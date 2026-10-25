@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "id": "PI-20261011-YJAYF7GD-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PERF-FU-REDUCE-PNL lane session_012h5mfFx5doTB4cYjaYF7gd",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000&offset=N' (page offsets 0..6000), then filter exit_reason='intent_reduce' and group notes.exit_price_source"
+  },
+  "routed_to": "manager",
+  "state": "queued",
+  "what": "A FULLY consumed intent_reduce parent is closed with exit_price=pkg.entry (the reduce signal's INTENDED price, execute.py apply_intent_reduce_partial_close) and the local sweep then books its pnl from it as recorded_exit_price (ESTIMATED). MEASURED 2026-10-11: 41 rows exit_reason='intent_reduce', 40 priced local_compute/recorded_exit_price. The reduce order's own fill (exchange_fills, order_id = the reduce leg's notes.trade_id) is the MEASURED exit; re-price these parents from it (same join src/runtime/reduce_leg_settlement.py uses)."
+}

@@ -1,0 +1,19 @@
+{
+  "based_on": "20261012T112918835334Z-9312faa2.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the first pairs_gld_gdx open has been held >= 5 sessions on alpaca_paper and the rerun query has been read once; closes with the measured count of affected directional decisions and a disposition (fix or accept)",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-HQ8T7BZU-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PAIRS-ALPACA-BUILD lane, session_01P1PVxyfLMUtw6WhQ8T7BZu (branch claude/pairs-alpaca-build)",
+    "rerun": "On the live journal (diag relay /api/diag/journal): rows on alpaca_paper with symbol in (GLD,GDX) whose strategy_name is gld_pullback_1d/gdx_pullback_1d and whose created_at falls inside an open pairs_gld_gdx_a/_b window, plus coordinator rejection rows (reentry_suppressed_netting_guard / opposite-direction refusal) on those symbols in the same windows. Finding holds while any directional GLD/GDX decision inside a pairs window was refused, nooped, or netted."
+  },
+  "routed_to": "PAIRS-GAPS (REGISTER-SWEEP-W43 2026-10-24: alpaca pairs residual)",
+  "state": "routed",
+  "what": "PAIRS-ALPACA-BUILD residual (INFERRED from code, not observed): alpaca_paper nets per symbol and also rosters gld_pullback_1d (GLD) and gdx_pullback_1d (GDX). The new pairs path refuses to OPEN onto a directional GLD/GDX row (skip_directional_conflict), but the reverse is not guarded by the pairs code: while pairs_gld_gdx holds a leg, the coordinator's net-position read (src/runtime/positions.py::current_net_position_qty sums ALL open rows on account+symbol, pairs rows included) makes a directional GLD/GDX package read the pairs leg as existing exposure -- intent-mode: an opposite package is refused and a same-side one may be sized as a delta/noop; legacy mode: the binary open-position block refuses it. If neither happens and an order is sent, Alpaca would net it against the pairs leg. Decide: exclude pairs rows from the directional net read on session venues, or accept the blocked directional entries as the soak's cost."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "AUTO-BRANCH-SYNC",
+  "title": "Workflow on push to main: update-branch open claude/* PRs that are behind and clean; comment on conflict only",
+  "phase": "automation",
+  "state": "landed_unproven",
+  "owner": "AUTO-WAVE1 lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17846
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-13 AUTO-WAVE1] .github/workflows/branch-sync.yml (push to main, 90s debounce) + scripts/ci/branch_sync.py: update-branch (merge commit) for open same-repo claude/* PRs that are behind, declare tier 1 self, carry no landing:hold label and touch no Tier-2/3 path; conflicts get one comment per head; max 10 per run. REQUIRES the BRANCH_PROTECTION_TOKEN secret (GITHUB_TOKEN updates raise no checks) - without it the job refuses and updates nothing. Built, not yet observed live.",
+  "updated_at": "2026-10-13T10:00:37Z",
+  "updated_by": "session_AUTO-WAVE1",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "AUTO-BRANCH-SYNC built and measured against its estimate",
+    "how_to_check": "a scratch PR left behind main gains main's head within one workflow run after a main push",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: ops automation, no milestone status change",
+    "arch": "none: no contract change"
+  },
+  "_seq": 447
+}

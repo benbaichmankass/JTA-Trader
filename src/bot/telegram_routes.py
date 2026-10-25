@@ -184,6 +184,20 @@ def claude_route() -> Route:
     return _resolve("claude", _CLAUDE_TOKEN_ORDER, _CLAUDE_CHAT_ORDER)
 
 
+#: SYSTEM channel (TELEGRAM-CHANNELS, 2026-10-11): the shared trader bot. An
+#: optional TELEGRAM_SYSTEM_CHAT_ID targets a group/channel; unset -> the DM.
+_SYSTEM_CHAT_ORDER = ("TELEGRAM_SYSTEM_CHAT_ID",)
+
+
+def system_route() -> Route:
+    """SYSTEM channel → the trader bot (``TELEGRAM_BOT_TOKEN``) and chat.
+
+    Its token is the trader token itself, so ``token_state`` is ``dedicated``
+    whenever it is set — this route is the floor every other one falls back
+    to (see ``src/runtime/telegram_channels.py``)."""
+    return _resolve("system", (_TRADER_TOKEN,), _SYSTEM_CHAT_ORDER)
+
+
 def _self_test() -> int:
     ok = True
 

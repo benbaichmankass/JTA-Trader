@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-10-24",
+    "kind": "date"
+  },
+  "id": "PI-20261021-WG8OPB7N-0004",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PIPELINE-HEALTH-1021 / research SLO blocked_over_age",
+    "rerun": "python3 scripts/research/research_slo.py --no-gh --json | python3 -c \"import sys,json;[print(s['value'],s['evidence']['sample']) for s in json.load(sys.stdin)['table'] if s['slo']=='blocked_over_age']\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research] Manager decision: 10 blocked units older than 21 d remain after PIPELINE-HEALTH-1021 (limit 10, so the SLO reads 10, AT the limit; RQ-20260930-505 crosses 21 d on 2026-10-22). 7 are regime-theme units owned by three checklist rows with owner `unassigned` and state queued since 2026-10-12..16 (REGIME-WEIGHT-VARIANTS -> RQ-20260927-006..009; REGIME-WF-VERDICT-WRAPPER -> RQ-20260928-ae17-01; FUNDING-OI-DATASETS-ETH-SOL -> RQ-20260929-109/110); the others are RQ-20260922-006 (needs the evidence record to name its fingerprint key set, row RQ-EVIDENCE-006-KEYSET), RQ-20260922-011 (pairs universe scan: trainer-resident candles + a measured maker fee, row E37), RQ-20260928-010 (row MACRO-BACKFILL-E5, cheaper path already designed). The age gate will keep re-breaching as these age; the only durable clears are building the levers or retiring the units. Assign the three regime rows to a build lane or retire the seven units with a reason."
+}

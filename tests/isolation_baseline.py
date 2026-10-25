@@ -62,28 +62,10 @@ BASELINE: dict[str, tuple[str, ...]] = {
     ),
 
     # ------------------------------------------------------------------
-    # Path-resolution reloads: `_reload()` pops the module and re-imports it
-    # under a different environment to prove reader and writer agree on a
-    # path. Necessarily replaces the slot; never restores the original.
+    # (Removed 2026-10-14, CI-DIET: the six test_runtime_paths_alignment.py entries. #17968's autouse
+    # `_drop_reloaded_routers` now cleans up what `_reload()` leaves behind; verified with
+    # TEST_ISOLATION_AUDIT=enforce, 7 passed with the entries gone.)
     # ------------------------------------------------------------------
-    "tests/test_runtime_paths_alignment.py::test_heartbeat_reader_writer_alignment_default": (
-        "module_replaced_real",
-    ),
-    "tests/test_runtime_paths_alignment.py::test_heartbeat_reader_writer_alignment_with_data_dir": (
-        "module_replaced_real",
-    ),
-    "tests/test_runtime_paths_alignment.py::test_signal_audit_reader_writer_alignment_with_data_dir": (
-        "module_replaced_real",
-    ),
-    "tests/test_runtime_paths_alignment.py::test_runtime_status_reader_writer_alignment_with_data_dir": (
-        "module_replaced_real",
-    ),
-    "tests/test_runtime_paths_alignment.py::test_shadow_predictions_reader_writer_alignment_with_data_dir": (
-        "module_replaced_real",
-    ),
-    "tests/test_runtime_paths_alignment.py::test_runtime_logs_dir_override_takes_precedence": (
-        "module_replaced_real",
-    ),
 }
 
 

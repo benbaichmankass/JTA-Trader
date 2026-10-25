@@ -1,0 +1,118 @@
+id: RQ-20260922-001
+title: Do the three alpaca_live 1d ETF passes survive dropping their single best trade?
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+compute: cpu_light
+kind: deterministic
+
+question: >-
+  ief_pullback_1d, slv_pullback_1d and iaum_pullback_1d are the entire
+  alpaca_live real-money roster and all three CLEAR the four-clause promotion
+  bar today. They clear it on n_trades_oos of 4, 4 and 6. Each record carries
+  its own refusal in a field called `low_n_warning`: *"the pooled number is
+  reported but is not a basis for a verdict."* The bar does not read that
+  field. So: after removing each leg's single largest per-trade net_r, is
+  net_r_oos still > 0 — i.e. is the Stage-0 pass a property of the strategy or
+  of one trade?
+
+why_this_matters: >-
+  MEASURED, from comms/strategy_evidence/{ief,slv,iaum}_pullback_1d.json on
+  main at f3746ab (generated 2026-09-22T05:34Z by
+  scripts/ops/build_strategy_evidence.py): net_r_oos 1.7081 / 20.3638 /
+  13.8738 over n_trades_oos 4 / 4 / 6, across 4 time-folds each, with
+  folds_positive 2 / 4 / 2. The fold_detail on slv shows a single fold
+  contributing +11.8756R of its +20.3638R on ONE trade; iaum shows +10.2559R
+  of +13.8738R likewise. Those are readable fold aggregates, not the
+  per-trade jackknife this unit asks for — the jackknife needs the trade
+  rows, which is why this unit is blocked rather than answered here.
+
+why_not_inferential: >-
+  This estimates no effect from a sample. It recomputes a stated statistic
+  over a FIXED and COMPLETE trade set — the same trades give the same answer
+  every time — so an expected_n and a minimum detectable effect would be
+  theatre rather than a bar. What makes it honest is the trade set being
+  complete, not a sample size.
+  ⚠️ The inferential question (can 4 trades support ANY verdict?) is
+  deliberately NOT asked here, because it is already answered and already
+  recorded: every one of these three records carries `low_n_warning`
+  "n_trades_oos=N < 10". That is a settled fact about the instrument. What is
+  NOT settled, and what this unit asks, is the narrower and decidable
+  question of whether the recorded number is one trade wide.
+
+decision_rule:
+  id: RULE-RQ0922-001-JACKKNIFE-STAGE0
+  registered_at: '2026-09-22'
+  registered_before_run: true
+  statistic: >-
+    jackknife_min = net_r_oos - max(per-trade net_r over the OOS folds), per leg.
+  rule: >-
+    IF jackknife_min <= 0 for a leg, that leg's Stage-0 pass is recorded
+    `single_trade_dependent: true` on its evidence record and is NO LONGER
+    admissible as the C4 clause of scripts/ci/check_roster_promotion_evidence.py
+    for a REAL-MONEY roster slot; the leg is handed to R2/D2 as a Tier-3 read
+    with this number attached.
+    IF jackknife_min > 0 on all three, the passes stand as written, this unit
+    closes `no_action_warranted`, and the `low_n_warning` on these records is
+    downgraded to advisory for the Stage-0 clause specifically.
+  what_it_does_not_do: >-
+    It does not demote, cut, or touch config/accounts.yaml or
+    config/strategies.yaml. Cutting the fleet is R2/D2 and is Tier-3. This
+    rule changes what an EVIDENCE RECORD says about itself, nothing else.
+
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: >-
+    Runner. scripts/ops/build_strategy_evidence.py drives the pullback harness
+    over dukascopy 1d candles for IEF/SLV/IAUM — no trainer-resident dataset
+    and no VM. Verified by reading the e35 shard plan, which schedules all
+    three legs with feed_source: dukascopy
+    (`python3 scripts/research/e35_shard_plan.py --ignore-missing-data`, run
+    2026-09-22).
+
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/evidence_fold_robustness.py
+  - --rule
+  - '001'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20260922-001
+  timeout_minutes: 10
+  note: >-
+    UNBLOCKED 2026-10-21 (lane PIPELINE-HEALTH-1021). The blocker was that nothing read
+    comms/strategy_evidence/ into a durable result; scripts/research/evidence_fold_robustness.py
+    --rule 001 is that reduction and implements this unit's decision_rule verbatim. The
+    rule is unchanged. Per-trade rows now survive the run: each evidence record's source_run is a
+    committed ledger under comms/strategy_evidence/runs/ (the tmp-path blocker, PI-20260922-
+    EVIDENCE-SOURCE-RUN-IS-A-TMP-PATH, is fixed). A trade is OOS when its entry_time falls in a
+    fold_detail span; the reconstructed OOS count equals the record's n_trades_oos for each leg.
+
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+
+related:
+  - 'checklist C5 / R4 (this unit is one of the ten)'
+  - 'PR #12705 / f3746ab (R1 — the run that produced the records this reads)'
+  - 'scripts/ci/check_roster_promotion_evidence.py (the bar whose C4 clause this would amend)'
+last_dispatched_at: '2026-10-21T20:43:44+00:00'
+grading:
+  attested: RULE-RQ0922-001-JACKKNIFE-STAGE0
+  auto: true
+  decision_rule_id: RULE-RQ0922-001-JACKKNIFE-STAGE0
+  evidence:
+  - research/results/RQ-20260922-001/39672877678.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

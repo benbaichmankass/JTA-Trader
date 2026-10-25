@@ -1,25 +1,90 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "strategy": "mhg_pullback_1d",
   "symbol": "MHG",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:0ca027e8a228081424ac1f1569c61e1e",
+  "config_fingerprint": "sha256:0caf3a8588bd113fa46ecd2c9a00c1fb",
   "basis": "harness_timefolds",
-  "coverage_state": "harness_failed",
-  "fidelity": null,
-  "omitted_levers": null,
-  "net_r_oos": null,
-  "expectancy_r_oos": null,
-  "n_trades_oos": null,
-  "folds": null,
-  "fold_detail": null,
-  "folds_positive": null,
+  "coverage_state": "measured",
+  "fidelity": "approximate",
+  "omitted_levers": [
+    "trail_decay_stall_bars",
+    "trail_decay_tight_mult"
+  ],
+  "net_r_oos": 4.0986,
+  "expectancy_r_oos": 0.4099,
+  "n_trades_oos": 10,
+  "folds": 4,
+  "fold_detail": [
+    {
+      "fold": 1,
+      "trades": 2,
+      "net_r": 5.3325,
+      "expectancy_r": 2.6662,
+      "start": "2025-11-05 00:00:00+00:00",
+      "end": "2026-01-22 00:00:00+00:00"
+    },
+    {
+      "fold": 2,
+      "trades": 2,
+      "net_r": -2.0415,
+      "expectancy_r": -1.0208,
+      "start": "2026-02-06 00:00:00+00:00",
+      "end": "2026-04-02 00:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 2,
+      "net_r": 3.014,
+      "expectancy_r": 1.507,
+      "start": "2026-05-01 00:00:00+00:00",
+      "end": "2026-06-08 00:00:00+00:00"
+    },
+    {
+      "fold": 4,
+      "trades": 4,
+      "net_r": -2.2064,
+      "expectancy_r": -0.5516,
+      "start": "2026-07-13 00:00:00+00:00",
+      "end": "2026-09-03 00:00:00+00:00"
+    }
+  ],
+  "folds_positive": 2,
   "window_days": 365,
-  "fee_bps_roundtrip": null,
+  "fee_bps_roundtrip": 7.5,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 10,
+    "max_drawdown_r": 3.0685,
+    "max_drawdown_at_trade": 10,
+    "final_equity_r": 4.0986,
+    "max_equity_r": 7.1671,
+    "worst_trade_r": -1.0411,
+    "best_trade_r": 3.8761,
+    "worst_day_r": -1.0411,
+    "worst_day_date": "2026-07-30",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 7.5,
+    "slippage": 5.0,
+    "funding": 0.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/strategy_evidence/runs/2026-09-24-e55/mhg_pullback_1d__bt.json"
+  },
+  "net_r_oos_fee_only": 4.245,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "pass"
+  },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-13T03:26:26.513013+00:00",
+  "generated_at": "2026-09-24T12:44:54.373073+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": null,
-  "error": "fetch failed: RuntimeError: yfinance returned no rows for HG=F",
+  "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/mhg_pullback_1d__trades.jsonl",
+  "error": null,
   "harness": "pullback"
 }

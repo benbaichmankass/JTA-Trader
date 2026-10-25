@@ -1,0 +1,224 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "ief_pullback_1d: 87 trades in the baseline arm 'B' on IEF 1d candles 2006-10-02 .. 2025-04-09, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B']",
+  "n": 87,
+  "measurement": {
+    "leg": "ief_pullback_1d",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "B",
+      "net_r": -0.8496,
+      "n": 87,
+      "max_drawdown_r": 25.0589,
+      "folds_positive": 3,
+      "n_folds": 8,
+      "fold_majority": 5,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=-0.8496 with 3/8 positive folds (needs > 0 and >= 5)"
+    },
+    "arms": {
+      "B": {
+        "reach_ge_6r": 0.046,
+        "n": 87,
+        "net_r": -0.8496,
+        "net_r_fee_only": 2.8102,
+        "max_drawdown_r": 25.0589,
+        "by_outcome": {
+          "stop": 44,
+          "trail_stop": 40,
+          "take_profit": 1,
+          "timeout": 2
+        },
+        "mean_bars_held": 34.609,
+        "net_r_per_capital_day": -0.0003,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 30,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2006-10-02 00:00:00+00:00",
+        "data_end": "2025-04-09 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2006-10-02 00:00:00+00:00",
+            "end": "2009-01-24 12:00:00+00:00",
+            "trades": 12,
+            "net_r": -4.3139
+          },
+          {
+            "fold": 2,
+            "start": "2009-01-24 12:00:00+00:00",
+            "end": "2011-05-20 00:00:00+00:00",
+            "trades": 10,
+            "net_r": -0.3993
+          },
+          {
+            "fold": 3,
+            "start": "2011-05-20 00:00:00+00:00",
+            "end": "2013-09-11 12:00:00+00:00",
+            "trades": 10,
+            "net_r": -6.1855
+          },
+          {
+            "fold": 4,
+            "start": "2013-09-11 12:00:00+00:00",
+            "end": "2016-01-05 00:00:00+00:00",
+            "trades": 17,
+            "net_r": -12.0775
+          },
+          {
+            "fold": 5,
+            "start": "2016-01-05 00:00:00+00:00",
+            "end": "2018-04-29 12:00:00+00:00",
+            "trades": 8,
+            "net_r": 10.2002
+          },
+          {
+            "fold": 6,
+            "start": "2018-04-29 12:00:00+00:00",
+            "end": "2020-08-22 00:00:00+00:00",
+            "trades": 9,
+            "net_r": 11.6816
+          },
+          {
+            "fold": 7,
+            "start": "2020-08-22 00:00:00+00:00",
+            "end": "2022-12-15 12:00:00+00:00",
+            "trades": 9,
+            "net_r": 1.3943
+          },
+          {
+            "fold": 8,
+            "start": "2022-12-15 12:00:00+00:00",
+            "end": "2025-04-09 00:00:00+00:00",
+            "trades": 12,
+            "net_r": -1.1493
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "30",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "IEF",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261016-c56e-16/39623994544/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-c56e-16/39623994544/arms/B__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2006-10-02",
+          "--end",
+          "2025-04-09"
+        ]
+      }
+    },
+    "window": {
+      "start": "2006-10-02",
+      "end": "2025-04-09",
+      "fetch_days": 7414,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "IEF",
+        "interval": "1d",
+        "resample": "1d"
+      },
+      "fold_edges": [
+        "2006-10-02 00:00:00+00:00",
+        "2009-01-24 12:00:00+00:00",
+        "2011-05-20 00:00:00+00:00",
+        "2013-09-11 12:00:00+00:00",
+        "2016-01-05 00:00:00+00:00",
+        "2018-04-29 12:00:00+00:00",
+        "2020-08-22 00:00:00+00:00",
+        "2022-12-15 12:00:00+00:00",
+        "2025-04-09 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "B": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "30",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "IEF",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261016-c56e-16/39623994544/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-c56e-16/39623994544/arms/B__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2006-10-02",
+          "--end",
+          "2025-04-09"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "trail_decay_stall_bars",
+          "trail_decay_tight_mult"
+        ]
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=-0.8496 with 3/8 positive folds (needs > 0 and >= 5)"
+}

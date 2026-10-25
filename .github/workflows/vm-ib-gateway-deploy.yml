@@ -20,7 +20,7 @@ name: vm-ib-gateway-deploy
 # Topology (gateway-isolation, 2026-06-10 — see docs/runbooks/ib-integration.md):
 #   The gateway VM (`ict-ib-gateway`) is on the PRIVATE subnet (10.0.0.251) with
 #   NO public IP. A runner reaches it by SSH **ProxyJump through the live
-#   trader** (141.145.193.91), which shares the 10.0.0.0/24 subnet. The same
+#   trader** (<VM_SSH_HOST>), which shares the 10.0.0.0/24 subnet. The same
 #   VM_SSH_KEY authorizes both hops. Identical transport to vm-ib-gateway-recover.
 #
 # Trust contract:
@@ -71,10 +71,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      JUMP_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+      JUMP_HOST: ${{ secrets.VM_SSH_HOST }}
       GATEWAY_HOST: ${{ vars.IB_GATEWAY_HOST || '10.0.0.251' }}
       VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -262,3 +269,5 @@ jobs:
               owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
               state: 'closed', state_reason: 'not_planned'
             });
+
+# no-durable-result: deploy action, no verdict computed

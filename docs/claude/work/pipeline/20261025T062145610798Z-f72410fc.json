@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "the count of real-money closed rows whose entry_price differs from their own entry-order fill VWAP is measured, and either the pnl path prices entry from the fill or the gap is documented as the convention with its USD size",
+    "kind": "observation",
+    "last_checked": "2026-10-25"
+  },
+  "id": "PI-20261025-HDEBJSNA-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane XRP-REDUCE-OTHER-CLOSES 2026-10-25 (PI-20261018-SALS1018-0002 venue reconciliation)",
+    "rerun": "scripts/ops/diag_fetch.sh 'bybit_raw_order_history?account_id=bybit_2&symbol=XRPUSDT&start_ms=1791471600000&end_ms=1791504000000' (a0189aeb avg_price) vs scripts/ops/diag_fetch.sh 'journal?table=trades&limit=400&envelope=true' row 6528 entry_price"
+  },
+  "state": "queued",
+  "what": "[performance][real-money] bybit_2 parent 6528 (trend_donchian_xrp_4h short) books pnl -3.2303 off entry_price 1.3464 (the package's signal entry) while the venue entry fill was 1.3478 (order a0189aeb, Sell 61.6, avg 1.3478) and Bybit closed-pnl for its SL leg a189d840 reads -3.2016 (fees included). MEASURED 2026-10-25 via /api/diag/bybit_raw_order_history + bybit_raw_closed_pnl (bybit_2 XRPUSDT 2026-10-08T15:00Z..10-09T08:00Z) and journal row 6528: (1.3464-1.4024)*56.9 - 0.0439 close fee = -3.2303 exactly, so the exit was re-priced from its own fill (backfill_own_fill) but the ENTRY side still uses pkg.entry. The reduce legs 6533/6539 already settle against the entry FILL (reduce_settlement_parents entry_fill 1.3478), so parent and reduce legs of the same position use different entry prices. Question: does closed-trade pnl price the entry from the entry order's own fill anywhere; if not, how many real-money closed rows carry an entry_price that differs from their broker_order_id fill VWAP, and by how much in USD."
+}

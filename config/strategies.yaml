@@ -499,7 +499,18 @@ strategies:
     model: null
     signal_prefixes: [ict_scalp]
     enabled: true
-    execution: live          # RE-PROMOTED shadow -> live 2026-07-20 (Tier-3,
+    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+                             # (relayed via manager to lane EXIT-OPS on
+                             # PI-20260922-UTN353OZ-0001): "Demote 3, re-test
+                             # XRP" — fails RULE-D1-STAGE0-NET-OF-FULL-COST
+                             # (net_r -9.4826, n=193, folds+ 1/4, faithful
+                             # record regenerated 2026-09-25 -- corrects the
+                             # 2026-09-22 E28 number's non-venue-aware
+                             # slippage; verdict unchanged: fail both times.
+                             # comms/strategy_evidence/ict_scalp_5m.json.
+                             # Keeps logging; stops taking
+                             # paper trades on bybit_1. Was:
+                             # RE-PROMOTED shadow -> live 2026-07-20 (Tier-3,
                              # operator-approved Phase-4 packet:
                              # docs/research/ict_scalp_5m-phase4-regime-gate-PROPOSAL-2026-07-20.md).
                              # The 2026-07-14 demotion's evidence did not survive
@@ -562,8 +573,8 @@ strategies:
 
   # ---------------------------------------------------------------------
   # M27 P0 Batch-1 ict_scalp alt variants (2026-07-21, Tier-3
-  # operator-approved promotion to bybit_1 demo soak — accrue live
-  # paper-trade data toward a real-money decision).
+  # operator-approved promotion to bybit_1 demo soak — a mechanical
+  # check on 1-2 clean trades, OPERATING-PLAN § 2).
   #
   # Config-exact copies of ict_scalp_5m's params on a different symbol —
   # the point of the M27 transfer study was testing the SAME live setup
@@ -585,7 +596,17 @@ strategies:
     model: null
     signal_prefixes: [ict_scalp]
     enabled: true
-    execution: live
+    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+                             # (relayed via manager to lane EXIT-OPS on
+                             # PI-20260922-UTN353OZ-0001): "Demote 3, re-test
+                             # XRP" — fails RULE-D1-STAGE0-NET-OF-FULL-COST
+                             # (net_r -8.8634, n=259, folds+ 1/4, faithful
+                             # record regenerated 2026-09-25 -- corrects the
+                             # 2026-09-22 E28 number's non-venue-aware
+                             # slippage; verdict unchanged: fail both times.
+                             # comms/strategy_evidence/ict_scalp_sol_5m.json.
+                             # Keeps logging; stops taking paper trades on
+                             # bybit_1.
     timeframe: "5m"
     symbols:
       - SOLUSDT
@@ -597,7 +618,6 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
     atr_sl_buffer_mult: 0.20
@@ -633,7 +653,6 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
     atr_sl_buffer_mult: 0.20
@@ -660,10 +679,36 @@ strategies:
     # needs a fitted per-fold threshold this static config can't reproduce
     # faithfully. Shipped on the UNGATED evidence, which independently
     # clears the gate. No local regime gate.
+    #
+    # atr_sl_buffer_mult 0.20 -> 0.50, PB-20260822-AVAX-SCALP-SIZED-OFF-MARGIN-NOT-RISK
+    # (operator decision 2026-09-28, "Fix risk sizing now" -- see
+    # docs/research/pb-20260822-avax-scalp-sizing-2026-09-28.md for the full
+    # evidence: bybit_1's risk_pct/leverage are ACCOUNT-level only, so this
+    # is the one per-leg lever that participates in position_size()'s
+    # risk_per_unit. 365d AVAXUSDT 5m backtest, this lever ONLY (config
+    # otherwise unchanged), net of full cost stack (fee 7.5/slip 3.0/fund
+    # 1.0bps): margin-ceiling bind rate 17.9% -> 13.2% of trades (n=251/250);
+    # net_total_r -8.2064R -> +7.0285R; win_rate 52.19% -> 53.2%; max_dd_r
+    # 27.51 -> 16.55. NOT a complete fix -- the sweep-extreme distance still
+    # dominates stop placement, not this buffer -- but a real, tested, and
+    # unexpectedly LARGE improvement on both the sizing question and net
+    # return. This is a raw full-window number, not the OOS-folded
+    # RULE-D1-STAGE0 statistic; re-run scripts/ops/build_strategy_evidence.py
+    # --strategy ict_scalp_avax_5m before treating this as a Stage-0 verdict.
     model: null
     signal_prefixes: [ict_scalp]
     enabled: true
-    execution: live
+    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+                             # (relayed via manager to lane EXIT-OPS on
+                             # PI-20260922-UTN353OZ-0001): "Demote 3, re-test
+                             # XRP" — fails RULE-D1-STAGE0-NET-OF-FULL-COST
+                             # (net_r -9.1340, n=259, folds+ 1/4, faithful
+                             # record regenerated 2026-09-25 -- corrects the
+                             # 2026-09-22 E28 number's non-venue-aware
+                             # slippage; verdict unchanged: fail both times.
+                             # comms/strategy_evidence/ict_scalp_avax_5m.json.
+                             # Keeps logging; stops taking paper trades on
+                             # bybit_1.
     timeframe: "5m"
     symbols:
       - AVAXUSDT
@@ -675,10 +720,9 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
-    atr_sl_buffer_mult: 0.20
+    atr_sl_buffer_mult: 0.50
     tp_at_r: 1.5
     be_offset_bps: 15
     session_filter_enabled: false
@@ -709,7 +753,6 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
     atr_sl_buffer_mult: 0.20
@@ -740,7 +783,6 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
     atr_sl_buffer_mult: 0.20
@@ -784,7 +826,6 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
     atr_sl_buffer_mult: 0.20
@@ -846,7 +887,13 @@ strategies:
     min_displacement_body_to_range: 0.55
     min_fvg_size_bps: 2.0
     mitigation_mode: "wick_rejection"
-    htf_trend_filter_enabled: true
+    # HTF trend filter EXPLICITLY OFF for this leg (manager review of #15340,
+    # 2026-10-01). The registered rule (docs/research/ict-scalp-htf-filter-
+    # decision-rule-2026-10-01.md) cleared on the 6 crypto legs only; MGC had no
+    # data source and is OUTSIDE that evidence, so its behaviour is kept exactly
+    # as before. Flip to true only if MGC clears the same rule on the fixed
+    # harness (pipeline row filed with this change).
+    htf_trend_filter_enabled: false
     htf_filter_timeframe: "1h"
     htf_filter_ema_period: 20
     atr_sl_buffer_mult: 0.20
@@ -1221,7 +1268,15 @@ strategies:
     # Same entries as trend_donchian_sol; ONLY the exits are tightened to the
     # eth_pullback_prop_2h recipe (trail_mult 3.5, tp_r 6.0 vs the live 5.0/50.0).
     # GRADUATED to live 2026-08-13 (the prop EV/survival gate passed — see the
-    # execution line). ROLLBACK: set execution: shadow (observe-only) — one field,
+    # execution line). ⚠️ CORRECTED 2026-10-15 (operator, "Yes, 1, 2 and 3a"): the prop
+    # EV/survival gate is NOT a lower bar than real money — it is a SUPERSET: a prop
+    # leg must ALSO clear Stage 0 net of full cost, a Stage-1 soak and Gate 2 ("if
+    # anything, the prop accounts should have a higher bar to clear because of the DD
+    # limits"). This leg reached prop WITHOUT the bybit_1 soak, so it is now soaking
+    # there (SOAK-stage1-bybit_1-trend_donchian_sol_prop, due 2026-12-11, row
+    # PROP-GATE-PARITY) while it STAYS LIVE on the prop books; a soak FAIL proposes
+    # pulling it (data-backed Tier-3). Guard: prop-roster-gate-guard.
+    # ROLLBACK: set execution: shadow (observe-only) — one field,
     # no redeploy. To fully retract, also remove this block + the breakout_1
     # routing + the builder/registry/intents entries.
     model: null
@@ -1267,12 +1322,21 @@ strategies:
     # short-side-dependent, the long-only A/B flipped it negative); ONLY the exits
     # are tightened to the eth_pullback_prop_2h recipe (trail_mult 3.5, tp_r 6.0
     # vs the live 5.0/50.0). GRADUATED to live 2026-08-13 (the prop EV/survival
-    # gate passed — see the execution line). ROLLBACK: set execution: shadow
+    # gate passed — see the execution line). ⚠️ CORRECTED 2026-10-15 (operator, "Yes, 1,
+    # 2 and 3a"): that gate is NOT a lower bar than real money — it is a SUPERSET: a prop
+    # leg must ALSO clear Stage 0 net of full cost, a Stage-1 soak and Gate 2 ("if
+    # anything, the prop accounts should have a higher bar to clear because of the DD
+    # limits"). This leg reached prop WITHOUT the bybit_1 soak, so it is now soaking
+    # there (SOAK-stage1-bybit_1-trend_donchian_eth_prop, due 2026-11-07, row
+    # PROP-GATE-PARITY) while it STAYS LIVE on the prop books; a soak FAIL proposes
+    # pulling it (data-backed Tier-3). Guard: prop-roster-gate-guard.
+    # ROLLBACK: set execution: shadow
     # (observe-only) — one field, no redeploy. To fully retract, also remove this
     # block + the breakout_1 routing + the builder/registry/intents entries.
     model: null
     signal_prefixes: [trend_donchian_eth_prop, donchian_eth_prop]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-10-22 popup "Split: 3 to closed, 2 stay (Recommended)": decide on the CLOSED bar its Stage-0 evidence uses; forming-bar record loses money (DECISION-BAR-MATCH, RQ-20261022-4de5-01, docs/research/evidence/decision-bar-match-2026-10-22.json). Revert = delete this line (default forming).
     execution: live          # [DECIDED] Tier-3, OPERATOR-APPROVED 2026-08-13; reverse by setting `execution: shadow` (one field, no redeploy). The prop EV/survival gate PASSED (account_compat_matrix -> run_ev_montecarlo under breakout.yaml; trainer relay #8975): ev_net_usd +$883, P(net>0)=0.8477 over 1110 trades spanning 2021-03..2026-06. STATE THE POPULATION: computed at size$5000 — a FRESH account with its full $300 static-DD budget — and positive BECAUSE the prop ruleset is cost-aware with BANK-ASAP re-buy (it prices in breaching and repurchasing at $45). [MEASURED @ account_compat_matrix -> run_ev_montecarlo under breakout.yaml, trainer relay #8975, 2026-08-13] The SAME ledger returns a `skip` on every standard account (end_return_mean -2.5%, P(breach) 0.859, survival 0.1997) -- population: this leg's own ledger graded by account_compat_matrix's standard arm. [INFERRED, AND THE INFERENCE IS REFUTED] -- but ⚠️ THAT SKIP DOES NOT MEAN "WORSE THAN WHAT WE TRADE ON REAL MONEY", AND THE EARLIER WORDING HERE SAID IT DID. It read: 'So this is "+EV to buy accounts and run this", NOT "this is safe".' That framing is WITHDRAWN 2026-08-27 (operator-corrected; BL-20260827-PROP-GATE-DOCUMENTED-AS-A-LOWER-BAR-THAN-REAL-MONEY + BL-20260827-STANDARD-ARM-MISMODELS-INTRADAY-MAX-DD-AS-A-TERMINAL-FLOOR). The prop gate is NOT a lower bar. The DESIGN standard is prop-dynamic-exits-faster-banking-DESIGN.md § 6: "higher mean_net_usd/p_profitable AT EQUAL-OR-BETTER SURVIVAL ... require strict improvement WITHOUT WORSE p_breach". The skip cannot support the inference for THREE independent reasons, each verified in code: (1) THE STANDARD ARM MODELS THE WRONG RISK RULE -- account_rulesets._standard_ruleset feeds the account's `max_dd_pct` into a `drawdown_type: "static"` limit, i.e. a PERMANENT floor off the STARTING balance, while risk.py:21 defines that same field as "max INTRA-DAY equity drawdown FROM TODAY'S HIGH" -- a cap that resets at UTC midnight and REFUSES A TRADE, never disabling the account. Two errors compounded: intraday->permanent and from-todays-high->from-start. (2) IT GRADES A SYNTHETIC BALANCE -- bybit_2 declares no `account_size_usd`, so the arm uses _DEFAULT_STANDARD_SIZE = $10,000, a number that account has never held. (3) IT GRADES THE WRONG LEDGER -- both arms consume the SAME ledger, and that ledger is THIS prop-tuned exit variant (trail 3.5 / tp_r 6.0). The base leg's own geometry (trail 5.0 / tp_r 50.0) was never graded against a standard account by this run. So the skip is a statement about a prop exit recipe, under a mis-modelled terminal floor, on a balance that does not exist. Fixing the arm is Tier-3 research (it changes gate verdicts), NOT a doc edit -- until then read the standard column as UNGRADED, never as evidence against the leg. An earlier gate run (#8969) returned skip at -$138,467 and was VOID — it graded a BTC 1-minute fixture under an ETHUSDT label (BL-20260813-HARNESS-SYMBOL-IS-A-LABEL-DATA-DEFAULTS-TO-BTC); do not cite it. Design: prop-dynamic-exits-faster-banking-DESIGN.md § 5.
     timeframe: "1h"
     symbols:
@@ -1296,9 +1360,14 @@ strategies:
                             # tp_r is a real geometry change, Tier-3; the measured
                             # answer was DO NOT TIGHTEN.
     min_confidence: 0.60
-    stale_exit_bars: 12          # M20 exit-lever sweep 2026-08-10 (Tier-3, operator-approved):
-    stale_exit_below_r: 0.0      # stale12_lt0R (IS +1.26R / OOS +5.43R, maxDD -4.18 / -4.88)
-    trail_decay_stall_bars: 10   # + decay_stall10_t1.8 (IS +1.37R / OOS +7.28R, maxDD -3.89 / -7.15).
+    # stale_exit_bars: 12 / stale_exit_below_r: 0.0 REMOVED 2026-10-07 (Tier-3, data-backed standing
+    #   authorization 2026-09-27; lane EXIT-LEVER-STRIP, findings PI-20261006-KX6ZKFNA-0001).
+    #   Declared a close-type lever the prop paths cannot execute. Measured WITH vs WITHOUT over 730d
+    #   (rule registered before the run): +13.0223 R / 355 trades / maxDD 13.03 vs +12.8408 R / 348 /
+    #   13.57 -> dR +0.18 R, 2 of 4 fold wins, inside the 2.0 R bar: not worth a close verb.
+    #   Evidence: comms/research/RQ-20261007-001/local-5fd0163ca/verdict.json (PR #16970).
+    #   ROLLBACK: re-add `stale_exit_bars: 12` + `stale_exit_below_r: 0.0` above `trail_decay_stall_bars`.
+    trail_decay_stall_bars: 10   # decay_stall10_t1.8 (M20 sweep 2026-08-10: IS +1.37R / OOS +7.28R, maxDD -3.89 / -7.15).
     trail_decay_tight_mult: 1.8  # Both cleared Path A on both windows + the yearly folds. UPDATED
                                  # 2026-08-13: this comment previously read "this leg is
                                  # `execution: shadow`, so these change NO money today — the validated
@@ -1313,7 +1382,8 @@ strategies:
                                  # base (IS +1.26R / OOS +5.43R), not on the 1h majors' base.
                                  # The tight mult is 1.8 not 2.5 because this leg's base trail is 3.5
                                  # (swap-robust), not 5.0 — the cell is leg-scaled, not copied.
-                                 # ROLLBACK: delete these four lines.
+                                 # ROLLBACK: delete the three remaining lines (stale pair removed 2026-10-07, see above).
+    trail_decay_arm_r: 2.99      # [DECIDED] operator 2026-09-26, #13015; deployed #13020; reversal = delete the line
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -1341,14 +1411,51 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_eth_4h, donchian_eth_4h]
     enabled: true
-    execution: live          # demo-only soak (paper money) per paper-execute policy.
+    execution: live          # LIVE on REAL-MONEY bybit_2 AND paper bybit_1/
+                             # bybit_portfolio (config/accounts.yaml). Corrected
+                             # 2026-09-28 (lane EXIT-OPS, PI-20260926-X3QEGPJL-0002):
+                             # the prior "demo-only soak (paper money)" comment was
+                             # stale -- same defect as trend_donchian_xrp_4h's,
+                             # corrected there 2026-07-30. Filed rather than found
+                             # again: BL-20260928-STALE-DEMO-ONLY-COMMENT-ON-REAL-MONEY-LEG.
     timeframe: "4h"
     symbols:
       - ETHUSDT
     donchian: 20
     atr_period: 14
-    atr_stop_mult: 2  # M20 e35 re-check 2026-08-29: cell sm2 (path_b_wf_pass, wf 6/6, d_net_r +28.7348); was 2.5
-    trail_mult: 5.0
+    # atr_stop_mult 2 -> 1.5 + trail_mult 5.0 -> 6.0 (Tier-3 PROPOSAL, holdout arm C3,
+    #   HOLD for operator approval). Evidence: comms/research/RQ-20261016-077e-02/38936621580/
+    #   verdict.json -- C3 selected from 9 arms on discovery only (2020-07-01 .. 2025-03-20,
+    #   n=187, +69.04 R, 4/4 folds; declared arm A n=174, +38.87 R, 4/4) and read ONCE on the
+    #   held-back span: C3 n=75 +19.23 R (0.256 R/trade) vs declared A n=70 +17.01 R
+    #   (0.243 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: atr_stop_mult 2, trail_mult 5.0.
+    atr_stop_mult: 1.5  # was 2 (M20 e35 re-check 2026-08-29: cell sm2, path_b_wf_pass, wf 6/6, d_net_r +28.7348; was 2.5 before that)
+    trail_mult: 6.0
+    # trail_decay stall 10 / tight 1.8 (Tier-3 PROPOSAL, lane ACTIVE-MGMT-DRIVE-1018, HOLD for operator
+    #   approval). Evidence: RQ-20261016-006 (P1-Q4-eth4h-stalldecay-rerun; rule RULE-P1-Q4-ETH4H-STALLDECAY-RERUN,
+    #   registered 2026-10-16) -- exit_lever_ablation --grade replace against THIS incumbent (atr 1.5 / trail 6.0),
+    #   ETHUSDT 4h 2022-10-15 .. 2026-10-14, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: arm D
+    #   (trail_decay_stall_bars 10, trail_decay_tight_mult 1.8, no arm_r) 70.03 R / 180 trades / maxDD 19.36 vs
+    #   A 61.08 R / 160 / 18.06; 3 of 4 calendar folds (fold 4, 2025-09..2026-10: -2.98 vs -10.62); net R per
+    #   capital-day 0.205 vs 0.127. Mechanism: once 10 bars have printed since the trade's peak the trail
+    #   tightens from 6.0 to 1.8 ATR (src/runtime/trail_decay.py; absent = off; the prop legs carry the same lever).
+    #   Does NOT touch the TP: entry_tp stays the 50 R sentinel (TP-doctrine state unchanged, see the PR).
+    #   ROLLBACK: delete these two lines.
+    trail_decay_stall_bars: 10
+    trail_decay_tight_mult: 1.8
+    # tp_revision donchian_measured_move width_mult 0.5 (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD for
+    #   operator approval). The resting entry TP stays the 50 R sentinel (venue cap); this moves the TP each closed
+    #   bar to the Donchian measured move (src/runtime/tp_revision.py), merged into the trail verdict.
+    #   Evidence: RQ-20261018-007 (rule RULE-P1-Q3-ETH4H-MEASURED-MOVE-W05-CONFIRM, registered before the run),
+    #   ETHUSDT 4h 2020-07-01..2026-10-15, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: A (leg as declared)
+    #   n=290 +99.23 R maxDD 19.36 vs MM05 n=275 +115.95 R maxDD 20.38 (delta +16.72 vs bar 5.8; 5 of 6 folds;
+    #   DD cap 26.14); 41% of revisions clamped at the venue cap (1374/3319); net R/capital-day 0.194 vs 0.187.
+    #   Operator directive 2026-10-18: a config-only improvement to an existing strategy ships live and its first
+    #   1-2 live amends are monitored (no soak alias). ROLLBACK: delete the tp_revision block.
+    tp_revision:
+      rule: donchian_measured_move
+      width_mult: 0.5
     tp_r: 50.0
     tp_intent:
       mode: none
@@ -1368,7 +1475,14 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_sol_4h, donchian_sol_4h]
     enabled: true
-    execution: live          # demo-only soak (paper money) per paper-execute policy.
+    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+                             # (relayed via manager to lane EXIT-OPS on
+                             # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
+                             # shadow" — fails RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE
+                             # (net_r_oos -2.796, n=35, WR 22.9%, folds+ 1/4,
+                             # E69 resweep 2026-09-24, comms/strategy_evidence/
+                             # trend_donchian_sol_4h.json). bybit_1 only (paper);
+                             # confirmed not on any real-money roster.
     timeframe: "4h"
     symbols:
       - SOLUSDT
@@ -1395,6 +1509,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_xrp_4h, donchian_xrp_4h]
     enabled: true
+    decision_bar: closed     # Tier-3 HELD (PI-20260930-QZSE4AMA-0002): evaluate the CLOSED 4h bar like Stage 0; revert = delete this line (default forming). Evidence: docs/research/evidence/donchian-closed-vs-forming-parity-2026-09-30.json
     execution: live          # LIVE on REAL-MONEY bybit_2 (promoted 2026-06-30, Tier-3
                              # operator-approved) AND paper bybit_1/bybit_portfolio.
                              # (Corrected 2026-07-30: the prior "demo-only soak" comment
@@ -1449,11 +1564,61 @@ strategies:
     trail_decay_tight_mult: 2.5
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
+
+  # SOAK ALIAS of trend_donchian_xrp_4h (Tier-3, OPERATOR-DECIDED 2026-10-22, popup answer verbatim:
+  # "bybit_1 now, real money after corroboration (Recommended)"; checklist OPERATOR-DECISIONS-1022).
+  # Identical to the incumbent except it DECLARES the MOMENTUM-LEVERS-LIVE ADX-tightened trail, and it is
+  # rostered on bybit_1 ONLY (INSTEAD of the incumbent), so bybit_2 + bybit_portfolio stay on the incumbent
+  # together (strict mirror equality). Name avoids the incumbent's signal_prefixes (attribution is by
+  # substring). WHY NOT REAL MONEY YET: RQ-20261016-015's own what_it_does_not_do -- "68 trades is thin:
+  # a PASS is a candidate a second leg must corroborate, not a ship". The corroboration unit tests the same
+  # cell (adx25_k0_t2.5) on sibling trend_donchian legs; a PASS on >= 1 sibling is the evidence record for
+  # declaring the lever on the incumbent for bybit_2 + bybit_portfolio together.
+  # EVIDENCE: research/results/RQ-20261016-015/39103752013.jsonl, RULE-P1-Q4-XRP4H-EXIT-CONFIRM registered
+  # before the run, XRPUSDT 4h 2020-07..2026-10, net of fee+slippage+funding: A n 68 +14.30 R maxDD 4.57 vs
+  # M2 n 68 +17.07 R maxDD 4.15, 4 of 4 folds >= A. Live producer: src/runtime/momentum_levers.py via
+  # trend_donchian.monitor (#18921, in the running sha).
+  # ROLLBACK: restore trend_donchian_xrp_4h on bybit_1 (config/accounts.yaml) and delete this block.
+  trend_donchian_xrp_adx25:
+    model: null
+    signal_prefixes: [trend_donchian_xrp_adx25]
+    enabled: true
+    decision_bar: closed
+    execution: live          # bybit_1 (Bybit demo, paper money) ONLY (config/accounts.yaml).
+    # Everything below except the two trail_adx_* keys is copied VERBATIM from the incumbent
+    # trend_donchian_xrp_4h (see its comments for the evidence); keep the two in step, so
+    # RQ-20261016-015's arm A == the incumbent and arm M2 == this alias.
+    side_filter: short
+    timeframe: "4h"
+    symbols:
+      - XRPUSDT
+    donchian: 20
+    atr_period: 14
+    atr_stop_mult: 2
+    trail_mult: 5.0
+    stale_exit_bars: 8
+    stale_exit_below_r: 0.0
+    tp_r: 3
+    min_confidence: 0.80
+    skip_hours: "0"
+    vol_skip_above_pctl: 0.9
+    trail_decay_arm_r: 2.0
+    trail_decay_tight_mult: 2.5
+    trail_adx_below: 25
+    trail_adx_tight_mult: 2.5
+    # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
   trend_donchian_ada_4h:
     model: null
     signal_prefixes: [trend_donchian_ada_4h, donchian_ada_4h]
     enabled: true
-    execution: live          # demo-only soak (paper money) per paper-execute policy.
+    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+                             # (relayed via manager to lane EXIT-OPS on
+                             # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
+                             # shadow" — fails RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE
+                             # (net_r_oos -8.6081, n=46, WR 28.3%, folds+ 1/4,
+                             # E69 resweep 2026-09-24, comms/strategy_evidence/
+                             # trend_donchian_ada_4h.json). bybit_1 only (paper);
+                             # confirmed not on any real-money roster.
     timeframe: "4h"
     symbols:
       - ADAUSDT
@@ -1478,7 +1643,14 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_avax_4h, donchian_avax_4h]
     enabled: true
-    execution: live          # demo-only soak (paper money) per paper-execute policy.
+    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+                             # (relayed via manager to lane EXIT-OPS on
+                             # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
+                             # shadow" — fails RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE
+                             # (net_r_oos -9.1414, n=50, WR 26.0%, folds+ 0/4,
+                             # E69 resweep 2026-09-24, comms/strategy_evidence/
+                             # trend_donchian_avax_4h.json). bybit_1 only
+                             # (paper); confirmed not on any real-money roster.
     timeframe: "4h"
     symbols:
       - AVAXUSDT
@@ -1822,7 +1994,33 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.0  # M20 B4 bracket geometry: cell tp3_sm2 (path_b_wf_pass, wf 5/6); was 2.5
     trail_mult: 4.0
-    trail_decay_arm_r: 3.56   # M20 P4.4 p80 cell (p80 arm, wf 5/6; sweep 2026-07-13)
+    # trail_decay_arm_r REMOVED 2026-09-22 — Tier-3, OPERATOR-DECIDED. The decision was "strip the
+    # arms entirely", and the operator CLARIFIED the test in their own words the same day: "I only
+    # wanted to strip the arm where it can't produce a result, it should stay where it can produce
+    # one." So the test is not "is the arm high" and not "does it rarely fire" — it is whether the
+    # measured answer is ZERO. This leg's is. Was: `trail_decay_arm_r: 3.56` (M20 P4.4 p80 cell, wf 5/6; sweep 2026-07-13).
+    #   ALREADY ADJUDICATED — OPERATOR DECISION 2026-08-16 (Tier-3, in-conversation): RECORD
+    #   INERT. MEASURED: cap_R 2.13 against the 3.56R arm, on two independent bases agreeing
+    #   exactly (live order_packages/risk_per_unit n=1 + candles/atr(14) 1d QQQ n=105); the
+    #   backtest entry-conditioned basis reads 16/81 (19.8%) pooled over 2007-2026 but 0/3 in
+    #   2026. Recorded in config/lever_reachability.json as verdict=inert,
+    #   disposition=recorded_inert, decided_at 2026-08-16.
+    #   ⚠️ A NAIVE RE-CHECK ON THE VENUE CAP ALONE NOW READS THE OTHER WAY AND IS WRONG:
+    #   0.099/(|entry-sl|/entry) over the last 12 months reads 3 of 7 >= 3.56 (cap_R max 5.239,
+    #   comms/strategy_evidence/runs/2026-09-22-r5/qqq_trend_long_1d__trades.jsonl). That is only
+    #   half the ceiling. The placed TP is min(entry*(1+0.099), entry + tp_r*risk)
+    #   (src/units/strategies/trend_donchian.py:393), and `tp_r: 3.0` below was cut from 50.0 by
+    #   M20 B4, so the trade ends at 3.0R and the binding ceiling is min(cap_R, 3.0) <= 3.0R < the
+    #   3.56R arm on EVERY entry. The arm is inert by construction, not just empirically.
+    #   EFFECT OF THE REMOVAL: this leg declares no `trail_decay_stall_bars`, so the trail-decay
+    #   lever becomes UNDECLARED and `resolve_trail_mult` returns the base trail mult
+    #   (src/runtime/trail_decay.py:143-145) — identical to today, because the arm could not fire.
+    #   The undeclared branch additionally writes one OBSERVE-ONLY annotate row to
+    #   runtime_logs/exit_lever_soak.jsonl per package when the reference stall-6 cell would arm;
+    #   that path never touches an order.
+    #   ROLLBACK (one line): restore `trail_decay_arm_r: 3.56` above `trail_decay_tight_mult`.
+    # NOTE `trail_decay_tight_mult: 2.0` is deliberately LEFT: with no arming condition it is now
+    # inert too, but removing it was not what was decided and is not taken here.
     trail_decay_tight_mult: 2.0
     tp_r: 3.0  # M20 B4 bracket geometry: cell tp3_sm2 (path_b_wf_pass, wf 5/6); was 50.0
     min_confidence: 0.0
@@ -1928,6 +2126,12 @@ strategies:
     # mgc_pullback_1d params). Phase-0: pullback1d GLD train +4.9R /
     # OOS +19.7R. alpaca_paper (PAPER money), bracket orders, US-session
     # gate.
+    # ⚠️ LONG-ONLY, ACCEPTED PERMANENTLY (operator triage 2026-09-28,
+    # BL-20260823-NO-INVERSE-ETF-INSTRUMENTS-DECLARED): no inverse-ETF proxy
+    # is declared, so this leg's short-side signals go fully inert under
+    # alpaca_live's long-only real-money mode. Expected contribution is
+    # restated on that basis — long-side flow only, not the bidirectional
+    # figure the Phase-0 backtest above measured.
     model: null
     signal_prefixes: [gld_pullback]
     enabled: true
@@ -1942,17 +2146,41 @@ strategies:
     atr_stop_mult: 2.0
     trail_mult: 4.0
     trail_decay_stall_bars: 10   # M20 P4.1 decay cell (stall10 tight2 wf 4/6; sweep 2026-07-12, PR #6251)
-    trail_decay_arm_r: 5.06     # M20 P4.4 p80 arm ADDED to stall10 (combo measured on the declared base, wf 5/6; sweep 2026-07-13)
+    # trail_decay_arm_r REMOVED 2026-09-22 — Tier-3, OPERATOR-DECIDED. The decision was "strip the
+    # arms entirely", and the operator CLARIFIED the test in their own words the same day: "I only
+    # wanted to strip the arm where it can't produce a result, it should stay where it can produce
+    # one." So the test is not "is the arm high" and not "does it rarely fire" — it is whether the
+    # measured answer is ZERO. This leg's is. Was: `trail_decay_arm_r: 5.06` (M20 P4.4 p80 arm ADDED to stall10, wf 5/6;
+    # sweep 2026-07-13).
+    #   ALREADY ADJUDICATED — OPERATOR DECISION 2026-08-16 (Tier-3, in-conversation): RECORD
+    #   INERT. MEASURED: 0 of 8 live order_packages over the leg's COMPLETE history could reach
+    #   5.06R (cap_R 2.20-3.01; risk/entry ran 3.294-4.506% against the 1.956% the arm needs).
+    #   The re-sweep's proposed 3.86R was itself unreachable on the same 8 entries, so "lower the
+    #   arm" was never an available answer. Recorded in config/lever_reachability.json as
+    #   verdict=inert, disposition=recorded_inert, decided_at 2026-08-16. What 2026-08-16 did NOT
+    #   do is remove the value — the decision was to stop counting it as shipped; this removes it.
+    #   RE-CHECKED 2026-09-22 on the current geometry (atr_stop_mult 2.0, unchanged since):
+    #   0 of 6 entry-conditioned backtest trades reach 5.06R over 2025-04-08 -> 2026-09-21
+    #   (cap_R min 1.191 / median 2.231 / max 3.968), from
+    #   comms/strategy_evidence/runs/2026-09-22-r5/gld_pullback_1d__trades.jsonl. Agrees with live.
+    #   EFFECT OF THE REMOVAL: `trail_decay_stall_bars: 10` above keeps the lever DECLARED, so the
+    #   stall arm and the tightened mult go on working exactly as today
+    #   (src/runtime/trail_decay.py:143-145). Only the dead R-arm is gone.
+    #   ROLLBACK (one line): restore `trail_decay_arm_r: 5.06` under `trail_decay_stall_bars: 10`.
     trail_decay_tight_mult: 2.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -1981,18 +2209,19 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 5.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: blocked_no_live_bar_count_exit
-      # ⚠️ NOT the same as the legs above. This leg's only gate-passing take-profit cell
-      # (mes: `tp1_sm2_to24`; tlt_1d: `tp2_sm1.5_to24`) prescribes a bar-count timeout
-      # that NO live unit implements, so no config change can deliver it. Giving live a
-      # bar-count exit is a separate Tier-3 order-path change
-      # (BL-20260829-HARNESS-FORCE-CLOSES-TREND-PULLBACK-TRADES-ON-BAR-COUNT-AND-LIVE-NEVER-DOES).
-      revisit_when: live_gains_a_bar_count_exit
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2021,15 +2250,24 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 5.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # M20-EXITS-4 (HELD Tier-3): stall-10 trail decay, tight = trail_mult/2. decay_stall10_t2.5 passed
+    # IS+OOS and the yearly WF on two independent partitions (corpus run 2026-10-02T17:03:50, WF 4/6 effective;
+    # 2026-08-15, WF 4/6). Rollback = delete these two lines.
+    trail_decay_stall_bars: 10
+    trail_decay_tight_mult: 2.5
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2054,9 +2292,32 @@ strategies:
     pullback_lookback: 12
     pullback_frac: 0.5
     atr_period: 14
-    atr_stop_mult: 2.5
+    # GEOMETRY CELL `tp6_sm1.5_to24` (operator popup 2026-09-28 ~13:20Z, "Ship the
+    # 3-part change"; checklist row PROMOTE). Evidence: docs/research/gld-1h-stop-confirm/
+    # 2026-09-28-confirming-walkforward.md -- 6/6 effective folds, OOS d_net_R +20.08,
+    # n=54 (scripts/research/e35_bracket_geometry_sweep.py). The moved keys are
+    # atr_stop_mult, tp_r (+ tp_intent.basis) and the stale_exit_* pair below.
+    # REVERT: `git revert` the PR that shipped this (it also moves the evidence record,
+    # the exit-matrix cells and the pin in tests/test_etf_intraday_pilot_wiring.py).
+    # By hand: atr_stop_mult 2.5, tp_r 4.0, tp_intent.basis e35_cell_tp4, DELETE
+    # stale_exit_bars / stale_exit_below_r, and restore those three files.
+    atr_stop_mult: 1.5
     trail_mult: 4.0
-    # M20 e3.5 bracket geometry: cell `tp4` (wf_pass, wf_wins_effective 4/6, 0 inert,
+    # THE `to24` TIME EXIT. This unit has NO `timeout_bars` reader (module docstring,
+    # htf_pullback_trend_2h.py) -- declaring `timeout_bars: 24` would be an inert key.
+    # The sweep's `--timeout-bars 24` closes at the CLOSE of the 24th bar after entry;
+    # the shared stale_stop lever (src/runtime/exit_levers.py, read by this unit's
+    # monitor and by scripts/backtest_pullback.py) with a threshold no open-R can
+    # reach is the same exit IN THE HARNESS (measured identical, n=90). LIVE it can
+    # fire up to ONE BAR EARLY: the monitor's frame includes the still-forming bar,
+    # which the age count treats as a bar. 24 bars of THIS leg's 1h clock -- on an
+    # RTH-only feed that is ~3.5 sessions, NOT one calendar day.
+    # ON DEPLOY: open gld_pullback_1h positions already >= 24 bars old are
+    # time-exited on the FIRST monitor tick, because the order monitor falls back to
+    # this live YAML for any key the position's own meta lacks.
+    stale_exit_bars: 24
+    stale_exit_below_r: 1000000000.0
+    # (pre-2026-09-28 history) M20 e3.5 bracket geometry: cell `tp4` (wf_pass, wf_wins_effective 4/6, 0 inert,
     # d_net_r +8.9997; sweep 2026-08-31, corpus docs/research/e35-bracket-corpus.jsonl).
     # REACHABILITY (this is what the number rests on): measured cap_r on this leg is
     # min 7.944 / median 8.243 over n=4 live rows (position_telemetry, 2026-09-07), so
@@ -2066,10 +2327,13 @@ strategies:
     # net R, not exit LOCATION, and 2 of 6 folds lost. It is a reachable target, not a
     # calibrated one. Selected for reachability over the matrix's d_net_r winner `sm1.5`,
     # which carries no take-profit at all.
-    tp_r: 4.0
+    # 2026-09-28: 4.0 -> 6.0 (cell tp6_sm1.5_to24, above). The cap_r figures above were
+    # measured at the 2.5x stop; a 1.5x stop shrinks risk, so cap_r in R GROWS
+    # (~8.2 x 2.5/1.5 ~ 13.7) and 6.0 stays below the venue clamp. Not re-measured live.
+    tp_r: 6.0
     tp_intent:
       mode: r_multiple
-      basis: e35_cell_tp4
+      basis: e35_cell_tp6_sm1.5_to24
       calibrated: false          # reachable, NOT calibrated — see MI-156 § 6
     min_confidence: 0.0
     shadow_model_ids: []
@@ -2147,7 +2411,7 @@ strategies:
     pullback_lookback: 12
     pullback_frac: 0.618
     atr_period: 14
-    atr_stop_mult: 2.5
+    atr_stop_mult: 1.5  # M20 e35 re-check 2026-08-31: cell sm1.5 (path_b_wf_pass, wf 5/6, d_net_r +28.1569); was 2.5
     trail_mult: 5.0
     # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
     # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
@@ -2311,6 +2575,11 @@ strategies:
     # Runs on alpaca_paper + alpaca_live (Tier-3 approved 2026-06-27).
     # Whole-share bracket orders; risk_pct inherited from strategy config.
     # PROVENANCE: mirrors gld_pullback_1d parameters (SRQ-20260627-SLV).
+    # ⚠️ LONG-ONLY, ACCEPTED PERMANENTLY (operator triage 2026-09-28,
+    # BL-20260823-NO-INVERSE-ETF-INSTRUMENTS-DECLARED): no inverse-ETF proxy
+    # is declared, so this leg's short-side signals go fully inert under
+    # alpaca_live's long-only real-money mode. Expected contribution is
+    # restated on that basis — long-side flow only.
     model: null
     signal_prefixes: [slv_pullback]
     enabled: true
@@ -2326,15 +2595,19 @@ strategies:
     trail_mult: 4.0
     trail_decay_stall_bars: 6   # M20 P4.1 decay cell (stall6 tight2 wf 5/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 2.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2346,6 +2619,11 @@ strategies:
     # Runs on alpaca_paper + alpaca_live (Tier-3 approved 2026-06-27).
     # Whole-share bracket orders.
     # PROVENANCE: mirrors gld_pullback_1d parameters (SRQ-20260627-GDX).
+    # ⚠️ LONG-ONLY, ACCEPTED PERMANENTLY (operator triage 2026-09-28,
+    # BL-20260823-NO-INVERSE-ETF-INSTRUMENTS-DECLARED): no inverse-ETF proxy
+    # is declared, so this leg's short-side signals go fully inert under
+    # alpaca_live's long-only real-money mode. Expected contribution is
+    # restated on that basis — long-side flow only.
     model: null
     signal_prefixes: [gdx_pullback]
     enabled: true
@@ -2359,15 +2637,19 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.0
     trail_mult: 4.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2430,6 +2712,14 @@ strategies:
     # gld_pullback_1d. alpaca_paper (PAPER money), bracket orders, US-session
     # gate. NOTE: IAUM's own price history only starts 2021 (fund inception);
     # GLD's full-history +52R edge is the deeper evidence base.
+    # ⚠️ LONG-ONLY, ACCEPTED PERMANENTLY (operator triage 2026-09-28,
+    # BL-20260823-NO-INVERSE-ETF-INSTRUMENTS-DECLARED): no inverse-ETF proxy
+    # is declared, so this leg's short-side signals go fully inert under
+    # alpaca_live's long-only real-money mode. Expected contribution is
+    # restated on that basis — long-side flow only. (Note: iaum_pullback_1d
+    # is also one of the two declared affordability proxies dropped from the
+    # alpaca_portfolio mirror per CLAUDE.md's Stage-2 invariant — a separate,
+    # unrelated carve-out from this one.)
     model: null
     signal_prefixes: [iaum_pullback]
     enabled: true
@@ -2445,15 +2735,19 @@ strategies:
     trail_mult: 4.0
     trail_decay_stall_bars: 10   # M20 P4.1 decay cell (stall10 tight2 wf 4/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 2.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2479,8 +2773,39 @@ strategies:
     atr_period: 14
     atr_stop_mult: 3.0  # M20 B4 bracket geometry: cell tp1.5_sm3 (wf_pass, wf 4/6); was 2.5
     trail_mult: 4.0
-    trail_decay_arm_r: 2.0   # M20 P4.1 decay cell (arm2R tight2 wf 6/6; sweep 2026-07-12, PR #6251)
-    trail_decay_tight_mult: 2.0
+    # trail_decay_arm_r + trail_decay_tight_mult REMOVED 2026-09-24 — Tier-3, OPERATOR-DECIDED
+    # ("Strip the arm", checklist row E48). Was:
+    #   `trail_decay_arm_r: 2.0`    # M20 P4.1 decay cell (arm2R tight2 wf 6/6; sweep 2026-07-12, PR #6251)
+    #   `trail_decay_tight_mult: 2.0`
+    # Both were declared together by that same operator-approved commit (62509a022, #6251,
+    # 2026-07-13), so they are removed together rather than leaving an orphan half-lever.
+    #   THE TEST IS ZERO, NOT RARE — the operator's own words on this family: "I only wanted to
+    #   strip the arm where it can't produce a result, it should stay where it can produce one."
+    #   MEASURED 2026-09-24, entry-conditioned against the REAL ceiling min(cap_R, tp_r):
+    #   **0 of 78** backtest trades reach the 2.00R arm (0.0%, Clopper-Pearson 95% CI
+    #   [0.0%, 4.6%]), uniform across all 17 sampled years. Run:
+    #   comms/strategy_evidence/runs/2026-09-24-e48/; registry row: config/lever_reachability.json
+    #   (verdict `inert`). Probe validated on two known answers first — uso_trend_1h 56/56
+    #   (`reachable`) and gld_pullback_1d 0/7 (`inert`).
+    #   ⚠️ THE REGISTRY'S OLD 83.1% (54/65) WAS THE VENUE CAP ONLY, measured 2026-08-16 and
+    #   cited in the 2026-09-22 strip dispatch as the exemplar of a lever that FIRES. M20 B4
+    #   (91de68b9c, #10419) has since cut this leg's tp_r 50.0 -> 1.5 and atr_stop_mult 2.5 -> 3.0.
+    #   The placed TP is min(entry*(1+0.099), entry + tp_r*risk)
+    #   (src/units/strategies/trend_donchian.py:393), so the binding ceiling is min(cap_R, 1.5),
+    #   below the 2.00R arm on every entry. cap_R alone still reads 54/78 on the same corpus —
+    #   the stale figure was correctly computed for the wrong ceiling.
+    #   EFFECT OF THE REMOVAL, stated as a CHANGE rather than a no-op: this leg declares no
+    #   `trail_decay_stall_bars`, so `resolve_trail_mult`'s `declared` predicate
+    #   (src/runtime/trail_decay.py:149 — `tight is not None and tight > 0 and (arm_r > 0 or
+    #   stall > 0)`) goes True -> False. Today the tightened mult 2.0 would replace the base
+    #   trail_mult 4.0 whenever peak_r >= 2.0R; after the strip the base mult is always
+    #   returned. Those are only INDISTINGUISHABLE because the arm measures 0/78 reachable —
+    #   which is the evidence above, not an assumption. The undeclared branch additionally
+    #   writes ONE observe-only annotate row to runtime_logs/exit_lever_soak.jsonl per package
+    #   when the reference stall-6 cell would arm (src/runtime/trail_decay.py:176-197); that
+    #   path never touches an order. Entry, stop and TP are untouched either way.
+    #   ROLLBACK (two lines): restore `trail_decay_arm_r: 2.0` and `trail_decay_tight_mult: 2.0`
+    #   between `trail_mult: 4.0` and `tp_r: 1.5`.
     tp_r: 1.5  # M20 B4 bracket geometry: cell tp1.5_sm3 (wf_pass, wf 4/6); was 50.0
     min_confidence: 0.0
     shadow_model_ids: []
@@ -2695,6 +3020,7 @@ strategies:
     model: null
     signal_prefixes: [xrp_pullback, xrp_pullback_2h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-10-22 popup "Split: 3 to closed, 2 stay (Recommended)": decide on the CLOSED bar its Stage-0 evidence uses; forming-bar record loses money (DECISION-BAR-MATCH, RQ-20261022-4de5-01, docs/research/evidence/decision-bar-match-2026-10-22.json). Revert = delete this line (default forming).
     execution: live          # bybit_1 demo (paper) + bybit_2 REAL MONEY (2026-06-30, Tier-3
                              # operator-approved). ROLLBACK: remove xrp_pullback_2h from
                              # bybit_2.strategies in config/accounts.yaml.
@@ -2711,8 +3037,12 @@ strategies:
     # trail is for. beats_baseline TRUE, train/OOS-consistent TRUE over 13,212 XRPUSDT 2h
     # bars (net-of-cost 7.5bps, --oos-start 2026-01-01). ROLLBACK: set back to 5.0.
     trail_mult: 6.0
-    trail_decay_arm_r: 4.49   # M20 P4.4 p80 cell (p80 arm, wf 5/6; sweep 2026-07-13)
-    trail_decay_tight_mult: 2.5
+    # trail_decay_arm_r: 4.49 / trail_decay_tight_mult: 2.5 REMOVED 2026-10-07 (Tier-3, data-backed standing
+    #   authorization 2026-09-27; lane EXIT-LEVER-STRIP, finding PI-20261006-KX6ZKFNA-0004). With tp_r 3.0 the
+    #   4.49R arm is unreachable: shipped == removed, byte-identical (+14.6686 R, 122 trades); every
+    #   reachable arm (1.0/1.5/2.0/2.5) is worse by 3.6-17.6 R with <= 1 fold win.
+    #   Evidence: comms/research/RQ-20261007-002/local-5fd0163ca/verdict.json (PR #16970).
+    #   ROLLBACK: restore `trail_decay_arm_r: 4.49` + `trail_decay_tight_mult: 2.5` under `trail_mult`.
     # tp_r 50.0 -> 3.0 (Tier-3, operator-approved 2026-08-23). The 50 was a FAR
     # SENTINEL meaning "no real target, the trail is the exit" — so the placed TP was
     # set by the venue's 9.9% ceiling, not by the strategy (13/14 open packages,
@@ -2729,6 +3059,7 @@ strategies:
     model: null
     signal_prefixes: [ada_pullback, ada_pullback_2h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-10-22 popup "Split: 3 to closed, 2 stay (Recommended)": decide on the CLOSED bar its Stage-0 evidence uses; forming-bar record loses money (DECISION-BAR-MATCH, RQ-20261022-4de5-01, docs/research/evidence/decision-bar-match-2026-10-22.json). Revert = delete this line (default forming).
     execution: live          # bybit_1 demo (paper) + bybit_2 REAL MONEY (2026-06-30, Tier-3
                              # operator-approved). ROLLBACK: remove ada_pullback_2h from
                              # bybit_2.strategies in config/accounts.yaml.
@@ -2737,7 +3068,14 @@ strategies:
       - ADAUSDT
     trend_lookback: 40
     pullback_lookback: 10
-    pullback_frac: 0.5
+    # pullback_frac 0.5 -> 0.618 (Tier-3 PROPOSAL, holdout arm C7, HOLD for operator approval).
+    #   Evidence: comms/research/RQ-20261016-077e-04/38989350528/verdict.json -- C7 selected from
+    #   9 arms on discovery only (2020-07-01 .. 2025-03-20: n=352, +42.32 R, 3/4 folds; the
+    #   declared arm A n=291, +43.74 R, 2/4 folds = NOT eligible under the fold-majority rule)
+    #   and read ONCE on the held-back span: C7 n=97 +24.08 R (0.248 R/trade) vs declared A
+    #   n=86 +23.08 R (0.268 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: pullback_frac 0.5.
+    pullback_frac: 0.618
     atr_period: 14
     # atr_stop_mult 2.5 -> 1.5 (Tier-3, operator-approved 2026-08-23). Swept because
     # cap_r = (0.099 x entry) / (atr_stop_mult x ATR) is INVERSELY proportional to this
@@ -2755,6 +3093,15 @@ strategies:
     tp_r: 4  # M20 e35 re-check 2026-08-29: cell tp4 (wf_pass, wf 4/6, d_net_r +12.8231); was 50.0
     min_confidence: 0.0
     vol_skip_below_pctl: 0.1   # M21 E-2 round 4 vol_lo10 (wf 4/6, 2026-07-14) — skip entries whose trigger-bar ATR sits in the dead-vol bottom decile (trailing 200-bar pctl); IS net_R 31.0 -> 32.3 (dd 16.1 -> 15.1), OOS 5.4 -> 7.4 (dd 12.0 -> 10.9). Rollback = delete this line.
+    # vol_skip_above_pctl 0 -> 0.95 (Tier-3, lane TIER3-PACKETS-1018; merged 2026-10-18 as a data-backed Tier-3 change, #18994 da294c41).
+    #   Skip entries whose trigger-bar ATR sits in the hot-vol top 5% (trailing 200-bar pctl); entry filter only,
+    #   exits untouched. Evidence: RQ-20261016-65ff-06 (VH95 chosen from 3 arms, 2024-10-05..2026-10-04: dR +7.27 R,
+    #   dDD -2.01 R, 3/4 folds) CONFIRMED on the disjoint preceding window by RQ-20261018-002 (rule
+    #   RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM, registered before the run), 2022-10-05..2024-10-04, ADAUSDT 2h,
+    #   net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: B (leg as declared) n=134 +38.04 R maxDD 9.17 vs
+    #   VH95 n=122 +40.19 R maxDD 8.52 (dR +2.16, dDD -0.65, folds 3/4). Record: research/results/RQ-20261018-002/.
+    #   ROLLBACK: delete this line.
+    vol_skip_above_pctl: 0.95
     adx_min: 28             # ADX>=28 regime gate (Tier-3, operator-approved 2026-07-20; raised from 25). Per-year OOS walk-forward: 28 wins 2024/25/26, ties 2023, ~flat 2022; lowers maxDD 4/5 yrs, halves the worst year (2025 net -7.6->-2.2, dd 13.1->7.2). Filters ADA marginal-trend fakeouts (ADX just-over-25 entries that fail). XRP stays 25 (grid showed raising it degrades). ROLLBACK: set back to 25.
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
@@ -2768,6 +3115,29 @@ strategies:
                              # 07-07/07-10, worst cell in the cohort). Thin n (7 trades) — a 4-6wk
                              # shadow re-eval is expected before any permanent kill decision, not a
                              # permanent demotion. ROLLBACK: set back to `live`.
+                             # ── RE-PROMOTION CONSIDERED AND DECLINED 2026-09-22 (R8, Tier-3,
+                             # operator: "wire ada only and send avax to the research que for
+                             # refinement"). THE STAGED PR HAD ALREADY FLIPPED THIS TO `live` AND
+                             # THE ARGUMENT FOR IT WAS WRONG — recorded so nobody rebuilds it.
+                             # The claim was that this demotion set its own re-promotion condition
+                             # ("a 4-6wk shadow re-eval is expected") and that R7's corpus met it:
+                             # net_r_oos +12.6729 over n=45, 3 of 4 folds positive, net of the full
+                             # cost stack, verdict `pass` against RULE-D1-STAGE0-NET-OF-FULL-COST.
+                             # [!] THE DEFECT IN THAT ARGUMENT: the demotion is dated 2026-07-22 and
+                             # the corpus's fold 4 runs 2026-07-09 -> 2026-09-20. So THE RE-EVAL THE
+                             # DEMOTION ASKED FOR *IS* FOLD 4 — and fold 4 is net_r -4.3601 over 12
+                             # trades. The +12.6729 was discharged against ten months that PREDATE
+                             # the demotion.
+                             # [!] AND THE FOLD SHAPE SAYS THE SAME THING WITHOUT THE DATE ARGUMENT:
+                             # +15.3895 -> +1.0988 -> +0.5447 -> -4.3601. The whole pooled result is
+                             # fold 1, a year ago; excluding it the last nine months are -2.72R.
+                             # "3 of 4 folds positive" concealed WHICH fold was negative, and it is
+                             # the most recent one. Compare ada_pullback_2h, promoted the same day:
+                             # +8.87 -> +2.72 -> +6.84 -> +3.51, 4/4, most recent fold POSITIVE.
+                             # [!] SO THIS IS NOT A KILL EITHER. It goes to the RESEARCH QUEUE for
+                             # refinement (see research/queue/), and the 2026-07-22 demotion above
+                             # stands undischarged. Re-promoting it needs the recency question
+                             # answered, not another pooled sum.
     timeframe: "2h"
     symbols:
       - AVAXUSDT
@@ -2782,9 +3152,15 @@ strategies:
     trail_decay_stall_bars: 6    # M20 exit-lever sweep 2026-08-10 (Tier-3, operator-approved):
                                  # decay_stall6_t2.5 (IS +5.36R / OOS +4.78R, maxDD -3.99 / -2.02,
                                  # cap/day +0.031; >=2/3 yearly folds). NOTE this ADDS a second arming
-                                 # condition to an ALREADY-ARMED lever — trail_decay_arm_r 4.86 above is
-                                 # live, so this is not switching on a dead lever. The sweep base
-                                 # threaded arm_r + tight_mult, so the delta is measured against the real
+                                 # condition to an ALREADY-ARMED lever. ⚠️ AMENDED 2026-09-22: that
+                                 # claim is MEASURED FALSE as an absolute — only 2 of 45 entry-conditioned
+                                 # backtest trades (4.4%) could reach trail_decay_arm_r 4.86 under the
+                                 # venue TP cap, so the R-arm is live but nearly always out of range and
+                                 # this stall bar is in practice the lever's working arming condition.
+                                 # The arm is NOT stripped: 4.4% is non-zero and the operator's test is
+                                 # "strip only where it cannot produce a result at all" — held pending
+                                 # their answer (PI-20260922-E41-0004). The sweep base threaded
+                                 # arm_r + tight_mult, so the delta is measured against the real
                                  # book. `execution: shadow` — no money impact until this leg is promoted.
                                  # ROLLBACK: delete this line (restores arm-only decay).
     tp_r: 50.0

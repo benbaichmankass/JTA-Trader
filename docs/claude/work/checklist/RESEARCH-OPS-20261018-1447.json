@@ -1,0 +1,38 @@
+{
+  "id": "RESEARCH-OPS-20261018-1447",
+  "title": "Research-ops pass 2026-10-18 14:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261018-1447",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18987
+  ],
+  "blocked_on": [],
+  "note": "[lane done] runnable 52 (floor 47); results since 09:30Z p8/f6/i2/producer_failed 1, all dispositioned or graded; 3 prop nodes authored (P1-Q4-ethprop-ev*, emit RQ-20261018-009..011 on next replenish -- id collision with draft #18978, see record); ff8f-03 re-queued; 22 due items routed, 1 left for manager (WCDIDFTE-0002); lever DECISION-BAR-SESSION-INSTRUMENT filed. Not run: blocked/ audit. Record comms/research/ops/20261018T1510Z.json. Held PR (E57).",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "P1-Q4-ethprop-ev* emit as RQ-20261018-009..011 (ids permitting) and each lands a measured prop_ev_grid verdict",
+    "how_to_check": "ls research/queue | grep -E 20261018-0(09|10|11); python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 567
+}

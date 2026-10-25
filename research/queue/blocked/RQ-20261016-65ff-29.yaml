@@ -1,0 +1,69 @@
+id: RQ-20261016-65ff-29
+title: 'Regime good-vs-bad on the REAL-MONEY equity legs (alpaca_live: ief_pullback_1d, slv_pullback_1d, iaum_pullback_1d): does a hot- or cold-volatility
+  entry skip beat the declared leg net of the full cost stack over 10 years of daily history?'
+status: blocked
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: 'Per leg, arms B (declared), VH80/VH90 (--vol-skip-above-pctl 0.8/0.9), VL10/VL20 (--vol-skip-below-pctl 0.1/0.2) on 2016-10-05 .. 2026-10-04
+  daily bars: does any arm beat B by >= 1.0 R with no worse drawdown in >= 3 of 4 folds?'
+why_this_matters: alpaca_live is real money and its legs have no regime-axis coverage at all; the crypto units (65ff-01..08) cannot reach them because exit_lever_ablation
+  fetches equities through yfinance, which the research runner does not install.
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: daily pullback legs trade ~5-10x/year; 10 years -> ~50-100 per leg. Below 39 the leg grades indeterminate.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed daily history; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff29-REGIME-EQUITY
+  statistic: 'Per leg and arm: harness --json net_total_r, max_drawdown_r, 4 calendar-fold net R, full cost stack (venue-aware Alpaca equity fee/slippage).'
+  rule: 'Per leg: a candidate PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4 with n(B) >= 39. The unit PASSES IF any leg has a passing arm
+    (a lead: fresh-window confirmation next, never a config edit); FAILS IF no arm passes on any leg with n(B) >= 39; INDETERMINATE if no leg reaches n(B)
+    >= 39.'
+  min_n: 39 baseline trades per leg.
+  what_it_does_not_do: Edits no config or roster; tests only the two vol axes.
+  registered_at: '2026-10-16'
+  registered_before_run: true
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: small real-money equity book'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Three legs x 5 harness passes on daily bars.
+  why_runner: public daily bars; no published shard covers equities
+blocked_on:
+- kind: work_item
+  ref: REGIME-EQUITY-LEG-FETCH
+  what: 'exit_lever_ablation.fetch_candles -> regime_debt_matrix._fetch_csv uses yfinance for non-USDT symbols; research-script-run.yml installs numpy/pandas/pyyaml/requests/python-dotenv/dukascopy-python
+    only (MEASURED: ModuleNotFoundError yfinance in this lane''s sandbox). The dukascopy lane already on the runner (fetch_backtest_candles.py --source
+    dukascopy) is the cheaper route.'
+  clears_when: exit_lever_ablation.py can fetch a non-crypto leg on the runner (a --source dukascopy path, or yfinance pinned in research-script-run.yml)
+    and one smoke unit lands a measured record; then split this unit into one per leg (each with its own exit_lever_ablation run.command) and git mv.
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill run.command (no run.workflow: compute class routes it) when the lever
+    row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-REGIME
+related:
+- REGIME-PROGRAM
+- scripts/research/exit_lever_ablation.py
+- scripts/research/regime_debt_matrix.py
+- P2-AI-REGIME-BACKLOG-1016

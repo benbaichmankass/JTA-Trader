@@ -38,7 +38,7 @@ name: vm-web-api-recover
 #                         (contents of ict-bot-ovm-private.key)
 #
 # Optional repo variables:
-#   * VM_SSH_HOST       — defaults to 141.145.193.91 (Ampere live trader; was the
+#   * VM_SSH_HOST       — defaults to <VM_SSH_HOST> (Ampere live trader; was the
 #                         x86 micro 158.178.210.252 pre-2026-06-14 cutover)
 #   * VM_SSH_USER       — defaults to ubuntu
 #
@@ -63,11 +63,26 @@ permissions:
   contents: read
   issues: write   # required to comment + close the request issue
 
-# Serialise — never restart the same unit twice concurrently. Shares
-# the same target as system-actions, so the group covers both
-# workflows when GitHub schedules them.
+# PER-ISSUE group (BL-20260611-002-class fix, applied here 2026-09-29,
+# mirroring vm-diag-snapshot.yml's 2026-07-04 fix for the identical failure
+# shape). The trigger below (`issues: types: [opened]`) has no label filter,
+# so EVERY issue opened anywhere in this repo — diag-request, trainer-diag,
+# system-action, etc. — enqueues a run of this workflow, not just ones
+# labelled `vm-web-api-recover`; the `if:` on the job below is what actually
+# screens for the label. A single literal group name meant all of that
+# traffic shared one concurrency slot, and GitHub keeps at most one pending
+# run per group — so a legitimately labelled restart request could sit
+# `queued` forever, starved by unrelated issue-open volume, with no error and
+# no comment ever posted back. MEASURED 2026-09-29: issue #14078 (a real
+# `vm-web-api-recover`-labelled restart request) stayed `queued` for 5+
+# minutes with zero progress while sibling diag-request/system-action runs
+# for the very same issue-open events completed in ~1-2 s each; several
+# queued runs in the old shared group dated back to 2026-05-15 and had never
+# executed. Per-issue grouping isolates each dispatch so unrelated issue
+# traffic can no longer block it. `workflow_dispatch` runs (no issue) fall
+# back to run_id (always-unique group = unrestricted).
 concurrency:
-  group: vm-web-api-recover
+  group: vm-web-api-recover-${{ github.event.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -81,10 +96,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+      VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
       VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -265,3 +287,5 @@ jobs:
               state: 'closed',
               state_reason: 'not_planned'
             });
+
+# no-durable-result: ops recovery action, no verdict computed

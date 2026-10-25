@@ -1,0 +1,130 @@
+id: RQ-20261024-4ef5-01
+title: 'Profit-lock STEP on ada_pullback_2h: once a trade has SEEN m R, floor the stop at +k R (m/k = 2.5/1.5, 3.0/1.0, 3.0/2.0, 3.4/2.5)'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'On ada_pullback_2h (declared tp_r 4, trail 5.0 x ATR, stop 1.5 x ATR), does a FIXED profit-lock floor (once peak >= m R the stop may never sit
+  below entry + k R; the chandelier keeps ratcheting above it) replace the declared exit on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the
+  venue cost stack? Distinct from the R-armed TIGHT TRAIL (eba2-03, f08c-01, and the lane exploratory D34T15/D30T15/D30T20/D25T20, all below A): a floor
+  does not follow price, so a winner that pulls back less than (peak - k) R to the target is untouched. Distinct from the BE floor (a1f3-07, fd06 B1E),
+  which is k = 0. MEASURED on the A arm of RQ-20261022-eba2-03 (n=402): of trades whose MFE reached 3.4 R, 26 of 32 hit the 4 R target and 6 left on the
+  trail at +0.28..+0.55 R; of those reaching 2.5 R, 59 of 77 hit target and 18 left at -0.86..+0.55 R.'
+why_this_matters: 'Operator 2026-10-24 ~15:25Z on the live bybit_2 ADAUSDT short (trade 6726, +3.4 R open, SL locking +0.18 R): "secure most of the gains".
+  Lane ADA-LIVE-EXIT-REVIEW-1024, row ADA-LIVE-EXIT-REVIEW-1024; evidence docs/research/ada-live-exit-review-2026-10-24.md. STRUCTURAL FINDING: trail 5.0
+  x ATR against a 1.5 x ATR initial stop puts the trail 3.33 R behind the extreme, so before the 4 R target it can lock at most +0.67 R; MEASURED 21 of
+  402 baseline exits are trail_stop. Looked before authoring: the queue was grepped for ada_pullback_2h exit units (about 30, incl. eba2-03/05/12, fd06-01,
+  a1f3-07, b7e1-*, f08c-01/02/07/19, 9a7e-01, RQ-20261018-009/015/016, RQ-20261007-022); none asks this arm set.'
+power:
+  expected_n: 402
+  min_detectable_effect: 0.14
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n = 402 is the MEASURED baseline trade count of ada_pullback_2h in the parent verdict(s). Unpaired one-sample MDE = 2.8/sqrt(n) = 0.14 sd. Arms
+    share most trades, so the paired difference is far tighter than that (MEASURED in the diag doc: paired sd 0.06-0.5 R per entry); the unit''s bar is
+    stated in R and is not claimed to be detectable at the unpaired MDE. A unit whose lever touches a handful of trades is reported with its differing-trade
+    count.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-202610244ef501
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15 23:59, 6 calendar folds, net_r
+    per arm net of the harness venue-aware stack (fee 7.5 bps round trip, slippage 3.0 bps round trip, funding 1.0 bps per 8h window; MEASURED in the parent
+    verdicts' cost_stack); baseline A = the leg as declared.
+  rule: 'INDETERMINATE IF n(A) < 39, or IF every C arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND
+    delta >= 0.02 R x n(A) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named and the follow-up
+    is ONE confirmation unit on a disjoint partition, never a config edit; before any Tier-3 proposal the winner is re-run with stop fills gap-adjusted.
+    FAIL IF none passes: the declared exit stands for THESE arms on this leg; the idea is not retired (operator rule 2026-10-22). The lever touches only
+    trades that reach m R, so the record reports the differing-trade count beside the result. Thresholds are not changed after any result.'
+what_it_does_not_do: 'Edits no config and places no order. Not a promotion case: a PASS is a discovery needing one disjoint-window confirmation. HARNESS
+  CAVEAT (same as f08c-01): a stop the bar trades through fills AT the stop price, which flatters every arm in proportion to its stop exits, so it favours
+  tighter arms; a PASS must be re-run gap-adjusted before any Tier-3 note. Needs scripts/backtest_pullback.py --be-floor-lock-r, which lands in the same
+  PR as this unit.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: live exit lever on a rostered leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window and runs the harness; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - L2515=--be-floor-r=2.5;--be-floor-lock-r=1.5
+  - --arm
+  - L3010=--be-floor-r=3.0;--be-floor-lock-r=1.0
+  - --arm
+  - L3020=--be-floor-r=3.0;--be-floor-lock-r=2.0
+  - --arm
+  - L3425=--be-floor-r=3.4;--be-floor-lock-r=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-4ef5-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- scripts/backtest_pullback.py
+- docs/research/ada-live-exit-review-2026-10-24.md
+- research/queue/RQ-20261022-eba2-03.yaml
+programme: P1
+last_dispatched_at: '2026-10-24T16:41:33+00:00'
+grading:
+  attested: RULE-202610244ef501
+  auto: true
+  decision_rule_id: RULE-202610244ef501
+  evidence:
+  - research/results/RQ-20261024-4ef5-01/40112767874.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

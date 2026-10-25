@@ -1,0 +1,21 @@
+{
+  "id": "ABLATION-CONTROL-WARMUP",
+  "title": "Build: exit_lever_ablation.py --control-since must skip the committed record's indicator warm-up (a long-window arm takes trades the record could not), so a 1-trade boundary artifact stops reading as control_failed",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P3-STRATEGY-BACKLOG-1016] MEASURED from the committed run comms/research/RQ-20261015-f01d-02/38832436016/: arm B (trend_donchian_eth_prop, 2020-10-15..2026-10-06) restricted to entries >= the record's data_start 2025-10-07 has 164 trades vs the record's 163; ALL 163 record trades reappear with identical net_r (0 diffs at 1e-3); the one extra trade entered 2025-10-07 14:00 (+0.936 R), 14 bars after data_start, inside the 20-bar Donchian warm-up, so the record's own run could not take it. check_control() then fails on net_r_abs_diff 0.9363 > tol 0.5 and the unit closed INDETERMINATE/control_failed. FIX (Tier-1 research tooling, ~15 lines + a --self-test case): with --control-since, match control trades by entry_time and pass iff every record trade is present with equal net_r and any extra arm trades lie before the record's first entry (or within the leg's warm-up bars). Until it lands, long-window units should use a window disjoint from the record (no control) as RQ-20261016-c56e-10..26 do; f01d-02's question is re-asked as c56e-14 on that design. Done when: the f01d-02 run re-graded under the fixed check reads control ok. roadmap L-LADDER.",
+  "updated_at": "2026-10-16T07:34:44Z",
+  "updated_by": "P3-STRATEGY-BACKLOG-1016",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 526
+}

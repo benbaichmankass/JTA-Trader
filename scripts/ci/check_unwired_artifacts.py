@@ -61,6 +61,9 @@ MARKER = re.compile(r"#[ \t]*wiring:[ \t]*manual-only[ \t]*[-—][ \t]*(\S[^\n]{
 # Places that can actually RUN a script.
 RUNNER_GLOBS = (
     ".github/workflows/*.yml", ".github/workflows/*.yaml",
+    # Composite actions RUN what they name (commit-to-main calls
+    # scripts/ops/resolve_stamp_conflicts.py); they were missing from the corpus.
+    ".github/actions/**/*.yml", ".github/actions/**/*.yaml",
     "deploy/**/*.service", "deploy/**/*.timer", "deploy/**/*.sh",
     "scripts/**/*.sh", "scripts/**/*.py", "src/**/*.py",
     # `bin/` was MISSING until 2026-08-22 — the directory whose entire purpose is
@@ -71,6 +74,14 @@ RUNNER_GLOBS = (
     # live tools as dead — and once the guard blocks, that rejects correct work.
     "bin/**/*.py", "bin/**/*.sh", "bin/*.py", "bin/*.sh",
     "Makefile", "*.md", "docs/**/*.md", ".claude/skills/**/*.md",
+    # RQ-RUN (2026-09-28): a research-queue unit is a RUNNER — its
+    # `run.command` is executed on a GitHub runner by
+    # research-script-run.yml (scripts/research/script_run.py reads it from
+    # the unit file), so a tool named only by a queue unit is wired, not
+    # rust. Without this line the first grid tool built for the runner
+    # (scripts/research/prop_ev_grid.py) graded `unwired` on the PR that
+    # wired it (#13730).
+    "research/queue/*.yaml", "research/queue/**/*.yaml",
 )
 
 
@@ -331,6 +342,14 @@ def _self_test(root: Path) -> int:
         # planted ORPHAN — must be flagged
         orphan = fake / "scripts" / "ops" / "orphan_tool.py"
         orphan.write_text("print('nobody calls me')\n")
+        # planted QUEUE-WIRED — a research-queue unit names it in run.command,
+        # which research-script-run.yml executes; must NOT be flagged
+        (fake / "scripts" / "research").mkdir(parents=True)
+        (fake / "research" / "queue").mkdir(parents=True)
+        (fake / "scripts" / "research" / "queue_wired_tool.py").write_text("print('a queue unit runs me')\n")
+        (fake / "research" / "queue" / "RQ-20260101-001.yaml").write_text(
+            "id: RQ-20260101-001\nrun:\n  workflow: research-script-run.yml\n"
+            "  command: [python3, scripts/research/queue_wired_tool.py, --out, '{out_dir}']\n")
         # planted WIRED — must NOT be flagged
         wired = fake / "scripts" / "ops" / "wired_tool.py"
         wired.write_text("print('a workflow runs me')\n")
@@ -384,6 +403,8 @@ def _self_test(root: Path) -> int:
                        "src/prop/prose_only_tool.py" in got))
         checks.append(("workflow-referenced tool is NOT flagged",
                        "scripts/ops/wired_tool.py" not in got))
+        checks.append(("queue-unit-referenced tool is NOT flagged (research-script-run runs it)",
+                       "scripts/research/queue_wired_tool.py" not in got))
         checks.append(("manual-only WITH a reason is NOT flagged",
                        "scripts/ops/manual_tool.py" not in got))
         checks.append(("manual-only with NO reason IS still flagged",
@@ -480,6 +501,15 @@ def main() -> int:
     ap.add_argument("--dirs", default="scripts,src",
                     help="comma-separated trees the --base mode judges")
     a = ap.parse_args()
+    # The verdict below is about the COMMITTED tree. Say so when that is
+    # not the tree you edited. See
+    # BL-20260917-THE-DIRTY-TREE-NOTICE-LIVES-ONLY-IN-RUN-GUARDS-SO-ALL-18-DIRECTLY-INVOCABLE-DIFF-SCOPED-GUARDS-STILL-GRADE-THE-WRONG-TREE-SILENTLY
+    import pathlib  # noqa: PLC0415 — local, so importing this module stays free
+    import sys as _sys  # noqa: PLC0415
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import _dirty_tree  # noqa: E402,PLC0415 — path shim above
+    _dirty_tree.warn()
+
     if a.self_test:
         return _self_test(REPO)
 

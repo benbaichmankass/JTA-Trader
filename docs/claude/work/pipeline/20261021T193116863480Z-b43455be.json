@@ -1,0 +1,26 @@
+{
+  "based_on": "20261016T075048563863Z-0953108e.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "dispatch_count drops below 9 or each of the 9 has a drift-remediation disposition",
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "id": "PI-20261016-P3PFA1GK-0001",
+  "next_action": "dispatch_lane",
+  "note": "Routed 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016 as RESEARCH questions, no retrain armed: 65ff-24 (published 1h, kaggle_cpu) asks whether 1h skill holds on the last 90 days (transient vs persistent for btc-regime-1h-*); blocked/65ff-27 asks per head whether the flag survives version-pure scoring (ARTIFACT / MIX / DECAY), on ML-DRIFT-SPLIT-INSTRUMENT. Branch nodes P2-Q1.3-* in research/programmes/02-ai-trader.yaml.",
+  "origin": {
+    "kind": "session",
+    "ref": "lane KAGGLE-TRAIN-RUNNER-FIRST / TRAINER-DRIFT-NEXT (session_01YH1am2LXDBtyPPp3PFA1gk), trainer-vm-diag #18485",
+    "rerun": "trainer-vm-diag: tail -n 400 runtime_logs/drift_retrain.jsonl | grep -c '\"action\": \"dispatch\"' and journalctl -u ict-drift-retrain --since -6h | grep dispatch_count"
+  },
+  "redate": {
+    "evidence": "trainer-vm-diag #19369 #19374; ml/shadow/drift_retrain.py",
+    "observation": "DRIFT-REMEDIATION-9 2026-10-21 (trainer-vm-diag #19369/#19374): the ADWIN flag on 7 of 9 heads is a scan artifact (stale cut 8-62 d old; KS/PSI drift_clean PASSES; daily score means stationary). Real: mes-regime-5m-baseline-v1 (drift_clean FAILS), setup-quality-baseline-v0 (degenerate, drift_clean + non_degenerate FAIL). Scan fix in PR claude/drift-scan-stale-cut-1021 (dispatch only on cut <=3 d old, 14 d stream). Retrain arms: NONE of 9.",
+    "observed_at": "2026-10-21"
+  },
+  "routed_to": "RQ-20261016-65ff-27 (blocked, ML-DRIFT-SPLIT-INSTRUMENT) + RQ-20261016-65ff-24 (runnable 1h twin)",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[persistent-drift] ict-drift-retrain (plan-only, hourly) flags the SAME 9 heads on every scan (dispatch_count=9; 16-17 consecutive scans 2026-10-15T06:37Z..2026-10-16T00:14Z, trainer-vm-diag #18485): eth-regime-5m-lgbm-v1, mes-regime-5m-baseline-v1, setup-quality-baseline-v0, sol-regime-15m-lgbm-fc-pcv-v1, sol-regime-15m-lgbm-fc-pcv-v2 (ADVISORY), sol-regime-5m-lgbm-v1, btc-regime-15m-lgbm-yz-v1, btc-regime-1h-lgbm-v2, btc-regime-1h-lgbm-yz-v1. Per the drift-remediation skill this is persistent, not transient: run a drift-remediation pass (advisory sol-regime-15m-lgbm-fc-pcv-v2 first) before any auto-retrain is armed (TRAINER-DRIFT-NEXT Q2). INFERRED, unverified: the flag never clears because the ADWIN scan reads shadow scores across model versions."
+}

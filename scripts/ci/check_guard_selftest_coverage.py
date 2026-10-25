@@ -113,7 +113,55 @@ TESTS_DIR = REPO / "tests"
 # The consequence is stated rather than left implicit: a PR that drops coverage
 # below 67 now FAILS, including one that reverts the change that earned the
 # 67th. That is what banking means, and it is the point.
-COVERAGE_FLOOR = 67
+# ⚠️ LOWERED 67 -> 43 on 2026-09-21 by the operating reset, which is the one
+# direction this ratchet normally refuses — the guard's own message permits it
+# ("If a guard was deleted, lower COVERAGE_FLOOR in the same commit and say
+# which guard went"), and this says which. 40 governance guard ENTRIES were
+# removed from `run_guards.py` (111 -> 71) because the registers they graded are
+# archived under `docs/archive/2026-09-21-operating-reset/`. The covered COUNT
+# fell with them; the covered RATIO did not collapse (43/93 = 46.2% against
+# 67/134 = 50.0% before). Nothing lost its self-test — the population shrank.
+# The floor may only go up from here.
+#
+# 43 -> 44 on 2026-09-21 (B1): `roster-promotion-evidence-guard` declares
+# `--self-test` and `run_guards.py` invokes it with that flag, so it resolves
+# into the required `guards` context by path A. Banked here in the same commit
+# that created it, per this guard's own instruction, so the new control cannot
+# be silently dropped later without lowering a number someone has to justify.
+#
+# 44 -> 47 on 2026-09-22 (E45), banked in the same commit that earned it, per
+# this guard's own instruction. THREE guards re-entered the covered set because
+# they were RE-POINTED at subjects that exist post-reset and each now ships a
+# `--self-test` that PLANTS A VIOLATION against its new subject and requires the
+# guard to fail on it: `claim-basis-guard` (11 controls),
+# `soak-registered-guard` (16) and `operator-owed-guard` (14). Their stale
+# exemptions were deleted in the same change.
+#
+# ⚠️ FOUR GUARDS WERE DELETED in that commit — `check_backlog_unresolve.py`,
+# `check_open_items.py`, `check_recurrence_ledger.py` and
+# `check_register_field_loss.py` — which is the case the instruction above is
+# about. They were NOT in the covered set (none was in `run_guards.py`), so the
+# covered COUNT does not fall with them; the population does. Named here rather
+# than left to be inferred from a number that happened not to move. Reasons:
+# docs/archive/2026-09-21-operating-reset/guards/RETIRED-GUARDS-2026-09-22.md
+#
+# 47 -> 51 on 2026-09-22 (E5): `research-results-guard`
+# (`scripts/ci/check_research_results.py`) declares `--self-test` and
+# `run_guards.py` invokes it with that flag, so it resolves into the required
+# `guards` context by path A. Banked in the same commit that created it, per
+# this guard's own instruction, so the new control cannot be silently dropped
+# later without lowering a number someone has to justify.
+#
+# ⚠️ 51, NOT 48, AND THAT GAP IS THE WHOLE REASON THIS IS RECOMPUTED RATHER THAN
+# ADDED UP. E45 and E5 both banked against the same base (47 and 45), so
+# arithmetic on either number is wrong whichever way it is done: the obvious
+# union, 47 + E5's one guard, gives 48 and is THREE SHORT. The value below is
+# what this script's own `covered` count returns on the merged tree, checked
+# against the git INDEX rather than the working filesystem so an untracked file
+# cannot inflate it. The three neither branch could see are guards each gained
+# from the other's merges, E20's `cadence-liveness` / `guard-liveness` among
+# them — which is exactly the case a hand-computed floor cannot reach.
+COVERAGE_FLOOR = 51
 
 _MONEY_BLAST_RADII = {"accounting", "money-at-risk", "money_at_risk"}
 

@@ -21,7 +21,9 @@ and decides whether to enqueue a ping.
 ## Decision rule
 
 - Count actionable signals — rows where ``side ∈ {buy, sell}`` and
-  ``status ∈ {submitted, multi_account_dispatched, dry_run}``.
+  ``status ∈ {submitted, multi_account_dispatched, dry_run}``. A
+  ``multi_account_dispatched`` row stamped ``accounts_placed == 0`` (every
+  account refused, dry or side-filtered) is NOT actionable.
   ("dry_run" counts because the operator wants to know if everything
   is on dry-run when it shouldn't be.)
 - Count trades placed — rows in ``trades`` with
@@ -93,6 +95,32 @@ _INTENTIONAL_HOLD_MARKERS = (
 )
 
 
+def count_placed_accounts(multi_results) -> int:
+    """How many per-account results of a ``multi_account_dispatched`` round
+    actually PLACED an order.
+
+    A dispatched round carries one result per account. Refused accounts have
+    ``error`` set (risk gate, broker shorting gate, below-min-qty, exchange
+    rejection); dry accounts — ``mode: dry_run``, ``execution: shadow`` and
+    ``side_filter`` suppressions — return a ``dry-`` trade id; a venue
+    rejection returns ``rejected_too_small:``. None of those is "the pipeline
+    tried to trade and nothing landed". Stamped on the audit row as
+    ``accounts_placed`` so the reader can tell a round that placed from one
+    that every account declined (RETIRE-GLOBAL-POSCAP, false URGENT 2026-10-19).
+    """
+    placed = 0
+    for r in multi_results or []:
+        if not isinstance(r, dict) or r.get("error"):
+            continue
+        tid = r.get("trade_id")
+        if tid is None or tid == "":
+            continue
+        if str(tid).startswith(("dry-", "rejected")):
+            continue
+        placed += 1
+    return placed
+
+
 @dataclass
 class LivenessResult:
     """Summary of the watchdog's last decision."""
@@ -149,6 +177,15 @@ def _count_actionable_signals(since_iso: str, audit_path: Path) -> int:
                     continue
                 status = (row.get("status") or "").strip().lower()
                 if status not in _ACTIONABLE_STATUSES:
+                    continue
+                # A dispatched round in which every account refused, ran dry
+                # or was side-filtered placed nothing and is not a signal the
+                # pipeline was expected to land. Rows without the field
+                # (written before 2026-10-21) keep counting.
+                if (
+                    status == "multi_account_dispatched"
+                    and row.get("accounts_placed") == 0
+                ):
                     continue
                 count += 1
     except Exception as exc:  # noqa: BLE001

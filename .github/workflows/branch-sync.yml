@@ -1,0 +1,44 @@
+name: branch-sync
+
+# AUTO-BRANCH-SYNC (plan docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md act M-a).
+# After main moves, merge main into open self-landing claude/* PRs that are only BEHIND, via
+# GitHub's update-branch (a merge commit; never a rebase or force-push). Eligibility lives in
+# scripts/ci/branch_sync.py (pure, tested). Hold / Tier-2/3 PRs and conflicting PRs are never
+# changed (a conflict gets one comment per head).
+#
+# The update runs under BRANCH_PROTECTION_TOKEN, NOT GITHUB_TOKEN: a GITHUB_TOKEN push raises no
+# pull_request event, so the PR would be left with no checks (see claude-pr-automerge.yml).
+# Without that secret the job refuses and updates nothing.
+#
+# DEBOUNCE: a 90 s sleep plus cancel-in-progress means a burst of merges to main yields ONE
+# sweep, run by the last push. Each update restarts that PR's CI - the accepted cost.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: branch-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Let a burst of merges settle
+        run: sleep 90
+      - name: Update behind self-landing PRs
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN || github.token }}
+          BRANCH_PROTECTION_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python3 scripts/ci/branch_sync.py --repo "$REPO"

@@ -1,5 +1,23 @@
 name: session-reaper
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+#
+# ⚠️ PUSH TRIGGER REMOVED 2026-10-04 (REAPER-NOISE). FIX-CA-17 (2026-09-27) had
+# dropped the `paths:` filter so this ran on EVERY push to main. Its concurrency
+# group cancels superseded pending runs, so a burst of merges cancelled most of
+# them (MEASURED by the operator's report: 16 of the last 30 runs `cancelled`),
+# and `claude-run-failure-alert` paged each as a "dead run". Worse, each run
+# landed its ledger as an auto-merge PR, which is itself a push to main.
+# NO LIVE READER: the only consumer of `REAPER-OBSERVATIONS.json` in the live tree
+# is `session_reaper.py` itself (which writes it), and that script grades the
+# archived `SESSIONS.json` registry. So the trigger was keeping a ledger no one
+# reads current. It is now `workflow_dispatch` only. It stays listed in the
+# failure alert so a deliberate manual run that dies is still reported.
+
 # THE REAPER'S CLOCK — the external, cadenced thing that records what a session
 # left behind, because the session that died cannot and the manager will not.
 #
@@ -43,26 +61,31 @@ name: session-reaper
 # never anything a session is working on.
 
 on:
-  schedule:
-    # Every 3 hours. Chosen against the 90-minute manager-lease TTL: a reaper
-    # slower than the lease would let a manager expire, be replaced, and have
-    # its sub-sessions go unrecorded across the gap. NOT tuned — no distribution
-    # of session lifetimes exists to tune it against, and inventing one would be
-    # the unmeasured-premise shape this repo keeps paying for.
-    - cron: '17 */3 * * *'
+  # schedule:
+    # # Every 3 hours. Chosen against the 90-minute manager-lease TTL: a reaper
+    # # slower than the lease would let a manager expire, be replaced, and have
+    # # its sub-sessions go unrecorded across the gap. NOT tuned — no distribution
+    # # of session lifetimes exists to tune it against, and inventing one would be
+    # # the unmeasured-premise shape this repo keeps paying for.
+    # - cron: '17 */3 * * *'
   workflow_dispatch:
     inputs:
       stale_after_minutes:
         description: 'Minutes without a commit before a branch stops counting as active'
         required: false
         default: '90'
-  push:
-    branches: [main]
-    paths:
-      # Re-reap when the registry changes, so a newly-spawned session is graded
-      # without waiting up to 3h for the cron.
-      - 'docs/claude/work/SESSIONS.json'
-      - 'scripts/ops/session_reaper.py'
+  # FIX-CA-17 / CA-A14-session-reaper-dead-trigger (2026-09-27): this used to
+  # carry `paths: [docs/claude/work/SESSIONS.json, scripts/ops/session_reaper.py]`
+  # — SESSIONS.json is one of the eight registers the 2026-09-21 operating
+  # reset archived under docs/archive/2026-09-21-operating-reset/, so nothing
+  # writes that path any more and that half of the filter was permanently dead.
+  # With the cron already retired above, the trigger had gone six days silent
+  # (last run 2026-09-21T12:18:04Z, confirmed against the live run history) —
+  # `session_reaper.py`'s own edits are rare, so the surviving half almost
+  # never fired either. Dropped the `paths:` filter entirely, matching
+  # work-digest.yml's own push-on-main fallback ("the ONLY carrier that can
+  # fire while `main` is quiet" per that file's header) — every push to `main`
+  # now re-reaps, same as every other push-driven producer in this repo.
 
 permissions:
   contents: write

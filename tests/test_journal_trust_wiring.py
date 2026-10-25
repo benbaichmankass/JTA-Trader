@@ -64,6 +64,24 @@ def test_a_recorded_account_is_known_divergent(ledger):
     assert "broker-truth" in v["note"]
 
 
+def test_a_known_divergent_verdict_carries_its_own_age(ledger):
+    """The ledger has no scheduled producer, so a caller reading this verdict
+    must be able to tell a fresh figure from a stale one without a second
+    lookup (E70, 2026-09-24: bybit_2's `as_of` sat 73 days stale with no
+    signal anywhere in the wire shape)."""
+    import datetime as dt
+
+    fresh = journal_trust("bybit_2", ledger, now=dt.datetime(2026, 7, 20, tzinfo=dt.timezone.utc))
+    assert fresh["as_of_age_days"] == 7
+    assert fresh["stale"] is False
+    assert "STALE" not in fresh["note"]
+
+    old = journal_trust("bybit_2", ledger, now=dt.datetime(2026, 9, 24, tzinfo=dt.timezone.utc))
+    assert old["as_of_age_days"] == 73
+    assert old["stale"] is True
+    assert "STALE" in old["note"]
+
+
 def test_an_unrecorded_account_is_not_a_clean_bill_of_health(ledger):
     """`no_record` means nobody reconciled it, NOT that it reconciles."""
     v = journal_trust("bybit_1", ledger)
@@ -92,6 +110,33 @@ def test_map_read_state_is_not_collapsed_into_an_empty_map(tmp_path):
     assert m["read_state"] == "unreadable"
     # And an empty map from a FAILED read must not grade an account clean.
     assert journal_trust_for("bybit_2", m)["state"] == TRUST_UNREADABLE
+
+
+def test_map_read_state_names_all_three_ledger_outcomes(tmp_path, ledger):
+    """FIX-SA-06: `read` / `absent` / `unreadable` are three different facts.
+
+    Real shapes: the committed-ledger fixture (`read`), a path that does not
+    exist (`absent` -- on the VM that is a DEPLOY failure), and a file that will
+    not parse (`unreadable`). An `absent` or `unreadable` map grades every
+    account TRUST_UNREADABLE, never `no_record`; only `read` can grade an
+    account against the ledger.
+    """
+    assert journal_trust_map(ledger)["read_state"] == "read"
+
+    absent = journal_trust_map(tmp_path / "not-deployed.json")
+    assert absent["read_state"] == "absent"
+    assert absent["accounts"] == {}
+
+    broken = tmp_path / "broken.json"
+    broken.write_text("{ not json")
+    assert journal_trust_map(broken)["read_state"] == "unreadable"
+
+    for m in (absent, journal_trust_map(broken)):
+        assert journal_trust_for("bybit_2", m)["state"] == TRUST_UNREADABLE
+    # and a genuinely read ledger that lists nothing for the account is the
+    # DIFFERENT, weaker claim
+    assert journal_trust_for("no-such-account", journal_trust_map(ledger))[
+        "state"] == TRUST_NO_RECORD
 
 
 def test_a_missing_account_id_is_not_graded_against_a_real_account(ledger):

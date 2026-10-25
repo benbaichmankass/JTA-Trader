@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "src/web/api/routers/diag.py change, deployed to the live web-api (and, since diag.py is in the trader's import closure, it restarts the trader). Follow-up to #18285: deployed_sha_by_unit read the deploy markers from runtime_logs_dir() (the data dir on the VM) instead of <repo>/runtime_logs where deploy_pull_restart.sh writes them, so it returned null for both units (observed in diag issue #18314). Lane does not self-land; the manager merges.",
+  "why": "TRADER-RESTART-GATE follow-up: /api/diag/version deployed_sha_by_unit reads the deploy markers from the repo's runtime_logs/; the test now models the VM's two directories."
+}

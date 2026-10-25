@@ -58,7 +58,10 @@ def test_prop_account_config():
     assert a["exchange"] == "breakout"
     assert a["type"] == "prop"                     # mission-aware PropRiskManager
     assert a["account_class"] == "prop"            # third funding category
-    assert a["mode"] == "live"                     # always-live ping (operator gates per-signal)
+    # 2026-10-05 (operator, set-account-mode run 37273806314, "Set it to
+    # dry_run"): breakout_1 is dry_run; tradeify_1 is the live prop account.
+    assert a["mode"] == "dry_run"
+    assert _accounts()["tradeify_1"]["mode"] == "live"
     assert a["account_state"] == "evaluation"      # eval→funded lifecycle tracked
     assert a["phase_requirements"]["target_profit_pct"] == 0.10
     # 2026-06-25 (Tier-3, operator-approved): the swap-robust variant
@@ -77,11 +80,22 @@ def test_prop_account_config():
     # applied to the pullback pair a month earlier was never carried across to
     # the donchian pair. Only the _prop twins remain routed here; the base legs
     # stay live on their bybit_1/bybit_2 routes.
-    # NOTE eth_pullback_prop_2h is still LISTED here but was demoted to
-    # execution: shadow on 2026-08-23 (PR #10161) — this set is the ROUTING
-    # roster, which is orthogonal to the per-strategy execution gate.
-    assert set(a["strategies"]) == {
-        "eth_pullback_prop_2h",
+    # 2026-09-22 (Tier-3, operator instruction "Cut the legs that don't clear
+    # the bar", checklist row R2): eth_pullback_prop_2h REMOVED from breakout_1.
+    # It fails clause C4 of B1's four-clause evidence bar — the registered rule
+    # RULE-D1-STAGE0-NET-OF-FULL-COST returns verdict `fail` on its record
+    # (`python3 scripts/ci/check_roster_promotion_evidence.py --population`).
+    # The leg had ALREADY been execution: shadow since 2026-08-23, so this cut
+    # changes no order flow; what ends is its ROSTER MEMBERSHIP on a prop
+    # account, which is what that guard keys on. The previous NOTE here — that
+    # the leg is "still LISTED but demoted to shadow", the routing roster being
+    # orthogonal to the execution gate — described exactly that situation and no
+    # longer applies, so it is replaced rather than left to read as current.
+    # 2026-10-07 (Tier-3, operator: "Dead: clear its roster, retire the row"):
+    # breakout_1 is breached and RETIRED, so its roster is empty. breakout_2 is
+    # the live Breakout account and carries the _prop twins.
+    assert a["strategies"] == []
+    assert set(_accounts()["breakout_2"]["strategies"]) == {
         "trend_donchian_sol_prop", "trend_donchian_eth_prop"}
     assert set(a["symbols"]) == {"SOLUSDT", "ETHUSDT"}
 

@@ -72,6 +72,18 @@ heal_devnull() {
 heal_devnull || true
 
 changed=0
+# Host role marker (/etc/ict-vm-role; "gateway" on the IB-Gateway VM, ABSENT on
+# the live trader). PI-20261004-PUQ1APTH-0007: the read used to be
+# `tr ... < /etc/ict-vm-role 2>/dev/null`. bash applies redirections left to
+# right, so the failing `<` was reported on the ORIGINAL stderr before the
+# `2>/dev/null` took effect -- one "No such file or directory" line in the
+# ict-git-sync journal on every unit refresh of the live VM. The `{ ...; }`
+# group puts the stderr redirect OUTSIDE the input redirect, so a missing file
+# is silent and the role reads empty (= non-gateway), exactly as before.
+# VM_ROLE_FILE is overridable for tests only.
+VM_ROLE_FILE=${VM_ROLE_FILE:-/etc/ict-vm-role}
+_read_vm_role() { { tr -d '[:space:]' < "$VM_ROLE_FILE"; } 2>/dev/null || true; }
+_VM_ROLE_EARLY="$(_read_vm_role)"
 
 # ---------------------------------------------------------------------------
 # Select the data-dir drop-in flavor by mount topology.
@@ -357,6 +369,76 @@ if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
     fi
 fi
 
+# ict-trainer-disk-alarm (FIX-SA-12) resolves runtime_logs_dir() (DATA_DIR-aware)
+# to read the trainer mirror the publisher rsyncs into $DATA_DIR/runtime_logs.
+# Without the generic data-dir drop-in it would read <repo>/runtime_logs -- a
+# DIFFERENT, never-written directory -- and report "no mirror" (unknown) forever.
+_DISKALARM_DROPIN_DST="${SYSTEMD_DIR}/ict-trainer-disk-alarm.service.d/data-dir.conf"
+if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
+    if [ ! -e "${_DISKALARM_DROPIN_DST}" ] || ! cmp -s "${_DATADIR_DROPIN_SRC}" "${_DISKALARM_DROPIN_DST}"; then
+        echo ">>> install_systemd_units: dropin data-dir.conf → ${_DISKALARM_DROPIN_DST}"
+        "${SUDO[@]}" mkdir -p "$(dirname "${_DISKALARM_DROPIN_DST}")"
+        "${SUDO[@]}" cp "${_DATADIR_DROPIN_SRC}" "${_DISKALARM_DROPIN_DST}"
+        "${SUDO[@]}" chmod 0644 "${_DISKALARM_DROPIN_DST}"
+        changed=1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# OnFailure= alerting (FIX-SA-08, SA-AUD-5-onfailure-still-absent, CA-A10-402).
+#
+# A failed oneshot behind an active timer shows `active (waiting)` on the timer
+# and pushed nothing (the PI-20260927-YZRZQ725-0002 masking pattern). Install:
+#   1. the ict-notify-failure@.service TEMPLATE (the generic loop above skips
+#      `@` units, so it is copied here) + the same data-dir drop-in the other
+#      writers carry, so the alert lands in the canonical runtime_logs;
+#   2. `OnFailure=ict-notify-failure@%n.service` as a drop-in on every
+#      Type=oneshot unit that has a sibling timer in deploy/.
+# Drop-in only: never edits a unit file and never restarts anything (the
+# trader is a long-running simple unit and is not selected). Skipped on the
+# gateway VM (a minimal box with no venv/.env for the notifier), and for the
+# units named below.
+# ---------------------------------------------------------------------------
+_ONFAILURE_EXCLUDED=" ict-trainer-git-sync ict-heartbeat ict-ib-gateway-reset ict-ib-gateway-watchdog "
+_NOTIFY_TPL_SRC="${REPO_DIR}/deploy/ict-notify-failure@.service"
+_ONFAILURE_DROPIN_SRC="${REPO_DIR}/deploy/dropins/onfailure.conf"
+if [ "$_VM_ROLE_EARLY" != "gateway" ] && [ -f "${_NOTIFY_TPL_SRC}" ] && [ -f "${_ONFAILURE_DROPIN_SRC}" ]; then
+    _NOTIFY_TPL_DST="${SYSTEMD_DIR}/ict-notify-failure@.service"
+    if [ ! -e "${_NOTIFY_TPL_DST}" ] || ! cmp -s "${_NOTIFY_TPL_SRC}" "${_NOTIFY_TPL_DST}"; then
+        echo ">>> install_systemd_units: ict-notify-failure@.service → ${_NOTIFY_TPL_DST}"
+        "${SUDO[@]}" cp "${_NOTIFY_TPL_SRC}" "${_NOTIFY_TPL_DST}"
+        "${SUDO[@]}" chmod 0644 "${_NOTIFY_TPL_DST}"
+        changed=1
+    fi
+    if [ -f "${_DATADIR_DROPIN_SRC}" ]; then
+        _NOTIFY_DD_DST="${SYSTEMD_DIR}/ict-notify-failure@.service.d/data-dir.conf"
+        if [ ! -e "${_NOTIFY_DD_DST}" ] || ! cmp -s "${_DATADIR_DROPIN_SRC}" "${_NOTIFY_DD_DST}"; then
+            echo ">>> install_systemd_units: dropin data-dir.conf → ${_NOTIFY_DD_DST}"
+            "${SUDO[@]}" mkdir -p "$(dirname "${_NOTIFY_DD_DST}")"
+            "${SUDO[@]}" cp "${_DATADIR_DROPIN_SRC}" "${_NOTIFY_DD_DST}"
+            "${SUDO[@]}" chmod 0644 "${_NOTIFY_DD_DST}"
+            changed=1
+        fi
+    fi
+    shopt -s nullglob
+    for _tp in deploy/*.timer; do
+        _base=$(basename "$_tp" .timer)
+        [[ "$_base" == *@* ]] && continue
+        case "$_ONFAILURE_EXCLUDED" in *" $_base "*) continue;; esac
+        [ -f "deploy/${_base}.service" ] || continue
+        grep -q '^Type=oneshot' "deploy/${_base}.service" || continue
+        _OF_DST="${SYSTEMD_DIR}/${_base}.service.d/onfailure.conf"
+        if [ ! -e "${_OF_DST}" ] || ! cmp -s "${_ONFAILURE_DROPIN_SRC}" "${_OF_DST}"; then
+            echo ">>> install_systemd_units: dropin onfailure.conf → ${_OF_DST}"
+            "${SUDO[@]}" mkdir -p "$(dirname "${_OF_DST}")"
+            "${SUDO[@]}" cp "${_ONFAILURE_DROPIN_SRC}" "${_OF_DST}"
+            "${SUDO[@]}" chmod 0644 "${_OF_DST}"
+            changed=1
+        fi
+    done
+    shopt -u nullglob
+fi
+
 if [ "$changed" -eq 1 ]; then
     echo ">>> install_systemd_units: daemon-reload"
     if ! "${SUDO[@]}" systemctl daemon-reload 2>&1; then
@@ -399,7 +481,7 @@ _GATEWAY_ONLY_TIMERS=" ict-ib-gateway-watchdog.timer ict-ib-gateway-reset.timer 
 # ict-web-api (crash-looping) + several timer services (failed) on the gateway.
 _GATEWAY_ALLOWED_TIMERS=" ict-ib-gateway-watchdog.timer ict-ib-gateway-reset.timer ict-git-sync.timer ict-devnull-guard.timer "
 _GATEWAY_ALLOWED_SERVICES=" ict-ib-gateway-watchdog.service ict-ib-gateway-reset.service ict-git-sync.service ict-devnull-guard.service "
-_VM_ROLE="$(tr -d '[:space:]' < /etc/ict-vm-role 2>/dev/null || true)"
+_VM_ROLE="$(_read_vm_role)"  # same silent read as _VM_ROLE_EARLY above
 
 # Gateway isolation pruning: on the gateway VM, actively disable/stop any
 # non-allowlisted ict-* unit a prior run or a stray deploy left
@@ -429,7 +511,17 @@ fi
 # unit files are kept (inert) so re-enabling is trivial and nothing that
 # references them breaks; this block ACTIVELY disables an already-enabled timer
 # on the VM, and the enable loop below SKIPS it so a deploy never re-enables it.
-_RETIRED_TIMERS=" ict-heartbeat.timer "
+#
+# breakout_1 (2026-10-09, OPS-DECISIONS-1009): the account is retired (#16981,
+# roster []; operator 2026-10-09 "it shouldn't be coming up again"). Its feed
+# timer deploy/ict-prop-feed.timer is NOT opt-in, so every deploy re-enabled it
+# after the 2026-10-08 feed-disable-timer (MEASURED 2026-10-09 via
+# diag_fetch.sh services: ict-prop-feed.timer=active, ict-prop-executor.service
+# =failed). Listing it here makes the retirement survive deploys; its leftover
+# `failed` service state is cleared below so it stops reading as a live fault.
+# tests/test_breakout1_retired.py pins the empty roster this list assumes.
+_RETIRED_TIMERS=" ict-heartbeat.timer ict-prop-feed.timer "
+_RETIRED_FAILED_SERVICES=" ict-prop-feed.service ict-prop-executor.service "
 for _rt in $_RETIRED_TIMERS; do
     # Unconditional idempotent disable — `disable --now` on an already-disabled
     # timer is a harmless no-op. Deliberately NOT guarded on `is-enabled` AND
@@ -438,8 +530,13 @@ for _rt in $_RETIRED_TIMERS; do
     # that guard's restart), so ANY `>/dev/null` here fails to open the fd and
     # bash skips the command before it runs. Let the output land in the deploy
     # log instead. `|| true` keeps a genuinely-absent unit from failing the deploy.
-    echo ">>> install_systemd_units: retiring $_rt (superseded by the hourly snapshot)"
+    echo ">>> install_systemd_units: retiring $_rt"
     "${SUDO[@]}" systemctl disable --now "$_rt" || true
+done
+for _rs in $_RETIRED_FAILED_SERVICES; do
+    # A retired unit's stale `failed` state still reads as a fault on
+    # /api/diag/services; clear it (no-op when not failed).
+    "${SUDO[@]}" systemctl reset-failed "$_rs" || true
 done
 
 shopt -s nullglob
@@ -450,7 +547,7 @@ for timer_path in deploy/*.timer; do
     fi
     # Retired timers are never (re-)enabled — disabled once above, kept inert.
     if [[ "$_RETIRED_TIMERS" == *" $timer_name "* ]]; then
-        echo ">>> install_systemd_units: skip enable $timer_name (retired; superseded by hourly snapshot)"
+        echo ">>> install_systemd_units: skip enable $timer_name (retired)"
         continue
     fi
     if [ "$_VM_ROLE" = "gateway" ]; then

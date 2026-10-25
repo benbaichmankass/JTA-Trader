@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2: order_monitor close-accounting (the pending broker-pnl sweep) on the live trader; MERGING IS THE DEPLOY (ict-git-sync ~5 min, then a trader restart picks up order_monitor). No order placement, sizing or bracket change: the sweep only READS the venue (one extra entry-order status call on a closed-pnl miss, cached per trade id) and writes pnl/exit_price/notes on rows already closed with pnl NULL. Manager merges.",
+  "why": "CLOSE-PNL-NULL: bybit_2 (real money) trade 6565 showed P&L '\u2014'. _sweep_pending_pnl_from_bybit matched Bybit's closed-pnl record on the journal's INTENDED entry (0.2492); the venue record carries the FILL (0.2489, 12 bps > 10 bps tolerance), so the venue's own SL record (exit 0.2432, closedPnl -3.28194216) was refused every tick. WATCHDOG-PAST-STOP (2026-10-10) fixed the reconciler and watchdog callers but not this one. Fix: retry once on a miss with the venue entry fill (same in scripts/ops/backfill_monitor_closed_pnl.py); /api/bot/trades/closed maps sl_cross/tp_cross to sl/tp instead of 'other'.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "CLOSE-PNL-NULL 2026-09-27 data-backed standing authorization; operator reported bybit_2 trade 6565 P&L missing 2026-10-12; root cause measured (entry 0.2492 vs venue 0.2489 = 12.05bps > 10bps matcher tolerance); manager + independent re-review 2026-10-12T17:05Z",
+    "evidence": "docs/claude/system-actions.md"
+  }
+}

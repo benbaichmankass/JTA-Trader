@@ -111,6 +111,34 @@ EXPECTED_SERVICES = {
     # the Ampere box). Live-trader-box only via install_systemd_units.sh auto-enable;
     # secondary-priority, skipped by deploy_pull_restart.sh DEFAULT_SKIP.
     "ict-exchange-fills-pull.service",
+    # 2026-09-27 (FIX-CA-OPS2): Alpaca fills pull, split off
+    # ict-exchange-fills-pull.service so an Alpaca-side failure (a revoked
+    # key, a rate limit, a 5xx -- FIX-CA-31 made scripts/pull_alpaca_fills.py
+    # exit non-zero on exactly these) can never skip the Bybit wallet ledger
+    # sharing that unit (the ExecStart-ordering contract systemd's
+    # Type=oneshot multi-ExecStart gives no other way to enforce). Timer-fired
+    # oneshot (ict-alpaca-fills-pull.timer, hourly at :23), same store
+    # (runtime_state/exchange_fills.sqlite), same fail-visible contract as its
+    # Bybit sibling. Live-trader-box only via install_systemd_units.sh
+    # auto-enable; skipped by deploy_pull_restart.sh DEFAULT_SKIP.
+    "ict-alpaca-fills-pull.service",
+    # 2026-09-28 (W6-PROP-FEED): 5-min read-only breakout_1 account_status
+    # feed (ict-prop-feed.timer). Logs in to a live prop account, so it is
+    # skipped by deploy_pull_restart.sh DEFAULT_SKIP (no unscheduled login).
+    "ict-prop-feed.service",
+    # 2026-09-30 (TRADEIFY-WIRE): per-account TEMPLATE of the same feed
+    # (ict-prop-feed@<account>). install_systemd_units.sh skips *@*; installed
+    # and enabled only by breakout-login-check apply: feed-enable-timer.
+    "ict-prop-feed@.service",
+    # 2026-09-28 (PROP-EXEC): the breakout_1 step-3 executor. Its timer is in
+    # deploy/opt-in/ (never auto-enabled); the unit is in DEFAULT_SKIP because
+    # a live-mode cycle can place orders.
+    "ict-prop-executor.service",
+    # 2026-10-03 (TRADEIFY-EXECUTOR): per-account TEMPLATE of the same executor
+    # (ict-prop-executor@<account>). install_systemd_units.sh skips *@*;
+    # installed and enabled only by breakout-login-check apply:
+    # executor-enable-timer for a non-breakout account.
+    "ict-prop-executor@.service",
     # 2026-07-19: daily Bybit funding pull (BL-20260719-FUNDING-NO-TIMER, PR #6901).
     # Timer-fired oneshot (ict-exchange-funding-pull.timer) that runs the funding
     # puller so the M24 go-forward fee+funding capture accrues without manual runs.
@@ -130,6 +158,9 @@ EXPECTED_SERVICES = {
     # install_systemd_units.sh's deploy/*.timer glob, and is TIER-2 (merging is
     # the VM mutation). Recorded in docs/claude/deployment-ops.md.
     "ict-work-digest.service",
+    # 2026-10-04 (WORK-SYSTEM, #16387): daily 05:30Z work-report GENERATOR,
+    # timer-fired oneshot; persists the report the manager reviews, sends nothing.
+    "ict-work-report.service",
     # 2026-08-02 (R4 P1): observe-only research→results gate reporter. Timer-fired
     # oneshot (ict-research-results-gate.timer, daily) that runs
     # scripts/research/research_results_gate_report.py over the live journal and
@@ -138,6 +169,24 @@ EXPECTED_SERVICES = {
     # gate flip is Tier-3. Live-trader-box only via install_systemd_units.sh
     # auto-enable; ships the data-dir drop-in (DATA_DIR-aware journal read + write).
     "ict-research-results-gate.service",
+    # 2026-09-29 (FIX-SA-08, audit SA-AUD-5-onfailure-still-absent): systemd
+    # TEMPLATE fired only via OnFailure=ict-notify-failure@%n.service, a drop-in
+    # install_systemd_units.sh puts on every timer-driven oneshot. Logs each
+    # failure and pings once per unit per 6 h, so a failed oneshot behind a live
+    # timer is no longer silent. Never restarted by a deploy (`@` skip).
+    "ict-notify-failure@.service",
+    # 2026-09-29 (FIX-SA-12, audit SA-AUD-5-trainer-disk-93pct): hourly oneshot
+    # (ict-trainer-disk-alarm.timer) that pings when the trainer root is >= 90%
+    # used, read from the published trainer_status.json mirror. Live-trader-box
+    # only; in deploy_pull_restart.sh DEFAULT_SKIP.
+    "ict-trainer-disk-alarm.service",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018): daily oneshot
+    # (ict-phone-capture-purge.timer) that deletes phone step captures older
+    # than 7 days under <trade_journal.db dir>/phone_captures (operator: stored
+    # on the server only, auto-deleted after 7 days). Live-trader-box only; in
+    # deploy_pull_restart.sh DEFAULT_SKIP (a deploy never fires an unscheduled
+    # purge). The capture POST runs the same purge at most hourly.
+    "ict-phone-capture-purge.service",
 }
 
 # Trader-side units (i.e. units that run trading-strategy code). Used to

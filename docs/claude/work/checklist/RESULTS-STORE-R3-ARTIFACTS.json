@@ -1,0 +1,36 @@
+{
+  "id": "RESULTS-STORE-R3-ARTIFACTS",
+  "title": "Result collector lands measurements/*.verdicts.json that research-results-guard R3 rejects: result PRs strand (#17085)",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "RESULTS-STORE-R3-ARTIFACTS lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 RESEARCH-OPS-1447] #17085 (automation/research-result-37729699069-1, unit RQ-20261007-004, run 37729699069, open since 2026-10-08, auto-merge armed) can never merge: it adds research/results/RQ-20261007-004/measurements/{ict_scalp_5m,ict_scalp_avax_5m,ict_scalp_eth_15m,ict_scalp_sol_15m,ict_scalp_sol_5m,ict_scalp_xrp_15m,ict_scalp_xrp_5m}.verdicts.json (865-1032 lines each, whole-file JSON) and guards fails research-results-guard R3 ('the store holds only .jsonl', check_research_results.py:88). Reproduced: merging origin/main into the branch and running python3 scripts/ci/check_research_results.py exits 1 with 7 R3 errors; on main the same guard is OK (files=517, problems=0). The result row ITSELF points at those files (artifact.store = research/results/RQ-20261007-004/measurements/<leg>.verdicts.json), so the producer (GEOM-B1 harness, #17011) and the guard contradict each other. FIX: either have the producer write the per-leg verdicts as .jsonl (one row per cell) or to a path outside research/results/ (e.g. comms/research/<unit>/) and point artifact.store there; then re-land the 7 legs' result (measured verdict no_action_warranted on all 7; xrp_15m: 2 cells cleared the gate without improving calibration = not a pass per RULE-RQ1007-004-SCALP-TARGET-REVISION). RERUN: git fetch origin automation/research-result-37729699069-1 && git worktree add /tmp/w FETCH_HEAD && (cd /tmp/w && git merge origin/main && python3 scripts/ci/check_research_results.py). Also check other open automation/research-result-* PRs for the same R3 signature. [2026-10-13 lane] Classified: #17085 = R3 (7 verdicts.json under research/results/<unit>/measurements); #17827 = fresh (07:50Z), guard OK after merging main, pytest running; #17824/#17802/#17771 = SUPERSEDED, same runs already on main (#17803, #17762, later batch) - add/add conflicts, closed; #17820 replenish = unrelated to R3 (queue yaml only). FIX: producer ict-scalp-exit-sweep.yml now passes --measurements-dir comms/research/${UNIT}/measurements; #17085 branch repaired (files git-mv'd to comms/research/RQ-20261007-004/measurements, artifact.store rewritten, guard OK 0 problems). landed_unproven: closes when #17085 and this PR are merged on main and the next ict-scalp-exit-sweep run lands a result with guard OK. [2026-10-13 asst-mgr, merged from main] Re-checked #17085 at 07:58Z: still failing with the same 7 R3 errors (since fixed, #17085 merged 08:55Z). RESULTS-VERDICTS-JSON not filed separately: this row covers it.",
+  "updated_at": "2026-10-24T06:01:13Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "observation": {
+    "what": "#17085 and #17832 merged on main and the next ict-scalp-exit-sweep result lands with research-results-guard OK",
+    "how_to_check": "python3 scripts/ci/check_research_results.py on main; git log -- research/results/RQ-20261007-004",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: pipeline-plumbing fix, no milestone moved",
+    "arch": "none: store contract unchanged; producer conformed to it"
+  },
+  "_seq": 436
+}

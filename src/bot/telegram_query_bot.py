@@ -61,14 +61,14 @@ load_dotenv()
 
 REPO_ROOT = _repo_root()
 
-# Canonical journal-DB path (resolver first, repo-root as existence fallback).
-_DB_CANDIDATES = [
-    _trade_journal_db_path(),
-    os.path.join(REPO_ROOT, "trade_journal.db"),
-]
-DB_PATH = next(
-    (p for p in _DB_CANDIDATES if p and os.path.exists(p)), _trade_journal_db_path()
-)
+# Canonical journal-DB path — the resolver, and nothing else.
+# The repo-root existence fallback was REMOVED 2026-10-01 (ORDER-AUDIT-2 item 9,
+# AUD-20260927-CA-A15-db-loaders-stray-trade-journal-fallback): with DATA_DIR
+# set but $DATA_DIR/trade_journal.db not yet present, `next(... exists ...)`
+# silently picked a stray <repo>/trade_journal.db. The resolver already falls
+# back to repo root when no env is set, so the second candidate only ever
+# changed the answer in that wrong case.
+DB_PATH = _trade_journal_db_path()
 
 STRATEGIES_YAML = os.path.join(REPO_ROOT, "config", "strategies.yaml")
 SET_ACCOUNT_MODE_SH = os.path.join(REPO_ROOT, "scripts", "ops", "set_account_mode.sh")
@@ -274,6 +274,11 @@ def _accounts_view_data(statuses: list[dict]) -> list[dict]:
                 "balance": s.get("live_balance_usdt"),
                 "pnl_24h": s.get("daily_pnl"),
                 "open_positions": s.get("open_positions"),
+                # BL-20260808: pass through the exposure block RiskManager.report()
+                # already emits (**risk_report in TradingAccount.status()) so the
+                # Telegram renderer can finally display it. Display only — no cap
+                # is read or enforced here.
+                "exposure": s.get("exposure"),
             }
         )
     return out
@@ -770,8 +775,26 @@ def main():
             # /api/diag/log_file?name=work_decision_sweep_receipt. This stays
             # for the operator tailing journalctl live.
             if (stats.get("prompted_choice") or stats.get("prompted_free_text")
+                    or stats.get("prompted_choice_shortened")
                     or stats.get("redelivered")):
                 logger.info("work-decision prompts: %s", stats)
+            # ⚠️ MI-303: THE RECEIPT NOW HAS A READER, AND THAT IS THE HALF
+            # THAT WAS MISSING. The sweep wrote a durable receipt on every run
+            # and NOTHING read it, so a channel delivering nothing on 47 of 47
+            # runs reported every health field good and four operator
+            # decisions reached nobody. `run_decision_channel_check` grades
+            # `sweep_outcome` and pages on a failing channel through
+            # outcomes.jsonl — Telegram and /api/bot/logs — rather than into
+            # the systemd journal, whose measured retention is ~30 minutes.
+            # Latched on the shared durable cooldown, so it cannot become the
+            # desensitised alarm it exists to replace.
+            try:
+                from src.runtime.decision_channel_alert import (
+                    run_decision_channel_check,
+                )
+                await asyncio.to_thread(run_decision_channel_check)
+            except Exception as exc:  # noqa: BLE001 — never kills the poller
+                logger.warning("decision-channel check failed: %s", exc)
 
         _wd_interval = prompt_interval_seconds()
         if _wd_interval > 0:
@@ -814,6 +837,12 @@ def main():
     # asked for and the one `answerable_route()` resolves to. This absence is
     # asserted by test; do not re-add it without withdrawing the constraint.
 
+    # TELEGRAM-CHANNELS part C: the ONE settings menu, SYSTEM channel. Mounted
+    # BEFORE the catch-all handler so `ns:` taps reach it.
+    from src.bot.notification_settings_menu import register as _register_settings
+
+    _register_settings(application, "system", service="ict-telegram-bot")
+
     application.add_handler(CallbackQueryHandler(callback_handler))
 
     # ── declare what THIS process polls, now that the handlers are attached ───
@@ -842,7 +871,7 @@ def main():
         record_poll,
     )
 
-    _polled_prefixes = (CB_PREFIX, "propexp")
+    _polled_prefixes = (CB_PREFIX, "propexp", "ns")
 
     async def _register_poll(_ctx) -> None:
         await asyncio.to_thread(

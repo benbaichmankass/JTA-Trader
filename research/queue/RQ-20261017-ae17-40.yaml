@@ -1,0 +1,72 @@
+id: RQ-20261017-ae17-40
+title: 'Runner dependency probe: can the token-free research runner import every module a runner-side unit may need?'
+status: queued
+cadence: daily
+theme: infra
+priority: 1
+kind: deterministic
+question: >-
+  Does research-script-run.yml still provide numpy, pandas, yaml, requests, dotenv and yfinance? A missing module kills a unit with exit=1 and
+  a producer_failed record (RQ-20261016-c56e-16/-17/-18, 2026-10-17, ModuleNotFoundError: yfinance).
+why_this_matters: >-
+  Theme infra (weight 2) held 0 runnable units on 2026-10-17 and fired 3 of 300 times in 7 d (research-slo theme_share_min_ratio 0.11 vs target
+  0.5), while the research pipeline's own failures (a runner without yfinance; a grader that erased hand grades) went unseen for hours. A daily
+  self-test is the cheapest standing detector for each. Plumbing only: it says nothing about any strategy or model.
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question
+  to power.'
+decision_rule:
+  id: RULE-RQ20261017ae1740-INFRA-RUNNER-DEPS
+  registered_at: '2026-10-17'
+  registered_before_run: true
+  statistic: verdict.measurement.missing (list of absent modules) from scripts/research/infra_selftest.py --check runner_deps
+  rule: >-
+    PASS IF all 6 modules import on the runner. FAIL IF any is missing (the fix is research-script-run.yml, then re-queue the producer_failed
+    units with last_dispatched_at: null). A producer_failed or no_data record is NOT a verdict: read run-manifest.json, fix the route, re-queue
+    (last_dispatched_at: null); the rule is never edited.
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account or queue unit.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.5
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent pipeline fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - runner_deps
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261017-ae17-40
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-OPS
+related:
+- RESEARCH-AUTHOR-GRADE-1017
+- scripts/research/infra_selftest.py
+- scripts/research/research_slo.yaml
+last_dispatched_at: '2026-10-24T22:34:33+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261017ae1740-INFRA-RUNNER-DEPS
+  evidence:
+  - research/results/RQ-20261017-ae17-40/40139191133.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: false
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

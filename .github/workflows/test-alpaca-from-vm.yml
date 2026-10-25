@@ -1,7 +1,7 @@
 name: test-alpaca-from-vm
 
 # Diagnostic workflow: tests the Alpaca live API endpoint directly from
-# the live VM (141.145.193.91) using the same credentials the trader uses
+# the live VM (<VM_SSH_HOST>) using the same credentials the trader uses
 # from .env — to confirm whether HTTP 403 is an IP restriction vs a
 # credentials issue.
 #
@@ -12,6 +12,13 @@ on:
   issues:
     types: [opened]
 
+# FIX-SA-13 (audit 2026-09-29): least privilege. Every step read: the only
+# GitHub API use is actions/github-script issues.createComment / issues.update,
+# so `issues: write` is needed and nothing else (no checkout, no push, no PR).
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   test-alpaca-from-vm:
     if: |
@@ -21,11 +28,18 @@ jobs:
       contains(github.event.issue.labels.*.name, 'test-alpaca-from-vm')
     runs-on: ubuntu-latest
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Test Alpaca live API from VM using .env credentials
         id: test
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 141.145.193.91
+          host: ${{ secrets.VM_SSH_HOST }}
           username: ubuntu
           key: ${{ secrets.VM_SSH_KEY }}
           script: |

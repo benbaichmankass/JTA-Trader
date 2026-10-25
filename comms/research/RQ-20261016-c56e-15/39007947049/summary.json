@@ -1,0 +1,152 @@
+{
+  "leg": "trend_donchian_sol_4h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "B",
+    "net_r": 21.6535,
+    "n": 147,
+    "max_drawdown_r": 8.1424,
+    "folds_positive": 5,
+    "n_folds": 6,
+    "fold_majority": 4,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=21.6535 > 0 with 5/6 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 147,
+      "net_r": 21.6535,
+      "net_r_fee_only": 24.1409,
+      "max_drawdown_r": 8.1424,
+      "by_outcome": {
+        "stop": 83,
+        "take_profit": 59,
+        "trail_stop": 4,
+        "timeout": 1
+      },
+      "mean_bars_held": 9.075,
+      "net_r_per_capital_day": 0.0974,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 5.57,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.5
+      },
+      "data_start": "2020-10-13 00:00:00+00:00",
+      "data_end": "2023-10-12 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-10-13 00:00:00+00:00",
+          "end": "2021-04-13 11:59:50+00:00",
+          "trades": 33,
+          "net_r": 1.2038
+        },
+        {
+          "fold": 2,
+          "start": "2021-04-13 11:59:50+00:00",
+          "end": "2021-10-12 23:59:40+00:00",
+          "trades": 27,
+          "net_r": 2.1765
+        },
+        {
+          "fold": 3,
+          "start": "2021-10-12 23:59:40+00:00",
+          "end": "2022-04-13 11:59:30+00:00",
+          "trades": 23,
+          "net_r": -2.4065
+        },
+        {
+          "fold": 4,
+          "start": "2022-04-13 11:59:30+00:00",
+          "end": "2022-10-12 23:59:20+00:00",
+          "trades": 21,
+          "net_r": 5.8997
+        },
+        {
+          "fold": 5,
+          "start": "2022-10-12 23:59:20+00:00",
+          "end": "2023-04-13 11:59:10+00:00",
+          "trades": 25,
+          "net_r": 5.2385
+        },
+        {
+          "fold": 6,
+          "start": "2023-04-13 11:59:10+00:00",
+          "end": "2023-10-12 23:59:00+00:00",
+          "trades": 18,
+          "net_r": 9.5414
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261016-c56e-15/39007947049/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261016-c56e-15/39007947049/arms/B__bt.json",
+        "--trail-decay-arm-r",
+        "5.57",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2020-10-13",
+        "--end",
+        "2023-10-12 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-10-13",
+    "end": "2023-10-12 23:59",
+    "fetch_days": 2240,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2020-10-13 00:00:00+00:00",
+      "2021-04-13 11:59:50+00:00",
+      "2021-10-12 23:59:40+00:00",
+      "2022-04-13 11:59:30+00:00",
+      "2022-10-12 23:59:20+00:00",
+      "2023-04-13 11:59:10+00:00",
+      "2023-10-12 23:59:00+00:00"
+    ]
+  }
+}

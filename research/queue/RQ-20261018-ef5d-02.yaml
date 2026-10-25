@@ -1,0 +1,119 @@
+id: RQ-20261018-ef5d-02
+title: >-
+  Programme 07 TIMEFRAMES, short arm, FIRST unit: cost-aware break-even by horizon -- at 1m / 5m / 15m / 30m / 1h bars and
+  holds of 1-48 bars (1 minute .. 2 days), what move per trade clears the full fee+slippage+funding stack on every venue/symbol
+  the books trade, and how often does the market deliver it?
+status: done
+cadence: once
+theme: timeframes
+priority: 1
+kind: deterministic
+question: >-
+  Same instrument and statistic as RQ-20261018-ef5d-01 on the SHORT grid: bars 1m/5m/15m/30m/1h, holds 1/2/3/6/12/24/48 bars,
+  the six Bybit perps (Binance USD-M proxy: 1m over 730 d, the rest 1825 d) and the 17 equity/futures symbols (Yahoo: 1h ~730
+  d; 5m/15m ~60 d, reported short_window; 30m resampled from 15m). Where, on the short end, is the cost wall (dead), where
+  is a trade merely marginal, and is there ANY sub-hour horizon on which half the perps are viable at taker cost?
+why_this_matters: >-
+  Operator 2026-10-18: shorter horizons need NEW breakout families whose expected move per trade clears the fee+slippage stack,
+  because fees dominate there. The 2026-10-16 idea-family review retired taker-cost 5m/15m trend/pullback/squeeze as a configuration
+  class on a wall nobody had measured per horizon (-783 to -878 R). This unit measures the wall: at which bar and hold does
+  the median move exceed twice the round trip, and what win rate would a 1:1 bracket need. Its frontier decides which short-arm
+  family units are worth running (ef5d-07/-08/-09 sit at 30m-1h; the 5m/15m nodes in the tree open only where this reads viable
+  or marginal) and whether the maker-cost column changes the answer enough to make a post-only route (IR row for maker entries,
+  RQ-20260930-502 lineage) the next lever. Prior short-horizon work this builds on and does NOT repeat: RQ-20260930-504 (<=1h
+  discovery grid at live/default params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop had NO Stage-A survivor at 5m-30m),
+  blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue the 15m scalp book, FAIL), the 2026-10-06
+  prop breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md
+  s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+why_not_inferential: >-
+  A descriptive measurement over every bar of the fetched history, as ef5d-01: threshold reads on medians and empirical frequencies,
+  not a test on a trade sample. Equity 5m/15m frames come from Yahoo's ~60-day lane and are flagged short_window in the record;
+  the arm verdict is defined on the crypto core, so those frames inform but never decide.
+decision_rule:
+  id: RULE-P7-BREAKEVEN-SHORT
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/timeframe_breakeven.py --arm short: identical per-cell statistic and grade to RULE-P7-BREAKEVEN-LONG
+    over bars {1m,5m,15m,30m,1h} and holds {1,2,3,6,12,24,48}; 1m crypto frames over 730 d, other crypto bars 1825 d, equities
+    per the Yahoo lane with window_days and short_window reported per frame.
+  rule: >-
+    PASS iff at least one (bar, hold) cell is viable on at least half of the measured core symbols: a sub-hour horizon exists
+    where the market's move routinely clears twice the round trip -- the short-arm family units run there first. FAIL iff
+    no cell is viable on any measured symbol: the short arm is dead at taker cost and its next lever is a cost change (maker
+    route, fee tier), recorded on the tree. INDETERMINATE iff fewer than half the declared frames measured or viable cells
+    exist on fewer than half the core symbols. The marginal band (0.10 < cost_r <= 0.25) is REPORTED per cell so a 'fail'
+    still names the least-bad horizon. Thresholds as ef5d-01, not changed after any result.
+  what_it_does_not_do: >-
+    Measures no strategy; a viable horizon is permission to search, not evidence of edge. Equity frames below 1h are ~60 days
+    and say nothing about multi-year behaviour (row TF-EQUITY-INTRADAY-BARS). Does not touch config or any roster.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.5
+  bucket: frontier
+  basis: >-
+    stand-in: it gates where the short arm's Stage-0 runs are spent and whether a maker route is the next lever; information
+    value; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 75
+  basis: >-
+    6 perps x 5 bars (1m: ~24 monthly zips x 6 symbols, ~2 MB each) + 17 equities x 5 bars from Yahoo; numpy over ~1M bars
+    per 1m frame. Estimate; the first run replaces it.
+  why_runner: >-
+    timeframe_breakeven.py fetches public candles (Binance Vision, Yahoo) and runs numpy; the 1m zips are the slow part and
+    are download-bound, not CPU-bound.
+run:
+  command:
+  - python3
+  - scripts/research/timeframe_breakeven.py
+  - --arm
+  - short
+  - --days-crypto
+  - '1825'
+  - --days-1m
+  - '730'
+  - --days-equity
+  - '730'
+  - --rule-id
+  - RULE-P7-BREAKEVEN-SHORT
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261018-ef5d-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- RQ-20261018-ef5d-01
+- scripts/research/timeframe_breakeven.py
+- RQ-20260930-504
+- RQ-20260930-505
+- RQ-20261016-1fa6-07
+- TF-EQUITY-INTRADAY-BARS
+- docs/research/idea-family-review-2026-10-16.md
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T10:53:57+00:00'
+grading:
+  attested: RULE-P7-BREAKEVEN-SHORT
+  auto: true
+  decision_rule_id: RULE-P7-BREAKEVEN-SHORT
+  evidence:
+  - research/results/RQ-20261018-ef5d-02/39121078158.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

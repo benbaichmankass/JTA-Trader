@@ -1,0 +1,116 @@
+id: RQ-20261012-75b2-16
+title: >-
+  Regime-head drift: BTCUSDT 15m regime_label, LightGBM vs class prior, purged CV vs last-90d holdout (does the
+  head's skill hold out of sample?)
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: >-
+  On datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl (trainer-resident nightly shard; last 60000 rows),
+  does LightGBM on the shipped regime-head feature set (excluding vol_bucket/fc_*, which are categorical/optional)
+  beat the class-prior baseline on macro-F1 under purged expanding walk-forward CV AND on the final-90-day holdout
+  (train strictly before 2026-07-12)? The gap between the two windows is the drift reading.
+why_this_matters: >-
+  Theme ml_health (w3) had one runnable unit. Regime heads (btc/eth/sol-regime-15m-lgbm-*) drive the vol axis the
+  router reads; drift or implementation dependence there is the cheapest ML-health signal and is not measured by
+  any queued unit. Uses the generic ml_bakeoff engine (ML-RQ-RUNNER) on trainer-resident nightly shards, no new
+  tooling. This tests the LABEL the shipped head predicts (regime_label, frozen-spec) and says nothing about trade
+  P&L. DATASET PATH UNVERIFIED FROM THIS SANDBOX: BTC/ETH/SOL 15m v002 shards were MEASURED present on the trainer
+  2026-10-11 (RQ-20261011-9da8-01 blocked_on note); column names are taken from ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml.
+  A missing column lands as dead-feature NaN or producer_failed, which research-ops must read as a route fault,
+  not a verdict.
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit = bar in the holdout window (~8640 rows: 90 days x 96 15m-bars); d=0.05 sd paired needs (1.96+0.8416)^2/0.05^2
+    = 3140 rows, floor met on rows. Rows are autocorrelated, so effective n is far lower; the rule therefore also
+    requires the CV fold-mean delta (min_folds 3), and the first run replaces this estimate with measured n_rows.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Nightly shard: history is fixed for the window used and the shard is rebuilt daily; nothing needs to accrue
+      for the rows this unit reads.
+decision_rule:
+  id: RULE-RQ1012-75B2-16-ML-DRIFT-BTC
+  registered_at: '2026-10-12'
+  registered_before_run: true
+  statistic: >-
+    Paired per-fold macro-F1 difference (candidate minus reference) on identical purged expanding walk-forward folds
+    (5 folds, embargo 96 rows, min_train_frac 0.4) and on one holdout window; mean over folds. Target regime_label
+    (classification, classes taken from the data), features ['rolling_log_return_vol', 'log_return', 'log_return_lag_1',
+    'log_return_lag_2', 'hour_of_day', 'dayofweek']. ml_bakeoff.py evaluate_rule applies the machine form in this
+    unit's ml_bakeoff.rule.
+  rule: >-
+    PASS IF lgbm - prior macro-F1 >= +0.10 on the CV mean AND on the holdout. FAIL IF lgbm evaluated ok and the
+    holdout delta < +0.10 (skill does not hold in the last 90d: file a drift-remediation row for this symbol/tf,
+    not a demotion). INDETERMINATE IF fewer than 3 usable folds, an arm is unavailable, or holdout rows < 20.
+  min_n: >-
+    3 usable CV folds; holdout >= 20 rows; if the shard has fewer rows than tail_rows the whole shard is used and
+    n_rows is reported.
+  what_it_does_not_do: >-
+    Retrains no registered model, touches no registry, manifest, stage or config, and promotes/demotes nothing (Tier-3).
+    Grades the regime LABEL only, not trade P&L, and not the fc_*/vol_bucket features.
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 15
+  basis: >-
+    Estimate, not a measurement: tail_rows-bounded read of one 15m shard (the loader keeps only declared columns),
+    200-tree LightGBM x 5 folds.
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 45
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  inputs: {research_unit: RQ-20261012-75b2-16}
+lands: {store: research/results/, assert_field: read_state, min_rows: 1}
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+  cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}
+  baseline: prior
+  controls: []
+  candidates: [lgbm]
+  learners:
+    prior: {kind: prior}
+    lgbm:
+      kind: lightgbm
+      params: {n_estimators: 200, learning_rate: 0.05, num_leaves: 31, min_child_samples: 50}
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: ALL, vs: baseline, window: cv, op: '>=', value: 0.1}
+    - {group: ALL, vs: baseline, window: holdout, op: '>=', value: 0.1}
+    fail_if_no_candidate_reaches:
+    - {group: ALL, vs: baseline, window: holdout, op: '>=', value: 0.1}
+roadmap: [M25]
+related: [ML-RQ-RUNNER, scripts/research/ml_bakeoff.py, ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, .claude/skills/ml-review/SKILL.md]
+last_dispatched_at: '2026-10-12T21:09:54+00:00'
+grading:
+  attested: RULE-RQ1012-75B2-16-ML-DRIFT-BTC
+  auto: true
+  decision_rule_id: RULE-RQ1012-75B2-16-ML-DRIFT-BTC
+  evidence:
+  - research/results/RQ-20261012-75b2-16/38308914451.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -3,7 +3,7 @@ name: vm-diag-snapshot
 # PM-side / web-sandbox bridge to the VM's diagnostic surface.
 #
 # The Claude Code on the web sandbox cannot egress to the Oracle VM
-# directly (141.145.193.91:8001 isn't on the platform allowlist).
+# directly (<VM_SSH_HOST>:8001 isn't on the platform allowlist).
 # GitHub-hosted runners can. Two trigger paths into the same job:
 #
 #   1. workflow_dispatch — operator clicks "Run workflow" in the UI.
@@ -58,7 +58,7 @@ name: vm-diag-snapshot
 #                         (also creatable manually).
 #
 # Optional repo variables:
-#   * VM_SSH_HOST       — defaults to 141.145.193.91 (Ampere live trader; was the
+#   * VM_SSH_HOST       — defaults to <VM_SSH_HOST> (Ampere live trader; was the
 #                         x86 micro 158.178.210.252 pre-2026-06-14 cutover)
 #   * VM_SSH_USER       — defaults to ubuntu
 
@@ -133,6 +133,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Dedup — bail if a bot comment already exists (2026-06-08)
         # The `issues: [opened, labeled]` trigger fires twice when the
         # session opens-with-label; this step short-circuits the second
@@ -163,6 +170,22 @@ jobs:
               core.setOutput('skip', 'false');
             }
 
+      - name: Checkout repo
+        # E19 (2026-09-22): the "Build combined diag comment" step
+        # (issues path) does `from scripts.ops.diag_relay_render import
+        # render_section` against `os.getcwd()` — this job never
+        # checked out the repo, so on any runner that path is empty
+        # and the import fails with `ModuleNotFoundError: No module
+        # named 'scripts'`, before the VM is ever contacted. Verified
+        # against run 35649903349: the SSH fetch step itself succeeded
+        # (6 lines written to diag-multi-output.txt) — the failure is
+        # entirely in this local post-processing step, not the relay
+        # to the VM, not VM_SSH_KEY, and not DIAG_READ_TOKEN. The
+        # import was added 2026-09-13 (a45d360) without adding this
+        # checkout, which git log confirms this workflow has never had.
+        if: steps.dedup.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
       # ────────────────────────────────────────────────────────────
       # workflow_dispatch path: single path, operator-driven, unchanged
       # behaviour/artifact contract from before the 2026-07-06 batching
@@ -179,6 +202,16 @@ jobs:
           set -euo pipefail
 
           DIAG_PATH="${DISPATCH_PATH}"
+
+          # FIX-SA-07 (audit 2026-09-29): refuse `..` segments and encoded
+          # dots/separators (%2e, %252e, %2f, %5c). The charset check below
+          # ALLOWS `.` `/` `%`, so `../x` reached the VM-side URL and left the
+          # /api/diag/ prefix. Logic lives in a tested script, not inline.
+          if ! guard_reason="$(python3 scripts/ops/diag_path_guard.py "$DIAG_PATH" 2>&1)"; then
+            echo "::error::Rejected diag_path (path traversal): $guard_reason"
+            echo "diag_reject_reason=path traversal refused ($guard_reason)" >>"$GITHUB_ENV"
+            exit 1
+          fi
 
           # Strip optional leading /api/diag/ so callers can pass either
           # "snapshot?limit=200" or "/api/diag/snapshot?limit=200".
@@ -220,7 +253,7 @@ jobs:
                   upstream_prefix="/api/"
                   path="$botpath"
                   ;;
-                performance|stats|positions|positions/net|signals|strategies|strategies/*/review|strategies/*/tune|strategy/attribution|backtests|backtests/sweeps|order-packages|trades/closed|trades/scores|candles|accounts/balances|liquidity|config|insights/summary|insights/recent|insights/health|insights/usage|insights/history|insights/strategy/*|health/latest|health/history|health/services|health/snapshot|shadow/stats|shadow/drift|shadow/predictions|exit-ladder/soak|allocator/soak|fc-geometry/soak|pairs/soak|exposure/soak|ml/status|ml/cycle|ml/sessions|ml/registry|ml/builds|ml/db_pulls|ml/runs/*|news/recent|pnl/exchange|pnl/exchange/fills|pnl/broker-truth|gpu/spend|roadmap|roadmap/sprint/*|reports|reports/*|notifications|prop/fills|prop/tickets|prop/status|prop/reconcile|db/tables|db/table/*)
+                performance|stats|positions|positions/net|signals|strategies|strategies/*/review|strategies/*/tune|strategy/attribution|backtests|backtests/sweeps|order-packages|trades/closed|trades/scores|candles|accounts/balances|liquidity|config|insights/summary|insights/recent|insights/health|insights/usage|insights/history|insights/strategy/*|health/latest|health/history|health/services|health/snapshot|shadow/stats|shadow/drift|shadow/predictions|exit-ladder/soak|allocator/soak|fc-geometry/soak|pairs/soak|exposure/soak|ml/status|ml/cycle|ml/sessions|ml/registry|ml/builds|ml/db_pulls|ml/runs/*|news/recent|pnl/exchange|pnl/exchange/fills|pnl/broker-truth|gpu/spend|roadmap|roadmap/sprint/*|reports|reports/*|notifications|prop/fills|prop/tickets|prop/status|prop/reconcile)
                   upstream_prefix="/api/bot/"
                   path="$botpath"
                   ;;
@@ -268,7 +301,7 @@ jobs:
         if: steps.dedup.outputs.skip != 'true'
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+          VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
         run: |
           set -euo pipefail
           if [ -z "${VM_SSH_KEY}" ]; then
@@ -285,7 +318,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && steps.dedup.outputs.skip != 'true'
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
-          VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+          VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
           VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
         run: |
           set -euo pipefail
@@ -314,6 +347,12 @@ jobs:
                     'http://127.0.0.1:8001${diag_upstream_prefix}${diag_path_safe}'" \
               > diag-output.json
           python3 -c "import json,sys; json.load(open('diag-output.json')); print('valid json,', __import__('os').path.getsize('diag-output.json'), 'bytes')"
+
+      - name: Redact secrets from diag output (FIX-SA-07)
+        if: github.event_name == 'workflow_dispatch' && steps.dedup.outputs.skip != 'true'
+        # Runs BEFORE the run-log preview and the artifact upload — both are
+        # readable by anyone on this PUBLIC repo. Prints rule=count only.
+        run: python3 scripts/ops/redact_diag_output.py diag-output.json
 
       - name: Pretty-print diag response (run-log preview)
         if: github.event_name == 'workflow_dispatch' && steps.dedup.outputs.skip != 'true'
@@ -362,6 +401,9 @@ jobs:
           import re
           import sys
 
+          sys.path.insert(0, os.getcwd())
+          from scripts.ops.diag_path_guard import traversal_reason
+
           MAX_PATHS = 15
           PATH_RE = re.compile(r'^[A-Za-z0-9/?&=_.:%-]+$')
 
@@ -400,11 +442,12 @@ jobs:
               "news/recent", "pnl/exchange", "pnl/broker-truth", "gpu/spend",
               "roadmap", "reports", "notifications",
               "prop/fills", "prop/tickets", "prop/status", "prop/reconcile",
-              "db/tables",
+              # db/tables + db/table/* REMOVED 2026-10-15 (PI-20261015-JWMGXOTH-0001): those routes need a dashboard
+              # session, so the relay's bearer always got 401 invalid_session (issue #18233) -- a dead entry
           }
           BOT_ALLOWLIST_GLOB = (
               "strategies/*/review", "strategies/*/tune",
-              "insights/strategy/*", "db/table/*",
+              "insights/strategy/*",
               "ml/runs/*", "roadmap/sprint/*", "reports/*",
           )
 
@@ -422,6 +465,10 @@ jobs:
               path = raw.strip()
               if not path:
                   raise ValueError("empty path")
+              # FIX-SA-07: `..` / encoded-dot traversal (see diag_path_guard.py).
+              reason = traversal_reason(path)
+              if reason:
+                  raise ValueError(f"path traversal refused: {reason}")
               if path.startswith("/api/diag/"):
                   path = path[len("/api/diag/"):]
               path = path.lstrip("/")
@@ -567,7 +614,7 @@ jobs:
         if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true'
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
-          VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+          VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
           VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
         run: |
           set -euo pipefail
@@ -645,6 +692,12 @@ jobs:
               "${VM_SSH_USER}@${VM_SSH_HOST}" \
               'bash -s' > diag-multi-output.txt
           wc -l diag-multi-output.txt
+
+      - name: Redact secrets from raw diag output (FIX-SA-07)
+        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true'
+        # Before render_section so a per-path truncation cannot cut a secret
+        # in half and leave a partial that no pattern matches.
+        run: python3 scripts/ops/redact_diag_output.py diag-multi-output.txt
 
       - name: Build combined diag comment
         if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true'
@@ -733,6 +786,10 @@ jobs:
           PY
         env:
           DROPPED_COUNT: ${{ steps.resolve_multi.outputs.dropped_count }}
+
+      - name: Redact secrets from comment body (FIX-SA-07, second pass)
+        if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true'
+        run: python3 scripts/ops/redact_diag_output.py diag-comment-body.md
 
       - name: Reply to issue with diag result
         if: github.event_name == 'issues' && steps.dedup.outputs.skip != 'true'
@@ -833,3 +890,5 @@ jobs:
               state: 'closed',
               state_reason: 'not_planned'
             });
+
+# no-durable-result: diag relay, no verdict computed

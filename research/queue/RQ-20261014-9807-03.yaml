@@ -1,0 +1,127 @@
+id: RQ-20261014-9807-03
+title: 'Programme 01 Q3, confirmation: do the TP-revision cells that cleared the IS/OOS gate on 2026-10-08 (tp_extend 6/24 on
+  xrp_pullback_2h and 6/24 on ada_pullback_2h; tp_retarget 2/9 on trend_donchian_xrp_4h) survive a FRESH date partition,
+  calibration first?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: >-
+  RQ-20261007-001 (tp_extend) and RQ-20261007-003 (tp_retarget) landed on 2026-10-08 with PASS rows on three REAL-MONEY bybit_2
+  legs (MEASURED from research/results/RQ-20261007-001/37724750138.jsonl and RQ-20261007-003/37735734635.jsonl: xrp_pullback_2h
+  6 of 24 cells, base OOS n 49; ada_pullback_2h 6 of 24, n 49; trend_donchian_xrp_4h 2 of 9, n 31) and 0 dispositions in
+  docs/research/research-disposition-ledger.jsonl. Those runs used split_mode oos-trades (a per-leg derived boundary) and their
+  calibration columns (tp_cal_cell_* vs tp_cal_base_*) sit in the corpus branch, unread. The doctrine grades a TP revision
+  calibration FIRST (docs/ARCHITECTURE-CANONICAL.md TP doctrine clause 2; exit-refinement skill: a cell that clears the gate while
+  worsening calibration is P&L without prediction and does not pass). Question: on a fixed DATE partition the 2026-10-08 run did
+  not use (split 2024-10-01), with the same levers, cap 0.099 and the full cost stack, does at least one of the 14 passing cells
+  per leg clear Path A or Path B again AND improve or hold calibration on both IS and OOS AND win >= 5 of 6 walk-forward folds?
+  A yes is the evidence record for the first Tier-3 TP-revision declare proposal (Programme 01 Q6); a no retires that cell.
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    One-sample floor at d = 0.45: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 OOS trades per leg, the exit-refinement precedent
+    (RQ-20261006-061). The m20 corpus reads base_oos_trades 49 for xrp_pullback_2h and ada_pullback_2h on the 2026-10-08 rows;
+    trend_donchian_xrp_4h reads 31, BELOW the floor, so its verdict is reported as below_floor by the rule rather than lowering
+    the bar. Trade sequences are autocorrelated, so the floor is a floor; the walk-forward fold majority carries the rest.
+  feasibility:
+    source: corpus
+    corpus: m20
+    statistic: min_per_leg
+    legs:
+    - xrp_pullback_2h
+    - ada_pullback_2h
+    basis: >-
+      Grounded on the m20 corpus because the run is an m20 exit-lever sweep. min_per_leg over the two pullback legs reads 49
+      (2026-10-08 rows), above 39 -> cleared. trend_donchian_xrp_4h (31) is deliberately scoped OUT of the feasibility
+      statistic and INTO the rule as a below-floor stratum so the unit neither certifies it on the pullback legs' n nor drops it.
+decision_rule:
+  id: RULE-RQ20261014-9807-03-TP-REVISION-CONFIRMATION
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per leg, per cell among the 14 cells that passed on 2026-10-08 (xrp_pullback_2h tpx_t3_*, ada_pullback_2h tpx_t2.5_*,
+    trend_donchian_xrp_4h tpr_atr_t3 / tpr_stall10_t3), from this run's corpus rows (sweep_generated_at = this run): gate_verdict
+    (Path A or Path B) on the fresh partition, base_oos_trades, walk-forward folds won of usable, and the calibration pair
+    tp_cal_cell_{IS,OOS} vs tp_cal_base_{IS,OOS} (share of trades exiting within +/-20% of their FINAL target). Net of the
+    harness cost stack (fee + venue slippage + funding via execution_costs.resolve_cost_policy).
+  rule: >-
+    Per leg: CONFIRMED IF at least one of its 2026-10-08 passing cells clears Path A or Path B on the fresh partition AND
+    tp_cal_cell >= tp_cal_base on BOTH IS and OOS AND wf wins >= 5 of 6 usable folds AND base_oos_trades >= 39 -> the
+    evidence record for a Tier-3 declare proposal of that cell's tp_revision on the leg (bybit_2, bybit_portfolio and bybit_1
+    in one PR; mirror-equality tests), through Programme 01 Q6 (observe-only soak first). FAIL (P&L without prediction) IF a
+    cell clears the gate but tp_cal_cell < tp_cal_base on either side -> retire that cell by doctrine. NOT_CONFIRMED IF no
+    passing cell clears the gate on the fresh partition -> the 2026-10-08 PASS was partition-specific; retire those cells and
+    leave the leg to the monthly re-sweep. BELOW_FLOOR IF base_oos_trades < 39 (expected for trend_donchian_xrp_4h) -> report,
+    no verdict, and name the pooled-family re-run as the follow-on. INDETERMINATE IF a cell's calibration columns are absent
+    (route fault: the sweep ran without --tp-report; re-dispatch once).
+  what_it_does_not_do: >-
+    Flips nothing: a CONFIRMED cell is an evidence record, the declare is Tier-3 and a producer soak comes first. Does not grade
+    the cells that failed on 2026-10-08. Does not re-open the scalp revision question (RQ-20261007-004, 0 of 5 on all 7 legs).
+    Says nothing about the prop legs (RQ-20261007-002, 0 of 24).
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.5
+  basis: >-
+    stand-in: three of the four bybit_2 real-money legs hold unread PASS rows; confirming one yields the first doctrine-compliant
+    real-money routing (0 of 50 today). Not a P&L measurement; no balances stated.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 90
+  basis: >-
+    Estimate: the 2026-10-08 runs of the same three legs with the same levers took one runner job each (run ids 37724750138,
+    37735734635); tp_extend 24 cells + tp_retarget 9 cells per leg on 2h/4h candles.
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: xrp_pullback_2h,ada_pullback_2h,trend_donchian_xrp_4h
+    levers: tp_extend,tp_retarget
+    tp_cap_pct: '0.099'
+    split_mode: date
+    split: '2024-10-01'
+    research_unit: RQ-20261014-9807-03
+  note: >-
+    run.workflow is kept (m20 sweep is a dedicated workflow, not a script run). split_mode=date with a 2024-10-01 boundary is the
+    FRESH partition: the 2026-10-08 runs derived their boundary per leg from oos-trades. The tp_* cells are opt-in and only exist
+    because `levers` names them; the calibration pair is written per cell row by the sweep (GEOM-B1-HARNESS).
+lands:
+  store: docs/research/m20-sweep-corpus.jsonl
+  assert_field: leg
+  min_rows: 1
+  note: >-
+    A default-branch dispatch retargets the corpus to branch claude/m20-sweep-corpus (the workflow's own note); read the rows
+    there. min_rows 1 because the sweep shards per leg and one leg's fetch can fail without the run being a landing failure.
+roadmap:
+- M20
+related:
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q3 rung 1; CONFIRMED feeds Q6)
+- RQ-20261007-001 (tp_extend, landed 2026-10-08; the cells under test)
+- RQ-20261007-003 (tp_retarget, landed 2026-10-08; the cells under test)
+- RQ-20261007-080 (Donchian measured-move revision; the other revision family, not duplicated here)
+- docs/ARCHITECTURE-CANONICAL.md TP doctrine (clause 2: calibration first)
+- .claude/skills/exit-refinement/SKILL.md (P2 gate, Path B bar, "P&L without prediction")
+- src/runtime/target_expectation.py (evaluate_extension, the decision half the harness imports)
+last_dispatched_at: '2026-10-14T09:10:30+00:00'
+grading:
+  decision_rule_id: RULE-RQ20261014-9807-03-TP-REVISION-CONFIRMATION
+  graded_at: '2026-10-16'
+  graded_by: P1-ATM-BACKLOG-1016 (lane session, manager dispatch 2026-10-16)
+  read_state: measured
+  needs_review: false
+  verdict: indeterminate
+  reason: 'Not gradable as registered (the 2026-10-15 needs_review note stands): the calibration pair
+    and walk-forward counts never reach main, and the run''s corpus rows are on branch claude/m20-sweep-corpus.
+    MEASURED research/results/RQ-20261014-9807-03/38540451920.jsonl, gate only: xrp_pullback_2h 6/33 (base
+    OOS 103), ada_pullback_2h 8/33 (83), trend_donchian_xrp_4h 1/33 (24, below floor). Follow-up: P1-Q3-xrp-pb-tpx-confirm,
+    P1-Q3-ada-pb-tpx-confirm, P1-Q4-xrp4h-exit-confirm; the programme nodes that waited on this unit (P1-Q3-second-leg
+    / P1-Q3-fail) were re-pointed to those.'

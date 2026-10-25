@@ -25,6 +25,34 @@ Fails (exit 1) if:
      banned "days–weeks soak-to-prove-edge" idiom.
   D. A DECISION-GATE SURFACE grades a verdict off LIVE-ACCRUAL evidence
      (see below) beyond the count recorded in the exception ledger.
+  E. A LIVE doc, plan or skill teaches a LONG SOAK: a soak measured in days /
+     weeks, an n of 3+, an end date / duration / expected rate / power, or a
+     cost / live-vs-backtest EXIT (see "CHECK E" below).
+  F. A soak contract in docs/claude/work/SOAKS.json is not mechanical
+     (soak_state.contract_problems: n_needed > 2, a calendar field, a
+     statistical pass/fail rule).
+  G. A GENERATOR emits a long soak: soak_state.make_contract, soak_report's
+     Stage-1 exit text, and mandate_resolver's soak data task are run and their
+     OUTPUT is scanned with the CHECK E patterns.
+  H. The rule is not stated exactly ONCE: OPERATING-PLAN § 2 must carry the
+     SOAK-RULE-CANONICAL marker once, and CLAUDE.md must quote the operator and
+     point at it.
+
+CHECK E–H — WHY (operator, 2026-10-15): "I don't know what, like,
+documentation is causing this problem to keep on happening over and over again,
+but it needs to be investigated, found, and fixed across the entire repo."
+MEASURED that day: the rule "a soak is 1–2 executions" was binding from
+2026-07-26, yet 46 of 50 soak contracts wanted n=10 with end dates into 2029.
+Checks A–C read three files and banned one idiom ("days–weeks to prove EDGE").
+The 2026-09-21 operating reset re-taught the long soak in DIFFERENT words — the
+Stage-1 soak "leaves when realized cost per trade matches the modelled cost" —
+in OPERATING-PLAN § 2 and the CLAUDE.md ladder, which no check read; a cost
+statistic is not "edge", so even a wider idiom scan would have passed it. The
+generators (soak_state.make_contract's N_CLOSES = 10 and end_date = n / rate,
+the manager skill's contract template, soak-contract-guard REQUIRING n / power
+/ end_date) then minted the accrual for every leg. So E scans every live
+surface for the SHAPE of a long soak (duration, n, end date, statistical exit),
+not for one phrase, and G scans what the generators actually EMIT.
 
 Runs whole-file (not diff-based) so the invariant is enforced on every PR
 regardless of what changed.
@@ -122,6 +150,203 @@ BANNED = [
 
 
 # ---------------------------------------------------------------------------
+# Checks E–H — the long-soak SHAPE, on every live surface and generator output.
+# ---------------------------------------------------------------------------
+
+#: The ONE statement of the rule (CHECK H). Everything else points at it.
+SOAK_CANON_DOC = ROOT / "docs" / "plans" / "OPERATING-PLAN-2026-09-21.md"
+SOAK_CANON_MARKER = "SOAK-RULE-CANONICAL"
+SOAK_OPERATOR_QUOTE = ("A soak is a mechanical verification that was already proven in "
+                       "backtesting, and nothing needs to soak for more than one or two trades.")
+
+#: LIVE instruction surfaces (CHECK E). Globs, relative to the repo root. A dated
+#: decision record kept only because a mandate cites it opts out by carrying
+#: SUPERSEDED_MARKER (and a banner pointing at the canonical rule).
+LIVE_SURFACES = [
+    "CLAUDE.md", "ROADMAP.md", "docs/*.md", "docs/plans/*.md", "docs/reference/*.md",
+    "docs/integrations/*.md", "docs/roadmap/milestones.yaml",
+    "docs/claude/work/SOAK-REPORT.md", "config/mandates.yaml", ".claude/skills/*/SKILL.md",
+]
+#: A DATED file (``*-YYYY-MM-DD*``) is a record of its day, not a live
+#: instruction — EXCEPT these plans, which the instruction hierarchy names as live.
+LIVE_DATED = {"docs/plans/OPERATING-PLAN-2026-09-21.md", "docs/plans/RESEARCH-PLAN-2026-09-21.md",
+              "docs/plans/work-system-2026-10-04.md"}
+_DATED = re.compile(r"-20\d\d-\d\d-\d\d")
+#: ROADMAP.md below its generated live block is a history of sprints; only the
+#: block (generated from docs/roadmap/milestones.yaml) is the live plan.
+ROADMAP_LIVE = ("<!-- ROADMAP-LIVE:BEGIN", "<!-- ROADMAP-LIVE:END -->")
+SUPERSEDED_MARKER = "soak-doctrine: superseded-record"
+#: Per-line opt-out for a line that names the banned shape in order to forbid it
+#: in words the negation filter cannot see. Use sparingly; it is visible in diffs.
+LINE_OK_MARKER = "soak-doctrine: ok"
+
+_NUM = r"(?:\d+|two|three|four|five|six|several|few|multiple|multi)"
+#: The SHAPE of a long soak, matched per SENTENCE inside any paragraph that
+#: mentions a soak (the 2026-09-21 teaching spanned lines: "STAGE 1 Soak … Do
+#: the mechanics work, and does realized cost match … Leaves when — … AND
+#: realized cost per trade matches the modelled cost"). ``needs_soak`` = the
+#: sentence itself must say "soak" (for shapes too common to judge by paragraph).
+SOAK_SHAPE = [
+    ("a soak measured in days/weeks", True,
+     re.compile(rf"(?<![-\w]){_NUM}[- ]?(?:days?|weeks?|months?|wks?)(?![-\w])", re.I)),
+    ("a soak sample size of 3+", False,
+     re.compile(r"n_needed\W{0,4}(?:[3-9]|\d{2,})\b|\bn needed\b|\bn and (?:its )?power\b|"
+                r"\buntil n\s*(?:>=|≥|=)|"
+                r"\b(?:needs?|needed|until|requires?|at least|wait\w* for|first)\s+(?:n\s*(?:>=|≥|=)\s*)?"
+                r"(?:[3-9]|\d{2,})\s*(?:closes|closed trades|fills|trades|executions|packages)\b|"
+                r"(?:>=|≥)\s*(?:[3-9]|\d{2,})\s*(?:closes|closed trades|fills|trades|executions)\b|"
+                r"\b(?:[3-9]|\d{2,})\s*(?:fills|closes|trades)\s*(?:per|/)\s*side\b", re.I)),
+    ("a soak end date / duration / rate / power", False,
+     re.compile(r"\bend[ _-]?date\b|\bduration_days\b|\bsoak duration\b|expected[ _]per[ _]week|"
+                r"\bexpected event rate\b|\bevent rate from the backtest\b|\bits power\b", re.I)),
+    ("a statistical soak exit (cost / live-vs-backtest)", False,
+     re.compile(r"(?:leaves when|exits? when|passes when|pass(?:es)? on|done when|clears when|pass rule|"
+                r"pass/fail rule|until)\b[^.;]{0,120}?(?:realized cost|cost[- ]fidelity|\bR3\b|slippage|"
+                r"live[- _]vs[- _]backtest)|realized cost (?:per trade )?match(?:es)?|"
+                r"with realized cost matching", re.I)),
+]
+#: A sentence that negates the shape is not a teaching of it ("no end date",
+#: "never a sample size", "not soak exit criteria", "retired", "refuses").
+_NEGATION = re.compile(r"\b(?:no|not|never|nor|without|refuses?|refused|retired|removed|forbid\w*|"
+                       r"banned|rejects?|isn't|cannot|instead of|superseded)\b|⛔", re.I)
+#: "soak" as the thing soaking — not a compound naming a tool or a log
+#: ("soak grade", "soak_book_grade", "exit_ladder_soak", "soak report").
+_SOAK_WORD = re.compile(r"(?<![_\w])soak(?:s|ed|ing)?\b(?![_-]|\s+(?:grade|book|report|log|state|contract|watch))", re.I)
+_SENT = re.compile(r"(?<=[.!?;])\s+|\s+[—–]\s+(?=[A-Z])")
+
+
+def soak_shape_hits(text: str, where: str) -> List[str]:
+    """Every sentence of ``text`` that teaches a long soak, as a finding string
+    (``where:line``). Paragraph-scoped: a sentence is judged when its paragraph
+    mentions a soak; a line carrying LINE_OK_MARKER is skipped."""
+    out: List[str] = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        if not lines[i].strip():
+            i += 1
+            continue
+        start = i
+        while i < len(lines) and lines[i].strip() and not (i > start and lines[i].lstrip().startswith(("|", "- ", "* ", "#"))):
+            i += 1
+        block = [ln for ln in lines[start:i] if LINE_OK_MARKER not in ln]
+        para = " ".join(ln.strip() for ln in block)
+        if "soak" not in para.lower():
+            continue
+        for sent in _SENT.split(para):
+            for label, needs_soak, rx in SOAK_SHAPE:
+                if needs_soak and not _SOAK_WORD.search(sent):
+                    continue
+                m = rx.search(sent)
+                if not m or _NEGATION.search(sent[max(0, m.start() - 45):m.end()]):
+                    continue
+                off = next((k for k, ln in enumerate(lines[start:i]) if m.group(0)[:12] in ln), 0)
+                out.append(f"{where}:{start + off + 1}: teaches {label}: …{m.group(0)[:80].strip()}… — the "
+                           f"soak is MECHANICAL, 1–2 clean trades, no calendar: point at OPERATING-PLAN § 2 "
+                           f"\"The soak is MECHANICAL\" instead of restating it")
+                break
+    return out
+
+
+def live_surfaces() -> List[Path]:
+    seen: Dict[Path, None] = {}
+    for g in LIVE_SURFACES:
+        for p in sorted(ROOT.glob(g)):
+            if p.is_file():
+                seen[p] = None
+    return list(seen)
+
+
+def check_live_language() -> List[str]:
+    """CHECK E."""
+    out: List[str] = []
+    for p in live_surfaces():
+        rel = _rel(p)
+        if _DATED.search(p.name) and rel not in LIVE_DATED:
+            continue
+        txt = p.read_text(encoding="utf-8", errors="replace")
+        if SUPERSEDED_MARKER in txt:
+            continue
+        if rel == "ROADMAP.md" and ROADMAP_LIVE[0] in txt:
+            a = txt.index(ROADMAP_LIVE[0])
+            b = txt.find(ROADMAP_LIVE[1], a)
+            head = txt[:a].count("\n")
+            txt = "\n" * head + txt[a:b if b > 0 else None]
+        out += soak_shape_hits(txt, rel)
+    return out
+
+
+def _import_ops(name: str):
+    sys.path.insert(0, str(ROOT / "scripts" / "ops"))
+    sys.path.insert(0, str(ROOT))
+    import importlib  # noqa: PLC0415
+    return importlib.import_module(name)
+
+
+def check_contracts() -> List[str]:
+    """CHECK F."""
+    ss = _import_ops("soak_state")
+    out = []
+    for c in ss.load_contracts():
+        out += [f"docs/claude/work/SOAKS.json {c.get('id')}: {p}" for p in ss.contract_problems(c)]
+    if ss.MAX_N_NEEDED > 2 or ss.N_DEFAULT > 2:
+        out.append("scripts/ops/soak_state.py: MAX_N_NEEDED / N_DEFAULT above 2")
+    return out
+
+
+def generator_outputs() -> List[Tuple[str, str]]:
+    """What the soak generators actually EMIT, as (where, text)."""
+    ss = _import_ops("soak_state")
+    out: List[Tuple[str, str]] = []
+    for kind in ("stage1", "shadow"):
+        c = ss.make_contract(kind=kind, leg="probe_leg", account="bybit_1", started="2026-10-15")
+        out.append((f"soak_state.make_contract({kind})", json.dumps(c, ensure_ascii=False)))
+    sr = _import_ops("soak_report")
+    out.append(("soak_report.grade_stage1",
+                " ".join(str(x) for x in sr.grade_stage1({"disposition": "healthy", "mechanics": {}},
+                                                         True, "g"))))
+    mr = _import_ops("mandate_resolver")
+    out.append(("mandate_resolver._soak_data_task",
+                json.dumps(mr._soak_data_task("probe_leg", "bybit_1", "MD-X", "bybit_2"), ensure_ascii=False)))
+    return out
+
+
+def check_generators() -> List[str]:
+    """CHECK G."""
+    ss = _import_ops("soak_state")
+    out: List[str] = []
+    for kind in ("stage1", "shadow"):
+        c = ss.make_contract(kind=kind, leg="probe_leg", account="bybit_1", started="2026-10-15")
+        out += [f"soak_state.make_contract({kind}) emits an inadmissible contract: {p}"
+                for p in ss.contract_problems(c)]
+    for where, text in generator_outputs():
+        out += soak_shape_hits(text.replace("\\n", " "), where)
+    return out
+
+
+def check_canonical_once() -> List[str]:
+    """CHECK H."""
+    txt = SOAK_CANON_DOC.read_text(encoding="utf-8") if SOAK_CANON_DOC.exists() else ""
+    return canon_problems(txt, (ROOT / "CLAUDE.md").read_text(encoding="utf-8"))
+
+
+def canon_problems(txt: str, claude_md: str) -> List[str]:
+    out: List[str] = []
+    n = txt.count(SOAK_CANON_MARKER)
+    if n != 1:
+        out.append(f"{_rel(SOAK_CANON_DOC)} carries the {SOAK_CANON_MARKER} marker {n} time(s); "
+                   "the soak rule is stated exactly ONCE, there")
+    if SOAK_OPERATOR_QUOTE not in " ".join(txt.split()):
+        out.append(f"{_rel(SOAK_CANON_DOC)}: the canonical soak paragraph must quote the operator verbatim")
+    cl = " ".join(claude_md.split())
+    if SOAK_OPERATOR_QUOTE not in cl or "OPERATING-PLAN-2026-09-21.md" not in cl \
+            or "The soak is MECHANICAL" not in cl:
+        out.append("CLAUDE.md must carry the short binding soak paragraph: the operator's verbatim "
+                   "quote plus a pointer to OPERATING-PLAN § 2 \"The soak is MECHANICAL\"")
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Check D — a verdict must not be control-dependent on live/calendar accrual.
 # ---------------------------------------------------------------------------
 
@@ -130,7 +355,15 @@ EXCEPTIONS = ROOT / "docs" / "claude" / "soak-doctrine-exceptions.json"
 
 #: Backlog files a ledger entry's ``backlog_row`` may be VERIFIED against. The
 #: entry is checked, not merely present — see the module docstring.
+#: ⚠️ UPDATED 2026-09-21 by the operating reset. The four review backlogs are
+#: archived under `docs/archive/2026-09-21-operating-reset/registers/` and the
+#: MANAGER CHECKLIST is now the one register, so a ledger entry names a
+#: checklist item id (`B4`) instead of a backlog row id. Both shapes read
+#: `items[].id`, so the loader below is unchanged. The archived paths stay in
+#: this list because `_load_backlog_ids` skips a path that does not exist —
+#: dropping them would silently stop verifying any entry that still names one.
 BACKLOGS = [
+    ROOT / "docs" / "claude" / "work" / "MANAGER-CHECKLIST.json",
     ROOT / "docs" / "claude" / "health-review-backlog.json",
     ROOT / "docs" / "claude" / "performance-review-backlog.json",
     ROOT / "docs" / "claude" / "ml-review-backlog.json",
@@ -257,11 +490,16 @@ def find_accrual_gated_verdicts(
 
 def _load_backlog_ids() -> Set[str]:
     ids: Set[str] = set()
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
     for path in BACKLOGS:
-        if not path.exists():
+        is_ck = _ck.is_checklist_path(path)  # monolith, or per-row store once cut over
+        if not (_ck.exists(path) if is_ck else path.exists()):
             continue
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = (_ck.load_path(path) if is_ck
+                    else json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError):
             continue
         rows = data.get("items") if isinstance(data, dict) else data
@@ -363,7 +601,69 @@ def check_gate_surfaces() -> Tuple[List[str], List[str]]:
     return errors, notices
 
 
+def self_test() -> int:
+    """Planted defects for CHECKS E–H: every one must be caught, every control
+    must stay quiet. A green guard run proves nothing on its own here — it was
+    green through the whole 2026-09-21..10-15 re-teaching."""
+    ok = True
+
+    def ck(label: str, cond: bool) -> None:
+        nonlocal ok
+        ok &= bool(cond)
+        print(f"  {'PASS' if cond else 'FAIL'}  {label}")
+
+    planted = {
+        "soak for 3 weeks": "Put the leg on bybit_1 and let it soak for 3 weeks.",
+        "a 14-day shadow soak": "Then a fresh 14-day shadow soak before any promotion talk.",
+        "cost exit (the 2026-09-21 ladder, across lines)":
+            "STAGE 1   Soak   bybit_1\n  Do the mechanics work?\n  Leaves when — orders place, AND realized "
+            "cost\n  per trade matches the modelled cost.",
+        "contract with rate, n and power, end date (the 2026-10-04 rule 3)":
+            "3. **Every soak carries a contract.** It states what it verifies, the expected\n"
+            "   event rate from the backtest, the n and power it needs, an **end date**.",
+        "n_needed: 10": "Each soak contract sets n_needed: 10 closes.",
+        "needs at least 10 closes": "A soak needs at least 10 closes per leg.",
+        "R3 fills per side": "The soak clears when R3 sees 10 fills per side.",
+        "prop soak with realized cost matching": "a Stage-1 soak on bybit_1 with realized cost matching the backtest",
+    }
+    for label, text in planted.items():
+        ck(f"planted: {label} is caught", soak_shape_hits(text, "t"))
+    canon = SOAK_CANON_DOC.read_text(encoding="utf-8")
+    a = canon.find("### The soak is MECHANICAL")
+    controls = {
+        "the canonical paragraph itself": canon[a:canon.find("**Stage 2 is one stage", a)],
+        "an observe-only log's row count": "`exit_ladder_soak` has shipped — n=277 rows so far.",
+        "a soak GRADE's staleness": "R5 weekly soak grade lands | newest record >= 8 days old",
+        "a negated calendar": "A soak has no end date, no duration and never a sample size.",
+        "a pipeline id": "open items: PI-20260922-R5-STAGE0-VERDICT-FLIPS-ON-A-9-DAY-WINDOW-SHIFT soaking",
+        "a demotion window": "reads the leg's LAST 40 closed trades; returns it to the Stage-1 soak book",
+        "an ok-marked line": "a soak for 3 weeks <!-- soak-doctrine: ok -->",
+    }
+    for label, text in controls.items():
+        ck(f"control: {label} stays quiet", not soak_shape_hits(text, "t"))
+    ss = _import_ops("soak_state")
+    old = {"id": "SOAK-stage1-bybit_1-x", "leg": "x", "account": "bybit_1", "kind": "stage1",
+           "verifies": "v", "metric": "m", "n_needed": 10, "power": "R3 floor", "started": "2026-10-01",
+           "end_date": "2026-12-11", "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + 2 bps",
+           "fail_rule": "f", "design": "too_long"}
+    ck("CHECK F: the retired accrual contract shape is refused", len(ss.contract_problems(old)) >= 4)
+    ck("CHECK F: the generator's contract is admissible",
+       ss.contract_problems(ss.make_contract(kind="stage1", leg="x", account="bybit_1", started="2026-10-01")) == [])
+    ck("CHECK G: current generator outputs are clean", check_generators() == [])
+    ck("CHECK G: an emitted '>=10 fills per side' would be caught",
+       soak_shape_hits("Soak clears when it has 10 fills per side (RULE-R3).", "g"))
+    good_cl = f"... {SOAK_OPERATOR_QUOTE} ... OPERATING-PLAN-2026-09-21.md § 2 \"The soak is MECHANICAL\""
+    ck("CHECK H: the real canon passes", canon_problems(canon, good_cl) == [])
+    ck("CHECK H: a second canonical marker is refused",
+       canon_problems(canon + SOAK_CANON_MARKER, good_cl) != [])
+    ck("CHECK H: CLAUDE.md without the pointer is refused", canon_problems(canon, SOAK_OPERATOR_QUOTE) != [])
+    print("soak-doctrine self-test (E–H):", "PASS" if ok else "FAIL")
+    return 0 if ok else 1
+
+
 def main() -> int:
+    if "--self-test" in sys.argv[1:]:
+        return self_test()
     errors: list[str] = []
 
     canon = CANON.read_text(encoding="utf-8") if CANON.exists() else ""
@@ -409,6 +709,10 @@ def main() -> int:
 
     d_errors, d_notices = check_gate_surfaces()
     errors.extend(d_errors)
+    errors.extend(check_live_language())
+    errors.extend(check_contracts())
+    errors.extend(check_generators())
+    errors.extend(check_canonical_once())
 
     if errors:
         print("SOAK-DOCTRINE GUARD FAILED:\n")

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "_FRESH_WINDOW_INPUTS covers every template workflow (or a harness is recorded as unable to express a window, with the reason), and no research/queue unit carries a confirmation blocked_reason",
+    "kind": "event"
+  },
+  "id": "PI-20261016-QOTFUEXV-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-CONFIRM-FRESH-WINDOW / PR #18593",
+    "rerun": "grep -n '_FRESH_WINDOW_INPUTS = {' -A4 scripts/research/queue_grade.py; grep -l 'blocked_reason' research/queue/*.yaml"
+  },
+  "state": "queued",
+  "what": "Fresh-window inputs missing for the e35-bracket-sweep, prop-fit-breakout (research-script-run.yml / prop_ev_grid.py) and roster-walkforward (research-harness-dispatch.yml) harnesses: queue_grade._FRESH_WINDOW_INPUTS maps only m20-exit-lever-sweep.yml, so a PASS on any other template cell gets its one confirmation unit authored status: blocked (blocked_reason names the workflow). Build: an input on each harness that confines evidence to data after a date (or a trades-file date filter for prop_ev_grid), then add the mapping. MEASURED on main 2026-10-16: 0 such PASSes exist today (no once-cell PASS; e35 monthly cells read indeterminate/no_action), so this is latent until the first one lands. ALSO: m20_fleet_exit_sweep.py has a --cells argument; the m20 confirmation should pass the parent's passing_cells so the fresh window re-asks the discovered cells, not a 16-25-cell re-selection."
+}

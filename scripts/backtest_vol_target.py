@@ -31,6 +31,14 @@ and the total turnover cost charged. ``--json`` + a text summary.
 The headline question P1 answers: does the overlay improve Sharpe NET of
 turnover, and by how much?
 
+Cost stack (FRONTIER-LEVER-HARNESS-COSTS): the overlay's costs are resolved
+through ``execution_costs.resolve_cost_policy`` for ``--cost-symbol`` (default a
+crypto perp, ``BTCUSDT``, since the book it overlays is the perp xsec book) --
+fee + slippage per unit of |delta multiplier| (round-trip, conservative) and perp
+funding per held day. ``None`` resolves to the venue-aware policy; an explicit
+0 is the comparison arm and is recorded in ``params.cost_policy``. There is no
+silent 0.0.
+
 Research only (Tier-1): reads a CSV (or trade JSONL via the shared combine), and
 writes JSON/text. Never touches the order path or live config.
 """
@@ -52,6 +60,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 # Reuse the canonical combine logic so book construction is identical to
 # portfolio_combine.py (no duplicated parse).
+from src.runtime import execution_costs  # noqa: E402
 from scripts.portfolio_combine import (  # noqa: E402
     TRADING_DAYS_PER_YEAR,
     build_book,
@@ -205,6 +214,56 @@ def _turnover_drag(mult: Sequence[float], turnover_bps: float
     return drag, round(total, 6)
 
 
+DEFAULT_COST_SYMBOL = "BTCUSDT"
+FUNDING_WINDOWS_PER_DAY = 24.0 / execution_costs.FUNDING_WINDOW_HOURS
+
+
+def resolve_overlay_costs(cost_symbol: str = DEFAULT_COST_SYMBOL, *,
+                          fee_bps_roundtrip: Optional[float] = None,
+                          slippage_bps_roundtrip: Optional[float] = None,
+                          funding_bps_per_window: Optional[float] = None,
+                          turnover_bps: Optional[float] = None,
+                          held_exposure: float = 1.0) -> Dict[str, Any]:
+    """The overlay's full cost stack via ``execution_costs.resolve_cost_policy``.
+
+    ``None`` -> venue-aware default for ``cost_symbol``; explicit (incl. 0) wins.
+    ``turnover_bps`` (legacy single-number flag), if given, REPLACES the
+    fee+slippage turnover charge and is recorded as an override.
+    """
+    from src.core.profile_loader import roundtrip_fee_bps_for
+    slip, fund = execution_costs.resolve_cost_policy(
+        cost_symbol, slippage_bps_roundtrip=slippage_bps_roundtrip,
+        funding_bps_per_window=funding_bps_per_window)
+    if fee_bps_roundtrip is None:
+        venue_fee = roundtrip_fee_bps_for(cost_symbol)
+        fee = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP if venue_fee is None else venue_fee
+    else:
+        fee = float(fee_bps_roundtrip)
+    turnover = (fee + slip) if turnover_bps is None else float(turnover_bps)
+    return {
+        "cost_symbol": cost_symbol,
+        "is_perp": execution_costs.is_perp(cost_symbol),
+        "fee_bps_roundtrip": fee,
+        "slippage_bps_roundtrip": slip,
+        "funding_bps_per_window": fund,
+        "funding_windows_per_day": FUNDING_WINDOWS_PER_DAY,
+        "held_exposure": held_exposure,
+        "turnover_bps_charged": turnover,
+        "turnover_bps_override": turnover_bps,
+        "source": "execution_costs.resolve_cost_policy",
+    }
+
+
+def _funding_drag(mult: Sequence[float], costs: Dict[str, Any]
+                  ) -> Tuple[List[float], List[float]]:
+    """Per-day perp funding drag in R for (baseline, targeted) -- the SAME formula
+    on both arms, ``held_exposure * mult_t * funding_bps/1e4 * windows_per_day``
+    (baseline mult = 1), so the Sharpe delta isolates the overlay."""
+    per_day = (costs["funding_bps_per_window"] / 10_000.0
+               * costs["funding_windows_per_day"] * costs["held_exposure"])
+    return [per_day] * len(mult), [per_day * m for m in mult]
+
+
 def _annualized_vol(daily_r: Sequence[float]) -> Optional[float]:
     if len(daily_r) < 2:
         return None
@@ -233,14 +292,24 @@ def _stats_block(daily_r: Sequence[float]) -> Dict[str, Any]:
 def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
                    target_vol: float, short: int, long: int, blend: float,
                    cap_lo: float, cap_hi: float, retarget: str,
-                   turnover_bps: float) -> Dict[str, Any]:
-    """Baseline vs vol-targeted comparison over the daily book series."""
+                   turnover_bps: Optional[float] = None,
+                   costs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Baseline vs vol-targeted comparison over the daily book series.
+
+    ``costs`` is :func:`resolve_overlay_costs`'s output; when omitted it is
+    resolved with the venue-aware defaults (never a silent zero)."""
+    if costs is None:
+        costs = resolve_overlay_costs(turnover_bps=turnover_bps)
+    turnover_bps = costs["turnover_bps_charged"]
     baseline_r = [r for (_d, r, _n) in daily]
     mult, at_cap = compute_multipliers(
         daily, target_vol=target_vol, short=short, long=long, blend=blend,
         cap_lo=cap_lo, cap_hi=cap_hi, retarget=retarget)
     drag, total_turnover = _turnover_drag(mult, turnover_bps)
-    scaled_r = [mult[t] * baseline_r[t] - drag[t] for t in range(len(daily))]
+    fund_base, fund_tgt = _funding_drag(mult, costs)
+    baseline_r = [baseline_r[t] - fund_base[t] for t in range(len(daily))]
+    scaled_r = [mult[t] * (baseline_r[t] + fund_base[t]) - fund_tgt[t] - drag[t]
+                for t in range(len(daily))]
 
     baseline = _stats_block(baseline_r)
     targeted = _stats_block(scaled_r)
@@ -258,6 +327,7 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
             "short_lookback": short, "long_lookback": long, "blend": blend,
             "cap_lo": cap_lo, "cap_hi": cap_hi, "retarget": retarget,
             "turnover_bps": turnover_bps,
+            "cost_policy": costs,
         },
         "data_start": str(daily[0][0]) if daily else None,
         "data_end": str(daily[-1][0]) if daily else None,
@@ -273,6 +343,8 @@ def run_vol_target(daily: Sequence[Tuple[date, float, int]], *,
             "pct_periods_at_cap": round(100.0 * n_at_cap_periods / n_periods, 2) if n_periods else 0.0,
         },
         "total_turnover_cost_r": total_turnover,
+        "total_funding_cost_r": {"baseline": round(sum(fund_base), 6),
+                                 "vol_targeted": round(sum(fund_tgt), 6)},
         "run_date": str(date.today()),
     }
 
@@ -295,7 +367,9 @@ def _fmt(out: Dict[str, Any]) -> str:
         f"  -> Sharpe delta (targeted - baseline) = {out['sharpe_delta']}",
         f"  multiplier: mean={m['mean']} min={m['min']} max={m['max']}  "
         f"periods={m['n_periods']} at_cap={m['n_periods_at_cap']} ({m['pct_periods_at_cap']}%)",
-        f"  total turnover cost charged = {out['total_turnover_cost_r']} R",
+        f"  total turnover cost charged = {out['total_turnover_cost_r']} R  "
+        f"funding (base/targeted) = {out['total_funding_cost_r']['baseline']}/"
+        f"{out['total_funding_cost_r']['vol_targeted']} R",
     ]
     return "\n".join(lines)
 
@@ -325,9 +399,24 @@ def main(argv: List[str]) -> int:
                    default="weekly",
                    help="Re-target cadence; multiplier held constant within a "
                         "period to damp turnover. Default weekly.")
-    p.add_argument("--turnover-bps", type=float, default=2.0,
-                   help="Cost in bps charged on |Δmultiplier| each re-balance "
-                        "(drag_R = |Δmult| * bps/1e4). Conservative default 2.0.")
+    p.add_argument("--turnover-bps", type=float, default=None,
+                   help="OVERRIDE the per-rebalance cost (bps charged on |delta mult|). "
+                        "DEFAULT (unset) = fee + slippage round-trip from "
+                        "execution_costs.resolve_cost_policy for --cost-symbol.")
+    p.add_argument("--cost-symbol", default=DEFAULT_COST_SYMBOL,
+                   help="Symbol whose venue the overlaid book trades; picks the "
+                        "venue-aware fee/slippage/funding. Default BTCUSDT (perp).")
+    p.add_argument("--fee-bps-roundtrip", type=float, default=None,
+                   help="Override round-trip fee bps. Unset = venue default.")
+    p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
+                   help="Override round-trip slippage bps. Unset = venue default; "
+                        "0 = fee-only comparison arm.")
+    p.add_argument("--funding-bps-per-window", type=float, default=None,
+                   help="Override perp funding bps per 8h window, charged per held "
+                        "day on both arms. Unset = venue default (perp 1.0, else 0).")
+    p.add_argument("--held-exposure", type=float, default=1.0,
+                   help="Average notional held per unit of book risk, for the funding "
+                        "term. Default 1.0.")
     p.add_argument("--json", dest="json_out", default=None,
                    help="Write the JSON payload here ('-' for stdout).")
     a = p.parse_args(argv[1:])
@@ -345,10 +434,15 @@ def main(argv: List[str]) -> int:
         print("ERROR: no daily rows loaded (empty book).", file=sys.stderr)
         return 1
 
+    costs = resolve_overlay_costs(
+        a.cost_symbol, fee_bps_roundtrip=a.fee_bps_roundtrip,
+        slippage_bps_roundtrip=a.slippage_bps_roundtrip,
+        funding_bps_per_window=a.funding_bps_per_window,
+        turnover_bps=a.turnover_bps, held_exposure=a.held_exposure)
     out = run_vol_target(
         daily, target_vol=a.target_vol, short=a.short, long=a.long,
         blend=a.blend, cap_lo=a.cap_lo, cap_hi=a.cap_hi, retarget=a.retarget,
-        turnover_bps=a.turnover_bps)
+        costs=costs)
     print(_fmt(out))
 
     if a.json_out:

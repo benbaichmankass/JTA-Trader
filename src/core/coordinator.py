@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import yaml
 
-from src.runtime.orders import account_state_dry_run
 
 if TYPE_CHECKING:
     from typing import Sequence
@@ -41,6 +40,18 @@ logger = logging.getLogger(__name__)
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 _UNITS_YAML = os.path.join(_REPO_ROOT, "config", "units.yaml")
 _ACCOUNTS_YAML = os.path.join(_REPO_ROOT, "config", "accounts.yaml")
+
+
+def _default_accounts_path() -> str:
+    """The accounts.yaml a call with no explicit path reads: the
+    ``ACCOUNTS_YAML_PATH`` env var when set, else ``config/accounts.yaml``.
+
+    Same resolution as ``src.config.accounts_loader._resolve_path`` for the
+    no-argument case, which is how ``strategy_monocle._accounts_declaring``
+    (the per-account open-package gate) reads the file. Dispatch ignored the
+    env var, so with it set the gate and the dispatcher read different files
+    (PI-20260930-MEK2XMWT-0006, ORDER-AUDIT-3)."""
+    return os.environ.get("ACCOUNTS_YAML_PATH") or _ACCOUNTS_YAML
 _INSTRUMENTS_YAML = os.path.join(_REPO_ROOT, "config", "instruments.yaml")
 
 
@@ -85,8 +96,12 @@ def balance_none_refusal_message(account_name: str, exchange: str) -> str:
     )
 
 
-def _has_open_position(account_name: str, symbol: str) -> bool:
-    """Return True if account already has an open live trade for symbol."""
+def _has_open_position(account_name: str, symbol: str) -> Optional[bool]:
+    """Return True if account already has an open live trade for symbol.
+
+    ``None`` when the journal read fails ("could not look", FIX-CA-07) — the
+    caller refuses rather than reading a locked journal as "no position".
+    """
     import sqlite3
     from src.utils.paths import trade_journal_db_path
     db_path = trade_journal_db_path()
@@ -101,8 +116,12 @@ def _has_open_position(account_name: str, symbol: str) -> bool:
                 (account_name, symbol),
             ).fetchone()
         return bool(row and row[0] > 0)
-    except Exception:  # noqa: BLE001
-        return False
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_has_open_position: read failed for account=%s symbol=%s: %s "
+            "(could not look -> None)", account_name, symbol, exc,
+        )
+        return None
 
 
 # In-process pause sentinels (PR #122 will replace with persistent flags).
@@ -172,6 +191,50 @@ def _instrument_exchange_for(symbol: str) -> Optional[str]:
         except Exception:  # noqa: BLE001
             _INSTRUMENT_EXCHANGE_CACHE = {}
     return _INSTRUMENT_EXCHANGE_CACHE.get(symbol) or None
+
+
+# PI-20260926-KNSTSR8N-0003: ``multi_account_execute`` drops an account from a
+# dispatch round in two places WITHOUT writing a ``trades`` row —
+# ``_dispatch_exclusion_reason``'s pre-loop eligibility filter, and the
+# ``account_type`` scope filter inside the loop. Both are correct BY DESIGN
+# for the routine case (``tests/test_multi_account_execute_early_out_logs_refusal.py``:
+# "the per-account strategy filter runs before the dispatch loop and removes
+# unmatched accounts from ``results`` entirely — no rejection row written").
+# The defect this closes is not the missing journal row (removing it was a
+# deliberate 2026-05-08 anti-noise fix) — it is that "no journal row" had come
+# to mean "no trace of ANY kind": a genuinely mis-wired leg (``configured``
+# flipped False, a routing-table gap, an emptied ``strategies:`` list) reads
+# identically to the routine case from outside this function. This is
+# observe-only: it changes no dispatch decision, only whether the decision
+# leaves a line in the log.
+#
+# Two reasons stay at DEBUG because they are the high-volume, working-as-
+# designed cases: ``strategy_not_assigned`` fires for most accounts on most
+# strategies, every tick (the exact O(strategies × accounts × ticks) shape
+# CLAUDE.md's "Per-account strategy filter" section already retired at INFO),
+# and ``outside_account_scope`` is E35's per-account election losing
+# gracefully to a same-symbol sibling. Every other reason names a leg that DOES
+# belong on this account and is still not reaching it, so it logs at WARNING.
+_DISPATCH_DROP_ROUTINE_REASONS = ("strategy_not_assigned", "outside_account_scope")
+
+
+def _log_dispatch_drop(
+    *, account: str, strategy: str, symbol: str, reason: str, stage: str,
+) -> None:
+    """Structured, no-op trace for an account dropped from dispatch before
+    ``execute_pkg`` is ever reached — the one class of drop that writes no
+    ``trades`` row of any status. Never raises; a tracing failure must not be
+    able to affect dispatch.
+    """
+    try:
+        _routine = any(reason.startswith(r) for r in _DISPATCH_DROP_ROUTINE_REASONS)
+        _log = logger.debug if _routine else logger.warning
+        _log(
+            "dispatch_drop: account=%s strategy=%s symbol=%s stage=%s reason=%s",
+            account, strategy, symbol, stage, reason,
+        )
+    except Exception:  # noqa: BLE001 — a trace must never break dispatch
+        logger.debug("dispatch_drop: trace emission failed", exc_info=False)
 
 
 # ---------------------------------------------------------------------------
@@ -739,8 +802,7 @@ class Coordinator:
             Path to accounts.yaml.  Defaults to ``config/accounts.yaml``.
         """
         from src.units.accounts import load_accounts
-        import os as _os
-        path = accounts_path or _os.path.join(_REPO_ROOT, "config", "accounts.yaml")
+        path = accounts_path or _default_accounts_path()
         try:
             tradeaccs = load_accounts(path)
         except FileNotFoundError:
@@ -869,9 +931,13 @@ class Coordinator:
             unchanged and is evaluated first. ``None`` (the default) is
             byte-for-byte the pre-2026-08-31 behaviour.
 
-            This is the per-account arbitration fan-out's dispatch handle
-            (``ARBITRATION_FANOUT_MODE=apply``). The global election picks ONE
-            winner per symbol before any account is consulted, so an account
+            This is the per-account election's dispatch handle (E35,
+            2026-09-25: ``pipeline._dispatch_rounds`` passes each round's
+            electing accounts; it was the ``ARBITRATION_FANOUT_MODE=apply``
+            fan-out's until then). It is LOAD-BEARING for no-double-place: a
+            package for strategy A must not reach an account that declares A
+            but elected B this tick. Historically: the global election picked
+            ONE winner per symbol before any account was consulted, so an account
             running its own candidate on that symbol is dropped here by
             ``pkg.strategy in assigned`` and produces no order package at all —
             invisible to the journal AND to every per-account detector
@@ -902,9 +968,28 @@ class Coordinator:
         """
         from src.units.accounts import load_accounts
         from src.units.accounts.account import RiskBreach
-        import os as _os
+        from src.runtime.runtime_flags import is_halted
 
-        path = accounts_path or _os.path.join(_REPO_ROOT, "config", "accounts.yaml")
+        # TRADER HALT FLAG — the real second, independent layer
+        # (AUD-20260927-CA-A02-safe-place-order-guards-have-no-callers,
+        # ORDER-AUDIT-2 item 2). The halt check documented as the order layer's
+        # "second, independent" one lives in
+        # ``src/runtime/orders.py::safe_place_order``, which has NO caller in
+        # src/ — so pipeline.run's check was the only one. Every entry package
+        # passes through this method, so a caller that reaches it without
+        # pipeline.run's check still cannot open a position while the flag is
+        # present. Entries only: exits run through order_monitor and are
+        # deliberately not halted (same scope as pipeline.run's halt).
+        if is_halted():
+            logger.warning(
+                "multi_account_execute: trader HALTED (flag present) — "
+                "refusing to dispatch %s %s %s to any account",
+                getattr(pkg, "strategy", "?"), getattr(pkg, "symbol", "?"),
+                getattr(pkg, "direction", "?"),
+            )
+            return []
+
+        path = accounts_path or _default_accounts_path()
         try:
             accounts = load_accounts(path)
         except FileNotFoundError:
@@ -973,12 +1058,61 @@ class Coordinator:
             except Exception:  # noqa: BLE001 — never break sizing on a probe
                 return str(getattr(acc, "exchange", "")).lower() == "breakout"
 
+        def _is_phone_flow(account_id: str) -> bool:
+            """True when *account_id* is a ``phone_accounts`` entry in
+            config/prop_platforms.yaml (ticket flow ``phone``). An unreadable
+            file reads as not-phone, keeping the refusal (the old behaviour)."""
+            try:
+                from src.prop.platform import FLOW_PHONE, ticket_flow
+                return ticket_flow(account_id) == FLOW_PHONE
+            except Exception:  # noqa: BLE001 — never break sizing on a probe
+                return False
+
+        def _prop_sizing_balance_or_refuse(acc, notify: bool = True) -> float:
+            """A declared prop account's sizing basis — or a refusal.
+
+            PROP ACCOUNTS HAVE NO BROKER SOCKET BY DESIGN. Their sizing basis
+            is the operator's reported account status (the same snapshot the
+            rule-distance guard reads). Only a FRESH snapshot yields a number;
+            stale / absent / error refuse, each with a true cause.
+            Measured 2026-08-13: the old socket-shaped raise was 5 of the 7
+            lifetime rejections on trend_donchian_sol.
+
+            ⚠️ The refusal is OPERATOR-FACING (BL-20260909-PROP-SIZING-
+            REFUSAL-ON-A-STALE-BALANCE-IS-JOURNALED-BUT-NEVER-PINGED): the raise
+            lands in the `sizing_failed` branch, which pages nobody, so
+            `note_refusal` pages once per account per occurrence. It is
+            best-effort, swallows its own exceptions, and de-duplicates, so it
+            can neither strand a trade nor become a per-tick pager. On `ok` it
+            clears the refusal cadence so the next refusal after a recovery
+            pages as a fresh occurrence.
+            """
+            from src.prop.prop_balance import (
+                note_refusal, prop_sizing_balance, refusal_message)
+            state, bal, meta = prop_sizing_balance(acc.name)
+            # A DRY dispatch (account mode: dry_run, execution: shadow,
+            # side_filter) places nothing, so a stale-balance refusal on it is
+            # journaled but never PAGES the operator (manager review of #14672,
+            # TRADEIFY-WIRE: a dry tradeify_1 must not page before its feed is
+            # fresh). The refusal itself is unchanged.
+            if notify:
+                note_refusal(state, acc.name, meta)
+            if state == "ok" and bal is not None:
+                return float(bal)
+            raise RuntimeError(refusal_message(state, acc.name, meta))
+
         def _default_balance_fetcher(acc) -> float:
-            # 1. Per-tick override stashed on pkg.meta — tests + the
-            #    bot's per-tick balance refresh use this.
+            # 1. Per-tick override stashed on pkg.meta — an explicit caller
+            #    injection (tests; no src/ writer as of 2026-09-28), honoured
+            #    for every account class exactly like the `balance_fetcher`
+            #    argument, which bypasses this function entirely.
             pkg_balances = (pkg.meta or {}).get("account_balances_usd") or {}
             if acc.name in pkg_balances:
                 return float(pkg_balances[acc.name])
+            # ⚠️ A DECLARED PROP ACCOUNT NEVER REACHES THIS FUNCTION (since
+            #    2026-09-28): the sizing site consults
+            #    `_prop_sizing_balance_or_refuse` for it instead, on every
+            #    path. See the comment there.
             # 2. Live lookup, cached at the top of this dispatch round.
             #    live_balances distinguishes three states:
             #      - acc.name NOT in dict: balance fetch was not attempted
@@ -997,24 +1131,7 @@ class Coordinator:
                 cached = getattr(acc, "cached_balance_usd", None)
                 if cached is not None:
                     return float(cached)
-                # PROP ACCOUNTS HAVE NO BROKER SOCKET BY DESIGN. A None here is
-                # not an API failure — there is no API. Their sizing basis is
-                # the operator's reported account status (the same snapshot the
-                # rule-distance guard reads), so consult that BEFORE raising,
-                # and raise with a cause that is actually true otherwise.
-                # Measured 2026-08-13: this raise was 5 of the 7 lifetime
-                # rejections on trend_donchian_sol and is why the leg had never
-                # emitted a prop ticket.
-                if _is_prop_account_obj(acc):
-                    from src.prop.prop_balance import (
-                        prop_sizing_balance, refusal_message)
-                    state, bal, meta = prop_sizing_balance(acc.name)
-                    if state == "ok" and bal is not None:
-                        return float(bal)
-                    # Still refuses — never sizes off a guess. Only the message
-                    # changes, and it now names something the operator can act on.
-                    raise RuntimeError(refusal_message(state, acc.name, meta))
-                # Non-prop sibling of the prop refusal above: still refuses,
+                # Non-prop sibling of the prop refusal: still refuses,
                 # still never sizes off a guess — only the message changes, and
                 # it now states what this branch actually knows instead of
                 # asserting a cause nothing tested. Full account + the live
@@ -1123,6 +1240,17 @@ class Coordinator:
                     f"symbol_exchange_routing: {pkg.symbol} routes to "
                     f"{inst_exchange}, account is {acct_exchange}"
                 )
+            # Per-account election round scope (E35; pipeline._dispatch_rounds).
+            # NARROWING ONLY: it can subtract an account from the eligible set
+            # but never add one. `None` = no fan-out in play = unchanged
+            # behaviour. It is checked BEFORE the strategies mapping because
+            # the legacy no-mapping early return below used to skip it, so an
+            # account with no `strategies:` key received every package even
+            # when the round was scoped to other accounts
+            # (PI-20260927-ECILBBVH-0005, ORDER-AUDIT-3).
+            if account_scope is not None:
+                if str(getattr(account_obj, "name", "")) not in account_scope:
+                    return "outside_account_scope"
             assigned = getattr(account_obj, "strategies", None)
             if assigned is None:
                 return None  # legacy / no-mapping account
@@ -1136,13 +1264,6 @@ class Coordinator:
                     f"strategy_not_assigned: {pkg.strategy} not in "
                     f"{sorted(str(a) for a in assigned)}"
                 )
-            # Per-account arbitration fan-out (ARBITRATION_FANOUT_MODE=apply).
-            # LAST, and NARROWING ONLY: every rule above has already passed, so
-            # this can subtract an account from the eligible set but can never
-            # add one. `None` = no fan-out in play = unchanged behaviour.
-            if account_scope is not None:
-                if str(getattr(account_obj, "name", "")) not in account_scope:
-                    return "outside_account_scope"
             return None
 
         # Keep the reasons, not just the survivors — an empty eligible set is
@@ -1156,8 +1277,20 @@ class Coordinator:
             if _reason is None:
                 _eligible.append(_acct)
             else:
-                excluded_by_account[str(getattr(_acct, "name", "?"))] = _reason
+                _acct_name = str(getattr(_acct, "name", "?"))
+                excluded_by_account[_acct_name] = _reason
+                _log_dispatch_drop(
+                    account=_acct_name, strategy=str(pkg.strategy or "?"),
+                    symbol=str(pkg.symbol or "?"), reason=_reason,
+                    stage="pre_loop_eligibility",
+                )
         accounts = _eligible
+        # MIRROR-QTY-DIVERGE: a Stage-2 mirror dispatches AFTER its real-money
+        # primary so the mirror gate below can follow the primary's outcome.
+        from src.runtime import mirror_pairs as _mirror_pairs
+        accounts = _mirror_pairs.order_primaries_first(
+            accounts, lambda a: str(getattr(a, "name", "")),
+        )
         logger.info(
             "[coordinator.dispatch] trace_id=%s strategy=%s symbol=%s eligible_accounts=%d",
             getattr(pkg, "trace_id", "?"), pkg.strategy, pkg.symbol, len(accounts),
@@ -1187,9 +1320,15 @@ class Coordinator:
                 # the pre-loop filter records its own: a round narrowed to
                 # ``account_type`` that matches nobody sizes nothing, and the
                 # refusal must be able to say so.
-                excluded_by_account[str(getattr(account, "name", "?"))] = (
+                _at_reason = (
                     f"account_type_mismatch: round wants {account_type}, "
                     f"account is {account.account_type}"
+                )
+                excluded_by_account[str(getattr(account, "name", "?"))] = _at_reason
+                _log_dispatch_drop(
+                    account=str(getattr(account, "name", "?")),
+                    strategy=str(pkg.strategy or "?"), symbol=str(pkg.symbol or "?"),
+                    reason=_at_reason, stage="account_type_scope",
                 )
                 continue
             # Reset per-iteration so intent_legs from a previous account
@@ -1226,6 +1365,54 @@ class Coordinator:
                 # without a category and fall back to is_demo only.
                 "account_class": getattr(account, "account_class", "real_money"),
             }
+
+            # MIRROR-QTY-DIVERGE (Stage 2 = IDENTICAL trades): a mirror places
+            # this package only if its primary placed it in this call. Without
+            # this, bybit_2's 0.5 XRP top-up was refused by the venue (110094)
+            # while bybit_portfolio's 160.9 filled, and the mirror carried a
+            # trade the real-money account never had (pkg-63b56da53bfe4d64).
+            _mv, _mreason = _mirror_pairs.follow_decision(
+                str(getattr(account, "name", "")), results, excluded_by_account,
+            )
+            if _mv == _mirror_pairs.SKIP:
+                logger.warning(
+                    "[coordinator] mirror gate: %s skips %s/%s — %s",
+                    account.name, pkg.strategy, pkg.symbol, _mreason,
+                )
+                try:
+                    from src.runtime.outcomes import Level, report
+                    report(
+                        "mirror_gate", "mirror_skipped_primary_not_placed",
+                        level=Level.WARN, reason=str(_mreason),
+                        account_id=str(account.name),
+                        strategy=pkg.strategy, symbol=pkg.symbol,
+                    )
+                except Exception:  # noqa: BLE001 — observability never blocks
+                    logger.debug("mirror gate outcome report failed", exc_info=True)
+                try:
+                    from src.units.accounts.execute import log_rejection_to_journal
+                    log_rejection_to_journal(
+                        pkg, _early_account_cfg,
+                        reason=str(_mreason), status="rejected", sized_qty=0.0,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.debug("mirror gate journal write failed", exc_info=True)
+                results.append({
+                    "name": account.name,
+                    "exchange": account.exchange,
+                    "account_type": account.account_type,
+                    "trade_id": None,
+                    "sized_qty": 0.0,
+                    "error": str(_mreason),
+                })
+                continue
+            if _mv == _mirror_pairs.UNOBSERVED:
+                logger.warning(
+                    "[coordinator] mirror gate: %s dispatching %s/%s with its "
+                    "primary absent from this call (%s) — trade equality "
+                    "cannot be enforced here", account.name, pkg.strategy,
+                    pkg.symbol, _mreason,
+                )
 
             # Build account_cfg, resolve effective_dry and exchange client
             # BEFORE sizing so the direction-aware balance override (spot
@@ -1298,6 +1485,15 @@ class Coordinator:
                 "alpaca_env": getattr(account, "alpaca_env", None),
                 "base_url": getattr(account, "base_url", None),
                 "oanda_env": getattr(account, "oanda_env", None),
+                # The prop ruleset (accounts.yaml::backtest_ruleset) so the prop
+                # ticket bridge sizes and routes against THIS account's rules;
+                # absent, unit_for_account defaults a prop account to
+                # prop_rulesets/breakout.yaml. None for non-prop accounts.
+                # TRADEIFY-WIRE 2026-09-30.
+                "backtest_ruleset": getattr(account, "backtest_ruleset", None),
+                # NETTED-SLICES: `position_model: slices` switches the intent
+                # path to per-strategy slices (src/runtime/positions.py::admit_slice).
+                "position_model": getattr(account, "position_model", None),
             }
 
             # Per-account live/dry resolution. The caller-supplied
@@ -1315,18 +1511,27 @@ class Coordinator:
                 effective_dry = bool(dry_run)
             else:
                 effective_dry = account_dry
-
-            # account_state.yaml belt-and-suspenders gate (PR-3 / M2).
-            # Only enforces dryness — never forces live. A missing file
-            # or missing account entry is a no-op (fail-open).
-            state_dry = account_state_dry_run(account.name)
-            if state_dry is True and not effective_dry:
-                logger.warning(
-                    "[coordinator] account_state.yaml overrides %s to dry_run "
-                    "(accounts.yaml said live, state file says dry)",
-                    account.name,
+            # WHICH gate made this dispatch dry, stamped onto the dry journal
+            # row as ``notes.dry_cause`` (PI-20260928-SVBNZOVH-0001). Before
+            # this, a side_filter-suppressed short on a ``mode: live`` account
+            # wrote an ordinary ``dry_run_no_order_placed`` row whose cause
+            # lived only in a logger line (journald keeps ~30 min), so it was
+            # indistinguishable in the DB from a shadow or mode demotion.
+            # Journal-only: nothing below branches on it.
+            _dry_cause: Optional[str] = None
+            if effective_dry:
+                _dry_cause = (
+                    "process_override" if dry_run is not None
+                    else "account_mode:dry_run"
                 )
-                effective_dry = True
+
+            # The config/account_state.yaml dry-only fold that sat here
+            # (PR-3 / M2) was RETIRED 2026-09-29 by operator decision
+            # JC-CA-06 ("Retire it"): effective_dry is decided by the two
+            # declared execution gates only — accounts.yaml::mode (above)
+            # and strategies.yaml::execution (below). At retirement the file
+            # read dry_run: false for every entry on main and on the VM, so
+            # no account's mode changed.
 
             # Strategy-level execution gate (S9, operator-approved
             # 2026-05-24). A strategy marked ``execution: shadow`` in
@@ -1354,6 +1559,7 @@ class Coordinator:
                             pkg.strategy, account.name,
                         )
                         effective_dry = True
+                        _dry_cause = "execution:shadow"
                 except Exception as exc:  # noqa: BLE001
                     # Fail-open to the account's own mode — never let a
                     # registry read error block a live strategy.
@@ -1406,12 +1612,112 @@ class Coordinator:
                             getattr(pkg, "symbol", "?"),
                         )
                         effective_dry = True
+                        _dry_cause = f"side_filter:{_sf_resolved}"
                 except Exception as exc:  # noqa: BLE001
                     # Fail-open to the account's own mode — a resolver error
                     # must never block a permitted direction.
                     logger.warning(
                         "[coordinator] account side_filter lookup failed for "
                         "'%s' (%s); leaving direction ungated",
+                        account.name, exc,
+                    )
+
+            # Per-ACCOUNT BROKER short gate — the venue's own
+            # ``shorting_enabled`` (BL-20260823-ALPACA-SHORTING-FLAG-READ-NEVER-
+            # CONSUMED; operator "Build the gate now", 2026-09-28: "Refuse short
+            # signals, with a logged reason, on any account whose broker reports
+            # shorting disabled"). ``side_filter`` above is a CONFIG policy
+            # covering only the accounts it is declared on; this reads what the
+            # broker says for every flagged exchange (src/runtime/
+            # broker_shorting_gate.py — cached CACHE_TTL_S=600s per account,
+            # fail-permissive on an unreadable flag).
+            #
+            # ⚠️ IT REFUSES WITH A JOURNAL ROW, IT DOES NOT DEMOTE TO DRY. A
+            # dry demotion writes an ordinary dry would-be row whose cause lives
+            # only in a logger line (journald keeps ~30 min), so on a live-mode
+            # account it is indistinguishable from a shadow / side_filter
+            # demotion. The refusal row carries
+            # reason=broker_shorting_disabled, so "why didn't it send?" is
+            # answerable from the DB. No order path is added — this only ever
+            # removes one.
+            #
+            # ⚠️ A CLOSE IS NEVER BLOCKED BY THIS GATE. Under FLIP_POLICY=flat a
+            # short package on an account HOLDING A LONG resolves to a
+            # ``flip_flat_policy`` close, flattened via close_open_position —
+            # and that only runs when the account is not dry. So the gate is
+            # skipped whenever the journal shows a long (or is unreadable —
+            # the intent path refuses an unreadable read on its own with
+            # net_position_unreadable). It only refuses a short that would
+            # OPEN or ADD to short exposure. An options-expressing account is
+            # skipped entirely (a bearish signal there is a debit spread).
+            if not effective_dry:
+                try:
+                    from src.runtime.broker_shorting_gate import (
+                        REFUSAL_TOKEN, refusal_reason, refuses_short,
+                    )
+
+                    def _shorting_client():
+                        # The SAME resolved account_cfg the order client is
+                        # built from below, so the flag is read on the same
+                        # credentials + environment the order would use.
+                        return alpaca_client_for(account_cfg)
+
+                    # An OPTIONS-expressing account (options.express_as:
+                    # debit_vertical, e.g. alpaca_options_paper) turns a bearish
+                    # signal into a bear put DEBIT spread — it BUYS premium and
+                    # is not a short sale, so shorting_enabled does not apply.
+                    # Same canonical predicate the execution path uses.
+                    from src.units.accounts.options_overlay import (
+                        account_expresses_options,
+                    )
+                    if account_expresses_options(account_cfg) is not None:
+                        _bs_refused, _bs_state = False, "not_applicable"
+                    else:
+                        _bs_refused, _bs_state = refuses_short(
+                            account.name, account.exchange,
+                            getattr(pkg, "direction", None), _shorting_client,
+                        )
+                    if _bs_refused:
+                        from src.runtime.positions import current_net_position_qty
+                        _bs_net = current_net_position_qty(account.name, pkg.symbol)
+                        if _bs_net is None or _bs_net > 0:
+                            logger.info(
+                                "[coordinator] broker shorting gate: %s holds "
+                                "net=%s on %s — short may close it; not refused",
+                                account.name, _bs_net, pkg.symbol,
+                            )
+                            _bs_refused = False
+                    if _bs_refused:
+                        logger.warning(
+                            "[coordinator] %s (%s) — refused",
+                            refusal_reason(account.name),
+                            getattr(pkg, "symbol", "?"),
+                        )
+                        from src.units.accounts.execute import (
+                            log_rejection_to_journal,
+                        )
+                        log_rejection_to_journal(
+                            pkg, account_cfg,
+                            reason=REFUSAL_TOKEN,
+                            status="rejected",
+                            sized_qty=0.0,
+                        )
+                        results.append({
+                            "name": account.name,
+                            "exchange": account.exchange,
+                            "account_type": account.account_type,
+                            "trade_id": None,
+                            "sized_qty": 0.0,
+                            "error": REFUSAL_TOKEN,
+                        })
+                        # Recorded so an all-refused round's empty sizing map
+                        # names this rule instead of "cause unattributed".
+                        excluded_by_account[account.name] = REFUSAL_TOKEN
+                        continue
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "[coordinator] broker shorting gate lookup failed for "
+                        "'%s' (%s); leaving short ungated by it",
                         account.name, exc,
                     )
 
@@ -1500,10 +1806,52 @@ class Coordinator:
             # an UnboundLocalError on exactly the failure path the row exists to
             # record. Line-order alone does not establish this; the assignment
             # has to be unconditionally REACHED.
+            # DECLARED PROP ACCOUNT → the stale-balance refusal applies on EVERY
+            # path (PI-20260921-E16-BALANCE-FETCHER-PROP-BRANCH-RARELY-REACHED;
+            # operator "Fix it", 2026-09-28). ⚠️ Until 2026-09-28 the refusal
+            # lived inside `_default_balance_fetcher`, reached only when the live
+            # lookup was attempted AND returned None AND no `cached_balance_usd`
+            # was set — and the bridge line below never called the fetcher at
+            # all, so for `breakout_1` (the one declared prop account, measured
+            # 2026-09-28 via `is_prop_account` over config/accounts.yaml) it was
+            # reached on ZERO paths: tickets emitted off a snapshot nobody had
+            # checked for freshness. Checked here, before any balance source
+            # (cached, live, fallback, a caller `balance_fetcher`, a
+            # `pkg.meta` override), so none of them can pre-empt it. Only the
+            # REFUSAL is new: a fresh snapshot leaves bridge sizing exactly as
+            # it was (0.0 basis → ruleset sentinel below); a non-bridge prop
+            # account sizes off the snapshot.
+            _is_declared_prop = _is_prop_account_obj(account)
             available_basis_kind = None
             margin_basis: dict = {}
             try:
-                balance = 0.0 if _is_prop_bridge else float(fetcher(account))
+                if _is_declared_prop and _is_prop_bridge and _is_phone_flow(account.name):
+                    # PHONE-FLOW BRIDGE (PROP-B2-STARVED, 2026-10-09): the
+                    # snapshot's only machine source is the phone itself, which
+                    # reads the account panel only while it is foregrounded on
+                    # the terminal -- and it foregrounds only for a waiting
+                    # ticket. Refusing on a missing snapshot is therefore a
+                    # DEADLOCK, not a per-trade refusal: MEASURED, breakout_2
+                    # refused all 7 trend_donchian_eth_prop signals
+                    # 2026-10-07..08 (prop_balance_absent) while tradeify_1 /
+                    # velotrade_1 emitted. The bridge does not size off this
+                    # number (0.0 basis -> ruleset below), so the refusal still
+                    # PAGES (one red flag, NO-HALT) and the ticket emits.
+                    try:
+                        _prop_sizing_balance_or_refuse(
+                            account, notify=not effective_dry)
+                    except RuntimeError as _snap_exc:
+                        logger.warning(
+                            "multi_account_execute: %s phone-flow emits without a "
+                            "fresh snapshot (the phone reads it at placement): %s",
+                            account.name, _snap_exc)
+                    balance = 0.0
+                elif _is_declared_prop:
+                    _prop_balance = _prop_sizing_balance_or_refuse(
+                        account, notify=not effective_dry)
+                    balance = 0.0 if _is_prop_bridge else _prop_balance
+                else:
+                    balance = float(fetcher(account))
                 # Direction-aware balance override for cash spot.
                 #
                 # Cash spot (``market_type: spot``): the account holds
@@ -1654,6 +2002,13 @@ class Coordinator:
                             if _cs.settlement_mode() != "off":
                                 _sb = _cs.resolve_for_account(account.name, client)
                                 _bind = _cs.may_apply(account.name)
+                                # Venue figure BEFORE replacement, and whether
+                                # the basis actually BOUND -- `applied` used to
+                                # be stamped from the allowlist alone and the
+                                # reduction read 0 on the very rows it reduced
+                                # (PI-20260927-ECILBBVH-0008).
+                                _venue_available = available_usd
+                                _replaced = False
                                 if (
                                     _bind
                                     and _sb.basis_usd is not None
@@ -1663,11 +2018,13 @@ class Coordinator:
                                     )
                                 ):
                                     available_usd = _sb.basis_usd
+                                    _replaced = True
                                 _cs.record_observation(
                                     account_id=account.name,
                                     basis=_sb,
                                     available_usd=available_usd,
-                                    applied=bool(_bind),
+                                    applied=_replaced,
+                                    venue_available_usd=_venue_available,
                                 )
                         except Exception as _cs_exc:  # noqa: BLE001
                             # Never break dispatch on an observability path.
@@ -1742,6 +2099,7 @@ class Coordinator:
             # caps the conviction-implied fraction to min(2%, risk_pct) so a
             # daily-loss-throttled account can't be re-inflated). Fail-inert.
             from src.runtime.conviction_sizing import apply_conviction_sizing
+            _pre_multiplier_qty = sized_qty
             sized_qty = apply_conviction_sizing(
                 pkg, sized_qty, account_name=account.name,
                 balance_usd=balance,
@@ -1796,6 +2154,57 @@ class Coordinator:
                 min_qty=getattr(account.risk_manager, "min_qty", 0.0),
                 qty_precision=getattr(account.risk_manager, "qty_precision", 3),
             )
+
+            # WHOLE-UNIT RE-QUANTIZE after the reductive multiplier chain
+            # (PI-20260927-ECILBBVH-0007, ORDER-AUDIT-3 -- TIER 3, sizing).
+            # position_size quantized to whole shares, but the conviction /
+            # advisory / news multipliers above then scaled that qty with no
+            # re-quantize: on a whole-unit venue 3 x 0.85 = 2.55 was placed as
+            # 3 (the broker rounds -- downsize erased), and 1 x 0.5 = 0.5 was
+            # refused as below_venue_min_qty (downsize became an unlabelled
+            # veto). When the chain REDUCED the qty, floor it to whole units;
+            # a floor to zero is its own per-trade refusal, `downsized_to_zero`,
+            # distinct from a lot-minimum miss. An unreduced (or enlarged) qty
+            # is untouched.
+            if (
+                not _is_prop_bridge
+                and 0 < sized_qty < _pre_multiplier_qty
+                and (requires_whole_unit_qty(account.exchange)
+                     or _market_type == "equity")
+            ):
+                _floored = float(int(sized_qty + 1e-9))
+                if _floored != sized_qty:
+                    logger.info(
+                        "multi_account_execute: whole-unit re-quantize %s/%s "
+                        "%g -> %g (risk-sized %g)", account.name, pkg.symbol,
+                        sized_qty, _floored, _pre_multiplier_qty,
+                    )
+                sized_qty = _floored
+                if sized_qty <= 0:
+                    error_msg = (
+                        f"downsized_to_zero: risk-sized qty "
+                        f"{_pre_multiplier_qty:g} reduced below one whole unit "
+                        f"by the sizing multipliers for {pkg.symbol} "
+                        f"(account={account.name})"
+                    )
+                    from src.units.accounts.execute import log_rejection_to_journal
+                    log_rejection_to_journal(
+                        pkg, _early_account_cfg,
+                        reason=error_msg,
+                        status="rejected",
+                        sized_qty=0.0,
+                        margin_basis=margin_basis or None,
+                    )
+                    sized_qty_by_account[account.name] = 0.0
+                    results.append({
+                        "name": account.name,
+                        "exchange": account.exchange,
+                        "account_type": account.account_type,
+                        "trade_id": None,
+                        "sized_qty": 0.0,
+                        "error": error_msg,
+                    })
+                    continue
 
             # Clean per-trade refusal when the risk-sized qty is below the
             # EXCHANGE lot minimum (BL-20260619-ETHMIN). The account-level
@@ -1872,40 +2281,19 @@ class Coordinator:
 
             sized_qty_by_account[account.name] = sized_qty
 
-            # Latching daily-loss-cap notification (operator-approved
-            # 2026-05-28). Fire ONE Telegram when an account first exhausts
-            # its daily-loss cap and ONE when it next clears — not per-tick.
-            # Runs every dispatch (so it catches both the cross-into and the
-            # cross-out-of cap, incl. the 00:00 UTC auto-reset on the next
-            # day's first tick); the latch in daily_cap_alert self-dedups.
-            # The cap-exhaustion check uses the same equity basis the sizer
-            # used. Best-effort — never blocks dispatch.
-            # Skipped for the prop bridge: its balance is a sentinel 0.0 (no
-            # broker API), so the cap math would misfire a spurious exhaustion
-            # alert. Prop daily-loss is governed by the prop ruleset + the
-            # rule-distance panel, not this RiskManager cap.
-            if not _is_prop_bridge:
-                try:
-                    from src.runtime.daily_cap_alert import note_account_cap_state
-                    _equity_basis = (
-                        total_account_usd if total_account_usd is not None else balance
-                    )
-                    note_account_cap_state(
-                        account.name,
-                        exhausted=account.risk_manager.is_daily_cap_exhausted(
-                            _equity_basis
-                        ),
-                        daily_pnl=account.risk_manager.daily_pnl,
-                        cap_usd=account.risk_manager.effective_daily_loss_usd(
-                            _equity_basis
-                        ),
-                        demo=getattr(account, "demo", False),
-                    )
-                except Exception as _cap_exc:  # noqa: BLE001
-                    logger.debug(
-                        "multi_account_execute: daily-cap note failed for %s: %s",
-                        account.name, _cap_exc,
-                    )
+            # Daily-DD switch equity feed (operator directive 2026-10-09). The
+            # latching daily-loss-cap ping that lived here was retired with the
+            # DAILY_LOSS_CAP it reported on; the switch sends its own ONE trip
+            # and ONE reset alert. Only a TOTAL-equity reading is fed (Bybit
+            # linear ``totalEquity``); otherwise the switch reads the balance
+            # snapshot (prop: the reported status row). Best-effort.
+            try:
+                account.risk_manager.note_live_equity(total_account_usd)
+            except Exception as _dd_exc:  # noqa: BLE001
+                logger.debug(
+                    "multi_account_execute: dd-switch equity feed failed for %s: %s",
+                    account.name, _dd_exc,
+                )
 
             # 2. Refuse to forward a zero-qty order. This branch fires
             # for ANY sized_qty <= 0 outcome from the RiskManager —
@@ -1939,6 +2327,21 @@ class Coordinator:
                 # routed signal (the sizer runs before the risk gate).
                 if effective_dry:
                     error_msg = f"dry_run_sizing_skip: {error_msg}"
+                # Sizing refusals (risk_refused / zero_balance / …) previously
+                # left no journalctl trace at all — only a trades-table row —
+                # which is why PR #13002's dispatch_drop WARNING pattern (pre-
+                # sizing exclusions only) could not explain a leg that IS
+                # elected and dispatched but sized to zero. Mirror
+                # _log_dispatch_drop's routine/WARNING split: an effective-dry
+                # account's refusal is an expected policy hold (DEBUG); any
+                # other account that reaches here DOES belong live and still
+                # got sized to zero, so it logs at WARNING.
+                _sizing_log = logger.debug if effective_dry else logger.warning
+                _sizing_log(
+                    "sizing_refused: account=%s strategy=%s symbol=%s reason=%s",
+                    account.name, str(pkg.strategy or "?"),
+                    str(pkg.symbol or "?"), error_msg,
+                )
                 from src.units.accounts.execute import log_rejection_to_journal
                 log_rejection_to_journal(
                     pkg, _early_account_cfg,
@@ -1961,6 +2364,11 @@ class Coordinator:
             # un-mangled token to the rejection-journal helper (post-CP-13
             # observability — every refusal lands a row in trade_journal.db).
             risk_reason: Optional[str] = None
+            # Bound before the try so the exchange-rejection journal write
+            # records the qty actually SENT (an intent-mode delta), not the
+            # risk-sized target (MIRROR-QTY-DIVERGE: row 6544 said 57.4 while
+            # the POST carried 0.5).
+            effective_qty = sized_qty
             try:
                 # 1. Per-account risk gate (local check, since execute_pkg
                 #    does not call account.risk_manager.approve()). Honour
@@ -1998,11 +2406,99 @@ class Coordinator:
                         current_net_position_qty,
                         get_existing_position_info,
                         has_open_trade_for_strategy,
+                        note_open_trade_read,
                         position_netting_guard_active_for,
                     )
-                    current_signed_qty = current_net_position_qty(
-                        account.name, pkg.symbol,
-                    )
+                    # NETTED-SLICES (operator 2026-10-15): on an account that
+                    # declares `position_model: slices` the position is a sum
+                    # of per-strategy slices, so the delta basis is THIS
+                    # strategy's own slice qty, not the account net — a second
+                    # strategy's same-side signal used to resolve to
+                    # `noop at_target` against another strategy's position.
+                    # positions.admit_slice also sizes the slice inside the symbol's
+                    # risk budget (never above sized_qty) and refuses, per
+                    # trade, an add the ledger cannot carry.
+                    from src.runtime.positions import account_uses_slices
+                    _slice_mode = account_uses_slices(account_cfg)
+                    if _slice_mode:
+                        from src.runtime.positions import admit_slice
+                        _adm = admit_slice(
+                            account_id=account.name,
+                            account_cfg=account_cfg,
+                            strategy=pkg.strategy,
+                            symbol=pkg.symbol,
+                            direction=pkg.direction,
+                            entry=pkg.entry,
+                            sl=pkg.sl,
+                            meta=pkg.meta,
+                            sized_qty=sized_qty,
+                            dry=bool(effective_dry),
+                        )
+                        pkg.meta["slice_admission"] = {
+                            "ok": _adm["ok"], "reason": _adm["reason"],
+                            "qty": _adm["qty"], **(_adm.get("detail") or {}),
+                        }
+                        if not _adm["ok"]:
+                            logger.info(
+                                "[coordinator] slice refused for %s/%s/%s: %s",
+                                account.name, pkg.symbol, pkg.strategy,
+                                _adm["reason"],
+                            )
+                            from src.units.accounts.execute import log_rejection_to_journal
+                            log_rejection_to_journal(
+                                pkg, account_cfg,
+                                reason=str(_adm["reason"]),
+                                status="rejected",
+                                sized_qty=0.0,
+                                margin_basis=margin_basis or None,
+                            )
+                            results.append({
+                                "name": account.name,
+                                "exchange": account.exchange,
+                                "account_type": account.account_type,
+                                "trade_id": None,
+                                "sized_qty": 0.0,
+                                "error": str(_adm["reason"]),
+                            })
+                            continue
+                        sized_qty = float(_adm["qty"])
+                        current_signed_qty = _adm["own_signed"]
+                    else:
+                        current_signed_qty = current_net_position_qty(
+                            account.name, pkg.symbol,
+                        )
+                    # FIX-CA-07 (CA-A02): an unreadable journal is "could not
+                    # look", not flat — reading it as 0.0 dispatched a fresh
+                    # full-size open on an account already holding the symbol.
+                    # Refuse this account for this package; the account stays
+                    # live (per-trade refusal with a logged cause).
+                    if current_signed_qty is None:
+                        logger.warning(
+                            "[coordinator] net position unreadable for %s/%s "
+                            "— refusing package (not treating as flat)",
+                            account.name, pkg.symbol,
+                        )
+                        note_open_trade_read(
+                            account.name, pkg.symbol, pkg.strategy,
+                            unreadable=True,
+                        )
+                        from src.units.accounts.execute import log_rejection_to_journal
+                        log_rejection_to_journal(
+                            pkg, account_cfg,
+                            reason="net_position_unreadable",
+                            status="rejected",
+                            sized_qty=0.0,
+                            margin_basis=margin_basis or None,
+                        )
+                        results.append({
+                            "name": account.name,
+                            "exchange": account.exchange,
+                            "account_type": account.account_type,
+                            "trade_id": None,
+                            "sized_qty": 0.0,
+                            "error": "net_position_unreadable",
+                        })
+                        continue
                     _existing_pos_info = (
                         get_existing_position_info(account.name, pkg.symbol)
                         if current_signed_qty != 0 else None
@@ -2050,13 +2546,54 @@ class Coordinator:
                     # POSITION_NETTING_GUARD_ENABLED env flag was removed (Prime
                     # Directive: a required correctness fix must not sit behind a
                     # default-off gate that an env drop could silently revert).
-                    if (
-                        position_netting_guard_active_for(account.name)
-                        and delta.action in ("open", "increase")
-                        and has_open_trade_for_strategy(
+                    # Read only for an ADD, so reduce / close / flip never
+                    # depend on it (they are never blocked). FIX-CA-07: an
+                    # unreadable read refuses the add rather than reading as
+                    # "no open trade".
+                    _holds_open = (
+                        has_open_trade_for_strategy(
                             account.name, pkg.symbol, pkg.strategy,
                         )
-                    ):
+                        if position_netting_guard_active_for(account.name)
+                        and delta.action in ("open", "increase")
+                        else False
+                    )
+                    # NO-HALT round 2 (2026-10-09): a missing OR unreadable
+                    # journal is "could not look" (None). Refuse THIS add for
+                    # THIS dispatch only — the next dispatch re-reads; one red
+                    # flag after 3 consecutive "could not look" refusals on
+                    # either read (net position above, or this one), no latch.
+                    # Reaching here with a non-None read clears the streak.
+                    note_open_trade_read(
+                        account.name, pkg.symbol, pkg.strategy,
+                        unreadable=_holds_open is None,
+                    )
+                    if _holds_open is None:
+                        logger.warning(
+                            "[coordinator] open-trade read unreadable "
+                            "(journal missing or read failed) for "
+                            "%s/%s/%s — refusing %s this dispatch (not "
+                            "treating as flat; next dispatch re-reads)",
+                            account.name, pkg.symbol, pkg.strategy, delta.action,
+                        )
+                        from src.units.accounts.execute import log_rejection_to_journal
+                        log_rejection_to_journal(
+                            pkg, account_cfg,
+                            reason="net_position_unreadable",
+                            status="rejected",
+                            sized_qty=0.0,
+                            margin_basis=margin_basis or None,
+                        )
+                        results.append({
+                            "name": account.name,
+                            "exchange": account.exchange,
+                            "account_type": account.account_type,
+                            "trade_id": None,
+                            "sized_qty": 0.0,
+                            "error": "net_position_unreadable",
+                        })
+                        continue
+                    if _holds_open:
                         _guard_reason = (
                             f"reentry_suppressed_netting_guard:{delta.action}"
                         )
@@ -2081,6 +2618,29 @@ class Coordinator:
                             "trade_id": None,
                             "sized_qty": 0.0,
                             "error": _guard_reason,
+                        })
+                        continue
+                    if _slice_mode and delta.action in ("reduce", "close", "flip"):
+                        # A slice is never resized or reversed by a later
+                        # signal: it exits through its OWN bracket or its
+                        # strategy's per-trade close, which reduces only its
+                        # own qty. Same shape as hold-to-bracket below.
+                        _slice_hold = f"intent_noop:slice_hold_to_bracket_{delta.action}"
+                        from src.units.accounts.execute import log_rejection_to_journal
+                        log_rejection_to_journal(
+                            pkg, account_cfg,
+                            reason=_slice_hold,
+                            status="rejected",
+                            sized_qty=0.0,
+                            margin_basis=margin_basis or None,
+                        )
+                        results.append({
+                            "name": account.name,
+                            "exchange": account.exchange,
+                            "account_type": account.account_type,
+                            "trade_id": None,
+                            "sized_qty": 0.0,
+                            "error": _slice_hold,
                         })
                         continue
                     if delta.action == "noop":
@@ -2319,6 +2879,52 @@ class Coordinator:
                             "error": "intent_sub_min_qty_delta",
                         })
                         continue
+                    # Venue minimum order VALUE (MIRROR-QTY-DIVERGE). The qty
+                    # check above passed bybit_2's 0.5 XRP delta (>= 0.1 lot)
+                    # worth $0.70, which Bybit refused with 110094 "minimum
+                    # order value 5USDT". Opening legs only: a reduce-only
+                    # order is never refused for value by the venue.
+                    if delta.action in ("open", "increase"):
+                        try:
+                            from src.units.accounts.qty_legalize import (
+                                venue_min_notional,
+                            )
+                            _min_notional = venue_min_notional(
+                                account_cfg=account_cfg, symbol=pkg.symbol,
+                                client=client,
+                            )
+                        except Exception:  # noqa: BLE001
+                            _min_notional = None
+                        _delta_notional = float(delta.qty_delta) * float(pkg.entry or 0.0)
+                        if (
+                            _min_notional is not None
+                            and pkg.entry
+                            and _delta_notional < _min_notional
+                        ):
+                            logger.info(
+                                "[coordinator] intent-mode sub-min-notional "
+                                "delta for %s/%s (delta=%s notional=%.4f < "
+                                "venue min %.4f) — treating as noop",
+                                account.name, pkg.symbol, delta.qty_delta,
+                                _delta_notional, _min_notional,
+                            )
+                            from src.units.accounts.execute import log_rejection_to_journal
+                            log_rejection_to_journal(
+                                pkg, account_cfg,
+                                reason="intent_sub_min_notional_delta",
+                                status="rejected",
+                                sized_qty=0.0,
+                                margin_basis=margin_basis or None,
+                            )
+                            results.append({
+                                "name": account.name,
+                                "exchange": account.exchange,
+                                "account_type": account.account_type,
+                                "trade_id": None,
+                                "sized_qty": 0.0,
+                                "error": "intent_sub_min_notional_delta",
+                            })
+                            continue
                     effective_qty = float(delta.qty_delta)
                     # Build leg list for the dispatcher. The vast
                     # majority of ticks produce a single "open"/"increase"
@@ -2335,14 +2941,30 @@ class Coordinator:
                     # Legacy single-strategy / first-wins multiplexer
                     # path. Binary open-position guard stays — see
                     # block comment above for the rationale.
-                    if _has_open_position(account.name, pkg.symbol):
+                    _open = _has_open_position(account.name, pkg.symbol)
+                    if _open is None:
+                        risk_reason = "net_position_unreadable"
+                        raise RiskBreach(
+                            f"Account '{account.name}' open-position read for "
+                            f"{pkg.symbol} failed — refusing (not treating as flat)"
+                        )
+                    if _open:
                         risk_reason = "open_position_exists"
                         raise RiskBreach(
                             f"Account '{account.name}' already has an open "
                             f"{pkg.symbol} position — skipping new order"
                         )
 
-                ok, reason = account.risk_manager.evaluate(pkg)
+                # A pure reduce/close (every leg reduce-only) is not a NEW
+                # entry: the daily-DD switch must let a tripped account exit.
+                _opening = not (
+                    intent_legs
+                    and all(bool(_l.get("reduce_only")) for _l in intent_legs)
+                )
+                ok, reason = (
+                    account.risk_manager.evaluate(pkg) if _opening
+                    else account.risk_manager.evaluate(pkg, opening=False)
+                )
                 if not ok:
                     risk_reason = reason or "risk_gate_refused"
                     raise RiskBreach(
@@ -2362,6 +2984,8 @@ class Coordinator:
                 # the dry-run-guard CI regex (which conservatively flags
                 # any new `dry_run=<truthy-token>` text as a flag flip).
                 exec_dry_run = bool(effective_dry)
+                if exec_dry_run and _dry_cause:
+                    account_cfg["dry_cause"] = _dry_cause
                 # Legacy / single-leg path: build a one-entry legs list
                 # so the same loop below handles both modes uniformly.
                 # ``intent_legs`` is set above only for intent-mode
@@ -2505,12 +3129,18 @@ class Coordinator:
                     demo=getattr(account, "demo", False),
                 )
                 from src.units.accounts.execute import log_rejection_to_journal
+                _sent_vs_sized = (
+                    {"risk_sized_qty": sized_qty,
+                     "execution_delta": (pkg.meta or {}).get("execution_delta")}
+                    if effective_qty != sized_qty else None
+                )
                 log_rejection_to_journal(
                     pkg, account_cfg,
                     reason=f"{type(exc).__name__}: {exc}",
                     status="exchange_rejected",
-                    sized_qty=sized_qty,
+                    sized_qty=effective_qty,
                     margin_basis=margin_basis or None,
+                    extra_notes=_sent_vs_sized,
                 )
                 results.append({
                     "name": account.name,
@@ -2565,18 +3195,45 @@ class Coordinator:
             return (
                 err.startswith("intent_noop:")
                 or err == "intent_sub_min_qty_delta"
+                or err == "intent_sub_min_notional_delta"
+                # A mirror following its primary's non-placement. The
+                # primary's own row decides whether the roll-up fires.
+                or err.startswith("mirror_primary_")
                 # Sub-lot-minimum refusal (BL-20260716-BYBIT2-SUBMIN-QTY) —
                 # covers both the exact ``below_venue_min_qty`` from the
                 # execute_pkg-catch benign path and the sized-path pre-check's
                 # ``below_venue_min_qty: sized_qty=… < …`` detail string.
                 or err.startswith("below_venue_min_qty")
+                # A reductive multiplier taking a whole-unit qty below one
+                # share (ORDER-AUDIT-3) -- a sizing decision, not a failure.
+                or err.startswith("downsized_to_zero:")
                 or err.startswith("reentry_suppressed_netting_guard:")
                 # A shelved dry_run account / prop mission-skip declining is a
                 # deliberate policy hold, not a dispatch failure — a round where
                 # every leg is one of these must NOT fire the "all accounts
                 # failed" roll-up (operator directive 2026-07-15).
                 or is_expected_dispatch_skip(err)
+                # The venue reported shorting_enabled=false and the short was
+                # refused on purpose, with its own journal row — a declared
+                # policy refusal, not a dispatch failure (2026-09-28).
+                or err == "broker_shorting_disabled"
             )
+
+        # MIRROR-QTY-DIVERGE: the direction the mirror gate cannot prevent —
+        # the primary's order is on the venue and the mirror failed. Never
+        # silent: ERROR reaches the operator.
+        for _div in _mirror_pairs.divergences(results):
+            try:
+                self.push_alert(
+                    f"Stage-2 mirror divergence: {_div['primary']} placed "
+                    f"{pkg.strategy} {pkg.direction} {pkg.symbol} "
+                    f"(trade {_div['primary_trade_id']}) but mirror "
+                    f"{_div['mirror']} did not: {_div['mirror_error']}",
+                    source="accounts", level="error",
+                    account=_div["mirror"], mirror_divergence=_div,
+                )
+            except Exception as _alert_exc:  # noqa: BLE001
+                logger.warning("mirror divergence alert raised: %s", _alert_exc)
 
         any_trade_placed = any(r.get("trade_id") is not None for r in results)
         all_benign_noop = bool(results) and all(_is_benign_noop(r) for r in results)
@@ -2777,9 +3434,8 @@ class Coordinator:
         each time), so 'reloading' just verifies the file is readable.
         """
         from src.units.accounts import load_accounts
-        import os as _os
 
-        path = accounts_path or _os.path.join(_REPO_ROOT, "config", "accounts.yaml")
+        path = accounts_path or _default_accounts_path()
         try:
             accounts = load_accounts(path)
         except FileNotFoundError:

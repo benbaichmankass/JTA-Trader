@@ -1,0 +1,116 @@
+id: RQ-20261014-f516-07
+title: 'Programme 05 Q4: what does the armed daily-DD switch (0.8 x firm limit) cost or buy velotrade_1 in E[profit per life] and P(breach)'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+question: 'On velotrade_1''s current book at its configured 1.0% sizing, does the DISARMED arm (C-OFF) or a looser 0.9 buffer (C-090)
+  beat the live setting A (switch armed at 0.8 x Velotrade''s 4% daily limit) on ev_net_usd_per_life with >= survival on every seed,
+  net of the full cost stack? velotrade_1 is the account where the switch can bind most: 1% risk per ticket against a 3.2% trip (~3
+  full-R losses in a day), vs 0.5% risk against a 2.4% trip on tradeify_1 / breakout_2.'
+why_this_matters: 'Operator 2026-10-09: the account daily-DD switch is the ONE sanctioned automatic off, prop buffer 20% of the firm''s
+  limit, armed on every non-retired account (row DAILY-DD-SWITCH). Nothing has priced what it costs or buys per account. A 400-life
+  smoke run on 2026-10-14 (not a result: one seed, no rule) moved ev from $160 to $145 -- enough to register the question properly.'
+power:
+  expected_n: 355
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.3 needs ~87-90 observations at alpha 0.05 / power 0.8 (the floor RQ-20260928-011/-012 registered and every prop fit since
+    has used). prop_ev_grid grades on the --leg leg''s n: trend_donchian_eth_prop has 355 committed 730 d trades and trend_donchian_sol_prop
+    132 (wc -l of the two trades files, counted 2026-10-14 before registration). Below 88 the grid grades UNDERPOWERED (indeterminate),
+    never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed 730 d trade evidence under the firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-RQ1014-F516-07-DDSWITCH-VELOTRADE1
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per seed and arm: path-mode ev_net_usd_per_life, p_alive_at_horizon, p_breach_daily_loss, p_breach_max_dd; counters dd_switch_trips
+    / dd_switch_blocked from sims/*.json. A = ''--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8'', C-OFF = same without --dd-switch-frac,
+    C-090 = --dd-switch-frac 0.9. Velotrade''s own stack (ruleset header, first-party 2026-10-04): 6 bps round-trip commission, 3 bps
+    slippage, 0.05%/night swap (dxtrade model), --no-hedge, per-leg lev caps ETH 5x / SOL 5x, the $ evaluation fee and payout split
+    from config/prop_rulesets/velotrade_classic_1step.yaml. The committed trade rows already carry the harness''s fee + slippage + funding
+    via execution_costs.resolve_cost_policy() (D1-cleared trend harness); the sim then charges the venue''s own stack on top.'
+  rule: 'prop_ev_grid --grade cushion_vs_flat, mechanically: PASS IF the best C arm beats A on ev with >= survival on ALL 5 seeds ->
+    evidence that the 0.8 buffer costs this account EV: it goes to the operator as a DECISION (the setting is their directive, so it
+    is never changed under the standing authorization), with the record and the per-seed P(breach_daily_loss) delta. FAIL IF A is undominated
+    on any seed -> the live setting is confirmed for velotrade_1 and Q4 closes for the other two accounts (lower risk per trip, so the
+    switch binds less) unless their Q1 counters show dd_switch_blocked > 0.5 per life. NULL otherwise -> setting stands; the arm table
+    is attached to 05-PROP.md.'
+  what_it_does_not_do: Changes no switch setting. The sim trips on day_start x daily-limit equity, an approximation of the runtime's
+    firm-amount basis; it does not model the 2h day-start equity read window or 'could not look' states.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: '2-leg prop_ev_sim book, 5 seeds x the unit''s arms at the default 4,000 lives, --jobs 4 (2026-10-14 smoke: 400 lives of the
+    velotrade book in well under a minute).'
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.4
+  basis: 'stand-in: one $5k evaluation account; the switch is operator-directed so the value is the information. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl
+  - --arm
+  - A=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8
+  - --arm
+  - COFF=--sizing balance --risk-pct 0.01
+  - --arm
+  - C090=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.9
+  - --common
+  - --trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml
+    --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh
+    --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - cushion_vs_flat
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - 'RQ-20261014-f516-07: Programme 05 Q4 daily-DD switch effect, velotrade_1'
+  inputs:
+    research_unit: RQ-20261014-f516-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/B6.json
+- scripts/research/prop_ev_sim.py
+- scripts/research/prop_ev_grid.py
+- docs/claude/work/checklist/DAILY-DD-SWITCH.json
+- src/units/accounts/daily_dd_switch.py
+last_dispatched_at: '2026-10-14T23:00:56+00:00'
+grading:
+  attested: RULE-RQ1014-F516-07-DDSWITCH-VELOTRADE1
+  auto: true
+  decision_rule_id: RULE-RQ1014-F516-07-DDSWITCH-VELOTRADE1
+  evidence:
+  - research/results/RQ-20261014-f516-07/38651476879.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

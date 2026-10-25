@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261025-ALQWWPXT-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-SILENCE-1025 / comms/health/alpaca-silence-20261025.json",
+    "rerun": "for o in 0 1000 2000 3000 4000 5000; do scripts/ops/diag_fetch.sh \"journal?table=order_packages&limit=1000&offset=$o\"; done | grep -o 'available_usd=[0-9.]*' | sort | uniq -c"
+  },
+  "state": "queued",
+  "what": "[alpaca/paper soak throughput] alpaca_paper sizes against the venue's own buying power (src/core/coordinator.py ~1960). 7 packages 2026-09-21..09-24 (tqqq/gld/tlt_pullback_1h/uso/iaum long + iaum short) and gld_pullback_1d 10-19/10-20 were risk_refused with available_usd 0.00 / 278.73 / 82.41, while bond shorts sized 579-876 sh (tlt_pullback_1d, ief_pullback_1d) and long-held SPY/GLD took most of the 4x margin book. These are correct refusals, but one low-vol leg's size can starve every other leg's Stage-1 soak. Question: is per-position notional on the paper book bounded at all? (BL-20260823-ALPACA-RISK-SIZING-EXCEEDS-ACCOUNT-NOTIONAL covers alpaca_live only.) Settle by recomputing notional / equity per open alpaca_paper position at each risk_refused timestamp. If one position exceeds about half the book, propose a paper-book notional cap as a Tier-3 change. Evidence: comms/health/alpaca-silence-20261025.json finding F3."
+}

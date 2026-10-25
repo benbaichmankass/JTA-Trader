@@ -1,0 +1,122 @@
+id: RQ-20261014-d6e7-05
+title: >-
+  In-trade exit line, rung 5: does an exit-now policy driven by the RICH-state (momentum) model beat holding the bracket, net of
+  cost, out of sample?
+status: retired
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+requires_result:
+  unit: RQ-20261014-d6e7-04
+  verdict: pass
+question: >-
+  On the same OOS trades and fold models as RQ-20261014-d6e7-04 (K = 2 R, Fixed-bracket reconstruction: each trade in the newest
+  committed ledger per USDT leg is re-walked bar by bar over public Binance Vision candles from its entry bar, with the ledger's
+  INITIAL stop at -1 R and a fixed TP at K R; SL before TP on a shared bar; timeout at H = max(10, p90 of the leg's realised holds);
+  a leg enters only if >= 80% of its controllable trades re-walk to the ledger's own mfe_r within 0.05 R (n >= 10). Costs: every
+  arm pays the trade's ledger cost_total_r (fee + slippage + funding via execution_costs.resolve_cost_policy()); an early exit
+  pays cost_slippage_r once more.), does the rule 'exit at the first bar close where (p_model - p_reference)(K + 1) > cost_slippage_r'
+  -- i.e. where the model says holding is worth less than the calibrated reference says by more than the extra exit cost -- beat
+  holding the fixed bracket to TP / SL / timeout, net of the full cost stack, per trade and per capital-day?
+why_this_matters: >-
+  The operator's mechanism: 'when the right time to drop out is'. The grade is P&L on the same trades, net of cost, out of sample,
+  because a calibration gain that does not move net R is not an exit improvement (the TP-doctrine analogue of 'P&L without prediction'
+  is here 'prediction without P&L'). Requires the probability rung's PASS so a P&L PASS can never stand on a model that predicts
+  nothing.
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.8
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    One-sample test on the PAIRED per-trade difference (policy net R - bracket net R, same OOS trade). sd of the paired difference
+    ~0.8 R (INFERRED: early exits move a trade by up to 1 + K R); 0.05 R needs (2.80 x 0.8 / 0.05)^2 = 2,007 trades -- at the edge
+    of the ~1,500-2,000 OOS trades, so an INDETERMINATE is a live outcome and is stated as such.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Committed ledgers + public candles; nothing accrues. n is set by the corpus the census RQ-20261014-d6e7-01 re-walks: 3,926
+      trades passed the MFE control in the lane authoring read of 2026-10-14; the OOS non-timeout share of those is the unit.
+decision_rule:
+  id: RULE-RQ20261014-D6E7-05-EXIT-POLICY-NET
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per OOS trade: policy net R - fixed-bracket net R (same trade; early exit pays cost_total_r + cost_slippage_r, the bracket
+    pays cost_total_r); pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold; net R per capital-day (sum net R /
+    sum hold days) for both arms, pooled and per leg; early-exit share; sanity control: share of trades on which the p0 policy
+    would exit.
+  rule: >-
+    PASS IF pooled per-trade gain >= 0.05 R AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND the capital-day guard holds
+    (when the bracket's net R per capital-day is > 0, the policy's is not lower) AND the p0 sanity control exits on < 5% of trades
+    -> the next rung is harness-native confirmation on the real-money legs (d6e7-06 once EXIT-PATH-EMIT-OFFLINE lands), then exit-refinement's
+    walk-forward and an observe-only shadow; a Tier-3 flip proposal only after both. FAIL IF the CI upper bound < 0.05 R: the model's
+    information does not pay for its exits on this corpus. INDETERMINATE otherwise, under n, or if the sanity control fails.
+  min_n: 300 OOS trades
+  what_it_does_not_do: >-
+    Flips nothing (Tier-3 via exit-refinement, on a harness-native record). The bracket is the fixed reconstruction, not the leg
+    as traded -- a PASS here says the mechanism works on a plain bracket, not that it beats the leg's trailing exit; that comparison
+    is d6e7-06's. When the bracket's own net R per capital-day is <= 0 the ratio is reported, not graded (two negatives over different
+    day counts are not monotone in P&L; first_passage.py docstring).
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the exit-now mechanism itself, on a plain bracket; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  basis: >-
+    MEASURED 2026-10-14 in the lane sandbox -- with per-leg fetches the census's candle fetch did not finish inside 30 min (since
+    fixed to one fetch per symbol x timeframe); budget 90 min, timeout 240 (runner cap 360). As the probability rung, plus one
+    pass over the OOS bar events.
+run:
+  command:
+  - python3
+  - scripts/research/first_passage.py
+  - --mode
+  - policy
+  - --features
+  - rich
+  - --ref
+  - dist
+  - --policy-tp-r
+  - '2.0'
+  - --min-trade-gain-r
+  - '0.05'
+  - --min-folds
+  - '3'
+  - --min-n
+  - '300'
+  - --cache-dir
+  - '{out_dir}/candles'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261014-d6e7-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+- M23
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q8, the destination of the exit line)
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- scripts/research/first_passage.py
+- EXIT-PATH-EMIT-OFFLINE
+last_dispatched_at: null
+retired_reason: '2026-10-16 P1-ATM-BACKLOG-1016: moot. requires_result RQ-20261014-d6e7-04 verdict pass,
+  but d6e7-04 closed INDETERMINATE (gain +0.00054 nats, CI [-0.00118, +0.00245], research/results/RQ-20261014-d6e7-04/38747778982.jsonl),
+  so this unit could never dispatch. The money question it asks is re-registered on the indeterminate
+  branch as programme node P1-Q8.4-indet-policy (same command, same thresholds).'

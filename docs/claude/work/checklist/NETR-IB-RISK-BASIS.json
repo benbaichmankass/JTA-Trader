@@ -1,0 +1,25 @@
+{
+  "id": "NETR-IB-RISK-BASIS",
+  "title": "net_r_label.risk_usd_for_trade falls back to multiplier 1.0 for IB futures rows without contract_value_usd in notes (mhg_pullback_1d trades 2578/2832 read ~-2,500R)",
+  "phase": "fix",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[RESEARCH-OPS-20261012-2047] Lever for PI-20261012-CMUZ8SWC-0002 (found by NEWS-VETO-EVAL, PR #17740): 19 of 653 taken trades in the news-veto join had |net R|>20. Any net-R aggregate over IB futures is distorted until fixed. Fix: derive contract multiplier from the instrument (or exclude rows lacking it, labelled UNVERIFIED per provenance.py) in src/runtime/net_r_label.py; Tier-1 read path. Clears when net_r_for_trade on trades 2578 and 2832 returns |net_R|<20.",
+  "updated_at": "2026-10-12T21:04:34Z",
+  "updated_by": "session_016F9Q3yiYHGv5UEHfzMn6Dz",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: lever row",
+    "arch": "none"
+  },
+  "_seq": 443
+}

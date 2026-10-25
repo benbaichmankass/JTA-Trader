@@ -173,29 +173,87 @@ def test_measured_state_2026_08_17():
     # never belonged in that bucket, and the fact that this number did not move
     # is the check that the new column was classified rather than just absorbed.
     #
-    # RESTATED 2026-09-12 (MI-278 U3), and the docstring above says to say so.
+    # 7 -> 4 on 2026-09-28 (lane EXIT-OPS, PI-20260922-UTN353OZ-0001): three of
+    # the seven pending ict_scalp legs (ict_scalp_5m, ict_scalp_sol_5m,
+    # ict_scalp_avax_5m) were demoted execution: live -> shadow (fail
+    # RULE-D1-STAGE0-NET-OF-FULL-COST), taking their cells out of the live
+    # movable population. The remaining 4 (eth_15m, sol_15m, xrp_15m, xrp_5m)
+    # are unaffected and still pending bracket_geometry.
     #
-    # `movable` moved 7 -> 0, and this is the bucket EMPTYING BY BEING WORKED
-    # rather than by being reclassified. All 7 were `ict_scalp` legs pending
-    # against `bracket_geometry`; MI-278 U3 swept every one of them at live
-    # parity (`timeout_bars=100000`) with a yearly walk-forward and wrote the
-    # verdicts into the matrix — 6 `honest_negative`, 1 `passed_unshipped`
-    # (`ict_scalp_xrp_15m` `tp1.25R`, the single walk-forward survivor). The
-    # eighth `ict_scalp` leg, `ict_scalp_mgc_15m`, was never in this bucket:
-    # it reads `blocked:no_free_lane_candle_feed` for the reason the 2026-08-20
-    # note above records. Run ids and per-cell numbers:
-    # `docs/research/m20-u3-scalp-target-sweepable-2026-09-12.md` sections 4l/4n.
+    # 4 -> 0 on 2026-09-29 (lane EXIT-OPS, checklist row EXIT-OPS, filed as
+    # PI-20260929-EXITOPS-0006): THIS TEST'S OWN COMMENT ABOVE WAS WRONG --
+    # "bracket_geometry ... HAS a sweep producer ... m20_fleet_exit_sweep.classify
+    # returns 'scalp' with a real SCALP_HARNESS. A session can move them" checked
+    # `classify()`/`FAMILY_HARNESS` (which do map scalp -> scripts/backtest_ict_scalp.py)
+    # but never checked whether the SWEEP PLANNER actually schedules the family.
+    # It does not: `e35_bracket_geometry_sweep.py::plan_legs` restricts its grid to
+    # `fam not in ("donchian", "pullback", "squeeze")` -> skip, with its own
+    # comment explaining why -- "`scalp`/`fvg` carry a REAL `tp_at_r`/`tp_r`
+    # bracket rather than the 50.0 sentinel, so this grid would mean something
+    # different on them." Verified by actually running the planner, not by
+    # re-reading prose: `python3 scripts/research/e35_shard_plan.py --only
+    # ict_scalp_eth_15m,ict_scalp_sol_15m,ict_scalp_xrp_15m,ict_scalp_xrp_5m
+    # --ignore-missing-data` returns 0 jobs, all 4 `out_of_scope_family:scalp`.
+    # The four cells' coverage-matrix status was corrected `pending` ->
+    # `blocked:out_of_scope_family` (docs/research/exit-refinement-coverage.json)
+    # so they no longer read as an open, sweepable backlog. `blocked:<reason>` on
+    # a status GATE_KINDS does not recognise lands in `unclassified` by this
+    # file's own documented design (a new blocked reason must not silently join a
+    # neighbouring bucket), NOT in `no_sweep_path` -- `bracket_geometry` genuinely
+    # has a sweep path for other families (pullback/donchian/squeeze), so filing
+    # it there would overstate the finding to "no run of this LEVER can ever
+    # move any cell," which is false. `movable` is therefore 0, not 4.
     #
-    # ⚠️ THE `no_sweep_path` ASSERTION IS THE LOAD-BEARING HALF OF THIS UPDATE,
-    # not a leftover. `movable` reaching 0 is what a bucket looks like when the
-    # work is done AND what it looks like when cells are quietly reclassified as
-    # unreachable. Those are opposite facts. `no_sweep_path` holding at 4 on the
-    # SAME two levers is what separates them: nothing moved sideways. Do not
-    # relax it to `>= 4` when this test next needs updating.
-    assert len(cut.get("movable", [])) == 0
-    assert {i[3] for i in cut["movable"]} == set()
-    assert len(cut.get("no_sweep_path", [])) == 4
-    assert {i[3] for i in cut["no_sweep_path"]} == {"exit_ladder", "regime_flip_exit"}
+    # 0 -> 76 on 2026-10-07 (GEOM-B1-HARNESS): the `tp_extend` / `tp_retarget`
+    # columns were added with a `pending` cell on each of the 38 donchian /
+    # pullback / scalp legs that has the harness lever. Unlike the cells above,
+    # these ARE movable by a session -- the harness flags exist, the fleet sweep
+    # emits the cells on `--levers tp_extend,tp_retarget`, and nothing blocks the
+    # run -- so counting them is the cut doing its job, not a regression. Pinned
+    # as exactly those two columns so any OTHER cell becoming movable still fails.
+    # 2026-10-25 (merging MI-278 U3, PR #11933): the 7 ict_scalp `bracket_geometry` cells that main had
+    # parked as blocked:out_of_scope_family carry measured verdicts again (honest_negative x6,
+    # passed_unshipped x1); neither bucket count moves, which is the check that they were worked
+    # rather than reclassified.
+    movable = cut.get("movable", [])
+    assert {i[3] for i in movable} == {"tp_extend", "tp_retarget"}
+    # 76 -> 73 on 2026-10-18 (lane ACTIVE-MGMT-DRIVE-1018, Programme 01 confirmations
+    # read from the runner): three of those cells RESOLVED and so left `pending` --
+    # xrp_pullback_2h tp_extend and ada_pullback_2h tp_extend -> honest_negative
+    # (RQ-20261016-009 / -008: every tp_extend cell inside the 0.02 R/trade
+    # materiality bar over 394 / 449 trades), trend_donchian_xrp_4h tp_retarget ->
+    # passed_unshipped (RQ-20261016-015 R1 stall_pull_in, 3 of 4 folds, no live
+    # producer). A resolved cell is the cut doing its job; the pin moves WITH the
+    # matrix and says why, exactly as the 2026-10-07 and 2026-09-29 notes above.
+    # 73 -> 74 on 2026-10-22 (lane OPERATOR-DECISIONS-1022): the NEW live soak alias
+    # trend_donchian_xrp_adx25 (bybit_1 only) mirrors the incumbent trend_donchian_xrp_4h row,
+    # whose one movable cell is tp_extend `pending`; the alias therefore adds exactly one, in a
+    # column already pinned above.
+    assert len(movable) == 74
+    #
+    # E65 (2026-09-24, PR #12868): 4 -> 2. The `exit_ladder` cells on
+    # trend_donchian_eth_prop and trend_donchian_sol_prop RESOLVED to
+    # `honest_negative` -- graded on the prop bracket by
+    # scripts/research/prop_exit_evidence.py (the 1.5R rung is worse than the
+    # same bracket without it on both legs). The two that remain:
+    # squeeze_breakout_4h exit_ladder (blocked:no_harness_levers) and
+    # trend_donchian_eth_prop regime_flip_exit (pending).
+    #
+    # 2 -> 1 on 2026-09-29 (lane EXIT-OPS, PI-20260929-EXITOPS unfiled ref --
+    # docs/research/exit-refinement-coverage.json PR #14076): the remaining
+    # trend_donchian_eth_prop regime_flip_exit cell RESOLVED pending ->
+    # honest_negative. It was left `pending` only because the pre-live-parity
+    # evidence was genuinely interpretive (a recorded PASS that only looked
+    # like an improvement on a heavy-loser book); the 2026-08-16 live-parity
+    # re-sweep already cited on that cell settles it -- verdict FAIL, wf=2/6,
+    # net_R degrades -4.0203 -> -27.762 at the geometry the live unit actually
+    # places. A non-`pending`/`blocked` status drops OUT of `gate_partition`'s
+    # buckets entirely (`OPEN_STATUSES = ("pending", "blocked")`), not just out
+    # of `no_sweep_path`, which is the correct behavior: the cell is no longer
+    # open. The one that remains: squeeze_breakout_4h exit_ladder
+    # (blocked:no_harness_levers).
+    assert len(cut.get("no_sweep_path", [])) == 1
+    assert {i[3] for i in cut["no_sweep_path"]} == {"exit_ladder"}
 
 
 def test_internal_keys_are_not_printed_as_buckets():
@@ -212,12 +270,11 @@ def test_internal_keys_are_not_printed_as_buckets():
     # The cut must not be rendered as gate-kind rows...
     assert not re.search(r"^\s+\d+\s+_?movable\b", text, re.M)
     assert not re.search(r"^\s+\d+\s+_?no_sweep_path\b", text, re.M)
-    # ...while the measured count IS rendered, and reads 0 rather than 4.
-    # 7 -> 0 on 2026-09-12: MI-278 U3 swept all seven `bracket_geometry` cells.
-    # See `test_measured_state_2026_08_17` for why `no_sweep_path` staying at 4
-    # is what makes the zero readable as "worked" rather than "reclassified".
-    assert "MOVABLE BY A SESSION: 0" in text
-    assert "NO SWEEP PATH AT ALL: 4" in text
+    # ...while the measured count IS rendered (0 since the 2026-09-29
+    # out_of_scope_family correction, 1 since the 2026-09-29
+    # regime_flip_exit resolution; see test_measured_state_2026_08_17 above).
+    assert "MOVABLE BY A SESSION: 74" in text   # 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
+    assert "NO SWEEP PATH AT ALL: 1" in text
 
 
 def test_the_cut_is_NOT_inside_the_partition():

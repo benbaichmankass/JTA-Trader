@@ -26,7 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +60,7 @@ from .shadow.inspector import (
     format_inspect_table,
     format_stats_table,
     iter_records,
+    iter_records_with_archives,
 )
 
 
@@ -243,8 +244,9 @@ def _cmd_shadow_drift(args: argparse.Namespace) -> int:
     now = datetime.now(timezone.utc)
     current_start = now - timedelta(days=args.current_days)
     reference_start = current_start - timedelta(days=args.reference_days)
+    # Active log + rotated archives, bounded to the window (FIX-CA-20).
     all_records = list(filter_records(
-        iter_records(args.log),
+        iter_records_with_archives(args.log, since=reference_start),
         model_id=args.model_id,
         stage=args.stage,
     ))
@@ -428,7 +430,12 @@ def _cmd_gate_check(args: argparse.Namespace) -> int:
             backfill_log=args.backfill_log, include_demo=args.include_demo,
         )
         attr = next((a for a in attrs if a.model_id == args.model_id), None)
-    records = list(iter_records(args.shadow_log))
+    # Active log + rotated archives, bounded to the drift window (FIX-CA-20).
+    records = list(iter_records_with_archives(
+        args.shadow_log,
+        since=datetime.now(timezone.utc)
+        - timedelta(days=args.reference_days + args.current_days),
+    ))
     drift = _drift_for_model(
         records, args.model_id,
         reference_days=args.reference_days, current_days=args.current_days,
@@ -483,7 +490,10 @@ def _cmd_gate_check(args: argparse.Namespace) -> int:
                 shadow_log=args.shadow_log,
                 datasets_root=args.datasets_root,
             )
-            if rg4_report is not None:
+            # An error report ("we could not look") is not a 0-row report:
+            # feeding n_records=0 to the labels_accruing gate would read as
+            # "looked, found nothing", so treat it as unmeasured like None.
+            if rg4_report is not None and not rg4_report.get("error"):
                 live_regime_auc = _rg4_auc(rg4_report)
                 labels_accruing = labels_accruing_from_counts(
                     args.model_id,
@@ -610,6 +620,8 @@ def _cmd_drift_retrain(args: argparse.Namespace) -> int:
         delta=args.delta,
         min_window=args.min_window,
         max_window=args.max_window,
+        scan_days=args.scan_days,
+        recent_days=args.recent_days,
     )
     written = 0
     if args.log_path:
@@ -620,6 +632,7 @@ def _cmd_drift_retrain(args: argparse.Namespace) -> int:
             "total": len(decisions),
             "dispatch": [d.model_id for d in decisions if d.action == "dispatch"],
             "skip_no_drift": sum(1 for d in decisions if d.action == "skip_no_drift"),
+            "skip_stale_drift": sum(1 for d in decisions if d.action == "skip_stale_drift"),
             "skip_no_manifest": sum(1 for d in decisions if d.action == "skip_no_manifest"),
             "skip_thin_data": sum(1 for d in decisions if d.action == "skip_thin_data"),
         },
@@ -957,12 +970,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="purged WF-CV fold count for the OOS-edge gate",
     )
     p_gate.add_argument(
-        "--label-horizon", type=int, default=1,
-        help="purge width (rows each label spans forward) for the OOS-edge gate",
+        "--label-horizon", type=int, default=None,
+        help="purge width (rows each label spans forward) for the OOS-edge "
+             "gate; default = the manifest's own evaluator_config value (or 1 "
+             "if undeclared); a value can only widen it, never shrink it",
     )
     p_gate.add_argument(
-        "--embargo-fraction", type=float, default=0.0,
-        help="embargo buffer as a fraction of the dataset for the OOS-edge gate",
+        "--embargo-fraction", type=float, default=None,
+        help="embargo buffer as a fraction of the dataset for the OOS-edge "
+             "gate; default = the manifest's own value (or 0.0); widen-only",
     )
     p_gate.add_argument(
         "--no-live-regime-auc", action="store_true", default=False,
@@ -1001,6 +1017,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p_dr.add_argument(
         "--max-window", type=int, default=10_000,
         help="cap on per-head ADWIN window length (FIFO trim above this)",
+    )
+    p_dr.add_argument(
+        "--scan-days", type=float, default=14.0,
+        help="stream only this many days of real-time scores into ADWIN",
+    )
+    p_dr.add_argument(
+        "--recent-days", type=float, default=3.0,
+        help=(
+            "dispatch only when ADWIN's latest cut is at most this old; an "
+            "older cut is skip_stale_drift (a retrain cannot rewrite it)"
+        ),
     )
     p_dr.add_argument(
         "--log-path", default=None,

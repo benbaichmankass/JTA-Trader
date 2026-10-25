@@ -3,6 +3,9 @@
 A `DatasetBuilder` produces:
   - `data.jsonl`     — one JSON object per row
   - `metadata.json`  — the canonical `DatasetMetadata` block
+  - `data.parquet`   — OPTIONAL derived sidecar, only for builders that set
+                       `parquet_sidecar = True` (see `parquet_sidecar.py`;
+                       JSONL stays the source of truth)
 
 under a versioned path:
   `<output_dir>/<family>/<symbol_scope>/<timeframe>/<version>/`
@@ -11,6 +14,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,6 +36,7 @@ class DatasetPaths:
     root: Path
     data: Path
     metadata: Path
+    parquet: Path
 
     @classmethod
     def for_dataset(
@@ -47,6 +52,7 @@ class DatasetPaths:
             root=root,
             data=root / "data.jsonl",
             metadata=root / "metadata.json",
+            parquet=root / "data.parquet",
         )
 
 
@@ -95,6 +101,8 @@ class DatasetBuilder(ABC):
     default_timeframe: ClassVar[str] = "all"
     leakage_test_status: ClassVar[LeakageStatus] = LeakageStatus.NOT_APPLICABLE
     label_version: ClassVar[str] = "n/a"
+    # Also write `data.parquet` beside `data.jsonl` (DATA-STORE-PARQUET-GC).
+    parquet_sidecar: ClassVar[bool] = False
 
     @abstractmethod
     def iter_rows(self, **kwargs: Any) -> Iterator[Mapping[str, Any]]:
@@ -144,7 +152,21 @@ class DatasetBuilder(ABC):
         iter_rows_kwargs = dict(iter_rows_kwargs)
         iter_rows_kwargs.setdefault("symbol_scope", symbol_scope)
         iter_rows_kwargs.setdefault("timeframe", timeframe)
+        # A sidecar left by an earlier build of this version would describe the
+        # OLD rows: drop it before the JSONL is rewritten, whatever the family.
+        from .parquet_sidecar import remove_sidecar, write_sidecar
+
+        remove_sidecar(paths.root)
         row_count = self._write_rows(paths.data, allowed_fields, iter_rows_kwargs)
+        if self.parquet_sidecar:
+            # Never fails the build: on refusal/failure no sidecar exists and
+            # the readers use data.jsonl, exactly as before.
+            result = write_sidecar(paths.root)
+            # `result` carries its own "status" (written/refused/failed): keep it
+            # under "sidecar" so the "parquet_sidecar" label is not overwritten.
+            print(json.dumps({"status": "parquet_sidecar",
+                              "dir": str(paths.root), "sidecar": result}),
+                  file=sys.stderr)
 
         # Persist the effective scalar build params so the dir is
         # self-describing (MB-20260716-BUILDPARAMS-IGNORED). Excludes the
@@ -187,12 +209,24 @@ class DatasetBuilder(ABC):
         iter_rows_kwargs: Mapping[str, Any],
     ) -> int:
         count = 0
-        with data_path.open("w", encoding="utf-8") as fh:
-            for row in self.iter_rows(**iter_rows_kwargs):
-                self._validate_row(row, allowed_fields)
-                fh.write(json.dumps(row, sort_keys=True))
-                fh.write("\n")
-                count += 1
+        # Write to a temp file and rename on success. Writing data.jsonl in
+        # place meant a fetch that died mid-stream (a Bybit 10016 on page N)
+        # left a PREFIX of the shard beside the previous build's metadata.json:
+        # MEASURED 2026-10-13 (row ML-SHARD-TRUNCATED) as BTCUSDT 15m data.jsonl
+        # 151,000 rows / metadata row_count 175,296, SOLUSDT 64,000 / 175,104.
+        # A failed build now leaves the previous data.jsonl untouched.
+        tmp_path = data_path.with_name(data_path.name + ".tmp")
+        try:
+            with tmp_path.open("w", encoding="utf-8") as fh:
+                for row in self.iter_rows(**iter_rows_kwargs):
+                    self._validate_row(row, allowed_fields)
+                    fh.write(json.dumps(row, sort_keys=True))
+                    fh.write("\n")
+                    count += 1
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
+        tmp_path.replace(data_path)
         return count
 
     def _validate_row(

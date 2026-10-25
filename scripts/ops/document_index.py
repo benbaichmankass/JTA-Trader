@@ -268,6 +268,9 @@ CATEGORY_EXPLICIT: Dict[str, Tuple[str, str]] = {
     # obeyed as one. Read in full by MI-162; no directory or name rule reaches
     # it, so it graded `unknown` until assigned here.
     "docs/claude/TASK-PRIORITY-2026-09-07.md": ("plan", "read:ranks-tasks-under-the-current-cycle-priority"),
+    # Evidence: a stated-population measurement (the triage of the first gitleaks
+    # full-history run), authored by the session that took it. No name rule reaches it.
+    "docs/security/gitleaks-baseline.md": ("evidence", "read:SA-SEC-lane-authored-the-triage-2026-09-29"),
 }
 
 # ---------------------------------------------------------------------------
@@ -300,6 +303,39 @@ STATUSES = {
 # Bulk-adding entries here to drain the `unknown` column would reproduce the
 # defect. One row per document actually read, or leave it `unknown`.
 STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
+    # Written 2026-10-14 by lane AI-TRADER-PROGRAMME, the same session that took
+    # every measurement in them (ml_plan_status --diversity, the research queue
+    # and results stores, the committed per-trade ledgers via
+    # scripts/research/ledger_metalabel.py, three read-only code sweeps of the
+    # strategy / regime / outcome producers), each figure MEASURED or marked
+    # INFERRED with its locator, so the status is ESTABLISHED rather than
+    # inferred. The programme is the plan of record for goal G4's research half
+    # (operator weekly planning 2026-10-14, relayed by the manager); the
+    # catalog pair is the research view over docs/reference/signal-catalog.yaml.
+    # ⚠️ The programme goes `superseded` when a later weekly pass rewrites it
+    # under a new file; the catalog pair goes `historical` only if the reference
+    # register is retired.
+    "docs/research/programmes/02-AI-TRADER.md": (
+        "live",
+        "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research programme of record for G4; re-measured by the weekly roadmap pass",
+    ),
+    # Written 2026-10-14 by lane P4-MACRO-PROGRAMME, the same session that read
+    # every figure in it (the 13 landed event-study results, the PM-surprise and
+    # WEPE G3 results, thesis_p4_scorecard via the MACRO-RESHAPE note, the
+    # survey-backfill release counts, config/accounts.yaml), each MEASURED or
+    # marked UNVERIFIED. Plan of record for M28/M29 (programme P4); goes
+    # `superseded` when a later weekly pass rewrites it under a new file.
+    "docs/research/programmes/04-MACRO-SLEEVE.md": (
+        "live",
+        "read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass",
+    ),
+    "docs/research/SIGNALS-CATALOG.md": (
+        "live",
+        "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research view over docs/reference/signal-catalog.yaml (M23 x signals catalog merge)",
+    ),
     # Written 2026-09-07 and read in full by MI-162 the same day. It is the
     # CURRENT task ranking: it anchors to `CYCLE-PRIORITY.json`'s
     # `CY-20260906-TRADING-TRUTH` (operator-set 09-06, re-affirmed 09-07), names
@@ -326,6 +362,57 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "evidence closing BL-20260816-CORPUS-CONFLICT-REDERIVE-RUNS-THE-STALE-BRANCH-EXTRACTOR; "
         "goes historical once the dispatched-sha stamp lands",
     ),
+    # Written 2026-10-07 by lane PAIRS-STOCKTAKE, the same session that took
+    # every measurement in it (paged /trades/closed and /pairs/soak reads,
+    # config/pairs.yaml, the executor, the mandate store, the prop lot
+    # tables), each figure MEASURED/INFERRED/DECIDED-marked with its locator,
+    # so the status is ESTABLISHED rather than inferred. No other rung can see
+    # it (not imported by rule 1, not in ACTIVE_DOCS, not a skill, not
+    # `history`), so without this entry it reads `unknown`, which it is not.
+    # ⚠️ It goes `historical` once RQ-20261007-005..008 land measured records:
+    # its verdict table's "no Stage-0 evidence" column is then a statement
+    # about the past, and the live answer lives in those records.
+    "docs/research/pairs-stocktake-2026-10-07.md": (
+        "live",
+        "read:PAIRS-STOCKTAKE-lane-authored-and-measured-it-2026-10-07",
+        "operator question 2026-10-06 (PI-20261006-APBY4NTV-0004); goes historical once "
+        "RQ-20261007-005..008 land measured records",
+    ),
+    # Written 2026-09-22 by the E24 OPS lane, the same session that took every
+    # measurement in it, so the status is ESTABLISHED rather than inferred. Each
+    # figure was read this session against a stated population, and every
+    # NEGATIVE carries a positive control on the same call shape and credential:
+    # the six GitHub security-API 403s are controlled by six 200s, and the four
+    # `sshd` journal 400s are controlled by a 200 on `ict-web-api.service` -- so
+    # "we could not look" is demonstrated, not assumed. No other rung can see
+    # it: rule 1 does not import it, rule 2's ACTIVE_DOCS does not enforce it,
+    # it is not a skill, not `history`, and it declares itself neither dead nor
+    # superseded -- so without this entry it reads `unknown`, which is the ONE
+    # thing it is not, because `unknown` means NOBODY HAS CHECKED.
+    # ⚠️ It goes `superseded` the moment a LATER breach sweep lands. This is a
+    # point-in-time sweep with short windows by construction (the activity and
+    # workflow-run feeds are page-capped at ~13.5 h and ~10.4 h), so leaving it
+    # `live` past its successor would let a reader quote a stale all-clear about
+    # a repo that moves this fast -- the exact trap the register exists to end.
+    "docs/security/breach-sweep-2026-09-22.md": (
+        "live",
+        "read:E24-lane-authored-and-measured-it-2026-09-22",
+        "the stated breach-check negative the /health-review skill requires and "
+        "the 2026-09-22 review could not produce; verdict `watch` -- 2 of 5 "
+        "sources swept clean, 1 partial, 2 `could_not_look` with named reasons; "
+        "superseded by the next sweep, and its windows are short by construction",
+    ),
+    # SA-SEC lane, 2026-09-29: authored by the session that measured it (fresh full
+    # clone, 12,301 commits, 1,501 branches; count cross-checked against CI run
+    # 36584026733) and pinned by tests/test_gitleaks_baseline.py. It goes stale the
+    # moment `.gitleaks-baseline.json` is regenerated without updating it.
+    "docs/security/gitleaks-baseline.md": (
+        "live",
+        "read:SA-SEC-lane-authored-and-measured-it-2026-09-29",
+        "what .gitleaks-baseline.json accepts and why: 352 first-run findings "
+        "classified by value shape, 4 named known-revoked entries, and the "
+        "planted-key proof; count pinned by tests/test_gitleaks_baseline.py",
+    ),
     "docs/claude/TASK-PRIORITY-2026-09-07.md": (
         "live",
         "read:MI-162-opened-it-anchored-to-the-current-cycle-priority",
@@ -348,6 +435,35 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:MI-283-authored-it-this-session-evidence-for-open-PR-11903",
         "evidence for the Tier-2 ask in PR #11903, which is open and unmerged; "
         "goes historical when that PR is decided",
+    ),
+    # Both written 2026-09-17 by the OPS lane (MI-294), which authored and read
+    # them in full in the same session. They are the deliverables of units 2 and
+    # 3 of that lane, and each states its own coverage and populations inline --
+    # the triage declares its partition verified complete (330/330), and the
+    # review opens with a table of what it did NOT cover rather than implying a
+    # full /system-review. They ship carrying `unknown` only because no derivable
+    # rule reaches a freshly-written record under `docs/claude/work/`.
+    "docs/claude/work/BACKLOG-TRIAGE-2026-09-17.md": (
+        "live",
+        "read:MI-294-authored-it-this-session-triage-handoff",
+        "the current triage of the health backlog into 21 named chunks; goes "
+        "historical when a later triage re-measures the same population",
+    ),
+    "docs/claude/work/SYSTEM-REVIEW-2026-09-17.md": (
+        "live",
+        "read:MI-294-authored-it-this-session-review-record",
+        "the 2026-09-17 review record, weighted to performance-7d and soak "
+        "monitoring; goes historical at the next system review",
+    ),
+    # Authored and read in full by lane BREAKOUT-TERMS-READ, 2026-10-08. It states
+    # its own coverage: the FAQ Center was read, the binding agreements were 403
+    # (section 0 lists every URL), so the doc is live as a record of what was and
+    # was not read -- not as a reading of Breakout's contracts.
+    "docs/integrations/breakout-terms-read-2026-10-08.md": (
+        "live",
+        "read:BREAKOUT-TERMS-READ-authored-it-this-session-terms-read-record",
+        "the 2026-10-08 read of Breakout's FAQ Center terms; goes historical "
+        "when the Evaluation Agreement / Program Rules are read at source",
     ),
 }
 

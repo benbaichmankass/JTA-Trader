@@ -1,0 +1,18 @@
+{
+  "based_on": "20261021T081813262154Z-81a39455.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-LRP-3840E225",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:spy_trend_long_1d:candle_mismatch",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "LIVE-PARITY",
+  "state": "routed",
+  "what": "Live-vs-replay parity: leg `spy_trend_long_1d` — candle_mismatch ×134 (paper roster) in window 2026-10-14T07:45:00+00:00..2026-10-21T07:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-21.json. Examples: [{\"class\": \"candle_mismatch\", \"bar\": \"2026-10-20T04:00:00+00:00\", \"t\": \"2026-10-20T14:35:54+00:00\", \"live\": {\"side\": \"none\", \"adx\": 12.4339, \"close\": 771.1, \"reason\": \"Strategy 'spy_trend_long_1d': no breakout on the latest bar (close=771.1 within channel [749.675, 781.59]) \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [13.0407, 13.0407], \"candidates\": [\"2026-10-20T14:30:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 12.4339, \"closed_only_199\": 11.931, \"closed_only_200\": 11.931}, \"fine_candle\": {\"time\": 1792506600, \"low\": 770.82, \"high\": 772.29}}}, {\"class\": \"candle_mismatch\", \"bar\": \"2026-10-20T04:00:00+00:00\", \"t\": \"2026-10-20T14:38:36+00:00\", \"live\": {\"side\": \"none\", \"adx\": 12.4339, \"close\": 771.1, \"reason\": \"Strategy 'spy_trend_long_1d': no breakout on the latest bar (close=771.1 within channel [749.675, 781.59]) \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"none\""
+}

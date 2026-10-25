@@ -1,0 +1,24 @@
+{
+  "based_on": "20261018T102018227544Z-84f012ae.json",
+  "due_when": {
+    "due_date": "2026-10-20",
+    "kind": "date"
+  },
+  "evidence": "issues #18948 #18949 #18954; journal row 6545 status closed exit_reason operator_flatten_reconciled closed_at 2026-10-18T11:11:29Z; exchange_positions + check_mirror_orphans 0 ORPHAN at ~11:12Z",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-XRPORPHAN-0001",
+  "money_path": true,
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "operator",
+    "ref": "operator 10:00Z Telegram snapshot via manager trigger 2026-10-18 10:10Z (mgr->ACTIVE-MGMT mirror divergence); manager hold decision 2026-10-12 12:25Z on row MIRROR-QTY-DIVERGE",
+    "rerun": "scripts/ops/diag_fetch.sh exchange_positions > pos.json && python3 scripts/ops/check_mirror_orphans.py pos.json  # holds while it prints ORPHAN bybit_2->bybit_portfolio XRPUSDT"
+  },
+  "roadmap": [
+    "M39"
+  ],
+  "routed_to": null,
+  "state": "done",
+  "terminal_reason": "DONE 2026-10-18: operator decided 'Flatten it (Recommended)' (~10:55Z, via manager). Executed through system-actions: dry run #18948 (run 39121309098) previewed bybit_portfolio XRPUSDT short 160.9, planned reduce-only BUY 160.9; apply #18949 (run 39121950720) placed it, exchange order bab442c9-4c4d-4703-b733-a26f883b9ea2, broker read flat; reconciler closed row 6545 at 11:11:29Z; mark-operator-flattened #18954 (run 39122591821) relabelled 6545 reconciler_filled -> operator_flatten_reconciled (pre_mark_exit_reason recorded). Verified: exchange_positions ~11:12Z shows bybit_2 and bybit_portfolio both ADAUSDT only; check_mirror_orphans.py: OK, 0 ORPHAN (2 stale_ack remain, TLT 5912 / IEF 4195, carried by PI-20261018-ORPHANWATCH-0001). Stage-2 identical positions restored.",
+  "what": "DECIDE the residual Stage-2 orphan: journal row 6545 = bybit_portfolio XRPUSDT short 160.9 (xrp_pullback_2h, pkg-63b56da53bfe4d64, opened 2026-10-09T06:02Z), with no bybit_2 twin since the 06:40Z stop took both parents. Root cause is fixed (#17696, deployed); this is the position the fix could not undo, held on its bracket (SL 1.41097 / TP 1.25816) by the 2026-10-12 12:25Z manager decision, and re-raised by the operator 2026-10-18 10:00Z. Options: (A, recommended) flatten it now: system-action `flatten-bybit-position` body `account: bybit_portfolio` + `symbol: XRPUSDT` + `apply: true` (Tier 2, paper book, reduce-only), then `mark-operator-flattened` `trade_id: 6545` so exit analyses exclude it; restores IDENTICAL trades and the mirror's demotion window stops carrying a trade the live book never had. (B) keep the hold and acknowledge row 6545 in config/mirror_window_exclusions.yaml so mirror-orphan-watch can tell a decided hold from a new orphan. Either way remove the two stale_ack entries (TLT 5912, IEF 4195; positions gone). Revert of (A): none needed (a flatten is final; the journal row closes via the reconciler and the mark is reversible per row via notes.pre_mark_exit_reason)."
+}

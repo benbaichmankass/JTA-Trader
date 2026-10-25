@@ -1,0 +1,22 @@
+{
+  "id": "TF-IGNITION-HARNESS",
+  "title": "Build: momentum-ignition breakout harness (scripts/backtest_ignition.py: a range-expansion bar >= k x ATR with a volume z-score >= z enters on the close in the bar's direction; bracket in ATR with a fixed R target and a bar time-stop; full cost stack; --emit-trades) so the 'catch just that wave' family can be measured at 5m-1h",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane FRONTIER-TIMEFRAMES-1018)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Programme 07 TIMEFRAMES short arm, family: momentum ignition (operator 2026-10-18: breakout-style entries that anticipate a jump and catch just that wave). FIELD (read 2026-10-18): no harness in scripts/backtest_*.py keys an entry on a single bar's range/volume expansion; squeeze keys on compression, trend on channel breaks, fade on failed breaks, ict_scalp on sweeps+FVG. WHAT TO BUILD: scripts/backtest_ignition.py with --range-mult (bar range / ATR floor), --vol-z (volume z-score floor over --vol-window bars), --tp-r, --atr-stop-mult, --timeout-bars, --cooldown-bars, --resample, --start/--end, --fee-bps-roundtrip/--slippage-bps-roundtrip/--funding-bps-per-window via execution_costs.resolve_cost_policy, --json with total_trades/net_total_r/max_drawdown_r/net_r_per_capital_day/mean_bars_held, --emit-trades (entry_time, exit_time, net_r, gross_r, mfe_r), and a classify() key (range_mult) + build_harness_cmd branch in regime_debt_matrix so harness_stage0.py runs it. Volume: Binance Vision klines carry volume; Yahoo 1h does too. CLOSES WHEN: blocked/RQ-20261018-ef5d-11 can be promoted to research/queue/ and its first record lands measured.",
+  "updated_at": "2026-10-18T06:31:00Z",
+  "updated_by": "lane-FRONTIER-TIMEFRAMES-1018",
+  "roadmap": [
+    "L-TIMEFRAMES",
+    "M22"
+  ],
+  "_seq": 559
+}

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-17",
+    "kind": "date"
+  },
+  "id": "PI-20261015-DBLSU8AO-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "docs/reviews/2026-10-15-weekly-walkthrough-perf.md (PR #18079) finding 2",
+    "rerun": "GET /api/bot/performance closed trades for account=ib_paper strategy=ict_scalp_mgc_15m since 2026-09-14: compare sum(pnl_usd) with sum(r) x risk_usd and the qty per ticket"
+  },
+  "state": "queued",
+  "what": "ib_paper ict_scalp_mgc_15m shows -$62.9k over 12 trades (96 contracts on one ticket), all ESTIMATED, while R is only -6.6 (W30 window, closed since 2026-09-14; PERF-REVIEW-PREP-20261014). Paper sizing and/or $ valuation for MGC on ib_paper looks wrong; until checked, IB paper $ must not be used to grade legs."
+}

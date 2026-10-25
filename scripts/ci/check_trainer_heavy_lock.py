@@ -75,6 +75,10 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/compute_smoke.py":
+        "RESEARCH-ROUTER plumbing smoke: one 4096x4096 fp16 matmul loop (GPU, on a Kaggle kernel) or one "
+        "1024x1024 fp32 numpy loop (CPU, on a runner) for a few seconds. It is never routed to the trainer "
+        "(compute: gpu -> Kaggle, cpu_light -> runner) and holds no training matrix.",
     "scripts/ml/export_exit_head.py":
         "reads a trained model and writes an artifact; fits nothing. Its heavy "
         "work happens inside train_exit_head.py, which locks.",

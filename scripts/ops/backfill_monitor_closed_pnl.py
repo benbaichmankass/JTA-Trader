@@ -160,6 +160,20 @@ def _compute_pnl_percent(
     return round((closed_pnl / notional) * 100.0, 4)
 
 
+def _venue_entry_fill(cfg: Dict[str, Any], row: sqlite3.Row) -> Optional[float]:
+    """The entry order's venue avg fill, or ``None`` (never raises)."""
+    try:
+        tid = _decode_notes(row["notes"]).get("trade_id")
+        if not tid:
+            return None
+        from src.units.accounts.clients import account_order_status
+        status = account_order_status(cfg, str(tid)) or {}
+        avg = float(status.get("avg_price") or 0)
+        return avg if avg > 0 else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _plan_row(
     row: sqlite3.Row, cfg: Optional[Dict[str, Any]],
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -200,6 +214,21 @@ def _plan_row(
         entry_price=entry_price,
     )
     if rec is None:
+        # CLOSE-PNL-NULL (2026-10-12): same retry as the live sweep — the
+        # journal entry is the INTENDED price, the venue's record carries the
+        # FILL, and >10 bps of entry slippage made the record unmatchable
+        # (bybit_2 trade 6565: 0.2492 vs 0.2489).
+        venue_entry = _venue_entry_fill(cfg, row)
+        if venue_entry and venue_entry != entry_price:
+            rec = account_closed_pnl_for_trade(
+                cfg,
+                symbol=str(row["symbol"] or ""),
+                direction=str(row["direction"] or ""),
+                opened_at_ms=opened_at_ms,
+                qty=qty,
+                entry_price=venue_entry,
+            )
+    if rec is None:
         return None, "account_closed_pnl_for_trade returned None"
 
     closed_pnl = rec.get("closed_pnl")
@@ -209,6 +238,39 @@ def _plan_row(
     avg_exit_price = rec.get("avg_exit_price") or 0.0
     if not avg_exit_price or avg_exit_price <= 0:
         return None, f"recovered avg_exit_price={avg_exit_price!r} (degenerate)"
+
+    # Sign-consistency sanity guard — ported verbatim from
+    # backfill_orphan_pnl.py::_plan_row (2026-06-20 dashboard-audit;
+    # FIX-CA-19 / CA-A11). A recovered closed_pnl whose SIGN contradicts
+    # the trade's own entry→exit price move is almost certainly a
+    # MISMATCHED Bybit closed-pnl record (observed on bybit_1: every long
+    # resolved to an identical +3847.29 even though the exit was ~18%
+    # adverse). Refuse the write and leave the row as it is rather than
+    # fabricate a profit/loss. Only fires on a >0.2% directional move, so a
+    # near-breakeven trade whose net-of-fees pnl flips sign is never refused.
+    try:
+        cp = float(closed_pnl)
+        if entry_price and entry_price > 0:
+            move = float(avg_exit_price) - entry_price
+            if str(row["direction"] or "").lower() == "short":
+                move = -move
+            move_frac = move / entry_price  # >0 favorable, <0 adverse
+            if move_frac < -0.002 and cp > 0:
+                return None, (
+                    f"recovered closed_pnl=+{cp:.4f} but {row['direction']} exit "
+                    f"{avg_exit_price} is {abs(move_frac) * 100:.1f}% ADVERSE to entry "
+                    f"{entry_price} — mismatched Bybit closed-pnl record; refusing to "
+                    f"write a fabricated profit"
+                )
+            if move_frac > 0.002 and cp < 0:
+                return None, (
+                    f"recovered closed_pnl={cp:.4f} but {row['direction']} exit "
+                    f"{avg_exit_price} is {move_frac * 100:.1f}% FAVORABLE to entry "
+                    f"{entry_price} — mismatched Bybit closed-pnl record; refusing to "
+                    f"write a fabricated loss"
+                )
+    except (TypeError, ValueError):
+        pass
 
     notes = _decode_notes(row["notes"])
     new_notes = dict(notes)

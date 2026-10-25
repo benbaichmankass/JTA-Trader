@@ -167,6 +167,8 @@ def test_run_checks_strategies_match_roster():
         # 9 paper_ready alt cells on bybit_1 DEMO (2026-06-18, Tier-3):
         "trend_donchian_eth_4h", "trend_donchian_sol_4h", "trend_donchian_xrp_4h",
         "trend_donchian_ada_4h", "trend_donchian_avax_4h",
+        # bybit_1 soak alias of trend_donchian_xrp_4h (ADX trail, OPERATOR-DECISIONS-1022):
+        "trend_donchian_xrp_adx25",
         "sol_pullback_2h", "xrp_pullback_2h", "ada_pullback_2h", "avax_pullback_2h",
         # swap-robust prop variant — breakout_1 shadow soak (DRAFT, Tier-3, 2026-06-25):
         "eth_pullback_prop_2h",

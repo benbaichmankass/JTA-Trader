@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2: runtime change on the exit path (src/units/strategies/trend_donchian.py + htf_pullback_trend_2h.py monitor(), new src/runtime/momentum_levers.py). Operator OK in chat, then deploy + trader restart, per docs/CLAUDE-RULES-CANONICAL.md Permission Tiers. WHAT CHANGES ON MERGE: nothing a leg trades -- both levers are OFF unless a leg declares trail_adx_* / momentum_stale_* in config/strategies.yaml, and no leg does (test_no_prop_leg_declares_the_momentum_close_verb + the byte-identical tests). The declares themselves are separate Tier-3 proposals (P1-Q6-eth4h-stop-declare, P1-Q6-xrp4h-declare, P1-Q6-slv1d-declare) after Q6 parity on 1-2 live trades. Revert: git revert (one commit).",
+  "why": "Checklist MOMENTUM-LEVERS-LIVE: three Programme-01 confirmations passed on real-money legs on 2026-10-18 (RQ-20261016-005 eth_4h ADX trail +23.1 R / 5 of 6 folds; RQ-20261016-015 xrp_4h ADX trail 4 of 4; RQ-20261016-016 slv_pullback_1d momentum-stale 3 of 4) and none can be declared because the lever existed only in the harnesses. This gives the live monitors the SAME rule functions the harnesses import (src/research/trail_levers.py), on closed bars, with a parity test against the harness ADX."
+}

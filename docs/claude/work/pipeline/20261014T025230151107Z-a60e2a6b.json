@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-16",
+    "kind": "date"
+  },
+  "id": "PI-20261014-20261014-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops 02:47Z pass 2026-10-14, PR #17702",
+    "rerun": "python3 scripts/ci/check_research_queue_dispatch_liveness.py; git log -1 --format=%ci -- docs/claude/work/research-queue-dispatch-receipt.json; python3 -c \"import json;print(json.load(open('docs/claude/work/research-queue-dispatch-receipt.json'))['timestamp'])\""
+  },
+  "state": "queued",
+  "what": "research-queue-dispatch.yml 'Check for an in-flight receipt PR' (l.543-550) skips EVERY receipt landing while any automation/research-queue-receipt* PR is open, with no staleness or mergeability test. PR #17702 sat open+dirty from 2026-10-12T07:52Z, so the receipt on main stayed at 2026-10-12T07:12Z (43.5h old at 2026-10-14T02:47Z; check_research_queue_dispatch_liveness.py trips at 48h and then pages). research-ops closed #17702 this pass (the unblock); the workflow is unchanged, so the same wedge recurs the next time a receipt PR goes dirty. Fix: when the in-flight receipt PR is mergeable_state=dirty or older than N hours, close it and proceed with the new landing (the receipt json is overwritten by the next landing, so closing loses nothing)."
+}

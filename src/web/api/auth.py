@@ -33,6 +33,10 @@ from typing import Optional
 
 import jwt
 from fastapi import HTTPException, Request, status
+from starlette.concurrency import run_in_threadpool
+from starlette.requests import HTTPConnection
+
+from src.web.api import web_sessions
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +168,18 @@ async def require_session(request: Request) -> dict:
     if not token:
         raise _UNAUTH
 
-    claims = decode_token(token)
+    # UI-UPGRADE-1-AUTH: a device-session token (``ws_...``) is accepted in
+    # addition to the legacy password JWT, so the routes that already demanded a
+    # session keep working once the SPA signs in with Google + passkey. Tokens
+    # that are not ``ws_`` take exactly the path they always did.
+    if token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
+        # sqlite on a worker thread, never on the event loop
+        row = await run_in_threadpool(web_sessions.validate_session, token)
+        if row is None:
+            raise _UNAUTH
+        claims = {"email": row["email"], "sid": row["handle"]}
+    else:
+        claims = decode_token(token)
     if claims is None:
         raise _UNAUTH
 
@@ -184,3 +199,115 @@ async def require_session(request: Request) -> dict:
         )
 
     return claims
+
+
+# ---------------------------------------------------------------------------
+# UI-UPGRADE-1-AUTH — the whole-site gate (design §2b).
+#
+# ``require_site_session`` is attached ONCE, as an app-level dependency, so it
+# covers every HTTP route and ``WS /ws/market``. ``SITE_AUTH_ENFORCE`` DEFAULTS
+# OFF: with it off the dependency returns before touching anything, so every
+# existing route answers exactly as it did. Flipping it is the operator's
+# ``set-env`` act, after a passkey is enrolled — NOT part of this change.
+#
+# This is a ROLLOUT switch for an auth surface, not a trading capability
+# (design §2b); it is removed once enforcement has been observed.
+# ---------------------------------------------------------------------------
+
+# Exact paths that stay public when the gate is on.
+SITE_PUBLIC_PATHS: frozenset[str] = frozenset({
+    "/api/health",
+    "/api/bot/prop/report",     # prop executor/phone write bearer (DASHBOARD_API_TOKEN)
+})
+# Prefixes that stay public when the gate is on. Each has its own credential:
+# auth routes (they ARE the sign-in; session-bearing ones add
+# ``require_device_session`` themselves), ``/api/diag/*`` (DIAG_READ_TOKEN — the
+# relays have no browser), prop phone routes (DASHBOARD_API_TOKEN bearer).
+SITE_PUBLIC_PREFIXES: tuple[str, ...] = (
+    "/api/auth/",
+    "/api/diag/",
+    "/api/bot/prop/phone/",
+)
+_SAFE_METHODS = frozenset({"GET", "HEAD"})
+
+
+def site_auth_enforced() -> bool:
+    """``SITE_AUTH_ENFORCE`` — default OFF; only an explicit truthy value arms it."""
+    return os.environ.get("SITE_AUTH_ENFORCE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_site_public(path: str) -> bool:
+    return path in SITE_PUBLIC_PATHS or path.startswith(SITE_PUBLIC_PREFIXES)
+
+
+def _bearer(conn: HTTPConnection) -> str:
+    h = conn.headers.get("Authorization", "")
+    return h[len("Bearer "):].strip() if h.startswith("Bearer ") else ""
+
+
+def _service_token_ok(token: str) -> bool:
+    """``DASHBOARD_API_TOKEN`` as a READ-ONLY service credential for the
+    non-browser consumers inventoried in design §2b."""
+    expected = os.environ.get("DASHBOARD_API_TOKEN", "").strip()
+    return bool(expected) and bool(token) and hmac.compare_digest(token, expected)
+
+
+def require_site_session(conn: HTTPConnection) -> None:
+    """App-level gate. No-op unless ``SITE_AUTH_ENFORCE`` is on.
+
+    On: public paths and CORS preflight pass; otherwise a live device session
+    (``Authorization: Bearer ws_...``) is required — or, for GET/HEAD only,
+    ``DASHBOARD_API_TOKEN`` as a service credential. ``WS /ws/market`` takes a
+    single-use ``?ticket=`` from ``POST /api/auth/ws-ticket`` (a browser
+    WebSocket cannot send an Authorization header).
+    """
+    if not site_auth_enforced():
+        return
+    scope = conn.scope
+    method = scope.get("method", "")
+    if method == "OPTIONS" or _is_site_public(conn.url.path):
+        return
+
+    token = _bearer(conn)
+    if scope["type"] == "websocket":
+        ticket = conn.query_params.get("ticket", "")
+        sid = web_sessions.mem_take("wsticket", ticket) if ticket else None
+        if sid is not None and web_sessions.session_alive(sid):
+            return
+        if token.startswith(web_sessions.SESSION_TOKEN_PREFIX) and _session_row_allowed(
+                web_sessions.validate_session(token)):
+            return
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": "invalid_session"})
+
+    if token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
+        if _session_row_allowed(web_sessions.validate_session(token)):
+            return
+        raise _UNAUTH
+    if method in _SAFE_METHODS and _service_token_ok(token):
+        return
+    raise _UNAUTH
+
+
+def _session_row_allowed(row: Optional[dict]) -> bool:
+    """A live session still needs ``email == ALLOWED_EMAIL`` (de-allowlisting
+    kills every session at once)."""
+    if not row:
+        return False
+    try:
+        return str(row["email"]).strip().lower() == _allowed_email()
+    except RuntimeError:
+        return False
+
+
+def require_device_session(request: Request) -> dict:
+    """ALWAYS-ON session check for the session-management routes
+    (``/api/auth/sessions``, ``/api/auth/ws-ticket``…), independent of
+    ``SITE_AUTH_ENFORCE``: these routes only make sense for a signed-in device.
+    """
+    token = _bearer(request)
+    if not token.startswith(web_sessions.SESSION_TOKEN_PREFIX):
+        raise _UNAUTH
+    row = web_sessions.validate_session(token)
+    if not _session_row_allowed(row):
+        raise _UNAUTH
+    return row

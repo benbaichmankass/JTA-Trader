@@ -1,0 +1,35 @@
+{
+  "id": "LIVE-PARITY",
+  "title": "Standing mechanical LIVE-vs-REPLAY parity check for every real-money leg: durable per-bar decision record, daily replay of the live code over the same bars, diff + alert, with positive controls",
+  "phase": "floor",
+  "state": "landed_unproven",
+  "owner": "build lane",
+  "lane": "session_014bomc3Y6kgwMFSqqGojcCp",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 45,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    15820,
+    15845,
+    15882,
+    18569,
+    19925
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-03T12:00Z manager session_01MM8o5js6TcDFeNAPBY4Ntv] MERGED #15820, #15845 and #15882 (d61f13af, calibration + alerts on). DEPLOYED: it is a GitHub workflow, not a VM change; scheduled daily 06:35Z. NOT OBSERVED: comms/live_parity/latest.json on main still reads status 'not_yet_run' (seeded by #15820). Closing observation: the 2026-10-04 06:35Z scheduled run commits latest.json with 3 of 3 controls passing and a leg/bar/divergence count. || [2026-10-03T06:12Z manager session_01MM8o5js6TcDFeNAPBY4Ntv] OPERATOR (chat 2026-10-03 ~06:10Z): wants mechanical verification that silence is really no signals, not a bug that looks like silence. Builds on LIVE-SILENCE replay.py. Done = a daily workflow plus a committed artifact plus one line on the brief (legs, bars, divergences; 'could not check' never reads as 0); planted-defect self-test FAILS; known pre-09-28 live fires reported MATCHED; an end-to-end liveness assertion (signal -> package -> order on some account in N days); one real 7-day run reported. Any writer change is a HELD Tier-2 PR.  | 2026-10-15 BACKLOG-DRAIN-20261015 (session_019p3X1tJAdUdV2dKaw9no8r): DONE \u2014 effect evidenced on main: comms/live_parity/latest.json generatedAt 2026-10-14T07:35Z: status ok, 7/7 real-money legs, 0 divergences, planted_defect 3/3 flagged; daily files 2026-10-04..10-14. [2026-10-16T10:00Z lane LIVE-PARITY-DIAG-1016] 10-16 DIVERGENT / historical_positive FAIL 7/22 ROOT-CAUSED: INSTRUMENT, not trader. (1) 15/15 misses = prop-leg packages (eth_prop 13, sol_prop 2, created 10-10..10-15T03:00Z) scored dropped_no_order against TODAY's roster; the legs joined bybit_1 10-15T17:38Z (#18394) and bybit_2/portfolio 10-16T04:45Z (#18500); replay matched the SIGNAL in all 15. (2) historical_positive mixed downstream drops into the instrument control. (3) planted_defect could plant in the bar before since (stale-frame cache window), a false FAIL that depends on run time-of-day, reproduced on main's script over the same bundle. FIX PR #18569 (Tier 1, self-land). VALIDATED live with branch script: issue #18575 run 38881239883 = all 3 controls PASS, historical_positive 21/21, divergences 18->3. The 3 left are trend_donchian_sol_prop candle_mismatch at bar 10-16T05:00, the known ADX residual PI-20261003-LRP-ADXRESIDUAL (side agrees, gap 0.5036 vs tol 0.5); sol_prop is now real-money, so it keeps status 'divergent' and pings until that residual is resolved. Trader: no Tier-2/3 change proposed. xrp/ada_pullback_2h: 0 parity divergences in all 13 daily runs 10-04..10-16 (83 bars each), so parity explains 0 of the live-below-backtest gap on the entry-decision + order-presence axis; it does not measure fills, cost or exits. Row LIVE-BT-STAGE-B does not exist on main. LANDED_UNPROVEN until the first scheduled daily run after the merge commits latest.json with historical_positive pass. [2026-10-16 RESEARCH-OPS-0847] 2026-10-16 daily run (comms/live_parity/2026-10-16.json) status DIVERGENT: 18 legs/630 bars, 18 divergences of which 5 on real-money legs; controls: planted_defect pass, liveness pass, historical_positive FAIL (7 of 22 live packages matched replay). PIs PI-20261016-LRP-156968F7/-288AF95B/-EF728D79 routed here. The failed positive control means the replay cannot currently be trusted to confirm live fills -- not diagnosed by research-ops; escalated to the manager. [2026-10-24T18:00Z manager session_01UETC6m] REGRESSION per WR-20261024-1734Z: daily run 2026-10-17->10-24 = 19 legs (7 real-money), 683 bars, divergences 169; controls planted_defect pass, historical_positive FAIL, liveness pass (was 3 divergences / all controls pass after #18569). Instrument vs trader not yet diagnosed; a failed positive control means replay cannot confirm live. Owed: one diagnosis lane (precedent LIVE-PARITY-DIAG-1016), dispatched by the next manager after rotation.  | [2026-10-24 lane LIVE-PARITY-DIAG-1024] Regression 10-22..10-24 ROOT-CAUSED: INSTRUMENT (decision_bar attribution vs today's config; lost_bar before roster join). Fix PR #19925, validated on bundle (#19923: 3/3 controls pass, historical_positive 30/30). ADX-residual candle_mismatch (spy paper 134, ada/xrp 5) unchanged; 3 fresh lost_bars 10-24T16-17Z open on row LIVE-PARITY-DIAG-1024.",
+  "updated_at": "2026-10-24T18:37:48Z",
+  "updated_by": "session_01X32HpXK6VSpTfDpvmyQVyb",
+  "observation": {
+    "what": "10-17 06:35Z daily run: historical_positive pass and 0 dropped_no_order on the prop legs",
+    "how_to_check": "python3 -c \"import json; d=json.load(open('comms/live_parity/2026-10-17.json')); print(d['controls']['historical_positive']['state'], {l['leg']: (l.get('by_class') or {}).get('dropped_no_order') for l in d['legs'] if l['leg'].endswith('_prop')})\"",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17T12:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 270
+}

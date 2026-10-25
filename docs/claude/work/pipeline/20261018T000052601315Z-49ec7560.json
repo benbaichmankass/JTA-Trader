@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the newest comms/research/ops/*.json (the 02:47Z research-ops pass or later) lists <= 2 not_run steps; if it still lists >= 3, dispatch the pass with the named steps first",
+    "due_date": "2026-10-18",
+    "kind": "date"
+  },
+  "id": "PI-20261018-RADE1017-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-GRADE-1017: research_slo research_ops_not_run reads the newest record only (20261017T2130Z)",
+    "rerun": "ls -1 comms/research/ops/*.json | sort | tail -1"
+  },
+  "routed_to": "RESEARCH-AUTHOR-GRADE-1017",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[research-slo] research_ops_not_run is the not_run count of the NEWEST research-ops record, and that record (20261017T2130Z, the 20:47Z pass) was written before this lane's merges, so it still lists 5 steps. Of those 5, as of 2026-10-18: m20 unread rows 9 -> 0 (PR #18833); stranded stamp PR check: none stranded (only #18831, auto); authoring beyond one node: 35 units authored (#18823); routing the due pipeline items: unrouted is 0 (#18816) but ~96 dated observations remain due and were not re-dated; step C per-file audit of blocked/: census only, 71 files remain and 9 have no theme. So the next pass can truthfully report <= 2 not_run if it runs the per-file blocked/ audit and the due-item review first (SKILL step C, brief 'name the not_run steps first'). It clears at that pass's record, not before."
+}

@@ -1,5 +1,11 @@
 name: constraint-readout
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+
 # A1's readout, on a real cadence. The operating model classifies A1 as trigger
 # `Cadenced`, autonomy `Full`; until this file landed it had NEITHER.
 #
@@ -52,12 +58,12 @@ name: constraint-readout
 # auto-merge PR, plus a read-only diag bearer for the money item.
 
 on:
-  schedule:
-    # 06:05 UTC daily. The slot is chosen, not decorative: it lands after
-    # probes (05:20) and due-list (05:50) have refreshed the registers the
-    # brief renders from, and before work-digest's 06:20 slot reads them. See
-    # the lateness warning above — this ordering is intent, not a promise.
-    - cron: "5 6 * * *"
+  # schedule:
+    # # 06:05 UTC daily. The slot is chosen, not decorative: it lands after
+    # # probes (05:20) and due-list (05:50) have refreshed the registers the
+    # # brief renders from, and before work-digest's 06:20 slot reads them. See
+    # # the lateness warning above — this ordering is intent, not a promise.
+    # - cron: "5 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -81,7 +87,7 @@ jobs:
     # job mid-wait and reports a failure for a merge that was about to succeed.
     # 40 = ~5m of work + the 30m wait + 5m slack. tests/test_commit_to_main_callers.py
     # pins this floor across every caller.
-    timeout-minutes: 40
+    timeout-minutes: 90  # was 60: shared commit-to-main wait 50->80 (W41)
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -132,9 +138,27 @@ jobs:
       # slot fires at all — read the run history, never the cron expression.
       #
       # Only PyYAML, deliberately: nothing else this job runs leaves the
-      # stdlib (render_due_list.py and render_session_brief.py are stdlib-only,
-      # which is why due-list.yml needs no install step and succeeds). The
-      # pinned spelling matches the 10 sibling workflows that already use it.
+      # stdlib. The pinned spelling matches the sibling workflows that already
+      # use it.
+      #
+      # ⚠️ CORRECTED 2026-09-17 — THIS COMMENT USED TO END "(render_due_list.py
+      # and render_session_brief.py are stdlib-only, WHICH IS WHY due-list.yml
+      # NEEDS NO INSTALL STEP AND SUCCEEDS)". Do not re-quote that. It was true
+      # when written on 2026-09-08 and false four days later:
+      # `src_spent_decision_edges` landed 2026-09-12 and execs
+      # `scripts/ci/check_decision_answers.py`, which imports PyYAML at module
+      # scope, so `render_due_list.py` stopped being stdlib-only. due-list.yml's
+      # cron then failed 4 of 4 scheduled runs (#104-#107, 2026-09-13 .. 09-16)
+      # at its own self-test gate on the identical ModuleNotFoundError this step
+      # was added to fix.
+      #
+      # ⚠️ THE STALE SENTENCE IS WHY THE FIX DID NOT SPREAD, which is the part
+      # worth carrying: this class was correctly diagnosed here and fixed at ONE
+      # call site, and a reader checking whether the siblings needed the same
+      # step was told in prose that they did not. FIELD BEATS COMMENT —
+      # tests/test_workflow_python_deps.py now DERIVES the answer from the
+      # import-and-exec graph over every workflow, so nobody has to trust a
+      # prose claim about which script is stdlib-only again.
       - name: Install PyYAML — the work store is YAML and the runner has none
         run: python3 -m pip install --quiet --upgrade pip "pyyaml>=6.0"
 

@@ -1,0 +1,155 @@
+# Hand-authored 2026-10-22 by lane TP-DOCTRINE-W43 (session_017BJaq4hC2mKhEmPT76E6Xm), manager dispatch.
+# Decision rule registered BEFORE any candidate arm was run on this window.
+id: RQ-20261022-bea9-02
+title: 'TP doctrine COMPLIANCE, out of sample: does the tp_extend revision selected on xrp_pullback_2h (X5 / X6:
+  3R target extended on approach while the thesis holds) stay no worse than the same static 3R target on its sibling
+  sol_pullback_2h (SOLUSDT 2h, never used to select it) in 5 of 6 folds over 2020-07..2026-10, net of cost?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'xrp_pullback_2h (bybit_2 real money, bybit_portfolio, bybit_1) declares a reachable 3R entry target (guard:
+  reach 0.246) and FAILS tp_revision on every routing. RQ-20261016-009 (MEASURED, comms/research/RQ-20261016-009/39103734048/verdict.json,
+  2020-07..2026-10, n(A) 394) found X6 +1.75 R and X5 +1.25 R over the declared 3R bracket, BOTH in 6 of 6 folds
+  with maxDD equal -- and FAILED both only on the 0.02 R/trade materiality bar (7.88 R). That window is spent (deterministic
+  harness, numbers known) and the harness''s candle source (Binance USD-M perps) starts 2020-01-06, so there is
+  no disjoint pre-history (MEASURED in the lane sandbox 2026-10-22: 21 declared-arm trades on 2020-01..2020-06,
+  below the 39 floor). The out-of-sample test that exists is ACROSS SYMBOLS: the same pullback unit and the same
+  two cells on sol_pullback_2h, which played no part in selecting them (siblings: eth_pullback_2h, avax_pullback_2h).'
+why_this_matters: 'Every earlier TP-lever unit on this leg asked a REPLACEMENT question -- beat the incumbent by
+  a materiality bar of 0.02 R x n(A) -- which is the right bar for a P&L-motivated swap. The TP doctrine (docs/ARCHITECTURE-CANONICAL.md
+  § ''TP doctrine'', operator 2026-10-06, binding) makes compliance itself the motive, so a revision that is no
+  worse than the incumbent is the doctrine''s answer; a materiality bar makes compliance unreachable for any roughly
+  P&L-neutral revision. This unit asks the COMPLIANCE question: everything as the programme''s replace bar (fold
+  supermajority, 0.35 drawdown tolerance, 39-trade floor) except the materiality term, which is 0. Out-of-sample
+  by symbol rather than by date: a cell that is no worse on three unseen symbols of the same unit is a property
+  of the unit''s trades, not of xrp''s partition.'
+power:
+  expected_n: 148
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 baseline trades (the exit-refinement floor). MEASURED
+    in the lane sandbox 2026-10-22: the baseline arm S3 ALONE (no candidate arm run, so the rule is registered before
+    any candidate number exists) carries 148 trades on SOLUSDT 2h over this window.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-W43-SOLPULLBACK2H-TPX-SIBLING-COMPLIANCE
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on sol_pullback_2h, window 2020-07-01
+    .. 2026-10-15 23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the
+    harness resolves per venue (execution_costs.resolve_cost_policy; recorded per arm as cost_stack). Per arm from
+    the harness''s own --json summary: n, net_total_r, max_drawdown_r, net R per fold, net_r_per_capital_day, by_outcome.
+    BASELINE S3 = the leg as declared with ONE change, a static 3R target (--tp-target-r=3, the harness''s GEOM-B1
+    static target; on xrp_pullback_2h this flag reproduced the declared tp_r 3 exactly, RQ-20261019-020 arm T3 =
+    A = 29.6492 R), so S3 vs X5/X6 isolates the REVISION -- the same comparison RQ-20261016-009 made on xrp (declared
+    3R vs 3R + extensions). Read every ''A'' below as S3. Candidates: X5 = tpx_t3_a0.85_e0.5_m3; X6 = tpx_t3_a0.85_e1_m3
+    -- the two cells SELECTED on xrp_pullback_2h (RQ-20261016-009), named before this run. Per candidate C: delta
+    = net_r(C) - net_r(A); folds_ge = folds where net_r(C) >= net_r(A) (ties count); maxDD(C) vs maxDD(A). Reported,
+    not graded (the doctrine read below): tp_share = by_outcome.take_profit / n(C) (the realised reach of the final
+    target), lever_fired, net_r_per_capital_day(C) vs (A).'
+  rule: 'INDETERMINATE IF n(S3) < 39 (underpowered: no verdict, never FAIL on thin n). A candidate C PASSES iff
+    net_r(C) > net_r(S3) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(S3) x 1.35 (the harness grades exactly this
+    with --delta-r 0 --delta-r-per-trade 0, so the unit is gradable as registered). PASS IF one or more pass: the
+    passing candidate with the highest net R is named, and the follow-on is the DOCTRINE READ, registered here:
+    if tp_share(C) < 0.10 (the TP-REACH-FLOOR) OR lever_fired is false OR net_r_per_capital_day(C) < net_r_per_capital_day(S3),
+    the PASS is forwarded to the manager as ''P&L without a reachable prediction'', not a declare; otherwise it
+    is the evidence record for a Tier-3 declare proposal -- here NOT a declare on this leg (it is on no account
+    roster) but one third of the FAMILY READ, registered now: the tp_extend revision GENERALISES iff the SAME cell
+    (X5 or X6) passes on >= 2 of the 3 sibling units (RQ-20261022-bea9-01 eth, -02 sol, -04 avax). Generalises ->
+    the evidence record for a Tier-3 proposal of that cell on xrp_pullback_2h (bybit_2 + bybit_portfolio + bybit_1,
+    where its own spent window already read 6/6 folds no worse) once the pullback-unit tp producer exists (row TP-DOCTRINE
+    B1); and the follow-on for ada_pullback_2h is a 4R-anchored replay of the same cell, not a declare -- a note
+    on row TP-DOCTRINE-W43 for the manager, never a config edit. FAIL IF none passes -> this sibling counts against
+    the family read; the cells are not retired by one sibling alone. Thresholds (zero materiality, 5/6 folds, the
+    0.35 drawdown tolerance, the 39 floor, the 0.10 tp_share read) are not changed after any result.'
+  what_it_does_not_do: Edits no config and places no order; this leg is on no account roster and nothing here is
+    a declare on it. Same calendar window as xrp's spent run, so crypto-wide regime effects are shared -- independence
+    is by symbol path, not by date. tp_share is a reach proxy, not calibration (row ABLATION-TP-CALIBRATION). Two
+    candidates per leg is a multiple comparison; the 5/6 fold supermajority and the 2-of-3 family read carry it.
+  registered_before_run: true
+  registered_at: '2026-10-22'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  basis: 'stand-in: TP-doctrine compliance of a leg''s bracket; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with
+    the internet off and metis-market-data carries no 2h/4h/1d candles for these legs; reads no trainer data.
+  basis: Runner. One harness invocation per unit; the 2-arm precedent (RQ-20261016-009) took 74 s wall incl. the
+    fetch; est_minutes carries headroom for runner fetch latency.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - sol_pullback_2h
+  - --arm
+  - S3=--tp-target-r=3
+  - --arm
+  - X5=--tp-target-r=3;--tp-extend-r=0.5;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native
+  - --arm
+  - X6=--tp-target-r=3;--tp-extend-r=1;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - S3
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-bea9-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TP-DOCTRINE-W43
+- RQ-20261016-009
+- RQ-20261016-008
+- RQ-20261019-020
+- docs/research/tp-doctrine-w43-proposals-2026-10-22.md
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-22T07:53:47+00:00'
+grading:
+  attested: RULE-W43-SOLPULLBACK2H-TPX-SIBLING-COMPLIANCE
+  auto: true
+  decision_rule_id: RULE-W43-SOLPULLBACK2H-TPX-SIBLING-COMPLIANCE
+  evidence:
+  - research/results/RQ-20261022-bea9-02/39743803265.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

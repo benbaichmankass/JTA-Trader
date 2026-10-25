@@ -1,9 +1,9 @@
 ---
 name: performance-review
-description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE and its RESEARCH PIPELINE — per-strategy aggregate stats, per-order-package decision grading, comparison against actual closed-trade PnL, and proposed tweaks to consider. Reviews the M13 AI-analyst insights log (/api/bot/insights/*) and cross-checks its claims against real data. ALSO owns the research pipeline end to end (2026-08-30): are backtests queued and routable, are they running, were their results READ and dispositioned, what analysis follows, and what action item comes out. Owns comms/claude_strategy_scores.jsonl (per-decision grading, append-only), docs/claude/performance-review-backlog.json (trading follow-ups) and docs/claude/research-review-backlog.json (research/evidence follow-ups). Also answers \"did anyone read that sweep\", \"is the research queue healthy\", \"/research-review\". Use when the operator says "run the performance review", "/performance-review", "score the recent trades", or "how are the strategies doing". NOT for ML/model perf (use /ml-review) and NOT for system/pipeline plumbing (use /health-review).
+description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE and its RESEARCH PIPELINE — per-strategy aggregate stats, per-order-package decision grading, comparison against actual closed-trade PnL, and proposed tweaks to consider. Reviews the M13 AI-analyst insights log (/api/bot/insights/*) and cross-checks its claims against real data. ALSO owns the research pipeline end to end (2026-08-30): are backtests queued and routable, are they running, were their results READ and dispositioned, what analysis follows, and what action item comes out. Owns comms/claude_strategy_scores.jsonl (per-decision grading, append-only) and docs/claude/work/PIPELINE.jsonl (trading + research follow-ups, filed via scripts/ops/pipeline.py). Also answers \"did anyone read that sweep\", \"is the research queue healthy\", \"/research-review\". Use when the operator says "run the performance review", "/performance-review", "score the recent trades", or "how are the strategies doing". NOT for ML/model perf (use /ml-review) and NOT for system/pipeline plumbing (use /health-review).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-09-24` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /performance-review — trading performance + the research pipeline
 
@@ -40,12 +40,20 @@ If the user asked about *technical/pipeline health* — STOP, use
 `/health-review`. If the user asked about *model training / promotion
 / shadow predictions* — STOP, use `/ml-review`.
 
-**Coordination (binding):** before your first diag pull, read + post to the
-**live coordination board** (GitHub issue #6927,
-`docs/claude/coordination-board.md`) — this skill dispatches real live-VM
-diag/system-action requests, grades trades, and commits backlog drains, so
-other concurrent sessions need to see your `▶️ START` before you touch
-anything.
+**Coordination (binding, corrected 2026-09-24):** the coordination board this
+paragraph used to point at (GitHub issue #6927 / `docs/claude/coordination-board.md`)
+is retired — `docs/claude/coordination-board.md` itself says #6927 "is retired,
+readable, and takes no writes. Do not post there." — and posting there is a
+no-op under the 2026-09-21 operating reset (`docs/plans/OPERATING-PLAN-2026-09-21.md`;
+CLAUDE.md § "How work is organised"). The live model is **one manager session
+plus scoped lanes**: read your lane's row in
+`docs/claude/work/MANAGER-CHECKLIST.json` before your first diag pull, and
+before landing a PR claim this branch's merge slot with
+`scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by
+<session-id>` per `.claude/skills/manager/SKILL.md`. This skill still
+dispatches real live-VM diag/system-action requests and commits pipeline
+filings, so check the checklist for another lane already working the same
+window before you duplicate its pulls.
 
 ## Scope (what this skill DOES)
 
@@ -118,9 +126,9 @@ pulls:
 
 | Pull | Path | Use |
 |---|---|---|
-| Order packages (decision-level) | `GET /api/bot/order-packages?since=<iso>&limit=500&include_paper=true` | one row per decision; **`include_paper=true` so PAPER + PROP packages are graded too, not just real-money** (operator directive 2026-06-22); includes `claudeScore` from prior reviews so dedupe is trivial |
-| Closed trades | `GET /api/bot/trades/closed?since=<iso>&limit=500&include_paper=true` | realized PnL + exit reason (all funding classes) |
-| Paper-book trades | `GET /api/bot/trades/closed?account_id=bybit_1&limit=500` | the diversified paper cohort's closed trades, for the tracker (§ "Diversified paper-book tracker"). `account_id=` returns that account incl. paper; pull the **full** book (no `since`) so the tracker's recency split + cumulative trajectory are correct |
+| Order packages (decision-level) | `GET /api/bot/order-packages?since=<iso>&limit=200&include_paper=true` (⚠️ the router caps `limit` at **200** and has NO `offset`; a `limit=500` call returns HTTP 422 — page the window per strategy with `&strategy=<name>`, measured 2026-10-04) | one row per decision; **`include_paper=true` so PAPER + PROP packages are graded too, not just real-money** (operator directive 2026-06-22); includes `claudeScore` from prior reviews so dedupe is trivial |
+| Closed trades | `GET /api/bot/trades/closed?since=<iso>&limit=200&offset=<n>&include_paper=true` (cap 200 per page; walk `offset`) | realized PnL + exit reason (all funding classes) |
+| Paper-book trades | `GET /api/bot/trades/closed?account_id=bybit_1&limit=200&offset=<n>` (walk `offset` to the end) | the diversified paper cohort's closed trades, for the tracker (§ "Diversified paper-book tracker"). `account_id=` returns that account incl. paper; pull the **full** book (no `since`) so the tracker's recency split + cumulative trajectory are correct |
 | Journal — order_packages | `journal?table=order_packages&limit=200` (diag) | redundant cross-check; carries `signal_logic` blob |
 | Journal — trades | `journal?table=trades&limit=200` (diag) | exit_reason, pnl, position_size |
 | Audit tail | `audit?limit=600` (diag) | `*_eval` events for context around each decision |
@@ -214,6 +222,13 @@ python scripts/analysis/classify_paper_records.py --limit 500 --format md   # on
 python scripts/analysis/classify_paper_records.py --json trades.json --reconstruct
 ```
 
+⚠️ **Feed it JOURNAL-shaped rows (`/api/diag/journal?table=trades`), not the
+`/api/bot/trades/closed` shape.** The classifier keys on `exit_reason`; the
+closed-trades endpoint collapses every non-sl/tp/reconciler reason into
+`closeReason: "other"`, so fed that shape it buckets every pairs exit as
+`unclassified:other` (bucket B). Measured 2026-10-04 on one window: API shape
+A=27/B=86/P=0, journal shape A=16/B=1/C=4/P=54 — same trades.
+
 It buckets each record (`src/analysis/paper_record_classifier.py`):
 
 - **A — gradeable** (clean SL/TP / monitor exit): the **only** rows that drive
@@ -243,6 +258,19 @@ the window:
 - `n_rejected` (status ∈ `failed_*`)
 - `win_rate` (closed_filled rows where `pnl > 0` ÷ closed_filled rows)
 - `pnl_total`, `pnl_avg_per_trade`
+- `pnl_measured_n` and `pnl_coverage` — **required beside every `pnl_total`**
+  (SA-AUD-3, FIX-SA-05). `pnl_measured_n` is the number of closed rows whose
+  `provenance.classify_pnl` bucket is MEASURED, `pnl_coverage` is
+  `pnl_measured_n ÷ closed rows`, and `pnl_estimated_n` counts the ESTIMATED
+  rows. Take them from `/api/bot/performance` `perStrategy[].pnlMeasuredCount`,
+  `.pnlCoverage`, `.pnlEstimatedCount`; never recompute over a different
+  population. `pnl_total` sums fabricated marks too, so a sum quoted without
+  its coverage is a number of unknown provenance.
+  ⚠️ **`totalPnlMeasured` is MEASURED+ESTIMATED despite its name.** Quote
+  `totalPnlMeasuredOnly` (the MEASURED rows, the same population as
+  `pnlMeasuredCount`) beside it and say so when the two disagree in sign: a
+  paper window read `totalPnlMeasured` +94,618 over 367 MEASURED rows against
+  699 ESTIMATED.
 - `avg_hold_seconds` (closed_at − opened_at)
 - `rejection_cluster` — most common rejection reason if rejections >
   filled
@@ -252,6 +280,16 @@ the window:
 their `n_filled` should be 0 (shadow does not place live orders) — if
 not, that's an anomaly. Closed-trade attribution joins by
 `trades.strategy_name`.
+
+⚠️ **Shadow is not a refusal** (PI-20261010-ERFFUW41-0001). Every
+`execution: shadow` dispatch journals an order package with `status:
+rejected`, `close_reason: NULL` and reason `dry_run_no_order_placed`
+(`src/units/accounts/execute.py`, the non-live rejection row). Count those
+as `n_shadow`, never in `n_rejected`, and never list a shadow leg's
+packages as "rejected with no recorded cause" — on 2026-10-10 that flagged
+`mgc_trend_1h` (16/16 "rejected", all shadow by design) as an anomaly and
+would have hidden a real refusal among them. `n_rejected` is the remainder:
+a package refused for a cause, on a leg that is `execution: live`.
 
 ## Per-decision scoring (PERSISTED, keyed by order package)
 
@@ -296,6 +334,23 @@ append packages decided since the last review.
 
 The retroactive backfiller for historical windows is
 `scripts/ops/score_order_packages.py` — re-use it, do not reinvent.
+
+**Closed trades are graded per TRADE, on a schedule (JC-SA-01, 2026-09-29).**
+`.github/workflows/grade-closed-trades.yml` runs daily and appends one row per
+closed, non-backtest trade, keyed on `linked_trade_id` (= that trade's
+`trades.id`), via `score_order_packages.py --emit-delta-only --by-trade` — the
+same `_grade_package` rubric, no new one. The skip-set for closed trades is
+therefore the set of `linked_trade_id`s already present, not the
+`order_package_id`s: a package that fans out to several accounts names only one
+trade in `order_packages.linked_trade_id`, and a package graded `orphaned`
+before its trades existed would otherwise keep that stale row forever
+(measured 2026-09-29: 54 of 486 recent closes fell in those two shapes). The
+stale package-level rows stay (append-only); the trade rows sit beside them.
+`scripts/ci/check_grading_freshness.py` is ALERT-ONLY (2026-09-29): it warns on
+a PR when `max(reviewed_at)` is older than 3 days and a daily
+`grading-freshness-alert.yml` pings Telegram. A review session no longer needs
+to run the grading pass for closed trades — it checks the guard emits no
+warning and reads the rows.
 
 **Web / PM session (no DB file):** dispatch the **`grade-closed-trades`**
 system-action (Tier-1, `docs/claude/system-actions.md`) instead of pulling the
@@ -372,6 +427,8 @@ scripts read these corpora, so a consumer EXISTS. This asks one level over:
 **was a consumer RUN, on THIS batch, and did a decision come out of it.** A tool
 that *could* have read a result is not a record that anyone did.
 
+> **Routine cadence (2026-10-10):** Stages 1–2 and the read-what-landed half of Stage 3 run 4x/day as `.claude/skills/research-ops/SKILL.md`; this review reads its latest record (`comms/research/ops/`) rather than re-deriving them.
+
 ### Stage 1 — is the pipeline HEALTHY (are jobs queued and routable)?
 
 Read `research/queue/*.yaml` through `scripts/research/research_queue.py`. Report
@@ -433,13 +490,26 @@ vocabulary `backlog_drive` is hardened with — "carried forward unchanged" cann
 satisfy this. `actioned` **must** name what was done. Deferring is permitted; it
 must be SAID, not achieved by silence.
 
-Anything needing follow-up goes to
-**[`docs/claude/research-review-backlog.json`](../../../docs/claude/research-review-backlog.json)**
-via `scripts/ops/backlog_append.py::append_row`, **never by hand**. That file is
-this session's SECOND backlog and is deliberately separate from
-`performance-review-backlog.json`: *"this sweep needs re-running at higher n"*
-and *"this strategy's win rate slipped"* are graded against different bars, and
-one file buries both. Drain it under the same HARD COMPLETION GATE as the other.
+⚠️ **CORRECTED 2026-09-24 — `docs/claude/research-review-backlog.json` and
+`docs/claude/performance-review-backlog.json` no longer exist.** Both were
+retired in the 2026-09-21 operating reset along with the other archived
+registers (CLAUDE.md § "How work is organised"; content migrated verbatim to
+`docs/archive/2026-09-21-operating-reset/registers/`, e.g.
+`SRQ-20260715-REALMONEY-ALLOC-BENCHMARK` now lives on as
+`PIPELINE.jsonl#SRQ-20260715-REALMONEY-ALLOC-BENCHMARK`). Anything needing
+follow-up — a research follow-up as much as a trading tweak-to-consider —
+goes to **`docs/claude/work/PIPELINE.jsonl`**, filed via
+`scripts.ops.pipeline.append(item, intent="new"|"update")` (mint the id with
+`python3 scripts/ops/pipeline.py --mint-id "<this session's ref>"`; **never
+edit the file by hand**, and never write a JSON array). It refuses an item
+without `due_when` and `origin.rerun`, which is stricter than the old
+backlogs' free-text follow-up fields, not looser — a research/performance
+item still needs a `clears_when` (or a date) and a rerun command the same way
+a health finding does. Draining still means the same thing: enumerate every
+open (non-terminal) item this skill's population touches, re-validate it
+against this window's data, and either move it to `done`/`killed` (with
+`terminal_reason`) or append an `update` record with the fresh evidence — never
+leave a re-validated item's record unchanged if the evidence moved.
 
 ## Underperformance → diagnose, don't demote (BINDING — operator directive 2026-07-30)
 
@@ -450,6 +520,15 @@ it turns a strategy off at a regime bottom, discards a real edge, and (worst)
 learns nothing about *why* it underperformed, so the same mistake recurs. This
 is the strategy-level analogue of the `drift-remediation` skill's one rule;
 follow it before ANY demote/kill enters `proposed_tweaks[]`.
+
+**Step 0 — always first (operator, 2026-10-15: "that should be a first step for any
+underperforming strategy"):** run `python3 scripts/research/live_vs_backtest.py --leg <leg>`
+and record its verdict beside the leg. It says whether the live cumulative R is inside the
+p5-p95 band the leg's own committed backtest predicts for the same number of trades.
+`CONSISTENT` → the result is luck-sized: keep accruing, no tune, no demote proposal (R4
+decides at its threshold). `BELOW_BACKTEST` → fidelity/regime problem, proceed to 1-3 and file
+the investigation unit. `NO_BACKTEST` → file a backtest unit. `INSUFFICIENT_N` /
+`NO_LIVE_TRADES` → say so; do not grade on it.
 
 When a live strategy underperforms in the window, the mandatory next step is a
 **root-cause diagnosis + robust re-test**, not a proposal to turn it off:
@@ -519,28 +598,42 @@ instead (§ "Draining the backlog").
 
 ## Draining the backlog — a HARD COMPLETION GATE (not a sample)
 
-**A performance-review is NOT complete until every open item in
-`docs/claude/performance-review-backlog.json` has been triaged THIS
-run.** Triaging a sample / "the recent few" is a review failure — the
-backlog IS the standing open-task list. (Health/ML backlogs are not
-touched here; each of the three reviews enforces this same gate on its
-own list.)
+⚠️ **CORRECTED 2026-09-24 — there is no more standalone
+`docs/claude/performance-review-backlog.json` to enumerate.** It was retired
+2026-09-21; its still-open rows were migrated verbatim into
+`docs/claude/work/PIPELINE.jsonl` (e.g. `SRQ-20260715-REALMONEY-ALLOC-BENCHMARK`,
+`PB-20260707-IBKR-STK-ETF-SUPPORT`). The gate below is unchanged in spirit —
+every open item this skill owns still gets touched every run, not sampled —
+it just reads from the pipeline now, alongside `docs/claude/strategy-refinement-queue.json`
+(§ "Draining the strategy-refinement queue", unaffected by the reset).
+
+**A performance-review is NOT complete until every open (non-terminal) pipeline
+item whose `origin.ref` traces to a performance-review/research finding —
+practically, everything tagged `[performance]` or `[research]` in `what`, plus
+any item this session itself filed on a prior run — has been re-checked THIS
+run.** Triaging a sample / "the recent few" is a review failure. (Health/ML
+findings in the same pipeline are not this skill's to drain — each review
+owns re-checking its own population; `state`/`next_action` on the row, not the
+tag prefix, decide who acts, but re-reading a health-tagged row you happen to
+pass is always fine.)
 
 **Enumerate the FULL open set, then walk it 100%:**
 
-1. **Count first.** Filter to every item whose `status` is not a
-   terminal-resolved value (`resolved`/`closed`/`done`/`invalid`/
-   `wont_fix`/`superseded`). Record `open_at_start` — you must touch
-   every one.
-2. **For EACH open item:** re-validate against this window's data;
-   then disposition into exactly one bucket — **resolved** (the new
-   data closes it / the tweak shipped), **fixed_now** (an in-scope
-   write — a proposal filed, the backlog itself), **invalid/superseded**
-   (stale), or **kept_open** (still needs more evidence / a Tier-3
-   decision — add an update with this run's re-validation + the
-   blocker, so it never sits stale-and-unlooked).
-3. **Write it back** + record EVERY item's disposition in
-   `backlog_drain[]` (array length == `open_at_start`).
+1. **Count first.** `python3 -c "from scripts.ops.pipeline import load; ..."`
+   (or `--stats`) over the store, filtered to this skill's population and to
+   `state` not in `("done", "killed")`. Record `open_at_start`.
+2. **For EACH open item:** re-run `origin.rerun`; then disposition into
+   exactly one bucket — **resolved** (append an `update` record with
+   `state: "done"` and a `terminal_reason` naming what changed), **fixed_now**
+   (an in-scope write — e.g. a proposal filed, this run's own pipeline item),
+   **killed** (stale/superseded — `update` with `state: "killed"` and why),
+   or **kept_open** (still needs more evidence / a Tier-3 decision — append
+   an `update` record carrying this run's re-validation and the blocker, so
+   it never sits stale-and-unlooked; `state`/`due_when` may be unchanged but
+   the record itself must be fresh).
+3. **Append it** (`intent="update"` — never rewrite the file by hand) and
+   record EVERY item's disposition in `backlog_drain[]` (array length ==
+   `open_at_start`).
 
 **Coverage assertion (the gate).** Emit `backlog_coverage:
 {open_at_start, triaged, resolved, fixed_now, closed_stale, kept_open,
@@ -610,8 +703,8 @@ Every run:
      net-negative + mean below floor over ≥10 trades) is a **caution**
      signal, not proof — note it and keep watching.
    - **Per-cell / per-family**: any cell that's a sustained net loser on
-     live paper (not just a flat week) is a candidate for the
-     `performance-review-backlog` — a future tweak or a
+     live paper (not just a flat week) is a candidate for a pipeline
+     item (`docs/claude/work/PIPELINE.jsonl`) — a future tweak or a
      `DEMOTE_SHADOW`/`KILL` proposal (Tier-3, *proposed* not enacted).
    - Cross-check against the backtest expectation (the families were
      complementary: trend wants low-moderate ADX, pullback wants high
@@ -620,6 +713,10 @@ Every run:
 4. **Record it** in the response under `paper_book_tracker` (§ Output)
    and, if a cell/family warrants follow-up, add a `SRQ-…` item to the
    backlog.
+
+⚠️ Measured 2026-10-04: the tracker had not been appended since 2026-07-22 —
+the 2026-09-24 and 2026-09-27 reviews skipped this step (their records carry
+`paper_book_tracker: null`). The append is part of the run, not optional.
 
 The tracker file is append-only history — **never rewrite prior
 snapshot lines** (same discipline as the scores jsonl). Updating the
@@ -709,8 +806,8 @@ Emit a single JSON object conforming to
   empty).
 - `insights_review[]` — agreements/disagreements with the M13 cache.
 - `proposed_tweaks[]` — Tier-3 proposals with evidence.
-- `backlog_drain[]` — actions taken on
-  `docs/claude/performance-review-backlog.json`.
+- `backlog_drain[]` — actions taken on this skill's open
+  `docs/claude/work/PIPELINE.jsonl` items (§ "Draining the backlog").
 - `paper_book_tracker` — the diversified paper-book read: this run's
   snapshot summary (book `n`/`net_usd`/`win_rate`, recent-vs-prior,
   per-family net, `decay_flag`), the Δ vs the previous snapshot, and a
@@ -732,13 +829,24 @@ Each `note`/`rationale` ≤240 chars; cite `order_package_id`,
 `trade_id`, strategy name, and numbers so the operator can verify
 fast.
 
+## Hand-off: `/perf-followup` (operator, 2026-10-10)
+
+Grading is not the end of the review. Once the response JSON is committed, say in the
+PR body and the Claude-channel ping that the review **hands off to `/perf-followup`**
+(`.claude/skills/perf-followup/SKILL.md`): the routine that tunes underperformers, runs
+the wider-context lessons post-mortem, extrapolates lessons, and files portfolio-level
+research. The manager dispatches it as one lane when this review's PR merges — you do
+not run it in this session. Anything in this review you leave open for research
+(`proposed_tweaks[]` demote candidates, `grade_drift`, benchmark verdicts) is its input.
+
 ## What you DO write (and what you don't)
 
 **Write:**
 - Append per-decision scores to `comms/claude_strategy_scores.jsonl`
   (keyed by `order_package_id`, dedup-on-append).
-- Edit `docs/claude/performance-review-backlog.json` to drain + add
-  new items.
+- File/update performance + research follow-ups in
+  `docs/claude/work/PIPELINE.jsonl` via `scripts.ops.pipeline.append`
+  (never by hand — see § "Draining the backlog", corrected 2026-09-24).
 - Append a snapshot line to `docs/research/paper-book-tracker.jsonl`
   (append-only, via `paper_book_tracker.py`; never rewrite prior lines).
 - Post the Claude-channel ping (via `send-ping` system-action; fall
@@ -749,8 +857,8 @@ fast.
 **Do NOT:**
 - Touch `src/`, `config/`, or any live-path file. **No exceptions** —
   param changes go in `proposed_tweaks[]` for operator approval.
-- Modify `docs/claude/health-review-backlog.json` or
-  `docs/claude/ml-review-backlog.json`.
+- Edit `docs/claude/work/MANAGER-CHECKLIST.json` — that register is the
+  manager's, not a lane's (CLAUDE.md § "How work is organised").
 - Touch the M13 insights cache (`runtime_logs/insights/*.json`) —
   that's the generator's territory; this skill only reads it.
 - Ask the operator to paste/download/SSH a snapshot — autonomy

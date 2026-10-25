@@ -1,0 +1,438 @@
+#!/usr/bin/env python3
+# wiring: deploy/ict-work-report.service <- deploy/ict-work-report.timer
+# (daily 05:30 UTC, the generator the manager reviews — not a Telegram sender);
+# served by GET /api/bot/work/report (src/web/api/routers/work.py);
+# freshness alarmed by scripts/ops/attention_watch.py::probe_report.
+# Guard: scripts/ci/run_guards.py::attention-watch (--self-test).
+"""THE WORK REPORT — one concentrated, scheduled, PERSISTED report.
+
+Design of record: ``docs/plans/work-system-2026-10-04.md`` § 3a.
+
+The operator, 2026-10-04 ~15:15Z: *"Even if it's not directly a push, it needs
+to be a concentrated, regularly generated report that the manager knows to look
+at … if it's not getting a ping when the generation happens, then it at least
+needs to know to periodically check to see if there's a new report and to
+review it."*
+
+``GET /api/bot/work/brief`` stays the LIVE view. This is the REVIEWED one:
+generated daily at 05:30Z by ``ict-work-report.timer`` (before the manager's
+05:52Z review routine). It sends nothing; Telegram goes out only through the
+hourly digest., with a
+``report_id`` and ``generated_at``, kept on disk, so *what did the manager see,
+and when* has an answer after the fact.
+
+CONTENTS — the brief is NOT re-rendered here. It is BRIEF-FIX's
+``render_daily_brief.build()`` + ``render()`` verbatim, so there is exactly one
+renderer. Above it sits the attention summary from
+``attention_watch.build()``:
+  * alarms — expected-signal-missing probes, ``ok``/``breached``/``unknown``;
+  * soaks — ``soak_state.soak_states()`` (SOAK-WATCH, live), mechanical_fail/unknown/passed first;
+  * ask_operator — the open decisions;
+  * due — the top items, ranked.
+
+Each section is generated separately and carries a ``state``: ``ok``, ``empty``,
+``absent`` (we looked; the source is not there) or ``error``. One section failing does not stop the report, and it is never
+rendered as a clean section. Errors are recorded, and the attention watch
+alarms on an ``error`` section.
+
+STORAGE: ``runtime_logs/work_reports/<report_id>.json`` plus ``latest.json``,
+anchored to the repo root (gitignored, VM-local; the same anchor as every
+other receipt diag reads). ``KEEP`` days are retained.
+
+report_id format: ``WR-YYYYMMDD-HHMMZ`` (generation time, UTC).
+
+Usage::
+
+    python3 scripts/ops/work_report.py             # generate + persist
+    python3 scripts/ops/work_report.py --print     # generate, print, persist nothing
+    python3 scripts/ops/work_report.py --self-test
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for _p in (REPO_ROOT, REPO_ROOT / "scripts"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+REPORT_DIR = REPO_ROOT / "runtime_logs" / "work_reports"
+LATEST = REPORT_DIR / "latest.json"
+KEEP = 45
+SCHEDULE = "daily 05:30 UTC (deploy/ict-work-report.timer)"
+SCHEMA_VERSION = 1
+
+
+def report_id_for(t: datetime) -> str:
+    return t.strftime("WR-%Y%m%d-%H%MZ")
+
+
+def _section(fn: Callable[[], tuple[Any, bool]]) -> dict:
+    """Run one section builder → ``{state, data|error}``. ``fn`` returns
+    ``(data, is_empty)``."""
+    try:
+        data, empty = fn()
+        return {"state": "empty" if empty else "ok", "data": data}
+    except Exception as exc:  # noqa: BLE001 — recorded loudly, never swallowed
+        return {"state": "error", "error": f"{type(exc).__name__}: {exc}",
+                "trace": traceback.format_exc(limit=4)}
+
+
+def _short(s: Any, n: int = 200) -> str:
+    s = " ".join(str(s or "").split())
+    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+
+QUEUE_DIR = REPO_ROOT / "research" / "queue"
+
+
+def session_debt(queue_dir: Path | None = None) -> dict:
+    """How many QUEUED research units can only move if a session acts (PI-20261006-LCEVL8D5-0002).
+
+    Operator principle (research/queue/README.md, 2026-10-06): a step that waits on a session is
+    debt. Two kinds, over every ``research/queue/*.yaml`` whose ``status`` is ``queued``:
+
+      * ``session_bound``: ``run.workflow`` is not a ``*.yml``/``*.yaml`` file AND the compute router
+        (``compute_router.plan``, the same call ``dispatch_queue`` makes) cannot inject one, so the
+        dispatcher can never fire it. A ``run.command`` + ``compute`` unit carries no ``run.workflow``
+        by design (the router picks it) and is NOT bound — until 2026-10-14 this counted them as bound;
+      * ``session_graded``: hand-written (no ``generated``) and no ``grading.auto``, so
+        ``queue_grade.py`` can never close it.
+
+    Raises on an unreadable unit rather than returning a shorter list: a debt count that silently
+    skipped a corrupt file would read as less debt.
+    """
+    import yaml  # noqa: PLC0415
+    from scripts.research import compute_router as cr  # noqa: PLC0415
+    cfg = cr.load_config()
+    d = queue_dir or QUEUE_DIR
+    bound: list[str] = []
+    graded: list[str] = []
+    queued = 0
+    files = sorted(d.glob("*.yaml"))
+    for f in files:
+        u = yaml.safe_load(f.read_text(encoding="utf-8"))
+        if not isinstance(u, dict):
+            raise ValueError(f"{f.name}: not a mapping")
+        if u.get("status") != "queued":
+            continue
+        queued += 1
+        uid = str(u.get("id") or f.stem)
+        wf = str((u.get("run") or {}).get("workflow") or "")
+        if not wf.endswith((".yml", ".yaml")) and not (not wf.strip() and cr.plan(u, cfg).ok):
+            bound.append(uid)
+        elif not u.get("generated") and not (u.get("grading") or {}).get("auto"):
+            graded.append(uid)
+    return {"population": f"{len(files)} unit files in research/queue/, {queued} with status queued",
+            "session_bound": bound, "session_graded": graded,
+            "session_debt": len(bound) + len(graded)}
+
+
+def generate(now: datetime | None = None) -> dict:
+    from scripts.ops import attention_watch as aw  # noqa: PLC0415
+    from scripts.ops import render_daily_brief as rdb  # noqa: PLC0415
+
+    now = now or datetime.now(timezone.utc)
+    view: dict = {}
+
+    def _view() -> tuple[Any, bool]:
+        view.update(aw.build(now))
+        return {"pipeline_readable": view["pipeline_readable"],
+                "pipeline_unreadable": view["pipeline_unreadable"]}, False
+
+    sections: dict[str, dict] = {"inputs": _section(_view)}
+
+    def _alarms() -> tuple[Any, bool]:
+        probes = view["probes"]
+        return probes, not probes
+
+    def _soaks() -> tuple[Any, bool]:
+        if view["soak_read"] == "unreadable":
+            raise RuntimeError("soak_state.soak_states() raised — see the journal")
+        order = {"mechanical_fail": 0, "unknown": 1, "passed": 2, "in_progress": 3}
+        rows = sorted(view["soaks"], key=lambda r: (order.get(str(r.get("state")), 9),
+                                                     str(r.get("id"))))
+        return rows, not rows
+
+    def _ask() -> tuple[Any, bool]:
+        rows = [{"id": i["id"], "state": i.get("state"), "what": _short(i.get("what"))}
+                for i in view["ask_operator"]]
+        return rows, not rows
+
+    def _due() -> tuple[Any, bool]:
+        s = view["stats"]
+        top = [{"id": i["id"], "state": i.get("state"), "next_action": i.get("next_action"),
+                "what": _short(i.get("what"))} for i in view["ranked"][:25]]
+        return {"due": s["due"], "unrouted": s["unrouted"],
+                "routing_alarm": s["unrouted_alarm"]["breached"], "top": top}, not top
+
+    def _brief() -> tuple[Any, bool]:
+        b = rdb.build(root=REPO_ROOT, today=now.date())
+        md = rdb.render(b)
+        return {"markdown": md, "bytes": len(md.encode("utf-8")),
+                "inputs": {"checklist": b.get("checklistState"),
+                           "mandates": b.get("mandatesState")}}, not md.strip()
+
+    def _debt() -> tuple[Any, bool]:
+        data = session_debt()
+        return data, data["session_debt"] == 0
+
+    sections["session_debt"] = _section(_debt)
+    if sections["inputs"]["state"] == "error":
+        for k in ("alarms", "soaks", "ask_operator", "due"):
+            sections[k] = {"state": "error", "error": "attention view failed to build"}
+    else:
+        sections["alarms"] = _section(_alarms)
+        sections["soaks"] = (
+            {"state": "absent", "detail": "absent (we looked): scripts/ops/soak_state.py "
+                                          "soak_states() is not on this tree"}
+            if view["soak_read"] == "absent" else _section(_soaks))
+        sections["ask_operator"] = _section(_ask)
+        sections["due"] = _section(_due)
+    # "What moved" is the brief's §3 — carried inside the brief, not re-derived.
+    sections["brief"] = _section(_brief)
+
+    return {"schema_version": SCHEMA_VERSION, "report_id": report_id_for(now),
+            "generated_at": now.isoformat(), "schedule": SCHEDULE,
+            "errored_sections": sorted(k for k, v in sections.items() if v["state"] == "error"),
+            "sections": sections, "markdown": (md := render(now, sections)),
+            "bytes": len(md.encode("utf-8"))}
+
+
+def render(now: datetime, sections: dict) -> str:
+    L = [f"# Work report {report_id_for(now)}", f"generated_at: {now.isoformat()}", ""]
+    bad = [k for k, v in sections.items() if v["state"] == "error"]
+    if bad:
+        L += [f"> ⛔ **SECTIONS FAILED TO BUILD: {', '.join(bad)}** — this report is incomplete.", ""]
+    a = sections.get("alarms", {})
+    L.append("## Expected signals")
+    if a.get("state") == "ok":
+        for k, p in a["data"].items():
+            L.append(f"- {'✅' if p['status'] == 'ok' else '🔕' if p['status'] == 'breached' else '❔'} "
+                     f"`{k}` {p['status']}: {p['detail']}")
+    else:
+        L.append(f"- ⛔ {a.get('state')}: {a.get('error', '')}")
+    L += ["", "## Soaks"]
+    s = sections.get("soaks", {})
+    if s.get("state") == "ok":
+        for r in s["data"]:
+            L.append(f"- **{r.get('state')}** `{r.get('id')}` {r.get('progress') or '—'} "
+                     f"· {_short(r.get('reason'), 120)}")
+    elif s.get("state") == "empty":
+        L.append("- soak_states() returned no soaks")
+    elif s.get("state") == "absent":
+        L.append(f"- {s.get('detail')}")
+    else:
+        L.append(f"- ⛔ not measured: {s.get('error', '')}")
+    L += ["", "## Decisions for the operator (ask_operator)"]
+    q = sections.get("ask_operator", {})
+    if q.get("state") == "ok":
+        L += [f"- `{r['id']}` [{r['state']}] {r['what']}" for r in q["data"]]
+    elif q.get("state") == "empty":
+        L.append("- none open")
+    else:
+        L.append(f"- ⛔ {q.get('error', '')}")
+    sd = sections.get("session_debt", {})
+    L += ["", "## Session debt (queued research units only a session can move)"]
+    if sd.get("state") in ("ok", "empty"):
+        dd = sd["data"]
+        L.append(f"**{dd['session_debt']}** — {len(dd['session_bound'])} session-bound (dispatcher can "
+                 f"never fire), {len(dd['session_graded'])} session-graded (grader can never close) "
+                 f"· population: {dd['population']}")
+        L += [f"- bound `{u}`" for u in dd["session_bound"]] + [f"- graded `{u}`" for u in dd["session_graded"]]
+    else:
+        L.append(f"- ⛔ not measured: {sd.get('error', 'section missing')}")
+    d = sections.get("due", {})
+    L += ["", "## Due (ranked)"]
+    if d.get("state") in ("ok", "empty"):
+        dd = d["data"]
+        L.append(f"due {dd['due']} · unrouted {dd['unrouted']}"
+                 + (f" · 🚨 {'; '.join(dd['routing_alarm'])}" if dd["routing_alarm"] else ""))
+        L += [f"- `{r['id']}` [{r['state']} · {r['next_action']}] {r['what']}" for r in dd["top"]]
+    else:
+        L.append(f"- ⛔ {d.get('error', '')}")
+    br = sections.get("brief", {})
+    L += ["", "---", ""]
+    L.append(br["data"]["markdown"] if br.get("state") == "ok"
+             else f"⛔ brief {br.get('state')}: {br.get('error', '')}")
+    return "\n".join(L).rstrip() + "\n"
+
+
+def persist(report: dict, directory: Path = REPORT_DIR) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{report['report_id']}.json"
+    body = json.dumps(report, ensure_ascii=False, indent=1, default=str)
+    for target in (path, directory / "latest.json"):
+        tmp = target.with_suffix(".json.tmp")
+        tmp.write_text(body, encoding="utf-8")
+        tmp.replace(target)
+    olds = sorted(p for p in directory.glob("WR-*.json"))
+    for p in olds[:-KEEP]:
+        p.unlink(missing_ok=True)
+    return path
+
+
+def read_latest(directory: Path = REPORT_DIR) -> tuple[str, dict | None]:
+    """``(read_state, report)`` — read_state ∈ read / absent / unreadable."""
+    p = directory / "latest.json"
+    if not p.exists():
+        return "absent", None
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return ("read", d) if isinstance(d, dict) and d.get("report_id") else ("unreadable", None)
+    except (OSError, ValueError):
+        return "unreadable", None
+
+
+def read_report(report_id: str, directory: Path = REPORT_DIR) -> tuple[str, dict | None]:
+    if not report_id.startswith("WR-") or "/" in report_id or ".." in report_id:
+        return "absent", None
+    p = directory / f"{report_id}.json"
+    if not p.exists():
+        return "absent", None
+    try:
+        return "read", json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "unreadable", None
+
+
+DIGEST_LOG = REPORT_DIR / "digest_log.jsonl"
+
+
+def append_digest_log(entry: dict, path: Path | None = None) -> None:
+    """One line per hourly digest block that was SENT — the machine-readable
+    copy of what Telegram carried, because a session cannot read Telegram."""
+    path = path or DIGEST_LOG
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+    # bound it: keep the last KEEP days
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        cutoff = (datetime.now(timezone.utc).timestamp() - KEEP * 86400)
+        kept = [ln for ln in lines if _entry_ts(ln) >= cutoff]
+        if len(kept) < len(lines):
+            path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _entry_ts(line: str) -> float:
+    try:
+        return datetime.fromisoformat(json.loads(line)["at"]).timestamp()
+    except (ValueError, KeyError, TypeError):
+        return float("inf")  # unparseable lines are kept, never silently dropped
+
+
+def read_digest_log(since: str | None, path: Path | None = None) -> tuple[str, list[dict]]:
+    """Entries with ``at`` > ``since`` (ISO). ``(read_state, entries)``."""
+    path = path or DIGEST_LOG
+    if not path.exists():
+        return "absent", []
+    try:
+        floor = datetime.fromisoformat(since).timestamp() if since else float("-inf")
+    except ValueError:
+        return "bad_since", []
+    out = []
+    try:
+        for ln in path.read_text(encoding="utf-8").splitlines():
+            if ln.strip() and _entry_ts(ln) > floor:
+                try:
+                    out.append(json.loads(ln))
+                except ValueError:
+                    out.append({"unparseable": ln[:200]})
+    except OSError:
+        return "unreadable", []
+    return "read", out
+
+
+def _self_test() -> int:
+    import tempfile  # noqa: PLC0415
+    ok = True
+
+    def check(label: str, passed: bool, detail: Any = "") -> None:
+        nonlocal ok
+        ok &= bool(passed)
+        print(f"  {'PASS' if passed else 'FAIL'} {label}" + ("" if passed else f" — {detail}"))
+
+    t = datetime(2026, 10, 5, 5, 30, tzinfo=timezone.utc)
+    check("report_id format", report_id_for(t) == "WR-20261005-0530Z", report_id_for(t))
+    check("a raising section is 'error', never 'ok'",
+          _section(lambda: (_ for _ in ()).throw(ValueError("x")))["state"] == "error")
+    check("an empty section is 'empty'", _section(lambda: ([], True))["state"] == "empty")
+    rep = generate(t)
+    check("generate() returns id + generated_at + all sections",
+          rep["report_id"] == "WR-20261005-0530Z" and set(rep["sections"]) >=
+          {"inputs", "alarms", "soaks", "ask_operator", "due", "brief", "session_debt"}, list(rep["sections"]))
+    with tempfile.TemporaryDirectory() as qd:
+        q = Path(qd)
+        (q / "RQ-1.yaml").write_text("id: RQ-1\nstatus: queued\nrun:\n  workflow: none — session-local\n")
+        (q / "RQ-2.yaml").write_text("id: RQ-2\nstatus: queued\nrun:\n  workflow: x.yml\n")
+        (q / "RQ-3.yaml").write_text("id: RQ-3\nstatus: queued\nrun:\n  workflow: x.yml\ngenerated:\n  key: k\n")
+        (q / "RQ-4.yaml").write_text("id: RQ-4\nstatus: queued\nrun:\n  workflow: x.yml\ngrading:\n  auto: {rule: r}\n")
+        (q / "RQ-5.yaml").write_text("id: RQ-5\nstatus: done\nrun:\n  workflow: none\n")
+        # a command unit with no run.workflow is router-dispatched (the f0e2-03 shape), not session-bound
+        (q / "RQ-7.yaml").write_text("id: RQ-7\nstatus: queued\ncompute: cpu_light\nrun:\n  command: [python3, x.py]\n"
+                                     "grading:\n  auto: true\n")
+        sdb = session_debt(q)
+        check("session debt: bound, graded and the clean/closed units are told apart",
+              sdb["session_bound"] == ["RQ-1"] and sdb["session_graded"] == ["RQ-2"]
+              and sdb["session_debt"] == 2, sdb)
+        (q / "RQ-6.yaml").write_text("id: [unclosed\n")
+        try:
+            session_debt(q)
+            raised = False
+        except Exception:  # noqa: BLE001
+            raised = True
+        check("a corrupt unit RAISES (section 'error'), never a smaller debt number", raised)
+    check("brief comes from render_daily_brief (one renderer)",
+          rep["sections"]["brief"]["state"] != "ok"
+          or "§0" in rep["sections"]["brief"]["data"]["markdown"], "")
+    with tempfile.TemporaryDirectory() as d:
+        dd = Path(d)
+        check("latest absent reads 'absent'", read_latest(dd)[0] == "absent")
+        persist(rep, dd)
+        st, got = read_latest(dd)
+        check("persisted report reads back as latest", st == "read" and got["report_id"] == rep["report_id"])
+        check("report readable by id", read_report(rep["report_id"], dd)[0] == "read")
+        check("path traversal refused", read_report("WR-../../x", dd)[0] == "absent")
+        (dd / "latest.json").write_text("{garbage", encoding="utf-8")
+        check("garbage latest reads 'unreadable', not absent", read_latest(dd)[0] == "unreadable")
+        lg = dd / "log.jsonl"
+        check("absent digest log reads 'absent'", read_digest_log(None, lg)[0] == "absent")
+        append_digest_log({"at": "2026-10-05T05:00:00+00:00", "new": ["a"]}, lg)
+        append_digest_log({"at": "2026-10-05T06:00:00+00:00", "new": ["b"]}, lg)
+        st, ent = read_digest_log("2026-10-05T05:30:00+00:00", lg)
+        check("digest log since filters by time", st == "read" and [e["new"] for e in ent] == [["b"]], ent)
+        check("bad since is refused, not read as 'all'", read_digest_log("garbage", lg)[0] == "bad_since")
+    print("work-report self-test:", "PASS" if ok else "FAIL")
+    return 0 if ok else 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--print", action="store_true", dest="print_only")
+    ap.add_argument("--self-test", action="store_true")
+    a = ap.parse_args(argv)
+    if a.self_test:
+        return _self_test()
+    rep = generate()
+    if a.print_only:
+        print(rep["markdown"])
+        return 0
+    path = persist(rep)
+    print(f"work-report: wrote {path} ({rep['report_id']}); errored sections: "
+          f"{rep['errored_sections'] or 'none'}")
+    # Exit nonzero on a failed section so systemd shows the unit failed too.
+    return 1 if rep["errored_sections"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

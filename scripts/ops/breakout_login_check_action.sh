@@ -1,0 +1,699 @@
+#!/usr/bin/env bash
+# Tier-2 system-action: READ-ONLY login check for a prop account's web
+# terminal (probe step 1 — docs/research/prop-automation-options-2026-09-27.md § 4).
+#
+# Logs in to breakout_1's DXtrade terminal (wss.breakoutprop.com, the dxtrade default login_url in
+# config/prop_platforms.yaml; app.breakoutprop.com is the separate proprietary-terminal dashboard) with
+# BREAKOUT_DX_USERNAME / BREAKOUT_DX_PASSWORD from the VM .env, reads balance,
+# equity, open positions and working orders, and prints them. It has NO code
+# path that clicks an order control (scripts/prop/breakout_login_check.py).
+# A challenge / CAPTCHA / 2FA / rejected login ends it with
+# "feasibility: <reason>" and exit 4 — reported, never worked around.
+#
+# Browser: Playwright Chromium, headless, default configuration, installed
+# into an ISOLATED venv under ~/.cache/metis-prop-browser (never the trader's
+# Python). No stealth plugin, fingerprint change or fake jitter.
+#
+# Dispatched by the system-actions workflow (issue body):
+#   action: breakout-login-check
+#   reason: <audit note>                     (required, Tier-2)
+#   account: breakout_1                      (optional, default breakout_1)
+#   apply: install-deps,emit-status          (optional, comma-separated)
+#     install-deps — also run `playwright install-deps chromium` (sudo apt:
+#                    the shared libraries Chromium needs). Only needed if a
+#                    run ends with "environment: chromium failed to launch".
+#     emit-status  — post ONE account_status through POST /api/bot/prop/report.
+#                    Default OFF.
+#     dump-tables  — READ-ONLY diagnostic of the positions / orders read path:
+#                    print every extracted table (kind, headers, row count,
+#                    first rows with ids masked) and how the readers classify
+#                    it (live test #13987: a filled position read back as 0).
+#     reset-feed   — clear the scheduled feed's BACKOFF state
+#                    (deploy/ict-prop-feed.timer, scripts/ops/prop_feed_tick.sh)
+#                    so its next tick tries at once, AFTER this check exits 0,
+#                    still under the shared lock. Never required: the feed
+#                    retries on its own capped backoff and never stops
+#                    (NO-HALT, 2026-10-09). A failed check leaves the backoff
+#                    as it was, so a refused login is not retried early. Also
+#                    removes a stale `tripped` marker left by the old code.
+#   Step-3 executor modes (PROP-EXEC 2026-09-28). Each REPLACES the login
+#   check with ONE run of scripts/prop/prop_executor_tick.py --login reuse
+#   (the feed's saved session; no credential login), under the same lock;
+#   at most one of them per dispatch:
+#     probe-ticket     — READ-ONLY: open the order ticket for SOLUSD (only if
+#                        one-click trading reads OFF), record its shape,
+#                        close it. Prints `feasibility: canvas_ticket` (exit
+#                        4) if it is canvas-only. Types nothing.
+#     executor-dry-run — walk the newest emitted ticket through intake →
+#                        guards → (if it fits) fill + read back the form, then
+#                        close it. No submit, no API write.
+#     watched-click    — THE WATCHED STEP-3 TEST: one live cycle, at most one
+#                        ticket, at executor.watched_click_max_lots (minimum
+#                        size), confirmed by re-read, reported through
+#                        POST /api/bot/prop/report. Refused unless
+#                        PROP_EXECUTOR_MODE=live. Dispatch only with the
+#                        operator watching.
+#     page-status      — READ-ONLY, ZERO INTERACTION (2026-10-03): capped masked
+#                        body text, alert/status/banner/toast elements, lines
+#                        naming a breach / liquidation / disabled state, and the
+#                        Buy/Sell controls' enabled state. One page.evaluate.
+#     quote-spread     — READ-ONLY (TRADEIFY-INSTR-SPECS, manager go 2026-10-15
+#                        20:21Z; needs `symbols:`): each watchlist symbol's quoted
+#                        spread in bps of mid (median of 3 reads) via the same
+#                        read_quote the executor uses. Clicks nothing, reads no
+#                        account figure.
+#     link-state-dump  — READ-ONLY (PROP-ETH-DOM 2026-10-01): watchlist rows with
+#                        the element hit at each Symbol cell's centre, every
+#                        symbol_input, and the sidebar ticket's buttons. Clicks,
+#                        hovers and types nothing. No symbols: needed.
+#     edit-dialog-dry  — READ-ONLY (DIALOG-MEASURE 2026-10-01): hover the
+#                        Positions row for `symbols:` (ONE venue symbol, e.g.
+#                        ETHUSD) and locate its edit pencil by icon name.
+#                        Clicks nothing.
+#     edit-dialog-probe — MEASUREMENT: the same, then click THAT pencil, read
+#     edit-surface-probe — MEASUREMENT (DIALOG-MEASURE 2026-10-02, after
+#                        #15628 found no new dialog): snapshot the page's
+#                        controls, click THAT symbol's modify control, report
+#                        the diff, leave via Escape or the changed surface's
+#                        own cancel/close only, then REQUIRE the page back at
+#                        baseline (else an alert). Submits nothing.
+#                        the dialog it opens (symbol, read-only qty, SL/TP
+#                        fields, Price/offset mode, submit/cancel geometry),
+#                        press the dialog's OWN Cancel. Submits nothing. Only
+#                        meaningful while a position is open on that symbol;
+#                        with no row it stops before any click.
+#     widget-menu-probe — MEASUREMENT (TRADEIFY-GOLIVE 2026-10-01): ONE click on
+#                        the current workspace's top-most add-widget "+", dump
+#                        the menu that appears (masked), Escape, re-read the
+#                        layout. Clicks no menu item, no order/price/delete
+#                        control; refused if one-click reads ON.
+#     add-watchlist-widget — LAYOUT CHANGE (TRADEIFY-GOLIVE option B step 2,
+#                        operator "Runner does it"): on "My Trading Account",
+#                        the add-widget "+" then the MEASURED "Watchlist" menu
+#                        entry (#15350) — two clicks, nothing else; refused
+#                        unless one-click reads OFF; a no-op when a watchlist
+#                        is already present; verified click-free.
+#     order-surface-dump — READ-ONLY (TRADEIFY-GOLIVE, tradeify-only; ONE
+#                          symbol): the symbol's watchlist row cells (header,
+#                          tid, class, title/aria, children, elementFromPoint)
+#                          and every order-surface term on the current page.
+#                          Clicks, hovers, focuses and types nothing.
+#     probe-ticket-ask — ONE GUARDED CLICK (TRADEIFY-GOLIVE, operator
+#                          2026-10-03 "Approve the guarded click";
+#                          tradeify-only; ONE symbol): the symbol's watchlist
+#                          Ask "Buy" price button, only when exactly one
+#                          matches, the account reads flat with no dialog, and
+#                          one-click re-reads OFF right before the click (else
+#                          aborted, no click). Records the order form, submits
+#                          nothing, closes via the ticket's own Cancel/Close,
+#                          then requires flat + no dialog (else alerts).
+#     instrument-page-dump — READ-ONLY (TRADEIFY-GOLIVE (b), tradeify-only;
+#                          needs symbols: with ONE symbol): types the base
+#                          asset key by key into the watchlist search (never
+#                          Enter), dumps every visible text leaf on the page
+#                          (masked, <=400, tbody included), resets + blurs.
+#                          Clicks nothing.
+#     add-watchlist-symbol-dry / add-watchlist-symbol — TRADEIFY-GOLIVE
+#                          (tradeify-only; ONE symbol): type the base asset into
+#                          the watchlist search, resolve the ONE suggestion row
+#                          whose Symbol cell is exactly e.g. ETH/USD. -dry
+#                          reports it (masked) and clicks nothing; the armed one
+#                          makes ONE click on that cell, Escape, refused unless
+#                          one-click OFF, verified: no ticket/dialog opened and
+#                          only that symbol was added.
+#     watchlist-submenu-probe — MEASUREMENT (TRADEIFY-GOLIVE, #15373 found the
+#                        "Watchlist" entry opens a Private/Public submenu): "+",
+#                        "Watchlist", then HOVER each submenu entry and dump;
+#                        clicks no submenu entry; Escape; layout re-read.
+#     round-trip-dry   — the END-TO-END test walked dry: read the quote, build
+#                        a minimum-size ETHUSD market bracket (add `sol` for
+#                        SOLUSD), fill + read back the form, locate the close
+#                        control. Clicks nothing.
+#     round-trip-live  — THE END-TO-END TEST (operator 2026-09-28): place that
+#                        bracket, confirm entry + SL + TP by re-read, report
+#                        `open`, CLOSE it at market, confirm flat by re-read,
+#                        report `closed`. Refused unless PROP_EXECUTOR_MODE=live.
+#                        Tell the operator before dispatching.
+#     instrument-probe — READ-ONLY (PROP-ETH, 2026-09-29): for each symbol in
+#                        `symbols:` (required, comma-separated venue symbols,
+#                        e.g. BTCUSD,ADAUSD,AVAXUSD,XRPUSD), searches the
+#                        watchlist/instrument search field and dumps whatever
+#                        surfaces (digit-run-masked), then resets the field.
+#                        Never opens the order ticket; never touches
+#                        BUY/SELL/submit/the chart. See
+#                        DXtradeAdapter.probe_instrument_details's docstring
+#                        for why this reports STRUCTURE, not named fields.
+#     instrument-search-dump — READ-ONLY (PROP-ETH-DOM, 2026-09-30): lists
+#                        every visible input / combobox / searchbox /
+#                        textbox / contenteditable / search-like button with
+#                        its attributes and ancestor chain, nearest the
+#                        watchlist first, so the search control's locator is
+#                        derived from a measurement. Types, clicks and reads
+#                        no value; skips the order ticket. No `symbols:`.
+#     instrument-info-dry / instrument-info-probe — the INFO-PANEL probe
+#                        (PROP-ETH-DOM, operator decision 2026-09-30 "Build an
+#                        automated probe"; requires `symbols:`). -dry resolves
+#                        every target and runs every guard, CLICKING NOTHING.
+#                        -probe single-clicks each symbol's watchlist Symbol
+#                        cell, the instrument info button and the panel's
+#                        close control ONLY, dumps the panel's own text, then
+#                        restores + verifies the originally linked symbol.
+#                        Refuses unless the account reads flat (Used Margin 0,
+#                        visible Orders table empty; no tab click). Exit 3 on
+#                        any alert (failed restore, unexpected dialog, panel
+#                        not closed, watchlist changed).
+#     close-position   — locate the ONE existing position for the symbol (add
+#                        `sol` for SOLUSD) and its row close control through
+#                        the terminal's own flow, read back, click nothing.
+#     close-position-live — CLOSE that position (row x -> "Close Position"
+#                        modal, every step read back) and journal open +
+#                        closed via POST /api/bot/prop/report. Refused
+#                        unless PROP_EXECUTOR_MODE=live.
+#   Executor timer (the go-live switch's second half; not a terminal run):
+#     executor-enable-timer  — install deploy/opt-in/ict-prop-executor.timer
+#                              and `systemctl enable --now` it. Go-live is
+#                              THIS plus `set-env PROP_EXECUTOR_MODE=live`
+#                              (service: none; the tick re-reads .env).
+#     executor-clear-halt    — HARMLESS NO-OP since NO-HALT (operator
+#                              2026-10-09): the executor no longer latches and
+#                              removes a stale executor/halted itself on start.
+#                              If the file is still there it is moved aside and
+#                              recorded; absent, it logs and exits 0.
+#     executor-clear-rollout — moves executor/modify_rollout.json aside when
+#                              present (no reason required any more); absent,
+#                              it logs and exits 0.
+#     executor-disable-timer — `systemctl disable --now` the timer. The instant
+#                              revert is `set-env PROP_EXECUTOR_MODE=off`
+#                              (which also stops reconciling in-flight
+#                              `submitted` rows: containment is manual after).
+#   Per-account feed timer (TRADEIFY-WIRE 2026-09-30; any account EXCEPT
+#   breakout_1, whose feed is the non-templated ict-prop-feed.timer. For
+#   breakout_1 ONLY feed-disable-timer is accepted, and only once the account
+#   is RETIRED: strategies == [] and mode != live in config/accounts.yaml):
+#     feed-enable-timer   — install deploy/ict-prop-feed@.service +
+#                           deploy/opt-in/ict-prop-feed@.timer and
+#                           `systemctl enable --now ict-prop-feed@<account>.timer`
+#                           (read-only account_status every 5 min).
+#     feed-disable-timer  — `systemctl disable --now` that instance.
+#
+# ACCOUNTS OTHER THAN breakout_1 (TRADEIFY-WIRE): the login env-var NAMES come
+# from config/prop_platforms.yaml (scripts/prop/prop_env_keys.py; no entry =
+# refused), the kill switch is PROP_EXECUTOR_MODE_<ACCOUNT> (never the global
+# PROP_EXECUTOR_MODE), state lives under accounts/<account>/{feed,executor},
+# the login check SAVES a session there (--storage-state) for the executor
+# modes to reuse, and executor-enable/disable-timer install / enable / disable
+# that account's OWN instance ict-prop-executor@<account>.timer (never
+# breakout_1's ict-prop-executor.timer); enable is refused unless the account's
+# ict-prop-feed@<account>.timer is active (TRADEIFY-EXECUTOR, 2026-10-03).
+#
+# Takes the same flock as the scheduled feed (${BASE}/login.lock; for a
+# non-breakout account only around the venv/Chromium bootstrap, then its own
+# ${BASE}/accounts/<account>/login.lock for the run), waiting up
+# to 200 s, so a manual check never logs in while a scheduled tick is.
+#
+# Exit codes pass through from the python script: 0 ok, 3 login ok but part of
+# the read did not parse, 4 feasibility stop, 5 environment, 1 other.
+
+set -euo pipefail
+
+SCRIPT_NAME="breakout_login_check_action"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/ops/_lib.sh
+source "${SCRIPT_DIR}/_lib.sh"
+
+load_runtime_env
+
+ACCOUNT="${ACCOUNT_ID:-breakout_1}"
+APPLY="${ACTION_APPLY:-}"
+
+# Per-account state (TRADEIFY-WIRE, 2026-09-30). breakout_1 keeps the paths it
+# has always had; any other prop account gets its own feed session + executor
+# ledger/latch under accounts/<id>/, so one account's saved session, intent
+# ledger or AUTO-REVERT latch can never be read as another's.
+BASE="${HOME}/.cache/metis-prop-browser"
+if [ "${ACCOUNT}" = "breakout_1" ]; then
+    FEED_DIR="${BASE}/feed"
+    X_STATE_DIR="${BASE}/executor"
+    MODE_KEY="PROP_EXECUTOR_MODE"
+else
+    FEED_DIR="${BASE}/accounts/${ACCOUNT}/feed"
+    X_STATE_DIR="${BASE}/accounts/${ACCOUNT}/executor"
+    MODE_KEY="PROP_EXECUTOR_MODE_$(printf '%s' "${ACCOUNT}" | tr 'a-z' 'A-Z' | tr -c 'A-Z0-9\n' '_')"
+fi
+case ",${APPLY}," in *",install-deps,"*) WANT_DEPS=1 ;; *) WANT_DEPS=0 ;; esac
+case ",${APPLY}," in *",emit-status,"*) WANT_EMIT=1 ;; *) WANT_EMIT=0 ;; esac
+case ",${APPLY}," in *",reset-feed,"*) WANT_RESET=1 ;; *) WANT_RESET=0 ;; esac
+case ",${APPLY}," in *",dump-tables,"*) WANT_TABLES=1 ;; *) WANT_TABLES=0 ;; esac
+EXEC_MODE=""
+for m in probe-ticket instrument-probe instrument-search-dump instrument-info-dry instrument-info-probe symbol-switch-dry quote-spread link-state-dump page-status edit-dialog-dry edit-dialog-probe edit-surface-probe widget-menu-probe add-watchlist-widget watchlist-submenu-probe instrument-page-dump order-surface-dump probe-ticket-ask add-watchlist-symbol-dry add-watchlist-symbol executor-dry-run watched-click round-trip-dry round-trip-live \
+         close-position close-position-live \
+         executor-enable-timer executor-disable-timer executor-clear-halt executor-clear-rollout \
+         feed-enable-timer feed-disable-timer; do
+    case ",${APPLY}," in *",${m},"*)
+        if [ -n "${EXEC_MODE}" ]; then
+            log "apply: at most one executor mode per dispatch (got ${EXEC_MODE} and ${m})"
+            exit 1
+        fi
+        EXEC_MODE="${m}" ;;
+    esac
+done
+case ",${APPLY}," in *",sol,"*) RT_SYMBOL="SOLUSD" ;; *) RT_SYMBOL="ETHUSD" ;; esac
+# `limit` is honoured ONLY by round-trip-dry (a dry-only LIMIT form walk). With
+# any other mode it would be silently ignored -- `round-trip-live,sol,limit`
+# would run a LIVE MARKET round trip -- so it is refused before anything runs
+# (review of #14737, 2026-09-30).
+case ",${APPLY}," in *",limit,"*)
+    if [ "${EXEC_MODE}" != "round-trip-dry" ]; then
+        log "limit: refused — 'limit' is valid only with round-trip-dry (got mode '${EXEC_MODE:-none}')"
+        exit 1
+    fi ;;
+esac
+# `lim-below` / `lim-above` (TRADEIFY-SOL-SIZE 2026-10-04): a DRY LIMIT walk
+# with the limit 0.5% below / above the touch. Only with round-trip-dry AND
+# limit; refused otherwise, before anything runs.
+LIMIT_OFFSET=""
+case ",${APPLY}," in *",lim-below,"*) LIMIT_OFFSET="-0.5" ;; esac
+case ",${APPLY}," in *",lim-above,"*)
+    if [ -n "${LIMIT_OFFSET}" ]; then log "lim-below/lim-above: refused — pick one"; exit 1; fi
+    LIMIT_OFFSET="0.5" ;;
+esac
+if [ -n "${LIMIT_OFFSET}" ]; then
+    case ",${APPLY}," in *",limit,"*) ;; *) log "lim-below/lim-above: refused — needs 'limit'"; exit 1 ;; esac
+    if [ "${EXEC_MODE}" != "round-trip-dry" ]; then
+        log "lim-below/lim-above: refused — valid only with round-trip-dry (got mode '${EXEC_MODE:-none}')"
+        exit 1
+    fi
+fi
+if [ "${EXEC_MODE}" = "executor-clear-halt" ] || [ "${EXEC_MODE}" = "executor-clear-rollout" ]; then
+    # NO-HALT (operator directive 2026-10-09, docs/CLAUDE-RULES-CANONICAL.md
+    # § Prime Directive rule 7): the executor no longer writes or reads
+    # `halted`, so clear-halt is a harmless no-op kept for old issue
+    # templates. Either action moves its file aside when present and records
+    # it in halt_clears.jsonl; absent, it logs and exits 0. Never refuses.
+    if [ "${EXEC_MODE}" = "executor-clear-rollout" ]; then
+        latch="${X_STATE_DIR}/modify_rollout.json"
+    else
+        latch="${X_STATE_DIR}/halted"
+    fi
+    if [ ! -f "${latch}" ]; then
+        log "${EXEC_MODE}: no-op — ${latch} is absent (NO-HALT 2026-10-09)"
+        exit 0
+    fi
+    prior="$(head -c 500 "${latch}" | tr -d '\r')"
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    name="$(basename "${latch}")"
+    log "${EXEC_MODE}: moving ${name} aside: ${prior:-(empty)}"
+    mv "${latch}" "${latch}.cleared-${stamp}"
+    PRIOR="${prior}" KIND="${name}" ACTOR="${ACTION_ACTOR:-unknown}" ISSUE="${ACTION_ISSUE:-}" WHY="${ACTION_REASON:-NO-HALT stale latch}" \
+        python3 -c 'import json,os,datetime;print(json.dumps({"ts":datetime.datetime.now(datetime.timezone.utc).isoformat(),"latch":os.environ["KIND"],"actor":os.environ["ACTOR"],"issue":os.environ["ISSUE"],"reason":os.environ["WHY"],"prior":os.environ["PRIOR"]}))' \
+        >> "${X_STATE_DIR}/halt_clears.jsonl" || true
+    record_audit "breakout-login-check" "${EXEC_MODE}" \
+        "{\"account\": \"${ACCOUNT}\", \"moved_to\": \"${name}.cleared-${stamp}\"}" >/dev/null || true
+    log "${EXEC_MODE}: moved ${name} aside (${name}.cleared-${stamp})"
+    exit 0
+fi
+
+TIMER_SRC="${REPO_DIR}/deploy/opt-in/ict-prop-executor.timer"
+if { [ "${EXEC_MODE}" = "executor-enable-timer" ] || [ "${EXEC_MODE}" = "executor-disable-timer" ]; } \
+        && [ "${ACCOUNT}" != "breakout_1" ]; then
+    # ict-prop-executor.timer runs breakout_1 only and is untouched here. Any
+    # other account gets its OWN instance of the template
+    # ict-prop-executor@<account> (TRADEIFY-EXECUTOR, 2026-10-03), whose tick
+    # uses only that account's session, state, lock and
+    # PROP_EXECUTOR_MODE_<ACCOUNT> (scripts/ops/prop_executor_tick.sh).
+    case "${ACCOUNT}" in
+        ''|*[!a-z0-9_]*) log "${EXEC_MODE}: refused — '${ACCOUNT}' is not a plain prop account id"; exit 1 ;;
+    esac
+    if ! (cd "${REPO_DIR}" && python3 scripts/prop/prop_env_keys.py "${ACCOUNT}" >/dev/null); then
+        log "${EXEC_MODE}: refused — ${ACCOUNT} has no entry in config/prop_platforms.yaml"
+        exit 1
+    fi
+    if ! sudo -n true >/dev/null 2>&1; then
+        log "environment: ${EXEC_MODE} needs passwordless sudo"
+        exit 5
+    fi
+    X_UNIT="ict-prop-executor@${ACCOUNT}"
+    if [ "${EXEC_MODE}" = "executor-enable-timer" ]; then
+        # The executor never logs in: without the account's own feed keeping a
+        # session it could only exit 6 every tick. Enable the feed first.
+        feed_state="$(systemctl is-active "ict-prop-feed@${ACCOUNT}.timer" 2>/dev/null || true)"
+        if [ "${feed_state}" != "active" ]; then
+            log "${EXEC_MODE}: refused — ict-prop-feed@${ACCOUNT}.timer is '${feed_state:-unknown}', not active (enable it first: apply: feed-enable-timer)"
+            exit 1
+        fi
+        for f in deploy/ict-prop-executor@.service deploy/opt-in/ict-prop-executor@.timer; do
+            [ -f "${REPO_DIR}/${f}" ] || { log "missing ${f}"; exit 1; }
+        done
+        sudo -n install -m 0644 "${REPO_DIR}/deploy/ict-prop-executor@.service" /etc/systemd/system/ict-prop-executor@.service
+        sudo -n install -m 0644 "${REPO_DIR}/deploy/opt-in/ict-prop-executor@.timer" /etc/systemd/system/ict-prop-executor@.timer
+        sudo -n systemctl daemon-reload
+        sudo -n systemctl enable --now "${X_UNIT}.timer"
+    else
+        sudo -n systemctl disable --now "${X_UNIT}.timer" 2>/dev/null || true
+    fi
+    state="$(systemctl is-active "${X_UNIT}.timer" 2>/dev/null || true)"
+    log "${EXEC_MODE}: ${X_UNIT}.timer is now '${state}' (the mode itself is ${MODE_KEY} in .env; read it with get-env)"
+    record_audit "breakout-login-check" "${EXEC_MODE}" \
+        "{\"account\": \"${ACCOUNT}\", \"timer\": \"${state}\", \"unit\": \"${X_UNIT}.timer\"}" >/dev/null || true
+    exit 0
+fi
+# probe-ticket's symbol (TRADEIFY-GOLIVE, manager 21:35Z 2026-10-02): an
+# optional ``symbols:`` line with EXACTLY ONE venue symbol selects it; nothing
+# forwarded PROBE_SYMBOL from an issue before, so probe-ticket always measured
+# the SOLUSD default. No ``symbols:`` line keeps that default unchanged.
+if [ "${EXEC_MODE}" = "probe-ticket" ] && [ -n "${ACTION_SYMBOLS// /}" ]; then
+    case "${ACTION_SYMBOLS// /}" in *,*) log "probe-ticket: refused — exactly one symbol"; exit 1 ;; esac
+    PROBE_SYMBOL="${ACTION_SYMBOLS// /}"
+fi
+if { [ "${EXEC_MODE}" = "add-watchlist-widget" ] || [ "${EXEC_MODE}" = "watchlist-submenu-probe" ] \
+     || [ "${EXEC_MODE}" = "instrument-page-dump" ] \
+     || [ "${EXEC_MODE}" = "order-surface-dump" ] || [ "${EXEC_MODE}" = "probe-ticket-ask" ] \
+     || [ "${EXEC_MODE}" = "add-watchlist-symbol-dry" ] || [ "${EXEC_MODE}" = "add-watchlist-symbol" ]; } \
+        && [ "${ACCOUNT}" = "breakout_1" ]; then
+    # A layout change on breakout_1's LIVE real-money terminal is never made
+    # by these modes (TRADEIFY-GOLIVE, manager review of #15354).
+    log "${EXEC_MODE}: refused for breakout_1 — a tradeify-only layout step"
+    exit 1
+fi
+if [ "${EXEC_MODE}" = "feed-enable-timer" ] || [ "${EXEC_MODE}" = "feed-disable-timer" ]; then
+    # Per-account account_status feed (templated unit, TRADEIFY-WIRE). breakout_1
+    # keeps its own non-templated ict-prop-feed.timer, untouched by this.
+    FEED_UNIT="ict-prop-feed@${ACCOUNT}"
+    if [ "${ACCOUNT}" = "breakout_1" ]; then
+        # breakout_1's feed is the non-templated ict-prop-feed.timer. It may be
+        # DISABLED (never enabled here) once the account is RETIRED: roster
+        # cleared in config/accounts.yaml (BREAKOUT1-RETIRE, 2026-10-07).
+        if [ "${EXEC_MODE}" = "feed-disable-timer" ] \
+           && (cd "${REPO_DIR}" && python3 - <<'PY'
+import sys, yaml
+a = (yaml.safe_load(open("config/accounts.yaml")) or {})
+a = a.get("accounts", a)["breakout_1"]
+sys.exit(0 if (a.get("strategies") or []) == [] and a.get("mode") != "live" else 1)
+PY
+           ); then
+            FEED_UNIT="ict-prop-feed"
+        else
+            log "${EXEC_MODE}: refused for breakout_1 — its feed is ict-prop-feed.timer (unchanged); only feed-disable-timer is allowed, and only once breakout_1 is retired (empty roster, not live)"
+            exit 1
+        fi
+    fi
+    if ! sudo -n true >/dev/null 2>&1; then
+        log "environment: ${EXEC_MODE} needs passwordless sudo"
+        exit 5
+    fi
+    if [ "${EXEC_MODE}" = "feed-enable-timer" ]; then
+        [ -f "${REPO_DIR}/deploy/opt-in/ict-prop-feed@.timer" ] || { log "missing deploy/opt-in/ict-prop-feed@.timer"; exit 1; }
+        sudo -n install -m 0644 "${REPO_DIR}/deploy/ict-prop-feed@.service" /etc/systemd/system/ict-prop-feed@.service
+        sudo -n install -m 0644 "${REPO_DIR}/deploy/opt-in/ict-prop-feed@.timer" /etc/systemd/system/ict-prop-feed@.timer
+        sudo -n systemctl daemon-reload
+        sudo -n systemctl enable --now "${FEED_UNIT}.timer"
+    else
+        sudo -n systemctl disable --now "${FEED_UNIT}.timer" 2>/dev/null || true
+    fi
+    state="$(systemctl is-active "${FEED_UNIT}.timer" 2>/dev/null || true)"
+    log "${EXEC_MODE}: ${FEED_UNIT}.timer is now '${state}'"
+    record_audit "breakout-login-check" "${EXEC_MODE}" \
+        "{\"account\": \"${ACCOUNT}\", \"timer\": \"${state}\"}" >/dev/null || true
+    exit 0
+fi
+if [ "${EXEC_MODE}" = "executor-enable-timer" ] || [ "${EXEC_MODE}" = "executor-disable-timer" ]; then
+    if ! sudo -n true >/dev/null 2>&1; then
+        log "environment: ${EXEC_MODE} needs passwordless sudo"
+        exit 5
+    fi
+    if [ "${EXEC_MODE}" = "executor-enable-timer" ]; then
+        [ -f "${TIMER_SRC}" ] || { log "missing ${TIMER_SRC}"; exit 1; }
+        sudo -n install -m 0644 "${REPO_DIR}/deploy/ict-prop-executor.service" /etc/systemd/system/ict-prop-executor.service
+        sudo -n install -m 0644 "${TIMER_SRC}" /etc/systemd/system/ict-prop-executor.timer
+        sudo -n systemctl daemon-reload
+        sudo -n systemctl enable --now ict-prop-executor.timer
+    else
+        sudo -n systemctl disable --now ict-prop-executor.timer 2>/dev/null || true
+    fi
+    state="$(systemctl is-active ict-prop-executor.timer 2>/dev/null || true)"
+    log "${EXEC_MODE}: ict-prop-executor.timer is now '${state}' (the mode itself is PROP_EXECUTOR_MODE in .env; read it with get-env)"
+    record_audit "breakout-login-check" "${EXEC_MODE}" \
+        "{\"account\": \"${ACCOUNT}\", \"timer\": \"${state}\"}" >/dev/null || true
+    exit 0
+fi
+
+# Export exactly the keys the check needs from the VM .env. Values are never
+# echoed (no `set -x`, no print); the python side prints set/MISSING only.
+# breakout_1's list is unchanged; any other account's credential + kill-switch
+# NAMES come from config/prop_platforms.yaml (scripts/prop/prop_env_keys.py),
+# and an account with no platform entry refuses rather than borrow a login.
+if [ "${ACCOUNT}" = "breakout_1" ]; then
+    CHECK_KEYS="BREAKOUT_DX_USERNAME BREAKOUT_DX_PASSWORD DASHBOARD_API_TOKEN PROP_EXECUTOR_MODE"
+else
+    if ! ACCT_KEYS="$(cd "${REPO_DIR}" && python3 scripts/prop/prop_env_keys.py "${ACCOUNT}")" || [ -z "${ACCT_KEYS}" ]; then
+        log "account ${ACCOUNT}: no entry in config/prop_platforms.yaml — refusing (no login borrowed from another account)"
+        exit 1
+    fi
+    CHECK_KEYS="${ACCT_KEYS} DASHBOARD_API_TOKEN"
+fi
+if [ -f "${REPO_DIR}/.env" ]; then
+    for ckey in ${CHECK_KEYS}; do
+        cval="$(grep -E "^${ckey}=" "${REPO_DIR}/.env" | tail -n1 | cut -d= -f2-)" || true
+        if [ -n "${cval}" ]; then
+            cval="${cval%\"}"; cval="${cval#\"}"
+            cval="${cval%\'}"; cval="${cval#\'}"
+            export "${ckey}=${cval}"
+        fi
+    done
+    unset cval
+fi
+
+# Isolated browser venv. --system-site-packages so the repo's own deps (yaml)
+# resolve from the same system Python the trader uses, without installing
+# anything into it.
+PW_VERSION="1.48.0"
+VENV="${BASE}/venv"
+# Overridable so tests can point the bootstrap at a stub interpreter instead
+# of the real system Python.
+PY3="${PY3:-/usr/bin/python3}"
+export PLAYWRIGHT_BROWSERS_PATH="${BASE}/browsers"
+mkdir -p "${BASE}"
+
+# One login at a time: the scheduled feed takes the same lock. Taken BEFORE
+# the venv/Chromium bootstrap so an install never swaps the browser build
+# under a running tick.
+exec 9>"${BASE}/login.lock"
+if ! flock -w 200 9; then
+    log "environment: a scheduled feed tick still holds ${BASE}/login.lock after 200s"
+    exit 5
+fi
+
+
+# A venv whose `bin/python` exists but whose pip is missing or broken is not
+# usable — that is exactly the partial state a prior `ensurepip`-missing
+# failure leaves behind (issue #13210: `venv` created bin/python, then died
+# before pip finished setting up).
+venv_pip_ok() {
+    local venv="$1"
+    [ -x "${venv}/bin/python" ] || return 1
+    [ -x "${venv}/bin/pip" ] || return 1
+    "${venv}/bin/python" -m pip --version >/dev/null 2>&1
+}
+
+# Bootstraps `${1}` into a usable venv, installing the matching
+# python3.X-venv apt package first if `ensurepip` is not importable (the
+# Debian/Ubuntu split-package case `python3 -m venv` fails on otherwise).
+ensure_venv() {
+    local venv="$1"
+    if venv_pip_ok "${venv}"; then
+        return 0
+    fi
+    if [ -e "${venv}" ]; then
+        log "Removing broken venv at ${venv} (bin/python present, pip not working)"
+        rm -rf "${venv}"
+    fi
+    if ! "${PY3}" -c 'import ensurepip' >/dev/null 2>&1; then
+        if ! sudo -n true >/dev/null 2>&1; then
+            log "environment: python3-venv missing and cannot install (no passwordless sudo)"
+            record_audit "breakout-login-check" "environment" \
+                "{\"account\": \"${ACCOUNT}\", \"exit\": 5, \"stage\": \"venv_bootstrap\"}" >/dev/null || true
+            exit 5
+        fi
+        local pyver installed_pkg=""
+        pyver="$("${PY3}" -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+        local pkg
+        for pkg in "python${pyver}-venv" "python3-venv"; do
+            log "Installing ${pkg} via apt (ensurepip unavailable for venv creation)"
+            if sudo -n apt-get install -y "${pkg}" >&2; then
+                installed_pkg="${pkg}"
+                break
+            fi
+        done
+        if [ -z "${installed_pkg}" ]; then
+            log "environment: python3-venv missing and cannot install"
+            record_audit "breakout-login-check" "environment" \
+                "{\"account\": \"${ACCOUNT}\", \"exit\": 5, \"stage\": \"venv_bootstrap\"}" >/dev/null || true
+            exit 5
+        fi
+        log "Installed ${installed_pkg}"
+    fi
+    log "Creating isolated browser venv at ${venv}"
+    "${PY3}" -m venv --system-site-packages "${venv}"
+    if ! venv_pip_ok "${venv}"; then
+        log "environment: python3-venv missing and cannot install"
+        record_audit "breakout-login-check" "environment" \
+            "{\"account\": \"${ACCOUNT}\", \"exit\": 5, \"stage\": \"venv_bootstrap\"}" >/dev/null || true
+        exit 5
+    fi
+}
+
+ensure_venv "${VENV}"
+if ! "${VENV}/bin/python" -c "import playwright, sys; from importlib.metadata import version; sys.exit(0 if version('playwright') == '${PW_VERSION}' else 1)" 2>/dev/null; then
+    log "Installing playwright==${PW_VERSION} into the isolated venv"
+    "${VENV}/bin/pip" install --quiet --disable-pip-version-check "playwright==${PW_VERSION}"
+fi
+log "Ensuring Playwright Chromium is present (${PLAYWRIGHT_BROWSERS_PATH})"
+"${VENV}/bin/python" -m playwright install chromium >/dev/null
+if [ "${WANT_DEPS}" = "1" ]; then
+    log "Installing Chromium system libraries (apt, via playwright install-deps)"
+    sudo -n env PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH}" \
+        "${VENV}/bin/python" -m playwright install-deps chromium
+fi
+
+# A non-breakout account (TRADEIFY-WIRE) held the SHARED lock only for the
+# venv/Chromium bootstrap above (the browser build is shared, so an install must
+# never swap it under a running breakout_1 tick). Its terminal run now switches
+# to its OWN lock, so a Tradeify check can never make breakout_1's feed or
+# real-money executor (both flock -n on ${BASE}/login.lock) skip a tick.
+if [ "${ACCOUNT}" != "breakout_1" ]; then
+    ACCT_LOCK_DIR="${BASE}/accounts/${ACCOUNT}"
+    mkdir -p "${ACCT_LOCK_DIR}" && chmod 700 "${ACCT_LOCK_DIR}"
+    exec 9>&-
+    exec 9>"${ACCT_LOCK_DIR}/login.lock"
+    if ! flock -w 200 9; then
+        log "environment: a ${ACCOUNT} feed tick still holds ${ACCT_LOCK_DIR}/login.lock after 200s"
+        exit 5
+    fi
+fi
+
+if { [ "${EXEC_MODE}" = "instrument-probe" ] || [ "${EXEC_MODE}" = "instrument-info-dry" ] \
+     || [ "${EXEC_MODE}" = "instrument-info-probe" ] || [ "${EXEC_MODE}" = "symbol-switch-dry" ] \
+     || [ "${EXEC_MODE}" = "quote-spread" ]; } \
+     && [ -z "${ACTION_SYMBOLS// }" ]; then
+    log "${EXEC_MODE}: refused — 'symbols:' is required (comma-separated venue symbols)"
+    exit 1
+fi
+
+if [ -n "${EXEC_MODE}" ]; then
+    # Reuse the FEED's saved session, never a second credential login: the
+    # served client carries force_logout "You have logged in somewhere else"
+    # (MEASURED 2026-09-28, PI-20260927-D9R6QTDB-0002), so a fresh login here
+    # could log out the feed or the operator. Exit 6 = no reusable session:
+    # re-dispatch after the feed's next tick (<= 5 min).
+    EARGS=(--account "${ACCOUNT}" --login reuse --storage-state "${FEED_DIR}/session_state.json"
+           --state-dir "${X_STATE_DIR}")
+    case "${EXEC_MODE}" in
+        probe-ticket)        EARGS+=(--probe-ticket "${PROBE_SYMBOL:-SOLUSD}") ;;
+        instrument-probe)    EARGS+=(--instrument-probe "${ACTION_SYMBOLS}") ;;
+        instrument-search-dump) EARGS+=(--instrument-search-dump) ;;
+        instrument-info-dry)    EARGS+=(--instrument-info-dry "${ACTION_SYMBOLS}") ;;
+        instrument-info-probe)  EARGS+=(--instrument-info-probe "${ACTION_SYMBOLS}") ;;
+        symbol-switch-dry)
+            case "${ACTION_SYMBOLS}" in *,*) log "symbol-switch-dry: refused — exactly one symbol"; exit 1 ;; esac
+            EARGS+=(--symbol-switch-dry "${ACTION_SYMBOLS// /}") ;;
+        quote-spread)           EARGS+=(--quote-spread "${ACTION_SYMBOLS// /}") ;;
+        link-state-dump)     EARGS+=(--link-state-dump) ;;
+        page-status)         EARGS+=(--page-status) ;;
+        edit-dialog-dry|edit-dialog-probe|edit-surface-probe)
+            case "${ACTION_SYMBOLS// /}" in ""|*,*) log "${EXEC_MODE}: refused — exactly one symbol"; exit 1 ;; esac
+            EARGS+=(--"${EXEC_MODE}" "${ACTION_SYMBOLS// /}") ;;
+        widget-menu-probe)   EARGS+=(--widget-menu-probe) ;;
+        add-watchlist-widget) EARGS+=(--add-watchlist-widget) ;;
+        watchlist-submenu-probe) EARGS+=(--watchlist-submenu-probe) ;;
+        add-watchlist-symbol-dry|add-watchlist-symbol)
+            case "${ACTION_SYMBOLS// /}" in ""|*,*) log "${EXEC_MODE}: refused — exactly one symbol"; exit 1 ;; esac
+            EARGS+=(--"${EXEC_MODE}" "${ACTION_SYMBOLS// /}") ;;
+        order-surface-dump)
+            case "${ACTION_SYMBOLS// /}" in ""|*,*) log "order-surface-dump: refused — exactly one symbol"; exit 1 ;; esac
+            EARGS+=(--order-surface-dump "${ACTION_SYMBOLS// /}") ;;
+        probe-ticket-ask)
+            case "${ACTION_SYMBOLS// /}" in ""|*,*) log "probe-ticket-ask: refused — exactly one symbol"; exit 1 ;; esac
+            EARGS+=(--probe-ticket-ask "${ACTION_SYMBOLS// /}") ;;
+        instrument-page-dump)
+            case "${ACTION_SYMBOLS// /}" in ""|*,*) log "instrument-page-dump: refused — exactly one symbol"; exit 1 ;; esac
+            EARGS+=(--instrument-page-dump "${ACTION_SYMBOLS// /}") ;;
+        executor-dry-run)    EARGS+=(--dry-run) ;;
+        watched-click)       EARGS+=(--watched-click) ;;
+        round-trip-dry)      EARGS+=(--round-trip "${RT_SYMBOL}")
+                             # `limit` in apply: walk the ticket path's LIMIT form (dry only).
+                             case ",${APPLY}," in *",limit,"*) EARGS+=(--order-type limit) ;; esac
+                             if [ -n "${LIMIT_OFFSET}" ]; then EARGS+=(--limit-offset-pct "${LIMIT_OFFSET}"); fi ;;
+        round-trip-live)     EARGS+=(--round-trip "${RT_SYMBOL}" --live) ;;
+        close-position)      EARGS+=(--close-position "${RT_SYMBOL}") ;;
+        close-position-live) EARGS+=(--close-position "${RT_SYMBOL}" --live) ;;
+    esac
+    log "Running prop executor (${EXEC_MODE}, account=${ACCOUNT}, ${MODE_KEY}=${!MODE_KEY:-unset→read_only})"
+    set +e
+    ( cd "${REPO_DIR}" && "${VENV}/bin/python" scripts/prop/prop_executor_tick.py "${EARGS[@]}" )
+    rc=$?
+    set -e
+    record_audit "breakout-login-check" "${EXEC_MODE}" \
+        "{\"account\": \"${ACCOUNT}\", \"exit\": ${rc}, \"mode\": \"${EXEC_MODE}\"}" >/dev/null || true
+    if [ "${rc}" -eq 7 ]; then
+        # EXIT_DEFERRED: a live ticket was waiting and this test stood aside
+        # before any browser (the tick wins, manager 5931584062). Not a failure.
+        log "breakout-login-check ${EXEC_MODE}: deferred — a live ticket is waiting; the executor tick wins (re-dispatch after it is placed)"
+        exit 0
+    fi
+    log "breakout-login-check ${EXEC_MODE}: exit ${rc}"
+    exit "${rc}"
+fi
+
+# breakout_1 keeps its dump dir; another account gets its own, so a Tradeify
+# check can never overwrite breakout_1's last-run page_text.txt / tables.json
+# mid-write (manager review of #14663).
+if [ "${ACCOUNT}" = "breakout_1" ]; then
+    DUMP_DIR="${BASE}/last-run"
+else
+    DUMP_DIR="${BASE}/accounts/${ACCOUNT}/last-run"
+fi
+ARGS=(--account "${ACCOUNT}" --dump-dir "${DUMP_DIR}")
+if [ "${ACCOUNT}" != "breakout_1" ]; then
+    # A non-breakout account has no feed session until its feed runs, and the
+    # executor modes above REUSE a saved session (never a second credential
+    # login). So this check saves one: it resumes the saved session when it is
+    # accepted and does ONE credential login otherwise (session: reused /
+    # relogin). breakout_1's manual check stays a clean fresh login.
+    mkdir -p "${FEED_DIR}" && chmod 700 "${FEED_DIR}"
+    ARGS+=(--storage-state "${FEED_DIR}/session_state.json")
+fi
+[ "${WANT_EMIT}" = "1" ] && ARGS+=(--emit-status)
+[ "${WANT_TABLES}" = "1" ] && ARGS+=(--dump-tables)
+
+log "Running read-only login check (account=${ACCOUNT} emit_status=${WANT_EMIT})"
+set +e
+( cd "${REPO_DIR}" && "${VENV}/bin/python" scripts/prop/breakout_login_check.py "${ARGS[@]}" )
+rc=$?
+set -e
+
+# reset-feed clears the feed's backoff ONLY on a clean check (exit 0), and
+# still under the lock taken above (fd 9 stays open until this script exits),
+# so a tick can never start between the proof and the clear. A failed check
+# leaves the backoff as it was (the feed keeps retrying on it regardless).
+if [ "${WANT_RESET}" = "1" ]; then
+    if [ "${rc}" = "0" ]; then
+        [ -f "${FEED_DIR}/backoff" ] && log "reset-feed: was backing off: $(sed -n 's/^reason=//p' "${FEED_DIR}/backoff" | head -c 300)"
+        [ -f "${FEED_DIR}/tripped" ] && log "reset-feed: removing a stale pre-NO-HALT trip marker: $(head -c 300 "${FEED_DIR}/tripped")"
+        rm -f "${FEED_DIR}/backoff" "${FEED_DIR}/tripped" "${FEED_DIR}/consecutive_failures"
+        log "reset-feed: backoff cleared (the check above passed); the next feed tick tries at once"
+    else
+        log "reset-feed: backoff NOT cleared — the check exited ${rc}; the feed keeps retrying on its own backoff"
+    fi
+fi
+
+case "${rc}" in
+    0) outcome="ok" ;;
+    3) outcome="login_ok_read_unparsed" ;;
+    4) outcome="feasibility_stop" ;;
+    5) outcome="environment" ;;
+    *) outcome="error" ;;
+esac
+record_audit "breakout-login-check" "${outcome}" \
+    "{\"account\": \"${ACCOUNT}\", \"exit\": ${rc}, \"emit_status\": ${WANT_EMIT}, \"reset_feed\": ${WANT_RESET}}" >/dev/null || true
+log "breakout-login-check: ${outcome} (exit ${rc})"
+exit "${rc}"

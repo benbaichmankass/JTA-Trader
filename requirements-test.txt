@@ -58,12 +58,34 @@ pyyaml>=6.0
 # Floor matches requirements.txt.
 psutil>=5.9.0
 
+# pyarrow: the data.parquet dataset sidecar (ml/datasets/parquet_sidecar.py,
+# DATA-STORE-PARQUET-GC). Optional at runtime (readers fall back to JSONL), so
+# tests/ml/test_parquet_sidecar.py importorskips it; listed here so CI runs
+# the parity tests instead of skipping them. Floor matches
+# requirements-backtest.txt (the trainer venv; 24.0.0 there on 2026-10-15).
+pyarrow>=14.0.0
+
 # ccxt is a production runtime dep but not in the default sandbox;
 # coordinator and exchange-integration tests import it at the top level.
 ccxt>=4.0.0
 
 # Optional intraday source adapters (data_sources.py).
-yfinance>=0.2.0
+# ⚠️ FLOOR RAISED 2026-09-16 (MI-287) — `>=0.2.0` WAS A FLOOR THAT ADMITTED A
+# BROKEN RESOLUTION, AND IT SILENTLY COST 23 OF 52 STRATEGY-EVIDENCE LEGS.
+# Yahoo answers a plain-`requests` User-Agent with HTTP 429 ("Edge: Too Many
+# Requests") and serves the byte-identical request with a browser UA. The
+# 0.2.x line builds its session on `requests`; the 1.x line uses `curl_cffi`
+# to impersonate a browser, so only the latter is served.
+# MEASURED 2026-09-16, same machine / network / minute, interleaved:
+#   raw API, curl default UA -> HTTP 429 in 6 of 6; browser UA -> 200 in 6 of 6
+#   yfinance 0.2.40 -> SPY 0 rows, GDX 0 rows, ES=F 0 rows
+#   yfinance 1.7.0  -> SPY 365,   GDX 365,   ES=F 302
+# (Measurement lives in the MI-287 PR body and the work object; re-run with
+#  `pip install yfinance==0.2.40` to reproduce the negative arm.)
+# ⚠️ THE BOUNDARY WAS NOT BISECTED. 1.7.0 is the lowest version MEASURED to
+# work, not the lowest version that DOES work — so this floor is honest rather
+# than minimal, and lowering it needs a measurement, not an assumption.
+yfinance>=1.7.0
 
 # python-telegram-bot is stubbed by tests/conftest.py; install it only
 # if you want to exercise the real handlers (rare).

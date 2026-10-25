@@ -1,0 +1,21 @@
+{
+  "id": "REGIME-VOL-LABELS-EXPORT",
+  "title": "Lever: export per-symbol regime LABEL streams (ML vol head p_volatile + causal-HMM label, BTC/ETH/SOL) from the trainer as committed market-only files so regime_impact_scoping --axis vol and regime_cell_walkforward --vol-labels can run on a runner",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P2-AI-REGIME-BACKLOG-1016] WHY: 02 s3 Q1.4 (vol-axis headroom with the ML head's label) has never had a usable unit (RQ-20260930-704 done with no record, power-bounded 673<785); REGIME-PROGRAM deliverable 2 (classifier comparison on trade separation) needs the same label files for a second classifier (HMM). Labels come from the head the router reads (regime-selectivity Rule 3: predict_proba['volatile'], scripts/ml/_regime_score_semantics.py), replayed by scripts/research/ml_vol_label_replay.py on the trainer. Market-only, so publishable per docs/research/ml-data-classification-2026-10-13.md. BUILD: a trainer-diag or research-script-run-trainer unit that runs ml_vol_label_replay.py for btc/sol advisory heads + eth 1h + btc-regime-1h-hmm-v1 and commits {ts, vol_regime, p_volatile} jsonl under docs/research/regime-labels/<symbol>/<model_id>.jsonl (or adds them to the metis-market-data export allowlist). UNBLOCKS: blocked/RQ-20261016-65ff-28 and (with REGIME-WF-VERDICT-WRAPPER) blocked/RQ-20260928-006. DONE WHEN: label files for BTC/ETH/SOL for both classifiers are on main and 65ff-28 leaves blocked/.",
+  "updated_at": "2026-10-16T07:50:08Z",
+  "updated_by": "session_01QseRmyoxCNTecxWrRma9Kc",
+  "roadmap": [
+    "L-REGIME"
+  ],
+  "_seq": 526
+}

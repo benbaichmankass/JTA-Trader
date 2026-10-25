@@ -1,0 +1,98 @@
+{
+  "run": "RESEARCH-OPS-20261022-2047",
+  "finished_at": "2026-10-22T21:05:00Z",
+  "by": "research-ops-2047",
+  "floor": 63,
+  "floor_basis": "computed_floor(fired_24h 79)",
+  "authoring_queue_depth": 25,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu"
+  ],
+  "needs_review_triaged": 1,
+  "needs_review_left": 36,
+  "throughput": {
+    "runnable_before": 48,
+    "runnable_after": 48,
+    "queued": 134,
+    "fired_24h": 79,
+    "results_landed_24h": 81,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "dispatch_queue dry run on this branch: 38be-02 would_dispatch (github_runner), 38be-01 deferred (trainer window); counted runnable only after the held PR merges"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (last dispatch 19:54Z)",
+    "collector": "ok (13 units landed since 14:47Z)",
+    "stranded_stamp_prs": [],
+    "grader": "ok (run 39839291207 success 19:21Z; two earlier dispatch-triggered runs cancelled, scheduled run success)",
+    "incident": null
+  },
+  "results_read": {
+    "pass": 7,
+    "fail": 4,
+    "indeterminate": 0,
+    "wiring_only": 1,
+    "units": [
+      "c56e-24 pass",
+      "c56e-25 pass",
+      "c56e-26 pass",
+      "7c2b-06 pass",
+      "7c2b-07 fail",
+      "ae17-26/27/28 fail (auto-graded)",
+      "ae17-40/41/42 pass infra (auto-graded)",
+      "008 pass (auto-graded)",
+      "RQ-20261005-816 wiring_only (auto-graded)"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "verdict grader for RQ-20261009-900 (ML-LEG-CORPUS prerequisite landed)",
+      "ref": "PI-20261022-HOPS2047-0001"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261022-38be-01",
+    "RQ-20261022-38be-02"
+  ],
+  "followups_filed": [
+    "RQ-20261022-38be-02 confirms 7c2b-06 PASS on disjoint window (denominator: 1 config x 6 cells)",
+    "RQ-20261022-38be-01 redesign of timed-out 4a3b-01",
+    "4a3b-01 grading.owner=ML-INSTRUMENTS-W43"
+  ],
+  "authoring": {
+    "queue_depth": 25,
+    "nodes_drafted": 0,
+    "nodes": [],
+    "unit_authored_outside_programme": [
+      "RQ-20261022-38be-01",
+      "RQ-20261022-38be-02"
+    ],
+    "theme_shortfall": {
+      "live_strategy": 7,
+      "ml_health": 7,
+      "infra": 6
+    },
+    "why_short": "budget went to the not_run steps and result follow-ups; no programme node drafted, so OPS-AUTHOR-SKIPPED will warn again honestly. Top of authoring queue still needs builds/Tier-3 packets per the 1447 record."
+  },
+  "not_run": [
+    "routing the 43 unrouted due items (legacy BL-* rows need diag reads; SA-ROUTE owns them) - sampled none this pass",
+    "programme node drafting (step E.0)",
+    "baselines print of ml2_bracket_train_eval on the 736c-01 corpus (timed out at 120 s in sandbox)",
+    "ml_plan_status.py write-back (no ml-plan item ref touched by these results)"
+  ],
+  "ran_from_previous_not_run": [
+    "stranded stamp PR list via GitHub MCP: ran, none open with automation/research-queue-* head",
+    "workflow-run history for grade: ran",
+    "step C blocked/ re-walk: ran (71 units, grouped by blocking row; 1 prerequisite landed)"
+  ],
+  "handoff": [
+    "MANAGER (Tier-3 INPUTS, not applied): tqqq_trend_long_1d / tlt_pullback_1d / scha_trend_long_1d each PASS Stage 0 at power on an 18y disjoint window (RQ-20261016-c56e-25/24/26: net R 25.6 n104 8/8 folds; 21.4 n98 5/8; 2.3 n68 5/8, thin). Soak-book legs, alpaca_paper/ib_paper; tlt_pullback_1d was pulled from alpaca_live by A6 on a -3.9R n=8 record - this is the first at-power read. Any Gate-1/2 case needs the live cost-fidelity read; scha margin is thin.",
+    "research-ops: read 38be-02 (confirms 7c2b-06) and 38be-01 when they land; apply rules verbatim",
+    "research-ops: confirm c56e-24/25/26 close at the next grade run (rows carry decision_rule id)",
+    "research-ops: draft programme nodes next pass (OPS-AUTHOR-SKIPPED persists); unrouted items remain with SA-ROUTE"
+  ]
+}

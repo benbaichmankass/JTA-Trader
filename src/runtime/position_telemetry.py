@@ -350,6 +350,31 @@ def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
         return False
 
 
+def _advisor_fields(kwargs: Dict[str, Any], candles_df: Any) -> Optional[Dict[str, Any]]:
+    """BRACKET-ADVISOR-SHADOW: what a confirmed-but-undeclared lever would set
+    on this bar, for the history row only. Its own try: a failure here costs
+    the four advisor columns, never the history row, the upsert or the trail."""
+    try:
+        from src.runtime import bracket_advisor
+        with _tick_hook("monitor.bracket_advisor"):
+            return bracket_advisor.advise(
+                open_pkg=kwargs.get("open_pkg"), meta=kwargs.get("meta"),
+                candles_df=candles_df, direction=kwargs.get("direction") or "",
+                current_price=kwargs.get("current_price"))
+    except Exception:  # noqa: BLE001 — observe-only, never raises
+        logger.debug("position_telemetry: bracket advisor failed", exc_info=True)
+        return None
+
+
+def _tick_hook(name: str):
+    try:
+        from src.runtime import tick_cost
+        return tick_cost.hook(name)
+    except Exception:  # noqa: BLE001 — measurement must never gate the write
+        from contextlib import nullcontext
+        return nullcontext()
+
+
 def record_position_telemetry(**kwargs) -> Optional[Dict[str, Any]]:
     """Build + persist in one call, timed into ``offloop_hooks``.
 
@@ -357,6 +382,10 @@ def record_position_telemetry(**kwargs) -> Optional[Dict[str, Any]]:
     an unmeasured per-pass cost is precisely the shape of both June 2026 wedges.
     """
     db_path = kwargs.pop("db_path", None)
+    # History-only inputs (EXIT-PATH-TELEMETRY-LIVE): the full candle frame for
+    # the bar key + ATR/ADX, and the ATR the monitor's own trail is using.
+    candles_df = kwargs.pop("candles_df", None)
+    monitor_atr = kwargs.pop("atr", None)
     try:
         from src.runtime import tick_cost
         ctx = tick_cost.hook("monitor.position_telemetry")
@@ -367,6 +396,19 @@ def record_position_telemetry(**kwargs) -> Optional[Dict[str, Any]]:
         rec = build_record(**kwargs)
         if rec is not None:
             write_record(rec, db_path=db_path)
+            # The append-only per-bar twin. Its own try: a history failure is
+            # contained here and can never reach the upsert above or the tick.
+            try:
+                from src.runtime import position_path_history as pph
+                pph.write_history(
+                    pph.build_history_row(
+                        rec, window=kwargs.get("window"), candles_df=candles_df,
+                        stop=kwargs.get("stop"), target=kwargs.get("target"),
+                        atr=monitor_atr, now=kwargs.get("now"),
+                        advisor=_advisor_fields(kwargs, candles_df)),
+                    db_path=db_path)
+            except Exception:  # noqa: BLE001 — observe-only, never raises
+                logger.debug("position_telemetry: history hook failed", exc_info=True)
         return rec
 
 

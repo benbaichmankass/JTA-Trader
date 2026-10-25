@@ -1,0 +1,33 @@
+{
+  "id": "P4-MACRO-BACKLOG-1016",
+  "title": "Programme 04 (macro sleeve): machine programme tree research/programmes/04-macro-sleeve.yaml + blocked-unit audit + >=2 weeks of runnable pre-registered P4 units",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "P4-MACRO-BACKLOG-1016",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18538
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-16 manager session_01VduHYzdaXe27wTDBLSu8ao -> lane session_014MjFeoNDx7wkGRWLa6mBzD] Dispatched: operator 2026-10-16 'research is the main focus'; plan 04 had no machine tree so its questions never reached the authoring queue. [2026-10-16 lane] Built: research/programmes/04-macro-sleeve.yaml (84 nodes: 58 pre-registered unit: rungs that materialise on a PASS, 26 needs_authoring covering Q1 valuation calibration/cost, Q2 PPI lead + family, Q3 axis, Q4 WEPE G2, Q5 news, Q6 M29 wake, Q7 executor + the 3 alpaca_options_paper legs). 19 runnable units RQ-20261016-7769-01..19 (dispatch_queue.py dry-run: would_dispatch, runner); 3 blocked with rows: -20/-22 (rank tilt, MACRO-EVENT-RANKTILT-ARM), -21 (vertical re-price, OPTIONS-VERTICAL-REPRICE). Retired: blocked/RQ-20261014-4a4c-09 (own clause: 4a4c-06 FAIL) and blocked/RQ-20260928-009 (superseded). Rows: NEWS-ALPHA-CORPUS-SLICE1 (cheapest GDELT build, measured cost), notes on MACRO-BACKFILL-E5 (cheaper wrapper path), NEWS-ALPHA-HARNESS (blocks all 14 news units), NEWS-ALPHA-CORPUS, MACRO-EVENT-AXIS-HARNESS (now blocked on -20). STALE POINTER for the manager: docs/roadmap/milestones.yaml M29.next still names RQ-20261014-4a4c-09's record as the wake read; it is now programme node P4-Q6-m29-wake (keys on P4-Q3-event-axis). Not edited here (scope: units, tree, rows).",
+  "updated_at": "2026-10-16T07:48:41Z",
+  "updated_by": "session_014MjFeoNDx7wkGRWLa6mBzD",
+  "roadmap": [
+    "M28",
+    "M29"
+  ],
+  "observation": {
+    "what": "PR #18538 merged and the 19 RQ-20261016-7769-* units fire and land measured E5 records",
+    "how_to_check": "ls research/results/RQ-20261016-7769-*; python3 scripts/research/queue_replenish.py --programme-state | grep P4",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: M28/M29/M36 milestone lines are deferred to row P4-DOCS-SYNC (this lane is units/tree/rows only); M29.next must be repointed to programme node P4-Q6-m29-wake",
+    "arch": "none: research authoring only, no runtime contract changed"
+  },
+  "_seq": 529
+}

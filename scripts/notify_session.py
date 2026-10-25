@@ -49,7 +49,9 @@ def _send(message: str) -> int:
     treated as a clean no-op (exit 0) by the helper itself.
     """
     try:
-        from src.runtime.notify import send_telegram_direct
+        # TELEGRAM-CHANNELS (2026-10-11): session pings are manager updates ->
+        # the MANAGER (Claude) bot, via the one routing table.
+        from src.runtime import telegram_channels
     except ImportError as exc:
         print(
             f"[notify_session] telegram-import-error: {exc}",
@@ -58,7 +60,8 @@ def _send(message: str) -> int:
         return 1
 
     try:
-        send_telegram_direct(message)
+        telegram_channels.send("session", message, parse_mode="HTML",
+                               mirror_to_fcm=True)
     except urllib.error.HTTPError as exc:
         print(
             f"[notify_session] telegram-http-error: status={exc.code}",

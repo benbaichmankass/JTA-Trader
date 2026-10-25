@@ -1,0 +1,475 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "n": 919,
+  "population": "newest committed ledger per leg under comms/strategy_evidence/runs/*/*__trades.jsonl, resamples excluded, Binance USD-M USDT legs only, <= 5000 trades per leg, legs passing the initial-SL-before-exit alignment control; 7 legs walked, 0 skipped (listed)",
+  "measurement": {
+    "fidelity_class": "MIXED",
+    "bars": {
+      "tp_r": "1,2,3",
+      "horizon_bars": 60,
+      "min_n": 100,
+      "needed_frac": 0.02,
+      "not_needed_frac": 0.005
+    },
+    "verdict": "MIXED",
+    "families": {
+      "ict_scalp": {
+        "legs": [
+          "ict_scalp_5m",
+          "ict_scalp_avax_5m",
+          "ict_scalp_eth_15m",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ict_scalp_xrp_15m",
+          "ict_scalp_xrp_5m"
+        ],
+        "1.0": {
+          "n": 919,
+          "amb": 5,
+          "mis": 5,
+          "amb_1m": 0,
+          "amb_frac": 0.00544069640914037,
+          "mislabel_frac": 0.00544069640914037
+        },
+        "2.0": {
+          "n": 919,
+          "amb": 2,
+          "mis": 2,
+          "amb_1m": 0,
+          "amb_frac": 0.002176278563656148,
+          "mislabel_frac": 0.002176278563656148
+        },
+        "3.0": {
+          "n": 919,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        }
+      }
+    },
+    "eligible_families": [
+      "ict_scalp"
+    ],
+    "legs": {
+      "ict_scalp_5m": {
+        "family": "ict_scalp",
+        "symbol": "BTCUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 140,
+              "breaches": 1
+            },
+            "1": {
+              "n": 140,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 145,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 145,
+            "amb": 2,
+            "mis": 2,
+            "amb_1m": 0,
+            "tp": 68,
+            "sl": 55,
+            "timeout": 22,
+            "amb_frac": 0.013793103448275862,
+            "mislabel_frac": 0.013793103448275862
+          },
+          "2.0": {
+            "n": 145,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 36,
+            "sl": 64,
+            "timeout": 45,
+            "amb_frac": 0.006896551724137931,
+            "mislabel_frac": 0.006896551724137931
+          },
+          "3.0": {
+            "n": 145,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 19,
+            "sl": 70,
+            "timeout": 56,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_avax_5m": {
+        "family": "ict_scalp",
+        "symbol": "AVAXUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 174,
+              "breaches": 3
+            },
+            "1": {
+              "n": 174,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 177,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 177,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 70,
+            "sl": 83,
+            "timeout": 24,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 177,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 32,
+            "sl": 93,
+            "timeout": 52,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 177,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 14,
+            "sl": 94,
+            "timeout": 69,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_eth_15m": {
+        "family": "ict_scalp",
+        "symbol": "ETHUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 78,
+              "breaches": 0
+            },
+            "1": {
+              "n": 78,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 78,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 78,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 33,
+            "sl": 29,
+            "timeout": 16,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 78,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 15,
+            "sl": 36,
+            "timeout": 27,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 78,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 8,
+            "sl": 40,
+            "timeout": 30,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_sol_15m": {
+        "family": "ict_scalp",
+        "symbol": "SOLUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 84,
+              "breaches": 0
+            },
+            "1": {
+              "n": 84,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 84,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 84,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 33,
+            "sl": 27,
+            "timeout": 24,
+            "amb_frac": 0.011904761904761904,
+            "mislabel_frac": 0.011904761904761904
+          },
+          "2.0": {
+            "n": 84,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 16,
+            "sl": 33,
+            "timeout": 35,
+            "amb_frac": 0.011904761904761904,
+            "mislabel_frac": 0.011904761904761904
+          },
+          "3.0": {
+            "n": 84,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 9,
+            "sl": 36,
+            "timeout": 39,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_sol_5m": {
+        "family": "ict_scalp",
+        "symbol": "SOLUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 187,
+              "breaches": 1
+            },
+            "1": {
+              "n": 187,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 190,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 190,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 88,
+            "sl": 79,
+            "timeout": 23,
+            "amb_frac": 0.005263157894736842,
+            "mislabel_frac": 0.005263157894736842
+          },
+          "2.0": {
+            "n": 190,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 40,
+            "sl": 93,
+            "timeout": 57,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 190,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 21,
+            "sl": 98,
+            "timeout": 71,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_xrp_15m": {
+        "family": "ict_scalp",
+        "symbol": "XRPUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 72,
+              "breaches": 1
+            },
+            "1": {
+              "n": 72,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 76,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 76,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 37,
+            "sl": 28,
+            "timeout": 11,
+            "amb_frac": 0.013157894736842105,
+            "mislabel_frac": 0.013157894736842105
+          },
+          "2.0": {
+            "n": 76,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 24,
+            "sl": 32,
+            "timeout": 20,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 76,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 9,
+            "sl": 37,
+            "timeout": 30,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_xrp_5m": {
+        "family": "ict_scalp",
+        "symbol": "XRPUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 165,
+              "breaches": 0
+            },
+            "1": {
+              "n": 165,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 169,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 169,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 71,
+            "sl": 73,
+            "timeout": 25,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 169,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 34,
+            "sl": 80,
+            "timeout": 55,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 169,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 22,
+            "sl": 83,
+            "timeout": 64,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      }
+    },
+    "skipped": {},
+    "missing_months": {}
+  },
+  "note": "Fixed bracket (initial SL at -1R, TP at +K R) re-walked on Binance Vision 1m klines; MISLABEL = the bar touched both levels and 1m says TP came first, i.e. the SL-first convention mislabelled it. Label-fidelity measurement for the 1m archive decision, NOT an edge or promotion case."
+}

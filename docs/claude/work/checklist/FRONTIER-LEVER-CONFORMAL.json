@@ -1,0 +1,34 @@
+{
+  "id": "FRONTIER-LEVER-CONFORMAL",
+  "title": "Lever: conformal_abstain_eval script over the shadow-log mirror",
+  "phase": "W41",
+  "state": "done",
+  "owner": "lane ML-UNBLOCK-1018 (built); manager merges #18890",
+  "lane": "ML-UNBLOCK-1018",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18890
+  ],
+  "blocked_on": [],
+  "note": "PR #18890 merged 2026-10-18 07:31Z (scorer scripts/research/conformal_abstain_eval.py on main; RQ-20261016-65ff-25 queued). Stays landed_unproven until the unit's first collected verdict.json carries coverage_matched and a per-level selective_error. [2026-10-25 BLOCKERS-1025] OBSERVED, closing. research/results/RQ-20261016-65ff-25/ holds two collected records (10-18); each measurement has coverage_matched (57 occurrences) and per-level selective_error (108) for the plain and conformal arms across BTC/ETH/SOL 1h. Verdict was fail, which is a science result and not a scorer fault.",
+  "updated_at": "2026-10-25T06:48:56Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "priority": "high",
+  "priority_rank": 3,
+  "roadmap": [
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "ROADMAP.md ML block, Update 2026-10-18: FRONTIER-LEVER-CONFORMAL built (PR #18890), RQ-20261016-65ff-25 queued, 9da8-03 keeps only the joiner blocker; milestone M25 / Track F step 2",
+    "arch": "none: research tooling only (scripts/research/conformal_abstain_eval.py); the architecture doc describes no research scorer. The E5 record contract it writes is already documented at scripts/research/script_run.py"
+  },
+  "observation": {
+    "what": "research/results/RQ-20261016-65ff-25/ holds a collected verdict.json whose result carries coverage_matched per level and a per-level selective_error for both arms (the scorer ran end to end on the published 1h shards)",
+    "how_to_check": "find research/results/RQ-20261016-65ff-25 -name verdict.json -exec grep -o \"\\\"verdict\\\": *\\\"[a-z_]*\\\"\" {} + ; grep -c coverage_matched research/results/RQ-20261016-65ff-25/*/result.json",
+    "due_by": "2026-10-25"
+  },
+  "_seq": 408
+}

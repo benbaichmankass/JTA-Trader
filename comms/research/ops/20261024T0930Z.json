@@ -1,0 +1,45 @@
+{
+ "run": "RESEARCH-OPS-20261024-0847",
+ "finished_at": "2026-10-24T09:30:00Z",
+ "by": "session_0118SbrkgfuqRYuHXvCLKYgM",
+ "floor": 61,
+ "floor_basis": "computed_floor(fired_24h 77)",
+ "authoring_queue_depth": 31,
+ "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+ "needs_review_triaged": 0,
+ "needs_review_left": 30,
+ "throughput": {"runnable_before": 34, "runnable_after": 34, "queued": 121, "fired_24h": 77, "results_landed_24h": 85, "hours_since_last_dispatch": 1.4, "idle_alarm": false,
+  "after_basis": "not re-measured after the +7 template refill and the 2 P4 nodes: new units count runnable only once this held PR merges. Still below the 61 floor: H1-AUTHOR (31 ready authoring questions), an authoring shortfall, not a mechanism fault"},
+ "mechanism": {"dispatch_receipt": "ok (liveness fresh; last receipt on main 9.4 h old, newest receipt PR #19812 is open, conflicting, 0 check runs)", "collector": "ok (85 results 24h, 0 unreadable)",
+  "stranded_stamp_prs": ["#19812 liveness receipt 04:59Z dirty/0 checks", "#19787 research-slo 23:47Z 0 checks/statuses"], "incident": null,
+  "watchdog": "read: comms/research/ops/watchdog_incidents.jsonl has 6 rows, newest 2026-10-17T23:27Z (self_healed backend:github_runner); no row in 7 days, could not tell quiet from not-writing",
+  "blocked_audit": "blocker_watch.py re-run; 71 files in research/queue/blocked/ not individually re-audited; findings were NOT_RUNNING (queued, never dispatched, incl. my 8 new units), 1 OPERATOR_WAIT (UI-UPGRADE-1)"},
+ "results_read": {"pass": 2, "fail": 12, "indeterminate": 0,
+  "units": ["RQ-20261011-9da8-01 fail", "RQ-20261023-1d5c-05 fail", "RQ-20261023-1d5c-06 fail", "RQ-20261023-9ffb-01 fail", "RQ-20261023-9ffb-02 fail", "RQ-20261023-a1f3-03 fail", "RQ-20261023-a1f3-05 fail", "RQ-20261023-a1f3-06 fail", "RQ-20261023-a1f3-09 fail", "RQ-20261023-a1f3-10 fail", "RQ-20261023-a1f3-11 fail", "RQ-20261023-a1f3-17 pass", "RQ-20261023-a1f3-18 fail", "RQ-20261024-002 pass"],
+  "note": "Verdict, n and the grader's one-line reason read from each verdict.json; the decision_rule text was read in full for a1f3-17, 002, 9ffb-01, 9ffb-02 only. The other 10 were taken from the grader's verdict line, not re-derived against their rules. No Tier-3 action taken."},
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [],
+ "units_authored": ["P4-Q2-ppi-es-late (emits when a1f3-17 grades pass)", "P4-Q2-ppi-es-placebo (same)", "RQ-20261024-003..009 (template refill: e35-bracket, m20-exit-lever, 5 prop-fit-breakout)"],
+ "followups_filed": [
+  {"what": "a1f3-17 PASS (one window; chosen from 2 instruments, family BH 64)", "ref": "P4-Q2-ppi-es-late, P4-Q2-ppi-es-placebo"},
+  {"what": "20261024-002 SOL 1h lgbm_yz PASS (score only, not promotion)", "ref": "no action, because programme node P2-Q1.6 is answered; a CV-score PASS is not edge and the rule says A PASS is not a promotion. Not checked: whether the node moved in --programme-state"},
+  {"what": "slv_pullback_1d 9ffb-01/-02 FAIL (3rd Stage-0 fail)", "ref": "SLV-PB1D-RETENTION-T3 note; manager Tier-3 question after 9ffb-03"},
+  {"what": "hot-vol trail fails: declared lever lines read dead config", "ref": "REGIME-PROGRAM note; manager decides on a Tier-3 strip packet"}
+ ],
+ "authoring": {"queue_depth": 31, "nodes_drafted": 2, "nodes": ["P4-Q2-ppi-es-late", "P4-Q2-ppi-es-placebo"],
+  "theme_shortfall": {"regime": 6, "live_strategy": 10, "ml_health": 8, "macro": 1, "infra": 4, "timeframes": 1},
+  "why_short": "both nodes are macro (authored from the one PASS I could follow up with a pre-registered rule); the large live_strategy/regime/ml_health shortfalls got nothing: the top authoring-queue nodes are reads of units not yet closed or Tier-3 notes, and I did not author toward them"},
+ "not_run": [
+  "step C needs_review triage: 0 of 30 (budget went to step A, the watchdog read and the result reads); 28 owned, 0 unowned",
+  "step C blocked/ audit: 71 files not individually re-audited",
+  "step D: rules for 10 of the 14 results not re-derived (grader verdict line used)",
+  "theme shortfalls live_strategy, regime, ml_health, infra not authored toward"
+ ],
+ "handoff": [
+  "MANAGER (held PR): merge this run PR (programme + queue edits hold under E57); merge-slot claim committed on the branch",
+  "MANAGER: #19812 (liveness receipt, conflicting, 0 checks) and #19787 (research-slo, 0 checks) are bot PRs stuck >3 h: close as superseded or re-request checks",
+  "MANAGER Tier-3: SLV-PB1D-RETENTION-T3 once RQ-20261023-9ffb-03 lands (two FAILs already in); REGIME-PROGRAM hot-vol dead-lever strip question",
+  "next research-ops: needs_review triage (30 left), watchdog_incidents.jsonl silent since 2026-10-17: check research-watchdog.yml runs; read the 8 new RQ-20261024-* units; check a1f3-17 got graded and P4 nodes emitted"
+ ]
+}

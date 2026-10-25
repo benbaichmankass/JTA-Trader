@@ -1,0 +1,140 @@
+{
+  "run": "RESEARCH-OPS-20261012-0247",
+  "finished_at": "2026-10-12T03:30:00Z",
+  "by": "session_01Qv7h6yJSf3kAaupPEcf4ho",
+  "baseline": "comms/research/ops/20261011T2100Z.json",
+  "floor": 25,
+  "throughput": {
+    "runnable_before": 19,
+    "runnable_after": 25,
+    "queued": 160,
+    "fired_24h": 33,
+    "fired_7d": 227,
+    "results_landed_24h": 41,
+    "hours_since_last_dispatch": 2.3,
+    "idle_alarm": false,
+    "as_of": "2026-10-12T02:57Z",
+    "note": "runnable_after is MEASURED on the branch tree with the six new units (check_research_queue_throughput.py), 19 + 6. The health check read H1 19 < 25 before authoring; the templates held 1 point for a deficit of 6, so a refill could not close it. The dispatcher fires ~1.4/h, so this reading decays; re-measure next pass."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 0.76h at 02:48Z, run 38194193407)",
+    "collector": "ok: result PRs #17654, #17663, #17664 and grading #17661 open <8h and landing; fc31-01 and 8025-03..06 on main",
+    "stranded_stamp_prs": [
+      17652
+    ],
+    "dispatcher_since_main_red": "Runs since main's guards went red (17:53Z; 8 listed, 7 completed): 38161538083 FAIL (17:53Z, landing waited on stamp PR #17618), 38169703925 ok, 38171810585 FAIL (20:20Z, 'Land the liveness receipt'), 38178165355 ok, 38182207173 FAIL (22:53Z, 'Land the dispatch stamps': stamp PR #17652 did not merge in 80m, refresh failed_conflict), 38186769774 ok (00:06Z), 38188631496 ok (00:36Z), 38194193407 in progress (02:01Z). Job lists read for 38182207173 (dispatch green, land failed) and 38188631496 (all green); for 38161538083 and 38171810585 only the failing step as reported by the manager was relied on, not re-read. 7 runs have completed since 17:53Z: 3 failed, 4 succeeded. fired_24h held at 33. Later runs succeed, but the stamp-landing step takes 77-80 min.",
+    "incident": "No dispatcher outage. The recurring defect is the stamp-PR landing step (fails or takes ~80 min). Appended to the existing row STAMP-RACE (landed_unproven) as a new instance; no twin filed. Cause (a) branch checks failed vs (b) never re-run was NOT established this pass.",
+    "closed_prs": {
+      "17287": "batch of 5 runner results; all 27 result files already on main",
+      "17138": "batch of 3 runner results; all 27 result files already on main"
+    },
+    "left_open": {
+      "17170": "RQ-20261005-814 (m20 sweep spy_trend_long_1d, verdict pass, read_state measured in the file; PR body says not_applicable/not_attempted) - result NOT on main, checks green at 23:49Z; handoff",
+      "17085": "RQ-20261007-004 (ict_scalp verdict files) - result NOT on main; handoff",
+      "17339/17326/17342/16874/16798/16779/17346/17048/17012/16826/16792/17051": "older automation PRs; NOT audited: the shallow clone has no merge base so a diff against main is not computable here; handoff (compare each PR's file list through the API against main)"
+    }
+  },
+  "results_read": {
+    "pass": 5,
+    "fail": 1,
+    "indeterminate": 3,
+    "units": [
+      {
+        "unit": "RQ-20261011-0ac8-01",
+        "verdict": "pass",
+        "n": 2880,
+        "rule": "RULE-RQ1011-0AC8-01-ML-RUNNER-SMOKE verbatim: logit minus prior macro_f1 +0.1586 (G0) and +0.1341 (G1) >= +0.05 on both groups. Plumbing pass, says nothing about any model. Record now on main. ML-F6 first half met; ML-RQ-RUNNER note added; plan item ML-F6 annotated, state unchanged (open)."
+      },
+      {
+        "unit": "RQ-20261011-fc31-01",
+        "verdict": "pass",
+        "net_total_r": 12.0667,
+        "n": 738,
+        "note": "trend BNB 1h, MDD 27.7R, 0.016 R/trade. Rule names no follow-up for a pass. A prop-fit follow-up was considered and NOT authored: BNB 1h was already screened with donor params (RQ-20261001-007, FAIL -23.55R), so the harness-default pass does not carry; recorded on PROP-FIT-DONORS-PB-SQ."
+      },
+      {
+        "unit": "RQ-20261011-fc31-02",
+        "verdict": "pass",
+        "net_total_r": 67.3402,
+        "n": 672,
+        "read_from": "open PR #17654 (not on main)",
+        "note": "trend XRP 1h. XRP 1h trend is already a donor-param prop-fit cell (p2_trend_xrpusdt); no action, because that cell is already covered."
+      },
+      {
+        "unit": "RQ-20261011-fc31-03",
+        "verdict": "pass",
+        "net_total_r": 32.1392,
+        "n": 363,
+        "read_from": "open PR #17663",
+        "note": "trend DOGE 2h. No 2h donor in p2_breakout_symbol_screen.DONORS, so no prop-fit path; lever = PROP-FIT-DONORS-PB-SQ (note added)."
+      },
+      {
+        "unit": "RQ-20261011-fc31-04",
+        "verdict": "pass",
+        "net_total_r": 32.1309,
+        "n": 352,
+        "read_from": "open PR #17664",
+        "note": "trend LINK 2h. Same as fc31-03."
+      },
+      {
+        "unit": "RQ-20261011-8025-04",
+        "verdict": "fail",
+        "net_total_r": -7.0887,
+        "n": 61,
+        "note": "trend SOL 2h; the rule re-queues one confirmatory run -> RQ-20261012-ca47-01."
+      },
+      {
+        "unit": "RQ-20261011-8025-03",
+        "verdict": "indeterminate",
+        "net_total_r": -6.1519,
+        "n": 30,
+        "note": "trend BTC 4h, n 30 < 39 floor. 4h over the declared window cannot reach the floor, so this is not 'extend n' on this instrument; no unit authored, because the window is a corpus-fetch property (scripts/ops/fetch_backtest_corpus.py), not a unit input."
+      },
+      {
+        "unit": "RQ-20261011-8025-05",
+        "verdict": "indeterminate",
+        "net_total_r": -5.862,
+        "n": 21,
+        "note": "pullback BTC 4h; same as 8025-03."
+      },
+      {
+        "unit": "RQ-20261011-8025-06",
+        "verdict": "indeterminate",
+        "net_total_r": 4.9905,
+        "n": 20,
+        "note": "squeeze SOL 4h; same as 8025-03."
+      }
+    ],
+    "rule_applied": "each breadth unit's registered rule verbatim: PASS net>0 and n>=39 (Stage-0 only); FAIL net<=0 with n>=39 is one pass and re-queues a confirmatory run before any kill; indeterminate if n<39. Verdicts are the harness_dispatch_result.py mechanical grade, re-read from the landed record. 8025-02 (read in the 20:47Z pass) is not counted again.",
+    "not_read": "RQ-20261011-8753-01..08 have not fired yet (last_dispatched_at null on main); RQ-20261011-fc31-05/06 not fired. research_disposition.py --unread-only lists 27 e35/m20 leg-level rows (not queue results), unchanged from the baseline."
+  },
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": {
+    "RQ-20261011-9da8-01..07": "no blocker row changed since the 20:47Z audit (FRONTIER-LEVER-TSFM, -TRAINER-DEPS, -TABULAR, -CONFORMAL, -LEADLAG, -XSEC-RUNNER, ML-HEAD-AGREEMENT-JOIN, ML-LEG-CORPUS all state queued, updated 2026-10-11); stay blocked, not re-audited per instruction.",
+    "NEEDS_LANE": "RQ-20260928-001, RQ-20261007-022, -023, -025, -030 carry a session-local run.workflow by design (scripts outside research-script-run.yml's allowlist or without a window input); the dispatcher can never fire them. Not retired, each names its own reason. Owner: a topic lane / the manager.",
+    "blocker_watch": "NOT_RUNNING 24 (19 are fresh units awaiting first dispatch, 5 are the NEEDS_LANE units); STALE_BLOCK 1: FRONTIER-RESEARCH names 'manager lands hold PR #17600' which matches no row or unit (manager's); UNPROVEN_OVERDUE 24 (manager's)."
+  },
+  "levers_filed": [],
+  "units_authored": [
+    "RQ-20261012-ca47-01",
+    "RQ-20261012-ca47-02",
+    "RQ-20261012-ca47-03",
+    "RQ-20261012-ca47-04",
+    "RQ-20261012-ca47-05",
+    "RQ-20261012-ca47-06"
+  ],
+  "authoring_note": "ca47-01 = confirmatory re-run of 8025-04 (rule-mandated, clone of 8753-08). ca47-02..06 = Stage-0 breadth for the declared-but-never-queued CANDIDATE_PAIRS cells (set difference of CANDIDATE_PAIRS x {trend,pullback,squeeze} against all harness inputs found 7: ETH 5m x3, BNB 5m x3, DOGE 15m pullback; these units cover ETH 5m squeeze/trend/pullback, BNB 5m trend, DOGE 15m pullback). Roadmap L-PROP on all six. Hand-authored, so E57: landing is HOLD. Expected outcome of the 5m/15m cells is FAIL (every 5m/15m cell read so far failed); they are there to close the grid and keep the floor, and say so in their text.",
+  "followups_filed": [],
+  "not_run": [
+    "audit of 12 older automation/* PRs (no merge base in the shallow clone)",
+    "roadmap M25 measured-state table: the smoke row is the manager's/ml-review's weekly pass; plan item annotated only"
+  ],
+  "handoff": [
+    "Manager: land 17170 and 17085 (stranded measured results; 17170 checks green at 23:49Z) or say why not; cause of the 4-day strand not established.",
+    "Next pass: grade 8753-01..08 and ca47-01 when they fire; a second FAIL closes the cell (kill, stated reason).",
+    "Next pass: remaining declared-but-never-queued cells: BNB 5m pullback, BNB 5m squeeze (2 of 7; the cap was reached). After that the CANDIDATE_PAIRS x 3 grid is covered and top-up needs a new intake source (IDEAS.md, perf-followup, a prop-fit donor for 2h trend).",
+    "Next pass: re-check dispatch landing - fresh failures in 'Land the dispatch stamps' would make STAMP-RACE a root-cause row; check #17652's own check runs first.",
+    "Next pass: audit older automation/* PRs by API file list (#17339 #17326 #17342 #16874 #16798 #16779 #17346 #17048 #17012 #16826 #16792 #17051)."
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261014-de02-05",
+  "run_id": "38605588647",
+  "commit_sha": "740143830f682618c89443c3c69e9e45f24fecd4",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/38605588647",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "adp_employment_change",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ES=F",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "positive",
+        "--population",
+        "adp_employment_change releases (live feed + survey-consensus backfill) joined to ES=F daily closes",
+        "--out",
+        "comms/research/RQ-20261014-de02-05/38605588647"
+      ],
+      "log": "comms/research/RQ-20261014-de02-05/38605588647/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 5.4
+    }
+  ],
+  "all_ok": true
+}

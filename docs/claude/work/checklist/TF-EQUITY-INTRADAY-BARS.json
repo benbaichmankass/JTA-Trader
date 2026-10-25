@@ -1,0 +1,22 @@
+{
+  "id": "TF-EQUITY-INTRADAY-BARS",
+  "title": "Build: a multi-year sub-hour candle lane for the Alpaca ETFs and IBKR futures proxies (Yahoo serves ~60 d at 5m/15m and ~730 d at 1h), so the short-arm break-even and breakout units can measure equities below 1h at power",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane FRONTIER-TIMEFRAMES-1018)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Programme 07 TIMEFRAMES short arm, data gap. FIELD (read 2026-10-18): scripts/ops/fetch_backtest_candles.py --source yfinance is clamped by the venue (ml/datasets/adapters/yf_symbols.YF_MAX_HISTORY_DAYS: ~60 d at 5m/15m, ~730 d at 1h; 1d uncapped); --source dukascopy exists (dukascopy-python 4.0.1 is installed on research-script-run.yml) and serves 1m/5m/15m/1h for its instrument list but its US ETF/CFD coverage for SPY/QQQ/GLD/TLT/IEF/SLV/GDX and the micro futures is UNVERIFIED this lane. RQ-20261018-ef5d-02 therefore measures the equity 5m/15m frames on a ~60-day window and flags them short_window; the equity short-arm verdict rests on the crypto core only. WHAT TO BUILD: (1) probe dukascopy_python.instruments for the 17 symbols (scripts/ops/fetch_dukascopy_ohlcv.py --list) and record coverage in docs/reference/corpus-manifest.json; (2) where Dukascopy serves them, route fetch_backtest_candles --source dukascopy for intervals 1/5/15 on non-USDT symbols with >= 3 years; (3) else an Alpaca market-data (IEX feed) historical-bars puller as a runner job with APCA_* from Actions secrets (credentials-and-vm-mutations: the operator originates nothing new -- the keys exist for the live accounts). CLOSES WHEN: ef5d-02's equity frames at 5m/15m report window_days >= 1095 and short_window false.",
+  "updated_at": "2026-10-18T06:31:00Z",
+  "updated_by": "lane-FRONTIER-TIMEFRAMES-1018",
+  "roadmap": [
+    "L-TIMEFRAMES",
+    "L-DATA"
+  ],
+  "_seq": 560
+}

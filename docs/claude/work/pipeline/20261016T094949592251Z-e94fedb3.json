@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the research-pipeline SLO definition on main names compute-runs-created/hour over the router-derived workflow set, dispatched-but-not-started, and backpressure-starved cycles",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-TT4AZN7N-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-DISPATCH-STALL-1016 (session_01PnDD59hUeWSKXsTt4aZN7n); incident dispatcher_fires@20261016T0936Z",
+    "rerun": "python3 scripts/research/research_watchdog.py  # read-only; see dispatcher_fires evidence.workflows_counted"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[research-slo-compute-started] Add two SLOs to the research-pipeline SLO work (lane RESEARCH-PIPELINE-SLO-1016; row RESEARCH-PIPELINE-SLO not on main at filing): (1) research compute runs CREATED per hour, counted over EVERY workflow a runnable unit resolves to (research_watchdog.compute_workflows / dispatch_queue.research_workflow_names) -- never a hardcoded file list; the 2026-10-16 09:36Z false escalation came from a 4-file list missing research-harness-dispatch.yml while 16 harness runs were created 08:12-08:57Z; (2) dispatched-but-not-started: a dispatcher DISPATCHED row whose workflow run is not created/started within N min. Also report cycles that DEFERRED EVERY FIRE on backpressure (09:37Z cycle: 27 repo runs queued > cap 10) as a separate starvation count, not as idle."
+}

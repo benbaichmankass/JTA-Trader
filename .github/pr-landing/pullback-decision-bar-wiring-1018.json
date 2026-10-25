@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2: a change to a live signal builder (src/runtime/strategy_signal_builders.py::_htf_pullback_variant_builder). Operator OK sought via the manager (lane DECISION-BAR-CLOSED-1018, manager session_01VduHYzdaXe27wTDBLSu8ao). Inert by default: no leg sets decision_bar on a pullback leg today, so the forming path is byte-identical; the closed path only runs once a Tier-3 PR sets decision_bar: closed on a pullback leg (xrp_pullback_2h / ada_pullback_2h, if RQ-20261018-2a10-01 grades CLOSED_WINS).",
+  "why": "The pullback variant builder did not read decision_bar at all (only the donchian builder did), so the Tier-3 decision-bar proposals this lane may open for xrp_pullback_2h / ada_pullback_2h would be silent no-ops without this wiring. Mirrors the donchian builder's closed-bar path exactly (window skip, cache bypass, forming-row drop, ledger record, catch-up price check). Tests prove the default is unchanged and the closed path decides the closed bar once."
+}

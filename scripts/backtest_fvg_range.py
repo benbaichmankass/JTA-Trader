@@ -62,12 +62,27 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import target_basis  # noqa: E402  (the ONE take-profit-basis definition)
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-FEE_BPS_ROUNDTRIP = 7.5
+from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+
+FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP
 _EXIT_STYLES = ("mid", "far", "tp1r")
+
+# Execution-realism (P1 § 3.B, checklist E3): this harness previously carried
+# FEE ONLY. main() (the CLI path) resolves unset --slippage/--funding flags to
+# the venue-aware defaults (funding is perp-only), so a real backtest is
+# net-of-real-cost by default. These MODULE GLOBALS default to 0.0 so a DIRECT
+# run_backtest() caller stays byte-identical to the legacy fee-only engine —
+# main() overwrites them with the venue-aware policy.
+SLIPPAGE_BPS_ROUNDTRIP = 0.0
+FUNDING_BPS_PER_WINDOW = 0.0
+FUNDING_WINDOW_HOURS = execution_costs.FUNDING_WINDOW_HOURS
 
 
 @dataclass
@@ -85,6 +100,11 @@ class Trade:
     r_multiple: float
     mfe_r: float
     confidence: float
+    # The arm's own provenance, per trade — never inferred by a reader
+    # from what it believes the caller passed.
+    tp_basis: str = target_basis.UNIT_TP
+    unit_tp: Optional[float] = None
+    cap_r: Optional[float] = None
 
 
 # --------------------------------------------------------------------------
@@ -170,6 +190,7 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                  symbol: str, min_confidence: float = 0.0,
                  stale_exit_bars: int = 0, stale_exit_below_r: float = 0.0,
                  giveback_min_mfe_r: float = 0.0, giveback_r: float = 1.0,
+                 tp_cap_pct: float = 0.0, no_tp: bool = False,
                  emit_path: Optional[str] = None) -> Dict[str, Any]:
     if exit_style not in _EXIT_STYLES:
         raise ValueError(f"exit_style must be one of {_EXIT_STYLES}")
@@ -312,18 +333,38 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
 
         # Target.
         if exit_style == "mid":
-            target = (R + S) / 2.0
+            unit_target = (R + S) / 2.0
         elif exit_style == "far":
-            target = R if direction == "long" else S
+            unit_target = R if direction == "long" else S
         else:  # tp1r
-            target = entry + tp_r * risk if direction == "long" else entry - tp_r * risk
+            unit_target = (entry + tp_r * risk if direction == "long"
+                           else entry - tp_r * risk)
         # Degenerate-target guard.
-        if direction == "long" and target <= entry:
+        #
+        # ⚠️ DELIBERATELY EVALUATED ON `unit_target`, AND STILL EVALUATED UNDER
+        # `--no-tp`. This guard SKIPS a signal, so it decides which trades
+        # exist at all. Letting it lapse when the target is switched off would
+        # admit signals the default arm rejects, and the two arms would then
+        # differ in their ENTRY population for a reason that has nothing to do
+        # with the exit — destroying the comparison the target-setting arm is
+        # for. `--no-tp` must change how a trade ENDS, never whether it BEGINS.
+        if direction == "long" and unit_target <= entry:
             i += 1
             continue
-        if direction == "short" and target >= entry:
+        if direction == "short" and unit_target >= entry:
             i += 1
             continue
+        # WHICH TARGET THIS ARM PLACES — through the ONE owner, shared with
+        # backtest_ict_scalp.py. Both flags default off => byte-identical.
+        #
+        # ⚠️ fvg_range's live unit sets `tp = R` (the opposite boundary,
+        # src/units/strategies/fvg_range_15m.py:376) and applies NO venue
+        # clamp — `fvg` is absent from tp_venue_cap.CLAMPING_FAMILIES — so
+        # `--exit-style far` with no cap is the live-parity arm here, NOT this
+        # harness's own `mid` default.
+        target, tp_basis = target_basis.resolve_target(
+            entry=entry, direction=direction, unit_tp=unit_target,
+            cap_pct=tp_cap_pct, disabled=no_tp)
 
         # Walk forward: SL-first intrabar (conservative), then target, then
         # timeout (time-decay).
@@ -338,7 +379,7 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                 if bl <= sl:
                     exit_price, exit_idx, exit_reason = sl, j, "stop"
                     break
-                if bh >= target:
+                if target is not None and bh >= target:
                     exit_price, exit_idx, exit_reason = target, j, "target"
                     break
                 ext = max(ext, bh)
@@ -347,7 +388,7 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                 if bh >= sl:
                     exit_price, exit_idx, exit_reason = sl, j, "stop"
                     break
-                if bl <= target:
+                if target is not None and bl <= target:
                     exit_price, exit_idx, exit_reason = target, j, "target"
                     break
                 ext = min(ext, bl)
@@ -374,7 +415,11 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
             entry=entry, sl=sl, risk=risk, exit_index=exit_idx,
             exit_time=ts.iloc[exit_idx], exit_price=exit_price,
             outcome=exit_reason, r_multiple=round(r, 4), mfe_r=round(mfe, 3),
-            confidence=confidence))
+            confidence=confidence, tp_basis=tp_basis,
+            unit_tp=unit_target,
+            cap_r=(target_basis.cap_r(entry=entry, risk=risk,
+                                      cap_pct=tp_cap_pct)
+                   if tp_cap_pct > 0.0 else None)))
         next_idx = exit_idx + 1 + cooldown_bars
         i = next_idx
 
@@ -395,7 +440,8 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                     # share this emit shape and all three had the same gap.
                     "symbol": symbol,
                     "exit_time": str(t.exit_time),
-                    "entry": t.entry, "sl": t.sl, "exit_reason": t.outcome,
+                    "entry": t.entry, "sl": t.sl, "risk": t.risk,
+                    "exit_reason": t.outcome,
                     "direction": t.direction, "gross_r": t.r_multiple,
                     "net_r": round(t.r_multiple - fr, 4),
                     # Additive fields for the capital-efficiency study
@@ -404,6 +450,8 @@ def run_backtest(df: pd.DataFrame, *, range_lookback: int, atr_period: int,
                     # uniformly across harnesses. No effect on existing consumers.
                     "hold_bars": int(t.exit_index - t.entry_index),
                     "mfe_r": t.mfe_r,
+                    "tp_basis": t.tp_basis, "unit_tp": t.unit_tp,
+                    "cap_r": t.cap_r,
                     "confidence": t.confidence}, default=str) + "\n")
     return _summarize(trades, df, timeframe=timeframe, symbol=symbol,
                       params={"range_lookback": range_lookback, "adx_max": adx_max,
@@ -461,10 +509,37 @@ def _find_range_fvg(h, lo_arr, c, i, *, direction, fvg_search, min_fvg_size_bps,
     return None
 
 
-def _fee_r(t: Trade) -> float:
+def _fee_only_r(t: Trade) -> float:
     if not t.exit_price or t.risk <= 0:
         return 0.0
     return (FEE_BPS_ROUNDTRIP / 10_000.0) * ((t.entry + t.exit_price) / 2.0) / t.risk
+
+
+def _cost_breakdown(t: Trade) -> Dict[str, float]:
+    """Per-trade round-trip cost in R: this harness's exact fee term + the
+    shared slippage + perp-funding terms (execution_costs). Slippage/funding
+    are 0.0 by default → fee-only, byte-identical to the legacy term for a
+    direct caller."""
+    if not t.exit_price or t.risk <= 0:
+        return {"fee_r": 0.0, "slippage_r": 0.0, "funding_r": 0.0,
+                "total_cost_r": 0.0, "funding_windows": 0.0}
+    fee_r = _fee_only_r(t)
+    cb = execution_costs.roundtrip_cost_r(
+        entry=t.entry, exit_price=t.exit_price, risk=t.risk,
+        entry_time=t.entry_time, exit_time=t.exit_time,
+        fee_bps_roundtrip=0.0,  # fee handled locally to preserve this harness's exact formula
+        slippage_bps_roundtrip=SLIPPAGE_BPS_ROUNDTRIP,
+        funding_bps_per_window=FUNDING_BPS_PER_WINDOW,
+        funding_window_hours=FUNDING_WINDOW_HOURS)
+    return {"fee_r": fee_r, "slippage_r": cb["slippage_r"], "funding_r": cb["funding_r"],
+            "total_cost_r": fee_r + cb["slippage_r"] + cb["funding_r"],
+            "funding_windows": cb["funding_windows"]}
+
+
+def _fee_r(t: Trade) -> float:
+    """Total round-trip cost in R (fee + slippage + funding). Name kept for the
+    existing call sites; with slippage/funding at 0.0 it equals the legacy fee."""
+    return _cost_breakdown(t)["total_cost_r"]
 
 
 def _monthly_consistency(pairs) -> Optional[Dict[str, Any]]:
@@ -509,11 +584,15 @@ def _summarize(trades: List[Trade], df: pd.DataFrame, *, timeframe: str,
     base: Dict[str, Any] = {
         "strategy": "fvg_range", "symbol": symbol, "timeframe": timeframe,
         "params": params, "total_trades": n, "fee_bps_roundtrip": FEE_BPS_ROUNDTRIP,
+        # Execution-realism cost config in effect for this run (P1 § 3.B).
+        "slippage_bps_roundtrip": SLIPPAGE_BPS_ROUNDTRIP,
+        "funding_bps_per_window": FUNDING_BPS_PER_WINDOW,
         "data_start": str(df["timestamp"].iloc[0]) if len(df) else None,
         "data_end": str(df["timestamp"].iloc[-1]) if len(df) else None,
         "run_date": str(date.today())}
     if n == 0:
         base.update({"win_rate_pct": 0.0, "total_r": 0.0, "net_total_r": 0.0,
+                     "net_total_r_fee_only": 0.0,
                      "net_expectancy_r": 0.0, "total_fee_r": 0.0,
                      "trades_long": 0, "trades_short": 0,
                      "net_total_r_long": 0.0, "net_total_r_short": 0.0,
@@ -557,6 +636,9 @@ def _summarize(trades: List[Trade], df: pd.DataFrame, *, timeframe: str,
         "net_total_r": round(sum(net), 4),
         "net_total_r_long": round(sum(t.r_multiple - _fee_r(t) for t in longs), 4),
         "net_total_r_short": round(sum(t.r_multiple - _fee_r(t) for t in shorts), 4),
+        # Fee-only comparison arm (always present, checklist E3): the number
+        # BEFORE slippage+funding, so a fee-only run is visible, not silent.
+        "net_total_r_fee_only": round(sum(t.r_multiple - _fee_only_r(t) for t in trades), 4),
         "net_expectancy_r": round(sum(net) / n, 4),
         "avg_win_r": round(sum(wins) / len(wins), 4) if wins else 0.0,
         "max_mfe_r": round(max(t.mfe_r for t in trades), 3),
@@ -590,12 +672,25 @@ def _fmt(s: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# --- canonical (symbol, timeframe) -> candle-file resolver -----------------
+# THE ONE WAY this harness gets candles: scripts/ops/backtest_data_source.py
+# wraps scripts/research/m20_fleet_exit_sweep.py::resolve_data (the single
+# (symbol, timeframe) -> file mapping; not re-derived here). Loaded by path,
+# not `from ... import`, because scripts/ is not a package -- the same
+# pattern scripts/backtest_trend.py uses. See docs/reference/backtest-data-loading.md.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location(
+    "_backtest_data_source", str(_REPO_ROOT / "scripts" / "ops" / "backtest_data_source.py"))
+_backtest_data_source = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_backtest_data_source)  # noqa: E402
+
+
 def main(argv: List[str]) -> int:
-    global FEE_BPS_ROUNDTRIP
-    p = argparse.ArgumentParser(description="FVG range / mean-reversion backtest (net-of-fee).")
-    p.add_argument("--data", default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"))
+    global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW
+    p = argparse.ArgumentParser(description="FVG range / mean-reversion backtest (net-of-cost: fee+slippage+funding).")
+    p.add_argument("--data", default=None)
     p.add_argument("--timeframe", default="15m")
-    p.add_argument("--symbol", default="BTCUSDT")
+    p.add_argument("--symbol", default=None)
     p.add_argument("--resample", default=None, help="Resample to this rule first (e.g. 15m, 30m).")
     p.add_argument("--start", default=None, help="Walk-forward window start (ISO date, inclusive).")
     p.add_argument("--end", default=None, help="Walk-forward window end (ISO date, inclusive).")
@@ -627,6 +722,14 @@ def main(argv: List[str]) -> int:
                    help="Time-decay backstop: close at market after N bars.")
     p.add_argument("--cooldown-bars", type=int, default=1)
     p.add_argument("--fee-bps-roundtrip", type=float, default=FEE_BPS_ROUNDTRIP)
+    p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
+                   help="Execution-realism: round-trip slippage bps; DEFAULT (unset) = "
+                        "venue-aware (execution_costs.slippage_bps_roundtrip_for, ~5 bps). "
+                        "Pass 0 for the fee-only comparison arm.")
+    p.add_argument("--funding-bps-per-window", type=float, default=None,
+                   help="Execution-realism: perp funding bps/8h; DEFAULT (unset) = "
+                        "VENUE-AWARE (execution_costs.funding_bps_per_window_for): ~1 bps/8h "
+                        "for a crypto perp, 0 for futures/equity/fx. Pass 0 for the fee-only arm.")
     p.add_argument("--min-confidence", type=float, default=0.0)
     p.add_argument("--stale-exit-bars", type=int, default=0,
                    help="M20 stale-stop: close at bar close after N bars if still below --stale-exit-below-r (0=off).")
@@ -635,11 +738,49 @@ def main(argv: List[str]) -> int:
                    help="M20 giveback-stop: arm once peak open profit reaches this many R (0=off).")
     p.add_argument("--giveback-r", type=float, default=1.0,
                    help="Close at bar close once the trade gives back this many R from its peak.")
+    p.add_argument("--tp-cap-pct", type=float, default=0.0,
+                   help="COUNTERFACTUAL venue clamp: place min(unit_target, "
+                        "entry*(1+pct)) long. 0 = off, byte-identical. "
+                        "** NOT LIVE PARITY ON THIS HARNESS. ** fvg_range's "
+                        "live unit sets tp = the opposite boundary and applies "
+                        "NO venue clamp (`fvg` is absent from "
+                        "src/runtime/tp_venue_cap.py::CLAMPING_FAMILIES), so "
+                        "live parity here is `--exit-style far` with NO cap, "
+                        "and this flag departs from it.")
+    p.add_argument("--no-tp", action="store_true",
+                   help="Disable the target entirely (run to stop or timeout) "
+                        "— the target-setting arm. The degenerate-target guard "
+                        "still runs on the unit target, so this changes how a "
+                        "trade ENDS and never which trades exist.")
     p.add_argument("--json", dest="json_out", default=None)
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write per-trade {entry_time, net_r, confidence} JSONL for portfolio_combine.")
     args = p.parse_args(argv[1:])
+    # --- data-source resolution (BL-20260912-FIFTEEN-MORE-HARNESSES...) ---
+    # --data/--symbol default to None so a bare invocation REFUSES rather
+    # than silently reaching the 5,001-row BTC fixture (docs/claude/work/
+    # MANAGER-CHECKLIST.json row E4). The fixture still works -- pass it
+    # explicitly: --data data/backtest_candles.csv.
+    _src = _backtest_data_source.resolve_or_refuse(
+        args.symbol, args.timeframe, args.data,
+        legacy_default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"))
+    if not _src.ok:
+        print(_backtest_data_source.refusal_message(
+            _src, harness="backtest_fvg_range.py",
+            legacy_default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv")),
+            file=sys.stderr)
+        return 2
+    args.data = _src.path
+    args.symbol = args.symbol or "BTCUSDT"
+    print(_src.provenance_line(), file=sys.stderr)
     FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
+    # Mandatory venue-aware cost policy: unset flags resolve to the venue-aware
+    # defaults (funding is perp-only → 0 for non-perps); an explicit value
+    # (incl. 0 for the fee-only comparison arm) always wins.
+    SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW = execution_costs.resolve_cost_policy(
+        args.symbol,
+        slippage_bps_roundtrip=args.slippage_bps_roundtrip,
+        funding_bps_per_window=args.funding_bps_per_window)
     try:
         df = _load_candles(args.data)
         if args.resample:
@@ -661,6 +802,7 @@ def main(argv: List[str]) -> int:
         stale_exit_bars=args.stale_exit_bars,
         stale_exit_below_r=args.stale_exit_below_r,
         giveback_min_mfe_r=args.giveback_min_mfe_r,
+        tp_cap_pct=float(args.tp_cap_pct), no_tp=bool(args.no_tp),
         giveback_r=args.giveback_r,
         emit_path=args.emit_trades)
     print(_fmt(out))

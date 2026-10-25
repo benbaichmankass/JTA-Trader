@@ -1,6 +1,6 @@
 ---
 name: health-review
-description: Autonomous layer-2 review of the LIVE ICT TRADING BOT's TECHNICAL runtime health — pipeline plumbing, DB integrity, data validity, service state, alert delivery, sprint-doc drift. Reviews the cron health-snapshot report and reconstructs the same view from the diag relays since the last review. Drains docs/claude/health-review-backlog.json (system bugs / wiring gaps / minor doc drift). Does NOT score trades and does NOT review model performance — those moved to /performance-review and /ml-review respectively (2026-05-26 split). Use when the operator says "run the health review", "/health-review", or "do the layer-2 system review". NOT a code review or security audit.
+description: Autonomous layer-2 review of the LIVE ICT TRADING BOT's TECHNICAL runtime health — pipeline plumbing, DB integrity, data validity, service state, alert delivery, sprint-doc drift. Reviews the cron health-snapshot report and reconstructs the same view from the diag relays since the last review. Drives its open items to a disposition (system bugs / wiring gaps / minor doc drift) off docs/claude/work/PIPELINE.jsonl + docs/claude/work/MANAGER-CHECKLIST.json. Does NOT score trades and does NOT review model performance — those moved to /performance-review and /ml-review respectively (2026-05-26 split). Use when the operator says "run the health review", "/health-review", or "do the layer-2 system review". NOT a code review or security audit.
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -83,8 +83,8 @@ sessions need to see your `▶️ START` before you touch anything.
     config change) in the window, checked against the canonical ruleset
     (§ "New-work compliance audit"). This is CHANGE-driven and distinct from
     the static weekday rotation (§ "Compliance audit rotation").
-13. **Drain the health-review backlog** — triage every open item, fix
-    what you can (§ "Draining the backlog").
+13. **Drive the open items to a disposition** — every item in the computed
+    open set, fix what you can (§ "Driving the open items").
 14. **Emit the response JSON** + **post a one-line update to the Claude
     channel** (§ "Output" + § "Posting to the Claude channel").
 
@@ -107,11 +107,20 @@ sessions need to see your `▶️ START` before you touch anything.
 The window runs from the last health-review to now. Determine "last
 review" in this order:
 
-1. The newest `reviewed_at` recorded in a prior health-review JSON
-   (look at the Claude channel ping for the last review, or the
-   newest `backlog_drain` action timestamp in
-   `docs/claude/health-review-backlog.json`).
-2. If neither is available, fall back to the last 24h.
+1. The newest `reviewed_at` recorded in a prior health-review JSON —
+   **the newest file under [`comms/reviews/health/`](../../../comms/reviews/health/)**,
+   which is where this skill's own output lands. That directory is the
+   anchor because it is written by this review and by nothing else.
+2. Failing that, the newest health-review entry in the Claude channel ping.
+3. If neither is available, fall back to the last 24h.
+
+> ⚠️ **This anchor was `docs/claude/health-review-backlog.json` until
+> 2026-09-22 and that file does not exist** — the 2026-09-21 operating reset
+> archived it. Anchoring a review window on an archived file does not fail
+> loudly; it silently yields no anchor, and the 2026-09-22 review had to open
+> its window at the reset and say so. `git log` of the archive is history, not
+> an anchor: it stopped moving when the file was archived, so it would pin the
+> window open forever.
 
 Cap practical pulls at the diag limits (audit `limit=600` ≈ 6h at full
 cadence). If the gap exceeds one pull, page back with
@@ -263,6 +272,26 @@ Status grades: `ok` (nothing to flag) / `watch` (bounded anomaly) /
 Overall: `healthy` (all ok) / `caution` (≥1 watch, no concern) /
 `investigate` (any concern).
 
+## Research pipeline health (MANDATORY — 2026-10-16)
+
+The research pipeline is graded like the trading pipeline (operator, 2026-10-16: *"It's a pipeline like the other
+pipelines and needs the same infra setup as the trading pipeline."*). Grade one dimension `research_pipeline` ∈
+`ok | watch | concern`:
+
+1. Read every `comms/research/health/<date>.json` since the last review (`latest`, `runs`, `alert_state`; SLOs in
+   `scripts/research/research_slo.yaml`). No file for a day, or a `runs` gap > 4 h, means the monitor itself was
+   down — that is a `concern` and a finding on its own.
+2. For **every** SLO that was `breach` or `could_not_look` in the window: name the value, the threshold, how long it
+   was red, and its disposition — fixed (commit), a checklist row / pipeline item that moves it (with a near
+   `due_when`), or a reasoned threshold change in a PR. "Noted" is not a disposition (manager § "Research SLO
+   escalation").
+3. Check the alert actually reached the operator: each `change` / `reminder` run should carry
+   `delivered.telegram: true`; a false is an alert-delivery finding, same class as an undelivered trade ping.
+4. Positive control before reporting "all ok": `python3 scripts/research/research_slo.py --self-test`.
+
+`ok` = no red SLO in the window. `watch` = red SLOs, each with a dispatched lane. `concern` = a red SLO with no
+disposition, a missing status day, or an undelivered alert.
+
 ## Trainer service touch
 
 Grade exactly one dimension: `trainer_service` ∈
@@ -393,7 +422,7 @@ For each artifact in the day's section:
    - **Non-compliant + the review session is shipping a fix for the
      containing system** → fix in the same PR.
    - **Non-compliant + non-blocking** → log to
-     `docs/claude/health-review-backlog.json` with the artifact path,
+     `docs/claude/work/PIPELINE.jsonl` (via `scripts/ops/pipeline.py`) with the artifact path,
      the specific rule it violates, the bright-line phrase or pattern
      observed, and a one-line suggested fix.
 
@@ -417,6 +446,27 @@ The audit findings appear in `compliance_audit` in the response JSON:
 
 This rotation does NOT touch artifacts outside the day's section — the
 weekly cycle is the coverage guarantee, not a per-session full sweep.
+
+**Standing measurement on EVERY rotation day (operator directive 2026-10-06
+— the TP doctrine, `docs/ARCHITECTURE-CANONICAL.md` § "TP doctrine"):** run
+
+```bash
+python3 scripts/ci/check_tp_doctrine.py --strict --json
+```
+
+and put its `summary.by_class` block into `compliance_audit` as a finding
+named `tp-doctrine` (`rule: "ARCHITECTURE-CANONICAL § TP doctrine"`), with the
+per-class `entry_tp` / `tp_revision` FAIL counts beside their denominators.
+`--strict` exits 1 while ANY baselined debt remains — that is the audit shape,
+because the audit asks whether the debt SHRANK, not whether it grew (the PR
+guard asks the latter). Three dispositions, by class, real-money and prop
+first: a routing that became compliant → remove its `BASELINE_2026_10_06` line
+in the same PR (the guard fails on a stale line); a routing still failing →
+confirm it is carried by `PI-20261006-5FUGHVX8-0001` or a successor pipeline
+row / `research/queue/` unit; a routing that is NEW and failing → the guard
+already failed its PR, so the finding is how it got in. Exit 2 is *could not
+look* and is reported as such, never as clean.
+
 
 ## New-work compliance audit (MANDATORY — 2026-07-19)
 
@@ -483,7 +533,7 @@ every review; they are not substitutes.
   gate, convert the `*_ENABLED` to permissive, fix the stale doc). If it's a
   Tier-1 doc/backlog fix you can make, make it.
 - **Non-compliant but low-risk / already-past** → log to
-  `docs/claude/health-review-backlog.json` with the PR, the rule, and a
+  `docs/claude/work/PIPELINE.jsonl` (via `scripts/ops/pipeline.py`) with the PR, the rule, and a
   one-line fix, and note it in the output.
 
 Record the result in `new_work_compliance` in the response JSON: the window's
@@ -511,7 +561,7 @@ Every health-review (and the master /system-review) MUST:
    `strategy_name='orphan_adopt'`, or `status='orphaned'`) — query via the Data
    Explorer (`/api/bot/db/table/trades?filter_col=setup_type&filter_op=eq&filter_val=adopted_orphan`).
 2. **For each orphan not already tracked**, append a `BL-…` item to
-   `docs/claude/health-review-backlog.json` (origin, account/symbol, trade_id,
+   `docs/claude/work/PIPELINE.jsonl` via `scripts/ops/pipeline.py` (origin, account/symbol, trade_id,
    the reconcile target if recoverable) so it is durably tracked — and **drive it
    to resolution**: reconcile to its real trade/order package, or, only after
    exhausting that, mark it explicitly `unreconciled` (never leave it resting as
@@ -546,13 +596,28 @@ with the `/security-review` skill (route there if a signal points at code).
   vector). Cross-check against the session's own known changes.
 - **Actions anomalies** — workflow runs triggered by an unexpected actor, or
   a spike/burst that doesn't match Claude-session or scheduled activity.
-- **VM host signals (via the diag relay)** — `journalctl` for
-  `sshd`/auth (failed-then-succeeded logins, new sessions/users), unexpected
+- **VM host signals (via the diag relay)** — `journalctl?unit=ssh.service`
+  for sshd/auth (failed-then-succeeded logins, new sessions/users), unexpected
   new systemd units / timers / cron, unexpected listening ports or processes,
   and host-agent tampering of the `/dev/null` clobber class. The 2026-06-28
   intrusion audit (`BL-20260628-SEC-HARDENING-FOLLOWUPS`) and the `/dev/null`
   investigation are the standing precedents — reconcile any new signal against
   them before calling it novel.
+  ⚠️ The unit is **`ssh.service`**, not `sshd.service` — measured 2026-09-22
+  on ict-bot-arm, `sshd.service` is a systemd *alias* and `journalctl -u
+  sshd.service` returns **`-- No entries --`**, so that spelling would report
+  the auth log CLEAN having read nothing. Until 2026-09-22 (E27) no spelling
+  worked at all: the unit was absent from `_CANONICAL_UNITS` and every attempt
+  returned HTTP 400 `unknown_unit`, so this source was unsatisfiable — if the
+  probe 400s, the sweep is `could_not_look`, never `clean`.
+  ⚠️ **One pull covers ~1.5 h, not the window** (the relay returns the last
+  2000 lines; the trainer logs ~400 accepts/h — measured 2026-10-24). Sweep the
+  whole window with `python3 scripts/ops/ssh_auth_sweep.py --since <ISO> --until
+  <ISO> --trainer-ip <trainer>` (pages in 20-min windows, splits full ones, prints
+  only non-trainer accepts with a hashed source class + key last4, exits 2 if any
+  window was unreadable = `could_not_look`). A Health Snapshot run (every ~6 h)
+  legitimately produces 2 non-trainer accepts with the shared deploy key; match
+  each by time to a workflow run (SSH-LOGIN-ATTRIB-1024).
 
 **What to do:**
 
@@ -582,9 +647,10 @@ for models and `/performance-review` for strategies; see Out of scope).
 **Check each soak's gate state for the window:**
 
 - **Shadow models** — `/api/bot/shadow/stats` (+ `/drift`): days-in-shadow,
-  prediction volume, the "wired" check, drift verdict. A model that has
-  accrued its soak volume + time with stable drift is a **promotion decision
-  due**; one drifting or degenerate (e.g. all-zero scores) is a **demotion /
+  prediction volume, the "wired" check, drift verdict. A model whose serving
+  mechanics are confirmed (wired, labels accruing, stable drift) and whose edge
+  is proven offline is a **promotion decision due** — calendar time is never
+  the gate (CLAUDE-RULES-CANONICAL § "Promotion evidence"); one drifting or degenerate (e.g. all-zero scores) is a **demotion /
   hold decision due**.
 - **Strategies** — `/api/bot/strategies/{name}/review` M7 packets: any packet
   whose action badge is `PROMOTE` / `DEMOTE_SHADOW` / `KILL` is a decision
@@ -600,23 +666,82 @@ for models and `/performance-review` for strategies; see Out of scope).
 reviews (a stalled decision is exactly what this section exists to catch).
 **If nothing has reached a gate, state "no soak decisions due."**
 
-## Draining the backlog — a HARD COMPLETION GATE (not a sample)
+## Driving the open items — a HARD COMPLETION GATE (not a sample)
 
-**A health-review is NOT complete until every open item in
-`docs/claude/health-review-backlog.json` has been triaged THIS run.**
-Triaging "the recent few", "the ones I touched", or a sample is a
-**review failure** — the backlog IS the standing open-task list, so a
-review that leaves open items unlooked-at has not done its core job.
-(`/performance-review` and `/ml-review` own their own backlogs — do not
-touch those here; but each of the three enforces this same gate on its
-own list.)
+> ### ⚠️ REPOINTED 2026-09-22 (checklist row E23). READ THIS BEFORE THE GATE.
+>
+> **This section named `docs/claude/health-review-backlog.json` in five places
+> and that file does not exist** — the 2026-09-21 operating reset archived it
+> under `docs/archive/2026-09-21-operating-reset/`. So from the reset until this
+> repoint, **every health-review was either incomplete by its own contract or
+> quietly ignoring it**, and an output contract demanding
+> `backlog_coverage.count_untriaged == 0` over an absent file was unsatisfiable
+> by construction. A binding skill at instruction-hierarchy level 5 instructing
+> something that cannot be done is the same defect class the canonical rules
+> already record at *"THIS RULE NAMED FIVE OTHER WORDS UNTIL 2026-09-12 AND NOT
+> ONE OF THEM WAS A LEGAL `status`"*.
+>
+> **The gate is KEPT, not removed** — a review that leaves open items
+> unlooked-at has still not done its job, and that reasoning did not expire with
+> the file. What changed is only WHERE the open set lives.
+>
+> ⚠️ **DO NOT RESURRECT THE ARCHIVED BACKLOG.** `CLAUDE.md` says so in terms,
+> and the pipeline is its deliberate replacement. The archived rows are ALSO not
+> imported (that is row `A8`, and most of them should be killed explicitly
+> rather than carried) — so the denominator below is the LIVE open set, not the
+> historical one, and saying that is part of satisfying the gate.
+
+**A health-review is NOT complete until every item in THIS REVIEW'S OPEN SET has
+been driven to a disposition THIS run.** Triaging "the recent few", "the ones I
+touched", or a sample is a **review failure**.
+
+**The open set is the union of two live surfaces, and it is COMPUTED, not
+declared:**
+
+| surface | what to take from it | how |
+|---|---|---|
+| [`docs/claude/work/PIPELINE.jsonl`](../../../docs/claude/work/PIPELINE.jsonl) | the **gate set** — due items that are unrouted, whose owner row has closed, or high-severity (§ "The narrowed gate" below) | `python3 scripts/ops/pipeline.py --gate` (and `--stats` for the due total) |
+| [`docs/claude/work/MANAGER-CHECKLIST.json`](../../../docs/claude/work/MANAGER-CHECKLIST.json) | every row this review OWNS — `state` not in `done`/`dropped` **and** whose subject is technical/pipeline/data health | read the file; a row owned by another lane is context, not yours |
+
+⚠️ **The narrowed gate (operator, 2026-10-24, "Narrow the gate (Recommended)"; row
+`HEALTH-GATE-NARROW`).** The per-item walk covers ONLY the gate set, computed by
+`pipeline.gate_set()` / `pipeline.py --gate`: (1) **unrouted** due items (state not
+`routed`, or an owner that resolves to no checklist row, research unit or PR);
+(2) due items whose **owner checklist row has closed** (`done`/`dropped`);
+(3) **high-severity** due items. Owner-routed items whose owner is live are the
+owner's job; the `UNPROVEN_OVERDUE` sweep (`scripts/ops/blocker_watch.py`) tracks
+them. **Why:** due went 110 → 256 → 369 over three reviews, which walked 5/110 and
+0/256; 349 of the 369 route to a live owner and 158 of those rows are
+`landed_unproven` — a gate counting every due item could not be met, and bulk
+re-dating is the failure BACKLOG-BURNDOWN-2 already showed. **The denominator is
+never silent:** `--gate` prints `due`, `gate`, the per-class counts and
+`excluded` by reason; record all of them in `backlog_coverage`. No other
+threshold changes.
+
+⚠️ **`due` is COMPUTED and that is the point** — an item becomes due because the
+clock or its condition says so, whether or not anybody chose to look. Do not
+hand-pick the set.
+
+⚠️ **A pipeline item is appended with `scripts/ops/pipeline.py`, never by hand.**
+It refuses a row without `due_when` and `origin.rerun`, requires an explicit
+`intent=`, and the file is **append-only JSONL, never a JSON array** — a shared
+array is what produced the archived registers' merge conflicts. If a concurrent
+lane has touched it, resolve as a **counted union** with record counts printed
+and asserted, never `--ours`/`--theirs`.
+
+(`/performance-review` and `/ml-review` enforce this same gate. ⚠️ **As measured
+2026-09-22 their own named files — `performance-review-backlog.json`,
+`research-review-backlog.json`, `ml-review-backlog.json` — are ALSO absent, so
+their gates are broken in exactly this way and are NOT fixed by this edit.** See
+§ "The sibling skills" below.)
 
 **The procedure — enumerate the FULL open set, then walk it 100%:**
 
-1. **Count first.** Load the file, filter to every item whose `status`
-   is not a terminal-resolved value (`resolved`/`closed`/`done`/`fixed`/
-   `wont_fix`/`invalid`/`superseded`). Record `open_at_start`. This is
-   your denominator — you must touch every one.
+1. **Count first.** Compute the open set from both surfaces above (pipeline =
+   the gate set), dedupe by id, and record `open_at_start`; record `due_total` and
+   `excluded` from `--gate` beside it. This is your denominator — you must touch
+   every one, and you **state the population**: which surfaces, and what the
+   count was on each.
 2. **For EACH open item** (all of them, oldest to newest):
    - **Re-validate against current live state.** Does its trigger still
      apply? Cross-check it against the diag pulls / DB / services you
@@ -641,18 +766,56 @@ own list.)
        change, an operator decision, a soak to mature, or future work).
        Keep it, but **add an update** with this run's re-validation
        result + the current blocker, so it never sits stale-and-unlooked.
-3. **Write it back.** Edit the backlog file: statuses updated, notes/
-   updates appended. Record EVERY item's disposition in the response's
-   `backlog_drain[]` (one entry per open item — the array length equals
-   `open_at_start`).
+3. **Write it back, to the surface the item came from.** A pipeline item is
+   updated through `scripts/ops/pipeline.py` (a close needs a
+   `terminal_reason`; `killed` is a first-class outcome and closing a dead row
+   WITH a stated reason is worth more than carrying it). A checklist row is
+   updated in place — its `state` and its `note`. Record EVERY item's
+   disposition in the response's `backlog_drain[]` (one entry per open item —
+   the array length equals `open_at_start`).
+
+   ⚠️ **Touch only rows this review owns.** Other lanes are live in the same
+   files concurrently.
 
 **Coverage assertion (the gate).** Emit
 `backlog_coverage: {open_at_start, triaged, resolved, fixed_now,
 closed_stale, kept_open, count_untriaged}` in the response.
 **`count_untriaged` MUST be 0** and `triaged` MUST equal `open_at_start`.
 If they don't, the review is INCOMPLETE — do not post the completion
-ping or call the review done; finish the drain first. The Claude-channel
-ping MUST cite `X/Y backlog items triaged, Z resolved`.
+ping or call the review done; finish the drive first. The Claude-channel
+ping MUST cite `X/Y items triaged, Z resolved`.
+
+⚠️ **`backlog_coverage` MUST also name the surfaces its denominator came
+from** (`sources: ["pipeline", "checklist"]` plus the per-surface counts).
+`open_at_start: 0` over an unstated population is the collapsed state this
+whole section exists to stop: *"there was nothing open"* and *"I could not
+read the open set"* are opposite findings. If a surface could not be read,
+say `could_not_look` for that surface and DO NOT silently shrink the
+denominator — a source that could not be swept does not drop out of it.
+
+## The sibling skills — the same gate, the same break, NOT fixed here
+
+**MEASURED 2026-09-22** (`ls docs/claude/*-review-backlog.json`): **all four
+named backlog files are absent** — `health-review-backlog.json`,
+`performance-review-backlog.json`, `research-review-backlog.json` and
+`ml-review-backlog.json`. So this is not a health-review problem that happened
+to be found first; it is one break with four instances.
+
+| skill | file(s) it names | exists? | its gate |
+|---|---|---|---|
+| `/health-review` | `health-review-backlog.json` | **no** | **repointed above** |
+| `/performance-review` | `performance-review-backlog.json`, `research-review-backlog.json` | **no**, **no** | **still broken** — its own § "Draining the backlog" demands the same `count_untriaged == 0` |
+| `/ml-review` | `ml-review-backlog.json` (archived) | **no** | **still broken** — same |
+
+> **Update 2026-09-29 (FIX-SA-09):** the live instruction lines in `/ml-review`, `sprint-format` and `doc-freshness` now point at `docs/claude/work/PIPELINE.jsonl`; the `retired-backlog-paths` guard fails any new live reference under `.claude/`.
+
+Both siblings carry the identical *"HARD COMPLETION GATE (not a sample)"*
+heading and the identical `backlog_coverage.count_untriaged` output contract
+over a file that is not there. **Recorded rather than fixed**, deliberately:
+each is its own skill with its own output template and its own owned
+surfaces, and repointing all three in one pass would be one PR to three
+concerns. The fix for each is mechanically this same edit. Tracked on
+checklist row **E23**.
 
 ## Posting to the Claude channel
 
@@ -705,9 +868,10 @@ shape (post-2026-05-26 split):
   explicit clean `note` is the required stated-negative.
 - `sprint_doc_review[]`.
 - `backlog_drain[]` — one entry per OPEN item (array length ==
-  `open_at_start`); the full-triage record (§ "Draining the backlog").
+  `open_at_start`); the full-triage record (§ "Driving the open items").
 - `backlog_coverage` — `{open_at_start, triaged, resolved, fixed_now,
-  closed_stale, kept_open, count_untriaged}`. The completion gate:
+  closed_stale, kept_open, count_untriaged, due_total, excluded}` (`due_total` and
+  `excluded` come from `pipeline.py --gate`; `open_at_start` counts the gate set). The completion gate:
   `count_untriaged` MUST be 0. A review with `count_untriaged > 0` is
   incomplete and must not be reported as done.
 - `anomalies[]` — free-form notable items.
@@ -724,7 +888,11 @@ the operator can verify fast.
 ## What you DO write (and what you don't)
 
 **Write:**
-- Edit `docs/claude/health-review-backlog.json` to drain it.
+- Append to / update `docs/claude/work/PIPELINE.jsonl` **through
+  `scripts/ops/pipeline.py`** (never by hand — it is append-only JSONL and the
+  script enforces `due_when`, `origin.rerun` and an explicit `intent=`), and
+  update the `state`/`note` of the `docs/claude/work/MANAGER-CHECKLIST.json`
+  rows this review owns.
 - Fix Tier-1 doc contradictions surfaced by the sprint-doc / backlog
   pass.
 - Append the Claude-channel ping (via `send-ping` system-action, or
@@ -736,8 +904,7 @@ the operator can verify fast.
 - Touch `src/`, `config/`, or any live-path file. Reviews don't trade.
 - Append to `comms/claude_strategy_scores.jsonl` (that belongs to
   `/performance-review` now).
-- Modify `docs/claude/performance-review-backlog.json` or
-  `docs/claude/ml-review-backlog.json` (those belong to their
+- Close the performance or ML rows in `docs/claude/work/PIPELINE.jsonl` (those belong to their
   respective skills).
 - Modify `comms/follow_ups.json` (deferred until the comms cleanup
   session).

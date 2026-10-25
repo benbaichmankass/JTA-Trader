@@ -27,11 +27,24 @@ from src.runtime.order_monitor import (
     _recover_orphan_order_package,
 )
 from src.units.db.database import Database
+from datetime import datetime, timedelta, timezone
+
 from tests.fixtures.real_schema_db import (
-    insert_order_package as _insert_package,
+    insert_order_package as _insert_package_raw,
     insert_trade as _insert_trade,
     make_canonical_db,
 )
+
+
+def _fresh(days_old: float = 1.0) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days_old)).isoformat()
+
+
+def _insert_package(path, **fields):
+    """The shared fixture defaults ``created_at`` to 2026-05-08, which the
+    orphan matcher's age bound (PROV-IB) now correctly refuses; default fresh."""
+    fields.setdefault("created_at", _fresh())
+    return _insert_package_raw(path, **fields)
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +390,38 @@ def test_a_strategy_with_no_history_is_still_attributed(tmp_path):
     )
     assert got.refused is False
     assert got.package is not None
+
+
+# ---------------------------------------------------------------------------
+# PROV-IB: a price match alone must not reattach a months-old package.
+# ---------------------------------------------------------------------------
+
+def test_a_stale_package_is_refused_not_attributed_and_not_flattened(tmp_path):
+    """ib_paper 5830/5852/5853/5856 (MES) carried a package 106 days old whose
+    entry 7596.75 was within 2% of the venue entry 7583.88. Size-ungated callers
+    took it. It must now be a REFUSAL (candidate exists -> never flattened)."""
+    db_path = make_canonical_db(tmp_path / "j.db")
+    _insert_package(
+        db_path, order_package_id="pkg-june", strategy_name="squeeze_breakout_4h",
+        symbol="MES", direction="long", entry=7596.75, sl=7647.2, tp=7800.0,
+        created_at=_fresh(106),
+    )
+    got = _recover_orphan_attribution(
+        db=Database(str(db_path)), symbol="MES", direction="long", entry_price=7583.878,
+    )
+    assert got.package is None
+    assert got.refused is True
+    assert "106" in got.detail
+
+
+def test_a_package_inside_the_age_bound_still_attributes(tmp_path):
+    db_path = make_canonical_db(tmp_path / "j.db")
+    _insert_package(
+        db_path, order_package_id="pkg-new", strategy_name="squeeze_breakout_4h",
+        symbol="MES", direction="long", entry=7596.75, sl=7647.2, tp=7800.0,
+        created_at=_fresh(6),
+    )
+    got = _recover_orphan_attribution(
+        db=Database(str(db_path)), symbol="MES", direction="long", entry_price=7583.878,
+    )
+    assert got.package is not None and got.refused is False

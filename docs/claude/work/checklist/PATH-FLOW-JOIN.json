@@ -1,0 +1,40 @@
+{
+  "id": "PATH-FLOW-JOIN",
+  "title": "Point-in-time flow join (funding, taker imbalance, OI) onto harness per-bar path rows for the crypto money legs",
+  "phase": "research-infra",
+  "state": "landed_unproven",
+  "owner": "PATH-FLOW-JOIN lane",
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 12,
+  "spend_usd": 2.45,
+  "tier": 1,
+  "prs": [
+    19975
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-24 lane ATM-AI-MERGE] WHY: AI active trade management rung A2 (blocked/RQ-20261024-09a6-02) asks whether flow adds per-bar exit information beyond price state; every failed exit head (ML-S2, d6e7) saw price features only. Funding/OI datasets exist for BTC 1h only (Programme 02 Q5). BUILD: join onto --emit-paths rows of trend_donchian_eth_4h/xrp_4h, xrp/ada_pullback_2h, trend_donchian_eth/sol_prop: (1) taker imbalance 2*taker_buy_base/volume-1 per bar (src/research/intrabar_features.py definition) where the candle feed carries taker_buy_base (Binance Vision USDT-M klines carry it; INFERRED, verify on the harness CSV); (2) last SETTLED funding rate at or before the bar close from a public funding-history backfill (arbitrary range, so no accrual wait); (3) OI change where a point-in-time OI history exists (coverage reported per symbol, never imputed 0). Tests: a forward-shifted flow column is refused; coverage report per leg. Tier 1 research tooling. CLOSES WHEN: 09a6-02 leaves blocked/ with run.command set. Consumer: 09a6-02; later the bracket advisor state (BRACKET-ADVISOR-SHADOW). [2026-10-25 00:09Z manager 01H99zMu] Dispatched as a FRESH Sonnet lane with a $12 ceiling. The spec is all on disk: this note plus blocked/RQ-20261024-09a6-02. If a funding/OI host is unreachable, the lane lands the join on the data it can reach and names the blocked input. [2026-10-25 lane PATH-FLOW-JOIN] BUILT scripts/research/path_flow_join.py + tests/test_path_flow_join.py; 09a6-02 promoted to research/queue/ (decision_rule/power byte-identical, would_dispatch confirmed). VERIFIED: harness candle CSV carries taker_buy_base (Binance Vision); Vision serves funding + OI from this box (fapi/Bybit blocked: 451/403). Coverage (states): taker 100%, funding 99.3-99.8%, OI 74-85% (history from 2021-12-01 only). [mgr 2026-10-25] final spend $2.45 (archived) vs $12 ceiling.",
+  "priority_rank": 4,
+  "updated_at": "2026-10-25T03:29:44Z",
+  "updated_by": "session_016v5FrVaSAmNoz8u6ct9HqC",
+  "roadmap": [
+    "L-ATM",
+    "M23"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: rung A2 instrument exists (path_flow_join.py: point-in-time taker/funding/OI join onto harness paths with a look-ahead guard and coverage report, plus the unit grader); RQ-20261024-09a6-02 is queued with run.command, not graded. OI history starts 2021-12-01 so the pre-registered 80% coverage clause drops 4 of 6 legs",
+    "arch": "none: offline research script + tests + queue unit; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "the first graded run of RQ-20261024-09a6-02 lands a verdict (research/results/RQ-20261024-09a6-02/). Local pre-run (2026-10-25, same command): INDETERMINATE by the rule as registered - OI is on 74-85% of states (Binance Vision metrics start 2021-12-01), 4 of 6 legs dropped, 471 trades remain (<600). Ungraded ex-OI sensitivity, 6 legs, 2558 OOS trades, reference R1: gain -0.00087 nats, CI [-0.00204, 0.00035], 2/6 folds positive, slope 0.927. Whether to amend the OI clause is the manager decision.",
+    "how_to_check": "ls research/results/RQ-20261024-09a6-02/ ; jq .verdict,.note,.measurement.legs_dropped_low_coverage,.measurement.ex_oi_sensitivity research/results/RQ-20261024-09a6-02/*/verdict.json",
+    "due_by": "2026-11-02"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01R3SJDe4obWZ5nn3Cw7JTHA",
+      "archived_at": "2026-10-25T03:29:44Z"
+    }
+  ],
+  "_seq": 634
+}

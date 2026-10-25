@@ -110,7 +110,10 @@ def test_yaml_entries_pin_validated_params():
     assert spy["symbols"] == ["SPY"]
     assert spy["signal_prefixes"] == ["spy_pullback"]
     assert (spy["trend_lookback"], spy["pullback_lookback"], spy["pullback_frac"]) == (60, 12, 0.618)
-    assert (spy["atr_period"], spy["atr_stop_mult"], spy["trail_mult"]) == (14, 2.5, 5.0)
+    # atr_stop_mult 2.5 -> 1.5: M20 e35 bracket-geometry re-check 2026-08-31,
+    # cell sm1.5 (path_b_wf_pass, wf 5/6, d_net_r +28.1569); PR #14332
+    # (supersedes the round-2b rollout's pin).
+    assert (spy["atr_period"], spy["atr_stop_mult"], spy["trail_mult"]) == (14, 1.5, 5.0)
     assert spy["timeframe"] == "1h"
     assert spy["min_confidence"] == 0.0 and spy["shadow_model_ids"] == []
     assert spy["model"] is None
@@ -172,8 +175,11 @@ def test_instrument_profiles_route_to_alpaca():
 
 def test_account_routing_and_descriptions():
     acct = yaml.safe_load(open("config/accounts.yaml"))["accounts"]["alpaca_paper"]
+    # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (#16548 grant) removed all four legs
+    # from alpaca_paper: complete soaks whose Stage-0 record fails. The builders
+    # stay wired; a re-add is a MD-PROMOTE-S0-S1 act and updates this test.
     for name in _BUILDERS:
-        assert name in acct["strategies"]
+        assert name not in acct["strategies"]
     assert "USO" in acct["symbols"]
     # SPY/QQQ/TLT already routed; the 1h pullback cells reuse them.
     for sym in ("SPY", "QQQ", "TLT"):

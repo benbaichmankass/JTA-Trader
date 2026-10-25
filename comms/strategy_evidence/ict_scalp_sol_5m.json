@@ -1,25 +1,88 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "strategy": "ict_scalp_sol_5m",
   "symbol": "SOLUSDT",
   "timeframe": "5m",
-  "config_fingerprint": "sha256:cf51806c05abf60ddbda1c71ec06ba67",
+  "config_fingerprint": "sha256:afd756a7a935d995e7c018fe3dd52e65",
   "basis": "harness_timefolds",
-  "coverage_state": "no_harness",
-  "fidelity": null,
-  "omitted_levers": null,
-  "net_r_oos": null,
-  "expectancy_r_oos": null,
-  "n_trades_oos": null,
-  "folds": null,
-  "fold_detail": null,
-  "folds_positive": null,
+  "coverage_state": "measured",
+  "fidelity": "faithful",
+  "omitted_levers": [],
+  "net_r_oos": -22.7181,
+  "expectancy_r_oos": -0.1196,
+  "n_trades_oos": 190,
+  "folds": 4,
+  "fold_detail": [
+    {
+      "fold": 1,
+      "trades": 47,
+      "net_r": -7.5376,
+      "expectancy_r": -0.1604,
+      "start": "2025-10-02 15:10:00+00:00",
+      "end": "2025-11-30 02:40:00+00:00"
+    },
+    {
+      "fold": 2,
+      "trades": 47,
+      "net_r": -3.5131,
+      "expectancy_r": -0.0747,
+      "start": "2025-12-02 03:40:00+00:00",
+      "end": "2026-02-22 08:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 47,
+      "net_r": -4.3251,
+      "expectancy_r": -0.092,
+      "start": "2026-02-22 23:10:00+00:00",
+      "end": "2026-06-11 17:30:00+00:00"
+    },
+    {
+      "fold": 4,
+      "trades": 49,
+      "net_r": -7.3423,
+      "expectancy_r": -0.1498,
+      "start": "2026-06-18 13:35:00+00:00",
+      "end": "2026-10-01 10:00:00+00:00"
+    }
+  ],
+  "folds_positive": 0,
   "window_days": 365,
-  "fee_bps_roundtrip": null,
+  "fee_bps_roundtrip": 7.5,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 190,
+    "max_drawdown_r": 24.865,
+    "max_drawdown_at_trade": 188,
+    "final_equity_r": -22.7181,
+    "max_equity_r": 1.9123,
+    "worst_trade_r": -1.4164,
+    "best_trade_r": 1.4454,
+    "worst_day_r": -2.3458,
+    "worst_day_date": "2025-11-30",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 7.5,
+    "slippage": 3.0,
+    "funding": 1.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_sol_5m__bt.json"
+  },
+  "net_r_oos_fee_only": -14.6778,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "fail"
+  },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-13T03:24:20.048285+00:00",
+  "generated_at": "2026-10-02T17:14:51.879024+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": null,
-  "error": "regime_debt_matrix.classify() routes nothing for this leg. Its three branches (donchian / trend_lookback|pullback_frac / kc_mult+bb_period) do not cover this config. A harness may still EXIST for the family -- backtest_ict_scalp.py and backtest_fvg_range.py both do -- so this is a missing classifier branch plus a lever map, not absent infrastructure.",
-  "harness": null
+  "source_run": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_sol_5m__trades.jsonl",
+  "error": null,
+  "harness": "ict_scalp",
+  "venue_bracket_arm": null
 }

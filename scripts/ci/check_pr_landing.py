@@ -153,6 +153,34 @@ created the record. This sentence travels with the grant, in the note R15 prints
 on every admission, so a reader of a landed Tier-2 PR meets it rather than
 having to find it here.
 
+AND ONE TIER-3 SHAPE LANDS ON A MANDATE (R16, 2026-09-25)
+----------------------------------------------------------
+Operator decision, 2026-09-25 ("Build auto-land route"), against pipeline item
+`PI-20260925-WCUZRAA3-0002`: B3 (#12963) made the Stage-2 DEMOTION decision
+automatic, but nothing could LAND it, so the ladder was *"decided + proposed
+automatically, landed by hand"*.
+
+A third `landing:` value — `"mandate"` — routes a PR to
+`scripts/ci/check_mandate_autoland.py`, which admits EXACTLY ONE diff shape:
+removals of legs from `strategies:` rosters in `config/accounts.yaml`, each
+carrying a committed mirror-window record and a firing record naming a GRANTED
+`derisk_only` mandate, the live account and its mirror cut together, authored by
+`.github/workflows/r4-demotion-gate.yml` and by no session. Read that module's
+docstring for the eight clauses and for what they do NOT establish.
+
+⚠️ **R4 IS UNCHANGED AND IS NOT WEAKENED.** `landing: "self"` at tier 3 still
+fails R4 outright, and no record, marker or mandate buys one. R16 is a
+DIFFERENT route whose separation property is stronger than R15's: the
+authorization is `config/mandates.yaml`, which the operator grants and which the
+diff MAY NOT CONTAIN; the decision is re-derived by `mandate_resolver` over the
+MERGE-BASE configs; and the edit may only ever REMOVE exposure. A wrong verdict
+on this route takes a leg off a real-money book. A wrong verdict on the route
+R4 bars puts one on.
+
+⚠️ **AND IT IS BUILT, NOT ARMED.** A8 of that module requires `autoland: true`
+on the granted mandate entry, and no entry carries it. Arming is the operator's
+act — the same asymmetry that makes granting a mandate theirs.
+
 AND THE ROUTE MAY NOT LAND A CHANGE TO ITSELF (R12)
 ---------------------------------------------------
 A PR that edits the landing machinery is Tier-1 by the canonical doc's own list
@@ -219,6 +247,9 @@ STATES, NEVER COLLAPSED
   ``declared_self_land``          — Tier-1, armed, diff inside the Tier-1
                                     surface. Lands itself on green.
   ``declared_hold``               — a typed, verified reason to stay held.
+  ``declared_mandate_autoland``   — Tier-3, the one mandate-authorized shape,
+                                    every clause of `check_mandate_autoland`
+                                    verified. Lands itself on green.
   ``declared_needs_approval``     — Tier-2/3, correctly not armed.
 
 Run standalone with ``--base origin/main``, or ``--self-test`` to plant each
@@ -239,6 +270,7 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import board_pointer  # noqa: E402
+import check_mandate_autoland as autoland  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -284,12 +316,227 @@ TIER1_SURFACE = [
     "scripts/ops/**",
     "scripts/research/**",
     "scripts/reports/**",
+    # MI-242, operator-approved 2026-09-10 (DR-20260908-SHOULD-SCRIPTS-BACKTEST-STAR-BE-IN-THE-TIER1-SURFACE).
+    # The canonical Tier-1 examples in docs/CLAUDE-RULES-CANONICAL.md § Permission
+    # Tiers explicitly name "backtest tooling that does not alter live runtime
+    # behavior", while this allowlist covered every scripts/** subdirectory
+    # EXCEPT the top-level research harnesses themselves. ⚠️ WIDENED ONLY TO
+    # THIS ONE GLOB, DELIBERATELY -- the operator's approval was for this
+    # specific contradiction, not a licence to admit `scripts/*.py` generally;
+    # every other loose script at `scripts/` top level stays outside Tier-1.
+    "scripts/backtest_*.py",
+    # ⚠️ ADDED 2026-09-24 (checklist row E57, operator-directed the same day:
+    # "this is a serious gap that needs to be fully resolved - not only
+    # rerunning tests whose results were lost, but ensuring we have a mechanism
+    # in place to prevent research from being lost"). Until this entry every
+    # automated research landing PR -- `.github/actions/research-result` writing
+    # `research/results/**`, and `replay-pregate` writing
+    # `runtime_logs/replay_pregate/**` -- was refused by R5 and sat open
+    # forever: MEASURED 2026-09-24, open replay-pregate PRs back to #12228
+    # (2026-09-13). Both are generated research OUTPUT: records and reports,
+    # read by nothing on the live VM's trading path. Widened to exactly these
+    # two stores, not to `research/**` or `runtime_logs/**`.
+    # `research/queue/**` is deliberately NOT here -- see STAMP_ONLY_SURFACE.
+    "research/results/**",
+    "runtime_logs/replay_pregate/**",
+    # PI-20260922-E5-RESEARCH-QUEUE-IS-OUTSIDE-TIER1-SURFACE-SO-NO-LANE-CAN-SELF-LAND-A-QUEUE-FLIP,
+    # operator-approved 2026-09-28 (ADMIN lane triage popup, verbatim answer
+    # "Apply my recommendations (Recommended)"), same precedent shape as
+    # MI-242 above. E5 hit R5 refusing a Tier-1 `blocked`->`queued` status
+    # flip on a research unit because TIER1_SURFACE covered
+    # scripts/research/** and research/results/** but not the queue units
+    # themselves.
+    #
+    # ⚠️ MANAGER REVIEW (2026-09-28, APPROVE-WITH-NITS) — DROPPED, not
+    # widened. The first version of this entry added `research/**` here,
+    # reasoning that STAMP_ONLY_SURFACE's precedence made the widening safe.
+    # That reasoning was backwards: fnmatch's `*` matches `/` too, so
+    # `research/queue/*.yaml` (STAMP_ONLY_SURFACE's only key) already matches
+    # EVERY file directly under `research/queue/`, including
+    # `research/queue/blocked/*.yaml`, and STAMP_ONLY_SURFACE governs those
+    # paths UNCONDITIONALLY regardless of what TIER1_SURFACE says (see its
+    # docstring below). So adding `research/**` changed nothing about what a
+    # queue unit can self-land: a `status:` / `blocked_on` / decision-rule
+    # rewrite was refused before that entry and is still refused after
+    # removing it (test_stamp_only_precedence_survives_tier1_widening below
+    # plants exactly that defect and asserts the refusal). What the entry DID
+    # widen -- silently, as a side effect nobody asked for -- is every OTHER
+    # path under `research/` that is not a queue unit and was not already
+    # covered by `research/results/**` above (e.g. `research/notes/**`,
+    # `research/design/**`, whatever tree exists or gets created there next).
+    # E5's actual ask -- self-landing a queue status flip -- is UNREACHABLE
+    # via TIER1_SURFACE at all; the fix belongs in STAMP_ONLY_SURFACE (a
+    # narrower, explicitly-scoped widening of its allowed fields) or a
+    # dedicated queue-flip guard, not here. See the corrected
+    # PI-20260922-E5-... pipeline record for what still needs a human.
+    # PI-20260927-QBHR1EYJ-0001, operator-approved 2026-09-28 (ADMIN lane
+    # triage popup, verbatim answer "Apply my recommendations (Recommended)").
+    # Applies the finding's own Option 3 (narrow widening): scripts/ml/**
+    # also holds training/promotion-adjacent code that is NOT Tier-1, so only
+    # the self-documented review/report tooling is admitted here, by name,
+    # rather than the whole tree.
+    #
+    # ⚠️ MANAGER REVIEW (2026-09-28, APPROVE-WITH-NITS) — named by exact
+    # filename, not glob: `scripts/ml/*review*.py` would also silently admit
+    # a future `promotion_review.py` without anyone re-approving the
+    # widening. `strategy_review_packet.py::decide()` (mechanical gate per
+    # docs/strategy-review-gate.md § Threshold table) is the advisory M7
+    # KILL/DEMOTE/PROMOTE grader -- exactly the promotion-adjacent code
+    # Option 3 said to keep out of a wide `scripts/ml/**` grant, which is why
+    # it is named individually rather than re-opening the glob.
+    "scripts/ml/strategy_review_packet.py",
+    "scripts/ml/evidence_floor_report.py",
     "*.md",
     ".ruff.toml",
     "ruff.toml",
     "pyproject.toml",
     ".gitignore",
 ]
+
+# E57, 2026-09-24. Paths a Tier-1 PR may self-land over ONLY when the diff to
+# them is a dispatch STAMP -- every added/removed line is one of the named
+# single-line scalar fields -- and the file existed at the merge-base.
+#
+# ⚠️ WHY NOT JUST ADD `research/queue/**` TO TIER1_SURFACE. A queue unit holds
+# a PRE-REGISTERED decision rule, and "a result cleared the rule registered
+# before the run" is the entire safety property of the promotion ladder once
+# nobody is in the path (CLAUDE.md § promotion ladder). A rule that can be
+# rewritten and self-landed in the same act as the dispatcher's stamp is not
+# pre-registered. So the stamp self-lands and everything else in the file
+# holds for a human -- the distinction is CHECKED HERE, per line, not stated in
+# a comment. The dispatcher (`scripts/research/dispatch_queue.py`) writes the
+# stamp as a line-level edit precisely so this check can be this narrow.
+#
+# ⚠️ WHY A STRANDED STAMP COSTS MONEY. `research-queue-dispatch.yml` uses
+# `last_dispatched_at` as its ONLY idempotency: a stamp that never reaches
+# `main` re-fires the same unit every run, burning a runner (and a GPU-routed
+# unit bills the spend ledger). Refusing the stamp PR was not a safe default.
+#
+# A NEW or DELETED queue file is never a stamp and stays unvouched.
+STAMP_ONLY_SURFACE = {
+    "research/queue/*.yaml": ("last_dispatched_at",),
+}
+_STAMP_VALUE = r"(?:null|'[^'\n]*'|\"[^\"\n]*\"|[0-9TZ:+.\-]+)"
+
+
+def stamp_only_violation(root: Path, base: str, path: str) -> Optional[str]:
+    """None when `path` is a STAMP_ONLY_SURFACE file whose diff is stamp-only.
+
+    Otherwise a one-line reason. A path outside STAMP_ONLY_SURFACE returns a
+    reason too, so a caller can never read "no reason" as "vouched" for a path
+    this function was not built to judge.
+    """
+    fields = None
+    for glob, names in STAMP_ONLY_SURFACE.items():
+        if fnmatch.fnmatch(path, glob):
+            fields = names
+    if fields is None:
+        return "not a stamp-only surface"
+    rc, mb = _git(root, "merge-base", base, "HEAD")
+    if rc != 0 or not mb:
+        return "merge-base unreadable, so the diff could not be graded"
+    if _git(root, "cat-file", "-e", f"{mb}:{path}")[0] != 0:
+        return "file is NEW on this branch -- a new queue unit is a registration, not a stamp"
+    if _git(root, "cat-file", "-e", f"HEAD:{path}")[0] != 0:
+        return "file is DELETED on this branch"
+    rc, out = _git(root, "diff", "-U0", "--no-color", mb, "HEAD", "--", path)
+    if rc != 0:
+        return "diff unreadable"
+    line_re = re.compile(
+        r"^(?:" + "|".join(re.escape(f) for f in fields) + r"): " + _STAMP_VALUE + r"\s*$")
+    changed = 0
+    for ln in out.splitlines():
+        if ln.startswith(("+++", "---")) or not ln.startswith(("+", "-")):
+            continue
+        changed += 1
+        if not line_re.match(ln[1:]):
+            return (f"changes a line other than {'/'.join(fields)}: {ln[:80]!r} -- "
+                    f"a pre-registered decision rule may not self-land")
+    if changed == 0:
+        return "no line-level change found (mode/rename only?) -- not a stamp"
+    return None
+
+
+def unvouched_paths(root: Path, base: str, paths: list[str]) -> list[str]:
+    """Paths neither inside TIER1_SURFACE nor a verified stamp-only edit.
+
+    ⚠️ STAMP_ONLY_SURFACE TAKES PRECEDENCE over a TIER1_SURFACE match, not the
+    other way round. Added 2026-09-28 alongside the `research/**` TIER1_SURFACE
+    entry (PI-20260922-E5-...): before this, a path matching BOTH lists (e.g.
+    `research/queue/RQ-1.yaml` once `research/**` was admitted) was vouched by
+    the plain `_match(p, TIER1_SURFACE)` check alone and `stamp_only_violation`
+    was never consulted -- silently letting a PR self-land a rewrite of a
+    pre-registered decision rule, exactly what STAMP_ONLY_SURFACE's own
+    docstring says must never self-land. A path this function was not built to
+    grade at all (neither list) is still refused, same as before.
+    """
+    out = []
+    for p in paths:
+        if any(fnmatch.fnmatch(p, g) for g in STAMP_ONLY_SURFACE):
+            if stamp_only_violation(root, base, p) is not None:
+                out.append(p)
+            continue
+        if not _match(p, TIER1_SURFACE):
+            out.append(p)
+    return out
+
+
+# E58, 2026-09-28 (lane RQ-RUN; operator: "the research queue should be running
+# 24/7 with or without Claude"). E57 refuses every non-stamp research/queue edit
+# for self-landing because a pre-registered rule must not be rewritten in the
+# act that lands it. A queue that refills and grades itself with NO session
+# needs exactly two automation producers to land queue edits anyway -- so the
+# admission is not "trust the bot" but REPRODUCIBILITY: the producer's own
+# `--verify --base <base>` is re-run HERE, at the PR's merge-base, and every
+# added (replenish) / modified (grade) unit must come out byte-identical from
+# the committed templates + `generated.params` / the committed results +
+# `grading.graded_at`. A hand-edit, a rule rewrite, a new hand-written unit or
+# a grade nobody can reproduce all fail `--verify` and fall back to E57's hold.
+# The branch prefix names WHICH producer to re-run; it grants nothing by itself.
+E58_PRODUCERS = {
+    "automation/research-queue-replenish-": "scripts/research/queue_replenish.py",
+    "automation/research-queue-grade-": "scripts/research/queue_grade.py",
+}
+
+
+def e58_generated_queue_vouch(root: Path, base: str, branch: Optional[str],
+                              changed: list[str]) -> tuple[list[str], list[str]]:
+    """(vouched research/queue paths, notes). Empty unless the branch is one of
+    the two producers' AND that producer's --verify reproduces every queue
+    change on it. Never vouches a path outside research/queue/."""
+    if not branch:
+        return [], []
+    script = next((s for pre, s in E58_PRODUCERS.items() if branch.startswith(pre)), None)
+    if script is None:
+        return [], []
+    queue_paths = [p for p in changed if fnmatch.fnmatch(p, "research/queue/*.yaml")]
+    if not queue_paths:
+        return [], []
+    # ⚠️ REVIEW FIX (2026-09-29): a producer branch may carry ONLY queue files
+    # plus the three landing files commit-to-main writes for its own slug.
+    # Anything else -- above all a fabricated research/results/** row that a
+    # grade would then be "reproduced" from -- means this is not the producer's
+    # output, and nothing on it is vouched.
+    slug = branch.replace("/", "-")
+    own = {f"{LANDING_DIR}/{slug}.json", f"{AUTOMERGE_DIR}/{slug}.txt", f"{BRANCH_SLOT_DIR}/{slug}.json"}
+    foreign = sorted(p for p in changed if p not in queue_paths and p not in own)
+    if foreign:
+        return [], [f"E58 {branch}: REFUSED -- the branch changes {len(foreign)} path(s) outside research/queue/ "
+                    f"({', '.join(foreign[:4])}); a producer branch carries only its queue files, so nothing "
+                    "on it is vouched"]
+    if not (root / script).is_file():
+        return [], [f"E58 {branch}: producer {script} is absent at HEAD -- nothing vouched"]
+    try:
+        proc = subprocess.run([sys.executable, script, "--verify", "--base", base],
+                              cwd=str(root), capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return [], [f"E58 {branch}: {script} --verify could not run ({exc}) -- nothing vouched"]
+    if proc.returncode != 0:
+        tail = (proc.stdout + proc.stderr).strip().splitlines()[-3:]
+        return [], [f"E58 {branch}: {script} --verify REFUSED -- nothing vouched: " + " | ".join(tail)]
+    return queue_paths, [f"E58 verified -- {script} --verify reproduced {len(queue_paths)} queue "
+                         f"file(s) at the merge-base: " + ", ".join(sorted(queue_paths)[:5])]
+
 
 # Named so a failure can say WHY a path is barred, and so that widening
 # TIER1_SURFACE by mistake still trips a named check.
@@ -400,6 +647,20 @@ LANDING_MACHINERY = [
     ".github/pr-landing/*.json",
     "scripts/ci/check_pr_landing.py",
     "scripts/ci/check_automerge_trigger.py",
+    # ⚠️ ADDED 2026-09-24 (E63). The pure decision `claude-pr-automerge.yml`
+    # calls before it will arm a PR — whether the PR's OWN `landing:` field
+    # says "self". A change to it is a change to what gets armed exactly as
+    # much as a change to the workflow file itself (already listed above), so
+    # it must not self-land by the route it decides for.
+    "scripts/ci/automerge_landing_gate.py",
+    # ⚠️ ADDED 2026-09-28 (JC-CA-03). The eight clauses of the ARMED
+    # MD-DEMOTE-S2-S1 auto-land route (R16 delegates to it), plus the producer
+    # that writes that route's branches. A change to either is a change to
+    # which Tier-3 roster cut merges with no human in the path. Found missing
+    # when a PR editing A7 declared `changes_landing_machinery` and R8 refused
+    # it: the route that decides a real-money merge could itself self-land.
+    "scripts/ci/check_mandate_autoland.py",
+    ".github/workflows/r4-demotion-gate.yml",
     "scripts/ops/session_registry.py",
     # ⚠️ ADDED 2026-09-09 (MI-208). This action is a THIRD landing route and was
     # missing from this list, so a change to it could self-land by the very
@@ -443,6 +704,15 @@ LANDING_MACHINERY = [
     # branch never MODIFIES an approval record — R15 forbids it outright
     # (clause d) — so R12 fires on a PR that WRITES an approval and on nothing
     # else. It cannot make every branch un-landable.
+    # E58: the two producers whose --verify vouches their own queue PRs.
+    "scripts/research/queue_replenish.py",
+    "scripts/research/queue_grade.py",
+    "research/templates/**",
+    # RESEARCH-LOOP-AUDIT RC2 (2026-10-15): programme question nodes are queue_replenish's
+    # sixth source -- a node's `unit:` is a pre-registration exactly like a template, and
+    # E58 vouches what it emits by re-rendering from the committed node, so an edit to a
+    # node file must be read by a human, never self-landed (E57's property, extended).
+    "research/programmes/**",
     f"{APPROVAL_DIR}/**",
 ]
 
@@ -515,7 +785,31 @@ def _board_claim_sentence() -> str:
     EXECUTABLE line — only a leading `#` or `//` counts as a comment — so a
     retired board number may not be named here even in prose. The `#`-comment
     block at `SESSION_BOARD` above is where that history lives.)
+
+    ⚠️ A FOURTH STATE, ADDED 2026-09-27, AND IT IS NOT A VARIANT OF
+    `could_not_check`. The 2026-09-21 operating reset archived
+    ``docs/claude/board-pointer.json`` itself (now under
+    ``docs/archive/2026-09-21-operating-reset/registers/``), so
+    ``board_pointer.resolve()`` reads a missing file and reports
+    `could_not_check` — its own vocabulary for "we did not look", built for a
+    board that is temporarily unreachable. A permanently retired board is a
+    different fact: nobody failed to look, there is nothing to repair, and
+    telling a reader to "repair" or "rotate" it points them at resurrecting an
+    archived subject the canonical doc says not to touch. So the missing-file
+    case is distinguished HERE, before calling into `board_pointer` at all,
+    rather than folded into its three-state return.
     """
+    if not (REPO / board_pointer.POINTER_PATH).exists():
+        return (f"The coordination board was RETIRED in the 2026-09-21 "
+                f"operating reset — {board_pointer.POINTER_PATH} and the board "
+                f"it named are archived under "
+                f"docs/archive/2026-09-21-operating-reset/registers/ "
+                f"(CLAUDE.md: 'do not resurrect them'). There is no live "
+                f"`🔒 MERGE SLOT CLAIM` comment to post and nothing to repair — "
+                f"the per-branch claim (`python3 scripts/ops/claim_merge_slot.py "
+                f"--branch-claim --branch <branch> --held-by <session>`, "
+                f"writing `.github/merge-slots/<slug>.json`) is the only claim "
+                f"this repo makes now.")
     code, num, _ptr, why = board_pointer.resolve()
     if code == board_pointer.RESOLVED:
         return (f"This does NOT replace the `🔒 MERGE SLOT CLAIM` comment on the "
@@ -664,7 +958,21 @@ def slot_claim_state(root: Path, base: str, branch: str) -> tuple[bool, str]:
 
     path = root / SESSION_BOARD
     if not path.exists():
-        return (False, f"{SESSION_BOARD} does not exist")
+        # ⚠️ E51, 2026-09-24: the legacy file is PERMANENTLY absent post-reset
+        # (archived under docs/archive/2026-09-21-operating-reset/registers/,
+        # CLAUDE.md says do not resurrect it), so this branch now fires on
+        # EVERY failed claim attempt. Discarding `branch_detail` here used to
+        # bury the real reason the per-branch route failed behind a dead
+        # path's absence — the reader saw only "session-board.json does not
+        # exist" with no way to act on it. Keep the real reason, and name the
+        # route that actually works instead of implying this dead file should
+        # be recreated.
+        return (False, f"{branch_detail}. (The legacy {SESSION_BOARD} route is "
+                       f"RETIRED by the 2026-09-21 operating reset and must not "
+                       f"be resurrected — its absence is not itself the problem.) "
+                       f"Write {_branch_slot_rel(branch)} instead: "
+                       f"`python3 scripts/ops/claim_merge_slot.py --branch-claim "
+                       f"--branch {branch} --held-by <session>`")
     if not _added_or_modified(root, base, SESSION_BOARD):
         return (False, f"neither route was taken: {branch_detail}, and "
                        f"{SESSION_BOARD} is unchanged from `{base}` — this branch "
@@ -1089,7 +1397,9 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
                 f"established as either. Passing on the unreadable case rather "
                 f"than failing a branch we did not establish anything about."])
         return ("undeclared", [
-            f"R11 no landing declaration at {decl_rel}. This branch was cut from "
+            f"R11 no landing declaration at {decl_rel}. The filename must be EXACTLY "
+            f"that (slug = branch name with '/' -> '-', no part dropped: "
+            f"`lane/foo` -> `lane-foo.json`). This branch was cut from "
             f"a `main` that already carried {GUARD_REL}, so the rule was "
             f"available to it. Every PR states its tier and how it means to "
             f"land; see {LANDING_DIR}/README.md for the four-line file."], notes)
@@ -1109,9 +1419,11 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
     # R1 / R2 / R3
     if tier not in (1, 2, 3):
         fails.append(f"R1 {decl_rel} `tier` is {tier!r}; must be 1, 2 or 3.")
-    if landing not in ("self", "hold"):
+    if landing not in ("self", "hold", autoland.LANDING_VALUE):
         fails.append(f"R2 {decl_rel} `landing` is {landing!r}; must be "
-                     f'"self" (lands itself on green) or "hold" (a human merges).')
+                     f'"self" (lands itself on green), "hold" (a human merges), or '
+                     f'"{autoland.LANDING_VALUE}" (the one mandate-authorized Tier-3 shape — '
+                     f"see scripts/ci/check_mandate_autoland.py).")
     if len(why) < MIN_TEXT:
         fails.append(
             f"R3 {decl_rel} `why` is {len(why)} chars; needs at least {MIN_TEXT}. "
@@ -1123,8 +1435,20 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
     # ---------------------------------------------------------------- diff floor
     barred3 = [p for p in changed if _match(p, TIER3_PATHS)]
     barred2 = [p for p in changed if _match(p, TIER2_PATHS) and p not in barred3]
-    unvouched = [p for p in changed
-                 if not _match(p, TIER1_SURFACE) and p not in barred3 and p not in barred2]
+    e58_vouched, e58_notes = e58_generated_queue_vouch(root, base, branch, changed)
+    notes.extend(e58_notes)
+    unvouched = [p for p in unvouched_paths(root, base, changed)
+                 if p not in barred3 and p not in barred2 and p not in e58_vouched]
+    for p in changed:
+        # Reported for every STAMP_ONLY_SURFACE match regardless of a
+        # TIER1_SURFACE hit too -- `unvouched_paths` now grades these paths by
+        # `stamp_only_violation` alone (see its docstring), so the note must
+        # stay visible even when `research/**` also matches the same path.
+        if any(fnmatch.fnmatch(p, g) for g in STAMP_ONLY_SURFACE):
+            why_not = stamp_only_violation(root, base, p)
+            notes.append(f"stamp-only surface {p}: "
+                         + ("VOUCHED (stamp fields only)" if why_not is None
+                            else f"NOT vouched -- {why_not}"))
 
     if barred3:
         notes.append(f"diff touches {len(barred3)} path(s) named Tier-3: "
@@ -1216,7 +1540,7 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
             if not ok:
                 fails.append(
                     f"R13 {decl_rel} arms the landing route while this branch does "
-                    f"not hold the merge slot in {SESSION_BOARD}: {detail}. Arming "
+                    f"not hold the merge slot: {detail}. Arming "
                     f"is not a request to merge, it IS the merge — "
                     f"`claude-pr-automerge.yml` enables auto-merge and GitHub lands "
                     f"the PR on green with no further act by anybody. "
@@ -1233,10 +1557,44 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
                     f"one; it does NOT serialize — a committed claim reaches no "
                     f"other session until this branch merges, "
                     f"BL-20260810-MERGE-SLOT-MIRROR-UNWRITABLE-PRE-MERGE.) "
-                    f"Set `merge_slot` "
-                    f"in {SESSION_BOARD} to this branch (`held_by`, `branch`, "
-                    f"`claimed_at`) and commit it alongside the arming file. "
+                    f"Fix: `python3 scripts/ops/claim_merge_slot.py --branch-claim "
+                    f"--branch {branch} --held-by <session>` writes "
+                    f"{_branch_slot_rel(branch)} — commit it alongside the arming "
+                    f"file. (The legacy `merge_slot` field in {SESSION_BOARD} is "
+                    f"RETIRED by the 2026-09-21 operating reset; that file must "
+                    f"not be resurrected.) "
                     + _board_claim_sentence())
+    elif landing == autoland.LANDING_VALUE:
+        # R16 — the mandate auto-land route. See the module docstring above and
+        # `scripts/ci/check_mandate_autoland.py` for the eight clauses.
+        #
+        # ⚠️ EVERY CLAUSE IS DELEGATED, NONE IS RESTATED HERE. Two copies of a
+        # safety rule is one copy that goes stale, and this file already carries
+        # the repo's worked example of that (`_board_claim_sentence`, whose
+        # hardcoded literal went false in twenty hours).
+        if tier != 3:
+            fails.append(
+                f"R16 {decl_rel} declares `landing: \"{autoland.LANDING_VALUE}\"` at tier "
+                f"{tier}. A Stage-2 roster edit is Tier-3 by TIER3_PATHS "
+                f"(config/accounts.yaml), and declaring it lower is under-declaring the "
+                f"one thing this route puts at stake. Tier-1 and Tier-2 work lands by "
+                f"`self` and its own rules.")
+        if armed:
+            fails.append(
+                f"R16 this branch ARMS the ordinary auto-merge route ({arm_rel} is "
+                f"added/modified) while declaring `landing: \"{autoland.LANDING_VALUE}\"`. "
+                f"The mandate route arms itself from "
+                f"{autoland.WORKFLOW_REL} and is graded by THIS check; the request file "
+                f"would route the same merge past a different gate. One route, or none.")
+        ok, afails, anotes = autoland.verdict(root, base, branch, decl, changed, slug)
+        fails.extend(afails)
+        notes.extend(anotes)
+        if ok:
+            notes.append(
+                "R16 ADMISSIBLE — a mandate-authorized, removal-only Stage-2 roster cut. "
+                "⚠️ What this establishes and what it does not is stated in "
+                "scripts/ci/check_mandate_autoland.py's docstring; it travels with the "
+                "grant rather than living only there.")
     else:  # landing == "hold"
         # R10 — the bite.
         if armed:
@@ -1283,8 +1641,8 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
         # which is the presence-only marker failure `new-table-wiring-guard` was
         # bitten by and that this guard cites twice elsewhere.
         if reason == "unvouchable_paths":
-            unvouchable = [p for p in changed
-                           if not _match(p, TIER1_SURFACE) and p != decl_rel]
+            unvouchable = [p for p in unvouched_paths(root, base, changed)
+                           if p != decl_rel and p not in e58_vouched]
             if not unvouchable:
                 fails.append(
                     f"R14 {decl_rel} claims `unvouchable_paths`, but every "
@@ -1309,9 +1667,12 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
                 f"dependency a reader can clear.")
 
     if fails:
-        return ("undeclared" if landing == "self" else "declared_hold", fails, notes)
+        return ("undeclared" if landing in ("self", autoland.LANDING_VALUE)
+                else "declared_hold", fails, notes)
     if landing == "self":
         return ("declared_self_land", [], notes)
+    if landing == autoland.LANDING_VALUE:
+        return ("declared_mandate_autoland", [], notes)
     return ("declared_needs_approval" if tier != 1 else "declared_hold", [], notes)
 
 
@@ -1525,6 +1886,13 @@ def self_test() -> int:
                                          "explicit operator approval before merge",
                                why="a strategy parameter change, Tier-3 by path"),
             False, "declared_needs_approval"),
+        "tier-1 self-land touching scripts/backtest_*.py (MI-242)": (
+            lambda r: ((r / "scripts").mkdir(parents=True, exist_ok=True),
+                       (r / "scripts/backtest_demo.py").write_text(
+                           "x\n", encoding="utf-8"),
+                       _declare(r, tier=1, landing="self", why=_GOOD_WHY), _arm(r),
+                       _claim_slot(r)),
+            True, "declared_self_land"),
         "verified unvouchable_paths hold on a tier-1 diff": (
             lambda r: ((r / "scripts").mkdir(parents=True, exist_ok=True),
                        (r / "scripts/check_something.py").write_text(
@@ -1560,6 +1928,155 @@ def self_test() -> int:
                 bad += 1
             else:
                 print(f"self-test: positive control '{name}' passes (state={state})")
+
+    # ---- E51 (2026-09-24): R13's remedy must not dead-end on the archived
+    # docs/claude/session-board.json. Before this fix, `slot_claim_state`
+    # discarded the branch route's own failure `detail` the moment
+    # `SESSION_BOARD` was absent, and returned only "<path> does not exist" —
+    # a message with no performable remedy, since CLAUDE.md forbids
+    # resurrecting that file. On the real repo this is not a corner case: the
+    # file has been permanently absent since the 2026-09-21 reset, so this
+    # branch fires on EVERY failed claim attempt.
+    with tempfile.TemporaryDirectory() as td:
+        root = _sandbox(Path(td), tier1_only=True)
+        (root / SESSION_BOARD).unlink()  # simulate the archived (real-repo) state
+        _commit(root)
+        ok, detail = slot_claim_state(root, "main", "claude/demo")
+        if ok:
+            print("::error::self-test FAILED — E51: slot_claim_state reported "
+                  "TRUE with no claim of any kind on the branch.")
+            bad += 1
+        elif SESSION_BOARD in detail and "RETIRED" not in detail:
+            print(f"::error::self-test FAILED — E51: with {SESSION_BOARD} "
+                  f"absent, the failure detail still points at it as if it "
+                  f"were a route to satisfy, not a retired one: {detail!r}")
+            bad += 1
+        elif "claim_merge_slot.py --branch-claim" not in detail:
+            print(f"::error::self-test FAILED — E51: the failure detail names "
+                  f"no performable remedy: {detail!r}")
+            bad += 1
+        elif ".github/merge-slots" not in detail:
+            print(f"::error::self-test FAILED — E51: the branch route's own "
+                  f"failure reason (why {_branch_slot_rel('claude/demo')} is "
+                  f"absent) was dropped from the message: {detail!r}")
+            bad += 1
+        else:
+            print("self-test: E51 — R13's remedy on a permanently-archived "
+                  "session-board.json names the live branch-claim route and "
+                  "keeps the branch route's own failure reason "
+                  f"(detail={detail!r})")
+
+    # ---- E57: research landing surfaces ------------------------------------
+    # Each case is (name, branch-side edit to the queue unit or None, extra
+    # files to add, want_pass). The base carries one queue unit with a
+    # decision rule, so a "rule edit" plant edits a line that REALLY EXISTS at
+    # the merge-base -- a plant that only ADDS lines would pass the new-file
+    # check for the wrong reason.
+    _unit = ("id: RQ-SELFTEST-001\n"
+             "decision_rule:\n"
+             "  id: RULE-SELFTEST\n"
+             "  pass_if: net_r_oos > 0.25\n"
+             "last_dispatched_at: null\n")
+    e57_cases = [
+        ("research/results/** self-lands", None,
+         {"research/results/_unattributed/1.jsonl": "{}\n"}, True),
+        ("runtime_logs/replay_pregate/** self-lands", None,
+         {"runtime_logs/replay_pregate/20260924T000000Z.json": "{}\n"}, True),
+        ("a queue STAMP-only edit self-lands",
+         _unit.replace("last_dispatched_at: null",
+                       "last_dispatched_at: '2026-09-24T11:58:37+00:00'"), {}, True),
+        ("a queue DECISION-RULE edit is refused",
+         _unit.replace("net_r_oos > 0.25", "net_r_oos > 0.0"), {}, False),
+        ("a stamp PLUS a rule edit is refused",
+         _unit.replace("net_r_oos > 0.25", "net_r_oos > 0.0").replace(
+             "last_dispatched_at: null", "last_dispatched_at: '2026-09-24'"), {}, False),
+        ("a stamp carrying a trailing payload is refused",
+         _unit.replace("last_dispatched_at: null",
+                       "last_dispatched_at: '2026-09-24' # pass_if: true"), {}, False),
+        ("a NEW queue unit is refused", None,
+         {"research/queue/RQ-SELFTEST-002.yaml": _unit}, False),
+        ("runtime_logs/ OUTSIDE replay_pregate is still refused", None,
+         {"runtime_logs/other/x.json": "{}\n"}, False),
+    ]
+    for name, unit_edit, extra, want_pass in e57_cases:
+        with tempfile.TemporaryDirectory() as td:
+            root = _sandbox(Path(td))
+            g = lambda *a: subprocess.run(["git", "-C", str(root), *a],  # noqa: E731
+                                          check=True, capture_output=True)
+            g("checkout", "-q", "main")
+            (root / "research/queue").mkdir(parents=True, exist_ok=True)
+            (root / "research/queue/RQ-SELFTEST-001.yaml").write_text(_unit, encoding="utf-8")
+            g("add", "-A")
+            g("commit", "-qm", "seed a queue unit")
+            g("checkout", "-q", "claude/demo")
+            g("merge", "-q", "--no-edit", "main")
+            if unit_edit is not None:
+                (root / "research/queue/RQ-SELFTEST-001.yaml").write_text(
+                    unit_edit, encoding="utf-8")
+            for rel, body in extra.items():
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_text(body, encoding="utf-8")
+            _declare(root, tier=1, landing="self", why=_GOOD_WHY)
+            _arm(root)
+            _branch_claim(root)
+            _commit(root)
+            state, fails, _ = check(root, "main", "claude/demo")
+            passed = not fails and state == "declared_self_land"
+            r5 = any(f.startswith("R5 ") for f in fails)
+            if want_pass and not passed:
+                print(f"::error::self-test FAILED — E57 positive '{name}' did not "
+                      f"self-land (state={state}, fails={fails}). A research result "
+                      f"that cannot land is a research result that is lost.")
+                bad += 1
+            elif not want_pass and not r5:
+                print(f"::error::self-test FAILED — E57 plant '{name}' was NOT "
+                      f"refused by R5 (state={state}, fails={fails}).")
+                bad += 1
+            else:
+                print(f"self-test: E57 '{name}' -> "
+                      + ("self-lands" if passed else "refused by R5"))
+
+    # ---- planted-defect control: a queue RULE rewrite stays refused even
+    # after research/** was dropped from TIER1_SURFACE (2026-09-28 fix-up).
+    # STAMP_ONLY_SURFACE's `research/queue/*.yaml` key is consulted BEFORE
+    # any TIER1_SURFACE match (see unvouched_paths docstring), so this must
+    # hold with or without a `research/**`-shaped entry in TIER1_SURFACE --
+    # this test exists precisely so a future re-widening of TIER1_SURFACE
+    # cannot silently reopen the hole without tripping a self-test failure.
+    # Planted under `research/queue/blocked/` specifically (not the top-level
+    # dir already covered above) because fnmatch's `*` matches `/`, so
+    # `research/queue/*.yaml` also matches every file under
+    # `research/queue/blocked/` -- the exact subdirectory this repo uses for
+    # units that cannot currently run.
+    with tempfile.TemporaryDirectory() as td:
+        root = _sandbox(Path(td))
+        g = lambda *a: subprocess.run(["git", "-C", str(root), *a],  # noqa: E731
+                                      check=True, capture_output=True)
+        g("checkout", "-q", "main")
+        (root / "research/queue/blocked").mkdir(parents=True, exist_ok=True)
+        (root / "research/queue/blocked/RQ-SELFTEST-003.yaml").write_text(
+            _unit, encoding="utf-8")
+        g("add", "-A")
+        g("commit", "-qm", "seed a blocked queue unit")
+        g("checkout", "-q", "claude/demo")
+        g("merge", "-q", "--no-edit", "main")
+        (root / "research/queue/blocked/RQ-SELFTEST-003.yaml").write_text(
+            _unit.replace("net_r_oos > 0.25", "net_r_oos > 0.0"), encoding="utf-8")
+        _declare(root, tier=1, landing="self", why=_GOOD_WHY)
+        _arm(root)
+        _branch_claim(root)
+        _commit(root)
+        state, fails, _ = check(root, "main", "claude/demo")
+        r5 = any(f.startswith("R5 ") for f in fails)
+        if not r5:
+            print(f"::error::self-test FAILED — a queue DECISION-RULE edit under "
+                  f"research/queue/blocked/ was NOT refused by R5 (state={state}, "
+                  f"fails={fails}). This is exactly the hole a research/**-shaped "
+                  f"TIER1_SURFACE widening must never reopen.")
+            bad += 1
+        else:
+            print("self-test: 'a blocked queue DECISION-RULE edit is refused' -> "
+                  "refused by R5")
 
     # ---- the escape hatch, and the hole it must NOT open -------------------
     with tempfile.TemporaryDirectory() as td:
@@ -1601,6 +2118,17 @@ def self_test() -> int:
         "R5 tier-1 self-land over a Tier-3 path": (
             lambda r: (_declare(r, tier=1, landing="self", why=_GOOD_WHY), _arm(r),
                        _claim_slot(r)), False),
+        # MI-242's OTHER direction: widening TIER1_SURFACE to
+        # `scripts/backtest_*.py` must not have widened it to `scripts/*.py`
+        # generally. `scripts/check_something.py` is the same non-backtest
+        # top-level script the positive "unvouchable_paths hold" control above
+        # uses — here it is declared SELF-LAND instead, which R5 must refuse.
+        "R5 tier-1 self-land over a still-excluded scripts/*.py path": (
+            lambda r: ((r / "scripts").mkdir(parents=True, exist_ok=True),
+                       (r / "scripts/check_something.py").write_text(
+                           "x\n", encoding="utf-8"),
+                       _declare(r, tier=1, landing="self", why=_GOOD_WHY), _arm(r),
+                       _claim_slot(r)), True),
         "R6 self-land declared but route not armed": (
             lambda r: _declare(r, tier=1, landing="self", why=_GOOD_WHY), True),
         "R3 a one-word `why`": (
@@ -1783,10 +2311,49 @@ def self_test() -> int:
             else:
                 print(f"self-test: '{name}' correctly refused")
 
+    # ── R16, the mandate auto-land route ───────────────────────────────────
+    # ⚠️ THE CLAUSES ARE NOT RE-PLANTED HERE, DELIBERATELY. They belong to
+    # `check_mandate_autoland.py`, whose own suite carries them — including the
+    # POSITIVE control (an admissible cut that LANDS), which needs a fixture
+    # with real rosters, evidence and bot-authored commits that this sandbox
+    # does not build. `run_guards.py` runs BOTH `--self-test`s, and
+    # `check_selftest_wiring.py` verifies that wiring rather than trusting it.
+    # What is planted here is only what THIS file decides: the tier, the
+    # one-route rule, and that the delegation actually happens.
+    r16_plants = {
+        "R16 `landing: \"mandate\"` declared at tier 1": (
+            lambda r: _declare(r, tier=1, landing=autoland.LANDING_VALUE,
+                               why="a roster cut declared as though it were docs work"),
+            "at tier 1"),
+        "R16 the mandate route ALSO arming the ordinary auto-merge route": (
+            lambda r: (_declare(r, tier=3, landing=autoland.LANDING_VALUE,
+                                why="a mandate-authorized Stage-2 roster cut, double-armed"),
+                       _arm(r)),
+            "ARMS the ordinary auto-merge route"),
+        "R16 the mandate route on an ordinary SESSION branch (delegation happens)": (
+            lambda r: _declare(r, tier=3, landing=autoland.LANDING_VALUE,
+                               why="a session branch claiming the automation route"),
+            "A7 branch"),
+    }
+    for name, (plant, needle) in r16_plants.items():
+        with tempfile.TemporaryDirectory() as td:
+            root = _sandbox(Path(td))
+            plant(root)
+            _commit(root)
+            state, fails, _ = check(root, "main", "claude/demo")
+            if not any(needle in f for f in fails):
+                print(f"::error::self-test FAILED — planted '{name}' and no failure "
+                      f"mentioned {needle!r}. state={state} fails={fails}")
+                bad += 1
+            else:
+                print(f"self-test: '{name}' correctly refused")
+
     if bad:
         return 1
     print(f"self-test OK — {len(positives) + 3} positive controls hold and all "
-          f"{len(plants) + len(r15_plants)} planted defects fail the guard")
+          f"{len(plants) + len(r15_plants) + len(r16_plants)} planted defects fail "
+          f"the guard (R16's own clauses are planted in "
+          f"check_mandate_autoland.py --self-test, which run_guards.py runs too)")
     return 0
 
 
@@ -1799,6 +2366,15 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true",
                     help="plant each defect and prove the guard fails on it")
     args = ap.parse_args(argv)
+    # The verdict below is about the COMMITTED tree. Say so when that is
+    # not the tree you edited. See
+    # BL-20260917-THE-DIRTY-TREE-NOTICE-LIVES-ONLY-IN-RUN-GUARDS-SO-ALL-18-DIRECTLY-INVOCABLE-DIFF-SCOPED-GUARDS-STILL-GRADE-THE-WRONG-TREE-SILENTLY
+    import pathlib  # noqa: PLC0415 — local, so importing this module stays free
+    import sys as _sys  # noqa: PLC0415
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import _dirty_tree  # noqa: E402,PLC0415 — path shim above
+    _dirty_tree.warn()
+
     if args.self_test:
         return self_test()
 

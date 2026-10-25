@@ -1,0 +1,72 @@
+id: RQ-20261017-ae17-50
+title: 'Dukascopy depth for the 1d ETF/index legs: does the feed reach back to ~2006, or is a second candle source needed?'
+status: done
+cadence: once
+theme: infra
+priority: 2
+kind: deterministic
+question: At daily resolution, does every adjudicated Dukascopy instrument behind the equity/index legs (SPY, QQQ, IWM, GLD, SLV, TLT, IEF, USO,
+  XAU/USD, S&P 500 index CFD) return bars at a 7300-day look-back (~2006-10), the depth the Stage-0 re-validations use? yfinance serves that history
+  today but only 730 d of 1h; this tells us whether a second source exists if it fails.
+why_this_matters: 'Manager decision 2026-10-17 (row REGIME-EQUITY-LEG-FETCH): the 1d equity units depend on one source (yfinance) that was missing
+  from the runner for a day. Existence is not span (ROADMAP, dukascopy-coverage-adjudication-2026-08-24.md); span has been measured only to 3650
+  d at 1h. Proxies keep their relation (SPLG->SPY, IAUM->GLD, MGC->XAUUSD, MES->S&P CFD); QLD/TQQQ are REFUSED and absent.'
+why_not_inferential: 'A deterministic probe of a data vendor: each (instrument, anchor) either returns bars, returns none, or errors. There is
+  no sampling question to power.'
+decision_rule:
+  id: RULE-RQ20261017ae1750-DUKA-SPAN-2006
+  registered_at: '2026-10-17'
+  registered_before_run: true
+  statistic: 'dukascopy_span_probe.run at interval 1d, anchors 1830/3650/5475/7300 d, 10 d windows: per instrument depth_claim and deepest anchor
+    with bars.'
+  rule: 'PASS IF every probed instrument is a clean `measured` claim with bars at the 7300 d anchor: Dukascopy can serve as the second source
+    back to ~2006. FAIL IF every anchor answered (no error, no unknown instrument) and at least one instrument has no bars at 7300 d: name those
+    instruments in measurement.shallow; a second source covers only the rest. INDETERMINATE IF any claim is a lower bound, errored or unknown_instrument
+    ("we did not look", never a depth): re-run. producer_failed / no_data is NOT a verdict.'
+  what_it_does_not_do: Does not decide whether a proxy may stand in for one of our symbols (the adjudication doc does), fetches no strategy data,
+    edits no config.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.5
+  bucket: structural
+  basis: 'stand-in: data-source redundancy for the 1d equity research lane; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 15
+  basis: 10 instruments x 4 anchors, one small Dukascopy request each, free GitHub-hosted runner; dukascopy-python is installed by research-script-run.yml.
+run:
+  command:
+  - python3
+  - scripts/research/dukascopy_span_probe_verdict.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261017-ae17-50
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-OPS
+related:
+- REGIME-EQUITY-LEG-FETCH
+- scripts/research/dukascopy_span_probe.py
+- docs/research/dukascopy-coverage-adjudication-2026-08-24.md
+last_dispatched_at: '2026-10-20T16:58:12+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261017ae1750-DUKA-SPAN-2006
+  evidence:
+  - research/results/RQ-20261017-ae17-50/39453827043.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

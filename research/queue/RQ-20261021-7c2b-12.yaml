@@ -1,0 +1,120 @@
+id: RQ-20261021-7c2b-12
+title: >-
+  Programme 05 Q2 rung 2, breakout_2 (Turbo): around the 0.35% flat risk that dominated the configured 0.5% (RQ-20261016-029), does
+  a neighbouring level or room sizing at 0.35% dominate it?
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: >-
+  On the SAME ledgers and ruleset as RQ-20261016-029 (trend_donchian_eth_prop + trend_donchian_sol_prop P-arm trades, breakout_turbo_1step,
+  switch 0.8), with A = flat 0.35% (the rung-1 winner) as the reference, does C0030 (0.30%), C0040 (0.40%) or CROOM35 (room sizing at
+  0.35%, room-frac 0.45) beat A on ev AND p_alive_at_horizon on all 5 seeds?
+why_this_matters: >-
+  Rung 1 PASSED (RQ-20261016-029, 2026-10-17): mean over 5 seeds, A (configured 0.5%) ev $85 / p_alive 0.008; C0035 $111 / 0.147; C0025
+  $74 / 0.53; CROOM (0.5%) $67 / 0.96. breakout_2 still trades 0.5% (config/accounts.yaml, read 2026-10-21). Node P5-Q2-SIZING-BRK-pass:
+  refine between the winner and its neighbours on the same ledgers so the change applied is the refined level, not the first grid point.
+power:
+  expected_n: 20000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    5 seeds x 4,000 simulated lives per arm (rung-1 shape); the comparison is per-seed dominance, so seeds, not lives, are the replication
+    -- the rule needs all 5.
+  feasibility:
+    source: none
+    accrual_basis: Monte Carlo over committed ledgers; nothing accrues.
+decision_rule:
+  id: RULE-P5-Q2-SIZING-BRK-RUNG2
+  registered_at: '2026-10-21'
+  registered_before_run: true
+  statistic: >-
+    Per seed and arm: path-mode ev_net_usd_per_life, p_alive_at_horizon, p_breach_max_dd; breakout_turbo_1step, switch 0.8; prop_ev_grid
+    --grade any_c_dominates with A = flat 0.35%.
+  rule: >-
+    prop_ev_grid --grade any_c_dominates, mechanically. PASS IF some C arm beats A on ev AND p_alive >= A on ALL 5 seeds -> that arm
+    (highest mean ev among dominators, and only if its p_breach_max_dd <= A on every seed) is the sizing proposal for breakout_2 instead
+    of 0.35%. FAIL IF none dominates -> 0.35% stands as the proposal. Either way the record goes to the manager as the input to the
+    breakout_2 sizing decision (0.5% -> the winner); the unit applies nothing. STRICT-SEED CAVEAT (as rung 1): a FAIL decided only by
+    a survival gap inside ~2 MC SE on one seed is reported as "FAIL (within-noise survival)" beside the mechanical verdict. NULL if
+    an arm is missing. Not changed after the run.
+  min_n: 5 seeds x 4,000 lives
+  what_it_does_not_do: >-
+    Changes no roster, risk, sizing or switch setting; reads no live prop P&L; does not re-open per-leg $ risk (f516-04).
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 150
+  basis: RQ-20261016-029 ran 5 arms x 5 seeds in its 330-min budget; 4 arms here.
+  why_runner: >-
+    Repo data only (committed trade JSONL + ruleset YAML), no GPU, not in metis-market-data, not trainer-resident.
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.4
+  basis: 'INFERRED stand-in (rung 1): breakout_2 dies in ~99% of simulated lives at the configured size.'
+run:
+  timeout_minutes: 330
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+  - --arm
+  - A=--sizing start --risk-pct 0.0035 --dd-switch-frac 0.8
+  - --arm
+  - C0030=--sizing start --risk-pct 0.003 --dd-switch-frac 0.8
+  - --arm
+  - C0040=--sizing start --risk-pct 0.004 --dd-switch-frac 0.8
+  - --arm
+  - CROOM35=--sizing room --risk-pct 0.0035 --room-frac 0.45 --dd-switch-frac 0.8
+  - --common
+  - >-
+    --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml
+    --costs breakout --swap-model prorated --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - any_c_dominates
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - P5 Q2 sizing rung 2, breakout_2 Turbo
+  inputs:
+    research_unit: RQ-20261021-7c2b-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-PROP
+programme: P5
+programme_node:
+  programme: P5
+  node: P5-Q2-SIZING-BRK-pass
+  goal: G2
+  after: []
+related:
+- research/queue/RQ-20261016-029.yaml
+- docs/research/programmes/05-PROP.md
+- research/programmes/05-prop.yaml
+last_dispatched_at: '2026-10-22T01:46:28+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-P5-Q2-SIZING-BRK-RUNG2
+  evidence:
+  - research/results/RQ-20261021-7c2b-12/39707655350.jsonl
+  graded_at: '2026-10-25'
+  graded_by: RESULTS-GRADE-1025 (Tier 1; supersedes the queue_grade auto verdict fail of 2026-10-22)
+  needs_review: false
+  disposition: underpowered
+  reason: "realised n 517 (sizing-sim population) is below the unit's own registered floor of 785 (d=0.10 sd, alpha 0.05, power 0.80): the auto verdict A_UNDOMINATED was admitted `accruing` and cannot stand as a FAIL."
+  verdict: indeterminate

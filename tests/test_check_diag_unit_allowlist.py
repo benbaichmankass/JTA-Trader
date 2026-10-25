@@ -46,7 +46,9 @@ def test_covered_tree_passes(tmp_path: Path):
                        "ict-heartbeat.service", "ict-heartbeat.timer",
                        "ict-ib-gateway-reset.service", "ict-ib-gateway-reset.timer",
                        "ict-trainer-git-sync.service", "ict-trainer-git-sync.timer",
-                       "ict-env-check.service", "ict-smoke-once.service"])
+                       "ict-env-check.service", "ict-smoke-once.service",
+                       "ict-notify-failure@.service", "ict-prop-feed@.service",
+                       "ict-prop-executor@.service"])
     r = _run(tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
 
@@ -58,7 +60,9 @@ def test_uncovered_unit_fails(tmp_path: Path):
                        "ict-heartbeat.service", "ict-heartbeat.timer",
                        "ict-ib-gateway-reset.service", "ict-ib-gateway-reset.timer",
                        "ict-trainer-git-sync.service", "ict-trainer-git-sync.timer",
-                       "ict-env-check.service", "ict-smoke-once.service"])
+                       "ict-env-check.service", "ict-smoke-once.service",
+                       "ict-notify-failure@.service", "ict-prop-feed@.service",
+                       "ict-prop-executor@.service"])
     r = _run(tmp_path)
     assert r.returncode == 1
     assert "ict-brand-new.timer" in r.stdout
@@ -71,7 +75,9 @@ def test_stale_exemption_fails(tmp_path: Path):
                deploy=["ict-a.service",
                        "ict-ib-gateway-reset.service", "ict-ib-gateway-reset.timer",
                        "ict-trainer-git-sync.service", "ict-trainer-git-sync.timer",
-                       "ict-env-check.service", "ict-smoke-once.service"])
+                       "ict-env-check.service", "ict-smoke-once.service",
+                       "ict-notify-failure@.service", "ict-prop-feed@.service",
+                       "ict-prop-executor@.service"])
     r = _run(tmp_path)
     assert r.returncode == 1
     assert "STALE" in r.stdout

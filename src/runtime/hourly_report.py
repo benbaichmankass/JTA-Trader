@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -265,6 +266,43 @@ def _record_balance_snapshot_to_db(
         )
 
 
+# read_state vocabulary for one account's hourly balance read. "We could not
+# look" (api_error) must never share a rendering with "there is no API to look
+# at" (no_api_by_design) or "we chose not to look" (dry_run_not_read) -- they
+# call for opposite operator actions (PI-20261004-APBY4NTV-0002: the operator
+# read ``API ERROR`` every hour for browser-executor prop accounts where
+# ``api_ok=False`` is the design).
+READ_OK = "ok"
+READ_NO_API_BY_DESIGN = "no_api_by_design"
+READ_DRY_RUN_NOT_READ = "dry_run_not_read"
+READ_API_ERROR = "api_error"
+
+
+def _account_read_state(acc: Dict[str, Any], bal: Optional[Dict[str, Any]]) -> str:
+    from src.prop.prop_identity import is_prop_account
+    if is_prop_account(acc):
+        return READ_NO_API_BY_DESIGN
+    if bal is not None:
+        return READ_OK
+    ex = str(acc.get("exchange") or "").lower()
+    if ex in ("interactive_brokers", "ib") and str(acc.get("mode") or "live").lower() != "live":
+        # data_loaders._ib_balance_diagnostic never dials a dry_run gateway.
+        return READ_DRY_RUN_NOT_READ
+    return READ_API_ERROR
+
+
+def _prop_status(account_id: str) -> Dict[str, Any]:
+    """The prop executor's own view of the account (operator-reported snapshot)."""
+    try:
+        from src.prop.prop_balance import prop_sizing_balance
+        state, val, meta = prop_sizing_balance(account_id)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; the hourly report must not fail on a prop read -- rendered as prop_status "error"
+        logger.warning("hourly_report: prop status(%s) raised: %s", account_id, exc)
+        return {"prop_status": "error", "prop_balance": None, "prop_age_hours": None}
+    return {"prop_status": state, "prop_balance": val,
+            "prop_age_hours": meta.get("age_hours")}
+
+
 def account_snapshots() -> Optional[List[Dict[str, Any]]]:
     """Return one dict per account: balance, 1h delta, API ok/err, open pos count.
 
@@ -299,7 +337,10 @@ def account_snapshots() -> Optional[List[Dict[str, Any]]]:
     new_snap: Dict[str, Any] = {}
 
     out: List[Dict[str, Any]] = []
+    from src.prop.prop_identity import is_retired_account
     for acc in accounts:
+        if is_retired_account(acc):
+            continue  # retired accounts do not appear on operator surfaces
         aid = acc.get("account_id") or "unknown"
         try:
             bal = account_balance(acc)
@@ -307,14 +348,19 @@ def account_snapshots() -> Optional[List[Dict[str, Any]]]:
             logger.warning("hourly_report: balance(%s) raised: %s", aid, exc)
             bal = None
 
+        read_state = _account_read_state(acc, bal)
         if bal is None:
-            out.append({
+            row = {
                 "account_id": aid,
                 "balance": None,
                 "delta_1h": None,
                 "api_ok": False,
+                "read_state": read_state,
                 "open_positions": None,
-            })
+            }
+            if read_state == READ_NO_API_BY_DESIGN:
+                row.update(_prop_status(aid))
+            out.append(row)
             _record_balance_snapshot_to_db(
                 aid, balance=None, delta_1h=None,
                 open_positions=None, api_ok=False, ts=now_iso,
@@ -339,7 +385,11 @@ def account_snapshots() -> Optional[List[Dict[str, Any]]]:
             "balance": total,
             "delta_1h": delta,
             "api_ok": True,
+            "read_state": read_state,
             "open_positions": open_count,
+            # TELEGRAM-CHANNELS: the TRADES snapshot renders each position's
+            # broker-read unrealised P&L from this list.
+            "positions": positions if isinstance(positions, list) else None,
         })
         _record_balance_snapshot_to_db(
             aid, balance=total, delta_1h=delta,
@@ -888,7 +938,15 @@ def _build_account_sections(
     api_errors = 0
     for a in accounts:
         aid = a["account_id"]
-        if not a.get("api_ok"):
+        # Older rows carry no read_state: derive it, never invent "error".
+        rs = a.get("read_state") or (READ_OK if a.get("api_ok") else READ_API_ERROR)
+        if rs == READ_NO_API_BY_DESIGN:
+            acct_lines.append(f"{aid}: {_render_prop_line(a)}")
+            continue
+        if rs == READ_DRY_RUN_NOT_READ:
+            acct_lines.append(f"{aid}: dry_run - gateway not read (by design)")
+            continue
+        if rs == READ_API_ERROR or not a.get("api_ok"):
             acct_lines.append(f"{aid}: API ERROR")
             api_errors += 1
             continue
@@ -915,6 +973,19 @@ def _build_account_sections(
                 body=bullet_list(acct_lines, empty="(no accounts configured)"),
                 priority=20),
     ]
+
+
+def _render_prop_line(a: Dict[str, Any]) -> str:
+    """A prop account line from the prop executor's own status, never 'API ERROR'."""
+    st = a.get("prop_status")
+    if st == "ok" and a.get("prop_balance") is not None:
+        age = a.get("prop_age_hours")
+        age_s = f", {age:.1f}h old" if isinstance(age, (int, float)) else ""
+        return (f"no broker API (prop bridge) | reported equity "
+                f"{_fmt_money(a['prop_balance'])}{age_s}")
+    if st in ("stale", "absent", "error"):
+        return f"no broker API (prop bridge) | operator balance {st}"
+    return "no broker API (prop bridge) | status —"
 
 
 def render_strategy_report(report: Dict[str, Any]) -> str:
@@ -978,7 +1049,10 @@ def render_combined_report(report: Dict[str, Any]) -> str:
     in one Telegram message (the verbose tail is collapsed in expandable
     blockquotes and truncated last if the hour is unusually noisy).
     """
-    from src.units.ui.telegram_format import render_html
+    # TELEGRAM-CHANNELS (2026-10-11): FITTED — a noisy hour trims section
+    # bodies with an explicit "N more line(s) not shown" count instead of
+    # cutting whole trailing sections (the accounts half) off the message.
+    from src.units.ui.telegram_format import render_html_fitted as render_html
 
     now: datetime = report["now_utc"]
     health = report["health"]
@@ -1037,6 +1111,224 @@ def build_combined_hourly_report(
         )
 
 
+# ---------------------------------------------------------------------------
+# TELEGRAM-CHANNELS (2026-10-11): the periodic updates are SPLIT BY CONTENT.
+# SYSTEM gets the HEALTH CHECK below; TRADES gets src/runtime/trades_snapshot.
+# No section rides both: the strategy P&L list and the trades/balances
+# sections are performance and live only in the TRADES snapshot.
+# ---------------------------------------------------------------------------
+
+#: Section summaries that are PERFORMANCE content — never in the health check.
+_PERFORMANCE_SUMMARIES = ("Strategies (today)",)
+
+
+def _reachability_section(accounts: Optional[List[Dict[str, Any]]]):
+    """Account REACHABILITY only (API ok / error / by-design) — no balances."""
+    from src.units.ui.telegram_format import Section, bullet_list
+
+    if accounts is None:
+        return Section(summary="Account reachability — data unavailable",
+                       body="list_accounts() raised — we could not look.", priority=35)
+    lines, errs = [], 0
+    for a in accounts:
+        rs = a.get("read_state") or (READ_OK if a.get("api_ok") else READ_API_ERROR)
+        if rs == READ_NO_API_BY_DESIGN:
+            lines.append(f"{a['account_id']}: prop bridge (no broker API) — status "
+                         f"{a.get('prop_status') or '—'}")
+        elif rs == READ_DRY_RUN_NOT_READ:
+            lines.append(f"{a['account_id']}: dry_run — not read (by design)")
+        elif rs == READ_API_ERROR or not a.get("api_ok"):
+            errs += 1
+            lines.append(f"{a['account_id']}: API ERROR")
+        else:
+            lines.append(f"{a['account_id']}: API OK")
+    return Section(summary=f"Account reachability — {len(accounts)} accounts"
+                   + (f" / {errs} API errors" if errs else " / all reachable"),
+                   body=bullet_list(lines, empty="(no accounts configured)"), priority=35)
+
+
+def deploy_and_alerts(since: datetime, now: datetime) -> Dict[str, Any]:
+    """Deploy sha / restart pending / alert ledgers changed / standing wedges.
+    Every field is three-state: a value, or None = could not look."""
+    out: Dict[str, Any] = {"running_sha": None, "disk_sha": None, "restart_pending": None,
+                           "alert_ledgers": None, "wedges_lines": None}
+    try:
+        st = json.loads((RUNTIME_LOGS / "runtime_status.json").read_text(encoding="utf-8"))
+        # `git_sha_running` is the sha the trader LOADED; `git_sha` in this file
+        # is the checkout at write time (runtime_status.build_status), which a
+        # pull advances without a restart -- reading it made "running" == disk.
+        out["running_sha"] = (st.get("git_sha_running") or None)
+    except (OSError, ValueError):
+        pass
+    try:
+        import subprocess
+        from src.utils.paths import repo_root
+        r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo_root()),
+                           capture_output=True, text=True, timeout=5, check=False)
+        out["disk_sha"] = r.stdout.strip() or None if r.returncode == 0 else None
+    except Exception:  # noqa: BLE001  # allow-silent: None renders as "could not look"
+        pass
+    if out["running_sha"] and out["disk_sha"]:
+        try:
+            # Per unit (TRADER-RESTART-GATE): the deploy's own trader rule.
+            from src.web.api.routers.diag import _trader_restart_pending
+            out["restart_pending"] = _trader_restart_pending(out["running_sha"], out["disk_sha"])
+        except Exception:  # noqa: BLE001  # allow-silent: None renders as "could not look"
+            pass
+    try:
+        changed = []
+        for f in sorted(RUNTIME_LOGS.glob("*_alert_state.json")):
+            m = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc)
+            if since <= m <= now:
+                changed.append(f.name.replace("_alert_state.json", ""))
+        out["alert_ledgers"] = changed
+    except OSError:
+        pass
+    try:
+        from scripts.ops.work_digest import standing_wedges
+        out["wedges_lines"] = wedge_lines(standing_wedges(), now, _decided_wedges())
+    except Exception:  # noqa: BLE001  # allow-silent: None renders as "could not look"
+        pass
+    return out
+
+
+def _decided_wedges() -> List[Dict[str, Any]]:
+    """Closed pipeline items about a close wedge (state done/killed with a
+    terminal_reason) — the operator's recorded decisions. [] when unreadable."""
+    try:
+        from scripts.ops import pipeline
+        res = pipeline.load()
+        items = res.items.values() if isinstance(res.items, dict) else res.items
+    except Exception:  # noqa: BLE001  # allow-silent: no decisions known -> rows render undecided (the louder side)
+        return []
+    out = []
+    for i in items:
+        if i.get("state") not in ("done", "killed") or not i.get("terminal_reason"):
+            continue
+        # Only an OPERATOR's decision counts: the item asked the operator, or
+        # its terminal_reason records one.
+        if not (i.get("next_action") == "ask_operator"
+                or "operator decision" in str(i["terminal_reason"]).lower()):
+            continue
+        text = f"{i.get('what') or ''} {(i.get('origin') or {}).get('ref') or ''}"
+        if "wedge" in text.lower() or "zombie oco" in text.lower():
+            out.append({"id": i.get("id"), "text": text, "reason": i["terminal_reason"]})
+    return out
+
+
+def wedge_lines(sw: Dict[str, Any], now: datetime,
+                decided: List[Dict[str, Any]]) -> List[str]:
+    """The standing-wedge block for the SYSTEM health check. Non-``read`` states
+    use the digest's own wording; a wedge the operator ALREADY decided renders
+    as decided (with the decision's id), never as an operator ask
+    (operator feedback 2026-10-11 on the first live manager update)."""
+    from scripts.ops.work_digest import _age_days, render_standing_wedges
+
+    rows = sw.get("wedges") or []
+    if sw.get("wedgeState") != "read" or not rows:
+        return render_standing_wedges(sw, now)
+    open_rows, out = [], [f"🧱 Standing close wedges: {len(rows)} (ledger: {sw.get('source')})"]
+    for w in rows:
+        acct, sym = str(w.get("account") or ""), str(w.get("symbol") or "")
+        hit = next((d for d in decided if acct and sym and acct in d["text"]
+                    and re.search(rf"\b{re.escape(sym)}\b", d["text"])), None)
+        head = (f"  • {acct or '—'}/{sym or '—'} {w.get('side') or '—'} · standing "
+                f"{_age_days(w.get('first_seen'), now)}")
+        if hit:
+            out.append(f"{head} · DECIDED ({hit['id']}): {str(hit['reason'])[:140]}"
+                       " — kept open, flagged, excluded from evidence; no action needed")
+        else:
+            open_rows.append(w)
+            out.append(f"{head} · {str(w.get('detail') or w.get('evidence') or '')[:140]}")
+    if open_rows:
+        out.append(f"  {len(open_rows)} undecided — need OPERATOR or VENUE action; the bot has "
+                   "no lever (raised in MANAGER as a decision when filed ask_operator).")
+    return out
+
+
+def _deploy_section(d: Dict[str, Any]):
+    from src.units.ui.telegram_format import Section
+
+    rp = d.get("restart_pending")
+    rp_s = {True: "⚠️ YES — code the trader loads changed on disk and is not loaded",
+            False: "no", None: "— (could not look)"}[rp]
+    al = d.get("alert_ledgers")
+    lines = [
+        f"Trader running sha: {(d.get('running_sha') or '—')[:10]}",
+        f"Checkout sha: {(d.get('disk_sha') or '—')[:10]}",
+        f"Restart pending: {rp_s}",
+        "Alert ledgers changed this window (raised or cleared): "
+        + ("— (could not look)" if al is None else (", ".join(al) or "none")),
+    ]
+    wl = d.get("wedges_lines")
+    lines += ["", *(wl if wl is not None else ["Standing close wedges: — (could not look)"])]
+    head = "Deploy & alerts — " + ("RESTART PENDING" if rp else
+                                  f"{len(al)} alert ledger(s) changed" if al else "quiet")
+    return Section(summary=head, body="\n".join(lines), priority=5 if rp else 45)
+
+
+def _notification_settings_section():
+    """Active NON-DEFAULT Telegram settings (TELEGRAM-CHANNELS-3 item 6), so a
+    silenced or slowed update is visible without reading the store. ``None``
+    when everything is at the defaults and the store was read; an absent store
+    IS the defaults, an UNREADABLE one is said (and serves defaults)."""
+    from src.runtime import telegram_settings as ts
+    from src.units.ui.telegram_format import Section
+
+    try:
+        d = ts.load()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: said in the section itself ("could not look"), never rendered as nothing
+        return Section(summary="Notification settings — could not look",
+                       body=f"telegram_settings unreadable ({type(exc).__name__})", priority=40)
+    lines: List[str] = []
+    for key, (channel, name) in ts.PERIODIC.items():
+        choice = ts.cadence(key)
+        if choice != ts.DEFAULT_CADENCE:
+            lines.append(f"{name} ({channel}): {ts.CADENCE_LABELS[choice]} — default is "
+                         f"{ts.CADENCE_LABELS[ts.DEFAULT_CADENCE]}")
+    if d.get("muted"):
+        lines.append("Muted kinds: " + ", ".join(d["muted"]))
+    if d.get("read_state") == "unreadable":
+        lines.append("Settings store UNREADABLE — serving defaults")
+    if not lines:
+        return None
+    n = len(lines)
+    if d.get("updated_at") or d.get("updated_by"):
+        lines.append(f"Last changed: {d.get('updated_at') or '—'} by {d.get('updated_by') or '—'}")
+    return Section(summary=f"Notification settings — {n} non-default",
+                   body="\n".join(lines), priority=40)
+
+
+def render_system_health(report: Dict[str, Any], extras: Optional[Dict[str, Any]] = None) -> str:
+    """The SYSTEM channel's periodic HEALTH CHECK (HTML, fitted)."""
+    from src.units.ui.telegram_format import render_html_fitted
+
+    now: datetime = report["now_utc"]
+    since: datetime = report.get("since") or now - timedelta(hours=1)
+    health = report["health"]
+    sections = [s for s in _build_strategy_sections(
+        ticks=report["ticks"], strategies=report["strategies"],
+        outcomes=report["outcomes"], health=health)
+        if not s.summary.startswith(_PERFORMANCE_SUMMARIES)]
+    sections.append(_build_training_section(report.get("training")))
+    sections.append(_reachability_section(report.get("accounts")))
+    if extras is not None:
+        sections.append(_deploy_section(extras))
+    notif = _notification_settings_section()
+    if notif is not None:
+        sections.append(notif)
+    footer = {
+        "ok": "All systems normal",
+        "warn": "WARN: errors logged but no critical issues",
+        "degraded": "ACTION NEEDED: see Errors / Health sections",
+    }.get(health["overall"], "")
+    hours = max(1, round((now - since).total_seconds() / 3600))
+    return render_html_fitted(
+        header=(f"[{_overall_glyph(health['overall'])}] 🩺 Health check — "
+                f"{now.strftime('%Y-%m-%d %H:00 UTC')} (window {hours}h)"),
+        sections=sections, footer=footer)
+
+
 def render_report(report: Dict[str, Any]) -> str:
     """Back-compat: return the strategy-focused HTML rendering.
 
@@ -1093,8 +1385,12 @@ def assemble_hourly_data(
     *,
     now_utc: Optional[datetime] = None,
     tick_interval_s: int = 900,
+    since: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """Run the four data-gathering passes and return the assembled dict.
+
+    ``since`` (TELEGRAM-CHANNELS part C) widens the window to the operator's
+    cadence — a 4-hourly health check covers 4 hours, not the last one.
 
     Both the strategy-focused and account-focused renderers consume
     the same shape, so the data sweep runs once per hourly cycle.
@@ -1102,7 +1398,7 @@ def assemble_hourly_data(
     ``render_accounts_report``. Never raises.
     """
     now = now_utc or datetime.now(timezone.utc)
-    since = now - timedelta(hours=1)
+    since = since or now - timedelta(hours=1)
     audit_records = _load_audit_lines_since(since)
     ticks = summarize_ticks(audit_records)
     trades = trades_in_window(since)
@@ -1118,6 +1414,7 @@ def assemble_hourly_data(
     )
     return {
         "now_utc": now,
+        "since": since,
         "ticks": ticks,
         "trades": trades,
         "accounts": accounts,

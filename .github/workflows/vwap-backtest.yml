@@ -4,7 +4,7 @@ name: vwap-backtest
 # fetches fresh 5m BTCUSDT data, runs the VWAP HTF-filter comparison
 # backtest, and comments results back on the issue.
 #
-# Runs on the TRAINER VM (ict-trainer-vm, 158.178.209.121) — NOT the
+# Runs on the TRAINER VM (ict-trainer-vm, <TRAINER_VM_IP>) — NOT the
 # live trader VM — to avoid compute contention and keep backtest
 # workloads isolated from live trading. A role-marker check
 # (/etc/ict-trainer-vm.role == "training-center") guards every run.
@@ -35,7 +35,7 @@ name: vwap-backtest
 #   VM_SSH_KEY   — SSH private key (same key authorised on both VMs)
 #
 # Optional repo variables:
-#   TRAINER_VM_SSH_HOST  — defaults to 158.178.209.121
+#   TRAINER_VM_SSH_HOST  — defaults to <TRAINER_VM_IP>
 
 on:
   workflow_dispatch:
@@ -96,6 +96,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Parse issue body
         if: github.event_name == 'issues'
         env:
@@ -176,7 +183,7 @@ jobs:
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          TRAINER_VM_SSH_HOST: ${{ vars.TRAINER_VM_SSH_HOST || '158.178.209.121' }}
+          TRAINER_VM_SSH_HOST: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           if [ -z "${VM_SSH_KEY}" ]; then
@@ -190,7 +197,7 @@ jobs:
 
       - name: Verify trainer VM role marker
         env:
-          TRAINER_VM_SSH_HOST: ${{ vars.TRAINER_VM_SSH_HOST || '158.178.209.121' }}
+          TRAINER_VM_SSH_HOST: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           role=$(ssh -i ~/.ssh/id_rsa \
@@ -208,7 +215,7 @@ jobs:
 
       - name: Pull latest code on trainer VM
         env:
-          TRAINER_VM_SSH_HOST: ${{ vars.TRAINER_VM_SSH_HOST || '158.178.209.121' }}
+          TRAINER_VM_SSH_HOST: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_rsa \
@@ -223,7 +230,7 @@ jobs:
 
       - name: Fetch fresh 5m backtest data on trainer VM
         env:
-          TRAINER_VM_SSH_HOST: ${{ vars.TRAINER_VM_SSH_HOST || '158.178.209.121' }}
+          TRAINER_VM_SSH_HOST: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
 
@@ -245,11 +252,11 @@ jobs:
               "cd /home/ubuntu/ict-trading-bot && \
                source .venv/bin/activate && \
                python scripts/ops/fetch_backtest_candles.py ${FETCH_ARGS} \
-                 --output /tmp/backtest_fresh.csv 2>&1"
+                 --allow-window-replace --output /tmp/backtest_fresh.csv 2>&1"
 
       - name: Run VWAP backtest on trainer VM
         env:
-          TRAINER_VM_SSH_HOST: ${{ vars.TRAINER_VM_SSH_HOST || '158.178.209.121' }}
+          TRAINER_VM_SSH_HOST: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
 
@@ -295,7 +302,7 @@ jobs:
 
       - name: Fetch backtest result from trainer VM
         env:
-          TRAINER_VM_SSH_HOST: ${{ vars.TRAINER_VM_SSH_HOST || '158.178.209.121' }}
+          TRAINER_VM_SSH_HOST: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_rsa \

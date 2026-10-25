@@ -1,56 +1,313 @@
-# MANAGER-SCOPE EXCEPTIONS — the escape hatch for `check_manager_scope.py`.
+# Manager-scope exceptions — read scripts/ci/check_manager_scope.py before adding one.
 #
-# THE MANAGER SESSION ONLY MANAGES. `CLAUDE.md`, operator 2026-09-01:
-#   "the manager session only manages and does not take even small items,
-#    because that means they're not focused on what they're actually supposed
-#    to be doing."
-#
-# ⚠️ A REAL EMERGENCY IS NOT "AN ITEM". An incident on the live trading system
-# at 3am, with no session up and money at risk, is management — and a rule that
-# forced the manager to spawn a session first would be a rule that costs money
-# to obey. That is what this file is for, and it is the ONLY way past the guard:
-# there is no bypass flag and no environment variable, deliberately.
-#
-# HOW IT IS DIFFERENT FROM A FLAG. Every field below is VERIFIED, not merely
-# present — the lesson of `new-table-wiring-guard`, whose presence-only marker
-# made the cheapest way to silence a real finding *naming a table that does not
-# exist*. A guard cheaper to lie to than to satisfy is worse than no guard, so:
-#
-#   * `status` must be exactly `active`. **`pending` REFUSES** — an unfilled
-#     template grants nothing, which is why the template below is `pending`.
-#   * `paths` must be a non-empty list of globs, and it is SCOPED: an entry
-#     naming `src/runtime/orders.py` does not excuse touching `config/`.
-#   * `reason` must be real text (>= 30 chars). A one-word reason is refused.
-#   * `expires` must be a real YYYY-MM-DD, and an EXPIRED entry grants nothing.
-#     There is no "permanent" value. If you still need it next week, you are
-#     not handling an incident — you are doing an item, and it wants a session.
-#
-# Every one of those refusals has a planted-defect case in
-# `check_manager_scope.py --self-test`, so an entry that would silence the guard
-# without meeting the bar cannot pass unnoticed.
-#
-# THIS FILE IS THE AUDIT TRAIL. An exception is meant to be READ afterwards —
-# by the operator, and by the next manager. Write the `reason` for that reader:
-# what was on fire, why no session could take it, and what you did.
-#
-# Pattern copied from `docs/claude/work/spawn-priority-exception.yaml`.
-
-schema_version: 1
-
+# Each entry NAMES the paths, is DATED, carries a real reason, and EXPIRES.
+# `status: pending` grants NOTHING — only `active` does. There is no bypass
+# flag and no environment variable, deliberately: the cheapest way to silence
+# this guard must remain "route the work to a session", because that is the
+# behaviour wanted.
 exceptions:
-  # ------------------------------------------------------------------------
-  # TEMPLATE — `status: pending`, so it grants NOTHING as written. Copy it,
-  # fill it in, and set `status: active` only for work that is genuinely an
-  # incident rather than an item.
-  # ------------------------------------------------------------------------
-  - id: EXC-YYYYMMDD-SHORT-SLUG
-    status: pending
+  - id: MGR-20261024-HOOK-ROTATION-CARVEOUT
+    status: active
+    expires: "2026-10-25"
     paths:
-      - src/runtime/example.py
+      - ".claude/settings.json"
     reason: >-
-      What was on fire, why it could not wait for a session to be spawned, and
-      what you actually changed. Written for the operator reading it later.
-    expires: 2026-01-01
-    # Optional, and worth filling in: the incident or work object this belongs
-    # to, so the exception can be joined back to the record of what happened.
-    ref: null
+      OPERATOR DECISION, 2026-10-24 ~15:24Z, popup in manager session
+      session_01UETC6mFiwMgXk6URsuWzZb, verbatim "Carve out manager rotation
+      (Recommended)" (row MANAGER-HANDOVER-SLIM). The owning lane
+      (session_01SX3Cx8hA6D6V8kJV3iiPB2) was refused the settings.json edit by
+      its auto-mode classifier. The operator then took the manager off auto
+      mode and told it in chat, verbatim: "Okay, took you off auto mode so that
+      you could handle the permissions." That names the MANAGER as the author.
+
+      WHAT IT COVERS: the single commit that adds ONE sentence to the
+      SessionStart READ-FIRST text in .claude/settings.json. The sentence
+      exempts only an incoming manager on a rotation (tagged manager +
+      predecessor:*) from the full CLAUDE-RULES-CANONICAL read, pointing it to
+      the targeted-section list in the manager skill. Every other session,
+      lanes included, still reads in full. Nothing else in that file changes.
+  - id: MGR-20261022-DECISION-BAR-SPLIT
+    status: active
+    expires: "2026-10-24"
+    paths:
+      - "config/strategies.yaml"
+      - ".github/pr-landing/lane-decision-bar-split-config-1022.json"
+      - "comms/strategy_evidence/ada_pullback_2h.json"
+      - "comms/strategy_evidence/xrp_pullback_2h.json"
+      - "comms/strategy_evidence/trend_donchian_eth_prop.json"
+      - "scripts/research/regime_debt_matrix.py"
+      - "tests/test_decision_bar_closed_fingerprint_inert.py"
+      - "tests/test_rebase_evidence_decision_bar.py"
+    reason: >-
+      OPERATOR DECISION, 2026-10-22 ~10:40Z, popup in manager session
+      session_01CSwhZWiw15rVCkjsJ8Cpuh, verbatim "Split: 3 to closed, 2 stay
+      (Recommended)" (row DECISION-BAR-MATCH). The owning lane
+      (session_01B7EoDeNYn9AmiGkk7q6etd) was refused the edit by its auto-mode
+      classifier, and so was the manager's first commit. The operator then
+      answered the manager's popup, verbatim "Take me off auto mode
+      (Recommended)", and told the manager in chat, verbatim "Off auto mode".
+      That names the MANAGER as the author.
+
+      WHAT IT COVERS: the single commit that adds `decision_bar: closed` to
+      xrp_pullback_2h, ada_pullback_2h and trend_donchian_eth_prop in
+      config/strategies.yaml. Nothing else in that file. The lane finishes the
+      fingerprints, tests and the held Tier-3 PR.
+
+      SECOND COMMIT (11:15Z): the lane's own classifier then refused to COMMIT
+      its finished, verified work onto this branch ("[Auto-Mode Bypass]"), so it
+      handed the manager a patch. The manager (off auto mode by the operator's
+      instruction) applied it UNCHANGED: the 3 inert fingerprint refreshes on the
+      named evidence records, the regime_debt_matrix pullback decision_bar
+      fidelity fix, two tests, and the Tier-3 hold landing file. Authored by lane
+      session_01B7EoDeNYn9AmiGkk7q6etd; committed by the manager.
+  - id: MGR-20261018-EXEC-TEST-TRADES-GRANT
+    status: active
+    expires: "2026-10-21"
+    paths:
+      - "config/mandates.yaml"
+    reason: >-
+      OPERATOR GRANT, 2026-10-18 ~08:05Z, in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao: a standing mandate for test trades to
+      verify the phone executor's operations (verbatim text in the
+      MD-EXEC-DEV-TEST-TRADES entry's source). The lane's classifier refused
+      the write because the grant reached it only relayed. The operator then
+      told the manager, verbatim: "the default fix for permissions is always to
+      try taking you off auto mode to impelment the changes first, not giving
+      me text to paste into a seperate session", and "Off auto mode". That
+      names the MANAGER as the author, so routing it to a lane is not what was
+      asked.
+
+      WHAT IT COVERS: the single commit that adds MD-EXEC-DEV-TEST-TRADES to
+      config/mandates.yaml. Nothing else in that file.
+  - id: MGR-20261015-SOAK-AMEND-GRANT
+    status: active
+    expires: "2026-10-18"
+    paths:
+      - "config/mandates.yaml"
+      - "tests/test_mandate_resolver.py"
+    reason: >-
+      OPERATOR GRANT, 2026-10-15 ~21:05Z, popup in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao, verbatim "Grant as written
+      (Recommended)" on MD-PROMOTE-S1-S2-SOAK-AMEND. The SOAK-REDEFINE lane's
+      write was refused by the permission classifier, and so was the manager's
+      first attempt; the operator then told the manager in chat, verbatim:
+      "go ahead, retry the mandates.yaml grant write", and for this exception
+      entry, verbatim: "granted permision for the rewrite", then answered the
+      unlock popup "Approve one prompt (Recommended)" and left auto mode for
+      it. That names the MANAGER as the author, so the guard's normal remedy
+      (route it to a session) is not what was asked, and a lane re-committing
+      it would misattribute a real-money authorization.
+
+      WHAT IT COVERS: PR #18445 commit eeb0de70 only -- folds
+      MD-PROMOTE-S1-S2-SOAK-AMEND into MD-PROMOTE-S1-S2 (amended_at /
+      amendment_source, never: soak = SOAKS.json passed, fires_when:
+      venue-symbol measured cost, bar.soak_passed, bar.cost_basis:
+      venue_symbol, proposed: []) plus the GLD R-AFFORD test fixture, which
+      needs a passed soak contract now that the soak clause precedes
+      affordability. Nothing else in those files.
+  - id: MGR-20261005-AUTOMERGE-BRANCH-WIDEN
+    status: active
+    expires: "2026-10-08"
+    paths:
+      - ".github/workflows/claude-pr-automerge.yml"
+    reason: >-
+      OPERATOR GRANT, 2026-10-05, to manager session_01MM8o5js6TcDFeNAPBY4Ntv.
+      The operator answered the manager's popup "widen the automerge relay
+      trigger to non-claude branches?" with, verbatim, "Yes, widen it". When
+      the manager then asked for a manual edit, the operator replied, verbatim:
+      "I do not make manual edits ... Fix it, figure it out. If you need to
+      take you off auto mode so that you can do the change, then that's what
+      you're supposed to do." That names the MANAGER as the author, so the
+      guard's normal remedy (route it to a session) is not what was asked.
+
+      WHAT IT COVERS: PR #16552 only. It changes the `on.push` branch filter of
+      claude-pr-automerge.yml from `claude/**` to every branch except main and
+      automation/**. The job body and the arming conditions are untouched.
+      Closes PI-20260929-AQRK6CL1-0001 and PI-20261002-ULPHZHHQ-0002.
+  - id: MGR-20260927-TITLE-AND-NO-DISPUTE-RULE
+    status: active
+    expires: "2026-09-30"
+    paths:
+      - ".claude/skills/manager/SKILL.md"
+      - "CLAUDE.md"
+      - "docs/CLAUDE-RULES-CANONICAL.md"
+      - ".github/merge-slots/w6-ops-authority-flag.json"
+      - ".github/merge-slots/close-pipeline-item-yzrzq725-mgvf3b.json"
+    reason: >-
+      SCRUB (operator, 2026-09-27, verbatim): "I told the session to fully
+      scrub that discrepency, I do not want to take any changes of degenerate
+      behavior poising future sessions." The two merge-slot paths are stale
+      claims of already-merged branches, deleted as part of that scrub; no
+      live merge is affected.
+
+      OPERATOR GRANT, 2026-09-27, verbatim, in the operator's own first message
+      to manager session_01KAQRJxRbRwpYTkPgBjNVyQ: (1) "Title yourself ... Then
+      make this permanent: add it as step 1 of the start-of-session procedure
+      in .claude/skills/manager/SKILL.md, plus a one-line pointer under
+      CLAUDE.md § 'Every session' item 2. Tier-1 self-land." (2) on the "No lane
+      files a dispute of operator authority" rule: "If the rule isn't on main
+      within the hour, land it yourself: a binding subsection in
+      CLAUDE-RULES-CANONICAL § 'Lanes answer to the manager' plus a one-line
+      pointer in CLAUDE.md." Both name the MANAGER as the author, so the
+      guard's normal remedy (route it to a session) is not what was asked.
+
+      ALSO (operator, 2026-09-27, verbatim): "the only acceptable way for
+      resolving these issues is for the manager to be temporarily taken on of
+      auto mode ... Make sure that is in the manager skill" -- covers the new
+      manager-skill section on classifier refusals.
+
+      WHAT IT COVERS: PR #13160 only — the new § "Start of session" in the
+      manager skill, the new subsection "No lane files a dispute of operator
+      authority" in CLAUDE-RULES-CANONICAL, and the two CLAUDE.md pointer
+      lines. Nothing else in those files.
+
+      WHY NOW: the rule was first asked of cleanup lane
+      session_01G5QWpSxtgbTPVizhiP3wAn, which did not write it; the operator's
+      one-hour fallback then made it the manager's. The guard only began
+      grading this branch once the same PR recorded the manager's session on
+      the register, which is how it surfaced.
+
+  - id: MGR-20260921-SPAWN-PROVENANCE
+    status: active
+    expires: "2026-09-24"
+    paths:
+      - ".claude/skills/manager/SKILL.md"
+    reason: >-
+      OPERATOR GRANT, 2026-09-21, verbatim: "You have permission to make this
+      fix permanent." It answers a decision this manager put to them in chat,
+      so the grant is specific rather than inferred, and it is recorded here
+      rather than acted on silently.
+
+      WHAT IT COVERS: writing the spawn-provenance recipe into
+      .claude/skills/manager/SKILL.md, and nothing else. Scope of record is
+      pipeline item PI-20260921-0004.
+
+      WHY A SESSION COULD NOT DO IT, which is the whole reason an exception is
+      needed. Measured 2026-09-21: the manager spawned a lane to make exactly
+      this edit and create_session was REFUSED by the auto-mode permission
+      classifier, reason [Self-Modification] — an agent spawning another agent
+      to rewrite its own operating instructions. That refusal is correct and
+      was not worked around. The normal remedy this guard prescribes, "route it
+      to a session", is therefore structurally unavailable for this one path,
+      which is precisely the case an argued escape hatch exists for.
+
+      WHY IT MATTERS ENOUGH TO USE THE HATCH: three of six lanes in the first
+      dispatch under the new operating model ended their first turn having done
+      no work, each asking whether its own task prompt was injected. They were
+      right to ask. The behavioural fix is already applied in this session, but
+      it lives only in this session's head, and the operator's stated
+      number-one failure mode is losing work to sessions dying mid-flight. An
+      unwritten fix IS that loss.
+
+  - id: MGR-20260921-STALE-SESSION-HOOKS
+    status: active
+    expires: "2026-09-24"
+    paths:
+      - ".claude/settings.json"
+      - "tests/test_merge_slot_guard.py"
+    reason: >-
+      OPERATOR GRANT, 2026-09-21, in answer to a decision put to them as one of
+      four: they chose "Grant me settings.json" over editing it themselves or
+      leaving it. Specific, not inferred.
+
+      ⚠️ WHY A tests/ PATH IS IN AN EXCEPTION THAT WAS GRANTED FOR
+      .claude/settings.json, stated rather than slipped in.
+      tests/test_merge_slot_guard.py asserts the CONTENT of the merge-slot
+      guard's deny message, which lives in settings.json. Repointing that
+      message off the archived board necessarily broke the assertion pinning
+      the old pointer — CI caught it as the single failure in 17,953. The test
+      change is therefore a direct consequence of the granted edit, not
+      separate work, and leaving CI red was not an option.
+
+      ⚠️ AND IT IS NOT A WEAKENING, which is the thing to check when a session
+      edits a test to go green. The test's own comment records it having made
+      this exact move once before — it asserted the literal issue number `6927`
+      until that board hit GitHub's comment cap, then asserted
+      board-pointer.json until the reset archived it. Both times the
+      REQUIREMENT was unchanged: the deny must tell a session where to make its
+      claim and what the claim is. The assertions now name
+      claim_merge_slot.py + --branch-claim + "MERGE SLOT CLAIM", which is
+      strictly MORE than the two they replaced, and they now name the same
+      mechanism pr-landing-guard R13 actually checks.
+
+      WHAT IT COVERS: removing instructions that send sessions to files the
+      2026-09-21 reset archived, and repointing them at what exists. Nothing
+      else in this file is touched — no new hook, no permission change, no
+      env var. Scope of record is pipeline item PI-20260921-M05.
+
+      WHY IT MATTERS: MEASURED 2026-09-21, 22 references across three
+      SessionStart hooks and two PreToolUse hooks. This is the most expensive
+      instance of the reset's orphan class found so far, because it is not a
+      degraded check a session might never run — it is the FIRST thing EVERY
+      session reads, and it instructed them to register on a coordination board
+      that does not exist, claim merge slots by commenting on it, pull two
+      retired skills, and file findings into three archived backlogs.
+
+      WHAT CHANGED, precisely: item 0 of the session-start contract (the whole
+      coordination-board protocol) replaced with what is actually live; the
+      /system-review roll-up marked retired; the definition of done repointed
+      from "the three review backlogs are drained" to the pipeline and the
+      checklist; Rule 2's filing target repointed; the delegate-work and
+      session-registry paragraph replaced with the manager contract; the
+      board-nudge PreToolUse hook DELETED outright, since the thing it nudged
+      is gone; and the merge-slot PreToolUse guard KEPT but repointed — the
+      claim is still live and required, it is now a file
+      (scripts/ops/claim_merge_slot.py --branch-claim) rather than a board
+      comment.
+
+      ⚠️ A DELIBERATE RESIDUE, so a successor does not "fix" it: the hooks
+      still NAME the archived files, in sentences saying they are archived and
+      must not be used. That is correct and load-bearing — a session needs the
+      name it would otherwise go looking for. A probe that merely counts
+      mentions will therefore never read zero, and the acceptance criterion on
+      PI-20260921-M05 was corrected to say so.
+
+      VERIFIED, not assumed: all six hook commands re-parsed under `bash -n`
+      and the rendered session-start text was read back after the edit.
+
+  - id: MGR-20260921-B2-ROSTER-EDIT
+    status: active
+    expires: "2026-09-24"
+    paths:
+      - "config/accounts.yaml"
+      - "tests/test_paper_portfolio_accounts.py"
+      - "CLAUDE.md"
+    reason: >-
+      OPERATOR APPROVAL, 2026-09-21, asked directly and answered directly: cut
+      `alpaca_portfolio.strategies` to exactly [ief_pullback_1d,
+      slv_pullback_1d], and — on the empty-`alpaca_live` question the B2 lane
+      raised and correctly refused to resolve — equality wins, no exception.
+      The CONTENT of this change is fully operator-approved. The only thing
+      this exception covers is WHO TYPED IT.
+
+      WHY A SESSION COULD NOT DO IT, which is the whole reason an exception is
+      needed. THREE lanes were dispatched for this four-line edit and none
+      committed a single line. Measured from `get_session`: lane one
+      (session_011b88KXF5rUPYPbUWARAtEy) reached $229.13 against a $30 ceiling
+      and ended on "git commit denied by permission rule" with four edits
+      staged in a container that is now gone. Lane two
+      (session_018J9SUp957b1V5xj1mcfTWu) stalled with its pending action
+      readable: a compound, piped git command awaiting an interactive Bash
+      approval nobody was present to give. Lane three
+      (session_01XnDDuqCsFscnUkgTNMTDA9) was dispatched with that shape
+      explicitly avoided and stalled anyway — on `python3 -m pytest
+      tests/test_paper_portfolio_accounts.py -q`, a plain single-purpose
+      command.
+
+      ⚠️ THAT THIRD DATA POINT REFUTES THE MANAGER'S OWN HYPOTHESIS. The
+      "compound/piped command shape" explanation written into
+      PI-20260921-LANE-BLOCKED-ON-AN-UNATTENDED-PERMISSION-PROMPT is WRONG and
+      has been corrected there rather than left standing. What is actually
+      established is narrower and stated as such: some sessions in this
+      environment escalate ordinary Bash commands to an interactive approval
+      that never arrives, and the manager cannot answer it for them.
+
+      So the guard's prescribed remedy — "route the work to a session" — was
+      attempted three times and is structurally unavailable, which is exactly
+      the case this hatch exists for. Leaving it undone would mean an
+      operator decision taken today silently does not happen, which is the
+      failure mode the whole operating reset was for.
+
+      WHAT IT DOES NOT COVER: any other roster, any `mode:` or `execution:`
+      value, anything in `alpaca_live`, and any future config edit. It is this
+      one approved change and the two files that carry its reasoning.

@@ -1,0 +1,25 @@
+{
+  "based_on": "20261018T102018413550Z-daa54a39.json",
+  "due_when": {
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "evidence": "gh run list --workflow=mirror-orphan-watch.yml: 5 consecutive scheduled failures 2026-10-13..17; workflow has steps Read positions / Compare mirror to live only",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-ORPHANWATCH-0001",
+  "money_path": true,
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ACTIVE-MGMT-DRIVE-1018 read 2026-10-18 10:35Z of mirror-orphan-watch runs + workflow file",
+    "rerun": "gh run list --workflow=mirror-orphan-watch.yml --limit 7  # holds while runs conclude failure and the workflow has no step that posts an alert; grep -c 'send-ping\\|outcomes' .github/workflows/mirror-orphan-watch.yml"
+  },
+  "roadmap": [
+    "M39"
+  ],
+  "routed_2026_10_25": "Checked on main 2026-10-25: mirror-orphan-watch.yml has 0 send-ping/outcomes matches.",
+  "routed_to": "checklist:ORPHANWATCH-ALERT",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "BUILD: .github/workflows/mirror-orphan-watch.yml has no alert step. It has concluded failure on every scheduled run since at least 2026-10-13 (5 runs, 39055834475 latest) and nobody was pinged; the only signal was GitHub's workflow-failure email. A red run must send ONE ping via the send-ping system-action (or the outcomes report path) naming the orphan rows, and distinguish ORPHAN from stale_ack so a decided hold does not mask a new divergence. Tier 1 (CI/observability). Also fold in: remove the two stale_ack entries from config/mirror_window_exclusions.yaml once PI-20261018-XRPORPHAN-0001 is decided."
+}

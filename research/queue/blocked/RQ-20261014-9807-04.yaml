@@ -1,0 +1,122 @@
+id: RQ-20261014-9807-04
+title: 'Programme 01 Q4, stop waiting: do giveback-stop and trail_decay cells KEYED TO THE MEASURED GIVEBACK (RQ-20261014-9807-01)
+  beat the fixed gb1R_afterMFE1R cell on net R per capital-day on the real-money legs? BLOCKED: the m20 sweep has no `cells`
+  input (fixed giveback cells only)'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+requires_result: {unit: RQ-20261014-9807-01, verdict: pass}
+question: >-
+  Doctrine clause 3: the trail decides when the thesis has failed. The fleet's giveback stop is swept at two FIXED cells
+  (gb1R_afterMFE1R, gb1R_afterMFE2R; scripts/research/m20_fleet_exit_sweep.py) chosen in July, not from any leg's own giveback
+  distribution. Once the census (RQ-20261014-9807-01) lands per-leg giveback_r p25/p50, peak_r p50 and median bars_since_peak,
+  the question is whether cells keyed to THOSE numbers -- giveback_r in {p25, p50 of the leg's giveback}, giveback_min_mfe_r in
+  {1.0, p50 of peak}, trail_decay_stall_bars = median bars_since_peak with the reference tight mult -- beat the fixed cell and
+  the config-exact base on the 7 real-money legs, by the exit-refinement gate (Path A or Path B, then the walk-forward), net of
+  the full cost stack.
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    One-sample floor at d = 0.45 -> 39 OOS trades per leg (exit-refinement precedent). The m20 corpus reads base_oos_trades 49
+    (xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h), 31 (trend_donchian_xrp_4h) and 4-7 (the three alpaca 1d legs);
+    the 1d legs are below the floor by scope and are reported, not graded, unless pooled as a family.
+  feasibility:
+    source: corpus
+    corpus: m20
+    statistic: min_per_leg
+    legs:
+    - xrp_pullback_2h
+    - ada_pullback_2h
+    - trend_donchian_eth_4h
+    basis: >-
+      Grounded on m20 because the run is an m20 exit-lever sweep; min_per_leg over the three legs with n >= 39 reads 49 on the
+      2026-10-08 rows -> cleared for those legs. trend_donchian_xrp_4h (31) and the alpaca 1d legs (4-7) are scoped into the rule
+      as below_floor strata rather than certified on these legs' n.
+decision_rule:
+  id: RULE-RQ20261014-9807-04-CENSUS-KEYED-STOP
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per leg, per census-keyed cell vs the fixed gb1R_afterMFE1R cell and the config-exact base: gate_verdict (Path A: net_R and
+    maxDD in IS and OOS; Path B: net_r_per_capital_day in IS and OOS with maxDD within 0.35x base), walk-forward folds won of
+    usable, base_oos_trades. Costs via execution_costs.resolve_cost_policy.
+  rule: >-
+    PASS IF a census-keyed cell clears Path A or Path B on a leg with base_oos_trades >= 39 AND wins >= 5 of 6 usable folds AND
+    its OOS net_r_per_capital_day exceeds the fixed cell's -> a Tier-3 declare proposal of that cell on the leg (bybit_2 +
+    mirrors in one PR; alpaca_live + alpaca_portfolio in one PR). RETIRE the census-keyed idea on a leg IF neither keyed cell
+    beats the fixed cell on OOS net_r_per_capital_day (the July cell was already right there). honest_negative IF no cell
+    clears on any leg. BELOW_FLOOR for legs under 39 OOS trades: report, no verdict, name the pooled-family re-run.
+  what_it_does_not_do: >-
+    Flips nothing. Does not re-test the ADX-keyed trail or momentum time stop (RQ-20261007-042/043 own those). Does not touch
+    the TP side (Q2/Q3).
+blocked_on:
+- what: >-
+    The census RQ-20261014-9807-01 has no usable result: its only record
+    (research/results/RQ-20261014-9807-01/38540458035.jsonl, run 38540458035) is read_state producer_failed
+    (`giveback_census.py` cmd 0 exit=1, nothing measured). The cells are keyed to its per-leg giveback_r p25/p50,
+    peak_r p50 and median bars_since_peak, so none can be derived yet.
+  ref: RQ-20261014-9807-01
+  clears_when: >-
+    RQ-20261014-9807-01 lands a result with per-leg rows (requires_result verdict pass). Then derive per-leg cells per the
+    question above (giveback_r in {p25, p50}, giveback_min_mfe_r in {1.0, peak p50}, trail_decay_stall_bars = median
+    bars_since_peak with the reference tight mult), put them in run.inputs.cells as a JSON list of
+    {leg, lever, tag, params}, git mv to research/queue/, status queued.
+- what: >-
+    [CLEARED by GEOM-CELLS-INPUT, PR #18063] the sweep had no `cells` input. m20-exit-lever-sweep.yml now takes `cells`
+    (JSON list of {leg, lever, tag, params}); empty keeps the full grid. Levers: giveback_stop (giveback_r,
+    giveback_min_mfe_r), trail_decay (trail_decay_arm_r, trail_decay_stall_bars, trail_decay_tight_mult), stale_stop,
+    trail_geometry.
+  ref: scripts/research/m20_fleet_exit_sweep.py (--cells); .github/workflows/m20-exit-lever-sweep.yml inputs.cells
+  clears_when: PR #18063 merged.
+- clears_when: EXIT-PATH-EMIT-OFFLINE lands harness --emit-paths for the real-money legs; derive giveback_r
+    p25/p50, peak_r p50 and median bars_since_peak from the path rows, fill run.inputs.cells, git mv to
+    research/queue/.
+  ref: EXIT-PATH-EMIT-OFFLINE
+  what: '[2026-10-16 lane P1-ATM-BACKLOG-1016] The census (RQ-20261014-9807-01) now lands, but its real-money
+    pool is insufficient_n (7 closes < 20; research/results/RQ-20261014-9807-01/38674510250.jsonl), and
+    keying the cells from the harness ledgers instead does NOT work: ledger mfe_r is a lagged lower bound,
+    so per-trade giveback (mfe_r - gross_r over trades with mfe_r >= 1) reads p50 -0.04 R on xrp_pullback_2h,
+    -0.11 ada, -0.07 eth_4h (lane sandbox 2026-10-16, newest committed ledger per leg) -- negative givebacks
+    cannot key a stop. The per-leg giveback this unit needs comes from per-bar paths.'
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.4
+  basis: >-
+    stand-in: the operator's named pain point on the real-money legs; the fixed cell is the only giveback stop any leg can
+    declare today. Not a P&L measurement; no balances stated.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 120
+  basis: Estimate; one m20 sweep over 7 legs with ~6 cells each on 2h/4h/1d candles, runner.
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: xrp_pullback_2h,ada_pullback_2h,trend_donchian_eth_4h,trend_donchian_xrp_4h,ief_pullback_1d,slv_pullback_1d,iaum_pullback_1d
+    levers: giveback_stop,trail_decay
+    tp_cap_pct: '0.099'
+    split_mode: oos-trades
+    research_unit: RQ-20261014-9807-04
+  note: run.inputs.cells (JSON list of {leg, lever, tag, params}) is filled from the census record once RQ-20261014-9807-01 has a result (blocked_on); do not dispatch before.
+lands:
+  store: docs/research/m20-sweep-corpus.jsonl
+  assert_field: leg
+  min_rows: 1
+roadmap:
+- M20
+related:
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q4 rung 2)
+- RQ-20261014-9807-01 (the census whose rows key the cells; requires_result)
+- RQ-20261007-042 / RQ-20261007-043 (momentum-keyed stop and time stop, queued; rung 1 of Q4, not duplicated)
+- src/runtime/trail_decay.py (the live lever; declared per leg, Tier-3)
+last_dispatched_at: null

@@ -1,0 +1,38 @@
+{
+  "id": "RESEARCH-OPS-20261017-0847",
+  "title": "Research-ops pass 2026-10-17 08:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261017-0847",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18746
+  ],
+  "blocked_on": [],
+  "note": "[lane done] runnable 81 vs floor 78 (met); 16 results read (p4/f9/i3); 1 node authored (P3-Q8-sol4h-overlap -> RQ-20261017-007 on merge); 3 holdout PASSes selected non-declared arms (077e-04/05/07) = Tier-3 proposal inputs for manager, denominator 9; c56e-15 PASS -> overlap unit; not run: blocked/ audit, due routing (10 unrouted). Record comms/research/ops/20261017T0930Z.json. HELD PR.",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261017-007 emitted and its result read",
+    "how_to_check": "python3 scripts/research/queue_replenish.py --programme-state | grep sol4h-overlap",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 547
+}

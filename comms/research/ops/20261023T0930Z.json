@@ -1,0 +1,49 @@
+{
+  "run": "RESEARCH-OPS-20261023-0847",
+  "finished_at": "2026-10-23T09:30:00Z",
+  "by": "session_014aKhz5de3aJVNnLwFPMbfr",
+  "floor": 57,
+  "floor_basis": "computed_floor(fired_24h 71)",
+  "authoring_queue_depth": 28,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu"],
+  "needs_review_triaged": 1,
+  "needs_review_left": 31,
+  "throughput": {"runnable_before": 42, "runnable_after": 43, "queued": 126, "fired_24h": 71, "results_landed_24h": 83, "hours_since_last_dispatch": 2.8, "idle_alarm": false,
+                 "after_basis": "RQ-20261022-38be-02 is re-armed (last_dispatched_at null) and counts runnable once this PR merges; the +1 is that unit"},
+  "mechanism": {"dispatch_receipt": "ok (fresh, 0.59 h)", "collector": "ok (83 results landed 24h, 0 unreadable)", "stranded_stamp_prs": [], "incident": null,
+                "watchdog": "newest watchdog_incidents.jsonl row is 2026-10-17; no open escalation",
+                "open_automation_prs": "19681 stamp (minutes old), 19682 news panel, 19632/19611 research-slo (not queue stamps); none stranded"},
+  "results_read": {"pass": 0, "fail": 11, "indeterminate": 0, "producer_failed": 1,
+                   "units": ["RQ-20261023-8961-01 fail", "RQ-20261022-eba2-10 fail", "RQ-20261022-eba2-13 fail", "RQ-20261022-eba2-14 fail", "RQ-20261022-4b82-11 fail",
+                             "RQ-20261020-003 fail", "RQ-20261021-7c2b-05 fail", "RQ-20261021-7c2b-08 fail", "RQ-20261021-7c2b-14 fail",
+                             "RQ-20261015-8bbc-01 fail (live below backtest)", "RQ-20261015-8bbc-02 fail (live below backtest)", "RQ-20261022-38be-02 producer_failed"],
+                   "note": "research_disposition.py --unread-only: unread 0. Every result above is already graded by the mechanism; the work here was the follow-up, not the grade. 9da8-01 (FM bake-off FAIL) diagnosed: arm_status all ok, chronos2 ran, so it is a real model verdict on that setup, not an unavailable-arm artefact; no licence question (all MIT)."},
+  "unlocked": [{"unit": "RQ-20261022-38be-02", "reason": "producer_failed from --days 1600 (trailing from today, fetch began 2022-06-06) vs pinned --start 2018-01-01: every cell hit 'empty window'. Fixed to --days 3400, re-armed; rule untouched. Binance Vision may hold fewer than n_floor bars pre-2020-06, in which case it grades INDETERMINATE on n, an honest answer."}],
+  "retired": [],
+  "levers_filed": [{"lever": "contract-valid verdict.json for intrabar_label_fidelity (blocks RQ-20261017-006)", "ref": "PR #18527 (draft, open since 2026-10-16) - escalated to manager"}],
+  "units_authored": [],
+  "followups_filed": [
+    {"what": "Tier-3 roster-retention case: slv_pullback_1d (alpaca_live + mirror) c56e-17 FAIL, 4/8 folds, net +5.03 R", "ref": "SLV-PB1D-RETENTION-T3"},
+    {"what": "ief_pullback_1d half of P3-Q3 is moot: ief is no longer on alpaca_live (paper only)", "ref": "SLV-PB1D-RETENTION-T3 note"},
+    {"what": "routed 16 research-shaped unrouted pipeline items (unrouted 61 -> 45)", "ref": "PI-20261007-ITYCHECK-0002, PI-20261005-OAKGATE1-0001, PI-20261016-10160247-0001 -> RESEARCH-FOLLOWUPS; PI-20261015-VUVNMUO8-0001/-0002 -> LIVE-BT-STAGE-B; PI-20261012-UFJZ63WF-0001 -> NEWS-VETO-EVAL; PI-20261016-10160847-0001, PI-20261016-IKK5NFPO-0002 -> RESEARCH-TOOLING-GAPS; 8 PI-2026102x-LRP-* -> LIVE-PARITY"}
+  ],
+  "authoring": {"queue_depth": 28, "nodes_drafted": 0, "nodes": [],
+                "theme_shortfall": {"live_strategy": 7, "ml_health": 5, "infra": 4, "macro": 1, "timeframes": 1},
+                "why_short": "0 nodes drafted, stated plainly: the head of the authoring queue is gated (P3-Q1 on build LIVE-BT-STAGE-B; P1-Q11 on build HARNESS-METRIC-TRIGGER; P1-Q6 declares and P2-R3 packets are Tier-3 notes, and the R3 c03/c04 legs trade no live roster; P3-Q3-ief/slv resolved as the SLV note above). The ae17 lead confirmations need a forward window (--end >= 2027-02-17) that cannot run yet (PI-20261022-R3DFW7IK-0001). The six owed variant families (PI-20261023-GGAWBEOX-0001) each still need a diagnosis, not a grid; only (5) was diagnosed this pass. Spend went to the 38be-02 repair, the not_run steps and routing."},
+  "not_run": [
+    "authoring of programme nodes / the six variant families (see authoring.why_short; first on the next pass)",
+    "needs_review triage beyond the one unowned unit: the other 31 are owned with a named gap (RESEARCH-TOOLING-GAPS 16 re-checked this pass: row still queued, lever not landed, #18527 still open)"
+  ],
+  "previous_not_run_now_run": {
+    "routing unrouted due items": "run: 16 routed, 61 -> 45 unrouted (pipeline.py --due --all before/after); the 45 left are health/live-trading rows needing VM diag reads, SA-ROUTE",
+    "re-check RESEARCH-TOOLING-GAPS owners": "run: checklist row state queued; 13 of 16 share one gap (research-harness-dispatch payload vs RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST); RQ-20261017-006 waits on open PR #18527",
+    "programme nodes beyond 1": "not run - see authoring.why_short"
+  },
+  "handoff": [
+    "MANAGER (held PR): merge this run PR; it hand-edits queue unit RQ-20261022-38be-02 (days fix + re-arm; landing hold unvouchable_paths, E57)",
+    "MANAGER: draft PR #18527 (contract-valid verdict.json for intrabar_label_fidelity) has been open since 2026-10-16 and is the sole blocker of RQ-20261017-006; merge or close it",
+    "MANAGER (Tier-3, data-backed): SLV-PB1D-RETENTION-T3 - slv_pullback_1d on alpaca_live failed Stage-0 at power (4/8 folds, one short; net +5.03 R); keep vs demote",
+    "next research-ops: read 38be-02 re-run; diagnose then author the owed variant families, hot-vol live-lever contrast on xrp/ada_pullback_2h first (PI-20261023-GGAWBEOX-0001 item 1); draft nodes for live_strategy/ml_health/infra",
+    "No Tier-3 note from a result implies a config change except SLV-PB1D-RETENTION-T3 (proposal only)"
+  ]
+}

@@ -1,0 +1,124 @@
+id: RQ-20261016-65ff-07
+title: 'Regime good-vs-bad, ada_pullback_2h: does a pre-registered cold-volatility tail skipped at entry (ATR percentile) (V0, VL20, VL30) beat the leg
+  as declared net of the full cost stack on 2024-10-05..2026-10-04?'
+status: done
+cadence: once
+theme: regime
+priority: 1
+kind: experiment
+question: 'Same harness argv builder as the evidence builder (regime_debt_matrix.build_harness_cmd), full cost stack, pinned window 2024-10-05 .. 2026-10-04
+  23:59: does any of the 3 pre-registered arms (V0 = --vol-skip-below-pctl=0.0, VL20 = --vol-skip-below-pctl=0.2, VL30 = --vol-skip-below-pctl=0.3) beat
+  ada_pullback_2h as declared (arm B) by >= 1.0 R with no worse drawdown and in >= 3 of 4 calendar folds? This asks whether the market condition at entry
+  (the cold-volatility tail skipped at entry (ATR percentile)) separates the leg''s good trades from its bad ones well enough to gate on -- REGIME-PROGRAM
+  deliverable 3. DISCLOSED: ada_pullback_2h DECLARES vol_skip_below_pctl 0.1, so B carries VL10; V0 removes it (is the declared cold-tail skip earning its
+  place?), VL20/VL30 tighten it.'
+why_this_matters: 'ada_pullback_2h trades real money (bybit_2 + bybit_portfolio mirror, bybit_1 paper). The volcold axis has no committed unit for this
+  leg (coverage read from research/queue on 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016). Regime theme weight is 5 with 0 regime units queued (L-REGIME
+  ''where''); this is the per-leg good-vs-bad trade condition study the operator asked for on 2026-10-11. A null is recorded honest_negative so the axis
+  is not re-asked. Design check (IDEA-REVIEW-1016 s11): ada_pullback_2h already DECLARES a live cold-tail skip (vol_skip_below_pctl 0.1) that no committed
+  unit has graded; arm V0 asks whether that declared real-money lever earns its place, which is needed whatever the sizing answer is.'
+power:
+  expected_n: 110
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=110 is an ESTIMATE: 407c-15 n(B)=111 on this window.
+    Below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance
+    test; the 3-of-4 calendar-fold majority refuses a one-period artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff07-REGIME-VOLCOLD
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack:
+    fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r, plus net_r
+    per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared; V0 = --vol-skip-below-pctl=0.0; VL20 = --vol-skip-below-pctl=0.2;
+    VL30 = --vol-skip-below-pctl=0.3. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also
+    reported per arm, not graded: net_r_per_capital_day (the programme headline measure).'
+  rule: 'indeterminate IF n(B) < 39 (no committed record exists on this exact window, so arm B is reported as the baseline itself) (underpowered: no verdict,
+    never FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR):
+    a LEAD only -- the follow-up is a fresh-window confirmation unit on the disjoint preceding window with the single chosen arm (the 470a-10 pattern),
+    never a config edit; two passing arms within 0.5 R of each other is a preference, not a finding. FAIL IF none passes: the declared setting stands; the
+    axis is recorded honest_negative for this leg on this window. The 1.0 R bar, the drawdown clause, the 3-of-4 fold majority and the 39 floor are not
+    changed after any result.'
+  what_it_does_not_do: 'Does not mine values: the arms are fixed here and may not be edited after any result. Does not edit config/strategies.yaml, config/regime_policy.yaml
+    or any roster; a pass is a lead/packet for the manager (Tier-3), never a promotion case. Live/paper P&L plays no part. Tests no other axis.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in: real-money/prop leg; a gate that removes a repeatable drag on ada_pullback_2h; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: One keyless Binance Vision fetch of ~760 days and 4 harness passes; GitHub-hosted runner, no trainer data.
+  why_runner: the harness fetches public Binance Vision candles itself and needs no published shard, no trainer data and no GPU; the runner is the only
+    backend whose env carries the harness deps.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - V0=--vol-skip-below-pctl=0.0
+  - --arm
+  - VL20=--vol-skip-below-pctl=0.2
+  - --arm
+  - VL30=--vol-skip-below-pctl=0.3
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261016-65ff-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-65ff-07/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-65ff-07/<run_id>/.
+roadmap:
+- L-REGIME
+related:
+- REGIME-PROGRAM
+- P2-AI-REGIME-BACKLOG-1016
+- scripts/research/exit_lever_ablation.py
+- .claude/skills/regime-selectivity/SKILL.md
+last_dispatched_at: '2026-10-16T12:31:17+00:00'
+grading:
+  attested: RULE-RQ2026101665ff07-REGIME-VOLCOLD
+  auto: true
+  decision_rule_id: RULE-RQ2026101665ff07-REGIME-VOLCOLD
+  evidence:
+  - research/results/RQ-20261016-65ff-07/38901140814.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

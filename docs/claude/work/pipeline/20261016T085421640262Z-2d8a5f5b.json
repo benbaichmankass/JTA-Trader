@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-23",
+    "kind": "date"
+  },
+  "id": "PI-20261016-10160847-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "RESEARCH-OPS-20261016-0847 needs_review triage (8 oldest + e35 group)",
+    "rerun": "python3 scripts/research/queue_grade.py --health | python3 -c \"import json,sys,yaml;[print(u,(yaml.safe_load(open(f'research/queue/{u}.yaml')).get('grading') or {}).get('reason')) for u in json.load(sys.stdin)['needs_review']]\" | grep 'base_oos_trades'   # any unit listed with 'base_oos_trades N < 39' and no rows under: grep -c '\"research_unit\": \"<id>\"' docs/research/e35-bracket-corpus.jsonl"
+  },
+  "state": "queued",
+  "what": "GRADER CANNOT REFRESH STALE needs_review ON SUPERSEDED E35 UNITS: scripts/research/queue_grade.py::grade_unit re-reads an e35 unit's rows from docs/research/e35-bracket-corpus.jsonl by research_unit tag, but e35_corpus_extract.py supersedes a leg's rows on re-extraction (identity = leg+cell+cap+split), so once a later unit sweeps the same leg the earlier unit has 0 tagged rows, grade_unit returns None and its old grading block (needs_review: true, written before the infeasible_at_cadence rule) is never rewritten. MEASURED 2026-10-16 over the 34-unit needs_review bucket: 7 are this class (RQ-20260929-004, RQ-20261004-653 [status retired], -655, RQ-20261005-001, -002, RQ-20261009-001 with base_oos_trades 5-9, plus RQ-20261011-002 n=29 which still has rows) and 14 more are wiring_only walk-forward template rows (PI-20261006-1VPYTX8E-0001). A retired unit also still counts in the bucket. FIX (Tier-1, scripts/research/queue_grade.py): (a) health()/needs_review excludes status retired; (b) when an e35 unit has 0 tagged rows but a prior grading block with base_oos_trades*INFEASIBLE_FRACTION < E35_FLOOR, re-stamp it infeasible_at_cadence/recheck_after_days instead of returning None. Add a test beside the RC5 cases."
+}

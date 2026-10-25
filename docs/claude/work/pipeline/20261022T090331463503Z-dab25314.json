@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-HOPS0847-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261022-0847 step C blocked/ audit",
+    "rerun": "ls research/queue/blocked/RQ-20261009-900.yaml; grep -rl 'RULE-RQ1009-900' scripts research/queue/*.yaml  # unit still blocked and no scripts/ hit => grader still missing"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 0847] RQ-20261009-900 (TP doctrine predict-head step 1, live_strategy priority 1) has its prerequisite CLEARED -- RQ-20261014-736c-01 landed a measured PASS and the corpus (comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl) is on main -- but its blocked_on also needs 'a small grader that writes verdict.json per the rule' (RULE-RQ1009-900-MFE-HEAD-VS-NAIVE-TP: head vs B1..B4 pinball loss per stratum x quantile, shuffled-label null p95, splits 0.55/0.65/0.75) and no such grader exists (grep below). Build it (wrapper over ml2_bracket_train_eval.py --per-leg --per-stratum), then git mv the unit out of blocked/ and set run.workflow research-script-run.yml. Heads-up recorded on the unit: S1 eval size ~74 < the 88 floor, so S1 will grade INDETERMINATE under the rule as written; decide window/pooling BEFORE promoting, the rule is not edited here."
+}

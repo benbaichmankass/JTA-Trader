@@ -105,6 +105,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_eth_4h_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
+    trend_donchian_xrp_adx25_signal_builder,
     trend_donchian_ada_4h_signal_builder,
     trend_donchian_avax_4h_signal_builder,
     trend_donchian_signal_builder,
@@ -310,6 +311,7 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         "trend_donchian_eth_4h": trend_donchian_eth_4h_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
+        "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,
         "trend_donchian_ada_4h": trend_donchian_ada_4h_signal_builder,
         "trend_donchian_avax_4h": trend_donchian_avax_4h_signal_builder,
         # mes_trend_long_1d: MES daily long-only equity-index diversifier on
@@ -488,6 +490,185 @@ def _strategy_symbol_scope() -> Dict[str, set]:
     return scope
 
 
+def _strategy_cfgs() -> Dict[str, dict]:
+    try:
+        from src.units.strategies import load_strategy_config
+        cfg = load_strategy_config() or {}
+    except Exception:  # noqa: BLE001
+        return {}
+    return {n: (c or {}) for n, c in cfg.items()} if isinstance(cfg, dict) else {}
+
+
+def _is_closed_decision_leg(vcfg: dict) -> bool:
+    """``decision_bar: closed`` legs decide their closed bar in the builder
+    (``_decision_frame``) and are left out of the forming catch-up."""
+    return str(vcfg.get("decision_bar") or "forming").lower() == "closed"
+
+
+def _forming_tail_gap_seconds(row: dict) -> float:
+    """How much of a bar's tail may go unevaluated before it counts as a GAP.
+
+    Two of the leg's own measured tick intervals (``cadence_s``, recorded by one
+    process between consecutive evaluations), never less than two configured
+    ticks. A forming leg's last look at a bar normally lands up to one tick
+    before the close, so normal spacing never triggers a catch-up — only a
+    restart or a stalled tick does."""
+    try:
+        tick = float(os.environ.get("TICK_INTERVAL_SECONDS", "60") or 60)
+    except ValueError:
+        tick = 60.0
+    cadence = row.get("cadence_s")
+    try:
+        cadence = float(cadence) if cadence is not None else 0.0
+    except (TypeError, ValueError):
+        cadence = 0.0
+    return 2.0 * max(tick, cadence)
+
+
+#: Mirrors strategy_signal_builders._CLOSED_DECISION_SETTLE_SECONDS.
+_CATCHUP_SETTLE_SECONDS = 5.0
+#: _forming_catchup_asof's "a catch-up is pending but not yet decidable".
+_CATCHUP_DEFER = -1.0
+
+
+def _forming_catchup_asof(name: str, key: str, tf_s: float, now: float,
+                          vcfg: Optional[dict] = None) -> Optional[float]:
+    """RESTART-SAFE for ``decision_bar: forming`` legs (PI-20261003-OJTPWGCC-0001).
+
+    A forming leg re-decides on the forming bar every tick, so a restart costs it
+    only the TAIL of a bar that closed while it was not evaluating. When that
+    unseen tail is longer than the leg's normal tick spacing, return the close
+    (epoch s) to decide that bar AS OF its close, once; ``None`` otherwise.
+    The disposition (evaluated / stale_skipped) is written to the ledger before
+    the builder runs, so the bar is never decided twice, by any process.
+    """
+    from src.runtime import decision_bar_ledger as ledger
+    row = ledger.get(key)
+    row_at, row_open = ledger.num((row or {}).get("at")), ledger.num((row or {}).get("bar_open"))
+    if row_at is None or row_open is None:
+        return None   # absent or corrupt row: treated as missing, overwritten this tick
+    cur_open = (now // tf_s) * tf_s
+    prev_open = cur_open - tf_s
+    if row_open >= cur_open:
+        return None
+    caught = ledger.num(row.get("catchup_open"))
+    if caught is not None and caught >= prev_open:
+        return None
+    unseen = cur_open - row_at
+    if unseen <= _forming_tail_gap_seconds(row):
+        return None
+    age = now - cur_open
+    if age < _CATCHUP_SETTLE_SECONDS:
+        # Same settle rule as the closed-bar gate: the venue may not have folded
+        # the bar's last trades in yet. Not disposed — the next tick decides,
+        # and the caller must not record this tick (it would erase the gap).
+        return _CATCHUP_DEFER
+    bound = ledger.catchup_bound_seconds(tf_s, vcfg)
+    who = "a previous process" if ledger.by_previous_process(row) else "this process"
+    if age > bound:
+        ledger.update(key, catchup_open=prev_open, catchup_disposition="stale_skipped",
+                      catchup_at=now)
+        # INFO, not WARNING: the leg re-decides on the forming bar this tick
+        # anyway; what is skipped is only the as-of-close read of the bar that
+        # closed during the gap (closed legs, whose whole decision is that read,
+        # warn in _closed_bar_disposition).
+        logger.info(
+            "intent_multiplexer: '%s' bar opened %s closed during a gap (last "
+            "evaluated by %s %.0fs before the close) — skipped as stale: closed "
+            "%.0fs ago, beyond the %.0fs catch-up bound",
+            key, prev_open, who, unseen, age, bound)
+        return None
+    # The strategy may already have ENTERED bar N before the restart (e.g. at
+    # 3:55 for the 4:00 close). The dispatch-side same-bar guard keys on the
+    # CURRENT bar, so it cannot see that; check bar N's own window here. An
+    # unreadable journal refuses the catch-up (it is an extra decision; never
+    # risk a repeat entry for it).
+    symbol = key.split("|", 1)[1] if "|" in key else None
+    entered = _entry_in_bar(name, symbol, prev_open, tf_s)
+    if entered is None or entered:
+        why = ("already entered that bar (order package %s)" % entered if entered
+               else "journal unreadable, cannot rule out an entry in that bar")
+        ledger.update(key, catchup_open=prev_open,
+                      catchup_disposition="already_entered" if entered else "journal_unreadable",
+                      catchup_at=now)
+        logger.info("intent_multiplexer: '%s' bar opened %s closed during a gap — not "
+                    "caught up: %s", key, prev_open, why)
+        return None
+    ledger.update(key, catchup_open=prev_open, catchup_disposition="evaluated",
+                  catchup_at=now)
+    logger.info(
+        "intent_multiplexer: '%s' caught up after restart/tick gap — deciding bar "
+        "opened %s as of its close (last evaluated by %s %.0fs before the close; "
+        "closed %.0fs ago, bound %.0fs)", key, prev_open, who, unseen, age, bound)
+    return cur_open
+
+
+def _entry_in_bar(strategy: str, symbol: Optional[str], bar_open: float,
+                  bar_seconds: float):
+    """The id of an order package ``strategy`` created for ``symbol`` inside
+    ``[bar_open, bar_open + bar_seconds)``; ``""`` when none; ``None`` when the
+    journal cannot be read. Same source as strategy_monocle's same-bar guard."""
+    try:
+        from datetime import datetime, timezone
+        from src.units.db.database import Database
+        from src.utils.paths import trade_journal_db_path
+        rows = Database(db_path=trade_journal_db_path()).get_order_packages_by_strategy(
+            strategy, status=None, limit=20, symbol=symbol)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("intent_multiplexer: entry-in-bar read failed for %s: %s",
+                       strategy, exc)
+        return None
+    for row in rows or []:
+        try:
+            ts = datetime.fromisoformat(str(row.get("created_at")).replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            continue
+        if bar_open <= ts.timestamp() < bar_open + bar_seconds:
+            return str(row.get("order_package_id") or "?")
+    return ""
+
+
+def _run_forming_catchup(name: str, builder: IntentBuilder, settings: dict, *,
+                         asof: float, tf_s: float, target_qty_hint: float,
+                         now: float, vcfg: Optional[dict] = None
+                         ) -> Optional[StrategyIntent]:
+    """Run ``builder`` on frames cut at ``asof``; keep its intent only if the live
+    price passes the catch-up drift check (fail closed when it cannot be read)."""
+    from src.runtime import decision_bar_ledger as ledger
+    with ledger.evaluate_as_of(asof) as holder:
+        try:
+            signal = builder(settings)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "intent_multiplexer: '%s' catch-up evaluation raised %s — skipped",
+                name, exc)
+            return None
+    intent = intent_from_signal(
+        signal, strategy=name, target_qty=target_qty_hint,
+        priority=DEFAULT_PRIORITIES.get(name), timestamp=now,
+    )
+    if intent is None:
+        logger.info("intent_multiplexer: '%s' catch-up: no actionable signal on the "
+                    "bar that closed during the gap", name)
+        return None
+    current = holder["current"].get(
+        (str(intent.symbol or "").upper().replace("/", ""), int(tf_s)))
+    max_frac = float((vcfg or {}).get("decision_bar_catchup_max_drift_stop_frac")
+                     or ledger.DEFAULT_MAX_DRIFT_STOP_FRAC)
+    ok, why = ledger.catchup_price_check(intent.side, intent.entry, intent.sl,
+                                         intent.tp, current, max_frac)
+    if not ok:
+        logger.warning(
+            "intent_multiplexer: '%s' caught-up %s signal skipped as stale — %s",
+            name, intent.side, why)
+        return None
+    logger.info("intent_multiplexer: '%s' caught-up %s signal accepted — %s",
+                name, intent.side, why)
+    return intent
+
+
 def _collect_intents(
     settings: dict,
     *,
@@ -513,6 +694,8 @@ def _collect_intents(
         settings.get("SYMBOL") or settings.get("symbol") or ""
     ).upper().replace("/", "")
     symbol_scope = _strategy_symbol_scope()
+    leg_cfgs = _strategy_cfgs()
+    forming_seen: Dict[str, dict] = {}
     for name in strategies:
         if is_strategy_paused(name):
             logger.info(
@@ -541,6 +724,24 @@ def _collect_intents(
                 name,
             )
             continue
+        # RESTART-SAFE: a forming leg decides any bar that closed during a gap
+        # (restart / stalled tick) once, as of its close, before the normal tick.
+        vcfg = leg_cfgs.get(name) or {}
+        tf_s = None if _is_closed_decision_leg(vcfg) else _strategy_timeframe_seconds(name)
+        leg_key = f"{name}|{tick_symbol}" if tick_symbol else name
+        defer_record = False
+        if tf_s:
+            try:
+                asof = _forming_catchup_asof(name, leg_key, float(tf_s), now, vcfg)
+                defer_record = asof == _CATCHUP_DEFER
+                if asof is not None and not defer_record:
+                    caught = _run_forming_catchup(
+                        name, builder, settings, asof=asof, tf_s=float(tf_s),
+                        target_qty_hint=target_qty_hint, now=now, vcfg=vcfg)
+                    if caught is not None:
+                        intents.append(caught)
+            except Exception:  # noqa: BLE001 — never let catch-up break the tick
+                logger.exception("intent_multiplexer: '%s' catch-up failed", name)
         try:
             signal = builder(settings)
         except Exception as exc:  # noqa: BLE001
@@ -593,6 +794,9 @@ def _collect_intents(
                 )
             continue
 
+        if tf_s and not defer_record:
+            forming_seen[leg_key] = {"bar_open": (now // tf_s) * tf_s, "at": now,
+                                     "tf_s": float(tf_s)}
         intent = intent_from_signal(
             signal,
             strategy=name,
@@ -612,7 +816,25 @@ def _collect_intents(
             name, intent.side, intent.target_qty, intent.effective_priority(),
         )
         intents.append(intent)
+    _record_forming_evaluations(forming_seen)
     return intents
+
+
+def _record_forming_evaluations(seen: Dict[str, dict]) -> None:
+    """One ledger write per tick: which bar each forming leg just evaluated, and
+    its measured tick cadence (same-process gaps only — a restart is not a tick)."""
+    if not seen:
+        return
+    try:
+        from src.runtime import decision_bar_ledger as ledger
+        for key, fields in seen.items():
+            prev = ledger.get(key)
+            prev_at = ledger.num((prev or {}).get("at"))
+            if prev_at is not None and not ledger.by_previous_process(prev):
+                fields["cadence_s"] = round(fields["at"] - prev_at, 1)
+        ledger.update_many(seen)
+    except Exception:  # noqa: BLE001
+        logger.exception("intent_multiplexer: forming decision-bar record failed")
 
 
 def _debounce_emissions(
@@ -918,40 +1140,27 @@ def multiplexed_intent_signal_builder(
         )
     except Exception:  # noqa: BLE001 — observe-only soak must never break a tick
         logger.debug("allocator_soak: record failed", exc_info=False)
-    # Lane P/P3 (observe-only): what per-ACCOUNT arbitration would change.
-    # `aggregate_intents` above picked ONE winner per SYMBOL globally, before
-    # account fan-out, so two accounts running the same strategy on the same
-    # symbol compete and the loser's account is silently starved — it produces
-    # no order package, so it is invisible to every per-account detector AND to
-    # the journal. Measured live: `trend_donchian_sol` (bybit_1) has 144
-    # actionable buy signals since 08-01 and ZERO journal rows on that account.
-    #
-    # The soak below still records the starvation regardless of mode — the
-    # allowlist scopes the BINDING, never the MEASUREMENT.
-    #
-    # Fail-permissive throughout.
-    # Lane P/P4 — the APPLY half. At the shipped `annotate` default this
-    # attaches NOTHING to the signal and routing is byte-for-byte unchanged;
-    # only `ARBITRATION_FANOUT_MODE=apply` plus a non-empty
-    # `ARBITRATION_FANOUT_ACCOUNTS` allowlist puts rounds on the signal for the
-    # pipeline to dispatch.
+    # E35 (Tier-3, 2026-09-25) — ELECT PER ACCOUNT; THIS IS THE ROUTING.
+    # `desired` above is the tick's HEADLINE (audit, signal writer, allocator
+    # soak) and no longer decides which account trades what. Every account
+    # elects from its OWN declared candidates off the SAME `_gated` set — gated
+    # once, so exactly one `regime_hard_gate` row per candidate per tick however
+    # many accounts elect — and the pipeline dispatches one package per round.
+    # This retires the global-election-plus-fan-out repair (BL-20260827, E33,
+    # E34): there is no global winner left for an account to lose to, and no
+    # allowlist that can subtract an account from a round it won.
     #
     # ⚠️ The election runs off `_gated`, NOT `intents` — the candidate batch
     # attached above is deliberately the pre-gate opportunity set (that is what
     # an allocator ranks), and electing from it would route candidates the
     # regime router refused.
-    #
-    # ⚠️ THIS RUNS BEFORE THE SOAK, DELIBERATELY. The soak row is the only
-    # durable record that the fan-out acted, so it must be able to record the
-    # PLAN — recording the global election's would-be starvation alone says
-    # what the fan-out was built to fix and nothing about whether it ran.
     _plan = None
     try:
-        _plan = _attach_fanout_plan(
+        _plan = _attach_account_election(
             signal, _gated, symbol=symbol, intents_before_gate=_pre_gate
         )
-    except Exception:  # noqa: BLE001 — a planner failure must never strand a tick
-        logger.debug("arbitration_fanout: plan attach failed", exc_info=False)
+    except Exception:  # noqa: BLE001 — see _attach_account_election: absent = fallback
+        logger.exception("account_election: plan attach failed")
 
     try:
         from src.runtime.arbitration_fanout_soak import record as _record_fanout
@@ -966,118 +1175,138 @@ def multiplexed_intent_signal_builder(
     return signal
 
 
-def _attach_fanout_plan(
+#: Top-level signal key carrying the per-account dispatch rounds. Deliberately
+#: NOT under ``meta``: ``meta`` is copied wholesale into every OrderPackage, and
+#: a package must never carry the whole tick's routing as if it were its own.
+ACCOUNT_ROUNDS_KEY = "account_rounds"
+
+
+def _attach_account_election(
     signal: Dict[str, Any],
     gated_candidates,
     *,
     symbol: str,
     intents_before_gate: int,
 ) -> Optional[Dict[str, Any]]:
-    """Attach the per-account election plan to ``signal['meta']`` in apply mode.
+    """Elect per account and put the dispatch rounds on ``signal``.
 
-    Returns the plan so the caller can hand it to the soak — that row is the
-    only durable record that this ran. Returns ``None`` at ``off``, which the
-    soak renders as ``plan_state: absent`` (*we did not look*) rather than as
-    an empty election.
+    Writes ``signal[ACCOUNT_ROUNDS_KEY]`` — a list of ``{strategy, accounts,
+    signal}`` where ``signal`` is the ELECTED strategy's own pipeline signal,
+    rendered by the SAME ``_desired_to_pipeline_signal`` the global path uses.
+    So the account that holds the global winner gets a package identical to
+    the one the global path built, and every other account gets its own
+    winner's geometry AND meta (``entry_time``, ``timeframe`` …) — the
+    pre-E35 fan-out stamped the global winner's meta under the round's name.
 
-    Writes ``meta['arbitration_fanout']`` with the plan, and — ONLY when the
-    mode is ``apply`` and at least one electing account is allowlisted —
-    ``apply_rounds``, which is the key the pipeline dispatches on. A held-back
-    account is still planned and still reported; it simply does not appear in
-    ``apply_rounds``, so a reviewer can see exactly what apply WOULD have
-    routed before widening the allowlist (the correction
-    ``NETTING_ATTRIBUTION_ACCOUNTS`` needed on 2026-08-09, where narrowing the
-    set at the top of the pass made the account being staged toward invisible).
+    Also writes ``meta['account_election']``: the compact per-account outcome,
+    so every package records which account elected what on its tick.
 
-    ⚠️ **A SCOPED ROUND CARRIES THE WHOLE PLANNED ROUND, NOT A HAND-PICKED PAIR
-    OF KEYS.** From 2026-08-31 to 2026-09-12 this built ``apply_rounds`` as a
-    NEW dict holding only ``strategy`` and ``accounts``, discarding the
-    ``side``/``entry``/``sl``/``tp`` the planner had put there — and
-    ``pipeline._fanout_apply_rounds`` refuses a round missing any of them. The
-    reader is fail-closed, so it returned ``[]`` on **every** tick: the fan-out
-    dispatched nothing, on any account, for twelve days, while this function
-    stamped ``applied: true`` on every row. The scoping now goes through
-    ``arbitration_fanout.scope_round_to_accounts``, which copies the round and
-    replaces ``accounts`` alone, so a field the planner adds later cannot be
-    dropped by anyone forgetting to widen a list here.
+    ⚠️ **``ACCOUNT_ROUNDS_KEY`` ABSENT ≠ PRESENT AND EMPTY.** Present and ``[]``
+    means *we looked and no account elected a dispatchable winner* — the
+    pipeline dispatches nothing. ABSENT means *we could not look* (roster
+    unreadable, planner raised) — the pipeline falls back to the global-winner
+    dispatch and stamps ``account_election.state = "unavailable"`` so the
+    fallback is countable instead of silent (E34 § 2, path 1). The fallback is
+    the pre-2026-08-31 routing, i.e. never worse than before the fan-out.
+
+    Returns the JSON-safe plan for the soak.
     """
+    from functools import partial
+
     from src.runtime.arbitration_fanout import (
-        ROUND_DISPATCH_FIELDS,
-        accepted_rounds,
-        apply_state_for,
+        accounts_in_more_than_one_round,
         plan_per_account_election,
-        scope_round_to_accounts,
-    )
-    from src.runtime.arbitration_fanout_soak import (
-        allowlisted_accounts,
-        apply_scope_for,
-        resolve_mode,
     )
 
-    mode = resolve_mode()
-    if mode == "off":
+    meta = signal.setdefault("meta", {})
+    if signal.get("side") not in ("buy", "sell"):
+        # A flat headline means every candidate is flat (the conflict branch
+        # always elects), so no account's subset can elect either. Planning
+        # would only write an empty election; say what happened instead.
+        if isinstance(meta, dict):
+            meta["account_election"] = {"state": "headline_flat"}
         return None
 
     plan = plan_per_account_election(
         gated_candidates,
         accounts=_load_accounts_dict(),
-        elect_fn=elect_from_gated,
+        # annotate=False: the global election above already wrote this tick's
+        # one conviction-arbitration row; N more would be the same decision
+        # counted N times.
+        elect_fn=partial(elect_from_gated, annotate=False),
         intents_before_gate=intents_before_gate,
+        keep_desired=True,
     )
-    allow = allowlisted_accounts()
-    plan["global_mode"] = mode
-    plan["apply_scope"] = {
-        a: apply_scope_for(a, mode)
-        for a, r in plan.get("per_account", {}).items()
-        if r.get("state") == "elected"
-    }
-
-    rounds = plan.get("rounds") or []
-    if mode == "apply" and allow:
-        scoped = [
-            s for s in (scope_round_to_accounts(r, allow) for r in rounds)
-            if s is not None
-        ]
-        if scoped:
-            plan["apply_rounds"] = scoped
-
-    # ── `applied` IS WHAT THE DISPATCHER ACCEPTS, NEVER WHAT WE WROTE ────────
-    # It used to read `bool(plan.get("apply_rounds"))`, which is a statement
-    # about this function's own output and cannot fail. For twelve days it
-    # therefore said `true` on every armed tick while `pipeline`'s fail-closed
-    # reader threw every round away for missing geometry — 93 of 93 soak rows,
-    # zero dispatches. That is this repo's "unprovenanced diagnostic output"
-    # sub-class A: the label named an effect no code path tested.
-    #
-    # The remedy is the one CLAUDE.md prescribes for that class — branch on the
-    # actual condition rather than reword the label — so the claim is now run
-    # through `accepted_rounds`, the SAME validator the dispatcher uses. It
-    # cannot report an acceptance the reader will refuse.
-    #
-    # ⚠️ IT STILL DOES NOT SAY A DISPATCH HAPPENED, and must not be read as
-    # doing so. This runs BEFORE the pipeline, so the strongest honest claim
-    # available here is *the dispatcher will accept these*. The order itself is
-    # evidenced only by a journal row — the soak's own docstring says so.
-    written = plan.get("apply_rounds") or []
-    accepted = accepted_rounds(written)
-    plan["apply_state"] = apply_state_for(mode, allow, written, accepted)
-    plan["applied"] = bool(accepted)
-    if written and not accepted:
-        # LOUD, because the failure is otherwise invisible: the dispatcher
-        # falls back to the global path and everything downstream looks normal.
+    desired_by_strategy = plan.pop("_desired_by_strategy", {}) or {}
+    if plan.get("roster_state") != "read":
         logger.error(
-            "arbitration_fanout: wrote %d round(s) the dispatcher REFUSES "
-            "(apply_state=refused_by_dispatcher, strategies=%s) — the fan-out "
-            "is silently degrading to the global dispatch. A round must carry "
-            "%s.",
-            len(written),
-            [r.get("strategy") for r in written if isinstance(r, dict)],
-            list(ROUND_DISPATCH_FIELDS),
+            "account_election: roster unreadable on %s — falling back to the "
+            "GLOBAL-winner dispatch for this tick (state=unavailable)", symbol,
         )
+        if isinstance(meta, dict):
+            meta["account_election"] = {
+                "state": "unavailable", "reason": "roster_unreadable",
+            }
+        return plan
 
-    meta = signal.setdefault("meta", {})
+    rounds = []
+    for r in plan.get("rounds") or []:
+        desired_r = desired_by_strategy.get(r["strategy"])
+        if desired_r is None:
+            continue
+        _rsig = _desired_to_pipeline_signal(desired_r, symbol=symbol, settings={})
+        _round = {
+            "strategy": r["strategy"],
+            "accounts": list(r["accounts"]),
+            "signal": _rsig,
+        }
+        if r.get("allocation"):
+            # NETTED-SLICES: the per-account share of this strategy's slice.
+            # Rides the round's OWN meta (copied into its OrderPackage) so the
+            # coordinator sizes the slice; a package never sees another
+            # strategy's share.
+            _round["allocation"] = dict(r["allocation"])
+            _pa = plan.get("per_account") or {}
+            _rmeta = _rsig.setdefault("meta", {})
+            if isinstance(_rmeta, dict):
+                from src.runtime.positions import ALLOCATION_META_KEY
+                _rmeta[ALLOCATION_META_KEY] = {
+                    a: {
+                        "weight": w,
+                        "contenders": sorted((_pa.get(a) or {}).get("allocation") or {}),
+                        "basis": (_pa.get(a) or {}).get("allocation_basis"),
+                        "score": ((_pa.get(a) or {}).get("scores") or {}).get(r["strategy"]),
+                    }
+                    for a, w in r["allocation"].items()
+                }
+        rounds.append(_round)
+    dup = accounts_in_more_than_one_round(rounds)
+    if dup:
+        # Unreachable by construction. If it is ever reached, refuse the tick's
+        # rounds outright rather than pick one: a double-place is worse than a
+        # skipped tick, and the ERROR is the page.
+        logger.error(
+            "account_election: accounts %s appear in more than one round on %s "
+            "— refusing every round this tick (would double-place)", dup, symbol,
+        )
+        rounds = []
+    plan["double_round_accounts"] = dup
+    signal[ACCOUNT_ROUNDS_KEY] = rounds
     if isinstance(meta, dict):
-        meta["arbitration_fanout"] = plan
+        meta["account_election"] = {
+            "state": "planned",
+            "per_account": {
+                a: {"state": c.get("state"), "elected": c.get("elected")}
+                for a, c in (plan.get("per_account") or {}).items()
+            },
+            "rounds": [
+                {"strategy": r["strategy"], "accounts": r["accounts"],
+                 **({"allocation": r["allocation"]} if r.get("allocation") else {})}
+                for r in rounds
+            ],
+            "accounts_planned": plan.get("accounts_planned"),
+            "accounts_elected": plan.get("accounts_elected"),
+        }
     return plan
 
 

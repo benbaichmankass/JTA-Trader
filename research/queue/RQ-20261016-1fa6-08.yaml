@@ -1,0 +1,172 @@
+id: RQ-20261016-1fa6-08
+title: 'Learner family is second-order: on the 15m regime label, scored on LOG-LOSS, is a ridge logit WITH HAR-RV inputs within 0.002 nats of LightGBM on BTC, ETH
+  and SOL?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: ml_bakeoff on the BTC/ETH/SOL 15m v002 shards, target regime_label, metric logloss, baseline lgbm, candidate logit_har (numpy_logit + har_rv feature block,
+  bars_per_unit 96), control prior. The 12+ learner-swap units since 2026-10-12 all swapped the LEARNER on a fixed 6-column input; the only linear arm saw raw vol
+  and hour/day-of-week as linear numbers, which is misspecified against the HAR-RV standard (Corsi 2009).
+why_this_matters: 'Grinsztajn et al. 2022 and McElfresh et al. 2023: on low-dimensional, low-signal tabular data, family differences are small and tuning/specification
+  dominate. If a correctly specified linear HAR model ties LightGBM on log-loss, the family lever is closed for this target (the next lever is the label/feature set,
+  rows DIRECTION-LABEL-V2 and METALABEL-EMIT-FEATURES) and the shipped head has a simpler, more stable diversity arm. A tie is the informative outcome here.'
+power:
+  expected_n: 5
+  min_detectable_effect: 0.002
+  effect_units: metric
+  sd: 0.001
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n = CV folds per group (5); the per-fold log-loss difference sd ~0.001 nats INFERRED from 4591-04 (HGB vs lgbm CIs ~+-0.003 over 5 folds). (2.8 x 0.001 /
+    0.002)^2 = 2 folds; min_folds 3 is binding. ~24k OOS rows per group back each fold.
+  feasibility:
+    source: none
+    accrual_basis: Trainer-resident v002 shards (the same paths RQ-20261013-1414-02 read); nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-1fa6-08
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'ml_bakeoff.py deltas (positive = learner better, logloss flipped): logit_har vs lgbm on the CV mean and on the holdout per group; logit_har vs prior
+    reported.'
+  rule: PASS (= 'family is second-order here') IF logit_har - lgbm >= -0.002 nats on the CV mean in ALL three groups AND >= -0.002 on the holdout in ALL three groups,
+    with >= 3 folds. FAIL IF logit_har - lgbm < -0.002 on the CV mean in any group (LightGBM's nonlinearity carries real information on this target; the family question
+    stays open for it). INDETERMINATE IF an arm is unavailable or folds < 3. Encoded in ml_bakeoff below.
+  what_it_does_not_do: Does not swap the shipped head or edit any ml/configs manifest. Does not test direction labels (closed for this input set; see row DIRECTION-LABEL-V2).
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 50
+  confidence: 0.3
+  basis: 'stand-in: closes the learner-family line on the regime target and redirects capacity to labels/features; information value.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 25
+  basis: Same dataset and shape as RQ-20261013-1414-02 (3 shards, 60k-row tails).
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - logit_har
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    logit_har:
+      kind: numpy_logit
+      feature_blocks:
+      - kind: har_rv
+        return_col: log_return
+        bars_per_unit: 96
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.002
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: -0.002
+    fail_if_no_candidate_reaches:
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.002
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 45
+  inputs:
+    research_unit: RQ-20261016-1fa6-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M14
+programme: P2
+related:
+- RQ-20261013-1414-02
+- RQ-20261014-4591-04
+- RQ-20261013-a793-01
+- docs/research/idea-family-review-2026-10-16.md
+- scripts/research/ml_bakeoff.py
+outside_evidence:
+- Grinsztajn, Oyallon, Varoquaux 2022 NeurIPS 'Why do tree-based models still outperform deep learning on tabular data?', https://arxiv.org/abs/2207.08815 (primary)
+- McElfresh et al. 2023 NeurIPS 'When Do Neural Nets Outperform Boosted Trees on Tabular Data?', https://arxiv.org/abs/2305.02997 (primary)
+- Corsi 2009 'A Simple Approximate Long-Memory Model of Realized Volatility', https://papers.ssrn.com/abstract=1365738 (primary)
+origin:
+  lane: IDEA-REVIEW-1016
+  family: learner-family swaps vs LightGBM
+  family_verdict: 'A (a fair answer to the wrong question: family swaps on a fixed weak input; the lever is label/features)'
+last_dispatched_at: '2026-10-16T21:12:28+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261016-1fa6-08
+  evidence:
+  - research/results/RQ-20261016-1fa6-08/38965309828.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -54,22 +54,22 @@ B = CL.backlog_burndown()
 # reads `opened_at` alone and dumps everything else into `undated` — the exact
 # shipped behaviour, wearing the new fields.
 
-def test_rows_are_actually_reached_through_the_alternate_spellings():
-    basis = B["creation_key_basis"]
-    assert basis.get("opened", 0) > 0, (
-        f"no row was dated via `opened` — either the register changed shape or "
-        f"the vocabulary is not being consulted: {basis}")
-    assert basis.get("opened_at", 0) > 0, "the ORIGINAL spelling must still work"
-    reachable_only_by_widening = sum(
-        basis.get(k, 0) for k in CL.CREATION_KEYS if k != "opened_at")
-    assert reachable_only_by_widening > 100, (
-        f"measured 413 such rows on 2026-09-12; {reachable_only_by_widening} now")
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_rows_are_actually_reached_through_the_alternate_spellings`.
+# It measured a property of the LIVE review backlogs, which are archived under
+# docs/archive/2026-09-21-operating-reset/registers/. Its subject is gone, so it
+# is removed WITH its subject rather than skipped — a permanently-skipped test is
+# a control in name only. The fixture-based siblings in this file are untouched
+# and still green: they test the CODE, which still exists. Restore from git
+# history if a review backlog ever returns.
 
 
-def test_the_undated_state_is_populated_so_it_is_not_decorative():
-    """A state no row reaches is untested. Both were non-zero when measured."""
-    assert B["undated"]["opened"] > 0
-    assert B["undated"]["closed"] > 0
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_the_undated_state_is_populated_so_it_is_not_decorative`.
+# It measured a property of the LIVE review backlogs, which are archived under
+# docs/archive/2026-09-21-operating-reset/registers/. Its subject is gone, so it
+# is removed WITH its subject rather than skipped — a permanently-skipped test is
+# a control in name only. The fixture-based siblings in this file are untouched
+# and still green: they test the CODE, which still exists. Restore from git
+# history if a review backlog ever returns.
 
 
 # ── THE IDENTITIES — what makes `undated` a publication and not a comment ───
@@ -137,20 +137,35 @@ def test_a_row_with_no_recognised_key_reports_that_rather_than_a_month():
 
 # ── THE ROW'S OWN CRITERION: "the two numbers must be shown to agree" ───────
 
-def test_open_now_agrees_with_an_INDEPENDENT_status_census():
-    """`BL-20260908-BACKLOG-BURNDOWN-READS-ONLY-OPENED-AT...` says in terms that
-    a code change alone does not clear it — the burn-down block and a direct
-    status census have to agree. This is that census, computed here from the
-    raw JSON without going through the function under test, so it is a second
-    reading rather than a restatement of the first.
-    """
-    import json
-    closed = {"resolved", "wont_fix", "invalid", "superseded"}
-    files = ["docs/claude/health-review-backlog.json",
-             "docs/claude/performance-review-backlog.json",
-             "docs/claude/ml-review-backlog.json"]
-    rows = [r for f in files
-            for r in json.loads((REPO / f).read_text(encoding="utf-8"))["items"]]
-    assert len(rows) == B["rows_total"]
-    assert sum(1 for r in rows if r.get("status") not in closed) == B["open_now"]
-    assert sum(1 for r in rows if r.get("status") in closed) == B["closed_total"]
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_open_now_agrees_with_an_INDEPENDENT_status_census`.
+# It measured a property of the LIVE review backlogs, which are archived under
+# docs/archive/2026-09-21-operating-reset/registers/. Its subject is gone, so it
+# is removed WITH its subject rather than skipped — a permanently-skipped test is
+# a control in name only. The fixture-based siblings in this file are untouched
+# and still green: they test the CODE, which still exists. Restore from git
+# history if a review backlog ever returns.
+
+
+# ── THE SCOPE: the function must count every DECLARED review backlog ────────
+# A sibling of the spelling defect above, one level up. That one asked "is this
+# row's date readable?"; this asks "is this row's FILE in the population at
+# all?". Both make the series look complete while it is not, and the scope one
+# is the quieter of the two: a missing date shows up in `undated`, a missing
+# FILE shows up nowhere.
+
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_the_burndown_counts_every_declared_review_backlog`.
+# It measured a property of the LIVE review backlogs, which are archived under
+# docs/archive/2026-09-21-operating-reset/registers/. Its subject is gone, so it
+# is removed WITH its subject rather than skipped — a permanently-skipped test is
+# a control in name only. The fixture-based siblings in this file are untouched
+# and still green: they test the CODE, which still exists. Restore from git
+# history if a review backlog ever returns.
+
+
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_that_scope_check_would_have_caught_the_original_defect`.
+# It measured a property of the LIVE review backlogs, which are archived under
+# docs/archive/2026-09-21-operating-reset/registers/. Its subject is gone, so it
+# is removed WITH its subject rather than skipped — a permanently-skipped test is
+# a control in name only. The fixture-based siblings in this file are untouched
+# and still green: they test the CODE, which still exists. Restore from git
+# history if a review backlog ever returns.

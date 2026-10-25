@@ -1,0 +1,118 @@
+id: RQ-20261014-470a-09
+title: 'Breakout strength floor, real money: does trend_donchian_eth_4h''s min_confidence (0.4, 0.7, 0.8) beat the declared 0.6 on its 1095-day
+  window, net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On 2023-10-13 .. 2026-10-11 20:00 (n(B)=116), does any of the 3 pre-registered min_confidence arms beat trend_donchian_eth_4h as declared
+  (0.6) by >= 2.0 R, no worse drawdown, in >= 3 of 4 calendar folds? Arm values fixed here before any run.
+why_this_matters: M21's depth_threshold column shipped min_confidence only on BTC 1h (E-2, 2026-07-13); the real-money ETH 4h leg has never had
+  the axis measured at its configured params. The prop twin trend_donchian_eth_prop shares the 0.6 floor, so a result is read there too (P5's
+  call).
+power:
+  expected_n: 116
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=116 is MEASURED: the committed 1095d record''s
+    n=116 on this exact window. Below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY
+    bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority refuses a one-period artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing
+      accrues.
+decision_rule:
+  id: RULE-RQ20261014470a09
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full
+    cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r,
+    plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (min_confidence 0.6); MC04 / MC07
+    / MC08 = min_confidence 0.4 / 0.7 / 0.8.. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which
+    C out-earns B. Also reported per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+  rule: 'indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR
+    >= 2.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR). FAIL IF none passes: the declared value stands
+    and the axis is recorded honest_negative on this window for this leg. A PASS from a best-of-3 sweep is a LEAD, not a finding: it opens exactly
+    one fresh-window confirmation unit (the passing arm alone vs B, on the disjoint window immediately preceding this one, same bars, no re-selection;
+    03-STRATEGY-IMPROVEMENT.md rung S0-C), and no Tier-3 proposal is written until that unit reads CONFIRMED.  The 2.0 R bar, the drawdown clause,
+    the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config. A PASS is a LEAD for rung S0-C, never a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: the largest real-money Stage-0 earner plus its mirror; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: One keyless Binance Vision fetch of ~1110 days and 4 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --arm
+  - MC04=min_confidence=0.4
+  - --arm
+  - MC07=min_confidence=0.7
+  - --arm
+  - MC08=min_confidence=0.8
+  - --days
+  - '1110'
+  - --start
+  - '2023-10-13'
+  - --end
+  - 2026-10-11 20:00
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '2.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261014-470a-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261014-470a-09/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261014-470a-09/<run_id>/.
+roadmap:
+- M21
+related:
+- P3-STRATEGY-PROGRAMME
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-15T04:43:06+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261014470a09
+  evidence:
+  - research/results/RQ-20261014-470a-09/38682954997.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

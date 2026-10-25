@@ -1,0 +1,96 @@
+{
+  "lane": "OLD-PR-SWEEP-1025",
+  "date": "2026-10-25",
+  "main_sha": "12e26e4c",
+  "note": "Classification read from PR metadata and grep of origin/main; CI status not re-read per PR. #17895 untouched.",
+  "prs": [
+    {
+      "pr": "18557",
+      "disposition": "b",
+      "tier": "Tier-1",
+      "evidence": "Guard/policy files absent on main; PLANNING.md already cites research/family_reviews/. Dirty. Needs merge main + guard self-test.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0001",
+      "needs": "manager"
+    },
+    {
+      "pr": "17874",
+      "disposition": "b",
+      "tier": "Tier-1",
+      "evidence": "Edits retired single-file checklist; first-run evidence (from PR body, unverified here) not on row. Record via checklist.py note, then close.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0002",
+      "needs": "manager"
+    },
+    {
+      "pr": "17194",
+      "disposition": "c",
+      "tier": "Tier-1 docs; companion Tier-3 #17193 closed 2026-10-22",
+      "evidence": "Evidence records absent on main. Land or drop decision.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0003",
+      "needs": "operator/manager"
+    },
+    {
+      "pr": "16233",
+      "disposition": "b",
+      "tier": "Tier-1",
+      "evidence": "replay_trade on main has no lookback; fix still wanted unless RQ-20260927-003 already done. Merge main.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0004",
+      "needs": "manager"
+    },
+    {
+      "pr": "14692",
+      "disposition": "c",
+      "tier": "Tier-2",
+      "evidence": "Dump-dir item landed differently on main; message, comments, sed-pipe bug remain.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0005",
+      "needs": "operator"
+    },
+    {
+      "pr": "12213",
+      "disposition": "c",
+      "tier": "Landing machinery (hold)",
+      "evidence": "Partly superseded on main (opener-aware grade, fetch PAT client); opener_cannot_attach and C8 absent.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0006",
+      "needs": "manager"
+    },
+    {
+      "pr": "12158",
+      "disposition": "c",
+      "tier": "Tier-1, human click (outside TIER1_SURFACE)",
+      "evidence": "Overlaps #11933 on --tp-at-r; flag absent on main.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0007",
+      "needs": "manager"
+    },
+    {
+      "pr": "12070",
+      "disposition": "a",
+      "tier": "closed",
+      "evidence": "Superseded: _UNKNOWN_STRATEGY_PRIORITY is -1 on main (src/runtime/intents.py:448); both invariants live in scripts/ci/check_priority_fallback_distribution.py.",
+      "pipeline_item": "",
+      "needs": "none"
+    },
+    {
+      "pr": "12564",
+      "disposition": "d",
+      "tier": "closed",
+      "evidence": "Premise gone: alpaca_live now routes 1 strategy (iaum_pullback_1d), not the 5 legs (TLT x2, IEF, SLV, IAUM) the proxy ranking was built on; prices 25 days stale; no checklist row points at it. Earlier memo alpaca-inverse-etf-route-2026-09-10.md is on main.",
+      "pipeline_item": "",
+      "needs": "none"
+    },
+    {
+      "pr": "11976",
+      "disposition": "c",
+      "tier": "Needs human click (src/**)",
+      "evidence": "Partly covered by scripts/research/stop_integrity_both_arms.py on main; module itself absent.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0008",
+      "needs": "manager"
+    },
+    {
+      "pr": "11933",
+      "disposition": "c",
+      "tier": "Tier-1 + Tier-3 proposals, human click",
+      "evidence": "Largest; sweep workflow exists on main but backtest flags/docs absent; overlaps #12158.",
+      "pipeline_item": "PI-20261025-FQCEYPUY-0007",
+      "needs": "operator/manager"
+    }
+  ]
+}

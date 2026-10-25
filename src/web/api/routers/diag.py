@@ -30,10 +30,11 @@ import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from src.runtime import telegram_settings as _telegram_settings
 from src.runtime.exit_loop_health import (
     STATE_FILE_NAME as EXIT_LOOP_HEALTH_STATE_FILE,
 )
@@ -59,9 +60,38 @@ _HEARTBEAT = runtime_logs_dir() / "heartbeat.txt"
 _STATUS_JSON = runtime_logs_dir() / "runtime_status.json"
 _IB_STATE_JSON = runtime_logs_dir() / "ib_state.json"
 
-_JOURNAL_TABLES: dict[str, str] = {
-    "order_packages": "datetime(updated_at)",
-    "trades": "id",
+class _JournalTable(NamedTuple):
+    """How one allowlisted journal table is ORDERED and PAGED.
+
+    ``order_expr`` — the chronological ordering expression (always DESC).
+
+    ``unique_col`` — a column unique within the table. It is BOTH the
+        deterministic tiebreaker appended to the ORDER BY (so a page boundary
+        can never fall inside a tie) and the column whose first/last values
+        are reported back as the range actually returned.
+
+    ``stable_key`` — True when ``unique_col`` IS the ordering key: the sort
+        key is then immutable and append-only, so OFFSET paging walks a fixed
+        sequence. False when the table is ordered by a MUTABLE column — the
+        tiebreaker still makes any SINGLE query a total order, but a row
+        updated between two page reads genuinely MOVES, so a multi-page walk
+        can skip or repeat it. That is a property of the data, not a defect to
+        paper over: it is REPORTED as ``page_stability`` rather than smoothed
+        away, because a caller paging ``order_packages`` to reconstruct a
+        population needs to know its walk is not snapshot-consistent. Shipping
+        ``offset`` without this distinction would have put a NEW silent
+        wrongness inside the fix for a silent wrongness.
+    """
+
+    order_expr: str
+    unique_col: str
+    stable_key: bool
+
+
+_JOURNAL_TABLES: dict[str, _JournalTable] = {
+    # updated_at is MUTABLE and non-unique — see _JournalTable.stable_key.
+    "order_packages": _JournalTable("datetime(updated_at)", "order_package_id", False),
+    "trades": _JournalTable("id", "id", True),
     # 2026-05-29 — M13 AI-analyst tables. Before this, the insights cache
     # had NO read path on the /api/diag/* relay: the cache files
     # (runtime_logs/insights/*.json) aren't in _LOG_FILES, the generator
@@ -72,9 +102,18 @@ _JOURNAL_TABLES: dict[str, str] = {
     # alive. Exposing these two tables (both keyed by autoincrement id) lets
     # a session read the analyst's history + spend via journal?table=...
     # and confirm the generator is writing. Read-only, no secrets.
-    "insights_history": "id",
-    "insights_usage": "id",
+    "insights_history": _JournalTable("id", "id", True),
+    "insights_usage": _JournalTable("id", "id", True),
 }
+
+# The EXACT set of query parameters /api/diag/journal understands. It is the
+# single source for both the signature and the refusal below, so a parameter
+# can never be added to one and silently dropped by the other — which is the
+# whole defect this set exists to end (MI-298 / MI-301, 2026-09-17/18):
+# FastAPI DISCARDS an undeclared query param without a word, so `offset=1000`
+# was accepted and ignored and the caller got a confident, specific, WRONG
+# population back.
+_JOURNAL_QUERY_PARAMS = frozenset({"table", "limit", "offset", "envelope"})
 
 _CANONICAL_UNITS: tuple[str, ...] = (
     # NB: the retired pre-rename trader unit "ict-bot.service" was removed here
@@ -101,6 +140,46 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # Do not remove without giving the SPA transport another liveness
     # surface first.
     "caddy.service",
+    # 2026-09-22 (E27). The OS sshd unit, here for ONE reason: the
+    # `/health-review` skill lists `journalctl` for sshd/auth as a MANDATORY
+    # breach-sweep source (§ "Security-breach check", source 5 — "VM host
+    # signals (via the diag relay)"), and this allowlist is exact-match, so
+    # that source has been UNSATISFIABLE on every day since the skill was
+    # written. MEASURED 2026-09-22 against the running web-api:
+    # journalctl?unit=ssh / ssh.service / sshd / sshd.service all returned
+    # HTTP 400 `unknown_unit`, against a control of unit=ict-web-api.service
+    # returning 200 with journal lines. There was no spelling that worked.
+    #
+    # ⚠️ THE NAME IS `ssh.service` AND THE ALIAS IS A TRAP. Measured on
+    # ict-bot-arm (Ubuntu 22.04.5 LTS) via the vm-driver relay:
+    #   systemctl list-unit-files 'ssh*' -> ssh.service enabled;
+    #                                       sshd.service alias
+    #   systemctl show ssh.service       -> Id=ssh.service,
+    #                                       Names="ssh.service sshd.service"
+    #   journalctl -u ssh.service  -n 3  -> 3 sshd lines
+    #   journalctl -u sshd.service -n 3  -> "-- No entries --"
+    # systemd resolves the alias for `show`/`is-active`; the JOURNAL MATCH
+    # does NOT — `_SYSTEMD_UNIT` records the Id. So allowlisting the alias
+    # would have returned HTTP 200 with `lines: []` and `available: true`
+    # (rc=0, no stderr), i.e. a breach sweep that reports CLEAN having read
+    # nothing. Do not "also add" sshd.service: a second spelling that
+    # silently answers empty is worse than the 400 it replaces.
+    #
+    # ⚠️ PRIVACY COST, STATED AND ACCEPTED (operator decision, 2026-09-22).
+    # sshd journal lines carry SOURCE IPs and USERNAMES, and everything
+    # holding the diag bearer can now read them. A counts-only summariser and
+    # dropping the skill's requirement were both offered and both declined.
+    # This is a READ route over host logs — it adds no write route and returns
+    # no secrets, so the closed diag-token rotation decision
+    # (docs/reference/diag-access.md) is not reopened by it.
+    #
+    # NOT ours, so the same guard blind spot as caddy.service above: sshd
+    # ships no deploy/*.service of ours, so scripts/check_diag_unit_allowlist.py
+    # never scans it — this line is hand-maintained and nothing flags its
+    # removal. It also now appears in /api/diag/services and /snapshot's
+    # `services` list; that list REPORTS state, it does not assert it, and
+    # nothing should read ssh.service's presence there as a deploy target.
+    "ssh.service",
     "ict-telegram-bot.service",
     # NB: the retired daily-digest unit "ict-heartbeat.service" was removed here
     # (2026-07-26 full-system audit, WS-B). The daily operator digest was retired
@@ -188,6 +267,10 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # rationale as the watchdog / bridge / insights pairs above.
     "ict-hourly-snapshot.service",
     "ict-hourly-snapshot.timer",
+    # FIX-SA-12 (2026-09-29): pushes when the TRAINER root is >= 90% used, read
+    # from the published mirror. Queryable so a session can confirm it is firing.
+    "ict-trainer-disk-alarm.service",
+    "ict-trainer-disk-alarm.timer",
     # MI-83 (2026-09-02). The hourly work digest, moved off GitHub Actions
     # cron onto the VM's own clock: work-digest.yml declares `20 * * * *` and
     # fired 5 times in a day at :19/:10/:33/:47 over its complete run history.
@@ -195,6 +278,10 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # alive?" for the timer as well as the run.
     "ict-work-digest.service",
     "ict-work-digest.timer",
+    # WORK-SYSTEM (2026-10-04). The daily 05:30Z work-report GENERATOR (sends
+    # nothing; the hourly digest above is the one Telegram carrier).
+    "ict-work-report.service",
+    "ict-work-report.timer",
     "ict-health-snapshot.service",
     "ict-health-snapshot.timer",
     # 2026-06-28 (full-system audit Workstream B) — two recurring trader-VM
@@ -232,8 +319,48 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # rationale as the watchdog / insights / snapshot pairs above.
     "ict-exchange-fills-pull.service",
     "ict-exchange-fills-pull.timer",
+    # 2026-09-27 (FIX-CA-OPS2) — Alpaca fills, split off
+    # ict-exchange-fills-pull.service so an Alpaca-side failure can never
+    # skip the Bybit wallet ledger sharing that unit's ExecStart chain. Same
+    # rationale as its Bybit sibling above: queryable so a session can verify
+    # the pull is firing on cadence and tail its journal.
+    "ict-alpaca-fills-pull.service",
+    "ict-alpaca-fills-pull.timer",
+    # 2026-09-28 (W6-PROP-FEED) — the 5-min read-only breakout_1
+    # account_status feed; queryable so its tick journal (redacted output,
+    # trip/backoff lines) can be tailed without SSH.
+    "ict-prop-feed.service",
+    "ict-prop-feed.timer",
+    # 2026-09-30 (TRADEIFY-WIRE) — the per-account feed INSTANCE for
+    # tradeify_1 (template deploy/ict-prop-feed@.service, opt-in timer);
+    # queryable so a session can confirm it is on and tail its journal.
+    "ict-prop-feed@tradeify_1.service",
+    "ict-prop-feed@tradeify_1.timer",
+    # 2026-09-28 (PROP-EXEC) — the breakout_1 step-3 executor. Ships NOT
+    # enabled (its timer is in deploy/opt-in/); queryable so a session can
+    # confirm it is off, and tail its redacted cycle journal once enabled.
+    "ict-prop-executor.service",
+    "ict-prop-executor.timer",
+    # 2026-10-03 (TRADEIFY-EXECUTOR) — the per-account executor INSTANCE for
+    # tradeify_1 (template deploy/ict-prop-executor@.service, opt-in timer);
+    # queryable so a session can confirm it is on/off and tail its cycle
+    # journal (account, env_mode) without SSH.
+    "ict-prop-executor@tradeify_1.service",
+    "ict-prop-executor@tradeify_1.timer",
+    # 2026-10-04 (VELOTRADE-WIRE) — the same two template instances for
+    # velotrade_1, queryable before either is enabled so a session can
+    # confirm they are off.
+    "ict-prop-feed@velotrade_1.service",
+    "ict-prop-feed@velotrade_1.timer",
+    "ict-prop-executor@velotrade_1.service",
+    "ict-prop-executor@velotrade_1.timer",
     "ict-exchange-funding-pull.service",
     "ict-exchange-funding-pull.timer",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018) — daily purge of phone step
+    # captures older than 7 days; queryable so a session can confirm the TTL
+    # job fires and tail its one-line result.
+    "ict-phone-capture-purge.service",
+    "ict-phone-capture-purge.timer",
     "ict-mes-ibkr-pull.service",
     "ict-mes-ibkr-pull.timer",
     # 2026-07-31 (full-system audit P2.4) — the HOURLY IBKR executions pull
@@ -268,6 +395,7 @@ _CONVICTION_ARBITRATION_LOG = runtime_logs_dir() / "conviction_arbitration.jsonl
 _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
+_VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
 _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # The protection RE-ASSERT soak (2026-08-23). At the default `annotate` mode
 # this is the exact row list to review before flipping PROTECTION_REASSERT_MODE
@@ -378,7 +506,7 @@ _PROP_TICKET_RISK_SOAK_LOG = (
 # always the same: "the mechanism stopped firing" and "the mechanism fired and
 # the condition simply persists" are indistinguishable from outside, so a
 # broken cadence looks exactly like a quiet one.
-_DAILY_CAP_ALERT_STATE = runtime_logs_dir() / "daily_cap_alert_state.json"
+_DAILY_DD_SWITCH_STATE = runtime_logs_dir() / "daily_dd_switch_state.json"
 _EXIT_LOOP_HEALTH_ALERT_STATE = (
     runtime_logs_dir() / "exit_loop_health_alert_state.json"
 )
@@ -425,12 +553,50 @@ _WORK_DIGEST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "work_digest_receipt.json"
 )
 
+# TELEGRAM-CHANNELS-3 (2026-10-11, item 6). The stored Telegram notification
+# settings (mutes, per-update cadence, last_sent, updated_at/updated_by). On
+# 2026-10-11 the MANAGER update moved from hourly to 4h and nobody could read
+# WHO changed it: the file is not otherwise reachable from a session. Holds no
+# secrets -- kind names, cadence choices and timestamps. Resolved through the
+# store's own path function so reader and writer cannot split.
+_TELEGRAM_SETTINGS = _telegram_settings._path()
+
+# WORK-SYSTEM (2026-10-04). The attention pass's receipt — stamped on every
+# pass. The pass rides ict-work-digest (no unit of its own), so it is anchored
+# to repo_root() for the same reason as the entry above.
+_ATTENTION_WATCH_RECEIPT = (
+    Path(repo_root()) / "runtime_logs" / "attention_watch_receipt.json"
+)
+
+# TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
+# former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
+# present only if old code wrote it -- the next trail pass moves it aside), its
+# last armed step's NON-blocking record (`modify_rollout_last.json`) and the
+# per-ticket replay state (`trail_state.json`: fail_streak / next_try_at /
+# red_flagged per ticket) live in the executor's state dir on the VM, outside
+# runtime_logs/, so a relay-bound session could not otherwise read them. The path mirrors
+# the WRITER's resolver (scripts/prop/prop_executor_tick.py::default_state_dir
+# and scripts/ops/prop_executor_tick.sh): breakout_1 keeps `<base>/executor`,
+# every other account is `<base>/accounts/<account>/executor`. Contents carry no
+# secret: the latch is {state, at, symbol, side, from_sl, to_sl, quote | why |
+# sl} (why is _mask_public_text-masked) and the state is per-ticket flags.
+def _prop_executor_state_dir(account: str) -> Path:
+    base = Path(os.environ.get("PROP_BROWSER_BASE")
+                or Path.home() / ".cache" / "metis-prop-browser")
+    if account == "breakout_1":
+        return base / "executor"
+    return base / "accounts" / account / "executor"
+
+
 _LOG_FILES: dict[str, Path] = {
     "audit": _AUDIT_LOG,
     # MI-83. "Has the hourly digest actually fired?" — answerable by READING,
     # not by trusting an `OnCalendar=` line. This repo has measured that a
     # declared cadence is not a run.
     "work_digest_receipt": _WORK_DIGEST_RECEIPT,
+    "telegram_settings": _TELEGRAM_SETTINGS,
+    # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
+    "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
     "bot_log": _BOT_LOG,
@@ -495,6 +661,7 @@ _LOG_FILES: dict[str, Path] = {
     # docs/research/M20-exit-refinement-2026-07-12.md § 5). Absent until the
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
+    "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
@@ -712,6 +879,9 @@ _LOG_FILES: dict[str, Path] = {
     # line-wrapped id as a reference resolving to NOTHING, which is what a
     # 'tracked by BL-X' that tracks nobody looks like to that guard.)
     "prop_ticket_risk_soak": _PROP_TICKET_RISK_SOAK_LOG,
+    # 2026-09-28 (PROP-EXEC): one row per trade RiskManager let through a
+    # breach because its account is breach_guards: report (breakout_1).
+    "breach_accepted": runtime_logs_dir() / "breach_accepted.jsonl",
     "exit_loop_health_alert_state": _EXIT_LOOP_HEALTH_ALERT_STATE,
     # Daily-cap alert latch.
     # ── The two "liveness watchdog" state files. THEY ARE DIFFERENT THINGS AND
@@ -723,10 +893,12 @@ _LOG_FILES: dict[str, Path] = {
     #
     #   * `heartbeat_check_state.json`  <- scripts/check_heartbeat.py, the EXTERNAL
     #     dead-man switch behind ict-liveness-watchdog.timer. Its state keys are
-    #     `autoheal_attempts`, `autoheal_exhausted_alerted`,
-    #     `last_autoheal_attempt_ts`. THIS is the restart budget. Once exhausted
-    #     the watchdog goes alert-only and stops auto-restarting the trader, so
-    #     without a read surface "the watchdog will restart the trader if it
+    #     `autoheal_attempts`, `autoheal_red_flag_alerted`,
+    #     `autoheal_next_backoff_s`, `last_autoheal_attempt_ts`. THIS is the
+    #     restart pacing. Since 2026-10-09 (NO-HALT) it never stops restarting:
+    #     past --max-restarts it raises one red flag and backs off up to
+    #     --max-backoff-min (until then it went EXHAUSTED and alert-only).
+    #     Without a read surface "the watchdog will restart the trader if it
     #     stalls" is an assumption, not an observation.
     #
     #   * `liveness_watchdog_state.json` <- src/runtime/liveness_watchdog.py, a
@@ -740,7 +912,7 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "heartbeat_check_state.json",
     "liveness_watchdog_state":
         runtime_logs_dir() / "liveness_watchdog_state.json",
-    "daily_cap_alert_state": _DAILY_CAP_ALERT_STATE,
+    "daily_dd_switch_state": _DAILY_DD_SWITCH_STATE,
     # THE OPERATOR-ALERT RING (BL-20260901-OPERATOR-ALERTS-HAS-NO-READ-SURFACE).
     # `execution_diagnostics._append_operator_alert` writes every alert that
     # reaches the `/api/bot/notifications` banner feed here -- close_failure,
@@ -828,6 +1000,30 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "silent_refusal_alert_state.json",
     "prop_fills_staleness_state":
         runtime_logs_dir() / "prop_fills_staleness_state.json",
+    "prop_trail_latch_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout_last.json",
+    "prop_trail_state_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "trail_state.json",
+    "prop_trail_latch_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout_last.json",
+    "prop_trail_state_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "trail_state.json",
+    "prop_trail_latch_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout.json",
+    "prop_trail_last_step_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout_last.json",
+    "prop_trail_state_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "trail_state.json",
+    "prop_trail_latch_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout.json",
+    "prop_trail_last_step_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout_last.json",
+    "prop_trail_state_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "trail_state.json",
     "target_naked_alert_state":
         runtime_logs_dir() / "target_naked_alert_state.json",
     # Registered IN THE SAME COMMIT that ships its writer. #8778 shipped
@@ -874,6 +1070,20 @@ _LOG_FILES: dict[str, Path] = {
     # on the one surface a relay-bound session can reach.
     "partial_stop_coverage_alert_state":
         runtime_logs_dir() / "partial_stop_coverage_alert_state.json",
+    # REVIEW-14123 (FIX-SA-03): `_note_protection_unreadable` pages CRITICAL
+    # when an Alpaca position's resting-order state stays unreadable, through
+    # `_cooldown_admits("alpaca_protection_unreadable", ...)`. Registered in
+    # the same commit as its writer, like every sibling above.
+    "alpaca_protection_unreadable_alert_state":
+        runtime_logs_dir() / "alpaca_protection_unreadable_alert_state.json",
+    # PI-20260929-PR6YRTQY-0005: the durable per-row re-arm attempt budget
+    # (`_record_rearm_attempt`) and the refusal-page cooldown
+    # (`_cooldown_admits("alpaca_rearm_refused", ...)`) — both suppress or
+    # gate a money-path action, so both must be readable from outside.
+    "alpaca_rearm_attempts_alert_state":
+        runtime_logs_dir() / "alpaca_rearm_attempts_alert_state.json",
+    "alpaca_rearm_refused_alert_state":
+        runtime_logs_dir() / "alpaca_rearm_refused_alert_state.json",
     # MI-276. ⚠️ THE FIRST PUSH REGISTERED ONLY THE TWO COOLDOWN FILES WHILE
     # THIS COMMENT ALREADY CLAIMED ALL FOUR, AND THE TWO IT OMITTED WERE THE
     # ONES THAT MATTER: `OI-20260911-THE-TWO-DETECTORS-...`'s clears_when
@@ -907,6 +1117,14 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "losing_streak_alert_state.json",
     "losing_streak_observed_state":
         runtime_logs_dir() / "losing_streak_observed_state.json",
+    # MI-303. The latch that rate-limits the DECISION-CHANNEL page. Allowlisted
+    # in the SAME commit that shipped the writer, for the reason the
+    # `exit_loop_health` #8778 lesson records: a latch that suppresses an
+    # operator page and cannot itself be inspected is worse than no latch —
+    # "the latch is holding" and "the latch is wedged and nothing will ever
+    # page again" are otherwise indistinguishable from outside.
+    "decision_channel_alert_state":
+        runtime_logs_dir() / "decision_channel_alert_state.json",
     "starved_account_alert_state":
         runtime_logs_dir() / "starved_account_alert_state.json",
     "starved_account_observed_state":
@@ -943,6 +1161,12 @@ _LOG_FILES: dict[str, Path] = {
     # were still sent. A reader may conclude a hash PRESENT here was enqueued;
     # a reader may NOT conclude that a hash missing here was not.
     "pending_pings_delivered": _PENDING_PINGS_DELIVERED,
+    # OA-16(b) (PI-20261004-GCFA5DOR-0010): FIX-SA-08's OnFailure handler
+    # (scripts/ops/notify_unit_failure.py) appends one row per failed unit
+    # here, pinged or suppressed. Without this entry a session could not
+    # observe that the handler fired. ABSENT = no unit failure recorded on
+    # this VM since the file was last reset (VM-local, not in git).
+    "unit_failures": runtime_logs_dir() / "unit_failures.jsonl",
 }
 
 _DEFAULT_LIMIT = 100
@@ -1001,6 +1225,56 @@ def _require_diag_token(request: Request) -> None:
             detail={"error": "invalid_token"},
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def _diag_accounts(
+    route: str,
+    list_accounts: Any,
+    account_id: str | None = None,
+    *,
+    require_known: bool = True,
+) -> list[dict[str, Any]]:
+    """The configured accounts for a venue-truth diag route, or an HTTP error.
+
+    FIX-CA-12 (CA-A08): these routes used to swallow a failed account read to
+    ``accounts = []`` and answer 200, and to answer 200 ``accounts: []`` for an
+    ``account_id`` that matches nothing — so *could not look* and *wrong id*
+    read exactly like *looked, the venue holds nothing*. Now:
+
+    * ``list_accounts()`` raised, or returned ``[]`` because ``accounts.yaml``
+      failed to read -> 503 ``accounts_unreadable``;
+    * ``require_known`` and ``account_id`` matches no configured account ->
+      404 ``unknown_account_id``.
+    """
+    try:
+        accounts = list_accounts() or []
+        unreadable: str | None = None
+        if not accounts:
+            from src.units.ui.data_loaders import accounts_yaml_read_errors
+            errs = accounts_yaml_read_errors()
+            if errs:
+                unreadable = "; ".join(
+                    str(e.get("error") or e) for e in errs)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503 (not swallowed)
+        unreadable = f"{type(exc).__name__}: {exc}"
+    if unreadable is not None:
+        logger.warning("%s: list_accounts failed: %s", route, unreadable)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "accounts_unreadable", "detail": unreadable},
+        )
+    if require_known and account_id and not any(
+            (a or {}).get("account_id") == account_id for a in accounts):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "unknown_account_id",
+                "account_id": account_id,
+                "configured": sorted(
+                    str((a or {}).get("account_id")) for a in accounts),
+            },
+        )
+    return accounts
 
 
 def _clamp(value: int | None, default: int, max_: int) -> int:
@@ -1075,18 +1349,80 @@ def _audit_tail(limit: int) -> list[dict[str, Any]]:
     return out
 
 
-def _journal_select(table: str, limit: int) -> list[dict[str, Any]]:
+def _journal_select(
+    table: str,
+    limit: int,
+    offset: int = 0,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Read one page of an allowlisted journal table, newest-first.
+
+    Returns ``(rows, meta)``. ``meta`` describes WHAT WAS ACTUALLY RETURNED —
+    the page key, the range of that key in the rows handed back, the table's
+    total row count, and whether more rows exist beyond this page — so a
+    caller can tell a COMPLETE population from a TRUNCATED one without
+    issuing a second call and without guessing.
+
+    Three never-collapsed states on ``total_rows_state``:
+
+      * ``counted``      — COUNT(*) ran; ``total_rows`` is that number.
+      * ``db_absent``    — the journal file does not exist yet (fresh
+                           install). ``total_rows`` is None.
+      * ``count_failed`` — the COUNT raised. ``total_rows`` is None.
+
+    ``total_rows`` is ``None``, never ``0``, whenever it was not measured:
+    zero is a REAL reading (an empty table) and must not be manufactured out
+    of a failed look. ``has_more`` is likewise ``None`` — not ``False`` —
+    when the total is unknown, because "there is nothing more" and "we could
+    not establish whether there is more" are opposite facts and the second one
+    is what silently amputated the pre-era research population.
+
+    A COUNT(*) failure deliberately does NOT fail the read: the rows are the
+    caller's answer and the count is provenance about them, so losing the
+    provenance must not also lose the data. Cost is bounded by the four-entry
+    allowlist (largest table ~150k rows, an indexed-free scan of ms).
+    """
     if table not in _JOURNAL_TABLES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "unknown_table", "allowed": sorted(_JOURNAL_TABLES.keys())},
         )
+    spec = _JOURNAL_TABLES[table]
+    # The deterministic tiebreaker is appended ONLY when it is not already the
+    # ordering key, so `trades` keeps the exact `ORDER BY id DESC` it has
+    # always had and `order_packages` gains the total order OFFSET paging
+    # needs. Both names come from the hardcoded allowlist above — never from
+    # user input — so the f-string carries no injection surface.
+    order_by = (
+        f"{spec.order_expr} DESC"
+        if spec.order_expr == spec.unique_col
+        else f"{spec.order_expr} DESC, {spec.unique_col} DESC"
+    )
+    meta: dict[str, Any] = {
+        "table": table,
+        "limit": limit,
+        "offset": offset,
+        "count": 0,
+        "order_by": order_by,
+        "page_key": spec.unique_col,
+        # `stable_key`  — the sort key is immutable, so paging walks a fixed
+        #                 sequence and a multi-page read reconstructs the
+        #                 table exactly.
+        # `mutable_key` — the sort key can CHANGE between page reads, so a
+        #                 row may move across a boundary and be skipped or
+        #                 repeated. The page is internally consistent; the
+        #                 WALK is not snapshot-consistent. Say so.
+        "page_stability": "stable_key" if spec.stable_key else "mutable_key",
+        "returned_range": None,
+        "total_rows": None,
+        "total_rows_state": "count_failed",
+        "has_more": None,
+    }
     if not _DB_PATH.exists():
         # Genuine "DB hasn't been created yet" — distinct from "DB
-        # reachable but broken". Keep the empty-list shape here so a
+        # reachable but broken". Keep the empty-rows shape here so a
         # fresh install doesn't 503 out of the gate.
-        return []
-    order_col = _JOURNAL_TABLES[table]
+        meta["total_rows_state"] = "db_absent"
+        return [], meta
     try:
         # mode=ro guarantees no mutation can happen here even if a future
         # change accidentally introduces an UPDATE/DELETE statement.
@@ -1094,10 +1430,29 @@ def _journal_select(table: str, limit: int) -> list[dict[str, Any]]:
         try:
             conn.row_factory = sqlite3.Row
             cur = conn.execute(
-                f"SELECT * FROM {table} ORDER BY {order_col} DESC LIMIT ?",
-                (limit,),
+                f"SELECT * FROM {table} ORDER BY {order_by} LIMIT ? OFFSET ?",
+                (limit, offset),
             )
-            return [dict(r) for r in cur.fetchall()]
+            rows = [dict(r) for r in cur.fetchall()]
+            meta["count"] = len(rows)
+            if rows:
+                meta["returned_range"] = {
+                    "column": spec.unique_col,
+                    "first": rows[0].get(spec.unique_col),
+                    "last": rows[-1].get(spec.unique_col),
+                }
+            try:
+                total = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except (sqlite3.Error, TypeError, IndexError) as exc:  # allow-silent: the OPPOSITE of silent — the failure is NAMED in the response (`total_rows_state: count_failed`, `total_rows`/`has_more` None = "we could not look", never 0/False) and logged with its type. It must not re-raise: the rows are the caller's answer and the COUNT is provenance ABOUT them, so losing the provenance must not also lose the data. Narrowing past sqlite3.Error is not available — that IS the count's failure mode, plus TypeError/IndexError if fetchone() returns None.
+                logger.warning(
+                    "diag: _journal_select(table=%s) COUNT(*) failed: %s: %s",
+                    table, type(exc).__name__, exc,
+                )
+            else:
+                meta["total_rows"] = int(total)
+                meta["total_rows_state"] = "counted"
+                meta["has_more"] = (offset + len(rows)) < int(total)
+            return rows, meta
         finally:
             conn.close()
     except sqlite3.Error as exc:
@@ -1490,8 +1845,10 @@ def get_snapshot(request: Request, limit: int = _DEFAULT_LIMIT) -> dict[str, Any
         "heartbeat": _heartbeat_snapshot(),
         "status": _status_json_payload(),
         "audit_tail": _audit_tail(n),
-        "order_packages": _journal_select("order_packages", n),
-        "trades": _journal_select("trades", n),
+        # `/snapshot` keeps its historical bare-list shape for these two
+        # keys; the paging provenance is available on `/journal` itself.
+        "order_packages": _journal_select("order_packages", n)[0],
+        "trades": _journal_select("trades", n)[0],
         "vm_health": _vm_health(),
         "services": [{"unit": u, "state": states.get(u, "unknown")} for u in _CANONICAL_UNITS],
     }
@@ -1632,9 +1989,114 @@ def get_journal(
     request: Request,
     table: str,
     limit: int = _DEFAULT_LIMIT,
-) -> list[dict[str, Any]]:
+    offset: int = 0,
+    envelope: bool = False,
+) -> list[dict[str, Any]] | dict[str, Any]:
+    """Newest-first page of an allowlisted journal table.
+
+    Params — and this list is EXHAUSTIVE, enforced rather than described
+    (see ``_JOURNAL_QUERY_PARAMS``): anything else is a **400**, never a
+    silent no-op.
+
+      * ``table``    — one of ``_JOURNAL_TABLES``.
+      * ``limit``    — rows per page, clamped to ``_MAX_LIMIT`` (1000).
+      * ``offset``   — rows to skip. **This is how you reach history older
+                       than the newest page.**
+      * ``envelope`` — ``true`` wraps the rows in a dict that also states
+                       what was returned (range, total, has_more). Default
+                       ``false`` returns the historical bare array.
+
+    **Why this exists (MI-298 / MI-301, measured 2026-09-17 and 2026-09-18).**
+    This route took ``table`` + ``limit`` only. FastAPI DISCARDS an undeclared
+    query parameter in silence, so ``offset=1000`` was accepted and ignored
+    and the caller got a confident, specific, WRONG population — with nothing
+    in the response saying so. That is ``UNPROVENANCED DIAGNOSTIC OUTPUT``
+    sub-class B (implicit input selection) on the surface most sessions grade
+    populations from. Because ids are monotonic and the window is the newest
+    ``limit`` rows, the window's FLOOR RISES as the table grows, so the
+    reachable population lost its OLDEST rows a little more each day: the
+    ``trades`` floor moved 4653 (2026-09-10) → 4701 (09-12) → 4891 (09-18),
+    i.e. 238 ids of pre-era history walked out of reach in 8 days while every
+    before/after study depended on them.
+
+    **THE 1000-ROW CLAMP IS DELIBERATE AND STAYS.** It is not the bug. It is
+    a real bound on an unbounded read against the web-api that shares a
+    2-OCPU box with the live trader, and this repo has paid for unbounded
+    reads twice (the June 2026 wedges). Measured on the live VM: one
+    ``limit=1000`` page of ``order_packages`` is already **4.8 MB**, so a
+    5000-row page would be ~24 MB in a single response. The fix is therefore
+    PAGING WITHIN the clamp, which is exactly what ``/audit_query`` — in this
+    same file — already chose for the same problem: *"``limit`` (≤
+    ``_MAX_LIMIT``) + ``offset`` — page back through the full table."* This
+    route simply never got that treatment.
+
+    **There is deliberately no ``since``/``until`` here**, and that is a
+    refusal rather than an omission. These tables have no single unambiguous
+    time column — ``trades`` carries ``timestamp``, ``created_at`` AND
+    ``closed_at``; ``order_packages`` carries ``created_at`` AND
+    ``updated_at`` — so a date filter would have to PICK one implicitly, which
+    is the very sub-class B defect this change exists to remove. A caller who
+    passes them is TOLD, and pointed at ``/audit_query``, which filters
+    ``signals`` on a single declared column. Adding a date filter here needs
+    the column named in the request, and that is a separate decision.
+
+    ⚠️ ``page_stability`` is not decoration. ``order_packages`` is ordered by
+    the MUTABLE ``updated_at``, so a multi-page walk of it is not
+    snapshot-consistent — a row updated mid-walk moves and can be skipped or
+    repeated. Every other table is ordered by its immutable ``id`` and pages
+    exactly. Read it before treating a paged pull as a census.
+    """
     _require_diag_token(request)
-    return _journal_select(table, _clamp(limit, _DEFAULT_LIMIT, _MAX_LIMIT))
+    # Refuse an unsupported parameter rather than discarding it. Ordered
+    # AFTER the token check so an unauthenticated caller learns nothing about
+    # the vocabulary.
+    unsupported = sorted(set(request.query_params.keys()) - _JOURNAL_QUERY_PARAMS)
+    if unsupported:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "unsupported_parameter",
+                "unsupported": unsupported,
+                "supported": sorted(_JOURNAL_QUERY_PARAMS),
+                "hint": (
+                    "This route pages with limit+offset (newest-first). It has "
+                    "no date filter on purpose: these tables carry more than "
+                    "one timestamp column, so filtering would have to choose "
+                    "one implicitly. For a time-filtered read of the audit "
+                    "stream use /api/diag/audit_query, which declares the "
+                    "column it filters (signals.logged_at_utc)."
+                ),
+            },
+        )
+    effective_limit = _clamp(limit, _DEFAULT_LIMIT, _MAX_LIMIT)
+    # Three states, not a boolean: "you got what you asked for", "your ask
+    # exceeded the deliberate cap", and "your ask was invalid so the default
+    # was substituted" are different facts, and the last one is the quiet way
+    # a caller ends up reading a population it never requested.
+    if effective_limit == limit:
+        limit_state = "as_requested"
+    elif limit is not None and limit >= 1:
+        limit_state = "clamped_to_max"
+    else:
+        limit_state = "defaulted_invalid"
+    effective_offset = max(0, offset)
+    rows, meta = _journal_select(table, effective_limit, effective_offset)
+    if not envelope:
+        # Default stays a BARE ARRAY, byte-identical to the historical shape.
+        # ~15 in-repo consumers parse this response as a JSON array
+        # (scripts/ops/system_invariants.py, scripts/research/*, …), so
+        # flipping the default would trade one breakage for another. The
+        # envelope is opt-in and is named in the 400 above so it is
+        # discoverable from the surface itself.
+        return rows
+    return {
+        **meta,
+        "limit_requested": limit,
+        "limit_state": limit_state,
+        "limit_max": _MAX_LIMIT,
+        "offset_requested": offset,
+        "rows": rows,
+    }
 
 
 @router.get("/audit_query")
@@ -1833,6 +2295,131 @@ def get_journalctl(
     )
 
 
+# Paths deploy_pull_restart.sh does NOT restart for (its RUNTIME_CHANGES filter).
+# Keep in lock-step with that regex: `restart_pending` must mean "a commit the
+# deploy would restart for is not loaded", not "the shas differ".
+# #15830 widened the deploy's set and this copy was not updated, so
+# restart_pending read True on research-only commits (OPS-AUDIT 2026-10-04,
+# OA-14); tests/test_diag_restart_pending_lockstep.py now pins the two equal.
+_NON_RUNTIME_PATHS_RE = re.compile(
+    r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
+    r"|tools/phone-executor/|tools/phone-probe/)"
+)
+# ...except these scripts/research modules, which the web-api's brief imports
+# in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
+# the deploy's IN_PROCESS_CHANGES grep. Same lock-step test as above.
+_IN_PROCESS_RUNTIME_PATHS_RE = re.compile(
+    r"^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$"
+)
+
+
+def _is_runtime_path(line: str) -> bool:
+    return bool(line) and (
+        not _NON_RUNTIME_PATHS_RE.match(line) or bool(_IN_PROCESS_RUNTIME_PATHS_RE.match(line))
+    )
+
+
+def _restart_pending(running: str, on_disk: str) -> bool | None:
+    """True when a RUNTIME path differs between the loaded sha and the checkout.
+
+    Three-way: None means we could not look (unknown sha, or the diff failed,
+    e.g. the running sha is absent from a shallow clone) -- never False.
+    """
+    if running == "unknown" or on_disk == "unknown":
+        return None
+    if running == on_disk:
+        return False
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--no-renames", "--name-only", running, on_disk],
+            cwd=str(repo_root()),
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("restart_pending: git diff could not run: %s", exc)
+        return None
+    if out.returncode != 0:
+        return None
+    return any(_is_runtime_path(line) for line in out.stdout.splitlines())
+
+
+TRADER_UNIT = "ict-trader-live.service"
+WEB_API_UNIT = "ict-web-api.service"
+
+
+def _trader_running_sha() -> str:
+    """The sha the TRADER process loaded (``runtime_status.json::git_sha_running``,
+    written by the trader itself). ``"unknown"`` when unreadable -- never the
+    checkout, which is what ``git_sha`` in that file means."""
+    try:
+        st = json.loads((runtime_logs_dir() / "runtime_status.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "unknown"
+    sha = st.get("git_sha_running") if isinstance(st, dict) else None
+    return str(sha) if sha else "unknown"
+
+
+@functools.lru_cache(maxsize=4)
+def _trader_closure_for(on_disk: str):
+    """The deploy's trader closure (committed file UNION a live walk) for the
+    checkout at ``on_disk``; cached per sha because the walk takes ~2 s."""
+    from scripts.ops.trader_import_closure import deploy_closure
+    closure, _notes = deploy_closure(repo_root())
+    return closure
+
+
+def _trader_restart_pending(running: str, on_disk: str) -> bool | None:
+    """Per-unit (TRADER-RESTART-GATE): True when the deploy WOULD restart the
+    trader for the diff between what the trader loaded and the checkout --
+    the same rule as scripts/deploy_pull_restart.sh's trader gate. Three-way:
+    None = could not look."""
+    if running == "unknown" or on_disk == "unknown":
+        return None
+    if running == on_disk:
+        return False
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--no-renames", "--name-only", running, on_disk],
+            cwd=str(repo_root()),
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("trader restart_pending: git diff could not run: %s", exc)
+        return None
+    if out.returncode != 0:
+        return None
+    changed = [ln for ln in out.stdout.splitlines() if ln]
+    try:
+        from scripts.ops.trader_import_closure import classify_path
+        closure = _trader_closure_for(on_disk)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: no closure is NOT empty -- it falls to the deploy's any-runtime-path restart rule below
+        logger.debug("trader restart_pending: closure unavailable: %s", exc)
+        closure = None
+    if closure is None:
+        # The deploy restarts the trader on ANY runtime path when it has no closure.
+        return any(not _NON_RUNTIME_PATHS_RE.match(p) for p in changed)
+    return any(classify_path(p, closure, _NON_RUNTIME_PATHS_RE) for p in changed)
+
+
+def _deployed_sha_by_unit() -> dict[str, str | None]:
+    """The deploy markers: ``deployed_sha.txt`` (every unit but the trader) and
+    ``deployed_sha_trader.txt`` (the trader, TRADER-RESTART-GATE). None = absent.
+
+    Read from ``<repo>/runtime_logs/`` -- where scripts/deploy_pull_restart.sh
+    writes them (``${REPO_DIR}/runtime_logs``) -- NOT ``runtime_logs_dir()``,
+    which on the live VM resolves to the data dir. OBSERVED 2026-10-15T12:17Z
+    (diag issue #18314): reading runtime_logs_dir() returned null for both."""
+    out: dict[str, str | None] = {}
+    marker_dir = Path(repo_root()) / "runtime_logs"
+    for unit, name in ((WEB_API_UNIT, "deployed_sha.txt"), (TRADER_UNIT, "deployed_sha_trader.txt")):
+        try:
+            out[unit] = (marker_dir / name).read_text(encoding="utf-8").strip() or None
+        except OSError:
+            out[unit] = None
+    return out
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -1849,13 +2436,10 @@ def get_version(request: Request) -> dict[str, Any]:
     """
     _require_diag_token(request)
     on_disk = _resolve_git_sha()
-    # Three-way, never collapsed. "unknown" on either side means we could not
-    # look, which is NOT the same as "they agree" -- so restart_pending is None
-    # rather than False when either sha is unresolvable.
-    if _RUNNING_GIT_SHA == "unknown" or on_disk == "unknown":
-        restart_pending = None
-    else:
-        restart_pending = _RUNNING_GIT_SHA != on_disk
+    # Three-way, never collapsed: None = we could not look (see _restart_pending).
+    restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
+    trader_sha = _trader_running_sha()
+    trader_pending = _trader_restart_pending(trader_sha, on_disk)
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -1865,10 +2449,20 @@ def get_version(request: Request) -> dict[str, Any]:
         # The sha currently checked out in the working tree, resolved live.
         # A pull advances this WITHOUT restarting anything.
         "git_sha_on_disk": on_disk,
-        # True when the tree has moved ahead of the running process, i.e. code
-        # was pulled and nothing restarted -- the 2026-05-09 incident state.
-        # None when either side is unknown (we could not look).
+        # True when a RUNTIME-path change (not docs/tests/.claude/.github/
+        # top-level md) sits between the running sha and the checkout -- the
+        # 2026-05-09 incident state. False when the shas differ only by files
+        # the deploy skips restarts for (FIX-SA-11). None = could not look.
         "restart_pending": restart_pending,
+        # PER UNIT (TRADER-RESTART-GATE): the deploy may leave the trader on an
+        # older sha whose loaded code is identical, so the trader has its own
+        # running sha and its own pending flag. Same three-way None.
+        "trader_git_sha": trader_sha,
+        "restart_pending_by_unit": {
+            WEB_API_UNIT: restart_pending,
+            TRADER_UNIT: trader_pending,
+        },
+        "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -1907,6 +2501,137 @@ def get_log_file(
         "size_bytes": path.stat().st_size,
         "lines": [ln.rstrip("\n") for ln in content[-n:]],
     }
+
+
+# ---------------------------------------------------------------------------
+# /log_aggregate (PI-20261004-4GA8WQPA-0003) -- the multi-day reader a 1000-line
+# /log_file TAIL cannot be. bybit_coverage_soak.jsonl (83 MB) and
+# position_read_state_soak.jsonl (136 MB) grow far faster than 1000 lines per
+# day, so their tail spans ONE UTC day while their closing criteria are
+# multi-day ("rows across >= 3 distinct UTC days", "at least one
+# verdicts_differ=true row"). Until this existed those soaks could only be
+# graded could-not-look. It streams the WHOLE file once and returns counts only
+# -- never row content -- so it is no wider a read than /log_file.
+# ---------------------------------------------------------------------------
+_AGG_FIELD_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
+_AGG_MAX_FIELDS = 6
+_AGG_MAX_VALUES = 20          # distinct values kept per field before "(other)"
+_AGG_TIME_BUDGET_S = 25.0     # whole-file scan must not hold a worker forever
+_AGG_DAY_KEYS = ("logged_at_utc", "ts", "logged_at", "timestamp")
+
+
+def _agg_day(row: dict) -> str | None:
+    for k in _AGG_DAY_KEYS:
+        v = row.get(k)
+        if isinstance(v, str) and len(v) >= 10 and v[4] == "-" and v[7] == "-":
+            return v[:10]
+    return None
+
+
+def aggregate_jsonl(path: Path, fields: list[str], count_true: list[str],
+                    account_key: str = "account_id",
+                    time_budget_s: float = _AGG_TIME_BUDGET_S) -> dict[str, Any]:
+    """Stream ``path`` once; per UTC day count rows, per account, the value
+    distribution of each of ``fields`` and the rows where each of ``count_true``
+    is truthy-and-nonzero.
+
+    ``read_state`` is ``complete`` or ``time_budget_hit``; the latter means the
+    counts are a LOWER BOUND over the lines scanned, never the whole file, and a
+    caller must not read an absent day as "no rows that day". Lines that are not
+    a JSON object are counted in ``unparseable_lines`` and rows with no
+    parseable timestamp in ``rows_without_day`` -- neither is silently dropped.
+    """
+    t0 = time.monotonic()
+    days: dict[str, dict[str, Any]] = {}
+    scanned = unparseable = no_day = 0
+    state = "complete"
+    with path.open("rb") as fh:
+        for raw in fh:
+            scanned += 1
+            if scanned % 2000 == 0 and time.monotonic() - t0 > time_budget_s:
+                state = "time_budget_hit"
+                break
+            try:
+                row = json.loads(raw)
+            except ValueError:
+                unparseable += 1
+                continue
+            if not isinstance(row, dict):
+                unparseable += 1
+                continue
+            day = _agg_day(row)
+            if day is None:
+                no_day += 1
+                continue
+            d = days.setdefault(day, {"rows": 0, "by_account": {}, "values": {}, "true_counts": {}})
+            d["rows"] += 1
+            acct = row.get(account_key)
+            if acct is not None:
+                d["by_account"][str(acct)] = d["by_account"].get(str(acct), 0) + 1
+            for f in fields:
+                if f in row:
+                    bucket = d["values"].setdefault(f, {})
+                    key = json.dumps(row[f], sort_keys=True) if not isinstance(row[f], str) else row[f]
+                    if key not in bucket and len(bucket) >= _AGG_MAX_VALUES:
+                        key = "(other)"
+                    bucket[key] = bucket.get(key, 0) + 1
+            for f in count_true:
+                v = row.get(f)
+                if v is True or (isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0):
+                    d["true_counts"][f] = d["true_counts"].get(f, 0) + 1
+    return {
+        "read_state": state,
+        "scanned_lines": scanned,
+        "unparseable_lines": unparseable,
+        "rows_without_day": no_day,
+        "distinct_utc_days": len(days),
+        "first_day": min(days) if days else None,
+        "last_day": max(days) if days else None,
+        "days": {k: days[k] for k in sorted(days)},
+        "elapsed_s": round(time.monotonic() - t0, 3),
+    }
+
+
+@router.get("/log_aggregate")
+def get_log_aggregate(
+    request: Request,
+    name: str,
+    fields: str = "",
+    count_true: str = "",
+    account_key: str = "account_id",
+) -> dict[str, Any]:
+    """Whole-file, counts-only aggregate of an allowlisted ``.jsonl`` log,
+    grouped by UTC day (see the block comment above). ``fields`` and
+    ``count_true`` are CSV lists of top-level keys (``[A-Za-z0-9_]``, at most 6
+    each); e.g. ``name=bybit_coverage_soak&fields=mode,binding&count_true=
+    verdicts_differ``. Row content is never returned."""
+    _require_diag_token(request)
+    if name not in _LOG_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "unknown_log_file", "allowed": sorted(_LOG_FILES.keys())},
+        )
+    f_list = [x.strip() for x in fields.split(",") if x.strip()]
+    t_list = [x.strip() for x in count_true.split(",") if x.strip()]
+    for k in (*f_list, *t_list, account_key):
+        if not _AGG_FIELD_RE.match(k):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail={"error": "bad_field_name", "field": k})
+    if len(f_list) > _AGG_MAX_FIELDS or len(t_list) > _AGG_MAX_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": "too_many_fields", "max": _AGG_MAX_FIELDS})
+    path = _LOG_FILES[name]
+    if not path.exists():
+        return {"name": name, "path": str(path), "present": False}
+    if path.suffix != ".jsonl":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": "not_jsonl", "name": name})
+    try:
+        agg = aggregate_jsonl(path, f_list, t_list, account_key)
+    except OSError as exc:
+        return {"name": name, "path": str(path), "present": True, "error": str(exc)}
+    return {"name": name, "path": str(path), "present": True,
+            "size_bytes": path.stat().st_size, **agg}
 
 
 @router.get("/shadow_stats")
@@ -1958,6 +2683,7 @@ def get_shadow_stats(
 async def get_exchange_positions(
     request: Request,
     account_id: str | None = None,
+    symbol: str | None = None,
 ) -> dict[str, Any]:
     """Read-only **exchange-side** open positions per account — the BROKER's
     truth, not the journal.
@@ -1982,10 +2708,32 @@ async def get_exchange_positions(
       * ``[]``    — genuinely flat on the exchange.
       * ``[{symbol, side, size, entry_price, unrealised_pnl}, ...]`` — live.
 
+    ``symbol`` (OI-20260913-A-BYBIT2-HEDGE-BOOK-IS-NEVER-FETCHED, 2026-09-27)
+    narrows to one instrument AND changes how it is read. Before it existed an
+    appended ``&symbol=`` was accepted and IGNORED — the payload was
+    byte-identical — so a session that did not diff the two responses would
+    have "checked" a symbol on nothing. Now, per account:
+
+      * **Bybit** — ``symbol_books`` carries a symbol-scoped venue read
+        (``account_bybit_symbol_books``): every book on the symbol, zero-size
+        rows included, with ``books_read`` naming which ``positionIdx`` the
+        venue answered with (both 1 and 2 on a hedge symbol) and
+        ``hedge_books_missing`` naming any it did not. This does NOT go
+        through the settleCoin page, which is the read that omits a hedge
+        symbol's second book. ``positions`` is the normal account read,
+        filtered to the symbol, so the two can be compared in one response.
+      * **Other venues** — ``positions`` filtered to the symbol;
+        ``symbol_books`` is ``null`` with ``symbol_read`` saying why.
+
+    ``requested_symbol`` is echoed so a reader can prove the parameter was
+    honoured. Still places, modifies and cancels nothing.
+
     Tier 1 — read-only, token-gated, best-effort per account.
     """
     _require_diag_token(request)
+    want_symbol = (symbol or "").strip().upper() or None
     try:
+        from src.units.accounts.clients import account_bybit_symbol_books
         from src.units.ui.data_loaders import account_open_positions, list_accounts
     except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503 (not swallowed)
         logger.warning("get_exchange_positions: import failed: %s", exc)
@@ -1994,11 +2742,7 @@ async def get_exchange_positions(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_exchange_positions: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_exchange_positions", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2016,17 +2760,48 @@ async def get_exchange_positions(
         except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row (error + positions=null), logged; one account must not fail the call
             err = f"{type(exc).__name__}: {exc}"
             logger.warning("get_exchange_positions: %s raised %s", aid, exc)
-        out.append({
+        row: dict[str, Any] = {
             "account_id": aid,
             "exchange": (acc or {}).get("exchange"),
-            # null = could-not-read; [] = flat; list = live positions.
-            "positions": positions,
-            "count": (len(positions) if isinstance(positions, list) else None),
-            "error": err,
-        })
+        }
+        if want_symbol is not None:
+            if isinstance(positions, list):
+                positions = [
+                    p for p in positions
+                    if str((p or {}).get("symbol") or "").upper() == want_symbol
+                ]
+            is_bybit = ((acc or {}).get("exchange") or "").lower() == "bybit"
+            books: Any = None
+            books_err: str | None = None
+            if is_bybit:
+                try:
+                    books = await run_account_read(
+                        account_bybit_symbol_books, acc, want_symbol)
+                except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced in the row (symbol_read=could_not_look + error), logged
+                    books_err = f"{type(exc).__name__}: {exc}"
+                    logger.warning(
+                        "get_exchange_positions: %s symbol read %s raised %s",
+                        aid, want_symbol, exc)
+            # collapsed-state: could_not_look — forwards the venue helper's
+            # `query_state` VERBATIM into `symbol_read` (rows_returned / no_rows
+            # reach the response unchanged); the one branch of its own is the
+            # raised-read `could_not_look`.
+            row["symbol_read"] = (
+                "not_bybit" if not is_bybit
+                else (books or {}).get("query_state") if isinstance(books, dict)
+                else "could_not_look"
+            )
+            row["symbol_books"] = books
+            row["symbol_books_error"] = books_err
+        # null = could-not-read; [] = flat; list = live positions.
+        row["positions"] = positions
+        row["count"] = len(positions) if isinstance(positions, list) else None
+        row["error"] = err
+        out.append(row)
     return {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "requested_account_id": account_id,
+        "requested_symbol": want_symbol,
         "accounts": out,
     }
 
@@ -2085,11 +2860,7 @@ async def get_venue_session(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_venue_session: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_venue_session", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2211,11 +2982,7 @@ async def get_ib_open_orders(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_ib_open_orders: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_ib_open_orders", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2398,11 +3165,7 @@ def get_broker_account_status(
             detail={"error": "loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, empty accounts so the call still answers
-        logger.warning("get_broker_account_status: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_broker_account_status", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2556,6 +3319,7 @@ def get_bybit_wallet_truth(
     request: Request,
     account_id: str | None = None,
     days: int = 30,
+    by_day: bool = False,
 ) -> dict[str, Any]:
     """**Live** account-level wallet truth for Bybit, from the venue's own
     transaction log — the read surface for the API figure that replaced a
@@ -2626,6 +3390,10 @@ def get_bybit_wallet_truth(
                 window_start_ms=start_ms, window_end_ms=end_ms,
             )
             d = v.as_dict()
+            if by_day:
+                # Per-UTC-day series for the journal-vs-wallet delta
+                # (LEDGER-REFRESH); sums to the headline `realized_usd`.
+                d["daily"] = _wt.daily_buckets(rows)
             if not rows:
                 # The store holding nothing for this account is ambiguous from
                 # the store alone: never pulled, or pulled and genuinely empty.
@@ -2825,6 +3593,55 @@ def get_position_telemetry(
     return read_records(limit=limit, strategy=strategy)
 
 
+@router.get("/position_path_history")
+def get_position_path_history(
+    request: Request,
+    order_package_id: str | None = None,
+    trade_id: str | None = None,
+    strategy: str | None = None,
+    since: str | None = None,
+    limit: int = 2000,
+) -> dict[str, Any]:
+    """EXIT-PATH-TELEMETRY-LIVE — the per-bar PATH of each open position.
+
+    ``position_telemetry`` (above) holds ONE upserted row per package, so a
+    trade's trajectory is overwritten bar by bar. ``position_path_history`` is
+    its append-only twin: one row per (package, bar), projected from the same
+    record on the same pass, plus ``mae_r``, ``sl_r``/``tp_r`` and ATR/ADX. It
+    is the live side of the in-trade exit model's parity check (row
+    IN-TRADE-EXIT-MODEL).
+
+    Filter by ``order_package_id`` or ``trade_id`` to get one trade's path in
+    BAR order; otherwise rows are newest-written first. ``present: false`` =
+    the table does not exist yet (not "no rows"). ``peak_r``/``mae_r`` are
+    bar-extreme reconstructions — ESTIMATED, never measured. ``passes`` says
+    how many exit-loop passes a bar row summarises; ``atr_source`` says
+    whether ATR is the trail's own (``monitor``), recomputed
+    (``computed_wilder14``), or ``unavailable``.
+
+    BRACKET-ADVISOR-SHADOW: ``advisor_sl_r``/``advisor_tp_r`` are the stop and
+    target a confirmed-but-undeclared lever WOULD set on that bar (same harness
+    functions; ``src/runtime/bracket_advisor.py``), ``advisor_source`` names the
+    lever and its evidence version, and ``advisor_state`` says why a value is
+    absent (enum in the envelope's ``advisor_states``). All four NULL = the
+    advisor did not run on that row. No exit path reads them.
+
+    Observe-only: one read-only SQLite connection, no socket, no order path.
+    Tier 2.5, token-gated.
+    """
+    _require_diag_token(request)
+    try:
+        from src.runtime.position_path_history import read_history
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503
+        logger.warning("get_position_path_history: import failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "path_history_unavailable", "detail": str(exc)},
+        ) from exc
+    return read_history(order_package_id=order_package_id, trade_id=trade_id,
+                        strategy=strategy, since=since, limit=limit)
+
+
 @router.get("/tick_cost")
 def get_tick_cost(request: Request) -> dict[str, Any]:
     """Per-tick wall-clock cost of the trader's hook chain (2026-08-09).
@@ -2916,11 +3733,7 @@ async def get_bybit_open_orders(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_bybit_open_orders: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_bybit_open_orders", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -3010,11 +3823,10 @@ async def get_bybit_raw_order_history(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, still answers
-        logger.warning("get_bybit_raw_order_history: list_accounts failed: %s", exc)
-        accounts = []
+    # Unknown account_id keeps its explicit read_state below; only an
+    # unreadable account list is an error here (FIX-CA-12).
+    accounts = _diag_accounts("get_bybit_raw_order_history", list_accounts, account_id,
+                              require_known=False)
 
     acc = next((a for a in accounts if (a or {}).get("account_id") == account_id), None)
     if acc is None:
@@ -3108,11 +3920,10 @@ async def get_bybit_raw_closed_pnl(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, still answers
-        logger.warning("get_bybit_raw_closed_pnl: list_accounts failed: %s", exc)
-        accounts = []
+    # Unknown account_id keeps its explicit read_state below; only an
+    # unreadable account list is an error here (FIX-CA-12).
+    accounts = _diag_accounts("get_bybit_raw_closed_pnl", list_accounts, account_id,
+                              require_known=False)
 
     acc = next((a for a in accounts if (a or {}).get("account_id") == account_id), None)
     if acc is None:
@@ -3230,11 +4041,7 @@ async def get_bybit_raw_positions(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_bybit_raw_positions: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_bybit_raw_positions", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -3272,6 +4079,89 @@ async def get_bybit_raw_positions(
         "requested_account_id": account_id,
         "count": len(out),
         "accounts": out,
+    }
+
+
+@router.get("/alpaca_order_history")
+async def get_alpaca_order_history(
+    request: Request,
+    account_id: str,
+    order_ids: str | None = None,
+    after: str | None = None,
+    until: str | None = None,
+    symbols: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Read-only **Alpaca order history**: every status, bracket legs nested.
+
+    FIX-SA-03 step 1 (E75 audit). ``/alpaca_open_orders`` says what rests NOW;
+    this says what rested THEN -- each order's ``status`` and lifecycle
+    timestamps (``canceled_at``, ``replaced_at``, ``filled_at`` ...) with its
+    bracket/OCO legs under ``legs``. It is the read that decides whether a
+    position the naked sweep re-armed was actually naked at the broker.
+
+    Params: ``account_id`` (required, one Alpaca account), ``order_ids``
+    (comma-separated Alpaca order ids, looked up one by one), ``after`` /
+    ``until`` (ISO-8601), ``symbols`` (comma-separated), ``limit`` (1-500).
+    A malformed argument is a **400**, never forwarded to the broker.
+
+    ``read_state``: ``not_alpaca`` / ``could_not_look`` (``result: null``) /
+    ``orders_read``. Per-id lookups carry their own read_state in
+    ``result.by_id``. Places, patches and cancels NOTHING. Tier 2.5.
+    """
+    _require_diag_token(request)
+    try:
+        from src.units.accounts.clients import account_alpaca_order_history
+        from src.units.ui.data_loaders import list_accounts
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503 (not swallowed)
+        logger.warning("get_alpaca_order_history: import failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "data_loaders_unavailable", "detail": str(exc)},
+        ) from exc
+
+    accounts = _diag_accounts("get_alpaca_order_history", list_accounts, account_id)
+    acc = next((a for a in accounts if (a or {}).get("account_id") == account_id), None)
+    if acc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "unknown_account", "account_id": account_id},
+        )
+    is_alpaca = ((acc or {}).get("exchange") or "unknown").lower() == "alpaca"
+    ids = [i for i in (order_ids or "").split(",") if i.strip()]
+    syms = [s for s in (symbols or "").split(",") if s.strip()]
+    result: Any = None
+    err: str | None = None
+    if is_alpaca:
+        try:
+            result = await run_account_read(
+                functools.partial(
+                    account_alpaca_order_history, order_ids=ids, after=after,
+                    until=until, symbols=syms, limit=limit,
+                ),
+                acc,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "bad_argument", "detail": str(exc)},
+            ) from exc
+        except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced in the payload (error + result=null), logged
+            err = f"{type(exc).__name__}: {exc}"
+            logger.warning("get_alpaca_order_history: %s raised %s", account_id, exc)
+    return {
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "account_id": account_id,
+        "exchange": (acc or {}).get("exchange"),
+        "mode": (acc or {}).get("mode"),
+        "account_class": (acc or {}).get("account_class"),
+        "read_state": (
+            "not_alpaca" if not is_alpaca
+            else "orders_read" if isinstance(result, dict)
+            else "could_not_look"
+        ),
+        "result": result,
+        "error": err,
     }
 
 
@@ -3333,11 +4223,7 @@ async def get_alpaca_open_orders(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_alpaca_open_orders: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_alpaca_open_orders", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -3378,3 +4264,80 @@ async def get_alpaca_open_orders(
         "count": len(out),
         "accounts": out,
     }
+
+
+# ---------------------------------------------------------------------------
+# Phone step captures (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18): the
+# manager's read side of what the Breakout phone executor recorded at each step
+# of a flow (off-screen WebView bitmap + sanitized DOM snapshot, posted to
+# POST /api/bot/prop/phone/capture, stored on the VM data volume, 7-day TTL).
+# Token-gated like every diag read; file reads are name-validated and never
+# leave the run's directory (src.prop.phone_captures.read_file).
+# ---------------------------------------------------------------------------
+
+
+@router.get("/phone_captures")
+def get_phone_captures(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """Capture runs for a phone account, newest first: run_id, flow, step count, failed steps, ticket, app
+    version, bytes. ``present: false`` = no capture directory yet (the phone never posted one), distinct from an
+    empty list."""
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        return pcap.list_runs(account_id, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_capture")
+def get_phone_capture(request: Request, run_id: str, account_id: str = "breakout_2") -> dict[str, Any]:
+    """One run: every step's meta (seq, step, ok, note, image/dom file names) in order."""
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        run = pcap.get_run(account_id, run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if run is None:
+        raise HTTPException(status_code=404, detail="no such capture run")
+    return run
+
+
+@router.get("/phone_capture_file")
+def get_phone_capture_file(request: Request, run_id: str, name: str, account_id: str = "breakout_2"):
+    """One stored file of a run (the step's image or its DOM snapshot JSON), raw, with its content type."""
+    from fastapi.responses import Response
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        got = pcap.read_file(account_id, run_id, name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if got is None:
+        raise HTTPException(status_code=404, detail="no such capture file")
+    data, ctype = got
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/phone_drill")
+def get_phone_drill(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """The phone executor's REHEARSAL drills (PHONE-EXEC-OBSERVABLE-1018): the pending request (requested /
+    claimed, or null), the live sheet-edit gate (`enabled`, `source` config|drills, consecutive `passes` toward
+    `passes_to_arm`), and the recent results newest first (per-step pass/fail, failed steps, the capture run id to
+    read on /api/diag/phone_capture). Pure file read."""
+    _require_diag_token(request)
+    from src.prop import phone_drill
+    try:
+        return phone_drill.status(account_id, limit=max(1, min(int(limit), 200)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_exec_js")
+def get_phone_exec_js(request: Request) -> dict[str, Any]:
+    """The signed remote exec.js state (PHONE-EXEC-OBSERVABLE-1018): the working tree's version/sha256, the stored
+    CI signature record (never the signature itself), and `served` -- whether GET /phone/exec.js would hand the
+    phone a script right now. Pure file read; no script body."""
+    _require_diag_token(request)
+    from src.prop import phone_exec_js
+    return phone_exec_js.status()

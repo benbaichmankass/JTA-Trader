@@ -1,0 +1,38 @@
+{
+  "id": "RESEARCH-OPS-20261014-2047",
+  "title": "Research-ops pass 2026-10-14 20:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261014-2047",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": 2,
+  "tier": 1,
+  "prs": [
+    18098
+  ],
+  "blocked_on": [],
+  "note": "[lane done] 15 results read p2/f4/i9; 1 PPI placebo unit authored (77dc-02); 77dc-01 dropped as duplicate of 4a4c-01 per manager; runnable 27 (floor met); FRONTIER-LEVER-TABULAR + ML-F9 updated; 1447 closed. Record comms/research/ops/20261014T2110Z.json. Hold PR #18098.",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "manager merges hold PR #18098; RQ-20261014-77dc-01/-02 dispatch and land read_state measured",
+    "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json; ls comms/research/RQ-20261014-77dc-0*",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 496
+}

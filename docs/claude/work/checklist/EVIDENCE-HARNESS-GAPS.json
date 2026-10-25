@@ -1,0 +1,18 @@
+{
+  "id": "EVIDENCE-HARNESS-GAPS",
+  "title": "Strategy-evidence harness gaps: no per-trade dispersion field, no --tp-cap-pct, SPLG feed returns 0 rows",
+  "phase": null,
+  "state": "queued",
+  "owner": "research-tooling lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ROUTE-AND-ASK-TRIAGE] Owns three Tier-1 research-tooling items routed here: PI-20260922-EVIDENCE-RECORDS-CARRY-NO-PER-TRADE-DISPERSION (MEASURED 2026-10-11: 52 comms/strategy_evidence/*.json, no sd/std/var/disp key on any), PI-20260922-PJVBLXLA-0001 (regime_debt_matrix.build_harness_cmd still passes no --tp-cap-pct, grep 2026-10-11), PI-20260922-R5-SPLG-FEED-RESOLVES-TO-ZERO-ROWS (comms/strategy_evidence/splg_trend_long_1d.json coverage_state harness_failed, 2026-10-11). Turning --tp-cap-pct on re-bases the fleet's history, so land it as a stated A/B, never silently. Closes when each item's own clears_when holds; the pipeline items carry the conditions.",
+  "updated_at": "2026-10-11T05:59:25Z",
+  "updated_by": "session_01BFAVovnP4UK5phrpVWnYsR",
+  "_seq": 391
+}

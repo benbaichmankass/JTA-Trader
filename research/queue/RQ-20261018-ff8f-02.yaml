@@ -1,0 +1,175 @@
+id: RQ-20261018-ff8f-02
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'Frontier / tabular foundation model at FULL n: TabICL vs LightGBM on the BTC/ETH/SOL 15m volatility-regime head (tabular_foundation_model, trainer-resident;
+  TabPFN rides as an observed arm, research-only)'
+status: done
+priority: 2
+question: On the trainer's BTC/ETH/SOL 15m v002 shards (last 12,000 rows, the 6 shared features), under identical purged folds, does the pretrained in-context
+  learner TabICL beat LightGBM by >= +0.010 macro-F1 on at least 2 of 3 symbols with the same sign on the third -- at a training-set size an order of magnitude
+  above RQ-20261013-1414-06's 3,000-row test?
+why_this_matters: 'Task 3 of lane ML-UNBLOCK-1018 (model-family diversity): tabular_foundation_model has 0 registered models and one INDETERMINATE (1414-06:
+  tabpfn licence error, tabicl ran at n~3k). tabicl 2.2.0 IS importable on the trainer (FRONTIER-LEVER-TRAINER-DEPS, #17682) so this arm can run NOW; TabPFN
+  still needs TABPFN_TOKEN (0 occurrences in the trainer env, trainer-vm-diag #18883; row ML-TABPFN-LICENCE) so it rides as a CONTROL whose arm_status is
+  observed, never a candidate that blocks a FAIL. A regime head that in-context learns could also be the lever for the meta-label wall (9da8-02). Trading
+  metric: a PASS releases the net-of-cost regime-cell walk-forward with the LightGBM head as the baseline to beat (see decision_rule).'
+power:
+  expected_n: 7200
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: tail_rows 12000 with min_train_frac 0.4 leaves ~7,200 OOS rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; autocorrelation makes the
+    true requirement higher, so the rule asks for 2 of 3 symbols plus the sign on the third rather than one significance test.
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of the nightly shard); n does not grow with waiting. tail_rows is capped at 12,000 because TabICL's
+      in-context attention is memory-bound on the 6 GB trainer; a larger n is a follow-up, not a re-run.
+decision_rule:
+  id: RULE-RQ20261018-FF8F-02-TABICL-FULL-N-15M
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (tabicl minus lightgbm) on identical rows; f1_class:volatile as the headline check; arm_status
+    of tabpfn recorded.'
+  rule: 'PASS IF tabicl beats lightgbm by >= +0.010 macro_f1 (CV mean) on >= 2 of BTC/ETH/SOL AND > 0 on the third: family history tabular_foundation_model
+    PASS, and the follow-up is (a) a candidate manifest proposal (Tier-3 note) ONLY after the net-of-cost regime-cell walk-forward beats the LightGBM head
+    in net R, (b) the meta-label unit 9da8-02 raised in priority. FAIL IF tabicl does not reach > 0 vs lightgbm on any symbol AND the tabicl arm was evaluated
+    on all three: family history FAIL for TabICL at n~12k on these 6 features (closes that configuration only). INDETERMINATE otherwise, if folds < 3, or
+    if the tabicl arm is unavailable/errored on any symbol. The tabpfn control''s status never decides the verdict.'
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: 'Serves nothing, registers nothing, touches no config. TabPFN is research-only: its arm reports status and metrics for the record;
+    any live use is an operator licence decision. A feature-lift PASS is not edge.'
+compute: needs_vm_data
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: a genuinely different learner family on the one head that influences orders; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 5.0
+  est_minutes: 150
+  basis: 'Estimate, NOT measured: 1414-06 ran TabICL at 3k rows; 12k rows x 5 folds x 3 symbols on 1 OCPU is the guess. Re-declare from the first run''s
+    run-manifest.json.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 12000
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lightgbm
+  controls:
+  - prior
+  - tabpfn
+  candidates:
+  - tabicl
+  learners:
+    prior:
+      kind: prior
+    lightgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    tabicl:
+      kind: tabicl
+      params: {}
+    tabpfn:
+      kind: tabpfn
+      params: {}
+      weights_note: Prior Labs non-commercial weights (license:other); offline research evaluation only; needs TABPFN_TOKEN (ML-TABPFN-LICENCE) -- an observed
+        control, never a candidate
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    - group:
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+    headline_checks:
+    - name: tabicl_volatile_f1_btc
+      learner: tabicl
+      vs: baseline
+      group:
+      - BTCUSDT
+      op: '>'
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261018-ff8f-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261013-1414-06
+- RQ-20261011-9da8-02
+- FRONTIER-LEVER-TABULAR
+- ML-TABPFN-LICENCE
+- ML-UNBLOCK-1018
+last_dispatched_at: '2026-10-18T08:55:18+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-02-TABICL-FULL-N-15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261018-FF8F-02-TABICL-FULL-N-15M
+  evidence:
+  - research/results/RQ-20261018-ff8f-02/39113344166.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

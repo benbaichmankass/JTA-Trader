@@ -1,0 +1,22 @@
+{
+  "id": "MARK-FLATTENED-SQLITE-PREVIEW",
+  "title": "mark_operator_flattened_action.sh prints BEFORE/AFTER with the sqlite3 CLI, absent on the live VM, so the audit record is missing from every run (PI-20261018-MARKSQLITE-0001)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (sonnet)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20261018-MARKSQLITE-0001. RE-CHECKED on main 2026-10-25: scripts/ops/mark_operator_flattened_action.sh still calls 'sqlite3 -header -column' at lines 81 and 100. Sibling wrappers with the same CLI idiom (grep of non-comment 'sqlite3 \"' lines): backfill_closed_null_pnl_action.sh, backfill_monitor_closed_pnl_action.sh, backfill_orphan_pnl_action.sh, backfill_pnl_nulls_action.sh, mark_reconciler_incomplete_action.sh, repair_malformed_notes_action.sh, revert_backfill_monitor_closed_pnl_action.sh; backfill_account_class/closed_at/exit_labels already use the python module and say why. BUILD (Tier 1 tooling): replace the previews with the python sqlite3 module (same SELECT) or fail loudly when the preview cannot be produced; fix the siblings in the same PR (shell-wrapper change; the action allowlist is unchanged). Add a test that no *_action.sh invokes the sqlite3 CLI unguarded.",
+  "priority_rank": 25,
+  "updated_at": "2026-10-25T06:05:43Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 644
+}

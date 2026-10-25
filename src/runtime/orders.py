@@ -2,49 +2,14 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
-from typing import Any, Dict, Optional
-
-try:
-    import yaml
-except ImportError:  # pragma: no cover
-    yaml = None  # type: ignore[assignment]
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
-_ACCOUNT_STATE_PATH = Path(__file__).parent.parent.parent / "config" / "account_state.yaml"
-
-
-def _load_account_state() -> dict:
-    """Load config/account_state.yaml. Returns {} on missing file or parse error."""
-    if yaml is None:
-        return {}
-    path = Path(os.environ.get("ACCOUNT_STATE_PATH", str(_ACCOUNT_STATE_PATH)))
-    try:
-        with open(path) as f:
-            data = yaml.safe_load(f) or {}
-        return data if isinstance(data, dict) else {}
-    except FileNotFoundError:
-        return {}
-    except Exception:  # noqa: BLE001
-        logger.warning("account_state.yaml unreadable — skipping override", exc_info=True)
-        return {}
-
-
-def account_state_dry_run(account_id: str) -> Optional[bool]:
-    """Return the account_state.yaml dry_run override for *account_id*.
-
-    Returns True/False if an explicit entry exists, None if the account
-    is absent (caller should fall back to accounts.yaml mode).
-    """
-    state = _load_account_state()
-    accounts = state.get("accounts") or {}
-    entry = accounts.get(account_id)
-    if entry is None or not isinstance(entry, dict):
-        return None
-    if "dry_run" not in entry:
-        return None
-    return bool(entry["dry_run"])
+# account_state_dry_run() / config/account_state.yaml lived here until
+# 2026-09-29, when operator decision JC-CA-06 retired the dry-only fold it
+# fed in Coordinator.multi_account_execute. The two declared execution gates
+# (accounts.yaml::mode, strategies.yaml::execution) are the only ones.
 
 
 def _get_value(settings: Any, key: str, default: Any = None) -> Any:
@@ -83,6 +48,17 @@ def safe_place_order(order: Dict[str, Any], settings: Any, client: Any) -> dict[
     """
     Validate order payload before real submission.
     Returns a structured status dict for logging/tests.
+
+    ⚠️ NO CALLER IN ``src/`` (re-verified 2026-10-01, ORDER-AUDIT-2 item 2,
+    AUD-20260927-CA-A02-safe-place-order-guards-have-no-callers). Live entries
+    dispatch through ``Coordinator.multi_account_execute`` → ``execute_pkg``,
+    never through here, so NONE of the guards below (halt flag, daily loss,
+    open-position caps, overtrading throttle) protect a live order. The halt
+    flag's second, independent layer is in ``multi_account_execute`` itself
+    (plus ``pairs_executor.run_pairs_tick`` for the isolated pairs sleeve).
+    The ``MAX_*`` guards are unset in every config/env file, so they were
+    no-ops even before this was found; whether to wire or delete them is
+    filed against ORDER-AUDIT-2, not decided here.
     """
     if not isinstance(order, dict):
         return {
@@ -146,17 +122,6 @@ def safe_place_order(order: Dict[str, Any], settings: Any, client: Any) -> dict[
                 raise ValueError(
                     f"Order aborted: daily loss {float(current_loss_raw):.2f} USD has reached"
                     f" MAX_DAILY_LOSS_USD {max_daily_loss}"
-                )
-
-    max_open_raw = _get_value(settings, "MAX_OPEN_POSITIONS", None)
-    if max_open_raw not in (None, ""):
-        max_open = int(float(max_open_raw))
-        current_open_raw = _get_value(settings, "CURRENT_OPEN_POSITIONS", None)
-        if current_open_raw not in (None, ""):
-            if int(float(current_open_raw)) >= max_open:
-                raise ValueError(
-                    f"Order aborted: open positions {int(float(current_open_raw))}"
-                    f" has reached MAX_OPEN_POSITIONS {max_open}"
                 )
 
     # Per-strategy caps (S-005 M2): only applied when the order carries a strategy name.

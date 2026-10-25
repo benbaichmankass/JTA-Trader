@@ -1,0 +1,73 @@
+id: RQ-20261011-9da8-04
+title: 'Frontier: offline contextual-bandit policy evaluation over the exit-ladder arms (doubly-robust OPE vs the live ladder
+  and the best fixed ladder)'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the per-trade counterfactual exit corpus for the six live legs, does a contextual policy that CHOOSES among the
+  existing exit-ladder arms (cheap discrete choice) have a doubly-robust off-policy value, in net R on held-out time, above
+  both the leg's live ladder and the best single fixed ladder?
+why_this_matters: Three exit-HEAD lines (donchian, S2-exit, XRP multi-fold) failed because they tried to predict a continuous
+  exit on thin labels. Choosing among a few known-good arms is a different, much lower-variance problem, and 'rl_bandit' is
+  a family with zero registered models. Evidence is thin outside simulation (searches 2026-10-11 found online-RL crypto papers
+  with no code and marginal significance, no offline-RL exit result) and the repo's own simulator does not reproduce live
+  closes (fc-geometry finding, 2026-07-05), so this unit is deliberately gated on the per-trade corpus that carries realised
+  closes.
+power:
+  expected_n: 150
+  min_detectable_effect: 0.4
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: ~0.4 sd paired lift needs ~100 trades per leg pooled at alpha .05 / power .8; 150 is the pooled floor across legs
+    from ML-LEG-CORPUS.
+  feasibility:
+    source: none
+    accrual_basis: ''
+decision_rule:
+  id: RULE-RQ1011-9DA8-04-BANDIT-EXIT-OPE
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: Doubly-robust OPE estimate of mean net R per trade of the learned arm-selection policy, with a 95% bootstrap
+    CI over trades (time-blocked), vs the live ladder and the best fixed ladder chosen on the training period only.
+  rule: PASS IF pooled n >= 150 AND the CI lower bound of (policy - live ladder) > 0 AND (policy - best fixed) > 0 on the
+    held-out period. FAIL IF n >= 150 and the point estimate of (policy - best fixed) <= 0. INDETERMINATE IF n < 150 or overlap
+    (propensity) coverage is < 80% of held-out trades.
+  what_it_does_not_do: Does not change any exit, stop or take-profit; the TP doctrine (real predictive TP at entry) is untouched.
+    A PASS is a Tier-3 proposal, never an applied change.
+blocked_on:
+- kind: work_item
+  ref: ML-LEG-CORPUS
+  what: The per-trade corpus with realised closes and the baseline exit arms does not exist yet (ML-X1).
+  clears_when: ml2_bracket_train_eval --per-leg prints the four baselines per quantile and the corpus carries one row per
+    (trade, arm) with the arm's realised or replayed net R and a logged arm-selection propensity.
+- kind: work_item
+  ref: EXIT-PATH-EMIT-OFFLINE
+  what: 'Added 2026-10-14 (lane IN-TRADE-EXIT-MODEL): a contextual bandit needs the CONTEXT at each decision bar, and no harness
+    emits per-bar in-trade state (harness rows are per-trade; live position_telemetry is one upserted row). This unit consumes
+    the OFFLINE harness path emit, not live telemetry (EXIT-PATH-TELEMETRY-LIVE is a parity read only).'
+  clears_when: EXIT-PATH-EMIT-OFFLINE lands --emit-paths on the trend + pullback harnesses with its parity test (per trade
+    max(peak_r over the path rows) == mfe_r).
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 60
+  basis: Estimate from the sibling fc / harness runs; the first run replaces it.
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the lever row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-X1
+- ML-S2
+- RQ-20261009-900
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-RESEARCH
+last_dispatched_at: null

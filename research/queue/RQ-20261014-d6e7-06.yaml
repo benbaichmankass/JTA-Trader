@@ -1,0 +1,137 @@
+id: RQ-20261014-d6e7-06
+title: >-
+  In-trade exit line, rung 6: the first-passage census and the exit-now policy on HARNESS-NATIVE per-bar paths of the real-money
+  legs -- the leg as it trades, not a fixed bracket. BLOCKED: no harness emits per-bar paths (EXIT-PATH-EMIT-OFFLINE)
+status: done
+status_reason: >-
+  2026-10-24 lane FIRST-PASSAGE-ON-PATHS: promoted from blocked/ -- first_passage.py --harness-legs (scripts/research/first_passage_paths.py)
+  builds per-bar as-traded events from config-exact harness --emit-paths rows; its self-test grades a driftless walk FAIL/INDETERMINATE
+  and a planted signal PASS. The decision rule below is unchanged; blocked_on is kept as history. The registered '6-fold yearly walk-forward' is run as 6 equal calendar folds by entry over 2020-07-01 .. 2026-10-15 (~1.05 years each), purged on each trade's last bar; the policy is the R1 linear value head (exit at the first bar whose OOS predicted exit_r - open_r_t < -c_exit), the 8.4 rich state named in blocked_on. Population: the six Programme 01 money legs.
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: >-
+  On config-exact harness runs of the real-money legs with --emit-paths (the stop and target IN FORCE at every bar, so trailing,
+  TP revision and stale exits are the leg's own): (a) the d6e7-01 census quantities with the leg's actual exit as the passage event,
+  and (b) the d6e7-03/05 policy (whichever passed) applied bar by bar against the leg's ACTUAL exit, net of the full cost stack
+  -- does the exit-now rule beat the leg as it trades, per leg?
+why_this_matters: >-
+  Rungs 1-5 answer the operator's question on a plain bracket built from committed ledgers. Before anything is proposed for a real-money
+  leg it has to beat that leg's own exit (trailing stop, TP revision, stale exit), which needs the harness's own per-bar path.
+  This is also the corpus RQ-20261011-9da8-04 (exit-arm bandit) and blocked/RQ-20261014-9807-05 (momentum-turn labels) consume.
+power:
+  expected_n: 600
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.8
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    One-sample test on the paired per-trade difference; the real-money 4h/2h legs carry ~50-120 trades each per committed ledger
+    (46-232, MEASURED 2026-10-14 from the newest ledgers), so per leg this is underpowered for 0.05 R and the rule pools within
+    family; per-leg rows are reported with their n.
+  feasibility:
+    source: none
+    accrual_basis: Harness re-runs; nothing accrues. Blocked on the emit.
+decision_rule:
+  id: RULE-RQ20261014-D6E7-06-HARNESS-NATIVE-EXIT-POLICY
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per family (trend_donchian 4h, pullback 2h) and per leg: policy net R - the leg's actual net R per trade (same trade, policy
+    early exit pays the extra cost_slippage_r), trade bootstrap CI, 6-fold yearly walk-forward sign; net R per capital-day both
+    arms.
+  rule: >-
+    PASS IF within a family the per-trade gain >= 0.05 R with CI lower bound > 0 AND >= 5 of 6 walk-forward folds positive AND
+    maxDD not worse than 1.35x the leg's -> exit-refinement P2 gate + observe-only shadow on the first leg (Programme 01 Q8), Tier-3
+    proposal only after the shadow's parity read. FAIL IF the CI upper bound < 0.05 R: the leg's own exit already captures what
+    the model sees. INDETERMINATE otherwise or under n.
+  min_n: 100 trades per family
+  what_it_does_not_do: >-
+    Requires a rung-3 or rung-5 PASS to be worth running; it is the confirmation, not a new search. Changes no config.
+blocked_on:
+- what: >-
+    2026-10-18 (lane ACTIVE-MGMT-DRIVE-1018): the harness side is DONE -- #18536 (EXIT-PATH-EMIT-OFFLINE) landed --emit-paths on
+    backtest_trend.py + backtest_pullback.py (one row per trade x bar with the stop and target in force). What is still missing is
+    the READER: scripts/research/first_passage.py takes only --ledgers (per-trade rows) and re-walks public candles with a FIXED
+    bracket; it has no --paths input, so the harness-native census and policy cannot be run yet.
+  ref: docs/claude/work/checklist/FIRST-PASSAGE-ON-PATHS.json
+  clears_when: >-
+    FIRST-PASSAGE-ON-PATHS lands a --paths <glob> input on first_passage.py (events, labels and feature sets built from the emitted
+    rows; the free null and the distance-only reference unchanged; a random-walk self-test). Then git mv to research/queue/, status
+    queued, run.command = first_passage.py --paths ... --mode census (then baseline) on config-exact emits of the real-money legs.
+    The former second clause ("RQ-20261014-d6e7-03 or -05 has graded PASS") is DROPPED: both policy rungs FAILED on the fixed-bracket
+    reconstruction (RQ-20261016-013, RQ-20261016-1fa6-06; -03/-05 retired), and that is exactly why the question moves to the legs
+    as traded. The registered rule above is unchanged; the question's (b) runs the 8.4 rich state as the candidate policy.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the step between an offline mechanism and a real-money proposal.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  basis: 'Estimate: config-exact harness runs of ~7 legs plus the policy pass.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/first_passage.py
+  - --harness-legs
+  - trend_donchian_eth_4h,trend_donchian_xrp_4h,xrp_pullback_2h,ada_pullback_2h,trend_donchian_eth_prop,trend_donchian_sol_prop
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - '2026-10-15 23:59'
+  - --mode
+  - policy
+  - --min-trade-gain-r
+  - '0.05'
+  - --min-folds
+  - '5'
+  - --min-n
+  - '100'
+  - --n-folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261014-d6e7-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+- M23
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q8, the destination of the exit line)
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- scripts/research/first_passage.py
+- EXIT-PATH-EMIT-OFFLINE
+- FIRST-PASSAGE-ON-PATHS
+last_dispatched_at: '2026-10-24T23:33:59+00:00'
+grading:
+  attested: RULE-RQ20261014-D6E7-06-HARNESS-NATIVE-EXIT-POLICY
+  auto: true
+  decision_rule_id: RULE-RQ20261014-D6E7-06-HARNESS-NATIVE-EXIT-POLICY
+  evidence:
+  - research/results/RQ-20261014-d6e7-06/40143284987.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

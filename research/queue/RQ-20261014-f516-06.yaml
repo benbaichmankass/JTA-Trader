@@ -1,0 +1,116 @@
+id: RQ-20261014-f516-06
+title: 'Programme 05 Q2 sizing: does any challenger sizing beat tradeify_1''s configured sizing on E[profit per life] with no worse
+  survival, under tradeify_247_1step'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+question: On tradeify_1's current book (ETH+SOL prop legs) and rules, does a challenger sizing arm (C075, C100, CROOM) beat the configured
+  arm A (0.5% of realised balance per ticket (accounts.yaml risk_pct 0.005) with the daily-DD switch armed at 0.8 x the firm's 3% daily
+  limit) on ev_net_usd_per_life with p_alive_at_horizon >= A's on EVERY seed, net of the full cost stack?
+why_this_matters: 'B6''s MEASURED finding (2026-09-27): the decision that moves prop money is the SIZING RULE of the account, not whether
+  to keep it -- cushion-fit room sizing priced +$112/life fresh vs -$12 at flat 1.5% on the then-breakout_1 book. No sizing comparison
+  has been run on tradeify_1''s book as it trades today.'
+power:
+  expected_n: 355
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.3 needs ~87-90 observations at alpha 0.05 / power 0.8 (the floor RQ-20260928-011/-012 registered and every prop fit since
+    has used). prop_ev_grid grades on the --leg leg''s n: trend_donchian_eth_prop has 355 committed 730 d trades and trend_donchian_sol_prop
+    132 (wc -l of the two trades files, counted 2026-10-14 before registration). Below 88 the grid grades UNDERPOWERED (indeterminate),
+    never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed 730 d trade evidence under the firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-RQ1014-F516-06-SIZING-TRADEIFY_1
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per seed and arm: path-mode ev_net_usd_per_life and p_alive_at_horizon (plus p_net_positive, p_pass_eval, p_breach_* read
+    by the grading session) over the 2-leg book. A = ''--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8''. Tradeify 24/7 1-Step
+    stack: --costs breakout (8 bps round-trip commission, 3 bps slippage, 0.033%/day swap prorated), hedging banned (--no-hedge), lev
+    caps ETH 5x / SOL 2x (alts), fee and payout split from config/prop_rulesets/tradeify_247_1step.yaml. The committed trade rows already
+    carry the harness''s fee + slippage + funding via execution_costs.resolve_cost_policy() (D1-cleared trend harness); the sim then
+    charges the venue''s own stack on top.'
+  rule: 'prop_ev_grid --grade cushion_vs_flat, mechanically: PASS (CUSHION_FIT_WINS) IF the best C arm by mean ev beats A on ev AND
+    has >= A''s p_alive_at_horizon on ALL 5 seeds -> a Tier-3 data-backed sizing change for this account to that arm, decided by the
+    manager under the 2026-09-27 standing authorization ONLY IF that arm''s P(breach_max_dd) is also <= A''s on every seed (else it
+    goes to the operator as a decision with the record); FAIL (FLAT_HOLDS) IF A is undominated on any seed -> the configured sizing
+    stands and this question closes for this book until the roster changes; NULL (indeterminate) otherwise -> configured sizing stands,
+    the arm table is attached to 05-PROP.md.'
+  what_it_does_not_do: Changes no config. Arms keep the switch armed at 0.8 so the comparison is of sizing alone. Does not search a
+    continuous risk grid (three challengers are the population).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 90
+  basis: '2-leg prop_ev_sim book, 5 seeds x the unit''s arms at the default 4,000 lives, --jobs 4 (2026-10-14 smoke: 400 lives of the
+    velotrade book in well under a minute).'
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 250
+  confidence: 0.45
+  basis: 'stand-in: B6 found sizing moved EV by ~$120/life on a $5k book; one live account. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl
+  - --arm
+  - A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+  - --arm
+  - C075=--sizing balance --risk-pct 0.0075 --dd-switch-frac 0.8
+  - --arm
+  - C100=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8
+  - --arm
+  - CROOM=--sizing room --risk-pct 0.015 --room-frac 0.45 --dd-switch-frac 0.8
+  - --common
+  - --trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/tradeify_247_1step.yaml
+    --costs breakout --swap-model prorated --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=2
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - cushion_vs_flat
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - 'RQ-20261014-f516-06: Programme 05 Q2 sizing challengers, tradeify_1'
+  inputs:
+    research_unit: RQ-20261014-f516-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/B6.json
+- scripts/research/prop_ev_sim.py
+- scripts/research/prop_ev_grid.py
+- config/prop_rulesets/tradeify_247_1step.yaml
+last_dispatched_at: '2026-10-14T20:47:22+00:00'
+grading:
+  attested: RULE-RQ1014-F516-06-SIZING-TRADEIFY_1
+  auto: true
+  decision_rule_id: RULE-RQ1014-F516-06-SIZING-TRADEIFY_1
+  evidence:
+  - research/results/RQ-20261014-f516-06/38635063080.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

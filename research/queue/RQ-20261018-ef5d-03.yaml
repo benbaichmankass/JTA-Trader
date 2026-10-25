@@ -1,0 +1,161 @@
+id: RQ-20261018-ef5d-03
+title: >-
+  Programme 07 TIMEFRAMES, long arm A2: DAILY-bar Donchian trend (20 and 55) on the six Bybit perps pooled, 2020-01-01..2026-10-17
+  -- does a weeks-long crypto position trade clear Stage 0 net of the full cost stack with fold consistency and breadth across
+  symbols?
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  On Binance USD-M daily bars (proxy for Bybit linear) for BTC/ETH/SOL/XRP/ADA/AVAX, 2020-01-01..2026-10-17, does the Donchian
+  trend family (scripts/backtest_trend.py, both sides, 2.5 x ATR14 stop, 5 x ATR trail, harness defaults otherwise) at Donchian
+  20 (arm D20) or Donchian 55 (arm D55) read net-positive POOLED across the six symbols with >= 4 of 6 calendar folds net
+  > 0 at pooled n >= 39, AND pass on at least half the powered cells (n >= 20)? Reported, not graded: net_r_per_capital_day
+  and mean hold in days per cell (the 'large P&L per trade' question is read off R/trade and hold, never off a book).
+why_this_matters: >-
+  Operator 2026-10-18: can large P&L per trade be extracted on daily bars with weeks-long holds (trend/momentum/position trading)?
+  The real-money crypto book decides on 1h (trend_donchian_sol_prop), 2h and 4h bars; no crypto daily-bar record exists in the repo (row IR-CRYPTO-DAILY-TREND,
+  read 2026-10-18), while the outside evidence puts crypto time-series momentum at 1-4 week horizons (Liu-Tsyvinski 2021 RFS,
+  primary; Zarattini-Pagani-Barbon 2025 multi-lookback Donchian, secondary). A per-symbol daily Donchian makes ~3 trades a
+  year (ETHUSDT 2025-09..2026-10 smoke, 2026-10-18: 3 trades, mean hold 97 days), so the honest design pools six symbols and
+  grades breadth. Instrument: scripts/research/harness_stage0.py (this lane) -- the IR-CRYPTO-DAILY-TREND first step. Prior
+  short-horizon work this builds on and does NOT repeat: RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL
+  at taker cost; squeeze/fade/pullback/fvg/chop had NO Stage-A survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm),
+  RQ-20261016-1fa6-07 (maker entries do not rescue the 15m scalp book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031
+  (5m-15m taker FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND
+  and IR-INTRADAY-SEASONALITY-HARNESS.
+requires_result:
+  unit: RQ-20261018-ef5d-01
+power:
+  expected_n: 110
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor), applied to the POOLED trade set. expected_n=110
+    is an ESTIMATE: ~3 trades/symbol/year on the 2025-26 smoke x 6 symbols x ~6.8 years, halved for the later listings (SOL/AVAX
+    2020-09). Per-cell n ~18 is below any floor, which is why cells are graded at n >= 20 for breadth only and the verdict
+    is pooled.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched Binance Vision daily candles over a pinned window; nothing accrues. The window is
+      bounded by the USD-M listing dates (BTC 2019-09, ETH 2019-11, XRP/ADA 2020-01, SOL/AVAX 2020-09), not by any calendar.
+decision_rule:
+  id: RULE-P7-A2-DAILY-DONCHIAN
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family trend --timeframe 1d, arms D20 (donchian 20) and D55 (donchian 55), both with trail_mult 5.0,
+    over --start 2020-01-01 --end 2026-10-17 on 2600 fetched days; per cell n, net_r, max_drawdown_r, 6 calendar folds, net_r_per_capital_day,
+    mean_bars_held -> hold_days; pooled across the six cells on one set of calendar edges.
+  rule: >-
+    Arms fixed now: D20 and D55. Flags: --folds 6 --fold-majority 4 --n-floor 20 --pooled-n-floor 39 --breadth-frac 0.5. PASS
+    iff any arm passes (best = highest pooled net_r, named) -> opens node P7-A2-overlap (same-symbol overlap read of the passing
+    daily arm against the live trend_donchian_*_4h / xrp_pullback_2h / ada_pullback_2h legs on bybit_2, then a re-entry case).
+    FAIL iff every arm fails -> the daily Donchian configuration class at these params is closed on this window; node P7-A2-fail
+    (regime-filtered arms in ef5d-06 still run; a FAIL here does not retire the horizon). INDETERMINATE otherwise -> extend
+    the window or pool a second family, never lower the floor. Verdicts are the script's own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of folds calendar folds
+    net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND
+    pooled net_r > 0 AND pooled folds >= fold_majority AND >= half the POWERED cells (n >= n_floor) pass, indeterminate iff
+    pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded
+    per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values across the arm's cells are REPORTED, not
+    graded. A PASS is a LEAD: it opens the programme-07 node named in the tree (a same-symbol overlap read against the live
+    legs, then a re-entry case under MD-PROMOTE-S0-S1 built as a new evidence record), never a roster act; a FAIL closes the
+    CONFIGURATION on this window, never the family (idea-family review 2026-10-16 negative-result protocol). Thresholds are
+    not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.25
+  bucket: frontier
+  basis: >-
+    stand-in: a candidate crypto position-trading leg at the book's per-leg risk (bybit_2 + mirror); an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  basis: >-
+    6 keyless daily fetches (~2,500 bars each) x 2 arms = 12 harness passes of seconds each; the fetch dominates. Estimate.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; daily crypto bars are not in metis-market-data.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2600'
+  - --start
+  - '2020-01-01'
+  - --end
+  - '2026-10-17'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - D20=
+  - --arm
+  - D55=donchian=55
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P7-A2-DAILY-DONCHIAN
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261018-ef5d-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- L-LADDER
+programme: P7
+related:
+- RQ-20261018-ef5d-01
+- RQ-20261018-ef5d-06
+- scripts/research/harness_stage0.py
+- IR-CRYPTO-DAILY-TREND
+- scripts/backtest_trend.py
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T14:40:03+00:00'
+grading:
+  attested: RULE-P7-A2-DAILY-DONCHIAN
+  auto: true
+  decision_rule_id: RULE-P7-A2-DAILY-DONCHIAN
+  evidence:
+  - research/results/RQ-20261018-ef5d-03/39124030374.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

@@ -88,6 +88,10 @@ lightgbm==4.6.0
 # degrades to inert + logs a WARNING (the trader is unaffected).
 google-auth>=2.0.0
 
+# UI-UPGRADE-1-AUTH: WebAuthn/passkey sign-in (src/web/api/routers/auth_google.py).
+# google-auth above also verifies the Google ID token there.
+webauthn>=2.0,<4
+
 # Tradovate WebSocket client (futures broker, PR #2647 + wiring PR).
 # Imported inside src/units/accounts/tradovate/websocket_client.py behind a
 # try/except so the rest of the Tradovate package (REST, models, risk) works

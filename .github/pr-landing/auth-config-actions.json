@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds a Tier-2 system-action (init-web-session-pepper: writes WEB_SESSION_PEPPER to the root-owned web-api.env if absent and restarts ict-web-api) and a Tier-1 one (passkey-enrol-code). The manager's brief asked for landing self, but the lane's self-landing declaration was blocked in-session, so this PR asks for a human/manager merge instead. Touches no order path, strategies, accounts, risk or SITE_AUTH_ENFORCE.",
+  "why": "Google sign-in cannot be configured on the live VM without these: web_sessions.py refuses to issue sessions without WEB_SESSION_PEPPER and no action generated it, and no action issued the passkey enrolment code. The pepper is generated on the VM, never overwritten, and never printed; the enrolment code is delivered only through the private SYSTEM ping. Tests: tests/ops/test_web_auth_config_actions.py plus the system-actions workflow suite.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "UI-UPGRADE-1-AUTH UI-UPGRADE-1-AUTH-CONFIG operator 2026-10-11 popups D1-D3; operator supplied GOOGLE_OAUTH_CLIENT_ID 2026-10-12 and asked for sign-in setup; manager review 2026-10-12T09:05Z"
+  }
+}

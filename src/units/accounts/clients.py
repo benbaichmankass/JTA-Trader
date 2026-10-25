@@ -28,8 +28,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -1327,29 +1328,39 @@ def _record_position_read_observation(obs: Dict[str, Any]) -> None:
 
 
 def _bybit_configured_symbols(account: Dict[str, Any]) -> list:
-    """Return the account's configured instrument list for the per-symbol
-    position cross-check (BL-20260713-BYBIT2-BTC-SETTLECOIN-BLIND).
+    """Return the account's instrument list for the per-symbol position
+    cross-check (BL-20260713-BYBIT2-BTC-SETTLECOIN-BLIND).
 
-    Prefers the ``symbols`` key already on the passed cfg dict (the reverse
-    reconciler's cfgs carry it). Falls back to loading it from
-    ``accounts.yaml`` by ``account_id`` for callers that hand-build a
-    reduced cfg (e.g. ``order_monitor._build_account_client``). Best-effort:
-    any failure returns ``[]`` so the cross-check simply no-ops rather than
-    raising — the primary settleCoin read is unaffected.
+    Since E42 (2026-09-22) this is ``src.config.symbol_sets`` in ``UNION``
+    mode — the declared ``symbols:`` pull list PLUS every symbol the account's
+    rostered strategies trade — rather than a private read of the declared
+    list. The precedence is unchanged and is pinned by
+    ``TestRosterCrossCheckAlreadyExists``: a NON-EMPTY ``symbols`` on the
+    passed cfg wins (the reverse reconciler's cfgs carry it), while an EMPTY or
+    absent one falls through to ``accounts.yaml`` by ``account_id`` — so a
+    caller still cannot switch this cross-check off by handing in an empty
+    roster, which is MI-222's structural correction.
+
+    Best-effort: any failure degrades to the declared list (the pre-E42
+    behaviour) so the cross-check narrows rather than raises — the primary
+    settleCoin read is unaffected.
     """
-    syms = account.get("symbols")
-    if isinstance(syms, (list, tuple)) and syms:
-        return list(syms)
+    # MODE: UNION (E42). This list is the denominator of a POSITION
+    # cross-check, and a position can exist on any symbol the account's roster
+    # trades — grading it against the declared pull list rather than the
+    # roster would reintroduce `BL-20260713-BYBIT2-BTC-SETTLECOIN-BLIND` one
+    # level up: a live symbol the settleCoin page omitted, on a leg whose
+    # symbol nobody remembered to declare, would be invisible to the very
+    # check that exists to catch it. Costs one REST call per symbol the page
+    # did not return, which is the cheaper side of reporting a live position
+    # as absent.
     aid = account.get("account_id")
-    if not aid:
-        return []
     try:
-        from src.config.accounts_loader import load_accounts_dict
-        cfg = load_accounts_dict().get(aid) or {}
-        resolved = cfg.get("symbols")
-        return list(resolved) if isinstance(resolved, (list, tuple)) else []
-    except Exception:  # noqa: BLE001
-        return []
+        from src.config.symbol_sets import UNION, symbols_for_account_id
+        return symbols_for_account_id(str(aid or ""), mode=UNION, cfg=account)
+    except Exception:  # noqa: BLE001  — FAIL-SAFE: best-effort cross-check denominator; the declared list is the pre-E42 behaviour, so this degrades rather than raising into the position read
+        syms = account.get("symbols")  # symbol-set: the DEGRADED fallback of the routed call two lines up, not a private derivation
+        return list(syms) if isinstance(syms, (list, tuple)) else []
 
 
 def _bybit_book_key(raw: Any) -> Any:
@@ -1395,6 +1406,25 @@ def _bybit_book_key(raw: Any) -> Any:
         return int(str(raw).strip())
     except (TypeError, ValueError):
         return ("unparsed", str(raw))
+
+
+class OpenPositions(list):
+    """A position list that also says which symbols it could NOT look at.
+
+    FIX-CA-08 (CA-A03, 2026-09-27). A Bybit symbol the ``settleCoin`` page
+    omitted, whose symbol-scoped cross-check then RAISED, used to be simply
+    absent from the list — byte-identical to "the venue says it is flat" — so
+    ``closed_flat_invariant`` graded it ``flat`` and ``_reconcile_open_trades``
+    closed an open journal row on it. ``unreadable_symbols`` carries those
+    symbols without collapsing the whole read to ``None`` (a per-symbol hiccup
+    must not blind every other symbol). Still a ``list``: every existing caller
+    is unchanged unless it opts in via ``getattr(positions,
+    "unreadable_symbols", ())``.
+    """
+
+    def __init__(self, rows=(), *, unreadable_symbols=()):
+        super().__init__(rows)
+        self.unreadable_symbols: frozenset = frozenset(unreadable_symbols)
 
 
 def account_open_positions(
@@ -1525,8 +1555,19 @@ def account_open_positions(
                 # through spot now.
                 return []
             resp = client.get_positions(category=category, settleCoin="USDT")
-            raw = resp.get("result", {}).get("list", []) if isinstance(resp, dict) else []
+            if not isinstance(resp, dict):
+                # FIX-CA-08: a non-dict page is a FAILED read, not an empty
+                # account — returning [] here graded every symbol flat.
+                logger.warning(
+                    "account_open_positions(%s): settleCoin page returned a "
+                    "non-dict (%s) — could not read, returning None",
+                    account.get("account_id") or "unknown", type(resp).__name__,
+                )
+                return None
+            raw = resp.get("result", {}).get("list", [])
             out: list = []
+            # FIX-CA-08: symbols whose required read FAILED this pass.
+            unreadable: set = set()
             # TWO sets, and conflating them is the defect this change repairs.
             #
             # ``seen_books`` keys the EMIT dedupe on ``(symbol, book)`` -- the
@@ -1622,8 +1663,20 @@ def account_open_positions(
                 "query_state": "rows_returned" if raw else "no_rows",
                 "row_count": len(raw),
             })
+            # Every book the PAGE listed, zero-size rows included, keyed by
+            # symbol -- the input to the hedge-sibling backfill below. Recorded
+            # before ``_emit`` so a zero-size row still counts as "the venue
+            # told us about this book".
+            page_books: Dict[str, set] = {}
             for p in raw:
+                if isinstance(p, dict) and isinstance(p.get("symbol"), str):
+                    page_books.setdefault(p["symbol"], set()).add(
+                        _bybit_book_key(p.get("positionIdx")))
                 _emit(p)
+            # Symbols a symbol-scoped read ANSWERED this pass. A symbol-scoped
+            # ``get_positions(symbol=...)`` returns every book on that symbol,
+            # so the hedge-sibling backfill never needs to ask twice.
+            symbol_scoped_answered: set = set()
 
             # BL-20260713-BYBIT2-BTC-SETTLECOIN-BLIND: a single
             # ``settleCoin=USDT`` position/list page can silently omit a
@@ -1664,6 +1717,7 @@ def account_open_positions(
                         "row_count": None,
                         "error": repr(exc)[:200],
                     })
+                    unreadable.add(sym)
                     continue
                 obs["queries"].append({
                     "scope": "symbol_scoped",
@@ -1671,10 +1725,93 @@ def account_open_positions(
                     "query_state": "rows_returned" if lst2 else "no_rows",
                     "row_count": len(lst2),
                 })
+                symbol_scoped_answered.add(sym)
                 for p in lst2:
                     _emit(p)
+
+            # OI-20260913-A-BYBIT2-HEDGE-BOOK-IS-NEVER-FETCHED (operator-
+            # approved 2026-09-27). The settleCoin page returns ONE row per
+            # symbol on bybit_2 -- measured 148 of 148 reads on 2026-09-13,
+            # ETHUSDT listed at positionIdx 1 only, XRPUSDT at 2 only -- and
+            # the cross-check above skips every symbol the page already
+            # surfaced (``sym in seen``), so a hedge symbol's SECOND book was
+            # never asked for at all. That is how a real-money ETHUSDT short
+            # sat naked and invisible to every bot surface.
+            #
+            # So: any symbol the page listed in a HEDGE book (idx 1 or 2)
+            # without its sibling gets one symbol-scoped read. One-way symbols
+            # (idx 0) are complete from the page and cost nothing. The added
+            # REST calls are bounded by the hedge symbols the page lists, not
+            # by the roster -- the unbounded per-tick round-trip the ``seen``
+            # comment above warns against is not reintroduced.
+            #
+            # A sibling read that FAILS is ``could_not_look`` (scope
+            # ``hedge_sibling``) and therefore increments the soak row's
+            # ``could_not_look_count`` -- the missing book is never again a
+            # silent 0. The read itself still returns what it has, exactly
+            # like a failed roster cross-check above: collapsing the whole
+            # account to ``None`` on one symbol's hiccup is a separate,
+            # wider behaviour change and is not taken here.
+            for sym in sorted(page_books):
+                books = page_books[sym]
+                if not (books & {1, 2}) or {1, 2} <= books:
+                    continue
+                if sym in symbol_scoped_answered:
+                    continue
+                missing = sorted({1, 2} - books)
+                try:
+                    r3 = client.get_positions(category=category, symbol=sym)
+                    lst3 = (
+                        r3.get("result", {}).get("list", [])
+                        if isinstance(r3, dict)
+                        else []
+                    )
+                except Exception as exc:  # noqa: BLE001  # allow-silent: recorded as could_not_look on this query; the page read still stands
+                    logger.warning(
+                        "account_open_positions(%s): hedge-sibling read for %s "
+                        "(missing book(s) %s) failed: %s",
+                        account.get("account_id") or "unknown", sym, missing, exc,
+                    )
+                    obs["queries"].append({
+                        "scope": "hedge_sibling",
+                        "symbol": sym,
+                        "query_state": "could_not_look",
+                        "row_count": None,
+                        "books_missing_from_page": missing,
+                        "error": repr(exc)[:200],
+                    })
+                    # The sibling book is unknown — the symbol cannot be
+                    # graded flat on that side either.
+                    unreadable.add(sym)
+                    continue
+                returned = sorted(
+                    {_bybit_book_key(p.get("positionIdx"))
+                     for p in lst3 if isinstance(p, dict)},
+                    key=str,
+                )
+                obs["queries"].append({
+                    "scope": "hedge_sibling",
+                    "symbol": sym,
+                    "query_state": "rows_returned" if lst3 else "no_rows",
+                    "row_count": len(lst3),
+                    "books_missing_from_page": missing,
+                    "books_returned": returned,
+                })
+                symbol_scoped_answered.add(sym)
+                for p in lst3:
+                    # The book the page already listed comes back too; it is
+                    # the SAME book re-read, not a venue duplicate, so it is
+                    # skipped here rather than sent through ``_emit``'s
+                    # dedupe (which would page it as an anomaly every read).
+                    # A row for any OTHER symbol is not an answer to this
+                    # query and is ignored.
+                    if not isinstance(p, dict) or p.get("symbol") != sym:
+                        continue
+                    if _bybit_book_key(p.get("positionIdx")) in books:
+                        continue
+                    _emit(p)
             _record_position_read_observation(obs)
-            return out
+            return OpenPositions(out, unreadable_symbols=unreadable)
         if ex == "alpaca":
             # Dry alpaca accounts are never dialled from the read path
             # (mirrors the IB branch above) — return None ("could not read")
@@ -1920,7 +2057,26 @@ def account_ib_venue_session(
     client = ib_read_client_for(account)
     if client is None:
         return None
-    sym = symbol or (account.get("symbols") or [None])[0] or account.get("symbol")
+    # MODE: UNION (E42). This picks ONE representative instrument to ask the
+    # venue about its session, and the declared entries stay first under the
+    # union — so for every account that declares anything this is byte-identical
+    # to the old `(account.get("symbols") or [None])[0]`. What it fixes is the
+    # account that declares NOTHING but rosters a leg: that used to fall through
+    # to `account.get("symbol")` or None and ask the venue about nothing.
+    # FOUND BY THE BYPASS CONTROL IN `symbol_sets._self_test`, not by reading —
+    # it is a fifth private derivation the original four-site list missed, which
+    # is the argument for the control rather than an argument against it.
+    # Calls the resolver DIRECTLY rather than borrowing
+    # `_bybit_configured_symbols`: this is the IB path, and routing an IB read
+    # through a bybit-named helper is the kind of thing that reads as a bug to
+    # the next person even when it computes the right answer.
+    try:
+        from src.config.symbol_sets import UNION, symbols_for_account_id
+        _resolved = symbols_for_account_id(
+            str(account.get("account_id") or ""), mode=UNION, cfg=account)
+    except Exception:  # noqa: BLE001  — FAIL-SAFE: representative-instrument pick; falls back to the pre-E42 expression below
+        _resolved = list(account.get("symbols") or [])  # symbol-set: DEGRADED fallback of the routed call directly above
+    sym = symbol or (_resolved[0] if _resolved else None) or account.get("symbol")
     try:
         return client.venue_session_detail(sym)
     except Exception as exc:  # noqa: BLE001  # allow-silent: logged; None = "could not look", the caller's documented degraded state
@@ -2159,7 +2315,13 @@ def account_bybit_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, Any
         # SYMBOL so no extra venue call is introduced.
         seen_books: set = set()
         seen: set = set()
+        # Every book the page LISTED (zero-size included), for the hedge-
+        # sibling backfill below.
+        page_books: Dict[str, set] = {}
         for p in praw:
+            if isinstance(p, dict) and isinstance(p.get("symbol"), str):
+                page_books.setdefault(p["symbol"], set()).add(
+                    _bybit_book_key(p.get("positionIdx")))
             size = _f(p.get("size"))
             if size <= 0:
                 continue
@@ -2178,11 +2340,16 @@ def account_bybit_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, Any
         # absent rather than as unprotected, which is the quieter failure and
         # therefore the worse one. Cross-check every CONFIGURED symbol the page
         # did not return.
-        for sym in (account.get("symbols") or []):
+        # MODE: UNION (E42) — same reasoning as `_bybit_configured_symbols`,
+        # and routed through the same resolver so the two halves of this
+        # cross-check cannot drift apart in their denominator.
+        roster_answered: set = set()
+        for sym in _bybit_configured_symbols(account):
             if not sym or sym in seen:
                 continue
             try:
                 one = client.get_positions(category=category, symbol=sym)
+                roster_answered.add(sym)
                 for p in (((one or {}).get("result") or {}).get("list") or []):
                     if _f(p.get("size")) <= 0:
                         continue
@@ -2195,6 +2362,43 @@ def account_bybit_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, Any
                     "account_bybit_open_orders(%s): symbol cross-check %s failed: %s",
                     aid, sym, exc,
                 )
+
+        # OI-20260913-A-BYBIT2-HEDGE-BOOK-IS-NEVER-FETCHED: the same sibling
+        # blindness as ``account_open_positions`` -- the page lists ONE book of
+        # a hedge symbol on bybit_2 and the cross-check above skips any symbol
+        # the page surfaced, so this protection surface could not show a naked
+        # second book. Same bounded backfill: one symbol-scoped read per hedge
+        # symbol listed without its sibling. A failure is NAMED in
+        # ``hedge_sibling_could_not_look`` rather than reading as "no book".
+        hedge_sibling_could_not_look: list = []
+        hedge_sibling_read: list = []
+        for sym in sorted(page_books):
+            books = page_books[sym]
+            if not (books & {1, 2}) or {1, 2} <= books:
+                continue
+            if sym in roster_answered:
+                continue  # already read symbol-scoped: every book is in hand
+            try:
+                one = client.get_positions(category=category, symbol=sym)
+            except Exception as exc:  # noqa: BLE001  # allow-silent: named in hedge_sibling_could_not_look; never an exception into the caller
+                logger.warning(
+                    "account_bybit_open_orders(%s): hedge-sibling read %s failed: %s",
+                    aid, sym, exc,
+                )
+                hedge_sibling_could_not_look.append(sym)
+                continue
+            hedge_sibling_read.append(sym)
+            for p in (((one or {}).get("result") or {}).get("list") or []):
+                if not isinstance(p, dict) or p.get("symbol") != sym:
+                    continue
+                key = _bybit_book_key(p.get("positionIdx"))
+                if key in books or (sym, key) in seen_books:
+                    continue
+                if _f(p.get("size")) <= 0:
+                    continue
+                seen_books.add((sym, key))
+                seen.add(sym)
+                positions.append(_bybit_position_row(p, settlecoin_blind=True))
 
         def _shape_order(o, ofilter, blind=False):
             row = {
@@ -2299,6 +2503,11 @@ def account_bybit_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, Any
         # short `orders` list is never mistaken for a complete one.
         "order_symbols_unchecked": order_symbols_unchecked,
         "order_symbols_cross_checked": sorted(s for s in seen if s),
+        # Hedge symbols the page listed with only ONE book, and whether the
+        # sibling read ran. A symbol in ``..._could_not_look`` may hold a book
+        # this payload does not show.
+        "hedge_sibling_read": hedge_sibling_read,
+        "hedge_sibling_could_not_look": hedge_sibling_could_not_look,
     }
 
 
@@ -2898,6 +3107,111 @@ def account_bybit_raw_positions(account: Dict[str, Any]) -> Optional[Dict[str, A
     }
 
 
+def account_bybit_symbol_books(
+    account: Dict[str, Any], symbol: str,
+) -> Optional[Dict[str, Any]]:
+    """Every position book the venue holds on ONE symbol, read symbol-scoped.
+
+    Backs ``/api/diag/exchange_positions?symbol=`` (OI-20260913-A-BYBIT2-
+    HEDGE-BOOK-IS-NEVER-FETCHED). Until this existed the route took
+    ``account_id`` only and an appended ``&symbol=ETHUSDT`` returned a
+    BYTE-IDENTICAL payload, so no session could ask the venue whether a hedge
+    symbol's second book was open -- every surface read through the page that
+    omits it.
+
+    One ``get_positions(category, symbol=...)`` call. Bybit v5 has no
+    ``positionIdx`` filter on ``/v5/position/list``; a symbol-scoped read
+    returns every book on the symbol (idx 0 in one-way mode, idx 1 AND 2 in
+    hedge mode), which is why this is the read the reconciler's page cannot
+    substitute for. ``books_read`` states which books the venue actually
+    answered with, so "we read both hedge books" is checkable rather than
+    asserted; ``hedge_books_missing`` names a hedge book the venue did NOT
+    return, which is a finding, never silently a flat book.
+
+    Reduces NOTHING: zero-size rows are kept, ``size_raw`` sits beside the
+    float, and ``stop_loss`` / ``take_profit`` are the position-level levels
+    (``None`` when unset -- a ``"0"`` is the venue saying "no stop", never a
+    stop at zero).
+
+    Returns ``None`` when this is not a Bybit account or no client can be
+    built. A raising venue call is ``query_state: "could_not_look"`` with
+    ``rows: None`` -- never ``[]``. Read-only: places, modifies and cancels
+    nothing. Never raises.
+    """
+    if not isinstance(account, dict):
+        return None
+    if (account.get("exchange") or "unknown").lower() != "bybit":
+        return None
+    aid = account.get("account_id") or "unknown"
+    client = bybit_client_for(account)
+    if client is None:
+        return None
+    sym = str(symbol or "").strip().upper()
+    try:
+        from src.units.accounts.execute import _bybit_category
+        category = _bybit_category(account)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: recorded as could_not_look below; never an exception into the caller
+        logger.warning(
+            "account_bybit_symbol_books(%s): category resolve failed: %s", aid, exc)
+        return {"symbol": sym, "category": None, "query_state": "could_not_look",
+                "rows": None, "books_read": None, "hedge_books_missing": None,
+                "error": f"{type(exc).__name__}: {exc}"}
+    try:
+        resp = client.get_positions(category=category, symbol=sym)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: recorded as could_not_look; never an exception into the caller
+        logger.warning(
+            "account_bybit_symbol_books(%s): %s read failed: %s", aid, sym, exc)
+        return {"symbol": sym, "category": category,
+                "query_state": "could_not_look", "rows": None,
+                "books_read": None, "hedge_books_missing": None,
+                "error": f"{type(exc).__name__}: {exc}"}
+    raw = (((resp.get("result") or {}).get("list") or [])
+           if isinstance(resp, dict) else [])
+    rows: list = []
+    for p in raw:
+        if not isinstance(p, dict):
+            continue
+        raw_size = p.get("size")
+        try:
+            size: Optional[float] = float(raw_size)
+        except (TypeError, ValueError):
+            size = None
+        rows.append({
+            "symbol": p.get("symbol"),
+            "position_idx": _bybit_book_key(p.get("positionIdx")),
+            "side": p.get("side") or None,
+            "size": size,
+            "size_raw": None if raw_size is None else str(raw_size),
+            "size_parsed": size is not None,
+            "avg_price": _bybit_venue_price(p.get("avgPrice")),
+            "mark_price": _bybit_venue_price(p.get("markPrice")),
+            "stop_loss": _bybit_venue_price(p.get("stopLoss")),
+            "take_profit": _bybit_venue_price(p.get("takeProfit")),
+            "tpsl_mode": p.get("tpslMode") or None,
+            "unrealised_pnl": _bybit_venue_price(p.get("unrealisedPnl")),
+            "created_time": p.get("createdTime"),
+            "updated_time": p.get("updatedTime"),
+        })
+    books = {r["position_idx"] for r in rows}
+    hedge = bool(books & {1, 2})
+    return {
+        "symbol": sym,
+        "category": category,
+        "query_state": "rows_returned" if rows else "no_rows",
+        "rows": rows,
+        "books_read": sorted(books, key=str),
+        # ``None`` when the symbol is not in hedge mode (or the venue returned
+        # nothing), so "one-way, nothing missing" and "hedge, nothing missing"
+        # stay distinguishable.
+        "hedge_books_missing": sorted({1, 2} - books) if hedge else None,
+        "nonzero_books": sorted(
+            (r["position_idx"] for r in rows
+             if r["size_parsed"] and (r["size"] or 0.0) > 0),
+            key=str),
+        "error": None,
+    }
+
+
 def account_alpaca_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Alpaca resting orders + open positions, or ``None``.
 
@@ -3008,6 +3322,48 @@ def account_alpaca_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, An
             if isinstance(leg, dict):
                 _emit(leg, parent_id=o.get("id"))
 
+    # FILLED-BRACKET CHILDREN (PI-20261005-APBY4NTV-0002). `status=open` never
+    # returns a `held` stop at top level, and a bracket's PARENT (the market
+    # entry) is `filled`, so it is not returned at all -- its held stop child is
+    # reachable only through the parent's `legs` on a `status=closed` read. A
+    # fully bracketed position therefore read as unprotected here. Same recipe
+    # as AlpacaClient._open_orders_for_symbol (FIX-SA-03), bounded to ONE page:
+    # a full page is reported `truncated`, a failed read `could_not_look` --
+    # neither is ever rendered as "no held legs". The open read above already
+    # answered the main question, so this sub-read degrades the payload's
+    # `held_legs_state` rather than nulling it.
+    held_legs_state = "read"
+    _resting = ("new", "accepted", "held", "partially_filled", "pending_new",
+                "pending_replace", "accepted_for_bidding", "calculated")
+    try:
+        from datetime import datetime, timedelta, timezone
+        after = (datetime.now(timezone.utc) - timedelta(days=91)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
+        page_limit = 500
+        env2 = client._request(
+            "GET", f"/v2/orders?status=closed&nested=true&direction=desc"
+                   f"&limit={page_limit}&after={after}")
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; surfaced as held_legs_state="could_not_look", never as "no held legs"
+        logger.warning("account_alpaca_open_orders(%s): closed-parent read raised: %s", aid, exc)
+        env2 = None
+    if not isinstance(env2, dict) or env2.get("retCode") != 0:
+        held_legs_state = "could_not_look"
+    else:
+        closed = [o for o in (env2.get("result") or []) if isinstance(o, dict)]
+        if len(closed) >= page_limit:
+            held_legs_state = "truncated"
+        seen_ids = {o.get("order_id") for o in orders}
+        for parent in closed:
+            if str(parent.get("status") or "").lower() not in ("filled", "partially_filled"):
+                continue
+            for leg in (parent.get("legs") or []):
+                if not isinstance(leg, dict) or leg.get("id") in seen_ids:
+                    continue
+                if str(leg.get("status") or "").lower() not in _resting:
+                    continue
+                seen_ids.add(leg.get("id"))
+                _emit(leg, parent_id=parent.get("id"))
+
     # POSITIONS SECOND -- context, not the answer. `positions()` already returns
     # None on a read failure rather than [], so that distinction is preserved
     # rather than re-derived here.
@@ -3032,6 +3388,171 @@ def account_alpaca_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, An
         "orders": orders,
         "positions": positions,
         "positions_state": positions_state,
+        # "read" | "truncated" | "could_not_look": whether `held` bracket legs
+        # of FILLED parents were enumerated (they are invisible to status=open).
+        "held_legs_state": held_legs_state,
         # Stated so a consumer never mistakes the shape for the Bybit one.
         "position_level_protection_supported": False,
+    }
+
+
+#: Alpaca order ids are UUIDs; anything else is refused before it reaches a URL.
+_ALPACA_ORDER_ID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+_ALPACA_SYMBOL_RE = re.compile(r"^[A-Z][A-Z0-9.]{0,9}$")
+_ALPACA_ISO_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$")
+
+#: Every timestamp Alpaca publishes on an order. A leg's life is read off
+#: these -- ``canceled_at`` is when it stopped resting, ``replaced_at`` when a
+#: PATCH superseded it -- so none is dropped, and an absent one stays ``None``.
+_ALPACA_ORDER_TS_FIELDS = (
+    "created_at", "submitted_at", "updated_at", "filled_at", "canceled_at",
+    "expired_at", "replaced_at", "failed_at",
+)
+
+
+def account_alpaca_order_history(
+    account: Dict[str, Any],
+    *,
+    order_ids: Optional[List[str]] = None,
+    after: Optional[str] = None,
+    until: Optional[str] = None,
+    symbols: Optional[List[str]] = None,
+    limit: int = 100,
+) -> Optional[Dict[str, Any]]:
+    """Alpaca order HISTORY -- every status, bracket legs nested -- or ``None``.
+
+    FIX-SA-03 step 1 (E75 audit, SA-AUD-1-alpaca-order-history-unreadable).
+    :func:`account_alpaca_open_orders` answers *what rests NOW*; nothing
+    answered *what rested THEN*. That made one question unanswerable: after 17
+    of 20 Alpaca entries (all 3 real-money ``alpaca_live`` ones) the naked sweep
+    re-armed protection 6-7 minutes later, and whether the entry bracket's stop
+    leg was resting in those minutes could not be read from anywhere.
+
+    This reads ``/v2/orders?status=all&nested=true`` (or, per id,
+    ``/v2/orders/{id}?nested=true``) and returns each order with its legs and
+    EVERY lifecycle timestamp, unreduced: ``status`` (``new`` / ``held`` /
+    ``accepted`` / ``replaced`` / ``canceled`` / ``filled`` ...),
+    ``canceled_at``, ``replaced_by``. A stop leg whose ``status`` is
+    ``canceled`` with ``canceled_at`` at the re-arm instant rested until the
+    re-arm cancelled it; one that was never created, or was rejected, did not.
+
+    Three-state, matching its siblings:
+
+    * ``None``  -- could not look (not Alpaca, creds missing, or the LIST read
+      failed). Never the same as "no orders".
+    * ``{...}`` -- a clean read. Per-id lookups fail independently: each id
+      reports its own ``read_state`` (``order_read`` / ``not_found`` /
+      ``could_not_look``) in ``by_id`` so one bad id does not blind the rest,
+      and a 404 is not collapsed into a read failure.
+
+    Arguments are validated here (UUID ids, ticker symbols, ISO timestamps)
+    and a malformed one raises ``ValueError`` -- the route turns that into a
+    400 rather than sending an unvetted string to the broker. Read-only:
+    places, patches and cancels nothing. Never raises on a broker failure.
+    """
+    if not isinstance(account, dict):
+        return None
+    if (account.get("exchange") or "unknown").lower() != "alpaca":
+        return None
+    ids = [str(i).strip() for i in (order_ids or []) if str(i).strip()]
+    for oid in ids:
+        if not _ALPACA_ORDER_ID_RE.match(oid):
+            raise ValueError(f"order_id {oid!r} is not an Alpaca order id")
+    syms = [str(s).strip().upper() for s in (symbols or []) if str(s).strip()]
+    for sym in syms:
+        if not _ALPACA_SYMBOL_RE.match(sym):
+            raise ValueError(f"symbol {sym!r} is not a ticker")
+    for name, val in (("after", after), ("until", until)):
+        if val is not None and not _ALPACA_ISO_RE.match(str(val)):
+            raise ValueError(f"{name} {val!r} is not an ISO-8601 timestamp")
+    try:
+        lim = max(1, min(500, int(limit)))
+    except (TypeError, ValueError):
+        raise ValueError(f"limit {limit!r} is not an integer") from None
+
+    aid = account.get("account_id") or "unknown"
+    client = alpaca_client_for(account)
+    if client is None:
+        return None
+
+    def _num(value: Any) -> Optional[float]:
+        if value is None or str(value).strip() == "":
+            return None
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return None
+        return None if num == 0.0 else num
+
+    def _shape(o: Dict[str, Any]) -> Dict[str, Any]:
+        row: Dict[str, Any] = {
+            "order_id": o.get("id"),
+            "client_order_id": o.get("client_order_id"),
+            "symbol": o.get("symbol"),
+            "order_class": o.get("order_class"),
+            "order_type": o.get("type") or o.get("order_type"),
+            "side": o.get("side"),
+            "qty": _num(o.get("qty")),
+            "filled_qty": _num(o.get("filled_qty")),
+            "filled_avg_price": _num(o.get("filled_avg_price")),
+            "stop_price": _num(o.get("stop_price")),
+            "limit_price": _num(o.get("limit_price")),
+            "time_in_force": o.get("time_in_force"),
+            "status": o.get("status"),
+            "replaced_by": o.get("replaced_by"),
+            "replaces": o.get("replaces"),
+        }
+        for key in _ALPACA_ORDER_TS_FIELDS:
+            row[key] = o.get(key)
+        row["legs"] = [_shape(leg) for leg in (o.get("legs") or [])
+                       if isinstance(leg, dict)]
+        return row
+
+    orders: Optional[List[Dict[str, Any]]] = None
+    list_state = "not_requested"
+    if not ids or after or until or syms:
+        path = f"/v2/orders?status=all&nested=true&direction=asc&limit={lim}"
+        if after:
+            path += f"&after={after}"
+        if until:
+            path += f"&until={until}"
+        if syms:
+            path += "&symbols=" + ",".join(syms)
+        try:
+            env = client._request("GET", path)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: logged; None = "could not look"
+            logger.warning("account_alpaca_order_history(%s): list read raised: %s", aid, exc)
+            return None
+        if (env or {}).get("retCode") != 0:
+            logger.warning("account_alpaca_order_history(%s): list read failed: %s",
+                           aid, (env or {}).get("retMsg"))
+            return None
+        orders = [_shape(o) for o in (env.get("result") or []) if isinstance(o, dict)]
+        list_state = "orders_read"
+
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for oid in ids:
+        try:
+            env = client._request("GET", f"/v2/orders/{oid}?nested=true")
+        except Exception as exc:  # noqa: BLE001  # allow-silent: per-id could_not_look, logged
+            logger.warning("account_alpaca_order_history(%s): %s raised: %s", aid, oid, exc)
+            env = {"retCode": -1, "retMsg": str(exc)}
+        rc = (env or {}).get("retCode")
+        if rc == 0 and isinstance(env.get("result"), dict):
+            by_id[oid] = {"read_state": "order_read", "order": _shape(env["result"])}
+        elif rc == 404:
+            by_id[oid] = {"read_state": "not_found", "order": None}
+        else:
+            by_id[oid] = {"read_state": "could_not_look", "order": None,
+                          "error": str((env or {}).get("retMsg") or "")}
+
+    return {
+        "list_state": list_state,
+        "orders": orders,
+        # null, never 0, when the list was not read.
+        "order_count": (len(orders) if orders is not None else None),
+        "limit": lim,
+        "truncated": (orders is not None and len(orders) >= lim),
+        "by_id": by_id,
     }

@@ -1,0 +1,120 @@
+id: RQ-20261022-326f-03
+title: >-
+  Trend-direction confirmation, trend_donchian_sol_prop: does an arm beat the declared setting net of the full cost stack (R>=1.0, >= 3 of 4 calendar folds, no worse
+  drawdown)?
+status: done
+cadence: once
+theme: regime
+priority: 1
+kind: experiment
+question: >-
+  On the full history up to 2026-10-22, same cost stack and same harness argv builder as the evidence builder, does any pre-registered direction-filter arm on trend_donchian_sol_prop
+  (DI = --direction-filter=di; SL = --direction-filter=slope) beat the leg as declared by >= 1.0 R with no worse drawdown and in at least 3 of 4 calendar folds? Arm
+  values are fixed here before any run; offline Stage-0 re-measurement, never a book decision.
+why_this_matters: >-
+  trend_donchian_sol_prop is on the bybit_2 live roster (prop-tuned exit variant); --direction-filter on trend legs is unmeasured (see RQ-20261022-326f-01). Lane
+  THEME-AUTHOR-1022 (research-slo theme_share_min_ratio 0.33 at 09:26Z; 7-day fires regime 32 of 426 against a 22.7% weight share). A lone pass is a LEAD, confirmed
+  on a disjoint window before any Tier-3 proposal.
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n=60 is an ESTIMATE, not a measurement: the baseline count over the full
+    history for trend_donchian_sol_prop is not re-measured here; below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The R bar is a
+    MATERIALITY bar over the whole window, not a significance test; the calendar-fold majority refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless candles (trend_donchian_sol_prop); the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ20261022-326F-03-DIRECTION-FILTER
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm's tokens; full cost stack: fee + resolved slippage
+    + funding, never a zero default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms:
+    B = leg as declared; DI = --direction-filter=di; SL = --direction-filter=slope. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
+    = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF
+    any candidate passes (best = highest dR): a LEAD, followed by ONE confirmation unit on a disjoint window with the same statistic and bar; only a confirmed pass
+    becomes a Tier-3 PROPOSAL note on the owning checklist row for the manager, never a config edit. FAIL IF none passes: the declared setting stands; the axis is
+    recorded honest_negative on this history. The bar, the drawdown clause, the fold majority, the 39 floor and the arm values are not changed after any result.
+  what_it_does_not_do: >-
+    Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config, place an order or touch a roster; a single-leg
+    pass is a LEAD only, not a promotion case. Does not test any other axis.
+  min_n: '39'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.25
+  bucket: own_losses
+  basis: >-
+    stand-in: edge on a live real-money leg from one pre-registered entry-regime setting; estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: >-
+    One keyless candle fetch of the full history and one harness pass per arm; GitHub-hosted runner (same shape as RQ-20261022-3a84-01..03).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - B=
+  - --arm
+  - DI=--direction-filter=di
+  - --arm
+  - SL=--direction-filter=slope
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-22'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261022-326f-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-REGIME
+related:
+- scripts/research/exit_lever_ablation.py
+- RQ-20261022-3a84-01
+- THEME-AUTHOR-1022
+last_dispatched_at: '2026-10-22T11:55:32+00:00'
+grading:
+  attested: RULE-RQ20261022-326F-03-DIRECTION-FILTER
+  auto: true
+  decision_rule_id: RULE-RQ20261022-326F-03-DIRECTION-FILTER
+  evidence:
+  - research/results/RQ-20261022-326f-03/39774300277.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

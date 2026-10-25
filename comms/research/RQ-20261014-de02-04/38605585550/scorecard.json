@@ -1,0 +1,156 @@
+{
+  "rows": [
+    {
+      "horizon_days": 1,
+      "n": 139,
+      "ic": -0.182537,
+      "ic_t": -2.173,
+      "overlap_factor": 1.0,
+      "n_eff": 139.0,
+      "ic_t_eff": -2.173,
+      "pearson": -0.226782,
+      "sign_hit_rate": 0.452991,
+      "mean_fwd_return": 0.003356
+    },
+    {
+      "horizon_days": 3,
+      "n": 139,
+      "ic": -0.281432,
+      "ic_t": -3.433,
+      "overlap_factor": 1.0,
+      "n_eff": 139.0,
+      "ic_t_eff": -3.433,
+      "pearson": -0.318122,
+      "sign_hit_rate": 0.40678,
+      "mean_fwd_return": 0.003645
+    },
+    {
+      "horizon_days": 5,
+      "n": 139,
+      "ic": -0.247073,
+      "ic_t": -2.984,
+      "overlap_factor": 1.0,
+      "n_eff": 139.0,
+      "ic_t_eff": -2.984,
+      "pearson": -0.229027,
+      "sign_hit_rate": 0.381356,
+      "mean_fwd_return": 0.002758
+    }
+  ],
+  "summary": {
+    "max_n": 139,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": true,
+    "any_flagged_horizon_overlap_corrected": true,
+    "strongest_ic_horizon_days": 3,
+    "strongest_ic": -0.281432,
+    "strongest_ic_t": -3.433,
+    "strongest_ic_t_eff": -3.433,
+    "t_flag": 2.0,
+    "verdict": "surprise_predicts_forward_return"
+  },
+  "meta": {
+    "kind": "ppi_mom",
+    "symbol": "ES=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 139,
+    "releases_with_value": 139,
+    "price_bars": 5488,
+    "first_release": "2015-01-15",
+    "last_release": "2026-09-10",
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 139,
+        "ic": -0.182537,
+        "ic_t": -2.173,
+        "overlap_factor": 1.0,
+        "n_eff": 139.0,
+        "ic_t_eff": -2.173,
+        "pearson": -0.226782,
+        "sign_hit_rate": 0.452991,
+        "mean_fwd_return": 0.003356
+      },
+      {
+        "horizon_days": 3,
+        "n": 139,
+        "ic": -0.281432,
+        "ic_t": -3.433,
+        "overlap_factor": 1.0,
+        "n_eff": 139.0,
+        "ic_t_eff": -3.433,
+        "pearson": -0.318122,
+        "sign_hit_rate": 0.40678,
+        "mean_fwd_return": 0.003645
+      },
+      {
+        "horizon_days": 5,
+        "n": 139,
+        "ic": -0.247073,
+        "ic_t": -2.984,
+        "overlap_factor": 1.0,
+        "n_eff": 139.0,
+        "ic_t_eff": -2.984,
+        "pearson": -0.229027,
+        "sign_hit_rate": 0.381356,
+        "mean_fwd_return": 0.002758
+      }
+    ],
+    "summary": {
+      "max_n": 139,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": true,
+      "any_flagged_horizon_overlap_corrected": true,
+      "strongest_ic_horizon_days": 3,
+      "strongest_ic": -0.281432,
+      "strongest_ic_t": -3.433,
+      "strongest_ic_t_eff": -3.433,
+      "t_flag": 2.0,
+      "verdict": "surprise_predicts_forward_return"
+    },
+    "rule": {
+      "primary": [
+        1,
+        3,
+        5
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "negative"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 139,
+        "ic": -0.182537,
+        "ic_t_eff": -2.173,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 3,
+        "n": 139,
+        "ic": -0.281432,
+        "ic_t_eff": -3.433,
+        "n_ok": true,
+        "t_reached": true,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 5,
+        "n": 139,
+        "ic": -0.247073,
+        "ic_t_eff": -2.984,
+        "n_ok": true,
+        "t_reached": true,
+        "sign_ok": true
+      }
+    ]
+  }
+}

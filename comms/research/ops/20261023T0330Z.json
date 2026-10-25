@@ -1,0 +1,112 @@
+{
+  "run": "RESEARCH-OPS-20261023-0247",
+  "finished_at": "2026-10-23T03:30:00Z",
+  "by": "session_01GgAwbeoXAaR5Db9MxTLzZM",
+  "floor": 64,
+  "floor_basis": "computed_floor(fired_24h 80)",
+  "authoring_queue_depth": 25,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu"
+  ],
+  "needs_review_triaged": 6,
+  "needs_review_left": 31,
+  "throughput": {
+    "runnable_before": 46,
+    "runnable_after": 46,
+    "queued": 147,
+    "fired_24h": 80,
+    "results_landed_24h": 83,
+    "hours_since_last_dispatch": 2.3,
+    "idle_alarm": false,
+    "after_basis": "RQ-20261023-8961-01 is a hand-authored unit: it counts runnable only after the held PR merges"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh 2.35h)",
+    "collector": "ok (83 landed/24h, 0 unreadable)",
+    "stranded_stamp_prs": [],
+    "grader": "ok (RESULTS-UNDISPOSITIONED: ungraded 0, needs_review unowned 0)",
+    "stranded_pr_detail": "GitHub MCP list of 18 open PRs: none with an automation/research-queue-* head (earlier record's ~15 grade PRs are gone); open automation PRs are research-slo #19632/#19611 and strategy-reviews #19588 only",
+    "watchdog": "last incident rows 2026-10-17, all resolved/self_healed; none open",
+    "incident": null
+  },
+  "results_read": {
+    "pass": 4,
+    "fail": 12,
+    "indeterminate": 3,
+    "units": [
+      "RQ-20261017-ae17-43/44/45 pass (best-of-3 arms; leads only, joins PI-20261022-R3DFW7IK-0001 forward-window list)",
+      "RQ-20261022-eba2-01 pass (Q11 transfer, ll clause only 5/6 folds, r2 negative) -> clears the verdict half of blocked eba2-07/-08; lever HARNESS-METRIC-TRIGGER noted",
+      "RQ-20261022-eba2-02 fail; eba2-03 fail; eba2-09 fail; eba2-12 fail (exit geometry, incumbent stands)",
+      "RQ-20261022-eba2-15 fail (M3 +1.56 R, M5 +0.50 R vs 5.5 R bar) -> variant RQ-20261023-8961-01",
+      "RQ-20261022-4b82-12/-15 fail (hot-vol tighten xrp/ada: declared lever dead config); 4b82-22/-23 fail (giveback AUC = prior)",
+      "RQ-20261011-9da8-01 fail (foundation-model bake-off; power accruing, arm_status to be checked)",
+      "RQ-20261020-002 fail; RQ-20261020-001 indeterminate (ppi_mom RTY, n<50); RQ-20261022-c0d1-01 indeterminate (GRU vs LightGBM fair control)"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "needs_review_actions": [
+    {
+      "units": [
+        "RQ-20260929-004",
+        "RQ-20261004-653",
+        "RQ-20261004-655",
+        "RQ-20261005-001",
+        "RQ-20261005-002",
+        "RQ-20261009-001"
+      ],
+      "disposition": "retired units whose stale needs_review was never refreshed (PI-20261006-1VPYTX8E-0001); needs_review set false with the reason on each file"
+    }
+  ],
+  "levers_filed": [
+    {
+      "lever": "variants owed after 10 first-test FAILs (6 families, diagnosis per family)",
+      "ref": "PI-20261023-GGAWBEOX-0001"
+    },
+    {
+      "lever": "HARNESS-METRIC-TRIGGER ranked up: sole remaining blocker of blocked eba2-07/-08",
+      "ref": "HARNESS-METRIC-TRIGGER"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261023-8961-01"
+  ],
+  "followups_filed": [
+    "PI-20261023-GGAWBEOX-0001"
+  ],
+  "authoring": {
+    "queue_depth": 25,
+    "nodes_drafted": 1,
+    "nodes": [
+      "P1-Q6-xrp4h-declare (status updated; variant unit RQ-20261023-8961-01 authored from its 'further variant' clause)"
+    ],
+    "theme_shortfall": {
+      "regime": 2,
+      "live_strategy": 7,
+      "ml_health": 6,
+      "infra": 6
+    },
+    "why_short": "1 unit, not the ~6 cap or the 64 floor: the head of the authoring queue (P3-Q1 live-bt-stage-b, P1-Q6 declares) waits on builds or Tier-3 packets, not on pre-registered units; the rest were not drafted for budget"
+  },
+  "blocked_audit": "77 files in research/queue/blocked/ grouped by blocked_on lever (REGIME-WEIGHT-VARIANTS 4, FUNDING-OI-DATASETS-ETH-SOL 3, FRONTIER-LEVER-HARNESS-COSTS 2, PI-20261007-X9UFEF4U-0001 2, HARNESS-METRIC-TRIGGER 2, others 1 each); every one names a lever; none unlockable this pass. blocker_watch: STALE_BLOCK 5 -- IDEA-REVIEW-1016 and PROMOTION-BAR-MULTIPLICITY point at PRs #18560/#18626, both MERGED 2026-10-16, so their blocked_on is stale (manager to clear); the other three have refs matching no row",
+  "not_run": [
+    "routing the 61 unrouted due items: all are legacy BL-* health/live-trading rows needing VM diag reads (none research-shaped); SA-ROUTE owns them",
+    "programme nodes beyond 1 (step E.0 cap not met)",
+    "remaining 31 needs_review are all owned with a named gap (RESEARCH-TOOLING-GAPS 16, others 15); the owned 16 under RESEARCH-TOOLING-GAPS were not re-checked for whether the lever landed"
+  ],
+  "ran_from_previous_not_run": [
+    "blocked/ audit: ran",
+    "needs_review triage: ran (6 written)",
+    "stranded-PR check in detail: ran",
+    "step E authoring: ran (1 unit)"
+  ],
+  "handoff": [
+    "MANAGER: merge the held PR (hand-authored unit RQ-20261023-8961-01, 6 retired-unit edits, programme status line); landing hold unvouchable_paths",
+    "MANAGER: blocker_watch STALE_BLOCK: IDEA-REVIEW-1016 (#18560 merged), PROMOTION-BAR-MULTIPLICITY (#18626 merged), PHONE-EXEC-OBSERVABLE-1018, MACRO-EVENT-AXIS-HARNESS, RESEARCH-TRIAL-LEDGER name refs that resolve to no open work",
+    "MANAGER/lane: HARNESS-METRIC-TRIGGER is the one build behind eba2-07/-08 (Q11 rung 2) now that eba2-01 passed",
+    "next research-ops: read 8961-01; draft nodes for ml_health/infra/live_strategy (runnable 3/0/5 vs shares 9/6/12); author the six variant families in PI-20261023-GGAWBEOX-0001",
+    "No Tier-3 note this pass: no result implies a config change"
+  ]
+}

@@ -1,25 +1,92 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "strategy": "iaum_pullback_1d",
   "symbol": "IAUM",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:dfac943e7e7aac04add4d1cb0dbad210",
+  "config_fingerprint": "sha256:59b8d4b365bf510d1881fe4cd05d1a12",
   "basis": "harness_timefolds",
-  "coverage_state": "harness_failed",
-  "fidelity": null,
-  "omitted_levers": null,
-  "net_r_oos": null,
-  "expectancy_r_oos": null,
-  "n_trades_oos": null,
-  "folds": null,
-  "fold_detail": null,
-  "folds_positive": null,
+  "coverage_state": "measured",
+  "fidelity": "approximate",
+  "omitted_levers": [
+    "trail_decay_stall_bars",
+    "trail_decay_tight_mult"
+  ],
+  "net_r_oos": 7.1631,
+  "expectancy_r_oos": 0.8954,
+  "n_trades_oos": 8,
+  "folds": 4,
+  "fold_detail": [
+    {
+      "fold": 1,
+      "trades": 2,
+      "net_r": 5.4743,
+      "expectancy_r": 2.7372,
+      "start": "2025-08-01 00:00:00+00:00",
+      "end": "2025-10-23 00:00:00+00:00"
+    },
+    {
+      "fold": 2,
+      "trades": 2,
+      "net_r": 1.8878,
+      "expectancy_r": 0.9439,
+      "start": "2025-12-30 00:00:00+00:00",
+      "end": "2026-02-03 00:00:00+00:00"
+    },
+    {
+      "fold": 3,
+      "trades": 2,
+      "net_r": 0.5229,
+      "expectancy_r": 0.2614,
+      "start": "2026-04-02 00:00:00+00:00",
+      "end": "2026-07-23 00:00:00+00:00"
+    },
+    {
+      "fold": 4,
+      "trades": 2,
+      "net_r": -0.7219,
+      "expectancy_r": -0.3609,
+      "start": "2026-09-02 00:00:00+00:00",
+      "end": "2026-10-16 00:00:00+00:00"
+    }
+  ],
+  "folds_positive": 3,
   "window_days": 365,
-  "fee_bps_roundtrip": null,
+  "fee_bps_roundtrip": 0.0,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 8,
+    "max_drawdown_r": 2.0264,
+    "max_drawdown_at_trade": 7,
+    "final_equity_r": 7.1631,
+    "max_equity_r": 8.899,
+    "worst_trade_r": -1.014,
+    "best_trade_r": 3.479,
+    "worst_day_r": -1.014,
+    "worst_day_date": "2026-08-05",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 0.0,
+    "slippage": 5.0,
+    "funding": 0.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/strategy_evidence/runs/2026-10-22-odc1022/iaum_pullback_1d__bt.json"
+  },
+  "net_r_oos_fee_only": 7.2685,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "pass"
+  },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-13T03:23:54.830650+00:00",
+  "generated_at": "2026-10-22T07:38:24.058833+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": null,
-  "error": "fetch failed: RuntimeError: yfinance returned no rows for IAUM",
-  "harness": "pullback"
+  "source_run": "comms/strategy_evidence/runs/2026-10-22-odc1022/iaum_pullback_1d__trades.jsonl",
+  "error": null,
+  "harness": "pullback",
+  "low_n_warning": "n_trades_oos=8 < 10; the pooled number is reported but is not a basis for a verdict.",
+  "venue_bracket_arm": null
 }

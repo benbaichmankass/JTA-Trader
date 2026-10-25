@@ -1,0 +1,20 @@
+{
+  "based_on": "20261018T050427133620Z-05c5cccd.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "exit_lever_ablation.py --grade holdout writes the declared arm's held-back n/net_r beside the selected arm's and labels a selected arm that trails it, OR the operator decides config-change proposals do not need the incumbent comparison",
+    "kind": "observation",
+    "last_checked": "2026-10-18"
+  },
+  "id": "PI-20261018-SALS1018-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane HOLDOUT-PROPOSALS-1018 (manager session_01VduHYzdaXe27wTDBLSu8ao), 2026-10-18; checklist PROMOTION-BAR-MULTIPLICITY",
+    "rerun": "python3 scripts/research/holdout_incumbent_compare.py comms/research/RQ-20261016-077e-0*/*/verdict.json"
+  },
+  "routed_2026_10_25": "Checked on main 2026-10-25: exit_lever_ablation.py --grade holdout still has no incumbent comparison.",
+  "routed_to": "checklist:HOLDOUT-INCUMBENT-GRADE",
+  "state": "routed",
+  "what": "[research][promotion-bar] The R-HOLDOUT bar can CONFIRM a challenger that is WORSE than the configuration already trading. exit_lever_ablation.py --grade holdout selects one arm from 9 on discovery and reads ONLY that arm on the held-back span; PASS = 'selected arm net R > 0 there'. It never reads the declared arm A on the same span. MEASURED 2026-10-18 by scripts/research/holdout_incumbent_compare.py over the 8 committed RQ-20261016-077e-* runs (population: each run's own boundary; held-back = trades entered on/after it; full cost stack; every selected-arm figure reproduces verdict.holdout exactly): of 6 runs that read a holdout, 3 PASS verdicts selected an arm the declared arm BEATS on the same span -- xrp_pullback_2h C5 +4.87R n=90 vs A +17.36R n=93 (-12.49R); trend_donchian_xrp_4h C1 +4.13R n=25 vs A +5.48R n=25 (-1.35R); trend_donchian_sol_prop C5 +5.28R n=96 vs A +6.56R n=100 (-1.29R). The other 3 selected arms lead A by +1.00..+2.66R (ada C7, eth_4h C3, slv C1) and iaum C4 is underpowered. Consequence: a mandate or a session reading 'PASS/confirmed' as 'ship the selected arm' would replace a better incumbent (lane HOLDOUT-PROPOSALS-1018 declined to open those 3 Tier-3 PRs for exactly this reason). FIX (Tier-1 research tooling, then a Tier-3 bar note): have --grade holdout also report A's held-back n/net_r (A is fixed before the run, so reading it is not a second selection) and label a PASS whose selected arm trails A as 'confirmed_not_better'; MD-PROMOTE-* R-HOLDOUT is unaffected for promotion of the declared config (A selected), only config-CHANGE proposals need it."
+}

@@ -1,0 +1,142 @@
+id: RQ-20261024-9a7e-04
+title: 'EXIT-GIVEBACK-PREDICTOR-GATE: on trend_donchian_ada_4h, does tightening the trail ONLY on trades a vol-controlled
+  giveback predictor flags (P>=0.6 at bar 6) beat the declared exit, the same tightening on every trade, AND the same tightening
+  on a matched-rate random draw, net R in 5 of 6 folds?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'The predictor of eba2-01/-04 has log-loss skill only (pooled ll_gain 0.0115 / 0.0145 on a 0.69 coin-flip base;
+  OOS R2 gain ~0) and eba2-07/-08 (gate at P>=0.5, no vol control) FAILED on ada/xrp pullback 2h with the gate flagging about
+  half the trades. Here the trigger is built with vol_ratio_k in the BASELINE (so it is the path metrics beyond realised volatility),
+  is SELECTIVE (P>=0.6), and every candidate is also graded against a matched-rate RANDOM flag draw. Over 2020-07-01 .. 2026-10-15
+  23:59 on trend_donchian_ada_4h (replace grade, 6 calendar folds by entry time), out-of-fold triggers only (a trade''s flag
+  never sees its own fold): does MT (flagged trades tighten the trail to 2.5 x ATR) beat A by >= 0.02 R/trade, beat UT (every
+  trade open at bar 6) and RT (random flags, same count) on net R and in >= 5 of 6 folds, within the Path B drawdown bar?'
+why_this_matters: 'Operator row EXIT-GIVEBACK-PREDICTOR-GATE: can the giveback predictor be a GATE for the exit levers. A
+  tightening lever that fails ungated (the tight trail loses R on every leg tested) can only pay if the predictor selects
+  trades better than chance. RT is the null: a gate that does not beat RT is not selecting, it is tightening a random half.
+  The harness fills a stop AT the stop price, which flatters a tightened trade; MT and RT tighten the same NUMBER of trades,
+  so MT - RT cancels the fill artifact where MT - A does not.'
+power:
+  expected_n: 259
+  min_detectable_effect: 0.17
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor 39 incumbent trades; expected n(A)=259 (MEASURED in the baseline arm of the parent result for this leg). MDE
+    = 2.8/sqrt(n) = 0.17 sd for an unpaired one-sample test. The registered 0.02 R/trade bar is BELOW what one leg''s n can
+    resolve (diagnosis doc, exit-failed-levers-diag-2026-10-24, finding 1): the 5-of-6-fold gate and the two control contrasts
+    carry the verdict, and a PASS is a lead for ONE confirmation unit, never a promotion.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-9A7E-04-TREND-DONCHIAN-ADA-4H
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_ada_4h with arms A (declared exit),
+    MT (tight 2.5 x ATR on trades flagged by the out-of-fold trigger), UT (tight 2.5 x ATR on every trade open at bar 6) and
+    RT (tight 2.5 x ATR on a seeded matched-rate random flag draw). Trigger: path_metric_giveback.oof_triggers, FULL model
+    (vol_ratio_k in the baseline) fit on the OTHER calendar folds only, k=6, big-quantile 0.5, flag when P(big giveback) >=
+    0.6. Window 2020-07-01 .. 2026-10-15 23:59, 6 calendar folds, net of the full cost stack (resolve_cost_policy, recorded
+    per arm). Per arm: n, net_total_r, max_drawdown_r, net R per fold, trail_stop exit count.'
+  rule: 'INDETERMINATE IF n(A) < 39 or MT is byte-identical to A (no flag fired). MT PASSES iff net_r(MT) > net_r(A) AND delta
+    vs A >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(MT) <= maxDD(A) x 1.35 AND net_r(MT) > net_r(UT) with folds_ge(UT)
+    >= 5 of 6 AND net_r(MT) > net_r(RT) with folds_ge(RT) >= 5 of 6 (the harness enforces all of it via --vs-control). PASS:
+    the predictor gate selects better than chance on this leg: ONE confirmation unit on a disjoint partition (a PASS on one
+    window is a discovery), a gap-adjusted re-run (stop fills charged a gap, the harness fills at the stop price), then Q6
+    parity and a Tier-3 declare proposal -- never a config edit. FAIL: the gate does not pay on this leg and the declared
+    exit stands; if MT beat A but not RT, the report says ''selection indistinguishable from chance''. Thresholds (P 0.6,
+    bar 6, 2.5 x ATR, seed 20261024) are not changed after any result.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  basis: 'stand-in: the gate has failed twice on the legs where it had skill; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: 'One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm (2 arms on xrp_pullback_2h
+    over 2020-07..2026-10 took 74 s wall MEASURED 2026-10-16).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_ada_4h
+  - --trigger-from-path-metrics
+  - '6'
+  - --trigger-baseline-extra
+  - vol_ratio_k
+  - --trigger-p-threshold
+  - '0.6'
+  - --trigger-shuffle-seed
+  - '20261024'
+  - --arm
+  - A=
+  - --arm
+  - MT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-file=@trigger_file
+  - --arm
+  - UT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-all=6
+  - --arm
+  - RT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-file=@trigger_file_random
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --vs-control
+  - MT=UT
+  - --vs-control
+  - MT=RT
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-9a7e-04
+    trigger_producer: built in -- exit_lever_ablation.py --trigger-from-path-metrics 6 --trigger-baseline-extra vol_ratio_k
+      --trigger-p-threshold 0.6 --trigger-shuffle-seed 20261024 (tokens @trigger_file, @trigger_file_random)
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261022-eba2-01.yaml
+- research/queue/RQ-20261022-eba2-04.yaml
+- research/queue/RQ-20261022-eba2-07.yaml
+- research/queue/RQ-20261022-eba2-08.yaml
+- docs/research/exit-giveback-predictor-gate-2026-10-24.md
+requires_result:
+  unit: RQ-20261022-eba2-01
+  verdict: pass
+what_it_does_not_do: 'Edits no config (no src/, no config/), places no order. Out-of-fold triggers make the harness honest;
+  a live gate would be fit on all history and needs a live producer of the bar-6 path metrics. Harness fills a stop at the
+  stop price, not at a gap: the control arms share the flatter but A does not, so MT vs A is biased toward the lever and MT
+  vs RT is not.'

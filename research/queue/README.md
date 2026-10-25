@@ -107,6 +107,17 @@ clears can still be underpowered; a job that fails is underpowered for certain.
 It also does not adjust for multiplicity — a 40-cell sweep must declare its own
 adjusted `alpha`.
 
+
+## Recurring units that cannot reach their power floor (RESEARCH-LOOP-AUDIT RC5, 2026-10-15)
+
+A RECURRING e35 unit graded `indeterminate` at `base_oos_trades` below a third of its floor
+(`queue_grade.INFEASIBLE_FRACTION`) cannot reach the floor on its own cadence (MEASURED 2026-10-15: daily-bar
+legs at OOS n 0-11 against 39, adding about one trade a month). The grader writes `power: infeasible_at_cadence`
+and `recheck_after_days: 90` into its own grading block (no `needs_review`), and `dispatch_queue.due()` waits
+max(cadence, that). The unit is re-asked quarterly, never retired, and its registered fields never move.
+`recheck_after_days` is honoured only from a grader-written block (`auto: true` + `grader: ...queue_grade.py`)
+and can only lengthen the gap.
+
 ## Fields
 
 ```yaml
@@ -115,6 +126,9 @@ title: ...
 question: >-                 # what is being asked, BEFORE it runs
 status: queued               # queued | running | done | blocked | retired
 cadence: once                # once | daily | weekly | monthly
+theme: live_strategy         # REQUIRED on a queued/running/blocked unit: a key of research/THEMES.yaml
+priority: 2                  # REQUIRED, 1 (most urgent) .. 3, WITHIN the theme
+requires_result: {unit: RQ-YYYYMMDD-NNN, verdict: pass}   # OPTIONAL structured gate, see "Scheduling"
 kind: experiment             # experiment | deterministic
 
 # kind: experiment → required
@@ -156,6 +170,26 @@ power:
 # kind: deterministic → required instead
 why_not_inferential: >-      # why no sample/effect applies. Empty ⇒ blocked.
 
+# REQUIRED on every NEW unit (both kinds) — `check_research_queue_decision_rule.py`
+# refuses a unit added on this branch with no admissible decision_rule. Existing
+# units that predate this requirement are GRANDFATHERED (counted, never failed);
+# the guard reports how many on every run. "The result IS the decision" — this
+# is what makes that true instead of aspirational: it states, BEFORE the run,
+# what each outcome means and what happens next, so landing the result is not
+# also the moment someone has to invent what it means.
+decision_rule:
+  id: RULE-<id>-<short-name>
+  registered_at: '2026-09-25'  # non-empty. When this was written, before the run.
+  registered_before_run: true  # must be literally `true` — not merely present.
+  statistic: >-                # what is actually computed from the run's output
+  rule: >-                     # IF <statistic condition> THEN <verdict/action>,
+                                # for every branch the run can land in. This is
+                                # the part that must not be written AFTER seeing
+                                # the result.
+  what_it_does_not_do: >-      # OPTIONAL but conventional — what this unit's
+                                # verdict may NOT be used to justify (e.g. a
+                                # Tier-3 roster change belongs to R2/D2, not here)
+
 routing:                     # DECLARED, never inferred
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -174,6 +208,71 @@ lands:                       # R2 — a run's deliverable is a LANDED result
 last_dispatched_at: null     # stamped by the dispatcher; drives cadence
 ```
 
+## Scheduling: themes, fair share, aging, preconditions
+
+**Order is not FIFO and not strict priority.** Until 2026-09-30 `load_queue` sorted by id and the dispatcher
+fired in that order, so the newest units waited behind every older one (46 of the 48 never-dispatched units
+had been created the day before). The operator's direction: regime first, but *everything keeps moving*.
+(2026-10-05 the operator moved prop-account strategies to the top: `new_strategy_prop` now carries the highest
+weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
+
+- Every queued unit carries `theme:` (a key of [`research/THEMES.yaml`](../THEMES.yaml): `regime`,
+  `live_strategy`, `ml_health`, `new_strategy_prop`, `macro`, `infra`) and `priority:` 1-3 within the theme.
+  `validate` refuses a queued/running/blocked unit without both; `done`/`retired` units are exempt.
+- **PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim "Those two items are our highest priority, we need to
+  make sure we're pushing forward on them": P1 active trade management, P2 AI trader).** `research_compute.yaml`
+  `value.programme_priority` is an ORDERED list of programme ids; a due unit of a listed programme
+  (`programme_node.programme` / `generated.family: programme:<id>`) ranks first on every backend, above every other
+  theme and programme, earlier entries first, then the rules below. Only a starved unit goes ahead of it. Edit the
+  list to change the priority; the decision line prints `pick=programme:<id>`.
+- **MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** `dispatch_queue.fair_order` takes
+  the theme whose NEXT unit scores highest on the router's value score (`scripts/research/research_compute.yaml`
+  `value:` -- $ at stake x confidence x bucket share x hand-written x age / cost), so a real-money / prop /
+  own-losses unit fires before a cheap unit in any other theme. A unit DUE past `value.starve_hours` goes first in
+  any theme (nothing starves). Inside a theme an ASKED unit (authored, or a programme node `generated.family:
+  programme:*`) precedes a template refill; the refill fires when its theme has nothing asked due, or when starved.
+  MEASURED cause of the rule: run 39098686264 fired two regime units scoring 6.5 and an infra unit at 30.7 while
+  the P1 real-money units (141.9 down) deferred on "github_runner at capacity", because until then the cross-theme
+  step was a round-robin by (stamps in `share_window_hours` + picks) / weight.
+- **Weights live in ONE file, `research/THEMES.yaml`, and they break ties.** Between two themes whose next units
+  score EQUAL, the one with the lower (stamps in the last `share_window_hours` + picks so far) / weight goes
+  first, then the heavier weight. A theme holding only low-value units therefore fires on spare capacity or at
+  starve_hours, and `theme_share_min_ratio` (research_slo.yaml) recovers more slowly than under the round-robin:
+  the share is honoured by SUPPLY of valuable units in the short theme (`H1-THEME`), not by ranking.
+- **Aging:** every `aging_hours` a unit has waited since it came DUE lowers its effective priority by one (floor 0)
+  and lifts its value score by `age_step`; past `starve_hours` it sorts first everywhere.
+- Not candidates, kept in id order after the ranked ones: units that are done, not yet due, invalid, session-bound
+  (`run.workflow` is prose) or whose precondition is unmet. Cadence, power and route gates are unchanged.
+- **Preconditions.** `requires_result: {unit, verdict?}` is evaluated: the unit is not due until
+  `research/results/<unit>/*.jsonl` holds a `read_state: measured` record (with that verdict, when given). The
+  free-text `dispatch_precondition` is **advisory prose for humans and is NOT evaluated**; state a gate that must
+  hold as `requires_result`, or it is not a gate.
+- **`not_before: <ISO time>`** (optional): the unit is not due before that moment; an unparseable value is
+  refused, never read as elapsed. The grader writes it on the fresh-window confirmation units it opens.
+- **Fresh-window confirmation (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16).** A PASS on a template
+  cell is a discovery: `queue_grade.py` adds ONE `confirmation:` unit (same rule, data after the PASS run) and
+  the cell may not feed a Tier-3 proposal until that unit grades `confirmation: confirmed`. A deterministic
+  template cell's FAIL closes with no same-window replay; it never retires the family (#18557 owns that).
+- **Pre-registered holdout (operator 2026-10-16, "Holdout re-run").** Every m20 sweep holds back the latest ~25%
+  of each leg's history (grown to the 25-trade floor, capped at 40%) before it selects cells, then grades only the
+  selected cells once on that span (`scripts/research/m20_holdout.py`). The result rows carry
+  `measurement.holdout.confirmation`, so discovery and confirmation come from one run with no wait. A PASS that did
+  not hold out gets one holdout re-run unit (`confirmation.mode: holdout_rerun`), not a forward wait.
+- Intake, planning and the weekly re-weighting: [`PLANNING.md`](PLANNING.md).
+
+## Allocating a unit id (RQ-ID-ALLOCATOR)
+
+**`python3 scripts/research/next_rq_id.py --fetch`** prints a collision-free id `RQ-YYYYMMDD-<h4>-NN`: `<h4>` is
+4 hex chars hashed from your session (env session id, else branch, else random), `NN` a per-session counter from 01.
+There is no shared counter, so two lanes cannot collide (the hash differs; the allocator also skips any id already
+claimed in the tree, on `main` or on any `origin/*` branch). Never hand-pick a number or a `9xx` band.
+`--count N` mints N; `--seed X` overrides the hashed seed. Old `RQ-YYYYMMDD-NNN` ids stay valid everywhere;
+`queue_replenish` still mints `001-899` (its ids must reproduce byte-for-byte for the E58 `--verify`), and
+`--legacy` mints from the old `900-999` hand band. The `research-queue-id-bands` guard refuses a PR that adds a
+unit whose id already exists on the base (in `queue/` or `queue/blocked/`) or twice in the PR (C4), and accepts the
+hashed scheme. Known pre-existing duplicate (not renumbered, heavily referenced): `RQ-20260928-006` in both
+`queue/` (done, M20 sweep) and `queue/blocked/` (volatile-cell parity re-check).
+
 ## Running it
 
 ```bash
@@ -190,3 +289,164 @@ largest single run $0.0987, against a **$10/month** cap. Two gates hold outside
 this directory — the burst workflow's ledger preflight and its `GPU_BURST_ARMED`
 arm gate — plus `--max-gpu-dispatches-per-run` here, because the ledger cap is
 *monthly* and cannot bound a loop inside one run.
+
+## `blocked/` — pre-registered questions with no instrument yet
+
+⚠️ **A question whose instrument does not exist is not a JOB.** `validate()`
+requires `run.workflow` and `lands.store` on every entry, unconditionally, and
+it is right to: this directory is a *dispatch* queue, and the dispatcher fires
+workflows. A unit that names no workflow cannot be dispatched, so admitting one
+here would make the queue's own census unreadable — `tests/test_research_queue.py`
+fails the whole file set on it, which is the correct behaviour and is how this
+subdirectory came to exist (PR #12706).
+
+So a question that is fully pre-registered — hypothesis, population, decision
+rule, power — but whose **measurement does not exist yet** lives in
+`research/queue/blocked/<id>.yaml` instead. Same schema, same id format, same
+filename-equals-id rule. `load_queue()` globs `*.yaml` NON-recursively, so
+these are outside the dispatched population by construction rather than by a
+flag anyone has to remember to set.
+
+**Each one carries a `blocked_on` block naming what must exist and a
+`clears_when`.** Promoting one back is a `git mv` into this directory's parent
+plus filling in `run.workflow` / `lands.store` — at which point the validator
+and the test start holding it to the full contract, which is the point.
+
+⚠️ **This is a waiting room, and keeping it from becoming a graveyard is not
+yet mechanical.** Each unit's `blocked_on` states a `clears_when`, and where the
+blocker is already filed it names the row —
+`RQ-20260922-001` → `PI-20260922-EVIDENCE-SOURCE-RUN-IS-A-TMP-PATH`. The others
+name a checklist row (E5/C2) or a source path instead, which is weaker: a
+checklist row has no `due_when`, so **nothing puts those on a clock today** and
+they rest on someone choosing to look in here. That is stated rather than
+papered over; giving every entry a dated `PI-` row is the obvious next step and
+is deliberately not done by the PR that created this directory, which was
+scoped to writing questions, not to building their follow-through.
+
+## The queue refills and grades itself (RQ-RUN, 2026-09-28)
+
+> Operator, 2026-10-06: *"the research queue shouldn't need a claude session
+> pushing it - claude should be queuing research units and analyzing results,
+> but the git infrastructure should be what keeps the queue moving."* A session
+> REGISTERS units and READS results; refill, dispatch, landing and mechanical
+> grading are the workflows' job, and any step that still waits on a session is
+> listed below as debt, not as process.
+
+Operator, 2026-09-28: *"The research queue should be running 24/7 with or
+without Claude."* Three scheduled workflows own that:
+
+| workflow | what | lands |
+|---|---|---|
+| `research-queue-replenish.yml` (daily 05:50) | `scripts/research/queue_replenish.py` expands `research/templates/*.yaml` (five pre-registered families, weights 30/25/20/15/10) into new units until >= 25 RUNNABLE units are queued -- runnable = the dispatcher would fire it within the next 6 h (`DISPATCH_CYCLE_HOURS`, the replenish HORIZON, unchanged when the cron went hourly; never run, or cadence elapsed; a `once` unit that already ran or a monthly unit that ran yesterday is queued but NOT runnable) | new `RQ-*.yaml` files, carrying `generated:` |
+| `research-queue-dispatch.yml` (HOURLY at :20 since 2026-10-06; was every 6 h) | fires what is due, under the unchanged caps: `--max-research-inflight 3`, `--max-repo-queued 10`, per-run GPU cap 1 | `last_dispatched_at` stamps |
+| `research-queue-grade.yml` (every 6 h, :50) | `scripts/research/queue_grade.py` reads each ran unit's committed rows and applies its rule mechanically | `status: done`, a confirmatory re-queue on a first FAIL, or `grading.needs_review: true` |
+
+A generated or graded unit self-lands ONLY because `check_pr_landing.py` (E58)
+re-runs the producer's `--verify` at the merge-base and gets the same bytes;
+a hand-edited unit, a new hand-written unit, or a rule rewrite still holds for
+a human (E57). Mechanical grading applies to template-generated units, to hand-written
+ones that opt in with `grading: {auto: true}`, and (RESEARCH-GRADE-BACKLOG,
+2026-10-15) to hand-written `once` units whose every result row carries the
+unit's own `decision_rule.id` (`attested`). A hand-written unit opts OUT with
+`grading: {auto: false}` or by carrying any session-written `grading:` block --
+the grader never overwrites a human read -- and a multi-dispatch unit declares
+`lands.runs: N` so the grader waits for N result files (RESEARCH-LOOP-AUDIT RC1). The `needs_review`
+bucket is `grep -l "needs_review: true" research/queue/*.yaml`. The alarm
+(`scripts/ci/check_research_queue_health.py`, run from the dispatcher) pages
+through the send-ping system-action when nothing has dispatched in 12 h or runnable units (same definition) < 25 AND the
+templates cannot fill the gap; when they can, it fires `research-queue-replenish.yml`
+instead of paging (exit 3 from the health check), because the refill is daily while the
+dispatcher runs hourly (up to 3 research runs in flight at once; it consumed up to 3 units
+every 6 h before 2026-10-06). The 12 h idle alarm is deliberately kept at the hourly cadence —
+GitHub drops hourly slots and a stamp takes ~1 h to land, so a tighter alarm would page on
+scheduler weather (`scripts/research/queue_throughput.py`).
+
+### Session debt — steps that still wait on a session (2026-10-06)
+
+Filed in the pipeline (`docs/claude/work/pipeline/`), each with a `rerun` that re-measures
+it; re-run those rather than quoting these counts.
+
+| debt | measured 2026-10-06 | row |
+|---|---|---|
+| `automation/*` PRs strand when their CI checks are cancelled ~15 min in; `stale-automation-sweep` refreshes but never re-requests checks, so a stranded stamp PR re-fires its units | #16656, #16657, #16124, #16654 (manager); checks on #16656 re-run by hand as a stopgap | `PI-20261006-LCEVL8D5-0001` |
+| queued units the dispatcher can never fire (`run.workflow` is a human note) or the grader can never close (hand-written, no `grading.auto`) | 2 session-bound + 4 session-graded of 308 files | `PI-20261006-LCEVL8D5-0002` |
+| the `needs_review` bucket surfaces only to a session that thinks to grep for it | 11 flagged (all statuses) | `PI-20261006-LCEVL8D5-0003` |
+
+## ML units — the same queue, a trainer-side runner (ML-RQ-RUNNER, 2026-10-11)
+
+An ML test (learner bake-off, conformal evaluation, control comparison) is an ordinary unit with an `ml_bakeoff:` block (the machine
+form of its `decision_rule`, registered with it) and `run.workflow: research-script-run-trainer.yml` (needs the trainer) or
+`research-script-run.yml` (CPU-only, data in the repo), `run.command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}',
+--out, '{out_dir}']`. The trainer twin SSHes to the trainer, refuses to run until the trainer's checkout holds byte-identical copies
+of the unit and its scripts, runs `script_run.py` there under the venv, and uploads the same artifact the collector already lands
+(`research-script-run-trainer-<unit>-<run_id>`). Engine schema: `scripts/research/ml_bakeoff.py` docstring. The loop around it:
+`.claude/skills/frontier-research/SKILL.md` § "The research → test → improve loop".
+
+## `run.workflow` DECLARED vs. actually `gh workflow run`-DISPATCHABLE
+
+> **RQ-RUN (2026-09-28): a session-local unit now has a token-free route.**
+> Declare `run.workflow: research-script-run.yml` and `run.command: [python3,
+> scripts/research/<script>.py, ...]` (or `run.commands: [[...], ...]`; the
+> placeholders `{out_dir}`, `{unit}`, `{run_id}` are substituted) and the
+> dispatcher fires a GitHub runner that reads the command from the unit file on
+> `main`, runs it, and lands the outputs under `comms/research/<unit>/<run_id>/`
+> plus an E5 record. The script must write `<out_dir>/verdict.json`
+> (`{verdict, read_state, population, n, measurement?, note?, records?}`) to
+> land as `measured`; `scripts/research/prop_ev_grid.py` is the first grader
+> built for it. Contract and refusals: `scripts/research/script_run.py`;
+> `_fire()` now names a non-`*.yml` workflow as session-bound instead of
+> quoting gh's error.
+
+
+RQ-OPS-2 (2026-09-28), while root-causing the dispatcher's cancelled runs:
+`validate()` requires the `run.workflow` field to be **present**, not that its
+value resolve to a real workflow. `_fire()` (`scripts/research/dispatch_queue.py`)
+does exactly `gh workflow run "<run.workflow>" --ref <ref>` with no other check
+— so a unit whose `run.workflow` is a human-readable note rather than a literal
+`*.yml` name grades identically to a real one (same power/route/cadence gates,
+same `would_dispatch` on a dry run) and only fails, loudly, at the actual `gh`
+call on a real `--fire`.
+
+MEASURED against the 19 committed units in this directory (`blocked/` excluded
+by construction, see above):
+
+| class | count | queued | done |
+|---|---|---|---|
+| **workflow-routed** — `run.workflow` names a real `*.yml` (`gh workflow run` succeeds) | 13 | 8 | 5 |
+| **issue-label / manual relay** — e.g. `trainer-vm-diag (issue label trainer-vm-diag-request)`; not a literal workflow name | 4 | 2 | 2 |
+| **`none` — session-local** — e.g. `none — session-local run of scripts/...`; declares no dispatch mechanism at all | 2 | 1 | 1 |
+
+The 6 non-workflow-routed units' `run.workflow` text reads as an instruction to
+whoever picks the unit up by hand (run this script; open an issue with this
+label) rather than a `gh workflow run` target — which is a reasonable pattern,
+but today the dispatcher cannot tell "declares a real workflow" from "declares
+a note to a human" and would attempt-and-fail the latter on a real fire if one
+ever came due on a scheduled run. **Not yet verified against a primary source
+in this repo:** that these 6 are instead picked up by a standing
+session/manager cadence (a claim made when RQ-OPS-2 was dispatched, not
+confirmed here) — `research/queue/README.md` and `dispatch_queue.py` are silent
+on it. If that pickup mechanism is real, it is undocumented; if it is not, all
+6 units are effectively unrouted. Either way the dispatcher's own grading does
+not distinguish them from a real workflow-routed unit today.
+
+## The programme source -- plans become units without a session (RESEARCH-LOOP-AUDIT, 2026-10-15)
+
+`queue_replenish.py` has a sixth source besides `research/templates/`: **`research/programmes/*.yaml`**,
+one file per research programme (`docs/research/programmes/<NN>-*.md` is the prose plan; the YAML is its
+question tree). Each node names its `goal` (G1 first), `roadmap`, `value`, `after` (prerequisite units or
+nodes and the CLOSED verdict each must reach -- `pass`, `fail`, `indeterminate`, `no_action_warranted` or
+`any`) and either a full pre-registered `unit:` body or `needs_authoring:` (one line).
+
+- A **`unit:` node** is emitted as a queue unit (generated band, `generated.key: programme:<node>`) on the
+  first replenish run after its `after` holds -- whenever ready, not only to fill a template deficit, at most
+  `PROGRAMME_MAX_PER_RUN` per run. E58 vouches it because `verify()` re-renders it from the committed node and
+  checks the node was ready on the merge-base queue. A FAIL branch registered in the plan is therefore as
+  pre-registered as a PASS chain.
+- A **`needs_authoring:` node** never becomes a unit here. Once its `after` holds it is in the **authoring
+  queue**, ranked goal-first then value: `python3 scripts/research/queue_replenish.py --authoring-queue`.
+  research-ops drafts from it first (SKILL § E).
+- `--programme-state` prints every node as `answered` / `in_queue` / `ready` / `waiting` / `moot` (a branch
+  not taken) / `retired`. It is computed on read, so there is no state file to go stale.
+- `research/programmes/**` is landing machinery (`check_pr_landing.py`): every edit holds for a human merge,
+  because a node's `unit:` is a registration.
+

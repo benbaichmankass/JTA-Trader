@@ -70,7 +70,29 @@ inputs:
       day on a genuinely stranded branch. Give the calling job a
       `timeout-minutes` above this or the job dies mid-wait — research-queue
       dispatch carries 35 for exactly that reason.
-    default: "30"
+
+      ⚠️ RAISED 30 -> 50 (lane OPS-FIXES 2026-10-04, PI-20261004-PUQ1APTH-0008,
+      PI-20261004-FOJGFIZF-0003). The suite grew ~2.4x since the 30 was sized:
+      MEASURED pytest-run 37 min on #16198 (07:29:38-08:06:35Z, auto-merged
+      08:06:56Z, verify failed at its 30-min deadline 08:00Z) and 34.6 min on
+      #16240 (21204 passed); dispatcher runs 37184231129 and 37166184601 went
+      red the same way after their PRs merged. The one-shot re-check after the
+      deadline (STAMP-RACE, below) cannot rescue a merge that lands minutes
+      later. 50 = ~37 run + queue time + margin. Every caller's job budget was
+      raised by the same 20 min so the work allowance each had is unchanged.
+
+      ⚠️ RAISED 50 -> 80 (HEALTH-REVIEW-W41, 2026-10-09; RQ-COLLECTOR residual).
+      The 2026-10-04 sizing was outgrown in 5 days. MEASURED over the 20
+      completed `pytest-run` pushes on main 2026-10-09 (Actions run durations):
+      29-64 min, 12 of 20 above 44 min. Dispatcher run 37965310081 went red
+      because its batch PR #17287's own `pytest-run` took 44 min
+      (17:21:15-18:05:59Z) and the 50 min wait expired at 18:11Z, ~5 min after
+      CI went green. The collector was NOT the cause (its step succeeded and
+      "Fail the job if the collector lost a run's rows" was skipped). 80 =
+      observed worst 64 + queue. Every caller's job budget was raised by the
+      same 30 min. ⚠️ A FIXED NUMBER WILL BE OUTGROWN AGAIN; the real fix is a
+      faster `pytest-run` (pipeline row filed by this review).
+    default: "80"
   refresh-command:
     description: >
       A shell command that RE-DERIVES this caller's generated file(s), run after
@@ -380,6 +402,91 @@ runs:
                    ".github/pr-automerge-requests/${SLUG}.txt" \
                    ".github/merge-slots"
         git commit -m "${MESSAGE}"
+        # EVERYTHING FROM HERE ON RUNS IN A CLEAN WORKTREE (STAMP-RACE-2,
+        # 2026-10-12). A caller's working tree can carry tracked edits this
+        # commit does not (research-queue-dispatch keeps its `last_dispatched_at`
+        # stamps dirty across three landings). Both `git checkout --detach
+        # FETCH_HEAD` (the replay below) and `git merge FETCH_HEAD` (the
+        # stale-branch refresh) REFUSE when such a file differs between HEAD and
+        # main, so MEASURED 2026-10-10/11 over 14 red dispatcher `land` jobs: 3
+        # died in ~1 s on the checkout ("local changes ... overwritten by
+        # checkout") and 2 more had their refresh reported `failed_conflict`
+        # by the same refusal ("overwritten by merge") with no conflict at all.
+        # The commit exists and the landed files are committed, so nothing the
+        # caller left dirty is needed here; the caller's tree is not touched.
+        PRODUCED_WT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/ctm-wt.XXXXXX")"
+        git worktree add -q --detach "${PRODUCED_WT}" HEAD
+        cd "${PRODUCED_WT}"
+        # CUT THE THROWAWAY BRANCH FROM `main`, NOT FROM THE DISPATCH REF
+        # (2026-10-04, lane CI-AUTOMERGE). Until now the commit above sat on
+        # whatever the CALLER checked out. A run dispatched on a session branch
+        # therefore pushed that whole branch: MEASURED 2026-10-04 on #16457
+        # (m20-exit-lever-sweep run 37222250087, dispatched on
+        # `claude/research-run-units`) — 1 result file plus 19 unmerged session
+        # commits and 57 files, including pre-registered queue units and that
+        # branch's own `hold` declaration, so `check_pr_landing` refused it under
+        # R5 + R12 and it could never land. 21 open research-result PRs had the
+        # same shape. The fix: replay ONLY the produced commit onto `main`.
+        #
+        # ⚠️ Only when the job did not run on `main` (GITHUB_REF), so a scheduled
+        # or main-dispatched caller is byte-for-byte unchanged. A conflicted
+        # `*.jsonl` is an append-only store: it resolves to main's file plus
+        # EXACTLY the lines this commit added — never the dispatch branch's own
+        # rows, which land (or not) with that branch's PR. Any other conflict
+        # falls back to the old behaviour, LOUDLY: the rows are kept on a PR
+        # that will need a human, rather than lost.
+        #
+        # ⚠️ WIDENED 2026-10-07 (lane RQ-INFRA, PI-20261006-LCEVL8D5-0001) FROM
+        # "ran off main" TO "this commit's parent is not main's tip". The old
+        # condition left a scheduled caller's SECOND call in one job cut from
+        # the FIRST call's commit: `research-queue-dispatch.yml` calls this
+        # action for the liveness receipt and then for the stamps, so every
+        # stamp branch carried the receipt commit under it. MEASURED 2026-10-07
+        # on #16900: `commits: 2`, `mergeable_state: dirty` -- the receipt PR
+        # squash-merged, the next run's receipt moved `research-queue-
+        # dispatch-receipt.json` again, and the stacked branch conflicted
+        # forever. A CONFLICTING PR gets no `pull_request` workflow runs at all
+        # (#16900 and #16850: zero check runs hours after opening), so its
+        # required checks never exist, auto-merge never fires, and the
+        # `last_dispatched_at` stamp it carries never lands -- the unit
+        # re-fires. A caller whose parent already IS main's tip is unchanged.
+        if [ "${GITHUB_REF:-refs/heads/main}" != "refs/heads/main" ] \
+           || [ "$(git rev-parse HEAD~1 2>/dev/null || true)" != "$(git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)" ]; then
+          PRODUCED="$(git rev-parse HEAD)"
+          if git fetch -q --no-tags origin main; then
+            git checkout -q --detach FETCH_HEAD
+            REPLAYED=false
+            if git cherry-pick --allow-empty "${PRODUCED}" >/dev/null 2>&1; then
+              REPLAYED=true
+            else
+              RESOLVED=true
+              for f in $(git diff --name-only --diff-filter=U); do
+                case "$f" in
+                  *.jsonl)
+                    { git show "FETCH_HEAD:$f" 2>/dev/null || true
+                      git diff --no-color --unified=0 "${PRODUCED}~1" "${PRODUCED}" -- "$f" \
+                        | grep -E '^\+' | grep -vE '^\+\+\+ ' | cut -c2- ; } > "$f.cm-tmp"
+                    mv "$f.cm-tmp" "$f"
+                    git add -- "$f" ;;
+                  *) RESOLVED=false ;;
+                esac
+              done
+              if [ "${RESOLVED}" = "true" ] && GIT_EDITOR=true git cherry-pick --continue >/dev/null 2>&1; then
+                REPLAYED=true
+              else
+                git cherry-pick --abort || true
+              fi
+            fi
+            if [ "${REPLAYED}" = "true" ]; then
+              echo "commit-to-main: ran on ${GITHUB_REF}; replayed the produced commit onto main so ${BR} carries only this run's paths."
+            else
+              git checkout -q --detach "${PRODUCED}"
+              echo "::warning::commit-to-main: ran on ${GITHUB_REF} and the produced commit does not replay cleanly onto main. Falling back to the dispatch ref as the base, so ${BR} ALSO carries that ref's unmerged commits and will likely need a human to land."
+            fi
+          else
+            echo "::warning::commit-to-main: could not fetch main to replay onto; ${BR} is cut from ${GITHUB_REF} and carries its unmerged commits."
+          fi
+        fi
         # Push the throwaway branch. The calling job checked out with the PAT, so
         # `origin` is PAT-authenticated → the PR opened below triggers the required
         # checks (a GITHUB_TOKEN-opened PR would not).
@@ -485,8 +592,43 @@ runs:
             *)
               # UNKNOWN is 'we could not read the PR', NOT 'not merged yet'.
               # Keep waiting rather than concluding either way.
+              # ⚠️ WHEN NOT TO REFRESH (STAMP-RACE-2, 2026-10-12). The merge below
+              # mints a new head sha, and the required `pytest-run` has
+              # `cancel-in-progress: true` per PR, so a refresh at the one-third
+              # mark KILLS the half-finished run and restarts the ~45 min suite.
+              # MEASURED over 62 automation/research-* PRs opened 2026-10-10 12:00Z
+              # onward: every PR whose `main` moved had a 27 min "queue" before its
+              # final pytest-run -- that was this refresh (first run cancelled at
+              # 27 min), and open-to-merge was 64-79 min against an 80 min wait.
+              # The suite itself is 27-49 min against its own 50 min limit, so one
+              # restart leaves no slack: 4 of the 14 red jobs (refresh=refreshed)
+              # and the cancelled runs on #17654/#17664 are that restart. Branch protection is
+              # `strict: false`, so a behind-main PR merges without it; the
+              # refresh exists only to re-trigger checks that are red or absent.
+              # So: refresh at once if the PR CONFLICTS (it cannot merge as it
+              # is, and checks on a conflicted PR never start), otherwise wait
+              # for the one-third mark and then only if the head's checks have
+              # FINISHED red or never appeared. In-flight or green -> leave it.
               if [ "${REFRESH_TRIED}" -eq 0 ] && [ "${REFRESH_STATE}" != "disabled" ] \
-                 && [ "$(date +%s)" -ge "${REFRESH_AT}" ]; then
+                 && [ "$(date +%s)" -ge "${MIN_WAIT}" ]; then
+                MERGEABLE="$(gh pr view "${PR_URL}" --json mergeable --jq .mergeable 2>/dev/null || echo UNKNOWN)"
+                CHECKS="$(gh api "repos/${GITHUB_REPOSITORY}/commits/$(git rev-parse HEAD)/check-runs?per_page=100" \
+                  --jq 'if .total_count == 0 then "none" elif ([.check_runs[]|select(.status != "completed")]|length) > 0 then "inflight" elif ([.check_runs[]|select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out" or .conclusion == "action_required")]|length) > 0 then "red" else "green" end' \
+                  2>/dev/null || echo unknown)"
+                WANT_REFRESH=0
+                if [ "${MERGEABLE}" = "CONFLICTING" ]; then
+                  WANT_REFRESH=1
+                elif [ "$(date +%s)" -ge "${REFRESH_AT}" ]; then
+                  case "${CHECKS}" in
+                    red|none|unknown) WANT_REFRESH=1 ;;
+                    inflight) REFRESH_STATE="deferred_checks_in_flight" ;;
+                    green)    REFRESH_STATE="not_needed_checks_green" ;;
+                  esac
+                fi
+              else
+                WANT_REFRESH=0
+              fi
+              if [ "${WANT_REFRESH}" -eq 1 ]; then
                 REFRESH_TRIED=1
                 if ! git fetch -q origin main; then
                   REFRESH_STATE="skipped_fetch_failed"
@@ -530,6 +672,31 @@ runs:
                   # two runs disagree about DATA, which no rule here can settle,
                   # so it still aborts.
                   CONFLICTED="$(git diff --name-only --diff-filter=U | tr '\n' ' ' | sed 's/ *$//')"
+                  # Which conflicted paths did this caller NOT declare in PATHS?
+                  # Computed here, before any branch, because the recompute arm
+                  # below is gated on it being EMPTY — a conflicted path the
+                  # caller does not produce means two runs disagree about data
+                  # this action cannot settle, and that still aborts.
+                  #
+                  # ⚠️ PURE SHELL, NO HEREDOC. A `<<'PY'` body must sit at column
+                  # zero, which terminates this YAML block scalar and makes the
+                  # whole action file unparseable — caught by
+                  # tests/test_commit_to_main_callers.py, which yaml-loads it.
+                  UNDECLARED=""
+                  for c in ${CONFLICTED}; do
+                    hit=""
+                    for d in ${PATHS}; do
+                      d="${d%/}"
+                      # exact match, or the conflicted path sits UNDER a declared
+                      # DIRECTORY. A declared directory covers what is beneath it;
+                      # nothing else does, so a declared `docs/claude/DUE` could
+                      # never silently swallow `docs/claude/DUE-OTHER.md`.
+                      if [ "${c}" = "${d}" ] || [ "${c#"${d}"/}" != "${c}" ]; then
+                        hit=1; break
+                      fi
+                    done
+                    [ -n "${hit}" ] || UNDECLARED="${UNDECLARED} ${c}"
+                  done
                   if [ "${CONFLICTED}" = "docs/claude/session-board.json" ] \
                      && git checkout --theirs -- docs/claude/session-board.json \
                      && python3 scripts/ops/claim_merge_slot.py \
@@ -543,6 +710,94 @@ runs:
                       DEADLINE=$(( $(date +%s) + MINS * 60 ))
                     else
                       REFRESH_STATE="failed_push"
+                    fi
+                  # ── A GENERATED ARTIFACT IS RECOMPUTED, NEVER SIDED ─────────
+                  # The block above resolves ONE hardcoded path and its own
+                  # comment records that it is now unreachable. Everything else
+                  # aborted — and for a GENERATED file that abort is the wrong
+                  # answer, because there is no side to take: its content is a
+                  # pure function of its inputs, so the correct merge is to
+                  # RECOMPUTE it over the merged inputs.
+                  #
+                  # MEASURED 2026-09-17 against `origin/main` 19e59662, over the
+                  # COMPLETE population of 70 open PRs (both API pages), probed
+                  # with `git merge-tree --write-tree` on an unshallowed clone
+                  # and with BOTH controls passing (positive: a whole-file
+                  # rewrite off an old commit -> conflicted, rc=1; negative:
+                  # main vs main -> clean):
+                  #
+                  #   56 of 70 open PRs (80.0%) are merge-conflicted
+                  #   44 of those are `automation/**` — this action's own PRs
+                  #   ZERO conflicts anywhere in src/, tests/, scripts/, config/
+                  #
+                  # and the blocked paths are led, by a wide margin, by files
+                  # that HAVE a generator in `scripts/ops/`:
+                  #
+                  #   28  docs/claude/DUE.json   28  docs/claude/DUE.md
+                  #   23  docs/claude/ERROR-FEED-DIGEST.json / .md
+                  #
+                  # 23 `error-feed-digest` PRs had stacked up since 2026-09-13,
+                  # each an hourly run that regenerated the same two artifacts
+                  # wholesale and therefore conflicted with every previous
+                  # unmerged run OF ITSELF. That is not two runs disagreeing
+                  # about data; it is one deterministic renderer racing itself.
+                  #
+                  # ⚠️ WHY THE EXISTING `refresh-command` COULD NOT REACH THIS.
+                  # The re-derive lives in the `else` arm below — it runs only
+                  # when the merge SUCCEEDS. A merge that CONFLICTS skipped
+                  # straight to the abort, so the one remedy that fits a
+                  # generated file was unreachable in exactly the case that
+                  # needed it. (And it was unused besides: MEASURED over all 27
+                  # call sites, 1 sets `refresh-command` and 27 set
+                  # `verify-merged` — the latter is the positive control that
+                  # the probe can see a real input.)
+                  #
+                  # ⚠️ THREE CONDITIONS, ALL REQUIRED — this can never resolve a
+                  # file the caller does not own:
+                  #   1. a `refresh-command` is set, i.e. the caller has
+                  #      DECLARED it can recompute its own output;
+                  #   2. EVERY conflicted path is one the caller named in
+                  #      `PATHS`. One path outside that list means two runs
+                  #      disagree about data this caller does not produce, which
+                  #      no rule here can settle — it still aborts;
+                  #   3. the recompute SUCCEEDS. A failing command is its own
+                  #      state and aborts; "we recomputed" and "we tried and
+                  #      could not" are opposite facts about the head we are
+                  #      about to push, and neither may be silent.
+                  #
+                  # We take MAIN's side first (`--theirs`, as the block above
+                  # does) so nothing already on main is lost and any declared
+                  # path the command does not rewrite keeps main's content, and
+                  # THEN recompute over it.
+                  elif [ -n "${CONFLICTED}" ] && [ -z "${UNDECLARED}" ] \
+                       && python3 scripts/ops/resolve_stamp_conflicts.py ${CONFLICTED} \
+                       && git add -- ${CONFLICTED} && git commit -q --no-edit; then
+                    # Every conflicted file differs from main ONLY in
+                    # `last_dispatched_at` (a dispatch stamp); the later stamp
+                    # was kept. See resolve_stamp_conflicts.py.
+                    if git push origin "HEAD:refs/heads/${BR}"; then
+                      REFRESH_STATE="refreshed_after_stamp_conflict"
+                    else
+                      REFRESH_STATE="failed_push"
+                    fi
+                  elif [ -n "${REFRESH_COMMAND:-}" ] && [ -n "${CONFLICTED}" ] \
+                       && [ -z "${UNDECLARED}" ]; then
+                    # shellcheck disable=SC2086 — CONFLICTED is a pathspec list.
+                    if git checkout --theirs -- ${CONFLICTED} \
+                       && git add -- ${CONFLICTED} \
+                       && bash -c "${REFRESH_COMMAND}"; then
+                      # shellcheck disable=SC2086 — PATHS is a pathspec list.
+                      git add -f -- ${PATHS} || true
+                      if git commit -q --no-edit \
+                         && git push origin "HEAD:refs/heads/${BR}"; then
+                        REFRESH_STATE="refreshed_after_generated_conflict"
+                        DEADLINE=$(( $(date +%s) + MINS * 60 ))
+                      else
+                        REFRESH_STATE="failed_push"
+                      fi
+                    else
+                      git merge --abort || true
+                      REFRESH_STATE="failed_conflict_rederive"
                     fi
                   else
                     git merge --abort || true
@@ -672,13 +927,36 @@ runs:
         # COMMITTED on main, byte-identical to what we wrote? That is
         # squash-safe, needs no `gh`, and is the claim itself rather than a
         # proxy for it.
-        LANDED="unknown"
-        if git fetch -q origin main 2>/dev/null; then
-          # shellcheck disable=SC2086 — PATHS is a space-separated pathspec list.
-          if git diff --quiet HEAD FETCH_HEAD -- ${PATHS} 2>/dev/null; then
+        landed_on_main() {
+          LANDED="unknown"
+          if git fetch -q origin main 2>/dev/null; then
+            # shellcheck disable=SC2086 — PATHS is a space-separated pathspec list.
+            if git diff --quiet HEAD FETCH_HEAD -- ${PATHS} 2>/dev/null; then
+              LANDED="yes"
+            else
+              LANDED="no"
+            fi
+          fi
+          [ "${LANDED}" = "yes" ]
+        }
+        # ⚠️ ONE FINAL RE-CHECK, AFTER A SETTLE (research-queue-dispatch run
+        # 36910217777, 2026-10-01): stamp PR #15276 MERGED 13 s AFTER the 30m wait
+        # expired (its pytest-run took 28.5m), and the single check above ran at
+        # the expiry instant, so the job failed on a stamp that landed seconds
+        # later. The last poll is up to a full 30 s `sleep` stale, so an immediate
+        # second look would miss the same race: wait one poll interval, then
+        # re-read the PR state and the main paths exactly once. This does NOT
+        # extend the timeout (it is one bounded, non-looping look) and does not
+        # change which checks run; a PR that is still not merged fails as before.
+        if ! landed_on_main; then
+          sleep 45
+          FINAL_STATE="$(gh pr view "${PR_URL}" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
+          [ "${FINAL_STATE}" = "UNKNOWN" ] || STATE_EVER_READ=1
+          if [ "${FINAL_STATE}" = "MERGED" ]; then
+            git fetch -q origin main 2>/dev/null || true
             LANDED="yes"
           else
-            LANDED="no"
+            landed_on_main || true
           fi
         fi
 

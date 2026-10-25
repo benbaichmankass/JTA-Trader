@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0008",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #11976",
+    "rerun": "read PR #11976 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "queued",
+  "what": "Decision: PR #11976 adds src/research/stop_attribution.py (trades.stop_loss is overwritten by trailing amends; 113 of 599 stop-outs graded against the wrong stop). Needs a human merge click (src/** is not Tier-1 surface). Main already has scripts/research/stop_integrity_both_arms.py using exit_plan.stop.price as the declared stop. Decide: land the shared owner module, or close as covered."
+}

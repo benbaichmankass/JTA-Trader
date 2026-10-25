@@ -1,0 +1,125 @@
+id: RQ-20261023-1d5c-06
+title: 'Hot-vol trail (extension): does tightening the trail in the hot-ATR tail help trend_donchian_avax_4h?'
+status: done
+cadence: once
+roadmap:
+- L-REGIME
+- L-ATM
+theme: regime
+priority: 2
+kind: experiment
+question: On trend_donchian_avax_4h, does any arm (TV80 / TV90 / TV95 = the trail tightens to 4.0 / 3.5 / 3.5 x ATR above the 0.8 / 0.9 / 0.95 ATR percentile) beat
+  the declared exit A by >= 0.02 R/trade in >= 4 of 6 folds with max drawdown no worse than A x 1.35?
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered VARIANT/EXTENSION.
+  Lane AUTHOR-FLOOR-1023B (research runnable floor 47 vs 59 at 18:45Z; regime 8 vs share 14, new_strategy_prop 7 vs 17). First test(s): RQ-20261022-4b82-11 (hot-vol
+  trail tighten on xrp_4h, graded FAIL at power) and RQ-20261014-470a-07. Diagnosis (one line, a hypothesis not a finding): the hot-vol trail has been run on the
+  xrp/eth/sol 4h and prop legs but not on this leg; its other 4h exit levers (ADX trail, stall decay, momentum stale) have only ever been read as one family, and
+  a volatility-percentile trigger is independent of ADX; this is an extension to an unrun leg, stated as a hypothesis'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=100 is an ESTIMATE from sibling units on this leg/window, not
+    a measurement; below 39 the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610231D5C06-AVAX4H-HOTVOL
+  registered_at: '2026-10-23'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_avax_4h --grade replace, window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds
+    by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now:
+    A = the leg as declared in config/strategies.yaml; candidates TV80, TV90, TV95. The trail-vol flags are the ones the xrp_4h/eth_prop units use. Per arm: n, net_total_r,
+    max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta
+    >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named and the follow-up
+    is ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), then a live-producer check and a Tier-3 declare PROPOSAL with the mirror
+    in the same PR, never a config edit. FAIL IF none passes with n(A) >= 39: this arm grid is closed on trend_donchian_avax_4h for this window and the family is
+    NOT retired; the record names the arm that moved closest and the next variant (a MILD 4.5 x ATR arm, or an entry-side vol skip). Thresholds and the arm grid are
+    not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever (check the leg''s
+    monitor) and a Tier-3 declare. The arm grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one. real-money
+    leg.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a regime-conditioned exit lever on a money/prop leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_avax_4h
+  - --arm
+  - A=
+  - --arm
+  - TV80=--trail-vol-above-pctl=0.8;--trail-vol-tight-mult=4.0
+  - --arm
+  - TV90=--trail-vol-above-pctl=0.9;--trail-vol-tight-mult=3.5
+  - --arm
+  - TV95=--trail-vol-above-pctl=0.95;--trail-vol-tight-mult=3.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261023-1d5c-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- scripts/research/exit_lever_ablation.py
+- AUTHOR-FLOOR-1023B
+- RQ-20261022-b7e1-04
+- RQ-20261022-4b82-11
+- RQ-20261014-470a-07
+last_dispatched_at: '2026-10-24T02:40:56+00:00'
+grading:
+  attested: RULE-RQ202610231D5C06-AVAX4H-HOTVOL
+  auto: true
+  decision_rule_id: RULE-RQ202610231D5C06-AVAX4H-HOTVOL
+  evidence:
+  - research/results/RQ-20261023-1d5c-06/40055223042.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

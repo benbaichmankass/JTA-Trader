@@ -7,6 +7,12 @@ import time
 
 from dotenv import load_dotenv
 
+from src.config.symbol_sets import (  # noqa: E402
+    EXCHANGE_DEFAULT_SYMBOL,
+    load_strategies_cfg,
+    UNION,
+    resolve_symbols,
+)
 from src.exchange.bybit_connector import BybitConnector
 from src.runtime.heartbeat import write_heartbeat
 from src.runtime.outcomes import Level, report
@@ -52,7 +58,7 @@ class _AlertManagerAdapter:
         self._am = alert_manager
 
     def send_message(self, message: str):
-        self._am.send_alert(message)
+        return self._am.send_alert(message)
 
 
 def _build_telegram_client():
@@ -271,6 +277,15 @@ def _symbols_for_account(account, strategies_cfg: dict) -> list:
     strategy entry carries a ``symbols`` list. The account's
     ``strategies`` attribute lists the strategy names that account is
     wired to. We take the union.
+
+    TWO CALLERS, and the second is the point of E42: the leverage
+    preflight (``_apply_per_account_leverage``) has always used this, and
+    since 2026-09-22 :func:`_resolve_tick_symbols` does too — so the
+    ROSTER, not the account's ``symbols:`` pull list, is what guarantees a
+    leg gets candles. Degrades to ``[]`` for a strategy absent from
+    ``strategies_cfg`` or declaring no ``symbols``; that is reported by
+    ``roster-symbol-reachability`` as ``strategy_unknown`` rather than
+    raising on the live tick path.
     """
     strat_names = getattr(account, "strategies", None) or []
     symbols = []
@@ -510,6 +525,25 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
     except Exception:  # noqa: BLE001
         _per_strategy_tf = {}
 
+    # Per-strategy candle LIMIT. 200 for every leg (unchanged) EXCEPT a leg
+    # running the vol_trail ATR percentile (declared, or the shadow
+    # instrument's leg): there 200 minus the forming bar left 199 < the
+    # 200-bar window, so the percentile was never computable live and the
+    # lever silently returned the base mult (PR #17212 P5 parity, measured
+    # 56/76 null closed percentiles on ada_pullback_2h). Sized from the leg's
+    # own params by trail_vol.monitor_fetch_limit; IB-routed legs get the same
+    # number, and _duration_str scales the request to it. Best-effort: a
+    # config-load failure leaves the map empty → 200 everywhere, as before.
+    try:
+        from src.units.strategies import load_strategy_config
+        from src.runtime.trail_vol import monitor_fetch_limit
+        _per_strategy_limit = {
+            name: monitor_fetch_limit(name, cfg or {})
+            for name, cfg in (load_strategy_config() or {}).items()
+        }
+    except Exception:  # noqa: BLE001
+        _per_strategy_limit = {}
+
     # --- The per-pass IB circuit breaker (R2, Tier-2, operator-approved
     # DEC-20260910-EXIT-EVAL-60S-REMEDY, chosen `r2_only`, 2026-09-10T07:52Z) --
     #
@@ -605,7 +639,7 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
             symbol, timeframe,
             settings=settings,
             exchange_client=client,
-            limit=200,
+            limit=_per_strategy_limit.get(strategy_name, 200),
         )
 
         if ib_routed:
@@ -667,39 +701,100 @@ def _run_symbol_tick(settings: dict, exchange_client, telegram_client) -> dict:
 # Per-exchange default instrument when a configured account omits the
 # ``symbols`` field in accounts.yaml. Keeps an account trading its natural
 # instrument rather than nothing.
-_EXCHANGE_DEFAULT_SYMBOL = {
-    "bybit": "BTCUSDT",
-    "interactive_brokers": "MES",
-}
+#
+# RE-EXPORT, NOT A SECOND COPY (E42): the values live in
+# ``src.config.symbol_sets.EXCHANGE_DEFAULT_SYMBOL`` with the resolver that
+# applies them. The name is kept because `tests/test_ib_sizing_and_data.py`
+# and `tests/test_roster_symbol_union.py` import it, and because a duplicated
+# literal here is precisely the four-private-copies shape this change exists
+# to remove.
+_EXCHANGE_DEFAULT_SYMBOL = EXCHANGE_DEFAULT_SYMBOL
+
+
+def _strategy_config_for_symbols() -> dict:
+    """``strategies.yaml``, or ``{}`` when it cannot be read.
+
+    ``{}`` is the FAIL-SAFE value and is chosen deliberately: an empty
+    strategy config makes the roster half of :func:`_resolve_tick_symbols`
+    contribute nothing, so the fetch set degrades to exactly the declared
+    ``symbols:`` lists — the pre-2026-09-22 behaviour, never anything
+    narrower. A config-read failure therefore cannot shrink what the
+    trader fetches.
+    """
+    try:
+        from src.units.strategies import load_strategy_config
+        return load_strategy_config() or {}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_resolve_tick_symbols: strategies.yaml unreadable (%s); the "
+            "roster-implied half of the fetch set is empty this call "
+            "(declared `symbols:` still fetched)", exc,
+        )
+        return {}
 
 
 def _resolve_tick_symbols(settings: dict) -> list:
-    """Symbols to run this tick — derived from configured accounts.
+    """Symbols to fetch this tick — the UNION of two independent sources.
 
-    ``config/accounts.yaml`` is the single source of truth: the tick loop
-    trades the union of every *configured* account's ``symbols`` (falling
-    back to the per-exchange default when an account omits the field),
-    restricted to accounts that actually trade (an explicit
-    ``strategies: []`` opts an account out; ``None`` / non-empty are
-    included). So one process trades BTCUSDT (Bybit) and MES (IB) whenever
-    those accounts are configured.
+    THE TWO SOURCES, AND WHY THEY ARE NOT THE SAME THING (operator,
+    2026-09-22)::
+
+        fetch set = ROSTER-IMPLIED symbols  ∪  DECLARED symbols
+
+    * **Roster-implied** — for every account that trades, the symbols its
+      rostered strategies declare in ``config/strategies.yaml``
+      (:func:`_symbols_for_account`). **The roster is the single source of
+      truth for what trades**, so anything it needs is fetched by
+      construction.
+    * **Declared** — the account's own ``symbols:`` list in
+      ``config/accounts.yaml``. This is a **purely ADDITIVE DATA-PULL
+      list**: instruments we fetch for reasons unrelated to the strategies
+      (position cross-checks, the cost sweep, the SPA's symbol selectors).
+      It is legitimate — and currently true of 19 entries — for it to name
+      a symbol no rostered leg trades.
+
+    ⚠️ **``symbols:`` IS NOT A GATE, and until 2026-09-22 it was one.**
+    This function built the fetch set from the declared list ALONE, so a
+    leg whose symbol was missing from it got no candles, produced no
+    signal and placed no order — while sitting on the roster looking
+    wired. That is a third execution gate in everything but name, which
+    Prime Directive rule 6 forbids; it is the same shape as the
+    ``MULTI_SYMBOL_ENABLED`` env removed in 2026-05 (that one stranded
+    MES), only spelled as an omission rather than a flag. **A symbol
+    missing from a pull list is a bug in the PULL LIST — never a reason a
+    rostered leg does not trade.** ``scripts/ci/check_roster_symbol_reachability.py``
+    reports the omission and says so in those words.
+
+    The union is **purely additive**: every symbol the old derivation
+    returned is still returned, so no leg that trades today can stop.
+    MEASURED over the real config on 2026-09-22 (11 accounts,
+    ``config/accounts.yaml`` + ``config/strategies.yaml`` at ``06914ce2f``):
+    the global fetch set is **23 symbols before and the same 23 after** —
+    0 added, 0 removed — because the declared lists happen to already
+    cover every rostered leg today. That was checked by hand during the
+    R8 promotion, not by anything mechanical, which is why the guard now
+    exists.
+
+    Accounts that trade nothing are still skipped: an explicit
+    ``strategies: []`` opts an account out entirely (``None`` / non-empty
+    are included), as does ``configured=False``. An account that declares
+    no ``symbols:`` still falls back to its per-exchange default.
 
     There is intentionally **no enable flag**. Per the "one switch per
     account" rule, ``mode: live|dry_run`` is the only runtime gate — a
     ``dry_run`` account still generates signals (logged, never executed),
-    and the symbol set never depends on a separate on/off env. The
-    previous ``MULTI_SYMBOL_ENABLED`` env was a forbidden second gate and
-    has been removed.
+    and the symbol set never depends on a separate on/off env.
 
-    Best-effort: the primary ``SYMBOL`` is always included, and any
-    account-load failure falls back to ``[primary]`` so a config error can
-    never empty the tick (defence-in-depth; preserves single-symbol
-    behaviour).
+    Best-effort: the primary ``SYMBOL`` is always included; an
+    account-load failure falls back to ``[primary]`` and an unreadable
+    ``strategies.yaml`` falls back to the declared lists, so no config
+    error can empty — or narrow — the tick.
     """
     primary = settings.get("SYMBOL", settings.get("symbol", "BTCUSDT"))
     try:
         from src.units.accounts import load_accounts
 
+        strategies_cfg = load_strategies_cfg()
         seen: set = set()
         out: list = []
         if primary:
@@ -711,12 +806,24 @@ def _resolve_tick_symbols(settings: dict) -> list:
             strategies = getattr(acct, "strategies", None)
             if strategies is not None and len(strategies) == 0:
                 continue  # explicit opt-out — account trades nothing
-            syms = list(getattr(acct, "symbols", None) or [])
-            if not syms:
-                default = _EXCHANGE_DEFAULT_SYMBOL.get(
-                    str(getattr(acct, "exchange", "") or "").lower()
-                )
-                syms = [default] if default else []
+            # MODE: UNION — flipped here by PR #12736 on the operator's Tier-2
+            # approval, 2026-09-24. The roster is the single source of truth for
+            # what trades, so the tick fetches UNION(roster-implied, declared)
+            # and a leg can no longer trade against a stale pull list.
+            # ⚠️ ORDERING, and it is load-bearing: #12748 landed first
+            # (efb150cf3) so every data reader — the Bybit position and order
+            # cross-checks, the funding puller, the IB venue session — was
+            # ALREADY union-aware before this flip. Without that, this line
+            # would turn 'the leg does not trade' into 'the leg TRADES while
+            # the naked-position cross-check cannot see it', which is the
+            # window the operator explicitly declined.
+            syms = resolve_symbols(
+                declared=getattr(acct, "symbols", None),
+                roster=getattr(acct, "strategies", None),
+                mode=UNION,
+                strategies_cfg=strategies_cfg,
+                exchange=getattr(acct, "exchange", None),
+            )
             for s in syms:
                 s = str(s).strip()
                 if s and s not in seen:
@@ -780,6 +887,9 @@ def run_one_tick(settings: dict, exchange_client, telegram_client) -> dict:
     return {"multi_symbol": True, "results": results}
 
 
+_CRITICAL_ALERT_MAX_ATTEMPTS = 5
+
+
 def _drain_critical_alerts(telegram_client) -> None:
     """Forward queued critical alerts to Telegram, then drain.
 
@@ -797,18 +907,44 @@ def _drain_critical_alerts(telegram_client) -> None:
     Drain on every tick so operator notification latency is bounded
     by ``TICK_INTERVAL_SECONDS``. Best-effort — never let a
     notification failure break the trader loop.
+
+    FIX-CA-13: ``pop_alerts()`` is destructive, so a failed send (raised,
+    or the client returned ``False``) re-queues the alert for the next
+    tick, up to ``_CRITICAL_ALERT_MAX_ATTEMPTS`` attempts; after that it
+    is logged at ERROR as UNDELIVERED with its full text. A client that
+    returns ``None`` (no delivery signal) is treated as sent.
     """
     try:
-        from src.units.dashboards.alerts import pop_alerts
+        from src.units.dashboards.alerts import pop_alerts, push_alert
         for alert in pop_alerts():
             if str(alert.get("level", "")).lower() != "critical":
                 continue
             source = alert.get("source") or "unknown"
             msg = alert.get("message") or ""
             try:
-                telegram_client.send_message(f"[CRITICAL][{source}] {msg}")
+                ok = telegram_client.send_message(f"[CRITICAL][{source}] {msg}")
             except Exception:  # noqa: BLE001
                 logger.exception("alert_drainer: telegram send failed")
+                ok = False
+            if ok is not False:
+                continue
+            attempts = int(alert.get("delivery_attempts") or 0) + 1
+            if attempts >= _CRITICAL_ALERT_MAX_ATTEMPTS:
+                logger.error(
+                    "alert_drainer: critical alert UNDELIVERED after %d "
+                    "attempts [%s] %s", attempts, source, msg,
+                )
+                continue
+            extra = {k: v for k, v in alert.items()
+                     if k not in ("ts", "source", "level", "message",
+                                  "delivery_attempts")}
+            push_alert(msg, source=source, level="critical",
+                       delivery_attempts=attempts, **extra)
+            logger.warning(
+                "alert_drainer: critical alert send failed (attempt %d/%d); "
+                "re-queued for next tick", attempts,
+                _CRITICAL_ALERT_MAX_ATTEMPTS,
+            )
     except Exception:  # noqa: BLE001
         logger.exception("alert_drainer: pop_alerts failed")
 
@@ -850,22 +986,17 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("dup-key check skipped: %s", exc)
 
-    # S-021: log open packages per strategy on every startup so the operator
-    # can see at a glance that monitoring will resume (BUG-048 observability gap).
+    # TELEGRAM-RESTART-MSG (2026-10-15): ONE restart ping — status headline,
+    # cause line, and a per-account journal <-> broker reconcile (positions,
+    # tracked, measured SL/TP) — replacing the S-021 per-strategy package list
+    # and the Sprint A-3 Bybit-only ghost alert. Runs on a daemon thread; boot waits
+    # at most boot_audit.REPORT_WAIT_S for it, so a slow broker read cannot hold
+    # the first tick back longer than that. Never raises.
     try:
-        from src.runtime.boot_audit import report_open_packages_on_boot
-        report_open_packages_on_boot()
+        from src.runtime.boot_audit import start_restart_report_thread
+        start_restart_report_thread()
     except Exception as exc:  # noqa: BLE001
-        logger.warning("boot_audit skipped: %s", exc)
-
-    # Sprint A-3: compare journal open rows against live Bybit positions.
-    # Ghost rows (journal open, Bybit flat) get a Telegram alert immediately
-    # on startup — before the first tick — so the operator can investigate.
-    try:
-        from src.runtime.boot_audit import reconcile_journal_vs_exchange_on_boot
-        reconcile_journal_vs_exchange_on_boot()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("boot_reconcile skipped: %s", exc)
+        logger.warning("boot restart report skipped: %s", exc)
 
     # S-PERSIST-CANON: snapshot the active strategies.yaml into the
     # (previously dead) trade_journal.db::strategy_versions table so the
@@ -1067,6 +1198,18 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("macro_thesis_tick failed")
 
+            # Account-level daily-DD switch (operator 2026-10-09, rule 7's one
+            # sanctioned off): fold one on-disk equity reading per ARMED
+            # account every tick, so day-start equity, the trip alert and the
+            # reset alert do not wait for a signal. OBSERVE-ONLY — the refusal
+            # stays in RiskManager.evaluate. No broker call; best-effort.
+            try:
+                from src.units.accounts.daily_dd_switch import observe_armed_accounts
+                with _tick_hook("daily_dd_switch"):
+                    observe_armed_accounts()
+            except Exception:  # noqa: BLE001
+                logger.exception("daily_dd_switch tick observe failed")
+
             # Prop trades are a manual bridge (no broker feed), so the
             # order_monitor above never sees them. Emit a periodic
             # "still monitoring" pulse per open prop position instead so
@@ -1078,6 +1221,15 @@ def main() -> None:
                 run_prop_monitor_pulse()
             except Exception:  # noqa: BLE001
                 logger.exception("prop_monitor_pulse tick failed")
+
+            # A resting prop limit the system itself placed becomes a known (ESTIMATED) open position when the candles
+            # trade through it, without waiting for the phone's Positions read (operator 2026-10-13: "the system
+            # opened that position, it should be aware of it"). Rate-limited inside; best-effort.
+            try:
+                from src.prop.fill_inference import run_inference_tick
+                run_inference_tick()
+            except Exception:  # noqa: BLE001
+                logger.exception("prop fill_inference tick failed")
 
             # A prop ticket that passed its validity window with no report-back
             # is silent drift — the bot can't tell whether it was

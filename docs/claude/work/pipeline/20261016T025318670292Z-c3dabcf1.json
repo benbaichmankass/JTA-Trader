@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a re-measured trend_donchian_eth_prop evidence record on the CURRENT corpus exists and RQ-20261015-f01d-02 (or its re-run) reads a non-control_failed verdict",
+    "kind": "observation",
+    "last_checked": "2026-10-16"
+  },
+  "id": "PI-20261016-10160247-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "research-ops 2026-10-16 02:47Z, RQ-20261015-f01d-02 indeterminate/control_failed",
+    "rerun": "python3 - <<'X'\nimport json,glob;f=sorted(glob.glob('comms/research/RQ-20261015-f01d-02/*/verdict.json'))[-1];print(json.load(open(f))['measurement']['grade']['control'])\nX"
+  },
+  "state": "queued",
+  "what": "RQ-20261015-f01d-02 (8-fold stage0 for trend_donchian_eth_prop, gates PR #18440's eth_prop twin / MD-PROMOTE-S1-S2 R-FOLDS) landed INDETERMINATE: its pre-registered positive control did not reproduce the committed record (arm n 164 vs record 163 = 0.6%, inside the 2% bar; arm net 10.26R vs record 9.32R = 0.94R diff, outside the 0.5R bar) on the identical data window ending 2026-10-06 23:00. Nothing was read; the fold result (5/8 folds positive, +60.1R n=1029) is NOT a verdict. The sol_prop twin (f01d-01) reproduced and PASSED, so the harness is not broken -- the eth record or the corpus drifted (a revised candle or funding row). FIX: re-measure the eth_prop evidence record on today's corpus (same window, same argv), diff the one extra trade to name the cause, then re-register f01d-02's control against the refreshed record in a NEW unit (the rule's bars stay fixed; the control reference changes). Tier-1/queue work only; no config edit, no promotion."
+}

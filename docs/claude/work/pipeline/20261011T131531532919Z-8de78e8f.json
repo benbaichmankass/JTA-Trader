@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "/api/bot/signals returns rows with non-empty timestamps and stable ids, and more than a handful of signals for the last day.",
+    "kind": "event",
+    "last_checked": "2026-10-11"
+  },
+  "id": "PI-20261011-JPFINTEQ-0001",
+  "next_action": "dispatch_lane",
+  "observation": "curl https://ict-bot.duckdns.org/api/bot/signals -> 2 rows, timestamp '' on both; ids differ between two calls.",
+  "origin": {
+    "kind": "session",
+    "ref": "UI-UPGRADE-1 lane (session_01McHbeefghxRy9AJPfinTeQ)",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/signals | python3 -c \"import json,sys; d=json.load(sys.stdin); print(len(d), sum(1 for x in d if not x.get('timestamp')))\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "1",
+  "what": "[dashboard][signals] GET /api/bot/signals serves timestamp \"\" on EVERY row and a fresh random uuid as id on every call (measured 2026-10-11: 2 rows, both timestamp \"\", strategies xrp_pullback_2h + mhg_pullback_1d). get_signals reads e.get('ts', e.get('timestamp','')) over the last 50 signal_audit.jsonl lines, so the writer's time key is neither; and only 2 of those 50 lines are buy/sell signals, so the Overview chart's signal overlay is near-empty and cannot be placed in time. Found by UI-UPGRADE-1 while timing the route. Fix: read 50 raw lines via the diag relay (audit?limit=100), name the writer's real time/id keys (src/runtime/pipeline.py log_signal), map them in dashboard.get_signals, and scan back until N signals rather than N lines."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "IP-IN-PUBLIC-LOGS",
+  "title": "Trainer and live-box addresses out of the workflows: secrets.TRAINER_VM_IP / secrets.VM_SSH_HOST, fail-closed, literal-guard (hold PR, canary-gated)",
+  "phase": "W42",
+  "state": "landed_unproven",
+  "owner": "manager (merge) after operator confirms both secrets",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18416
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-15 ML-FRONTIER-W42] Operator decision relayed by the manager (08:28Z and 17:57Z): stop printing the VM addresses in public job logs and make rotation a one-place change. PR #18416 (draft HOLD, Tier 2) rewires 62 workflows to secrets.* with no literal fallback, adds a fail-closed first step per job and workflow-vm-literal-guard. BLOCKED ON: (1) operator confirms secrets TRAINER_VM_IP and VM_SSH_HOST exist (a session cannot read the secrets API: HTTP 403 through the proxy); (2) manager merges. DONE WHEN (observation): after merge, one read-only diag relay resolving via secrets.VM_SSH_HOST and one read-only trainer-vm-diag resolving via secrets.TRAINER_VM_IP both succeed, a job log shows the address masked, and python3 scripts/ci/check_workflow_vm_literals.py is green on main. Only after that are the schedule-driven and the 13 live-mutating workflows (system-actions, rotate-account-keys, sync-vm-secrets, vm-resize-live, terminate-instance, reset-instance, cutover-live, provision-live-vm, provision-gateway-vm, provision-ib-gateway, vm-caddy-deploy, vm-ib-gateway-deploy, vm-devnull-deploy-bootstrap) trusted. Follow-up for the src/deploy/config/scripts literals: pipeline item PI-20261015-KXMANT1S-0001. cutover-live MICRO_HOST (retired third box) is deliberately untouched. [2026-10-15 20:08Z canary] MERGED: #18416 squash 235d5063 (manager, after operator confirmed both secrets ~19:50Z). DEPLOYED: workflows are live on main (no VM deploy). OBSERVED, 2 of 62 jobs: vm-diag-snapshot run 38799420129 (secrets.VM_SSH_HOST; 'Require VM host secrets' step passed; /api/diag/version returned git_sha data) and trainer-vm-diag run 38799424452 (secrets.TRAINER_VM_IP; fail-closed step passed; remote command output returned). Log scan of both runs: no occurrence of either VM address (1 IPv4-shaped token in run 1, a different non-VM literal in the script text). NOT observed: the other 60 jobs; landed_unproven until a rotation or a sweep of the remaining relays exercises them, and PI-20261015-KXMANT1S-0001 (literals in src/deploy/config/scripts) is open.",
+  "updated_at": "2026-10-15T20:16:30Z",
+  "updated_by": "lane-ML-FRONTIER-W42",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: CI/ops hygiene under L-OPS changes no milestone measure or status",
+    "arch": "none: no trade/comms pipeline or contract changed; workflow secrets wiring only"
+  },
+  "observation": {
+    "what": "the remaining workflow jobs that read secrets.VM_SSH_HOST or secrets.TRAINER_VM_IP have each run green at least once after 2026-10-15 (canary covered vm-diag-snapshot and trainer-vm-diag only), with no VM address in their logs",
+    "how_to_check": "python3 scripts/ci/check_workflow_vm_literals.py (must pass), and gh run list per workflow for a success after 2026-10-15T20:07Z; scan a run log for the two addresses by count only, never print",
+    "due_by": "2026-10-29"
+  },
+  "_seq": 520
+}

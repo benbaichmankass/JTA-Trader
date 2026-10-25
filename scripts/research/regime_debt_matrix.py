@@ -4,7 +4,10 @@ debt roster — the rec #5 follow-up for the strategies the sandbox can't reach.
 
 For each `coverage_debt` strategy (config/regime_coverage_exemptions.yaml) it:
   1. classifies the harness (Donchian trend -> backtest_trend.py; pullback ->
-     backtest_pullback.py; TTM-style BB-inside-KC squeeze -> backtest_squeeze.py)
+     backtest_pullback.py; TTM-style BB-inside-KC squeeze -> backtest_squeeze.py;
+     failed-breakout fade -> backtest_fade.py, keyed on `pierce_min` and checked
+     BEFORE the trend branch since a fade leg also declares `donchian` — see the
+     E39 / `_FADE_PLAIN` comment below)
      and extracts the EXACT live params from config/strategies.yaml,
   2. resolves the candle feed for the symbol — Binance-vision for `*USDT` crypto,
      Yahoo (yfinance) for equities/ETFs, and Yahoo continuous futures for
@@ -15,6 +18,49 @@ For each `coverage_debt` strategy (config/regime_coverage_exemptions.yaml) it:
 **Fidelity.** A strategy is `faithful` when the base harness models every lever
 its config declares. The pullback harness exposes the vol-skip / stale-exit /
 trail-vol lever flags, so those variants run faithfully.
+
+⚠️ **AND IT IS COMPUTED FROM THE ARGV, NOT FROM A MEMBERSHIP SET (E46,
+2026-09-22).** A `PLAIN` set is an ASSERTION that the harness accounts for a
+key, and for `tp_r` on trend/pullback that assertion was FALSE: both harnesses
+take `--tp-r`, it is "only consulted when --tp-cap-pct > 0", and
+`build_harness_cmd` used to pass NEITHER -- so the run modelled no take-profit
+at all. `qqq_trend_long_1d` recorded `fidelity: faithful` with
+`omitted_levers: []` against a config declaring `tp_r: 3.0`
+(`PI-20260922-E41-0005`). `conditional_omissions()` reads the command that is
+actually about to run, so E46 made the false claim VISIBLE: MEASURED over the
+51 routed legs of `config/strategies.yaml` on 2026-09-22, `faithful` **37 ->
+25**; 13 legs named `tp_r` as omitted, 12 of which previously claimed to have
+modelled it.
+
+⚠️ **E55 (2026-09-24) IS THE FIX, NOT JUST THE DISCLOSURE.** `_tp_r_flags`
+now builds the argv that genuinely models a declared `tp_r`, via the SAME
+`--tp-cap-pct`/`--tp-r` pair backtest_trend.py's own CLI already describes as
+"LIVE-PARITY" -- `tp = min(entry*(1+TP_VENUE_CAP_PCT), entry + tp_r*risk)`,
+`TP_VENUE_CAP_PCT = 0.099` imported from the single owner,
+`src/runtime/tp_venue_cap.py`. Passing `--tp-r` alone would do nothing
+(`--tp-cap-pct` is what makes it consulted at all), so modelling `tp_r` and
+modelling the venue price cap are not independent choices -- they are one
+flag pair. MEASURED 2026-09-24: `tp_r` no longer appears in ANY enabled leg's
+`omitted_levers` (0/41 trend/pullback legs, all of which declare a numeric
+`tp_r`); `faithful` moved **25 -> 37** -- the SAME number the 2026-09-22
+census read before E46's correction, but for the opposite, now-correct
+reason (12 of the 13 previously-omitted legs are now genuinely modelled;
+`xrp_pullback_2h` stays `approximate` on an unrelated omitted lever,
+`trail_decay_arm_r`/`trail_decay_tight_mult`).
+
+⚠️ **THIS ALSO CLOSES `BL-20260810-BACKTEST-DOES-NOT-MODEL-THE-LIVE-CAPPED-TP`
+FOR EVERY TREND/PULLBACK LEG THAT DECLARES A `tp_r`** -- previously read here
+as deliberately NOT folded in, "because doing so would re-base the whole
+fleet's history". E55 measured that re-basing rather than continuing to defer
+it: regenerating all 41 enabled trend/pullback legs' evidence records through
+the harness flipped 8/41 Stage-0 verdicts. VERIFIED against
+`config/accounts.yaml`: none of the 8 are on a real-money account
+(`bybit_2`/`bybit_portfolio`/`alpaca_live`/`alpaca_portfolio`) today. Filed as
+`PI-20260924-EDNBNMSG-0001` for whoever next reviews Stage-1 promotion
+candidates. A leg still carrying the fleet's 50R "parked" sentinel is now ALSO
+modelled -- the venue PRICE cap binds regardless of how large `tp_r` is, so a
+sentinel is not "harmlessly unreachable" once the harness can model the cap at
+all (see `_tp_r_flags`'s own docstring for the reasoning this corrects).
 
 **Trend harness, updated 2026-08-08 (convergence step (a) of
 `BL-20260808-TREND-HARNESS-FORK-SPLITS-FIDELITY-FROM-EVIDENCE`).** There used to
@@ -66,7 +112,7 @@ import os
 import subprocess
 import sys
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -76,9 +122,26 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 # Yahoo tickers for the symbols that need translating (mirror dashboard _yf_ticker).
 _YF_TICKER = {"MES": "ES=F", "MGC": "GC=F", "MHG": "HG=F", "XAUUSD": "GC=F"}
 # Bybit interval code fetch_backtest_candles speaks, per timeframe.
-_TF_TO_BYBIT_INT = {"1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+# ⚠️ BOTH MAPS `.get(timeframe, <daily>)`, so a timeframe MISSING here does not
+# fail — it silently fetches DAILY bars and hands them to a harness told to
+# `--resample 15m`. That is the collapsed state this repo has a guard family
+# for, one level down in the feed: "we have no mapping for this bar" and "this
+# leg trades daily" produced the same CSV. Nothing hit it while classify() only
+# routed 1h/2h/4h/1d legs; routing the 15m fvg_range family (below) makes it
+# reachable, so the intraday codes are filled in here rather than left to be
+# rediscovered as a mysteriously empty backtest.
+# Bybit kline codes, per scripts/ops/fetch_backtest_candles.py --interval
+# (1/3/5/15/30/60/120/240/D/W).
+_TF_TO_BYBIT_INT = {"1m": "1", "3m": "3", "5m": "5", "15m": "15", "30m": "30",
+                    "1h": "60", "2h": "120", "4h": "240", "1d": "D"}
 # Yahoo base interval to fetch per timeframe (Yahoo has no 2h/4h -> fetch 60m + resample).
-_TF_TO_YF_INT = {"1h": "60m", "2h": "60m", "4h": "60m", "1d": "1d"}
+# ⚠️ The intraday entries are served by yfinance only over a SHORT lookback
+# (~60d for 5m/15m against the 720d the 60m lane gets). A `--days` window past
+# that returns an EMPTY frame, which `_fetch_csv` turns into a NAMED
+# `_yahoo_empty_reason` failure — a loud `harness_failed`, which is the honest
+# outcome and strictly better than the daily-bar fallback it replaces.
+_TF_TO_YF_INT = {"5m": "5m", "15m": "15m", "30m": "30m",
+                 "1h": "60m", "2h": "60m", "4h": "60m", "1d": "1d"}
 
 # Plain trend param keys the base harness fully models; anything else on a
 # Donchian strategy is an unmodelled lever -> approximate.
@@ -99,7 +162,15 @@ _TF_TO_YF_INT = {"1h": "60m", "2h": "60m", "4h": "60m", "1d": "1d"}
 _TREND_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe",
                 "symbols", "donchian", "atr_period", "atr_stop_mult", "trail_mult",
                 "tp_r", "min_confidence", "long_only", "adx_min", "adx_max",
-                "adx_period", "shadow_model_ids", "description", "tp_intent"}
+                "adx_period", "shadow_model_ids", "description", "tp_intent",
+                # decision_bar: closed == what THIS harness does by construction (it
+                # decides on the closed bar, i.e. Stage 0). An explicit `forming` is
+                # NOT modelled and is added to the omitted set in build_harness_cmd.
+                "decision_bar",
+                # tp_revision (TP doctrine B1): modelled via `_tp_revision_flags`
+                # (--tp-revision / --tp-revision-width-mult), the same flags
+                # exit_lever_ablation's arms use, so a declaring leg stays faithful.
+                "tp_revision"}
 # Trend lever config-key -> harness flag (levers the trend harness DOES model,
 # so a trend strategy carrying ONLY these is faithful, not approximate). The
 # stale-exit lever was ported into scripts/backtest_trend.py as the rec #5
@@ -146,6 +217,14 @@ _TREND_LEVER_FLAG = {
     "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_below_pctl": "--trail-vol-below-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult",
+    # MOMENTUM-LEVERS-LIVE (2026-10-18): once a leg declares the ADX trail or the
+    # momentum-keyed time stop, a config-exact A arm must carry it, or every
+    # later ablation would measure the leg without the lever it trades.
+    "trail_adx_below": "--trail-adx-below",
+    "trail_adx_falling_bars": "--trail-adx-falling-bars",
+    "trail_adx_tight_mult": "--trail-adx-tight-mult",
+    "momentum_stale_bars": "--momentum-stale-bars",
+    "momentum_stale_adx_below": "--momentum-stale-adx-below",
 }
 # Pullback lever config-key -> harness flag (these the pullback harness DOES model).
 _PB_LEVER_FLAG = {
@@ -154,11 +233,23 @@ _PB_LEVER_FLAG = {
     "trail_vol_below_pctl": "--trail-vol-below-pctl", "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult", "vol_pctl_window": "--vol-pctl-window",
     "side_filter": "--side-filter",  # see the note on _TREND_LEVER_FLAG above
+    # MOMENTUM-LEVERS-LIVE (2026-10-18), as on _TREND_LEVER_FLAG.
+    "trail_adx_below": "--trail-adx-below",
+    "trail_adx_falling_bars": "--trail-adx-falling-bars",
+    "trail_adx_tight_mult": "--trail-adx-tight-mult",
+    "momentum_stale_bars": "--momentum-stale-bars",
+    "momentum_stale_adx_below": "--momentum-stale-adx-below",
 }
 _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
              "trend_lookback", "pullback_lookback", "pullback_frac", "atr_period",
              "atr_stop_mult", "trail_mult", "tp_r", "min_confidence", "adx_min",
-             "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent"}
+             "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent",
+             # decision_bar: closed == what the pullback harness does by construction
+             # (closed bar, Stage 0), as for _TREND_PLAIN; an explicit `forming` is NOT
+             # modelled and is added to the omitted set in build_harness_cmd. Without
+             # this, xrp/ada_pullback_2h's operator-approved `decision_bar: closed`
+             # (DECISION-BAR-MATCH, 2026-10-22) graded their records `approximate`.
+             "decision_bar"}
 # Squeeze (TTM-style BB-inside-KC) lever config-key -> harness flag. The squeeze
 # harness (scripts/backtest_squeeze.py) is the SAME harness that validated the
 # strategy in docs/audits/squeeze-breakout-complement-2026-05-24.md — it was simply
@@ -189,12 +280,244 @@ _SQZ_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "
 # the threshold `tp_r` is reported as an omitted lever and the row degrades to
 # `approximate`, which correctly blocks cell authoring.
 #
+# Fade (failed-breakout reversion) lever config-key -> the PLAIN set for
+# scripts/backtest_fade.py. E39 (2026-09-25): `classify()` below used to check
+# `"donchian" in cfg` FIRST, and fade_breakout_4h's config declares `donchian`
+# (the channel it fades pierces) — the SAME structural key trend_donchian legs
+# use. So `classify()` returned `"trend"` for it and every "fade_breakout_4h"
+# evidence record ever built (`comms/strategy_evidence/fade_breakout_4h.json`,
+# every run under `comms/strategy_evidence/runs/*/`) measured
+# scripts/backtest_trend.py's CONTINUATION entry (buy the confirmed breakout)
+# against fade's stop/trail/timeout params, not scripts/backtest_fade.py's
+# structurally OPPOSITE reversion entry (fade the FAILED breakout) the live
+# unit (src/units/strategies/fade_breakout_4h.py) actually trades — the same
+# "never wired into classify()" shape as BL-20260730-SQUEEZE-NO-HARNESS, one
+# entry-direction deeper: a wrong-harness silent `measured`, not a
+# `no_harness` refusal. `pierce_min` (checked in `classify()` below BEFORE the
+# `donchian` branch) is the discriminator: MEASURED 2026-09-25 against every
+# enabled leg in `config/strategies.yaml`, exactly ONE leg
+# (`fade_breakout_4h`) declares it, so keying on it cannot silently re-route a
+# leg an earlier/later branch should keep.
+_FADE_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe",
+               "symbols", "donchian", "atr_period", "atr_stop_buffer",
+               "pierce_min", "trail_mult", "adx_max", "adx_period", "tp_r",
+               "timeout_bars", "min_confidence", "shadow_model_ids",
+               "description", "tp_intent"}
+#
 # 20R is chosen as comfortably beyond any plausible 3.5-ATR-trail exit while
 # still failing loudly if someone sets a real target (e.g. tp_r: 3). The live
 # config is tp_r: 50.0. The STRONGER form of this check is empirical — verify no
 # emitted trade's MFE ever reached tp_r on the sample — which needs a post-run
 # fidelity adjustment in both callers: BL-20260730-SQZ-TPR-EMPIRICAL-CHECK.
 _SQZ_TP_R_NONBINDING = 20.0
+#: Same threshold, applied to EVERY harness rather than only to squeeze. The
+#: alias keeps the historical name reachable (tests and
+#: scripts/check_harness_lever_coupling.py cite it) while the accounting below
+#: stops being squeeze-only. See `_PLAIN_CONDITIONAL_ON_FLAG`.
+_TP_R_NONBINDING = _SQZ_TP_R_NONBINDING
+
+
+def _tp_r_binds(v: Any) -> bool:
+    """Does a declared `tp_r` sit near enough to price to actually be reached?
+
+    A parked sentinel (the fleet's 50R convention) cannot be touched, so a
+    harness with no take-profit path is not omitting anything reachable. A leg
+    declaring `tp_r: 3.0` is a different statement entirely.
+
+    ⚠️ This is the THRESHOLD form of the check, not the empirical one. The
+    stronger form -- no emitted trade's MFE ever reached `tp_r` on the sample --
+    is `BL-20260730-SQZ-TPR-EMPIRICAL-CHECK` and is still open; the harnesses
+    already emit `tp_r_effective_*` for it.
+    """
+    if v is None:
+        return False
+    try:
+        return float(v) < _TP_R_NONBINDING
+    except (TypeError, ValueError):
+        # A tp_r we cannot read is not a tp_r we can certify as parked. Fail
+        # toward `omitted` -- "we could not look" is never permission to claim
+        # `faithful`.
+        return True
+
+
+#: CONFIG KEYS THAT SIT IN A `PLAIN` SET BUT ARE ONLY REALLY MODELLED WHEN THE
+#: RUN PASSES A PARTICULAR FLAG.  {harness: {cfg_key: (required_flag, binds)}}
+#:
+#: ⚠️ WHY THIS EXISTS (E46 / PI-20260922-E41-0005, 2026-09-22). A `PLAIN` set is
+#: an ASSERTION that the harness accounts for a key. For `tp_r` on trend and
+#: pullback that assertion was FALSE: both harnesses take `--tp-r`, but it is
+#: "only consulted when --tp-cap-pct > 0" (backtest_trend.py's own help text)
+#: and `build_harness_cmd` passes NEITHER flag -- so `tp_cap_pct` defaults to
+#: 0.0 and the run models NO take-profit at all. `qqq_trend_long_1d` therefore
+#: recorded `fidelity: faithful` with `omitted_levers: []` against a config
+#: declaring `tp_r: 3.0`, on the corpus the real-money promotion bar reads.
+#:
+#: The fix is that the grade is COMPUTED FROM THE ARGV THAT WAS ACTUALLY BUILT,
+#: not asserted by a membership set: `required_flag` absent from `argv` means
+#: the lever was not modelled, whatever any PLAIN set says. `None` as the flag
+#: means this harness has no way to model it at all (squeeze: the Chandelier
+#: trail is its sole profit-exit). Wire the flag through and the omission
+#: disappears on its own -- nothing here needs editing.
+#:
+#: ⚠️ WHAT THIS DELIBERATELY DOES NOT FIX, because it is a WIDER finding with
+#: its own id: live places `tp = min(entry*(1+0.099), entry + tp_r*risk)`, so
+#: the ~9.9% venue clamp binds on EVERY trend/pullback leg -- including the 28
+#: whose `tp_r` is the 50R sentinel -- and the harness models that for none of
+#: them. `faithful` still does NOT mean "the live capped TP was modelled".
+#: That is BL-20260810-BACKTEST-DOES-NOT-MODEL-THE-LIVE-CAPPED-TP, and folding
+#: it in here would silently re-base the whole fleet's history -- exactly what
+#: backtest_trend.py's `--tp-cap-pct` default-off comment refuses.
+_PLAIN_CONDITIONAL_ON_FLAG: Dict[str, Dict[str, tuple]] = {
+    "trend": {"tp_r": ("--tp-cap-pct", _tp_r_binds)},
+    "pullback": {"tp_r": ("--tp-cap-pct", _tp_r_binds)},
+    # backtest_squeeze.py has no take-profit path to enable, so no flag can
+    # carry it. This replaces the hand-rolled special case that used to live in
+    # `build_harness_cmd`'s squeeze branch.
+    "squeeze": {"tp_r": (None, _tp_r_binds)},
+    # backtest_fade.py takes the same --tp-cap-pct/--tp-r pair (E39, 2026-09-25).
+    "fade": {"tp_r": ("--tp-cap-pct", _tp_r_binds)},
+}
+
+
+def conditional_omissions(harness: str, cfg: dict, argv: List[str]) -> List[str]:
+    """Keys the built `argv` did NOT actually carry, despite a PLAIN claim.
+
+    Reads the command that is about to run rather than a membership set -- so a
+    key can no longer claim to be modelled by sitting in the right frozenset.
+    """
+    out: List[str] = []
+    for key, (flag, binds) in _PLAIN_CONDITIONAL_ON_FLAG.get(harness, {}).items():
+        if flag is not None and flag in argv:
+            continue  # the run really did model it
+        if binds(cfg.get(key)):
+            out.append(key)
+    return out
+# FVG range / mean-reversion (scripts/backtest_fvg_range.py) config-key -> harness
+# flag. The harness has existed and been cost-wired the whole time; nothing
+# routed to it, so `fvg_range_15m` — a leg on the REAL-MONEY bybit_2 roster —
+# was the only one of the four legs failing B1's evidence bar to fail all four
+# clauses, purely because nothing ever measured it.
+#
+# ⚠️ These flags were read off `backtest_fvg_range.py`'s own add_argument list,
+# not off its docstring (field beats comment). Every key the LIVE
+# `fvg_range_15m` config carries maps to a real flag, so the leg grades
+# `faithful` rather than `approximate` — verified by running the classifier
+# against the live config, not asserted here.
+_FVG_LEVER_FLAG = {
+    "adx_max": "--adx-max",
+    "min_width_pct": "--min-width-pct", "max_width_pct": "--max-width-pct",
+    "touch_tol_pct": "--touch-tol-pct", "min_touches": "--min-touches",
+    "third_frac": "--third-frac", "fvg_search": "--fvg-search",
+    "min_fvg_size_bps": "--min-fvg-size-bps",
+    "atr_stop_buffer": "--atr-stop-buffer",
+    "timeout_bars": "--timeout-bars", "cooldown_bars": "--cooldown-bars",
+    "exit_style": "--exit-style",
+    "stale_exit_bars": "--stale-exit-bars",
+    "stale_exit_below_r": "--stale-exit-below-r",
+    "giveback_min_mfe_r": "--giveback-min-mfe-r", "giveback_r": "--giveback-r",
+}
+_FVG_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe",
+              "symbols", "range_lookback", "atr_period", "adx_period",
+              "min_confidence", "shadow_model_ids", "description", "tp_intent"}
+# ⚠️ `adx_min` and `tp_r` are in NEITHER set, deliberately, and for the reason
+# the squeeze block gives for its own `side_filter`/`tp_r` omissions:
+#   * `backtest_fvg_range.py` has no `--adx-min` — only the trend + pullback
+#     harnesses gained one. A fvg leg declaring it degrades to `approximate`
+#     and names it, rather than having a floor silently not applied.
+#   * `--tp-r` EXISTS but binds only under `--exit-style tp1r` (the default is
+#     `mid`, the range midline). Forwarding it unconditionally would claim a
+#     target the harness then ignores. Left out, so a leg declaring `tp_r`
+#     reads `approximate` and names it — the honest answer. Porting the flags,
+#     not widening these sets, is the fix if a variant ever needs them.
+# ICT scalp (liquidity sweep -> displacement -> FVG mitigation) config-key ->
+# harness flag, for scripts/backtest_ict_scalp.py. THE EIGHT-LEG FAMILY E28
+# ROUTES, and it is NOT a mechanical copy of the fvg_range branch above.
+#
+# ⚠️ THE "FORWARD EVERY PARAM UNDER --ignore-yaml" OPTION DOES NOT EXIST, so the
+# design call E28's row poses is FORCED rather than chosen. Read off the
+# harness's own `add_argument` list (field beats comment): it declares NO flag
+# for any of the fourteen keys `src/units/strategies/ict_scalp.py::_DEFAULTS`
+# consumes — sweep/swing lookbacks, sweep_buffer_bps, displacement_atr_mult,
+# min_displacement_body_to_range, min_fvg_size_bps, mitigation_mode,
+# atr_sl_buffer_mult, tp_at_r, atr_period, htf_trend_filter_enabled and the
+# three session keys. They reach the unit ONLY through the harness's own
+# `_load_yaml_params()` read. So the YAML read is load-bearing, not a
+# convenience, and `_SCALP_PLAIN` below records which keys it carries.
+#
+# ⚠️ AND "TRUST THE HARNESS'S OWN READ" WAS UNSOUND UNTIL THIS PR: that read was
+# HARDCODED to the `ict_scalp_5m` block for every leg (MI-321,
+# docs/research/ict-scalp-seam-2026-09-18.md § 3, filed and explicitly NOT
+# fixed there because the file was outside that lane's Tier-1 surface). Routing
+# the family at the old signature would have measured ONE leg's config eight
+# times under eight names and written eight `coverage_state: "measured"`
+# records — worse than the `no_harness` they replace, because a wrong number
+# reads as evidence and a missing one does not. `backtest_ict_scalp.py` now
+# takes the block from `--strategy-name` and RAISES on an unknown name rather
+# than falling back. That fix is a precondition of this map, not a bonus.
+_SCALP_LEVER_FLAG = {
+    # The HTF bias filter's geometry. The unit consumes the FILTER's verdict
+    # (cfg["htf_close"]/cfg["htf_ema"]), which the harness computes itself from
+    # these two flags — so they must be forwarded, not left to the harness
+    # defaults that happen to equal today's config ("1h"/20). Relying on that
+    # coincidence is how a lever stops being applied the day a leg moves.
+    # Same config-key -> flag mapping scripts/research/m20_fleet_exit_sweep.py
+    # already uses for this harness.
+    "htf_filter_timeframe": "--htf-rule",
+    "htf_filter_ema_period": "--htf-ema-period",
+    # Exit levers. These are `run_backtest` KEYWORD ARGUMENTS, not cfg keys:
+    # the YAML read cannot reach them, so a leg declaring one is measured
+    # without it unless it is forwarded here. `ict_scalp_eth_15m` declares
+    # stale_exit_bars=12 / stale_exit_below_r=0.0 and is the live instance.
+    "stale_exit_bars": "--stale-exit-bars",
+    "stale_exit_below_r": "--stale-exit-below-r",
+    "giveback_min_mfe_r": "--giveback-min-mfe-r",
+    "giveback_r": "--giveback-r",
+    "bank_frac": "--bank-frac",
+    "bank_at_r": "--bank-at-r",
+    "min_confidence": "--min-confidence",
+}
+#: `be_offset_bps` maps to a STORE_TRUE flag, so it cannot live in the value map
+#: above. The live monitor genuinely arms the break-even ratchet from this key
+#: (`src/units/strategies/ict_scalp.py::monitor` -> `_base.monitor_breakeven_sl`,
+#: read 2026-09-22), and the harness models that rule ONLY under
+#: `--sim-breakeven` — with the offset then taken from cfg. Forwarding it is the
+#: same act as forwarding `--side-filter` on the trend map: applying a lever the
+#: leg declares. Leaving it off would have measured every one of the eight legs
+#: with no break-even ratchet at all, which live has.
+_SCALP_BE_FLAG = "--sim-breakeven"
+#: Keys the harness genuinely accounts for WITHOUT a flag, because
+#: `_load_yaml_params()` hands them to the unit verbatim. The `_DEFAULTS` half is
+#: asserted against the unit rather than transcribed — see
+#: tests/test_regime_debt_matrix_ict_scalp.py, which fails if the unit gains a
+#: parameter this set does not carry.
+_SCALP_PLAIN = {
+    "model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
+    "shadow_model_ids", "description", "tp_intent",
+    # == src.units.strategies.ict_scalp._DEFAULTS
+    "sweep_lookback_bars", "swing_lookback_bars", "atr_period",
+    "sweep_buffer_bps", "displacement_atr_mult",
+    "min_displacement_body_to_range", "min_fvg_size_bps", "mitigation_mode",
+    "atr_sl_buffer_mult", "tp_at_r", "htf_trend_filter_enabled",
+    "session_filter_enabled", "session_start_hour", "session_end_hour",
+}
+# ⚠️ `off_cells` and `vol_spec` are in NEITHER set, deliberately, and this is the
+# one place where this family is NOT the shape E25 fixed. MI-321 graded them by
+# joining two independent measurements (does a flag exist; does the key reach a
+# SKIP on each side) rather than one predicate:
+#   * `off_cells` -> `not_expressible`. The LIVE builder suppresses an entry on
+#     it (`strategy_signal_builders.py:797-802`, `if off_cells and vol_spec:`);
+#     `off_cells` occurs ZERO times in backtest_ict_scalp.py and NO flag exists.
+#   * `vol_spec`  -> `asymmetric_gate`. `--vol-spec-json` exists and reaches no
+#     skip — it guards the regime-STAMPING routine only (12 occurrences, all
+#     inside `_stamp_decision_time_regime`), so passing it would LABEL a run
+#     with the spec while it behaves as if unset. A count reports it as
+#     implemented; the skip test does not.
+# `ict_scalp_xrp_5m` is the only leg carrying either, so it is the only one that
+# grades `approximate`, naming both. Its measured number is therefore the
+# UNGATED arm, and the live builder's own docstring says which arm that is:
+# "XRP's pass was conditional on this gate (ungated 2/4 folds fails; gated 4/4
+# passes)". Forwarding `--vol-spec-json` to make the row look faithful is the
+# trap, not the fix; porting an off-cell skip into the harness is.
 # Levers no offline harness can replay.
 _UNREPLAYABLE = {"exit_head_model", "exit_head_threshold", "exit_head_action"}
 
@@ -266,6 +589,16 @@ def annotate_exit_head_replayability(cfg: dict, row: dict, omitted: list[str]) -
 
 
 def classify(cfg: dict) -> str | None:
+    # Checked BEFORE `donchian` below: fade_breakout_4h declares BOTH `donchian`
+    # (the channel it fades pierces) and `pierce_min` (fade-specific: the
+    # minimum pierce depth past that channel that counts as a failed breakout).
+    # `donchian` alone cannot discriminate it from trend_donchian's own legs —
+    # see the `_FADE_PLAIN` comment above for the E39 finding this fixes.
+    # `pierce_min` is carried by exactly ONE leg fleet-wide (measured
+    # 2026-09-25), so checking it first cannot silently re-route a donchian
+    # trend-follower leg into the fade branch.
+    if "pierce_min" in cfg:
+        return "fade"
     if "donchian" in cfg:
         return "trend"
     if "trend_lookback" in cfg or "pullback_frac" in cfg:
@@ -275,6 +608,31 @@ def classify(cfg: dict) -> str | None:
     # existing harness (no silent re-routing of an already-measured strategy).
     if "kc_mult" in cfg and "bb_period" in cfg:
         return "squeeze"
+    # FVG range mean-reversion: a horizontal range (range_lookback) entered on
+    # its outer third (third_frac). Keyed on the leg's own defining STRUCTURAL
+    # params, the same kind of signal the three branches above use — not on the
+    # strategy's name, its signal_prefixes or its module, which are labels about
+    # the config rather than the config. MEASURED over all 55 legs in
+    # config/strategies.yaml on 2026-09-22: `range_lookback` and `third_frac`
+    # are each carried by exactly ONE leg (fvg_range_15m), so the conjunction
+    # cannot capture a leg an earlier branch should have taken. Checked LAST for
+    # the same reason squeeze is checked after trend/pullback.
+    if "range_lookback" in cfg and "third_frac" in cfg:
+        return "fvg_range"
+    # ICT scalp: a liquidity sweep over `sweep_lookback_bars` of prior
+    # structure, mitigated per `mitigation_mode`. Keyed on the family's own
+    # defining STRUCTURAL params for the same reason the fvg_range branch is —
+    # not on the name, `signal_prefixes` or the module, which are labels about
+    # the config rather than the config. MEASURED over all 55 legs in
+    # config/strategies.yaml on 2026-09-22: `sweep_lookback_bars` and
+    # `mitigation_mode` are each carried by exactly the EIGHT ict_scalp_* legs
+    # and by nothing else, and no leg carrying either also carries `donchian`,
+    # `trend_lookback`, `pullback_frac`, `kc_mult`/`bb_period` or
+    # `range_lookback`/`third_frac` — so the conjunction cannot capture a leg an
+    # earlier branch should have taken. Checked LAST, like squeeze and
+    # fvg_range, so no already-measured leg is silently re-routed.
+    if "sweep_lookback_bars" in cfg and "mitigation_mode" in cfg:
+        return "ict_scalp"
     return None
 
 
@@ -284,6 +642,124 @@ def resolve_feed(symbol: str, timeframe: str) -> dict:
                 "interval": _TF_TO_BYBIT_INT.get(timeframe, "D"), "resample": timeframe}
     return {"source": "yahoo", "ticker": _YF_TICKER.get(symbol.upper(), symbol),
             "interval": _TF_TO_YF_INT.get(timeframe, "1d"), "resample": timeframe}
+
+
+#: A liquid, continuously-listed ETF used ONLY as a positive control when a
+#: Yahoo fetch comes back empty. It is never written to a CSV and never enters
+#: any harness — it exists to supply a denominator.
+_YF_CONTROL_TICKER = "SPY"
+
+
+#: Window the same-interval self-probe asks for. Well inside every documented
+#: yfinance intraday limit (~60d for 5m/15m, ~730d for 60m), so a POSITIVE here
+#: means the ticker+interval pair is genuinely served and only the WINDOW was
+#: too wide.
+_YF_SELF_PROBE_PERIOD = "5d"
+
+
+def _yahoo_empty_reason(ticker: str, yf, interval: str = "1d") -> str:
+    """Say WHICH empty this is: the venue refused us, it has no such data, or we
+    asked for more history than it serves at this interval.
+
+    ⚠️ THIS EXISTS BECAUSE THE COLLAPSED MESSAGE COST A SESSION, NOT AS POLISH.
+    The old text was `yfinance returned no rows for {ticker}`, which is true of
+    two states that want opposite responses:
+
+      * **the venue refused US** — Yahoo answers a plain-`requests` User-Agent
+        with HTTP 429 and serves the byte-identical request with a browser UA,
+        so an old (0.2.x, requests-backed) yfinance gets nothing for EVERY
+        ticker. That is *we could not look*, and the remedy is our dependency.
+      * **the venue has no rows for THIS ticker** — a delisting, a re-listing
+        with a short history, an unmapped symbol. That is *we looked*, and the
+        remedy is the symbol or the window.
+
+    MEASURED 2026-09-16 (MI-287): 23 of 52 strategy-evidence legs carried the
+    collapsed message, 22 of them from the first state and 1 (`SPLG`) from the
+    second — indistinguishable from the record, so the whole class read as
+    "23 broken harnesses" until someone re-derived it by hand.
+
+    The discriminator is a POSITIVE CONTROL, which is this repo's standing rule
+    for a negative result: a silent probe is only evidence once it is shown it
+    can return a positive. If the control is ALSO empty the venue is refusing
+    us; if the control returns rows, the venue is up and this ticker is the
+    problem. A control that itself RAISES leaves us unable to say which — and
+    that third state is reported as `undetermined`, never folded into either.
+    """
+    ver = getattr(yf, "__version__", "unknown")
+    base = f"yfinance returned no rows for {ticker} (yfinance=={ver})"
+    if ticker.upper() == _YF_CONTROL_TICKER:
+        # The control IS the ticker; a second call would prove nothing new.
+        return (f"{base}; venue_state=undetermined -- the requested ticker is "
+                f"the control itself, so no independent probe is available.")
+    try:
+        ctl = yf.download(_YF_CONTROL_TICKER, period="5d", interval="1d",
+                          auto_adjust=False, progress=False, threads=False)
+    # allow-silent: this is the INVERSE of the silent-empty class, not an instance of it.
+    # The probe is a DIAGNOSTIC running inside an already-failed fetch, and its failure
+    # yields the explicit `undetermined` state -- reported to the caller, never folded
+    # into `serving` or `refusing_us` -- so it cannot produce a clean-looking read. The
+    # except is broad because yfinance raises an open-ended, version-dependent set here
+    # (network, HTTP, parse, curl_cffi), and a narrowed list would let an unanticipated
+    # type escape a diagnostic and REPLACE the genuine fetch failure the caller is about
+    # to raise -- losing the real error to a secondary one. Same shape as
+    # scripts/ops/strategy_liveness.py:43 ("unreachable API is 'unknown', reported by
+    # the caller"). Re-raising is the wrong fix here for exactly that reason.
+    except Exception as e:  # noqa: BLE001  # allow-silent: probe failure is reported as `undetermined`, never as an answer
+        return (f"{base}; venue_state=undetermined -- the {_YF_CONTROL_TICKER} "
+                f"control probe raised {type(e).__name__}: {e}. We could not "
+                f"establish whether the venue is refusing us.")
+    if ctl is None or len(ctl) == 0:
+        return (f"{base}; venue_state=refusing_us -- the {_YF_CONTROL_TICKER} "
+                f"control is ALSO empty, so this is not about {ticker}. Yahoo "
+                f"answers a plain-requests User-Agent with HTTP 429 and serves "
+                f"the same request with a browser UA; the 0.2.x line is "
+                f"requests-backed and the 1.x line impersonates via curl_cffi. "
+                f"Check the installed version against requirements "
+                f"(yfinance>=1.7.0).")
+    # ⚠️ FOURTH STATE, ADDED 2026-09-22 (E28), BECAUSE THE THREE ABOVE MISATTRIBUTED
+    # A REAL FAILURE WITH CONFIDENCE. `ict_scalp_mgc_15m` is the instance: 15m over
+    # 365 days returns nothing, and the SPY control — which probes `period="5d",
+    # interval="1d"` and therefore exercises NEITHER the requested interval NOR the
+    # requested window — came back serving, so the message read
+    # "specific to GC=F (delisting, a short listing history, or a wrong symbol map)".
+    # All three of those are FALSE: measured the same day, `GC=F` at 15m over 5d
+    # returns 4,338 rows and over 365d returns 0, with Yahoo's own error naming the
+    # cause ("The requested range must be within the last 60 days").
+    #
+    # This is the collapsed-state rule applied to a control rather than to a field:
+    # a probe that cannot vary along the axis under test can only ever return the
+    # answer it already had. `_TF_TO_YF_INT`'s own comment predicted this exact
+    # failure ("A `--days` window past that returns an EMPTY frame"); the discriminator
+    # simply could not see it, so the honest outcome was reported with a wrong cause
+    # attached — worse than an unexplained failure, because a named cause closes off
+    # the investigation. A later session would have gone hunting a symbol map that is
+    # correct.
+    #
+    # So: re-ask for the SAME ticker at the SAME interval over a window no documented
+    # limit excludes. Rows here mean the pair is served and only the span was too wide.
+    if interval.endswith("m"):
+        try:
+            self_probe = yf.download(ticker, period=_YF_SELF_PROBE_PERIOD,
+                                     interval=interval, auto_adjust=False,
+                                     progress=False, threads=False)
+        # allow-silent: same contract as the control probe above — a raising probe
+        # yields `undetermined` for THIS axis and falls through to the ticker-specific
+        # answer, which is the pre-existing behaviour. It cannot manufacture a clean read.
+        except Exception:  # noqa: BLE001  # allow-silent: probe failure falls through to the ticker-specific answer below
+            self_probe = None
+        if self_probe is not None and len(self_probe):
+            return (f"{base}; venue_state=serving, "
+                    f"interval_state=window_exceeds_intraday_limit -- {ticker} at "
+                    f"interval={interval} returns rows over "
+                    f"{_YF_SELF_PROBE_PERIOD} and none over the requested window, "
+                    f"so the ticker and the symbol map are FINE and the WINDOW is "
+                    f"the problem. Yahoo serves ~60d of 5m/15m and ~730d of 60m. "
+                    f"The remedy is a shorter --days, or a feed that serves this "
+                    f"interval over the full history -- NOT a symbol-map change.")
+    return (f"{base}; venue_state=serving -- the {_YF_CONTROL_TICKER} control "
+            f"returned {len(ctl)} rows, so the venue is up and this is specific "
+            f"to {ticker} (delisting, a short listing history, or a wrong "
+            f"symbol map). NOT a dependency problem.")
 
 
 def _fetch_csv(feed: dict, days: int, out: str) -> None:
@@ -306,7 +782,7 @@ def _fetch_csv(feed: dict, days: int, out: str) -> None:
     df = yf.download(feed["ticker"], period=period, interval=feed["interval"],
                      auto_adjust=False, progress=False, threads=False)
     if df is None or len(df) == 0:
-        raise RuntimeError(f"yfinance returned no rows for {feed['ticker']}")
+        raise RuntimeError(_yahoo_empty_reason(feed["ticker"], yf, feed["interval"]))
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
     df = df.rename(columns=str.lower).reset_index()
@@ -354,9 +830,92 @@ def roundtrip_fee_bps(symbol: str) -> float:
     return float(DEFAULT_FEE_BPS_ROUNDTRIP if resolved is None else resolved)
 
 
+def _tp_venue_cap_pct() -> float:
+    """The live venue TP clamp (0.099) — imported, never re-declared.
+
+    `src/runtime/tp_venue_cap.py` is the ONE owner of this literal (its own
+    docstring: it used to be declared thirteen times under three names with
+    nothing binding them together). Importing it here is what makes
+    `--tp-cap-pct` below the SAME number `order_package` sends to the venue,
+    not a thirteenth opinion.
+    """
+    if REPO not in sys.path:
+        sys.path.insert(0, REPO)
+    from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT
+    return TP_VENUE_CAP_PCT
+
+
+def _tp_revision_flags(cfg: dict) -> List[str]:
+    """`--tp-revision <rule> [--tp-revision-width-mult <w>]` for a leg that declares
+    `tp_revision` (string or `{rule, width_mult}` mapping), else `[]`. Only the rule
+    scripts/backtest_trend.py implements is forwarded; an unknown rule is returned as
+    an omission by `conditional_omissions`-style callers via the unchanged
+    `_TREND_PLAIN` miss, so we forward nothing for it rather than abort the harness."""
+    raw = cfg.get("tp_revision")
+    rule = raw.get("rule") if isinstance(raw, dict) else raw
+    if rule != "donchian_measured_move":
+        return []
+    flags = ["--tp-revision", str(rule)]
+    width = raw.get("width_mult") if isinstance(raw, dict) else None
+    if width is not None:
+        flags += ["--tp-revision-width-mult", str(width)]
+    return flags
+
+
+def _tp_r_flags(cfg: dict) -> List[str]:
+    """``--tp-cap-pct``/``--tp-r`` argv, or ``[]`` when the leg declares no `tp_r`.
+
+    E55 / `PI-20260924-JN54P2HH-0005` (graded continuation of
+    `PI-20260922-E41-0006`). Before this, `build_harness_cmd` passed NEITHER
+    flag for trend/pullback, so `tp_r` sat in `_TREND_PLAIN`/`_PB_PLAIN` as an
+    ASSERTION the harness accounted for it while the run modelled no
+    take-profit at all — the false-`faithful` defect E46 made VISIBLE
+    (`conditional_omissions` now computes the grade from the argv) but did not
+    fix. This is the fix: actually build the argv that models it.
+
+    `--tp-r` is "only consulted when --tp-cap-pct > 0" (backtest_trend.py's
+    own help text for both harnesses), so modelling a leg's declared `tp_r` at
+    all REQUIRES passing the venue cap alongside it — the two are not
+    independent choices, they are one flag pair implementing the live formula
+    `tp = min(entry*(1+TP_VENUE_CAP_PCT), entry + tp_r*risk)`
+    (`src/units/strategies/trend_donchian.py:393`). Passing `--tp-r` alone
+    would leave `tp_cap_pct` at its 0.0 default and change nothing.
+
+    Deliberately keyed on PRESENCE, not on `_tp_r_binds`'s nonbinding
+    threshold: that threshold answered a narrower question ("is the omission
+    dishonest enough to disclose") for a harness that could not model the
+    lever at all. It never established that a parked 50R sentinel is
+    unreachable — the venue cap `min(entry*1.099, entry+50R*risk)` almost
+    always resolves to the *price* term regardless of `tp_r`'s size, which is
+    exactly `BL-20260810-BACKTEST-DOES-NOT-MODEL-THE-LIVE-CAPPED-TP`. So once
+    the harness CAN model the cap, withholding it for a sentinel leg would
+    reintroduce the same omission for a different reason.
+
+    A leg with no `tp_r` in its config gets neither flag — byte-identical to
+    every run before this function existed (`--tp-cap-pct` defaults to 0.0,
+    the harness's own untouched default).
+
+    An UNREADABLE `tp_r` (not coercible to `float`) also gets neither flag —
+    forwarding it verbatim would hand the subprocess's `type=float` argparse a
+    string it cannot parse, turning "we could not read this lever" into a
+    crashed run (`harness_failed`) instead of the honest `approximate` grade
+    `conditional_omissions`/`_tp_r_binds` already give it when the flag is
+    absent. Fail toward *omitted*, never toward a subprocess crash.
+    """
+    v = cfg.get("tp_r")
+    if v is None:
+        return []
+    try:
+        float(v)
+    except (TypeError, ValueError):
+        return []
+    return ["--tp-cap-pct", str(_tp_venue_cap_pct()), "--tp-r", str(v)]
+
+
 def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: str,  # inert: name — the argv is built from cfg/harness/csv; the cell name is used by the CALLER for reporting, never by the command
                       emit: str, jout: str,
-                      fee_override: Optional[float] = None
+                      fee_override: Optional[float] = None,
+                      research_emits: bool = False
                       ) -> tuple[list[str], bool, list[str]]:
     """Return (argv, faithful, omitted_levers).
 
@@ -400,8 +959,50 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         for k, flag in _TREND_LEVER_FLAG.items():
             if cfg.get(k) is not None:
                 argv += [flag, str(cfg[k])]
-        omitted = sorted(k for k in cfg
-                         if k not in _TREND_PLAIN and k not in _TREND_LEVER_FLAG)
+        # E55 — model the leg's declared tp_r (the live-capped TP formula).
+        # See `_tp_r_flags`. `[]` when the leg declares no tp_r.
+        argv += _tp_r_flags(cfg)
+        argv += _tp_revision_flags(cfg)
+        omitted = sorted(set(k for k in cfg
+                             if k not in _TREND_PLAIN and k not in _TREND_LEVER_FLAG)
+                         | set(conditional_omissions("trend", cfg, argv))
+                         | ({"decision_bar"}
+                            if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
+        faithful = not omitted
+    elif harness == "fade":
+        # Deliberately does NOT reuse `common`: that list hard-codes
+        # `--atr-stop-mult`, which scripts/backtest_fade.py does not accept —
+        # its stop is `--atr-stop-buffer` (ATR beyond the rejection wick), a
+        # structurally different lever. Passing it would abort the subprocess
+        # with "unrecognized arguments" (same reasoning as the fvg_range/
+        # ict_scalp branches below). `--exit-style far` matches the harness
+        # variant validated in docs/audits/fade-breakout-complement-2026-05-24.md
+        # and the `backtesting` skill's own example invocation — the live unit
+        # has no fixed-target exit style to select. No `--adx-min`: the harness
+        # takes only `--adx-max` (chop gate), and fade_breakout_4h declares
+        # only adx_max today.
+        argv = [py, os.path.join(REPO, "scripts/backtest_fade.py"),
+                "--data", csv, "--symbol", symbol, "--resample", resample,
+                "--donchian", str(cfg.get("donchian", 20)),
+                "--atr-period", str(cfg.get("atr_period", 14)),
+                "--atr-stop-buffer", str(cfg.get("atr_stop_buffer", 0.5)),
+                "--pierce-min", str(cfg.get("pierce_min", 0.0)),
+                "--trail-mult", str(cfg.get("trail_mult", 3.0)),
+                "--exit-style", "far",
+                "--min-confidence", str(cfg.get("min_confidence", 0.0)),
+                "--fee-bps-roundtrip", str(fee),
+                "--emit-trades", emit, "--json", jout]
+        if cfg.get("adx_max") is not None:
+            argv += ["--adx-max", str(cfg["adx_max"])]
+        if cfg.get("adx_period") is not None:
+            argv += ["--adx-period", str(cfg["adx_period"])]
+        if cfg.get("timeout_bars") is not None:
+            argv += ["--timeout-bars", str(cfg["timeout_bars"])]
+        # E55-style — model the leg's declared tp_r (the live-capped TP
+        # formula). `[]` when the leg declares no tp_r.
+        argv += _tp_r_flags(cfg)
+        omitted = sorted(set(k for k in cfg if k not in _FADE_PLAIN)
+                         | set(conditional_omissions("fade", cfg, argv)))
         faithful = not omitted
     elif harness == "squeeze":
         argv = [py, os.path.join(REPO, "scripts/backtest_squeeze.py"),
@@ -411,15 +1012,77 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         for k, flag in _SQZ_LEVER_FLAG.items():
             if cfg.get(k) is not None:
                 argv += [flag, str(cfg[k])]
+        # `tp_r` is excluded from the comprehension and handled by
+        # `conditional_omissions` instead: it counts as omitted only when it is
+        # near enough to actually bind, and a missing tp_r is the harness's own
+        # default (trail-only), so neither is an omission. That used to be a
+        # hand-rolled block here; it is now the same mechanism trend and
+        # pullback use, so the three cannot drift apart.
+        omitted = sorted(set(k for k in cfg
+                             if k not in _SQZ_PLAIN and k not in _SQZ_LEVER_FLAG
+                             and k != "tp_r")
+                         | set(conditional_omissions("squeeze", cfg, argv)))
+        faithful = not omitted
+    elif harness == "fvg_range":
+        # Deliberately does NOT reuse `common`: that list hard-codes
+        # `--atr-stop-mult` and `--trail-mult`, which backtest_fvg_range.py does
+        # not accept (it sizes its stop from the range edge + --atr-stop-buffer
+        # and exits at the midline). Passing them would abort the subprocess with
+        # "unrecognized arguments", and run_one reports a non-zero exit as
+        # `harness failed` — a missing FLAG would have been misread as a broken
+        # harness. Same reasoning as the adx_flags carve-out above, one step
+        # further: the flags are not merely withheld, the shared list is not
+        # applicable at all.
+        argv = [py, os.path.join(REPO, "scripts/backtest_fvg_range.py"),
+                "--data", csv, "--symbol", symbol, "--resample", resample,
+                "--timeframe", str(cfg.get("timeframe") or resample),
+                "--range-lookback", str(cfg.get("range_lookback", 48)),
+                "--atr-period", str(cfg.get("atr_period", 14)),
+                "--adx-period", str(cfg.get("adx_period", 14)),
+                "--min-confidence", str(cfg.get("min_confidence", 0.0)),
+                "--fee-bps-roundtrip", str(fee),
+                "--emit-trades", emit, "--json", jout]
+        for k, flag in _FVG_LEVER_FLAG.items():
+            if cfg.get(k) is not None:
+                argv += [flag, str(cfg[k])]
         omitted = sorted(k for k in cfg
-                         if k not in _SQZ_PLAIN and k not in _SQZ_LEVER_FLAG
-                         and k != "tp_r")
-        # tp_r counts as omitted only when it is near enough to actually bind —
-        # see _SQZ_TP_R_NONBINDING. A missing tp_r is the harness's own default
-        # (trail-only), so it is not an omission either.
-        tp_r = cfg.get("tp_r")
-        if tp_r is not None and float(tp_r) < _SQZ_TP_R_NONBINDING:
-            omitted = sorted(set(omitted) | {"tp_r"})
+                         if k not in _FVG_PLAIN and k not in _FVG_LEVER_FLAG)
+        faithful = not omitted
+    elif harness == "ict_scalp":
+        # Like the fvg_range branch, this deliberately does NOT reuse `common`:
+        # backtest_ict_scalp.py accepts neither --resample nor --atr-period /
+        # --atr-stop-mult / --trail-mult, and an unrecognised argument aborts the
+        # subprocess, which run_one reports as `harness failed` — a missing FLAG
+        # misread as a broken harness.
+        #
+        # ⚠️ NO --resample, and that is a REQUIREMENT on the feed rather than an
+        # omission: this harness reads the CSV as given (`_load_candles`, no
+        # resample step anywhere), so the fetch must already be at the leg's own
+        # interval. `resolve_feed` supplies exactly that — `_TF_TO_BYBIT_INT`
+        # has native 5m/15m codes, so the seven USDT legs fetch natively. The
+        # one non-USDT leg (`ict_scalp_mgc_15m`) goes to Yahoo, whose 15m lane
+        # serves ~60d against a 365d window, and `_fetch_csv` turns the empty
+        # frame into a NAMED `_yahoo_empty_reason` failure. That is a loud
+        # `harness_failed` with its reason, which is the honest outcome — never
+        # a daily-bar fallback silently graded as 15m.
+        #
+        # `--strategy-name` now SELECTS the config block as well as stamping the
+        # emitted rows (see the map above); passing `name` is what makes this
+        # branch measure the leg in front of it.
+        argv = [py, os.path.join(REPO, "scripts/backtest_ict_scalp.py"),
+                "--data", csv, "--symbol", symbol,
+                "--timeframe", str(cfg.get("timeframe") or resample),
+                "--strategy-name", name,
+                "--fee-bps-roundtrip", str(fee),
+                "--emit-trades", emit, "--json", jout]
+        for k, flag in _SCALP_LEVER_FLAG.items():
+            if cfg.get(k) is not None:
+                argv += [flag, str(cfg[k])]
+        if cfg.get("be_offset_bps"):
+            argv.append(_SCALP_BE_FLAG)
+        omitted = sorted(k for k in cfg
+                         if k not in _SCALP_PLAIN and k not in _SCALP_LEVER_FLAG
+                         and k != "be_offset_bps")
         faithful = not omitted
     else:
         argv = [py, os.path.join(REPO, "scripts/backtest_pullback.py"),
@@ -430,10 +1093,29 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         for k, flag in _PB_LEVER_FLAG.items():
             if cfg.get(k) is not None:
                 argv += [flag, str(cfg[k])]
-        omitted = sorted(k for k in cfg
-                         if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
+        # E55 — model the leg's declared tp_r (the live-capped TP formula).
+        # See `_tp_r_flags`. `[]` when the leg declares no tp_r.
+        argv += _tp_r_flags(cfg)
+        omitted = sorted(set(k for k in cfg
+                             if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
+                         | set(conditional_omissions("pullback", cfg, argv))
+                         | ({"decision_bar"}
+                            if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
         faithful = not omitted
+    # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (opt-in, default False =
+    # byte-identical argv): ask the trend/pullback harnesses for the per-bar path
+    # file (beside `emit`, `__paths.jsonl`) and the decision-time f_* columns.
+    # Appended AFTER fidelity is graded -- they change what is WRITTEN, never
+    # which trades exist (tests/test_harness_emit.py pins that).
+    if research_emits and harness in ("trend", "pullback"):
+        argv += ["--emit-features", "--emit-paths", research_paths_file(emit)]
     return argv, faithful, omitted
+
+
+def research_paths_file(emit: str) -> str:
+    """Where `research_emits` writes the per-bar path rows for a trades emit."""
+    stem = emit[:-len("__trades.jsonl")] if emit.endswith("__trades.jsonl") else emit
+    return stem + "__paths.jsonl"
 
 
 def _regime_tag(csv: str, emit: str, resample: str, label: str) -> dict:
@@ -517,8 +1199,8 @@ def emit_trades_for(name: str, cfg: dict, workdir: str, days: int, *,
     row: dict = {"strategy": name, "symbol": sym, "timeframe": tf,
                  "harness": harness, "emit_path": None, "n_emitted": 0}
     if harness is None or not sym or not tf:
-        row["error"] = ("unclassifiable (no donchian/pullback/squeeze params "
-                        "or no symbol/timeframe)")
+        row["error"] = ("unclassifiable (no donchian/pullback/squeeze/fvg-range/"
+                        "ict-scalp params or no symbol/timeframe)")
         return row
     feed = resolve_feed(sym, tf)
     row["feed"] = feed
@@ -561,13 +1243,14 @@ def emit_trades_for(name: str, cfg: dict, workdir: str, days: int, *,
 
 
 def run_one(name: str, cfg: dict, workdir: str, days: int,
-            fee_arms: Optional[list] = None) -> dict:
+            fee_arms: Optional[list] = None, research_emits: bool = False) -> dict:
     harness = classify(cfg)
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
     row: dict = {"strategy": name, "symbol": sym, "timeframe": tf, "harness": harness}
     if harness is None or not sym or not tf:
-        row["error"] = "unclassifiable (no donchian/pullback/squeeze params or no symbol/timeframe)"
+        row["error"] = ("unclassifiable (no donchian/pullback/squeeze/fvg-range/"
+                        "ict-scalp params or no symbol/timeframe)")
         return row
     feed = resolve_feed(sym, tf)
     row["feed"] = feed
@@ -580,7 +1263,8 @@ def run_one(name: str, cfg: dict, workdir: str, days: int,
         row["error"] = f"fetch failed: {type(e).__name__}: {e}"
         return row
     argv, faithful, omitted = build_harness_cmd(name, cfg, harness, csv,
-                                                feed["resample"], emit, jout)
+                                                feed["resample"], emit, jout,
+                                                research_emits=research_emits)
     row["fidelity"] = "faithful" if faithful else "approximate"
     row["omitted_levers"] = omitted
     annotate_exit_head_replayability(cfg, row, omitted)

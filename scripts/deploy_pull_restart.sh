@@ -12,7 +12,8 @@
 #
 # Verify locally before merging:
 #   bash -n scripts/deploy_pull_restart.sh
-#   shellcheck scripts/deploy_pull_restart.sh
+#   run shellcheck on this file (the bare word at the start of a comment
+#   is parsed as a shellcheck directive and aborts the run)
 # ============================================
 
 set -euo pipefail
@@ -86,6 +87,35 @@ cd "$REPO_DIR"
 # ---------------------------------------------------------------------------
 PRE_SYNC_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 echo ">>> Pre-sync HEAD: ${PRE_SYNC_HEAD}"
+
+# ---------------------------------------------------------------------------
+# PI-20261004-PUQ1APTH-0007 (2): clear a stuck auto-gc before the fetch.
+#
+# When `git gc --auto` finds more unreachable loose objects than it may prune
+# (gc.pruneExpire keeps the last 2 weeks), it writes .git/gc.log and then
+# REFUSES to auto-gc again until that file is removed. Every fetch since printed
+# "The last gc run reported ... remove .git/gc.log" / "too many unreachable
+# loose objects; run git prune" (MEASURED 2026-10-03, ict-git-sync journal), and
+# the object store only grows. This clone is a read-only mirror whose only
+# object writer is this script, so pruning UNREACHABLE objects is safe; the
+# --expire=1.hour.ago margin still spares anything a concurrent writer (a
+# pull-and-deploy run overlapping the timer) could have just created.
+#
+# Bounded and never blocking: runs only when gc.log exists (so once per stuck
+# gc, not every tick), is capped by `timeout`, and every failure is only a
+# warning -- a prune problem must never stop the pull. gc.log is removed only
+# after a successful prune, so a failed prune is retried on the next tick.
+# ---------------------------------------------------------------------------
+GIT_GC_LOG="${REPO_DIR}/.git/gc.log"
+if [ -f "${GIT_GC_LOG}" ]; then
+    echo ">>> ${GIT_GC_LOG} present (auto-gc is stuck) — running a bounded git prune..."
+    if timeout "${GIT_PRUNE_TIMEOUT_S:-300}" git prune --expire=1.hour.ago; then
+        rm -f "${GIT_GC_LOG}" || true
+        echo ">>> git prune done; removed .git/gc.log so auto-gc can run again."
+    else
+        echo ">>> WARNING: git prune failed or timed out — leaving .git/gc.log; continuing with the pull."
+    fi
+fi
 
 echo ">>> Fetching latest from origin..."
 # BL-20260706-GITSYNC-AUTH-BROKEN: the repo went private 2026-07-06, so the
@@ -303,6 +333,60 @@ fi
 # order-package / comms-handler paths), requirements*, pyproject, etc. —
 # falls through to the normal restart below.
 #
+# RESTART-SAFE (2026-10-03, PI-20261003-OJTPWGCC-0001) widened the safe set by
+# six paths no long-running process imports or caches: research/ (queue units +
+# results), runtime_logs/ (CI-committed artifacts such as replay_pregate/),
+# scripts/research/ and scripts/ci/ (offline tools and CI guards — src/ imports
+# only scripts.ops and scripts.ml), comms/research/ and comms/strategy_evidence/
+# (evidence records; no src/ reader). MEASURED over 2026-09-30T15:58Z..
+# 2026-10-03T06:00Z: all 112 ict-trader-live process starts were this script's
+# restarts (soak process boundaries vs this unit's journal), and 45 of them
+# changed nothing outside the widened set. Each restart can land inside a
+# leg's decision window, so a needless one is not free. comms/ OUTSIDE the
+# subdirectories listed in the regex stays runtime (claude_strategy_scores.jsonl
+# and strategy_reviews/ have src/ readers).
+#
+# comms/macro/ joined the safe set on 2026-10-04 (PI-20261004-PUQ1APTH-0006): a
+# workflow append to comms/macro/valuation_snapshots.jsonl alone restarted the
+# trader on 2026-10-03T13:31Z. IMPORT-TIME PROOF (grep of src/, scripts/ops,
+# scripts/ml and scripts/*.py on 2026-10-04, for `comms/macro`,
+# `"comms", "macro"`, `/ "macro"` and every basename under comms/macro/):
+#   - The ONLY long-running-process reader is
+#     src/units/strategies/macro_thesis/valuation_store.py
+#     (COMMITTED_SNAPSHOT_SUBPATH = ("comms", "macro", "valuation_snapshots.jsonl")).
+#     read_snapshot_records() opens the file on EVERY call. There is no
+#     module-level read, no lru_cache and no module global holding its content.
+#   - Its one runtime caller is thesis_tick.run_macro_thesis_tick(), which
+#     src/main.py calls once per trader tick (cadence-gated). So the next due
+#     tick reads the new rows without a restart.
+#   - No src/web router reads comms/macro. The only other hits are
+#     scripts/ops/check_artifact_validity.py and sweep_stale_automation_prs.py,
+#     which are per-invocation CLIs that src/ never imports.
+# Re-run the grep before adding an import-time cache of any comms/macro file.
+#
+# tools/phone-executor/ and tools/phone-probe/ joined the safe set on 2026-10-15
+# (TRADER-RESTART-GATE, manager finding): they are Android app sources, built
+# into an APK by .github/workflows/phone-executor-apk.yml on a GitHub runner and
+# installed on the operator's phone. MEASURED by grep of src/, scripts/ (outside
+# research/ci), deploy/, bin/, ml/, utils/, sim/ and the top-level *.sh: no
+# reader (the one hit, src/prop/phone_reconcile.py, is a docstring). The VM talks
+# to the phone over its API, never through these files. Over 2026-10-08..10-15
+# tools/phone-executor/ was among the paths forcing 17 of the 119 replayed
+# trader restarts (trader_import_closure.py replay, merges per forcing area).
+#
+# EXCEPTION (OA-16(d), PI-20261004-GCFA5DOR-0010): scripts/research/ is
+# non-runtime EXCEPT the modules the web-api's /api/bot/work/brief imports
+# IN-PROCESS. src/web/api/routers/work.py imports
+# scripts.ops.render_daily_brief, which imports
+# scripts.research.queue_throughput (render_daily_brief.py:334/365). Python
+# caches them in sys.modules, so only a restart loads a change. The list below
+# is that import closure, MEASURED by building and rendering the brief and
+# collecting every loaded module file under scripts/research/.
+# tests/test_deploy_pull_restart_runtime_gate.py re-measures the closure and
+# fails if a module the brief loads is missing from the list.
+# src/web/api/routers/diag.py carries the same two patterns for restart_pending,
+# and tests/test_diag_restart_pending_lockstep.py pins them equal.
+#
 # FAIL-SAFE: if the diff cannot be computed, or comes back empty while HEAD
 # moved, we DO restart. An unnecessary restart is the prior status quo; a
 # MISSED restart would pin the running processes to stale code. Only a
@@ -314,13 +398,21 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     # than PRE_SYNC_HEAD, so a drift deploy (HEAD didn't move this fetch, but
     # the marker is behind) evaluates the files that changed since the running
     # processes started — not an empty PRE..POST diff.
-    CHANGED_FILES="$(git diff --name-only "${RUNTIME_BASE}" "${POST_SYNC_HEAD}" 2>/dev/null || true)"
+    # --no-renames: a rename is reported as BOTH paths, so moving a runtime file
+    # into a non-runtime directory (src/x.py -> scripts/research/x.py) still
+    # restarts — rename detection would otherwise show only the new path.
+    CHANGED_FILES="$(git diff --no-renames --name-only "${RUNTIME_BASE}" "${POST_SYNC_HEAD}" 2>/dev/null || true)"
     if [ -n "${CHANGED_FILES}" ]; then
         # Strip the known-safe non-runtime paths; anything left needs a restart.
         RUNTIME_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
-            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$)' || true)"
+            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|tools/phone-executor/|tools/phone-probe/)' || true)"
+        # Add back the scripts/research modules the web-api imports in-process
+        # (the EXCEPTION above). Without this the brief serves stale code.
+        IN_PROCESS_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
+            | grep -E '^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$' || true)"
+        RUNTIME_CHANGES="${RUNTIME_CHANGES}${IN_PROCESS_CHANGES}"
         if [ -z "${RUNTIME_CHANGES}" ]; then
-            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only docs/tests/.claude/top-level-markdown changed."
+            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro}/tools/{phone-executor,phone-probe})"
             echo ">>> Code synced + pings sent; skipping dependency install, unit refresh, and service restart (BL-20260529-002)."
             printf '%s\n' "${CHANGED_FILES}" | sed 's/^/>>>   changed: /'
             # The running processes' RUNTIME code already matches POST (only
@@ -333,6 +425,66 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
         fi
     fi
 fi
+
+# ---------------------------------------------------------------------------
+# TRADER-RESTART-GATE (operator decision 2026-10-15, "Build it (Recommended)",
+# Phase 1): a runtime diff restarts EVERY long-running unit below, but the
+# trader only needs a restart when the diff touches something IT loads.
+# MEASURED over the 879 first-parent merges 2026-10-08T09:40Z..2026-10-15T09:40Z:
+# of 168 runtime merges, 42 changed only src/ or scripts/ .py files outside the
+# trader's import closure (web-api routers, ops CLIs) and bounced the trader for
+# nothing. scripts/ops/trader_import_closure.py replay regenerates the split.
+#
+# The trader restarts iff a path changed since the TRADER's own deployed sha is
+#   (a) a .py in its static import closure from src.main
+#       (config/trader_import_closure.txt UNION a live recompute on this tree),
+#   (b) a non-.py path outside the non-runtime set above, or
+#   (c) a .py outside src/ and scripts/ outside that set.
+# Every other unit keeps the rule above, unchanged.
+#
+# Per-unit marker: runtime_logs/deployed_sha_trader.txt is the sha the trader
+# was last (re)started onto. A skipped trader KEEPS its older sha, so the next
+# deploy diffs from what the trader really loaded and a change it skipped can
+# never be lost; deployed_sha.txt keeps meaning "every other unit".
+#
+# FAIL-SAFE: restart unless the gate positively says SKIP. A missing/unreadable
+# trader marker, a diff that fails or is empty, a missing closure file, a closure
+# file that does not parse, any python error: RESTART. A trader that is not
+# active is never skipped (the deploy's revive of a crashed trader is kept).
+# DEPLOY_FORCE_RESTART=1 bypasses the gate.
+# ---------------------------------------------------------------------------
+TRADER_DEPLOYED_SHA_FILE="${REPO_DIR}/runtime_logs/deployed_sha_trader.txt"
+TRADER_RESTART=1
+TRADER_GATE_NOTE="restart (default)"
+TRADER_BASE="${RUNTIME_BASE}"
+LAST_TRADER_SHA="$(tr -d '[:space:]' < "${TRADER_DEPLOYED_SHA_FILE}" 2>/dev/null || true)"
+if [ "${DEPLOY_FORCE_RESTART:-0}" = "1" ]; then
+    TRADER_GATE_NOTE="restart (DEPLOY_FORCE_RESTART=1)"
+elif [ -z "${LAST_TRADER_SHA}" ] || ! git rev-parse -q --verify "${LAST_TRADER_SHA}^{commit}" >/dev/null 2>&1; then
+    TRADER_GATE_NOTE="restart (no resolvable trader deploy marker)"
+else
+    TRADER_BASE="${LAST_TRADER_SHA}"
+    if [ "${TRADER_BASE}" = "${POST_SYNC_HEAD}" ]; then
+        TRADER_CHANGED=""
+        TRADER_GATE_NOTE="skip (trader already deployed at ${POST_SYNC_HEAD:0:7})"
+        TRADER_RESTART=0
+    elif ! TRADER_CHANGED="$(git diff --no-renames --name-only "${TRADER_BASE}" "${POST_SYNC_HEAD}" 2>/dev/null)" \
+            || [ -z "${TRADER_CHANGED}" ]; then
+        TRADER_GATE_NOTE="restart (trader diff ${TRADER_BASE:0:7}..${POST_SYNC_HEAD:0:7} unreadable or empty)"
+    else
+        TRADER_DECISION="$(printf '%s\n' "${TRADER_CHANGED}" \
+            | /usr/bin/python3 "${REPO_DIR}/scripts/ops/trader_import_closure.py" decide --root "${REPO_DIR}" 2>&1 || true)"
+        TRADER_VERDICT="${TRADER_DECISION%%$'\n'*}"  # line 1, no pipe (pipefail-safe)
+        TRADER_REASONS="$(printf '%s\n' "${TRADER_DECISION}" | sed -n '2,6p' | tr '\n' ';' | sed 's/;$//')"
+        if [ "${TRADER_VERDICT}" = "SKIP" ]; then
+            TRADER_RESTART=0
+            TRADER_GATE_NOTE="skip (${TRADER_BASE:0:7}..${POST_SYNC_HEAD:0:7}: ${TRADER_REASONS})"
+        else
+            TRADER_GATE_NOTE="restart (${TRADER_BASE:0:7}..${POST_SYNC_HEAD:0:7}: ${TRADER_REASONS:-no verdict})"
+        fi
+    fi
+fi
+echo ">>> Trader restart gate: ${TRADER_GATE_NOTE}"
 
 echo ">>> Code changed (${PRE_SYNC_HEAD:0:7} -> ${POST_SYNC_HEAD:0:7}). Installing/updating dependencies..."
 /usr/bin/python3 -m pip install -r requirements.txt --quiet
@@ -393,14 +545,34 @@ fi
 # ict-exchange-fills-pull.timer (daily) — restarting it on every deploy would
 # fire an unscheduled Bybit fills pull each time (cheap + idempotent, but
 # needless). Let the timer own it (BL-20260713-EXCHANGE-FILLS-STORE-EMPTY).
+# ict-alpaca-fills-pull.service is a oneshot owned by
+# ict-alpaca-fills-pull.timer (hourly), split off ict-exchange-fills-pull on
+# 2026-09-27 (FIX-CA-OPS2) — same reasoning as its Bybit sibling: let the
+# timer own it rather than firing an unscheduled Alpaca pull on every deploy.
+# ict-prop-feed.service is a oneshot owned by ict-prop-feed.timer (5 min,
+# W6-PROP-FEED). Each fire LOGS IN to a live prop account, so a deploy restart
+# would be an unscheduled extra login outside the lock/backoff cadence. Let
+# the timer own it.
+# ict-prop-executor.service (PROP-EXEC 2026-09-28) is a oneshot owned by its
+# OPT-IN timer. A cycle can PLACE ORDERS on a live prop account when
+# PROP_EXECUTOR_MODE=live, so a deploy must never fire one: only its timer or
+# an explicit system-action runs it.
+# ict-phone-capture-purge.service (PHONE-EXEC-OBSERVABLE-1018) is a daily
+# oneshot owned by its timer; a deploy never fires an unscheduled purge.
 # ict-ib-executions-pull.service is a oneshot owned by
 # ict-ib-executions-pull.timer (hourly) — restarting it on every deploy would
 # open an unscheduled IB GATEWAY connection each time. That is the costliest
 # of these three to fire needlessly: the gateway is the component with the
 # wedge history (BL-20260609 / BL-20260709), and a deploy can land inside
 # IBKR's ~03:45-05:45 UTC reset window. Let the timer own it.
+# ict-trainer-disk-alarm.service (FIX-SA-12) is a oneshot owned by
+# ict-trainer-disk-alarm.timer (hourly). A deploy restart would only fire an
+# unscheduled extra check; let the timer own it.
+# ict-notify-failure@<unit>.service instances (FIX-SA-08) are NOT listed here
+# because instance names vary: the restart loop below skips every `@` unit
+# outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-ib-executions-pull.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-phone-capture-purge.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes
@@ -435,9 +607,150 @@ if [ "${#ICT_UNITS[@]}" -eq 0 ]; then
     ICT_UNITS=(ict-trader-live.service ict-web-api.service ict-telegram-bot.service)
 fi
 
+# ---------------------------------------------------------------------------
+# PI-20260927-YDVVYLKH-0002: `systemctl restart` STARTS an inactive unit, so this
+# loop used to revive a trader the operator had stopped on purpose. MEASURED
+# 2026-09-27: stop-bot-service stopped ict-trader-live at 14:15:23Z; this script
+# restarted it at 14:16:59Z and 14:22:27Z, and the forced IB cancels the stop
+# was taken for hit Error 326 (clientId 497 held by the revived trader).
+#
+# Two holds, neither of which gives up the stale-code redeploy of a RUNNING
+# trader (BL-20260714-DEPLOY-STALE-ON-OOB-SYNC):
+#
+#   1. ict-trader-live: stop_bot.sh writes TRADER_STOP_MARKER; start/restart-
+#      bot-service and pull-and-deploy clear it. While it exists AND the trader
+#      is not active, skip it -- never start it from here. A marker with an
+#      ACTIVE trader is either a stop in progress (marker younger than
+#      TRADER_STOP_MARKER_GRACE_S, default 300 s: skip, do not restart) or stale
+#      (older: someone started the trader by another path -- remove it and
+#      restart as before). Without a marker the behaviour is unchanged,
+#      including reviving a crashed/failed trader. A held trader still gets the
+#      deploy marker written below: nothing restarts it here, and whatever
+#      starts it next (start/restart-bot-service, pull-and-deploy) loads the
+#      synced tree, so it is not left on stale code.
+#      Path must match scripts/ops/_lib.sh::TRADER_STOP_MARKER (this script
+#      cannot source _lib.sh; a test pins the two).
+#   2. ict-liveness-watchdog.service is the timer's ONESHOT payload
+#      (check_heartbeat.py, which can itself `systemctl restart` the trader).
+#      Restarting it runs one watchdog check, so doing that while
+#      pause-autoheal has stopped its timer re-arms the dead-man switch the
+#      operator paused. Skip it whenever the timer is not active; when the
+#      timer is active it fires within 60 s anyway.
+# ---------------------------------------------------------------------------
+TRADER_UNIT="ict-trader-live.service"
+TRADER_STOP_MARKER="${REPO_DIR}/runtime_logs/trader_operator_stop.json"
+TRADER_STOP_MARKER_GRACE_S="${TRADER_STOP_MARKER_GRACE_S:-300}"
+WATCHDOG_ONESHOT="ict-liveness-watchdog.service"
+WATCHDOG_TIMER="ict-liveness-watchdog.timer"
+
+# ---------------------------------------------------------------------------
+# GITSYNC-REVIVE (PI-20260927-YDVVYLKH-0002, second half): a first version held
+# EVERY long-running unit that read inactive/deactivating after running since
+# boot. Review (2026-09-30) found that systemd cannot tell a human's raw
+# `systemctl stop` from its OWN stops, and that holding on state alone
+# regressed the Prime Directive in two measured paths:
+#   - a RequiresMountsFor=/data/bot-data drop stops the trader cleanly
+#     (inactive, Result=success -- identical to a manual stop);
+#   - a `systemctl reset-failed` turns a start-limit-`failed` trader into
+#     `inactive` with a non-zero ActiveEnterTimestamp.
+# Both used to be revived here and must still be. Result= does not separate
+# them (a manual stop is Result=success too), and a paused autoheal is not a
+# stop signal (pause_autoheal.sh is for a trader that keeps RUNNING).
+# So the ONLY hold is an explicit operator signal: TRADER_STOP_MARKER above,
+# written by stop-bot-service (which also pauses the liveness watchdog -- that
+# watchdog restarts a raw-stopped trader within minutes on its own, so a raw
+# stop never stayed stopped regardless of this script).
+# What this adds for every other case is the logged CAUSE: a stopped
+# long-running unit that this deploy is about to START is named, with its
+# state, so a revive is visible in the ict-git-sync journal instead of
+# reading as an ordinary restart.
+# Read-only; any unreadable field just means no note. Adds no stop.
+# ---------------------------------------------------------------------------
+stopped_unit_note() {
+    local unit="$1" state utype entered
+    state="$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)"
+    case "${state}" in
+        inactive|deactivating) ;;
+        *) return 1;;
+    esac
+    utype="$("${SYSTEMCTL[@]}" show -p Type "${unit}" 2>/dev/null | cut -d= -f2- || true)"
+    if [ -z "${utype}" ] || [ "${utype}" = "oneshot" ]; then
+        return 1
+    fi
+    entered="$("${SYSTEMCTL[@]}" show -p ActiveEnterTimestampMonotonic "${unit}" 2>/dev/null | cut -d= -f2- || true)"
+    case "${entered}" in
+        ''|0|*[!0-9]*) return 1;;
+    esac
+    printf "unit is '%s' after running since boot (Type=%s) and carries no operator-stop signal; a raw stop, a mount drop and a reset-failed crash look identical, so it is STARTED as before" "${state}" "${utype}"
+}
+
+# ---------------------------------------------------------------------------
+# JC-CA-05 (docs/audits/code-audit-2026-09-27.md §6, `CA-A10-300`, operator
+# decision 2026-09-28: "Loud alert, manual" — option B only).
+#
+# CA-A10-300: this script has no rollback-on-failure. If a deploy leaves a
+# money-path unit crash-looping on the new code, nothing here reverts the
+# working tree — the restart loop below only WARNS and continues, and the
+# version assertion further down only `exit 4`s, by which point `git reset
+# --hard`, `pip install`, and every unit restart have already run against the
+# new, broken code. Recovery was entirely silent and out-of-band.
+#
+# Option A (auto-revert: `git reset --hard <DEPLOYED_SHA_FILE>` + re-restart)
+# was REJECTED — it risks compounding one bad deploy with a second risky
+# git/restart cycle while the trader may be mid-restart or holding open
+# positions. Option B (this): no auto-revert, keep every existing exit code
+# and continue-on-warning behaviour byte-for-byte, but the INSTANT a
+# money-path unit's restart fails or the version assertion mismatches, send a
+# ping distinct from a clean deploy's Telegram pings (S-020 above, and the
+# per-unit summary at "Service status") naming the failing unit, the new SHA,
+# the last KNOWN-GOOD sha (DEPLOYED_SHA_FILE's content before this run,
+# captured in ${LAST_DEPLOYED_SHA} above — untouched at either failure point,
+# since the marker is only overwritten on full success far below), and how a
+# human rolls back.
+#
+# ⚠️ WHY THE ROLLBACK INSTRUCTION NAMES `pull-and-deploy`, NOT A RAW VM-LOCAL
+# RESET: this VM is a read-only mirror of `origin/main` (see the file header)
+# and `ict-git-sync.timer` re-runs this exact script every ~5 min. A bare
+# `git reset --hard <good-sha>` run BY HAND on the VM would be silently undone
+# by the next tick, which would re-deploy the same broken commit and
+# re-produce this exact alert — so the only durable rollback is to revert the
+# bad commit(s) on `main` (the source of truth) and then dispatch the
+# existing `pull-and-deploy` system-action (docs/claude/system-actions.md),
+# which is the wrapper around this very script.
+#
+# Money-path = the two units CA-A10-300's `fix` field names explicitly:
+# ict-trader-live (the order-package/execution pipeline) and ict-web-api (the
+# surface /api/bot/* and /api/diag/* read from — a stale/crash-looping
+# web-api blinds the operator's own read path onto the failure).
+MONEY_PATH_UNITS="ict-trader-live.service ict-web-api.service"
+
+# Best-effort: a broken ping channel must never mask (or worse, ABORT via
+# `set -e`) the deploy-failure condition it exists to report, so every
+# internal step is `|| true`'d and the function itself is always called
+# `|| true` at each call site.
+send_deploy_failure_ping() {
+    local what="$1"
+    local rollback_sha="${LAST_DEPLOYED_SHA:-unknown}"
+    local msg="DEPLOY FAILURE (JC-CA-05): ${what}. unit-of-concern SHA new=${POST_SYNC_HEAD:0:7} last-known-good=${rollback_sha:0:7}. Roll back: revert main to ${rollback_sha} and dispatch the pull-and-deploy system-action (a VM-local git reset alone would be undone by the next ict-git-sync tick)."
+    echo ">>> ALERT: ${msg}"
+    heal_devnull || true
+    if /usr/bin/python3 "${REPO_DIR}/scripts/send_ping.py" --priority urgent --target trader "${msg}" >/dev/null 2>&1; then
+        echo ">>> Deploy-failure ping sent."
+    else
+        echo ">>> WARNING: could not send deploy-failure ping (send_ping.py failed) -- see the ALERT line above, which is why it is printed regardless."
+    fi
+}
+
 echo ">>> Restarting services (enumeration: ${#ICT_UNITS[@]} ict-* unit(s))..."
 RESTARTED_UNITS=()
 for unit in "${ICT_UNITS[@]}"; do
+    # FIX-SA-08: a template INSTANCE (ict-notify-failure@<failed-unit>.service,
+    # loaded after any OnFailure= fire) is fired only by systemd. Restarting it
+    # runs the notifier for a unit that did not fail. Unlike DEFAULT_SKIP this
+    # cannot be overridden away by DEPLOY_RESTART_SKIP.
+    case "${unit}" in
+        *@*) echo ">>>   skip ${unit} (template instance; fired only by OnFailure=)"; continue;;
+    esac
     skip=0
     for skip_unit in ${SKIP_LIST}; do
         if [ "${unit}" = "${skip_unit}" ]; then
@@ -449,11 +762,78 @@ for unit in "${ICT_UNITS[@]}"; do
         echo ">>>   skip ${unit} (in DEPLOY_RESTART_SKIP)"
         continue
     fi
+    if [ "${unit}" = "${TRADER_UNIT}" ] && [ "${TRADER_RESTART}" -eq 0 ]; then
+        # TRADER-RESTART-GATE: only a RUNNING trader is left alone; a stopped or
+        # crashed one falls through to the rules below exactly as before.
+        trader_state="$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)"
+        if [ "${trader_state}" = "active" ]; then
+            echo ">>>   skip ${unit} (trader restart gate: ${TRADER_GATE_NOTE}; trader stays on ${TRADER_BASE:0:7})"
+            continue
+        fi
+        echo ">>>   trader restart gate said skip, but ${unit} is '${trader_state:-unknown}' — not skipping it."
+    fi
+    if [ "${unit}" = "${TRADER_UNIT}" ] && [ -f "${TRADER_STOP_MARKER}" ]; then
+        trader_state="$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)"
+        if [ "${trader_state}" != "active" ]; then
+            echo ">>>   hold ${unit} (operator stop marker present, unit '${trader_state:-unknown}') — NOT starting it; start-bot-service releases the hold."
+            # Whatever starts it next loads the synced tree (see the hold note above).
+            printf '%s\n' "${POST_SYNC_HEAD}" > "${TRADER_DEPLOYED_SHA_FILE}" 2>&- || true
+            continue
+        fi
+        # Active + marker. stop_bot.sh writes the marker a few seconds BEFORE its
+        # `systemctl stop`, so a FRESH marker on an active trader is a stop in
+        # progress, not a stale one: deleting it and restarting here is exactly
+        # the race that would revive the stop. Only a marker older than the grace
+        # window is stale (the trader was started by some other path).
+        marker_mtime="$(stat -c %Y "${TRADER_STOP_MARKER}" 2>/dev/null || echo 0)"
+        marker_age=$(( $(date +%s) - marker_mtime ))
+        if [ "${marker_age}" -lt "${TRADER_STOP_MARKER_GRACE_S}" ]; then
+            echo ">>>   skip ${unit} (operator stop marker is ${marker_age}s old — a stop is in progress; not restarting it)"
+            printf '%s\n' "${POST_SYNC_HEAD}" > "${TRADER_DEPLOYED_SHA_FILE}" 2>&- || true
+            continue
+        fi
+        echo ">>>   ${unit} is active with a ${marker_age}s-old operator stop marker — marker is stale; removing it and restarting as normal."
+        rm -f "${TRADER_STOP_MARKER}" 2>/dev/null || true
+    fi
+    if [ "${unit}" = "${WATCHDOG_ONESHOT}" ]; then
+        wd_timer_state="$("${SYSTEMCTL[@]}" is-active "${WATCHDOG_TIMER}" 2>/dev/null || true)"
+        if [ "${wd_timer_state}" != "active" ]; then
+            echo ">>>   skip ${unit} (${WATCHDOG_TIMER} is '${wd_timer_state:-unknown}' — autoheal paused; not re-running the watchdog)"
+            continue
+        fi
+    fi
+    if stop_note="$(stopped_unit_note "${unit}")"; then
+        echo ">>>   starting stopped ${unit} (${stop_note}). To keep the trader stopped use stop-bot-service."
+    fi
+    if [ "${unit}" = "${TRADER_UNIT}" ]; then
+        # TELEGRAM-RESTART-MSG: tell the trader's boot ping WHY it is starting
+        # (src/runtime/restart_cause.py reads + consumes this). Best-effort.
+        # "from" is the TRADER's own deployed sha (TRADER-RESTART-GATE), so the
+        # cause line counts the commits the trader actually moves across.
+        printf '{"cause": "deploy", "sha": "%s", "from": "%s", "unit": "%s", "at": %s}\n' \
+            "${POST_SYNC_HEAD}" "${TRADER_BASE}" "${TRADER_UNIT}" "$(date +%s)" \
+            > "${REPO_DIR}/runtime_logs/trader_restart_intent.json" 2>&- || true
+    fi
     if "${SYSTEMCTL[@]}" restart "${unit}"; then
         echo ">>>   restarted ${unit}"
         RESTARTED_UNITS+=("${unit}")
+        if [ "${unit}" = "${TRADER_UNIT}" ]; then
+            # Per-unit marker, written the moment the trader is on POST: a later
+            # failure (version assertion exit 4) must not make it lie older.
+            if printf '%s\n' "${POST_SYNC_HEAD}" > "${TRADER_DEPLOYED_SHA_FILE}" 2>&-; then
+                echo ">>>   recorded trader deploy marker: ${POST_SYNC_HEAD:0:7}"
+            else
+                echo ">>>   WARNING: could not write trader deploy marker ${TRADER_DEPLOYED_SHA_FILE} (next deploy restarts the trader)"
+            fi
+        fi
     else
         echo ">>>   WARNING: restart ${unit} failed (continuing)"
+        for money_unit in ${MONEY_PATH_UNITS}; do
+            if [ "${unit}" = "${money_unit}" ]; then
+                send_deploy_failure_ping "restart of money-path unit ${unit} failed" || true
+                break
+            fi
+        done
     fi
 done
 
@@ -525,10 +905,14 @@ DIAG_TOKEN="${DIAG_READ_TOKEN:-}"
 if [ -z "${DIAG_TOKEN}" ] && [ -r "${DIAG_TOKEN_FILE}" ]; then
     DIAG_TOKEN="$(cat "${DIAG_TOKEN_FILE}")"
 fi
+# Overridable (same pattern as DIAG_TOKEN_FILE above), added alongside JC-CA-05
+# so this gate -- and the failure ping behind it -- can be black-box tested
+# without writing into the real /etc/systemd/system.
+WEB_API_UNIT_FILE="${WEB_API_UNIT_FILE:-/etc/systemd/system/ict-web-api.service}"
 
 if ! command -v curl >/dev/null 2>&1; then
     echo ">>> Skipping post-deploy version assertion (curl not installed)."
-elif [ ! -f /etc/systemd/system/ict-web-api.service ]; then
+elif [ ! -f "${WEB_API_UNIT_FILE}" ]; then
     echo ">>> Skipping post-deploy version assertion (ict-web-api.service not installed)."
 elif [ -z "${DIAG_TOKEN}" ]; then
     echo ">>> Skipping post-deploy version assertion (DIAG_READ_TOKEN unset and ${DIAG_TOKEN_FILE} not readable)."
@@ -562,6 +946,7 @@ else
         echo ">>> ERROR: post-deploy version round-trip failed."
         echo ">>>   expected SHA: ${EXPECTED_SHA}"
         echo ">>>   This usually means ict-web-api.service didn't actually restart."
+        send_deploy_failure_ping "post-deploy version assertion failed (web-api expected git_sha=${EXPECTED_SHA}, last reported ${REPORTED_SHA:-unreachable})" || true
         exit 4
     fi
 fi

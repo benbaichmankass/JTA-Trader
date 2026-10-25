@@ -1,0 +1,119 @@
+id: RQ-20261014-da7a-01
+title: >-
+  Programme 06 Q1 (L-DATA): is the SL-first tie convention a material first-passage LABEL error? 1m re-walk of the committed
+  ledgers, fixed bracket K in {1,2,3} R, per family
+status: done
+cadence: once
+kind: experiment
+theme: infra
+priority: 1
+roadmap: L-DATA
+question: >-
+  Over the newest committed ledger per Binance-USD-M USDT leg (25 legs, ~3,356 trades at <= 400 per leg, MEASURED 2026-10-14),
+  with a fixed bracket (initial SL at -1 R, TP at +K R, K = 1, 2, 3, horizon 60 leg bars) walked on leg-size bars rebuilt from
+  Binance Vision 1m: what share of trades hit a leg bar that touches BOTH levels first (ambiguous at bar resolution), and what
+  share of those does the 1m walk resolve TP-first -- i.e. how often does the SL-first convention every barrier labeller in this
+  repo uses (ml/datasets/labeling/triple_barrier.py, src/research/triple_barrier.py) mislabel the trade?
+why_this_matters: >-
+  The in-trade exit model (row IN-TRADE-EXIT-MODEL) learns P(SL before TP | state at bar t); every label it, setup_candidates and
+  exit_candidates train on resolves ties SL-first. If that is a material error on a family, a persisted 1m archive
+  (DATA-KLINE-ARCHIVE) is a LABEL PREREQUISITE and tie-aware labels (DATA-LABEL-TIES) come first; if not, the archive is an
+  information source and drops to W3. The operator's 2026-10-14 directive asks for data infra that lets the models learn; this
+  decides which part of it the labels need. Measurement, not an edge or promotion case.
+power:
+  expected_n: 3356
+  min_detectable_effect: 0.02
+  effect_units: proportion
+  sd: 0.14
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    sd = 0.14 is INFERRED, not measured: Bernoulli sqrt(p(1-p)) at the pre-registered NEEDED bar p = 0.02. A proportion near 0.02 on the smallest eligible family (trend_donchian, ~374 trades) has SE ~0.007, so the 2% NEEDED bar and
+    the 0.5% NOT_NEEDED bar are separable per family at n >= ~370; pullback (1,636) and ict_scalp (919) are better powered. Counts
+    MEASURED 2026-10-14 by newest_ledgers() over comms/strategy_evidence/runs (resamples excluded, USDT legs with a bar size).
+  feasibility:
+    source: none
+    accrual_basis: Re-walk of committed ledgers over a public archive; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261014-DA7A-01-INTRABAR-TIE-FIDELITY
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per family (pooled over its legs that pass the alignment control) and per K: mislabel_frac = trades whose first touching leg
+    bar touches both levels AND whose 1m walk inside that bar touches TP first, divided by trades walked. Reported beside it:
+    amb_frac (ties at bar resolution), amb_1m (still tied on one 1m bar), and per leg the alignment control at entry offsets 0 and 1.
+  rule: >-
+    Eligible family: >= 100 walked trades at every K. NEEDED if mislabel_frac >= 0.02 on ANY eligible family at ANY K (the 1m
+    archive and tie-aware labels are a label prerequisite for that family). NOT_NEEDED if mislabel_frac < 0.005 on EVERY eligible
+    family at EVERY K. MIXED otherwise (prerequisite only for the families at or above 0.02 are named; others get the archive as an
+    information source). INDETERMINATE if no family is eligible or the archive could not be fetched (missing months are listed).
+  alignment_control: >-
+    A leg is walked only if, at the registered entry offset (1 leg bar after the ledger's entry_time, an open-time label), the share
+    of trades whose 1m path breaches the initial SL strictly before the ledger's exit bar is <= 0.05 on >= 10 trades; else
+    control_failed and excluded with its numbers. Sandbox read 2026-10-14 (disclosed, not the verdict): trend_donchian_xrp_4h,
+    44 trades: 0/44 at offset 1 vs 27/44 at offset 0; 0 bar-level ties at K = 1, 2, 3 on that leg (n = 46).
+  what_it_does_not_do: >-
+    Models no trailing stop, TP revision or stale exit (fixed bracket only); says nothing about edge; changes no config. The leg as
+    it trades needs the harness path emit (EXIT-PATH-EMIT-OFFLINE, the exit lane's row).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 120
+  basis: >-
+    ~6 symbols x up to ~72 monthly 1m zips (~1.5-2 MB each) fetched once into a runner-scratch cache; walk is numpy masks over <=
+    14,400 1m rows per trade. INFERRED: the runner reaches data.binance.vision (committed fetchers rely on it; this sandbox
+    reached it, MEASURED); a fetch failure grades INDETERMINATE, never FAIL.
+compute: cpu_long
+value:
+  bucket: information
+  usd_at_stake_per_month: 150
+  confidence: 0.5
+  basis: 'stand-in: decides the order of the L-DATA builds and whether every first-passage label is a convention. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 240
+  command:
+  - python3
+  - scripts/research/intrabar_label_fidelity.py
+  - --out
+  - '{out_dir}'
+  - --tp-r
+  - 1,2,3
+  - --horizon-bars
+  - '60'
+  - --max-trades-per-leg
+  - '400'
+  - --entry-offset-bars
+  - '1'
+  - --control-max-breach
+  - '0.05'
+  - --min-n
+  - '100'
+  - --needed-frac
+  - '0.02'
+  - --not-needed-frac
+  - '0.005'
+  inputs:
+    research_unit: RQ-20261014-da7a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/06-DATA-INFRA.md
+- scripts/research/intrabar_label_fidelity.py
+- docs/claude/work/checklist/DATA-KLINE-ARCHIVE.json
+- docs/claude/work/checklist/DATA-LABEL-TIES.json
+- ml/datasets/labeling/triple_barrier.py
+last_dispatched_at: '2026-10-14T23:59:27+00:00'
+grading:
+  decision_rule_id: RULE-RQ20261014-DA7A-01-INTRABAR-TIE-FIDELITY
+  graded_at: '2026-10-15'
+  graded_by: session_01AHy9CTrdF2hMBAWNBzB5wN (lane RESEARCH-GRADE-BACKLOG)
+  read_state: measured
+  reason: 'verdict.json measured MIXED (not an accepted row verdict, so the row landed producer_failed):
+    no eligible family >= 0.02 mislabel (max ict_scalp K=1 0.0054); not every family < 0.005. MIXED is
+    neither NEEDED nor NOT_NEEDED: no label prerequisite named, information only.'
+  verdict: indeterminate

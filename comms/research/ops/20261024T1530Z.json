@@ -1,0 +1,44 @@
+{
+ "run": "RESEARCH-OPS-20261024-1447",
+ "finished_at": "2026-10-24T15:30:00Z",
+ "by": "session_016Br2THxzkZkY1Fh2nXMyUG",
+ "floor": 59, "floor_basis": "computed_floor(fired_24h 74)", "authoring_queue_depth": 31,
+ "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+ "needs_review_triaged": 1, "needs_review_left": 29,
+ "needs_review_note": "30 units measured by queue_grade.py --health; all 30 already carry grading.owner + owner_reason (result_disposition_check: owned 28 / UNOWNED 0 at start). Each unit's file was read. Only RQ-20261022-4a3b-01 could be dispositioned by a write (retired unit, redesign RQ-20261022-38be-01 exists -> needs_review false; health went 30 -> 29, measured). The other 29 cannot be closed by applying their rule: 14x RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST are wiring_only (harness emits whole-window R, no OOS split), 5 producer_failed (3 with a lever now named, see levers_filed), 3 NEWS-ALPHA mixed fail/indeterminate cells with no primary-cell label, 2 {fail,pass} flips (029, 237), 1 n-bound (RQ-20261011-002, 29 of 39 OOS trades), 2 no_data Kaggle parity, 1 indeterminate (RQ-20260929-009 no MGC feed), 2 not gradable as registered (1007-017, 1007-024). Two units' owner_reason was STALE and was corrected (1631-01/-02 claimed they would re-run; they had, and still failed).",
+ "throughput": {"runnable_before": 75, "runnable_after": 76, "queued": 163, "fired_24h": 74, "results_landed_24h": 76, "hours_since_last_dispatch": 1.1, "idle_alarm": false,
+  "after_basis": "runnable_after = 75 + 1 new unit, not re-measured on the merged tree; the new unit counts runnable only once this held PR merges. 76 vs floor 59 so H1 is met; H1-THEME shortfalls remain (ml_health 0 vs 9, new_strategy_prop 15 vs 17, infra 3 vs 6)."},
+ "mechanism": {"dispatch_receipt": "ok (last dispatch 13:46Z, 1.1 h)", "collector": "ok (76 results 24h, 0 unreadable)",
+  "stranded_stamp_prs": "not re-listed this pass (GitHub PR list not queried); previous record named #19812 and #19787", "incident": null,
+  "watchdog": "comms/research/ops/watchdog_incidents.jsonl: newest row 2026-10-24T09:09Z (resolved conflicted_automation); first row since 2026-10-17, so the file is being written (08:47Z handoff question answered)",
+  "blocked_audit": "RUN. research/queue/blocked/ = 71 files (63 blocked, 8 retired). For every blocked unit the blocked_on refs were resolved against the checklist store and PIPELINE.jsonl: 63 of 63 have a named lever with a live owner after this pass's fixes (RQ-20261008-901, RQ-20261012-5bd1-14, RQ-20261011-17f4-01) (RQ-20261008-901 had none -> EXIT-HEAD-PULLBACK-DRIVER added; RQ-20261012-5bd1-14 lacked an owner for the arm-comparison build -> stated why no row is filed). Unlock candidates checked by reading the code, none unlockable: RQ-20261017-9582-01 and -470a-12 (PAIRS-R-SCALE landed_unproven but grep finds no --entry-trigger in backtest_pairs.py / pairs_configured_stage0.py), RQ-20261011-17f4-01 (ML-PARITY-HARNESS: svble self-check not yet recorded), RQ-20261011-9da8-03 (needs ML-HEAD-AGREEMENT-JOIN). Of the 49 distinct checklist rows the blocked_on texts reference (regex match against the store): 33 queued, 14 landed_unproven, 4 done, 1 blocked. Of the 4 done, ML-PARITY-HARNESS is a real stale blocker on RQ-20261011-17f4-01 (self-check WAS read; mes head answered; the two fc heads wait on ML-PARITY-FC-SHADOWLOG): corrected in the unit's blocked_on, still blocked. The other done rows (RESEARCH-FOLLOWUPS, CROSS-SIGNAL-RESEARCH, EXIT-PATH-TELEMETRY-LIVE) are mentioned as context, not the lever, and were not each re-verified. The 14 landed_unproven levers were not each re-verified for a fully unblocked driver."
+ },
+ "results_read": {"pass": 1, "fail": 12, "indeterminate": 0,
+  "units": ["RQ-20261022-4b82-03 PASS (arm WIDE, 1 of 4 arms)", "RQ-20261022-4b82-04/-05/-06/-07/-08 fail", "RQ-20261022-3a84-03/-04 fail", "RQ-20261023-7e83-01/-02 fail", "RQ-20261023-9ffb-03 fail", "RQ-20261023-1d5c-07 fail", "RQ-20261024-001 fail"],
+  "note": "13 result dirs landed since 09:30Z. The decision_rule was read in full for 4b82-03 and 4b82-07; the rest were taken from the grader verdict line. 4b82-07, 4b82-08 and 1d5c-07 are not yet graded in their files (grader runs 6-hourly; the 'fail' is the producer verdict.json). 4b82-07's baseline B alone reads pooled net_r 180.7 with 6/6 folds positive and 3/6 powered cells: that is the baseline, not a candidate pass. No Tier-3 action taken."},
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [{"lever": "crypto 5m candle source for scripts/research/same_symbol_head_to_head.py (ETH, XRP, SOL all unresolved)", "ref": "SAME-SYMBOL-ALLOCATION (note appended; existing row, no twin filed)"}],
+ "units_authored": ["RQ-20261024-71e8-01 (confirmation of the 4b82-03 WIDE PASS on a symbol-disjoint basket; denominator 3 arms x 6 cells stated in the question; all calendar windows already seen so symbol-disjoint is the only available axis)"],
+ "followups_filed": [
+  {"what": "4b82-03 WIDE PASS (one window)", "ref": "RQ-20261024-71e8-01"},
+  {"what": "9ffb-03 FAIL: slv_pullback_1d fourth Stage-0 fail", "ref": "SLV-PB1D-RETENTION-T3 note appended: Tier-3 question now the manager's; variant step still owed"},
+  {"what": "RQ-20261022-3a84-12 daily self-test reads FAIL (14 blocked units over 10 days)", "ref": "each has a named lever + owner per the blocked audit above; no unit is retired for age alone. The check will keep reading FAIL until levers land or units are retired by their owners"},
+  {"what": "RQ-20261015-1631-01/-02 and 20261018-001 producer_failed on 5m candles", "ref": "SAME-SYMBOL-ALLOCATION"}
+ ],
+ "authoring": {"queue_depth": 31, "nodes_drafted": 0, "nodes": [],
+  "theme_shortfall": {"ml_health": 9, "new_strategy_prop": 2, "infra": 3, "regime": 0, "live_strategy": 0, "macro": 1},
+  "why_short": "OPS-AUTHOR-SKIPPED stays unmet: this pass spent its budget on the needs_review triage and the blocked audit the previous pass skipped, and authored one hand unit (the confirmation) but no programme node. The 31-deep authoring queue and the ml_health shortfall (0 runnable vs 9) go to the next pass first."},
+ "not_run": [
+  "step E.0 programme nodes: 0 drafted (OPS-AUTHOR-SKIPPED will warn)",
+  "stranded automation PR list (#19812/#19787) not re-queried",
+  "RQ-20261022-4b82-07/-08, 1d5c-07 rules not individually re-derived (grader had not yet graded them)",
+  "12 landed_unproven lever rows not individually verified as unblocking their units"
+ ],
+ "handoff": [
+  "MANAGER (held PR): merge this run PR (queue edits hold under E57); merge-slot claim committed on the branch",
+  "MANAGER Tier-3: slv_pullback_1d retention/demotion after 9ffb-03 FAIL (row SLV-PB1D-RETENTION-T3); no config touched here",
+  "next research-ops: author ml_health units first (0 runnable vs 9 share), then programme nodes from the 31-deep authoring queue; read RQ-20261024-71e8-01 when it lands; re-grade 4b82-07/-08, 1d5c-07",
+  "next research-ops: needs_review 29 left, all owned; the 14 TPL-ROSTER wiring_only units are one instrument gap (OOS split in research-harness-dispatch) already owned by RESEARCH-TOOLING-GAPS: ask whether that row has a build date"
+ ]
+}

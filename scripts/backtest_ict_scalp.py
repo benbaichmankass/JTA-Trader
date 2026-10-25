@@ -56,6 +56,9 @@ sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
 import capital_efficiency  # noqa: E402  (the ONE capital-efficiency definition)
+import target_basis  # noqa: E402  (the ONE take-profit-basis definition)
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "research"))  # noqa: E402
+import tp_geometry as _tpg  # noqa: E402  (GEOM-B1: a take-profit that moves; every lever off by default)
 from src.units.strategies.ict_scalp import (  # noqa: E402
     order_package,
     # IMPORTED, never re-derived. The effective take-profit distance has ONE
@@ -76,6 +79,16 @@ FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP
 SLIPPAGE_BPS_ROUNDTRIP = 0.0
 FUNDING_BPS_PER_WINDOW = 0.0
 FUNDING_WINDOW_HOURS = execution_costs.FUNDING_WINDOW_HOURS
+
+# LIMIT-ENTRY mode (RQ-20260930-502, registered 2026-09-30 BEFORE any run). Bybit's
+# published schedule quoted on HyroTrader's fee FAQ: maker 0.0200%, taker 0.0550% per
+# side. A limit entry pays maker on entry and taker on the exit/stop; the venue slippage
+# applies to the taker exit only (half the round-trip figure, the RQ-20260929-401
+# convention). Market mode is untouched and still charges FEE_BPS_ROUNDTRIP above.
+# NOTE the default 7.5 bps round-trip is this account's taker figure; HyroTrader's
+# published taker-taker round trip would be 11 bps, which is NOT what market mode charges.
+LIMIT_MAKER_FEE_BPS = 2.0
+LIMIT_TAKER_FEE_BPS = 5.5
 
 
 @dataclass
@@ -232,11 +245,54 @@ def bank_rung_state(bank_frac: float, bank_at_r: float,
             else "rung_below_target")
 
 
-def _load_yaml_params() -> Dict[str, Any]:
+#: The leg whose ``config/strategies.yaml`` block a caller gets when it does not
+#: say which one it wants. Kept as the historical literal so every existing
+#: caller — and ``scripts/research/mi321_ict_scalp_seam.py``, which calls
+#: ``_load_yaml_params()`` with no argument to describe a DEFAULT run — is
+#: byte-identical.
+DEFAULT_CFG_KEY = "ict_scalp_5m"
+
+
+def _load_yaml_params(name: str = DEFAULT_CFG_KEY) -> Dict[str, Any]:
+    """The ``config/strategies.yaml`` block for leg *name*, minus the keys the
+    unit does not consume.
+
+    ⚠️ **This used to read ``ict_scalp_5m`` unconditionally, for every leg**, and
+    that is the defect this signature fixes. MI-321 measured it
+    (`docs/research/ict-scalp-seam-2026-09-18.md` § 3): seven of the eight live
+    ``ict_scalp_*`` legs run through their own block live, ``--strategy-name``
+    relabelled the emitted rows without rerouting the read, and a default run is
+    faithful to exactly THREE legs — ``ict_scalp_5m``, ``ict_scalp_sol_5m``,
+    ``ict_scalp_avax_5m``, the three that differ from that block in 0 consumable
+    keys.
+
+    It matters now because ``scripts/research/regime_debt_matrix.py`` routes all
+    eight legs here (E28). Routing them at the old signature would have measured
+    ``ict_scalp_5m``'s config eight times under eight names and written eight
+    ``coverage_state: "measured"`` records — which is strictly WORSE than the
+    ``no_harness`` state it replaced, because a wrong number reads as evidence
+    and a missing one does not.
+
+    An UNKNOWN name raises. It does not fall back to ``DEFAULT_CFG_KEY``: a
+    silent fallback is precisely the collapse above, and *"the leg is not in the
+    config"* and *"the leg's config is what ict_scalp_5m declares"* are opposite
+    statements.
+    """
     try:
-        cfg = load_strategy_config().get("ict_scalp_5m", {}) or {}
+        all_cfg = load_strategy_config()
     except Exception:
-        cfg = {}
+        # Config unreadable — the unit's own defaults are the honest answer, and
+        # they are the same answer this function has always given here.
+        return {}
+    cfg = all_cfg.get(name)
+    if cfg is None:
+        raise KeyError(
+            f"--strategy-name {name!r} is not a key in config/strategies.yaml. "
+            f"It selects the parameter block this harness runs, so an unknown "
+            f"name cannot be silently served {DEFAULT_CFG_KEY!r}'s block. Pass a "
+            f"declared leg, or --ignore-yaml to run the unit's own defaults."
+        )
+    cfg = dict(cfg) or {}
     # Strip fields the unit doesn't consume.
     for k in ("enabled", "model", "signal_prefixes", "symbols", "risk_pct", "shadow_model_ids"):
         cfg.pop(k, None)
@@ -249,7 +305,7 @@ def _simulate_exit(
     start_idx: int,
     direction: str,
     sl: float,
-    tp: float,
+    tp: Optional[float],
     timeout_bars: int,
     entry: Optional[float] = None,
     be_offset_bps: Optional[float] = None,
@@ -260,6 +316,10 @@ def _simulate_exit(
     giveback_r: float = 1.0,
     bank_frac: float = 0.0,
     bank_at_r: float = 1.0,
+    first_bar_no_tp: bool = False,
+    tp_tracker: Optional[Any] = None,
+    tp_thesis_fn: Optional[Any] = None,
+    tp_atr: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Walk forward from start_idx checking SL/TP hits against bar
     extremes. Assumes intra-bar SL/TP fills are at the level (no slippage).
@@ -270,6 +330,12 @@ def _simulate_exit(
     MFE/MAE on the exit bar itself uses the full bar range, which slightly
     overstates excursion past the exit level — acceptable for
     distribution-level diagnosis.
+
+    ``first_bar_no_tp`` (default off, byte-identical): the LIMIT-ENTRY fill bar. A
+    limit order fills somewhere inside its fill bar and the bar's high/low ordering is
+    unknown, so a take-profit touch on that same bar cannot be credited (the price may
+    have reached the target BEFORE it dipped through the limit). The stop IS still
+    checked on that bar (pessimistic). See RQ-20260930-502.
 
     ``banked`` is reported on EVERY return path (asserted structurally by
     tests/test_ict_scalp_exit_levers.py) so the caller can read it strictly
@@ -290,10 +356,16 @@ def _simulate_exit(
                                # rung can be credited its shorter hold. A
                                # boolean cannot express "how long was the
                                # capital actually committed".
+    # GEOM-B1 target revision state (tp_tracker is None at default => none of it
+    # runs). `peak_j` = bar of the last NEW favourable extreme, for stall_pull_in.
+    peak_j = start_idx
     for j in range(start_idx, last + 1):
         bar_low = float(df["low"].iloc[j])
         bar_high = float(df["high"].iloc[j])
         if entry is not None:
+            if tp_tracker is not None and (
+                    bar_high > best if direction == "long" else bar_low < best):
+                peak_j = j
             if direction == "long":
                 best = max(best, bar_high)
                 worst = min(worst, bar_low)
@@ -328,7 +400,8 @@ def _simulate_exit(
                         "exit_index": j, "exit_price": cur_sl,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
-            if bar_high >= tp:
+            if (tp is not None and bar_high >= tp
+                    and not (first_bar_no_tp and j == start_idx)):
                 return {"outcome": "tp_hit", "exit_index": j, "exit_price": tp,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
@@ -338,7 +411,8 @@ def _simulate_exit(
                         "exit_index": j, "exit_price": cur_sl,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
-            if bar_low <= tp:
+            if (tp is not None and bar_low <= tp
+                    and not (first_bar_no_tp and j == start_idx)):
                 return {"outcome": "tp_hit", "exit_index": j, "exit_price": tp,
                         "mfe_price": best, "mae_price": worst, "banked": banked,
                         "banked_index": banked_index}
@@ -402,6 +476,20 @@ def _simulate_exit(
             elif direction == "short" and trigger <= entry - risk_1r:
                 cur_sl = entry * (1 - be_offset_bps / 10000.0)
                 be_armed = True
+        # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode).
+        # On the bar's CLOSE, after its own stop/target/lever tests; the revised
+        # level binds from the next bar. Native thesis = the scalp's own setup, as
+        # REGISTERED in RQ-20261007-004: the entry displacement leg's extreme has
+        # not yet been retraced 50% (the close is still beyond the midpoint of
+        # sweep_extreme -> displacement extreme, in the trade direction).
+        if tp_tracker is not None and tp_tracker.spec.revises and tp is not None:
+            tp_tracker.on_bar_close(
+                close=float(df["close"].iloc[j]), ext=best, bars_since_peak=j - peak_j,
+                atr_now=(None if tp_atr is None else float(tp_atr[j])),
+                thesis_fn=(None if tp_thesis_fn is None
+                           else (lambda _ab, _j=j: tp_thesis_fn(_j))),
+                bar_index=j)
+            tp = tp_tracker.target
     # Timeout: close at the last bar's close.
     return {
         "outcome": "timeout",
@@ -422,7 +510,7 @@ def _build_htf_series(
 ) -> Optional[pd.DataFrame]:
     """Resample the 5m OHLCV feed to ``htf_rule`` and return a per-row
     DataFrame containing (timestamp, htf_close, htf_ema) aligned to the
-    HTF bar. Caller forward-fills onto the 5m index.
+    HTF bar's CLOSE time. Caller forward-fills onto the 5m index.
 
     v2 backtest CLI: lets the strategy's HTF bias filter run without a
     second data feed. Returns None when the frame doesn't have a
@@ -437,7 +525,13 @@ def _build_htf_series(
         tmp = df.copy()
         tmp["timestamp"] = ts
         tmp = tmp.set_index("timestamp")
-        agg = tmp.resample(htf_rule).agg({"close": "last"}).dropna()
+        # Causal bar-close labelling (ICT-SCALP-HTF, 2026-10-01): the default
+        # label="left" stamped each HTF bar with its OPEN time, so the backward
+        # merge_asof in run_backtest handed e.g. the 10:00 bar's 10:55 close to
+        # the 10:05 base bar -- up to (htf - base) of lookahead. Bins are
+        # [open, close) labelled by their CLOSE time, so a base bar only ever
+        # sees HTF bars that have fully closed (timestamps are bar-open).
+        agg = tmp.resample(htf_rule, closed="left", label="right").agg({"close": "last"}).dropna()
         if len(agg) < ema_period + 1:
             return None
         agg["htf_ema"] = agg["close"].ewm(span=ema_period, adjust=False).mean()
@@ -517,7 +611,23 @@ def run_backtest(
     bank_frac: float = 0.0,
     bank_at_r: float = 1.0,
     strategy_name: str = "ict_scalp_5m",
+    tp_cap_pct: float = 0.0,
+    no_tp: bool = False,
+    entry_mode: str = "market",
+    limit_expire_bars: int = 3,
+    maker_fee_bps: float = LIMIT_MAKER_FEE_BPS,
+    taker_fee_bps: float = LIMIT_TAKER_FEE_BPS,
+    tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
 ) -> Dict[str, Any]:
+    tp_geom = tp_geometry or _tpg.TPGeometrySpec()
+    _refused = _tpg.refusal(tp_geom, has_target=not no_tp)
+    if _refused:
+        raise ValueError(_refused)
+    if entry_mode not in ("market", "limit"):
+        raise ValueError(f"entry_mode must be 'market' or 'limit', got {entry_mode!r}")
+    if entry_mode == "limit" and int(limit_expire_bars) < 1:
+        raise ValueError("limit_expire_bars must be >= 1")
+    n_signals = 0
     cfg = {"symbol": symbol, "timeframe": timeframe, **cfg_overrides}
     htf_df = _build_htf_series(df, htf_rule=htf_rule, ema_period=htf_ema_period)
     # Align the HTF series onto the base index ONCE via merge_asof (most
@@ -534,6 +644,10 @@ def run_backtest(
         htf_ema_arr = aligned["htf_ema"].to_numpy()
     trades: List[Trade] = []
     n = len(df)
+    # ATR series for atr_rescale only -- never built at default.
+    tp_atr_arr = None
+    if tp_geom.retarget_mode == "atr_rescale":
+        tp_atr_arr = _tpg.atr_series(df, int(cfg.get("atr_period", 14))).to_numpy()
     if n < warmup_bars + 5:
         raise ValueError(
             f"Not enough candles: have {n}, need at least {warmup_bars + 5}"
@@ -578,14 +692,83 @@ def run_backtest(
             continue
         entry = float(pkg["entry"])
         sl = float(pkg["sl"])
-        tp = float(pkg["tp"])
+        unit_tp = float(pkg["tp"])
         risk = abs(entry - sl)
         if risk <= 0:
             continue
-        # Fill simulation starts on the next bar.
+        # WHICH TARGET THIS ARM PLACES — resolved through the ONE owner
+        # (scripts/target_basis.py) rather than branched on here, so this
+        # harness and backtest_fvg_range.py cannot drift on what "capped"
+        # means. Both defaults are off, so a caller passing neither flag is
+        # byte-identical to before these arms existed.
+        #
+        # ⚠️ `unit_tp` IS ALREADY THE LIVE TARGET. ict_scalp's live unit sets
+        # `tp = entry ± tp_at_r * risk` (src/units/strategies/ict_scalp.py:525)
+        # and applies NO venue clamp — `scalp` is absent from
+        # `tp_venue_cap.CLAMPING_FAMILIES`. So the default arm here is live
+        # parity (what `m20_fleet_exit_sweep.tp_geometry_for` calls
+        # `live_parity_uncapped`), `--tp-cap-pct` is a COUNTERFACTUAL rather
+        # than parity, and `--no-tp` is the target-setting basis MI-307 calls
+        # the "uncapped" arm. Do not map those names across families by
+        # analogy with backtest_trend.py, where "no flag" means no target.
+        tp, tp_basis = target_basis.resolve_target(
+            entry=entry, direction=direction, unit_tp=unit_tp,
+            cap_pct=tp_cap_pct, disabled=no_tp)
+        # GEOM-B1: a finite entry-time target and/or a target that moves
+        # (scripts/research/tp_geometry.py). `tp` is the live unit's own target
+        # unless `--tp-target-r` replaces it; skipped entirely at default.
+        _tpt = None
+        _thesis_fn = None
+        if tp_geom.armed:
+            tp = _tpg.entry_target(
+                tp_geom, anchor=entry, risk=risk, is_long=(direction == "long"),
+                tp_cap_pct=tp_cap_pct, legacy_tp=tp)
+            if tp_geom.target_r is not None:
+                tp_basis = "geometry_target_r"
+            _atr0 = float(tp_atr_arr[i]) if tp_atr_arr is not None else 0.0
+            _tpt = _tpg.TPTracker(
+                tp_geom, anchor=entry, sl=sl, risk=risk, is_long=(direction == "long"),
+                tp_cap_pct=tp_cap_pct, target=tp, atr0=_atr0)
+            _m = pkg.get("meta") or {}
+            _se, _di = _m.get("sweep_extreme"), _m.get("displacement_idx_from_end")
+            if _se is not None and _di is not None and 0 <= i - int(_di) < n:
+                _d_idx = i - int(_di)
+                _d_ext = (float(df["high"].iloc[_d_idx]) if direction == "long"
+                          else float(df["low"].iloc[_d_idx]))
+                _mid = (float(_se) + _d_ext) / 2.0
+
+                def _thesis_fn(_j, _long=(direction == "long"), _mid=_mid):
+                    _c = float(df["close"].iloc[_j])
+                    return (_c > _mid) if _long else (_c < _mid)
+        # ENTRY MODE. `market` (default, byte-identical): filled at `entry` and the
+        # exit walk starts on the next bar. `limit` (RQ-20260930-502): a post-only limit
+        # at `entry` rests for `limit_expire_bars` bars and fills ONLY if a bar's LOW is
+        # strictly below it (long) / HIGH strictly above it (short) -- price trading
+        # THROUGH the level, not merely touching it. A signal price never trades through
+        # is a MISSED trade and is counted, never dropped silently: that is the adverse
+        # selection (the winners that run away without a dip never fill).
+        ref_idx = i
+        sim_start = i + 1
+        if entry_mode == "limit":
+            n_signals += 1
+            fill_idx = None
+            for jj in range(i + 1, min(i + 1 + int(limit_expire_bars), n)):
+                if direction == "long":
+                    thru = float(df["low"].iloc[jj]) < entry
+                else:
+                    thru = float(df["high"].iloc[jj]) > entry
+                if thru:
+                    fill_idx = jj
+                    break
+            if fill_idx is None:
+                next_eligible_idx = i + 1 + int(limit_expire_bars)
+                continue
+            ref_idx = fill_idx
+            sim_start = fill_idx
+        # Fill simulation starts on the next bar (limit mode: on the fill bar itself).
         result = _simulate_exit(
             df,
-            start_idx=i + 1,
+            start_idx=sim_start,
             direction=direction,
             sl=sl,
             tp=tp,
@@ -602,12 +785,15 @@ def run_backtest(
             giveback_r=giveback_r,
             bank_frac=bank_frac,
             bank_at_r=bank_at_r,
+            first_bar_no_tp=(entry_mode == "limit"),
+            tp_tracker=_tpt, tp_thesis_fn=_thesis_fn, tp_atr=tp_atr_arr,
         )
         exit_price = float(result["exit_price"])
         if direction == "long":
             r = (exit_price - entry) / risk
         else:
             r = (entry - exit_price) / risk
+        _tp_exit_r = float(r)      # raw price R, before bank weighting (calibration)
         # M20 bank lever: a filled rung realises `bank_frac` of the position at
         # +bank_at_r; the remainder realises the exit R. No-op when bank_frac is
         # 0 (`banked` can only be True when bank_frac > 0). Read STRICTLY — a
@@ -618,7 +804,7 @@ def run_backtest(
         # Fee note: banking splits ONE exit into two partial exits whose sizes
         # sum to the original position, so round-trip notional — and therefore
         # the bps cost model in _cost_breakdown — is unchanged to first order.
-        ts = df["timestamp"].iloc[i] if "timestamp" in df.columns else i
+        ts = df["timestamp"].iloc[ref_idx] if "timestamp" in df.columns else ref_idx
         exit_ts = (
             df["timestamp"].iloc[result["exit_index"]] if "timestamp" in df.columns else result["exit_index"]
         )
@@ -636,7 +822,7 @@ def run_backtest(
             sign = 1.0 if direction == "long" else -1.0
             meta["mfe_r"] = round(sign * (float(mfe_price) - entry) / risk, 4)
             meta["mae_r"] = round(sign * (float(mae_price) - entry) / risk, 4)
-        bars_held = int(result["exit_index"]) - i
+        bars_held = int(result["exit_index"]) - ref_idx
         meta["bars_held"] = bars_held
         # CAPITAL-WEIGHTED hold — the axis a net_R-only gate cannot see.
         # Banking does not close the trade; it releases `bank_frac` of the
@@ -648,7 +834,7 @@ def run_backtest(
         # chop with nothing to show for it).
         bi = result.get("banked_index")
         if banked and bi is not None:
-            cap_bars = (bank_frac * (int(bi) - i)
+            cap_bars = (bank_frac * (int(bi) - ref_idx)
                         + (1.0 - bank_frac) * bars_held)
         else:
             cap_bars = float(bars_held)
@@ -657,12 +843,37 @@ def run_backtest(
             # Rung-fill rate is the denominator a ladder verdict is read over:
             # a cell where almost nothing banks is inert, not a fair negative.
             meta["banked"] = banked
+        if entry_mode == "limit":
+            # Provenance per trade: which entry model produced this row, how long the
+            # order rested, and the fee it was charged (read by _cost_breakdown).
+            meta["limit_entry"] = True
+            meta["limit_fill_bars_after_signal"] = int(ref_idx - i)
+            meta["limit_fee_bps_roundtrip"] = float(maker_fee_bps) + float(taker_fee_bps)
         meta["exit_time"] = str(exit_ts)
         meta["exit_price"] = exit_price
         meta["tp"] = tp
+        if _tpt is not None:
+            # Reported as the ENTRY-time target above; the moving target's final
+            # level and activity ride alongside (only when a lever is armed).
+            meta["final_target_r"] = _tpt.final_target_r
+            meta["n_extends"] = _tpt.n_extends
+            meta["n_retargets"] = _tpt.n_retargets
+            meta["tp_exit_r"] = round(_tp_exit_r, 4)
+
+        # The arm's own provenance, per trade. A reader must never infer which
+        # arm produced a row from what it believes the caller passed — that is
+        # the substitution scripts/target_basis.py exists to make impossible.
+        meta["tp_basis"] = tp_basis
+        meta["unit_tp"] = unit_tp
+        # cap_r is reported whenever a cap was ASKED for, including when it was
+        # inert, because the inert count is the measurement that says whether
+        # this family's missing clamp matters at all.
+        if tp_cap_pct > 0.0:
+            meta["cap_r"] = target_basis.cap_r(
+                entry=entry, risk=risk, cap_pct=tp_cap_pct)
         trades.append(
             Trade(
-                entry_index=i,
+                entry_index=ref_idx,
                 entry_time=ts,
                 direction=direction,
                 entry=entry,
@@ -721,7 +932,25 @@ def run_backtest(
                     "funding_windows": round(cb["funding_windows"], 3),
                     "entry": t.entry, "sl": t.sl, "risk": t.risk,
                     "outcome": t.outcome,
+                    # Two ALIASES of fields this row already carries, under the
+                    # names the rest of the evidence corpus uses. The four
+                    # `scripts/backtest_{trend,pullback,squeeze,fvg_range}.py`
+                    # harnesses emit `exit_reason` and a top-level `mfe_r`; this
+                    # one emits `outcome` and buries MFE in `meta`. Same facts,
+                    # different spelling — so a consumer reading the corpus
+                    # uniformly (B6's barrier arithmetic over `runs/*/*__trades
+                    # .jsonl`, RQ-20260922-012's fold-recency question) got a
+                    # KeyError on exactly the eight ict_scalp legs and nothing
+                    # else. Additive: `outcome` and `meta.mfe_r` are unchanged,
+                    # so the E0 exit-head builder and component_edge_report.py
+                    # read what they always read.
+                    # `mfe_r` is None when the excursion could not be computed
+                    # (no entry/risk on the simulated exit) — an explicit null,
+                    # never a 0.0 that would read as "the trade never moved".
+                    "exit_reason": t.outcome,
+                    "mfe_r": t.meta.get("mfe_r"),
                     "confidence": t.confidence,
+                    **(_tpg_row(t) if tp_geom.armed else {}),
                     # The LIVE order_package meta (sweep_level/sweep_extreme/
                     # displacement_body_to_range/fvg_low/fvg_high/fvg_size/
                     # mitigation_mode/atr + stamped regime/adx_14/vol_regime) —
@@ -743,11 +972,44 @@ def run_backtest(
     # the condition is STAMPED rather than left to a comment nobody reads.
     #
     # `unknown` is *we could not establish the ceiling*, never a pass.
-    _eff_tp = cfg_overrides.get("tp_at_r", _UNIT_DEFAULTS.get("tp_at_r"))
-    summary["tp_at_r_effective"] = _eff_tp
-    summary["tp_at_r_source"] = ("cli_or_yaml_override" if "tp_at_r" in cfg_overrides
-                                 else "unit_default")
-    summary["bank_rung_state"] = bank_rung_state(bank_frac, bank_at_r, _eff_tp)
+    #
+    # STAMPED ONLY WHEN THE QUESTION CAN ARISE (a tp_at_r override or a bank
+    # rung): a plain default run's summary stays byte-identical to the
+    # pre-lever harness, which tests/test_tp_geometry_harness.py's golden and
+    # tests/test_ict_scalp_limit_entry.py pin.
+    if "tp_at_r" in cfg_overrides or bank_frac:
+        _eff_tp = cfg_overrides.get("tp_at_r", _UNIT_DEFAULTS.get("tp_at_r"))
+        summary["tp_at_r_effective"] = _eff_tp
+        summary["tp_at_r_source"] = ("cli_or_yaml_override" if "tp_at_r" in cfg_overrides
+                                     else "unit_default")
+        summary["bank_rung_state"] = bank_rung_state(bank_frac, bank_at_r, _eff_tp)
+    if tp_geom.armed:
+        summary["tp_geometry"] = _tpg.summarize_geometry([
+            {**_tpg_row(t), "outcome": t.outcome} for t in trades])
+        summary["tp_geometry"]["params"] = tp_geom.params()
+    if entry_mode == "limit":
+        # The denominators a limit verdict is read over. `net_total_r` is over FILLED
+        # trades only; a book that fills 40% of its signals and wins on those is not the
+        # same book as one that fills 90%, so the per-SIGNAL figure sits beside it.
+        n_filled = len(trades)
+        net_total = float(summary.get("net_total_r") or 0.0)
+        summary["limit_entry"] = {
+            "entry_mode": "limit",
+            "limit_expire_bars": int(limit_expire_bars),
+            "n_signals": int(n_signals),
+            "n_filled": int(n_filled),
+            "n_missed": int(n_signals - n_filled),
+            "fill_rate": (round(n_filled / n_signals, 4) if n_signals else None),
+            "net_total_r_filled": round(net_total, 4),
+            "net_r_per_signal": (round(net_total / n_signals, 5) if n_signals else None),
+            "maker_fee_bps": float(maker_fee_bps),
+            "taker_fee_bps": float(taker_fee_bps),
+            "fee_bps_roundtrip_charged": float(maker_fee_bps) + float(taker_fee_bps),
+            "slippage_bps_roundtrip_charged": float(SLIPPAGE_BPS_ROUNDTRIP) / 2.0,
+            "fill_model": "post-only limit at the signal bar close; fills only when a later "
+                          "bar's low is strictly below (long) / high strictly above (short) "
+                          "the limit within limit_expire_bars; fill bar: stop checked, TP not",
+        }
     if _collect_trades:
         # (confidence, r_multiple) per trade — lets the sweep filter by
         # threshold without re-walking the (expensive) 5m frame N times.
@@ -763,6 +1025,14 @@ def run_backtest(
     return summary
 
 
+def _tpg_row(t: "Trade") -> Dict[str, Any]:
+    """The TP-geometry fields of one trade (only emitted when a lever is armed)."""
+    return {"final_target_r": t.meta.get("final_target_r"),
+            "n_extends": t.meta.get("n_extends"),
+            "n_retargets": t.meta.get("n_retargets"),
+            "exit_r": t.meta.get("tp_exit_r")}
+
+
 def _cost_breakdown(t: Trade) -> Dict[str, float]:
     """Per-trade round-trip cost in R via the ONE shared execution-realism model
     (fee + slippage + funding). Funding counts the 8h perp windows the hold crossed
@@ -771,11 +1041,18 @@ def _cost_breakdown(t: Trade) -> Dict[str, float]:
     if not t.exit_price or t.risk <= 0:
         return {"fee_r": 0.0, "slippage_r": 0.0, "funding_r": 0.0,
                 "total_cost_r": 0.0, "funding_windows": 0.0}
+    fee_bps = FEE_BPS_ROUNDTRIP
+    slip_bps = SLIPPAGE_BPS_ROUNDTRIP
+    if t.meta.get("limit_entry"):
+        # Limit entry: maker on the entry side + taker on the exit side, slippage on the
+        # taker exit only (half the round-trip figure). Market trades never carry the key.
+        fee_bps = float(t.meta["limit_fee_bps_roundtrip"])
+        slip_bps = SLIPPAGE_BPS_ROUNDTRIP / 2.0
     return execution_costs.roundtrip_cost_r(
         entry=t.entry, exit_price=t.exit_price, risk=t.risk,
         entry_time=t.entry_time, exit_time=t.exit_time,
-        fee_bps_roundtrip=FEE_BPS_ROUNDTRIP,
-        slippage_bps_roundtrip=SLIPPAGE_BPS_ROUNDTRIP,
+        fee_bps_roundtrip=fee_bps,
+        slippage_bps_roundtrip=slip_bps,
         funding_bps_per_window=FUNDING_BPS_PER_WINDOW,
         funding_window_hours=FUNDING_WINDOW_HOURS,
     )
@@ -1045,10 +1322,10 @@ def build_parser() -> argparse.ArgumentParser:
     """
     p = argparse.ArgumentParser(
         description="Backtest ict_scalp_5m (net-of-cost: fee+slippage+funding).")
-    p.add_argument("--data", default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"),
+    p.add_argument("--data", default=None,
                    help="OHLCV CSV path (default: $BACKTEST_DATA_PATH or data/backtest_candles.csv).")
     p.add_argument("--timeframe", default="5m", help="Strategy timeframe label (default: 5m).")
-    p.add_argument("--symbol", default="BTCUSDT")
+    p.add_argument("--symbol", default=None)
     p.add_argument("--start", default=None,
                    help="Window start (ISO date, inclusive). Applied BEFORE "
                         "--warmup-bars, so the window's own first bars pay the "
@@ -1097,6 +1374,31 @@ def build_parser() -> argparse.ArgumentParser:
                         "existing caller emits byte-identically; the exit-head "
                         "round passes the real leg so per-leg verdicts are "
                         "attributable.")
+    p.add_argument("--tp-cap-pct", type=float, default=0.0,
+                   help="COUNTERFACTUAL venue clamp: cap the strategy's own "
+                        "take-profit at entry*(1 +/- pct), i.e. place "
+                        "min(unit_tp, entry*(1+pct)) long. 0 = off, "
+                        "byte-identical. ** THIS IS NOT LIVE PARITY ON THIS "
+                        "HARNESS. ** ict_scalp's live unit applies NO venue "
+                        "clamp (`scalp` is absent from "
+                        "src/runtime/tp_venue_cap.py::CLAMPING_FAMILIES, and "
+                        "the constant is applied in exactly four unit modules, "
+                        "none of them this one), so the DEFAULT arm is already "
+                        "the live book and this flag DEPARTS from it. It exists "
+                        "to measure whether the clamp's absence here is "
+                        "material -- read the `unit_tp_cap_inert` share. On "
+                        "backtest_trend.py the same flag means the opposite "
+                        "(there, no flag = no target at all); do not carry the "
+                        "meaning across families.")
+    _tpg.add_cli_flags(p)
+    p.add_argument("--no-tp", action="store_true",
+                   help="Disable the take-profit entirely, so a trade runs to "
+                        "its stop or timeout. THIS is the target-setting "
+                        "('uncapped') arm MI-307 needs and the one this "
+                        "harness could not previously produce: with the target "
+                        "live, MFE is truncated at it and can say nothing "
+                        "about what lay above. Off by default, so every "
+                        "existing caller is byte-identical.")
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write one per-trade JSONL object per closed trade to PATH "
                         "(for the ML backtest-label recorder; single-run only, not with --confidence-sweep).")
@@ -1170,17 +1472,70 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--giveback-r", type=float, default=1.0, metavar="R",
                    help="Once armed, exit when >= this many R has been surrendered "
                         "from the peak (default 1.0).")
+    p.add_argument("--entry-mode", choices=("market", "limit"), default="market",
+                   help="Entry model (default market = byte-identical to before this flag). "
+                        "`limit` = RQ-20260930-502: a post-only limit at the signal bar close "
+                        "that fills only when price trades THROUGH it within "
+                        "--limit-expire-bars; charges maker+taker fees and half the "
+                        "round-trip slippage (taker exit only); ignores --fee-bps-roundtrip.")
+    p.add_argument("--limit-expire-bars", type=int, default=3, metavar="N",
+                   help="Bars a limit order rests before it is cancelled unfilled (default 3; "
+                        "the RQ-20260930-502 registration).")
+    p.add_argument("--maker-fee-bps", type=float, default=LIMIT_MAKER_FEE_BPS,
+                   help="Limit-entry maker fee per side in bps (default 2.0 = Bybit 0.0200%%).")
+    p.add_argument("--taker-fee-bps", type=float, default=LIMIT_TAKER_FEE_BPS,
+                   help="Limit-entry taker fee per side in bps, paid on the exit/stop "
+                        "(default 5.5 = Bybit 0.0550%%).")
     return p
+
+
+# --- canonical (symbol, timeframe) -> candle-file resolver -----------------
+# THE ONE WAY this harness gets candles: scripts/ops/backtest_data_source.py
+# wraps scripts/research/m20_fleet_exit_sweep.py::resolve_data (the single
+# (symbol, timeframe) -> file mapping; not re-derived here). Loaded by path,
+# not `from ... import`, because scripts/ is not a package -- the same
+# pattern scripts/backtest_trend.py uses. See docs/reference/backtest-data-loading.md.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location(
+    "_backtest_data_source", str(_REPO_ROOT / "scripts" / "ops" / "backtest_data_source.py"))
+_backtest_data_source = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 
 
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     p = build_parser()
     args = p.parse_args(argv[1:])
+    # --- data-source resolution (BL-20260912-FIFTEEN-MORE-HARNESSES...) ---
+    # --data/--symbol default to None so a bare invocation REFUSES rather
+    # than silently reaching the 5,001-row BTC fixture (docs/claude/work/
+    # MANAGER-CHECKLIST.json row E4). The fixture still works -- pass it
+    # explicitly: --data data/backtest_candles.csv.
+    _src = _backtest_data_source.resolve_or_refuse(
+        args.symbol, args.timeframe, args.data,
+        legacy_default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"))
+    if not _src.ok:
+        print(_backtest_data_source.refusal_message(
+            _src, harness="backtest_ict_scalp.py",
+            legacy_default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv")),
+            file=sys.stderr)
+        return 2
+    args.data = _src.path
+    args.symbol = args.symbol or "BTCUSDT"
+    print(_src.provenance_line(), file=sys.stderr)
     # Mandatory venue-aware cost policy (operator directive 2026-08-04): a faithful
     # backtest is net-of-real-cost by default. Unset flags resolve to the venue-aware
     # defaults (funding is perp-only → 0 for a non-perp, never a fabricated cost); an
     # explicit value (incl. 0 for the fee-only comparison arm) always wins.
+    try:
+        args.tp_geometry = _tpg.spec_from_args(args)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    _tpg_refusal = _tpg.refusal(args.tp_geometry, has_target=not args.no_tp)
+    if _tpg_refusal:
+        print(f"ERROR: {_tpg_refusal}", file=sys.stderr)
+        return 2
     FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
     SLIPPAGE_BPS_ROUNDTRIP = (
         execution_costs.slippage_bps_roundtrip_for(args.symbol)
@@ -1205,7 +1560,11 @@ def main(argv: List[str]) -> int:
               file=sys.stderr)
         return 1
 
-    cfg_overrides = {} if args.ignore_yaml else _load_yaml_params()
+    try:
+        cfg_overrides = {} if args.ignore_yaml else _load_yaml_params(args.strategy_name)
+    except KeyError as exc:
+        print(f"ERROR: {exc.args[0]}", file=sys.stderr)
+        return 2
     try:
         _tp_override = resolve_tp_at_r_override(args.tp_at_r)
     except TpOverrideError as exc:
@@ -1247,6 +1606,13 @@ def main(argv: List[str]) -> int:
         giveback_r=float(args.giveback_r),
         bank_frac=float(args.bank_frac),
         bank_at_r=float(args.bank_at_r),
+        tp_cap_pct=float(args.tp_cap_pct),
+        no_tp=bool(args.no_tp),
+        entry_mode=str(args.entry_mode),
+        limit_expire_bars=int(args.limit_expire_bars),
+        maker_fee_bps=float(args.maker_fee_bps),
+        taker_fee_bps=float(args.taker_fee_bps),
+        tp_geometry=args.tp_geometry,
     )
 
     try:

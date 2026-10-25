@@ -64,7 +64,9 @@ Public surface
                              strategies append a row here)
 - ``SUPPORTED_SYMBOLS``    — static base whitelist; validation actually goes
                              through ``supported_symbols()``, which unions in
-                             every symbol declared in config/accounts.yaml
+                             every symbol declared in config/accounts.yaml AND
+                             every symbol the rostered strategies declare in
+                             config/strategies.yaml
 
 Future-strategy plug-in pattern
 -------------------------------
@@ -97,17 +99,35 @@ from src.runtime.conviction_arbitration import annotate_conviction_arbitration
 # BTCUSDT package can't suppress an MES entry). MGC (Micro Gold) + MHG (Micro
 # Copper) join 2026-06-02 for the WS-A metals sleeve (mgc_pullback_1d /
 # mhg_pullback_1d on ib_paper) — same per-symbol parametricity. This is a
-# validation whitelist, not a runtime on/off gate — accounts.yaml ``symbols``
-# drives what actually trades; ``mode:`` is the only execution gate.
+# validation whitelist, not an execution gate — the STRATEGY ROSTER decides
+# what trades, and ``mode:`` / ``execution:`` are the only two execution gates.
+#
+# ⚠️ THE SENTENCE THAT USED TO SIT HERE READ *"accounts.yaml ``symbols`` drives
+# what actually trades"*, and it contradicted its own first clause. It was also
+# an accurate description of a defect: until 2026-09-22
+# ``src/main.py::_resolve_tick_symbols`` built the tick's fetch set from the
+# declared ``symbols:`` lists alone, so an undeclared symbol meant no candles,
+# no signal and no order for a leg that WAS on the roster. That is fixed at
+# source — the fetch set is now the union of roster-implied and declared
+# symbols — and ``accounts.yaml::symbols`` is what it always claimed to be: an
+# additive DATA-PULL list.
 #
 # Config-driven since 2026-06-11: this frozenset is only the STATIC BASE.
 # Validation goes through ``supported_symbols()``, which unions in every
-# symbol declared on an account in ``config/accounts.yaml`` — so wiring a
-# new instrument (M15: XAUUSD on oanda_practice, SPY/QQQ/GLD on
-# alpaca_paper) never needs a code edit here again. The hand-maintained
-# base had already drifted behind accounts.yaml once (the M15 symbols),
-# which would have raised ``ValueError`` out of ``_collect_intents`` on
-# the first actionable signal.
+# symbol declared on an account in ``config/accounts.yaml`` AND every symbol
+# the accounts' rostered strategies declare in ``config/strategies.yaml`` — so
+# wiring a new instrument (M15: XAUUSD on oanda_practice, SPY/QQQ/GLD on
+# alpaca_paper) never needs a code edit here again. The hand-maintained base
+# had already drifted behind accounts.yaml once (the M15 symbols), which would
+# have raised ``ValueError`` out of ``_collect_intents`` on the first
+# actionable signal.
+#
+# ⚠️ THE ROSTER HALF IS LOAD-BEARING, NOT TIDINESS. ``__post_init__`` RAISES
+# on an unaccepted symbol, so for a symbol declared on no account this
+# whitelist is a hard refusal — the same third gate one layer down. Before
+# 2026-09-22 it was unreachable (nothing fetched such a symbol, so no signal
+# was ever built for one); widening the fetch set to the roster is exactly
+# what makes it reachable, which is why the two changes ship together.
 SUPPORTED_SYMBOLS: frozenset[str] = frozenset({"BTCUSDT", "MES", "MGC", "MHG"})
 
 # accounts.yaml-declared symbols, cached briefly so per-intent validation
@@ -115,35 +135,62 @@ SUPPORTED_SYMBOLS: frozenset[str] = frozenset({"BTCUSDT", "MES", "MGC", "MHG"})
 # failure leaves the cached set empty and validation falls back to the
 # static base — never *narrower* than the pre-config-driven behaviour.
 _CONFIG_SYMBOLS_TTL_S = 60.0
-_config_symbols_state: Dict[str, Any] = {"at": 0.0, "symbols": frozenset()}
+# ``"at": None`` (never populated) rather than ``0.0`` — a monotonic clock
+# under the TTL (a just-booted host or fresh container; PI-20260925-HJPL5ABP-0001)
+# would otherwise satisfy ``now - 0.0 <= TTL`` on the very first call and read
+# the never-populated cache as fresh, silently narrowing validation to the
+# static base for that window.
+_config_symbols_state: Dict[str, Any] = {"at": None, "symbols": frozenset()}
 
 
 def _reset_config_symbols_cache() -> None:
     """Test hook — force the next ``supported_symbols()`` to re-read config."""
-    _config_symbols_state["at"] = 0.0
+    _config_symbols_state["at"] = None
     _config_symbols_state["symbols"] = frozenset()
 
 
 def supported_symbols() -> frozenset[str]:
-    """``SUPPORTED_SYMBOLS`` ∪ every symbol declared in ``config/accounts.yaml``.
+    """``SUPPORTED_SYMBOLS`` ∪ the accounts' declared ∪ roster-implied symbols.
 
-    accounts.yaml is the single source of truth for what trades (it drives
-    ``_resolve_tick_symbols``), so it is also the source of truth for what
-    the intent layer should accept. A typo'd symbol is still rejected —
-    no account declares it. Symbols are normalised (upper, ``/`` stripped)
-    to match ``StrategyIntent`` normalisation.
+    The same union ``src/main.py::_resolve_tick_symbols`` fetches, for the
+    same reason: what an account's roster trades and what its ``symbols:``
+    pull list declares are two independent sets, and accepting only the
+    second would refuse an intent for a leg the roster genuinely runs. A
+    typo'd symbol is still rejected — no account declares it and no rostered
+    strategy names it. Symbols are normalised (upper, ``/`` stripped) to
+    match ``StrategyIntent`` normalisation.
+
+    FAIL-SAFE, in both halves independently: an unreadable accounts.yaml or
+    strategies.yaml contributes an empty set rather than raising, so the
+    accepted set degrades toward the static base and is never narrower than
+    it. Widening a whitelist cannot strand a leg; narrowing one can.
     """
     now = time.monotonic()
-    if now - _config_symbols_state["at"] > _CONFIG_SYMBOLS_TTL_S:
+    at = _config_symbols_state["at"]
+    if at is None or now - at > _CONFIG_SYMBOLS_TTL_S:
         symbols: set = set()
+        accounts: Dict[str, Any] = {}
         try:
             from src.config.accounts_loader import load_accounts_dict
 
-            for cfg in (load_accounts_dict() or {}).values():
+            accounts = load_accounts_dict() or {}
+            for cfg in accounts.values():
                 for sym in (cfg or {}).get("symbols") or []:
                     symbols.add(str(sym).upper().replace("/", ""))
         except Exception:  # noqa: BLE001 — fail-safe to the static base
-            symbols = set()
+            accounts = {}
+        try:
+            from src.units.strategies import load_strategy_config
+
+            strategies_cfg = load_strategy_config() or {}
+            for cfg in accounts.values():
+                roster = (cfg or {}).get("strategies")
+                for name in (roster or []):
+                    scfg = strategies_cfg.get(name) or {}
+                    for sym in (scfg.get("symbols") or []):
+                        symbols.add(str(sym).upper().replace("/", ""))
+        except Exception:  # noqa: BLE001 — fail-safe: declared half stands
+            pass
         _config_symbols_state["symbols"] = frozenset(symbols)
         _config_symbols_state["at"] = now
     return SUPPORTED_SYMBOLS | _config_symbols_state["symbols"]
@@ -360,19 +407,45 @@ DEFAULT_PRIORITIES: Dict[str, int] = {
     "trend_donchian_eth_4h": 0,
     "trend_donchian_sol_4h": 0,
     "trend_donchian_xrp_4h": 0,
+    "trend_donchian_xrp_adx25": 0,
     "trend_donchian_ada_4h": 0,
     "trend_donchian_avax_4h": 0,
     "sol_pullback_2h": 0,
     "xrp_pullback_2h": 0,
     "ada_pullback_2h": 0,
     "avax_pullback_2h": 0,
+    # Alpaca ETF legs added 2026-09-10 (Option-A roster change) WITHOUT a row
+    # here, so each fell through to the fallback — which then sat at 10, ABOVE
+    # 45 of 50 mapped legs, so omission WON the arbitration (pipeline item
+    # BL-20260909-UNKNOWN-STRATEGY-PRIORITY-NOW-BEATS-45-OF-50-DECLARED-LEGS-AND-
+    # THE-CONTENTION-IS-LIVE; operator "Fix both + wire guard", 2026-09-28).
+    # MEASURED 2026-09-28 over every enabled leg in config/strategies.yaml:
+    # GDX, IAUM, SCHA and SPLG each carry exactly ONE enabled leg, so these four
+    # take the single-symbol ETF value 0 and no election can change.
+    "gdx_pullback_1d": 0,
+    "iaum_pullback_1d": 0,
+    "scha_trend_long_1d": 0,
+    "splg_trend_long_1d": 0,
+    # slv_pullback_1d is the ONE contested leg: SLV also carries slv_trend_1h
+    # (execution: shadow, 0). Until today slv_pullback_1d resolved to the old
+    # fallback 10 and so beat that shadow leg on the declared-priority term; 0
+    # would hand every confidence tie to the shadow leg and starve this leg's
+    # order on alpaca_live (real money). 1 is the lowest value that keeps
+    # today's ordering against every SLV rival. Pinned by
+    # tests/test_priority_fallback_election_unchanged.py.
+    "slv_pullback_1d": 1,
 }
 
 # Priority used when a strategy is not listed in DEFAULT_PRIORITIES and
-# the intent does not carry an explicit priority. Picked deliberately
-# below the in-scope strategies so a misconfigured new strategy never
-# silently overrides Turtle Soup / VWAP.
-_UNKNOWN_STRATEGY_PRIORITY: int = 10
+# the intent does not carry an explicit priority. It MUST sit strictly below
+# min(DEFAULT_PRIORITIES.values()) so an unmapped leg LOSES the declared-
+# priority term to every mapped rival by default. ⚠️ It read 10 until
+# 2026-09-28, which had been below the in-scope strategies when chosen but
+# sat ABOVE 45 of 50 mapped legs once the 0-floor became the norm — omission
+# then won the arbitration. Enforced by
+# scripts/ci/check_priority_fallback_distribution.py --strict (R1), which
+# also fails any enabled execution:live leg missing from the map (R2).
+_UNKNOWN_STRATEGY_PRIORITY: int = -1
 
 
 _VALID_SIDES: frozenset[str] = frozenset({"long", "short", "flat"})
@@ -620,9 +693,10 @@ class StrategyIntent:
             raise ValueError(
                 f"StrategyIntent.symbol must be one of "
                 f"{sorted(accepted)}; got {self.symbol!r}. A symbol becomes "
-                "supported by declaring it in the `symbols:` list of an "
-                "account in config/accounts.yaml (alongside its per-symbol "
-                "position-state wiring) — no code edit needed."
+                "supported by being named in `symbols:` on a strategy that "
+                "some account rosters (config/strategies.yaml), or in the "
+                "`symbols:` pull list of an account (config/accounts.yaml) — "
+                "either one, no code edit needed."
             )
         # Normalise via object.__setattr__ since the dataclass is frozen.
         object.__setattr__(self, "symbol", norm_symbol)
@@ -1617,12 +1691,22 @@ def elect_from_gated(
     *,
     symbol: str = "BTCUSDT",
     intents_before_gate: Optional[int] = None,
+    annotate: bool = True,
 ) -> DesiredPosition:
     """Elect one ``DesiredPosition`` from an ALREADY-GATED candidate tuple.
 
-    **Pure** — no audit emission, no policy load, no env read. Safe to call
-    repeatedly within one tick (once per account / per book), which
-    ``aggregate_intents`` is not.
+    No ``regime_hard_gate`` emission, no policy load, no env read — so it is
+    safe to call repeatedly within one tick (once per account / per book),
+    which ``aggregate_intents`` is not.
+
+    ⚠️ **IT WAS DOCUMENTED AS "PURE" UNTIL 2026-09-25 AND WAS NOT.** Both
+    election branches call ``annotate_conviction_arbitration``, which appends a
+    row to ``runtime_logs/conviction_arbitration.jsonl``. Called once per
+    account, that soak gains one row per account per tick for the same
+    decision — the conviction-soak twin of the ``regime_hard_gate`` double
+    count the gate/elect split exists to prevent. ``annotate=False`` skips it;
+    every per-account election passes it (E35), so the tick's ONE global
+    election is the only one that writes the observe-only row.
 
     ``candidates`` must already be filtered to ``symbol`` and already have had
     the regime router applied by ``gate_intents``. This function does NOT
@@ -1724,13 +1808,14 @@ def elect_from_gated(
         # P3 conviction arbitration — OBSERVE-ONLY (design § 3.4, no gate). Log
         # what conviction-weighted reinforcement WOULD pick vs today's max-qty
         # winner; the decision below is unchanged. Fail-permissive.
-        annotate_conviction_arbitration(
-            same_side,
-            symbol=norm_symbol,
-            resolution="same_direction",
-            actual_winner_strategy=winner.strategy,
-            actual_target_qty=float(winner.target_qty),
-        )
+        if annotate:
+            annotate_conviction_arbitration(
+                same_side,
+                symbol=norm_symbol,
+                resolution="same_direction",
+                actual_winner_strategy=winner.strategy,
+                actual_target_qty=float(winner.target_qty),
+            )
         # The reason string must not label the sentinel as a measured max —
         # "max target_qty=0.0" reads as a size comparison that picked the
         # winner, and neither half of that is true on the live path
@@ -1784,13 +1869,14 @@ def elect_from_gated(
     # P3 conviction arbitration — OBSERVE-ONLY (design § 3.4, no gate). Log what
     # the higher-conviction intent WOULD have been vs today's priority winner;
     # the priority decision below is unchanged. Fail-permissive.
-    annotate_conviction_arbitration(
-        non_flat,
-        symbol=norm_symbol,
-        resolution="priority_conflict",
-        actual_winner_strategy=winner.strategy,
-        actual_target_qty=float(target_qty),
-    )
+    if annotate:
+        annotate_conviction_arbitration(
+            non_flat,
+            symbol=norm_symbol,
+            resolution="priority_conflict",
+            actual_winner_strategy=winner.strategy,
+            actual_target_qty=float(target_qty),
+        )
     return DesiredPosition(
         symbol=norm_symbol,
         side=winner.side,

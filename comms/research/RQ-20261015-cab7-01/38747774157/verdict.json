@@ -1,0 +1,161 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 222,
+ "population": "ada_pullback_2h 2021-10-10..2026-10-14 (1830 d), config-exact UNCAPPED no-TP harness replay, 222 trades, rule=unconditioned: {'ada_pullback_2h': 'INDETERMINATE'}",
+ "note": "tp-prediction-derive: counterfactual TP net of the row's own cost stack; a PASS is a screen -- its follow-on is the harness-native e35 tp_r confirmation of K* before any Tier-3 proposal",
+ "measurement": {
+  "window": "2021-10-10..2026-10-14 (1830 d)",
+  "rule": "unconditioned",
+  "pooled": false,
+  "per_leg": {
+   "ada_pullback_2h": {
+    "n": 222,
+    "n_is": 133,
+    "n_oos": 89,
+    "base_tp_r": 4.0,
+    "mfe_r_quantiles": {
+     "p50": 1.129,
+     "p60": 1.8502,
+     "p70": 3.2573,
+     "p80": 4.4194,
+     "p90": 7.070400000000003
+    },
+    "reach_all_uncapped": {
+     "1.0": 0.527027027027027,
+     "1.25": 0.4774774774774775,
+     "1.5": 0.44144144144144143,
+     "1.75": 0.4144144144144144,
+     "2.0": 0.38288288288288286,
+     "2.5": 0.36036036036036034,
+     "3.0": 0.3153153153153153,
+     "3.5": 0.28378378378378377,
+     "4.0": 0.25225225225225223,
+     "5.0": 0.18018018018018017,
+     "6.0": 0.13963963963963963,
+     "8.0": 0.07207207207207207
+    },
+    "selection": {
+     "cap_r_median_is": 3.531840627041155,
+     "curve": [
+      {
+       "k": 1.0,
+       "reach_is": 0.5488721804511278,
+       "mean_net_is": 0.02358637463967081,
+       "eligible": true
+      },
+      {
+       "k": 1.25,
+       "reach_is": 0.518796992481203,
+       "mean_net_is": 0.08949814204212922,
+       "eligible": true
+      },
+      {
+       "k": 1.5,
+       "reach_is": 0.49624060150375937,
+       "mean_net_is": 0.15355410894108387,
+       "eligible": true
+      },
+      {
+       "k": 1.75,
+       "reach_is": 0.47368421052631576,
+       "mean_net_is": 0.20480326926253586,
+       "eligible": true
+      },
+      {
+       "k": 2.0,
+       "reach_is": 0.42857142857142855,
+       "mean_net_is": 0.17457415800615417,
+       "eligible": true
+      },
+      {
+       "k": 2.5,
+       "reach_is": 0.42105263157894735,
+       "mean_net_is": 0.32238263175371284,
+       "eligible": true
+      },
+      {
+       "k": 3.0,
+       "reach_is": 0.38345864661654133,
+       "mean_net_is": 0.33079111419309637,
+       "eligible": true
+      },
+      {
+       "k": 3.5,
+       "reach_is": 0.3684210526315789,
+       "mean_net_is": 0.37966047687054555,
+       "eligible": true
+      },
+      {
+       "k": 4.0,
+       "reach_is": 0.3609022556390977,
+       "mean_net_is": 0.42562203757659356,
+       "eligible": false
+      },
+      {
+       "k": 5.0,
+       "reach_is": 0.3233082706766917,
+       "mean_net_is": 0.38971886831439967,
+       "eligible": false
+      },
+      {
+       "k": 6.0,
+       "reach_is": 0.3082706766917293,
+       "mean_net_is": 0.3762933044046251,
+       "eligible": false
+      },
+      {
+       "k": 8.0,
+       "reach_is": 0.2932330827067669,
+       "mean_net_is": 0.35619248417222615,
+       "eligible": false
+      }
+     ]
+    },
+    "k_star": 3.5,
+    "oos_mean_net_kstar": 0.17546887135520833,
+    "oos_mean_net_base": 0.19047829071683636,
+    "oos_delta_mean": -0.015009419361627986,
+    "oos_delta_ci95": [
+     -0.07142696629213512,
+     0.07351814487210116
+    ],
+    "reach_is_kstar": 0.3684210526315789,
+    "reach_oos_kstar": 0.3146067415730337,
+    "calibration_gap": 0.05381431105854523,
+    "reach_oos_base": 0.30337078651685395,
+    "outcome": "INDETERMINATE",
+    "verdict": "indeterminate",
+    "why": "delta CI [-0.071, 0.074] straddles -0.05"
+   }
+  },
+  "unreadable_rows": {
+   "ada_pullback_2h": 0
+  },
+  "constants": {
+   "grid": [
+    1.0,
+    1.25,
+    1.5,
+    1.75,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    5.0,
+    6.0,
+    8.0
+   ],
+   "reach_floor": 0.1,
+   "is_frac": 0.6,
+   "min_oos": 39,
+   "noninf_margin_r": 0.05,
+   "cal_tol": 0.1,
+   "min_cell_is": 30,
+   "boot": 2000,
+   "seed": 20261015,
+   "venue_cap_pct": 0.099
+  }
+ }
+}

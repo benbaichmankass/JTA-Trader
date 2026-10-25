@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Fixes a double-count found by the pre-apply check: legacy intent_reduce allocations without a 'closed' key were read as partial, re-booking 29 fully-consumed parents' units (+1,027.12 on bybit_1). Classifies them from the parent (exit_reason=intent_reduce, size==consumed, same close time). src/runtime/reduce_leg_settlement.py only; no order path, no config.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "PERF-FU-REDUCE-PNL"},
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Runtime module feeding a DB writeback: held for the manager to merge before the backfill is re-dry-run and applied."
+}

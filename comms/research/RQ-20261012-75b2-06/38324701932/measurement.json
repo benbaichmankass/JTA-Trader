@@ -1,0 +1,587 @@
+{
+  "label": "no_headroom_trend_axis",
+  "scoping_only_not_a_promotion_case": true,
+  "axis": "trend (ADX-14); vol NOT covered",
+  "selection": {
+    "min_cell_n": 20,
+    "loss_se": 1.0
+  },
+  "bar": {
+    "per_test_trade_r": 0.03,
+    "p5_gt": 0,
+    "min_cell_n": 20,
+    "min_leg_n": 30,
+    "min_legs": 5,
+    "blocks": 4,
+    "seeds": 300
+  },
+  "skipped": {},
+  "legs": {
+    "ict_scalp_5m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_5m__trades.jsonl",
+      "symbol": "BTCUSDT",
+      "timeframe": "5m",
+      "n": 145,
+      "label_counts": {
+        "chop": 60,
+        "transitional": 32,
+        "trending": 53
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": true
+    },
+    "ict_scalp_avax_5m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_avax_5m__trades.jsonl",
+      "symbol": "AVAXUSDT",
+      "timeframe": "5m",
+      "n": 177,
+      "label_counts": {
+        "chop": 80,
+        "transitional": 46,
+        "trending": 51
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": false
+    },
+    "ict_scalp_eth_15m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_eth_15m__trades.jsonl",
+      "symbol": "ETHUSDT",
+      "timeframe": "15m",
+      "n": 78,
+      "label_counts": {
+        "chop": 38,
+        "transitional": 22,
+        "trending": 18
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": false
+    },
+    "ict_scalp_sol_15m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_sol_15m__trades.jsonl",
+      "symbol": "SOLUSDT",
+      "timeframe": "15m",
+      "n": 84,
+      "label_counts": {
+        "chop": 46,
+        "transitional": 22,
+        "trending": 16
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": false
+    },
+    "ict_scalp_sol_5m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_sol_5m__trades.jsonl",
+      "symbol": "SOLUSDT",
+      "timeframe": "5m",
+      "n": 190,
+      "label_counts": {
+        "chop": 89,
+        "transitional": 54,
+        "trending": 47
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": false
+    },
+    "ict_scalp_xrp_15m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_xrp_15m__trades.jsonl",
+      "symbol": "XRPUSDT",
+      "timeframe": "15m",
+      "n": 76,
+      "label_counts": {
+        "chop": 39,
+        "transitional": 24,
+        "trending": 13
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": false
+    },
+    "ict_scalp_xrp_5m": {
+      "ledger": "comms/strategy_evidence/runs/2026-10-02/ict_scalp_xrp_5m__trades.jsonl",
+      "symbol": "XRPUSDT",
+      "timeframe": "5m",
+      "n": 169,
+      "label_counts": {
+        "chop": 89,
+        "transitional": 42,
+        "trending": 38
+      },
+      "unlabelled": 0,
+      "has_live_policy_cell": false
+    }
+  },
+  "n_legs": 7,
+  "test_trades_total": 686,
+  "ungated_test_net_r_total": -95.965,
+  "ungated_test_net_r_per_leg": {
+    "ict_scalp_5m": -16.637,
+    "ict_scalp_avax_5m": -30.817,
+    "ict_scalp_eth_15m": -5.758,
+    "ict_scalp_sol_15m": -5.939,
+    "ict_scalp_sol_5m": -14.579,
+    "ict_scalp_xrp_15m": -1.996,
+    "ict_scalp_xrp_5m": -20.239
+  },
+  "seeds": 300,
+  "results": {
+    "ordinal": {
+      "oracle": {
+        "pooled_delta_r": {
+          "mean": 14.1229,
+          "p5": 3.7919,
+          "p95": 26.2028
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0199,
+          "p5": 0.0067,
+          "p95": 0.0327
+        },
+        "mean_dropped_trades_total": 78.0,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 2.6053,
+            "p5": 2.6053,
+            "p95": 2.6053,
+            "mean_dropped": 12.0
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.2581,
+            "p5": 3.2581,
+            "p95": 3.2581,
+            "mean_dropped": 16.0
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 7.6473,
+            "p5": 7.6473,
+            "p95": 7.6473,
+            "mean_dropped": 29.0
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.5933,
+            "p5": 0.5933,
+            "p95": 0.5933,
+            "mean_dropped": 21.0
+          }
+        }
+      },
+      "A=0.55": {
+        "pooled_delta_r": {
+          "mean": 14.762,
+          "p5": 1.8693,
+          "p95": 31.9685
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0209,
+          "p5": 0.0028,
+          "p95": 0.039
+        },
+        "mean_dropped_trades_total": 60.87,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 2.3351,
+            "p5": -1.0174,
+            "p95": 5.7206,
+            "mean_dropped": 8.5
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.9971,
+            "p5": 0.5816,
+            "p95": 7.6166,
+            "mean_dropped": 11.87
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 7.6642,
+            "p5": 3.4388,
+            "p95": 11.3018,
+            "mean_dropped": 27.55
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.8371,
+            "p5": -2.922,
+            "p95": 4.5943,
+            "mean_dropped": 12.95
+          }
+        }
+      },
+      "A=0.60": {
+        "pooled_delta_r": {
+          "mean": 14.7075,
+          "p5": 1.501,
+          "p95": 29.314
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0208,
+          "p5": 0.0022,
+          "p95": 0.0376
+        },
+        "mean_dropped_trades_total": 62.68,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 2.3719,
+            "p5": -0.7749,
+            "p95": 5.8179,
+            "mean_dropped": 8.84
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.8922,
+            "p5": 0.58,
+            "p95": 7.4927,
+            "mean_dropped": 12.32
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 7.6353,
+            "p5": 3.782,
+            "p95": 11.1903,
+            "mean_dropped": 27.68
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.843,
+            "p5": -3.0537,
+            "p95": 4.7198,
+            "mean_dropped": 13.84
+          }
+        }
+      },
+      "A=0.70": {
+        "pooled_delta_r": {
+          "mean": 14.7989,
+          "p5": 2.8306,
+          "p95": 29.3582
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.021,
+          "p5": 0.0048,
+          "p95": 0.0378
+        },
+        "mean_dropped_trades_total": 66.45,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 2.5794,
+            "p5": -0.6023,
+            "p95": 5.7953,
+            "mean_dropped": 9.62
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.6372,
+            "p5": 0.5875,
+            "p95": 7.0886,
+            "mean_dropped": 13.25
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 7.6072,
+            "p5": 4.4446,
+            "p95": 10.8039,
+            "mean_dropped": 27.92
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.7498,
+            "p5": -2.9212,
+            "p95": 4.5834,
+            "mean_dropped": 15.66
+          }
+        }
+      }
+    },
+    "uniform": {
+      "oracle": {
+        "pooled_delta_r": {
+          "mean": 14.1229,
+          "p5": 3.7919,
+          "p95": 26.2028
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0199,
+          "p5": 0.0067,
+          "p95": 0.0327
+        },
+        "mean_dropped_trades_total": 78.0,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 2.6053,
+            "p5": 2.6053,
+            "p95": 2.6053,
+            "mean_dropped": 12.0
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.2581,
+            "p5": 3.2581,
+            "p95": 3.2581,
+            "mean_dropped": 16.0
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 7.6473,
+            "p5": 7.6473,
+            "p95": 7.6473,
+            "mean_dropped": 29.0
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.5933,
+            "p5": 0.5933,
+            "p95": 0.5933,
+            "mean_dropped": 21.0
+          }
+        }
+      },
+      "A=0.55": {
+        "pooled_delta_r": {
+          "mean": 14.592,
+          "p5": 2.1988,
+          "p95": 29.8774
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0207,
+          "p5": 0.0034,
+          "p95": 0.0396
+        },
+        "mean_dropped_trades_total": 69.39,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 3.1263,
+            "p5": -1.0336,
+            "p95": 7.6143,
+            "mean_dropped": 12.04
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.9428,
+            "p5": -0.1979,
+            "p95": 8.3143,
+            "mean_dropped": 14.92
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 6.6614,
+            "p5": 1.7206,
+            "p95": 11.3342,
+            "mean_dropped": 26.27
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.879,
+            "p5": -3.8021,
+            "p95": 5.3698,
+            "mean_dropped": 16.16
+          }
+        }
+      },
+      "A=0.60": {
+        "pooled_delta_r": {
+          "mean": 14.479,
+          "p5": 1.7659,
+          "p95": 30.212
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0205,
+          "p5": 0.003,
+          "p95": 0.0397
+        },
+        "mean_dropped_trades_total": 70.29,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 3.1283,
+            "p5": -0.9041,
+            "p95": 7.2218,
+            "mean_dropped": 12.0
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.8332,
+            "p5": -0.5782,
+            "p95": 8.2664,
+            "mean_dropped": 15.02
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 6.7061,
+            "p5": 2.3589,
+            "p95": 11.0562,
+            "mean_dropped": 26.52
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.8608,
+            "p5": -3.9037,
+            "p95": 5.3221,
+            "mean_dropped": 16.75
+          }
+        }
+      },
+      "A=0.70": {
+        "pooled_delta_r": {
+          "mean": 14.6914,
+          "p5": 2.6088,
+          "p95": 29.3697
+        },
+        "pooled_delta_r_per_test_trade": {
+          "mean": 0.0208,
+          "p5": 0.0044,
+          "p95": 0.0391
+        },
+        "mean_dropped_trades_total": 72.08,
+        "per_leg": {
+          "ict_scalp_5m": {
+            "mean": 3.1108,
+            "p5": -0.5835,
+            "p95": 6.8679,
+            "mean_dropped": 11.98
+          },
+          "ict_scalp_avax_5m": {
+            "mean": 3.6423,
+            "p5": -0.2775,
+            "p95": 7.5053,
+            "mean_dropped": 15.25
+          },
+          "ict_scalp_eth_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_sol_5m": {
+            "mean": 6.9126,
+            "p5": 2.7555,
+            "p95": 10.7658,
+            "mean_dropped": 27.05
+          },
+          "ict_scalp_xrp_15m": {
+            "mean": 0.0,
+            "p5": 0.0,
+            "p95": 0.0,
+            "mean_dropped": 0.0
+          },
+          "ict_scalp_xrp_5m": {
+            "mean": 0.7706,
+            "p5": -3.0852,
+            "p95": 5.4821,
+            "mean_dropped": 17.8
+          }
+        }
+      }
+    }
+  }
+}

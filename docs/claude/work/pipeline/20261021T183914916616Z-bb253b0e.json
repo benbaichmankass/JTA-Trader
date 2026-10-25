@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 30,
+    "due_date": "2026-12-26",
+    "kind": "date"
+  },
+  "id": "PI-20261021-WG8OPB7N-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PIPELINE-HEALTH-1021 / retired RQ-20260928-014",
+    "rerun": "git show origin/main:comms/strategy_evidence/ict_scalp_avax_5m.json | python3 -c \"import json,sys;d=json.load(sys.stdin);print(d['fold_detail'][-1]['end'])\"  # a fold ending >= ~3 months after 2026-09-26 means the fresh window exists"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research] Re-author the fresh-window confirmation of the ict_scalp_avax_5m atr_sl_buffer_mult 0.20->0.50 change (retired stub RQ-20260928-014, rule RULE-RQ0928-014 reused verbatim from that file) against a DISPATCHABLE route (research-script-run.yml; its run.workflow was prose). Gate: >= ~88 new AVAXUSDT 5m trades past 2026-09-26 (~3 months at the leg's ~64 trades/91 d). Population caveat: the leg is routed to no account today, so run only if it is still a candidate."
+}

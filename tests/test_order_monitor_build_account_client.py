@@ -28,6 +28,9 @@ def test_build_account_client_populates_market_type_for_linear_account(monkeypat
 
     assert cfg["market_type"] == "linear"
     assert cfg["account_id"] == "bybit_2"
+    # MagicMock() fabricates .dry_run (not True) -> must read as live, never as
+    # a fabricated child Mock (_account_mode uses `is True`).
+    assert cfg["mode"] == "live"
     assert client is not None
 
 
@@ -52,3 +55,35 @@ def test_build_account_client_defaults_market_type_to_spot_when_attribute_missin
     _client, cfg = order_monitor._build_account_client("bybit_legacy")
 
     assert cfg["market_type"] == "spot"
+    # spec has neither .dry_run nor .mode -> default applies.
+    assert cfg["mode"] == "live"
+
+
+def _real_account(name, dry_run):
+    from src.units.accounts.account import TradingAccount
+    return TradingAccount(
+        name=name, exchange="bybit", api_key_env="BYBIT_API_KEY_X",
+        risk_manager=MagicMock(), dry_run=dry_run, market_type="linear",
+    )
+
+
+def test_build_account_client_reports_dry_run_for_a_real_dry_run_account(monkeypatch):
+    """CA-A04 / PI-20260927-JT7JW9CR-0004: TradingAccount has no ``.mode``; a
+    reader of ``getattr(acc, "mode", "live")`` resolved every account to live.
+    A REAL TradingAccount(dry_run=True) must surface as cfg['mode']=='dry_run'."""
+    acc = _real_account("bybit_dry", True)
+    assert not hasattr(acc, "mode")  # the premise of the original bug
+    monkeypatch.setattr("src.units.accounts.load_accounts", lambda: [acc])
+    monkeypatch.setattr(
+        "src.units.accounts.clients.bybit_client_for", lambda cfg: MagicMock())
+    _client, cfg = order_monitor._build_account_client("bybit_dry")
+    assert cfg["mode"] == "dry_run"
+
+
+def test_build_account_client_reports_live_for_a_real_live_account(monkeypatch):
+    acc = _real_account("bybit_live", False)
+    monkeypatch.setattr("src.units.accounts.load_accounts", lambda: [acc])
+    monkeypatch.setattr(
+        "src.units.accounts.clients.bybit_client_for", lambda cfg: MagicMock())
+    _client, cfg = order_monitor._build_account_client("bybit_live")
+    assert cfg["mode"] == "live"

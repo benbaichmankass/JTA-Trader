@@ -1,0 +1,28 @@
+{
+  "id": "CLOSE-PNL-NULL",
+  "title": "Decided closes on Bybit left pnl NULL: pending-pnl sweep matched broker closed-pnl on the journal's intended entry (bybit_2 #6565 shown '\u2014')",
+  "phase": null,
+  "state": "done",
+  "owner": "lane (session_01MnEwSE9MJ4ePnc7DjDhEry)",
+  "lane": "session_01MnEwSE9MJ4ePnc7DjDhEry",
+  "model": null,
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    17768
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane session_01MnEwSE9MJ4ePnc7DjDhEry, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] Operator screenshot: bybit_2 trade 6565 P&L '\u2014'. ROOT CAUSE: order_monitor._sweep_pending_pnl_from_bybit passed trades.entry_price (intended 0.2492) to the closed-pnl matcher; venue record avgEntryPrice is the fill 0.2489 (12 bps > 10 bps tolerance) so the venue's own SL record (order 71c1cc1e, exit 0.2432, closedPnl -3.28194216) was refused every tick. WATCHDOG-PAST-STOP (2026-10-10) fixed the other two callers only. Fix: retry on miss with the venue entry fill; same in scripts/ops/backfill_monitor_closed_pnl.py; /trades/closed maps sl_cross/tp_cross to sl/tp (was 'other'). Landing hold. [2026-10-12T15:16Z lane session_01MnEwSE9MJ4ePnc7DjDhEry] BUILT, HOLD for manager: PR #17768 (Tier 2, landing hold). NOT merged/deployed/observed. Real exit for 6565 (venue, MEASURED): SL order 71c1cc1e Filled 2026-10-12T14:38:33Z at 0.2432, avgEntry 0.2489, closedPnl -3.28194216; mirror 6566 bybit_portfolio same fill, closedPnl -996.54256355. Without the fix the local sweep would book 6565 fee-blind at -3.34 from the verdict price at ~20:39Z and the broker sweep would never revisit it. Post-merge check: PI-20261012-7DJDHERY-0001 (backfill-monitor-closed-pnl if needed, before 2026-10-18). [2026-10-12T17:58Z lane session_01MnEwSE9MJ4ePnc7DjDhEry] MERGED #17768 17:52Z, DEPLOYED (diag/version git_sha cfe89c5cd, restart_pending false, 17:56:41Z), OBSERVED: trade 6565 at 17:57:52Z pnl -3.28194216, exit 0.2432, exit_price_source bybit_closed_pnl \u2014 equal to the venue closedPnl. No backfill needed. Mirror 6566 was priced before deploy by local compute on the measured fill (exit_price_source exchange_fill, pnl -998.382 vs venue -996.54256355, .84 apart); not NULL, left as is.manager 17:55Z] #17768 merged 17:52Z (independent review: root cause 12.05bps entry gap vs 10bps matcher; retry with venue avg_price). Open from review: explain the other 6 of 9 NULL rows; include 6564 (bybit_1) in the clears_when check.",
+  "updated_at": "2026-10-12T18:02:44Z",
+  "updated_by": "session_01MnEwSE9MJ4ePnc7DjDhEry",
+  "roadmap": [
+    "M39"
+  ],
+  "priority": "high",
+  "writeback": {
+    "roadmap": "none: M39 defect fix restoring the existing broker-pnl sweep contract; no milestone measure or status changes",
+    "arch": "none: no contract change \u2014 the pending-pnl sweep already owns broker-truth pnl for decided closes; the fix makes its matcher use the venue entry fill like its two sibling callers"
+  },
+  "_seq": 434
+}

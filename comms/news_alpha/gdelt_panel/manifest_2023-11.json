@@ -1,0 +1,17 @@
+{
+  "schema": "gdelt-gkg-hourly-panel-v1",
+  "month": "2023-11",
+  "generated_at": "2026-10-16T08:31:54Z",
+  "source": "GDELT 2.0 GKG 15-min files (https://data.gdeltproject.org/gdeltv2/)",
+  "entity_map": "research/news_alpha/entity_map_v1.json",
+  "entity_map_sha256": "af3e174881b32c02f4ab9a231d3342ee65e43d5f25d59b9a815df0126d293fbb",
+  "hours": 720,
+  "hours_complete": 717,
+  "files_ok": 2877,
+  "files_missing": 3,
+  "files_error": 0,
+  "rows_scanned_this_run": 4448008,
+  "panel_rows": 4875,
+  "availability_rule": "hour = floor(GKG file stamp = V2.1DATE ingest); max_avail = latest ok stamp in the hour",
+  "note": "files_ok < 4 marks an hour as NOT fully read: features over it are NaN, never zero news"
+}

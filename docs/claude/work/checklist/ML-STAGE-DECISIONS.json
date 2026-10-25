@@ -1,0 +1,28 @@
+{
+  "id": "ML-STAGE-DECISIONS",
+  "title": "Apply operator ML stage decisions of 2026-10-08 (MES baselines retire + 15m twin demote; audit baseline soft-off; prop-mission awaiting_source)",
+  "phase": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    17580,
+    17636
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-08T06:55Z manager] Operator popups 06:35Z verbatim: MES \"Retire baselines, keep 5m only\"; audit \"Soft-off\"; prop-mission not retired (see PROP-MISSION-MODEL). Applied by the Sun 10-11 ML-review lane as one held Tier-3 PR. [2026-10-11 ROUTE-AND-ASK-TRIAGE] PI-20260929-K85Q64SF-0005 (MES baselines silent) routed here 2026-10-11: already answered by the operator's 2026-10-08 retire decision  [2026-10-11 ml-review lane session_01TJm8DkoUfBts46QxZqzm7j] Hold PR #17580 (manifests). Registry stage still OLD (GET /api/bot/ml/registry 2026-10-11). Manager after merge: run the promote-stage block in the PR body for 4 models (mes-setup-quality-baseline-v0, mes-trade-outcome-winrate-baseline-v0, mes-regime-15m-lgbm-v2, setup-quality-audit-baseline-v0); setup-quality-lgbm-v2 and prop-mission-policy-baseline-v0 are already candidate. Close on registry observation; then set plumbing.expected_registry_stages to shadow 21 / candidate 71. [2026-10-11 ML-STAGE-FLIPS lane] DONE. Applied on trainer via relay #17633 (promote-stage x4); trainer verify #17635. MEASURED on GET /api/bot/ml/registry at 22:09Z: all 4 ids target_deployment_stage=candidate, deployment_bucket=OFFLINE, stage_history entry by=claude-ml-review-20261011 (shadow->candidate 21:28Z). deployment_bucket derives from target_deployment_stage + linked_strategies (training_center.py::_compute_deployment_bucket). shadow/stats had no post-flip rows at 21:30Z (not re-read after mirror sync). OPEN, not done by this lane: plumbing.expected_registry_stages -> shadow 21 / candidate 71 (ml-review closing step).",
+  "updated_at": "2026-10-11T22:09:35Z",
+  "updated_by": "session_01Tek3WNMpDTChWtLP51vFYb",
+  "roadmap": [
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "M25: stage decisions applied 2026-10-11 (4 heads shadow->candidate, mirror confirms OFFLINE); milestone text to drop the apply-stage-decisions item on next roadmap pass",
+    "arch": "none: registry stage change, no contract change"
+  },
+  "_seq": 349
+}

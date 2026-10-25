@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261017-006/39974455121/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261017-006/39974455121",
+  "data_fingerprint": "{\"state\": \"not_established\", \"why\": \"the run named no existing input file or directory in its argv or in verdict.json data_inputs\"}",
+  "decision_rule_id": "RULE-P6-Q1-SCALP-TIE-FIDELITY",
+  "decision_rule_registered_at": "2026-10-17",
+  "measurement_file": "comms/research/RQ-20261017-006/39974455121/measurement.json",
+  "min_rows": "1",
+  "n": "919",
+  "note": "Fixed bracket (initial SL at -1R, TP at +K R) re-walked on Binance Vision 1m klines; MISLABEL = the bar touched both levels and 1m says TP came first, i.e. the SL-first convention mislabelled it. Label-fidelity measurement for the 1m archive decision, NOT an edge or promotion case.",
+  "population": "newest committed ledger per leg under comms/strategy_evidence/runs/*/*__trades.jsonl, resamples excluded, Binance USD-M USDT legs only, <= 5000 trades per leg, legs passing the initial-SL-before-exit alignment control; 7 legs walked, 0 skipped (listed)",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261017-006",
+  "tool": "python3 scripts/research/intrabar_label_fidelity.py",
+  "verdict": "indeterminate"
+}

@@ -29,8 +29,10 @@ those four are printed as separate counters for exactly that reason.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -39,16 +41,141 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+
+
+class _LazyRouter:
+    """compute_router, imported on first use. The web-api brief imports this module in-process and the deploy's
+    in-process allowlist (Tier-2 scripts/deploy_pull_restart.sh) does not name the router: loading it only when
+    the dispatcher actually routes keeps the brief's import closure exactly what it was."""
+
+    def __getattr__(self, name: str) -> Any:
+        import importlib  # noqa: PLC0415
+        return getattr(importlib.import_module("scripts.research.compute_router"), name)
+
+
+cr = _LazyRouter()
 from scripts.research.research_queue import (  # noqa: E402
     BLOCKED_POWER, BLOCKED_ROUTE, DISPATCHED, DISPATCH_FAILED, GPU, INVALID,
-    NOT_DUE, grade_power, grade_route, load_queue,
+    NOT_DUE, grade_power, grade_route, load_queue, load_themes,
 )
 
 _REPO = Path(__file__).resolve().parents[2]
 _DEFAULT_QUEUE = _REPO / "research" / "queue"
+#: The R1 result store. A row under <RESULTS_ROOT>/<unit id>/ is evidence the
+#: unit ALREADY RAN, whatever its `last_dispatched_at` says -- see `_is_due`.
+#: Module-level so a test can point it at a scratch tree.
+RESULTS_ROOT = _REPO / "research" / "results"
 
 #: How long after a run a cadence is considered satisfied. `once` never repeats.
 _CADENCE_DAYS = {"daily": 1, "weekly": 7, "monthly": 30}
+
+#: The throwaway branch prefix the dispatcher's own stamp landing uses
+#: (research-queue-dispatch.yml -> commit-to-main `branch-prefix`). An OPEN
+#: PR on such a branch that touches research/queue/<uid>.yaml is a stamp for
+#: <uid> that has not reached main yet -- see `pending_stamp_units`.
+STAMP_BRANCH_PREFIX = "automation/research-queue-stamp"
+
+#: An open stamp PR older than this is STRANDED, not in flight (RQ-DISPATCH-STALL,
+#: 2026-10-10). A healthy stamp PR merges inside the land job's own 80 min wait
+#: (commit-to-main), so 3 h is "it is not going to". MEASURED that day: 14 open
+#: stamp PRs (oldest #16790, 2026-10-05) held 72 units' stamps; each PR had gone
+#: red on a transient base failure or conflicted on a unit another stamp PR also
+#: edits, and nothing ever closed or re-landed them.
+STRANDED_STAMP_HOURS = 3.0
+
+
+def _parse_ts(raw: Any) -> Optional[datetime]:
+    """An aware UTC datetime from an ISO stamp, or None when unparseable."""
+    if not raw:
+        return None
+    try:
+        when = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+
+
+def latest_result_at(uid: str, results_root: Optional[Path] = None) -> tuple:
+    """(latest `generated_at` of any result row under <results_root>/<uid>/, row count).
+
+    (None, 0) when the directory is absent or holds no readable row -- "no
+    result" and "could not read" both mean this cannot vouch for a run, which
+    is the direction that falls back to the stamp. A row whose `generated_at`
+    is unparseable still counts toward the row count (it IS a landed result)
+    but contributes no timestamp."""
+    rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+    latest: Optional[datetime] = None
+    rows = 0
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for ln in lines:
+            if not ln.strip():
+                continue
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(r, dict):
+                continue
+            rows += 1
+            ts = _parse_ts(r.get("generated_at"))
+            if ts and (latest is None or ts > latest):
+                latest = ts
+    return latest, rows
+
+
+#: `read_state` values of a landed row that mean the run produced NO verdict for
+#: infrastructure reasons (the declared command crashed, timed out, or found no
+#: data). `collect_runner_results` writes `producer_failed` for a failed or
+#: timed-out command. Such a row is not a result of the experiment, so it must
+#: not consume a `cadence: once` unit (RQ-REARM-PRODUCER-FAILED, 2026-10-13).
+NON_VERDICT_READ_STATES = frozenset({"producer_failed", "no_data"})
+
+#: Re-dispatches allowed after the first run when every landed row is a
+#: non-verdict outcome. Attempts are counted from the rows themselves (no new
+#: field). Past the cap the unit is not due and `RETRY_CAP_MARK` is in its
+#: reason, which `main()` surfaces as a `::warning::` -- a human decides.
+MAX_NONVERDICT_RETRIES = 2
+RETRY_CAP_MARK = "retry cap reached"
+
+
+def nonverdict_attempts(uid: str, results_root: Optional[Path] = None) -> int:
+    """How many landed rows there are when EVERY row is a non-verdict outcome, else 0.
+
+    0 means "no rows" or "at least one real verdict (or an unreadable
+    read_state) is among them" -- the unit stays done. Only a unit whose whole
+    history is infrastructure failure is re-armable."""
+    rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+    rows = 0
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return 0
+        for ln in lines:
+            if not ln.strip():
+                continue
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(r, dict):
+                continue
+            if str(r.get("read_state") or "") not in NON_VERDICT_READ_STATES:
+                return 0
+            rows += 1
+    return rows
+
+
+def rearmable(entry: Dict[str, Any]) -> bool:
+    """A stamp-cleared unit whose only landed rows are non-verdict outcomes and
+    that is still under the retry cap."""
+    uid = str(entry.get("id") or "")
+    n = nonverdict_attempts(uid) if uid else 0
+    return 0 < n <= MAX_NONVERDICT_RETRIES
 
 
 def _display_path(path: Path) -> str:
@@ -64,28 +191,477 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def precondition_met(entry: Dict[str, Any], root: Optional[Path] = None) -> tuple:
+    """(met, reason) for the structured `requires_result: {unit, verdict?}` field: at least one MEASURED
+    record under research/results/<unit>/*.jsonl (and, when `verdict` is given, one carrying it). A unit
+    without the field is always met. The free-text `dispatch_precondition` is prose for humans and is
+    NOT evaluated (research/queue/README.md): an unevaluated precondition reads as a gate and is not."""
+    req = entry.get("requires_result")
+    if not req:
+        return True, "no precondition"
+    unit, want = str(req.get("unit")), req.get("verdict")
+    rdir = (root or _REPO) / "research" / "results" / unit
+    seen = 0
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        try:
+            rows = [json.loads(ln) for ln in f.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        except (OSError, ValueError):
+            continue
+        for r in rows:
+            if str(r.get("read_state")) == "measured":
+                seen += 1
+                if want is None or str(r.get("verdict")) == str(want):
+                    return True, f"{unit} landed a measured record" + (f" with verdict {want}" if want else "")
+    return False, (f"precondition unmet: needs a measured record from {unit}"
+                   + (f" with verdict {want}" if want else "") + f" (found {seen} measured record(s) without it)")
+
+
+#: Values that mean "a human has not decided this yet". A unit carrying one must never reach `gh`:
+#: the string is sent verbatim as an input value and lands in a numeric parameter.
+_PLACEHOLDER_RE = re.compile(r"NOT YET DECIDED|\bTBD\b|\bTODO\b|\bFIXME\b", re.I)
+
+
+@functools.lru_cache(maxsize=1)
+def _e35_sweepable_legs() -> frozenset:
+    """The legs e35-bracket-sweep's own planner would accept -- the sweep's resolver
+    (`plan_legs`), never a second copy of its scope. Config-only: `ignore_missing_data`."""
+    from scripts.research.e35_bracket_geometry_sweep import plan_legs
+    runnable, _ = plan_legs(Path("data"), None, 0.099, ignore_missing_data=True)
+    return frozenset(r["leg"] for r in runnable)
+
+
+def _e35_scope_problem(workflow: str, inputs: Dict[str, Any], repo: Optional[Path]) -> Optional[str]:
+    """A unit naming an e35 leg the planner refuses is DETERMINISTICALLY doomed: the run dies in
+    its `plan` job (~90 s, "shard-plan produced ZERO jobs") AFTER the dispatcher stamped the
+    unit, so it reads as dispatched while the corpus never grows. MEASURED 2026-10-04:
+    RQ-20260929-005 / RQ-20261002-001 / RQ-20261003-001 / RQ-20261003-006 name `ict_scalp_*`
+    legs (family `scalp`, out_of_scope_family) -- runs 37086544045 and 37106772916, red in `plan`."""
+    if workflow.split("/")[-1] != "e35-bracket-sweep.yml" or (repo is not None and repo != _REPO):
+        return None
+    only = [x.strip() for x in str(inputs.get("only") or "").split(",") if x.strip()]
+    if not only:
+        return None
+    try:
+        sweepable = _e35_sweepable_legs()
+    except (ImportError, OSError, ValueError, KeyError, TypeError) as exc:
+        # could not look: never doom a unit on an unreadable scope -- but say so
+        print(f"::warning::e35 scope unreadable ({type(exc).__name__}: {exc}); not applying the scope check",
+              file=sys.stderr)
+        return None
+    out = sorted(x for x in only if x not in sweepable)
+    if out:
+        return (f"misconfigured: run.inputs.only {out} are outside the e35 sweep's scope "
+                "(its planner refuses them as out_of_scope_family) -- the run would fail in `plan`")
+    return None
+
+
+def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Optional[str]:
+    """Why this unit's dispatch is DETERMINISTICALLY doomed, or None.
+
+    Two shapes, both measured on research-queue-dispatch run 36798175014 (2026-10-01): RQ-20260928-010
+    named inputs its workflow does not declare (HTTP 422 on every cycle, which reddened the run) and
+    carried `fee_frac: "NOT YET DECIDED ..."`. A doomed unit is not due: it reports `not_due` with this
+    reason instead of failing the whole run each cycle, and the runnable count (queue health, refill)
+    stops counting it. The fix belongs in the unit, so the reason names it."""
+    run = entry.get("run") or {}
+    workflow = str(run.get("workflow") or "")
+    if not workflow.endswith((".yml", ".yaml")) or any(ch.isspace() for ch in workflow):
+        return None   # session-bound: reported separately
+    bad = [k for k, v in (run.get("inputs") or {}).items()
+           if isinstance(v, str) and _PLACEHOLDER_RE.search(v)]
+    if bad:
+        return f"misconfigured: run.inputs {bad} hold an unresolved placeholder ('NOT YET DECIDED'/TBD/TODO)"
+    declared = declared_inputs(workflow, repo=repo or _REPO)
+    if declared is None or workflow.split("/")[-1] in ("research-script-run.yml", "research-script-run-trainer.yml",
+                                                                "research-script-run-kaggle.yml", "research-script-run-data.yml",
+                                                                "research-script-run-kaggle-cpu.yml"):
+        return None
+    inputs, _ = dispatch_inputs(entry, power_state="x", repo=repo or _REPO)
+    unknown = sorted(k for k in inputs if k not in declared)
+    if unknown:
+        return (f"misconfigured: run.inputs {unknown} are not declared by {workflow.split('/')[-1]} "
+                f"(declared: {declared}); GitHub would refuse the dispatch with HTTP 422")
+    return None
+
+
+def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime],
+                         results_root: Optional[Path] = None) -> bool:
+    """Did `queue_grade.decide` clear this unit's stamp to ask for a confirmatory
+    run AFTER reading the rows that exist? True only when the grading block
+    says `confirmatory_run >= 1` and no result has landed since that grading --
+    a result landed after the grading is the confirmatory run itself, and the
+    unit is then not due again.
+
+    ⚠️ "Since the grading" is read from the grading's own `evidence` list when it
+    has one: the rows the grader READ are named there, so a result file NOT in
+    it is new. Only without that list does it fall back to `graded_at`, and the
+    grader writes `graded_at` as a DATE ('2026-10-15'), which parses to midnight:
+    comparing a same-day result (19:14) against it said "landed after the
+    grading", so `stamp_lost` re-stamped the deliberate re-queue with run 1's
+    own `generated_at`, the confirmatory run never fired, and the grader's
+    confirmatory pass (`since` = that stamp, rows with ts < since excluded) re-read
+    run 1 and closed the unit "two consecutive FAIL passes" on ONE run. MEASURED
+    2026-10-16 (lane RESEARCH-FOLLOWUP-1016): RQ-20261015-4941-01/-02 closed that
+    way, evidence one file each. A date-only fallback therefore compares DATES:
+    a result dated on or before the grading day counts as already read."""
+    g = entry.get("grading") if isinstance(entry.get("grading"), dict) else {}
+    try:
+        if int(g.get("confirmatory_run") or 0) < 1:
+            return False
+    except (TypeError, ValueError):
+        return False
+    evidence = g.get("evidence")
+    uid = str(entry.get("id") or "")
+    if isinstance(evidence, list) and evidence and uid:
+        rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+        read = {Path(str(e)).name for e in evidence}
+        landed = {f.name for f in rdir.glob("*.jsonl")} if rdir.is_dir() else set()
+        return landed <= read
+    raw = str(g.get("graded_at") or "")
+    graded = _parse_ts(raw)
+    if graded is None:
+        return False
+    if result_at is None:
+        return True
+    if len(raw) == 10:   # date-only: the grading happened at an unknown time that day
+        return result_at.date() <= graded.date()
+    return result_at <= graded
+
+
+def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
+    """The timestamp a missing stamp should be REPAIRED to, or None.
+
+    A unit with landed result rows and NO `last_dispatched_at` ran, but its
+    stamp PR never merged (a dropped stamp, e.g. #16770 `dirty`). The grader
+    (`queue_grade.grade_unit`) refuses to grade an unstamped unit, so without
+    repair such a unit would now sit `queued`, never re-fired (result-based
+    idempotence) and never graded -- a silent park, which is worse than the
+    double-fire it replaced. The dispatcher therefore re-stamps it from the
+    evidence: the latest row's `generated_at`. Never for a grader re-queue
+    (`confirmatory_requeue`), whose cleared stamp is deliberate."""
+    if entry.get("last_dispatched_at"):
+        return None
+    uid = str(entry.get("id") or "")
+    result_at, rows = latest_result_at(uid) if uid else (None, 0)
+    if not rows or result_at is None or confirmatory_requeue(entry, result_at):
+        return None
+    if rearmable(entry):
+        return None   # a cleared stamp on a producer_failed-only unit is a deliberate re-arm
+    return result_at
+
+
+def cleared_on_purpose(entry: Dict[str, Any]) -> bool:
+    """Is this unit's missing stamp a DELIBERATE re-arm, not a dropped stamp?
+
+    True for a null stamp that a person (or the grader) cleared so the unit runs again: a unit whose
+    only landed rows are non-verdict outcomes and that is under the retry cap (`rearmable`), or one the
+    grader re-queued for a confirmatory run. Anything that WRITES a stamp from old evidence (the
+    stranded-PR adoption in `main()`, the `stamp_lost` repair) must leave such a unit alone: writing the
+    old stamp back is what undid #17829's re-arm of RQ-20261009-903 / RQ-20261012-75b2-19 (PR #17853
+    restored `14:51:40` / `02:15:56`, the stamps of an OPEN stranded stamp PR, #17809, onto units whose
+    null was the re-arm). PI-20261013-HOPS1447-0001."""
+    if entry.get("last_dispatched_at"):
+        return False
+    uid = str(entry.get("id") or "")
+    result_at, rows = latest_result_at(uid) if uid else (None, 0)
+    if not rows:
+        return False
+    return rearmable(entry) or confirmatory_requeue(entry, result_at)
+
+
 def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     """(due, reason). A job with no recorded run has never run and IS due."""
+    met, why = precondition_met(entry)
+    if not met:
+        return False, why
+    # RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16): a fresh-window confirmation unit
+    # (queue_grade.confirmation_unit) needs data its PASS never saw, so it carries the earliest
+    # moment that data can exist. An unparseable value is refused, never read as "elapsed".
+    if entry.get("not_before") is not None:
+        nb = _parse_ts(entry.get("not_before"))
+        if nb is None:
+            return False, f"not_before={entry.get('not_before')!r} is unparseable -- refusing to fire"
+        if now < nb:
+            return False, f"not_before {nb.isoformat()} not reached (fresh window still accruing)"
+    problem = config_problem(entry)
+    if problem:
+        return False, problem
+    # Scope is a different class from a misconfigured input: the unit is well-formed and
+    # the workflow would accept it, then refuse the LEG. Kept out of config_problem so the
+    # "committed queue has no doomed unit" test keeps meaning "no malformed unit"; the
+    # out-of-scope units already on main are listed for retirement, not hidden.
+    scope = _e35_scope_problem(str((entry.get("run") or {}).get("workflow") or ""),
+                               (entry.get("run") or {}).get("inputs") or {}, None)
+    if scope:
+        return False, scope
     cadence = str(entry.get("cadence") or "once")
     last = entry.get("last_dispatched_at")
-    if not last:
+    # ── RESULT-BASED IDEMPOTENCE (lane RQ-FIX, 2026-10-06) ────────────────
+    # The stamp is bookkeeping the dispatcher has to WRITE, through a PR that
+    # takes a CI cycle (~35-60 min) to merge; the hourly cron (#16736) then
+    # reads main without it and fires the unit again. MEASURED 2026-10-06:
+    # RQ-20261006-005 (cadence once) fired at 09:59 and 11:05 (results
+    # 37446806904 and 37454118580); RQ-20261004-659 fired 10:04 and 11:09.
+    # A landed result row under research/results/<uid>/ is evidence the unit
+    # ran that NOBODY has to write for it, so it is read here as a stamp: the
+    # later of (stamp, latest result) is what the cadence is measured from.
+    # The in-flight window before the result lands is closed by the
+    # open-stamp-PR check in main() (`pending_stamp_units`), fire path only.
+    uid = str(entry.get("id") or "")
+    result_at, result_rows = latest_result_at(uid) if uid else (None, 0)
+    if not last and not result_rows:
         return True, "never dispatched"
+    if not last and result_rows and confirmatory_requeue(entry, result_at):
+        # The GRADER cleared the stamp on purpose (queue_grade.decide: first FAIL
+        # -> `last_dispatched_at: null`, grading.confirmatory_run 1) after
+        # reading these very rows. That is a re-queue, not a lost stamp.
+        return True, (f"re-queued for a confirmatory run by the grader at "
+                      f"{(entry.get('grading') or {}).get('graded_at')} (the {result_rows} landed "
+                      "row(s) were already read)")
+    if not last and result_rows and nonverdict_attempts(uid):
+        attempts = nonverdict_attempts(uid)
+        if attempts <= MAX_NONVERDICT_RETRIES:
+            return True, (f"re-armed: all {attempts} landed row(s) are non-verdict outcomes "
+                          f"({'/'.join(sorted(NON_VERDICT_READ_STATES))}); retry "
+                          f"{attempts}/{MAX_NONVERDICT_RETRIES}")
+        return False, (f"{RETRY_CAP_MARK}: {attempts} landed rows are all non-verdict outcomes "
+                       f"(max {MAX_NONVERDICT_RETRIES} retries) -- needs a human")
     if cadence == "once":
-        return False, f"cadence=once and it ran at {last}"
-    try:
-        when = datetime.fromisoformat(str(last).replace("Z", "+00:00"))
-        if when.tzinfo is None:
-            when = when.replace(tzinfo=timezone.utc)
-    except ValueError:
+        if last:
+            return False, f"cadence=once and it ran at {last}"
+        return False, (f"cadence=once and research/results/{uid}/ already holds {result_rows} "
+                       f"row(s) (latest {result_at.isoformat() if result_at else 'undated'}): "
+                       "result-based idempotence, no stamp needed")
+    when = _parse_ts(last) if last else None
+    if last and when is None:
         # ⚠️ An undateable stamp is NOT "long ago". We cannot show the cadence
         # has elapsed, so we do not fire — the fail-safe direction for a thing
         # that spends money and burns runner minutes.
         return False, f"last_dispatched_at={last!r} is unparseable — refusing to " \
                       "treat an undateable stamp as elapsed"
-    gap = timedelta(days=_CADENCE_DAYS.get(cadence, 1))
+    basis = "stamp"
+    if result_at and (when is None or result_at > when):
+        when, basis = result_at, f"latest of {result_rows} result row(s)"
+    if when is None:
+        # rows exist but none carries a readable generated_at, and no stamp:
+        # cannot show the cadence elapsed -- same fail-safe direction as above.
+        return False, (f"research/results/{uid}/ holds {result_rows} row(s) with no readable "
+                       "generated_at and there is no stamp — refusing to treat an undated "
+                       "result as elapsed")
+    gap = timedelta(days=max(_CADENCE_DAYS.get(cadence, 1), recheck_after_days(entry)))
     if now - when >= gap:
-        return True, f"last ran {when.isoformat()}, cadence {cadence} elapsed"
-    return False, f"last ran {when.isoformat()}, cadence {cadence} not yet elapsed"
+        return True, f"last ran {when.isoformat()} ({basis}), cadence {cadence} elapsed"
+    return False, f"last ran {when.isoformat()} ({basis}), cadence {cadence} not yet elapsed"
+
+
+def recheck_after_days(entry: Dict[str, Any]) -> int:
+    """A re-ask stretch the GRADER wrote into its own grading block (queue_grade RC5: a
+    recurring unit whose power cannot reach its floor at its cadence). Honoured only when
+    the block is the grader's (`auto: true` + `grader` names queue_grade.py), so a hand edit
+    of `grading:` cannot silently park a unit; clamped to [0, 366] days. It can only
+    LENGTHEN the gap -- `due()` takes max(cadence, this)."""
+    g = entry.get("grading")
+    if not (isinstance(g, dict) and g.get("auto") is True and str(g.get("grader") or "").endswith("queue_grade.py")):
+        return 0
+    try:
+        return max(0, min(366, int(g.get("recheck_after_days") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _waiting_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
+    """When the unit started waiting: its last stamp, else the date in its id."""
+    last = entry.get("last_dispatched_at")
+    if last:
+        try:
+            when = datetime.fromisoformat(str(last).replace("Z", "+00:00"))
+            return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    m = re.match(r"^RQ-(\d{4})(\d{2})(\d{2})-", uid)
+    return datetime(int(m[1]), int(m[2]), int(m[3]), tzinfo=timezone.utc) if m else None
+
+
+def _due_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
+    """When the unit became DUE -- the moment it started waiting for a slot. For a recurring unit that
+    is its last stamp PLUS its cadence gap, never the stamp itself.
+
+    ⚠️ RESEARCH-ENGINE-1016 (2026-10-16). Aging and starvation used to count from the last stamp
+    (`_waiting_since`), so a monthly re-run came due already "waiting" 30 days: 720 h > the router's
+    `starve_hours` 240, i.e. STARVED, sorting ahead of every authored unit in its theme, plus ten aging
+    steps of age_boost. 62 of the 112 queued units on 2026-10-16 were generated monthly sweeps (e35-bracket 26,
+    m20-exit-lever 36), so each month's rollover would put them all in front of the questions anybody asked.
+    A unit waits from when it is due; a `once` unit (and a recurring one never stamped) is due from creation."""
+    since = _waiting_since(entry, uid)
+    cadence = str(entry.get("cadence") or "once")
+    if since is not None and entry.get("last_dispatched_at") and cadence in _CADENCE_DAYS:
+        since = since + timedelta(days=max(_CADENCE_DAYS[cadence], recheck_after_days(entry)))
+    return since
+
+
+def effective_priority(entry: Dict[str, Any], uid: str, now: datetime, aging_hours: float) -> int:
+    """priority minus one step per `aging_hours` waited since the unit came DUE (floor 0): nothing
+    starves inside its theme."""
+    prio = entry.get("priority")
+    prio = prio if isinstance(prio, int) and not isinstance(prio, bool) else 3
+    since = _due_since(entry, uid)
+    steps = int(max(0.0, (now - since).total_seconds()) // (aging_hours * 3600)) if since else 0
+    return max(0, prio - steps)
+
+
+def is_refill(entry: Dict[str, Any]) -> bool:
+    """A template / sweep re-run (research/templates family) as opposed to a question somebody ASKED.
+
+    MONEY-FIRST (operator 2026-10-18): a programme node (`generated.family: programme:*`) is emitted from an
+    authored programme tree (research/programmes/), so it is an asked question, not a refill -- the same line
+    `queue_grade.template_cell` draws. MEASURED 2026-10-18 on the committed queue: the 17 P1 real-money
+    trade-management units (RQ-20261017-002 score 145, RQ-20261016-004..021) carried `generated:` and so sorted
+    behind 11 authored equity units (scores 13..27) inside live_strategy, on top of the cross-theme round-robin."""
+    gen = entry.get("generated")
+    return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
+
+
+def programme_of(entry: Dict[str, Any]) -> str:
+    """The research programme a unit belongs to ("" when none): `programme_node.programme`, else the
+    `generated.family: programme:<id>` the programme emitter writes (both are on every P1 unit, 2026-10-18)."""
+    pn = entry.get("programme_node")
+    if isinstance(pn, dict) and pn.get("programme"):
+        return str(pn["programme"])
+    gen = entry.get("generated")
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    return fam[len("programme:"):] if fam.startswith("programme:") else ""
+
+
+def programme_tier(entry: Dict[str, Any], cfg: Dict[str, Any]) -> int:
+    """Position of the unit's programme in ``value.programme_priority`` (0 = the operator's first priority);
+    len(list) for every unit outside it. PROGRAMME PRIORITY (operator 2026-10-18, ~06:20Z): P1 active trade
+    management and P2 AI trader rank first on every backend, above other themes and programmes."""
+    order = [str(x) for x in (cfg.get("value", {}).get("programme_priority") or [])]
+    prog = programme_of(entry)
+    return order.index(prog) if prog and prog in order else len(order)
+
+
+def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
+               cfg: Optional[Dict[str, Any]] = None) -> List[Any]:
+    """Dispatch order. With ``cfg`` (the live dispatcher): MONEY FIRST across themes, theme share breaks ties.
+    Without ``cfg``: the pre-router weighted fair share across themes, aged priority within a theme, unchanged.
+
+    MONEY FIRST (operator decision 2026-10-18, verbatim "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018).
+    Until then the cross-theme step was a round-robin: repeatedly pick the theme with the lowest (fired in the
+    last `share_window_hours` + picked so far) / weight and take its best unit, so the VALUE score ordered units
+    only inside a theme. MEASURED on run 39098686264 (2026-10-18 04:56Z): github_runner's three slots went to
+    RQ-20261017-ae17-08/-09 (regime, score 6.5) and ae17-45 (infra, 30.7) while RQ-20261017-002 (own_losses,
+    141.9) and the other P1 real-money units deferred on "github_runner at capacity (3/3 in flight)" -- a starved
+    theme took every scarce slot regardless of what the unit was worth. The operator declined to raise the runner
+    cap and chose: real-money / prop / own-losses work dispatches first; theme balancing only breaks ties and uses
+    spare capacity.
+
+    The order now, with ``cfg``:
+      1. Inside a theme (unchanged shape): starved first (DUE past ``value.starve_hours``), then the operator's
+         PROGRAMME PRIORITY (``value.programme_priority``, an ordered list; `programme_tier`), then ASKED units
+         (authored, or a programme node -- see `is_refill`) before template refills, then by ``compute_router.score``
+         (value per cost, bucket shares, hand-written and age boosts), then id.
+      2. Across themes: take the theme whose NEXT unit is worth most -- a starved head first (nothing starves past
+         starve_hours, in any theme), then the lowest programme tier, then the highest score. Theme share (fired in
+         the window + picked so far, over THEMES.yaml weight) decides only between EQUAL scores, then the heavier
+         theme, then the name.
+    PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim "Those two items are our highest priority, we need to
+    make sure we're pushing forward on them": P1 active trade management, P2 AI trader). A due unit of a listed
+    programme ranks first on every backend, above every other theme and programme, P1 before P2 (the list is
+    ordered); only a starved unit goes ahead of it. Edit the list in research_compute.yaml to change the priority.
+    A theme holding only low-value units therefore fires when capacity is spare or when its units starve (240 h),
+    so ``theme_share_min_ratio`` recovers more slowly than under the round-robin -- stated on the SLO's config and
+    on checklist row RESEARCH-PIPELINE-SLO, deliberately not re-thresholded. The share is still honoured by SUPPLY
+    (check_research_queue_health.py `theme_supply`): authoring valuable units in a short theme is how it recovers.
+    Each ranked job carries ``raw['_rank']`` (score + derivation + ``pick``: "starved" or "value") for the
+    decision line. Jobs that are not due (done, cadence not elapsed, unmet precondition, session-bound, invalid)
+    keep id order after the candidates, unchanged. Stateless: the only memory is the stamps already on the units."""
+    themes = themes_doc["themes"]
+    window = timedelta(hours=float(themes_doc["share_window_hours"]))
+    aging = float(themes_doc["aging_hours"])
+    used: Dict[str, float] = {t: 0.0 for t in themes}
+    for j in jobs:
+        ts = _waiting_since({"last_dispatched_at": j.raw.get("last_dispatched_at")}, "") \
+            if j.raw.get("last_dispatched_at") else None   # a stamp, never the id-date fallback
+        th = str(j.raw.get("theme") or "")
+        if ts and now - ts <= window and th in used:
+            used[th] += 1
+    cand: Dict[str, List[Any]] = {}
+    rest: List[Any] = []
+    for j in sorted(jobs, key=lambda x: x.id):
+        e = j.raw
+        th = str(e.get("theme") or "")
+        wf = str((e.get("run") or {}).get("workflow") or "")
+        if not wf and cfg is not None:     # compute-only unit: fireable iff its class resolves
+            _p = cr.plan(e, cfg)
+            wf = _p.workflow if _p.ok else ""
+        fireable = (j.valid and j.status == "queued" and th in themes and wf.endswith((".yml", ".yaml"))
+                    and not any(ch.isspace() for ch in wf) and _is_due(e, now)[0])
+        (cand.setdefault(th, []) if fireable else rest).append(j)
+    if cfg is not None:
+        fires: Dict[str, float] = {}
+        for j in jobs:
+            ts = _parse_ts(j.raw.get("last_dispatched_at"))
+            if ts and now - ts <= window:
+                b = cr.bucket_of(j.raw, cfg)
+                if b:
+                    fires[b] = fires.get(b, 0.0) + 1
+        starve = timedelta(hours=float(cfg["value"]["starve_hours"]))
+        for th in cand:
+            def _key(x, _fires=fires):
+                since = _due_since(x.raw, x.id)
+                waited = (now - since) if since else timedelta(0)
+                steps = int(max(0.0, waited.total_seconds()) // (aging * 3600))
+                r = cr.score(x.raw, cfg, aging_steps=steps, fires=_fires)
+                r["starved"] = waited > starve
+                r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
+                r["refill"] = is_refill(x.raw)
+                r["programme"] = programme_of(x.raw)
+                r["programme_tier"] = programme_tier(x.raw, cfg)
+                x.raw["_rank"] = r
+                # Programme priority first (operator 2026-10-18: P1, P2), then asked before refill inside a theme
+                # (RESEARCH-ENGINE-1016, kept): someone ASKED an authored question or registered a programme node;
+                # a template re-run keeps the queue stocked. A refill still fires whenever its theme has no asked
+                # unit due -- or first, once DUE past starve_hours.
+                return (not r["starved"], r["programme_tier"], r["refill"], -r["rank_value"], x.id)
+            cand[th].sort(key=_key)
+    for th in cand if cfg is None else ():
+        # Within one effective priority a hand-written unit (someone ASKED this question) goes
+        # before a template-generated one (the refill keeps the queue stocked): MEASURED
+        # 2026-10-04, RQ-20260929-101..108 -- eight pre-registered Stage-0 units the operator
+        # asked for -- sat behind ~15 generated prop-fit units in the same theme for five days,
+        # because ids sort by creation and the 09-29 replenish batch numbered 025..060 < 101.
+        cand[th].sort(key=lambda x: (effective_priority(x.raw, x.id, now, aging),
+                                     isinstance(x.raw.get("generated"), dict), x.id))
+    out: List[Any] = []
+    while any(cand.values()):
+        if cfg is None:
+            th = min((t for t in cand if cand[t]),
+                     key=lambda t: (used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+        else:
+            # Starved first; then the operator's programme priority; then MONEY FIRST: the theme whose next unit is
+            # worth most; theme share only breaks an equal score.
+            th = min((t for t in cand if cand[t]),
+                     key=lambda t: (not cand[t][0].raw["_rank"]["starved"], cand[t][0].raw["_rank"]["programme_tier"],
+                                    -cand[t][0].raw["_rank"]["rank_value"],
+                                    used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+            _r = cand[th][0].raw["_rank"]
+            _r["pick"] = ("starved" if _r["starved"]
+                          else f"programme:{_r['programme']}" if _r["programme_tier"] < len(cfg["value"].get("programme_priority") or [])
+                          else "value")
+        out.append(cand[th].pop(0))
+        used[th] += 1
+    return out + rest
+
+def due_within(entry: Dict[str, Any], now: datetime, hours: float = 0.0) -> bool:
+    """Would the dispatcher fire this unit at ``now + hours``? The ONE due rule
+    (`_is_due`), exposed so the refill (`queue_replenish.runnable`) and the alarm
+    (`queue_grade.health`) count exactly what this dispatcher would fire and
+    never a looser notion of "runnable". A `once` unit that already ran and a
+    monthly unit that ran yesterday both carry `status: queued` and are NOT due;
+    measured 2026-09-29 04:35Z on main they were 18 of the 21 "runnable" units,
+    so the refill never fired and the alarm stayed quiet while the runners idled."""
+    return bool(_is_due(entry, now + timedelta(hours=hours))[0])
 
 
 def _stamp(path: Path, when: datetime) -> Optional[str]:
@@ -98,18 +674,29 @@ def _stamp(path: Path, when: datetime) -> Optional[str]:
     Between firing and that PR merging, a second dispatcher run would read the
     OLD stamp and fire the same job again.
 
-    What bounds it today: the cron is daily (so the window is minutes against a
-    24 h cadence), the dispatcher is `concurrency`-grouped so two runs cannot
-    overlap, and `--max-gpu-dispatches-per-run` caps the only route that costs
-    money. What does NOT bound it: nothing stops a same-day double-fire of a
-    free runner job if the stamp PR is still open.
+    What bounded it until 2026-10-06: the cron was 6-hourly (so the window was
+    minutes against a 6 h slot), the dispatcher is `concurrency`-grouped so two
+    runs cannot overlap, and `--max-gpu-dispatches-per-run` caps the only route
+    that costs money. Then #16736 made the cron HOURLY and the stamp PR's CI
+    cycle (~35-60 min) became longer than the slot: MEASURED the same morning,
+    RQ-20261006-005 (cadence once) fired at 09:59 and 11:05, RQ-20261004-659 at
+    10:04 and 11:09, and the two stamp PRs then conflicted on the same line of
+    the same unit file (#16770 `dirty`), so the losing stamp was dropped whole.
 
-    **The stronger fix is result-based idempotence, not a better stamp** — every
-    job already declares `lands.store`, so the dispatcher could ask "are this
-    job's rows already there?" and skip on the RESULT rather than on
-    bookkeeping it has to write. That is deliberately not built here: it needs
-    the store readable from the runner and it is a larger change than this PR
-    should carry. Tracked, not silently omitted.
+    **The stronger fix — result-based idempotence — IS NOW BUILT** (lane
+    RQ-FIX, 2026-10-06), in two halves, neither of which is a better stamp:
+      1. `_is_due` reads research/results/<uid>/ as a stamp nobody has to
+         write: a `once` unit with any landed row is not due, and a recurring
+         unit measures its cadence from the later of the stamp and its latest
+         row's `generated_at`.
+      2. `main()` (fire path, `--check-open-stamp-prs`, which the workflow
+         passes with `--fire`) asks GitHub once per cycle for OPEN PRs on
+         `automation/research-queue-stamp-*` and treats a unit whose
+         research/queue/<uid>.yaml one of them modifies as already dispatched
+         (`pending_stamp_units`). That closes the window between the fire and
+         the result landing, during which (1) cannot see anything yet.
+    The stamp itself stays: it is what `fair_order`'s share window and the
+    aging reads, and it is still correct whenever it does land.
     ⚠️ **WRITTEN AS A TARGETED TEXT EDIT, NEVER A YAML ROUND-TRIP.** It used
     ``yaml.safe_dump`` until 2026-08-31, which is lossy in a way nobody sees
     until the prose is gone: PyYAML does not model comments, so a load/dump
@@ -164,12 +751,436 @@ def _stamp(path: Path, when: datetime) -> Optional[str]:
         return f"{type(exc).__name__}: {exc}"
 
 
+
+def declared_inputs(workflow: str, *, repo: Path = _REPO) -> Optional[List[str]]:
+    """The ``workflow_dispatch.inputs`` keys ``<repo>/.github/workflows/<workflow>``
+    declares, or ``None`` when the file cannot be read (not "no inputs" — the
+    two are different claims, and only the second is a reason to filter)."""
+    # A unit may spell the workflow as `.github/workflows/x.yml` (RQ-20260928-010 did). Joining that
+    # onto the workflows dir gave a path that never exists, so this returned None, the undeclared-inputs
+    # preflight in `_fire` was skipped, and gh answered HTTP 422 on every cycle (run 36798175014).
+    path = repo / ".github" / "workflows" / workflow.split("/")[-1]
+    try:
+        import yaml  # noqa: PLC0415 — optional at import time, required here
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeDecodeError, ValueError, ImportError):
+        return None
+    # PyYAML parses the bare `on:` key as boolean True.
+    on = doc.get("on") if isinstance(doc.get("on"), dict) else doc.get(True)
+    if not isinstance(on, dict):
+        return None
+    wd = on.get("workflow_dispatch")
+    inputs = wd.get("inputs") if isinstance(wd, dict) else None
+    return sorted(inputs.keys()) if isinstance(inputs, dict) else []
+
+
+def dispatch_inputs(entry: Dict[str, Any], *, power_state: str = "",
+                    repo: Path = _REPO) -> tuple:
+    """``(inputs, dropped)`` — what ``gh workflow run -f`` will carry.
+
+    RQ-RUN (2026-09-28), MEASURED on research-queue-dispatch run 36476810004:
+    GitHub refuses the whole dispatch with ``HTTP 422: Unexpected inputs
+    provided: ["script"]`` when a unit's ``run.inputs`` names a key the
+    workflow does not declare — four token-free-runner units carried a
+    leftover ``script:`` key from their retarget and none of them fired, while
+    the dry run (which never builds the command) said ``would_dispatch``. The
+    runner reads the command from the unit FILE, so for it every key beyond
+    ``research_unit``/``power_state`` is provably noise: drop it, and NAME it.
+    Any other workflow keeps its inputs verbatim — an undeclared key there is
+    a unit bug, refused by ``_fire`` before gh is called, in those words.
+    """
+    run = entry.get("run") or {}
+    inputs = dict(run.get("inputs") or {})
+    workflow = str(run.get("workflow"))
+    declared = declared_inputs(workflow, repo=repo)
+    # A unit that forgot `research_unit` in its inputs lands its result under
+    # research/results/_unattributed/ -- MEASURED 2026-10-04: RQ-20260928-006/-007 fired
+    # m20-exit-lever-sweep runs 36434140504 / 36434144288, which sit in _unattributed/ although
+    # their unit ids were known to the dispatcher. The dispatcher knows the id, so when the
+    # workflow declares the input it supplies it (declared_inputs None = unreadable: never guess).
+    if declared and "research_unit" in declared and not inputs.get("research_unit") and entry.get("id"):
+        inputs["research_unit"] = str(entry["id"])
+    if inputs.get("research_unit") and power_state:
+        inputs["power_state"] = power_state
+    if declared is None or workflow not in ("research-script-run.yml", "research-script-run-trainer.yml",
+                                            "research-script-run-kaggle.yml", "research-script-run-data.yml",
+                                                                "research-script-run-kaggle-cpu.yml"):
+        return inputs, []
+    dropped = sorted(k for k in inputs if k not in declared)
+    return {k: v for k, v in inputs.items() if k in declared}, dropped
+
+
+
+# ── backpressure (manager review 2026-09-29, 01:27Z) ────────────────────────
+# MEASURED at 01:27Z on 2026-09-29: 67 runs queued repo-wide and 12 research
+# compute runs in progress at once (6 research-script-run, 2 harness, 2 m20,
+# 1 e35, 1 macro backfill) after the dispatcher fanned the whole queue out in
+# one cycle. Every system-action -- set-env, flatten, the Breakout AUTO-REVERT
+# -- waited in the same runner pool. Research must never starve a safety
+# action, so a fire is DEFERRED (not failed, not stamped) when research
+# compute already holds `--max-research-inflight` runs or the repo already has
+# more than `--max-repo-queued` runs waiting. A deferred unit is due again on
+# the next cycle exactly as if it had never been looked at.
+DEFERRED = "deferred"
+
+# ── same-workflow serialization (PI-20260929-RQRUN-E35CORPUS-0001) ─────────
+# MEASURED 2026-09-29 00:53Z: one cycle fired three e35-bracket-sweep units.
+# e35-bracket-sweep.yml declares `concurrency: {group: e35-bracket-sweep,
+# cancel-in-progress: false}`, and GitHub keeps ONE pending run per group, so
+# the third dispatch CANCELLED the second (RQ-20260928-017 ran nothing, stayed
+# stamped, and would never have re-fired). The two survivors then each
+# rewrote docs/research/e35-bracket-corpus.jsonl from their own checkout and
+# their landing PRs (#13910, #13801) stranded CONFLICTING. m20-exit-lever-
+# sweep has no group but the same whole-file corpus rewrite. So a cycle fires
+# at most `--max-fires-per-workflow` unit(s) per workflow FILE; the rest are
+# DEFERRED to the next cycle, unstamped. Only workflows that can collide are
+# serialized (see serialized_workflow()): a per-run or per-unit concurrency
+# group -- the harness dispatcher, the exit-head build, the token-free runner
+# whose results land in ONE batch PR -- fans out as before.
+#: Workflows whose runs collide even without a constant concurrency group:
+#: they rewrite a whole corpus file and land it via commit-to-main.
+SERIALIZED_WORKFLOWS = frozenset({"e35-bracket-sweep.yml", "m20-exit-lever-sweep.yml",
+                                  "macro-valuation-backfill.yml"})
+_CONCURRENCY_GROUP_RE = re.compile(r"^concurrency:\s*\n(?:[ \t]+.*\n)*?[ \t]+group:[ \t]*(.+?)[ \t]*$", re.M)
+
+
+def serialized_workflow(wf_file: str, repo: Path = _REPO) -> bool:
+    """Should the dispatcher fire at most one unit of this workflow per cycle?
+    Yes when it is a known corpus rewriter (SERIALIZED_WORKFLOWS) or its file
+    declares a CONSTANT `concurrency.group` (no `${{ ... }}`), because GitHub
+    keeps one pending run per group and cancels the rest. A per-run group
+    (`${{ github.run_id }}`, a per-unit input) never cancels, so those
+    workflows -- the harness dispatcher, the exit-head build, the token-free
+    runner -- fan out as before."""
+    name = wf_file.split("/")[-1]
+    if name in SERIALIZED_WORKFLOWS:
+        return True
+    try:
+        text = (repo / ".github" / "workflows" / name).read_text(encoding="utf-8")
+    except OSError:
+        return False
+    m = _CONCURRENCY_GROUP_RE.search(text)
+    return bool(m) and "${{" not in m.group(1)
+
+
+def managed_first(jobs: List[Any], cfg: Dict[str, Any]) -> List[Any]:
+    """Fire order across the shared --max-research-inflight cap: units placed on a MANAGED backend first, then
+    units whose explicit run.workflow has no backend (compute_router.plan -> "unmanaged"), each group keeping
+    its fair_order. The cap (research_compute.yaml limits.max_total_inflight) is declared as the SUM of the
+    backends' slots, but an unmanaged unit is gated only by that cap -- so in pure fair order it can take every
+    slot. MEASURED 2026-10-16 (lane RESEARCH-DISPATCH-STALL-1016): the 08:10Z and 08:51Z cycles fired 8
+    research-harness-dispatch.yml units each and deferred trainer (RQ-20261012-75b2-20) and kaggle_cpu
+    (RQ-20261014-65cc-09) units on "research compute cap 8 reached" while both backends had 0 in flight; the
+    watchdog then escalated trainer idle 397 min / kaggle_cpu idle 336 min. A managed unit is still bounded
+    by its own backend's max_concurrent, so unmanaged units keep every slot no backend has due work for."""
+    def managed(j: Any) -> bool:
+        p = (getattr(j, "raw", None) or {}).get("_plan")
+        return isinstance(p, cr.Resolution) and p.ok and p.backend in cfg.get("backends", {})
+    return [j for j in jobs if managed(j)] + [j for j in jobs if not managed(j)]
+
+
+def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, str]:
+    """{workflow file -> its `name:`} for every real workflow the queue routes
+    to, plus the token-free runner. A run counts as research compute when its
+    workflowName is one of these names (gh run list reports names, not files)."""
+    files = {"research-script-run.yml"}
+    try:   # every routable backend's workflow counts as research compute, even with no unit naming it yet
+        files |= {b["workflow"] for b in cr.load_config()["backends"].values()}
+    except (OSError, ValueError):
+        pass
+    for job in jobs:
+        wf = str(((getattr(job, "raw", None) or {}).get("run") or {}).get("workflow") or "")
+        if wf.endswith((".yml", ".yaml")) and not any(ch.isspace() for ch in wf):
+            files.add(wf.split("/")[-1])
+    out: Dict[str, str] = {}
+    for f in sorted(files):
+        path = repo / ".github" / "workflows" / f
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for line in text.splitlines():
+            if line.startswith("name:"):
+                out[f] = line.split(":", 1)[1].strip().strip("\"'")
+                break
+    return out
+
+
+def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
+    """`gh run list` rows for one status, or None when gh could not answer --
+    a count we could not take is reported as such, never as zero."""
+    cmd = ["gh", "run", "list", "--status", status, "--limit", str(limit),
+           "--json", "databaseId,workflowName,status,createdAt,event"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        rows = json.loads(proc.stdout or "[]")
+    except ValueError:
+        return None
+    return rows if isinstance(rows, list) else None
+
+
+#: A run still `queued` or `in_progress` this long after it was created is not
+#: waiting for a hosted runner -- it is STUCK (an `issues`-triggered job whose
+#: label no runner serves, a lost runner) and adds nothing to the pool's load.
+#: MEASURED 2026-09-29 06:56Z on the first fired cycle after #13907: every one
+#: of the 36 "queued" runs was created on 2026-05-15, and the "3 research runs
+#: in flight" were three `trainer-vm-diag` issue dispatches from the same
+#: morning. Counting them deferred every fire, and would have forever.
+STALE_PRESSURE_HOURS = 24.0
+
+#: Run events that do NOT count toward --max-repo-queued (manager decision 2026-10-16, lane
+#: RESEARCH-DISPATCH-STALL-1016). A `workflow_run` listener run is created for EVERY completion of a
+#: workflow it watches and mostly ends `skipped` without holding a runner. MEASURED 2026-10-16 09:37Z:
+#: the 27 fresh queued runs that deferred every fire were mostly claude-run-failure-alert (37 of ~60 of
+#: its runs since 08:00Z ended skipped). They still count for infra-yield (system-actions-cancel-guard is
+#: a listener AND infra) -- this only narrows the saturation count.
+NON_COMPETING_EVENTS = frozenset({"workflow_run"})
+
+
+def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
+    """Hours since the run was created, or None when createdAt is unreadable."""
+    raw = row.get("createdAt")
+    if not raw:
+        return None
+    try:
+        when = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (now - when).total_seconds() / 3600.0
+
+
+def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queued: int,
+                 runs_by_status: Optional[Dict[str, Optional[List[Dict[str, Any]]]]] = None,
+                 now: Optional[datetime] = None, stale_after_hours: float = STALE_PRESSURE_HOURS,
+                 infra_names: Optional[List[str]] = None) -> Dict[str, Any]:
+    """What the runner pool looks like before this cycle fires anything.
+
+    Returns {inflight_research, repo_queued, stale_ignored, block, detail}.
+    `block` is None when firing may proceed (subject to the per-fire count),
+    else a reason. A status gh could not list is a BLOCK with that reason: the
+    conservative direction for research spend is to wait one cycle.
+
+    A run created more than `stale_after_hours` ago and still queued / in
+    progress is STUCK, not load (see STALE_PRESSURE_HOURS): it is reported in
+    `stale_ignored` and counted against neither cap. A run whose `createdAt`
+    cannot be read counts as fresh -- the conservative direction.
+
+    YIELD TO INFRA (GH-CAPACITY-INFRA-FIRST, operator 2026-10-15: "GitHub should give infra first
+    preference ... Research can use the spare capacity there"). `infra_names` are workflow NAMES
+    (research_compute.yaml limits.infra_workflows). While ANY fresh run of one is QUEUED, every fire is
+    deferred -- including fires to trainer/Kaggle, because each of those backends' workflows also holds a
+    GitHub runner while it polls the remote job (measured: research-script-run-trainer/-kaggle loop on
+    ubuntu-latest up to their 360-min timeouts). GitHub has no job priority, so not adding a job while
+    infra waits is the only yield available on a shared runner pool."""
+    if runs_by_status is None:
+        runs_by_status = {st: gh_runs(st) for st in ("queued", "in_progress")}
+    now = now or datetime.now(timezone.utc)
+    names = set(research_names.values())
+    unreadable = [st for st, rows in runs_by_status.items() if rows is None]
+    if unreadable:
+        return {"inflight_research": None, "repo_queued": None, "stale_ignored": None,
+                "block": f"could not count {'/'.join(unreadable)} runs via gh -- deferring every fire this cycle"}
+
+    def fresh(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        out = []
+        for r in rows:
+            age = _run_age_hours(r, now)
+            if age is None or age <= stale_after_hours:
+                out.append(r)
+        return out
+
+    queued_all = list(runs_by_status.get("queued") or [])
+    inprog_all = list(runs_by_status.get("in_progress") or [])
+    queued, inprog = fresh(queued_all), fresh(inprog_all)
+    stale = (len(queued_all) - len(queued)) + (len(inprog_all) - len(inprog))
+    inflight = sum(1 for r in queued + inprog if str(r.get("workflowName")) in names)
+    by_name: Dict[str, int] = {}
+    for r in queued + inprog:
+        if str(r.get("workflowName")) in names:
+            by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    listeners = len(queued) - len(competing)
+    infra = set(infra_names or [])
+    infra_waiting = sorted({str(r.get("workflowName")) for r in queued if str(r.get("workflowName")) in infra})
+    infra_queued = sum(1 for r in queued if str(r.get("workflowName")) in infra)
+    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
+           "infra_queued": infra_queued, "listener_queued_ignored": listeners,
+           "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
+                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
+    if infra_queued:
+        out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
+                        "the shared GitHub runner pool to infra -- deferring every fire this cycle")
+    elif len(competing) > max_queued:
+        out["block"] = (f"{len(competing)} workflow runs are queued repo-wide (> {max_queued}): research "
+                        "must not add to a saturated runner pool -- deferring every fire this cycle")
+    elif inflight >= max_inflight:
+        out["block"] = (f"{inflight} research compute run(s) already queued/in progress (cap "
+                        f"{max_inflight}) -- deferring every fire this cycle")
+    return out
+
+
+def _gh_api_json(path: str) -> Optional[Any]:
+    """`gh api <path>` parsed, or None when gh could not answer (never [])."""
+    try:
+        proc = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        return json.loads(proc.stdout or "[]")
+    except ValueError:
+        return None
+
+
+_QUEUE_FILE_RE = re.compile(r"^research/queue/(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))\.ya?ml$")
+
+
+def pending_stamp_units(api: Any = _gh_api_json) -> Optional[Dict[str, str]]:
+    """{unit id -> 'PR #n (<branch>)'} for every unit whose stamp is in an OPEN
+    stamp PR, or None when GitHub could not be asked (a block, never "none").
+
+    ⚠️ THIS IS THE OTHER HALF OF RESULT-BASED IDEMPOTENCE (see `_stamp`). A
+    fired unit's result takes ~35-90 min to reach main and its stamp PR takes
+    a CI cycle; the hourly cron reads main in between and sees a unit that
+    "never dispatched". The dispatcher is `concurrency`-grouped, so by the time
+    a cycle runs, the previous cycle has finished and has either opened its
+    stamp PR (caught here), merged it (the stamp is on main) or failed to open
+    it (then the result row, once landed, is what `_is_due` reads).
+
+    REST, not GraphQL: `gh pr list --json files` is GraphQL and is refused
+    from a Claude Code session (HTTP 403), so it could never be exercised
+    locally; `gh api repos/{owner}/{repo}/pulls` works in both places. One
+    list call per cycle plus one files call per open stamp PR (0-3 in
+    practice, measured 2026-10-06: #16656, #16770, #16777)."""
+    pulls = api("repos/{owner}/{repo}/pulls?state=open&per_page=100")
+    if not isinstance(pulls, list):
+        return None
+    out: Dict[str, str] = {}
+    for pr in pulls:
+        if not isinstance(pr, dict):
+            continue
+        ref = str(((pr.get("head") or {}).get("ref")) or "")
+        num = pr.get("number")
+        if not ref.startswith(STAMP_BRANCH_PREFIX) or not isinstance(num, int):
+            continue
+        files = api(f"repos/{{owner}}/{{repo}}/pulls/{num}/files?per_page=100")
+        if not isinstance(files, list):
+            return None   # could not read THIS PR's files: cannot vouch for any unit
+        for f in files:
+            m = _QUEUE_FILE_RE.match(str((f or {}).get("filename") or "")) if isinstance(f, dict) else None
+            if m and m.group(1) not in out:
+                out[m.group(1)] = f"PR #{num} ({ref})"
+    return out
+
+
+_STAMP_PATCH_RE = re.compile(r"^\+last_dispatched_at:\s*'?([^'\s]+)'?\s*$", re.M)
+
+
+def stranded_stamp_adoptions(now: datetime, stale_hours: float = STRANDED_STAMP_HOURS,
+                             api: Any = _gh_api_json) -> Optional[Dict[str, tuple]]:
+    """{unit id -> (stamp datetime, 'PR #n (<branch>)')} for every unit whose stamp
+    sits in an OPEN stamp PR older than ``stale_hours``, or None when GitHub could
+    not be asked.
+
+    ⚠️ WHY THIS EXISTS. `pending_stamp_units` treats a unit in ANY open stamp PR as
+    already dispatched -- right for the minutes before that PR merges, and a
+    permanent park once it never does. A stranded PR leaves main saying the unit
+    never ran (stamp null), the dispatcher refusing to fire it again, and
+    `blocker_watch` reporting NOT_RUNNING for work that did run. The honest repair
+    is not to re-fire (that spends compute twice) and not to wait (it never
+    lands): carry the ORIGINAL stamp, read from the stranded PR's own patch, into
+    this cycle's fresh stamp landing. The unit then reads as dispatched at the
+    time it really was. The stranded PR is left alone (closing it needs write
+    scope this job does not hold); once the adopted stamp is on main the unit is
+    not due and the old PR is inert.
+
+    The newest stamp per unit wins. A PR whose patch carries no readable
+    ``+last_dispatched_at`` line for a unit (GitHub omits very large patches)
+    adopts nothing for it -- unreadable is not "dispatched at now"."""
+    pulls = api("repos/{owner}/{repo}/pulls?state=open&per_page=100")
+    if not isinstance(pulls, list):
+        return None
+    out: Dict[str, tuple] = {}
+    for pr in pulls:
+        if not isinstance(pr, dict):
+            continue
+        ref = str(((pr.get("head") or {}).get("ref")) or "")
+        num = pr.get("number")
+        if not ref.startswith(STAMP_BRANCH_PREFIX) or not isinstance(num, int):
+            continue
+        opened = _parse_ts(pr.get("created_at"))
+        if opened is None or (now - opened).total_seconds() < stale_hours * 3600:
+            continue
+        files = api(f"repos/{{owner}}/{{repo}}/pulls/{num}/files?per_page=100")
+        if not isinstance(files, list):
+            return None
+        for f in files:
+            if not isinstance(f, dict):
+                continue
+            m = _QUEUE_FILE_RE.match(str(f.get("filename") or ""))
+            sm = _STAMP_PATCH_RE.search(str(f.get("patch") or ""))
+            when = _parse_ts(sm.group(1)) if sm else None
+            if not m or when is None:
+                continue
+            prev = out.get(m.group(1))
+            if prev is None or when > prev[0]:
+                out[m.group(1)] = (when, f"PR #{num} ({ref})")
+    return out
+
+
 def _fire(entry: Dict[str, Any], *, route: str, ref: str,
           power_state: str = "") -> tuple:
     """Dispatch via `gh workflow run`. Returns (ok, detail)."""
     run = entry.get("run") or {}
     workflow = str(run.get("workflow"))
-    inputs = dict(run.get("inputs") or {})
+    # ⚠️ A `run.workflow` that is not a workflow FILE is a note to a human, not
+    # a dispatch target (research/queue/README.md § "DECLARED vs. actually
+    # dispatchable"). Until 2026-09-28 this ran `gh workflow run "none — ..."`
+    # and reported gh's own error; the outcome is the same DISPATCH_FAILED,
+    # but the reason now says what the unit needs (a real runner — see
+    # research-script-run.yml) instead of quoting a gh usage message.
+    if not workflow.endswith((".yml", ".yaml")) or any(ch.isspace() for ch in workflow):
+        return False, (f"run.workflow {workflow[:60]!r} is not a workflow file — a "
+                       "session-bound note; retarget it to research-script-run.yml "
+                       "(scripts/research/script_run.py) or a real *.yml")
+    # ML-DATA-OFF-TRAINER: the RunPod burst is ISSUE-triggered (gpu-burst-train.yml has no workflow_dispatch), so a unit the
+    # router placed there opens the labelled request issue the workflow already parses. Its own gates still bind: the
+    # ledger preflight ($10/month), GPU_BURST_ARMED, and --max-gpu-dispatches-per-run above.
+    _rp = (entry.get("routing") or {}).get("runpod")
+    if workflow == "gpu-burst-train.yml" and isinstance(_rp, dict) and _rp.get("manifest"):
+        body = "\n".join([f"experiment: {entry.get('id')} {str(entry.get('title') or '')[:80]}".strip(),
+                          f"est_cost: {float(_rp.get('est_cost_usd') or 0.5):.2f}",
+                          f"manifest: {_rp['manifest']}",
+                          f"max_minutes: {int(_rp.get('max_minutes') or 90)}",
+                          "", f"Opened by research-queue-dispatch for {entry.get('id')} (Kaggle GPU quota short; RunPod fallback)."])
+        try:
+            proc = subprocess.run(["gh", "issue", "create", "--label", "gpu-burst-train",
+                                   "--title", f"gpu-burst: {entry.get('id')}", "--body", body],
+                                  capture_output=True, text=True, timeout=120)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return False, f"{type(exc).__name__}: {exc}"
+        if proc.returncode != 0:
+            return False, (proc.stderr or proc.stdout or "").strip()[:400]
+        return True, f"opened gpu-burst-train request {proc.stdout.strip()[-60:]} (route={route})"
+    # RQ-RUN (2026-09-28): the token-free runner reads the unit's command from
+    # its YAML. Refuse here what the runner would refuse there, so a bad unit
+    # is a DISPATCH_FAILED row instead of a spent runner + a stamped unit.
+    if workflow in ("research-script-run.yml", "research-script-run-trainer.yml",
+                    "research-script-run-kaggle.yml", "research-script-run-data.yml",
+                                                                "research-script-run-kaggle-cpu.yml"):
+        from scripts.research import script_run
+        preflight = script_run.plan(str(entry.get("id")), run_id="preflight")
+        if not preflight.ok:
+            return False, "research-script-run preflight refused: " + "; ".join(preflight.errors)[:400]
     # ⚠️ THE UNIT DECLARES ITS IDENTITY; THE DISPATCHER SUPPLIES THE VERDICT.
     # `power_state` is deliberately NOT hand-written in the YAML: it is a SAFETY
     # label ("do not read this run's output as a test result"), and a
@@ -180,8 +1191,18 @@ def _fire(entry: Dict[str, Any], *, route: str, ref: str,
     # Injected only when the unit already declares `research_unit`, because
     # `gh workflow run -f <input-the-workflow-never-declared>` ERRORS. Opting in
     # by declaring the identity is the unit asserting its workflow accepts both.
-    if inputs.get("research_unit") and power_state:
-        inputs["power_state"] = power_state
+    inputs, dropped = dispatch_inputs(entry, power_state=power_state)
+    if dropped:
+        print(f"::notice::{entry.get('id')}: run.inputs {dropped} are not declared by "
+              f"{workflow} and were not sent — the runner reads the command from the "
+              "unit file; drop them from the unit on its next edit", file=sys.stderr)
+    declared = declared_inputs(workflow)
+    if declared is not None:
+        unknown = sorted(k for k in inputs if k not in declared)
+        if unknown:
+            return False, (f"run.inputs {unknown} are not declared by {workflow} "
+                           f"(declared: {declared}) — GitHub would refuse the dispatch "
+                           "with HTTP 422; fix the unit's run.inputs")
     cmd = ["gh", "workflow", "run", workflow, "--ref", ref]
     for key, value in inputs.items():
         cmd += ["-f", f"{key}={value}"]
@@ -199,11 +1220,45 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--queue-dir", default=str(_DEFAULT_QUEUE))
     ap.add_argument("--fire", action="store_true",
                     help="actually dispatch; default is a dry run that only reports")
+    ap.add_argument("--check-open-stamp-prs", action="store_true",
+                    help="fire path only: ask GitHub (gh api, REST) for OPEN automation/"
+                         "research-queue-stamp-* PRs and treat a unit one of them stamps as "
+                         "already dispatched; when gh cannot answer, DEFER every fire this "
+                         "cycle. research-queue-dispatch.yml passes it with --fire. Without "
+                         "it no gh call is made for this purpose (a test or a hand run with "
+                         "no GitHub context would otherwise defer every fire and prove nothing).")
+    ap.add_argument("--stranded-stamp-hours", type=float, default=STRANDED_STAMP_HOURS,
+                    help="fire path with --check-open-stamp-prs: an open stamp PR older than this "
+                         "is stranded; its units' ORIGINAL stamps are adopted into this cycle's "
+                         "stamp landing instead of blocking them forever "
+                         "(see stranded_stamp_adoptions)")
     ap.add_argument("--ref", default=os.environ.get("GITHUB_REF_NAME") or "main")
     ap.add_argument("--only", default=None, help="dispatch just this job id")
+    ap.add_argument("--max-research-inflight", type=int, default=None,
+                    help="defer every fire while this many research compute runs are already "
+                         "queued or in progress (counted via gh; see backpressure()). Default: "
+                         "scripts/research/research_compute.yaml limits.max_total_inflight; the per-backend "
+                         "max_concurrent there is the finer cap")
+    ap.add_argument("--kaggle-quota-file", default=None,
+                    help="text of `kaggle quota` (the dispatch workflow writes it). Absent/unparsable = quota "
+                         "UNKNOWN: GPU units wait, they are never routed blind (compute_router.parse_quota)")
+    ap.add_argument("--pressure-stale-hours", type=float, default=STALE_PRESSURE_HOURS,
+                    help="a run still queued/in progress this many hours after creation is stuck, "
+                         "not load, and counts against neither cap (see STALE_PRESSURE_HOURS)")
+    ap.add_argument("--max-repo-queued", type=int, default=10,
+                    help="defer every fire while more than this many workflow runs are queued "
+                         "repo-wide (research must never starve a system-action)")
+    ap.add_argument("--max-fires-per-workflow", type=int, default=1,
+                    help="fire at most this many units per workflow FILE per cycle; the rest are "
+                         "deferred (same-workflow runs cancel each other in a concurrency group "
+                         "and collide on whole-file corpus rewrites). research-script-run.yml "
+                         "is exempt: per-unit concurrency, batch-landed results")
     ap.add_argument("--max-gpu-dispatches-per-run", type=int, default=1,
                     help="per-RUN cap on GPU bursts; the ledger cap is monthly and "
                          "cannot bound a loop inside one run")
+    ap.add_argument("--utilization-dir", default=None,
+                    help="fire path: write this cycle's per-backend utilization record (measured vs could-not-look) "
+                         "to <dir>/<run_id>.json (research_utilization.py). The summary line always prints.")
     ap.add_argument("--json", action="store_true", help="emit the decisions as JSON")
     args = ap.parse_args(argv)
 
@@ -222,11 +1277,151 @@ def main(argv: Optional[List[str]] = None) -> int:
               f"This is NOT an empty queue.", file=sys.stderr)
         return 2
 
+    # Fire order (fair_order): MONEY FIRST across themes by the router's value score, theme share
+    # (research/THEMES.yaml) breaking ties, starved units first, asked before refill inside a theme.
+    # load_queue returns files sorted by id, which made this a pure FIFO: a cycle fires at
+    # most --max-research-inflight units, so the newest ids waited behind every older one.
+    cfg: Optional[Dict[str, Any]] = None
+    try:
+        cfg = cr.load_config()
+    except (OSError, ValueError) as exc:
+        print(f"::error::research-queue: COULD NOT READ scripts/research/research_compute.yaml -- {exc}. Compute classes and "
+              "value ranking are OFF this cycle (explicit run.workflow units still fire); this is a broken "
+              "router, not a quiet one.", file=sys.stderr)
+    if cfg is not None:
+        for _j in jobs:
+            if not _j.valid:
+                continue
+            _p = cr.plan(_j.raw, cfg)
+            _j.raw["_plan"] = _p
+            if _p.ok and not str((_j.raw.get("run") or {}).get("workflow") or "").strip():
+                _j.raw.setdefault("run", {})["workflow"] = _p.workflow   # in memory only: _stamp edits the file text
+                _j.raw["_injected_workflow"] = True
+    max_inflight = args.max_research_inflight if args.max_research_inflight is not None else \
+        int((cfg or {}).get("limits", {}).get("max_total_inflight", 3))
+    try:
+        jobs = fair_order(jobs, now, load_themes(), cfg)
+    except (OSError, ValueError) as exc:
+        print(f"::error::research-queue: COULD NOT READ research/THEMES.yaml — {exc}. Falling back "
+              "to id order; this is a broken scheduler, not a quiet one.", file=sys.stderr)
+
     decisions: List[Dict[str, Any]] = []
+    # Backpressure is read ONCE per cycle, then every successful fire counts
+    # against the in-flight cap so one cycle cannot fan the whole queue out.
+    pressure: Dict[str, Any] = {"block": None, "inflight_research": 0, "detail": "dry run: not counted"}
+    if args.fire:
+        wf_names = research_workflow_names(jobs)
+        pressure = backpressure(wf_names, max_inflight=max_inflight,
+                                max_queued=args.max_repo_queued,
+                                stale_after_hours=args.pressure_stale_hours,
+                                infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []))
+        print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
+        if pressure["block"]:
+            print(f"::notice::research-queue-dispatch deferred every fire: {pressure['block']}", file=sys.stderr)
+    inflight = int(pressure.get("inflight_research") or 0)
+    # Per-backend load: runs in flight by workflow NAME (gh reports names) mapped back to backends.
+    state = cr.BackendState(total_inflight=inflight, now=now)
+    _q: Dict[str, Any] = {"remaining": None, "note": "no quota read"}
+    if cfg is not None:
+        name_to_backend = {}
+        for _f, _n in (research_workflow_names(jobs) if args.fire else {}).items():
+            _b = cr.backend_for_workflow(_f, cfg)
+            if _b:
+                name_to_backend[_n] = _b
+        for _n, _c in (pressure.get("by_name") or {}).items():
+            if _n in name_to_backend:
+                state.inflight[name_to_backend[_n]] = state.busy(name_to_backend[_n]) + int(_c)
+        _qres = (cfg["backends"].get("kaggle", {}).get("quota") or {}).get("resource", "GPU")
+        _q = cr.read_quota_file(args.kaggle_quota_file, _qres)
+        state.quota_hours, state.quota_refresh, state.quota_note = _q["remaining"], _q.get("refresh", ""), _q.get("note", "")
+    # Open stamp PRs are read ONCE per cycle, fire path only, and only when the
+    # caller opted in with --check-open-stamp-prs (the workflow always does; a
+    # dry run makes no gh calls). None = GitHub could not be asked: every due
+    # unit is DEFERRED this cycle rather than risk the double-fire this check
+    # exists to end. MEASURED 2026-10-06 on PR #16791: asked unconditionally,
+    # the pytest runner (no gh auth) deferred every fire and three `--fire`
+    # tests that stub `_fire` saw nothing fire -- an opt-in keeps the fail-closed
+    # direction where a stamp PR can exist and leaves a context with no GitHub
+    # at all on the stamp alone, which is what it had before.
+    pending: Optional[Dict[str, str]] = {}
+    if args.fire and args.check_open_stamp_prs and not pressure["block"]:
+        # Not under a backpressure block: every fire is deferred then anyway,
+        # and gh must not be called at all under pressure (planted test).
+        pending = pending_stamp_units()
+        if pending is None:
+            print("::warning::research-queue-dispatch could not list open stamp PRs via gh -- "
+                  "deferring every fire this cycle (a unit may already be dispatched)", file=sys.stderr)
+        elif pending:
+            adopted = stranded_stamp_adoptions(now, args.stranded_stamp_hours)
+            if adopted:
+                by_id = {j.id: j for j in jobs}
+                n_ok = 0
+                for uid, (when, src) in sorted(adopted.items()):
+                    job = by_id.get(uid)
+                    if job is None or not job.valid:
+                        continue
+                    cur = _parse_ts(job.raw.get("last_dispatched_at"))
+                    if cur is not None and cur >= when:
+                        pending.pop(uid, None)   # main already carries this stamp or newer
+                        continue
+                    if cleared_on_purpose(job.raw):
+                        # A null on main here is a re-arm, not a dropped stamp: adopting the old stamp
+                        # would silently undo it (PI-20261013-HOPS1447-0001). The stranded PR stays
+                        # inert for this unit; the unit is due again on its own terms.
+                        pending.pop(uid, None)
+                        print(f"::notice::{uid}: not adopting the stranded stamp from {src} -- its null "
+                              "stamp is a deliberate re-arm", file=sys.stderr)
+                        continue
+                    err = _stamp(job.path, when)
+                    if err:
+                        print(f"::warning::{uid}: could not adopt the stranded stamp from {src} ({err})",
+                              file=sys.stderr)
+                        continue
+                    job.raw["last_dispatched_at"] = when.replace(microsecond=0).isoformat()
+                    pending.pop(uid, None)
+                    n_ok += 1
+                print(f"::warning::{n_ok} stamp(s) adopted from stranded open stamp PRs (older than "
+                      f"{args.stranded_stamp_hours:g} h): "
+                      + ", ".join(sorted({src.split(' (')[0] for _w, src in adopted.values()}))
+                      + " -- those PRs are not merging; check their checks/conflicts", file=sys.stderr)
+            elif adopted is None:
+                print("::warning::research-queue-dispatch could not re-read open stamp PRs to look "
+                      "for stranded ones; leaving every pending stamp as-is this cycle", file=sys.stderr)
+            if pending:
+                print("pending stamps (open stamp PRs, treated as dispatched): "
+                      + ", ".join(f"{u} <- {p}" for u, p in sorted(pending.items())), file=sys.stderr)
+    # IDLE-CAPACITY FILL (RESEARCH-ROUTER, operator 2026-10-13: "get the most out of all the resources"): when a backend
+    # has more free slots than units due for it, pull forward recurring units that opted in with `idle_fill: true`
+    # and are waiting only on their cadence. Fire path only (a dry run has no occupancy to fill), lowest priority
+    # (they sort after every due unit), and capped by the free slots.
+    fill_ids: set = set()
+    if args.fire and cfg is not None and pressure.get("by_name") is not None and not pressure["block"]:
+        due_by_be: Dict[str, int] = {}
+        waiting: List[Any] = []
+        for j in jobs:
+            if not j.valid or j.status != "queued" or not isinstance(j.raw.get("_plan"), cr.Resolution) or not j.raw["_plan"].ok:
+                continue
+            be = j.raw["_plan"].backend
+            ok_due, why = _is_due(j.raw, now)
+            if ok_due:
+                due_by_be[be] = due_by_be.get(be, 0) + 1
+            elif j.raw.get("idle_fill") is True and "not yet elapsed" in why:
+                waiting.append((be, j))
+        for be, j in waiting:
+            b = cfg["backends"].get(be)
+            if b is None or b.get("auto_route", True) is not True:
+                continue
+            if int(b["max_concurrent"]) - state.busy(be) - due_by_be.get(be, 0) > 0:
+                fill_ids.add(j.id)
+                due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
+    fired_by_workflow: Dict[str, int] = {}
+    if args.fire and cfg is not None:
+        jobs = managed_first(jobs, cfg)
     for job in jobs:
         entry = job.raw
-        row: Dict[str, Any] = {"id": job.id, "path": _display_path(job.path)}
+        row: Dict[str, Any] = {"id": job.id, "path": _display_path(job.path),
+                               "theme": entry.get("theme"), "priority": entry.get("priority")}
 
         if not job.valid:
             row.update(outcome=INVALID, errors=job.errors)
@@ -242,8 +1437,58 @@ def main(argv: Optional[List[str]] = None) -> int:
             continue
 
         due, due_reason = _is_due(entry, now)
+        if not due and job.id in fill_ids:
+            due, due_reason = True, "idle-capacity fill (opted in; " + due_reason + ")"
+            row["idle_fill"] = True
         if not due:
             row.update(outcome=NOT_DUE, reason=due_reason)
+            if RETRY_CAP_MARK in due_reason:
+                print(f"::warning::{job.id}: {due_reason}", file=sys.stderr)
+            if args.fire and not pressure["block"]:
+                # A deferred cycle (backpressure) touches NOTHING, repairs
+                # included: the repair lands via the stamp PR, which such a
+                # cycle has no reason to open (planted test: nothing stamped).
+                repair_to = stamp_lost(entry)
+                if repair_to is not None:
+                    # Re-stamp from the evidence so the grader can read the unit
+                    # (see stamp_lost). Lands through the same stamp step.
+                    err = _stamp(job.path, repair_to)
+                    row["stamp_repaired_to"] = repair_to.replace(microsecond=0).isoformat()
+                    if err:
+                        row["stamp_error"] = err
+                        print(f"::warning::{job.id} has landed results but no stamp, and the repair "
+                              f"stamp could NOT be written ({err})", file=sys.stderr)
+                    else:
+                        print(f"::notice::{job.id} has landed results but no stamp (a dropped stamp "
+                              f"PR): re-stamped to its latest result {row['stamp_repaired_to']}",
+                              file=sys.stderr)
+            decisions.append(row)
+            continue
+        if pending and job.id in pending:
+            # Already fired by a previous cycle; its stamp is on a PR that has
+            # not merged yet. Not due for THIS cycle, and not stamped again
+            # (a second stamp of the same line is what made #16770 `dirty`).
+            row.update(outcome=NOT_DUE,
+                       reason=f"already dispatched: open stamp {pending[job.id]} modifies "
+                              f"research/queue/{job.id}.yaml and has not merged yet")
+            decisions.append(row)
+            continue
+
+        _plan = entry.get("_plan")
+        if _plan is not None and not _plan.ok:
+            row.update(outcome=BLOCKED_ROUTE, route_state="unroutable", route_reason="compute: " + _plan.error)
+            decisions.append(row)
+            continue
+        # A session-bound note (`run.workflow` is prose, not a workflow file)
+        # can never be fired. Until 2026-09-30 it reached _fire(), returned
+        # DISPATCH_FAILED on EVERY cycle and turned each firing run red
+        # ("Fail the job if grading reported a problem"), while reading as
+        # would_dispatch in a dry run. It is not due for THIS dispatcher.
+        _wf = str((entry.get("run") or {}).get("workflow") or "")
+        if not _wf.endswith((".yml", ".yaml")) or any(ch.isspace() for ch in _wf):
+            row.update(outcome=NOT_DUE,
+                       reason=f"session-bound: run.workflow {_wf[:40]!r} is not a workflow file "
+                              "(retarget to research-script-run.yml to make it dispatchable)")
             decisions.append(row)
             continue
 
@@ -261,19 +1506,67 @@ def main(argv: Optional[List[str]] = None) -> int:
             row["outcome"] = BLOCKED_ROUTE
             decisions.append(row)
             continue
-        if route.state == GPU and gpu_fired >= args.max_gpu_dispatches_per_run:
+        res = cr.resolve(entry, cfg, state) if cfg is not None else None
+        if res is not None and res.ok:
+            row.update(compute_class=res.cls or None, backend=res.backend, compute_source=res.source,
+                       placement=res.reason)
+            if res.workflow and not res.wait:
+                entry.setdefault("run", {})["workflow"] = res.workflow   # a fallback backend changes the target
+        if entry.get("_rank"):
+            row["value_score"] = round(entry["_rank"]["rank_value"], 2)
+            row["value_derivation"] = entry["_rank"]["derivation"]
+            if entry["_rank"].get("pick"):       # "programme:<id>" (operator priority), "value" (score across themes) or "starved"
+                row["pick"] = entry["_rank"]["pick"]
+                row["value_derivation"] += f" | pick={row['pick']}" + (" (refill)" if entry["_rank"].get("refill") else "")
+        if res is not None and res.ok and res.wait:
+            row.update(outcome=DEFERRED, reason=f"waiting for compute: {res.reason}")
+            decisions.append(row)
+            continue
+        _managed_gpu = route.state == GPU and (res is None or res.backend != "kaggle")
+        if _managed_gpu and gpu_fired >= args.max_gpu_dispatches_per_run:
             row.update(outcome=NOT_DUE,
                        reason=f"per-run GPU cap {args.max_gpu_dispatches_per_run} reached")
             decisions.append(row)
             continue
 
         if not args.fire:
-            row.update(outcome="would_dispatch", detail=f"route={route.state} (dry run)")
+            row.update(outcome="would_dispatch",
+                       detail=(f"route={route.state} backend={res.backend} ({res.source}) (dry run)"
+                               if res is not None and res.ok else f"route={route.state} (dry run)"))
+            decisions.append(row)
+            continue
+        if pressure["block"]:
+            row.update(outcome=DEFERRED, reason=pressure["block"])
+            decisions.append(row)
+            continue
+        if pending is None:
+            row.update(outcome=DEFERRED,
+                       reason="could not list open stamp PRs via gh -- cannot tell whether this "
+                              "unit was already dispatched by a previous cycle; due again next cycle")
+            decisions.append(row)
+            continue
+        if inflight >= max_inflight:
+            row.update(outcome=DEFERRED,
+                       reason=f"research compute cap {max_inflight} reached this cycle "
+                              f"({inflight} in flight incl. fires above) -- due again next cycle")
+            decisions.append(row)
+            continue
+        wf_file = str((entry.get("run") or {}).get("workflow") or "").split("/")[-1]
+        if serialized_workflow(wf_file) and fired_by_workflow.get(wf_file, 0) >= args.max_fires_per_workflow:
+            row.update(outcome=DEFERRED,
+                       reason=f"{wf_file} already fired {fired_by_workflow[wf_file]} unit(s) this cycle "
+                              f"(cap {args.max_fires_per_workflow}): same-workflow runs cancel each other "
+                              "in its concurrency group and collide on the corpus landing -- due again next cycle")
             decisions.append(row)
             continue
 
         ok, detail = _fire(entry, route=route.state, ref=args.ref,
                            power_state=power.state)
+        if ok:
+            inflight += 1
+            if res is not None and res.ok and res.backend in (cfg or {}).get("backends", {}):
+                state.took(res.backend)
+            fired_by_workflow[wf_file] = fired_by_workflow.get(wf_file, 0) + 1
         row.update(outcome=DISPATCHED if ok else DISPATCH_FAILED, detail=detail)
         if ok:
             # Stamp only a SUCCESSFUL fire. Stamping a failed one would mark the
@@ -286,13 +1579,35 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(f"::warning::{job.id} fired but its last_dispatched_at could "
                       f"NOT be stamped ({stamp_err}) — it will re-fire next run",
                       file=sys.stderr)
-            if route.state == GPU:
+            if _managed_gpu:
                 gpu_fired += 1
         decisions.append(row)
 
     counts: Dict[str, int] = {}
     for row in decisions:
         counts[row["outcome"]] = counts.get(row["outcome"], 0) + 1
+
+    # UTILIZATION (RESEARCH-ROUTER): measure what this cycle used of each backend, with explicit read-state.
+    if cfg is not None:
+        from scripts.research import research_utilization as ru
+        try:
+            _n2b = {}
+            for _f, _n in research_workflow_names(jobs).items():
+                _b = cr.backend_for_workflow(_f, cfg)
+                if _b:
+                    _n2b[_n] = _b
+            util = ru.measure(cfg=cfg, by_name_to_backend=_n2b, pressure=pressure,
+                              quota=_q,
+                              decisions=decisions, now=now, run_id=os.environ.get("GITHUB_RUN_ID", now.strftime("%Y%m%dT%H%M%S")),
+                              fired=bool(args.fire))
+            print(ru.one_line(util), file=sys.stderr)
+            for _fl in util["flags"]:
+                print(f"::warning::research-capacity {_fl}", file=sys.stderr)
+            if args.fire and args.utilization_dir:
+                ru.write(util, Path(args.utilization_dir))
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"::warning::utilization could not be recorded ({type(exc).__name__}: {exc}); dispatch is unaffected",
+                  file=sys.stderr)
 
     if args.json:
         print(json.dumps({"generated_at": now.isoformat(), "queue_dir": str(queue_dir),
@@ -310,6 +1625,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     else row.get("route_reason")
             if row["outcome"] == INVALID:
                 extra = "; ".join(row.get("errors") or [])
+            if row.get("value_derivation") and row["outcome"] in ("would_dispatch", DISPATCHED, DEFERRED):
+                extra = f"{extra}  | {row['value_derivation']}"
             print(f"  {row['id']:<18} {row['outcome']:<15} {extra}")
         summary = " · ".join(f"{k}={v}" for k, v in sorted(counts.items()))
         # `"  " + summary or fallback` would be truthy even when summary is

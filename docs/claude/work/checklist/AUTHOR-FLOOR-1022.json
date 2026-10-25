@@ -1,0 +1,42 @@
+{
+  "id": "AUTHOR-FLOOR-1022",
+  "title": "Research runnable-floor gap: author ~24 pre-registered units for new_strategy_prop/regime/macro/timeframes/ml_health (non-sequence), variants of first-test failures preferred (operator 2026-10-22)",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": 3.96,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-10-22 lane AUTHOR-FLOOR-1022 (manager Manager Session 2026-10-22): authored 23 pre-registered units RQ-20261022-4b82-01..23 (new_strategy_prop 9, regime 8, timeframes 2, macro 2, ml_health 2); 19 are registered VARIANTS of first-test FAILs (operator 2026-10-22), each carrying a one-line diagnosis and its prior ids. All 23 would_dispatch on dispatch_queue.py dry run; decision-rule guard OK. MEASURED on this branch tree (local fire stamps absent, so floor reads 25 here, not the manager's 65): runnable 37 -> 60 (+23); theme supply regime 0->8, new_strategy_prop 0->9, timeframes 0->2, macro 14->16, ml_health 0->2. Manager's 17:40Z CI measure (33 vs 65, nsp 9/regime 8/ml 9/macro 2/tf 2 short) not re-measurable locally. ml_health under-delivered (2 of up to 4): four ledger-meta-label variants were smoke-executed locally, all printed fail and exposed a degenerate 0.5 giveback target (base rate 0.80-0.94), so they were DISCARDED unregistered and replaced by two unseen giveback-threshold variants. Argv of units 01-21 parse-checked by launching each command (no argparse error; network fetch not completed). Landing: hold (unvouchable_paths); merged != deployed != observed. [2026-10-23T21:20Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Units RQ-20261022-4b82-* are on main (35 entries across queue/blocked/results). Lane archived. Closes on the observation above (due 2026-10-25). [2026-10-24 REGISTER-SWEEP-W43] lane session_01LTmb3WTjqV1ivUVTkjFoZ7 get_session cost_usd=3.96 (read after archive; SESSION_STATUS_ARCHIVED) [2026-10-25 BLOCKERS-1025] due_by moved to 2026-10-27: see observation.redated. CORRECTION: 4b82 units with results are 18 of 23 (01-08, 10-17, 22, 23: 16 fail, 2 pass); 09 and 18-21 are queued and never dispatched (blocker_watch NOT_RUNNING).",
+  "updated_at": "2026-10-25T06:49:45Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "runnable floor and theme supply recover after merge; first results of 4b82 units graded",
+    "how_to_check": "python3 scripts/ci/check_research_queue_health.py; ls research/results | grep 4b82",
+    "due_by": "2026-10-27T00:00Z",
+    "redated": {
+      "on": "2026-10-25",
+      "from": "2026-10-25T00:00Z",
+      "by": "BLOCKERS-1025",
+      "reason": "partly observed: 18 of 23 4b82 units have results (09 and 18-21 are still queued and undispatched), but runnable units 48 vs floor 58 and ml_health/infra supply 0; research-ops step E (authoring queue holds 37 ready questions) owns the refill"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: research units authored",
+    "arch": "none"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01LTmb3WTjqV1ivUVTkjFoZ7",
+      "archived_at": "2026-10-23T21:18:36Z"
+    }
+  ],
+  "_seq": 575
+}

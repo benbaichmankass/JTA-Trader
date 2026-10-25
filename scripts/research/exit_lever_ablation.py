@@ -1,0 +1,1083 @@
+#!/usr/bin/env python3
+# wiring: research/queue/RQ-20261007-020 + RQ-20261007-021 via .github/workflows/research-script-run.yml
+"""EXIT-PARITY-RQ: re-measure a leg's Stage-0 evidence WITH and WITHOUT an exit
+lever, on the same corpus the committed record used, net of the full cost
+stack, and grade the delta against a rule registered before the run.
+
+WHY (lane EXIT-PARITY-RQ, 2026-10-07; findings PI-20261006-KX6ZKFNA-0001 and
+-0004). Two live legs declare an exit lever their execution path cannot fire:
+
+  * trend_donchian_eth_prop declares ``stale_exit_bars: 12`` (a bar-CLOSE exit).
+    ``src/prop/prop_trail.py`` lists it in ``_CLOSE_LEVERS`` and only ALERTS when
+    it would fire; ``EXCHANGE_MANAGEMENT_CAPS["breakout"]`` is empty, so the
+    live prop book trades the leg WITHOUT the exit its record (79 of 355 exits
+    on the 2026-10-05-730d run) was measured with.
+  * xrp_pullback_2h (bybit_2 real money) declares ``trail_decay_arm_r: 4.49``
+    with ``tp_r: 3.0``: the resting TP closes every trade before the arm can be
+    reached, so the decay is dead config.
+
+THE ONE QUESTION this script answers: what does the leg's evidence look like
+without the lever it cannot execute -- and, for a dead lever, with a
+reachable one? It is an ABLATION over the committed-record argv, not a new
+harness: every arm is built by ``regime_debt_matrix.build_harness_cmd`` (the
+same function ``scripts/ops/build_strategy_evidence.py`` runs), so the
+baseline arm reproduces the committed record byte-for-byte on the same
+candles, and that reproduction is asserted as a POSITIVE CONTROL before any
+delta is read (``--control``).
+
+ARMS. ``--arm "LABEL=tok;tok;..."``; an empty spec (``"W="``) is the leg as
+declared. Tokens:
+
+  * ``key=value``   set a ``config/strategies.yaml`` key for this arm (value
+                    parsed as YAML, so ``1.5`` is a float and ``none`` is None);
+  * ``-key``        unset a key for this arm (the lever is REMOVED, which is
+                    what "the live path cannot fire it" means in the harness);
+  * ``--flag=value`` / ``--flag``  a raw harness flag appended to the argv (for
+                    a lever the argv builder does not forward, e.g. the pullback
+                    builder omits ``--trail-decay-*``, see
+                    ``regime_debt_matrix._PB_LEVER_FLAG``).
+
+FOLDS. ``--folds`` (default four) equal CALENDAR spans of the measured window,
+a trade binned by entry_time. Calendar, not equal-count: the arms have different
+trade sets, so equal-count folds would put different dates in "fold 2" for each
+arm and the per-fold comparison would compare nothing. Every arm is folded on
+the same date boundaries. ``--fold-majority`` must not exceed ``--folds``.
+
+GRADES (``--grade``), each writing ``<out>/verdict.json`` in the
+``script_run.py`` contract -- the rule's thresholds are the UNIT's, passed as
+flags, never defaults chosen here:
+
+  * ``parity`` -- baseline B (lever on, the record) vs candidate C (lever off,
+    what the live path trades). ``dR = net_r(B) - net_r(C)``,
+    ``dDD = maxDD(C) - maxDD(B)``, ``fold_wins`` = folds where B out-earns C.
+      pass / ``stage0_fails_without``  if net_r(C) <= 0 (the executable book has
+                                        no Stage-0 edge: a roster INPUT, never
+                                        a roster act);
+      pass / ``build_close_verb``      if (dR >= delta_r or dDD >= delta_r) and
+                                        fold_wins >= fold_majority;
+      fail / ``live_without_lever``    otherwise (the lever's measured value is
+                                        inside the declared materiality bar, so
+                                        declared == executable is the cheaper
+                                        fix: strip it, Tier-3, not done here);
+      indeterminate                    if the control fails or n(B) < n_floor.
+  * ``sweep`` -- baseline B (lever removed) vs every other non-control arm.
+    A candidate C passes iff ``net_r(C) - net_r(B) >= delta_r`` AND
+    ``maxDD(C) <= maxDD(B)`` AND fold_wins(C over B) >= fold_majority.
+      pass   if any candidate passes (best by delta named);
+      fail   if none does (the removed lever's lines are dead: strip them);
+      indeterminate if the control fails, a ``--same-as`` pair differs, or
+                    n(B) < n_floor.
+    ``--same-as S=N`` asserts two arms are IDENTICAL (n and net_r): the shipped
+    unreachable-arm config must equal the no-decay arm, or the premise that the
+    lever is dead is wrong and nothing below it may be read.
+
+  * ``replace`` (EXIT-REPLACE-ETH4H, 2026-10-15) -- baseline A is the INCUMBENT exit; every other
+    arm is a candidate to REPLACE it. A candidate passes iff ``net_r(C) > net_r(A)`` (strictly)
+    AND folds where ``net_r(C) >= net_r(A)`` (ties count) >= ``--fold-majority`` AND
+    ``maxDD(C) <= maxDD(A) * (1 + --dd-tol-frac)`` AND (optional materiality, default off)
+    ``net_r(C) - net_r(A) >= --delta-r-per-trade * n(A)``. Several pass -> the highest net R. None ->
+    fail: the incumbent stands. Each candidate also reports ``tp_doctrine`` (the share of its
+    trades whose MFE reached its own declared tp_r vs ``check_tp_doctrine.REACH_FLOOR``) and
+    ``lever_fired`` (False when the arm reproduces A exactly -- a dead lever).
+    ``--control-since`` grades the positive control on the arm's trades entered on/after the
+    committed record's ``data_start`` when the window is LONGER than the record's.
+  * ``stage0`` -- ONE arm (the baseline) graded on its own: the Stage-0 bar at
+    whatever cost stack that arm carries (e.g. a prop venue's, via raw
+    ``--fee-bps-roundtrip`` / ``--slippage-bps-roundtrip`` / ``--funding-*``
+    flags). pass iff net_r > 0 AND n >= n_floor AND >= fold_majority folds net
+    > 0; fail otherwise at n >= n_floor; indeterminate when n < n_floor or a
+    ``--control`` arm does not reproduce its committed record.
+  * ``holdout`` (PROMOTION-BAR-HOLDOUT-1016; operator decision 2026-10-16, "Require holdout":
+    *"promotion needs a pass on the held-back 25% ... one setting tested once, so no deflation
+    is needed"*) -- SELECT on the earliest span, then test the ONE selected arm ONCE on the latest
+    span. Every arm runs once over the whole pinned window (one continuous harness pass, so
+    indicators warm up exactly as the record's run did); the boundary is fixed BEFORE any outcome
+    is read: the latest ``--holdout-frac`` (default 0.25) of the calendar window, grown in 1%
+    steps until it holds ``--holdout-min-trades`` (default 25) of the BASELINE arm's entries
+    (entry times only, never an outcome), capped at ``--holdout-max-frac`` (default 0.40); a leg
+    still short at the cap is run anyway and grades ``underpowered``. DISCOVERY sees only trades
+    whose entry AND exit precede the boundary (``discovery_trades`` raises ``HoldoutLeak`` on
+    anything else; a trade straddling the boundary is in neither span). SELECTION: an arm is
+    eligible iff its discovery n >= ``--n-floor``, discovery net R > 0 and >= ``--fold-majority``
+    of ``--folds`` calendar folds of the discovery span are net-positive; the eligible arm with
+    the highest discovery net R is selected (a tie goes to ``--baseline``, then declaration
+    order). HOLDOUT: the selected arm's trades entered on/after the boundary, read once.
+      pass / ``confirmed``          if n_holdout >= --holdout-min-trades and net R > 0;
+      fail / ``not_replicated``     if n_holdout >= the floor and net R <= 0 (closes the
+                                    CONFIGURATION, never the family);
+      fail / ``no_discovery``       if no arm is eligible on discovery (nothing to confirm) while at
+                                    least one arm held >= --n-floor discovery trades;
+      indeterminate / ``insufficient_discovery`` if every arm held < --n-floor discovery trades
+                                    (a power shortfall, never evidence against the leg);
+      indeterminate / ``underpowered`` if n_holdout < the floor.
+    The verdict carries ``holdout_confirmation`` in the exact shape
+    ``scripts/ops/mandate_resolver.py`` clause ``R-HOLDOUT`` reads from a Stage-0 record
+    (``source_run`` is null here: whoever writes the record points it at the committed
+    ``verdict.json``).
+Honesty notes. ``maxDD`` and ``net_total_r`` are read from the harness's own
+``--json`` summary, never re-derived. ``delta_r`` is a MATERIALITY bar in R
+over the whole window (the unit says why that value), not a significance test;
+the fold-majority clause is what stands between a one-period artifact and a
+verdict. Nothing here edits config, and a ``pass`` is a PROPOSAL input.
+
+Tier-1 research tooling: fetches public candles (Binance Vision), runs the
+research harnesses, writes only under ``--out``. No live path, no config write.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
+
+VERDICTS = ("pass", "fail", "indeterminate")
+GRADES = ("parity", "sweep", "stage0", "replace", "holdout")
+N_FOLDS = 4
+
+
+# ── arm specs ───────────────────────────────────────────────────────────────
+def parse_arm(spec: str) -> tuple[str, dict[str, Any], list[str], list[str]]:
+    """``LABEL=tok;tok`` -> (label, cfg_set, cfg_unset, extra_argv)."""
+    import yaml
+    if "=" not in spec:
+        raise ValueError(f"arm spec {spec!r} must be LABEL=tok;tok;... (LABEL= for the leg as declared)")
+    label, _, body = spec.partition("=")
+    label = label.strip()
+    if not label:
+        raise ValueError(f"arm spec {spec!r} has an empty label")
+    sets: dict[str, Any] = {}
+    unsets: list[str] = []
+    extra: list[str] = []
+    for tok in (t.strip() for t in body.split(";")):
+        if not tok:
+            continue
+        if tok.startswith("--"):
+            flag, has_val, val = tok.partition("=")
+            extra.append(flag)
+            if has_val:
+                extra.append(val)
+        elif tok.startswith("-"):
+            unsets.append(tok[1:])
+        elif "=" in tok:
+            k, _, v = tok.partition("=")
+            sets[k.strip()] = yaml.safe_load(v)
+        else:
+            raise ValueError(f"arm {label!r}: token {tok!r} is not key=value, -key or --flag[=value]")
+    return label, sets, unsets, extra
+
+
+def arm_cfg(base: dict[str, Any], sets: dict[str, Any], unsets: list[str]) -> dict[str, Any]:
+    cfg = dict(base)
+    for k in unsets:
+        cfg.pop(k, None)
+    cfg.update(sets)
+    return cfg
+
+
+#: Raw harness flags that arm a GEOM-B1 take-profit mover (scripts/research/tp_geometry.py).
+_GEOM_TP_FLAGS = ("--tp-target-r", "--tp-extend-r", "--tp-retarget-mode", "--tp-report")
+
+
+def tp_mover_conflict(label: str, cfg: dict[str, Any], extra: list[str]) -> str | None:
+    """A message when the arm would arm TWO take-profit movers, else None.
+
+    A leg that declares ``tp_revision`` (TP doctrine B1, e.g. trend_donchian_eth_4h since
+    2026-10-18) has its rule forwarded by the argv builder as ``--tp-revision``; a GEOM-B1 flag on
+    the same arm makes backtest_trend.run_backtest raise ``ValueError`` (each moves tp_price), so
+    the arm died exit 1 after the baseline had already run (RQ-20261018-012/-014,
+    PI-20261021-6SBYWRKB-0001). Caught here, before any fetch, with the remedy: a candidate that
+    REPLACES the declared TP mover says so with ``-tp_revision``."""
+    if not cfg.get("tp_revision"):
+        return None
+    hit = [f for f in extra if f in _GEOM_TP_FLAGS]
+    if not hit:
+        return None
+    return (f"arm {label!r}: the leg declares tp_revision and the arm arms a GEOM-B1 TP lever "
+            f"({', '.join(hit)}); the harness refuses two TP movers in one run. Add '-tp_revision' to "
+            "the arm so the candidate replaces the declared mover.")
+
+
+# ── harness runs ────────────────────────────────────────────────────────────
+def _replace_opt(argv: list[str], flag: str, value: str) -> list[str]:
+    out = list(argv)
+    if flag in out:
+        out[out.index(flag) + 1] = value
+    else:
+        out += [flag, value]
+    return out
+
+
+def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit: str, jout: str,
+                   extra: list[str], start: str | None, end: str | None) -> tuple[list[str], list[str]]:
+    """The committed-record argv for ``cfg`` (via build_harness_cmd), plus the
+    arm's raw flags and the pinned window. Returns (argv, omitted_levers)."""
+    import regime_debt_matrix as rdm
+    harness = rdm.classify(cfg)
+    # ict_scalp joined 2026-10-13 (QUEUE-FILL-1013): its argv builder is the same
+    # rdm.build_harness_cmd branch the evidence builder runs, and the arm tokens it
+    # needs (--cooldown-bars, --timeout-bars, --min-confidence) are plain raw flags.
+    if harness not in ("trend", "pullback", "ict_scalp"):
+        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback and "
+                         "ict_scalp harnesses")
+    argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout)
+    argv = list(argv)
+    i = 0
+    while i < len(extra):
+        flag = extra[i]
+        if i + 1 < len(extra) and not extra[i + 1].startswith("--"):
+            argv = _replace_opt(argv, flag, extra[i + 1])
+            i += 2
+        else:
+            if flag not in argv:
+                argv.append(flag)
+            i += 1
+    if start:
+        argv += ["--start", start]
+    if end:
+        argv += ["--end", end]
+    return argv, list(omitted)
+
+
+#: `--non-crypto-source dukascopy` interval codes (scripts/ops/fetch_backtest_candles.py --interval).
+_DUKA_INTERVAL = {"1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+
+
+def fetch_candles(leg: str, cfg: dict[str, Any], days: int, csv: str,
+                  non_crypto_source: str = "auto") -> dict[str, Any]:
+    """The SAME fetch the evidence builder makes (regime_debt_matrix._fetch_csv).
+
+    ``non_crypto_source="dukascopy"`` (P1-ATM-BACKLOG-1016) sends a NON-crypto leg to the dukascopy
+    lane instead of yfinance: research-script-run.yml installs dukascopy-python but not yfinance,
+    so an equity/ETF leg could not be ablated on the runner at all. Crypto legs are unaffected, and
+    the default ("auto") is the evidence builder's own fetch, byte-for-byte."""
+    import regime_debt_matrix as rdm
+    sym = (cfg.get("symbols") or [None])[0]
+    tf = cfg.get("timeframe")
+    if not sym or not tf:
+        raise ValueError(f"{leg}: no symbols[0]/timeframe in config")
+    feed = rdm.resolve_feed(sym, tf)
+    if non_crypto_source == "dukascopy" and feed["source"] != "binance":
+        code = _DUKA_INTERVAL.get(str(tf))
+        if code is None:
+            raise ValueError(f"{leg}: no dukascopy interval code for timeframe {tf!r}")
+        subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+                        "--source", "dukascopy", "--interval", code, "--days", str(days), "--output", csv],
+                       check=True, cwd=str(REPO))
+        return {**feed, "source": "dukascopy", "ticker": sym}
+    rdm._fetch_csv(feed, days, csv)
+    return feed
+
+
+def _load_trades(path: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with open(path, encoding="utf-8") as fh:
+        for ln in fh:
+            ln = ln.strip()
+            if ln:
+                rows.append(json.loads(ln))
+    return rows
+
+
+def _ts(s: Any):
+    import pandas as pd
+    return pd.Timestamp(str(s)).tz_localize("UTC") if pd.Timestamp(str(s)).tzinfo is None else pd.Timestamp(str(s))
+
+
+def fold_edges(csv: str, start: str | None, end: str | None) -> list[Any]:
+    """N_FOLDS+1 calendar boundaries over the measured candle window."""
+    import pandas as pd
+    df = pd.read_csv(csv, usecols=["timestamp"])
+    ts = df["timestamp"]
+    ts = pd.to_datetime(ts, unit="ms", utc=True) if pd.api.types.is_numeric_dtype(ts) else pd.to_datetime(ts, utc=True)
+    lo, hi = ts.min(), ts.max()
+    if start:
+        lo = max(lo, _ts(start))
+    if end:
+        hi = min(hi, _ts(end))
+    if hi <= lo:
+        raise ValueError(f"empty window: {lo} .. {hi}")
+    step = (hi - lo) / N_FOLDS
+    return [lo + step * i for i in range(N_FOLDS)] + [hi]
+
+
+def fold_net_r(trades: list[dict[str, Any]], edges: list[Any]) -> list[dict[str, Any]]:
+    out = []
+    for i in range(N_FOLDS):
+        lo, hi = edges[i], edges[i + 1]
+        last = i == N_FOLDS - 1
+        rs = [float(t.get("net_r") or 0.0) for t in trades
+              if (lo <= _ts(t["entry_time"]) < hi) or (last and _ts(t["entry_time"]) == hi)]
+        out.append({"fold": i + 1, "start": str(lo), "end": str(hi), "trades": len(rs),
+                    "net_r": round(sum(rs), 4)})
+    return out
+
+
+def summarize_arm(jout: str, emit: str, edges: list[Any]) -> dict[str, Any]:
+    with open(jout, encoding="utf-8") as fh:
+        bt = json.load(fh)
+    trades = _load_trades(emit)
+    mfes = [float(t["mfe_r"]) for t in trades if t.get("mfe_r") is not None]
+    return {
+        "reach_ge_6r": round(sum(1 for m in mfes if m >= 6.0) / len(mfes), 4) if mfes else None,
+        "n": int(bt.get("total_trades", len(trades))),
+        "net_r": float(bt["net_total_r"]),
+        "net_r_fee_only": bt.get("net_total_r_fee_only"),
+        "max_drawdown_r": float(bt["max_drawdown_r"]),
+        "by_outcome": bt.get("by_outcome"),
+        "mean_bars_held": bt.get("mean_bars_held"),
+        "net_r_per_capital_day": bt.get("net_r_per_capital_day"),
+        "cost_stack": {"fee_bps_roundtrip": bt.get("fee_bps_roundtrip"),
+                       "slippage_bps_roundtrip": bt.get("slippage_bps_roundtrip"),
+                       "funding_bps_per_window": bt.get("funding_bps_per_window")},
+        "params": bt.get("params"),
+        "data_start": bt.get("data_start"), "data_end": bt.get("data_end"),
+        "folds": fold_net_r(trades, edges),
+    }
+
+
+# ── grading (pure) ──────────────────────────────────────────────────────────
+def check_control(arm: dict[str, Any], record_bt: dict[str, Any], tol_n: float, tol_r: float) -> dict[str, Any]:
+    """Does the arm reproduce the committed record? (n within tol_n fraction, net_r within tol_r R)."""
+    rn, rr = int(record_bt["total_trades"]), float(record_bt["net_total_r"])
+    dn = abs(arm["n"] - rn) / max(rn, 1)
+    dr = abs(arm["net_r"] - rr)
+    ok = dn <= tol_n and dr <= tol_r
+    return {"ok": ok, "record_n": rn, "record_net_r": rr, "arm_n": arm["n"], "arm_net_r": arm["net_r"],
+            "n_frac_diff": round(dn, 4), "net_r_abs_diff": round(dr, 4), "tol_n": tol_n, "tol_r": tol_r}
+
+
+def _fold_wins(a: dict[str, Any], b: dict[str, Any]) -> int:
+    """Folds where arm a out-earns arm b (strictly)."""
+    return sum(1 for fa, fb in zip(a["folds"], b["folds"]) if fa["net_r"] > fb["net_r"])
+
+
+def grade_parity(arms: dict[str, dict[str, Any]], *, baseline: str, candidate: str, delta_r: float,
+                 fold_majority: int, n_floor: int, control: dict[str, Any] | None) -> dict[str, Any]:
+    b, c = arms[baseline], arms[candidate]
+    d_r = round(b["net_r"] - c["net_r"], 4)
+    d_dd = round(c["max_drawdown_r"] - b["max_drawdown_r"], 4)
+    wins = _fold_wins(b, c)
+    m = {"baseline": baseline, "candidate": candidate, "delta_net_r": d_r, "delta_max_drawdown_r": d_dd,
+         "fold_wins_baseline": wins, "n_folds": N_FOLDS, "delta_r_bar": delta_r, "fold_majority": fold_majority,
+         "n_floor": n_floor, "control": control}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the baseline arm does not reproduce the committed record: the corpus differs, so no delta is read"}
+    if b["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"baseline n={b['n']} < n_floor {n_floor}"}
+    if c["net_r"] <= 0.0:
+        return {"verdict": "pass", "label": "stage0_fails_without", **m,
+                "why": f"without the lever the book reads net_r={c['net_r']} <= 0: the executable book has no "
+                       "Stage-0 edge (a Gate-2 / roster INPUT for the manager, not a roster act)"}
+    if (d_r >= delta_r or d_dd >= delta_r) and wins >= fold_majority:
+        return {"verdict": "pass", "label": "build_close_verb", **m,
+                "why": f"the lever is worth dR={d_r} / dDD={d_dd} (bar {delta_r}) and out-earns in {wins}/{N_FOLDS} "
+                       "folds: cheaper to BUILD the close op than to live without it"}
+    return {"verdict": "fail", "label": "live_without_lever", **m,
+            "why": f"dR={d_r} / dDD={d_dd} against bar {delta_r} with {wins}/{N_FOLDS} fold wins: the lever's "
+                   "measured value is inside the materiality bar, so declared == executable (strip it) is the cheaper fix"}
+
+
+TP_REACH_FLOOR = 0.10  # == scripts/ci/check_tp_doctrine.REACH_FLOOR (TP-REACH-FLOOR, 2026-10-14)
+
+
+def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], fold_majority: int,
+                  n_floor: int, dd_tol_frac: float, control: dict[str, Any] | None,
+                  tp_r_by_arm: dict[str, float | None] | None = None,
+                  delta_r_per_trade: float = 0.0,
+                  vs_controls: dict[str, list[str]] | None = None) -> dict[str, Any]:
+    a = arms[baseline]
+    # MATERIALITY (P1-ATM-BACKLOG-1016): an optional per-trade bar, scaled by the INCUMBENT's n, so a
+    # unit can register "beats A by >= x R/trade" before n is known. 0.0 (the default) is the strict
+    # `net_r(C) > net_r(A)` the operator's rule used, byte-for-byte (RQ-20261015-a1df-01).
+    bar = round(delta_r_per_trade * a["n"], 4)
+    m: dict[str, Any] = {"baseline": baseline, "candidates": {}, "fold_majority": fold_majority,
+                         "n_floor": n_floor, "dd_tol_frac": dd_tol_frac, "control": control,
+                         "delta_r_per_trade": delta_r_per_trade, "delta_r_bar": bar}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the incumbent arm does not reproduce the committed record: the corpus differs"}
+    if a["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m, "why": f"incumbent n={a['n']} < n_floor {n_floor}"}
+    best, best_r = None, None
+    for cl in candidates:
+        c = arms[cl]
+        d_r = round(c["net_r"] - a["net_r"], 4)
+        dd_cap = round(a["max_drawdown_r"] * (1.0 + dd_tol_frac), 4)
+        wins = sum(1 for fc, fa in zip(c["folds"], a["folds"]) if fc["net_r"] >= fa["net_r"])
+        ok = (c["net_r"] > a["net_r"] and d_r >= bar and wins >= fold_majority
+              and c["max_drawdown_r"] <= dd_cap)
+        # EXIT-GIVEBACK-PREDICTOR-GATE: a gated candidate must ALSO beat each of its controls (the same action on
+        # every trade, and on a matched-rate random draw) on net R and in >= fold_majority folds; the harness's
+        # stop-at-stop-price fill flatters a tightened trade equally in the arm and its random control, so the
+        # contrast cancels it. Absent ``vs_controls`` this branch never runs (byte-identical to before).
+        ctl_rows: dict[str, Any] = {}
+        for ctl in (vs_controls or {}).get(cl, []):
+            ca = arms[ctl]
+            cw = sum(1 for fc, fk in zip(c["folds"], ca["folds"]) if fc["net_r"] >= fk["net_r"])
+            beat = c["net_r"] > ca["net_r"] and cw >= fold_majority
+            ctl_rows[ctl] = {"net_r": ca["net_r"], "delta_net_r": round(c["net_r"] - ca["net_r"], 4),
+                             "folds_ge_control": cw, "beats": beat}
+            ok = ok and beat
+        reach = c.get("reach_ge_6r")
+        tp_r = (tp_r_by_arm or {}).get(cl)
+        m["candidates"][cl] = {
+            "net_r": c["net_r"], "delta_net_r": d_r, "max_drawdown_r": c["max_drawdown_r"], "max_drawdown_cap": dd_cap,
+            "folds_ge_incumbent": wins, "passes": ok, **({"vs_controls": ctl_rows} if ctl_rows else {}),
+            "lever_fired": not (c["n"] == a["n"] and abs(c["net_r"] - a["net_r"]) < 1e-9),
+            "tp_doctrine": {"declared_tp_r": tp_r, "reach_ge_6r": reach,
+                            "satisfies_reach_floor": (None if tp_r is None or tp_r >= 50 or reach is None
+                                                      else bool(reach >= TP_REACH_FLOOR)),
+                            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is "
+                                    "P(mfe_r >= 6) over this arm's own trades"}}
+        if ok and (best_r is None or c["net_r"] > best_r):
+            best, best_r = cl, c["net_r"]
+    if best is not None:
+        return {"verdict": "pass", "label": "candidate_replaces_incumbent", "best": best, **m,
+                "why": f"{best} beats the incumbent {baseline} (net R {best_r} vs {a['net_r']}) in >= {fold_majority}/{N_FOLDS} "
+                       "folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"}
+    return {"verdict": "fail", "label": "incumbent_stands", **m,
+            "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"}
+
+
+def grade_sweep(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], delta_r: float,
+                fold_majority: int, n_floor: int, control: dict[str, Any] | None,
+                same_as: tuple[str, str] | None) -> dict[str, Any]:
+    b = arms[baseline]
+    m: dict[str, Any] = {"baseline": baseline, "candidates": {}, "delta_r_bar": delta_r,
+                         "fold_majority": fold_majority, "n_floor": n_floor, "control": control}
+    if same_as:
+        x, y = same_as
+        ident = arms[x]["n"] == arms[y]["n"] and abs(arms[x]["net_r"] - arms[y]["net_r"]) < 1e-9
+        m["same_as"] = {"arms": [x, y], "identical": ident, "n": [arms[x]["n"], arms[y]["n"]],
+                        "net_r": [arms[x]["net_r"], arms[y]["net_r"]]}
+        if not ident:
+            return {"verdict": "indeterminate", "label": "premise_failed", **m,
+                    "why": f"arms {x} and {y} were declared identical (the lever cannot fire) and are not: "
+                           "the dead-lever premise is wrong; nothing below it is read"}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the control arm does not reproduce the committed record: the corpus differs"}
+    if b["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m, "why": f"baseline n={b['n']} < n_floor {n_floor}"}
+    best, best_d = None, None
+    for cl in candidates:
+        c = arms[cl]
+        d_r = round(c["net_r"] - b["net_r"], 4)
+        d_dd = round(c["max_drawdown_r"] - b["max_drawdown_r"], 4)
+        wins = _fold_wins(c, b)
+        ok = d_r >= delta_r and d_dd <= 0.0 and wins >= fold_majority
+        m["candidates"][cl] = {"delta_net_r": d_r, "delta_max_drawdown_r": d_dd, "fold_wins": wins, "passes": ok}
+        if ok and (best_d is None or d_r > best_d):
+            best, best_d = cl, d_r
+    if best is not None:
+        return {"verdict": "pass", "label": "reachable_lever_beats_removed", "best": best, **m,
+                "why": f"{best} beats the removed-lever baseline by {best_d} R with no worse drawdown and "
+                       f">= {fold_majority}/{N_FOLDS} fold wins: a Tier-3 proposal to declare it (not done here)"}
+    return {"verdict": "fail", "label": "no_reachable_lever_beats_removed", **m,
+            "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable "
+                   "earns its place -- strip them (Tier-3, not done here)"}
+
+
+def grade_stage0(arms: dict[str, dict[str, Any]], *, baseline: str, fold_majority: int, n_floor: int,
+                 control: dict[str, Any] | None) -> dict[str, Any]:
+    """Stage-0 for ONE arm (the baseline): is there an edge net of the cost stack THIS arm carries?
+
+    PASS iff net_r > 0 AND n >= n_floor AND >= fold_majority of the N_FOLDS calendar folds net > 0.
+    FAIL iff n >= n_floor and that does not hold. INDETERMINATE when n < n_floor or the control arm
+    (another declared arm, e.g. the record's own cost stack) does not reproduce the committed record.
+    Added 2026-10-15 (lane RESEARCH-GRADE-BACKLOG, manager ask): the prop add decision needed the 4h
+    legs' Stage-0 at the PROP venue's cost stack, and no dispatchable driver graded a single
+    config-exact arm at a non-default stack."""
+    b = arms[baseline]
+    pos = sum(1 for f in b["folds"] if f["net_r"] > 0)
+    m = {"baseline": baseline, "net_r": b["net_r"], "n": b["n"], "max_drawdown_r": b["max_drawdown_r"],
+         "folds_positive": pos, "n_folds": N_FOLDS, "fold_majority": fold_majority, "n_floor": n_floor,
+         "control": control}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the control arm does not reproduce the committed record: the corpus differs, so nothing is read"}
+    if b["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m, "why": f"n={b['n']} < n_floor {n_floor}"}
+    if b["net_r"] > 0.0 and pos >= fold_majority:
+        return {"verdict": "pass", "label": "stage0_edge", **m,
+                "why": f"net_r={b['net_r']} > 0 with {pos}/{N_FOLDS} positive folds at this arm's cost stack"}
+    return {"verdict": "fail", "label": "stage0_no_edge", **m,
+            "why": f"net_r={b['net_r']} with {pos}/{N_FOLDS} positive folds (needs > 0 and >= {fold_majority})"}
+
+
+# ── holdout (pure; see the module docstring's ``holdout`` grade) ───────────────
+class HoldoutLeak(ValueError):
+    """A trade at or after the holdout boundary reached the selection step."""
+
+
+def holdout_boundary(entry_times: list[Any], lo: Any, hi: Any, *, frac: float, min_trades: int,
+                     max_frac: float) -> dict[str, Any]:
+    """Place the boundary from the calendar window and the BASELINE arm's entry times only.
+
+    The share starts at ``frac`` and grows in 1% steps until the span [boundary, hi] holds
+    ``min_trades`` entries, capped at ``max_frac``. Returns the boundary, the share used, the
+    baseline entries in the span, and whether the cap was hit short of the floor."""
+    if not (0.0 < frac <= max_frac < 1.0):
+        raise ValueError(f"need 0 < holdout_frac <= holdout_max_frac < 1 (got {frac}, {max_frac})")
+    ts = sorted(_ts(t) for t in entry_times)
+    steps = int(round((max_frac - frac) * 100))
+    share = frac
+    for i in range(steps + 1):
+        share = round(frac + i / 100.0, 4)
+        boundary = hi - (hi - lo) * share
+        n = sum(1 for t in ts if boundary <= t <= hi)
+        if n >= min_trades:
+            return {"boundary": boundary, "share": share, "baseline_n_holdout": n, "grown": i > 0,
+                    "short_at_cap": False}
+    boundary = hi - (hi - lo) * max_frac
+    n = sum(1 for t in ts if boundary <= t <= hi)
+    return {"boundary": boundary, "share": max_frac, "baseline_n_holdout": n, "grown": True,
+            "short_at_cap": True}
+
+
+def discovery_trades(trades: list[dict[str, Any]], boundary: Any) -> list[dict[str, Any]]:
+    """Trades whose entry AND exit precede the boundary; anything that touches the held-back
+    span is dropped here, so the selection step cannot see it."""
+    out = []
+    for t in trades:
+        ex = t.get("exit_time")
+        if ex and _ts(t["entry_time"]) < boundary and _ts(ex) < boundary:
+            out.append(t)
+    return out
+
+
+def holdout_trades(trades: list[dict[str, Any]], boundary: Any, hi: Any) -> list[dict[str, Any]]:
+    return [t for t in trades if boundary <= _ts(t["entry_time"]) <= hi]
+
+
+def _assert_discovery_only(trades: list[dict[str, Any]], boundary: Any) -> None:
+    for t in trades:
+        if _ts(t["entry_time"]) >= boundary or not t.get("exit_time") or _ts(t["exit_time"]) >= boundary:
+            raise HoldoutLeak(f"trade entered {t.get('entry_time')} / exited {t.get('exit_time')} touches the "
+                              f"held-back span (boundary {boundary}) and reached selection")
+
+
+def _span_stats(trades: list[dict[str, Any]], edges: list[Any] | None) -> dict[str, Any]:
+    net = round(sum(float(t.get("net_r") or 0.0) for t in trades), 4)
+    out: dict[str, Any] = {"n": len(trades), "net_r": net,
+                           "expectancy_r": round(net / len(trades), 4) if trades else None}
+    if edges is not None:
+        folds = fold_net_r(trades, edges)
+        out["folds"] = folds
+        out["folds_positive"] = sum(1 for f in folds if f["net_r"] > 0)
+    return out
+
+
+def select_on_discovery(disc: dict[str, list[dict[str, Any]]], *, order: list[str], baseline: str,
+                        boundary: Any, edges: list[Any], n_floor: int, fold_majority: int
+                        ) -> tuple[str | None, dict[str, Any]]:
+    """The pre-registered selection rule over DISCOVERY trades only (see the docstring)."""
+    table: dict[str, Any] = {}
+    best, best_r = None, None
+    ranked = [baseline] + [lab for lab in order if lab != baseline]
+    for lab in ranked:
+        _assert_discovery_only(disc[lab], boundary)
+        st = _span_stats(disc[lab], edges)
+        ok = st["n"] >= n_floor and st["net_r"] > 0 and st["folds_positive"] >= fold_majority
+        st["eligible"] = ok
+        table[lab] = st
+        if ok and (best_r is None or st["net_r"] > best_r):
+            best, best_r = lab, st["net_r"]
+    return best, table
+
+
+def grade_holdout(selected: str | None, held: dict[str, Any] | None, *, min_trades: int,
+                  plan: dict[str, Any], table: dict[str, Any], n_floor: int = 0) -> dict[str, Any]:
+    m = {"selected": selected, "selected_from": len(table), "discovery": table, "plan": plan,
+         "holdout": held, "holdout_min_trades": min_trades, "discovery_n_floor": n_floor,
+         "evaluations_on_holdout": 1 if selected else 0}
+    if selected is None and table and all((st.get("n") or 0) < n_floor for st in table.values()):
+        return {"verdict": "indeterminate", "label": "insufficient_discovery", **m,
+                "why": f"every arm holds < {n_floor} discovery trades: selection could not be made, which is a "
+                       "power shortfall, not evidence against the leg"}
+    if selected is None:
+        return {"verdict": "fail", "label": "no_discovery", **m,
+                "why": "no arm is eligible on the discovery span (n floor, net R > 0, fold majority): nothing to confirm"}
+    if held["n"] < min_trades:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"{selected} holds n={held['n']} held-back trades < {min_trades}: the span cannot decide"}
+    if held["net_r"] > 0.0:
+        return {"verdict": "pass", "label": "confirmed", **m,
+                "why": f"{selected} (selected from {len(table)} on discovery) reads net_r={held['net_r']} over "
+                       f"n={held['n']} held-back trades, read once"}
+    return {"verdict": "fail", "label": "not_replicated", **m,
+            "why": f"{selected} reads net_r={held['net_r']} over n={held['n']} held-back trades: the configuration "
+                   "does not replicate (closes the configuration, never the family)"}
+
+
+def holdout_confirmation(g: dict[str, Any], *, fingerprint: str | None, cost_stack: dict[str, Any],
+                         lo: Any, hi: Any, unit: str | None) -> dict[str, Any]:
+    """The block mandate_resolver.py R-HOLDOUT reads off a Stage-0 record."""
+    plan, held = g["plan"], g.get("holdout") or {}
+    import pandas as pd
+    b = plan["boundary"]
+    disc_end = str(b - pd.Timedelta(seconds=1))
+    return {"verdict": g["label"], "research_unit": unit,
+            "decision_rule": {"id": f"RULE-{unit}" if unit else None, "registered_before_run": True},
+            "selected_label": g["selected"], "selected_config_fingerprint": fingerprint,
+            "selected_from": g["selected_from"], "evaluations_on_holdout": g["evaluations_on_holdout"],
+            "discovery": {"start": str(lo), "end": disc_end},
+            "holdout": {"start": str(b), "end": str(hi), "share": plan["share"],
+                        "short_at_cap": plan["short_at_cap"]},
+            "n_holdout": held.get("n"), "net_r_holdout": held.get("net_r"),
+            "expectancy_r_holdout": held.get("expectancy_r"), "cost_stack": cost_stack, "source_run": None}
+
+
+def verdict_record(grade: dict[str, Any], *, leg: str, arms: dict[str, dict[str, Any]], population: str,
+                   n: int, extra: dict[str, Any]) -> dict[str, Any]:
+    return {"verdict": grade["verdict"], "read_state": "measured", "population": population, "n": n,
+            "measurement": {"leg": leg, "label": grade.get("label"), "grade": grade, "arms": arms, **extra},
+            "note": f"{grade['verdict'].upper()} / {grade.get('label')}: {grade.get('why')}"}
+
+
+def _run_holdout(a: Any, base: dict[str, Any], specs: list[Any], labels: list[str], arms_dir: Path,
+                 edges: list[Any], arms: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Boundary from the baseline arm's entry times, selection on discovery, one read of the winner."""
+    sys.path.insert(0, str(REPO / "scripts" / "ci"))
+    from check_roster_promotion_evidence import config_fingerprint
+    lo, hi = edges[0], edges[-1]
+    trades = {lab: _load_trades(str(arms_dir / f"{lab}__trades.jsonl")) for lab in labels}
+    plan = holdout_boundary([t["entry_time"] for t in trades[a.baseline]], lo, hi, frac=a.holdout_frac,
+                            min_trades=a.holdout_min_trades, max_frac=a.holdout_max_frac)
+    b = plan["boundary"]
+    step = (b - lo) / N_FOLDS
+    d_edges = [lo + step * i for i in range(N_FOLDS)] + [b]
+    disc = {lab: discovery_trades(trades[lab], b) for lab in labels}
+    sel, table = select_on_discovery(disc, order=labels, baseline=a.baseline, boundary=b, edges=d_edges,
+                                     n_floor=a.n_floor, fold_majority=a.fold_majority)
+    held = _span_stats(holdout_trades(trades[sel], b, hi), None) if sel else None
+    plan_out = {**plan, "boundary": b, "discovery_fold_edges": [str(e) for e in d_edges],
+                "straddling_excluded": {lab: sum(1 for t in trades[lab] if _ts(t["entry_time"]) < b)
+                                        - len(disc[lab]) for lab in labels}}
+    g = grade_holdout(sel, held, min_trades=a.holdout_min_trades, plan=plan_out, table=table, n_floor=a.n_floor)
+    # The cost stack every arm ran at (the selected arm's; the baseline's when nothing was selected).
+    c = arms[sel or a.baseline]["cost_stack"]
+    cs = {"fees": c.get("fee_bps_roundtrip"), "slippage": c.get("slippage_bps_roundtrip"),
+          "funding": c.get("funding_bps_per_window"), "unit": "bps_roundtrip (funding: bps per funding window)"}
+    fp = None
+    if sel:
+        spec = next(sp for sp in specs if sp[0] == sel)
+        fp = config_fingerprint(arm_cfg(base, spec[1], spec[2]))
+        if spec[3]:
+            g["raw_flag_warning"] = (f"{sel} carries raw harness flags {spec[3]} the config fingerprint does not "
+                                     "see: a record cannot be bound to it")
+    g["_block"] = holdout_confirmation(g, fingerprint=fp, cost_stack=cs, lo=lo, hi=hi, unit=a.research_unit)
+    g["plan"]["boundary"] = str(b)
+    return g
+
+
+# ── main ────────────────────────────────────────────────────────────────────
+def _write_failure(out: Path, info: dict[str, Any]) -> None:
+    """``<out>/failure.json``: why the run stopped, in a file the landing keeps.
+
+    The ``__stderr.log`` files and the runner's ``logs/cmd-0.log`` match ``.gitignore``'s ``*.log``,
+    so a failed run used to land on main with nothing that said why (PI-20261021-6SBYWRKB-0001)."""
+    (out / "failure.json").write_text(json.dumps(info, indent=2, default=str) + "\n", encoding="utf-8")
+
+
+def main(argv: list[str] | None = None) -> int:
+    if "--self-test" in (sys.argv[1:] if argv is None else argv):
+        return _self_test()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--leg", required=True, help="config/strategies.yaml key")
+    ap.add_argument("--arm", action="append", required=True, help='LABEL=tok;tok (see module docstring)')
+    ap.add_argument("--days", type=int, default=740, help="trailing days to FETCH (the window is pinned by --start/--end)")
+    ap.add_argument("--start", default=None, help="harness --start (ISO), pinned to the record's data_start")
+    ap.add_argument("--end", default=None, help="harness --end (ISO datetime), pinned to the record's data_end")
+    ap.add_argument("--data-csv", default=None, help="skip the fetch and use this candle CSV (tests)")
+    ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
+                    help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
+                         "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
+    ap.add_argument("--control", default=None, help="LABEL=<committed __bt.json> the arm must reproduce")
+    ap.add_argument("--control-tol-n", type=float, default=0.02)
+    ap.add_argument("--control-tol-r", type=float, default=0.5)
+    ap.add_argument("--grade", choices=GRADES, required=True)
+    ap.add_argument("--baseline", required=True)
+    ap.add_argument("--candidate", default=None, help="parity: the lever-off arm")
+    ap.add_argument("--same-as", default=None, help="sweep: X=Y, two arms asserted identical")
+    ap.add_argument("--delta-r", type=float, required=True, help="materiality bar in R over the window (the unit's)")
+    ap.add_argument("--fold-majority", type=int, required=True)
+    ap.add_argument("--folds", type=int, default=4,
+                    help="number of equal calendar folds (default 4; a longer window can carry more)")
+    ap.add_argument("--n-floor", type=int, required=True)
+    ap.add_argument("--dd-tol-frac", type=float, default=0.10, help="replace: max DD may exceed the incumbent's by this fraction")
+    ap.add_argument("--delta-r-per-trade", type=float, default=0.0,
+                    help="replace: a candidate must also beat the incumbent by this many R per incumbent trade "
+                         "(bar = x * n(incumbent)); 0 = the strict net-R rule alone")
+    ap.add_argument("--holdout-frac", type=float, default=0.25,
+                    help="holdout: the latest share of the calendar window held back (grown to the trade floor)")
+    ap.add_argument("--holdout-min-trades", type=int, default=25,
+                    help="holdout: baseline entries the held-back span must hold; also its grading floor")
+    ap.add_argument("--holdout-max-frac", type=float, default=0.40, help="holdout: cap on the held-back share")
+    ap.add_argument("--research-unit", default=None, help="holdout: the unit id, carried into the block")
+    ap.add_argument("--trigger-from-path-metrics", type=int, default=0, metavar="K",
+                    help="HARNESS-METRIC-TRIGGER: before the arms run, score this leg's trades at bar offset K "
+                         "with path_metric_giveback.py's out-of-fold FULL model (--folds calendar folds, "
+                         "--trigger-big-quantile) and substitute the resulting file for the literal token @trigger_file (NOT a {brace} placeholder: script_run refuses those) in the "
+                         "arms' tokens. 0 = off: an arm that names @trigger_file is then refused.")
+    ap.add_argument("--trigger-big-quantile", type=float, default=0.5,
+                    help="with --trigger-from-path-metrics: the 'big giveback' cut, a quantile of the "
+                         "TRAINING folds' giveback (the eba2-01 construction)")
+    ap.add_argument("--trigger-baseline-extra", action="append", default=[], choices=("vol_ratio_k",),
+                    help="with --trigger-from-path-metrics: move this feature into the trigger model's BASELINE "
+                         "(PATHMETRIC-VOLCTL), so the flag is the path metrics beyond it. Default none = as before.")
+    ap.add_argument("--trigger-p-threshold", type=float, default=0.5,
+                    help="with --trigger-from-path-metrics: flag a trade when its out-of-fold P(big giveback) >= this "
+                         "(default 0.5 = the eba2-07/08 construction). A higher value is a SELECTIVE gate.")
+    ap.add_argument("--trigger-shuffle-seed", type=int, default=None,
+                    help="with --trigger-from-path-metrics: also write a matched-rate RANDOM trigger file and "
+                         "substitute it for the literal token @trigger_file_random (the gate's null control)")
+    ap.add_argument("--vs-control", action="append", default=[], metavar="CAND=CTRL",
+                    help="replace: CAND must also beat arm CTRL on net R and in >= --fold-majority folds (repeatable)")
+    ap.add_argument("--control-since", action="store_true",
+                    help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--self-test", action="store_true")
+    a = ap.parse_args(argv)
+    if a.folds < 2 or not (1 <= a.fold_majority <= a.folds):
+        print(f"ERROR: need --folds >= 2 and 1 <= --fold-majority <= --folds (got {a.folds}, {a.fold_majority})",
+              file=sys.stderr)
+        return 2
+    global N_FOLDS
+    N_FOLDS = a.folds
+
+    import yaml
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    legs = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text(encoding="utf-8"))
+    legs = legs.get("strategies", legs)
+    base = legs.get(a.leg)
+    if not isinstance(base, dict):
+        print(f"ERROR: leg {a.leg!r} not in config/strategies.yaml", file=sys.stderr)
+        return 2
+    specs = [parse_arm(s) for s in a.arm]
+    labels = [s[0] for s in specs]
+    conflicts = [m for m in (tp_mover_conflict(lab, arm_cfg(base, st, un), ex) for lab, st, un, ex in specs) if m]
+    if conflicts:
+        for m in conflicts:
+            print(f"ERROR: {m}", file=sys.stderr)
+        _write_failure(out, {"stage": "preflight", "errors": conflicts})
+        return 2
+    if len(set(labels)) != len(labels):
+        print(f"ERROR: duplicate arm labels {labels}", file=sys.stderr)
+        return 2
+    for need in [a.baseline] + ([a.candidate] if a.candidate else []):
+        if need not in labels:
+            print(f"ERROR: arm {need!r} is not declared ({labels})", file=sys.stderr)
+            return 2
+    if a.grade == "parity" and not a.candidate:
+        print("ERROR: --grade parity needs --candidate", file=sys.stderr)
+        return 2
+    same_as = None
+    if a.same_as:
+        x, _, y = a.same_as.partition("=")
+        if x not in labels or y not in labels:
+            print(f"ERROR: --same-as names an undeclared arm ({a.same_as})", file=sys.stderr)
+            return 2
+        same_as = (x, y)
+    control_label, control_bt = None, None
+    if a.control:
+        control_label, _, p = a.control.partition("=")
+        if control_label not in labels:
+            print(f"ERROR: --control names an undeclared arm ({control_label})", file=sys.stderr)
+            return 2
+        with open(REPO / p if not os.path.isabs(p) else p, encoding="utf-8") as fh:
+            control_bt = json.load(fh)
+
+    wd = Path(tempfile.mkdtemp(prefix="exit_lever_ablation_"))
+    csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
+    feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
+    if not a.data_csv:
+        feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
+    edges = fold_edges(csv, a.start, a.end)
+    trigger_meta: dict[str, Any] | None = None
+    if a.trigger_from_path_metrics:
+        if str(feed["resample"]) != str(base.get("timeframe")):
+            print(f"ERROR: --trigger-from-path-metrics scores at the leg's own timeframe "
+                  f"({base.get('timeframe')}), but the feed resamples to {feed['resample']}", file=sys.stderr)
+            return 2
+        import path_metric_giveback as pm
+        try:
+            prow, _pmeta = pm.run_leg_paths(a.leg, base, days=a.days, start=a.start, end=a.end, wd=wd,
+                                            data_csv=csv, non_crypto_source=a.non_crypto_source)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- printed, written to failure.json, exit 1
+            print(f"ERROR: trigger producer: {exc}", file=sys.stderr)
+            _write_failure(out, {"stage": "trigger_producer", "error": str(exc)})
+            return 1
+        t_extra = tuple(dict.fromkeys(a.trigger_baseline_extra))
+        ptable, _ex, _tot = pm.build_table(prow, a.trigger_from_path_metrics, t_extra)
+        trows = pm.oof_triggers(ptable, a.trigger_from_path_metrics, folds=a.folds,
+                                big_quantile=a.trigger_big_quantile, extra=t_extra,
+                                p_threshold=a.trigger_p_threshold)
+        rnd_file = None
+        if a.trigger_shuffle_seed is not None:
+            rnd_file = out / f"triggers_random__{a.leg}.jsonl"
+            rnd_file.write_text("".join(json.dumps(r) + "\n"
+                                        for r in pm.shuffle_triggers(trows, a.trigger_shuffle_seed)), encoding="utf-8")
+        trig_file = out / f"triggers__{a.leg}.jsonl"
+        trig_file.write_text("".join(json.dumps(r) + "\n" for r in trows), encoding="utf-8")
+        trigger_meta = {"file": trig_file.name, "k": a.trigger_from_path_metrics, "n_scored": len(trows),
+                        "n_flagged": sum(1 for r in trows if r["trigger"]), "folds": a.folds,
+                        "big_quantile": a.trigger_big_quantile,
+                        "construction": "path_metric_giveback.oof_triggers: FULL model fit on the other "
+                                        f"calendar folds only; P(big giveback) >= {a.trigger_p_threshold}"
+                                        + (f"; baseline + {list(t_extra)}" if t_extra else ""),
+                        "p_threshold": a.trigger_p_threshold, "baseline_extra": list(t_extra),
+                        "random_control_file": (rnd_file.name if rnd_file else None),
+                        "n_flagged_random": (sum(1 for r in pm.shuffle_triggers(trows, a.trigger_shuffle_seed)
+                                                 if r["trigger"]) if rnd_file else None)}
+        print(f"[triggers] {trigger_meta}", flush=True)
+        if rnd_file is None and any("@trigger_file_random" in x for _l, _s, _u, ex in specs for x in ex):
+            print("ERROR: an arm names @trigger_file_random but --trigger-shuffle-seed was not given", file=sys.stderr)
+            return 2
+        specs = [(lab, st, un, [x.replace("@trigger_file_random", str(rnd_file or "")).replace("@trigger_file", str(trig_file))
+                                for x in ex])
+                 for lab, st, un, ex in specs]
+    elif any("@trigger_file" in x for _l, _s, _u, ex in specs for x in ex):
+        print("ERROR: an arm names @trigger_file but --trigger-from-path-metrics K was not given",
+              file=sys.stderr)
+        return 2
+    arms_dir = out / "arms"
+    arms_dir.mkdir(exist_ok=True)
+    arms: dict[str, dict[str, Any]] = {}
+    argvs: dict[str, Any] = {}
+    for label, sets, unsets, extra in specs:
+        cfg = arm_cfg(base, sets, unsets)
+        emit, jout = str(arms_dir / f"{label}__trades.jsonl"), str(arms_dir / f"{label}__bt.json")
+        argv_i, omitted = build_arm_argv(a.leg, cfg, csv, str(feed["resample"]), emit, jout, extra, a.start, a.end)
+        shown = [("<data>" if t == csv else t) for t in argv_i]
+        argvs[label] = {"argv": shown, "cfg_set": sets, "cfg_unset": unsets, "extra_flags": extra,
+                        "omitted_levers_per_builder": omitted}
+        print(f"[{label}] {' '.join(shown)}", flush=True)
+        r = subprocess.run(argv_i, cwd=str(REPO), capture_output=True, text=True, check=False)
+        (arms_dir / f"{label}__stderr.log").write_text(r.stderr[-20000:], encoding="utf-8")
+        if r.returncode != 0:
+            print(f"ERROR: arm {label} harness exit {r.returncode}: {r.stderr[-800:]}", file=sys.stderr)
+            _write_failure(out, {"stage": "harness", "arm": label, "exit_code": r.returncode, "argv": shown,
+                                 "arms_completed": sorted(arms), "stderr_tail": r.stderr[-4000:]})
+            return 1
+        arms[label] = summarize_arm(jout, emit, edges)
+        arms[label]["argv"] = shown
+    ctl_arm = arms.get(control_label) if control_bt else None
+    if ctl_arm is not None and a.control_since:
+        since = _ts(control_bt["data_start"])
+        sub = [t for t in _load_trades(str(arms_dir / f"{control_label}__trades.jsonl"))
+               if _ts(t["entry_time"]) >= since]
+        ctl_arm = {"n": len(sub), "net_r": round(sum(float(t.get("net_r") or 0.0) for t in sub), 4)}
+    control = check_control(ctl_arm, control_bt, a.control_tol_n, a.control_tol_r) if control_bt else None
+    if control is not None and a.control_since:
+        control["since"] = str(control_bt["data_start"])
+    if a.grade == "parity":
+        g = grade_parity(arms, baseline=a.baseline, candidate=a.candidate, delta_r=a.delta_r,
+                         fold_majority=a.fold_majority, n_floor=a.n_floor, control=control)
+    elif a.grade == "stage0":
+        g = grade_stage0(arms, baseline=a.baseline, fold_majority=a.fold_majority, n_floor=a.n_floor,
+                         control=control)
+    elif a.grade == "replace":
+        vs_controls: dict[str, list[str]] = {}
+        for spec in a.vs_control:
+            cand, _, ctl = spec.partition("=")
+            if cand not in labels or ctl not in labels:
+                print(f"ERROR: --vs-control {spec!r} names an undeclared arm", file=sys.stderr)
+                return 2
+            vs_controls.setdefault(cand, []).append(ctl)
+        ctl_labels = {c for cs in vs_controls.values() for c in cs}  # a control arm is never itself a candidate
+        cands = [lab for lab in labels if lab != a.baseline and lab not in ctl_labels]
+        tp_by = {lab: arm_cfg(base, sets, unsets).get("tp_r") for lab, sets, unsets, _x in specs}
+        g = grade_replace(arms, baseline=a.baseline, candidates=cands, fold_majority=a.fold_majority,
+                          n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by,
+                          delta_r_per_trade=a.delta_r_per_trade, vs_controls=vs_controls)
+    elif a.grade == "holdout":
+        g = _run_holdout(a, base, specs, labels, arms_dir, edges, arms)
+    else:
+        cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
+        g = grade_sweep(arms, baseline=a.baseline, candidates=cands, delta_r=a.delta_r,
+                        fold_majority=a.fold_majority, n_floor=a.n_floor, control=control, same_as=same_as)
+    window = {"start": a.start, "end": a.end, "fetch_days": a.days, "feed": feed,
+              "fold_edges": [str(e) for e in edges]}
+    pop = (f"{a.leg}: {arms[a.baseline]['n']} trades in the baseline arm {a.baseline!r} on "
+           f"{feed.get('ticker', base.get('symbols', ['?'])[0])} {base.get('timeframe')} candles "
+           f"{a.start or arms[a.baseline].get('data_start')} .. {a.end or arms[a.baseline].get('data_end')}, "
+           f"net of fee+slippage+funding (the harness's venue-aware stack); arms {labels}")
+    extra_m: dict[str, Any] = {"window": window, "argv": argvs}
+    if trigger_meta:
+        extra_m["trigger"] = trigger_meta
+    if a.grade == "holdout":
+        extra_m["holdout_confirmation"] = g.pop("_block")
+        pop += (f"; holdout boundary {g['plan']['boundary']} (share {g['plan']['share']}), selection on "
+                "discovery trades only, the selected arm read once on the held-back span")
+    rec = verdict_record(g, leg=a.leg, arms=arms, population=pop, n=arms[a.baseline]["n"],
+                         extra=extra_m)
+    (out / "verdict.json").write_text(json.dumps(rec, indent=2, default=str) + "\n", encoding="utf-8")
+    (out / "summary.json").write_text(json.dumps({"leg": a.leg, "grade": g, "arms": arms, "window": window},
+                                                 indent=2, default=str) + "\n", encoding="utf-8")
+    print(json.dumps({"verdict": g["verdict"], "label": g.get("label"), "why": g.get("why")}, indent=1))
+    return 0
+
+
+# ── self-test: planted controls for every grading branch, no network ─────────
+def _arm(n: int, net_r: float, dd: float, folds: list[float]) -> dict[str, Any]:
+    return {"n": n, "net_r": net_r, "max_drawdown_r": dd,
+            "folds": [{"fold": i + 1, "net_r": f} for i, f in enumerate(folds)]}
+
+
+def _self_test() -> int:
+    ok = True
+
+    def check(label: str, cond: bool) -> None:
+        nonlocal ok
+        ok &= bool(cond)
+        print(f"  self-test {'ok  ' if cond else 'FAIL'}: {label}")
+
+    # stage0 (one arm, its own cost stack)
+    g0 = grade_stage0({"P": _arm(60, 5.0, 3.0, [1, 2, -1, 3])}, baseline="P", fold_majority=3, n_floor=39, control=None)
+    check("stage0: net>0, 3/4 folds -> pass", g0["verdict"] == "pass" and g0["label"] == "stage0_edge")
+    g0 = grade_stage0({"P": _arm(60, 5.0, 3.0, [1, -2, -1, 7])}, baseline="P", fold_majority=3, n_floor=39, control=None)
+    check("stage0: net>0, 2/4 folds -> fail", g0["verdict"] == "fail")
+    g0 = grade_stage0({"P": _arm(60, -0.5, 3.0, [1, 1, 1, -3.5])}, baseline="P", fold_majority=3, n_floor=39, control=None)
+    check("stage0: net<=0 -> fail", g0["verdict"] == "fail" and g0["label"] == "stage0_no_edge")
+    g0 = grade_stage0({"P": _arm(20, 5.0, 3.0, [1, 2, 1, 1])}, baseline="P", fold_majority=3, n_floor=39, control=None)
+    check("stage0: n < floor -> indeterminate", g0["verdict"] == "indeterminate")
+    g0 = grade_stage0({"P": _arm(60, 5.0, 3.0, [1, 2, 1, 1])}, baseline="P", fold_majority=3, n_floor=39,
+                      control={"ok": False})
+    check("stage0: failed control -> indeterminate", g0["verdict"] == "indeterminate" and g0["label"] == "control_failed")
+
+    lab, sets, unsets, extra = parse_arm("X=-stale_exit_bars;-stale_exit_below_r;--timeout-bars=100000;tp_r=3.0")
+    check("arm spec parses sets/unsets/extra", lab == "X" and unsets == ["stale_exit_bars", "stale_exit_below_r"]
+          and extra == ["--timeout-bars", "100000"] and sets == {"tp_r": 3.0})
+    check("empty spec is the leg as declared", parse_arm("W=")[1:] == ({}, [], []))
+    c = arm_cfg({"a": 1, "stale_exit_bars": 12}, {"b": 2}, ["stale_exit_bars"])
+    check("arm_cfg removes and sets", c == {"a": 1, "b": 2})
+
+    good = {"total_trades": 355, "net_total_r": 13.0223}
+    ctl_ok = check_control(_arm(356, 13.1, 13.0, [1, 1, 1, 1]), good, 0.02, 0.5)
+    ctl_bad = check_control(_arm(300, 13.1, 13.0, [1, 1, 1, 1]), good, 0.02, 0.5)
+    check("control passes within tolerance", ctl_ok["ok"] and not ctl_bad["ok"])
+
+    W = _arm(355, 13.0, 13.0, [2.0, -3.0, 20.0, -6.0])
+    # lever off: 3R worse pooled, worse in 3 of 4 folds -> build
+    X = _arm(340, 10.0, 13.5, [1.0, -3.5, 18.0, -5.5])
+    g = grade_parity({"W": W, "X": X}, baseline="W", candidate="X", delta_r=2.0, fold_majority=3, n_floor=88, control=ctl_ok)
+    check("parity: material + fold-consistent -> pass/build_close_verb", g["verdict"] == "pass" and g["label"] == "build_close_verb")
+    X2 = _arm(340, 12.5, 13.0, [2.5, -3.0, 19.0, -6.0])   # 0.5R worse, 1 fold win -> live without
+    g = grade_parity({"W": W, "X2": X2}, baseline="W", candidate="X2", delta_r=2.0, fold_majority=3, n_floor=88, control=ctl_ok)
+    check("parity: inside the bar -> fail/live_without_lever", g["verdict"] == "fail" and g["label"] == "live_without_lever")
+    X3 = _arm(340, 10.0, 13.5, [2.5, -3.5, 25.0, -14.0])  # 3R worse pooled but only 2 fold wins -> not build
+    g = grade_parity({"W": W, "X3": X3}, baseline="W", candidate="X3", delta_r=2.0, fold_majority=3, n_floor=88, control=ctl_ok)
+    check("parity: material but one-period -> fail (fold majority holds the line)", g["verdict"] == "fail")
+    X4 = _arm(340, -1.0, 20.0, [0, -5, 8, -4])
+    g = grade_parity({"W": W, "X4": X4}, baseline="W", candidate="X4", delta_r=2.0, fold_majority=3, n_floor=88, control=ctl_ok)
+    check("parity: stage-0 fails without -> pass/stage0_fails_without", g["verdict"] == "pass" and g["label"] == "stage0_fails_without")
+    g = grade_parity({"W": W, "X": X}, baseline="W", candidate="X", delta_r=2.0, fold_majority=3, n_floor=88, control=ctl_bad)
+    check("parity: failed control -> indeterminate, nothing read", g["verdict"] == "indeterminate" and g["label"] == "control_failed")
+    g = grade_parity({"W": _arm(50, 13.0, 13.0, [1, 1, 1, 1]), "X": X}, baseline="W", candidate="X", delta_r=2.0,
+                     fold_majority=3, n_floor=88, control=None)
+    check("parity: n below floor -> indeterminate/underpowered", g["verdict"] == "indeterminate" and g["label"] == "underpowered")
+
+    S = _arm(122, 14.6686, 6.0, [5, 2, 8, -0.3])
+    N = _arm(122, 14.6686, 6.0, [5, 2, 8, -0.3])
+    R1 = _arm(122, 16.2, 5.5, [5.5, 2.4, 8.5, -0.2])      # +1.53R, no worse DD, 4 fold wins -> passes
+    R2 = _arm(122, 15.0, 6.5, [5.2, 2.1, 8.1, -0.4])      # DD worse -> no
+    g = grade_sweep({"S": S, "N": N, "R1": R1, "R2": R2}, baseline="N", candidates=["R1", "R2"], delta_r=1.0,
+                    fold_majority=3, n_floor=39, control=None, same_as=("S", "N"))
+    check("sweep: a reachable arm beats the removed lever -> pass, best named",
+          g["verdict"] == "pass" and g["best"] == "R1" and not g["candidates"]["R2"]["passes"])
+    g = grade_sweep({"S": S, "N": N, "R2": R2}, baseline="N", candidates=["R2"], delta_r=1.0,
+                    fold_majority=3, n_floor=39, control=None, same_as=("S", "N"))
+    check("sweep: nothing clears -> fail/no_reachable_lever_beats_removed", g["verdict"] == "fail")
+    S2 = _arm(121, 14.0, 6.0, [5, 2, 8, -1])
+    g = grade_sweep({"S": S2, "N": N, "R1": R1}, baseline="N", candidates=["R1"], delta_r=1.0,
+                    fold_majority=3, n_floor=39, control=None, same_as=("S", "N"))
+    check("sweep: 'identical' arms differ -> indeterminate/premise_failed", g["verdict"] == "indeterminate" and g["label"] == "premise_failed")
+
+    # replace: operator rule (net R > A, >=3/4 folds >= A with ties, maxDD <= A*1.10)
+    A = _arm(100, 20.0, 10.0, [5, 5, 5, 5])
+    B1 = _arm(100, 22.0, 10.9, [5, 5, 6, 6])
+    B1["reach_ge_6r"] = 0.02
+    B2 = _arm(100, 25.0, 11.5, [9, 9, 9, -2])   # DD 15% worse -> no
+    B3 = _arm(100, 21.0, 9.0, [5, 6, 4, 6])     # 3 folds >= A (one tie, one loss)
+    B4 = _arm(100, 20.0, 9.0, [5, 5, 5, 5])     # not strictly greater
+    B5 = _arm(100, 23.0, 9.0, [6, 6, 4, 4])     # only 2 folds
+    g = grade_replace({"A": A, "B": B1, "C": B2, "D": B3, "E": B4, "F": B5}, baseline="A",
+                      candidates=["B", "C", "D", "E", "F"], fold_majority=3, n_floor=39, dd_tol_frac=0.10, control=None,
+                      tp_r_by_arm={"B": 6.0})
+    c = g["candidates"]
+    check("replace: only B and D pass; highest net R (B) wins; DD/strict/fold clauses each bite",
+          g["verdict"] == "pass" and g["best"] == "B" and c["B"]["passes"] and c["D"]["passes"] and not c["C"]["passes"]
+          and not c["E"]["passes"] and not c["F"]["passes"])
+    check("replace: tp_doctrine reach field reported (2% < floor -> not satisfied)",
+          c["B"]["tp_doctrine"]["satisfies_reach_floor"] is False)
+    g = grade_replace({"A": A, "C": B2, "E": B4}, baseline="A", candidates=["C", "E"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None)
+    check("replace: none pass -> fail/incumbent_stands", g["verdict"] == "fail" and g["label"] == "incumbent_stands")
+    g = grade_replace({"A": _arm(30, 1.0, 1.0, [0, 0, 0, 1]), "B": B1}, baseline="A", candidates=["B"], fold_majority=3,
+                      n_floor=39, dd_tol_frac=0.10, control=None)
+    check("replace: thin incumbent -> indeterminate", g["verdict"] == "indeterminate")
+    # materiality: B beats A by 2.0 R over 100 trades (0.02 R/trade) -- passes at 0.02, fails at 0.03
+    g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None, delta_r_per_trade=0.02)
+    check("replace: per-trade materiality bar met exactly -> pass", g["verdict"] == "pass" and g["delta_r_bar"] == 2.0)
+    g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None, delta_r_per_trade=0.03)
+    check("replace: below the per-trade materiality bar -> fail", g["verdict"] == "fail" and not g["candidates"]["B"]["passes"])
+
+    # calendar folds: four equal spans, a trade binned by entry_time, the last edge inclusive
+    import pandas as pd
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "c.csv"
+        ts = pd.date_range("2025-01-01", "2025-12-31 23:00", freq="h", tz="UTC")
+        pd.DataFrame({"timestamp": ts.strftime("%Y-%m-%d %H:%M:%S%z"), "open": 1.0, "high": 1.0, "low": 1.0,
+                      "close": 1.0, "volume": 1.0}).to_csv(p, index=False)
+        edges = fold_edges(str(p), "2025-01-01", "2025-12-31 23:00")
+        tr = [{"entry_time": "2025-02-01 00:00:00+00:00", "net_r": 1.0},
+              {"entry_time": "2025-07-15 00:00:00+00:00", "net_r": -2.0},
+              {"entry_time": "2025-12-31 23:00:00+00:00", "net_r": 0.5}]
+        f = fold_net_r(tr, edges)
+        check("folds: 4 calendar spans, trades binned by entry_time incl. the last edge",
+              len(f) == 4 and f[0]["net_r"] == 1.0 and f[2]["net_r"] == -2.0 and f[3]["net_r"] == 0.5 and f[1]["trades"] == 0)
+
+    # the argv builder reproduces the evidence builder's argv and applies the arm's edits
+    import yaml
+    legs = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text(encoding="utf-8"))["strategies"]
+    # The fixture is the live leg PLUS the levers the ablation removes, set explicitly: the live
+    # config is not a stable fixture (EXIT-LEVER-STRIP #17002 removed stale_exit_bars from
+    # trend_donchian_eth_prop on 2026-10-07, which made this check fail with the builder intact).
+    eth = legs.get("trend_donchian_eth_prop")
+    if isinstance(eth, dict):
+        eth = {**eth, "stale_exit_bars": 12, "stale_exit_below_r": 0.0}
+        base_argv, _ = build_arm_argv("trend_donchian_eth_prop", eth, "<d>", "1h", "<e>", "<j>", [], None, None)
+        x_cfg = arm_cfg(eth, {}, ["stale_exit_bars", "stale_exit_below_r"])
+        x_argv, _ = build_arm_argv("trend_donchian_eth_prop", x_cfg, "<d>", "1h", "<e>", "<j>",
+                                   ["--timeout-bars", "100000"], "2024-10-05", "2026-10-03 23:59")
+        check("trend arm argv: declared leg carries --stale-exit-bars, the ablated arm does not and pins the window",
+              "--stale-exit-bars" in base_argv and "--stale-exit-bars" not in x_argv
+              and x_argv[x_argv.index("--timeout-bars") + 1] == "100000" and "--start" in x_argv and "--end" in x_argv
+              and "--trail-decay-arm-r" in x_argv)
+    xrp = legs.get("xrp_pullback_2h")
+    if isinstance(xrp, dict):
+        s_argv, _ = build_arm_argv("xrp_pullback_2h", xrp, "<d>", "2h", "<e>", "<j>",
+                                   ["--trail-decay-arm-r", "4.49", "--trail-decay-tight-mult", "2.5"], None, None)
+        n_argv, _ = build_arm_argv("xrp_pullback_2h", xrp, "<d>", "2h", "<e>", "<j>", [], None, None)
+        check("pullback arm argv: the builder omits --trail-decay-* (why the record is approximate); the raw flag adds it",
+              "--trail-decay-arm-r" not in n_argv and s_argv[s_argv.index("--trail-decay-arm-r") + 1] == "4.49"
+              and "--tp-r" in n_argv and n_argv[n_argv.index("--tp-r") + 1] == "3.0")
+    print("self-test:", "PASS" if ok else "FAIL")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,137 @@
+id: RQ-20261014-4591-06
+title: 'AI trader / recency: does the 1h regime log-loss lift over the class prior hold on only the most recent 12,000 hours (about 500 days)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the last 12,000 rows per symbol only, does LightGBM or the logit beat the class prior by >= 0.005 nats of log-loss on the CV mean on BOTH symbols?
+why_this_matters: RQ-20261014-65cc-10 used a 40,000-row tail (about 4.5 years). If the lift is concentrated in older market structure, a recent-only window shows it; if it holds, the
+  heads are not living off history that no longer applies. Sibling of the holdout unit RQ-20261014-4591-01 with a different cut (window length, not a split date).
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 40000 with min_train_frac 0.4 leaves ~24000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows, so each symbol is above the row floor on rows,
+    but bars are autocorrelated so effective n is lower: the rule also requires the same-direction CV mean on BOTH symbols.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up is a larger
+      or different dataset, not a re-run.'
+decision_rule:
+  id: RULE-RQ20261014-4591-06-REGIME-LOGLOSS-RECENT-1H
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: Paired per-fold difference on identical purged folds (5, embargo 24 rows), mean over folds, per symbol; positive = candidate better.
+  rule: PASS IF a candidate (lgbm or logit) beats the class prior by >= +0.005 nats on the CV mean on BOTH symbols. FAIL IF no candidate beats the prior by >= 0 on the CV mean on ANY
+    symbol. INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: gates whether a downstream ML lever is worth building; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 20
+  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); compute: auto routes it to the Kaggle CPU kernel (published data; not metered by the GPU quota).'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 12000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - lgbm
+  - logit
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    logit:
+      kind: numpy_logit
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.005
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261014-4591-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261014-65cc-10
+- scripts/research/ml_bakeoff.py
+- RQ-20261014-4591-01
+last_dispatched_at: '2026-10-15T12:55:32+00:00'
+grading:
+  attested: RULE-RQ20261014-4591-06-REGIME-LOGLOSS-RECENT-1H
+  auto: true
+  decision_rule_id: RULE-RQ20261014-4591-06-REGIME-LOGLOSS-RECENT-1H
+  evidence:
+  - research/results/RQ-20261014-4591-06/38560877721.jsonl
+  - research/results/RQ-20261014-4591-06/38738478568.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: pass

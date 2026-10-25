@@ -1,0 +1,33 @@
+{
+  "unit": "RQ-20261013-0b07-01",
+  "run_id": "38419107113",
+  "commit_sha": "bdd36f2423f63aad4dac45cc40400dfb6ecbd334",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/38419107113",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/compute_smoke.py",
+        "--mode",
+        "gpu",
+        "--out",
+        "comms/research/RQ-20261013-0b07-01/38419107113"
+      ],
+      "log": "comms/research/RQ-20261013-0b07-01/38419107113/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 23.3
+    }
+  ],
+  "all_ok": true,
+  "provenance_correction": {
+    "corrected_on": "2026-10-13",
+    "as_found": {
+      "unit": "RQ-20261013-0b07-01",
+      "run_id": "38397260629",
+      "commit_sha": "8e00306eba8f7db6ec0acf5b262341a9a9ed7816"
+    },
+    "why": "stale Kaggle dataset mount: the kernel executed the PREVIOUS run's spec (fresh measurement, stale identity); unit/run_id fixed to the directory's, commit_sha taken from research/results/<unit>/<run_id>.jsonl produced_by; command argv/log paths rewritten to this directory; exit codes and timings are the kernel's own, unchanged"
+  }
+}

@@ -1,0 +1,120 @@
+id: RQ-20261025-d7e6-11
+title: 'AI-ATM rung C1 VARIANT (entry-set-clean arms): with arms A, D and M only, can an entry-bar chooser beat the best fixed arm by >= 0.03 R/trade without more than 10% of entries
+  excluded by the join?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M23
+programme: P1
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'RQ-20261024-09a6-04 read INDETERMINATE: 14.2% of entries were excluded by the join (the rule allows 10%), because an arm that exits earlier frees the position for a re-entry
+  the other arms do not take. MEASURED 2026-10-25 from the kept arm emits (comms/research/RQ-20261024-09a6-04/*/arms, six legs): excluded share by arm subset A,D = 7.5%, A,M = 5.0%,
+  A,S = 4.9%, A,T = 8.6%, A,D,M = 8.95%, A,D,S = 8.9%, A,M,S = 6.6%, A,D,M,S = 10.01% (just over), anything with T and D or M above 10.9%. Dropping the TP pull-in arm T and the momentum-stale
+  arm S keeps the two stop-side levers whose producers exist or are one build away (D stall decay is live; M ADX trail is MOMENTUM-LEVERS-LIVE). With arms A, D, M on the same six legs
+  and window, does the entry-bar chooser beat the best fixed arm by >= 0.03 R/trade (CI lower > 0, >= 4 of 6 folds, net R per capital-day not worse, maxDD <= 1.35x on every leg)?'
+why_this_matters: 'Design failure of the join, with an edge warning stated up front: in 09a6-04 the chooser collapsed to arm A on every trade (arm share A = 1.0) and arm A was the best
+  fixed arm in all 6 folds (mean net R on joined trades A 0.1533, D 0.1381, M 0.1303, S 0.1323, T 0.0946), so the hindsight oracle (0.378) is mostly the max of noisy arms. This variant
+  is worth one run because the join, not the chooser, was what the rule refused; a second collapse to A closes entry-bar arm choice on these arms.'
+power:
+  expected_n: 2604
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Joined trades: 2604 MEASURED for A,D,M (09a6-04 emits). The paired sd of an arm switch against A is 0.61 R (D) and 0.58 R (M) MEASURED on those trades, so the minimum detectable
+    effect of a rule that switched EVERY trade would be 0.030 / 0.028 R/trade at power 0.80 one-sided; a chooser switches only some trades, so its own sd and MDE are lower. Expected
+    n 2604. Stated plainly: against the 0.03 R bar a rule that switched every trade resolves 0.033 R/trade (sd 0.6, n 2604, two-sided 0.05, power 0.80; repo floor 3140 trades), slightly
+    above the bar, so this unit can grade INDETERMINATE even on a clean join; a chooser that switches half the trades has sd ~0.42 and resolves ~0.023. The bar is the parent''s and is
+    not lowered to fit.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025-D7E6-11-C1-CLEAN-ARMS
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'As 09a6-04: scripts/research/exit_arm_chooser.py over trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop
+    with arms A (declared), D (stall decay 10 bars / tight 1.8), M (ADX < 25 trail tight 2.5) only; cost-sensitive multinomial logistic chooser on ENTRY-BAR state, 6 purged calendar
+    folds, 2000 bootstrap resamples; every net R is the harness''s own resolve_cost_policy stack.'
+  rule: INDETERMINATE IF > 10% of the union of entries is excluded by the join (MEASURED 8.95% for A,D,M on the 09a6-04 emits), or < 600 joined trades (MEASURED 2604). PASS IF chooser
+    - best fixed >= +0.03 R/trade AND bootstrap CI lower > 0 AND >= 4 of 6 folds positive AND chooser net R per capital-day >= best fixed AND maxDD <= 1.35x best fixed on every leg.
+    FAIL IF the CI upper bound of (chooser - best fixed) < 0.03 R. OTHERWISE INDETERMINATE (unresolved). Thresholds are the parent's and are not changed after any result.
+  min_n: 600 joined trades pooled
+  what_it_does_not_do: 'Edits no config, places no order; chooses at the ENTRY bar only (per-bar switching is rung C2, earned by a PASS). Drops arms S and T by the measured exclusion
+    share, not by their results: T (TP pull-in) was the worst arm, so dropping it cannot flatter the chooser. Does not pool with 09a6-04.'
+blocked_on: []
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+  basis: 'stand-in: the prize is the giveback (book keeps ~13% of peak R, 90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md); not a P&L measurement of this lever.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  why_runner: Keyless public candles + config-exact harness runs; reads no trainer data.
+  basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16) plus the fit.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_arm_chooser.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_xrp_4h
+  - --leg
+  - xrp_pullback_2h
+  - --leg
+  - ada_pullback_2h
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=
+  - --arm
+  - D=--trail-decay-stall-bars=10;--trail-decay-tight-mult=1.8
+  - --arm
+  - M=--trail-adx-below=25;--trail-adx-tight-mult=2.5
+  - --baseline
+  - A
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --n-folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --min-n
+  - '600'
+  - --max-excluded
+  - '0.10'
+  - --min-gain-r
+  - '0.03'
+  - --min-folds
+  - '4'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261025-d7e6-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261024-09a6-04.yaml
+- comms/research/grading/RESULTS-GRADE-1025.json
+top_notdo: Chooses at the entry bar only (per-bar switching needs a harness that takes a policy; that is rung C2, earned by a PASS). Changes no config.
+last_dispatched_at: '2026-10-25T07:01:43+00:00'
