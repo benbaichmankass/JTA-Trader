@@ -254,12 +254,13 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
 EXIT_BUF_FRAC = 0.001
 
 
-def exit_stop(direction: str, price: float, step: Optional[float], atr: Optional[float]) -> float:
+def exit_stop(direction: str, price: float, step: Optional[float], atr: Optional[float],
+              frac: float = EXIT_BUF_FRAC) -> float:
     """The tightest SAFE stop when the trail has been crossed: ``price + buffer`` for a short, ``price - buffer``
     for a long, rounded to the venue step on the LOOSE side (away from price). It fills on the next adverse tick,
     approximating the harness's exit at the trail (worse by the buffer)."""
     st = step if step and step > 0 else 0.0
-    buf = max(2 * st, EXIT_BUF_FRAC * float(price), QUOTE_BUFFER_ATR * float(atr or 0.0))
+    buf = max(2 * st, float(frac) * float(price), QUOTE_BUFFER_ATR * float(atr or 0.0))
     if direction == "long":
         raw = float(price) - buf
         return round(math.floor(raw / st + 1e-9) * st, 10) if st else raw
