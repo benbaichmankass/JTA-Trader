@@ -2,7 +2,7 @@
   "id": "ML-READ-1025",
   "title": "Read the forecaster bake-off (9da8-01), TabICL/TabPFN and GRU-variant results; read Timestral-209M licence and add it as an arm if usable",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
@@ -11,12 +11,21 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Sun). Walkthrough \u00a74 frontier: Timestral after FRONTIER-LEVER-TSFM lands (landed #19550).",
+  "note": "2026-10-25 lane read done: record comms/ml-plan/20261025T0000Z-ML-READ-1025.json. 9da8-01 machine FAIL but underpowered for the floor (accruing, no override; measured fold sd needs ~17 folds) and PASS rejected on BTC; TabICL/TabPFN/GRU units all INDETERMINATE; GRU delta vs fair baseline positive in 17/18 configs but fold sd 0.03 makes +0.010 unresolvable (ML-F29 needs_authoring). Timestral-209M licence = Modified MIT, rights lapse above USD 20M monthly revenue; research clear, new unit RQ-20261025-7ee1-01 (blocked on loader, row FRONTIER-LEVER-TSFM-TIMESTRAL). PREFERENCE QUESTION FOR MANAGER (not decided): does the serving entity stay at or under USD 20M global monthly revenue, with trading P&L not counted as revenue? Needed only before live serving.",
   "priority_rank": 11,
-  "updated_at": "2026-10-23T15:00:33Z",
-  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "updated_at": "2026-10-25T04:15:05Z",
+  "updated_by": "session_01Uu4FohckqnmdhhZa4iUaT2",
   "roadmap": [
     "M25"
   ],
+  "writeback": {
+    "roadmap": "none: lane read of results; no milestone line changed",
+    "arch": "none: no architecture section changed (ML plan items and a blocked unit only)"
+  },
+  "observation": {
+    "what": "PR #19998 merged to main and ml_plan_status.py shows ML-F28 blocked and ML-F29 queued with no CLOSED-OPEN flag",
+    "how_to_check": "python3 scripts/ops/ml_plan_status.py | grep -E \"ML-F2[289]\"",
+    "due_by": "2026-11-01"
+  },
   "_seq": 605
 }
