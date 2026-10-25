@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-01
 title: 'Chop-gate strength variant: does a stricter CHOP gate (0.80 / 0.90) tighten the trail only in the worst chop and beat the declared prop leg trend_donchian_sol_prop?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -114,3 +114,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T05:02:15+00:00'
+grading:
+  attested: RULE-RQ20261024014201-SOLPROPCHOPGATEWID
+  auto: true
+  decision_rule_id: RULE-RQ20261024014201-SOLPROPCHOPGATEWID
+  evidence:
+  - research/results/RQ-20261024-0142-01/40164101027.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

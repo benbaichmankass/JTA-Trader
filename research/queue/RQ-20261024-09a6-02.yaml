@@ -1,7 +1,7 @@
 id: RQ-20261024-09a6-02
 title: 'AI-ATM rung A2: does FLOW (funding, taker imbalance, open interest where history exists) add per-bar exit information beyond
   the price state, on the crypto money legs as traded?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -113,3 +113,17 @@ related:
 what_it_does_not_do: Changes no config; builds no live producer. A PASS earns flow a place in the policy state and makes a live flow
   producer a prerequisite of any shadow; it is not a promotion.
 last_dispatched_at: '2026-10-25T03:54:23+00:00'
+grading:
+  attested: RULE-RQ20261024-09A6-02-FLOW-INFO
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261024-09A6-02-FLOW-INFO
+  evidence:
+  - research/results/RQ-20261024-09a6-02/40158010225.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

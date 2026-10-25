@@ -1,7 +1,7 @@
 id: RQ-20261024-1eb9-01
 title: 'Confirmation of the f08c-22 PASS (path metrics at bar 24 predict giveback on the prop legs, ll clause only): same statistic and bar on
   the three trend legs it was NOT selected on'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -106,3 +106,16 @@ related:
 - scripts/research/path_metric_giveback.py
 programme: P1
 last_dispatched_at: '2026-10-25T03:54:25+00:00'
+grading:
+  attested: RULE-1EB9-01-PATH-METRIC-K24-CONFIRM
+  auto: true
+  decision_rule_id: RULE-1EB9-01-PATH-METRIC-K24-CONFIRM
+  evidence:
+  - research/results/RQ-20261024-1eb9-01/40158012841.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

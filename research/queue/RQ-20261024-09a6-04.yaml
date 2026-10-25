@@ -2,7 +2,7 @@ id: RQ-20261024-09a6-04
 title: 'AI-ATM rung C1: a policy layer -- per trade, can a state-conditioned chooser pick among the already-validated rule exits (stall
   trail decay, ADX trail, momentum-stale, measured-move / stall pull-in TP) better than the best single fixed choice? Full-information
   counterfactuals, no propensities.'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -138,3 +138,17 @@ related:
 what_it_does_not_do: Chooses at the entry bar only (per-bar switching needs a harness that takes a policy; that is rung C2, earned by
   a PASS). Changes no config.
 last_dispatched_at: '2026-10-25T02:16:53+00:00'
+grading:
+  attested: RULE-RQ20261024-09A6-04-ARM-CHOOSER
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261024-09A6-04-ARM-CHOOSER
+  evidence:
+  - research/results/RQ-20261024-09a6-04/40153889868.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
