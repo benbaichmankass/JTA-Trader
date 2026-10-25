@@ -22,10 +22,11 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import backtest_ict_scalp as bt  # noqa: E402
-import regime_debt_matrix as rdm  # noqa: E402
-from src.runtime import execution_costs  # noqa: E402
-from src.units.strategies import load_strategy_config  # noqa: E402
+import backtest_ict_scalp as bt
+import regime_debt_matrix as rdm
+
+from src.runtime import execution_costs
+from src.units.strategies import load_strategy_config
 
 
 def run_arm(leg: str, csv: str, out: Path, arm: str) -> dict:
