@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "14 days of breakout_2 amend capture runs show no sheet_not_open failure, or the app's sheet-open path is fixed and observed opening the sheet on a live amend",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-11CORKKG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PHONE-AMEND-REFUSED-1025 (PR #20122)",
+    "rerun": "scripts/ops/diag_fetch.sh 'phone_captures?account_id=breakout_2&limit=200' | python3 -c \"import json,sys;[print(r['run_id'],r['failed']) for r in json.load(sys.stdin)['runs'] if r['flow']=='amend']\""
+  },
+  "routed_to": "checklist:PHONE-AMEND-REFUSED-1025",
+  "state": "routed",
+  "what": "breakout_2 phone app: amend attempts #a2-#a4 on prop-manual-2e786ef17c05 (2026-10-24 16:00-23:00Z) failed sheet_not_open: target_child_entry / target_child_tpsl / target_child all 'coveredbutton/tab' (the position sheet's tap target was covered by another element), so the exit stop never reached the terminal. Same failure on prop-manual-c4fdc772df5b #a1-#a3 on 2026-10-22. Separate from the qty refusal fixed in #20122. Root-cause in tools/phone-executor (sheetRead / child_entry hit-test) from the per-step captures."
+}
