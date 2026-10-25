@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only — the live-trade-review pricing tool; a reviewer session RUNS it per open trade (LTR-3 skill will call it), no schedule or workflow consumes it.
 """Conditional outcome table for an OPEN trade: HOLD vs each TIGHTEN, from the leg's own history.
 
     python3 scripts/research/live_review_outcomes.py --leg ada_pullback_2h --side short \\
