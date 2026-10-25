@@ -211,6 +211,10 @@ def test_measured_state_2026_08_17():
     # emits the cells on `--levers tp_extend,tp_retarget`, and nothing blocks the
     # run -- so counting them is the cut doing its job, not a regression. Pinned
     # as exactly those two columns so any OTHER cell becoming movable still fails.
+    # 2026-10-25 (merging MI-278 U3, PR #11933): the 7 ict_scalp `bracket_geometry` cells that main had
+    # parked as blocked:out_of_scope_family carry measured verdicts again (honest_negative x6,
+    # passed_unshipped x1); neither bucket count moves, which is the check that they were worked
+    # rather than reclassified.
     movable = cut.get("movable", [])
     assert {i[3] for i in movable} == {"tp_extend", "tp_retarget"}
     # 76 -> 73 on 2026-10-18 (lane ACTIVE-MGMT-DRIVE-1018, Programme 01 confirmations

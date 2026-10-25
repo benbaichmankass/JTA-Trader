@@ -271,6 +271,11 @@ written after seeing the number:
   status is **"first test failed → variants queued"**, never "dead". Retire dependent units whose
   `requires_result` can no longer be met, but retire a *family* only through
   `scripts/research/family_retirement_policy.yaml`.
+  Write ONE line per FAIL in the run record's `results_read` (and the unit's follow-up note):
+  **"configuration closed: <what was tested>; family <name> stays open; next test = <unit id or the question>"**.
+  A unit may carry `family: <name>` (and `retires_family:` defaults to false); only a C-verdict review record
+  with all six protocol items (`research/family_reviews/README.md`) retires one; `family-retirement-guard`
+  refuses family-closure wording or a `retires_family:` without one.
 - **indeterminate →** extend n or redesign, in one line, and a unit that does it.
 
 Record each disposition with `research_disposition.py --record` (it routes to `append` and

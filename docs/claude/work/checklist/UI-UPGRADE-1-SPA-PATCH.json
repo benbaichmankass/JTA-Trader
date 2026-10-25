@@ -2,21 +2,32 @@
   "id": "UI-UPGRADE-1-SPA-PATCH",
   "title": "Apply the SPA patch comms/ui-upgrade-1/ict-trader-dashboard-ui-upgrade-1.patch (items 1-client, 2, 3-display, 4, 5, 6, 8) to ict-trader-dashboard via a manager-dispatched session with push",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    "benbaichmankass/ict-trader-dashboard#230"
+  ],
   "blocked_on": [],
-  "note": "Split from UI-UPGRADE-1 by BLOCKERS-1025 2026-10-25. Not an operator decision: the original lane could not push to benbaichmankass/ict-trader-dashboard, but the manager merged dashboard PRs #222/#223 so push exists at manager level. Patch was built against ict-trader-dashboard@f2ac028 (git am; rebase onto current main first). Done when the live SPA Overview renders each call as it lands, the work-queue box shows, and nav order is real money/paper/prop.",
+  "note": "Split from UI-UPGRADE-1 by BLOCKERS-1025 2026-10-25. Not an operator decision: the original lane could not push to benbaichmankass/ict-trader-dashboard, but the manager merged dashboard PRs #222/#223 so push exists at manager level. Patch was built against ict-trader-dashboard@f2ac028 (git am; rebase onto current main first). Done when the live SPA Overview renders each call as it lands, the work-queue box shows, and nav order is real money/paper/prop.  [lane] Applied via git am -3 onto main 8bea05d; one conflict (ExecSummary prop uPnL) resolved keeping main's superset. Local check/build/7 contract tests and 8 CI checks green. Merged, deploy queued at 12:04Z, not observed.",
   "priority_rank": 6,
-  "updated_at": "2026-10-25T06:49:37Z",
-  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "updated_at": "2026-10-25T12:05:47Z",
+  "updated_by": "session_019DEUcepacH9dxshdLTHphS",
   "roadmap": [
     "M6"
   ],
+  "writeback": {
+    "roadmap": "none: SPA patch applied as written; M6 milestone text unchanged until observed",
+    "arch": "none: front-end only, API/CORS contract unchanged"
+  },
+  "observation": {
+    "what": "ict-trader-dashboard#230 merged (46ed0bb); Pages deploy of 46ed0bb succeeds and the live SPA Overview renders each call as it lands, shows the work-queue box, and nav order is real money / paper / prop",
+    "how_to_check": "gh run list for pages.yml on 46ed0bb = success; fetch the deployed index and confirm the new bundle hash; open Overview and Accounts in a browser",
+    "due_by": "2026-10-27"
+  },
   "_seq": 647
 }

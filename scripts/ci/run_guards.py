@@ -1365,6 +1365,17 @@ GUARDS: List[Dict[str, Any]] = [
                    "--base", "origin/{base_ref}"]],
     },
     {
+        # RESEARCH-ENGINE-1016 (operator 2026-10-16): a cell FAIL closes a CONFIG; retiring a FAMILY
+        # needs research/family_reviews/<family>.yaml meeting scripts/research/family_retirement_policy.yaml.
+        # Structured retirements are graded whole-tree; closure WORDING only on added lines (--base).
+        "name": "family-retirement-guard",
+        "when": {"globs": ["research/**", "docs/plans/ml-plan-items.yaml", "docs/research/programmes/**",
+                            "comms/research/ops/**", "comms/perf_followup/**",
+                            "scripts/research/family_retirement_guard.py"]},
+        "steps": [["python3", "scripts/research/family_retirement_guard.py", "--self-test"],
+                  ["python3", "scripts/research/family_retirement_guard.py", "--base", "origin/{base_ref}"]],
+    },
+    {
         # RESEARCH-ENGINE-1016 (2026-10-16): every question a programme PLAN asks
         # (docs/research/programmes/<NN>-*.md) must have a node in its machine-read tree
         # (research/programmes/<NN>-*.yaml), or nothing ever reaches the authoring queue. A
