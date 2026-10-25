@@ -26,9 +26,33 @@ Contract (every rule fails closed):
 * **Results** (``kind: amend_result``): ``amended`` (read back on the terminal, re-checked
   here against the asked levels), ``dry_amended`` (walked, typed, read back in the dialog,
   cancelled), ``refused`` (no click), ``no_position``, ``human_moved``, ``mismatch`` (a
-  click whose result did not read back). A ``mismatch``, a ``human_moved``, a second
-  ``refused`` or a claimed amend with no report LOCKS the ticket's trail and pings the
-  operator: an amend that cannot be verified is never retried.
+  click whose result did not read back).
+* **No halting** (operator directive 2026-10-09, Prime Directive rule 7: *"There is no
+  halting."*). A ``refused``, a ``mismatch`` or a claimed amend with no report is THAT
+  ATTEMPT failing: the ticket backs off (1, 2, 4 ... capped at :data:`BACKOFF_CAP_BARS`
+  closed bars) and is re-planned. The next amend still carries the stop the server believes
+  is resting, so the phone's pre-click check decides whether the terminal agrees before any
+  click. The first failure of a streak pings; :data:`FLAG_AFTER` consecutive failures raise
+  ONE red flag; the first success after a flag announces recovery once. A ``no_position``
+  read is a miss, never an end: it backs off and re-checks (a position that is really gone
+  is simply never amended again; the ticket ages out after :data:`MAX_AGE_DAYS`).
+* **A human's stop is never fought.** ``human_moved`` holds the ticket's trail
+  (``human_hold``) until the human's levels are on record (a ``{kind: amend}`` report,
+  :func:`note_human_amend`); the trail then resumes from them. That is the operator acting,
+  not a self-halt. A ``locked``/``ended`` state persisted by the pre-2026-10-09 code is
+  ignored on load with a log line (a human-moved lock is carried over as ``human_hold``).
+* **An UNREAD stop is never a human move** (operator, 2026-10-18, breakout_2
+  ``prop-manual-c1dba3c376b3#a7``: the app 1b.265 reported ``human_moved`` with *"terminal
+  stop null != expected 2452.65"* — ``sheetOrders()`` returns ``trigger: null`` when the Stop
+  row holds 0 or 2+ price cells, and ``close(null, …)`` is false — and the server held the
+  trail although nobody had moved anything). *"We did not read it"* and *"we read it and it
+  differs"* are distinct states (the collapsed-states rule): a ``human_moved`` report that
+  carries no read value and whose evidence is a null/absent reading (:func:`_unread_stop`)
+  is recorded as ``unread`` — THAT attempt failed, backoff, retried, flagged like any other
+  failure, one alert per live attempt naming the stop the plan wants — and never a hold. A
+  ``human_hold`` already written from such a report is released on the next plan
+  (:func:`_release_unread_hold`, a ``hold_released`` history row), so the trail resumes on
+  its own; no journal edit by hand.
 * ``submit`` follows the entry path's own decision (:func:`phone_executor.submit_mode`);
   there is no device-local switch on top (ARMED-GATE). No new gate.
 * TP: :func:`request_tp_amend` publishes a TP revision through the same slot for lane
@@ -39,6 +63,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Mapping, Optional
 
@@ -49,11 +74,13 @@ logger = logging.getLogger(__name__)
 KEY = "phone_trail"
 AMEND_VALID_S = 20 * 60          # an emitted amend not claimed in time expires (re-planned next bar)
 CLAIM_TIMEOUT_S = 180            # same watchdog as an entry claim (phone_executor.CLAIM_TIMEOUT_S)
-MAX_REFUSALS = 2                 # pre-click refusals per ticket before its trail locks
-MAX_NO_POSITION = 6              # unseen-position reads (limit not yet filled) before the trail ends
+FLAG_AFTER = 3                   # consecutive failed attempts on one ticket -> ONE red flag (never a stop)
+BACKOFF_CAP_BARS = 8             # retry backoff after a failed attempt: 1, 2, 4, 8, 8 ... closed bars
+MAX_NO_POSITION = 6              # never-seen position reads -> ONE red flag (re-checked with backoff, never ended)
 MAX_AGE_DAYS = 14                # parent tickets older than this are not planned
 PARENT_STATUSES = ("placed", "filled")
 RESULTS = ("amended", "dry_amended", "refused", "no_position", "human_moved", "mismatch")
+UNREAD = "unread"                # recorded status of a human_moved report that read nothing (never a hold)
 QUOTE_BUFFER_ATR = 0.1           # prop_trail.QUOTE_BUFFER_ATR: the new stop clears the price by this many ATRs
 _HISTORY_MAX = 12
 
@@ -128,8 +155,144 @@ def _levels(row: Mapping[str, Any], tr: Mapping[str, Any], step: Optional[float]
     return sl, tp
 
 
-def _lock(tr: Dict[str, Any], why: str) -> None:
-    tr["locked"] = why
+_HUMAN_LOCK_PREFIX = "the terminal's stop differs"
+_UNREAD_RE = re.compile(r"(terminal stop|modal trigger|stop trigger|trigger)\s*(=|!=|is)?\s*(null|none|nan|unread)\b"
+                        r"|stop\s+unread|unread\s+stop", re.IGNORECASE)
+
+
+def _stop_rows(form: Any) -> List[Mapping[str, Any]]:
+    """The Stop rows of a ``sheetOrders()`` dump the app attached as ``form`` ({rows: [{type, trigger, n_px}]})."""
+    rows = form.get("rows") if isinstance(form, Mapping) else None
+    return [x for x in (rows or []) if isinstance(x, Mapping) and str(x.get("type") or "") == "stop"]
+
+
+def _unread_stop(reason: str, sl_read: Any, form: Any) -> Optional[str]:
+    """Why a ``human_moved`` report is an UNREAD stop rather than a different one, or None when it
+    carries a reading. Evidence, in order: the app read a value (``sl_read``) -> not unread; the
+    attached ``sheetOrders`` dump shows the Stop row with ``trigger: null`` (0 or 2+ price cells,
+    ``n_px``) or no Stop row at all; else the reason text says the reading was null/unread. A
+    reason that names two numbers ("terminal SL 2470 != 2450") is a genuine mismatch: a human."""
+    if _f(sl_read) is not None:
+        return None
+    stops = _stop_rows(form)
+    if stops:
+        st = stops[0]
+        if _f(st.get("trigger")) is None:
+            n = st.get("n_px")
+            why = st.get("why")
+            return (f"the Stop row's trigger did not read (price cells n={n})" if n is not None
+                    else f"the Stop row's trigger did not read ({why or 'no value'})")
+    elif isinstance(form, Mapping) and form.get("rows") is not None:
+        return "no Stop row read on the [TP/SL] tab"
+    m = _UNREAD_RE.search(str(reason or ""))
+    if m:
+        return f"the stop did not read ({m.group(0).strip()})"
+    return None
+
+
+def _release_unread_hold(tr: Dict[str, Any], tid: str, now: datetime) -> Optional[str]:
+    """Drop a ``human_hold`` that an UNREAD-stop report wrote (the pre-fix classifier, or an older
+    app), with a ``hold_released`` history row. Returns the reason, or None when the hold stands
+    (a genuine human move, or no evidence either way: a hold is never dropped on a guess)."""
+    hold = tr.get("human_hold")
+    if not hold:
+        return None
+    am = tr.get("amend") or {}
+    if str(am.get("status") or "") != "human_moved":
+        return None
+    why = _unread_stop(str(am.get("reason_reported") or ""), am.get("sl_read"), am.get("form"))
+    if why is None:
+        return None
+    tr.pop("human_hold", None)
+    tr["amend"] = {**am, "status": UNREAD, "read_state": "unread", "hold_released_at": now.isoformat()}
+    _hist(tr, {"status": "hold_released", "at": now.isoformat(), "amend_id": am.get("id"),
+               "why": f"human_moved was an unread stop, not a human move: {why}"})
+    logger.warning("phone_trail: %s: released human_hold (%s): %s", tid, hold, why)
+    return why
+
+
+def _load_trail(m: Mapping[str, Any], tid: str) -> Dict[str, Any]:
+    """The ticket's trail state. A permanent ``locked``/``ended`` written by the pre-2026-10-09
+    code is dropped (no halting); a human-moved lock is carried over as ``human_hold``."""
+    tr = dict(m.get(KEY) or {})
+    old_lock = tr.pop("locked", None)
+    old_end = tr.pop("ended", None)
+    if old_lock and str(old_lock).startswith(_HUMAN_LOCK_PREFIX):
+        tr.setdefault("human_hold", str(old_lock))
+    elif old_lock or old_end:
+        logger.info("phone_trail: %s: ignoring stale %s from the old code (no halting): %s", tid,
+                    "lock" if old_lock else "end", old_lock or old_end)
+    return tr
+
+
+def _backoff_bars(n: int) -> int:
+    return min(2 ** max(int(n) - 1, 0), BACKOFF_CAP_BARS)
+
+
+PASSES_TO_ARM = 3   # mirrors src.prop.phone_drill.PASSES_TO_ARM (the gate's own constant is read through the gate)
+
+
+def _sheet_edit_gate(account_id: str) -> Dict[str, Any]:
+    """The live pencil + Confirm gate the claim config carries to the app (:func:`src.prop.phone_drill.sheet_edit`).
+    Fail CLOSED on a read error, like the claim config does."""
+    try:
+        from src.prop import phone_drill
+        g = dict(phone_drill.sheet_edit(account_id) or {})
+        return g
+    except Exception:  # noqa: BLE001  # allow-silent: a gate that cannot be read is closed; logged
+        logger.warning("phone_trail: sheet_edit gate read failed for %s", account_id, exc_info=True)
+        return {"enabled": False, "source": "unreadable", "passes": None}
+
+
+def _served_exec_js() -> Optional[str]:
+    """The exec.js version the server currently SERVES to the phone (signed and matching the tree), else None.
+    Recorded on every failed attempt; a newer served version waives that attempt's backoff once."""
+    try:
+        from src.prop import phone_exec_js
+        st = phone_exec_js.status()
+        return str((st.get("tree") or {}).get("version") or "") if st.get("served") else None
+    except Exception:  # noqa: BLE001  # allow-silent: the backoff keeps its normal clock when the status is unreadable
+        logger.warning("phone_trail: exec.js status unreadable", exc_info=True)
+        return None
+
+
+def _fail(tr: Dict[str, Any], tid: str, at: str, what: str, alerts: List[str], *, counter: str = "fails",
+          flag_at: int = FLAG_AFTER, first: Optional[str] = None) -> None:
+    """One attempt failed: count it, back off, ping on the first of a streak, ONE red flag at
+    ``flag_at`` (0 = never flag). Never ends or locks the trail."""
+    n = int(tr.get(counter) or 0) + 1
+    tr[counter] = n
+    tr["backoff"] = {"n": n, "since": at, "exec_js": _served_exec_js()}
+    if n == 1 and first:
+        alerts.append(f"{tid}: {first}")
+    if flag_at and n == flag_at and not tr.get("flagged"):
+        tr["flagged"] = what
+        alerts.append(f"🚩 {tid}: {n} consecutive failed trail attempts ({what}). The trail keeps retrying "
+                      f"with backoff (up to every {BACKOFF_CAP_BARS} bars); it needs help to succeed. CHECK the "
+                      "stop and target on the terminal")
+    elif n > 1:
+        logger.warning("phone_trail: %s: attempt failed again (%s x%d): %s", tid, counter, n, what)
+
+
+def _hand_set_alert(tid: str, row: Mapping[str, Any], am: Mapping[str, Any], reason: str, cap_run: str) -> str:
+    """A LIVE amend the phone refused before any click (PHONE-EXEC-OBSERVABLE-1018, piece 5; operator 2026-10-18):
+    the trail keeps retrying with backoff, and EVERY refusal tells the operator the exact stop to set by hand, with
+    the link to that attempt's per-step captures (``capture_run`` from the phone's report)."""
+    from src.prop import phone_captures
+    tp = f"; TP -> {am.get('tp')}" if am.get("tp") is not None and am.get("tp") != am.get("from_tp") else ""
+    link = phone_captures.capture_link(str(row["account_id"]), cap_run) if cap_run else "none posted"
+    return (f"{tid}: LIVE amend REFUSED before any click ({reason[:120]}). SET THE STOP BY HAND on the terminal: "
+            f"{row['symbol']} {row['direction']} stop -> {am.get('sl')} (from {am.get('from_sl')}){tp}. "
+            f"The trail retries with backoff. Step captures: {link}")
+
+
+def _ok(tr: Dict[str, Any], tid: str, alerts: List[str]) -> None:
+    """An attempt succeeded: the streak and its backoff clear; a raised flag is announced recovered once."""
+    tr["fails"], tr["no_position"], tr["absent"] = 0, 0, 0
+    tr.pop("backoff", None)
+    flagged = tr.pop("flagged", None)
+    if flagged:
+        alerts.append(f"✅ {tid}: trail RECOVERED (was flagged: {str(flagged)[:120]})")
 
 
 def _hist(tr: Dict[str, Any], entry: Mapping[str, Any]) -> None:
@@ -188,22 +351,50 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     leg = legs.get(str(r["strategy"] or ""))
     if not leg:
         return
-    tr = dict(m.get(KEY) or {})
-    if tr.get("locked") or tr.get("ended"):
+    tr = _load_trail(m, tid)
+    gate = _sheet_edit_gate(account_id)
+    if not gate.get("enabled"):
+        # THE GATE (PHONE-EXEC-OBSERVABLE-1018): the app refuses the pencil click until the server's sheet_edit says
+        # so (3 drill passes, or the operator's pin). Emitting an amend it will refuse by design only burns the
+        # ticket's backoff (measured 2026-10-18: every refusal counted as a failure). So the server does not emit
+        # while the gate is closed: the plan is logged, ONE alert per ticket names what arms it, nothing backs off,
+        # and the next plan after the gate opens emits at once.
+        why = (f"sheet_edit gate closed ({gate.get('source') or 'drills'}: passes {gate.get('passes')}/"
+               f"{gate.get('needed') or PASSES_TO_ARM})")
+        out["log"].append({"ticket_id": tid, "why": why})
+        if not tr.get("gate_alerted"):
+            tr["gate_alerted"] = now.isoformat()
+            if _cas(conn, tid, raw, {**m, KEY: tr}):
+                out["alerts"].append(f"{tid}: no amend emitted while the {why}; the live stop edit arms after "
+                                     f"{PASSES_TO_ARM} rehearsal-drill passes on this phone (phone-drill) or the "
+                                     "operator's phone_accounts.<acct>.sheet_edit pin")
         return
+    if tr.get("human_hold"):
+        released = _release_unread_hold(tr, tid, now)
+        if released is None:
+            return  # a human's stop is on the terminal: never fought; resumes on their {kind: amend} report
+        m2 = {**m, KEY: tr}
+        if not _cas(conn, tid, raw, m2):
+            return
+        raw, m = json.dumps(m2), m2
+        out["alerts"].append(f"{tid}: hold RELEASED — the 'human_moved' on record was an unread stop, not a human "
+                             f"move ({released}); the trail re-plans from the server's resting stop")
     am = dict(tr.get("amend") or {})
     st = am.get("status")
-    # Watchdog: a CLAIMED amend with no report means the stop on the terminal is UNKNOWN.
+    # Watchdog: a CLAIMED amend with no report means the stop on the terminal is UNKNOWN. That attempt
+    # failed; the next one re-checks the terminal against the server's resting stop before any click.
     if st == "claimed":
         ca = _parse(am.get("claimed_at"))
         if ca and (now - ca).total_seconds() > CLAIM_TIMEOUT_S:
             am["status"] = "unreported"
             tr["amend"] = am
             _hist(tr, {**am, "at": now.isoformat()})
-            _lock(tr, "claimed amend got no report: the stop on the terminal is UNKNOWN")
+            wd_alerts: List[str] = []
+            _fail(tr, tid, str(am.get("claimed_at")), "claimed amend got no report", wd_alerts,
+                  first=f"amend {am.get('id')} to SL {am.get('sl')} was claimed and never reported; the stop on "
+                        "the terminal is UNKNOWN until the next attempt reads it. Retrying with backoff")
             if _cas(conn, tid, raw, {**m, KEY: tr}):
-                out["alerts"].append(f"{tid}: amend {am.get('id')} to SL {am.get('sl')} was claimed and never "
-                                     "reported; trail LOCKED for this ticket. CHECK the stop on the terminal.")
+                out["alerts"].extend(wd_alerts)
         return
     if st == "emitted":
         vu = _parse(am.get("valid_until"))
@@ -220,6 +411,19 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     tf_min = prop_trail._TF_MINUTES.get(tf)
     if tf_min is None:
         return
+    bo = tr.get("backoff") or {}
+    since = _parse(bo.get("since"))
+    if since is not None and now < since + timedelta(minutes=tf_min * _backoff_bars(int(bo.get("n") or 1))):
+        # backing off after a failed attempt: retried once the wait has passed, never dropped. ONE exception
+        # (operator 2026-10-18, breakout_2 #a8 at fails=7 = an 8-bar wait): a NEW signed exec.js is a new reader,
+        # so the wait is waived ONCE per served version — the fix is tried on the next plan, not tomorrow.
+        served = _served_exec_js()
+        if not served or bo.get("exec_js") == served:
+            return
+        was = bo.get("exec_js") or "unknown"
+        tr["backoff"] = {**bo, "exec_js": served, "waived_at": now.isoformat()}
+        out["log"].append({"ticket_id": tid, "why": f"backoff waived once: exec.js {served} is newer than the "
+                                                    f"script the last attempt ran ({was})"})
     bar = _closed_bar_start(now, tf_min)
     if tr.get("last_bar") == bar:
         return
@@ -258,13 +462,29 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
             new = plan.sl
         else:
             tr["last_plan"]["why"] = f"new stop {plan.sl} within {buf:.4g} of the price {px}: not amended"
+    exit_ = False
+    if plan.action == "exit" and candles is not None and len(candles):
+        # TRAIL CROSSED (PI-20261015-JWMGXOTH-0002): the harness has exited (prop_trail.plan_trail); the stop goes
+        # to the feed price + buffer (short) / - buffer (long), tighten-only, through the same amend channel. The
+        # phone re-checks it against the venue's own price before any click.
+        px = float(candles["close"].iloc[-1])
+        tgt = prop_trail.exit_stop(direction, px, step, plan.detail.get("atr"))
+        if prop_trail.tightens(direction, resting_sl, tgt, step):
+            new, exit_ = tgt, True
+            if not tr.get("exit_alerted"):
+                alerts.append(f"{tid}: trail CROSSED (replay {plan.replay_sl} through the price {px}): the harness "
+                              f"has exited, so the stop amend is to {tgt} (price + buffer). Tighten-only; no close")
+                tr["exit_alerted"] = True
+        else:
+            tr["last_plan"]["why"] = f"{plan.why}; the resting SL {resting_sl} is already at or inside {tgt}"
     if new is not None:
         seq = int(tr.get("seq") or 0) + 1
         tr["seq"] = seq
         tr["amend"] = {"id": f"{tid}#a{seq}", "status": "emitted", "kind": "sl", "from_sl": resting_sl,
                        "sl": new, "from_tp": resting_tp, "tp": resting_tp, "emitted_at": now.isoformat(),
                        "valid_until": (now + timedelta(seconds=AMEND_VALID_S)).isoformat(),
-                       "reason": f"trail: {tf} chandelier replay (bars={plan.bars}, mfe_r={plan.detail.get('mfe_r')})"}
+                       "reason": (f"trail crossed: exit stop at price + buffer (replay {plan.replay_sl})" if exit_ else
+                                  f"trail: {tf} chandelier replay (bars={plan.bars}, mfe_r={plan.detail.get('mfe_r')})")}
     if _cas(conn, tid, raw, {**m, KEY: tr}):
         out["alerts"].extend(alerts)
         if new is not None:
@@ -274,8 +494,8 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
 def request_tp_amend(account_id: str, ticket_id: str, tp: float, *, reason: str,
                      now: Optional[datetime] = None) -> Dict[str, Any]:
     """Publish a TP revision for one open phone ticket through the amend slot (for lane
-    TP-DOCTRINE's revision verdicts). Refused, never queued, when an amend is outstanding or
-    the trail is locked/ended; the SL is carried unchanged and the phone verifies it."""
+    TP-DOCTRINE's revision verdicts). Refused, never queued, when an amend is outstanding or a
+    human's stop is held; the SL is carried unchanged and the phone verifies it."""
     now = now or _now()
     tpf = _f(tp)
     if tpf is None or tpf <= 0:
@@ -290,9 +510,9 @@ def request_tp_amend(account_id: str, ticket_id: str, tp: float, *, reason: str,
         m = _meta(r["meta"])
         if m.get("test"):
             return {"ok": False, "why": "test ticket"}
-        tr = dict(m.get(KEY) or {})
-        if tr.get("locked") or tr.get("ended"):
-            return {"ok": False, "why": f"trail {'locked: ' + str(tr.get('locked')) if tr.get('locked') else 'ended'}"}
+        tr = _load_trail(m, ticket_id)
+        if tr.get("human_hold"):
+            return {"ok": False, "why": f"a human's stop is held: {tr['human_hold']}"}
         if (tr.get("amend") or {}).get("status") in ("emitted", "claimed"):
             return {"ok": False, "why": "an amend is outstanding for this ticket"}
         step = _price_step(account_id, r["symbol"])
@@ -348,10 +568,10 @@ def claim_amend(device: Any, now: Optional[datetime] = None) -> Optional[Dict[st
                             "ORDER BY created_at ASC", (acct, *PARENT_STATUSES)).fetchall()
         for r in rows:
             m = _meta(r["meta"])
-            tr = dict(m.get(KEY) or {})
+            tr = _load_trail(m, r["ticket_id"])
             am = dict(tr.get("amend") or {})
             vu = _parse(am.get("valid_until"))
-            if am.get("status") != "emitted" or vu is None or vu <= now or tr.get("locked") or tr.get("ended"):
+            if am.get("status") != "emitted" or vu is None or vu <= now or tr.get("human_hold"):
                 continue
             am.update(status="claimed", claimed_at=now.isoformat(), device_id=device.device_id)
             tr["amend"] = am
@@ -370,7 +590,8 @@ def claim_amend(device: Any, now: Optional[datetime] = None) -> Optional[Dict[st
 def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[datetime] = None,
                         send: Optional[Callable[..., Any]] = None) -> Dict[str, Any]:
     """The phone's report of one claimed amend. The server re-checks an ``amended`` claim
-    against the levels it asked for; anything it cannot verify locks the trail and pings."""
+    against the levels it asked for; anything it cannot verify fails THAT attempt (backoff, then
+    retried; ONE red flag after :data:`FLAG_AFTER` in a row). Only ``human_moved`` holds the trail."""
     now = now or _now()
     acct = device.account_id
     tid = str(body.get("ticket_id") or "")
@@ -380,6 +601,7 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
         raise ValueError("amend_result.result invalid")
     reason = str(body.get("reason") or "")[:300]
     form = body.get("form") if isinstance(body.get("form"), dict) else {}
+    from src.prop import phone_captures, phone_executor as pe
     from src.utils.json_notes import dump_capped
 
     conn = prop_journal._connect()
@@ -390,7 +612,7 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
         if r is None:
             return {"ok": False, "why": "no such ticket on this account"}
         m = _meta(r["meta"])
-        tr = dict(m.get(KEY) or {})
+        tr = _load_trail(m, tid)
         am = dict(tr.get("amend") or {})
         if am.get("id") != aid or am.get("status") != "claimed":
             return {"ok": False, "why": "amend is not the claimed one"}
@@ -399,59 +621,86 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
         sl_read, tp_read = _f(body.get("sl_read")), _f(body.get("tp_read"))
         if result == "amended":
             sl_ok = sl_read is not None and abs(sl_read - float(am["sl"])) <= tol
-            tp_ok = am.get("tp") is None or (tp_read is not None and abs(tp_read - float(am["tp"])) <= tol)
+            # An sl-only amend (kind "sl") never touches the TP: the app edits the Stop row's modal and reads the STOP
+            # back; it has no TP to read and reports tp_read None, while the ticket's TP rides along on the amend
+            # unchanged. MEASURED 2026-10-18 #a9 on breakout_2: the stop moved 2452.65 -> 2391.18 on the terminal and
+            # was read back, and this check called it a mismatch (fails 8) over tp=None. Only a TP amend verifies the TP.
+            tp_ok = (am.get("kind") == "sl" or am.get("tp") is None
+                     or (tp_read is not None and abs(tp_read - float(am["tp"])) <= tol))
             if not (sl_ok and tp_ok):
                 reason = f"phone said amended but read back sl={sl_read} tp={tp_read} (asked sl={am['sl']} tp={am.get('tp')}); " + reason
                 result = "mismatch"
-        am.update(status=result, reported_at=now.isoformat(), reason_reported=reason, sl_read=sl_read, tp_read=tp_read)
+        cap_run = str(body.get("capture_run") or "")
+        if cap_run and not phone_captures._RUN_RE.match(cap_run):
+            cap_run = ""
+        am.update(status=result, reported_at=now.isoformat(), reason_reported=reason, sl_read=sl_read, tp_read=tp_read,
+                  **({"capture_run": cap_run} if cap_run else {}))
         if form:
             am["form"] = json.loads(dump_capped(form, 12000))
         tr["amend"] = am
         _hist(tr, {k: v for k, v in am.items() if k != "form"})
+        at = str(am.get("claimed_at") or now.isoformat())  # backoff runs on the planner's clock
         if result == "amended":
             tr["resting_sl"], tr["resting_tp"] = sl_read, (tp_read if tp_read is not None else tr.get("resting_tp"))
-            tr["seen"], tr["refusals"] = True, 0
+            tr["seen"] = True
+            _ok(tr, tid, alerts)
             if not tr.get("first_amend_pinged"):
                 tr["first_amend_pinged"] = True
                 alerts.append(f"{tid}: SL {am.get('from_sl')} -> {sl_read} amended and READ BACK on the terminal "
                               f"({am.get('reason')})")
         elif result == "dry_amended":
             tr["seen"] = True
+            _ok(tr, tid, alerts)
             if not tr.get("dry_pinged"):
                 tr["dry_pinged"] = True
                 alerts.append(f"{tid}: DRY amend walked to SL {am.get('sl')} and read back in the edit dialog, "
                               "NOT saved (submit dry or app not armed)")
         elif result == "no_position":
+            # A miss, never an end: a Positions read can fail transiently. Re-checked with backoff; a position
+            # that is really gone is simply never amended (the ticket ages out after MAX_AGE_DAYS).
             if tr.get("seen"):
-                tr["ended"] = "position no longer on the terminal"
+                _fail(tr, tid, at, "position no longer seen on the terminal", alerts, counter="absent", flag_at=0,
+                      first="the position is no longer seen on the terminal (closed, or a transient read); "
+                            "the trail re-checks with backoff")
             else:
-                tr["no_position"] = int(tr.get("no_position") or 0) + 1
-                if tr["no_position"] == 1:
-                    # a limit not yet filled, OR a Positions layout the phone cannot read: say so once
-                    alerts.append(f"{tid}: the phone found no matching row in Positions (limit not filled yet, or a "
-                                  f"layout it cannot read; rows dump in the ticket's phone_trail); the trail ends "
-                                  f"after {MAX_NO_POSITION} such reads")
-                if tr["no_position"] >= MAX_NO_POSITION:
-                    tr["ended"] = f"position never seen on the terminal in {MAX_NO_POSITION} reads"
-                    alerts.append(f"{tid}: trail ENDED: {tr['ended']}")
+                _fail(tr, tid, at, f"position never seen on the terminal in {MAX_NO_POSITION} reads",
+                      alerts, counter="no_position", flag_at=MAX_NO_POSITION,
+                      first="the phone found no matching row in Positions (limit not filled yet, or a layout it "
+                            "cannot read; rows dump in the ticket's phone_trail); re-checked with backoff")
         elif result == "refused":
-            tr["refusals"] = int(tr.get("refusals") or 0) + 1
-            if tr["refusals"] >= MAX_REFUSALS:
-                _lock(tr, f"{MAX_REFUSALS} refusals: {reason[:120]}")
-                alerts.append(f"{tid}: amend REFUSED {MAX_REFUSALS}x before any click ({reason[:120]}); "
-                              "trail LOCKED for this ticket, the bracket stays as it is")
-            else:
-                alerts.append(f"{tid}: amend to SL {am.get('sl')} refused before any click ({reason[:120]}); "
-                              "re-planned at the next closed bar")
+            live = pe.submit_mode(acct, test=False) == "live"
+            _fail(tr, tid, at, f"refused before any click: {reason[:120]}", alerts,
+                  first=None if live else f"amend to SL {am.get('sl')} refused before any click ({reason[:120]}); "
+                                           "retried with backoff")
+            if live:
+                alerts.append(_hand_set_alert(tid, r, am, reason, cap_run))
+        elif result == "human_moved" and (unread := _unread_stop(reason, sl_read, form)) is not None:
+            # NOT a human move: the app could not read the resting stop (operator 2026-10-18, see the module
+            # doc). Recorded as its own state, failed like any other attempt, retried with backoff; never a hold.
+            am.update(status=UNREAD, read_state="unread")
+            tr["amend"] = am
+            live = pe.submit_mode(acct, test=False) == "live"
+            _fail(tr, tid, at, f"stop unread on the terminal: {unread}", alerts,
+                  first=None if live else f"amend to SL {am.get('sl')}: the resting stop did not READ on the "
+                                           f"terminal ({unread}); not a human move, retried with backoff")
+            if live:
+                link = phone_captures.capture_link(acct, cap_run) if cap_run else "none posted"
+                alerts.append(f"{tid}: LIVE amend to SL {am.get('sl')} (from {am.get('from_sl')}): the resting stop "
+                              f"did NOT READ on the terminal ({unread}; the app reported '{reason[:100]}'). Not a "
+                              "human move, nothing held: the trail retries with backoff. Step captures: " + link)
         elif result == "human_moved":
-            _lock(tr, "the terminal's stop differs from the server's: a human moved it")
+            tr["human_hold"] = f"{_HUMAN_LOCK_PREFIX} from the server's: a human moved it"
             alerts.append(f"{tid}: the terminal shows a stop/target other than the server's ({reason[:120]}); "
-                          "the trail will not override a human: LOCKED for this ticket. Report the move with "
-                          "{kind: amend} so the journal holds it")
-        else:  # mismatch
-            _lock(tr, f"amend clicked but not verified: {reason[:120]}")
-            alerts.append(f"{tid}: amend to SL {am.get('sl')} NOT verified after the click ({reason[:120]}); "
-                          "trail LOCKED, never retried. CHECK the stop and target on the terminal NOW")
+                          "the trail will not override a human: HELD for this ticket. Report the move with "
+                          "{kind: amend} so the journal holds it and the trail resumes from it")
+        else:  # mismatch: the click did not verify. A stop the terminal showed after it is now the truth.
+            if sl_read is not None:
+                tr["resting_sl"] = sl_read
+            if tp_read is not None:
+                tr["resting_tp"] = tp_read
+            _fail(tr, tid, at, f"amend clicked but not verified: {reason[:120]}", alerts,
+                  first=f"amend to SL {am.get('sl')} NOT verified after the click ({reason[:120]}). CHECK the stop "
+                        "and target on the terminal; the next attempt re-reads them before any click")
         if not _cas(conn, tid, r["meta"], {**m, KEY: tr}):
             return {"ok": False, "why": "concurrent write; report again"}
     finally:
@@ -487,13 +736,12 @@ def note_human_amend(account_id: str, ticket_id: str, sl: Any = None, tp: Any = 
         if r is None:
             return False
         m = _meta(r["meta"])
-        tr = dict(m.get(KEY) or {})
+        tr = _load_trail(m, ticket_id)
         if slf is not None:
             tr["resting_sl"] = slf
         if tpf is not None:
             tr["resting_tp"] = tpf
-        if str(tr.get("locked") or "").startswith("the terminal's stop differs"):
-            tr.pop("locked")  # the human's move is now on record: the trail resumes from it
+        tr.pop("human_hold", None)  # the human's move is now on record: the trail resumes from it
         _hist(tr, {"status": "human_amend", "sl": slf, "tp": tpf})
         return _cas(conn, ticket_id, r["meta"], {**m, KEY: tr})
     finally:

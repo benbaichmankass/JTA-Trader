@@ -1,0 +1,27 @@
+{
+  "based_on": "20261015T104615805226Z-27d483b9.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20261015-PD85QJEZ-0003",
+  "next_action": "check_observation",
+  "note_2026_10_15": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC)] Root cause: src/units/accounts/execute.py's intent-reduce audit insert (the ONLY writer of exit_reason='intent_reduce_executed') never stamped a source. The reason is the intent layer's own decision. #18273 stamps exit_reason_source='intent_reduce_order', a new value registered ESTIMATED, and backfills history stamp-only. Measured: 29 closed rows in ids 5631-6630, of which 6 are real money (6533/6534/6539/6540/5702/5703). MERGED no. NEXT: the manager merges #18273 (the writer fix goes live on the next deploy); the same backfill-exit-labels run as -0002 stamps history.",
+  "observation": {
+    "due_by": "2026-10-22",
+    "how_to_check": "bash scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000' -> count closed exit_reason=intent_reduce_executed rows with no notes.exit_reason_source; plus the backfill-exit-labels run comment",
+    "what": "after #18273 deploys, new intent_reduce_executed rows carry notes.exit_reason_source=intent_reduce_order, and after the backfill apply the unsourced intent_reduce_executed count reads 0 (the wrapper's pre/post '<cross>/<reduce>' line)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "ORDER-AUDIT-3 lane session_015ph6MwWrWPDbc6Pd85QJEZ (from the #18208 investigation)",
+    "rerun": "bash scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000'  # count real-money (bybit_2/bybit_portfolio/alpaca_live) closes with exit_reason=intent_reduce_executed and no notes.exit_reason_source; >0 = still open"
+  },
+  "routed_to": "ORDER-AUDIT-4 PR #18273 (HOLD, Tier 2)",
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC) 2026-10-15] DONE: merged (#18273), applied, observed. The writer (execute.py intent-reduce audit insert) now stamps exit_reason_source=intent_reduce_order (registered ESTIMATED in provenance.py). Backfill apply #18298 stamped 114 historical rows (ids 3135..6540); unsourced intent_reduce_executed went 114->0. An independent diag re-read at 11:31Z found 0 unsourced among the 50 such closed rows in trade ids 4631-6630. Reasons, pnl and prices are unchanged.",
+  "tier": 2,
+  "what": "4 real-money closes since 2026-10-08 carry exit_reason=intent_reduce_executed with NO notes.exit_reason_source (live read 2026-10-15 via diag journal trades limit=1000, real-money closes since 10-08, n=16). Per CLAUDE.md any close that is not TP/SL/strategy-close with a correct, sourced reason is a bug. Root-cause the intent-reduce close writer (src/units/accounts/execute.py reduce audit path / order_monitor) and stamp a truthful source; separate population from #18208's sl_cross fix."
+}

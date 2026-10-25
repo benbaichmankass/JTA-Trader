@@ -1,0 +1,31 @@
+{
+  "id": "TRADEIFY-INSTR-SPECS",
+  "title": "Tradeify tradeify_1: read per-instrument spread/commission/swap/leverage/hours for SILVER, XYZ100, SP500, USOIL, UKOIL, PAXG (needs watchlist adds)",
+  "phase": "done",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18435,
+    18438,
+    18453,
+    18454,
+    18456
+  ],
+  "blocked_on": [],
+  "note": "Filed by lane TRADEIFY-PLATFORMS 2026-10-15. docs/research/tradeify-platforms-2026-10-15.md \u00a7 2: the terminal's spread/swap/leverage/hours per instrument were NOT obtained because the instrument-info panel is reachable only after a watchlist add (add-watchlist-symbol, a UI mutation, no order) and the lane's brief was read-only; bid/ask digits are also masked by the dump. NEXT STEP (Tier-2, one operator OK in chat): add-watchlist-symbol on tradeify_1 for each symbol above (one per run), then instrument-info-probe; flat-account guard applies. CLOSES when the six instruments carry MEASURED spread, swap, leverage and hours in config/prop_rulesets/tradeify_routing.yaml or the memo, and RQ-20261015-24ca-01..05 are re-costed from them if they differ from the declared 8 bps + 3 bps + 0.033%/day. Until then those units run on DECLARED costs. ATTEMPTED 2026-10-15 20:08-20:16Z by lane TRADEIFY-INSTR-SPECS (operator 'Yes, add and read' ~19:50Z): PART DONE, NOT DONE. DONE+verified: SILVER/USD, XYZ100/USD, SP500/USD, USOIL/USD added to tradeify_1's watchlist (issues 18428/18430/18432/18433; one click each, no ticket/dialog, only that symbol added, nothing removed, one-click OFF). NOT OBTAINED: the info panel. instrument-info-dry (issue 18434, run 38800387543) refused '0 visible instrument_info_button (need exactly 1)' and '0 widget_menu_ORDERS': probe_instrument_info needs a symbol_input-linked widget header (breakout_1 layout) and an Orders widget; tradeify_1 has only Watchlist+Positions widgets. Digits are also masked in the public dump, so no existing read-only mode returns a spread number. Spread/swap/leverage/contract size/min qty+step/hours/commission all still UNMEASURED; RQ-20261015-24ca-01..05 NOT re-priced (no measured cost differs; -01 already graded fail, -02 already dispatched). CLOSES when a read-only mode (or an operator-approved symbol-linked widget) returns those fields numerically-safe (e.g. spread as bps of mid), then re-cost the units still queued. See docs/research/tradeify-platforms-2026-10-15.md section 2b. MEASURED 2026-10-15 21:10-21:17Z (research doc section 2c): spread bps of mid SILVER 1.74 / XYZ100 1.00 / SP500 0.13 / USOIL 1.04 (ETH control 0.0), one snapshot, run 38807791311 (#18448); REST (run 38808598907, #18452, flat verified #18450): marginRate 0.2 (5:1 INFERRED) SILVER+USOIL+ETH, lot 1, min qty/step 0.01, hours continuous 24x7 in the schedule. STILL UNMEASURED: swap long/short and commission (no field in the REST row), XYZ100+SP500 margin rate and min order size (HTTP 429, 15 of 40 GETs). No 24ca unit edited: measured spread < declared 3 bps; the lev-cap 2 vs inferred 5:1 is part of the pre-registered rule, flagged to the manager. NOT DONE: closes when the probe is paced/retried on 429 and re-run for the two indices, and swap/commission are read from somewhere (terminal info panel only, per REST keys) or accepted as firm-declared by the manager. CLOSED 2026-10-15 21:45Z. XYZ100/SP500 re-run (issue 18461, run 38812053334, after #18454, flat verified by 18460 run 38811858513, REST portfolio positions 0 orders 0): marginRate 0.5 = 2:1 INFERRED for both indices (matches the cap of 2 in the index units), min order/step 0.01, status FULL, no 429. All four instruments now carry MEASURED spread (one snapshot), margin rate, min qty/step, 24x7 schedule; swap + commission accepted as firm-declared UNCONFIRMED (manager 21:20Z). Observed, not just merged: runs 38807791311 (quote-spread), 38808598907 + 38812053334 (REST). MANAGER DECISIONS 21:20Z: swap/commission ACCEPTED as firm-declared (UNCONFIRMED); 24ca units untouched; ONE new pre-registered unit RQ-20261015-ca42-01 (SILVER fade + USOIL trend at --lev-cap 5, 5:1 INFERRED, own rule + cap-binding reading), hold-landed. Open elsewhere, not this row: RQ-20261015-ca42-01 (PR 18456 hold) runs SILVER/USOIL at lev-cap 5. Not in scope here: UKOIL, PAXG.",
+  "updated_at": "2026-10-15T21:46:06Z",
+  "updated_by": "lane-TRADEIFY-INSTR-SPECS-2026-10-15",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "writeback": {
+    "roadmap": "docs/roadmap/milestones.yaml L-PROP where: Tradeify non-crypto on tradeify_1 measured (spread, margin, hours), ROADMAP.md block regenerated",
+    "arch": "ARCHITECTURE-CANONICAL.md section Prop ticket flow: tradeify_1 instrument specs and how to read them (quote-spread, REST probe)"
+  },
+  "_seq": 519
+}

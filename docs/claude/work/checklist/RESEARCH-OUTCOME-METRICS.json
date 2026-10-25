@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-OUTCOME-METRICS",
+  "title": "Research OUTCOME metrics beside the flow SLOs: rejection rate per stage, time-to-decision, indeterminate share, value-estimate calibration, realised live/backtest haircut of promoted legs; name the vanity metrics",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 RESEARCH-OPS-BENCHMARK-1016] GAP (benchmark docs/research/research-ops-benchmark-2026-10-16.md section 2; S9, S13, S17, S23). We measure flow (fired/24h, runnable, utilisation; SLOs from RESEARCH-PIPELINE-SLO-1016) not outcome. MEASURED: 211 units carry value.confidence (=P(result changes a decision)), never compared to what happened; of 517 done units 106 indeterminate (20.5%; 30% of the 359 with a verdict) and 158 have no verdict in grading. SCOPE (Tier-1): scripts/research/research_outcomes.py, weekly into comms/research/outcomes/: (1) per stage (unit -> confirmed -> Stage-0 record -> Stage-1 -> Stage-2) counts and rejection rates; (2) median days unit-authored -> verdict; (3) indeterminate share by theme + power_state at dispatch (units that could not reach power are a design defect); (4) calibration: value.confidence bucket vs share whose verdict produced a follow-up/Tier-3 note; (5) live/backtest expectancy ratio of every promoted leg vs the expected haircut. Vanity (report but never target): fires, units authored, backtests per leg (Quantopian: more backtests -> wider OOS gap). Shown in the Wednesday planning view. FIRST STEP: compute (2) and (3) from research/queue git history. Coordinate with RESEARCH-PIPELINE-SLO-1016 (flow) -- this row is outcomes only. roadmap L-PROGRAMMES.",
+  "updated_at": "2026-10-16T09:46:56Z",
+  "updated_by": "session_016YtGa4nVhnWbckKhb6VYaV",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "_seq": 536
+}

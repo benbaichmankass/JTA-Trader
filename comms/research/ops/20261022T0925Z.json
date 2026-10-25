@@ -1,0 +1,124 @@
+{
+  "run": "RESEARCH-OPS-20261022-0847",
+  "finished_at": "2026-10-22T09:25:00Z",
+  "by": "session_01Fz7Hik1HiHWrxGeht5b3ur",
+  "floor": 50,
+  "floor_basis": "computed_floor(fired_24h 62)",
+  "authoring_queue_depth": 24,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu"
+  ],
+  "needs_review_triaged": 2,
+  "needs_review_left": 36,
+  "needs_review_note": "36 listed by queue_grade --health; 34 already carry an owner + named gap (28 owned live units) or are status retired (7 base_oos_trades < 39 siblings); the 2 with neither (RQ-20260929-009, RQ-20261011-002) now carry grading.owner + owner_reason in this PR. result_disposition_check --list: UNOWNED 0, UNGRADED 0. 14 wiring_only roster-walkforward units all hang on PI-20261006-1VPYTX8E-0001 (due 2026-10-29).",
+  "throughput": {
+    "runnable_before": 45,
+    "runnable_after": 46,
+    "queued": 130,
+    "fired_24h": 62,
+    "results_landed_24h": 59,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "dispatch_queue dry run on this branch: RQ-20261022-1f8b-01 would_dispatch; the second authored item is a programme node emitted by the 05:50Z replenish, not a runnable unit yet"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 1.51 h)",
+    "collector": "ok",
+    "stranded_stamp_prs": "checked via GitHub MCP list_pull_requests (open, 20 PRs): automation/research-* open = #19498 results batch (09:06Z), #19490 receipt (07:57Z), #19459/#19357/#19236 research-slo status; none is a stamp PR past STRANDED_STAMP_HOURS by head prefix automation/research-queue-*, only the 07:57Z receipt PR (1.5 h old) carries that prefix",
+    "incident": null,
+    "watchdog": "newest 5 rows of watchdog_incidents.jsonl read: all self_healed/resolved, no escalated row without a resolve"
+  },
+  "results_read": {
+    "pass": 1,
+    "fail": 8,
+    "indeterminate": 0,
+    "units": [
+      {
+        "unit": "RQ-20261022-007",
+        "verdict": "pass",
+        "disposition": "rule applied verbatim: ll_gain 0.0137 >= 0.01 with 5/6 folds (r2_gain -0.0038, fails its own criterion); pooled PASS driven by ada_pullback_2h, eth_4h reads no_gain. Discovery, not confirmation -> RQ-20261022-1f8b-01 (disjoint window 2018-10..2020-06, same statistic, fold bar raised to 3 of 4)"
+      },
+      {
+        "unit": "RQ-20261022-001..006 (P1-Q10 level-triggered trail, 6 legs)",
+        "verdict": "fail",
+        "disposition": "all six FAIL / incumbent_stands: the declared exit stands for this lever family; no follow-up"
+      },
+      {
+        "unit": "RQ-20261018-012, RQ-20261018-014",
+        "verdict": "fail",
+        "disposition": "P1-Q9 eth4h retarget / tp3 replace: incumbent stands; no follow-up"
+      },
+      {
+        "unit": "RQ-20261021-7c2b-12",
+        "verdict": "fail",
+        "disposition": "A_UNDOMINATED -> 0.35% stays the breakout_2 sizing proposal; Tier-3 input noted on P5-PROP-PROGRAMME for the manager"
+      },
+      {
+        "unit": "RQ-20261016-7769-17",
+        "verdict": "fail",
+        "disposition": "no pre-registered horizon reached the t-bar; own-rule graded, no follow-up"
+      },
+      {
+        "unit": "RQ-20260929-016",
+        "verdict": "wiring_only",
+        "disposition": "not a verdict; owned by RESEARCH-TOOLING-GAPS (PI-20261006-1VPYTX8E-0001)"
+      },
+      {
+        "unit": "RQ-20261007-040/-041",
+        "verdict": "pass/no_action_warranted",
+        "disposition": "overdue CROSS-SIGNAL readout applied: docs/research/cross-signal-exits-2026-10-07.md section 8 (ADA result instrument-specific; one-leg Tier-3 question on CROSS-SIGNAL-RESEARCH)"
+      }
+    ],
+    "pending_grade": "RQ-20261022-004/005/006 results landed after the last grade run and show status queued here; the 6-hourly grader closes them"
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "grader for RULE-RQ1009-900 (unblocks RQ-20261009-900, prerequisite RQ-20261014-736c-01 now PASS)",
+      "ref": "PI-20261022-HOPS0847-0001"
+    },
+    {
+      "lever": "derive per-leg cells from --emit-paths rows (unblocks RQ-20261014-9807-04)",
+      "ref": "PI-20261022-HOPS0847-0002"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261022-1f8b-01 (Q11 confirmation, live_strategy)"
+  ],
+  "followups_filed": [
+    "PI-20261022-HOPS0847-0001",
+    "PI-20261022-HOPS0847-0002",
+    "PI-20261016-6RBHEWTW-0001 closed (programme coverage 0 uncovered on all 7 plans)",
+    "PI-20261007-9ARZOHV6-0001 redated to 2026-10-29 with the readout applied"
+  ],
+  "authoring": {
+    "queue_depth": 24,
+    "nodes_drafted": 1,
+    "nodes": [
+      "P3-Q3-soak-equity-overlap"
+    ],
+    "theme_shortfall": {
+      "regime": 1,
+      "ml_health": 2,
+      "new_strategy_prop": 7,
+      "infra": 3
+    },
+    "why_short": "new_strategy_prop's template space (prop-fit-breakout x legs x 5 sizing arms) is already fully minted, so its shortfall needs new questions, not re-parameterised copies; the remaining top of the authoring queue needs builds or Tier-3 packets (P3-Q1 live-vs-backtest needs LIVE-BT-STAGE-B; P1-Q6 declares need MOMENTUM-LEVERS-LIVE). The node drafted here emits on the 05:50Z replenish after a full unit body replaced its needs_authoring line; scripts/research/soak_equity_overlap.py (self-tested) is its instrument."
+  },
+  "disclosure": "A smoke run of an EXIT-WEEK-binned variant of soak_equity_overlap.py (N_eff 3.86 of 4) was seen before the unit was registered; it was discarded as an invalid overlap measure (exit-week bins ignore holding overlap) and the registered variant spreads each trade's R over its holding days. Thresholds (N_eff >= 2.0, corr >= 0.5) were fixed before either variant ran; the registered variant was exercised only for 'runs without error', its result not read. The unit carries this disclosure.",
+  "blocked_audit": "72 files in research/queue/blocked/ (62 blocked, 10 retired), each checked for a named lever row/PI. 2 findings: RQ-20261009-900 prerequisite cleared but its grader is missing (PI-...HOPS0847-0001); RQ-20261014-9807-04 cells derivable now that --emit-paths landed (PI-...HOPS0847-0002). The rest hang on a queued/landed_unproven lever row each (REGIME-WEIGHT-VARIANTS, FUNDING-OI-DATASETS-ETH-SOL, DATA-KLINE-ARCHIVE, FRONTIER-LEVER-*, NEWS-ALPHA-*, ML-* instruments); none unlockable without the owner build. Not checked per unit: whether each named row's text still matches its unit (only the row state).",
+  "not_run": [
+    "workflow-run history read for dispatch/grade/replenish (receipt and git log used instead)",
+    "new_strategy_prop (7 short), infra (3 short), ml_health (2 short) and regime (1 short) authoring beyond the one unit and one node"
+  ],
+  "handoff": [
+    "MANAGER: this PR holds (E57, hand-authored queue unit + programme node + new script); runnable only counts after it merges",
+    "MANAGER (Tier-3 inputs, not applied): breakout_2 sizing 0.5% -> 0.35% per RQ-20261021-7c2b-12 with the survival-vs-EV observation on P5-PROP-PROGRAMME; one-leg ada_pullback_2h vol_trail question on CROSS-SIGNAL-RESEARCH",
+    "research-ops: read RQ-20261022-1f8b-01 and the soak-overlap unit when they land; author new_strategy_prop questions from programme 05 (new questions, not template copies)",
+    "research-ops: RQ-20261022-004/005/006 close at the next grade run - confirm they did",
+    "MANAGER: the one-leg ada_pullback_2h vol_trail declare already exists as HELD Tier-3 PRs #17193 and #14053; readout (cross-signal memo s8) says the sibling-generalisation claim failed, so decide those two on the one-leg evidence only; #19236/#19357 research-slo status PRs are 1-2 days old and unmerged"
+  ]
+}

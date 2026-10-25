@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20260929-008
 title: 'M20 exit-lever sweep: ict_scalp_eth_15m (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -69,10 +69,15 @@ grading:
   decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
   evidence:
   - research/results/RQ-20260929-008/36731568765.jsonl
-  graded_at: '2026-10-09'
+  graded_at: '2026-10-16'
   grader: scripts/research/queue_grade.py
   latest: true
   needs_review: false
   reason: 1 row(s), all measured, all no_action_warranted
   rows: 1
   verdict: no_action_warranted
+retired_reason: '2026-10-16 P1-ATM-BACKLOG-1016: ict_scalp_eth_15m is routed to NO account (config/accounts.yaml
+  strategies: rosters, read 2026-10-16 via src.config.accounts_loader; queue_replenish.repo_facts no longer
+  lists it), so a monthly exit/bracket re-sweep measures a leg that does not trade. Retired, not answered.
+  Generator gap (a generated unit whose leg left the roster is never retired, and its retired key blocks
+  re-minting if the leg returns) filed on checklist row QUEUE-GEN-ROSTER-SYNC.'

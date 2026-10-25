@@ -1,0 +1,31 @@
+{
+  "id": "PERF-FU-LEG-REPLAY",
+  "title": "Build leg-replay-emit: queue-runnable config-exact replay of live legs with per-direction folds + daily-R series (unblocks RQ-20261010-419b-02/03/04)",
+  "phase": "perf-followup",
+  "state": "landed_unproven",
+  "owner": "session_01ES3iQEoWRboqmSUjDm7BSW",
+  "lane": "PERF-FOLLOWUP-2026W41",
+  "model": null,
+  "ceiling_usd": 6,
+  "spend_usd": 1.5,
+  "tier": 1,
+  "prs": [
+    17500
+  ],
+  "blocked_on": [],
+  "note": "Instrument gap named in research/queue/blocked/RQ-20261010-419b-02..04 blocked_on. Needs scripts/research/leg_replay_emit.py writing {out_dir}/verdict.json (research-script-run.yml contract), running backtest_trend.py/backtest_pullback.py --emit-trades config-exact over 1830 d binance_vision, then direction_walkforward per leg and per-leg daily-R series (portfolio). Reuse m20_fleet_exit_sweep.base_args for config-exact args (same lever as TP-PREDICT-HEAD ml2-live-leg-corpus - build the emit-keeping runner once). DONE WHEN clears_when in the three blocked units is true; then git mv each to research/queue/.  | 2026-10-11 lane: built scripts/research/leg_replay_emit.py (+13 tests), moved RQ-20261010-419b-02/03/04 to research/queue/ with run.command wired (decision_rule unchanged). PR held for manager merge. Open: units not yet RUN on the runner (landed_unproven until a result record lands).  | CLOSES WHEN: research-queue-dispatch fires RQ-20261010-419b-02/03/04 on research-script-run.yml and a measured (not producer_failed) record lands under research/results/<unit>/. Unit 03's e38 family arm is NOT wired.",
+  "updated_at": "2026-10-24T06:01:08Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "observation": {
+    "what": "research-queue-dispatch fires RQ-20261010-419b-02/03/04 on research-script-run.yml and a measured (not producer_failed) record lands",
+    "how_to_check": "ls research/results/RQ-20261010-419b-0{2,3,4}/ and read read_state in each .jsonl",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-18T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 388
+}

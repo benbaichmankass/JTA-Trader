@@ -74,6 +74,21 @@ related:
 - RQ-20261006-005
 - docs/integrations/breakout-instruments-2026-09-27.md
 - scripts/ops/fetch_backtest_corpus.py
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T14:09:54+00:00'
 grading:
   auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ1007-237-DOGEUSDT-2h-PULLBACK-STAGE0
+  evidence:
+  - research/results/RQ-20261007-237/38913595643.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: RESEARCH-FOLLOWUPS
+  owner_reason: 'First read FAIL, confirmatory re-run read PASS ({fail,pass} not unanimous); same pre-registered rule, so run-to-run variance, not a verdict. Needs one tie-break run or a window pin; no leg change on it.'
+  note: 'confirmatory run read ''pass'' after a first FAIL: {fail, pass} is not unanimous -> needs_review,
+    not closed'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: null

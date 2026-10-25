@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a disposition is recorded: new-version fix merged, head retired, or cause shown to be non-model",
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261021-K43EKTZA-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DRIFT-REMEDIATION-9 (session_017RN2dTgPqsaRoGk43eKTZa), trainer-vm-diag #19369 #19374; parent PI-20261016-P3PFA1GK-0001",
+    "rerun": "trainer-vm-diag: grep mes-regime-5m-baseline-v1 runtime_logs/trainer_mirror/promotion_readiness/$(date -u +%F)/SUMMARY.md and count shadow_predictions rows per UTC day for the model"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[real-drift, cause unknown] mes-regime-5m-baseline-v1 is the only regime head of the 9 whose KS/PSI drift_clean gate FAILS. Shadow score mean fell 0.73 to 0.67 after 09-28 and daily means swing 0.51-0.89 with days of only 11-45 records (10-10, 10-11, 10-17, 10-18) against ~280 normally, i.e. the input mix (MES session hours / feed gaps) is the first suspect, not model decay. 153 daily retrains already run, so arming drift-retrain adds nothing. Check the MES candle feed gaps and per-session score split before any model change."
+}

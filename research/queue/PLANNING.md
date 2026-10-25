@@ -9,6 +9,8 @@ recurring planning session does.
   operator's Google Doc. That file is the manager's; the planning session reads it and does not create or reshape it.
   Each row there is triaged to a `research/queue` unit (a question) or a checklist row (a build). This file
   is only the research half.
+- **Mint the id with `python3 scripts/research/next_rq_id.py --fetch`** (`RQ-YYYYMMDD-<h4>-NN`, session-hashed; never
+  hand-pick a number or a `9xx` band). See `README.md` § Allocating a unit id.
 - **The manager drafts the unit.** `theme` and `priority` are required (the validator refuses a queued unit
   without them). **A decision rule is registered before any run** (`decision_rule.registered_before_run: true`,
   committed in the same PR that adds the unit); `check_research_queue_decision_rule.py` enforces it.
@@ -17,6 +19,77 @@ recurring planning session does.
   with its own rule. A dropped idea is a finding nobody can re-ask.
 - Every unit says what it does not do. An upper-bound or scoping unit says it is not a promotion case.
 - Units that need a prior result to be worth running use `requires_result`, not prose.
+- **Look before you re-test** (RESEARCH-OPS-BENCHMARK-1016; Arnott-Harvey-Markowitz 2019 "track every model tried").
+  Before authoring a unit, search what was already tried on the same leg or family: `grep -l <leg|family>
+  research/queue/*.yaml research/queue/blocked/*.yaml`, `research/results/`, `docs/research/m20-sweep-corpus.jsonl`,
+  `research/family_reviews/`. Cite the prior unit ids in the unit's `question` or `value.basis`. A re-test of a
+  configuration already closed states what is different (window, conditioning, harness fix). Otherwise it is
+  another draw from the same distribution and only inflates the number of trials.
+
+## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
+Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends
+it to the right compute and spends scarce resources on the highest-value work. The policy is data:
+[`scripts/research/research_compute.yaml`](../../scripts/research/research_compute.yaml); the code is `scripts/research/compute_router.py`
+(placement + value) called by `dispatch_queue.py`. **A session authoring a unit writes four things for this:**
+
+```yaml
+compute: cpu_light      # cpu_light | cpu_long | needs_vm_data | gpu | gpu_preferred | auto   (auto = derive from routing:)
+routing: {needs_gpu: false, needs_trainer_resident_data: false, peak_memory_gb: 2.0, est_minutes: 20}   # as before
+value:                  # optional; every field optional; omitted fields fall back to priority-derived defaults
+  usd_at_stake_per_month: 400   # expected net-P&L impact / money at stake if the answer is acted on (state the basis)
+  confidence: 0.4               # P(the result changes a decision), 0..1
+  bucket: own_losses            # own_losses | structural | information | ai_trader | frontier  (STRATEGY-REALIGN mix 30/25/20/15/10)
+  basis: "one line: where the dollar figure comes from"
+run:
+  command: ["python3", "scripts/research/<harness>.py", "--out", "{out_dir}"]
+  inputs: {research_unit: RQ-...}      # no run.workflow: the router fills it
+```
+
+- **Classes:** `cpu_light` (<= ~30 min) and `cpu_long` (to 5.5 h) -> GitHub-hosted runner; `needs_vm_data` -> the
+  trainer VM (only when the unit reads trainer-resident data and fits 6 GB); `gpu` -> Kaggle GPU (waits for the
+  weekly quota, never runs on CPU); `gpu_preferred` -> Kaggle, else the runner (the script must support both).
+  A class that contradicts the unit's own `routing:` block is refused (`BLOCKED_ROUTE`), not guessed.
+- **`run.workflow:` still works and beats `compute:`** (every existing unit keeps its hard-coded runner). Do not
+  add one to a new unit: picking a runner by hand is exactly what this replaces. RunPod (`gpu-burst-train.yml`) is
+  never auto-routed; it stays an explicit, operator-armed, ledger-capped choice.
+- **Ranking** (within a theme; theme weights stay the operator's across themes):
+  `score = usd_per_month x confidence x bucket_boost x hand_written_boost x age_boost / ((1 + est_hours) x backend cost_weight)`.
+  Every dry-run line prints its derivation. A unit waiting past `value.starve_hours` sorts first in its theme.
+  `bucket_boost` = target share / observed share of the unit's bucket over the share window (clamped 0.5-2.0), which is how the 30/25/20/15/10
+  mix steers fires. A dollar figure is an estimate with a stated basis, never a measurement.
+- **Capacity** is per backend (`max_concurrent`) plus a total, and the Kaggle weekly GPU quota has a floor.
+  A unit whose backend is full or out of quota is `deferred` with the reason and retried next cycle; it does not
+  block units bound for other backends.
+
+- **Published data (ML-DATA-OFF-TRAINER, 2026-10-13).** A unit whose `ml_bakeoff.dataset` paths are all in `scripts/research/market_data_export.py::ALLOW`
+  (BTC/ETH/SOL 15m+1h `market_features`/`market_raw`, published daily as the private Kaggle dataset `metis-market-data`) declares
+  `routing: {needs_trainer_resident_data: false, published_data: metis-market-data}` and `compute: auto`, with no `run.workflow`. The router CHECKS
+  the claim (a path outside the allowlist is `BLOCKED_ROUTE`) and sends it to `research-script-run-data.yml` (runner + dataset fetch) or, with
+  `needs_gpu`, to Kaggle with the dataset mounted. **Check `published-data.json` beside the result**: it carries each shard's `last_ts`; a shard that
+  disagrees with its own metadata is withheld by the exporter and the unit fails closed (`ML-SHARD-TRUNCATED`: BTC/SOL 15m were cut short on 2026-10-13).
+  Units that read OURS data (trade_outcomes, setup_labels, conviction_meta, execution_quality, account_context) still need `needs_vm_data`.
+- **Say why a unit cannot take an idle backend before choosing `cpu_light`** (RESEARCH-LOOP-AUDIT RC5, 2026-10-15). MEASURED
+  2026-10-15: the runner backend sat at 3/3 with 12 due units waiting while the Kaggle GPU had used 0.19 of 30 weekly hours and
+  Kaggle CPU and the trainer had nothing due -- almost every authored unit declared `cpu_light`. When a unit's data is in
+  `metis-market-data` (`published_data` -> Kaggle CPU) or is trainer-resident (`needs_vm_data`, idle windows 03-05Z/07-24Z),
+  or its model is GPU-shaped, declare that class; if it must be `cpu_light`, say why in one line under `routing:`
+  (`why_runner: ...`). `check_research_queue_health.py` prints the idle backends every dispatch cycle.
+- **The trainer is its own windowed queue.** `backends.trainer.queue.windows_utc` (derived from the measured hour-of-day occupancy, `comms/cloud/trainer_workload_profile.json`)
+  releases `needs_vm_data` units only into idle windows (03-05Z, 07-24Z) and only when `est_minutes x 1.5` fits before the window closes; otherwise `deferred` with the next opening.
+- **RunPod is a ledger-capped fallback for `compute: gpu`**, after Kaggle, and only for a unit that declares `routing.runpod: {manifest, est_cost_usd}` (the pod trains a registered
+  ML manifest, not a script). It opens the labelled `gpu-burst-train` issue; the $10/month ledger gate and `GPU_BURST_ARMED` still decide whether a pod launches.
+- **Utilization is measured every fired cycle** (`scripts/research/research_utilization.py`, one file per run under
+  `comms/research/utilization/`, landed with the liveness receipt): per backend capacity, in flight, fired, waiting and
+  free slots, each with an explicit `read_state` (`measured` | `could_not_look` -- a backend we could not count is never
+  reported idle); Kaggle GPU hours used / remaining / expiring before the weekly reset; GPU-burst $ month-to-date; the
+  trainer VM's spare capacity when COMPUTE-UTIL-TELEMETRY has landed. `python3 scripts/research/research_utilization.py --week`
+  is the Wednesday planning view: slot-cycles available vs used vs idle, value dispatched, flag counts.
+- **Idle-capacity fill:** a recurring unit that sets `idle_fill: true` may be pulled forward when its backend has more
+  free slots than units due for it (it sorts after every due unit). Set it only when an early re-run is harmless.
+- **Thin floor:** when a backend has free slots and nothing due for it (or Kaggle GPU hours are about to expire with no
+  gpu unit due) the dispatcher prints ONE `::warning::research-capacity floor_thin|kaggle_quota_expiring ...` and records
+  it in the utilization file; research-ops step A reads it and treats it as top-up work (author units whose compute
+  class lands on the idle backend).
 
 ## 2. Weights
 - `research/THEMES.yaml` is the only place weights live. They are a share of fire slots, not an order.
@@ -28,12 +101,37 @@ recurring planning session does.
   outranks research breadth, and no single topic may starve the rest, so a weight never goes below 1 and a theme
   holding due work is checked against its fired count.
 
+- **Weights are honoured by SUPPLY, not by ranking** (lane RESEARCH-ENGINE-1016, 2026-10-16). `fair_order` shares
+  slots among themes that hold due work, so a theme with nothing queued gets nothing: MEASURED over the 181 fires in
+  `comms/research/utilization/` 2026-10-13..16, `regime` took 20 (11 %) against a 24 % weight share, while it held 0
+  queued units on the 16th. `check_research_queue_health.py` splits the floor by weight every cycle and prints an
+  `H1-THEME` warning per short theme (generated re-runs credited for at most 40 % of a slice); that is the
+  authoring target list for research-ops step E. Inside a theme, authored units rank before generated ones.
+- **PROGRAMME PRIORITY** (operator 2026-10-18 ~06:20Z: P1 active trade management and P2 AI trader are "our highest
+  priority"). `research_compute.yaml` `value.programme_priority: [P1, P2]` -- an ordered list; a due unit of a listed
+  programme ranks first on every backend, in list order, above every theme and other programme; only a starved unit
+  precedes it. Re-prioritising is an edit of that list in a PR that quotes the decision.
+- **MONEY FIRST across themes** (operator 2026-10-18, popup "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018).
+  `fair_order` no longer round-robins the themes: it takes the theme whose next unit has the highest router value
+  score, a starved unit first in any theme, and the weight share only breaks an EQUAL score. Programme nodes
+  (`generated.family: programme:*`) count as asked units, not refills. A theme stocked only with low-value units now
+  fires on spare capacity or at `starve_hours`, so the theme-share SLO recovers through SUPPLY of valuable units in
+  the short theme -- author them with a `value:` block that states the money at stake.
+
 ## 3. Aging
-`aging_hours` (THEMES.yaml) lowers a waiting unit's effective priority one step per period. It is the
-starvation backstop inside a theme; fair share is the backstop between themes. If a unit is old and still
+`aging_hours` (THEMES.yaml) lowers a waiting unit's effective priority one step per period, counted from when the
+unit came DUE (a recurring unit: its last stamp plus its cadence gap; since 2026-10-16, `dispatch_queue._due_since`). It is the
+starvation backstop inside a theme; `starve_hours` (research_compute.yaml) is the backstop between themes since
+2026-10-18 (a starved unit sorts first everywhere). If a unit is old and still
 unrun, read why (precondition, gate, route) before lowering anything.
 
 ## 4. What the recurring research-planning session does, every time
+> **Routine cadence = the `research-ops` skill (2026-10-10).** Steps 1, 2 and 5 below (throughput, grade
+> landed results, retire stale units) now run 4x/day as `.claude/skills/research-ops/SKILL.md`, a bounded
+> lane the manager dispatches. This section remains the *weekly planning* session: re-weighting (step 3),
+> drafting from `IDEAS.md` (step 4) and the one-page plan (step 6). Do not re-do what the last research-ops
+> record (`comms/research/ops/`) already holds.
+
 1. **Read throughput and results since the last session:** `python3 scripts/ci/check_research_queue_throughput.py --json`
    (fired 24 h / 7 d, results landed, runnable, idle hours) and the `research/results/` records landed since.
 2. **Grade landed results** against their registered rules (`research_disposition.py --record`; never hand-edit

@@ -350,7 +350,7 @@ signs in, types a credential, or needs an account.
 | **OPERATOR GATE: "purchase account now"** | Reached only when 1a and 1b pass. The manager asks the operator to purchase a Breakout terminal account, **after the operator has read the terms (§ 7.4)**. | **purchase** | — | Operator buys; the manager records it. |
 | **2. Capture with login** | The operator logs in **by hand** in the WebView. Redacted DOM capture of the real terminal; read-only: positions, orders, account snapshot. Measures § 5.4 (do SL/TP survive the client being closed) with one tiny hand-placed position. Session-expiry and any email-code or 2FA behaviour recorded. | **yes** | 2–3 | Captured, redacted fixtures committed; the questions in § 7.3 answered. |
 | **3. Armed click, dry then one watched live** | Held Tier-2: the submit and its confirmation built from the phase 2 capture; dry round trip (D1–D7 analogue), then **one** minimum-size live round trip under criteria registered before the run. The operator present. | yes | 3–4 | D and L criteria pass; auto-revert armed. |
-| **4. Soak** | Probation (first 5 trades or 72 h), trade-by-trade reports, then steady state; auto-revert to `read_only` on the VM executor's triggers. | yes | 2 + observation | Gate 1-style review. |
+| **4. Soak** | Mechanical soak: the first 1–2 clean trades (OPERATING-PLAN § 2 "The soak is MECHANICAL"), trade-by-trade reports, then steady state; auto-revert to `read_only` on the VM executor's triggers. | yes | 2 + observation | Gate 1-style review. |
 
 **Effort (estimate):** before the gate ≈ **8–10 lane-days** (0.5 + 2–3 + 5–6); after it ≈ **7–10** (2–3 + 3–4 + 2). Total
 **≈ 15–20 lane-days**, with independent review rounds likely the long pole. Everything before the gate costs **no account
@@ -641,7 +641,7 @@ By the criteria registered before the run, that is 2 of 4: **NOT-YET** by the le
 | Routes | `POST /api/bot/prop/phone/{claim,report,event,test-ticket}` (`routers/prop.py`, `docs/api-tier-policy.md`) | `claim` is the atomic `emitted -> claimed`, and it runs the 3-minute watchdog. `report` forces `account_id` from the token. `ticket_result` keeps the phone's form dump in `meta.phone.result`, which is how the unread TP/SL labels will be read. `event` pings Telegram with links, emails and 6+ digit runs scrubbed. `test-ticket` is always dry. |
 | Submit decision | `phone_executor.submit_mode` | `live` only if the account's `accounts.yaml` mode is `live`, `PROP_PHONE_MODE_<ACCOUNT>` is not `off` or `dry` (an unparseable value counts as `dry`), and the ticket is not a test. This is the **only** live/dry decision: the phone's device-local ARMED switch was removed on 2026-10-06 (operator: *"not have the feature on the app where I need to arm it manually … extra gates that are unnecessary … actually less safe than we think"*; § 7.15). |
 | Account | `config/accounts.yaml::breakout_2` (`mode: dry_run`), `config/prop_platforms.yaml::phone_accounts.breakout_2`, `config/prop_rulesets/breakout_turbo_1step.yaml` | `phone_accounts` is a separate section, so the VM executor and the login check never load it. |
-| App | `tools/phone-executor/` (`com.metis.phoneexec`), CI `phone-executor-apk.yml` | Kiosk WebView, stock UA. Claim every 30 s. Fill: Limit tab, side tab, limit price, quantity (unit must name the base asset), TP/SL. Read every field back; the submit label must carry the side. In dry mode it does not submit; in live mode it submits, then reads Open orders / Positions back and flattens any opposite-side position. Fsynced intent ledger with no retry after a restart. Auto re-login: dedicated inbox, newest `breakoutprop.com` mail, the ONE link whose text equals the page's number, opened in the same WebView, 2 failures then latch and ping. Foreground service + boot receiver + "display over other apps" to come back after a reboot. |
+| App | `tools/phone-executor/` (`com.metis.phoneexec`), CI `phone-executor-apk.yml` | Kiosk WebView, stock UA. Claim every 30 s. Fill: Limit tab, side tab, limit price, quantity (unit must name the base asset), TP/SL. Read every field back; the submit label must carry the side. In dry mode it does not submit; in live mode it submits, then reads Open orders / Positions back and flattens any opposite-side position. Fsynced intent ledger with no retry after a restart. Auto re-login: dedicated inbox, newest `breakoutprop.com` mail, the ONE link whose text equals the page's number, opened in the same WebView. ~~2 failures then latch and ping~~ (superseded 2026-10-10, § 7.16: no latch; retried with backoff forever, ONE red flag after 3 in a row, and a backgrounded app comes forward every 30 min to check its login). Foreground service + boot receiver + "display over other apps" to come back after a reboot. |
 | Stable signing | `phone-executor-apk.yml` | The first run generates a keystore into Actions secrets (`PHONE_EXEC_KEYSTORE_*`) through the existing `BRANCH_PROTECTION_TOKEN`; it is never printed and never in git. Later builds install over the old app and keep the session. **New applicationId**, so the 1a probe and its session under measurement are untouched. |
 
 **Deviation from the dispatch, stated:** the inbox is read over **IMAP with a Gmail app password**, not the Gmail API with OAuth.
@@ -671,14 +671,14 @@ Every one of these is a **refusal with the form dump**, never a guess, so the fi
    - In your **main** Gmail: Settings → Forwarding → add the new address. Confirm with the code Google sends to the new inbox.
    - Still in the main Gmail, add a filter `from:(breakoutprop.com)` → "Forward it to" the new address.
 2. **Install:**
-   - Open the latest `phone-executor-apk` run in GitHub Actions and download the `phone-executor-1b-apk` artifact.
+   - Open the latest `phone-executor-apk` run **on `main`** (or a manual dispatch) in GitHub Actions and download the `phone-executor-1b-apk` artifact. Since 2026-10-15 a branch push runs only the compile/test job and publishes no APK (PI-20261015-QC5PFG9A-0001).
    - Unzip it and install `app-release.apk`, allowing "install unknown apps" for your browser once.
 3. **Open "Metis Executor" → Setup:**
    - your Breakout login email;
    - the new Gmail address;
    - the app password, typed into the app only, never into chat.
    - Tap "Allow restart after reboot", "Ignore battery optimisation" and "Allow notifications".
-4. Leave the app open. It loads the terminal and should log itself in through the inbox; that first login is the first test of auto re-login. If it latches, log in by hand in the app and tap "Reset login".
+4. Leave the app open. It loads the terminal and should log itself in through the inbox; that first login is the first test of auto re-login. *(Superseded 2026-10-10, § 7.16: there is no latch and no "Reset login"; a failed login is retried by itself, and "Retry login" only skips the current wait.)*
 5. Tap **Share ID** and send the line to the manager. It is a fingerprint, not a secret. We commit it, which pairs the phone.
 6. Tap **Dry test**. The app fills one ETH ticket, reads it back, does **not** submit, and the VM pings the result.
 7. Keep the phone on charge with the app on screen. *(Superseded 2026-10-06, § 7.15: there is no ARMED button any more; live vs dry is decided by the server.)*
@@ -760,13 +760,96 @@ is ever outstanding. The claim serves it ONLY to an app that posts `accepts: ["a
 5. **DRY:** cancel and report `dry_amended`. **LIVE:** click the ONE save button, then read the result back on the terminal:
    the row's SL/TP columns, or else the dialog re-opened read-only and cancelled.
 
-Anything unverified before the save is `refused`; after it, `mismatch`. The server locks that ticket's trail on
-`mismatch`, `human_moved`, a second refusal, or a claimed amend with no report, and pings the operator. A locked trail is
-never retried.
+Anything unverified before the save is `refused`; after it, `mismatch`. **No halting** (operator directive 2026-10-09,
+*"There is no halting."*; until then the server LOCKED the ticket's trail for good on these): a `refused`, a `mismatch`
+or a claimed amend with no report fails THAT attempt only. The ticket backs off 1, 2, 4, 8 (cap) closed bars and is
+re-planned; the next amend still carries the stop the server believes is resting (after a `mismatch`, the stop the
+terminal read back, when it read one), so the phone's pre-click check decides before any click. The first failure of a
+streak pings; 3 in a row raise ONE red flag; the first success after it announces recovery once. A `no_position` read is
+a miss, never an end: re-checked with backoff (6 never-seen reads raise one red flag). `human_moved` still HOLDS the
+ticket's trail (the trail never fights a human's stop) until the human's `{kind: amend}` report puts their levels on
+record, then resumes from them. A `locked`/`ended` state left by the old code is ignored on load with a log line (an old
+human-moved lock is kept as the hold). The trail only ever tightens.
 
-**UNMEASURED:** no capture has shown Breakout's Positions row edit control or its dialog. The headless fixtures
-(`test/exec_check.js`, "amend") prove the helpers' mechanics on synthetic DOM only. The first real amend, dry or live,
-either passes or refuses with the dump (row headers and controls, dialog inputs and buttons) that names the label to fix.
+**An UNREAD stop is never a human move (operator, 2026-10-18).** breakout_2 `prop-manual-c1dba3c376b3#a7` on app
+1b.265: `sheetOrders()` returned `trigger: null` for the Stop row (its ancestor held 0 or 2+ price-shaped cells, so
+no single value was read), `close(null, fromSl)` was false, the app reported `human_moved` with *"terminal stop null !=
+expected 2452.65"*, and the server held a trail nobody had touched — the operator had not moved the stop. *"We did not
+read it"* and *"we read it and it differs"* are distinct states (the collapsed-states rule) and are now kept apart at
+every layer: exec.js returns `why: no_price | many_prices` and the cells' digit-masked `px_shapes` beside the null
+(exec.js 2026-10-18.3, signed); the app refuses the attempt as *"stop trigger UNREAD"* (and *"modal trigger UNREAD"*)
+instead of calling it a human move; the server (`phone_trail._unread_stop`) records a `human_moved` report that carries
+no read value and whose evidence is a null/absent reading as status `unread` — failed like any other attempt, backoff,
+retried, one Telegram per live attempt naming the stop the plan wants and the step captures — and never a hold. A
+`human_hold` already written from such a report is released by the next plan (`_release_unread_hold`, a `hold_released`
+history row), so the trail resumes on its own with no journal edit by hand. A report naming two numbers (*"terminal
+stop 2470 != expected 2450"*) or carrying a read-back value stays a human move and still holds.
+
+**Why the stop read null, MEASURED (2026-10-18 14:32Z, app 1b.300, amend #a8, capture step `003-stop_row`).** The
+[1 TP / 1 SL] Stop row is `Long | Stop loss | 2,452.65 USD | 0.52 ETH` with the number and the unit in separate
+spans, so `sheetOrderRows` found TWO bare price-shaped leaves — the trigger and the QUANTITY — and returned null; the
+terminal's stop equalled the server's. exec.js 2026-10-18.4 picks the trigger by the **quote unit**
+(`unitOf(leaf)`: the unit in the leaf's own text, else the first word after it in the nearest ancestor whose text
+starts with it; USD/USDT/USDC = price, the coin = quantity), reports `n_usd` / `why` (`no_price`,
+`many_prices_no_unit`, `many_quote_prices`) and the units in `px_shapes`, and the real-page fixture
+`tools/phone-executor/test/fixtures/breakout-sheet-tpsl-stop-row` (built from that capture with
+`fixture_from_capture.py`) proves the read in CI. Same day, the planner: a running backoff is waived ONCE when a
+NEWER signed exec.js is served than the one the last attempt ran (`backoff.exec_js`, `_served_exec_js`), so a reader
+fix is tried on the next plan instead of after the 8-bar cap (#a8 sat at `fails: 7`). And the planner emits **no
+amend while the `sheet_edit` gate is closed** (drill passes < 3 and no pin): the app would refuse the pencil by
+design and every such refusal counted as a failure; instead the plan is logged, ONE alert per ticket names what arms
+the gate, nothing backs off, and the first plan after the gate opens emits at once (a gated plan never consumes the
+exec.js waiver).
+
+**The edit control is MEASURED; its dialog is not yet** (2026-10-18, drill 1 on breakout_2, run
+`drill-drill-20261018-163942-9541d8-20261018T163959Z`, 1b.300 + exec.js 2026-10-18.4). The first drill after #18996
+passed every step up to `pencil` — `stop_row` read `trigger 2452.65`, `stop_matches_server` read the same as the
+server — and FAILED at `modal_open` (`n=0`). The captures `009-pencil` / `010-modal_open` show why: the Stop row's
+edit control is `span[tabindex] > button[aria-label="Edit order"] > svg`; `rowIcons` keeps the OUTERMOST interactive
+element (the wrapper span), `sheetEditStop` called `.click()` on it, and a click on an ancestor never reaches the
+button's handler (events bubble up, not down) — the DOM after the click holds only the Position details dialog. exec.js
+2026-10-18.5 resolves an icon to its control (`ctlOf`: the ONE button / role=button / link inside the wrapper) before
+clicking, and adds `sheetEditStopTarget(scroll)` — the pencil's touch point under `sheetTarget`'s rules — so the app
+(`pencilTap`, from the next APK) touches the pencil with the same trusted finger the Positions row needed; a 1b.300
+phone picks up `.5` over the signed remote script and clicks the button. Both are proven on the real-page fixture
+`breakout-sheet-tpsl-stop-row` (the control resolves to `button "Edit order"`, the point lies inside its rect) and
+on a synthetic wrapped-pencil page (the click opens the modal).
+
+**The "Edit Stop loss" modal is MEASURED, and Cancel closes the whole sheet** (2026-10-18 19:00Z, drill 2 on
+breakout_2, run `drill-drill-20261018-185905-39549f-20261018T190001Z`, 1b.300 + exec.js 2026-10-18.5; fixture
+`breakout-modal-edit-stop-loss` from its `010-modal_open` capture). The pencil's button click opened the modal; it
+holds Quantity (`name=protectionStopLossSize`), **Trigger (`name=protectionStopLossPrice`, unit USD)**, Entry
+distance (`protectionStopLossDistance`, %), and under them the "Stop loss Entry distance" **slider** (`input
+type=range` inside `div.ds-slider`), R:R, Cancel and Confirm. The drill typed 2452.63 into the Trigger input, read it
+back, left the quantity at 0.52, and the slider's thumb did not move between the before and after captures while the
+terminal recomputed its "Est. maximum loss" from the typed price — the operator's rule (via the manager, same day:
+*click the field with the price level for the SL and type a new value; never the slider*) is what the code does, and
+exec.js 2026-10-18.6 makes it explicit: `modalSetTrigger` refuses anything but a text input outside any slider, reports
+the resolved input's `name`/`type`, and `modalInfo` counts the modal's `sliders` so a capture shows the slider seen and
+left alone. The drill then FAILED at `stop_unchanged` (`before 2452.65 after null`): the modal's **Cancel closed the
+whole position sheet**, not just the modal (captures `014-modal_cancel` / `015-stop_unchanged` show the Positions
+grid, no sheet root — and the modal capture itself holds no sheet root), so the re-read found no sheet. The live
+amend's read-back after Confirm reads the sheet the same way, which would have reported `mismatch` with a null read on a
+stop that had in fact moved, and the next attempt would have called the new level a human move. So (app, next APK):
+every Stop-row re-read after a modal goes through `sheetEnsureOpen` (re-opens the sheet with the same native touch,
+recorded as `sheet_after_cancel` / in the `stop_reread` note), and an amend that finds the terminal already at the
+ASKED level reports `amended` with that read instead of `human_moved`.
+
+**The system moved a live stop on its own — OBSERVED 2026-10-18 20:54Z** (breakout_2, ticket
+`prop-manual-c1dba3c376b3`, 1b.311 + exec.js 2026-10-18.6). After #19029 merged and the operator installed 1b.311
+(20:25Z), rehearsal drills 3/4/5 (issues #19035 / #19036 / #19038) passed every step on the real position — the sheet
+re-opened after Cancel each time — and armed `sheet_edit` at 20:53:59Z. The planner's next pass (20:54:38Z) waived the
+backoff for the newer script and emitted #a9 (tighten 2452.65 → 2391.18); the phone applied it by 20:55:11Z: capture
+`amend-prop-manual-c1dba3c376b3-a9-20261018T205440Z` (11 steps, none failed) — pencil touched, modal opened, 2391.18
+typed into the price input and read back, Confirm clicked live, **the sheet re-opened after Confirm** (so Confirm
+closes it exactly as Cancel does — now MEASURED), `stop_reread 2391.18 asked 2391.18`. The stop sits below the
+2405.89 entry: profit locked, no human in the path. **The server then mis-recorded the success:**
+`record_amend_result` demanded the TP read back too (*"phone said amended but read back sl=2391.18 tp=None (asked
+sl=2391.18 tp=2167.19)"*) and wrote `mismatch` (fails 8), while an sl-only amend never touches the TP — the app
+edits the Stop row's modal and reads the stop back; it has no TP to read — and every test had passed `tp_read`. Fixed
+the same day: an sl-only amend (`kind: sl`) verifies the stop only; a TP amend still verifies the TP; a wrong stop
+with no TP read is still a mismatch. Residual on that ticket until its next tighten: the trail's `resting_sl` is
+2391.18 (the terminal's truth) while the fill's `open_risk.sl` still reads 2452.65.
 
 ### 7.15 The device-local ARMED switch is removed: live vs dry is decided only by the server (2026-10-06, lane ARMED-GATE)
 
@@ -791,6 +874,180 @@ safe than we think".* It is the same rule as CLAUDE.md § "The two execution gat
 **Until the new APK is installed** the old app still requires its own ARMED flag. On 2026-10-06 the phone was already armed, so
 installing the new APK does not change what it does today; it removes the way for the phone to silently drift to dry.
 
+### 7.16 Auto re-login without a human: no latch, background login check (PHONE-AUTOLOGIN, 2026-10-10)
+
+**Operator, verbatim (2026-10-10, relayed by the manager):** *"the login cannot depend on manual input from me, and the
+system was able to login autonomously already - that's why we set up the dedicated inbox"*. Binding with it: the
+2026-10-09 *"There is no halting"* directive (CLAUDE.md, Prime Directive rule 7).
+
+**MEASURED by the manager (live, 2026-10-10):** breakout_2's phone posted no `account_status` after 2026-10-09T15:01Z.
+`/api/bot/prop/status?account_id=breakout_2` `phone_events` showed `logout_seen` at 08:19:27Z ("logged out; trying auto
+re-login") and then no `login_started` for 7+ minutes, while heartbeats read `st=background, fg=false`. Root causes read
+from `MainActivity.kt` (build before this PR):
+
+| # | cause | fix (this PR) |
+|---|---|---|
+| 1 | `relogin()` returned while `userActive()` (5 min after the operator's last tap). The operator opened the app (a tap), it went to the background, background ticks never read the page, so re-login never ran: **opening the app prevented the login.** | Re-login is deferred only while the screen is being touched (60 s, `RELOGIN_DEFER_MS`) and only while resumed; the 5-min hold still guards navigation reloads. |
+| 2 | A backgrounded app never read the page, so a logout overnight was invisible (`PI-20261010-GKFNZSH4-0001`). | The background tick brings the Activity forward (the existing `bringToFront()` / BG_WAKE mechanism) every 30 min (`LOGIN_CHECK_MS`), when a re-login retry is due, or when `GET /phone/pending` says `status_age_hours` >= 1 h (at most every 10 min); the resumed tick reads the page, re-logs in if needed, posts `account_status`, and the task goes back unless the operator touched it. |
+| 3 | Two failures set `RELOGIN_LATCHED`, stopping auto re-login until a human tapped "Reset login": a self-halt the no-halt directive forbids. | No latch. Retry after 2, 5, 10, 20, then every 30 min, forever. Retries are logged as the quiet `login_retry` event; the 3rd consecutive failure sends ONE `login_failed` ("STILL RETRYING"), the recovery ONE `login_ok` ("RECOVERED"). An older build's persisted latch is cleared at start. "Reset login" became "Retry login", which only skips the current wait. |
+| 4 | Mail was searched only since now-60 s, so a code page left by an earlier attempt (ours or the operator's) could never be answered. | A code page this attempt reached is answered by mail since its own email submit (-60 s); a code page it FOUND by mail up to 30 min old. The newest 5 Breakout mails are scanned newest first; the link must still be the ONE whose text is the shown number. |
+
+**Challenge pages** are still never solved or interacted with. What changed: the challenge no longer stops the loop for
+good; the app reloads the terminal every 30 min to re-check it (one `error` event on first sight). A challenge on the
+login host is a login failure, so it follows the same backoff.
+
+**Server side.** `scripts/ops/prop_silence.py::probe_phone_login` (`phone_login_breakout_2`, hourly attention-watch
+carrier) raises ONE urgent alarm, deduped and cleared by the existing edge class, when the phone's heartbeat is alive
+but `status_age_hours` > 3 h on a live account: a silent logout surfaces even if the app's own red flag never arrives.
+A dead heartbeat stays the heartbeat probe's alarm.
+
+**Not verified (landed_unproven until observed):** that Android resumes the Activity from the background on this
+phone when the screen is off/locked (the ticket wake shares the same limit), and the observation that closes checklist
+row `PHONE-AUTOLOGIN`: breakout_2 `phone_events` shows `login_started` -> logged in and a fresh `account_status` after
+the new APK is installed.
+
+### 7.17 The lineup login, waited for properly, and a background engine (PHONE-AUTOLOGIN-2, 2026-10-10)
+
+**Operator, verbatim (2026-10-10, watching the phone, relayed by the manager):** *"it's a login check that verifies you
+can choose the correct 2 digit number from a line up of 3"* and *"it's way not waiting long enough to see the email.
+That can take at least up to a minute. It needs to wait longer to see the email and see if it comes up with one of the
+numbers that is the correct one."* And on the background: *"it would be more stable if it could do it in the
+background ... the more automated and backgrounded it could be, the better."*
+
+**MEASURED (this lane, live `/api/bot/prop/status?account_id=breakout_2` `phone_events`, 2026-10-10):**
+`login_started` 12:30:35Z -> `login_retry` "failed (1): no single number on the waiting page" at 12:30:41Z; attempt 2
+12:40:45Z -> the same failure at 12:40:51Z. Both failed **6 s** after the start. The build in front of this PR waited a
+fixed `delay(6000)` after the email submit, read `__ex.loginNumber()` ONCE, and required one prominent number; that
+function returns `""` when there are several numbers at the same size, which is the lineup shape. The 18 x 10 s inbox
+poll was never reached. Also measured: a retry due ~12:32:41Z did not run (`"background: bring-to-front already
+requested"` at 12:33:03Z): the wake window from 12:30:31Z outlived the failed attempt. `status_age_hours` read 21.7.
+
+**Which side shows the lineup is NOT established from the repo.** The only recorded flow (§ 7.9, 2026-10-05) is "the
+operator tapped the number link in Breakout's email" (page shows one number, the mail carries numbered links); the
+operator's 2026-10-10 words read as the page showing three numbers and the mail naming the right one. Both are
+supported, and the PAGE decides which applies (`LoginMatch.kt`, pure, JVM-tested):
+
+| page shows | mail carries | action | fail closed when |
+|---|---|---|---|
+| >= 2 numbers (tappable controls, else the >= 2 at the top font size) | a number on its own (whole element / whole line), else one bound to "number/code/select/tap/choose/matching" | tap the ONE page choice the mail names (`__ex.loginPick`) | 0 or > 1 of the page's choices appear in the newest deciding mail |
+| exactly one number | numbered https links | open the ONE link whose text is that number (the 1b behaviour) | 0 or > 1 such links |
+
+Timing: after the submit the page is polled every 3 s for up to **90 s** for the number(s); the inbox (newest 5
+`breakoutprop.com` mails after the submit, -60 s slack; 30 min for a code page found already open) every 10 s for up to
+**5 min**; then up to 30 s for the page to finish on its own, else the terminal is loaded and must read logged in within
+45 s. Values (numbers, links, addresses) stay in memory only.
+
+**Diagnosable from the VM.** Every attempt posts ONE quiet `login_diag` event (kept in `phone_events`, not pinged;
+server-scrubbed again): engine, step reached, `page_n/page_top/page_btn` (how many numeric candidates the page showed),
+`shape`, `mails`, `polls`, `match` (candidates in the deciding mail), `tier`, `mail_err` (exception class only),
+seconds at each stage, and the host at failure. Never a value.
+
+**Background engine (`Page.kt::BgWeb`).** A second WebView owned by the process (kept alive by the existing foreground
+service), sharing the kiosk WebView's cookie store and site storage, runs the login check, the re-login and the
+account-panel read while the Activity is backgrounded: every 15 min while logged in, when a retry is due, and on the
+VM's stale-`account_status` hint. For each job it is attached to a full-screen, alpha-0, not-touchable, not-focusable
+overlay window (the "Display over other apps" permission already granted for the boot restart) so Chromium treats it as
+visible and keeps its JS running, and it is detached when the job ends so no overlay lingers over what the operator is
+doing. Without that permission it runs detached at screen size. **Tickets never run in the engine**: orders stay on the
+foreground path (bring-to-front), unchanged. If two engine jobs in a row get no answer from the page, the login check
+falls back to bring-to-front once and the engine is tried again afterwards. A successful re-login was also given the
+wake window back on failure (the 12:33Z skip). Heartbeat fields: `bg` (overlay / detached / ""), `bg_runs`, `bg_ok`,
+`bg_last` (e.g. `logged_in+posted`, `login_ok`, `login_fail`, `no_answer`), `bg_last_min`; the server now also keeps
+`relogin_failures / relogin_flagged / relogin_next_min`, which it silently dropped before.
+
+**Not verified (landed_unproven, checklist `PHONE-AUTOLOGIN-2`):** the real page and mail shapes (the tests are
+synthetic), that this phone's WebView keeps running JS in an alpha-0 overlay, and that the session is shared between
+the two WebViews on this device. The observation that closes it: breakout_2 `phone_events` shows `login_started` ->
+`login_ok` without operator input and a fresh `account_status`. If the engine reports `bg_last=no_answer` repeatedly,
+the next step is moving the whole loop into the service (pipeline item filed with this PR).
+
+### 7.18 Zero numbers after the email click: diagnose, broaden, verify the submit (PHONE-AUTOLOGIN-3, 2026-10-10)
+
+**MEASURED (live `/api/bot/prop/status?account_id=breakout_2` `phone_events`, read by this lane).** The PHONE-AUTOLOGIN-2
+build, installed ~13:50Z, ran in the background engine (`bg=overlay`). Attempt 1: `login_started` 13:50:53Z ->
+`login_diag "eng=overlay email=clicked page_n=0 page_top=0 page_btn=0 step=page host=portal.breakoutprop.com"` 13:52:24Z
+-> `login_retry "no number or lineup on the waiting page within 90 s"`. Attempt 2 (13:54:31Z -> 13:56:03Z) the same. So
+`loginEmail` reported a click, and then for 90 s the page had **zero** visible leaf elements whose whole text was a 1-3
+digit number. The mail step was never reached (it was gated on the page), so nothing is known about the mail either.
+
+**The cause is NOT established.** Three hypotheses, none ruled out by that diag line:
+
+| | hypothesis | what the old build could not see | what this build does |
+|---|---|---|---|
+| a | the click did not submit (wrong control: the old code clicked the FIRST page button matching `continue/next/...`, which on a sign-in page can be "Continue with Google"; or the form needs Enter / a second step) | whether the page changed at all | looks for the continue control in the email field's own form first, never a social/passkey button; then **verifies** the page moved within 12 s (email field gone, code page, or a text-signature change), else presses Enter and waits again. Diag: `sub_where` (form/page/none), `sub_btns`, `sub_label` (scrubbed), `enter`, `adv`, `changed` |
+| b | the numbers are there but the reader missed them | only `div/span/...` leaves with NO child element, raw text | a candidate is the innermost element whose text with all whitespace and zero-width characters removed is a 1-3 digit number (icon children and split digit spans no longer hide it), or a radio/button/option whose `aria-label`/`value` is one; searched in open shadow roots and same-origin iframes; nested candidates resolve to the control (a row of choices) or the whole number (split digits) |
+| c | the page only says "check your email"; the choices are in the mail | what the mail carried | the inbox is polled **in parallel** from the submit on; the page wait stretches to 150 s while no mail has arrived; the diag reports `mails`, `mail_first_s`, `mshape` (`none / numbered_links / numbers / one_login_link / links / text`) and per-shape counts of the newest mail. A `one_login_link` mail is **reported, not opened**: the LINK rule still needs the page's single number |
+
+My lean, stated as an inference: **(c) or (a) are likelier than (b)**. The only flow ever observed (§ 7.9, 2026-10-05)
+was the operator tapping "the number link in Breakout's email" with the waiting page as the other half, and a portal
+sign-in page commonly carries a social-login button that the old selector could pick first. (b) would require all three
+numbers to be hidden from a leaf-text read at once, which is possible (icon children, split digits) but less common.
+The next attempt's diag decides it; this build fixes (a) and (b) where they apply and describes (c).
+
+**The structure snapshot (`exec.js::loginProbe`, posted on every attempt).** Tag histogram (top 15), open shadow roots,
+iframes and cross-origin (unreadable) iframes, visible input types, which phrases are present (check_email, we_sent,
+select, choose, verify, number, code, link, tap, expired, error, social), the COUNT of numeric tokens in the readable
+text (document + shadow roots + same-origin iframes), the number of candidates the reader found, and up to 20
+button / heading / label / alert texts of at most 40 chars with **every digit replaced by `N`** and emails / links
+replaced by `EML` / `URL`. Never a value. Because the server keeps 160 chars of `[A-Za-z0-9 _.:/()=+-]` per event
+(`src/prop/phone_executor.py::record_event`), the diag is posted as up to 7 numbered `login_diag` parts (`d1/N ...`),
+core line first; no server change was needed.
+
+**Tests (synthetic, not Breakout's page):** `tools/phone-executor/test/exec_check.js` adds one page per hypothesis (icon
+children / split digits / zero-width; radios by value; `aria-label`-only controls; a shadow root; a same-origin iframe;
+a check-your-email page whose probe must carry no digit, email or link; a social button before the form's Continue; a
+form with no button) and re-checks the PHONE-AUTOLOGIN-2 lineup. `LoginMatchTest` adds the mail shapes, incl. that a
+magic-link mail is never acted on.
+
+**Not verified (`landed_unproven`):** the real page and mail shapes. The observation that closes the diagnosis: the next
+breakout_2 `login_diag d1..dN` parts with `adv`, `changed`, `cands`, `ph`, `mshape`. The observation that closes the
+row: `login_started` -> `login_ok` without operator input.
+
+### 7.19 The dedicated inbox refuses the login: say why, test it in seconds, stop hammering (PHONE-AUTOLOGIN-2, 2026-10-10)
+
+**Reported to this lane by the manager, not re-read here:** every attempt (14:53Z, 15:01Z, 15:19Z, 15:26Z, 15:57Z,
+16:04Z) reached the waiting page and then logged `mail_err=AuthenticationFailedException mails=0 polls=24-28`. The
+operator generated a new Gmail app password twice (~14:58Z, ~15:54Z), states it is the dedicated address and the right
+password, and IMAP is enabled in that Gmail. Taken as fact.
+
+**What the code review found (read, not run on the phone):**
+
+| checked | finding |
+|---|---|
+| stale value in memory | none: `relogin()` reads `INBOX_USER`/`INBOX_PASS` from the store on every attempt |
+| encryption mismatch | not the cause: a value that cannot be decrypted reads as `null` (Store.get catches) and shows "not configured", never an auth failure |
+| wrong key | none: Setup writes and relogin reads the same two keys |
+| mechanism | javamail 1.6 uses AUTHENTICATE PLAIN when Gmail advertises it; XOAUTH2 is off by default. Gmail accepts PLAIN with an app password |
+| **password normalisation** | **Setup removed only the ASCII space** (`replace(" ", "")`). An app password copied from Google's page or a password manager can carry a no-break / narrow space, a zero-width char or a newline in its gaps; any one left in makes a 17-19 char password that Gmail refuses with `Invalid credentials`, however right the 16 letters are. Re-entering it the same way reproduces it. |
+| **hammering** | after a refusal the poller retried the same credential every 10 s for 5 min: 24-28 refused logins per attempt, ~150 in an hour. Gmail throttles an account that does that, and a throttled account refuses even a correct password for a while. |
+| **opacity** | only the exception CLASS was reported, so `Invalid credentials`, `Application-specific password required`, `Please log in via your web browser` and javamail's own `no password specified` all read the same |
+
+**Likely cause (an inference, MEDIUM-LOW confidence):** the normalisation gap, compounded by the hammering. It is the only
+code path that turns a right password into a wrong one; it is NOT proven, because the old build could not say what Gmail
+answered. The `inbox` diag line below settles it: `plen=16 p_other=0` with `Invalid credentials` points away from it
+(then: throttle, or the password/address really do not pair); `plen` 17-19 or `p_other>0` on the OLD stored value
+confirms it.
+
+**What changed (`Creds.kt`, `Mail.kt`, `MainActivity.kt`):**
+- `Creds.pass` removes every whitespace / invisible / control char anywhere; applied at Setup save AND at every read in
+  `Mail.scan`, so a value an older build stored is cleaned without re-entry. `Creds.user` likewise for the address.
+- `Mail.scan` connects with PLAIN, and on a refusal tries the IMAP LOGIN command once (both refused = the credential, not
+  the mechanism); `ssl.enable` and `auth.xoauth2.disable` are explicit.
+- On a refusal the attempt stops polling (one check per attempt, not 24-28) and fails at once with a stated reason.
+- A quiet `login_diag "i1/N inbox err=... mech=... srv=(Gmail's words, scrubbed) ulen= uat= udom= plen= p_upper= p_other="`
+  is posted on the first error and on any refusal. `Creds.scrub` removes the user and password values, any address and
+  any link, and keeps only the server's diag charset. Shapes are counts and booleans, never a value.
+- Setup gains **Test inbox**: one IMAP connect now with what is typed (a blank password = the stored one), the scrubbed
+  result in a dialog and as `login_diag "i1/N inbox_test src=typed|stored ok|FAIL ..."`.
+- Setup save takes effect immediately: the backoff wait is cleared and the running attempt's poller re-reads the store
+  on every poll.
+
+**Tests:** `CredsTest` (synthetic): NBSP / narrow space / zero-width / BOM / newline stripped; the old normalisation
+leaves the NBSP in (19 chars); shapes carry no value; scrub keeps Gmail's words and drops address, password and link.
+
+**Not verified (`landed_unproven`):** that this is the cause. Closing observation: the operator taps **Test inbox** on
+the new build (or the next attempt posts its `inbox` line) and it reads `ok`, then `login_started` -> `login_ok`.
+
 ## 8. Open questions for the operator / manager
 
 | # | question | my lean |
@@ -809,3 +1066,65 @@ installing the new APK does not change what it does today; it removes the way fo
 - **Not read:** the Funded Trader Agreement, the Terms of Service, the private Android repo (this session).
 - **Inherited without re-checking:** the Android app facts in § 1.1 (a 2026-09-30 reading of a commit dated 2026-08-13).
 - **Not claimed:** that any part of this works. It is a plan with a stop at Phase 1.
+
+### 7.20 Observable and testable, built once (PHONE-EXEC-OBSERVABLE-1018, operator decision 2026-10-18)
+
+**Why.** Between 2026-10-17 and 2026-10-18 four APKs (#18709, #18775, #18811, #18901) each guessed why one
+native tap on Breakout's Positions row opened no sheet, waited for the next live trail amend, and read a
+40-character diag line. The operator ended that loop (popups, ~08:00Z): *the app must know what it is doing,
+record its own actions without anything popping up on screen, and show what it did right and wrong.* DECIDED
+(all five pieces; reversal = a new operator decision on the same row): captures stored on the server only,
+auto-deleted after 7 days, never committed to this public repo; live `breakout_2` trail amends keep trying
+meanwhile and every refusal alerts the operator with the stop to set by hand.
+
+| piece | what it is | where |
+|---|---|---|
+| 1 RECORDING | at each step of every flow (positions read, row find, tap, sheet open, field set, confirm/abort) the app draws its own WebView to an off-screen bitmap (no MediaProjection, nothing on screen), paints redaction boxes over account ids / balances / equity / P&L, takes a sanitized DOM snapshot (`__ex.snapshot`), and posts both to `POST /api/bot/prop/phone/capture`. The server scrubs a second time, bounds every write, stores under `<trade_journal.db dir>/phone_captures/<acct>/<run>/` and purges after 7 days (`ict-phone-capture-purge.timer` + an at-most-hourly purge on the POST). Read on the diag tier: `GET /api/diag/phone_captures`, `phone_capture`, `phone_capture_file`. | `src/prop/phone_captures.py`, PR 1 |
+| 2 REHEARSAL | a server-issued **drill**: the full stop-amend flow on a real open position up to the final Confirm, then Cancel and close the sheet. Pass/fail per step with captures. Triggered on demand by a system-action. Never an order change. | PR 3 |
+| 3 REAL-PAGE TESTS | tooling that turns a captured DOM snapshot into an `exec_check.js` fixture with the numbers replaced, so CI proves a fix against the real Breakout page. | PR 5 |
+| 4 SIGNED REMOTE LOGIC | `exec.js` fetched from our own API at startup and on a version bump, pinned by version, verified with an embedded ed25519 public key, bundled copy as the fallback. Signed in CI with a key in Actions secrets. Native/Kotlin changes still need an APK. | PR 2 (app) + PR 4 (CI + route) |
+| 5 ALERT | when a live amend is refused: ONE Telegram message with the stop to set by hand and a link to the step captures. | PR 5 |
+
+**Done when** the drill passes 3 times in a row on the operator's phone (`breakout_2`), with captures showing
+each step; then the live amend runs on the same logic. Row: `PHONE-EXEC-OBSERVABLE-1018`.
+
+**The drill may open and close a real test trade (operator grant `MD-EXEC-DEV-TEST-TRADES`, 2026-10-18; PR 6).**
+Waiting for a live trail amend to exercise the sheet meant one attempt every 8 bars; the operator ended that too,
+verbatim in `config/mandates.yaml`: *"we can open and close trades when needed in order to verify or understand how
+to do the operations. That is a standing mandate."* `src/prop/exec_test_trades.py` reads the granted entry (absent =
+refuse) and writes ONE minimum-size long with a protective stop and a 30-minute `close_by`, under the bounds the
+manager set and the operator can change in the entry: the three phone-executed prop accounts only, the account's
+declared instruments, 6 per account per UTC day, never when the day loss is past half the daily-DD switch limit or
+cannot be read, never while a strategy ticket or position is open on the same symbol. `claim_next` re-checks every
+bound when the phone claims the ticket and refuses it otherwise. Such a trade is execution plumbing, not a strategy
+(`strategy: exec_test`, `meta.origin: exec_test`, ids `exec-test-*`): the trades snapshot, the prop overview's
+closed set, soak grading and the trade-quality review drop it; an OPEN test position stays visible in the overview
+because it is real money. A test trade the drill fails to close by `close_by` raises one alert naming it; nothing
+halts. The drill extension that writes the ticket, confirms the amend and closes the position is PR 3's `symbol:`
+option (server) and the app PR that follows.
+
+**Piece 3 and piece 5 as built (PR 5).** `tools/phone-executor/test/fixture_from_capture.py` turns one
+`NNN-<step>.dom.json` (read from `GET /api/diag/phone_capture_file`) into `fixtures/<name>.html` + `.meta.json`:
+every element laid out absolutely at the rect it had on the phone, same tags / roles / attributes / nesting, the
+React handler names restored, **every digit run replaced** (same length and leading digit, seeded by the value so one
+value maps to one replacement across the page); ids and money were already masked on the device.
+`exec_fixtures_check.js` serves each fixture on the trade host and runs its `<name>.spec.json` (partial deep match)
+against the bundled `exec.js`; it is a step of the APK workflow's `check` job. A fixture proves READS and TARGETS; a
+tap that must open something is the drill's job. The raw capture never enters the repo. The first fixture
+(`sample-positions-sheet-synthetic`) is built from `exec_check.js`'s synthetic page to prove the tooling; a real
+capture replaces it. Building it found two on-device redaction bugs fixed in PR 2: the sheet's "1 TP / 1 SL" tab
+and the Positions count were masked (blinding `sheetInfo`), and the Value column was masked although it is the
+kept quantity times the kept mark price and `positionsRead`'s only quantity source on the grid.
+The alert (`src/prop/phone_trail.py::_hand_set_alert`): a **live** amend the phone refused before any click sends
+ONE Telegram line **on every refusal** (not only the first of a streak, which stays the dry-mode behaviour) naming
+the symbol, direction, the stop to set by hand and the stop it moves from, plus the diag link to that attempt's
+step captures (`capture_run` in the phone's `amend_result`, stored on the amend record). The trail's backoff, the
+red flag after five failures and the recovery ping are unchanged.
+
+**Capture contract (PR 1).** One POST per step: `run_id` (`[A-Za-z0-9][A-Za-z0-9._-]{2,79}`, e.g.
+`amend-<ticket>-a<seq>-<UTC stamp>`), `flow` (`entry|amend|drill|positions|login|probe`), `step`
+(`[a-z][a-z0-9_]{1,39}`), `seq`, `ok` (true/false/null), `note` (≤300 chars, scrubbed), optional `ticket_id`,
+`app_version`, `page` (`fg|bg`), `png_b64` + `png_type` (JPEG/PNG/WebP ≤ 900 KB, magic bytes checked), `dom`
+(JSON tree ≤ 600 KB). Stored as `NNN-<step>.json` (meta) + `.jpg|.png|.webp` + `.dom.json`. Caps: 80 steps per
+run, 400 runs per account (oldest dropped), 400 MB per account (refused with `ok: false`, the flow carries on).
+The write's `ok` and the step's `ok` are two fields (`{"ok": true, "stored": true, "capture": {... "ok": false}}`).

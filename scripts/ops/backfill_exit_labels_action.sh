@@ -26,6 +26,11 @@
 #   1. dry-run (no flag) → prints the full plan and its denominators.
 #   2. --apply           → writes.
 #
+# PREVIEW ONLY (ORDER-AUDIT-4): an issue body line `apply: false` reaches this
+# script as ACTION_APPLY=false and stops after step 1, so a Tier-2 dry run can be
+# shown and approved before anything is written. Unset/other keeps the old
+# dry-run-then-apply behaviour.
+#
 # Idempotent: a row already carrying `exit_reason_source` is skipped, so
 # re-running is a no-op. Does NOT restart any service.
 set -euo pipefail
@@ -76,6 +81,20 @@ print(con.execute(
 PY
 }
 
+# ORDER-AUDIT-4: the two populations it added, unsourced, as "<cross>/<reduce>".
+_oa4_count() {
+    python3 - "${DB_PATH}" <<'PY' 2>/dev/null || echo "?"
+import sqlite3, sys
+con = sqlite3.connect("file:%s?mode=ro" % sys.argv[1], uri=True)
+q = ("SELECT COUNT(*) FROM trades WHERE status='closed' "
+     " AND COALESCE(is_backtest,0)=0 AND exit_reason IN (%s) "
+     " AND COALESCE(notes,'') NOT LIKE '%%\"exit_reason_source\"%%'")
+x = con.execute(q % "'sl_cross','tp_cross'").fetchone()[0]
+r = con.execute(q % "'intent_reduce_executed'").fetchone()[0]
+print("%s/%s" % (x, r))
+PY
+}
+
 # The self-test is a PRECONDITION, not decoration: this writes to the money DB,
 # and a classifier that cannot be shown able to fire must not be trusted to
 # relabel 191 rows of history.
@@ -93,6 +112,8 @@ fi
 
 pre="$(_generic_count)"
 log "Rows generic + unstamped (pre-backfill): ${pre}"
+pre_oa4="$(_oa4_count)"
+log "Unsourced sl_cross+tp_cross / intent_reduce_executed (pre-backfill): ${pre_oa4}"
 
 echo
 echo "===== backfill_exit_labels.py (DRY-RUN plan) ====="
@@ -107,6 +128,13 @@ if [ "${dry_code}" -ne 0 ]; then
     exit "${dry_code}"
 fi
 
+if [ "${ACTION_APPLY:-}" = "false" ]; then
+    log "PREVIEW ONLY (apply: false) — nothing written."
+    record_audit "backfill-exit-labels" "ok" \
+        "{\"phase\": \"preview\", \"pre\": \"${pre}\", \"pre_oa4\": \"${pre_oa4}\"}" >/dev/null || true
+    exit 0
+fi
+
 echo
 echo "===== backfill_exit_labels.py --apply (COMMIT) ====="
 set +e
@@ -116,6 +144,8 @@ set -e
 
 post="$(_generic_count)"
 log "Post-backfill: generic + unstamped=${post}"
+post_oa4="$(_oa4_count)"
+log "Post-backfill: unsourced sl_cross+tp_cross / intent_reduce_executed=${post_oa4} (was ${pre_oa4})"
 
 if [ "${apply_code}" -ne 0 ]; then
     record_audit "backfill-exit-labels" "failed" \

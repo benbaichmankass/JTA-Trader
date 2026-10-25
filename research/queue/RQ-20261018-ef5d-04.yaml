@@ -1,0 +1,146 @@
+id: RQ-20261018-ef5d-04
+title: >-
+  Programme 07 TIMEFRAMES, long arm A2b: DAILY-bar trend-pullback (htf_pullback family, pullback_frac 0.5 and 0.618) on the
+  six Bybit perps pooled, 2020-01-01..2026-10-17 -- does the other real-money family hold a weeks-long edge on daily bars
+  net of the full cost stack?
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  Same window, symbols, folds and pooled design as RQ-20261018-ef5d-03 with scripts/backtest_pullback.py at the family's declared
+  shape (trend_lookback 40, pullback_lookback 10, 2.5 x ATR14 stop, 5 x ATR trail): arm B = pullback_frac 0.5 (the harness
+  default and most legs' value) and arm F0618 = pullback_frac 0.618 (the value that moved ada_pullback_2h, RQ-20261014-470a-05).
+  Does either clear the pooled Stage-0 rule with breadth?
+why_this_matters: >-
+  The two families that carry real money are 4h Donchian and 2h pullback; ef5d-03 lifts the first to daily bars, this lifts
+  the second, so the long arm's answer is a family comparison rather than a single draw. Daily pullbacks hold for weeks (ETHUSDT
+  smoke 2026-10-18: 3 trades, mean hold 98 days), so the question is exactly the operator's: large R per trade over weeks,
+  net of a funding term that grows with the hold (the smoke's 600 funding windows cost 0.37 R on one trade). Prior short-horizon
+  work this builds on and does NOT repeat: RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL at taker cost;
+  squeeze/fade/pullback/fvg/chop had NO Stage-A survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07
+  (maker entries do not rescue the 15m scalp book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker
+  FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+requires_result:
+  unit: RQ-20261018-ef5d-01
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    As ef5d-03: 39 pooled trades at d=0.45; expected_n=100 is an ESTIMATE from ~3 trades/symbol/year on the smoke.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched Binance Vision daily candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P7-A2B-DAILY-PULLBACK
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family pullback --timeframe 1d, arms B (pullback_frac 0.5) and F0618 (pullback_frac 0.618), same flags
+    and window as ef5d-03.
+  rule: >-
+    Arms fixed now: B and F0618. Flags: --folds 6 --fold-majority 4 --n-floor 20 --pooled-n-floor 39 --breadth-frac 0.5. PASS
+    iff any arm passes -> node P7-A2b-overlap (overlap read against the live 2h pullback legs, then a re-entry case). FAIL
+    iff every arm fails -> the daily pullback configuration class at these params is closed on this window (node P7-A2b-fail).
+    INDETERMINATE otherwise. Verdicts are the script's own (scripts/research/harness_stage0.py, grades fixed by these flags):
+    per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of folds calendar folds net > 0, fail iff n >= n_floor
+    and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds
+    >= fold_majority AND >= half the POWERED cells (n >= n_floor) pass, indeterminate iff pooled n < pooled_n_floor or < 2
+    powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell, never dropped), fail
+    otherwise. Holm-corrected one-sided t p-values across the arm's cells are REPORTED, not graded. A PASS is a LEAD: it opens
+    the programme-07 node named in the tree (a same-symbol overlap read against the live legs, then a re-entry case under
+    MD-PROMOTE-S0-S1 built as a new evidence record), never a roster act; a FAIL closes the CONFIGURATION on this window,
+    never the family (idea-family review 2026-10-16 negative-result protocol). Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.25
+  bucket: frontier
+  basis: 'stand-in: a candidate crypto position-trading leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  basis: 6 daily fetches x 2 arms = 12 harness passes of seconds; the fetch dominates. Estimate.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; daily crypto bars are not in metis-market-data.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - pullback
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2600'
+  - --start
+  - '2020-01-01'
+  - --end
+  - '2026-10-17'
+  - --arm
+  - B=
+  - --arm
+  - F0618=pullback_frac=0.618
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P7-A2B-DAILY-PULLBACK
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261018-ef5d-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- L-LADDER
+programme: P7
+related:
+- RQ-20261018-ef5d-01
+- RQ-20261018-ef5d-03
+- scripts/research/harness_stage0.py
+- scripts/backtest_pullback.py
+- RQ-20261014-470a-05
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T14:40:04+00:00'
+grading:
+  attested: RULE-P7-A2B-DAILY-PULLBACK
+  auto: true
+  decision_rule_id: RULE-P7-A2B-DAILY-PULLBACK
+  evidence:
+  - research/results/RQ-20261018-ef5d-04/39124031926.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

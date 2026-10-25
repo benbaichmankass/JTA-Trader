@@ -1,7 +1,7 @@
 id: RQ-20261007-025
 title: 'GLD/GDX 1d pairs confirmatory: pre-registered IS/OOS split, yearly walk-forward and a 3x3 parameter neighbourhood
   on the same harness that passed once at defaults (PI-20261004-P24XMV4V-0003, PI-20261004-UQ9JJPRQ-0002)'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 3
@@ -82,3 +82,23 @@ related:
 - RQ-20260929-105
 - RQ-20260929-106
 - research/results/RQ-20260929-105/37188716030.jsonl
+grading:
+  decision_rule_id: RULE-RQ1007-GLD-GDX-PAIRS-CONFIRMATORY
+  evidence:
+  - research/results/RQ-20261007-025/ro0847-RQ-20261007-025.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: 'This unit IS the confirmation of RQ-20260929-105''s single pooled PASS (registered split + walk-forward
+    + neighbourhood), so it is a confirmed result, not a discovery. Selected from 2 pairs (GLD/GDX passed,
+    SPY/QQQ 1h FAILED -121.96 R): multiple-testing denominator 2 pairs x 1 default cell. Follow-up filed:
+    checklist PAIRS-ALPACA-BUILD-QUESTION (bucket-3 build question to the operator). No live leg, no config/pairs.yaml
+    change.'
+  population: GLD/GDX 1d pairs, OOS n 69, 10 walk-forward years, 9 neighbourhood cells
+  read_state: measured
+  reason: 'PASS on all three registered conditions: (A) OOS 2022-01-03..2026-10-02 net_total_r +5.25 R
+    at n 69 (>= 20); (B) 8 of 10 gradeable calendar years net-positive (>= 6); (C) 8 of 9 OOS neighbourhood
+    cells net-positive (>= 6; worst lookback 30 / entry-z 2.5, -2.00 R at n 32). IS 2016-10-06..2021-12-31
+    +10.77 R at n 72. Costs fee 7.5 + slippage 5.0 bps rt per leg, funding 0 (non-perp). Population: scripts/backtest_pairs.py
+    GLD 1d vs GDX 1d.'
+  rows: 1
+  verdict: pass

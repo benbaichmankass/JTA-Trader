@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Edits 23 hand-authored research/queue units (adds grading.auto: true only; decision_rule untouched). Queue units are outside TIER1_SURFACE, so the guard cannot vouch for them; a human or the manager reads the diff and merges.",
+  "why": "Session-debt check WR-20261014-0530Z. scripts/ops/work_report.py session_debt() counted command+compute units (no run.workflow, router-dispatched) as session-bound; it now asks compute_router.plan like dispatch_queue does. Measured over 572 unit files / 256 queued: debt 176 (54 bound + 122 graded) -> 125 (3 + 122). 23 overnight units also lacked grading.auto so the grader could never close them; opted in. Tooling and queue metadata only, no src/ runtime, config or order path."
+}

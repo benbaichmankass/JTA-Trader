@@ -80,6 +80,14 @@ that constructs the command line `build_strategy_evidence.py` and the
 evidence corpus run through) passes **no** `--slippage`/`--funding` flags at
 all, so every corpus run resolves through the CLI's venue-aware default.
 
+> **UPDATE 2026-10-11 (checklist `FRONTIER-LEVER-HARNESS-COSTS`):** the
+> `backtest_xsec_momentum.py` and `backtest_vol_target.py` bullets below are
+> now RESOLVED. Both resolve fee + slippage + perp funding per symbol through
+> `execution_costs.resolve_cost_policy()` and record `params.cost_policy`
+> (tests: `tests/test_frontier_lever_harness_costs.py`). Only
+> `backtest_orb.py` and `src/backtest/backtester.py` remain unwired. The text
+> below is the 2026-09-25 finding, left as written.
+
 **(d) Three harnesses have no wiring to `execution_costs` at all** — a leg
 routed through one of these is undercosted with no warning, and this is
 *wider than D1's original note*, which named two of the three:

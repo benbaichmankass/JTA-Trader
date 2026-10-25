@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261022-5AEVV1RL-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-TSFM-TRAINER / RQ-20261011-9da8-01 (session_01DRYR8RsCR3Nw4S5AEVv1rL)",
+    "rerun": "python3 -c \"from ml.datasets.forecast_features import FORECAST_BACKENDS as b; print(sorted(b))\"  # expect more than chronos-* once built"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[ml] TSFM arms beyond Chronos-2 have NO loader: RQ-20261011-9da8-01 runs Chronos-2 only. TimesFM-2.5, TiRex-2, Kronos-base and TTM-r2 are absent from ml/datasets/forecast_features.py FORECAST_BACKENDS (different packages/loaders; timesfm/tirex installed on the trainer by FRONTIER-LEVER-TRAINER-DEPS, tsfm_public for TTM is NOT, a Tier-2 pip). Each needs its own forecast_fn + a test pinning the six fc_* names, then a c2-style side-stream and a candidate entry in the unit. A FAIL of the unit closes only Chronos-2 zero-shot until then."
+}

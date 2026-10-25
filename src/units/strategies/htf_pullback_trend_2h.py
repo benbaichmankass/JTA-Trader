@@ -1,10 +1,17 @@
-"""HTF trend-pullback continuation — units-layer adapter (SCAFFOLD, not wired).
+"""HTF trend-pullback continuation — units-layer adapter (LIVE-WIRED).
 
 Rank-2 candidate from the new-strategy research pass
-(docs/research/new-strategy-candidates-2026-05-31.md). **Not yet wired** into
-``strategy_signal_builders.py``, ``intents.py``, or ``config/strategies.yaml``
-(registration is explicit; no auto-discovery) — inert until the Tier-3
-activation PR. Backtested via ``scripts/backtest_pullback.py`` first.
+(docs/research/new-strategy-candidates-2026-05-31.md). **Wired and live-path:**
+``strategy_signal_builders.py`` calls this unit's ``order_package()`` and
+``intent_multiplexer.py`` dispatches ``htf_pullback_trend_2h_signal_builder``
+for every enabled ``config/strategies.yaml`` block that names it (the base BTC 2h
+leg traded real money on ``bybit_2`` from 2026-06-02 until it was demoted to
+``execution: shadow`` on 2026-08-23). Treat edits here as order-path changes
+(Tier 2/3), not scaffold work. ⚠️ The enabled-leg and live/shadow counts move
+with every roster edit — read ``config/strategies.yaml``, do not quote a number.
+(The pre-2026-10-12 header called this a "SCAFFOLD, not wired … inert until the
+Tier-3 activation PR"; false in the field — CA-A05-006.) Backtested via
+``scripts/backtest_pullback.py`` first.
 
 Strategy summary
 ----------------
@@ -68,6 +75,7 @@ import pandas as pd
 
 from src.runtime.tp_venue_cap import (  # the ONE owner of the clamp
     TP_VENUE_CAP_PCT as _TP_SENTINEL_CAP_PCT)
+from src.runtime.tp_revision import declared_rule, merge_verdict, plan_tp_revision
 from src.units.strategies._base import require_candles
 
 _DEFAULTS: Dict[str, Any] = {
@@ -429,9 +437,21 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
                  "trail_decay_arm_r", "trail_decay_stall_bars",
                  "trail_decay_tight_mult",
                  "trail_vol_above_pctl", "trail_vol_below_pctl",
-                 "trail_vol_tight_mult", "vol_pctl_window"):
+                 "trail_vol_tight_mult", "vol_pctl_window",
+                 # MOMENTUM-LEVERS-LIVE (2026-10-18): src/runtime/momentum_levers.py.
+                 "trail_adx_below", "trail_adx_falling_bars", "trail_adx_tight_mult",
+                 "momentum_stale_bars", "momentum_stale_adx_below", "adx_period",
+                 # TP doctrine B1 (TPX-PULLBACK-PRODUCER): the declared
+                 # TP-revision rule (src/runtime/tp_revision.py). Absent = no
+                 # revision.
+                 "tp_revision"):
         if cfg.get(_key) is not None:
             package["meta"][_key] = cfg[_key]
+    if declared_rule(cfg) is not None:
+        # The tp_extend thesis is the entry's own midline test, so the frozen
+        # package must carry the lookback that defined it. Threaded ONLY under
+        # a declaration: an undeclared leg's meta is byte-identical.
+        package["meta"]["trend_lookback"] = int(params["trend_lookback"])
     if skip_hour_set:
         # Auditability: this entry passed a declared time-of-day gate
         # (M21 E-2). Entry-side only — the monitor never reads it.
@@ -692,6 +712,27 @@ def monitor(cfg, candles_df, open_pkg):
             return _st
     except Exception:  # noqa: BLE001 — a lever must never break the monitor
         pass
+    # MOMENTUM-LEVERS-LIVE: momentum-keyed time stop, after giveback -> stale
+    # as scripts/backtest_pullback.py orders its close verbs (momentum_stale
+    # follows the stale check there too). Shared rule, YAML-declared, fail-safe.
+    # Confirmed cell: RQ-20261016-016 ms8_a20 on slv_pullback_1d (alpaca_live).
+    try:
+        from src.runtime.momentum_levers import momentum_stale_verdict
+
+        _ms = momentum_stale_verdict(meta, cfg_dict, open_pkg, candles_df,
+                                     current_price, direction,
+                                     default_label="htf_pullback_trend_2h")
+        if _ms is not None:
+            return _ms
+    except Exception:  # noqa: BLE001 — a lever must never break the monitor
+        pass
+
+    # TP doctrine B1 (TPX-PULLBACK-PRODUCER): the leg's declared TP-revision
+    # rule, merged into whatever the trail decides below. A close verdict above
+    # has already returned; a revision never rides on a close. Undeclared =
+    # None = the resting TP is never moved (byte-identical for every leg that
+    # does not declare `tp_revision`).
+    _tp_rev = _revise_tp(meta, cfg_dict, candles_df, open_pkg, current_price, direction)
 
     atr = _coerce_float(meta.get("atr"))
     if atr is None or atr <= 0:
@@ -699,9 +740,9 @@ def monitor(cfg, candles_df, open_pkg):
         try:
             atr = float(_atr(candles_df, period).iloc[-1])
         except Exception:  # noqa: BLE001
-            return None
+            return merge_verdict(None, _tp_rev)
     if atr is None or atr <= 0:
-        return None
+        return merge_verdict(None, _tp_rev)
 
     trail_mult = (
         _coerce_float(meta.get("trail_mult"))
@@ -737,6 +778,17 @@ def monitor(cfg, candles_df, open_pkg):
                                             open_pkg=open_pkg)
     except Exception:  # noqa: BLE001 — the lever must never break the trail
         pass
+    # MOMENTUM-LEVERS-LIVE: the ADX-conditioned trail, composed by min() after
+    # decay and vol (trail_levers.effective_trail_mult order). Undeclared =
+    # base mult. See trend_donchian._trail_verdict for the contract.
+    try:
+        from src.runtime.momentum_levers import resolve_momentum_trail_mult
+
+        trail_mult = resolve_momentum_trail_mult(meta, cfg_dict, candles_df,
+                                                 trail_mult, direction,
+                                                 open_pkg=open_pkg)
+    except Exception:  # noqa: BLE001 — the lever must never break the trail
+        pass
     # P5 live-parity instrument (M20-EXITS): LOG-ONLY shadow of the vol_trail
     # reference cell, never feeds trail_mult; see src/runtime/trail_vol_shadow.py.
     try:
@@ -755,6 +807,7 @@ def monitor(cfg, candles_df, open_pkg):
         from src.runtime.position_telemetry import record_position_telemetry
 
         record_position_telemetry(
+            candles_df=candles_df, atr=atr,
             open_pkg=open_pkg, meta=meta, window=window, direction=direction,
             current_price=current_price, stop=sl,
             target=_coerce_float(open_pkg.get("tp")),
@@ -763,17 +816,42 @@ def monitor(cfg, candles_df, open_pkg):
         )
     except Exception:  # noqa: BLE001 — telemetry must never break the trail
         pass
+    _trail = None
     try:
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
             if candidate > sl and candidate < current_price:
-                return {"sl": round(candidate, 8)}
+                _trail = {"sl": round(candidate, 8)}
         else:
             ext = float(window["low"].min())
             candidate = ext + trail_mult * atr
             if candidate < sl and candidate > current_price:
-                return {"sl": round(candidate, 8)}
+                _trail = {"sl": round(candidate, 8)}
     except (KeyError, ValueError, TypeError):
+        _trail = None
+    return merge_verdict(_trail, _tp_rev)
+
+
+def _revise_tp(meta, cfg_dict, candles_df, open_pkg, current_price, direction):
+    """The leg's declared TP-revision rule (``tp_revision.plan_tp_revision``,
+    rule ``tp_extend``) on the CLOSED bars -- the forming last row excluded,
+    exactly as ``trend_donchian._revise_tp`` does. The DECLARATION is read from
+    the package meta only (frozen at entry, so a later YAML edit cannot
+    re-grade an open trade); ``trend_lookback`` falls back to the live cfg for
+    a package that predates its threading. None when nothing is declared."""
+    try:
+        if declared_rule(meta) is None:
+            return None
+        entry = _coerce_float(open_pkg.get("entry"))
+        risk = _coerce_float(meta.get("risk_per_unit"))
+        if entry is None or risk is None or candles_df is None or len(candles_df) < 2:
+            return None
+        leg = dict(meta)
+        if leg.get("trend_lookback") is None and cfg_dict.get("trend_lookback") is not None:
+            leg["trend_lookback"] = cfg_dict["trend_lookback"]
+        return plan_tp_revision(leg=leg, direction=direction, entry=entry, risk=risk,
+                                bars=candles_df.iloc[:-1], entry_time=meta.get("entry_time"),
+                                ref_price=current_price)
+    except Exception:  # noqa: BLE001 — a revision must never break the trail
         return None
-    return None

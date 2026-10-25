@@ -1,0 +1,23 @@
+{
+  "id": "TRADEIFY-PLATFORMS",
+  "title": "Tradeify non-crypto instruments on tradeify_1 (DXtrade crypto-CFD terminal): which existing strategies map to them?",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18402
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-10-09: 'tradeify has other platforms for other groups of securities (I think forex and options or something) - I want to check if we have any existing strategies that might run well on those accounts.' Scope: (1) verify what Tradeify actually offers beyond the futures account we run (tradeify_1) - products, platforms, rules (daily loss, trailing DD, consistency, news/hold rules), API or bridge access; operator's 'forex and options' is unverified. (2) Map each offering against our existing legs and their committed backtest evidence (net of full cost stack), incl. the FX legs on oanda_practice and any options work. (3) Output: one research/queue unit per credible candidate leg x platform with a pre-registered rule; or an honest 'none fit' with reasons. No account opened, no roster edit - Tier 3 stays with the operator. Priority: below DAILY-DD-SWITCH; Sonnet lane. Priority correction (operator 2026-10-09): this does NOT jump the queue - 'we have other things that should definitely take priority.' Ordinary backlog: picked up only after the higher-priority rows already queued, not as the next lane after DAILY-DD-SWITCH. [2026-10-15 lane TRADEIFY-PLATFORMS] ROW ERROR CORRECTED: tradeify_1 is Tradeify 247's DXtrade crypto-CFD account (dx.tradeify247.co), NOT 'the futures account'; operator's 'forex and options' is NOT supported (watchlist tabs: All/Cryptocurrencies/Stocks; no forex/options symbol seen; the Tradeify futures brand/Tradovate was not examined). MEASURED via instrument-page-dump (key-by-key, read-only, positive control ETH #18393): SILVER/USD, XYZ100/USD (Nasdaq-100), SP500/USD, USOIL/USD (WTI), UKOIL/USD (Brent) are Hyperliquid 'synthetic perp' CFDs, asset class 'Stocks'; PAXG/USD is a gold token (Cryptocurrencies); CRCL/ORCL/GOOGL single-stock synthetics seen. The first probe #18391 (fill()-typed) is RETRACTED: its empty rows are an adapter artefact (#15472). List is a lower bound (first ~4 rows/query, name-prefix search). Per-instrument spread/swap/leverage/hours NOT obtained (needs a watchlist add; read-only brief): filed as TRADEIFY-INSTR-SPECS; units use firm-declared 8 bps commission + 0.033%/day swap + 2:1 leverage + a DECLARED 3 bps slippage. MAPPING (docs/research/tradeify-platforms-2026-10-15.md): SLV->SILVER, QQQ->XYZ100, SPY->SP500, USO->USOIL (poor proxy); GLD->PAXG, single stocks, forex, options: no unit, reasons in the memo. SLV fade (RQ-20261006-031 PASS) caveat: priced at Alpaca-ETF costs on ~720d, +0.05R/trade expectancy, max drawdown 19-21R vs +6.7..7.6R total (~9.5% at 0.5% risk vs the 6% static floor): survival is the open question. UNITS (hold, manager merges): RQ-20261015-24ca-01 (lead, SLV fade 1h) .. -05 (USO trend 1h), each Stage 0 at Tradeify costs on the trainer's 8-9y candles + 5-seed prop_ev_grid, rule registered before run, operator rule stated (Stage 0, soak [live prop counts], cost fidelity, PLUS prop DD survival); routed needs_vm_data -> trainer (dry-run: would_dispatch route=trainer). landed_unproven closes when the five units are graded and their verdicts are written back here; honest expectation: a FAIL at Tradeify costs is likelier than a PASS. [2026-10-15 close-out] State is 'queued', not landed_unproven: PR #18402 (draft, HOLD for manager merge) is unmerged and the five units have not run. The row closes when RQ-20261015-24ca-01..05 are graded and their verdicts are written back here; TRADEIFY-INSTR-SPECS (Tier-2, one operator OK) is the separate next step for measured per-instrument costs.",
+  "updated_at": "2026-10-15T17:02:07Z",
+  "updated_by": "lane-TRADEIFY-PLATFORMS-2026-10-15",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 369
+}

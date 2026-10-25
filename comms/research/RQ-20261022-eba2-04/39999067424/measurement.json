@@ -1,0 +1,609 @@
+{
+  "k": 6,
+  "pooled": {
+    "n": 835,
+    "n_floor": 100,
+    "folds": 6,
+    "fold_majority": 4,
+    "min_r2_gain": 0.02,
+    "min_ll_gain": 0.01,
+    "big_quantile": 0.5,
+    "baseline_extra": [
+      "vol_ratio_k"
+    ],
+    "verdict": "pass",
+    "label": "path_metrics_predict_giveback",
+    "why": "OOS R2 base 0.0263 full 0.0257 (gain -0.0005, 3/6 folds); log-loss base 0.6814 full 0.6669 (gain +0.0145, 5/6 folds)",
+    "r2_base": 0.0263,
+    "r2_full": 0.0257,
+    "r2_gain": -0.0005,
+    "ll_base": 0.6814,
+    "ll_full": 0.6669,
+    "ll_gain": 0.0145,
+    "r2_fold_wins": 3,
+    "ll_fold_wins": 5,
+    "usable_folds": 6,
+    "big_share": 0.5114,
+    "giveback_mean": 1.1441,
+    "per_fold": [
+      {
+        "fold": 0,
+        "n": 150,
+        "usable": true,
+        "r2_base": 0.0375,
+        "r2_full": 0.0372,
+        "ll_base": 0.6784,
+        "ll_full": 0.6598
+      },
+      {
+        "fold": 1,
+        "n": 141,
+        "usable": true,
+        "r2_base": 0.0671,
+        "r2_full": 0.0588,
+        "ll_base": 0.6769,
+        "ll_full": 0.6624
+      },
+      {
+        "fold": 2,
+        "n": 135,
+        "usable": true,
+        "r2_base": -0.0164,
+        "r2_full": -0.0018,
+        "ll_base": 0.6925,
+        "ll_full": 0.6869
+      },
+      {
+        "fold": 3,
+        "n": 128,
+        "usable": true,
+        "r2_base": -0.0947,
+        "r2_full": -0.1573,
+        "ll_base": 0.724,
+        "ll_full": 0.7337
+      },
+      {
+        "fold": 4,
+        "n": 137,
+        "usable": true,
+        "r2_base": 0.0763,
+        "r2_full": 0.1089,
+        "ll_base": 0.6475,
+        "ll_full": 0.6193
+      },
+      {
+        "fold": 5,
+        "n": 144,
+        "usable": true,
+        "r2_base": 0.1016,
+        "r2_full": 0.1191,
+        "ll_base": 0.6727,
+        "ll_full": 0.6457
+      }
+    ]
+  },
+  "per_leg": {
+    "trend_donchian_eth_4h": {
+      "n": 164,
+      "n_floor": 100,
+      "folds": 6,
+      "fold_majority": 4,
+      "min_r2_gain": 0.02,
+      "min_ll_gain": 0.01,
+      "big_quantile": 0.5,
+      "baseline_extra": [
+        "vol_ratio_k"
+      ],
+      "verdict": "fail",
+      "label": "no_gain_over_bars_and_r",
+      "why": "OOS R2 base -0.0315 full -0.1109 (gain -0.0794, 0/6 folds); log-loss base 0.6921 full 0.7251 (gain -0.0330, 0/6 folds)",
+      "r2_base": -0.0315,
+      "r2_full": -0.1109,
+      "r2_gain": -0.0794,
+      "ll_base": 0.6921,
+      "ll_full": 0.7251,
+      "ll_gain": -0.033,
+      "r2_fold_wins": 0,
+      "ll_fold_wins": 0,
+      "usable_folds": 6,
+      "big_share": 0.622,
+      "giveback_mean": 1.5404,
+      "per_fold": [
+        {
+          "fold": 0,
+          "n": 27,
+          "usable": true,
+          "r2_base": -0.1014,
+          "r2_full": -0.1579,
+          "ll_base": 0.6886,
+          "ll_full": 0.7119
+        },
+        {
+          "fold": 1,
+          "n": 28,
+          "usable": true,
+          "r2_base": -0.1264,
+          "r2_full": -0.1375,
+          "ll_base": 0.6131,
+          "ll_full": 0.6407
+        },
+        {
+          "fold": 2,
+          "n": 24,
+          "usable": true,
+          "r2_base": 0.0191,
+          "r2_full": 0.0011,
+          "ll_base": 0.6901,
+          "ll_full": 0.6914
+        },
+        {
+          "fold": 3,
+          "n": 24,
+          "usable": true,
+          "r2_base": -0.0654,
+          "r2_full": -0.2364,
+          "ll_base": 0.8326,
+          "ll_full": 0.9014
+        },
+        {
+          "fold": 4,
+          "n": 27,
+          "usable": true,
+          "r2_base": 0.1843,
+          "r2_full": 0.013,
+          "ll_base": 0.6819,
+          "ll_full": 0.6822
+        },
+        {
+          "fold": 5,
+          "n": 34,
+          "usable": true,
+          "r2_base": 0.0263,
+          "r2_full": -0.0115,
+          "ll_base": 0.6701,
+          "ll_full": 0.7385
+        }
+      ],
+      "n_trades": 275,
+      "n_exited_by_k": 111,
+      "cost_policy": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      }
+    },
+    "trend_donchian_xrp_4h": {
+      "n": 44,
+      "n_floor": 100,
+      "folds": 6,
+      "fold_majority": 4,
+      "min_r2_gain": 0.02,
+      "min_ll_gain": 0.01,
+      "big_quantile": 0.5,
+      "baseline_extra": [
+        "vol_ratio_k"
+      ],
+      "verdict": "indeterminate",
+      "label": "underpowered",
+      "why": "44 trades open at k < n_floor 100",
+      "n_trades": 68,
+      "n_exited_by_k": 24,
+      "cost_policy": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      }
+    },
+    "ada_pullback_2h": {
+      "n": 275,
+      "n_floor": 100,
+      "folds": 6,
+      "fold_majority": 4,
+      "min_r2_gain": 0.02,
+      "min_ll_gain": 0.01,
+      "big_quantile": 0.5,
+      "baseline_extra": [
+        "vol_ratio_k"
+      ],
+      "verdict": "pass",
+      "label": "path_metrics_predict_giveback",
+      "why": "OOS R2 base 0.0259 full -0.0010 (gain -0.0269, 2/6 folds); log-loss base 0.6761 full 0.6571 (gain +0.0190, 4/6 folds)",
+      "r2_base": 0.0259,
+      "r2_full": -0.001,
+      "r2_gain": -0.0269,
+      "ll_base": 0.6761,
+      "ll_full": 0.6571,
+      "ll_gain": 0.019,
+      "r2_fold_wins": 2,
+      "ll_fold_wins": 4,
+      "usable_folds": 6,
+      "big_share": 0.4909,
+      "giveback_mean": 1.2105,
+      "per_fold": [
+        {
+          "fold": 0,
+          "n": 50,
+          "usable": true,
+          "r2_base": -0.0007,
+          "r2_full": 0.0029,
+          "ll_base": 0.715,
+          "ll_full": 0.6419
+        },
+        {
+          "fold": 1,
+          "n": 48,
+          "usable": true,
+          "r2_base": 0.0692,
+          "r2_full": -0.0185,
+          "ll_base": 0.6578,
+          "ll_full": 0.7083
+        },
+        {
+          "fold": 2,
+          "n": 44,
+          "usable": true,
+          "r2_base": 0.025,
+          "r2_full": 0.041,
+          "ll_base": 0.7197,
+          "ll_full": 0.7009
+        },
+        {
+          "fold": 3,
+          "n": 44,
+          "usable": true,
+          "r2_base": -0.031,
+          "r2_full": -0.0506,
+          "ll_base": 0.6939,
+          "ll_full": 0.6454
+        },
+        {
+          "fold": 4,
+          "n": 45,
+          "usable": true,
+          "r2_base": 0.0864,
+          "r2_full": 0.0762,
+          "ll_base": 0.6135,
+          "ll_full": 0.5844
+        },
+        {
+          "fold": 5,
+          "n": 44,
+          "usable": true,
+          "r2_base": 0.0751,
+          "r2_full": 0.0136,
+          "ll_base": 0.6545,
+          "ll_full": 0.6608
+        }
+      ],
+      "n_trades": 402,
+      "n_exited_by_k": 127,
+      "cost_policy": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      }
+    },
+    "xrp_pullback_2h": {
+      "n": 352,
+      "n_floor": 100,
+      "folds": 6,
+      "fold_majority": 4,
+      "min_r2_gain": 0.02,
+      "min_ll_gain": 0.01,
+      "big_quantile": 0.5,
+      "baseline_extra": [
+        "vol_ratio_k"
+      ],
+      "verdict": "pass",
+      "label": "path_metrics_predict_giveback",
+      "why": "OOS R2 base -0.0543 full -0.0541 (gain +0.0001, 4/6 folds); log-loss base 0.7021 full 0.6885 (gain +0.0136, 4/6 folds)",
+      "r2_base": -0.0543,
+      "r2_full": -0.0541,
+      "r2_gain": 0.0001,
+      "ll_base": 0.7021,
+      "ll_full": 0.6885,
+      "ll_gain": 0.0136,
+      "r2_fold_wins": 4,
+      "ll_fold_wins": 4,
+      "usable_folds": 6,
+      "big_share": 0.5028,
+      "giveback_mean": 0.9412,
+      "per_fold": [
+        {
+          "fold": 0,
+          "n": 69,
+          "usable": true,
+          "r2_base": 0.0479,
+          "r2_full": -0.0281,
+          "ll_base": 0.6883,
+          "ll_full": 0.7314
+        },
+        {
+          "fold": 1,
+          "n": 59,
+          "usable": true,
+          "r2_base": 0.0337,
+          "r2_full": 0.0781,
+          "ll_base": 0.6863,
+          "ll_full": 0.6343
+        },
+        {
+          "fold": 2,
+          "n": 54,
+          "usable": true,
+          "r2_base": -0.0703,
+          "r2_full": -0.014,
+          "ll_base": 0.6962,
+          "ll_full": 0.6349
+        },
+        {
+          "fold": 3,
+          "n": 53,
+          "usable": true,
+          "r2_base": -0.1862,
+          "r2_full": -0.3046,
+          "ll_base": 0.7341,
+          "ll_full": 0.7673
+        },
+        {
+          "fold": 4,
+          "n": 61,
+          "usable": true,
+          "r2_base": -0.012,
+          "r2_full": 0.043,
+          "ll_base": 0.6857,
+          "ll_full": 0.6523
+        },
+        {
+          "fold": 5,
+          "n": 56,
+          "usable": true,
+          "r2_base": -0.0582,
+          "r2_full": -0.0289,
+          "ll_base": 0.7289,
+          "ll_full": 0.7091
+        }
+      ],
+      "n_trades": 394,
+      "n_exited_by_k": 42,
+      "cost_policy": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      }
+    }
+  },
+  "runs": {
+    "trend_donchian_eth_4h": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "6.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "/tmp/path_metric_giveback_mlz2nov6/trend_donchian_eth_4h__trades.jsonl",
+        "--json",
+        "/tmp/path_metric_giveback_mlz2nov6/trend_donchian_eth_4h__bt.json",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--tp-revision",
+        "donchian_measured_move",
+        "--tp-revision-width-mult",
+        "0.5",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--emit-paths",
+        "/tmp/path_metric_giveback_mlz2nov6/trend_donchian_eth_4h__paths.jsonl"
+      ],
+      "feed": {
+        "source": "binance",
+        "ticker": "ETHUSDT",
+        "interval": "240",
+        "resample": "4h"
+      }
+    },
+    "trend_donchian_xrp_4h": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "XRPUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "/tmp/path_metric_giveback_mlz2nov6/trend_donchian_xrp_4h__trades.jsonl",
+        "--json",
+        "/tmp/path_metric_giveback_mlz2nov6/trend_donchian_xrp_4h__bt.json",
+        "--stale-exit-bars",
+        "8",
+        "--stale-exit-below-r",
+        "0.0",
+        "--side-filter",
+        "short",
+        "--trail-decay-arm-r",
+        "2.0",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--skip-hours",
+        "0",
+        "--vol-skip-above-pctl",
+        "0.9",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--emit-paths",
+        "/tmp/path_metric_giveback_mlz2nov6/trend_donchian_xrp_4h__paths.jsonl"
+      ],
+      "feed": {
+        "source": "binance",
+        "ticker": "XRPUSDT",
+        "interval": "240",
+        "resample": "4h"
+      }
+    },
+    "ada_pullback_2h": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ADAUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "/tmp/path_metric_giveback_mlz2nov6/ada_pullback_2h__trades.jsonl",
+        "--json",
+        "/tmp/path_metric_giveback_mlz2nov6/ada_pullback_2h__bt.json",
+        "--adx-min",
+        "28",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--vol-skip-above-pctl",
+        "0.95",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "4",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--emit-paths",
+        "/tmp/path_metric_giveback_mlz2nov6/ada_pullback_2h__paths.jsonl"
+      ],
+      "feed": {
+        "source": "binance",
+        "ticker": "ADAUSDT",
+        "interval": "120",
+        "resample": "2h"
+      }
+    },
+    "xrp_pullback_2h": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "XRPUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "6.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "/tmp/path_metric_giveback_mlz2nov6/xrp_pullback_2h__trades.jsonl",
+        "--json",
+        "/tmp/path_metric_giveback_mlz2nov6/xrp_pullback_2h__bt.json",
+        "--adx-min",
+        "25",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--emit-paths",
+        "/tmp/path_metric_giveback_mlz2nov6/xrp_pullback_2h__paths.jsonl"
+      ],
+      "feed": {
+        "source": "binance",
+        "ticker": "XRPUSDT",
+        "interval": "120",
+        "resample": "2h"
+      }
+    }
+  },
+  "features": {
+    "base": [
+      "open_r_k",
+      "peak_r_k",
+      "bars_since_peak_k"
+    ],
+    "path": [
+      "chop_k",
+      "er_k",
+      "shape_k",
+      "early_k"
+    ]
+  },
+  "baseline_extra": [
+    "vol_ratio_k"
+  ],
+  "n_missing_baseline_feature": 0
+}

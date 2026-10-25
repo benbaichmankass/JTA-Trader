@@ -1,0 +1,27 @@
+{
+  "id": "UNPROVEN-SWEEP-2",
+  "title": "Close or re-date the 24 overdue landed_unproven observations (blocker_watch 2026-10-12)",
+  "phase": null,
+  "state": "done",
+  "owner": "lane (session_01Khx64L6tHdG52Srbh2NVdT)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17686
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-12T05:58Z manager session_01G16FfyYSmDPQuuW55BuTmK, review WR-20261012-0530Z] blocker_watch reports UNPROVEN_OVERDUE 24 of 112 landed_unproven rows (35 more carry no observation). For each overdue row: run its observation.how_to_check against live data (diag relay), then set done with the evidence, re-date with a stated reason (observation still pending a natural event, e.g. next prop ticket), or file the failure as a pipeline item / fix. Operator-dependent ones (phone APK tests, screenshots) are re-dated and listed for the manager, not asked. Second pass: give the 35 no-observation rows one. Predecessor UNPROVEN-SWEEP (done 10-02). [2026-10-12T05:59Z manager session_01G16FfyYSmDPQuuW55BuTmK] Dispatched lane session_01Khx64L6tHdG52Srbh2NVdT. [2026-10-12 session_01Khx64L6tHdG52Srbh2NVdT] DONE (PR #17686). 24 UNPROVEN_OVERDUE rows read against live diag/API/Actions data. DONE 12: APK-BUILD-CONCURRENCY, BLOCKER-WATCH, MIRROR-LEGACY-SHORTS, PM-COLLECTOR, PROP-PER-LEG-SIZING, RQ-COLLECTOR, RQ-FIX, RQ-INFRA, TRAIL-PAUSE-PULSE, VELOTRADE-API-EXEC, VELOTRADE-QUALDAYS, VELOTRADE-TICKET. RE-DATED 12: API-COLLAPSED-STATES, DAILY-DD-SWITCH, HEALTH-REVIEW-W41 (failed in part), PROP-LIMIT-GUARD, PROP-SILENCE-ALERTS, PROTECTION-HARDENING, SIGNAL-CATALOG, PHONE-EXEC-1B, PHONE-GO-TOKEN, PHONE-SCREENSHOTS, SOL-PICKER, ARMED-GATE. FAILURES FILED: PI-20261012-EEP21012-0001 (research-queue land job stale-branch refresh fails on a dirty research/queue tree, 3 of last 12 cycles), PI-20261012-EEP21012-0002 (velotrade_1 risk gate refuses entries on unrealized_unreported). Second pass (observations for the 35 rows with none) NOT done. Operator-hands rows: PHONE-GO-TOKEN, ARMED-GATE, SOL-PICKER, PHONE-SCREENSHOTS, PROP-SILENCE-ALERTS (closed-app test), API-COLLAPSED-STATES (glance at one hourly ping). No config, order or risk surface touched; one read-only trainer-vm-diag run (38210838168).",
+  "updated_at": "2026-10-12T08:11:10Z",
+  "updated_by": "session_01Khx64L6tHdG52Srbh2NVdT",
+  "roadmap": [
+    "M39"
+  ],
+  "writeback": {
+    "roadmap": "none: ops-hygiene pass, dispositions only, no milestone where/next changes",
+    "arch": "none: no component, path or contract changed (checklist and pipeline state records only)"
+  },
+  "_seq": 419
+}

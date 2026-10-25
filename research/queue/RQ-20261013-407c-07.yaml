@@ -1,0 +1,136 @@
+id: RQ-20261013-407c-07
+title: >-
+  Scalp cost drag, ict_scalp_xrp_15m: does a longer post-exit cooldown (6/12/24 bars vs the declared 3) cut enough fee drag
+  to beat the declared entry cadence net of the full cost stack
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: >-
+  Same fee-drag question as the 5m sibling (RQ-20261013-407c-06), on the 15m leg where each bar is 3x longer, so 'N bars'
+  is a different wall-clock cooldown: a pooled read across both timeframes separates a frequency effect from a clock effect.
+  XRPUSDT 15m, pinned 365d window (2025-10-05 .. 2026-10-04), harness cost stack: does cooldown 6, 12 or 24 bars beat the
+  declared 3 on net R by a material margin, with no worse drawdown and in at least 3 of 4 calendar folds?
+why_this_matters: >-
+  ict_scalp_xrp_15m is live-rostered and paper-bleeding in the perf-followup window (n=1-3 per leg in that window: too thin
+  to read, hence this offline test).
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor, RQ-20261006-002/-004/-060). expected_n
+    = 150 is an ESTIMATE from the nearest committed record or the leg's trade cadence, not a measurement of this exact arm
+    set. Below 60 baseline trades the unit grades indeterminate (underpowered), never FAIL. The 4.0 R bar is a MATERIALITY
+    bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority is what refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless Binance Vision candles (ict_scalp_xrp_15m, pinned window 2025-10-05 .. 2026-10-04
+      23:59); the harness replays history, nothing accrues. expected_n is an estimate, so power_state stays accruing and a
+      thin baseline grades indeterminate.
+decision_rule:
+  id: RULE-20261013407C07-COOLDOWN
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_ict_scalp.py (argv built by regime_debt_matrix.build_harness_cmd,
+    the evidence builder's own, plus the arm's raw tokens; full cost stack: fee + resolved slippage + funding, never a zero
+    default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans of the window
+    (same date boundaries every arm). Arms: B = leg as declared, CD6 = --cooldown-bars=6, CD12 = --cooldown-bars=12, CD24
+    = --cooldown-bars=24. Per candidate C in {CD6, CD12, CD24}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
+    = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF the positive control fails or n(B) < 60 (underpowered: no verdict, extend the window or redesign; never
+    FAIL on thin n). A candidate C PASSES iff dR >= 4.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes
+    (best = highest dR; the script's generic label reads 'reachable_lever_beats_removed'): a Tier-3 PROPOSAL note on the owning
+    checklist row for the manager, never a config edit; two passing candidates within 0.5 R of each other is a preference,
+    not a finding. FAIL IF none passes (script label 'no_reachable_lever_beats_removed'): the declared cooldown stands; the
+    axis is recorded honest_negative on this window. The 4.0 R bar, the drawdown clause, the 3-of-4 fold majority and the
+    60 floor are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config; does not change ict_scalp_xrp_15m's signal logic, confidence model or bracket; a PASS is a Tier-3
+    proposal input for the manager (mirror/paper equality applies if the leg is rostered on a mirrored account). A scalp harness
+    result is Stage-0 evidence, never a live-book claim.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.25
+  bucket: own_losses
+  basis: >-
+    stand-in: the ict_scalp family is the largest net-R loser in the committed ledgers (RQ-20261012-75b2-05: ungated test
+    net R -96.0 over 686 trades across 7 scalp legs); a frequency or exit-clock lever that recovers even a fraction is worth
+    more than any 2h pullback tweak. Estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: >-
+    One keyless Binance Vision fetch of ~400 days and 4 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ict_scalp_xrp_15m
+  - --arm
+  - B=
+  - --arm
+  - CD6=--cooldown-bars=6
+  - --arm
+  - CD12=--cooldown-bars=12
+  - --arm
+  - CD24=--cooldown-bars=24
+  - --days
+  - '400'
+  - --start
+  - '2025-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '4.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '60'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261013-407c-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    research/results/RQ-20261013-407c-07/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
+    trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-07/<run_id>/.
+roadmap:
+- M27
+related:
+- QUEUE-FILL-1013
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+last_dispatched_at: '2026-10-14T07:33:48+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-20261013407C07-COOLDOWN
+  evidence:
+  - research/results/RQ-20261013-407c-07/38519990226.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

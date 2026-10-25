@@ -573,8 +573,8 @@ strategies:
 
   # ---------------------------------------------------------------------
   # M27 P0 Batch-1 ict_scalp alt variants (2026-07-21, Tier-3
-  # operator-approved promotion to bybit_1 demo soak — accrue live
-  # paper-trade data toward a real-money decision).
+  # operator-approved promotion to bybit_1 demo soak — a mechanical
+  # check on 1-2 clean trades, OPERATING-PLAN § 2).
   #
   # Config-exact copies of ict_scalp_5m's params on a different symbol —
   # the point of the M27 transfer study was testing the SAME live setup
@@ -1268,7 +1268,15 @@ strategies:
     # Same entries as trend_donchian_sol; ONLY the exits are tightened to the
     # eth_pullback_prop_2h recipe (trail_mult 3.5, tp_r 6.0 vs the live 5.0/50.0).
     # GRADUATED to live 2026-08-13 (the prop EV/survival gate passed — see the
-    # execution line). ROLLBACK: set execution: shadow (observe-only) — one field,
+    # execution line). ⚠️ CORRECTED 2026-10-15 (operator, "Yes, 1, 2 and 3a"): the prop
+    # EV/survival gate is NOT a lower bar than real money — it is a SUPERSET: a prop
+    # leg must ALSO clear Stage 0 net of full cost, a Stage-1 soak and Gate 2 ("if
+    # anything, the prop accounts should have a higher bar to clear because of the DD
+    # limits"). This leg reached prop WITHOUT the bybit_1 soak, so it is now soaking
+    # there (SOAK-stage1-bybit_1-trend_donchian_sol_prop, due 2026-12-11, row
+    # PROP-GATE-PARITY) while it STAYS LIVE on the prop books; a soak FAIL proposes
+    # pulling it (data-backed Tier-3). Guard: prop-roster-gate-guard.
+    # ROLLBACK: set execution: shadow (observe-only) — one field,
     # no redeploy. To fully retract, also remove this block + the breakout_1
     # routing + the builder/registry/intents entries.
     model: null
@@ -1314,12 +1322,21 @@ strategies:
     # short-side-dependent, the long-only A/B flipped it negative); ONLY the exits
     # are tightened to the eth_pullback_prop_2h recipe (trail_mult 3.5, tp_r 6.0
     # vs the live 5.0/50.0). GRADUATED to live 2026-08-13 (the prop EV/survival
-    # gate passed — see the execution line). ROLLBACK: set execution: shadow
+    # gate passed — see the execution line). ⚠️ CORRECTED 2026-10-15 (operator, "Yes, 1,
+    # 2 and 3a"): that gate is NOT a lower bar than real money — it is a SUPERSET: a prop
+    # leg must ALSO clear Stage 0 net of full cost, a Stage-1 soak and Gate 2 ("if
+    # anything, the prop accounts should have a higher bar to clear because of the DD
+    # limits"). This leg reached prop WITHOUT the bybit_1 soak, so it is now soaking
+    # there (SOAK-stage1-bybit_1-trend_donchian_eth_prop, due 2026-11-07, row
+    # PROP-GATE-PARITY) while it STAYS LIVE on the prop books; a soak FAIL proposes
+    # pulling it (data-backed Tier-3). Guard: prop-roster-gate-guard.
+    # ROLLBACK: set execution: shadow
     # (observe-only) — one field, no redeploy. To fully retract, also remove this
     # block + the breakout_1 routing + the builder/registry/intents entries.
     model: null
     signal_prefixes: [trend_donchian_eth_prop, donchian_eth_prop]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-10-22 popup "Split: 3 to closed, 2 stay (Recommended)": decide on the CLOSED bar its Stage-0 evidence uses; forming-bar record loses money (DECISION-BAR-MATCH, RQ-20261022-4de5-01, docs/research/evidence/decision-bar-match-2026-10-22.json). Revert = delete this line (default forming).
     execution: live          # [DECIDED] Tier-3, OPERATOR-APPROVED 2026-08-13; reverse by setting `execution: shadow` (one field, no redeploy). The prop EV/survival gate PASSED (account_compat_matrix -> run_ev_montecarlo under breakout.yaml; trainer relay #8975): ev_net_usd +$883, P(net>0)=0.8477 over 1110 trades spanning 2021-03..2026-06. STATE THE POPULATION: computed at size$5000 — a FRESH account with its full $300 static-DD budget — and positive BECAUSE the prop ruleset is cost-aware with BANK-ASAP re-buy (it prices in breaching and repurchasing at $45). [MEASURED @ account_compat_matrix -> run_ev_montecarlo under breakout.yaml, trainer relay #8975, 2026-08-13] The SAME ledger returns a `skip` on every standard account (end_return_mean -2.5%, P(breach) 0.859, survival 0.1997) -- population: this leg's own ledger graded by account_compat_matrix's standard arm. [INFERRED, AND THE INFERENCE IS REFUTED] -- but ⚠️ THAT SKIP DOES NOT MEAN "WORSE THAN WHAT WE TRADE ON REAL MONEY", AND THE EARLIER WORDING HERE SAID IT DID. It read: 'So this is "+EV to buy accounts and run this", NOT "this is safe".' That framing is WITHDRAWN 2026-08-27 (operator-corrected; BL-20260827-PROP-GATE-DOCUMENTED-AS-A-LOWER-BAR-THAN-REAL-MONEY + BL-20260827-STANDARD-ARM-MISMODELS-INTRADAY-MAX-DD-AS-A-TERMINAL-FLOOR). The prop gate is NOT a lower bar. The DESIGN standard is prop-dynamic-exits-faster-banking-DESIGN.md § 6: "higher mean_net_usd/p_profitable AT EQUAL-OR-BETTER SURVIVAL ... require strict improvement WITHOUT WORSE p_breach". The skip cannot support the inference for THREE independent reasons, each verified in code: (1) THE STANDARD ARM MODELS THE WRONG RISK RULE -- account_rulesets._standard_ruleset feeds the account's `max_dd_pct` into a `drawdown_type: "static"` limit, i.e. a PERMANENT floor off the STARTING balance, while risk.py:21 defines that same field as "max INTRA-DAY equity drawdown FROM TODAY'S HIGH" -- a cap that resets at UTC midnight and REFUSES A TRADE, never disabling the account. Two errors compounded: intraday->permanent and from-todays-high->from-start. (2) IT GRADES A SYNTHETIC BALANCE -- bybit_2 declares no `account_size_usd`, so the arm uses _DEFAULT_STANDARD_SIZE = $10,000, a number that account has never held. (3) IT GRADES THE WRONG LEDGER -- both arms consume the SAME ledger, and that ledger is THIS prop-tuned exit variant (trail 3.5 / tp_r 6.0). The base leg's own geometry (trail 5.0 / tp_r 50.0) was never graded against a standard account by this run. So the skip is a statement about a prop exit recipe, under a mis-modelled terminal floor, on a balance that does not exist. Fixing the arm is Tier-3 research (it changes gate verdicts), NOT a doc edit -- until then read the standard column as UNGRADED, never as evidence against the leg. An earlier gate run (#8969) returned skip at -$138,467 and was VOID — it graded a BTC 1-minute fixture under an ETHUSDT label (BL-20260813-HARNESS-SYMBOL-IS-A-LABEL-DATA-DEFAULTS-TO-BTC); do not cite it. Design: prop-dynamic-exits-faster-banking-DESIGN.md § 5.
     timeframe: "1h"
     symbols:
@@ -1406,8 +1423,39 @@ strategies:
       - ETHUSDT
     donchian: 20
     atr_period: 14
-    atr_stop_mult: 2  # M20 e35 re-check 2026-08-29: cell sm2 (path_b_wf_pass, wf 6/6, d_net_r +28.7348); was 2.5
-    trail_mult: 5.0
+    # atr_stop_mult 2 -> 1.5 + trail_mult 5.0 -> 6.0 (Tier-3 PROPOSAL, holdout arm C3,
+    #   HOLD for operator approval). Evidence: comms/research/RQ-20261016-077e-02/38936621580/
+    #   verdict.json -- C3 selected from 9 arms on discovery only (2020-07-01 .. 2025-03-20,
+    #   n=187, +69.04 R, 4/4 folds; declared arm A n=174, +38.87 R, 4/4) and read ONCE on the
+    #   held-back span: C3 n=75 +19.23 R (0.256 R/trade) vs declared A n=70 +17.01 R
+    #   (0.243 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: atr_stop_mult 2, trail_mult 5.0.
+    atr_stop_mult: 1.5  # was 2 (M20 e35 re-check 2026-08-29: cell sm2, path_b_wf_pass, wf 6/6, d_net_r +28.7348; was 2.5 before that)
+    trail_mult: 6.0
+    # trail_decay stall 10 / tight 1.8 (Tier-3 PROPOSAL, lane ACTIVE-MGMT-DRIVE-1018, HOLD for operator
+    #   approval). Evidence: RQ-20261016-006 (P1-Q4-eth4h-stalldecay-rerun; rule RULE-P1-Q4-ETH4H-STALLDECAY-RERUN,
+    #   registered 2026-10-16) -- exit_lever_ablation --grade replace against THIS incumbent (atr 1.5 / trail 6.0),
+    #   ETHUSDT 4h 2022-10-15 .. 2026-10-14, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: arm D
+    #   (trail_decay_stall_bars 10, trail_decay_tight_mult 1.8, no arm_r) 70.03 R / 180 trades / maxDD 19.36 vs
+    #   A 61.08 R / 160 / 18.06; 3 of 4 calendar folds (fold 4, 2025-09..2026-10: -2.98 vs -10.62); net R per
+    #   capital-day 0.205 vs 0.127. Mechanism: once 10 bars have printed since the trade's peak the trail
+    #   tightens from 6.0 to 1.8 ATR (src/runtime/trail_decay.py; absent = off; the prop legs carry the same lever).
+    #   Does NOT touch the TP: entry_tp stays the 50 R sentinel (TP-doctrine state unchanged, see the PR).
+    #   ROLLBACK: delete these two lines.
+    trail_decay_stall_bars: 10
+    trail_decay_tight_mult: 1.8
+    # tp_revision donchian_measured_move width_mult 0.5 (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD for
+    #   operator approval). The resting entry TP stays the 50 R sentinel (venue cap); this moves the TP each closed
+    #   bar to the Donchian measured move (src/runtime/tp_revision.py), merged into the trail verdict.
+    #   Evidence: RQ-20261018-007 (rule RULE-P1-Q3-ETH4H-MEASURED-MOVE-W05-CONFIRM, registered before the run),
+    #   ETHUSDT 4h 2020-07-01..2026-10-15, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: A (leg as declared)
+    #   n=290 +99.23 R maxDD 19.36 vs MM05 n=275 +115.95 R maxDD 20.38 (delta +16.72 vs bar 5.8; 5 of 6 folds;
+    #   DD cap 26.14); 41% of revisions clamped at the venue cap (1374/3319); net R/capital-day 0.194 vs 0.187.
+    #   Operator directive 2026-10-18: a config-only improvement to an existing strategy ships live and its first
+    #   1-2 live amends are monitored (no soak alias). ROLLBACK: delete the tp_revision block.
+    tp_revision:
+      rule: donchian_measured_move
+      width_mult: 0.5
     tp_r: 50.0
     tp_intent:
       mode: none
@@ -1516,6 +1564,49 @@ strategies:
     trail_decay_tight_mult: 2.5
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
+
+  # SOAK ALIAS of trend_donchian_xrp_4h (Tier-3, OPERATOR-DECIDED 2026-10-22, popup answer verbatim:
+  # "bybit_1 now, real money after corroboration (Recommended)"; checklist OPERATOR-DECISIONS-1022).
+  # Identical to the incumbent except it DECLARES the MOMENTUM-LEVERS-LIVE ADX-tightened trail, and it is
+  # rostered on bybit_1 ONLY (INSTEAD of the incumbent), so bybit_2 + bybit_portfolio stay on the incumbent
+  # together (strict mirror equality). Name avoids the incumbent's signal_prefixes (attribution is by
+  # substring). WHY NOT REAL MONEY YET: RQ-20261016-015's own what_it_does_not_do -- "68 trades is thin:
+  # a PASS is a candidate a second leg must corroborate, not a ship". The corroboration unit tests the same
+  # cell (adx25_k0_t2.5) on sibling trend_donchian legs; a PASS on >= 1 sibling is the evidence record for
+  # declaring the lever on the incumbent for bybit_2 + bybit_portfolio together.
+  # EVIDENCE: research/results/RQ-20261016-015/39103752013.jsonl, RULE-P1-Q4-XRP4H-EXIT-CONFIRM registered
+  # before the run, XRPUSDT 4h 2020-07..2026-10, net of fee+slippage+funding: A n 68 +14.30 R maxDD 4.57 vs
+  # M2 n 68 +17.07 R maxDD 4.15, 4 of 4 folds >= A. Live producer: src/runtime/momentum_levers.py via
+  # trend_donchian.monitor (#18921, in the running sha).
+  # ROLLBACK: restore trend_donchian_xrp_4h on bybit_1 (config/accounts.yaml) and delete this block.
+  trend_donchian_xrp_adx25:
+    model: null
+    signal_prefixes: [trend_donchian_xrp_adx25]
+    enabled: true
+    decision_bar: closed
+    execution: live          # bybit_1 (Bybit demo, paper money) ONLY (config/accounts.yaml).
+    # Everything below except the two trail_adx_* keys is copied VERBATIM from the incumbent
+    # trend_donchian_xrp_4h (see its comments for the evidence); keep the two in step, so
+    # RQ-20261016-015's arm A == the incumbent and arm M2 == this alias.
+    side_filter: short
+    timeframe: "4h"
+    symbols:
+      - XRPUSDT
+    donchian: 20
+    atr_period: 14
+    atr_stop_mult: 2
+    trail_mult: 5.0
+    stale_exit_bars: 8
+    stale_exit_below_r: 0.0
+    tp_r: 3
+    min_confidence: 0.80
+    skip_hours: "0"
+    vol_skip_above_pctl: 0.9
+    trail_decay_arm_r: 2.0
+    trail_decay_tight_mult: 2.5
+    trail_adx_below: 25
+    trail_adx_tight_mult: 2.5
+    # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
   trend_donchian_ada_4h:
     model: null
     signal_prefixes: [trend_donchian_ada_4h, donchian_ada_4h]
@@ -2077,15 +2168,19 @@ strategies:
     #   (src/runtime/trail_decay.py:143-145). Only the dead R-arm is gone.
     #   ROLLBACK (one line): restore `trail_decay_arm_r: 5.06` under `trail_decay_stall_bars: 10`.
     trail_decay_tight_mult: 2.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2114,18 +2209,19 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.5
     trail_mult: 5.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: blocked_no_live_bar_count_exit
-      # ⚠️ NOT the same as the legs above. This leg's only gate-passing take-profit cell
-      # (mes: `tp1_sm2_to24`; tlt_1d: `tp2_sm1.5_to24`) prescribes a bar-count timeout
-      # that NO live unit implements, so no config change can deliver it. Giving live a
-      # bar-count exit is a separate Tier-3 order-path change
-      # (BL-20260829-HARNESS-FORCE-CLOSES-TREND-PULLBACK-TRADES-ON-BAR-COUNT-AND-LIVE-NEVER-DOES).
-      revisit_when: live_gains_a_bar_count_exit
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2159,15 +2255,19 @@ strategies:
     # 2026-08-15, WF 4/6). Rollback = delete these two lines.
     trail_decay_stall_bars: 10
     trail_decay_tight_mult: 2.5
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2495,15 +2595,19 @@ strategies:
     trail_mult: 4.0
     trail_decay_stall_bars: 6   # M20 P4.1 decay cell (stall6 tight2 wf 5/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 2.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2533,15 +2637,19 @@ strategies:
     atr_period: 14
     atr_stop_mult: 2.0
     trail_mult: 4.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2627,15 +2735,19 @@ strategies:
     trail_mult: 4.0
     trail_decay_stall_bars: 10   # M20 P4.1 decay cell (stall10 tight2 wf 4/6; sweep 2026-07-12, PR #6251)
     trail_decay_tight_mult: 2.0
-    # Was absent, therefore inherited htf_pullback_trend_2h._DEFAULTS["tp_r"] = 50.0.
-    # Written out so the sentinel is visible to `grep tp_r`. RUNTIME-IDENTICAL.
-    tp_r: 50.0
+    # TP doctrine (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through answer "Declare 3.5R
+    # (Recommended)"; checklist OPERATOR-DECISIONS-1022 / TP-DECLARE-ALPACA-PB1D, pipeline
+    # PI-20261018-ACAKSTAR-0001): a real predictive TP replaces the 50 R sentinel for the whole
+    # 1d pullback family (slv/iaum/gdx/tlt/gld/ief). EVIDENCE: research/results/RQ-20261016-014/
+    # 39103759555.jsonl (tp_prediction_derive --pool, n 326 / n_oos 133, 2018-02..2026-10):
+    # K* = 3.5 R reaches 27.8% of OOS trades (floor 10%), calibration gap 0.019, OOS delta vs
+    # the sentinel +0.003 R/trade CI [-0.061, +0.069]. The trail is UNCHANGED.
+    # ROLLBACK: restore `tp_r: 50.0` + the prior `tp_intent: {mode: none}` block (git history).
+    tp_r: 3.5
     tp_intent:
-      mode: none
-      reason: trail_is_the_profit_exit
-      # MEASURED: this leg has NEVER carried a tp_r key, across all 110 revisions of this
-      # file (2026-04-29 -> 2026-09-06). Never declared — NOT intended-and-lost.
-      evidence: no_gate_passing_timeout_free_tp_cell
+      mode: r_multiple
+      basis: RQ-20261016-014_pooled_kstar_3.5R
+      calibrated: true           # OOS calibration gap 0.019 (RQ-20261016-014)
     min_confidence: 0.0
     shadow_model_ids: []
 
@@ -2908,6 +3020,7 @@ strategies:
     model: null
     signal_prefixes: [xrp_pullback, xrp_pullback_2h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-10-22 popup "Split: 3 to closed, 2 stay (Recommended)": decide on the CLOSED bar its Stage-0 evidence uses; forming-bar record loses money (DECISION-BAR-MATCH, RQ-20261022-4de5-01, docs/research/evidence/decision-bar-match-2026-10-22.json). Revert = delete this line (default forming).
     execution: live          # bybit_1 demo (paper) + bybit_2 REAL MONEY (2026-06-30, Tier-3
                              # operator-approved). ROLLBACK: remove xrp_pullback_2h from
                              # bybit_2.strategies in config/accounts.yaml.
@@ -2946,6 +3059,7 @@ strategies:
     model: null
     signal_prefixes: [ada_pullback, ada_pullback_2h]
     enabled: true
+    decision_bar: closed     # Tier-3, OPERATOR 2026-10-22 popup "Split: 3 to closed, 2 stay (Recommended)": decide on the CLOSED bar its Stage-0 evidence uses; forming-bar record loses money (DECISION-BAR-MATCH, RQ-20261022-4de5-01, docs/research/evidence/decision-bar-match-2026-10-22.json). Revert = delete this line (default forming).
     execution: live          # bybit_1 demo (paper) + bybit_2 REAL MONEY (2026-06-30, Tier-3
                              # operator-approved). ROLLBACK: remove ada_pullback_2h from
                              # bybit_2.strategies in config/accounts.yaml.
@@ -2954,7 +3068,14 @@ strategies:
       - ADAUSDT
     trend_lookback: 40
     pullback_lookback: 10
-    pullback_frac: 0.5
+    # pullback_frac 0.5 -> 0.618 (Tier-3 PROPOSAL, holdout arm C7, HOLD for operator approval).
+    #   Evidence: comms/research/RQ-20261016-077e-04/38989350528/verdict.json -- C7 selected from
+    #   9 arms on discovery only (2020-07-01 .. 2025-03-20: n=352, +42.32 R, 3/4 folds; the
+    #   declared arm A n=291, +43.74 R, 2/4 folds = NOT eligible under the fold-majority rule)
+    #   and read ONCE on the held-back span: C7 n=97 +24.08 R (0.248 R/trade) vs declared A
+    #   n=86 +23.08 R (0.268 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: pullback_frac 0.5.
+    pullback_frac: 0.618
     atr_period: 14
     # atr_stop_mult 2.5 -> 1.5 (Tier-3, operator-approved 2026-08-23). Swept because
     # cap_r = (0.099 x entry) / (atr_stop_mult x ATR) is INVERSELY proportional to this
@@ -2972,6 +3093,15 @@ strategies:
     tp_r: 4  # M20 e35 re-check 2026-08-29: cell tp4 (wf_pass, wf 4/6, d_net_r +12.8231); was 50.0
     min_confidence: 0.0
     vol_skip_below_pctl: 0.1   # M21 E-2 round 4 vol_lo10 (wf 4/6, 2026-07-14) — skip entries whose trigger-bar ATR sits in the dead-vol bottom decile (trailing 200-bar pctl); IS net_R 31.0 -> 32.3 (dd 16.1 -> 15.1), OOS 5.4 -> 7.4 (dd 12.0 -> 10.9). Rollback = delete this line.
+    # vol_skip_above_pctl 0 -> 0.95 (Tier-3, lane TIER3-PACKETS-1018; merged 2026-10-18 as a data-backed Tier-3 change, #18994 da294c41).
+    #   Skip entries whose trigger-bar ATR sits in the hot-vol top 5% (trailing 200-bar pctl); entry filter only,
+    #   exits untouched. Evidence: RQ-20261016-65ff-06 (VH95 chosen from 3 arms, 2024-10-05..2026-10-04: dR +7.27 R,
+    #   dDD -2.01 R, 3/4 folds) CONFIRMED on the disjoint preceding window by RQ-20261018-002 (rule
+    #   RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM, registered before the run), 2022-10-05..2024-10-04, ADAUSDT 2h,
+    #   net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: B (leg as declared) n=134 +38.04 R maxDD 9.17 vs
+    #   VH95 n=122 +40.19 R maxDD 8.52 (dR +2.16, dDD -0.65, folds 3/4). Record: research/results/RQ-20261018-002/.
+    #   ROLLBACK: delete this line.
+    vol_skip_above_pctl: 0.95
     adx_min: 28             # ADX>=28 regime gate (Tier-3, operator-approved 2026-07-20; raised from 25). Per-year OOS walk-forward: 28 wins 2024/25/26, ties 2023, ~flat 2022; lowers maxDD 4/5 yrs, halves the worst year (2025 net -7.6->-2.2, dd 13.1->7.2). Filters ADA marginal-trend fakeouts (ADX just-over-25 entries that fail). XRP stays 25 (grid showed raising it degrades). ROLLBACK: set back to 25.
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 

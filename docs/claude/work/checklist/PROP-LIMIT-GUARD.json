@@ -14,11 +14,19 @@
     16569
   ],
   "blocked_on": [],
-  "note": "2026-10-05 06:52Z dispatched by manager session_01MM8o5js6TcDFeNAPBY4Ntv; operator approved verbatim \"Yes, fix it now (Recommended)\". Tier-2 hold PR, manager merges + verifies deploy. [08:13Z manager] #16571 MERGED a20e90f9; DEPLOYED (VM bfeaf7639 contains it); tradeify_1 executor 08:08Z cycle exit 0, 08:13Z cycle code_sha bfeaf7639. Also #16569 (breakout_1 -> dry_run, operator popup) MERGED bfeaf763, account-mode-verify success, /api/bot/config breakout_1 dry_run live=false. Reverts: git revert a20e90f9; set-account-mode breakout_1 live.",
+  "note": "2026-10-05 06:52Z dispatched by manager session_01MM8o5js6TcDFeNAPBY4Ntv; operator approved verbatim \"Yes, fix it now (Recommended)\". Tier-2 hold PR, manager merges + verifies deploy. [08:13Z manager] #16571 MERGED a20e90f9; DEPLOYED (VM bfeaf7639 contains it); tradeify_1 executor 08:08Z cycle exit 0, 08:13Z cycle code_sha bfeaf7639. Also #16569 (breakout_1 -> dry_run, operator popup) MERGED bfeaf763, account-mode-verify success, /api/bot/config breakout_1 dry_run live=false. Reverts: git revert a20e90f9; set-account-mode breakout_1 live. [2026-10-12 UNPROVEN-SWEEP-2 pass 2 session_01Khx64L6tHdG52Srbh2NVdT] RE-DATED to 2026-10-19. NOT YET HAPPENED. Diag journalctl windows (tradeify_1 10-11 19:48Z..10-12 05:58Z, velotrade_1 10-11 17:33Z..05:58Z) contain 0 presubmit_* lines; the latest tradeify_1/velotrade_1 tickets are either suppressed (open position), skipped or already filled, none with a marketable LIMIT in-window. The relay returns only the latest 2000 lines, so earlier tickets (10-10, 10-11 15:46Z) are out of reach.",
   "observation": {
     "what": "the next tradeify_1/velotrade_1 ticket whose LIMIT is marketable logs presubmit_marketable (or presubmit_quote_unreadable) and clicks nothing",
     "how_to_check": "bash scripts/ops/diag_fetch.sh '/api/diag/journalctl?unit=ict-prop-executor@tradeify_1.service' | grep presubmit_",
-    "due_by": "2026-10-12"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-19",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
+  "updated_at": "2026-10-24T06:01:09Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 294
 }

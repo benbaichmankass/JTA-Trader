@@ -2,7 +2,7 @@
   "id": "UNPROVEN-SWEEP",
   "title": "Check every landed_unproven checklist row's closing observation against live data; close, re-scope or kill",
   "phase": "W8",
-  "state": "queued",
+  "state": "done",
   "owner": "research lane",
   "lane": null,
   "model": "claude-sonnet-5-5",
@@ -11,14 +11,14 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-10-02 ~17:00Z (manager session_01MM8o5js6TcDFeNAPBY4Ntv): dispatched; operator popup verbatim 'Landed-but-unproven sweep'. [2026-10-08T16:05Z manager session_01Uq7MrjPQDRWqbhCjwuMava, stale-state sweep] Lane session_01YZ1v25eGAXFHxUgidK1DDx finished 10-02 (40 landed_unproven rows scanned: 9 closeable, 31 need lanes, 6 unfiled findings incl. bybit_1 OVER-COVER). Lane archived now. Re-dispatch is PACE-W40 queue item 14; it must first re-read the 10-02 output on branch claude/unproven-sweep-2026-10-02.",
+  "note": "2026-10-02 ~17:00Z (manager session_01MM8o5js6TcDFeNAPBY4Ntv): dispatched; operator popup verbatim 'Landed-but-unproven sweep'. [2026-10-08T16:05Z manager session_01Uq7MrjPQDRWqbhCjwuMava, stale-state sweep] Lane session_01YZ1v25eGAXFHxUgidK1DDx finished 10-02 (40 landed_unproven rows scanned: 9 closeable, 31 need lanes, 6 unfiled findings incl. bybit_1 OVER-COVER). Lane archived now. Re-dispatch is PACE-W40 queue item 14; it must first re-read the 10-02 output on branch claude/unproven-sweep-2026-10-02. [2026-10-09 lane session_015WZhDbDdZTbgTzGXeDzjqe, ~$4] Re-dispatch pass over 120 landed_unproven rows (77 lacked a structured observation). Result: 6 done (A6, JC-CA-06, GRADE, EXIT-CLUSTER, R8, ORDER-AUDIT-2) + PROP-EXEC and W6-PROP-FEED done = 8 done; 3 dropped (BREAKOUT-ATTRITION, BREAKOUT-CAP-ROUND, PROP-FUNNEL: breakout_1 retired); 30 given a structured observation; 0 reopened. bybit_1 OVER-COVER: not live (see PI-20261009-GXEDZJQE-0001). The 10-02 scan branch claude/unproven-sweep-2026-10-02 no longer exists on origin (git ls-remote), so its other 5 unfiled findings could not be recovered; only the bybit_1 one is named in this row. ~47 landed_unproven rows still carry no observation (mostly tier-1 research/tooling rows) -> re-dispatch. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] PASS RESULT: 120 landed_unproven rows at start (count via checklist store). Covered 32 (31 landed_unproven + WATCHDOG-PAST-STOP, which was in_flight). done 14 (WATCHDOG-PAST-STOP, EXIT-LEVER-STRIP, TRADEIFY-RISK-75, TRADEIFY-FEED-TRIP, RQ-DISPATCH-STALL, GEOM-B1-HARNESS, EXIT-PARITY-RQ, PAIRS-STOCKTAKE, RESEARCH-FOLLOWUPS, MOMENTUM-TRAIL-LEVER, PROP-STRATEGY-SEARCH, EXIT-PARITY-CHECK, RESEARCH-NIGHT-1010, ARB-RESEARCH); dropped 1 (E16); re-scoped to queued 4 (A1, PHONE-BALANCE-READ, VELOTRADE-RECON, PROP-EXIT-READ); kept with dated note 13. Findings: PI-20261011-MJ5KSFIO-0001 (velotrade_1 close unpriced), -0002 (alpaca_live 5875/6097 identical close stamp). Not covered: 35 rows carry no structured observation; rows needing journalctl greps (relay returns the latest lines only, ignores grep) or trainer-vm-diag (needs labelled issue) were left. Remaining landed_unproven after this pass: 102 (120 - 13 done - 1 dropped - 4 re-scoped; WATCHDOG was in_flight). Spend est. ~$3. [2026-10-11T07:10Z manager] DONE for this pass: swept by lane UNPROVEN-SWEEP-2 in #17499 (13 done, 1 dropped, 4 re-scoped, 13 kept); 102 landed_unproven remain and are next-pass work, re-opened as a new row when dispatched.",
   "lane_history": [
     {
       "lane": "session_01YZ1v25eGAXFHxUgidK1DDx",
       "archived_at": "2026-10-08T15:55:58Z"
     }
   ],
-  "updated_at": "2026-10-08T15:55:59Z",
+  "updated_at": "2026-10-11T07:05:44Z",
   "updated_by": "session_01Uq7MrjPQDRWqbhCjwuMava",
   "_seq": 263
 }

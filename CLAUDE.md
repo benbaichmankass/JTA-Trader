@@ -108,6 +108,19 @@ page** on the SPA (`GET /api/bot/work/checklist`), which reads the file from the
 VM's working tree; `ict-git-sync` pulls `main` every ~5 min, so the page is
 exactly as fresh as the last push **to `main`**. **Push, then answer.**
 
+### The roadmap loop — the plan the two categories are built from (operator, 2026-10-11, binding)
+
+[`ROADMAP.md`](ROADMAP.md) opens with a **generated "Live roadmap" block** (source:
+[`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml)): 7 goals, each with a measure and
+a dated baseline, and the milestones that serve them. It is the high-level plan — it informs what
+is built and **authorizes nothing** (tiers and mandates unchanged), and it is not a third category
+of work. **Checklist rows and queue units are built and prioritised FROM its milestones** — each
+carries a `roadmap` ref — and **a closing row writes its outcome back** to the milestone and to
+[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) (`writeback` field). Cadence:
+per merge (the lane), every daily review (`python3 scripts/ops/roadmap_map.py --report`), and a
+weekly roadmap pass. Contract: [`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md)
+§ "The roadmap loop"; guard `roadmap-map-guard`.
+
 ### The follow-through pipeline — what exists, and what does not
 
 **`docs/claude/work/PIPELINE.jsonl` is the intake for anything that will need
@@ -168,16 +181,36 @@ STAGE 0  Backtest        offline harness
          evidence record.
                           ▼  GATE 1  ▼
 STAGE 1  Soak             bybit_1 · alpaca_paper
-         Do the mechanics work, and does REALIZED COST match what the
-         backtest assumed? This stage may be wide — it is an instrument,
-         not a decision surface. It is also where legs that have not passed
-         shadow live data so we can learn how to tweak them.
+         Do the MECHANICS work? 1–2 clean trades — no sample size, no
+         calendar (the binding paragraph below). This stage may be wide — it
+         is an instrument, not a decision surface. It is also where legs that
+         have not passed shadow live data so we can learn how to tweak them.
                           ▼  GATE 2  ▼
 STAGE 2  Live + mirror    bybit_2 + bybit_portfolio · alpaca_live + alpaca_portfolio
          Real money. The mirror carries the IDENTICAL roster and the
          IDENTICAL trades, at honest size. Its net-of-cost window is the
          DEMOTION signal.
 ```
+
+**Prop legs clear a SUPERSET of this ladder** (operator, 2026-10-15: *"if anything, the prop accounts
+should have a higher bar to clear because of the DD limits"*): everything a real-money leg clears —
+Stage 0 net of the full cost stack, a PASSED mechanical Stage-1 soak, Gate 2 —
+**plus** the prop EV/survival gate against the firm's DD limits (`comms/prop_survival/<leg>.json`).
+Never a lower bar. `prop-roster-gate-guard` enforces it on roster adds; `trend_donchian_eth_prop` /
+`trend_donchian_sol_prop` are grandfathered by name (exemption lapses 2026-11-07 / 2026-12-11, row
+`PROP-GATE-PARITY`). **Amendment (operator, 2026-10-15): live prop trades count as Stage-1 soak trades**
+(1–2 distinct clean signals on the mechanical checklist); a pass feeds `MD-PROMOTE-S1-S2` (bybit_2 +
+bybit_portfolio together, human merge) after a portfolio-overlap check, with cost checked against Bybit's
+own MEASURED cost for the symbol.
+
+⚠️ **THE SOAK IS MECHANICAL — 1–2 clean trades, never a sample size, never a date** (operator,
+2026-10-15, binding, verbatim): *"A soak is a mechanical verification that was already proven in
+backtesting, and nothing needs to soak for more than one or two trades."* Realized cost and
+live-vs-backtest are monitoring, never a soak's exit. This rule has been re-taught wrongly four times
+(2026-07-26, 07-28, 09-09, 10-15); it is stated ONCE, in
+[`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is
+MECHANICAL" — point at it, never restate it. `soak-contract-guard` refuses a contract with `n_needed` > 2
+or a calendar field; `soak-doctrine-guard` refuses a live doc, skill or generator that teaches a longer soak.
 
 **A live or paper book never establishes edge.** It checks mechanics and cost.
 If a proposal advances a leg on live-book P&L, that is a category error.
@@ -304,14 +337,18 @@ run_backtest_vwap harnesses) resolve slippage and funding through
 `execution_costs.resolve_cost_policy()`'s venue-aware non-zero defaults, not a
 silent `0.0` — verified in
 [`docs/research/d1-cost-stack-verification-2026-09-25.md`](docs/research/d1-cost-stack-verification-2026-09-25.md).
-`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Four harness
+`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Two harness
 families still lack a full cost stack and stay out of scope for any promotion
 corpus until fixed:** `scripts/backtest_orb.py` (fee only, in points; no
-slippage or funding term), `src/backtest/backtester.py` (its own hardcoded
-cost dict, disconnected from the canonical venue decisions; no funding term),
-`scripts/backtest_xsec_momentum.py` (slippage wired, but no funding term for a
-held perp leg), and `scripts/backtest_vol_target.py` (turnover-bps drag only,
-no fee/slippage/funding split — currently backs no scored leg). The
+slippage or funding term) and `src/backtest/backtester.py` (its own hardcoded
+cost dict, disconnected from the canonical venue decisions; no funding term).
+`scripts/backtest_xsec_momentum.py` and `scripts/backtest_vol_target.py` were
+removed from this list on 2026-10-11 (checklist `FRONTIER-LEVER-HARNESS-COSTS`):
+both now resolve fee + slippage + perp funding through
+`execution_costs.resolve_cost_policy()` and record the policy in their result
+(`params.cost_policy`), with tests in
+`tests/test_frontier_lever_harness_costs.py`. That is `landed_unproven` until a
+queue run emits a result carrying it. The
 `derisk_only` mandates carry no such block.
 
 ⚠️ **A mandate is not a third execution gate** — see § "The two execution
@@ -395,7 +432,7 @@ which should never have reached the operator): *"either we have enough data
 to decide, or we don't and then getting that data becomes a task which needs
 to happen so that a decision can be made."* So before asking: is getting the
 missing data itself a well-defined task (a research-queue unit, a Stage-1
-soak placement, a longer accrual window)? If yes, **file it** — no popup —
+soak placement, a replay or backfill)? If yes, **file it** — no popup —
 and only ask when the choice is genuinely a preference no data would settle.
 `scripts/ops/mandate_resolver.py` returns a third verdict, `NEEDS_DATA` (never
 `FIRE`, never a decisive `REFUSE`), naming the exact clause lacking evidence
@@ -458,6 +495,43 @@ that toggles mode, no "safety" default that goes dry on boot. Transient issues
 route through `RiskManager` per-trade: the account stays live and individual
 trades are refused with a logged cause. Full Prime Directive:
 [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § Prime Directive.
+
+⚠️ **There is no halting — in ANY pipeline** (operator directive 2026-10-09,
+binding; Prime Directive rule 7). Verbatim: *"I never asked for a
+functionality for it to halt myself, nor was it made clear to me in any design
+spec that that's something that would happen. There is no halting. If
+something doesn't work, it tries to figure it out and try again. If it
+consistently is incapable, then yes, it obviously needs to raise a red flag so
+that somebody knows to help it. But there is, this is going back to the same
+thing as adding more and more gates that don't need to be there. Under
+absolutely no circumstances does any pipeline halt training on its own without
+getting verbatim permission from me, the operator. That should not happen
+under any circumstances. There is no halting. There's no halting."* Trading,
+prop execution, training, research and data pipelines never halt themselves.
+A failure is contained per item, retried with diagnosis, and when it keeps
+failing ONE red flag reaches the operator while the pipeline keeps trying. A
+self-halt exists only with the operator's verbatim permission recorded in the
+repo. The prop executor's AUTO-REVERT `halted` latch was removed under it.
+
+⚠️ **The ONE sanctioned exception: the account-level daily drawdown switch**
+(operator, 2026-10-09, same day, verbatim): *"I overreacted regarding the
+halting. There is one thing that I want to take back, and that is the daily
+drawdown on at the account level. That's the only place I want there to be
+like a automatic off switch, basically, where if we lose more than a defined
+amount from the account in a day, then the account automatically turns off
+until it resets the next day. But that should be a default off. We'll arm all
+of them, but I, the default for when it's built should be off so that like we
+know that it's something that has to actively be done and turned on. And the
+default setting should be, for the prop accounts, obviously it should be like
+the prop accounts daily drawdown with a buffer. And for the other accounts, it
+should be 3%."* Popup answers: **keep open, block new** (open positions keep
+their SL/TP; only new entries are refused until the daily reset; one alert on
+trip, one on reset) and a prop buffer of **20% of the firm's limit** (limit =
+0.8 × the firm's daily limit, at the firm's reset time). Config:
+`config/accounts.yaml::<acct>.risk.daily_dd_switch` (`armed` defaults to
+`false` in code; arming is an explicit per-account YAML act). It is a
+per-trade `RiskManager` refusal, never a `mode:` flip. Checklist row
+`DAILY-DD-SWITCH`. No other self-halt is sanctioned by this.
 
 ⚠️ **CI is asymmetric, and this is the single mechanical fact behind the roster
 drift.** `scripts/check_dry_run_in_diff.py` fails any PR that adds a
@@ -556,6 +630,25 @@ autonomously; Tier-2 after an operator OK in chat. Allowlist:
 
 ## Skills
 
+**`research-ops`** (`.claude/skills/research-ops/SKILL.md`) is the routine research-operations pass — 4×/day, bounded Sonnet lane dispatched by the manager: pipeline health, runnable floor, blocked-unit audit, results read, follow-ups filed. It keeps research flowing; it does not replace topic research (`perf-followup`, ML, readouts).
+
+**`weekly-audit`** (`.claude/skills/weekly-audit/SKILL.md`, operator 2026-10-14/15) is the Monday 06:07Z audit — a completion test, not a memo: a CORE pass every week plus a deep pass rotating by ISO week mod 4; every finding becomes a checklist row or pipeline item with a detector, and the one-page report lands in a self-landing PR. It replaces the retired `full-system-audit` program.
+
+**The ML / AI-trader build plan is reviewed every week, not when someone remembers** (operator,
+2026-10-11). Plan: `ROADMAP.md` § "AI trader (ML) — build plan"; machine-readable form
+`docs/plans/ml-plan-items.yaml` (every item → its checklist row or `research/queue/` unit);
+checker `python3 scripts/ops/ml_plan_status.py --plumbing`. The loop (plan vs measured progress,
+plumbing validation, ≥1 new idea per run, roadmap + work-queue write-back, run record in
+`comms/ml-plan/`) is step 9 of the Sunday `/ml-review` — see `ml-review` § "The ML plan loop"
+and `manager` § "Weekly: the ML plan loop". It is a recurring step of existing routines, not a new cron.
+
+**The frontier scan is the other half of that loop** (operator, 2026-10-11): the mandate is *better models,
+not variations of the first good one* — a weekly scan of outside open-source models/methods (and
+strategy ideas) that turns every kept idea into a pre-registered queue unit, plus a model-family
+diversity check (`python3 scripts/ops/ml_plan_status.py --diversity`; 78% of registered models were
+GBDT on 2026-10-11). Skill: [`.claude/skills/frontier-research/SKILL.md`](.claude/skills/frontier-research/SKILL.md);
+row `FRONTIER-RESEARCH`; first scan `docs/research/frontier-scan-2026-10-11.md`.
+
 Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup
 is binding** — before generating any task output, scan the catalog; if a skill
 matches, derive from it rather than from a precedent artifact. Precedents are
@@ -580,6 +673,12 @@ lifecycle, promotion/demotion against the `candidate → shadow → advisory`
 ladder). Each has its own rubric and output template. The `/system-review`
 roll-up that ran all three plus register maintenance is retired — the operator
 called it bloated and its backlog-drive mandate is gone with the backlogs.
+
+**Every `/performance-review` hands off to `/perf-followup`**
+(`.claude/skills/perf-followup/SKILL.md`, operator 2026-10-10): tune the
+underperformers, a wider-context lessons post-mortem, extrapolate the lessons to
+other and new strategies, and portfolio-level research. The manager dispatches
+one `PERF-FOLLOWUP-<week>` lane when the review's PR merges.
 
 ---
 

@@ -1,0 +1,19 @@
+{
+  "based_on": "20261016T071121568113Z-350aff62.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-LRP-EF728D79",
+  "next_action": "dispatch_lane",
+  "note": "ROOT-CAUSED by lane LIVE-PARITY-DIAG-1016: INSTRUMENT, not trader. The parity script applied today's config/accounts.yaml roster to the whole 7-day window; trend_donchian_eth_prop joined bybit_1 at 2026-10-15T17:38Z (#18394), trend_donchian_sol_prop joined bybit_1 then and bybit_2/bybit_portfolio at 2026-10-16T04:45Z (#18500). All 15 'dropped_no_order' packages (eth_prop 13, sol_prop 2) were created 10-10..10-15T03:00Z, while those legs were prop-only, so no Bybit order was expected; the replay matched live's SIGNAL in all 15 bars. FIX: PR #18569 (roster-at-signal from git history; historical_positive scores the signal replay; planted_defect plants only inside analysed bars). VALIDATED on live data with the branch script: issue #18575 / run 38881239883 -> dropped_no_order 0 on both legs, controls planted_defect pass, historical_positive pass 21/21, liveness pass. CLOSES WHEN: the first scheduled daily run after #18569 merges commits comms/live_parity/latest.json with 0 of this class.",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_sol_prop:dropped_no_order",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "PR #18569 (lane LIVE-PARITY-DIAG-1016); closes on the first daily live-replay-parity run after merge",
+  "state": "routed",
+  "what": "Live-vs-replay parity: leg `trend_donchian_sol_prop` — dropped_no_order ×2 (REAL-MONEY roster) in window 2026-10-09T06:45:00+00:00..2026-10-16T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-16.json. Examples: [{\"class\": \"dropped_no_order\", \"bar\": \"2026-10-11T15:00:00+00:00\", \"t\": \"2026-10-11T15:49:44+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-c58bbadd9b9a492f\", \"pkg-5c72deb264e948b1\"], \"gates\": [], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_2\", \"bybit_portfolio\", \"bybit_1\"]}}, {\"class\": \"dropped_no_order\", \"bar\": \"2026-10-11T16:00:00+00:00\", \"t\": \"2026-10-11T16:01:56+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-c58bbadd9b9a492f\"], \"gates\": [], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_2\", \"bybit_portfolio\", \"bybit_1\"]}}]"
+}

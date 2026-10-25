@@ -870,6 +870,26 @@ def check_third_gate_documented() -> list[str]:
     return fails
 
 
+_SOAK_CANON = "docs/plans/OPERATING-PLAN-2026-09-21.md"
+_SOAK_POINTERS = ("CLAUDE.md", "docs/CLAUDE-RULES-CANONICAL.md", "docs/ARCHITECTURE-CANONICAL.md")
+
+
+def check_soak_rule_single_source() -> list[str]:
+    """The soak rule (operator 2026-10-15: a soak is MECHANICAL, 1-2 clean
+    trades) is stated ONCE, in OPERATING-PLAN § 2, and the three canonical docs
+    POINT at it rather than restate it — four earlier restatements drifted
+    (SOAK-REDEFINE). The long-soak language scan itself is soak-doctrine-guard."""
+    fails: list[str] = []
+    canon = ROOT / _SOAK_CANON
+    if not canon.exists() or canon.read_text(encoding="utf-8").count("SOAK-RULE-CANONICAL") != 1:
+        fails.append(f"{_SOAK_CANON}: must carry the SOAK-RULE-CANONICAL paragraph exactly once")
+    for rel in _SOAK_POINTERS:
+        t = " ".join(((ROOT / rel).read_text(encoding="utf-8") if (ROOT / rel).exists() else "").split())
+        if "The soak is MECHANICAL" not in t or "OPERATING-PLAN" not in t:
+            fails.append(f"{rel}: must point at {_SOAK_CANON} § 2 \"The soak is MECHANICAL\"")
+    return fails
+
+
 CHECKS = [
     # FIRST, because the checks below read these files' CONTENT and a
     # conflicted file makes some of their verdicts untrustworthy. It does
@@ -886,6 +906,8 @@ CHECKS = [
      check_env_knob_live_values),
     ("account_state.yaml third-gate fold documented in both gate sections",
      check_third_gate_documented),
+    ("soak rule stated once (OPERATING-PLAN § 2) and pointed at by the canonical docs",
+     check_soak_rule_single_source),
 ]
 
 

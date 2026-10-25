@@ -34,6 +34,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.backtest_system import ROSTER, _load_candles, run_system_backtest  # noqa: E402
+from src.research.run_costs import resolve_run_costs  # noqa: E402
 
 ROSTER_4 = ["trend_donchian", "fade_breakout_4h", "squeeze_breakout_4h", "fvg_range_15m"]
 POLICIES = ["net", "suppress"]
@@ -45,6 +46,7 @@ def _cell(base5m, *, start, end, roster, reentry_policy) -> Dict[str, Any]:
         initial_balance=10_000.0, risk_pct=0.3, daily_loss_pct=3.0,
         signal_ttl_bars=1, overrides={}, refresh=False, clock_tf="15m",
         flip_policy="hold", reentry_policy=reentry_policy,
+        symbol="BTCUSDT", costs=resolve_run_costs("BTCUSDT"), require_full_costs=True,
     )
     return {
         "trades": out["total_trades"],

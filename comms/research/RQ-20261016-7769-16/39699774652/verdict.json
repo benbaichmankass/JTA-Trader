@@ -1,0 +1,94 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "philadelphia_fed_manufacturing_survey releases (live + survey backfill) joined to ES=F daily closes",
+  "n": 140,
+  "measurement": {
+    "kind": "philadelphia_fed_manufacturing_survey",
+    "symbol": "ES=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 140,
+    "releases_with_value": 140,
+    "price_bars": 5493,
+    "first_release": "2015-01-15",
+    "last_release": "2026-10-15",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 140,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 140,
+        "ic": -0.068288,
+        "ic_t": -0.804,
+        "overlap_factor": 1.0,
+        "n_eff": 140.0,
+        "ic_t_eff": -0.804,
+        "pearson": 0.008382,
+        "sign_hit_rate": 0.456522,
+        "mean_fwd_return": 0.000109
+      },
+      {
+        "horizon_days": 3,
+        "n": 140,
+        "ic": -0.10932,
+        "ic_t": -1.292,
+        "overlap_factor": 1.0,
+        "n_eff": 140.0,
+        "ic_t_eff": -1.292,
+        "pearson": -0.077831,
+        "sign_hit_rate": 0.463768,
+        "mean_fwd_return": 0.000851
+      },
+      {
+        "horizon_days": 5,
+        "n": 139,
+        "ic": -0.213336,
+        "ic_t": -2.556,
+        "overlap_factor": 1.0,
+        "n_eff": 139.0,
+        "ic_t_eff": -2.556,
+        "pearson": -0.239344,
+        "sign_hit_rate": 0.416058,
+        "mean_fwd_return": 0.002549
+      }
+    ],
+    "summary": {
+      "max_n": 140,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": true,
+      "any_flagged_horizon_overlap_corrected": true,
+      "strongest_ic_horizon_days": 5,
+      "strongest_ic": -0.213336,
+      "strongest_ic_t": -2.556,
+      "strongest_ic_t_eff": -2.556,
+      "t_flag": 2.0,
+      "verdict": "surprise_predicts_forward_return"
+    },
+    "rule": {
+      "primary": [
+        3
+      ],
+      "min_n": 100,
+      "t_bar": 3.0,
+      "expected_sign": "either"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 3,
+        "n": 140,
+        "ic": -0.10932,
+        "ic_t_eff": -1.292,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      }
+    ]
+  },
+  "note": "no pre-registered horizon reached the t-bar in the expected sign"
+}

@@ -28,6 +28,9 @@ def _load(monkeypatch, tmp_path):
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     monkeypatch.setattr(mod, "RECEIPT", tmp_path / "work_digest_receipt.json")
+    monkeypatch.setattr(mod, "RESEARCH_CURSOR", tmp_path / "research_digest_cursor.json")
+    monkeypatch.setattr(mod, "WORK_CURSOR", tmp_path / "work_section_cursor.json")
+    monkeypatch.setenv("TELEGRAM_SETTINGS_PATH", str(tmp_path / "telegram_settings.json"))
     # WORK-SYSTEM: the carrier also runs the attention pass, which has its own
     # tests (tests/test_attention_watch.py). Isolated here so these tests count
     # only the digest's own sends; the call itself is asserted below.
@@ -221,9 +224,19 @@ def test_one_message_carries_the_attention_block_first_and_commits_after_send(mo
     fake.enqueue = lambda body, **k: sent.append((body, k)) or Path("queued")
     monkeypatch.setitem(sys.modules, "send_ping", fake)
     assert mod.run(force=True) == 0
-    assert len(sent) == 1 and sent[0][0].startswith("🟢 No new actionable items")
-    assert "— what changed —" in sent[0][0]
+    # TELEGRAM-CHANNELS (2026-10-11): headline first (the attention line is
+    # line 2 of it), then the attention section leads the collapsible ones.
+    body, kw = sent[0]
+    assert len(sent) == 1 and body.startswith("<b>🧭 Manager update")
+    assert body.splitlines()[1] == "🟢 No new actionable items"
+    order = [body.index(h) for h in ("Needs you — decisions only",
+                                     "Research queue — new since last update",
+                                     "Work — blocked · didn't work")]
+    assert order == sorted(order) and len(body) <= 4096
+    assert kw.get("target") == "manager" and kw.get("parse_mode") == "HTML"
     assert mod._attention_calls == ["sent"]
+    # the research cursor advances only after a successful send
+    assert (tmp_path / "research_digest_cursor.json").exists()
 
 
 def test_a_failed_send_does_not_commit_attention_state(monkeypatch, tmp_path):
@@ -235,3 +248,4 @@ def test_a_failed_send_does_not_commit_attention_state(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "send_ping", fake)
     assert mod.run(force=True) == 1
     assert mod._attention_calls == ["enqueue_failed"]
+    assert not (tmp_path / "research_digest_cursor.json").exists()

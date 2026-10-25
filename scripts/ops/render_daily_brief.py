@@ -269,6 +269,78 @@ def section0_lines(res: Any, today: date) -> list[str]:
     L.append("")
     return L
 
+# ── §0b — DERIVED due-ness (AUD-20261019-DESIGN-WORK-LIVENESS) ─────────────
+# Operator, 2026-10-21 popup "Show now (Recommended)": grow §0 by derived
+# due-ness now and let the daily reviews work it down. Two shapes `pipeline.due`
+# cannot see, because each lives in the JOIN of two stores:
+#   * a pipeline item ROUTED to a checklist row that has since closed -- nothing
+#     will ever pick it up (62 of 253 due items on 2026-10-21);
+#   * a `landed_unproven` row whose observation.due_by has passed -- the closing
+#     observation has no puller (72 of 188 rows on 2026-10-21).
+# The pipeline's own due() is untouched; this is an additional, separately
+# counted block, so the §0 headline count keeps meaning what it meant.
+
+_CLOSED_ROW_STATES = ("done", "dropped", "killed")
+_ROW_REF = re.compile(r"\s*`?([A-Z0-9][A-Za-z0-9_-]+)")
+
+
+def _routed_row_id(item: dict) -> str | None:
+    m = _ROW_REF.match(str(item.get("routed_to") or ""))
+    return m.group(1) if m else None
+
+
+def derived_due(pipe_items: list[dict], rows: list[dict], today: date) -> dict[str, list]:
+    """``{"routed_to_closed": [(item, row)], "observation_overdue": [row]}``.
+
+    Open pipeline items only (a terminal item is finished whatever it points at);
+    a row id that resolves to no row is not graded here (it is not evidence the
+    target closed)."""
+    by_id = {str(r.get("id")): r for r in rows if isinstance(r, dict) and r.get("id")}
+    closed = []
+    for it in pipe_items:
+        if it.get("state") in pipeline.TERMINAL_STATES or it.get("state") != "routed":
+            continue
+        row = by_id.get(_routed_row_id(it) or "")
+        if row is not None and row.get("state") in _CLOSED_ROW_STATES:
+            closed.append((it, row))
+    overdue = []
+    for r in by_id.values():
+        if r.get("state") != _NOT_DONE_BUT_MERGED:
+            continue
+        due_by = str(((r.get("observation") or {}).get("due_by")) or "")[:10]
+        try:
+            if due_by and date.fromisoformat(due_by) < today:
+                overdue.append(r)
+        except ValueError:
+            continue
+    closed.sort(key=lambda p: str(p[0].get("id")))
+    overdue.sort(key=lambda r: (str((r.get("observation") or {}).get("due_by")), str(r.get("id"))))
+    return {"routed_to_closed": closed, "observation_overdue": overdue}
+
+
+def derived_due_lines(d: dict[str, list]) -> list[str]:
+    closed, overdue = d["routed_to_closed"], d["observation_overdue"]
+    L = ["### §0b — DERIVED DUE (joins the pipeline to the checklist)", ""]
+    if not closed and not overdue:
+        return L + ["Nothing derived-due: no routed item points at a closed row, and no "
+                    "`landed_unproven` row is past its observation date.", ""]
+    L.append(f"**{len(closed)} routed item(s) point at a closed row** (close or re-route each) · "
+             f"**{len(overdue)} `landed_unproven` row(s) past observation.due_by** (make the "
+             "observation, or re-date it with what you read).")
+    for it, row in closed[:TOP_DUE]:
+        L.append(f"- **{it.get('id')}** → `{row.get('id')}` is `{row.get('state')}` · "
+                 f"{_clip(it.get('what'), _LINE)}")
+    if len(closed) > TOP_DUE:
+        L.append(f"- … {len(closed) - TOP_DUE} more routed-to-closed item(s).")
+    for r in overdue[:TOP_DUE]:
+        o = r.get("observation") or {}
+        L.append(f"- **{r.get('id')}** observation due `{o.get('due_by')}` · "
+                 f"{_clip(o.get('how_to_check') or o.get('what'), _LINE)}")
+    if len(overdue) > TOP_DUE:
+        L.append(f"- … {len(overdue) - TOP_DUE} more overdue observation(s).")
+    return L + [""]
+
+
 # ── §2/§3/§4 — checklist views ─────────────────────────────────────────────
 
 def checklist_view(doc: Any) -> dict[str, Any]:
@@ -419,8 +491,10 @@ def row_last_evidence(it: dict, act: dict, today: date) -> tuple[date | None, st
 
 # ── SOAKS — computed LIVE by scripts/ops/soak_state.py ──────────────────────
 # INTERFACE (agreed WORK-SYSTEM <-> SOAK-WATCH): `soak_state.soak_states() ->
-# list[dict]` with keys {leg, account, state, end_date, reason}; state is one of
-# accruing/ready/overdue/dead/unknown. Imported live, like `pipeline` — NOT read
+# list[dict]` with keys {leg, account, state, n_needed, progress, reason}; state is
+# one of passed/in_progress/awaiting_first_trade/mechanical_fail/unknown (the
+# MECHANICAL soak, operator 2026-10-15: 1-2 clean trades, no calendar — there is
+# no end date to show). Imported live, like `pipeline` — NOT read
 # from a committed file: the VM only PULLS git, so a VM-computed soak state can
 # never land in one, and a session-written file is the stale-state failure this
 # brief exists to end. `days_in` is computed here when the row carries `started`.
@@ -473,23 +547,25 @@ def _soak_lines(b: dict) -> list[str]:
     if not n:
         return L + ["_None declared._", ""]
     dash = lambda v: "—" if v in (None, "") else v  # noqa: E731
-    # Only the states that owe a decision are listed in full; `accruing` is a
-    # count plus the nearest end date (the soak alarm rule: accruing stays
-    # quiet). 48 full rows took the brief past its 16 KB cap on 2026-10-04.
-    loud = [r for r in sk["rows"] if r.get("state") != "accruing"]
-    order = {"ready": 0, "overdue": 1, "dead": 2, "unknown": 3}
+    # Only the states that owe something are listed in full: `mechanical_fail`
+    # (a fault to fix, then re-soak), `passed` (a promotion candidate) and
+    # `unknown`. `awaiting_first_trade` / `in_progress` are quiet counts — a soak
+    # with no signal yet is waiting, not failing, and has no deadline. 48 full
+    # rows took the brief past its 16 KB cap on 2026-10-04.
+    quiet_states = ("awaiting_first_trade", "in_progress")
+    loud = [r for r in sk["rows"] if r.get("state") not in quiet_states]
+    order = {"mechanical_fail": 0, "unknown": 1, "passed": 2}
     for r in sorted(loud, key=lambda r: (order.get(str(r.get("state")), 9), str(r.get("id")))):
         L.append(f"- **{dash(r.get('id'))}** {dash(r.get('leg'))} @{dash(r.get('account'))} · "
                  f"{dash(r.get('state'))} · started {dash(r.get('started'))} · "
                  f"day {dash(r.get('days_in'))} · {_clip(dash(r.get('progress')), 40)} · "
-                 f"ends {dash(r.get('end_date'))} · {_clip(dash(r.get('reason')), 50)}")
-    acc = [r for r in sk["rows"] if r.get("state") == "accruing"]
-    if acc:
-        ends = sorted(str(r["end_date"]) for r in acc if r.get("end_date"))
-        nearest = next((r for r in acc if str(r.get("end_date")) == ends[0]), None) if ends else None
-        L.append(f"- _{len(acc)} accruing (quiet); nearest end "
-                 + (f"{ends[0]} (`{dash(nearest.get('id'))}`)" if nearest else "—")
-                 + ". Full table: `docs/claude/work/SOAK-REPORT.md`._")
+                 f"{_clip(dash(r.get('reason')), 50)}")
+    for st in quiet_states:
+        q = [r for r in sk["rows"] if r.get("state") == st]
+        if q:
+            L.append(f"- _{len(q)} {st.replace('_', ' ')} (quiet, no deadline): "
+                     + ", ".join(f"`{dash(r.get('leg'))}`" for r in sorted(q, key=lambda r: str(r.get('id'))))
+                     + "._")
     L.append("")
     return L
 
@@ -511,15 +587,35 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 
     checklist_doc, checklist_state = read_json(_CHECKLIST, root)
     ck = checklist_view(checklist_doc) if checklist_state == "read" else checklist_view({})
+    # §0b: derived due-ness, only when the checklist was actually read -- an
+    # unread checklist is "we did not look", never "nothing derived-due".
+    if checklist_state == "read":
+        section0 = section0 + derived_due_lines(derived_due(
+            pipe_items, (checklist_doc or {}).get("items") or [], today))
+    else:
+        section0 = section0 + ["### §0b — DERIVED DUE — COULD NOT BE COMPUTED "
+                               f"(checklist `{checklist_state}`; we did not look, this is not zero)", ""]
 
     mandates_doc, mandates_state = read_yaml(_MANDATES, root)
 
+    research_t = _research_throughput(root)
+
+    try:  # BLOCKER-WATCH: do the blocked / 'running' claims still hold?
+        from scripts.ops import blocker_watch  # noqa: PLC0415
+        bw = blocker_watch.build(repo=root)
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        bw = None
+
     return {
+        "blockerWatch": bw,
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "researchThroughput": _research_throughput(root),
+        "researchThroughput": research_t,
+        "researchFloorLines": _research_floor_lines(research_t, root),
+        "researchSlo": _research_slo(root),
         "liveParity": _live_parity_line(root),
+        "activeTradeManagement": atm_view(root),
         "pipeline": {"stats": pipe_stats, "section0Lines": section0,
                      "healthy": pipe_res.healthy, "askOperator": ask_operator},
         "activity": git_activity(root, today),
@@ -542,7 +638,22 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 def _section0(b: dict) -> list[str]:
     # `section0_lines` emits its own "## §0 —" header. Due-ness comes from
     # pipeline.py (`due`, `due_bucket`), never re-derived here.
-    return list(b["pipeline"]["section0Lines"]) + [""]
+    L = list(b["pipeline"]["section0Lines"]) + [""]
+    # RESEARCH-ENGINE-1016 (2026-10-16): a research floor gap is DUE work computed on every render -- it
+    # reached the manager only as prose in research-ops handoffs before, and nobody acted on it.
+    if "researchFloorLines" in b:
+        L += list(b["researchFloorLines"])
+    # RESEARCH-PIPELINE-SLO (2026-10-16): the research pipeline's SLO table, every render, from the newest
+    # comms/research/health/ status file -- a missing or stale file is a declared hole, never "all ok".
+    if "researchSlo" in b:
+        L += list((b["researchSlo"] or {}).get("lines") or [])
+    bw = b.get("blockerWatch")
+    if bw is not None:
+        from scripts.ops import blocker_watch  # noqa: PLC0415
+        L += blocker_watch.render_lines(bw)
+    elif "blockerWatch" in b:
+        L += ["### 🧱 BLOCKER-WATCH — COULD NOT BE RUN (we did not look; this is not zero)", ""]
+    return L
 
 
 def _section1(b: dict) -> list[str]:
@@ -650,6 +761,34 @@ def _research_throughput(root: Path | None) -> dict | None:
         return None
 
 
+def _research_floor_lines(t: dict | None, root: Path | None) -> list[str]:
+    """§0 lines for a research floor gap (RESEARCH-ENGINE-1016): computed on every render from the
+    throughput already read above, so a gap is due work the moment it exists -- not prose in a handoff."""
+    try:
+        from scripts.research.queue_throughput import floor_gap_lines  # noqa: PLC0415
+        return floor_gap_lines(t, root or REPO_ROOT)
+    except Exception:  # noqa: BLE001 -- a hole, declared, not a crash of the brief
+        return ["### 🚨 Research floor — COULD NOT BE READ (we did not look; this is not 'met')", ""]
+
+
+def _research_slo(root: Path | None) -> dict:
+    """{readState, asOf, counts, notOk, table, lines}: the newest research SLO status file
+    (scripts/research/research_slo.py, written every 2 h by research-slo.yml). Absent / unreadable /
+    stale are states rendered in §0, never an empty table read as healthy."""
+    try:
+        from scripts.ops import research_slo_view as research_slo  # noqa: PLC0415
+        doc, state = research_slo.latest_status(root or REPO_ROOT)
+        rows = (doc or {}).get("latest") or []
+        return {"readState": state, "asOf": (doc or {}).get("as_of"), "counts": (doc or {}).get("counts"),
+                "notOk": [r.get("slo") for r in rows if r.get("state") != "ok"],
+                "table": [{k: r.get(k) for k in ("slo", "state", "value", "op", "threshold")} for r in rows],
+                "lines": research_slo.table_lines(doc, state)}
+    except Exception as exc:  # noqa: BLE001 -- a hole, declared, not a crash of the brief
+        return {"readState": "unreadable", "asOf": None, "counts": None, "notOk": None, "table": None,
+                "lines": [f"### 🚨 Research pipeline SLOs — COULD NOT BE READ ({type(exc).__name__}; we did not look, "
+                          "this is not 'ok')", ""]}
+
+
 _LIVE_PARITY = Path("comms/live_parity/latest.json")
 
 
@@ -684,10 +823,141 @@ def _parity_lines(b: dict) -> list[str]:
     return [f"### 🔁 {line}", ""]
 
 
+# ── Active trade management (Programme P1) — a standing line, operator 2026-10-18 ──────
+# The operator named active trade management and ML "our highest priority" (2026-10-18
+# ~06:20Z, lane ACTIVE-MGMT-DRIVE-1018). Until this existed the brief could not say how
+# many P1 units were queued, fired, landed, or what they decided -- and 17 of 21 sat
+# un-dispatched for two days without the brief noticing. Computed on EVERY render from
+# research/queue/ (+ blocked/) and the units' own grading; never a file that can go stale.
+_P1 = "P1"
+_P1_PLAN = "research/programmes/01-active-trade-management.yaml"
+
+
+def _is_p1(u: dict) -> bool:
+    pn = u.get("programme_node")
+    return u.get("programme") == _P1 or (isinstance(pn, dict) and pn.get("programme") == _P1)
+
+
+def _stamp_ts(value: Any) -> float:
+    """ISO timestamp -> epoch seconds; 0.0 when absent or unparseable (declared below as 'no stamp')."""
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except Exception:  # noqa: BLE001 -- an unparseable stamp counts as no stamp, never as 'newest'
+        return 0.0
+
+
+def _latest_record_ts(rdir: Path) -> float:
+    """The newest `generated_at` over EVERY record file under research/results/<unit>/ (all of
+    them are read; none is picked by name or mtime). 0.0 = no readable record."""
+    latest = 0.0
+    if not rdir.is_dir():
+        return latest
+    for f in sorted(rdir.glob("*.jsonl")):
+        for line in _lines_or_none(f) or []:
+            # provenance: _record_generated_ts — the newest DECLARED generated_at over EVERY record of every
+            # file; no file is picked by name, position or mtime, so nothing here is an implicit input choice
+            latest = max(latest, _record_generated_ts(line))
+    return latest
+
+
+def _lines_or_none(f: Path) -> list[str] | None:
+    """The file's lines, or None when it cannot be read (an unreadable record contributes nothing)."""
+    try:
+        return f.read_text(encoding="utf-8").splitlines()
+    except Exception:  # noqa: BLE001 -- stated above: unreadable = contributes nothing, never 'newest'
+        return None
+
+
+def _record_generated_ts(line: str) -> float:
+    """One JSONL record's `generated_at` as epoch seconds; 0.0 for a blank or malformed line."""
+    if not line.strip():
+        return 0.0
+    try:
+        return _stamp_ts(json.loads(line).get("generated_at"))
+    except Exception:  # noqa: BLE001 -- a malformed record contributes nothing, never 'newest'
+        return 0.0
+
+
+def atm_view(root: Path | None = None) -> dict[str, Any]:
+    """{readState, units, counts, verdicts, fired, nextDecision}: Programme P1 (active trade
+    management) units by state. `fired` = status queued AND a dispatcher `last_dispatched_at`
+    stamp newer than any landed record -- a FLOOR: a hand-dispatched run (workflow_dispatch
+    from a session) carries no stamp until the collector lands it, so it reads as `queued`.
+    `nextDecision` = the ready `needs_authoring` nodes of the P1 tree (the plan's own
+    authoring queue), or the reason it could not be read."""
+    root = root or REPO_ROOT
+    qdir = root / "research/queue"
+    if not qdir.is_dir():
+        return {"readState": "absent", "units": 0, "counts": {}, "verdicts": {}, "fired": 0,
+                "nextDecision": "COULD NOT BE READ (no research/queue/)"}
+    try:
+        import yaml
+    except Exception:  # noqa: BLE001
+        return {"readState": "unreadable", "units": 0, "counts": {}, "verdicts": {}, "fired": 0,
+                "nextDecision": "COULD NOT BE READ (yaml unavailable)"}
+    units: dict[str, dict] = {}
+    unreadable = 0
+    for f in sorted(qdir.glob("*.yaml")) + sorted((qdir / "blocked").glob("*.yaml")):
+        try:
+            u = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 -- counted, never silently skipped
+            unreadable += 1
+            continue
+        if isinstance(u, dict) and _is_p1(u):
+            units[str(u.get("id") or f.stem)] = u
+    counts: dict[str, int] = {}
+    verdicts: dict[str, int] = {}
+    fired = 0
+    for uid, u in units.items():
+        st = str(u.get("status") or "unknown")
+        counts[st] = counts.get(st, 0) + 1
+        if st == "done":
+            v = str(((u.get("grading") or {}).get("verdict")) or "ungraded")
+            verdicts[v] = verdicts.get(v, 0) + 1
+        elif st == "queued" and u.get("last_dispatched_at"):
+            # "Fired, record pending" = the dispatcher stamp is newer than every record the unit
+            # has LANDED. The comparison reads each record's own `generated_at` (a declared field
+            # of the E5 record), never file order or mtimes, so a re-collected or re-ordered file
+            # cannot make a landed run look pending or a pending run look landed.
+            if _stamp_ts(u.get("last_dispatched_at")) > _latest_record_ts(root / "research/results" / uid):
+                fired += 1
+    nxt: str
+    try:
+        from scripts.research import queue_replenish as qr
+        plan = qr.programme_plan(root, units)
+        ready = [a for a in plan.get("authoring_queue", []) if a.get("programme") == _P1]
+        emit = [e for e in plan.get("emit", []) if (e.get("programme") if isinstance(e, dict) else None) in (_P1, None)]
+        if ready:
+            nxt = (f"{len(ready)} P1 node(s) ready to author: "
+                   + ", ".join(str(a.get("node")) for a in ready[:3]) + (" …" if len(ready) > 3 else ""))
+        else:
+            nxt = f"no P1 node ready to author; {len(emit)} programme node(s) ready to emit at the next replenish"
+    except Exception as exc:  # noqa: BLE001 -- a hole, declared
+        nxt = f"COULD NOT BE READ ({type(exc).__name__} reading {_P1_PLAN})"
+    return {"readState": "read" if not unreadable else "partial", "units": len(units), "counts": counts,
+            "verdicts": verdicts, "fired": fired, "unreadable": unreadable, "nextDecision": nxt}
+
+
+def _atm_lines(b: dict) -> list[str]:
+    v = b.get("activeTradeManagement") or {}
+    if v.get("readState") in (None, "absent", "unreadable"):
+        hole = f"COULD NOT BE READ ({v.get('nextDecision', 'not computed')}; we did not look, this is not zero)"
+        return [f"### 🎯 Active trade management (P1) — {hole}", ""]
+    c, vd = v["counts"], v["verdicts"]
+    done = c.get("done", 0)
+    vtxt = " · ".join(f"{k} {n}" for k, n in sorted(vd.items(), key=lambda kv: -kv[1])) or "—"
+    line = (f"### 🎯 Active trade management (P1) — units {v['units']}: queued {c.get('queued', 0)} "
+            f"(fired, record pending ≥ {v['fired']}) · landed {done}: {vtxt} · blocked {c.get('blocked', 0)}"
+            f" · retired {c.get('retired', 0)} · next decision: {v['nextDecision']}")
+    if v.get("unreadable"):
+        line += f" · ⚠️ {v['unreadable']} queue file(s) unreadable (counts are a floor)"
+    return [line, ""]
+
+
 def _section4(b: dict) -> list[str]:
     if b["checklistState"] != "read":
         return ["---", "", "## §4 — WHAT IS RUNNING", "",
-                f"{_HOLE[b['checklistState']]} — `docs/claude/work/MANAGER-CHECKLIST.json`.", ""] + _soak_lines(b) + _research_lines(b) + _parity_lines(b)
+                f"{_HOLE[b['checklistState']]} — `docs/claude/work/MANAGER-CHECKLIST.json`.", ""] + _soak_lines(b) + _research_lines(b) + _atm_lines(b) + _parity_lines(b)
     ck = b["checklist"]
     today = date.fromisoformat(b["forDate"])
     act = b.get("activity") or {"state": "unreadable", "commits": [], "coversDays": None}
@@ -732,7 +1002,7 @@ def _section4(b: dict) -> list[str]:
     if other:
         L += ["_Everything else, by count only: "
               + ", ".join(f"`{k}` {v}" for k, v in other.items()) + "._", ""]
-    return L + _soak_lines(b) + _research_lines(b) + _parity_lines(b)
+    return L + _soak_lines(b) + _research_lines(b) + _atm_lines(b) + _parity_lines(b)
 
 
 def _section5(b: dict) -> list[str]:
@@ -805,6 +1075,37 @@ def _self_test() -> int:
     check("§0 is built from pipeline.due via section0_lines, not re-derived",
           "**1 item(s) due. Each needs a disposition today.**" in md_due
           and "- **X**" in md_due)
+
+    # ── §0b: derived due-ness joins the pipeline to the checklist ──────────
+    _items = [
+        {"id": "R1", "state": "routed", "routed_to": "ROW-DONE — lane x", "what": "orphaned"},
+        {"id": "R2", "state": "routed", "routed_to": "ROW-OPEN", "what": "still owned"},
+        {"id": "R3", "state": "done", "routed_to": "ROW-DONE", "what": "finished",
+         "terminal_reason": "t"},
+        {"id": "R4", "state": "routed", "routed_to": "NO-SUCH-ROW", "what": "unresolvable"},
+    ]
+    _rows = [
+        {"id": "ROW-DONE", "state": "done"},
+        {"id": "ROW-OPEN", "state": "queued"},
+        {"id": "LU-LATE", "state": "landed_unproven",
+         "observation": {"what": "w", "how_to_check": "h", "due_by": "2026-09-20"}},
+        {"id": "LU-FUTURE", "state": "landed_unproven",
+         "observation": {"what": "w", "how_to_check": "h", "due_by": "2026-09-22T00:00Z"}},
+        {"id": "LU-TODAY", "state": "landed_unproven",
+         "observation": {"what": "w", "how_to_check": "h", "due_by": "2026-09-21"}},
+    ]
+    dd = derived_due(_items, _rows, today)
+    check("§0b: a routed item whose row is done is derived-due; open, terminal and "
+          "unresolvable ones are not",
+          [i["id"] for i, _ in dd["routed_to_closed"]] == ["R1"])
+    check("§0b: landed_unproven past due_by is derived-due; today and future are not",
+          [r["id"] for r in dd["observation_overdue"]] == ["LU-LATE"])
+    _l = "\n".join(derived_due_lines(dd))
+    check("§0b renders both populations with their counts",
+          "**1 routed item(s) point at a closed row**" in _l and "**LU-LATE**" in _l
+          and "**R1** → `ROW-DONE`" in _l)
+    check("§0b renders an explicit nothing-line, never silence",
+          "Nothing derived-due" in "\n".join(derived_due_lines(derived_due([], [], today))))
 
     # ── an unreadable pipeline store is a declared floor, not a clean 0 ────
     res_bad = pipeline.LoadResult(unreadable=[(3, "JSONDecodeError: x")])

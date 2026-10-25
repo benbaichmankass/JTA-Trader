@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "run_id": "38461124769",
+  "generated_at": "2026-10-13T20:15:30.467368+00:00",
+  "fired": true,
+  "backends": {
+    "github_runner": {
+      "read_state": "measured",
+      "capacity": 3,
+      "inflight_at_start": 0,
+      "fired_this_cycle": 3,
+      "due_waiting": 15,
+      "due_total": 18,
+      "free_slots_after": 0,
+      "busy_fraction": 1.0
+    },
+    "trainer": {
+      "read_state": "measured",
+      "capacity": 1,
+      "inflight_at_start": 0,
+      "fired_this_cycle": 1,
+      "due_waiting": 10,
+      "due_total": 11,
+      "free_slots_after": 0,
+      "busy_fraction": 1.0
+    },
+    "kaggle": {
+      "read_state": "measured",
+      "capacity": 1,
+      "inflight_at_start": 0,
+      "fired_this_cycle": 0,
+      "due_waiting": 0,
+      "due_total": 0,
+      "free_slots_after": 1,
+      "busy_fraction": 0.0
+    }
+  },
+  "runner_pool_used_vs_platform": {
+    "research_inflight": 0,
+    "platform_concurrency": 20,
+    "read_state": "measured",
+    "note": "research runs only; other workflows share the pool"
+  },
+  "kaggle_gpu": {
+    "read_state": "measured",
+    "remaining_h": 29.93,
+    "used_h": 0.07,
+    "total_h": 30.0,
+    "refresh_at": "2026-10-17T00:00:00",
+    "hours_to_refresh": 75.7,
+    "expiring_h": 0.0
+  },
+  "gpu_burst": {
+    "read_state": "measured",
+    "month_to_date_usd": 0,
+    "budget_usd": 10.0
+  },
+  "trainer_vm": {
+    "read_state": "measured",
+    "source": "comms/cloud/compute_spare.json",
+    "spare": {
+      "as_of": "2026-10-13T13:48:35+00:00",
+      "consumer": "research router (config/research_compute.yaml), trainer backend = hosts.trainer",
+      "hosts": {
+        "gateway": {
+          "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+          "days_measured": 7,
+          "display_name": "ict-ib-gateway",
+          "memory_gb": 6.0,
+          "ocpus": 1.0,
+          "read_state": "measured",
+          "spare_memory_gb": 4.208,
+          "spare_ocpus": 0.273
+        },
+        "live": {
+          "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+          "days_measured": 7,
+          "display_name": "ict-bot-arm",
+          "memory_gb": 12.0,
+          "ocpus": 2.0,
+          "read_state": "measured",
+          "spare_memory_gb": 9.332,
+          "spare_ocpus": 0.247
+        },
+        "trainer": {
+          "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+          "days_measured": 7,
+          "display_name": "ict-trainer-vm",
+          "memory_gb": 6.0,
+          "ocpus": 1.0,
+          "read_state": "measured",
+          "spare_memory_gb": 0.527,
+          "spare_ocpus": 0.0
+        }
+      }
+    }
+  },
+  "dispatched": [
+    {
+      "id": "RQ-20261013-407c-16",
+      "backend": "github_runner",
+      "class": "cpu_light",
+      "value": 60.0,
+      "idle_fill": false
+    },
+    {
+      "id": "RQ-20261013-1414-11",
+      "backend": "github_runner",
+      "class": "cpu_light",
+      "value": 34.29,
+      "idle_fill": false
+    },
+    {
+      "id": "RQ-20261013-407c-17",
+      "backend": "github_runner",
+      "class": "cpu_light",
+      "value": 48.0,
+      "idle_fill": false
+    },
+    {
+      "id": "RQ-20261005-010",
+      "backend": "unmanaged",
+      "class": null,
+      "value": 27.0,
+      "idle_fill": false
+    },
+    {
+      "id": "RQ-20261013-1414-04",
+      "backend": "trainer",
+      "class": "needs_vm_data",
+      "value": 31.07,
+      "idle_fill": false
+    }
+  ],
+  "flags": [
+    "floor_thin: kaggle has 1 idle slot(s) and nothing due for it -- research-ops should author units whose compute class lands there"
+  ]
+}

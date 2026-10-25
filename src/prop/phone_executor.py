@@ -49,6 +49,7 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -70,8 +71,17 @@ PHONE_PLATFORM = "breakout_phone"
 CLAIM_TIMEOUT_S = 180  # design § 3.3: "suggest 3 minutes without a report"
 _FP_RE = re.compile(r"^[0-9a-f]{64}$")
 _EVENT_KINDS = {
-    "login_ok", "login_failed", "logout_seen", "login_started", "refusal",
+    "login_ok", "login_failed", "logout_seen", "login_started", "login_retry", "refusal",
     "mismatch", "flattened", "dry_fill_ok", "submitted", "app_started", "error", "terminal_miss", "heartbeat",
+    "login_diag", "positions_miss",
+    # PHONE-KEEPALIVE: the in-app watchdog restarted a wedged tick loop (pinged: a self-recovery the operator should see)
+    "loop_restarted",
+    # PHONE-FGS-EXEC: a ticket the background engine claimed ended badly; the app brings itself to the front for the
+    # next tickets for a while, then retries the engine (pinged: the operator should know the fallback is in use)
+    "bg_ticket_fallback",
+    # PHONE-EXEC-OBSERVABLE-1018: the app's own line at the end of a rehearsal drill (quiet: phone_drill.record_result
+    # already sends the ONE result ping with the capture link)
+    "drill",
 }
 # terminal_miss carries the control texts the page showed (our own UI labels, scrubbed like a reason) so the
 # next "terminal did not load" is self-diagnosing; only the LATEST one per account is kept, beside the journal.
@@ -148,6 +158,24 @@ def phone_config(account_id: str, path: Optional[Path] = None) -> Dict[str, Any]
     return dict((data.get("phone_accounts") or {}).get(account_id) or {})
 
 
+def phone_claim_config(account_id: str) -> Dict[str, Any]:
+    """The config the claim answer carries to the app: ``phone_config`` plus ``sheet_edit`` -- the live pencil +
+    Confirm gate on the position sheet (PHONE-EXEC-OBSERVABLE-1018). The gate is the SERVER's, never a build
+    constant: :func:`src.prop.phone_drill.sheet_edit` (3 consecutive rehearsal-drill passes, or an explicit
+    ``phone_accounts.<acct>.sheet_edit`` pin). A read failure answers False (fail closed: no click)."""
+    cfg = phone_config(account_id)
+    try:
+        from src.prop import phone_drill
+        gate = phone_drill.sheet_edit(account_id)
+    except Exception:  # noqa: BLE001  # allow-silent: fail closed, the app does not click; logged
+        logger.warning("phone_executor: sheet_edit gate read failed for %s", account_id, exc_info=True)
+        gate = {"enabled": False, "source": "error", "passes": None}
+    cfg["sheet_edit"] = bool(gate.get("enabled"))
+    cfg["sheet_edit_source"] = str(gate.get("source") or "")
+    cfg["sheet_edit_passes"] = gate.get("passes")
+    return cfg
+
+
 def kill_switch(account_id: str, env: Optional[Dict[str, str]] = None) -> str:
     """``PROP_PHONE_MODE_<ACCOUNT>``: off | dry | live (default live = defer to
     accounts.yaml). Anything unparseable is ``dry`` (fail closed)."""
@@ -190,10 +218,17 @@ def _meta(row: sqlite3.Row) -> Dict[str, Any]:
 
 def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list:
     """Watchdog (§ 3.3): a claim with no report within CLAIM_TIMEOUT_S becomes
-    ``skipped`` (never re-emitted) and is returned so the caller alerts."""
+    ``skipped`` (never re-emitted) and is returned so the caller alerts.
+
+    EXCEPTION (BREAKOUT-UNRECORDED, 2026-10-12): a claim whose LIVE go-token was redeemed (``go.go`` true) is NOT
+    skipped. The phone was told to click submit, so an order may be resting or filled on the terminal: calling that
+    "skipped" is a false record (breakout_2 ETH + SOL, 2026-10-11, both real positions while the journal said
+    skipped). It is journaled ``placed`` (unconfirmed) via :func:`_journal_unconfirmed_submit` and is not returned
+    here (the caller's "marked skipped" alert would be wrong for it)."""
     now = now or _now()
     conn = prop_journal._connect()
     out = []
+    unconfirmed = []
     try:
         prop_journal.ensure_tables(conn)
         rows = conn.execute(
@@ -203,6 +238,10 @@ def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list
             m = _meta(r)
             claimed = _parse((m.get("phone") or {}).get("claimed_at"))
             if claimed and (now - claimed).total_seconds() > CLAIM_TIMEOUT_S:
+                go = (m.get("phone") or {}).get("go") or {}
+                if go.get("go") is True and go.get("mode") == "live":
+                    unconfirmed.append(prop_journal._ticket_row(r))
+                    continue
                 m.setdefault("phone", {})["skipped_reason"] = "claimed_no_report"
                 cur = conn.execute(
                     "UPDATE prop_tickets SET status = 'skipped', meta = ? "
@@ -213,7 +252,60 @@ def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list
         conn.commit()
     finally:
         conn.close()
+    for t in unconfirmed:
+        _journal_unconfirmed_submit(account_id, t)
     return out
+
+
+def _journal_unconfirmed_submit(account_id: str, ticket: Dict[str, Any], *, send=None) -> None:
+    """A live go-token was redeemed and the phone never closed the claim: journal the order as ``placed``.
+
+    ``placed`` is the working-order state (not an open position): it claims only what the server KNOWS, that the
+    submit was authorised and clicked, never that it filled. Levels come from the form the server itself verified
+    before the token (``meta.phone.go.form``), else the ticket. ``provenance: UNVERIFIED`` and the reason say it was
+    never confirmed on the terminal, so a later operator/phone report (open, closed, skipped) corrects it in place.
+    Never fatal: a failed journal write is logged and pinged, and the next watchdog pass retries (the claim stays)."""
+    tid = str(ticket.get("ticket_id") or "")
+    m = ticket.get("meta") if isinstance(ticket.get("meta"), dict) else {}
+    form = ((m.get("phone") or {}).get("go") or {}).get("form") or {}
+
+    def pick(k: str, fk: str) -> Any:
+        v = form.get(fk)
+        return v if v is not None else ticket.get(k)
+
+    report = {
+        "kind": "fill", "status": "placed", "account_id": account_id, "ticket_id": tid,
+        "symbol": ticket.get("symbol"), "direction": ticket.get("direction"),
+        "entry_price": pick("entry", "price"), "qty": pick("qty", "qty"),
+        "sl": pick("sl", "sl"), "tp": pick("tp", "tp"),
+        # the go-token redemption is the last server-seen moment before the submit click (fill_inference keys its
+        # bars off this, not off this row's write time, which the watchdog may make hours late)
+        "placed_at": ((m.get("phone") or {}).get("go") or {}).get("used_at"),
+        "source": "phone_executor_unconfirmed", "provenance": "UNVERIFIED",
+        "reason": "unconfirmed live submit: go-token redeemed, no placed/open report from the phone "
+                  "(entry/qty/sl/tp are the server-verified form values, not a venue read)",
+    }
+    try:
+        from src.prop.prop_report import ingest_report
+        ingest_report(report)
+        prop_journal.transition_ticket_status(tid, "placed", from_statuses=("claimed",), account_id=account_id)
+        logger.warning("phone_executor: unconfirmed live submit journaled placed %s %s", account_id, tid)
+        _ping(f"📱 phone {account_id}: [{_scrub(tid, 64)}] live submit was authorised but never confirmed by the "
+              f"phone: journaled as PLACED (unverified). CHECK the terminal and report open/skipped if it differs.",
+              send)
+    except Exception:  # noqa: BLE001  # allow-silent: logged + pinged; the claim stays so the next pass retries
+        logger.warning("phone_executor: unconfirmed-submit journaling failed %s %s", account_id, tid, exc_info=True)
+        if not (m.get("phone") or {}).get("unconfirmed_failed"):  # one flag, not one per 30 s claim poll
+            m.setdefault("phone", {})["unconfirmed_failed"] = True
+            conn = prop_journal._connect()
+            try:
+                conn.execute("UPDATE prop_tickets SET meta = ? WHERE ticket_id = ? AND status = 'claimed'",
+                             (json.dumps(m), tid))
+                conn.commit()
+            finally:
+                conn.close()
+            _ping(f"📱 phone {account_id}: [{_scrub(tid, 64)}] live submit unconfirmed AND the journal write failed. "
+                  f"CHECK the terminal for a position.", send)
 
 
 def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
@@ -241,6 +333,18 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
             if vu is None or vu <= now:
                 continue
             m = _meta(r)
+            if m.get("origin") == "exec_test":
+                # MD-EXEC-DEV-TEST-TRADES: every bound again at claim time; a refused ticket is never served
+                from src.prop import exec_test_trades
+                v = exec_test_trades.check_bounds(acct, r["symbol"], now=now, skip_count_for=r["ticket_id"])
+                if not v["ok"]:
+                    m["exec_test"] = {**(m.get("exec_test") or {}), "refused_at_claim": v["refusals"],
+                                      "refused_at": now.isoformat()}
+                    conn.execute("UPDATE prop_tickets SET status = 'refused', meta = ? "
+                                 "WHERE ticket_id = ? AND status = 'emitted'", (json.dumps(m), r["ticket_id"]))
+                    conn.commit()
+                    logger.warning("phone_executor: exec test ticket %s refused at claim: %s", r["ticket_id"], v["refusals"])
+                    continue
             m["phone"] = {"device_id": device.device_id, "claimed_at": now.isoformat()}
             cur = conn.execute(
                 "UPDATE prop_tickets SET status = 'claimed', meta = ? "
@@ -309,11 +413,72 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         if clean["balance"] is None and clean["equity"] is None:
             raise ValueError("account_status needs balance or equity")
         label = "portfolio" if str(body.get("equity_label") or "") == "portfolio" else "equity"
+        body_in = body
         body = {"kind": "account_status", "account_id": device.account_id, "balance": clean["balance"],
                 "equity": clean["equity"], "source": "phone_executor", "provenance": "MEASURED",
                 "equity_label": label}
+        # The terminal's own unrealized P&L (BREAKOUT-UNRECORDED): optional, may be negative, and absent stays
+        # absent -- the overview shows "not_reported", never 0. Sent when the terminal labels one (PROP-TRACKING build).
+        ur = body_in.get("unrealized")
+        if ur is not None:
+            if isinstance(ur, bool) or not isinstance(ur, (int, float)) or not math.isfinite(ur):
+                raise ValueError("account_status.unrealized invalid")
+            body["unrealized"] = float(ur)
+            body["unrealized_source"] = "terminal_panel"
+        # PROP-TRACKING (operator 2026-10-12): the terminal's Positions list. Only a CLEAN read ("read") is stored as
+        # positions and reconciled; any other state is kept as a label so "we could not look" stays visible.
+        from src.prop import phone_reconcile
+        pstate = re.sub(r"[^a-z_]", "", str(body_in.get("positions_state") or "not_read"))[:24] or "not_read"
+        positions = closed = None
+        if pstate == "side_unread":
+            # BREAKOUT-POS-UNPARSED: rows parsed except the side the venue draws without text; the journal may supply
+            # it (phone_reconcile.resolve_sides). Then the read counts, labelled ESTIMATED; otherwise it stays a label.
+            resolved = phone_reconcile.resolve_sides(device.account_id, body_in.get("positions"))
+            if resolved is not None:
+                body_in = {**body_in, "positions": resolved}
+                pstate = "read"
+                body["positions_side_source"] = "journal"
+                body["positions_provenance"] = "ESTIMATED"
+        body["positions_state"] = pstate
+        if pstate == "read":
+            positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
+            if any(p.get("side_source") == "sheet" for p in positions):
+                # BREAKOUT-SL-AMEND-CLICK: the phone read the side the grid does not show off each row's position sheet
+                body["positions_side_source"] = "sheet"
+                body["positions_provenance"] = "MEASURED"
+            elif any(p.get("side_source") == "row" for p in positions):
+                # BREAKOUT-NATIVE-TAP: the side read as TEXT off the expanded child row of the Positions grid
+                body["positions_side_source"] = "row"
+                body["positions_provenance"] = "MEASURED"
+            closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
+            body["positions"] = positions
+            body["closed_orders"] = closed
+            pc = body_in.get("positions_count")
+            if isinstance(pc, int) and not isinstance(pc, bool):
+                body["positions_count"] = pc
+            if "unrealized" not in body:
+                # the venue's own per-position figures, summed (0.0 when the terminal says flat): MEASURED
+                derived = phone_reconcile.account_unrealized(positions)
+                if derived is not None:
+                    body["unrealized"] = derived
+                    body["unrealized_source"] = "positions_sum"
+        if (body.get("unrealized") is None and label == "equity" and clean["balance"] is not None
+                and clean["equity"] is not None):
+            body["unrealized"] = round(clean["equity"] - clean["balance"], 2)
+            body["unrealized_source"] = "equity_minus_balance"
     from src.prop.prop_report import ingest_report
     res = ingest_report(body)
+    if body.get("kind") == "account_status" and body.get("positions_state") == "read":
+        try:
+            res["reconcile"] = phone_reconcile.reconcile(device.account_id, body["positions"], body["closed_orders"])
+        except Exception:  # noqa: BLE001  # allow-silent: logged; the snapshot is stored and the next read retries
+            logger.warning("phone_executor: positions reconcile failed for %s", device.account_id, exc_info=True)
+            res["reconcile"] = None
+        try:   # fills in the exit of rows ALREADY closed unpriced; independent of the reconcile mode (see its doc)
+            res["fill_in"] = phone_reconcile.fill_unpriced_closes(device.account_id, body["closed_orders"])
+        except Exception:  # noqa: BLE001  # allow-silent: logged; the next clean read retries
+            logger.warning("phone_executor: closed-order fill-in failed for %s", device.account_id, exc_info=True)
+            res["fill_in"] = None
     tid = body.get("ticket_id")
     if tid and str(body.get("kind") or "") == "amend":
         # The human {kind: amend} path ("moved stop/target"): the phone trail's resting levels follow it.
@@ -483,11 +648,23 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
     msg = f"📱 phone {device.account_id}: {kind}" + (f" [{ticket}]" if ticket else "") + (
         f" — {reason}" if reason else "")
     logger.info("phone_executor event %s %s %s", device.account_id, kind, ticket)
+    _append_event(device.account_id, kind, reason, ticket)
     if kind == "terminal_miss":
         _write_diag(device.account_id, reason, body.get("controls"))
     if kind == "heartbeat":
         _write_heartbeat(device.account_id, reason, body.get("state"))
-    quiet = (kind == "app_started" and not body.get("ping")) or kind in ("terminal_miss", "heartbeat")
+    if kind == "positions_miss":
+        _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
+        # a closed_* miss follows a CLEAN Positions read, and an amend_* dump (BREAKOUT-POS-UNPARSED) is the trail amend
+        # refusing on a row it FOUND: in neither is a position unseen
+        # sheet_* (BREAKOUT-SL-AMEND-CLICK) is the position-sheet read's own evidence; the Positions read is reported apart
+        if not reason.startswith(("closed_", "amend_", "sheet_")):
+            _alert_unseen_positions(device.account_id, reason, send=send)
+    # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
+    # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.
+    # login_diag (PHONE-AUTOLOGIN-2): one scrubbed structure snapshot per re-login attempt -- step reached, how many
+    # numeric candidates the page / mail showed, timings; never a value -- kept in phone_events, not pinged.
+    quiet = (kind == "app_started" and not body.get("ping")) or kind in ("terminal_miss", "heartbeat", "login_retry", "login_diag", "positions_miss", "drill")
     sent = False
     if not quiet:
         try:
@@ -518,12 +695,114 @@ def _write_diag(account_id: str, reason: str, controls: Any) -> None:
         logger.warning("phone_executor: diag write failed", exc_info=True)
 
 
+# positions_miss (PROP-TRACKING): a Positions read that was not clean -- its state plus the table's digit-masked
+# headers and the page's control texts -- so the next build is fixed from evidence. Latest per account only. An
+# unparsed read also carries `cells`: its first failing row as key:shape, digits masked app-side (BREAKOUT-POS-UNPARSED).
+def _positions_diag_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_posdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+# BREAKOUT-NATIVE-TAP finding (b): the position-SHEET probes (sheet_* / amend_sheet_* / child_*) shared the one
+# positions slot, so the Positions read's own side_unread miss posted a second later overwrote the sheet evidence
+# (2026-10-15 08:21:38Z sheet_sheet_not_open -> 08:21:39Z side_unread). They get their own slot.
+_SHEET_DIAG_PREFIXES = ("sheet_", "amend_sheet_", "child_")
+
+
+def _is_sheet_diag(state: str) -> bool:
+    return str(state or "").startswith(_SHEET_DIAG_PREFIXES)
+
+
+def _sheet_diag_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_sheetdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any, cells: Any = None) -> None:
+    def lst(v: Any) -> list:
+        return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
+    try:
+        (_sheet_diag_path if _is_sheet_diag(state) else _positions_diag_path)(account_id).write_text(json.dumps(
+            {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls),
+             "cells": [re.sub(r"\d", "d", c) for c in lst(cells)]}))
+    except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
+        logger.warning("phone_executor: positions diag write failed", exc_info=True)
+
+
+# BREAKOUT-UNTRACKED-1014 (operator 2026-10-14: "a trade it placed but isn't tracking"): an ETH short sat open for
+# ~9 h while every Positions read was no_tab. positions_miss is quiet (it repeats every ~35 min), so nothing reached
+# the operator. When a Positions read fails while the journal holds a ticket ON THE VENUE (placed / filled), ONE
+# system-channel alert goes out per newly unseen ticket (dedup file beside the diag; ids drop out once resolved).
+_UNSEEN_STATUSES = ("placed", "filled")
+
+
+def _unseen_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_unseen_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def _alert_unseen_positions(account_id: str, state: str, *, send=None) -> bool:
+    """Ping once per ticket the journal says is on the venue while the phone cannot read Positions. Never fatal."""
+    try:
+        live = [t for st in _UNSEEN_STATUSES for t in prop_journal.list_tickets(account_id=account_id, status=st, limit=50)]
+    except Exception:  # noqa: BLE001  # allow-silent: logged; the miss itself is still recorded
+        logger.warning("phone_executor: unseen-position check failed", exc_info=True)
+        return False
+    ids = {str(t.get("ticket_id")) for t in live if t.get("ticket_id")}
+    path = _unseen_path(account_id)
+    try:
+        prev = set(json.loads(path.read_text()).get("alerted") or [])
+    except (OSError, ValueError, AttributeError):
+        prev = set()
+    new = sorted(ids - prev)
+    sent = False
+    if new:
+        desc = "; ".join(f"{re.sub(r'[^A-Za-z0-9_-]', '', str(t.get('ticket_id')))[:64]} {_scrub(t.get('symbol'), 16)} {_scrub(t.get('direction'), 8)} "
+                         f"{_scrub(t.get('status'), 10)}" for t in live if str(t.get("ticket_id")) in new)[:400]
+        sent = _ping(f"⚠️ phone {account_id}: the app cannot read the Breakout Positions tab ({_scrub(state, 60)}) while "
+                     f"the journal has {len(new)} ticket(s) on the venue: {desc}. That position is INVISIBLE to the system "
+                     f"(no MEASURED uPnL, no SL/TP check). CHECK the terminal; one alert per ticket.", send)
+    alerted = (prev & ids) | (set(new) if sent else set())
+    if alerted != prev:
+        try:
+            path.write_text(json.dumps({"at": _now().isoformat(), "alerted": sorted(alerted)}))
+        except OSError:  # allow-silent: a lost dedup file means at most one repeat alert
+            logger.warning("phone_executor: unseen dedup write failed", exc_info=True)
+    return sent
+
+
+def last_positions_diag(account_id: str) -> Optional[Dict[str, Any]]:
+    """The latest positions_miss dump for the account, or None when none was ever posted."""
+    try:
+        return json.loads(_positions_diag_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def last_sheet_diag(account_id: str) -> Optional[Dict[str, Any]]:
+    """The latest position-SHEET dump (state sheet_* / amend_sheet_* / child_*), or None when none was posted since
+    the slot existed (BREAKOUT-NATIVE-TAP). Older sheet dumps sit in the positions slot."""
+    try:
+        return json.loads(_sheet_diag_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+
+
 # heartbeat (2026-10-06 08:15Z: the phone went silent for an hour with no claim and no event, because every
 # no-claim branch but one only set the on-screen status). The app posts its status line + gate state on every
 # tick path at most every 2 min; only the latest is kept. Keys are a fixed allowlist; values are bools, small
 # ints or scrubbed short strings.
 _HB_KEYS = {"st", "paused", "hold", "host", "onAccount", "path_depth", "ready", "probe", "panels", "orderControl",
-            "ticketOpen", "buySell", "tabs", "inputs", "build", "fg", "jsTimeouts", "pending", "acct"}
+            "ticketOpen", "buySell", "tabs", "inputs", "build", "fg", "jsTimeouts", "pending", "acct", "last",
+            # auto re-login streak (PHONE-AUTOLOGIN) and the background engine (PHONE-AUTOLOGIN-2: which engine, jobs
+            # run, jobs whose page answered, the last job's result, minutes since it)
+            "relogin_failures", "relogin_flagged", "relogin_next_min", "bg", "bg_runs", "bg_ok", "bg_last", "bg_last_min",
+            # PHONE-KEEPALIVE (2026-10-13): what keeps the app alive and what had to bring it back
+            "battery_exempt", "overlay", "fgs_running", "alarm_exact", "last_restart_reason", "restarts_24h",
+            "app_version",
+            # PHONE-FGS-EXEC (2026-10-15): tickets the background engine claimed, the last one's ledger state, minutes
+            # left on the bring-to-front fallback
+            "bg_tickets", "bg_ticket_last", "bg_ticket_off_min",
+            # PHONE-EXEC-OBSERVABLE-1018: which page-side script runs (version, bundled|remote, last refresh answer),
+            # captures posted this process + the last capture error, drills run + the last drill's outcome
+            "exec_js", "exec_src", "js_refresh", "captures", "capture_err", "drills", "drill_last"}
 
 
 def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:
@@ -539,6 +818,57 @@ def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:
         _heartbeat_path(account_id).write_text(json.dumps({"at": _now().isoformat(), "status": reason, "state": st}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
         logger.warning("phone_executor: heartbeat write failed", exc_info=True)
+
+
+# event log (2026-10-10: the phone posted login_started/login_failed for an hour and the reasons were readable only in
+# Telegram -- the logger line above never reached the journal a session can read). The last _EVENTS_MAX events per
+# account (kind, the already-scrubbed reason, ticket, at) are kept beside the diag/heartbeat files and served on
+# /api/bot/prop/status as ``phone_events``. A heartbeat is logged only when its status line changes, so the 2-minute
+# heartbeat cadence cannot push the login events out of the window.
+_EVENTS_MAX = 40
+_EVENTS_LOCK = threading.Lock()
+
+
+def _events_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_events_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def _append_event(account_id: str, kind: str, reason: str, ticket: str) -> None:
+    path = _events_path(account_id)
+    try:
+        with _EVENTS_LOCK:
+            events = recent_events(account_id) or []
+            if kind == "heartbeat":
+                last_hb = next((e for e in reversed(events) if e.get("kind") == "heartbeat"), None)
+                if last_hb is not None and last_hb.get("reason") == reason:
+                    return
+            events.append({"at": _now().isoformat(), "kind": kind, "reason": reason, "ticket": ticket or None})
+            tmp = path.with_name(path.name + ".tmp")
+            tmp.write_text(json.dumps(events[-_EVENTS_MAX:]))
+            tmp.replace(path)
+    except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
+        logger.warning("phone_executor: event log write failed", exc_info=True)
+
+
+def recent_events(account_id: str) -> list | None:
+    """The last _EVENTS_MAX phone events for the account, oldest first, or None when none was ever posted."""
+    try:
+        got = json.loads(_events_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+    return got if isinstance(got, list) else None
+
+
+def account_status_age_hours(account_id: str) -> Optional[float]:
+    """Age (h) of the account's latest ``prop_account_status`` row, or None (no row / unreadable / undateable).
+    Served on GET /phone/pending so a backgrounded phone brings itself forward to check its login when it is stale
+    (PHONE-AUTOLOGIN; the phone posts account_status only while logged in on the terminal)."""
+    try:
+        from src.prop import prop_balance, prop_journal
+        return prop_balance.status_age_hours(prop_journal.latest_account_status(account_id))
+    except Exception:  # noqa: BLE001  # allow-silent: None = "not told"; the phone's own 30-min check still runs
+        logger.warning("phone_executor: account_status age read failed", exc_info=True)
+        return None
 
 
 def _heartbeat_path(account_id: str) -> Path:
@@ -746,7 +1076,10 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
         token = secrets.token_urlsafe(24)
         expires = now + timedelta(seconds=GO_TOKEN_TTL_S)
         ph["go"] = {"token_sha256": _token_sha(token), "readback_sha256": rb_hash, "mode": mode,
-                    "issued_at": now.isoformat(), "expires_at": expires.isoformat(), "used": False}
+                    "issued_at": now.isoformat(), "expires_at": expires.isoformat(), "used": False,
+                    "form": {k: v for k, v in {"price": _num(fields.get("price")), "qty": _num(fields.get("qty")),
+                                               "sl": _num(fields.get("sl")), "tp": _num(fields.get("tp"))}.items()
+                             if v is not None}}
         ph["verify"] = {"at": now.isoformat(), "ok": True, "mode": mode}
         m["phone"] = ph
         cur = conn.execute("UPDATE prop_tickets SET meta = ? WHERE ticket_id = ? AND status = 'claimed' AND meta = ?",

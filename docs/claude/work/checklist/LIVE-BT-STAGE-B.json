@@ -1,0 +1,22 @@
+{
+  "id": "LIVE-BT-STAGE-B",
+  "title": "Build: live-vs-backtest Stage B for xrp_pullback_2h / ada_pullback_2h (real money BELOW_BACKTEST) -- join each live close to its config-exact backtest twin and split the gap into cost / missed-extra signal / exit path / regime, plus the mirror-vs-live close-count gap",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P3-STRATEGY-BACKLOG-1016, from the programme-03 audit \u00a7 5.1 (PR #18532)] Promotes PI-20261015-10152047-0001 to a row: it is the highest-money P3 item. MEASURED from research/results/RQ-20261015-8bbc-01/-02 (2026-10-15 runs): bybit_2 realMoney xrp_pullback_2h -8.8427 R over 16 closes (3.4th pct of a 20000-draw bootstrap of the 55-trade record), ada_pullback_2h -7.0383 R over 15 (4.7th pct); the SAME results show the bybit_portfolio mirror closed 11 (xrp) and 9 (ada) -- fewer than live despite roster equality (test_bybit_portfolio_mirrors_bybit_2_exactly); cause NOT checked (MIRROR-QTY-DIVERGE is a different direction: live rejected at min-qty while the mirror held). Instrument gap: scripts/research/leg_replay_emit.py replays the harness only; the live half needs journal trades (needs_vm_data or a diag pull). Done when: a queue unit with a registered rule names the cause per leg (programme node P3-Q1-live-bt-stage-b authors it the day this lands). Runnable 'window' half already queued: RQ-20261016-c56e-10/-11 (Stage 0 on the four years before each record). [2026-10-16T11:00Z lane LIVE-PARITY-DIAG-1016] LIVE-vs-REPLAY PARITY explains 0 of the xrp_pullback_2h / ada_pullback_2h live-vs-backtest gap on the ENTRY-DECISION + ORDER-PRESENCE axis: both legs 0 divergences in all 13 daily live-replay-parity runs 2026-10-04..10-16 (83 2h bars per 7-day window; 10-16 run: 36 matched xrp signal bars, 11 ada). Source: comms/live_parity/2026-10-*.json, legs[].divergences. Parity does NOT measure fills, slippage, cost or exits, so the remaining gap must be in fills / slippage / cost / exits / sample size \u2014 that is where Stage B's split should look. [2026-10-18 lane HOLDOUT-PROPOSALS-1018] BUILT (branch live-bt-trade-join-1018, Tier-1 PR landing hold): scripts/research/live_bt_trade_join.py joins each bybit_2 close to the closed-bar harness trade on the same bar (R basis = order_packages.meta.risk_per_unit; live R gross; off-roster spans excluded) and splits the gap into entry / exit / execution / modelled cost with a zero-residual identity. MEASURED (comms/research/live_bt_join/2026-10-18/): xrp_pullback_2h live -7.15R (14 with R basis) vs closed-bar backtest -2.36R (n=11) -> ENTRY -5.79R, exit +0.66R, execution 0.00R. ada_pullback_2h live -6.49R (15) vs backtest -2.75R (n=11, off-roster 07-16..09-22 excluded) -> ENTRY -3.89R, exit -0.26R, execution +0.04R, plus a regime share (the closed-bar strategy itself lost -2.75R). Entry = forming-bar decisions (no decision_bar on either leg; live-only packages created median 4.4/6.7 min into the bar), the RQ-20260929-301/302 finding (PI-20260929-VOLSKIP-SIGNAL-0003). Mirror close-count gap NOT examined here. PI-20261015-10152047-0001 closed with these numbers. On merge: state -> done (the research result is the deliverable; no runtime effect).",
+  "updated_at": "2026-10-18T05:04:42Z",
+  "updated_by": "lane-HOLDOUT-PROPOSALS-1018",
+  "roadmap": [
+    "L-LADDER",
+    "M21"
+  ],
+  "_seq": 527
+}

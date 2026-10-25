@@ -13,11 +13,19 @@
     16945
   ],
   "blocked_on": [],
-  "note": "[2026-10-07T19:40Z manager] Lane archived 19:38Z; spend $2.39 final. #16945 merged; proof = the operator's screenshot of the app no longer blacks out on the next APK (FLAG_SECURE scoped) -- manager reads it from the operator. || [2026-10-07T18:55Z manager] MERGED #16945 b2cc9777 (FLAG_SECURE only on credential screens, fail-closed until logged_in; claim 5xx backoff, no double-claim). 502 root cause NOT confirmed by the lane. On the phone only with the next APK install. || [2026-10-07T18:23Z manager] Dispatched (all 12 confirmed status_bucket WORKING at 18:23Z); post-reset (operator: 'let's get everything going again'). Pipeline: PI-20261006-APBY4NTV-0006. Scope FLAG_SECURE to credential surfaces only (login page, credential dialog) so the terminal can be screenshotted; root-cause the 502 on /phone/claim seen 2026-10-06 10:26Z. Background robustness already landed (#16764). Sonnet, auto.",
+  "note": "[2026-10-07T19:40Z manager] Lane archived 19:38Z; spend $2.39 final. #16945 merged; proof = the operator's screenshot of the app no longer blacks out on the next APK (FLAG_SECURE scoped) -- manager reads it from the operator. || [2026-10-07T18:55Z manager] MERGED #16945 b2cc9777 (FLAG_SECURE only on credential screens, fail-closed until logged_in; claim 5xx backoff, no double-claim). 502 root cause NOT confirmed by the lane. On the phone only with the next APK install. || [2026-10-07T18:23Z manager] Dispatched (all 12 confirmed status_bucket WORKING at 18:23Z); post-reset (operator: 'let's get everything going again'). Pipeline: PI-20261006-APBY4NTV-0006. Scope FLAG_SECURE to credential surfaces only (login page, credential dialog) so the terminal can be screenshotted; root-cause the 502 on /phone/claim seen 2026-10-06 10:26Z. Background robustness already landed (#16764). Sonnet, auto. [2026-10-12 UNPROVEN-SWEEP-2 pass 2 session_01Khx64L6tHdG52Srbh2NVdT] RE-DATED to 2026-10-19. NOT YET HAPPENED (operator hands: screenshot). phone_heartbeat 2026-10-12T05:58Z: st=background, last=logged_in, bg_ok 115 of 116 - consistent with a logged-in terminal but not the screenshot the observation asks for.",
   "observation": {
     "what": "operator screenshots the trading terminal (not black) with the APK built from main (run 37669999484 or later)",
     "how_to_check": "operator report; phone_heartbeat st logged_in",
-    "due_by": "2026-10-09T18:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-19",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
+  "updated_at": "2026-10-24T06:01:09Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 306
 }

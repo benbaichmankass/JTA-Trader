@@ -101,9 +101,9 @@ class BybitConnector:
         balance), so a spot connector returns ``[]`` without a call.
 
         A failed read RAISES. It used to return ``[]``, which made "could not
-        read" and "no positions" the same answer; the only consumer
-        (``risk_counters.inject_runtime_counters``) already catches, reports,
-        and leaves the counter absent. The contracts > 0 filter matches the
+        read" and "no positions" the same answer; the one consumer
+        (``risk_counters.inject_runtime_counters``) that used to catch it was
+        retired 2026-10-21 with the MAX_OPEN_POSITIONS guard. The contracts > 0 filter matches the
         Binance connector's schema exactly.
         """
         from src.units.accounts.execute import _bybit_category

@@ -1,0 +1,21 @@
+{
+  "id": "HTF-FILTER-AB-LANE",
+  "title": "Run RQ-20260928-001 (7-leg ict_scalp HTF-filter A/B, JC-CA-02 option A) in a lane",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[RESEARCH-OPS-20261012-0847] RQ-20260928-001 is session-local by design and was NOT run by the pass: 14 backtest_ict_scalp.py invocations (7 legs x 2 arms, ~5-8 min each on multi-year 5m/15m feeds, est 90 min, 4-core box) and no CLI switch for the filter arm (htf_trend_filter_enabled is read from config/strategies.yaml, which option B removed from the legs, so arm (b) needs --ignore-yaml with each leg's params or a small arm-toggle in the harness). Not retired: the question is operator-decided (2026-09-28 'Remove flag + research') and live. Lever: a lane with ~90 min (session-local; network egress to binance_vision/yfinance works from a web session, verified 2026-10-12) OR a scripts/research wrapper that fetches data and writes verdict.json so research-script-run.yml can run it. Closes when research/results/RQ-20260928-001/ carries 7 per-leg verdicts. Roadmap L-PROP n/a; JC-CA-02.",
+  "updated_at": "2026-10-12T08:58:42Z",
+  "updated_by": "session_01K3YNoSWcFrHPY45DzknGf4",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 429
+}

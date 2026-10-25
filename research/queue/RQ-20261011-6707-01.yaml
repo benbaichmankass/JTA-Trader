@@ -1,0 +1,145 @@
+id: RQ-20261011-6707-01
+title: Do the three approximate alpaca_live pullback legs still clear Stage 0 once trail_decay is simulated?
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 1
+
+question: >-
+  ief_pullback_1d, slv_pullback_1d and iaum_pullback_1d sit on alpaca_live
+  (real money) on evidence records graded `fidelity: approximate`, each naming
+  `omitted_levers: [trail_decay_stall_bars, trail_decay_tight_mult]` -- the
+  live legs run a stall-armed trail tightening the Stage-0 harness run never
+  simulated. Re-run each record's own harness, on the record's own candle
+  window and cost stack, with those two levers passed at the leg's live
+  values. Does net_r_oos stay > 0?
+
+why_this_matters: >-
+  OPERATOR DECISION 2026-10-11 (popup, verbatim "Add it, re-measure the 3
+  now") on GUARD-FIDELITY / PI-20260928-HK3BKCKE-0001: check_roster_promotion_evidence.py
+  gains a fifth clause refusing `fidelity: approximate` as Stage-0 evidence for
+  a NEW real-money roster add, and these three legs are baselined in it citing
+  this unit. RQ-20260922-004 measured the same class of omission on
+  xrp_pullback_2h at 5.6-11.0R of FLATTERING delta on 4 of 5 trail_decay
+  cells, so the approximate records are not assumed conservative.
+  ROOT CAUSE (read 2026-10-11): scripts/backtest_pullback.py accepts
+  --trail-decay-stall-bars / --trail-decay-tight-mult, but
+  scripts/research/regime_debt_matrix.py::_PB_LEVER_FLAG never maps them, so
+  the evidence producer omitted them and graded every such leg approximate.
+
+power:
+  expected_n: 21
+  min_detectable_effect: 0.62
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    expected_n is the SUM of the three records' achieved n_trades_oos
+    (ief 3 + slv 11 + iaum 7 = 21), read off comms/strategy_evidence/<leg>.json
+    on main 2026-10-11. (1.96+0.8416)^2 / 0.62^2 = 20.4 <= 21.
+    ⚠️ THIS IS NOT A POWERED TEST OF EDGE AND DOES NOT CLAIM TO BE. Per leg n
+    is 3 / 11 / 7. The question is narrower: the original records cleared
+    RULE-D1 (sign of net_r_oos) at these n with no floor (operator declined an
+    n floor 2026-09-21); this unit applies the IDENTICAL rule to the faithful
+    arm at the same n. A pass here means "the omission did not flip the sign",
+    never "the leg has edge".
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Nothing accrues: the window is each record's own fixed
+      [data_start, data_end], re-fetched (yfinance, daily) and trimmed to it.
+      comms/strategy_evidence is not a registered research_disposition corpus
+      (PI-20260922-STRATEGY-EVIDENCE-IS-NOT-A-REGISTERED-CORPUS), so the
+      count is declared, not gate-checked.
+
+decision_rule:
+  id: RULE-RQ1011-001-FAITHFUL-STAGE0
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: >-
+    Per leg: net_r_oos of the FAITHFUL arm (the record's own harness argv plus
+    --trail-decay-stall-bars / --trail-decay-tight-mult at the leg's live
+    config/strategies.yaml values), over the record's own [data_start,
+    data_end], under the harness's resolved cost stack (fee + slippage +
+    funding, read back from the run JSON). Control statistic: the same argv
+    WITHOUT the two flags (the APPROXIMATE arm) on the same trimmed candles.
+  rule: >-
+    SAME BAR as each leg's original promotion evidence, RULE-D1-STAGE0-NET-OF-FULL-COST:
+    the faithful arm PASSES iff net_r_oos > 0 net of the full cost stack.
+    INSTRUMENT CONTROL FIRST: the approximate arm must reproduce the
+    committed record (same n_trades_oos, |net_r_oos - record| <= 0.10R). If
+    it does not, the leg grades `could_not_measure` (data revision or window
+    drift), its faithful number is reported but NOT graded, and a follow-up
+    is filed -- never a pass, never a fail.
+    A leg whose faithful arm gives net_r_oos <= 0 FAILS: the result names
+    it for the demotion path (a pipeline row naming MD-DEMOTE-S2-S1) and the
+    lane reports it to the manager. This unit never edits config/accounts.yaml.
+    A leg that PASSES stays on the GUARD-FIDELITY baseline until its evidence
+    record is regenerated `fidelity: faithful` (which needs the
+    _PB_LEVER_FLAG mapping fix).
+  what_it_does_not_do: >-
+    It does not change any lever, roster or record. It does not grade edge
+    (see power.basis). It does not re-measure xrp_pullback_2h, whose record
+    already reads `fidelity: faithful` on main (regenerated 2026-10-08).
+
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: >-
+    Three daily-bar pullback harness runs x two arms on yfinance data; runs on
+    a GitHub-hosted runner or in a session sandbox with yfinance installed.
+
+run:
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261011-6707-01
+  commands:
+  - - python3
+    - scripts/research/fidelity_remeasure.py
+    - --leg
+    - ief_pullback_1d
+    - --leg
+    - slv_pullback_1d
+    - --leg
+    - iaum_pullback_1d
+    - --out
+    - '{out_dir}'
+
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+
+related:
+  - 'checklist GUARD-FIDELITY'
+  - 'pipeline PI-20260928-HK3BKCKE-0001'
+  - 'research/queue/RQ-20260922-004.yaml (xrp_pullback_2h, same omission class)'
+last_dispatched_at: null
+renumbered_from: RQ-20261011-001  # research-queue-id-bands C3: hand-authored units take the allocator's id; the decision_rule id keeps its pre-registered spelling
+result: >-
+  GRADED 2026-10-11 by lane GUARD-FIDELITY (session_0138CvwpMuWStDp1Ys3usyJQ),
+  rule RULE-RQ1011-001-FAITHFUL-STAGE0 (registered and committed f50c640
+  BEFORE the run). RAN SESSION-LOCALLY (yfinance daily, each record's own
+  window, harness-resolved cost stack fees=0.0 / slippage=5.0 bps rt /
+  funding=0.0); outputs at comms/research/RQ-20261011-6707-01/local-20261011/.
+  INSTRUMENT CONTROL held on all three: the approximate arm reproduced each
+  committed record (ief n=3 +4.3125R vs record +4.3238R; slv n=11 +2.4841R vs
+  +2.4842R; iaum n=7 +7.6621R vs +7.6621R).
+  FAITHFUL ARM (trail_decay_stall_bars + trail_decay_tight_mult at live values):
+  ief_pullback_1d +2.3254R over n=8 (delta -1.99R; the tighter trail closes
+  trades sooner, freeing the slot for 5 more entries) -> PASS;
+  slv_pullback_1d +2.4841R over n=11 (delta 0.00R, verified real: all 11
+  trades exit by TP/stop/timeout, none by trail, so the tighter trail never
+  binds) -> PASS;
+  iaum_pullback_1d +9.8512R over n=8 (delta +2.19R) -> PASS.
+  VERDICT pass on all three: the omission did not flip the sign of RULE-D1 on
+  any leg. NOT evidence of edge at n=8/11/8 (see power.basis). No demotion
+  filed. The legs stay on FIDELITY_BASELINE until their records are
+  regenerated faithful (PI-20261011-YS3USYJQ-0001).
+  RE-VERIFIED 2026-10-11 ~07:10Z after merging origin/main (the first run used
+  a 5-day-stale base; scripts/backtest_pullback.py had changed since): re-run
+  on current main code, every output byte-identical apart from run timestamps.

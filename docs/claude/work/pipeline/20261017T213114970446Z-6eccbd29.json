@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "research-slo theme_share_min_ratio >= 0.5 on two consecutive runs AFTER the hand-authored ae17 regime units have drained, or queue_replenish.py fills per-theme shortfalls (H1-THEME) so regime/infra supply no longer depends on a session",
+    "due_date": "2026-10-24",
+    "kind": "date"
+  },
+  "id": "PI-20261017-RADE1017-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-GRADE-1017 (session_01R5gxKTnLKNXdwF7vhpU9Bp)",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py 2>&1 | grep -E 'H1-THEME|theme supply'; python3 -c \"import json;print([s for s in json.load(open('comms/research/health/'+__import__('datetime').date.today().isoformat()+'.json'))['latest'] if s['slo']=='theme_share_min_ratio'])\""
+  },
+  "routed_to": "QUEUE-THEME-ALIGN",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[research-slo] theme_share_min_ratio is a 7-day ROLLING share: regime needs >= ~48 of ~400 weekly fires (weight 5 of 21 -> share 0.119 at ratio 0.5), infra >= ~19 (0.0475). Hand-authored once-units (34 in RESEARCH-AUTHOR-GRADE-1017: 28 regime, 6 daily infra) lift it for the days they take to drain, then it falls back: regime had 0 runnable units and 26 fires/7d, and nothing refills it, because queue_replenish.py fills only the TOTAL runnable deficit (target 46, runnable 64+) and ignores the per-theme shortfall check_research_queue_health.py prints as H1-THEME. A sustained fix is theme-aware replenishment (generate for the short theme first), or a regime template family; the daily infra units are the only recurring supply added here. Routed to QUEUE-THEME-ALIGN (queue themes follow THEMES.yaml weights)."
+}

@@ -35,6 +35,7 @@ import scripts.backtest_system as bt  # noqa: E402
 from src.prop.evaluator import TradeRecord, evaluate  # noqa: E402
 from src.prop.report import render_json, render_markdown  # noqa: E402
 from src.prop.ruleset import PropRuleset, load_ruleset  # noqa: E402
+from src.research.run_costs import add_cost_args, costs_from_args  # noqa: E402
 
 # The BTCUSDT roster the portfolio engine supports. ict_scalp_5m (5m-native)
 # was added 2026-06-16 (HIGH-FREQUENCY member) — the Monte-Carlo found the
@@ -153,6 +154,9 @@ def _rank_key(v: Dict[str, Any], ruleset: PropRuleset):
 def run(args: argparse.Namespace) -> int:
     ruleset = load_ruleset(args.ruleset)
     account_size = args.initial_balance
+    # Full cost stack (fee + slippage + funding; firm-declared commission/swap when the
+    # ruleset has a `costs:` block). A fee-only stack is refused, never defaulted.
+    costs = costs_from_args(args, args.symbol, ruleset)
 
     members = [m.strip() for m in args.members.split(",") if m.strip() in bt.ROSTER]
     if not members:
@@ -180,7 +184,8 @@ def run(args: argparse.Namespace) -> int:
                 daily_loss_pct=args.daily_loss_pct, signal_ttl_bars=args.signal_ttl_bars,
                 overrides={}, refresh=args.refresh_signals, clock_tf=args.clock_tf,
                 flip_policy=args.flip_policy, reentry_policy=args.reentry_policy,
-                attach_full=True,
+                attach_full=True, symbol=args.symbol,
+                costs=costs, require_full_costs=not args.fee_only_arm,
             )
         except Exception as exc:  # noqa: BLE001 — one bad roster must not abort the sweep
             print(f"[prop] roster {roster_str} failed: {exc}", file=sys.stderr)
@@ -212,7 +217,11 @@ def run(args: argparse.Namespace) -> int:
     md = render_markdown(verdicts, ruleset_view=ruleset_view,
                          data_window=data_window, generated_at=generated_at)
     js = render_json(verdicts, ruleset_view=ruleset_view,
-                     data_window=data_window, generated_at=generated_at)
+                     data_window=data_window, generated_at=generated_at,
+                     cost_policy=costs)
+    md = (f"> cost policy: fee {costs['fee_bps_roundtrip']} bps RT + slippage "
+          f"{costs['slippage_bps_roundtrip']} bps RT + funding {costs['funding_bps_per_window']} "
+          f"bps/8h ({costs['source']}; fee-only arm declared: {costs['fee_only_arm_declared']})\n\n") + md
 
     out_dir = Path(args.out_dir) if args.out_dir else (
         _REPO_ROOT / "runtime_logs" / "prop_eval" / date.today().isoformat()
@@ -249,6 +258,8 @@ def main(argv: List[str]) -> int:
     p.add_argument("--daily-loss-pct", type=float, default=3.0,
                    help="In-sim daily-loss cap %% of day-start balance (engine halt).")
     p.add_argument("--signal-ttl-bars", type=int, default=1)
+    p.add_argument("--symbol", default="BTCUSDT", help="Symbol the candles are for (prices its cost stack).")
+    add_cost_args(p)
     p.add_argument("--clock-tf", default="15m", choices=list(bt._PANDAS_TF.keys()))
     p.add_argument("--flip-policy", default="hold", choices=["reverse", "hold", "flat"])
     p.add_argument("--reentry-policy", default="suppress", choices=["suppress", "net"])

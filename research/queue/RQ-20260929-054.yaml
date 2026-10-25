@@ -90,3 +90,21 @@ generated:
     timeframe: 5m
     trades_file: comms/strategy_evidence/runs/2026-09-25/ict_scalp_xrp_5m__trades.jsonl
 last_dispatched_at: null
+grading:
+  branch: FAIL
+  decision_rule_id: RULE-TPL-PROP-FIT-B6V2-ict_scalp_xrp_5m-room033
+  evidence:
+  - research/results/RQ-20260929-054/sess017ii-p2-local-20260929.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: 'A FAIL closes THIS configuration only (leg x Breakout x this sizing arm); no same-window replay
+    (prop_ev_grid pins seeds 1-5 -> deterministic, operator decision 2026-10-16 #18593). Never a family
+    retirement: that is the family-retirement protocol''s (#18557) review record.'
+  population: 243 committed trades of ict_scalp_xrp_5m (comms/strategy_evidence/runs/2026-09-25/ict_scalp_xrp_5m__trades.jsonl),
+    sizing cushion-fit room 0.33 at 1.5%, Breakout cost stack, 5 seeds
+  read_state: measured
+  reason: 'FAIL: ev_net_usd_per_life -14.49..-9.44 across 5 seeds, P(net>0) 0.122..0.141 (bar 0.70 on
+    every seed); n 243 >= 88 floor. Population: 243 committed trades of ict_scalp_xrp_5m (comms/strategy_evidence/runs/2026-09-25/ict_scalp_xrp_5m__trades.jsonl),
+    sizing cushion-fit room 0.33 at 1.5%, Breakout cost stack, 5 seeds.'
+  rows: 1
+  verdict: fail

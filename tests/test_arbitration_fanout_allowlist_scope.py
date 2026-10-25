@@ -123,4 +123,13 @@ def test_every_bybit_2_leg_is_also_on_bybit_1():
     bybit_1 = set((accounts.get("bybit_1") or {}).get("strategies") or [])
     bybit_2 = set((accounts.get("bybit_2") or {}).get("strategies") or [])
     assert bybit_2, "bybit_2 has no legs — the premise cannot be tested"
-    assert bybit_2 <= bybit_1, sorted(bybit_2 - bybit_1)
+    # A bybit_1-only SOAK ALIAS stands in for its incumbent there: it is the same
+    # entry logic on the same symbol (one exit lever differs), so bybit_1 still has
+    # a candidate on every tick bybit_2's incumbent does, under its own label. That
+    # bybit_1 elects a DIFFERENT leg than bybit_2 is the divergent-election case
+    # test_FLIPPED_divergent_election_dispatches_both_rounds pins above.
+    # 2026-10-22 (OPERATOR-DECISIONS-1022): trend_donchian_xrp_adx25 replaces
+    # trend_donchian_xrp_4h on bybit_1 only, until the ADX trail is corroborated.
+    soak_alias_of = {"trend_donchian_xrp_adx25": "trend_donchian_xrp_4h"}
+    covered = bybit_1 | {soak_alias_of[a] for a in bybit_1 if a in soak_alias_of}
+    assert bybit_2 <= covered, sorted(bybit_2 - covered)

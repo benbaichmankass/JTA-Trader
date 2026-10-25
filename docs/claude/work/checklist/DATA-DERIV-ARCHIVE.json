@@ -1,0 +1,21 @@
+{
+  "id": "DATA-DERIV-ARCHIVE",
+  "title": "Perp derivatives archive for the 6 crypto roster symbols: Binance Vision UM metrics (5m OI, long/short ratios, taker buy/sell volume), fundingRate, bookDepth -- same manifest contract as DATA-KLINE-ARCHIVE",
+  "phase": "build",
+  "state": "queued",
+  "owner": "build lane dispatched by the manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane DATA-INFRA-PROGRAMME, plan docs/research/programmes/06-DATA-INFRA.md, milestone L-DATA] Programme 06 Q2/Q5. WHY: funding/OI history exists for BTCUSDT only (trainer funding_oi/BTCUSDT, 572 KB) and order flow for BTC 5m only, forward from 2026-06-04 (37,722 rows) with raw book/trades discarded (MEASURED, diag #18108; scripts/ml/orderflow_capture.py). Binance Vision publishes all of it free (MEASURED sizes 2026-10-14: metrics 11.6 KB/day, fundingRate 0.9 KB/month, bookDepth 0.56 MB/day per symbol). This is the SOURCE for FUNDING-OI-DATASETS-ETH-SOL (that row owns the market_features join; not duplicated here). Licence: Binance ToU, private stores only. Tier-1 runner backfill. DONE WHEN: manifests whole for 6 symbols and blocked/RQ-20261014-da7a-03 leaves blocked/.",
+  "updated_at": "2026-10-14T21:42:33Z",
+  "updated_by": "session_016Csv2rRGUB5JorxKavz8rY",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "_seq": 499
+}

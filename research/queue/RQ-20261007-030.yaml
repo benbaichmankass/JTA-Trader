@@ -1,7 +1,7 @@
 id: RQ-20261007-030
 title: 'Prop candidate pool: 1095-day evidence records for trend_donchian_eth_4h (n=85 at 730d) and trend_donchian_sol_4h
   (n=75 at 730d), both just under the 88 admission floor (PI-20261005-XJSGZG1X-0002)'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -72,3 +72,20 @@ related:
 - RQ-20261005-903
 - comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_eth_4h.json
 - comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_sol_4h.json
+grading:
+  decision_rule_id: RULE-RQ1007-ETH-SOL-4H-ADMIT-1095D
+  evidence:
+  - research/results/RQ-20261007-030/ro0847-RQ-20261007-030.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: 'Admission to the prop candidate POOL only, never a roster placement. Follow-up filed: checklist
+    PROP-BOOK-SEARCH-1095D (the prop_book_search unit over the admitted pool). Prop legs clear the superset
+    ladder (Stage 0 + mechanical soak + Gate 2 + the prop EV/survival gate) before any roster add.'
+  population: trend_donchian_eth_4h + trend_donchian_sol_4h, 1095d, 4 folds, n_oos 116 each
+  read_state: measured
+  reason: 'PASS (ADMIT) per leg: trend_donchian_eth_4h faithful, n_oos 116 >= 88, expectancy +0.287 R,
+    4/4 folds, net +33.33 R; trend_donchian_sol_4h faithful, n_oos 116 >= 88, expectancy +0.390 R, 3/4
+    folds, net +45.29 R. Population: config-exact records at --days 1095 --folds 4, fees 7.5 + slippage
+    3.0 bps rt + funding 1.0 bps/8h.'
+  rows: 1
+  verdict: pass

@@ -1,0 +1,133 @@
+id: RQ-20261021-2d98-01
+title: 'Parameter re-test for fold consistency, real money: does any pre-registered variant of slv_pullback_1d clear >= 5 of 8 folds net > 0 on 2006-10-02 ..
+  2025-04-09 and then replicate on the disjoint held-back confirmation span, net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: slv_pullback_1d as declared is net-positive but not fold-consistent (RQ-20261016-c56e-17 FAIL, +5.03R, 4 of 8 folds, n 160, window 2006-10-02 .. 2025-04-09).
+  Selecting on the earlier span only, does one of 5 pre-registered parameter variants (or the declared leg) reach net_r > 0 with >= 5 of 8 calendar folds net > 0,
+  and does that ONE selected arm then stay net_r > 0 on the disjoint latest span, tested once?
+why_this_matters: 'Operator decision 2026-10-21 (popup ~22:15Z, "Keep live, retest": "Keep it live, since it''s net positive, and queue a parameter re-test aimed
+  at consistency across periods"). slv_pullback_1d trades REAL MONEY on alpaca_live (+ mirror). This unit is the queued re-test; the live config is not touched.
+  Prior units on the same leg: RQ-20261016-c56e-17 (the FAIL this answers), RQ-20261011-6707-01 (faithful arm, record window), RQ-20261005-015/016 -- looked
+  up per PLANNING.md section 1; this unit differs from them by testing a registered parameter set on the long window with a held-back confirmation span.'
+power:
+  expected_n: 160
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor), applied to the DISCOVERY span. expected_n=160 is the c56e-17 count
+    on the full window; the discovery span (earliest ~75%) holds ~120 and the held-back span (>= 25 baseline entries, grown to <= 40% of the window) the rest.
+    Six arms are tried (declared + 5); the holdout tests exactly one arm once, so no deflation is needed (operator 2026-10-16 "Require holdout"). Cost stack:
+    Alpaca equity fee 0 + resolved slippage + no funding, resolved by execution_costs.resolve_cost_policy as in c56e-17.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261021-2d98-01
+  registered_at: '2026-10-21'
+  registered_before_run: true
+  statistic: 'Six arms, every one built by regime_debt_matrix.build_harness_cmd and run once over the pinned window, graded by exit_lever_ablation.py --grade holdout:
+    B = the leg as declared; P1 trend_lookback=60; P2 pullback_frac=0.5; P3 atr_stop_mult=2.5; P4 trail_mult=3.0; P5 trend_lookback=60 + atr_stop_mult=2.5. The
+    boundary is the latest 25% of the window (grown to hold 25 baseline entries, capped at 40%), fixed before any outcome. Discovery eligibility per arm: n >= 39 AND
+    net_r > 0 AND >= 5 of 8 calendar folds of the discovery span net > 0. The eligible arm with the highest discovery net R is selected (tie -> B). The selected
+    arm is read ONCE on the held-back span.'
+  rule: 'PASS IF an arm is eligible on discovery (net_r > 0 AND >= 5 of 8 folds net > 0, full cost stack) AND the selected arm has n_holdout >= 25 and net_r_holdout > 0 on the
+    disjoint held-back span (verdict confirmed). FAIL IF >= 1 arm held >= 39 discovery trades but none is eligible (no_discovery) or the selected arm has net_r_holdout <= 0
+    at n >= 25 (not_replicated): no tested configuration has fold-consistent edge; a roster-retention case for alpaca_live sent to the manager, nothing changed here.
+    INDETERMINATE IF every arm held < 39 discovery trades or n_holdout < 25 (a power shortfall, never evidence against the leg). The 0 R bar, the 5-of-8 fold majority, the
+    39 and 25 floors, the arm list and the holdout fraction are not changed after any result. Windows are never pooled with the c56e-17 record; it keeps its own grade.'
+  what_it_does_not_do: Does not edit config/strategies.yaml or any roster and does not change slv_pullback_1d's live parameters. A PASS naming a non-declared arm is a Tier-3
+    proposal input for the manager, not a change. Not a promotion case, and does not by itself alter the 2026-10-21 decision to keep the leg live.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'stand-in: slv_pullback_1d is a small real-money alpaca_live leg; same figure as c56e-17. Estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: One keyless candle fetch of ~7414 days and SIX harness passes over the pinned window (c56e-17 ran one pass in ~10 min incl. fetch).
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo); the symbol/timeframe is not in metis-market-data, so the Kaggle-CPU and
+    trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_pullback_1d
+  - --arm
+  - B=
+  - --arm
+  - P1=trend_lookback=60
+  - --arm
+  - P2=pullback_frac=0.5
+  - --arm
+  - P3=atr_stop_mult=2.5
+  - --arm
+  - P4=trail_mult=3.0
+  - --arm
+  - P5=trend_lookback=60;atr_stop_mult=2.5
+  - --days
+  - '7414'
+  - --start
+  - '2006-10-02'
+  - --end
+  - '2025-04-09'
+  - --grade
+  - holdout
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261021-2d98-01
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261021-2d98-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261021-2d98-01/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261021-2d98-01/<run_id>/.
+roadmap:
+- L-LADDER
+related:
+- RQ-20261016-c56e-17
+- RQ-20261016-c56e-18
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-23T10:02:22+00:00'
+grading:
+  attested: RULE-RQ20261021-2d98-01
+  auto: true
+  decision_rule_id: RULE-RQ20261021-2d98-01
+  evidence:
+  - research/results/RQ-20261021-2d98-01/39936255796.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -39,6 +39,11 @@ jobs:
           bash scripts/ops/diag_fetch.sh 'exchange_positions' > positions.json 2> positions.err \
             || { echo "::error::exchange_positions read failed -- we could not look"; exit 2; }
       - name: Compare mirror to live
+        # pipefail is LOAD-BEARING: the default `bash -e {0}` shell takes the
+        # pipeline's exit from `tee` (0), so an ORPHAN (exit 1) went GREEN:
+        # run 38169088768 (2026-10-11) printed "ORPHAN bybit_2->bybit_portfolio
+        # XRPUSDT short size=160.9" and concluded success (MIRROR-QTY-DIVERGE).
         run: |
+          set -o pipefail
           pip install -q pyyaml
           python3 scripts/ops/check_mirror_orphans.py positions.json | tee -a "$GITHUB_STEP_SUMMARY"

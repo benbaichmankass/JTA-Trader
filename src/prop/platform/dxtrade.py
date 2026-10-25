@@ -3446,8 +3446,8 @@ def watchlist_diff(before: Mapping[str, Any], after: Mapping[str, Any]) -> Dict[
 # hover, immediately before the click; a REFUSED panel is never click-closed
 # (one Escape, then abort); record the linked symbol first and RESTORE it on
 # every exit path while no dialog is open -- a skipped or failed restore is an
-# alert, a non-zero exit AND the executor's AUTO-REVERT latch, so no executor
-# tick trades until it is re-selected and cleared; the watchlist symbol set
+# alert and a non-zero exit (never a latch since NO-HALT 2026-10-09: the
+# order form's symbol check refuses a wrong-symbol ticket); the watchlist symbol set
 # must read the same before and after. A DOUBLE-click on a watchlist row
 # opens the order ticket (open_order_ticket): this probe only ever issues a
 # single click, on the Symbol cell, never on a Bid/Ask cell.
@@ -4552,11 +4552,11 @@ def info_probe_one_click_off(one_click: Optional[Mapping[str, Any]]) -> bool:
 
 
 def info_probe_restore_latch_reason(got: Mapping[str, Any]) -> Optional[str]:
-    """The AUTO-REVERT latch reason to write when the probe may have left
-    the terminal's linked symbol changed, else None. Written by the tick
-    into the executor's own ``halted`` latch, which every executor tick
-    reads before trading (refuses every new entry, alerts) until the
-    manager/operator clears it with ``executor-clear-halt``."""
+    """The ALERT text when the probe may have left the terminal's linked
+    symbol changed, else None. NO-HALT (operator 2026-10-09): it is alerted
+    only; until then the tick wrote it into the executor's ``halted`` latch.
+    A wrong linked symbol cannot place a wrong order: the order form checks
+    the symbol at open and at read-back (:func:`form_names_symbol`)."""
     rest = got.get("restore") or {}
     if got.get("mode") != "click" or not rest:
         return None
@@ -4568,14 +4568,14 @@ def info_probe_restore_latch_reason(got: Mapping[str, Any]) -> Optional[str]:
     # tick's ``fresh_page_check``, manager-approved 2026-09-30 18:00Z) reads
     # the original symbol with no dialog open, the run alerts only and no
     # latch is written. Anything else -- no check, unreadable, another
-    # symbol, a dialog -- latches as before.
+    # symbol, a dialog -- alerts (NO-HALT 2026-10-09: never a latch).
     fp = got.get("fresh_page_check") or {}
     if (fp.get("readable") is True and rest.get("original")
             and fp.get("linked_symbol") == rest.get("original") and fp.get("dialogs") == 0):
         return None
-    return ("AUTO-REVERT: instrument-info-probe left the linked symbol unverified "
+    return ("PROBE-RESTORE-UNVERIFIED: instrument-info-probe left the linked symbol unverified "
             f"(should be {rest.get('original')!r}; restore attempted={rest.get('attempted')}); "
-            "re-select it on the terminal, then executor-clear-halt")
+            "re-select it on the terminal")
 
 
 #: A quote whose spread is wider than this is not believed (a mis-aligned
@@ -4596,6 +4596,27 @@ def quote_from_watchlist_rows(got: Mapping[str, Any], venue_symbol: str) -> Opti
         return None
     rows = [r for r in (got.get("rows") or []) if len(r) == len(headers)]
     return quote_from_tables([{"headers": headers, "rows": rows}], venue_symbol)
+
+
+def spread_bps(bid: float, ask: float) -> Optional[float]:
+    """(ask - bid) / mid in basis points, or None for a quote that is not 0 < bid <= ask."""
+    if not (bid > 0 and ask >= bid):
+        return None
+    return (ask - bid) / ((ask + bid) / 2.0) * 10_000.0
+
+
+def quote_spread_summary(quotes: Sequence[Mapping[str, float]], samples: int) -> Dict[str, Any]:
+    """Median / min / max spread (bps) and the median mid over the parsed reads. Pure; tested."""
+    pairs = [(spread_bps(q["bid"], q["ask"]), (q["bid"] + q["ask"]) / 2.0) for q in quotes
+             if q and "bid" in q and "ask" in q]
+    pairs = [(b, m) for b, m in pairs if b is not None]
+    if not pairs:
+        return {"read": "none", "n_ok": 0, "n_tried": samples}
+    bps = sorted(b for b, _ in pairs)
+    mids = sorted(m for _, m in pairs)
+    return {"read": "ok", "n_ok": len(pairs), "n_tried": samples,
+            "spread_bps": round(bps[len(bps) // 2], 3), "spread_bps_min": round(bps[0], 3),
+            "spread_bps_max": round(bps[-1], 3), "mid": round(mids[len(mids) // 2], 6)}
 
 
 def quote_diagnostics(tables: Sequence[Mapping[str, Any]], venue_symbol: str) -> Dict[str, Any]:
@@ -4891,6 +4912,8 @@ def verify_form_selection(form: Mapping[str, Any], side: str, order_type: str) -
 #: "Buy <qty> SOLUSD at <price>" -- the TERMINAL's own statement of what it is
 #: about to send.
 _SUBMIT_LABEL = re.compile(r"\b(buy|sell)\s+([0-9]+(?:[.,][0-9]+)?)\s+([A-Za-z0-9._/-]+)", re.IGNORECASE)
+#: The "at <price>" tail of the same label ("... at 2,683.584").
+_SUBMIT_LABEL_PRICE = re.compile(r"^\s*at\s+([0-9][0-9,]*(?:\.[0-9]+)?)", re.IGNORECASE)
 
 
 def submit_label_mismatch(text: str, spec: "BracketSpec") -> str:
@@ -4936,6 +4959,26 @@ def submit_label_mismatch(text: str, spec: "BracketSpec") -> str:
     want = {"long": "buy", "short": "sell"}.get(str(getattr(spec, "side", "") or "").lower())
     if want is not None and m.group(1).lower() != want:
         return f"its text {text!r} states side {m.group(1)!r}, not the meant {want}"
+    # The PRICE the label states must be the typed LIMIT price, within one
+    # declared price_step (OA-07(a), PI-20261004-GCFA5DOR-0004): tradeify's
+    # price field reverts to a market-derived price unless it sees typing, and
+    # a label moved from "at 120.91" to "at 120.94" after the click. Checked
+    # only for a LIMIT spec whose venue increment is declared (the same
+    # one-step tolerance the form read-back uses, price_tolerances); a spec
+    # with no price_step keeps the previous behaviour (no price compare),
+    # because the label shows display precision and an exact compare would
+    # refuse a correctly typed price. A refusal is this ticket's refusal only.
+    step = getattr(spec, "price_step", None)
+    lim = getattr(spec, "limit_price", None)
+    if (str(getattr(spec, "order_type", "") or "").lower() == "limit" and lim is not None
+            and step and float(step) > 0):
+        pm = _SUBMIT_LABEL_PRICE.search((text or "")[m.end():])
+        shown = parse_number(pm.group(1)) if pm else None
+        if shown is None:
+            return f"its text {text!r} states no readable 'at <price>' for a LIMIT at {_fmt_num(lim)}"
+        if abs(shown - float(lim)) > float(step) + 1e-9:
+            return (f"its text {text!r} states price {_fmt_num(shown)}, not the typed limit "
+                    f"{_fmt_num(lim)} (more than one tick of {_fmt_num(step)} away)")
     return ""
 
 
@@ -5101,6 +5144,20 @@ def surface_diff(before: Mapping[str, Any], after: Mapping[str, Any]) -> Dict[st
     return {"same": same, "added": added, "removed": removed, "changed": changed,
             "summary": "no change" if same else f"{len(added)} added, {len(removed)} removed, {len(changed)} changed"}
 
+def panel_names_symbol(text: str, symbol: str) -> bool:
+    """Pure: does ``text`` name ``symbol`` as a whole token, compared through
+    :func:`canonical_symbol` (EXACT equality of canonical forms, never a
+    substring) -- so Breakout's "ETHUSD" and tradeify_1's "ETH/USD" both name
+    ETHUSD (MEASURED on tradeify_1's Position Details panel, #18358 run
+    38748442282: "Position Details ETH/USD Ethereum vs United States dollar
+    ..."). Still an identity check: "SOL/USD", "ETH/USDT", "BTC/ETH/USD" and
+    "ETH-USD" never name ETHUSD."""
+    want = canonical_symbol(symbol)
+    if not want:
+        return False
+    return any(canonical_symbol(tok) == want for tok in re.findall(r"[A-Za-z0-9/]+", str(text or "")))
+
+
 def position_panel_mismatch(panel: Mapping[str, Any], symbol: str,
                             want: Sequence[str] = ("stop_loss", "take_profit"),
                             *, require_submit_enabled: bool = False) -> List[str]:
@@ -5119,7 +5176,7 @@ def position_panel_mismatch(panel: Mapping[str, Any], symbol: str,
         return [str(panel.get("why") or "panel not read")]
     bad: List[str] = []
     text = str(panel.get("text") or "")
-    if not re.search(rf"(?<![A-Za-z0-9]){re.escape(symbol)}(?![A-Za-z0-9])", text, re.IGNORECASE):
+    if not panel_names_symbol(text, symbol):
         bad.append(f"panel does not name {symbol}")
     if panel.get("ambiguous"):
         bad.append(f"ambiguous fields: {sorted(panel['ambiguous'])}")
@@ -5204,35 +5261,81 @@ def rollout_verify_mismatch(before: "Position", after: Optional["Position"], new
     return bad
 
 
+#: The RETIRED per-account latch. Until NO-HALT (operator 2026-10-09, "There
+#: is no halting.") its existence blocked every further armed modify on the
+#: account until ``executor-clear-rollout``. Nothing reads it as a block now;
+#: a copy left by the old code is moved aside on sight (:class:`ModifyRollout`).
+ROLLOUT_LATCH_FILE = "modify_rollout.json"
+#: The NON-blocking evidence record of the account's latest armed modify step.
+ROLLOUT_LAST_FILE = "modify_rollout_last.json"
+
+
 class ModifyRollout:
-    """The per-account latch of the modify rollout (a JSON file in the
-    executor's state dir). Its EXISTENCE blocks every further armed modify:
-    the single watched step has been used ("in_progress" written BEFORE the
-    click, so a crash cannot buy a second), "verified" or "verify_failed".
-    Only a reviewed removal of the file allows the next step: the
-    ``executor-clear-rollout`` system-action, which names this latch alone
-    (``executor-clear-halt`` never touches it)."""
+    """Evidence record of the account's armed modify steps -- NOT a latch.
+
+    Each armed step still passes the per-step guards in ``modify_bracket``
+    (tighten-only and bounded, ``rollout_tighten_mismatch``; the next-read
+    verify, ``rollout_verify_mismatch``), and its outcome is written to
+    ``<state dir>/modify_rollout_last.json``: "in_progress" BEFORE the click
+    (so a crash mid-step leaves evidence), then "verified" / "verify_failed" /
+    "refused". That file never blocks the next step: a failed step is that
+    step's failure, retried on the next cycle by its caller (NO-HALT, operator
+    2026-10-09: "There is no halting.").
+
+    ``path`` is the account's legacy latch path (``<state dir>/modify_rollout.json``,
+    what every caller passes); the evidence file sits beside it. A legacy latch
+    left by the old code is ignored and moved aside to
+    ``modify_rollout.json.retired-<UTC stamp>`` on construction, with a log line;
+    :attr:`stale_retired` says what was moved (None when nothing was)."""
 
     def __init__(self, path: Any) -> None:
         from pathlib import Path
-        self.path = Path(path)
+        self.latch_path = Path(path)
+        self.path = self.latch_path.with_name(ROLLOUT_LAST_FILE)
+        self.stale_retired: Optional[Dict[str, Any]] = self.retire_stale_latch()
 
-    def blocked(self) -> Optional[str]:
-        if not self.path.exists():
-            return None
+    def retire_stale_latch(self) -> Optional[Dict[str, Any]]:
+        """Move a legacy latch file aside (never raises). Returns
+        ``{"from", "to", "prior"}`` when one was moved, else None."""
+        import logging
         try:
-            state = json.loads(self.path.read_text()).get("state")
+            if not self.latch_path.exists():
+                return None
+            try:
+                prior = self.latch_path.read_text()[:500]
+            except OSError:
+                prior = "unreadable"
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            dest = self.latch_path.with_name(f"{self.latch_path.name}.retired-{stamp}")
+            self.latch_path.replace(dest)
+        except OSError as exc:
+            logging.getLogger(__name__).warning(
+                "modify-rollout: stale latch %s could not be moved aside (%s); it is ignored either way",
+                self.latch_path, type(exc).__name__)
+            return None
+        logging.getLogger(__name__).warning(
+            "modify-rollout: stale latch %s from the retired rollout latch moved aside to %s (NO-HALT); "
+            "it no longer blocks any modify", self.latch_path, dest.name)
+        return {"from": str(self.latch_path), "to": str(dest), "prior": prior}
+
+    def last(self) -> Optional[Dict[str, Any]]:
+        """The latest step's record, or None when absent/unreadable."""
+        try:
+            data = json.loads(self.path.read_text())
         except (OSError, ValueError):
-            state = "unreadable"
-        return (f"rollout: the single watched modify step is used (state {state!r}); "
-                f"further modifies are halted until {self.path.name} is reviewed and cleared "
-                "(executor-clear-rollout)")
+            return None
+        return data if isinstance(data, dict) else None
 
     def record(self, state: str, **facts: Any) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"state": state, "at": time.time(), **facts}, default=str))
-        tmp.replace(self.path)
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps({"state": state, "at": time.time(), **facts}, default=str))
+            tmp.replace(self.path)
+        except OSError:
+            # Evidence only: an unwritable record must not stop the step's
+            # own guards from deciding (they do not read it).
+            pass
 
 def check_bracket_spec(spec: BracketSpec) -> List[str]:
     """Pure structural check of one bracket before any click: both legs, a
@@ -5619,6 +5722,37 @@ class DXtradeAdapter(PropPlatformAdapter):
         first; else the virtualised grid's rows (#13898)."""
         return (quote_from_tables(self._tables(page), venue_symbol)
                 or quote_from_watchlist_rows(self._watchlist_rows(page, venue_symbol), venue_symbol))
+
+    def quote_spread(self, page: Any, symbols: Sequence[str], *, samples: int = 3,
+                     gap_ms: int = 1_000) -> Dict[str, Any]:
+        """READ-ONLY (TRADEIFY-INSTR-SPECS, manager go 2026-10-15 20:21Z): the
+        quoted spread of each watchlist symbol, from the same ``read_quote``
+        the trail and the executor use. Clicks, hovers and types NOTHING.
+
+        Numeric-safe emit: per symbol only ``spread_bps`` (ask - bid over mid,
+        in bps; the median of ``samples`` reads ``gap_ms`` apart, plus the min
+        and max) and ``mid``. No account figure is read at all. A symbol with
+        no parsed quote reports ``read: none`` -- "we could not look", never 0.
+        """
+        out: Dict[str, Any] = {"mode": "quote_spread", "symbols": [], "results": {}}
+        for raw in dict.fromkeys(str(x).strip().upper() for x in symbols if str(x).strip()):
+            out["symbols"].append(raw)
+            got: List[Dict[str, float]] = []
+            for i in range(max(1, samples)):
+                try:
+                    q = self.read_quote(page, raw)
+                except Exception as exc:
+                    out["results"][raw] = {"read": "error", "error": type(exc).__name__}
+                    got = []
+                    break
+                if q:
+                    got.append(q)
+                if i + 1 < samples:
+                    page.wait_for_timeout(gap_ms)
+            if raw in out["results"]:
+                continue
+            out["results"][raw] = quote_spread_summary(got, samples)
+        return out
 
     def quote_diagnostics(self, page: Any, venue_symbol: str) -> Dict[str, Any]:
         """Read-only: what the watchlist looked like when no quote parsed."""
@@ -6162,9 +6296,9 @@ class DXtradeAdapter(PropPlatformAdapter):
         close it and confirm it is gone. On EVERY exit path (success, abort,
         exception) it re-selects the originally linked symbol and verifies
         it, unless a dialog is open. ``alerts`` is non-empty whenever the
-        terminal may have been left changed; an unverified restore is also
-        the executor's AUTO-REVERT latch (info_probe_restore_latch_reason,
-        written by the tick).
+        terminal may have been left changed; an unverified restore is
+        alerted by the tick (info_probe_restore_latch_reason; never a latch
+        since NO-HALT 2026-10-09).
         """
         want = list(dict.fromkeys(s.strip().upper() for s in symbols if s and s.strip()))
         out: Dict[str, Any] = {"mode": "click" if click else "dry", "symbols": want,
@@ -8385,14 +8519,16 @@ class DXtradeAdapter(PropPlatformAdapter):
     # no quantity field); modify_bracket targets exactly that surface (#15673).
     # Flipped True on the operator's answer "Merge and switch on together"
     # (2026-10-03, with the PROP-TRAIL merge #15316). Every armed modify still
-    # passes the ROLLOUT guard below (#15693): one watched, tighten-only SL
-    # step per reviewed executor-clear-rollout. Setting this back to False is
-    # the kill switch: an armed modify then refuses before any click.
+    # passes the ROLLOUT guard below (#15693): a tighten-only, bounded SL
+    # step, verified on the next read. Setting this back to False is the kill
+    # switch: an armed modify then refuses before any click.
     EDIT_DIALOG_MEASURED = True
-    # When armed, the first modifies on a real-money book are a ROLLOUT
-    # (manager 2026-10-02 21:30Z): one watched, tighten-only step per reviewed
-    # clear of the per-account latch (ModifyRollout, cleared only by
-    # executor-clear-rollout, never by executor-clear-halt). Every armed modify is gated by it.
+    # When armed, every modify on a real-money book is a ROLLOUT step
+    # (manager 2026-10-02 21:30Z): tighten-only, at most
+    # ROLLOUT_MAX_TIGHTEN_FRACTION of the stop distance, TP untouched, verified
+    # on the next read. Since NO-HALT (operator 2026-10-09) there is no
+    # per-account latch: ModifyRollout records each step's outcome as evidence
+    # and a failed step is retried by its caller. Every armed modify is gated by it.
     ROLLOUT_GUARD = True
     # TP doctrine B1: the rollout guard refuses any TP change
     # (`rollout_tighten_mismatch`), so this adapter cannot move a TP while it
@@ -8630,14 +8766,13 @@ class DXtradeAdapter(PropPlatformAdapter):
             return {"ok": False, "clicked": False, **seen, "why": "position side / size unknown: refusing"}
         guarded = bool(self.ROLLOUT_GUARD)
         if guarded:
-            # ROLLOUT: a single watched TIGHTEN-ONLY step, refused before any
-            # click unless the latch is clear and the move is bounded.
+            # ROLLOUT guard: every armed step is a TIGHTEN-ONLY, bounded SL
+            # step, refused before any click otherwise. Its record is evidence
+            # only -- a previous step's outcome never blocks this one (NO-HALT,
+            # operator 2026-10-09: "There is no halting.").
             if rollout is None:
                 return {"ok": False, "clicked": False, **seen,
-                        "why": "refused: rollout guard needs the account's modify-rollout latch"}
-            blocked = rollout.blocked()
-            if blocked:
-                return {"ok": False, "clicked": False, **seen, "why": blocked}
+                        "why": "refused: rollout guard needs the account's modify-rollout record"}
             try:
                 quote = self.read_quote(page, position.symbol)
             except Exception:
@@ -8695,8 +8830,10 @@ class DXtradeAdapter(PropPlatformAdapter):
         if not guarded:
             return {"ok": True, "clicked": True, **seen, "panel": panel, "why": "Modify Position clicked"}
         # ROLLOUT verify: the very next positions read must show the NEW stop,
-        # the UNCHANGED take profit and size -- else alert loudly and keep the
-        # latch (no further modify until it is reviewed and cleared).
+        # the UNCHANGED take profit and size -- else THIS step failed and says
+        # so loudly. Nothing is latched: the caller retries on its next cycle,
+        # and that step passes the same tighten-only guard from whatever SL
+        # then rests (NO-HALT, operator 2026-10-09).
         page.wait_for_timeout(1_500)
         try:
             rows = [p for p in self.read_positions(page) if canonical_symbol(p.symbol) == canonical_symbol(position.symbol)]
@@ -8708,7 +8845,7 @@ class DXtradeAdapter(PropPlatformAdapter):
             rollout.record("verify_failed", why="; ".join(bad))
             return {"ok": False, "clicked": True, **seen, "panel": panel, "rollout": "verify_failed",
                     "why": "ROLLOUT VERIFY FAILED after Modify Position: " + "; ".join(bad)
-                           + " -- further modifies halted"}
+                           + " -- this step failed; the next cycle retries"}
         rollout.record("verified", sl=float(stop_loss))
         return {"ok": True, "clicked": True, **seen, "panel": panel, "rollout": "verified",
                 "why": "Modify Position clicked; next read shows the new SL with TP and size unchanged"}

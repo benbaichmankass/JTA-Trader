@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-26",
+    "kind": "date"
+  },
+  "id": "PI-20261022-5AEVV1RL-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-TSFM-TRAINER / RQ-20261011-9da8-01 (session_01DRYR8RsCR3Nw4S5AEVv1rL)",
+    "rerun": "trainer-vm-diag: ps -eo pid,etimes,rss,cmd | grep replay_pregate_fleet; cat runtime_logs/trainer/heavy_lock_holder.json; python3 scripts/ci/check_trainer_heavy_lock.py"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[infra] scripts/ml/replay_pregate_fleet.py ran on the trainer WITHOUT the shared heavy lock (pid 3009740, ~4.1-4.3 GB RSS of 5.9 GB, 2026-10-22 16:14Z onward) while the lock was held by other jobs; free memory read 93-119 MB and a nice-19 Chronos-2 build was slowed ~2x (ETH 73 min vs BTC 30). The lock is meant to serialise memory-heavy jobs (docs/claude/trainer-resource-protocol.md); this one bypassed it or the CLI backstop does not cover it. Find who launched it and why it skipped take_trainer_heavy_lock."
+}

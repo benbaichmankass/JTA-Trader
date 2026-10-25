@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "BREAKOUT-SL-AMEND-CLICK (manager session_01VduHYzdaXe27wTDBLSu8ao). Tier 2 by path (phone-executor APK). The position sheet is now touched at other cells of the SAME child row after the Market cell misses: the Opening price cell, then the '1 TP / 1 SL' text of the TP / SL cell. The group row is touched only to expand a collapsed group (never while the child row is shown, which collapsed it on 08:03Z). Same native finger touch, same denylist and elementFromPoint re-check, same modal-after-tap stop (Cancel / Escape, never Confirm), same tighten-only amend path. exec.js adds a passive map of the page's React handlers around the tapped element to the sheet diag (hd: lines). No order, size or stop rule changes. Revert = revert this PR + reinstall the prior APK. The manager merges, then sends the operator the APK.",
+  "why": "live phone_sheet_diag breakout_2 on 1b.253: 08:03Z the child Market cell received a fully trusted finger touch (pdown:touch w9 tr1, tstart, pup, tend, click:touch tr1) and no sheet opened; 12:03Z child none, group touched -> expanded (new=79), tabs details=0. click() and a synthetic pointer tap on the same cell also missed (1b.210), while click() on the group cell reaches the row's handler. The event is not the cause; the target cell is."
+}

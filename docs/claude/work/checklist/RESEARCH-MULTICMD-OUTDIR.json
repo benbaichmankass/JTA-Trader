@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-MULTICMD-OUTDIR",
+  "title": "Queue units with several run.commands share one {out_dir}: later invocation overwrites the earlier record (RQ-20261022-511e-01 lost eth_4h)",
+  "phase": "Research",
+  "state": "queued",
+  "owner": "unassigned (filed by EXITS-GIVEBACK-W43)",
+  "lane": "EXITS-GIVEBACK-W43",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-22 EXITS-GIVEBACK-W43] MEASURED: RQ-20261022-511e-01 runs exit_lever_ablation.py twice (eth_4h then sol_4h) with the same --out {out_dir}; only the sol_4h numbers reached research/results/ (comms/research/RQ-20261022-511e-01/39769641439/logs/cmd-0.log keeps the eth_4h verdict line only), so the grader saw 1 row of min_rows 2 and parked the unit in needs_review. Any multi-command unit has this risk. FIX: give each command its own subdir ({out_dir}/cmd-N) and have the collector emit one row per command, or make the unit validator reject multi-command units that share {out_dir}. DONE WHEN: a two-command smoke unit lands two result rows with distinct leg fields and the validator/test covers it.",
+  "updated_at": "2026-10-22T14:37:05Z",
+  "updated_by": "session_013boLrFb4hM4JJ2Naq19bqS",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 601
+}

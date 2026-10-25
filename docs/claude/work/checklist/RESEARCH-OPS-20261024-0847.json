@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261024-0847",
+  "title": "Research-ops pass 2026-10-24 08:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261024-0847",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane] runnable 34 vs floor 61 (fired_24h 77); dispatcher/collector healthy (last dispatch 1.4 h; 85 results 24h, 0 unreadable). Ran the steps the 02:47Z pass skipped: (A) stranded-PR list: open automation PRs #19835 stamp (fresh, 08:46Z), #19812 liveness receipt (04:59Z, mergeable_state dirty, 0 check runs), #19787 research-slo (23:47Z 10-23, 0 check runs/statuses): bot-opened PRs with no checks = the known cause class (PI-20261006-LCEVL8D5-0001); receipts on main still landing (#19784) and liveness reads fresh, so no incident, but 2 PRs are >3h unmerged: manager may close #19812/#19787 as superseded. (watchdog) watchdog_incidents.jsonl last row is 2026-10-17T23:27Z (6 rows total): no row for 7 days; I cannot tell from this file alone whether the watchdog stayed quiet or stopped writing -> handoff. (D) read 14 verdicts landed since 03:30Z: 12 FAIL, 2 PASS (a1f3-17 ppi_mom->ES=F h=3 IC -0.287 t -3.52 n140; 20261024-002 SOL 1h lgbm_yz). Authored P4-Q2-ppi-es-late + -placebo (confirmation of a one-window PASS; denominator noted) and ran the template refill (+7 units, RQ-20261024-003..009). SLV-PB1D-RETENTION-T3 and REGIME-PROGRAM carry the Tier-3 notes. Held PR (queue + programme edits, E57).",
+  "updated_at": "2026-10-24T08:54:20Z",
+  "updated_by": "session_0118SbrkgfuqRYuHXvCLKYgM",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "P4-Q2-ppi-es-late and P4-Q2-ppi-es-placebo are emitted as queue units once a1f3-17 is graded pass, dispatch and land measured verdicts",
+    "how_to_check": "python3 scripts/research/queue_replenish.py --programme-state | grep ppi-es; ls research/results | grep -c .",
+    "due_by": "2026-10-31"
+  },
+  "_seq": 624
+}

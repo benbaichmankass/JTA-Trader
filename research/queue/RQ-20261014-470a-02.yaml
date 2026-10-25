@@ -1,0 +1,118 @@
+id: RQ-20261014-470a-02
+title: 'Transfer, real money: does adx_min=22 (the f0e2-05 eth_pullback_2h lead) beat xrp_pullback_2h''s declared adx_min=25 on its 730-day window,
+  net of the full cost stack? One arm, no selection.'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: Does the single value adx_min=22, fixed in advance from RQ-20261014-f0e2-05 (not chosen on xrp_pullback_2h), beat xrp_pullback_2h as
+  declared (adx_min=25) on 2024-10-05 .. 2026-10-04 23:59 by >= 1.0 R with no worse drawdown in >= 3 of 4 calendar folds?
+why_this_matters: xrp_pullback_2h is on the real-money roster (bybit_2) and its mirror; adx_min has never been measured on it (checked research/queue
+  and research/results 2026-10-14). If the eth lead is a property of the 2h pullback family it should transfer; a single pre-fixed arm is an independent
+  test, so a PASS here also corroborates 470a-01, and a FAIL says the eth lead is leg-specific.
+power:
+  expected_n: 122
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=122 is MEASURED: the committed 730d record''s
+    n=122 on this exact window (the positive control asserts it). Below 39 baseline trades the unit grades indeterminate (underpowered), never
+    FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority refuses a one-period
+    artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing
+      accrues.
+decision_rule:
+  id: RULE-RQ20261014470a02
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full
+    cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r,
+    plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (adx_min 25); A22 = adx_min=22.
+    No other arm.. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported
+    per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+  rule: 'indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR
+    >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR). FAIL IF none passes: the declared value stands
+    and the axis is recorded honest_negative on this window for this leg. PASS: a Tier-3 PROPOSAL note on the owning row only after 470a-01 has
+    also read (a transfer PASS with a NOT CONFIRMED origin is reported as leg-specific and gets its own fresh-window confirmation, rung S0-C).
+    FAIL: adx_min stays; honest_negative for this leg. The 1.0 R bar, the drawdown clause, the 3-of-4 fold majority and the 39 floor are not changed
+    after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml or any roster (Tier-3). Does not search adx values. Does not test any other axis.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'stand-in: a real-money 2h pullback leg at 1.5% risk on a low-hundreds-$ book plus its mirror; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: One keyless Binance Vision fetch of ~760 days and 2 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - A22=adx_min=22
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-05-730d-expand/xrp_pullback_2h__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261014-470a-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261014-470a-02/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261014-470a-02/<run_id>/.
+roadmap:
+- M21
+related:
+- P3-STRATEGY-PROGRAMME
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-15T03:05:38+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261014470a02
+  evidence:
+  - research/results/RQ-20261014-470a-02/38663656413.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

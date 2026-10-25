@@ -1,0 +1,181 @@
+name: research-script-run-kaggle-cpu
+
+# KAGGLE-CPU-ROUTE (2026-10-14): the Kaggle CPU twin of research-script-run-kaggle.yml. A unit with routing.published_data is sent
+# here by the token-free dispatcher (scripts/research/research_compute.yaml, backend kaggle_cpu) because kaggle 2.2.4
+# DownloadDataset 404s for the private metis-market-data dataset from a GitHub runner (runs 38507974681 / 38512183556 /
+# 38514877849, row ML-DATA-RUNNER-FETCH) while a Kaggle KERNEL mounts it (verified 20/20 files).
+#
+# Identical to the GPU twin except: the kernel has enable_gpu=false (a CPU kernel is NOT metered by the 30 h/week GPU quota, so there
+# is no quota gate), the bundle-dataset / kernel slugs are the -cpu ones (a CPU and a GPU run may be in flight together), and the
+# artifact is research-script-run-kaggle-cpu-<unit>-<run_id>. Same two inputs, same allowlist re-check, same collector.
+#
+# SECRETS. KAGGLE_API_TOKEN only (plus the ambient GITHUB_TOKEN, contents: read). The unit's script runs INSIDE Kaggle, which
+# receives no secret. The Kaggle username is masked and scrubbed from every uploaded file.
+#
+# landed-by: scripts/research/collect_runner_results.py
+#
+# Tier-1: reads the repo, writes only comms/research/** and research/results/** (via the collector).
+
+on:
+  workflow_dispatch:
+    inputs:
+      research_unit:
+        description: "The queue unit to run (RQ-...). Its run.command is read from research/queue/<id>.yaml on this ref."
+        required: true
+      power_state:
+        description: "Pass-through dispatcher power-state label, if any (never a command)"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # One Kaggle CPU kernel slot (kernel + bundle dataset are fixed -cpu slugs): one research run here at a time.
+  group: research-script-run-kaggle-cpu
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas pyyaml requests "kaggle>=2.0"
+      - name: Check the unit's declared command against the allowlist
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/script_run.py --self-test
+          python3 scripts/research/kaggle_run.py self-test
+          python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" --check
+      - name: Auth, bundle, push, poll, fetch
+        id: kaggle
+        continue-on-error: true
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          set +e
+          set -uo pipefail
+          case "$UNIT" in RQ-[0-9]*) ;; *) echo "::error::bad unit id"; exit 1;; esac
+          case "$UNIT" in *[!A-Za-z0-9-]*) echo "::error::bad unit id chars"; exit 1;; esac
+          OUT="comms/research/${UNIT}/${GITHUB_RUN_ID}"
+          mkdir -p "$OUT" /tmp/kb
+          if [ -z "${KAGGLE_API_TOKEN}" ]; then echo "KAGGLE_API_TOKEN secret is empty" | tee "$OUT/kaggle-session.log"; exit 1; fi
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          if [ -z "$USERNAME" ]; then echo "AUTH FAILED: token did not resolve to a user" | tee "$OUT/kaggle-session.log"; exit 1; fi
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          # no quota gate: a CPU kernel (enable_gpu=false) draws none of the weekly GPU hours
+          # ML-NONGBDT-RUNNERS: the kernel has no internet, so ship the pure-python learner wheels in the bundle (best effort: a failed
+          # download only leaves those arms `unavailable`, which the kernel's probe line records).
+          mkdir -p /tmp/kb/wheels
+          pip download --no-deps --only-binary=:all: -d /tmp/kb/wheels tabicl==2.2.0 tabpfn==9.1.0 einops skrub || echo "learner wheel download failed (arms will report unavailable)"
+          python3 scripts/research/kaggle_run.py bundle --unit "$UNIT" --run-id "$GITHUB_RUN_ID" \
+              --username "$USERNAME" --accelerator cpu --out /tmp/kb/bundle --sha "$GITHUB_SHA" --wheels /tmp/kb/wheels | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
+          # dataset: create the first time, new version afterwards. The CLI can exit non-zero while the dataset
+          # is still being created (observed run 38396475640: output "Your private Dataset is being created"), so the
+          # exit code is NOT the verdict -- polling `datasets status` for "ready" is.
+          if kaggle datasets status "$USERNAME/metis-research-bundle-cpu" >/dev/null 2>&1; then
+            kaggle datasets version -p /tmp/kb/bundle -m "run ${GITHUB_RUN_ID} ${UNIT}" 2>&1 | scrub | grep -v "it/s\|B/s" | tee -a "$OUT/kaggle-session.log"
+          else
+            kaggle datasets create -p /tmp/kb/bundle 2>&1 | scrub | grep -v "it/s\|B/s" | tee -a "$OUT/kaggle-session.log"
+          fi
+          READY=0
+          for i in $(seq 1 60); do
+            st=$(kaggle datasets status "$USERNAME/metis-research-bundle-cpu" 2>&1 | scrub)
+            echo "dataset: $st" | tee -a "$OUT/kaggle-session.log"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
+            sleep 15
+          done
+          if [ "$READY" != "1" ]; then echo "DATASET NEVER BECAME READY" | tee -a "$OUT/kaggle-session.log"; exit 12; fi
+          # STALE-MOUNT GUARD (2026-10-13): twice the kernel mounted the PREVIOUS dataset version although `datasets status`
+          # said ready, executed the previous run's spec and filed it under this run (manifest named the wrong unit/run).
+          # kernel_main.py now refuses a spec that is not this run's (EXPECTED, injected by `bundle`), and `verify`
+          # below re-checks the fetched manifest; on a stale mount we wait and re-push the kernel (it re-mounts the
+          # latest version), and a result that never verifies is NOT copied into $OUT.
+          VERIFIED=0
+          for ATTEMPT in 1 2 3; do
+            rm -rf /tmp/kb/kout
+            echo "# attempt ${ATTEMPT}" >> /tmp/kb/bundle-kernel/kernel_main.py
+            timeout 300 kaggle kernels push -p /tmp/kb/bundle-kernel 2>&1 | scrub | tee /tmp/kb/push.txt | tee -a "$OUT/kaggle-session.log"
+            if grep -qi "error\|fail" /tmp/kb/push.txt; then echo "PUSH FAILED"; exit 11; fi
+            TIMEOUT_MIN=$(python3 -c "import json,sys;print(json.loads(open('/tmp/kb/info.json').read())['timeout_minutes'])" 2>/dev/null || echo 120)
+            deadline=$(( $(date +%s) + (TIMEOUT_MIN + 10) * 60 ))
+            while :; do
+              s=$(timeout 90 kaggle kernels status "$USERNAME/metis-research-run-cpu" 2>&1 | scrub)
+              echo "$(date -u +%H:%M:%S) $s"
+              case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+              if [ "$(date +%s)" -gt "$deadline" ]; then echo "TIMEOUT waiting for the kernel" | tee -a "$OUT/kaggle-session.log"; break; fi
+              sleep 30
+            done
+            echo "kernel final status (attempt ${ATTEMPT}): $s" >> "$OUT/kaggle-session.log"
+            timeout 300 kaggle kernels output "$USERNAME/metis-research-run-cpu" -p /tmp/kb/kout 2>&1 | scrub | tee -a "$OUT/kaggle-session.log" || true
+            cp /tmp/kb/kout/*.log "$OUT/kaggle-kernel.log" 2>/dev/null || true
+            python3 scripts/research/kaggle_run.py verify --dir /tmp/kb/kout/result --unit "$UNIT" --run-id "$GITHUB_RUN_ID" | tee -a "$OUT/kaggle-session.log"
+            VRC=${PIPESTATUS[0]}
+            if [ "$VRC" = "0" ]; then VERIFIED=1; break; fi
+            if [ "$VRC" = "20" ] && [ "$ATTEMPT" != "3" ]; then echo "stale dataset mount; waiting 120s then re-pushing the kernel" | tee -a "$OUT/kaggle-session.log"; sleep 120; continue; fi
+            break
+          done
+          if [ "$VERIFIED" = "1" ]; then cp -r /tmp/kb/kout/result/. "$OUT/"; else echo "RESULT NOT VERIFIED AS THIS RUN'S -- nothing copied" | tee -a "$OUT/kaggle-session.log"; fi
+          grep -rl "$USERNAME" "$OUT" 2>/dev/null | xargs -r sed -i "s|$USERNAME|<user>|g"
+          # show the kernel's own log in this job's log (the kernel is a black box otherwise); username already scrubbed
+          echo "== kaggle kernel log (tail) =="; tail -c 6000 "$OUT/kaggle-kernel.log" 2>/dev/null || echo "(no kernel log downloaded)"
+          test -s "$OUT/run-manifest.json"
+      - name: Derive the result record
+        if: always()
+        env:
+          UNIT: ${{ inputs.research_unit }}
+          POWER_STATE: ${{ inputs.power_state }}
+        run: |
+          set -euo pipefail
+          OUT="comms/research/${UNIT}/${GITHUB_RUN_ID}"
+          mkdir -p "$OUT"
+          python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" \
+            --derive-record --power-state "${POWER_STATE}" > /dev/null
+          test -s "$OUT/record-inputs.json"
+      - name: Upload the run outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-script-run-kaggle-cpu-${{ inputs.research_unit }}-${{ github.run_id }}
+          path: comms/research/${{ inputs.research_unit }}/${{ github.run_id }}
+          retention-days: 14
+          if-no-files-found: error
+      - name: Summarize
+        if: always()
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          {
+            echo "### research-script-run-kaggle-cpu — ${UNIT}"
+            echo
+            echo "* kaggle steps: \`${{ steps.kaggle.outcome }}\`"
+            echo "* outputs + record-inputs.json uploaded as artifact; landed in one batch by the next research-queue-dispatch cycle"
+            echo
+            echo '```'
+            tail -c 3000 "comms/research/${UNIT}/${GITHUB_RUN_ID}/kaggle-session.log" 2>/dev/null || echo "(no kaggle session log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail if the Kaggle run did not complete
+        if: always() && steps.kaggle.outcome != 'success'
+        run: |
+          echo "::error::the Kaggle run did not complete (${{ steps.kaggle.outcome }}) -- its session log and a producer_failed record are in the artifact and land with the next cycle."
+          exit 1

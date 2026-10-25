@@ -6,16 +6,17 @@ title: >-
 status: blocked
 cadence: once
 theme: macro
-priority: 2
+priority: 1
 blocked_on: >-
-  (a) the options round-trip cost figure (`design.cost_figure`) is DECIDED: a debit-vertical commission plus
-  bid/ask width for the alpaca_options_paper 5-symbol universe, or a clearly labelled conservative proxy; AND
-  (b) `run.inputs` is rewritten to what `.github/workflows/macro-valuation-backfill.yml` declares
-  (start_date, cadence_days, fee_frac, carry_frac_per_day), with real numbers, no `research_unit` /
-  `label_trigger` / `note` keys. Moved here 2026-10-01 (RESEARCH-W7): in `research/queue/` it failed dispatch on
-  EVERY cycle (HTTP 422: the workflow declares none of research_unit/label_trigger/note/power_state) and
-  carried `fee_frac: "NOT YET DECIDED"`, which would have been sent as a numeric input. Unblock by `git mv` back
-  to research/queue/ with status: queued once both hold.
+  RE-SCOPED 2026-10-14 (lane P4-MACRO-PROGRAMME). The two 2026-10-01 clauses are CLEARED: (a) design.cost_figure_decided
+  records a labelled conservative proxy (fee_frac 0.005, carry 0.0); (b) run.inputs carries exactly the four inputs
+  macro-valuation-backfill.yml declares (verified on origin/main 2026-10-14). ONE blocker remains, found by grading
+  this unit with scripts/research/research_queue.grade_power on 2026-10-14: an `accruing` unit must declare
+  run.inputs.research_unit so its landed rows carry the unit label, and macro-valuation-backfill.yml declares no
+  research_unit input and lands no E5 research/results record (only the scorecard file). Adding research_unit to
+  run.inputs alone would be refused with HTTP 422. Clears when the workflow declares a research_unit input AND lands
+  an E5 record via .github/actions/research-result (build row proposed to the manager: MACRO-BACKFILL-E5, Tier-1
+  CI), then `git mv` back to research/queue/ with research_unit added to run.inputs.
 kind: experiment
 
 question: >-
@@ -77,8 +78,19 @@ power:
       (data/macro_candles, regenerated each backfill run, gitignored).
 
 design:
+  cost_figure_decided: >-
+    DECIDED 2026-10-14 (P4-MACRO-PROGRAMME): fee_frac = 0.005 round trip (50 bps of underlying notional), carry_frac_per_day
+    = 0.0. LABEL: CONSERVATIVE PROXY, NOT A MEASURED FIGURE. Basis: the workflow's own documented debit-vertical
+    estimate (macro-valuation-backfill.yml fee_frac input description, "e.g. 0.005 for a debit-vertical estimate");
+    a two-leg vertical crosses four half-spreads per round trip, and for the liquid 5-symbol ETF universe a few cents
+    per leg on a ~2% debit is well under 50 bps of underlying notional, so 0.005 errs against the thesis. Alpaca's
+    options commission schedule and point-in-time chain spreads were NOT read this session (the sandbox has no egress
+    to those hosts) -- UNVERIFIED, and a measured figure is the follow-on (04 programme, Q1 rung 3). carry stays 0.0
+    on purpose: run_thesis_backtest models LINEAR underlying exposure (thesis_backtest.net_return), so a vertical's
+    theta is a payoff-shape effect, not a linear per-day drag; charging a guessed linear carry would fabricate a cost
+    the harness cannot model. The verdict is conditional on this proxy and says so.
   cost_figure: >-
-    NOT yet decided in this registration and deliberately left as the run's
+    (registration text, kept verbatim) NOT yet decided in this registration and deliberately left as the run's
     first step, not guessed here: a debit vertical's round-trip cost is
     commission + bid/ask on TWO legs, materially different from a single-leg
     equity fee_frac. Before dispatch, pull Alpaca's actual options commission
@@ -139,28 +151,17 @@ routing:
     RQ-20260928-009.
 
 run:
-  workflow: .github/workflows/macro-valuation-backfill.yml
+  workflow: macro-valuation-backfill.yml
   inputs:
-    research_unit: RQ-20260928-010
-    label_trigger: macro-valuation-backfill-now
-    fee_frac: 'NOT YET DECIDED -- see design.cost_figure'
-    carry_frac_per_day: 'NOT YET DECIDED -- see design.cost_figure'
-    note: >-
-      design.workflow_change_needed CLEARED and OBSERVED 2026-09-29: PR
-      #14043 (merged c61f13d6, verified on origin/main this session via
-      `git show origin/main:.github/workflows/macro-valuation-backfill.yml`)
-      added the fee_frac/carry_frac_per_day workflow_dispatch inputs and
-      routes a nonzero-cost run's scorecard to
-      comms/macro/thesis_p4_scorecard_realistic_cost.json, landed alongside
-      (never overwriting) the zero-cost comms/macro/thesis_p4_scorecard.json
-      baseline -- the workflow can now run this unit without risk to the
-      CAA05-0003 baseline. STILL NOT DISPATCHED: design.cost_figure (a
-      debit-vertical round-trip options cost for the alpaca_options_paper
-      venue) remains undecided -- this run must not silently reuse an
-      equity-style fee_frac guess. Next session: pull Alpaca's actual
-      options commission schedule + a representative bid/ask width for the
-      5-symbol universe (or a clearly-labeled conservative proxy, stated as
-      such), then dispatch via the label trigger with the decided figure.
+    start_date: '2005-01-01'
+    cadence_days: '7'
+    fee_frac: '0.005'
+    carry_frac_per_day: '0.0'
+  note: >-
+    The workflow routes a nonzero-cost run's scorecard to comms/macro/thesis_p4_scorecard_realistic_cost.json (PR
+    #14043, merged c61f13d6), landed alongside -- never overwriting -- the zero-cost baseline. It does not emit an E5
+    research/results record: the read-out is the scorecard file, read against decision_rule by research-ops or the
+    04 programme lane.
 
 lands:
   store: comms/macro/thesis_p4_scorecard_realistic_cost.json
@@ -171,4 +172,6 @@ related:
   - 'PI-20260927-CAA05-0003 (the zero-cost finding this unit closes honestly)'
   - 'comms/macro/thesis_p4_scorecard.json (the zero-cost baseline — NOT to be overwritten)'
   - 'docs/research/M28-macro-value-speculation-DESIGN.md'
+roadmap: [M28]
+programme: P4
 last_dispatched_at: null

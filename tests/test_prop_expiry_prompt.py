@@ -15,6 +15,19 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _prop_prompts_unretired(monkeypatch):
+    """TELEGRAM-CHANNELS (operator 2026-10-09) RETIRED the manual-flow prop
+    ticket prompts on Telegram. The machinery is kept (un-retiring is a table
+    edit in src/runtime/telegram_channels.py), so this file still pins it with
+    the retirement lifted; the retirement itself is pinned in
+    tests/test_telegram_channels.py."""
+    from src.runtime import telegram_channels as tc
+    for k in ("prop_ticket", "prop_expiry_prompt", "prop_expiry_notice",
+              "prop_invalidation_prompt"):
+        monkeypatch.setitem(tc.EVENT_CHANNEL, k, tc.TRADES)
+
+
 @pytest.fixture
 def isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("TRADE_JOURNAL_DB", str(tmp_path / "trade_journal.db"))

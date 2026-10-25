@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Implements the operator's popup decision of 2026-10-21 ~22:15Z (manager session_01CSwhZWiw15rVCkjsJ8Cpuh), answer 'Move to paper (Recommended)': remove ief_pullback_1d from the alpaca_live and alpaca_portfolio rosters (strict mirror equality kept); it stays on alpaca_paper. Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87. Also drops the now-stale alpaca_live/alpaca_portfolio ief baseline lines in check_tp_doctrine.py and check_roster_promotion_evidence.py. Held for the manager, who merges under the operator's decision. Revert: add the line back to both rosters (Tier 3). Closing observation: /api/bot/config shows ief_pullback_1d absent from alpaca_live and alpaca_portfolio and present on alpaca_paper after deploy.",
+  "why": "Tier-3 by content: removes a leg from a real-money roster (config/accounts.yaml alpaca_live). The decision is the operator's popup answer; the hold routes the merge to the manager."
+}

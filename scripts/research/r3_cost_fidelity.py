@@ -62,6 +62,7 @@ STAGE_OF_ACCOUNT = {
     "bybit_2": "S2", "alpaca_live": "S2", "ib_live": "S2",
     "bybit_portfolio": "S2-mirror", "alpaca_portfolio": "S2-mirror",
 }
+PAIRS_PREFIX = "pairs_"
 SL_FAMILY = {"sl", "sl_cross", "giveback_stop"}
 E62_DEPLOY = "2026-09-24T18:18:38+00:00"  # #12878 boot, row E62
 RATE_WINDOW_DAYS = 60
@@ -112,6 +113,27 @@ def grade(entry: List[float], exit_: List[float], modelled: Optional[float],
     else:
         out["verdict"] = INCONCLUSIVE
     return out
+
+
+def mark_pairs_exit_ungradable(cell: Dict[str, Any], leg: str,
+                               excluded: Dict[str, int]) -> Dict[str, Any]:
+    """PAIRS-GAPS / PI-20261007-N6TXSAL6-0001: say WHY a pairs cell cannot clear.
+
+    A pairs close is a SPREAD exit (pairs_revert / pairs_stop) with no
+    order-package price reference, so d3.measure() excludes every one as
+    ``exit_measured_no_reference``. n_exit stays 0 however long the soak runs:
+    the generic "need >= N each" wording would imply accrual fixes it, and it
+    cannot. The verdict is left to the registered rule; only the reason is added.
+    """
+    if not leg.startswith(PAIRS_PREFIX) or cell.get("n_exit"):
+        return cell
+    n = sum(v for k, v in excluded.items()
+            if k.startswith("exit_measured_no_reference:pairs_"))
+    cell["structurally_ungradable"] = "exit"
+    cell["why"] = (cell.get("why", "") + "; exit side is structurally ungradable "
+                   "(pairs closes are spread exits with no price reference; "
+                   f"{n} pairs exit rows excluded across all pairs legs)")
+    return cell
 
 
 def _record(leg: str) -> Optional[dict]:
@@ -208,6 +230,7 @@ def run(in_dir: Path, as_of: datetime) -> dict:
             c = grade(g["entry"], g["exit"], modelled, tol)
             if rec is None and c["verdict"] != INSUFFICIENT:
                 c["verdict"] = NO_RECORD
+            mark_pairs_exit_ungradable(c, leg, m["excluded"])
             klass = (acfg.get(acct) or {}).get("account_class")
             c.update({"account_id": acct, "account_class": klass,
                       "basis": "market" if klass == "real_money" else "simulator",
@@ -232,6 +255,11 @@ def run(in_dir: Path, as_of: datetime) -> dict:
             DIVERGENT: "DEMOTE one stage AND invalidate the Stage-0 record (rule § consequence)",
             CONSISTENT: "Gate-1 cost clause PASSES",
         }.get(lv, "none: keep accruing")
+        if lv == INSUFFICIENT and any(c.get("structurally_ungradable") for c in cells):
+            per_leg[leg]["action"] = (
+                "none: exit side structurally ungradable under RULE-R3 (spread "
+                "exits carry no price reference) -- accruing does not clear it; "
+                "needs a pairs-specific cost rule (PAIRS-GAPS)")
 
     # ---- per venue x basis, pooled (D3's floor) -----------------------------
     per_venue: Dict[str, dict] = {}

@@ -47,7 +47,7 @@ on:
     # at the next :20 instead of waiting up to 6 h. The 06:20 slot still
     # follows the IB gateway's 06:05 reset window. schedule-keeper reads these
     # crons from this file, so its dedupe/keep logic follows the change with no
-    # edit of its own; `--max-research-inflight 3`, `--max-repo-queued 10`,
+    # edit of its own; `--max-repo-queued 10` (the in-flight caps moved to scripts/research/research_compute.yaml),
     # the per-run GPU cap and the monthly ledger cap are UNCHANGED and bind
     # each run exactly as before (24 runs/day x cap 1 is the per-day GPU
     # ceiling — the ledger's $10/month still binds first). The replenisher's
@@ -70,6 +70,7 @@ on:
 permissions:
   contents: read
   actions: write   # `gh workflow run` on the routed workflow
+  issues: write    # `gh issue create --label gpu-burst-train`: the RunPod fallback is issue-triggered (ML-DATA-OFF-TRAINER)
 
 jobs:
   # schedule-keeper (scripts/ops/schedule_keeper.py, RQ-OPS-2 2026-09-28):
@@ -205,13 +206,22 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
           set -euo pipefail
-          # Backpressure (manager review 2026-09-29): defer every fire while
-          # >= 3 research compute runs are queued/in progress or > 10 runs are
-          # queued repo-wide; dispatch_queue.py counts via gh and says why.
+          # Backpressure (manager review 2026-09-29): defer every fire while the
+          # research compute runs queued/in progress reach the total cap, or > 10 runs
+          # are queued repo-wide; dispatch_queue.py counts via gh and says why.
+          # RESEARCH-ROUTER (2026-10-13): the TOTAL cap and each backend's own
+          # max_concurrent (runner 3, trainer 1, kaggle 1) now live in
+          # scripts/research/research_compute.yaml, not on this command line.
           ARGS=(--ref "${{ github.ref_name }}" --max-gpu-dispatches-per-run "${{ inputs.max_gpu || '1' }}"
-                --max-research-inflight 3 --max-repo-queued 10)
+                --max-repo-queued 10 --utilization-dir comms/research/utilization)
+          # Kaggle weekly GPU quota (token-free): unreadable = GPU units WAIT, never routed blind.
+          if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
+            pip install --quiet "kaggle>=2.0" && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
+            if [ -s /tmp/kaggle-quota.txt ]; then ARGS+=(--kaggle-quota-file /tmp/kaggle-quota.txt); fi
+          fi
           # --check-open-stamp-prs rides with the fire flag (same FIRE gate): a
           # unit stamped by an OPEN stamp PR is already dispatched (lane RQ-FIX,
           # 2026-10-06); if gh cannot list PRs the cycle defers every fire
@@ -280,6 +290,11 @@ jobs:
           mkdir -p /tmp/payload
           git ls-files -m -o --exclude-standard -- comms/research research/results research/queue \
             docs/claude/work/research-queue-dispatch-receipt.json > /tmp/payload/changed.txt
+          # A run's logs/cmd-0.log and arms/*.log match .gitignore's `*.log` / `logs/`, so
+          # --exclude-standard dropped them and a failed run landed with no readable cause
+          # (PI-20261021-6SBYWRKB-0001). Name them explicitly; the land step adds with -f.
+          git ls-files -o -i --exclude-standard -- 'comms/research/*/*/logs/*.log' \
+            'comms/research/*/*/arms/*.log' >> /tmp/payload/changed.txt || true
           cat /tmp/payload/changed.txt
           if [ -f /tmp/collected.json ]; then cp /tmp/collected.json /tmp/payload/collected.json; fi
           tar czf /tmp/payload/landing.tgz --ignore-failed-read -T /tmp/payload/changed.txt
@@ -432,7 +447,12 @@ jobs:
     # / PI-20261004-FOJGFIZF-0003): the shared wait default moved 30 -> 50
     # because pytest-run alone now takes ~35-37 min; 165 = 3 x 50 + 15. Pinned
     # by tests/test_commit_to_main_callers.py::test_budget_covers_every_wait_in_the_job.
-    timeout-minutes: 165
+    # ⚠️ RAISED 165 -> 255 and the three waits pinned to 80 (HEALTH-REVIEW-W41,
+    # 2026-10-09, RQ-COLLECTOR residual): pytest-run is now 29-64 min on main
+    # (MEASURED, 20 completed pushes 2026-10-09), so run 37965310081's batch PR
+    # #17287 (pytest-run 44 min) outlived the 50 min wait and the cycle read red
+    # with the collector innocent. 255 = 3 x 80 + 15.
+    timeout-minutes: 255
     env:
       # Read from the dispatch job, which owns THE ONE FIRE DECISION (see its env).
       # `inputs` is deliberately not consulted here: on a schedule event it is empty.
@@ -540,9 +560,14 @@ jobs:
         if: steps.rcpt.outputs.skip != 'true'
         uses: ./.github/actions/commit-to-main
         with:
-          verify-merged: "true"
+          # "false" (GH-CAPACITY-INFRA-FIRST, operator 2026-10-15: infra first on the shared runner pool):
+          # the in-run wait held an idle runner ~7 min/run. Arrival is still verified -- next cycle, by
+          # check_research_queue_dispatch_liveness.py grading the receipt ON MAIN (pages when stale/absent),
+          # which is the design that script's docstring always described. Exemption is pinned in
+          # tests/test_commit_to_main_callers.py::DEFERRED_VERIFY to this one file.
+          verify-merged: "false"
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: docs/claude/work/research-queue-dispatch-receipt.json
+          paths: docs/claude/work/research-queue-dispatch-receipt.json comms/research/utilization
           message: "chore(research-queue): liveness receipt for run ${{ github.run_id }}"
           pr-title: "chore(research-queue): liveness receipt (auto)"
           pr-body: >-

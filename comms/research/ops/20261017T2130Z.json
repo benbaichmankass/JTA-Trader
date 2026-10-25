@@ -1,0 +1,35 @@
+{
+  "run": "RESEARCH-OPS-2026-10-17-2047", "finished_at": "2026-10-17T21:30:00Z", "by": "research-ops-lane-20261017-2047",
+  "floor": 48, "floor_basis": "computed_floor(fired_24h 60)", "authoring_queue_depth": 18,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 5, "needs_review_left": 30,
+  "needs_review_note": "result_disposition_check --list: UNOWNED 5 -> 0. 027/028: the 14:47Z hand grades (fail) had been REVERTED by grader run 39062231812 (#18805) -- restored, grader fixed. 024 owner RESEARCH-TOOLING-GAPS (timeout 240 min, 12 of 15 sims); c56e-16/-18 owner REGIME-EQUITY-LEG-FETCH (producer_failed, runner lacks yfinance). 30 needs_review now all owned; UNGRADED 4 left (RQ-20260928-006 id collision PI-20261016-IKK5NFPO-0001; 8bbc-01/-02 weekly recurring; 6013-01 weekly recurring, read PASS here).",
+  "throughput": {"runnable_before": 64, "runnable_after": 57, "queued": 137, "fired_24h": 60, "results_landed_24h": 109, "hours_since_last_dispatch": 1.3, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: fresh 1.3h", "collector": "ok: 0 unreadable result files; watchdog collector incident resolved 19:25Z", "stranded_stamp_prs": "not checked (open-PR list exceeded the tool output cap)", "incident": "grader reverted session hand-grades on template-generated units (fixed in this PR)", "watchdog": "newest escalated-or-self_healed row 2026-10-17T10:53Z dispatcher self_healed; no open escalated incident"},
+  "results_read": {"pass": 1, "fail": 0, "indeterminate": 0, "units": [
+    "RQ-20261016-6013-01 PASS (trial ledger): 29 Stage-0 PASS records, 0 survive DSR>0.95 AND BHY haircut -> PROMOTION-BAR-MULTIPLICITY note",
+    "RQ-20261016-024 / c56e-16 / c56e-18 producer_failed: NOT verdicts (timeout; runner lacks yfinance) -> owners stamped",
+    "20 e35 sweep reads, all engine power_state accruing/infeasible -> recorded `underpowered` in the disposition ledger (no verdict, no config implication)"
+  ]},
+  "unlocked": [],
+  "retired": [],
+  "blocked": [{"unit": "RQ-20261016-c56e-20..26", "reason": "equity 1d legs; runner has no yfinance (same driver failed on -16/-17/-18); moved to blocked/, lever REGIME-EQUITY-LEG-FETCH"}],
+  "levers_filed": [
+    {"lever": "queue_grade.py honours grading.auto:false on generated units", "ref": "FIXED in this PR (RESEARCH-TOOLING-GAPS note)"},
+    {"lever": "prop_ev_grid resume-from-existing-sims / seeds split", "ref": "RESEARCH-TOOLING-GAPS (note appended)"},
+    {"lever": "yfinance on the research runner or dukascopy span probe", "ref": "REGIME-EQUITY-LEG-FETCH (note appended)"},
+    {"lever": "collector commits cmd logs", "ref": "PI-20261015-WNBZB5WN-0002 (re-dated 2026-10-24)"}
+  ],
+  "units_authored": ["P3-Q8-sol-1h-family (programme node; emits on next queue_replenish)"], "followups_filed": [],
+  "authoring": {"queue_depth": 18, "nodes_drafted": 1, "nodes": ["P3-Q8-sol-1h-family"],
+                "theme_shortfall": {"regime": 12, "ml_health": 7, "new_strategy_prop": 14, "infra": 5}},
+  "not_run": ["step C per-file audit of research/queue/blocked/", "routing of the ~106 due pipeline items (one re-dated)", "stranded stamp PR check", "m20 corpus: 9 unread rows (Oct 4) not read", "authoring beyond one node: budget"],
+  "handoff": [
+    "MANAGER (held PR): merge the run PR -- it edits research/queue (E57 hold) and queue_grade.py; the grader fix stops #18805-style reverts",
+    "REGIME-EQUITY-LEG-FETCH is now costing runs: pick the yfinance pin or run the dukascopy span probe; then git mv c56e-20..26 back and re-arm c56e-16/-17/-18. P3-Q3-ief-tune waits on c56e-16 PASS",
+    "RQ-20261016-024: needs prop_ev_grid resume or a seeds split before re-fire",
+    "read the 9 unread m20 rows (2026-10-04) and RQ-20260928-006 (id collision PI-20261016-IKK5NFPO-0001)",
+    "author toward regime, ml_health, new_strategy_prop, infra (largest: new_strategy_prop 14); next in authoring queue: P2-R3.g06-pass, P2-R3.c05-pass, P1-Q7-sol-tp3-prop",
+    "the pipeline holds ~106 due items, oldest unrouted 57d (routing alarm)"
+  ]
+}

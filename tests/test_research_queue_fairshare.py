@@ -149,7 +149,11 @@ def test_committed_queue_dispatches_every_theme_it_holds():
     assert err is None
     now = datetime.now(timezone.utc)
     starved, themes = _starved_themes(dq.fair_order, jobs, now, load_themes())
-    assert themes and not starved, f"themes starved of dispatch: {sorted(starved)}"
+    if not themes:
+        # Live wall-clock state: no due+queued workflow unit right now is "could not look",
+        # not a pass or a fail (CI-PYTEST-TIMEOUT-HEADROOM).
+        pytest.skip("committed queue holds no due+queued unit at this moment; nothing to check")
+    assert not starved, f"themes starved of dispatch: {sorted(starved)}"
 
 
 def _starved_synth(order_fn, jobs):

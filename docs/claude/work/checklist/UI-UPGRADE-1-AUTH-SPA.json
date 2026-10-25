@@ -1,0 +1,30 @@
+{
+  "id": "UI-UPGRADE-1-AUTH-SPA",
+  "title": "SPA (ict-trader-dashboard): integrate the Google + passkey sign-in screen and Devices admin (patch comms/ui-upgrade-1-auth + integration steps 1-5)",
+  "phase": null,
+  "state": "done",
+  "owner": "lane (session_01BE5GqpGsgTUxTEap8C85vt)",
+  "lane": "session_01BE5GqpGsgTUxTEap8C85vt",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12T08:12Z manager session_01G16FfyYSmDPQuuW55BuTmK] Push access to benbaichmankass/ict-trader-dashboard obtained this session (add_repo push OK; HEAD f2ac028 = the patch base). Lane applies comms/ui-upgrade-1-auth/ict-trader-dashboard-ui-upgrade-1-auth.patch, does README integration steps 1-5 (api.ts bearer + 401 signal, App.svelte gate, nav Devices, /ws/market ticket URL, CSP), builds + svelte-check + tests. Gate stays off API-side, so the SPA must keep working signed-out while SITE_AUTH_ENFORCE is off. Then the UI-UPGRADE-1 patch (items 1-6, 8) as a second PR if budget allows. Unblocks UI-UPGRADE-1. [manager 12:25Z] Dashboard PR #222 (sign-in screen) + #223 (mobile Settings gear) merged + live bundle verified with negative control. Operator test 10:55Z: Google 200, passkey register/begin 500 (webauthn missing from web-api venv) -> PR #17746 (install-web-api-deps). [manager 17:55Z] OBSERVED: operator signed in on Android 2026-10-12 13:39-13:40Z \u2014 web-api log POST /api/auth/google 200, passkey/register/begin 200, register/finish 200, GET /api/auth/sessions 200; operator screenshot shows Devices row 'Android \u00b7 Chrome (this device)'. Dashboard #222/#223 live. DONE.",
+  "updated_at": "2026-10-12T17:53:46Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M6"
+  ],
+  "observation": {
+    "what": "operator completes Google + passkey sign-in on the SPA (Android)",
+    "how_to_check": "web-api log POST /api/auth/passkey/register/finish 200 for the operator; Devices panel lists the phone",
+    "due_by": "2026-10-15"
+  },
+  "writeback": {
+    "roadmap": "none: owed at close (M6)",
+    "arch": "none: owed at close; written by UI-UPGRADE-1-AUTH-HARDEN"
+  },
+  "_seq": 427
+}

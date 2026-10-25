@@ -1,7 +1,7 @@
 id: RQ-20261007-023
 title: 'Stage-0 record rebuild for trend_donchian_xrp_4h (REAL MONEY, bybit_2 + bybit_portfolio) on a 1460-day window: the
   730d rebuild landed n=25, below the 30 floor (PI-20261004-P24XMV4V-0004)'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -83,3 +83,21 @@ related:
 - comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_xrp_4h.json
 - RQ-20261005-901
 - config/mandates.yaml (MD-PROMOTE-S0-S1 bar; MD-DERISK-ONLY-ROSTER-CUT)
+grading:
+  decision_rule_id: RULE-RQ1007-XRP4H-STAGE0-1460D
+  evidence:
+  - research/results/RQ-20261007-023/ro0847-RQ-20261007-023.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: 'Follow-up already filed and actioned: checklist XRP4H-PIN-RESTATE (pin re-stated in PR #17722;
+    the 1460d record''s p10 is NEGATIVE, -3.885, so SIGNAL-0005''s positive-p10 pricing changed -- a report
+    to the operator, not a roster edit). Not a template cell; the 1460d window is the leg''s whole powered
+    history, so there is no unseen window left to confirm on in-sample -- a forward check is the live
+    leg itself (monitoring, never a soak exit).'
+  population: trend_donchian_xrp_4h, 1460d, 4 folds, n_oos 46
+  read_state: measured
+  reason: 'PASS: fidelity faithful, n_trades_oos 46 >= 30, expectancy_r_oos +0.177 > 0, folds_positive
+    3 of 4 (>= 3). net_r_oos +8.14 R. Population: trend_donchian_xrp_4h config-exact record at --days
+    1460 --folds 4, fees 7.5 + slippage 3.0 bps rt + funding 1.0 bps/8h.'
+  rows: 1
+  verdict: pass

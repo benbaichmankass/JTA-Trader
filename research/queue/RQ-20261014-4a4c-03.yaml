@@ -1,0 +1,107 @@
+id: RQ-20261014-4a4c-03
+title: 'P4-Q2 placebo: does the PPI m/m surprise ''predict'' ES=F returns over a window that ENDS BEFORE the release (anchor shifted -10 trading days)? Expected FAIL'
+status: done
+cadence: once
+theme: macro
+priority: 1
+kind: experiment
+question: With every release's base bar moved 10 trading days earlier (so the h=3 and h=5 forward windows end 5-7 trading days before the print), is the IC of (surprise, ES=F forward
+  return) negative with |t_eff| >= 2.0? The surprise is unknowable in that window, so a PASS means the parent's IC is a property of the sample (trend/seasonality in both series), not
+  information.
+why_this_matters: 'Parent: RQ-20261014-de02-04 PASSED 2026-10-14 (run 38605585550): ppi_mom survey surprise vs ES=F forward return, n=139 releases 2015-01-15..2026-09-10, IC h1 -0.183
+  (t -2.17), h3 -0.281 (t -3.43), h5 -0.247 (t -2.98), expected negative sign. It was 1 PASS of 13 kinds x 3 horizons = 39 tests landed 2026-10-13/14; normal-approx two-sided p at t=-3.43
+  is ~0.0006, under the BH rank-1 threshold 0.05/39 = 0.0013, so it survives the family read, but a single-sample IC on daily closes is a lead: stability, a placebo, a second instrument
+  and a net-of-cost book are owed before it can feed a conviction axis (programme 04-MACRO-SLEEVE.md, Q2). This is the placebo the parent''s own what_it_does_not_do names as owed.'
+power:
+  expected_n: 139
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one release; 139 on file, a few drop where the shifted bar precedes the panel start. Floor (2.80/0.25)^2 = 126 at d=0.25: CLEARED at the declared effect, so a placebo
+    FAIL is informative.'
+  feasibility:
+    source: none
+    accrual_basis: 'n is bounded by the resolved ppi_mom releases with a defined survey surprise on file (a fixed historical backfill, MEASURED 2026-10-14 with econ_event_study.load_resolved_events_multi
+      over the two committed files: 139 total, 71 before 2021-01-01, 68 on/after; 118 with a non-zero surprise). Not an accrual: ~12 releases/yr add slowly; the run prints the joined
+      count and a short join lands INDETERMINATE, never padded.'
+decision_rule:
+  id: RULE-RQ-20261014-4a4c-03
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: ic_t_eff at horizons 3 and 5 with --anchor-shift-td -10.
+  rule: 'The verdict is stated FOR THE PLACEBO: PASS (= placebo shows ''edge'' = the parent is an ARTIFACT) IF at h=3 or h=5 with n >= 100, |ic_t_eff| >= 2.0 AND negative. FAIL (= placebo
+    clean, the parent survives this check) IF both horizons have n >= 100 and neither does. INDETERMINATE IF a horizon has n < 100. A significant POSITIVE placebo IC is reported in the
+    note and also counts against the parent (a two-sided artifact).'
+  what_it_does_not_do: Does not test the parent's post-release window; it only rules a sample artifact in or out.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: confirms or retires the one event-surprise lead that could seed an event-scored conviction axis for the M28 sleeve (alpaca_options_paper); information value, not
+    a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-de02-04 (one daily-close fetch, ~300 snapshot rows, rank correlations); measured run time of that parent was minutes on research-script-run.yml.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - 3,5
+  - --primary-horizons
+  - 3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.0'
+  - --expected-sign
+  - negative
+  - --anchor-shift-td
+  - '-10'
+  - --population
+  - ppi_mom releases (live + survey backfill), ES=F base bar shifted -10 trading days (placebo)
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-4a4c-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- RQ-20261014-de02-04
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+last_dispatched_at: '2026-10-16T03:01:41+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261014-4a4c-03
+  evidence:
+  - research/results/RQ-20261014-4a4c-03/38843467501.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

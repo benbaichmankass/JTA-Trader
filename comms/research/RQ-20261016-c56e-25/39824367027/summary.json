@@ -1,0 +1,161 @@
+{
+  "leg": "tqqq_trend_long_1d",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "B",
+    "net_r": 25.6301,
+    "n": 104,
+    "max_drawdown_r": 5.8753,
+    "folds_positive": 8,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=25.6301 > 0 with 8/8 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 104,
+      "net_r": 25.6301,
+      "net_r_fee_only": 26.2499,
+      "max_drawdown_r": 5.8753,
+      "by_outcome": {
+        "stop": 29,
+        "take_profit": 59,
+        "trail_stop": 16
+      },
+      "mean_bars_held": 13.942,
+      "net_r_per_capital_day": 0.0177,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2010-06-01 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2010-06-01 00:00:00+00:00",
+          "end": "2012-04-09 06:00:00+00:00",
+          "trades": 15,
+          "net_r": 2.2538
+        },
+        {
+          "fold": 2,
+          "start": "2012-04-09 06:00:00+00:00",
+          "end": "2014-02-16 12:00:00+00:00",
+          "trades": 13,
+          "net_r": 3.1451
+        },
+        {
+          "fold": 3,
+          "start": "2014-02-16 12:00:00+00:00",
+          "end": "2015-12-26 18:00:00+00:00",
+          "trades": 9,
+          "net_r": 2.4223
+        },
+        {
+          "fold": 4,
+          "start": "2015-12-26 18:00:00+00:00",
+          "end": "2017-11-04 00:00:00+00:00",
+          "trades": 13,
+          "net_r": 5.0594
+        },
+        {
+          "fold": 5,
+          "start": "2017-11-04 00:00:00+00:00",
+          "end": "2019-09-13 06:00:00+00:00",
+          "trades": 11,
+          "net_r": 3.7697
+        },
+        {
+          "fold": 6,
+          "start": "2019-09-13 06:00:00+00:00",
+          "end": "2021-07-22 12:00:00+00:00",
+          "trades": 21,
+          "net_r": 4.155
+        },
+        {
+          "fold": 7,
+          "start": "2021-07-22 12:00:00+00:00",
+          "end": "2023-05-31 18:00:00+00:00",
+          "trades": 9,
+          "net_r": 2.7257
+        },
+        {
+          "fold": 8,
+          "start": "2023-05-31 18:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 13,
+          "net_r": 2.0987
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "TQQQ",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261016-c56e-25/39824367027/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261016-c56e-25/39824367027/arms/B__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2010-06-01",
+        "--end",
+        "2025-04-09"
+      ]
+    }
+  },
+  "window": {
+    "start": "2010-06-01",
+    "end": "2025-04-09",
+    "fetch_days": 6000,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "TQQQ",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2010-06-01 00:00:00+00:00",
+      "2012-04-09 06:00:00+00:00",
+      "2014-02-16 12:00:00+00:00",
+      "2015-12-26 18:00:00+00:00",
+      "2017-11-04 00:00:00+00:00",
+      "2019-09-13 06:00:00+00:00",
+      "2021-07-22 12:00:00+00:00",
+      "2023-05-31 18:00:00+00:00",
+      "2025-04-09 00:00:00+00:00"
+    ]
+  }
+}

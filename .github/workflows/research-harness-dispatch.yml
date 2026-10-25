@@ -231,7 +231,7 @@ jobs:
     needs: [build]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 110  # was 45: commit-to-main verify-merged waits up to 80 min (W41 raised callers; this one was missed, 2026-10-11 RQ-353c-11/13)
     permissions:
       contents: write
       pull-requests: write

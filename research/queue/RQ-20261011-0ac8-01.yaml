@@ -1,0 +1,82 @@
+id: RQ-20261011-0ac8-01
+title: 'ML-RQ-RUNNER smoke: the trainer-side bake-off path end to end on a synthetic planted-signal dataset (plumbing, not research)'
+status: done
+cadence: once
+theme: infra
+priority: 1
+kind: deterministic
+question: >-
+  Does a unit declaring run.workflow research-script-run-trainer.yml + the generic ml_bakeoff engine dispatch to the trainer
+  VM, run under the trainer venv, take the shared heavy-job lock, copy its verdict back and land as an E5 result record that
+  research-ops can read and grade by the unit's registered rule?
+why_this_matters: >-
+  ML units (frontier bake-offs RQ-20261011-9da8-*) had no dispatchable route. This is the live proof of the route; its
+  PASS is the observation that closes checklist row ML-RQ-RUNNER. It says NOTHING about any model's quality: the dataset is
+  synthetic with a planted signal so the verdict is known in advance.
+why_not_inferential: >-
+  A plumbing check on a seeded synthetic dataset whose planted signal makes the expected outcome certain (numpy_logit must
+  beat the class-prior baseline by a wide margin); there is no sampling question to power.
+decision_rule:
+  id: RULE-RQ1011-0AC8-01-ML-RUNNER-SMOKE
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: 'verdict.json from scripts/research/ml_bakeoff.py: paired purged-CV delta macro_f1 of numpy_logit vs the prior baseline on 2 synthetic groups x 4 folds; plus the arm_status of the lightgbm control.'
+  rule: >-
+    PASS IF the E5 record landed with read_state=measured, n>0, numpy_logit delta macro_f1 vs prior >= +0.05 on BOTH groups,
+    and the record's measurement lists the lightgbm control's status (ok OR unavailable-with-reason; either is informative).
+    FAIL IF measured but the delta is < +0.05 on either group (the engine or CV is broken). A producer_failed/no_data record
+    is NOT a verdict: it means the route is broken - read run-manifest.json / trainer-session.log, fix, re-queue.
+  what_it_does_not_do: >-
+    Grades no model, touches no registry, dataset or config, and proves nothing about TSFM/tabular learners (their
+    availability on the trainer is reported by the real units' arm_status, not by this one).
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Seeded 2 x 2400-row synthetic frame, numpy_logit and (if present) lightgbm; seconds of CPU.
+run:
+  workflow: research-script-run-trainer.yml
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261011-0ac8-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset: {kind: synthetic, groups: [G0, G1], n: 2400, seed: 11, signal: 2.0, ts_col: ts, target: label, features: [x0, x1, x2, x3]}
+  cv: {folds: 4, embargo_rows: 10, min_train_frac: 0.4}
+  baseline: prior
+  controls: [lightgbm]
+  candidates: [logit]
+  learners:
+    prior: {kind: prior}
+    logit: {kind: numpy_logit}
+    lightgbm: {kind: lightgbm, params: {n_estimators: 100}}
+  rule:
+    min_folds: 3
+    pass_if:
+      - {group: [G0, G1], vs: baseline, op: '>=', value: 0.05}
+    fail_if_no_candidate_reaches:
+      - {group: any, vs: baseline, op: '>=', value: 0.05}
+roadmap: [M25]
+related:
+- ML-RQ-RUNNER
+- scripts/research/ml_bakeoff.py
+- .github/workflows/research-script-run-trainer.yml
+last_dispatched_at: '2026-10-11T19:51:45+00:00'
+grading:
+  attested: RULE-RQ1011-0AC8-01-ML-RUNNER-SMOKE
+  auto: true
+  decision_rule_id: RULE-RQ1011-0AC8-01-ML-RUNNER-SMOKE
+  evidence:
+  - research/results/RQ-20261011-0ac8-01/38169810099.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

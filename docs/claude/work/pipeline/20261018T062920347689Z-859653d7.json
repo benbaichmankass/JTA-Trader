@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "a research/queue unit with a registered rule measures forming-vs-closed for the alpaca_live legs on intraday session data (its result named here), or the manager kills this item with the acceptance of the gap stated as the reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261018-WCDIDFTE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DECISION-BAR-CLOSED-1018 (manager session_01VduHYzdaXe27wTDBLSu8ao), 2026-10-18, PR #18884",
+    "rerun": "grep -c '_fetch_session_frame(' src/runtime/strategy_signal_builders.py; ls research/queue | xargs grep -l 'alpaca_live.*decision_bar\\|forming.*ief_pullback_1d' 2>/dev/null  # holds while no unit measures forming-vs-closed for a US-session leg"
+  },
+  "state": "queued",
+  "what": "[strategy][decision-bar] 14 US-session legs decide on the FORMING session bar while their Stage-0 records score the CLOSED bar, and none has a forming-vs-closed measurement: alpaca_live (REAL MONEY) ief_pullback_1d / slv_pullback_1d / iaum_pullback_1d; alpaca_paper + alpaca_portfolio + alpaca_options_paper spy/qqq/iwm/tqqq/qld/splg/scha_trend_long_1d, gld/tlt/ief/slv/gdx/iaum_pullback_1d, slv_trend_1h; plus ib_paper mes_trend_long_1d, mgc/mhg_pullback_1d, mgc_trend_1h (plain fetch, no decision frame) -- READ 2026-10-18 in src/runtime/strategy_signal_builders.py (_fetch_session_frame docstring: 'US-session decision_bar: forming leg'; none of these builders calls _decision_frame). Lane DECISION-BAR-CLOSED-1018 measured the six crypto variant-builder legs (RQ-20261018-2a10-01, Binance 1m proxy) but the forming-bar harness mode (scripts/research/forming_bar_entries.py) needs 1m data for the traded symbol, which Binance does not carry for ETFs/futures. Decision needed: a research unit that establishes an intraday session-bar source for the alpaca_live symbols (Alpaca bars API from the VM, or dukascopy) and replays forming-vs-closed with the same RULE-RQ-20261018-2a10-01 holdout grade -- or a stated acceptance of the gap for 1d legs (a daily leg's forming-bar read inside RTH is a different mechanism from the crypto 2-min tick: it decides once per session in the close window for pairs, but every tick for these legs)."
+}

@@ -105,5 +105,35 @@ wire-up. See trainer-vm-mode.md § 5 for the full lifecycle.
   Migration tooling (`provision-live-vm`, `cutover-live`, `terminate-instance`)
   remains for rollback / future moves.
 
+## Utilisation telemetry, idle-reclaim check and tenancy limits (added 2026-10-13)
+
+Rows `COMPUTE-UTIL-TELEMETRY` + `COMPUTE-OCI-QUOTA-CHECK`. Workflow `compute-util-telemetry`
+(daily 06:37 UTC, or a `compute-util-telemetry`-labelled issue); logic in `scripts/ops/compute_util.py`.
+
+- **Ledger** `comms/cloud/compute_util_ledger.jsonl` — one row per (host, UTC day), 60 d rolling: CPU / memory
+  daily p95 and max and network p95 from the OCI Monitoring API (`oci_computeagent`; covers the gateway with no SSH),
+  disk % + load from a read-only SSH sample (gateway via ProxyJump through the live VM). Each metric carries
+  `read_state` `measured | could_not_look`; an unread host is `null`, never 0, and still gets a row.
+- **Oracle idle rule** (docs.oracle.com Always Free Resources, fetched 2026-10-13): idle if over 7 days CPU p95 < 20 %,
+  network < 20 %, and (A1 only) memory < 20 %. `max(daily p95)` is a conservative upper bound on the 7-day p95.
+  Verdicts per host in `comms/cloud/compute_reclaim_state.json`: `at_risk` (all < 20 %), `watch` (all < 30 %), `ok`,
+  `insufficient`/`unknown` (not enough measured days; fails the run). ONE Telegram alert per host per status change.
+  ⚠️ NETWORK IS NOT GATED: Oracle's page does not define "network utilisation", and the first run's bytes->% conversion
+  (assumed 1 Gbps/OCPU) gave 570-1,240 %, so the unit is unverified. Raw p95 bytes are kept; the verdict is cpu+mem only.
+- **Spare capacity for the research router** `comms/cloud/compute_spare.json` (reader: `compute_util.get_spare("trainer")`):
+  `spare_ocpus` / `spare_memory_gb` = shape x (1 - max daily p95, 7 d); `null` + `read_state: could_not_look` when unread.
+- **Tenancy limits** `comms/cloud/oci_limits.json` — `standard-a1-core-count` / `standard-a1-memory-count` from the
+  Limits API (`list_limit_values` + `get_resource_availability`). **READ 2026-10-13 (first run, workflow run 38400278448):**
+  limit **250 cores / 1,666 GB** in the single AD (`eu-paris-1`), used **4 / 24**, available 246 / 1,642. So the tenancy is
+  NOT capped at the Always-Free 2 OCPU / 12 GB: 4/24 is well inside the service limit and no quota path threatens the
+  three instances. What this does NOT show is billing: Oracle's page says upgraded tenancies are charged above the free
+  1,500 OCPU-h / 9,000 GB-h per month; 4/24 all month is about 2,880 OCPU-h / 17,280 GB-h, so some overage is expected if
+  the tenancy is upgraded. Unverified (billing console); the operator reports no charges.
+- **First readings** (daily p95 over 7 complete days 2026-10-05..11, cpu / mem; `max` of the daily p95s): live 87 % / 22 %,
+  trainer 100 % / 91 % (memory swings 27-91 % by day), gateway 72 % / 30 %. Nothing is within reach of Oracle's
+  20 % idle line on CPU; the gateway, previously unmeasured, is busy (CPU p95 43-86 %). Spare capacity (conservative):
+  trainer 0.0 OCPU / 0.5 GB, live 0.25 OCPU / 9.4 GB, gateway 0.28 OCPU / 4.2 GB. Disk was not sampled on run 1
+  (SSH hosts unresolved); addresses are now taken from the OCI API.
+
 When in doubt about scope, default to the **live-VM** rules and ask.
 

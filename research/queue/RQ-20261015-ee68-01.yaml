@@ -1,0 +1,113 @@
+id: RQ-20261015-ee68-01
+title: 'velotrade_1 risk sweep: current ETH+SOL 1h book at risk 0.005 (A) vs the same book PLUS the 4h Donchian pair at risk 0.0025 / 0.0035 / 0.0045 -- does ANY level dominate A on every seed?'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: On the same 5 pinned seeds, is there a risk level X in {0.0025, 0.0035, 0.0045} at which the book PLUS trend_donchian_eth_4h + trend_donchian_sol_4h beats velotrade_1's current
+  2-leg book at risk 0.005 on ev_net_usd_per_life AND has >= its survival (p_alive_at_horizon) on EVERY seed, under the venue stack, switch armed?
+why_this_matters: 'FOLLOW-UP TO RQ-20261015-1bf3-02 (manager, 2026-10-15 13:47Z). 1bf3-02 FAILED its pre-registered rule: C4H050 had ~4x A''s ev per life (660-681 vs 159-175)
+  on every seed but 1.6 / 1.8 pp lower p_alive on seeds 1 and 5, so the incumbent stands and the 4h pair is pool-only. That FAIL is final; this unit does NOT re-read it. The ev gap is
+  large enough that the manager asked one NEW question, registered here before any run: does a LOWER risk on the add arm buy back the survival while keeping ev above A? DISCLOSED BEFORE
+  REGISTRATION: (1) no arm at 0.0025 / 0.0035 / 0.0045 has been run on this book; A@0.005 is byte-identical to 1bf3-02''s arm A (same --common, same seeds), so A''s numbers are known
+  (ev 159.36-174.79, p_alive 0.2655-0.2787). (2) prop_ev_sim''s --risk-pct is book-wide: each C4Hxxx arm runs ALL FOUR legs (incumbents included) at X, not only the 4h pair --
+  per-leg fractional risk does not exist in the sim (only flat $ via --leg-risk-usd). So a PASS answers "the 4-leg book at X beats the 2-leg book at 0.005", and a Tier-3 proposal
+  from it would change velotrade_1''s risk_pct as well as its roster -- stated so the decision is not read as a pure roster add. (3) Window mismatch as in 1bf3-02: 4h rows are 1095 d,
+  incumbent rows 730 d; reported, not equalised. GRADE: prop_ev_grid --grade any_c_dominates (added with this unit): unlike cushion_vs_flat it does not pick the highest-ev C first, because
+  the highest-risk C is the one most likely to give up survival.'
+power:
+  expected_n: 116
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '4h pair: 116 committed 1095 d trades each (RQ-20261014-f516-10 record); incumbent ETH 355 / SOL committed 730 d trades. Same evidence as 1bf3-02.'
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed trade evidence under the firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261015-ee68-01-C4H-RISK-SWEEP
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: Per seed and arm, path-mode ev_net_usd_per_life and p_alive_at_horizon over the velotrade_1 book (prop_ev_grid, venue stack from the ruleset, switch armed at 0.8). A = the
+    incumbent ETH+SOL 1h book at risk 0.005; C4H025 / C4H035 / C4H045 = A's legs plus the 4h ETH+SOL Donchian legs, the whole book at risk 0.0025 / 0.0035 / 0.0045.
+  rule: 'prop_ev_grid --grade any_c_dominates, mechanically: PASS IF SOME C4Hxxx arm has ev > A''s AND p_alive_at_horizon >= A''s on ALL 5 seeds -> a Tier-3 proposal (roster add
+    of the 4h pair AND velotrade_1 risk_pct to that X; if several pass, the highest mean ev among the passing levels) written as a note on the owning checklist row for the manager --
+    never a config edit, never a promotion claim. FAIL IF no C4Hxxx arm dominates A on every seed -> incumbent stands at 0.005, the 4h pair stays pool-only, and this risk band is
+    closed for the pair. NULL (indeterminate) only if an arm is missing or shares no seed with A -> nothing is read.'
+  min_n: '88'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 125
+  basis: '1bf3-02 ran 2 arms x 5 seeds at 4,000 lives in 61 min (run 38730577903, --jobs 4); this is 4 arms x 5 seeds, so ~2x.'
+  backend_note: 'Repo data only (committed trade JSONL + ruleset), no GPU. The router sends cpu_long to github_runner; the trainer is reserved for trainer-resident data (1 OCPU,
+    would run this 20-cell grid several times slower inside the daily cycle''s box) and kaggle_cpu takes only routing.published_data units, so neither idle backend fits.'
+compute: cpu_long
+value:
+  bucket: information
+  usd_at_stake_per_month: 120
+  confidence: 0.3
+  basis: 'stand-in, same as 1bf3-02: pool-admission follow-up; information until a Tier-3 proposal. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl
+  - --arm
+  - A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+  - --arm
+  - C4H025=--sizing balance --risk-pct 0.0025 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl --lev-cap trend_donchian_eth_4h=5 --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --lev-cap trend_donchian_sol_4h=5
+  - --arm
+  - C4H035=--sizing balance --risk-pct 0.0035 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl --lev-cap trend_donchian_eth_4h=5 --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --lev-cap trend_donchian_sol_4h=5
+  - --arm
+  - C4H045=--sizing balance --risk-pct 0.0045 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl --lev-cap trend_donchian_eth_4h=5 --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --lev-cap trend_donchian_sol_4h=5
+  - --common
+  - --trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - any_c_dominates
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - 'RQ-20261015-ee68-01: velotrade_1 C4H risk sweep 0.0025/0.0035/0.0045 vs A@0.005'
+  inputs:
+    research_unit: RQ-20261015-ee68-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261015-1bf3-02.yaml
+- research/queue/RQ-20261015-1bf3-03.yaml
+- research/queue/RQ-20261015-1bf3-04.yaml
+- research/queue/RQ-20261015-1bf3-05.yaml
+- research/queue/RQ-20261015-1bf3-06.yaml
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/PROP-BOOK-SEARCH-1095D.json
+what_it_does_not_do: 'Changes no roster, risk cap or config. Does not re-grade 1bf3-02. Does not test the 4h pair at a lower risk with the incumbents held at 0.005 (the sim has no
+  per-leg fractional risk; a flat-$ --leg-risk-usd variant would be a separate question). Window mismatch (1095 d vs 730 d) reported, not corrected. Same-symbol netting across the
+  1h and 4h ETH legs only as far as --no-hedge models it.'
+last_dispatched_at: '2026-10-15T15:07:24+00:00'
+grading:
+  attested: RULE-RQ-20261015-ee68-01-C4H-RISK-SWEEP
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-ee68-01-C4H-RISK-SWEEP
+  evidence:
+  - research/results/RQ-20261015-ee68-01/38757570688.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

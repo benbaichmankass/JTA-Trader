@@ -65,7 +65,18 @@ paragraph exists; the mechanism changed, the obligation did not.)
 7. **Propose AI experiments** — new manifests, new features, new
    datasets, new model families to try (§ "Experiment proposals").
 8. **Drain the ml-review backlog** (§ "Draining the backlog").
-9. **Emit the response JSON** + **post a one-line update to the Claude
+9. **Run the ML plan loop** — plan vs measured progress, plumbing
+   validation, new ideas, roadmap + work-queue write-back (§ "The ML plan
+   loop"). **Weekly, every run.** This is the step that keeps the ML build
+   from getting a burst of work only when someone remembers. It includes the
+   **frontier scan** (`frontier-research` skill: outside models/methods →
+   pre-registered units, plus `ml_plan_status.py --diversity`; the whole scan → run → read → improve loop is written once in that skill, § "The research → test → improve loop") — operator,
+   2026-10-11: the mandate is *better models*, not variations of the first good one.
+9a. **Run the drift scan** (plan-only) and turn drift that persists across
+   2 consecutive weekly reads into drift-remediation rows (§ "The drift
+   scan"). **Weekly, every run** — it replaced the retired ~8/day
+   `ict-drift-retrain.timer` (operator, 2026-10-25).
+10. **Emit the response JSON** + **post a one-line update to the Claude
    channel** (§ "Output" + § "Posting to the Claude channel").
 
 ## Out of scope (DO NOT do here)
@@ -178,20 +189,25 @@ the trainer relay errored):
   window (≤24h for a daily timer) with `overall_rc=0`. `concern` on
   non-zero `ExecMainStatus`, persistent `FAILED`/`error` lines, or
   last run >72h.
-  - **Single-manifest OOM quarantine — MANDATORY check
-    (BL-20260717-TRAINER-SINGLE-MANIFEST-OOM).** Scan the cycle log
-    (`training_cycle.jsonl` / `/api/bot/ml/cycle`) for
-    `manifest_quarantine_tripped` and `manifest_quarantined` events. These are
-    the trainer's durable escalation that a manifest OOMs *alone* on the 6 GB
-    box (it can't commit a backlog item itself). A quarantine trip is a
-    **required flag** — it means that manifest hasn't trained for ≥3 cycles.
-    You OWN the disposition (Rule 3, `docs/claude/trainer-resource-protocol.md`):
-    (a) shrink its peak RSS (dataset chunking / shorter 5m window — a manifest
-    change, Tier-3 propose), (b) route it to the GPU burst (note LightGBM is
-    CPU-bound, so the burst just gets it off the box — no speedup), or (c)
-    drop/split it. File a `docs/claude/work/PIPELINE.jsonl` row (`scripts/ops/pipeline.py`) naming the manifest and the
-    chosen disposition; the quarantine self-clears once it trains fit or after
-    the recheck window. Known first case: `btc-regime-5m-lgbm-flow-v1`.
+  - **Single-manifest OOM red flag — MANDATORY check
+    (BL-20260717-TRAINER-SINGLE-MANIFEST-OOM; quarantine retired under the
+    NO-HALT directive 2026-10-09, "There is no halting.").** Scan the cycle log
+    (`training_cycle.jsonl` / `/api/bot/ml/cycle`) for `manifest_oom_red_flag`,
+    `manifest_oom_retry` and `manifest_oom_recovered` events. A red flag is the
+    trainer's durable escalation that a manifest OOMs/times out *alone* on the
+    6 GB box on 3 consecutive cycles (it can't commit a backlog item itself);
+    it carries the streak and the OOM diagnosis (exit-code meaning, cap,
+    stderr tail). The manifest is NOT skipped — it is retried every cycle — so
+    the flag is a **required disposition**, not a status. You OWN it (Rule 3,
+    `docs/claude/trainer-resource-protocol.md`): (a) shrink its peak RSS
+    (dataset chunking / shorter 5m window — a manifest change, Tier-3 propose),
+    (b) route it to the GPU burst (note LightGBM is CPU-bound, so the burst
+    just gets it off the box — no speedup), or (c) drop/split it. File a
+    `docs/claude/work/PIPELINE.jsonl` row (`scripts/ops/pipeline.py`) naming the
+    manifest and the chosen disposition; `manifest_oom_recovered` closes it.
+    Historical logs may still show the retired `manifest_quarantined` /
+    `manifest_quarantine_tripped` events. Known first case:
+    `btc-regime-5m-lgbm-flow-v1`.
 - **`trainer_datasets`** — `ok` if `datasets-out/` has the expected
   families built within 72h. `concern` if no datasets dir or all
   builds error.
@@ -468,6 +484,153 @@ and carry what `scripts/ops/pipeline.py::validate` demands: `id`, `what`,
 `origin{kind,ref,rerun}`, `due_when{kind,clears_when|due_date,check_every_days}`,
 `next_action`, `state` (plus `tier`/`severity`); a `done`/`killed` record
 needs a `terminal_reason`.
+
+## The drift scan — REQUIRED each run (operator, 2026-10-25, binding)
+
+**Why it is here and not on a timer.** The `ict-drift-retrain.timer` (~8 scans/day) was retired
+2026-10-25 (row `DRIFT-SCAN-RETIRE`). MEASURED 2026-10-21 (PI-20261021-WG8OPB7N-0002): the scans
+flagged 9 manifests and retrained 0 (`RETRAIN_PLAN_ONLY=1`), while the daily training cycle
+retrained 67. Transient drift therefore self-corrects on the daily cycle; the scan's only value
+is spotting **persistent** drift, which is a multi-day judgement. Operator: *"we still need to at
+least be measuring drift and using that information on the workplan, but it doesn't need to be 8
+times a day"*, and drift as *"part of the regular ML review"*. **`scripts/ops/run_drift_retrain.sh`
+is kept, plan-only.** Do not re-add a timer and do not set `RETRAIN_PLAN_ONLY=0`.
+
+**1. Run it** (one trainer-vm-diag block, batched with the trainer-state block above; the unit is
+a oneshot so `start` returns when the scan is done, and it queues behind the heavy-job lock):
+
+```
+cmd: |
+  sudo systemctl start ict-drift-retrain.service
+  systemctl show ict-drift-retrain.service -p Result,ExecMainStatus
+  python3 - <<'PY'
+  import json, datetime as d
+  cut = (d.datetime.utcnow() - d.timedelta(hours=1)).isoformat()
+  rows = [json.loads(l) for l in open("/home/ubuntu/ict-trading-bot/runtime_logs/drift_retrain.jsonl") if l.strip()]
+  rows = [r for r in rows if r["ts"] >= cut]
+  print(len(rows), "rows;", sorted({r["action"] for r in rows}))
+  for r in rows:
+      if r["action"] in ("dispatch", "skip_no_manifest"):
+          print(r["ts"], r["action"], r["model_id"], r.get("manifest_path"))
+  PY
+```
+
+**Output lands** in `runtime_logs/drift_retrain.jsonl` on the trainer (one JSONL row per head per
+scan: `ts`, `model_id`, `manifest_path`, `action`) and the unit journal. The review **copies the
+drifted list into the run record** (`comms/ml-plan/<stamp>.json`, key `drift`, below), because the
+trainer log is not in git and the next run needs this one as its baseline.
+*Drifted* = `action` is `dispatch` (drift on a head that resolves to a manifest) or
+`skip_no_manifest` (drift, no manifest to retrain: a finding by itself). `skip_no_drift`,
+`skip_thin_data` and `skip_stale_drift` are not drifted. A nonzero rc other than 11, or a missing
+or empty log, is **could-not-look**, never "no drift": record it as an anomaly and file the fix.
+
+**2. The 2-consecutive-weekly-reads rule.** Read the previous record's `drift.drifted` from the
+latest file in `comms/ml-plan/`. A model_id drifted in **this** read **and** the previous one is
+*persistent*; a first-time one, or any model with no previous record, is *watch* (recorded, no
+row). Each persistent model gets a **drift-remediation row** via `scripts/ops/checklist.py add`
+(title `DRIFT-REMEDIATE-<model_id>`, `roadmap` a milestone id, `note` carrying the two read dates
+and the `shadow-drift` numbers), or a `research/queue/` unit if it needs a measurement first. Then
+apply the **`drift-remediation` skill** (`python -m ml shadow-drift --model-id <id>`; drift-only
+with `drift_clean` now passing → no action; a real capability failure → feature/label fix shipped
+as a new version, operator promotes). If a row for that model already exists, add a note, not a
+duplicate. A model absent from one read is *watch* again.
+
+**3. Record** under the run record's `drift` key: `{"scan_rc": 0|11, "heads_scanned": N,
+"drifted": ["model_id", ...], "persistent": [...], "watch": [...], "rows_filed": [...],
+"could_not_look": false}`, and report the persistent list in the response `recommendations`.
+
+## The ML plan loop — plan vs measured, every run (operator, 2026-10-11, binding)
+
+**Why it exists.** The ML / AI-trader build is a long program (research *and* infra). Without a
+recurring review the plan decays into a memo: units sit blocked on levers nobody filed, heads go
+silent unnoticed, and the roadmap describes a state that no longer exists. Operator, 2026-10-11:
+the ML plan must be *"in the work and research queues"* with *"mechanisms … for manual (Claude)
+review and adjustment of ML research and infra progress … open-ended research for new ideas/builds,
+validating the plumbing, updating the roadmap and work queue from results."* This section is that
+mechanism. It is part of this review, not a second review: **do not duplicate** the lifecycle,
+promotion and soak-integrity work above — the loop *consumes* it (its findings are the plumbing
+and measured-state inputs) and turns it into plan movement.
+
+**The artefacts (all committed; the loop edits only these):**
+`ROADMAP.md` § "AI trader (ML) — build plan" (human plan + measured-state table) ·
+`docs/plans/ml-plan-items.yaml` (every plan item → its checklist row or `research/queue/` unit +
+the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker) ·
+`comms/ml-plan/<YYYYMMDDTHHMMZ>.json` (the run record the next run reads as its baseline).
+
+**Steps — in this order; each ends in a filed row/unit, a write-back, or "none, because":**
+
+1. **Check the plan against the field.** `python3 scripts/ops/ml_plan_status.py --plumbing`
+   (exit 0 clean · 1 findings · 2 *could not look* — a 2 is an incident, never "clean").
+   Every `ORPHAN` / `CLOSED-OPEN` / `OPEN-DONE` / `STALE` / `UNPLANNED` flag is resolved in this
+   run: re-point the item to a live row, close it with the row's terminal reason, or file the
+   missing row. An `UNPLANNED` ML row is either folded into the plan or killed.
+2. **Read the results that landed** since the last record (`git log --since=<last record>
+   -- research/results comms/research`, filtered to plan refs). research-ops grades them; *you*
+   read what they mean for the plan: set the item's state, update the roadmap's measured-state
+   table with the new numbers **and their locators**, and re-check the plan's INFERRED statement
+   ("only the volatility regime earns an order-influencing role") against them. A line is killed
+   only by its registered exhaustion condition, never by one bad pass (operator, 2026-09-27).
+3. **Validate the plumbing** (the `--plumbing` output plus the lifecycle audit above). A silent or
+   constant head with no tracking row is a finding: fix it (in tier), file a row with an
+   observation that closes it, or put the Tier-3 call to the operator via the classified popup path.
+   Add a newly *explained* silence to `plumbing.tracked` **with the owning row** so it stops
+   re-alarming without being forgotten. The weekly question the plumbing section answers:
+   *can a signal go from raw data to a graded, served, logged prediction and back to a label
+   without a hole?* — trainer cycle, dataset builds, registry stage, served-feature parity
+   (present AND non-default AND equal), shadow-log liveness, label coverage, drift reference.
+4. **Generate ideas — the standing quota is at least one new idea or build per run, or a written
+   "none, because".** Sources, in order: (a) what step 2/3 just surfaced (a surprising number, a
+   head pair training to identical metrics, a unit that passed on one stratum), (b) the plan's
+   "what would change this plan" list, (c) a bounded outside-in look (a technique or information
+   class the registry has never tried: label sources, cross-asset or breadth features, consensus
+   across heads, non-price information), and (d) **the frontier scan** — read the previous
+   `frontier` block, run `python3 scripts/ops/ml_plan_status.py --diversity`, and run the weekly
+   scan of outside models/methods per `.claude/skills/frontier-research/SKILL.md` (the manager
+   dispatches it as its own `FRONTIER-SCAN-<date>` lane the same day; if that lane has not run,
+   run Steps 0–5 of the skill here). A `CONCENTRATION` or `FAIL-STREAK` finding is resolved in the
+   run like any plan flag: re-point capacity to an untested family or retire the line by its
+   registered exhaustion rule — never queue another variation of a crowded family. Each idea becomes a `research/queue/` unit with a
+   decision rule registered **before** the run (see `perf-followup` § "Filing a queue unit"), or —
+   if its instrument is missing — a checklist row for the lever plus the unit in
+   `research/queue/blocked/` naming it. A new hand-written unit holds for a human merge (E57);
+   put it in a hold PR with `recorded_decision: {kind: operator_decision, ref: <row>}`.
+5. **Write back and re-prioritise.** Update `ml-plan-items.yaml` (add/close items *only* with
+   their row or unit), the roadmap table's "Measured state" block (date + locators) and its
+   "Order of work" line if the evidence moved it. Close, kill or re-dispatch stale rows with a
+   stated terminal reason. Tell the manager which rows are next by value per cost — the manager
+   dispatches; this review does not spawn lanes or schedule anything.
+6. **Record.** Write `comms/ml-plan/<stamp>.json`:
+   `{"run": "<session>", "finished_at": "...", "plan_items": N, "open": N, "flags": [...],
+   "plumbing_findings": [...], "results_read": [{"unit": "...", "verdict": "...", "plan_item": "..."}],
+   "ideas": [{"id": "RQ-…|row", "source": "a|b|c|d", "rule_registered": true}] or "none: <because>",
+   "frontier": {…the block defined in the frontier-research skill § "The run record"…},
+   "drift": {…the block defined in § "The drift scan" above…},
+   "writebacks": ["ROADMAP.md", "ml-plan-items.yaml", ...], "rows_filed": [], "units_filed": [],
+   "next_by_value_per_cost": ["…"], "handoff": ["…"]}`
+   and cite its path in the response JSON's `sources` and in the ping.
+
+**Cheap daily/between-run touchpoints (no lane, no cost):** the manager's twice-daily review runs
+`python3 scripts/ops/ml_plan_status.py` (no `--plumbing`) and works any flag; research-ops, on
+reading a result whose unit is a plan ref, sets the plan item's state in the same PR
+(`research-ops` § D); `perf-followup` files ML-shaped lessons under the plan's track N.
+
+**First scheduled cycle, corrections (2026-10-11 run, fixed in this text):**
+- Name the lane's own checklist row `ML-REVIEW-<YYYYMMDD>`. Before this run the checker flagged it
+  `UNPLANNED` (only `ML-ROADMAP-LOOP` was exempt); `ml_plan_status.py` now exempts that name pattern (plan item `ML-V2`).
+- Fire the one batched trainer-vm-diag issue FIRST, before the direct-HTTPS pulls and the backlog walk:
+  the Actions runner queued it for 20+ minutes on 2026-10-11, and everything stage-guard/gate-check-shaped
+  waits on it. Direct HTTPS (`/api/bot/ml/{registry,status,cycle}`, `shadow/{stats,drift}`) answered in seconds.
+- `scripts.ops.pipeline.load()` returns a `LoadResult`, not a list: iterate `.items` (dict by id). Record a re-read
+  of a still-open row with `python3 scripts/ops/pipeline.py --redate <id> --observation ... --next-due ...`
+  (or `pipeline.redate()`); close with `append(rec, intent="update", based_on=read_log(STORE).sources[id])`.
+- When a stage decision lands, update `plumbing.expected_registry_stages` in `docs/plans/ml-plan-items.yaml`
+  in the same PR/run that observes the registry change, or the next `--plumbing` run flags it.
+- The cycle-1 record says `plan_items: 28`; the yaml and the checker count 25. Trust the checker.
+
+**Hard limits (unchanged):** the loop never promotes a model past `shadow`, never edits
+`config/strategies.yaml` / `config/accounts.yaml`, never places an order, never creates a
+cron/trigger. A change to cadence is a request to the manager, written in the run record's
+`handoff`.
 
 ## Posting to the Claude channel
 

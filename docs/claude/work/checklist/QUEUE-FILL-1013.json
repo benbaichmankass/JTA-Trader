@@ -1,0 +1,40 @@
+{
+  "id": "QUEUE-FILL-1013",
+  "title": "Research queue fill 2026-10-13: 21 pre-registered own_losses + structural units; runnable census made router-aware",
+  "phase": "R",
+  "state": "landed_unproven",
+  "owner": "lane QUEUE-FILL-1013",
+  "lane": "session_01SzsfmkqkXFpt6KsLgBNJSX",
+  "model": "sonnet",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17880
+  ],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-13 ~15:00Z (via manager session_01G16FfyYSmDPQuuW55BuTmK): fill the research queue now, ONLY the own_losses (30%) and structural (25%) buckets; AI-trader/frontier/information left for tomorrow's planning. MEASURED 15:02Z (check_research_queue_throughput.py): runnable 5 of 200 queued, floor 25. BUILT: 21 new hand-written units RQ-20261013-407c-01..21, all on the existing token-free path (scripts/research/exit_lever_ablation.py --grade sweep, which runs the real Stage-0 harnesses with the full cost stack via regime_debt_matrix.build_harness_cmd), compute cpu_light/cpu_long, value block on each, decision_rule registered before any run. OWN_LOSSES (12): entry depth pullback_frac on xrp/ada/eth_pullback_2h (-01..-03; the M21 depth_threshold column was PENDING for the family); adx_min floor on xrp/ada (-04,-05); re-entry cooldown on xrp/ada_pullback_2h (-16,-17; answers perf-followup lesson L3 loss clustering); ict_scalp cooldown xrp_5m/xrp_15m/sol_15m (-06,-07,-09) and time-stop xrp_5m/xrp_15m (-08,-18) (the scalp family is the largest net-R loser, RQ-20261012-75b2-05). STRUCTURAL (9): three a-priori UTC session blocks (Asia 00-07, US-open 12-16, late 20-23) on seven crypto legs (-10..-15,-19; a lone pass is a lead, a Tier-3 filter needs >=4 of 7); hot-vol-tail entry skip on trend_donchian_eth / _sol 1h (-20,-21). TOOLING (2, both Tier-1): (1) exit_lever_ablation.py now accepts ict_scalp legs; (2) queue_replenish.dispatchable() now counts a unit that declares a `compute:` class the router can place - before, every router-style unit (no run.workflow, as PLANNING.md 1b instructs) was invisible to the runnable census, the 25 floor, the health alarm and the refill: the dispatcher dry run would fire them while the census read 5. Measured after: runnable 27. NOT DONE / HONEST LIMITS: no unit has run; every verdict is a pre-registered materiality rule (dR bar, no-worse drawdown, 3-of-4 calendar folds), not a significance test, and the 7-leg session family is 21 arms (read lone passes as leads). Each unit's command was smoke-run on a 2026-07..10 sub-window for plumbing only (exit 0, verdict.json written); the smoke's printed pass/fail LABELS (never numbers) for units 01-15 were seen by the lane (pass: 03, 05, 15; fail: the rest) - a 3-month sub-window of the registered window; no rule, arm or bar was edited after seeing them, and units 16-21 were smoked with labels suppressed. Baselines for -10..-14,-19..-21 and -01,-03,-04 reproduce their committed 730d records (116/+10.47 vs 116/+10.5, 232/+9.54 vs 9.5, 120/+18.18 vs 18.2, 75/+27.81, 85/+27.10, 122/+14.67): wired as --control. Found, filed: exit_lever_ablation.py --self-test fails on main (PI-20261013-407C-0001). [2026-10-14T02:50Z research-ops 02:47 pass] READ (MEASURED: research/results/RQ-20261013-407c-{01,04,17,18,20,21}/*.jsonl, landed after the 00:40Z record; each unit's own registered rule applied verbatim): FAIL x5 (407c-01 xrp_pullback pullback_frac, -04 xrp_pullback adx_min, -17 ada_pullback cooldown, -18 ict_scalp_xrp_15m time-stop, -20 trend_donchian_eth vol-skip) = no_reachable_lever_beats_removed, the declared values stand, each axis honest_negative on its window. PASS x1: 407c-21 trend_donchian_sol hot-vol skip, n(B)=120 trades, 2024-10-05..2026-10-04 SOLUSDT 1h long-only, positive control ok, B net +18.18 R vs VH90 +11.36 R (fold wins 4/4, dDD -1.01 R), VH80 +6.96 R and VH95 +5.21 R also clear the 2.0 R bar. TIER-3 PROPOSAL FOR THE MANAGER (not applied; no config edited): declare vol_skip_above_pctl=0.90 on trend_donchian_sol; revert = remove the line. Caveats per the rule: one leg, one window, selected from 3 candidates so the best-of-3 delta is optimistic; the sibling eth unit (407c-20) FAILED the same axis, so this is not a family-wide effect. Suggest a walk-forward confirm before declaring. [2026-10-14 research-ops] OPERATOR DECISION NEEDED (small): proposed new template family e35-bracket-recent (trailing 730d window, weight 5, 22 points) is parked at research/proposals/e35-bracket-recent.yaml.proposed because the weights test pins the five families to your priorities. Adopt = approve a weight, move the file into research/templates/, update tests/test_research_queue_autonomy.py. [2026-10-14 08:47Z research-ops] TIER-3 PROPOSAL (not applied): RQ-20261014-f0e2-05 PASSED its pre-registered rule on eth_pullback_2h (730d, n=116): adx_min=22 vs declared dR +10.18 R, dDD -2.15 R, fold_wins 4/4 (A32 -8.14 R, A35 -10.84 R). Caveats: best-of-3 arms so the delta is optimistic; single leg = a LEAD only; suggest a walk-forward confirm before any config change. Result: comms/research/RQ-20261014-f0e2-05/.",
+  "updated_at": "2026-10-24T06:01:10Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "M21",
+    "M27",
+    "L-REGIME"
+  ],
+  "writeback": {
+    "roadmap": "M21 where/next: depth_threshold (pullback family) and a fleet cooldown lever are now queued as pre-registered units; M27: scalp cooldown/time-stop queued; L-REGIME: session + hot-vol structural family queued",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md: none -- Tier-1 research queue content + census tooling"
+  },
+  "observation": {
+    "what": "(1) the 21 units are dispatched and land research/results/<unit>/*.jsonl with read_state measured; (2) check_research_queue_throughput.py reports runnable counting router-class units",
+    "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json ; ls research/results/RQ-20261013-407c-*",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 465
+}

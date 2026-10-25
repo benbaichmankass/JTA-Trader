@@ -1,7 +1,7 @@
 id: RQ-20261007-213
 title: 'Velotrade Classic 1-Step $5k prop fit with PACE: ict_scalp 15m on ZECUSDT at flat 0.5% / 1.0% of balance, days-to-target
   reported (PI-20261006-APBY4NTV-0001 batch 2)'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -126,8 +126,6 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-grading:
-  auto: true
 related:
 - PI-20261006-APBY4NTV-0001
 - RQ-20261001-046
@@ -136,4 +134,17 @@ related:
 - RQ-20261006-034
 - docs/integrations/breakout-instruments-2026-09-27.md
 - scripts/research/p2_breakout_symbol_screen.py
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T21:55:40+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ1007-213-VELO-FIT-p2_ict15_zecusdt
+  evidence:
+  - research/results/RQ-20261007-213/38972614272.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

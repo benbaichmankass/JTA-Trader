@@ -1,0 +1,11 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Adds a NEW research queue unit (research/queue/RQ-20261011-6707-01.yaml) and edits a queue unit's body (research/queue/RQ-20260922-004.yaml: operator_decision block). Per R5/STAMP_ONLY_SURFACE a new queue unit is a registration, not a stamp, and cannot self-land; the manager merges. Every other path is Tier-1 CI tooling / research tooling / records.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "GUARD-FIDELITY"
+  },
+  "why": "OPERATOR DECISION 2026-10-11 ~06:30Z (popup, verbatim \"Add it, re-measure the 3 now\") on PI-20260928-HK3BKCKE-0001 / checklist GUARD-FIDELITY / RQ-20260922-004. (1) scripts/ci/check_roster_promotion_evidence.py gains clause C5: an evidence record whose `fidelity` is not literally `faithful` (approximate, null, absent) is refused as Stage-0 evidence for any NEW leg reaching a risk-bearing roster (the guard's existing derived scope: every account_class except paper). FIDELITY_BASELINE names the 3 (account, leg) slots still rostered on approximate records, measured by parsing config/accounts.yaml + comms/strategy_evidence on current main: alpaca_live ief/slv/iaum_pullback_1d -> RQ-20261011-6707-01 (bybit_2 xrp_pullback_2h's record already reads faithful). A test pins the baseline EQUAL to the measured approximate risk-bearing set. (2) RQ-20261011-6707-01, rule registered and committed BEFORE the run, re-ran each alpaca_live record's own harness argv over its own window and cost stack with trail_decay_stall_bars/tight_mult simulated: ief +2.33R n=8, slv +2.48R n=11, iaum +9.85R n=8 -- all PASS RULE-D1; the approximate control arm reproduced each committed record. Root cause filed as PI-20261011-YS3USYJQ-0001 (regime_debt_matrix._PB_LEVER_FLAG omits the trail_decay keys). No config/, src/ or order-path change."
+}

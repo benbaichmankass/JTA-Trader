@@ -61,6 +61,9 @@ MARKER = re.compile(r"#[ \t]*wiring:[ \t]*manual-only[ \t]*[-—][ \t]*(\S[^\n]{
 # Places that can actually RUN a script.
 RUNNER_GLOBS = (
     ".github/workflows/*.yml", ".github/workflows/*.yaml",
+    # Composite actions RUN what they name (commit-to-main calls
+    # scripts/ops/resolve_stamp_conflicts.py); they were missing from the corpus.
+    ".github/actions/**/*.yml", ".github/actions/**/*.yaml",
     "deploy/**/*.service", "deploy/**/*.timer", "deploy/**/*.sh",
     "scripts/**/*.sh", "scripts/**/*.py", "src/**/*.py",
     # `bin/` was MISSING until 2026-08-22 — the directory whose entire purpose is

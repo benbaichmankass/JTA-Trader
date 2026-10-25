@@ -68,8 +68,19 @@ def emit_prop_signal(ticket: Ticket, *, push: bool = True, telegram: bool = True
     ``{"push": bool, "telegram": bool}`` — ``True`` means the leg was attempted
     without an exception (delivery itself is fire-and-forget downstream).
     """
-    fields = ticket_to_fields(ticket, account_id=account_id, ticket_id=ticket_id)
     out = {"push": False, "telegram": False}
+    if _machine_executed(account_id):
+        # PROP-MANUAL-MSG-SUPPRESS: the "BREAKOUT TRADE SETUP … REPORT BACK" text
+        # asks a human to place and report the trade. A machine-flow (REST, phone,
+        # browser) account's executor places and reports it, so nothing on it
+        # asks for manual input. The journal row keeps the rendered body
+        # (`prop_tickets.message`, read by prop_executor's entry-band check);
+        # only the human-facing sends (Telegram + prop_signal push) are refused.
+        logger.info("emit_prop_signal: refused for machine-executed account %s "
+                    "(ticket %s)", account_id, ticket_id)
+        return out
+
+    fields = ticket_to_fields(ticket, account_id=account_id, ticket_id=ticket_id)
 
     if push:
         try:
@@ -81,6 +92,16 @@ def emit_prop_signal(ticket: Ticket, *, push: bool = True, telegram: bool = True
         except Exception as exc:  # noqa: BLE001 — notification failure is never fatal
             logger.warning("emit_prop_signal: FCM push failed: %s", exc)
 
+    if telegram:
+        from src.runtime import telegram_channels
+
+        if telegram_channels.is_retired("prop_ticket"):
+            # TELEGRAM-CHANNELS: operator 2026-10-09 — "prop execution is fully
+            # automated, so NO tickets there any more". The ticket stays
+            # journaled and the typed prop_signal push above is unchanged.
+            logger.info("emit_prop_signal: Telegram ticket retired (ticket %s, "
+                        "account %s)", ticket_id, account_id)
+            telegram = False
     if telegram:
         try:
             from src.runtime.notify import send_telegram_direct
@@ -259,11 +280,11 @@ def emit_prop_monitor_pulse(position: Dict[str, Any], *, push: bool = True,
 
     if telegram:
         try:
-            from src.runtime.notify import send_telegram_direct
+            # TELEGRAM-CHANNELS: routed by the one table -> prop_monitor.
+            from src.runtime import telegram_channels
 
-            send_telegram_direct(text, parse_mode=None, mirror_to_fcm=False,
-                                 bot_token=_prop_bot_token())
-            out["telegram"] = True
+            out["telegram"] = telegram_channels.send(
+                "prop_monitor", text, parse_mode=None, mirror_to_fcm=False)
         except Exception as exc:  # noqa: BLE001
             logger.warning("emit_prop_monitor_pulse: telegram send failed: %s", exc)
 
@@ -330,11 +351,11 @@ def emit_prop_monitor_consolidated(positions: List[Dict[str, Any]], *,
 
     if telegram:
         try:
-            from src.runtime.notify import send_telegram_direct
+            # TELEGRAM-CHANNELS: routed by the one table -> prop_monitor.
+            from src.runtime import telegram_channels
 
-            send_telegram_direct(text, parse_mode=None, mirror_to_fcm=False,
-                                 bot_token=_prop_bot_token())
-            out["telegram"] = True
+            out["telegram"] = telegram_channels.send(
+                "prop_monitor", text, parse_mode=None, mirror_to_fcm=False)
         except Exception as exc:  # noqa: BLE001
             logger.warning("emit_prop_monitor_consolidated: telegram send failed: %s", exc)
 
@@ -375,10 +396,23 @@ def emit_prop_expiry_prompt(ticket: Dict[str, Any], *,
     ticket_id = str(ticket.get("ticket_id") or "")
     if not ticket_id:
         return False
+    if _machine_executed(ticket.get("account_id")):
+        # PI-20261007-JOHNSXDJ-0002: no human places a machine-flow (REST,
+        # phone, browser) ticket, so no human is asked whether one was placed.
+        logger.info("emit_prop_expiry_prompt: refused for machine-executed "
+                    "account %s (ticket %s)", ticket.get("account_id"), ticket_id)
+        return False
     try:
         from src.prop.prop_expiry_prompt import build_expiry_keyboard
         from src.runtime.notify import send_telegram_direct
 
+        from src.runtime import telegram_channels
+
+        if telegram_channels.is_retired("prop_expiry_prompt"):
+            # TELEGRAM-CHANNELS: operator 2026-10-09 retired prop ticket
+            # prompts ("prop execution is fully automated").
+            logger.info("prop_expiry_prompt: retired — not sent (ticket %s)", ticket_id)
+            return False
         return bool(send_telegram_direct(
             render_expiry_prompt_message(ticket),
             parse_mode=None,
@@ -428,6 +462,13 @@ def emit_prop_expiry_notice(ticket: Dict[str, Any], *,
         from src.prop.prop_expiry_prompt import build_late_fill_keyboard
         from src.runtime.notify import send_telegram_direct
 
+        from src.runtime import telegram_channels
+
+        if telegram_channels.is_retired("prop_expiry_notice"):
+            # TELEGRAM-CHANNELS: operator 2026-10-09 retired prop ticket
+            # prompts ("prop execution is fully automated").
+            logger.info("prop_expiry_notice: retired — not sent (ticket %s)", ticket_id)
+            return False
         return bool(send_telegram_direct(
             render_expiry_notice_message(ticket),
             parse_mode=None,
@@ -486,10 +527,23 @@ def emit_prop_invalidation_prompt(
     ticket_id = str(ticket.get("ticket_id") or "")
     if not ticket_id:
         return False
+    if _machine_executed(ticket.get("account_id")):
+        # PI-20261007-JOHNSXDJ-0002: no human places a machine-flow (REST,
+        # phone, browser) ticket, so no human is asked whether one was placed.
+        logger.info("emit_prop_invalidation_prompt: refused for machine-executed "
+                    "account %s (ticket %s)", ticket.get("account_id"), ticket_id)
+        return False
     try:
         from src.prop.prop_expiry_prompt import build_expiry_keyboard
         from src.runtime.notify import send_telegram_direct
 
+        from src.runtime import telegram_channels
+
+        if telegram_channels.is_retired("prop_invalidation_prompt"):
+            # TELEGRAM-CHANNELS: operator 2026-10-09 retired prop ticket
+            # prompts ("prop execution is fully automated").
+            logger.info("prop_invalidation_prompt: retired — not sent (ticket %s)", ticket_id)
+            return False
         return bool(send_telegram_direct(
             render_invalidation_prompt_message(ticket, current_price, which),
             parse_mode=None,
@@ -544,11 +598,11 @@ def emit_prop_fill(fill: Dict[str, Any], *, push: bool = True,
 
     if telegram:
         try:
-            from src.runtime.notify import send_telegram_direct
+            # TELEGRAM-CHANNELS: routed by the one table -> prop_fill.
+            from src.runtime import telegram_channels
 
-            send_telegram_direct(text, parse_mode=None, mirror_to_fcm=False,
-                                 bot_token=_prop_bot_token())
-            out["telegram"] = True
+            out["telegram"] = telegram_channels.send(
+                "prop_fill", text, parse_mode=None, mirror_to_fcm=False)
         except Exception as exc:  # noqa: BLE001
             logger.warning("emit_prop_fill: telegram send failed: %s", exc)
 
@@ -675,11 +729,11 @@ def emit_prop_sl_tp_alert(
 
     if telegram:
         try:
-            from src.runtime.notify import send_telegram_direct
+            # TELEGRAM-CHANNELS: routed by the one table -> prop_alert.
+            from src.runtime import telegram_channels
 
-            send_telegram_direct(text, parse_mode=None, mirror_to_fcm=False,
-                                 bot_token=_prop_bot_token())
-            out["telegram"] = True
+            out["telegram"] = telegram_channels.send(
+                "prop_alert", text, parse_mode=None, mirror_to_fcm=False)
         except Exception as exc:  # noqa: BLE001
             logger.warning("emit_prop_sl_tp_alert: telegram send failed: %s", exc)
 
@@ -768,11 +822,11 @@ def emit_prop_status_request(account_id: str,
 
     if telegram:
         try:
-            from src.runtime.notify import send_telegram_direct
+            # TELEGRAM-CHANNELS: routed by the one table -> prop_status_request.
+            from src.runtime import telegram_channels
 
-            send_telegram_direct(text, parse_mode=None, mirror_to_fcm=False,
-                                 bot_token=_prop_bot_token())
-            out["telegram"] = True
+            out["telegram"] = telegram_channels.send(
+                "prop_status_request", text, parse_mode=None, mirror_to_fcm=False)
         except Exception as exc:  # noqa: BLE001
             logger.warning("emit_prop_status_request: telegram send failed: %s", exc)
 

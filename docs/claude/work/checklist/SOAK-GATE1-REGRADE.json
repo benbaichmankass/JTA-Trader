@@ -1,0 +1,27 @@
+{
+  "id": "SOAK-GATE1-REGRADE",
+  "title": "Gate-1 regrade of every ready/overdue/dead/unknown soak in the 2026-10-10 work report; close the contracts the 2026-10-05 cuts already settled",
+  "phase": "W6",
+  "state": "done",
+  "owner": "manager-dispatched lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-10-10 lane session_01Vvom6qxDS8nCR2trJxC189, ceiling ~$7. 28 of 29 non-accruing soaks given a recorded disposition on SOAKS.json (22 KILLED: already cut 2026-10-05 by #16556/#16561 but contracts never closed; 3 NEEDS_DATA S2 copies + slv_trend_1h + splg_trend_long_1d until 2026-10-24; mgc_trend_1h REFUSE). Fresh R3 comms/research/r3_cost_fidelity/2026-10-10.json: 48/55 legs insufficient_n, no Gate-1 promotion fires. New: soak_state.py disposition key (quiet until a date). Evidence comms/research/soak_gate1_regrade/2026-10-10.json. No config change. [2026-10-25 BLOCKERS-1025] OBSERVED, closing. Live GET /api/bot/work/report 05:39Z sections.soaks: 21 soaks (10 passed, 8 mechanical_fail, 3 awaiting_first_trade). None of SOAKS.json's 22 KILLED dispositions and not the REFUSE (mgc_trend_1h) appear. The earlier NEEDS_DATA copies were superseded by PASS dispositions (10-15, 10-23) and now list as passed. Seven soaks with no disposition (shadow ict_scalp_5m, trend_donchian_1h/ada_4h/avax_4h/sol_4h, turtle_soup, vwap) are also absent from the report; not part of this observation, flagged to the manager.",
+  "updated_at": "2026-10-25T06:48:56Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "observation": {
+    "what": "GET /api/bot/work/report sections.soaks lists none of the 22 KILLED soaks and none of the 6 NEEDS_DATA/REFUSE soaks before 2026-10-24; the NEEDS_DATA ones reappear on 2026-10-25",
+    "how_to_check": "curl /api/bot/work/report | jq .sections.soaks.data after the deploy of this branch",
+    "due_by": "2026-10-25"
+  },
+  "writeback": {
+    "roadmap": "none: soak disposition bookkeeping, no milestone changes",
+    "arch": "none: soak_state.py disposition key is tooling"
+  },
+  "_seq": 376
+}

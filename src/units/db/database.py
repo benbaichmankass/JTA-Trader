@@ -200,6 +200,27 @@ def _migrate_add_telemetry_terminal(cursor: sqlite3.Cursor) -> bool:
     return True
 
 
+def _migrate_add_path_history_advisor(cursor: sqlite3.Cursor) -> bool:
+    """Add the four BRACKET-ADVISOR-SHADOW columns to ``position_path_history``.
+
+    ``advisor_sl_r`` / ``advisor_tp_r`` / ``advisor_source`` / ``advisor_state``:
+    the stop/target a confirmed-but-undeclared lever WOULD set on that bar
+    (``src/runtime/bracket_advisor.py``), beside the live ``sl_r``/``tp_r``.
+    Observe-only; no exit or order path reads them. Pre-migration rows read
+    NULL in all four, which says "the advisor did not run" — never a state.
+    Idempotent: returns True only on the run that actually adds the columns.
+    """
+    cursor.execute("PRAGMA table_info(position_path_history)")
+    columns = {row[1] for row in cursor.fetchall()}
+    if not columns or "advisor_state" in columns:
+        return False   # no table (the CREATE declares them) or already migrated
+    for col, typ in (("advisor_sl_r", "REAL"), ("advisor_tp_r", "REAL"),
+                     ("advisor_source", "TEXT"), ("advisor_state", "TEXT")):
+        if col not in columns:
+            cursor.execute(f"ALTER TABLE position_path_history ADD COLUMN {col} {typ}")
+    return True
+
+
 def _migrate_add_reconcile_status(cursor: sqlite3.Cursor) -> bool:
     """Add ``reconcile_status`` column to ``trades`` if absent.
 
@@ -799,6 +820,70 @@ class Database:
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_position_telemetry_strategy "
             "ON position_telemetry(strategy, updated_at)")
+
+        # EXIT-PATH-TELEMETRY-LIVE (operator OK 2026-10-15, "Build it
+        # (Recommended)") — the per-bar PATH of each open position, one row per
+        # (order_package_id, bar_ts). OBSERVE-ONLY: nothing reads it back to
+        # change an exit.
+        # data-wiring: position_path_history is a PROJECTION of position_telemetry
+        # — the same writer, on the same pass, copies the record
+        # position_telemetry.build_record already built (same since_entry_peak,
+        # same r_distances), keyed to order_packages.order_package_id and
+        # carrying trades.id as trade_id. Never a second truth: position_telemetry
+        # stays the canonical latest state. Nothing to backfill — the per-bar
+        # path was overwritten by the upsert and exists nowhere upstream.
+        # Bounded: position_path_history.RETENTION_DAYS, pruned on the write path.
+        # Sole writer: src/runtime/position_path_history.py.
+        # The four advisor_* columns (BRACKET-ADVISOR-SHADOW, operator OK
+        # 2026-10-25 "Build it (Recommended)") are computed on the same pass by
+        # src/runtime/bracket_advisor.py from the same candles + package meta,
+        # with the harness's own lever functions; read by no exit/order path.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS position_path_history (
+                order_package_id TEXT NOT NULL,
+                bar_ts TEXT NOT NULL,
+                trade_id TEXT,
+                account_id TEXT,
+                strategy TEXT,
+                symbol TEXT,
+                direction TEXT,
+                entry REAL,
+                risk_per_unit REAL,
+                last_price REAL,
+                open_r REAL,
+                peak_r REAL,
+                peak_state TEXT,
+                mae_r REAL,
+                giveback_r REAL,
+                bars_held INTEGER,
+                bars_since_peak INTEGER,
+                sl_price REAL,
+                tp_price REAL,
+                sl_r REAL,
+                tp_r REAL,
+                r_to_stop REAL,
+                r_to_target REAL,
+                rr_from_here REAL,
+                atr REAL,
+                atr_source TEXT,
+                adx REAL,
+                advisor_sl_r REAL,
+                advisor_tp_r REAL,
+                advisor_source TEXT,
+                advisor_state TEXT,
+                passes INTEGER NOT NULL DEFAULT 1,
+                first_seen_at TEXT,
+                written_at TEXT NOT NULL,
+                PRIMARY KEY (order_package_id, bar_ts)
+            )
+        ''')
+        _migrate_add_path_history_advisor(cursor)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_position_path_history_written "
+            "ON position_path_history(written_at)")
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_position_path_history_trade "
+            "ON position_path_history(trade_id, bar_ts)")
 
         # AI Analyst — per-run history (M13 S1).
         # Every generator cycle appends one row per refreshed endpoint

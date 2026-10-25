@@ -87,24 +87,12 @@ def test_safe_place_order_passes_when_daily_loss_below_limit():
 
 
 # ---------------------------------------------------------------------------
-# MAX_OPEN_POSITIONS guard
+# MAX_OPEN_POSITIONS guard — RETIRED 2026-10-21 (RETIRE-GLOBAL-POSCAP)
 # ---------------------------------------------------------------------------
 
 
-def test_safe_place_order_raises_when_max_open_positions_at_limit():
-    settings = _settings(MAX_OPEN_POSITIONS="3", CURRENT_OPEN_POSITIONS="3")
-    with pytest.raises(ValueError, match="MAX_OPEN_POSITIONS"):
-        safe_place_order(_buy_order(), settings, _DummyClient())
-
-
-def test_safe_place_order_raises_when_max_open_positions_exceeded():
+def test_safe_place_order_ignores_open_position_count():
     settings = _settings(MAX_OPEN_POSITIONS="3", CURRENT_OPEN_POSITIONS="5")
-    with pytest.raises(ValueError, match="MAX_OPEN_POSITIONS"):
-        safe_place_order(_buy_order(), settings, _DummyClient())
-
-
-def test_safe_place_order_passes_when_open_positions_below_limit():
-    settings = _settings(MAX_OPEN_POSITIONS="3", CURRENT_OPEN_POSITIONS="2")
     result = safe_place_order(_buy_order(), settings, _DummyClient())
     assert result["status"] == "submitted"
 

@@ -334,6 +334,15 @@ class SimConfig:
     # Refuse an entry that would be simultaneously long and short the SAME symbol
     # across legs (Tradeify 247: hedging is banned). Needs `symbol`/`direction` on rows.
     no_hedge: bool = False
+    # Flat $ risk per ticket for a named leg, overriding the risk_pct base (P5-PROP Q3,
+    # PROP-PER-LEG-EV-GRID). Mirrors the runtime's sizing.flat.per_leg_risk_usd: a leg
+    # absent from the map keeps the account-level sizing. lev_caps still scale it DOWN.
+    leg_risk_usd: Optional[Dict[str, float]] = None
+    # Account-level daily drawdown switch (row DAILY-DD-SWITCH, src/units/accounts/daily_dd_switch.py):
+    # once day-start equity minus current equity reaches dd_switch_frac x the firm's daily
+    # limit, NEW entries are refused until the next reset; open positions keep their
+    # brackets. None = disarmed. The operator's prop setting is 0.8 (a 20% buffer).
+    dd_switch_frac: Optional[float] = None
 
 
 @dataclass
@@ -685,6 +694,13 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
     src = stream if stream is not None else trade_stream(hist, rng, cfg.block_days, H)
     pending = next(src, None)
 
+    dd_tripped = False
+
+    def dd_switch_hit() -> bool:
+        if cfg.dd_switch_frac is None:
+            return False
+        return bal + marks_sum <= day_start * (1.0 - cfg.dd_switch_frac * dl) + 1e-9
+
     def breached() -> Optional[str]:
         eq = bal + marks_sum
         if eq <= floor + 1e-9:
@@ -735,6 +751,7 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
             # higher of balance and equity (open marks included) at that instant
             day_start = (max(bal, bal + marks_sum) if rules.day_reset_basis == "max_balance_equity"
                          else bal)
+            dd_tripped = False              # the switch latches until the day boundary, then clears
             next_reset += 1.0
             # Velotrade: "If you hit your profit target before completing 5 minimum
             # trading days, your phase is not passed yet" -- so the pass can land at a
@@ -815,13 +832,21 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
                     (o.symbol == t.symbol and o.direction != t.direction) for o in
                     (open_trades[k] for k in open_pos if k in open_trades)):
                 counters["hedge_blocked"] = counters.get("hedge_blocked", 0) + 1
+            elif dd_tripped or dd_switch_hit():
+                dd_tripped = True
+                counters["dd_switch_blocked"] = counters.get("dd_switch_blocked", 0) + 1
             else:
+                base_usd = (cfg.leg_risk_usd[t.leg] if cfg.leg_risk_usd and t.leg in cfg.leg_risk_usd
+                            else None)
                 if cfg.sizing == "room":
                     # Fit the NEW trade inside the binding cushion (static floor or today's
                     # daily limit), net of what open positions are already marked at.
                     eq = bal + marks_sum
                     room = min(eq - floor, eq - day_start * (1.0 - dl))
-                    risk_usd = min(cfg.risk_pct * bal, cfg.room_frac * max(0.0, room))
+                    risk_usd = min(cfg.risk_pct * bal if base_usd is None else base_usd,
+                                   cfg.room_frac * max(0.0, room))
+                elif base_usd is not None:
+                    risk_usd = base_usd
                 else:
                     risk_usd = cfg.risk_pct * (bal if cfg.sizing == "balance" else start)
                 if cfg.lev_caps and t.stop_frac and t.leg in cfg.lev_caps:
@@ -847,6 +872,9 @@ def simulate_life(hist: History, rules: PropRules, cfg: SimConfig, mode: str,
                 marks_sum += mark
                 life.trades_taken += 1
 
+        if cfg.dd_switch_frac is not None and not dd_tripped and dd_switch_hit():
+            dd_tripped = True
+            counters["dd_switch_trips"] = counters.get("dd_switch_trips", 0) + 1
         cause = breached()
         if cause:
             life.died = True
@@ -1388,6 +1416,41 @@ def _self_test() -> int:
     check(stricter == 40 and lenient == 0,
           f"reset basis: max(balance, equity) is strictly stricter ({stricter}/40 extra deaths, {lenient} spared)")
 
+    # --- P5-PROP: per-leg flat $ risk and the account daily-drawdown switch -------------
+    # (a) one -1R trade on leg "b" at 4% of start ($200) breaches a 3% static floor ($150);
+    # the same trade at a flat leg_risk_usd $50 does not. A leg absent from the map is unchanged.
+    rows_l = {"b": _toy_rows([-1.0])}
+    trades_l, _, days_l = build_trades(rows_l, as_given)
+    died_l = {}
+    for name, m in (("pct", None), ("flat50", {"b": 50.0}), ("other_leg", {"zz": 50.0})):
+        cfg_l = SimConfig(risk_pct=0.04, sizing="start", horizon_days=days_l + 1, block_days=days_l,
+                          leg_risk_usd=m)
+        lf = simulate_life(History(trades_l, days_l), PropRules(daily_loss_pct=0.50, max_dd_pct=0.03),
+                           cfg_l, "realized", np.random.default_rng(0),
+                           stream=((t.entry, t.exit, t) for t in trades_l))
+        died_l[name] = lf.died
+    check(died_l == {"pct": True, "flat50": False, "other_leg": True},
+          f"leg_risk_usd: flat $50 on leg b survives the $200 breach, unmapped legs unchanged (got {died_l})")
+    # (b) day 1: -1R then +1R, +1R; day 2: +1R. 2% of start per trade, daily limit 3%.
+    # Armed at 0.5 x limit (1.5%), the -2% loss trips it: the two day-1 winners are refused,
+    # the day-2 trade is taken (the latch clears at the reset). Disarmed, all four trade.
+    rows_d = [{"entry_time": "2025-01-01T02:00:00+00:00", "exit_time": "2025-01-01T03:00:00+00:00", "net_r": -1.0},
+              {"entry_time": "2025-01-01T05:00:00+00:00", "exit_time": "2025-01-01T06:00:00+00:00", "net_r": 1.0},
+              {"entry_time": "2025-01-01T08:00:00+00:00", "exit_time": "2025-01-01T09:00:00+00:00", "net_r": 1.0},
+              {"entry_time": "2025-01-02T05:00:00+00:00", "exit_time": "2025-01-02T06:00:00+00:00", "net_r": 1.0}]
+    trades_d, _, days_d = build_trades({"d": rows_d}, as_given)
+    taken = {}
+    for frac in (None, 0.5):
+        cnt: Dict[str, int] = {}
+        cfg_d = SimConfig(risk_pct=0.02, sizing="start", horizon_days=days_d + 1, block_days=days_d,
+                          dd_switch_frac=frac)
+        lf = simulate_life(History(trades_d, days_d), PropRules(daily_loss_pct=0.03, max_dd_pct=0.50),
+                           cfg_d, "realized", np.random.default_rng(0), counters=cnt,
+                           stream=((t.entry, t.exit, t) for t in trades_d))
+        taken[frac] = (lf.trades_taken, cnt.get("dd_switch_blocked", 0), lf.died)
+    check(taken[None] == (4, 0, False) and taken[0.5] == (2, 2, False),
+          f"dd switch: disarmed takes 4, armed@0.5 takes 2 and refuses 2 then clears at reset (got {taken})")
+
     print(f"\nself-test: {'PASS' if not fails else 'FAIL'} ({len(fails)} failure(s))")
     return 0 if not fails else 1
 
@@ -1412,6 +1475,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="skip an entry that would hold long+short in the same symbol across legs")
     ap.add_argument("--lev-cap", action="append", default=[], metavar="LEG=X",
                     help="per-position notional cap as a multiple of balance for LEG (repeatable)")
+    ap.add_argument("--leg-risk-usd", action="append", default=[], metavar="LEG=USD",
+                    help="flat $ risk per ticket for LEG (repeatable), overriding the --risk-pct base; "
+                         "mirrors sizing.flat.per_leg_risk_usd")
+    ap.add_argument("--dd-switch-frac", type=float, default=None,
+                    help="arm the account daily-drawdown switch at this fraction of the firm's daily limit "
+                         "(0.8 = the operator's 20%% buffer): new entries refused until the next reset")
     ap.add_argument("--room-frac", type=float, default=0.45)
     ap.add_argument("--min-risk", type=float, default=1.0, help="skip a trade sized below this many USD of risk")
     ap.add_argument("--start-balance", type=float, default=None,
@@ -1479,6 +1548,15 @@ def main(argv: Optional[List[str]] = None) -> int:
                     first_payout_refund=(rules.first_payout_refund if args.first_payout_refund is None
                                          else bool(args.first_payout_refund)))
     cfg.no_hedge = bool(args.no_hedge)
+    if args.dd_switch_frac is not None:
+        if not 0.0 < args.dd_switch_frac <= 1.0:
+            ap.error("--dd-switch-frac must be in (0, 1]")
+        cfg.dd_switch_frac = float(args.dd_switch_frac)
+    for spec in args.leg_risk_usd:
+        if "=" not in spec:
+            ap.error(f"--leg-risk-usd expects LEG=USD, got {spec!r}")
+        leg, x = spec.split("=", 1)
+        cfg.leg_risk_usd = {**(cfg.leg_risk_usd or {}), leg: float(x)}
     for spec in args.lev_cap:
         if "=" not in spec:
             ap.error(f"--lev-cap expects LEG=X, got {spec!r}")

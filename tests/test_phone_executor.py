@@ -30,6 +30,10 @@ def _iso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     ]}))
     monkeypatch.setattr(pe, "DEVICES_PATH", dev)
     monkeypatch.delenv("PROP_PHONE_MODE_BREAKOUT_2", raising=False)
+    # No network in unit tests: the REAL config/prop_platforms.yaml may carry a dry_test_request for
+    # breakout_2, which claim_next serves only when _bybit_last returns a price -- so with Bybit
+    # reachable from CI every claim test got an extra phone-test ticket. Tests needing a price patch it.
+    monkeypatch.setattr(pe, "_bybit_last", lambda sym: None)
     sent: list = []
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: sent.append(m) or True)
     return sent
@@ -226,6 +230,50 @@ def test_dry_test_request_serves_exactly_one_dry_ticket(monkeypatch):
     assert pe.claim_next(_dev()) is None  # same request id is never served twice
 
 
+def test_login_retry_is_logged_quietly_and_the_red_flag_pings(_iso):
+    """PHONE-AUTOLOGIN: no latch, retries forever -- each retry is logged in phone_events but not pinged; the ONE
+    login_failed red flag (after 3 in a row) and the recovery login_ok are pinged."""
+    n = len(_iso)
+    for i in range(5):
+        pe.record_event(_dev(), {"event": "login_retry", "reason": f"failed ({i + 1}): email step; next try in 5 min"})
+    assert len(_iso) == n
+    pe.record_event(_dev(), {"event": "login_failed", "reason": "auto re-login failed 3 times in a row; STILL RETRYING"})
+    pe.record_event(_dev(), {"event": "login_ok", "reason": "RECOVERED (auto re-login via dedicated inbox)"})
+    assert len(_iso) == n + 2
+    assert [e["kind"] for e in pe.recent_events("breakout_2")][-3:] == ["login_retry", "login_failed", "login_ok"]
+
+
+def test_login_diag_is_quiet_scrubbed_and_kept_in_phone_events(_iso):
+    """PHONE-AUTOLOGIN-2: each re-login attempt posts ONE login_diag (counts, steps, timings) -- logged, not pinged,
+    and anything shaped like a link, an address or a long number is scrubbed even if the phone ever sent one."""
+    n = len(_iso)
+    pe.record_event(_dev(), {"event": "login_diag", "reason": "eng=overlay email=clicked page_n=3 page_top=3 page_btn=3 "
+                             "shape=lineup choices=3 mails=1 polls=7 match=1 step=ok https://x.y/z a@b.co 1234567"})
+    assert len(_iso) == n
+    last = pe.recent_events("breakout_2")[-1]
+    assert last["kind"] == "login_diag" and "shape=lineup" in last["reason"] and "match=1" in last["reason"]
+    assert "http" not in last["reason"] and "@" not in last["reason"] and "1234567" not in last["reason"]
+
+
+def test_heartbeat_keeps_relogin_and_background_engine_fields(_iso):
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"st": "background", "bg": "overlay", "bg_runs": 4, "bg_ok": 3,
+                                       "bg_last": "logged_in+posted", "bg_last_min": 2, "relogin_failures": 0,
+                                       "relogin_flagged": False, "relogin_next_min": 0, "nope": 1}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["bg"] == "overlay" and st["bg_runs"] == 4 and st["bg_last"] == "logged_in+posted"
+    assert st["relogin_flagged"] is False and "nope" not in st
+
+
+def test_account_status_age_hours(_iso):
+    assert pe.account_status_age_hours("breakout_2") is None  # no row: not told, never "fresh"
+    from src.prop import prop_journal
+    prop_journal.insert_account_status({"account_id": "breakout_2", "balance": 100.0, "equity": 100.0,
+                                        "source": "phone_executor"})
+    age = pe.account_status_age_hours("breakout_2")
+    assert age is not None and 0.0 <= age < 0.1
+
+
 def test_terminal_miss_keeps_latest_controls_scrubbed_and_does_not_ping(_iso):
     n = len(_iso)
     assert pe.last_diag("breakout_2") is None
@@ -246,14 +294,38 @@ def test_heartbeat_keeps_latest_allowlisted_state_and_does_not_ping(_iso):
     assert pe.last_heartbeat("breakout_2") is None
     pe.record_event(_dev(), {"event": "heartbeat", "reason": "logged in, not on the terminal; acct 12345678",
                              "state": {"st": "logged_in", "hold": True, "tabs": 3, "host": "trade.breakoutprop.com",
-                                       "secret": "x", "onAccount": False, "armed": True}})
+                                       "secret": "x", "onAccount": False, "armed": True, "last": "login"}})
     hb = pe.last_heartbeat("breakout_2")
     assert len(_iso) == n
     assert "12345678" not in hb["status"] and hb["state"] == {"st": "logged_in", "hold": True, "tabs": 3,
-                                                               "host": "trade.breakoutprop.com", "onAccount": False}
+                                                               "host": "trade.breakoutprop.com", "onAccount": False,
+                                                               "last": "login"}
     from src.web.api import main as api_main
     body = TestClient(api_main.app, raise_server_exceptions=False).get("/api/bot/prop/status?account_id=breakout_2").json()
     assert body["phone_heartbeat"]["state"]["hold"] is True
+
+
+def test_event_log_keeps_last_events_scrubbed_and_dedupes_heartbeats(_iso, monkeypatch):
+    assert pe.recent_events("breakout_2") is None
+    pe.record_event(_dev(), {"event": "login_started", "reason": "attempt 1"})
+    pe.record_event(_dev(), {"event": "login_failed", "ticket_id": "t-1!",
+                             "reason": "no password field at https://x.example/login acct 12345678 me@x.com"})
+    for _ in range(3):
+        pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting", "state": {}})
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "logged in", "state": {}})
+    ev = pe.recent_events("breakout_2")
+    assert [e["kind"] for e in ev] == ["login_started", "login_failed", "heartbeat", "heartbeat"]
+    fail = ev[1]
+    assert fail["ticket"] == "t-1" and fail["at"]
+    assert "12345678" not in fail["reason"] and "@" not in fail["reason"] and "http" not in fail["reason"]
+    monkeypatch.setattr(pe, "_EVENTS_MAX", 5)
+    for i in range(10):
+        pe.record_event(_dev(), {"event": "login_failed", "reason": f"try {i}"})
+    ev = pe.recent_events("breakout_2")
+    assert len(ev) == 5 and ev[-1]["reason"] == "try 9"
+    from src.web.api import main as api_main
+    body = TestClient(api_main.app, raise_server_exceptions=False).get("/api/bot/prop/status?account_id=breakout_2").json()
+    assert body["phone_events"][-1] == ev[-1]
 
 
 def test_pending_peek_counts_without_claiming(monkeypatch):
@@ -263,7 +335,7 @@ def test_pending_peek_counts_without_claiming(monkeypatch):
     c = TestClient(api_main.app, raise_server_exceptions=False)
     assert c.get("/api/bot/prop/phone/pending").status_code == 401
     h = {"Authorization": "Bearer " + TOKEN}
-    assert c.get("/api/bot/prop/phone/pending", headers=h).json() == {"ok": True, "pending": 0}
+    assert c.get("/api/bot/prop/phone/pending", headers=h).json() == {"ok": True, "pending": 0, "status_age_hours": None, "drill": None}
     _ticket("old", minutes=-1)
     _ticket("t1")
     assert c.get("/api/bot/prop/phone/pending", headers=h).json()["pending"] == 1
@@ -304,6 +376,8 @@ def test_account_status_from_phone_is_measured_and_absent_stays_absent():
     {"kind": "account_status", "balance": float("nan")},
     {"kind": "account_status", "equity": -1},
     {"kind": "account_status", "equity": True},
+    {"kind": "account_status", "equity": 5000.0, "unrealized": "31.27"},
+    {"kind": "account_status", "equity": 5000.0, "unrealized": float("inf")},
 ])
 def test_account_status_unread_or_invalid_is_refused(body):
     with pytest.raises(ValueError):
@@ -465,3 +539,118 @@ def test_readback_hash_matches_the_phone_canonical_form():
     src = Path("tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt").read_text()
     order = src.split("READBACK_FIELDS = listOf(")[1].split(")")[0]
     assert [x.strip().strip('"') for x in order.split(",") if x.strip()] == list(pe.READBACK_FIELDS)
+
+
+# --- BREAKOUT-UNRECORDED (2026-10-12): a redeemed LIVE go-token that never gets a report is not "skipped" ---
+
+def _go_live(tmp_path, monkeypatch, tid: str = "t1") -> str:
+    _live(tmp_path, monkeypatch)
+    _claimed(tid)
+    v = _verify(tid)
+    assert pe.redeem_go_token(_dev(), {"ticket_id": tid, "token": v["token"],
+                                       "readback_sha256": v["readback_sha256"]})["go"] is True
+    return tid
+
+
+def test_live_go_without_report_is_journaled_placed_not_skipped(tmp_path, monkeypatch, _iso):
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    assert pe.expire_stale_claims("breakout_2", now=later) == []  # not in the "marked skipped" alert list
+    assert prop_journal.get_ticket(tid)["status"] == "placed"
+    fills = prop_journal.list_fills(account_id="breakout_2")
+    assert len(fills) == 1
+    f = fills[0]
+    assert (f["status"], f["ticket_id"], f["direction"], f["symbol"]) == ("placed", tid, "long", "ETHUSDT")
+    assert (f["entry_price"], f["qty"], f["sl"], f["tp"]) == (2500.0, 0.5, 2450.0, 2700.0)
+    assert "UNVERIFIED" in (f.get("raw") or "") and "unconfirmed live submit" in (f.get("reason") or "")
+    assert any("never confirmed" in m for m in _iso)
+    # idempotent: a second pass finds no claimed ticket and writes nothing more
+    pe.expire_stale_claims("breakout_2", now=later)
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1
+
+
+def test_late_phone_report_corrects_the_unconfirmed_row_in_place(tmp_path, monkeypatch):
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    pe.expire_stale_claims("breakout_2", now=later)
+    pe.record_report(_dev(), {"kind": "fill", "status": "placed", "ticket_id": tid, "symbol": "ETHUSDT",
+                              "direction": "long", "entry": 2500.0, "sl": 2450.0, "tp": 2700.0, "qty": 0.5})
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1
+
+
+def test_claim_without_a_live_go_is_still_skipped(tmp_path, monkeypatch):
+    _live(tmp_path, monkeypatch)
+    _claimed("t2")
+    _verify("t2")  # token issued but never redeemed: nothing was clicked
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    assert pe.expire_stale_claims("breakout_2", now=later) == ["t2"]
+    assert prop_journal.get_ticket("t2")["status"] == "skipped"
+    assert prop_journal.list_fills(account_id="breakout_2") == []
+
+
+def test_refused_go_is_still_skipped(tmp_path, monkeypatch):
+    _live(tmp_path, monkeypatch)
+    _claimed("t3")
+    v = _verify("t3")
+    assert pe.redeem_go_token(_dev(), {"ticket_id": "t3", "token": v["token"], "readback_sha256": "bad"})["go"] is False
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    assert pe.expire_stale_claims("breakout_2", now=later) == ["t3"]
+
+
+def test_account_status_unrealized_is_kept_when_read_and_null_when_not():
+    pe.record_report(_dev(), {"kind": "account_status", "equity": 5056.86, "unrealized": -12.5})
+    assert prop_journal.latest_account_status("breakout_2")["unrealized"] == -12.5
+    pe.record_report(_dev(), {"kind": "account_status", "equity": 5056.86})
+    assert prop_journal.latest_account_status("breakout_2")["unrealized"] is None  # unread is NULL, never 0
+
+
+def test_heartbeat_keeps_keepalive_fields(_iso):
+    """PHONE-KEEPALIVE: what keeps the app alive and what had to bring it back is reported, not dropped."""
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"st": "background", "battery_exempt": True, "overlay": False, "fgs_running": True,
+                                       "alarm_exact": False, "restarts_24h": 2,
+                                       "last_restart_reason": "activity_missing(service_tick)",
+                                       "app_version": "1b.200/200", "nope": 1}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["battery_exempt"] is True and st["overlay"] is False and st["fgs_running"] is True
+    assert st["restarts_24h"] == 2 and st["last_restart_reason"] == "activity_missing(service_tick)"
+    assert st["app_version"] == "1b.200/200" and "nope" not in st
+
+
+def test_loop_restarted_is_an_accepted_event_kind(_iso):
+    pe.record_event(_dev(), {"event": "loop_restarted", "reason": "watchdog"}, send=lambda *a, **k: True)
+    assert pe.recent_events("breakout_2")[-1]["kind"] == "loop_restarted"
+
+
+def test_background_ticket_fields_and_fallback_event(_iso):
+    """PHONE-FGS-EXEC: the background-ticket heartbeat fields are kept, the fallback event is accepted and pinged, and
+    the engine tag on a reason survives the scrub."""
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"st": "background", "bg_tickets": 3, "bg_ticket_last": "dry_filled",
+                                       "bg_ticket_off_min": 0}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["bg_tickets"] == 3 and st["bg_ticket_last"] == "dry_filled" and st["bg_ticket_off_min"] == 0
+    sent = []
+    pe.record_event(_dev(), {"event": "bg_ticket_fallback", "reason": "background ticket ended refused (overlay)",
+                             "ticket_id": "t-1"}, send=lambda m, **k: sent.append(m) or True)
+    assert pe.recent_events("breakout_2")[-1]["kind"] == "bg_ticket_fallback" and len(sent) == 1
+    pe.record_event(_dev(), {"event": "dry_fill_ok", "reason": "(bg:overlay) filled + read back"}, send=lambda *a, **k: True)
+    assert pe.recent_events("breakout_2")[-1]["reason"].startswith("(bg:overlay) filled")
+
+
+def test_pending_poll_runs_the_stale_claim_watchdog(tmp_path, monkeypatch, _iso):
+    """BREAKOUT-UNTRACKED-1014: the backgrounded app only polls /phone/pending, never /phone/claim, so a live
+    submit the phone never confirmed sat `claimed` for 5 h with no alert. The pending poll now runs the watchdog."""
+    from src.web.api import main as api_main
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    monkeypatch.setattr(pe, "_now", lambda: later)
+    c = TestClient(api_main.app, raise_server_exceptions=False)
+    r = c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
+    assert r.status_code == 200
+    assert prop_journal.get_ticket(tid)["status"] == "placed"
+    assert any("never confirmed" in m for m in _iso)
+    n = len(_iso)
+    c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
+    assert len(_iso) == n   # idempotent: no second journal row, no second ping
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1

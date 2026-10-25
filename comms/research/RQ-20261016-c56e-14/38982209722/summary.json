@@ -1,0 +1,170 @@
+{
+  "leg": "trend_donchian_eth_prop",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "B",
+    "net_r": 50.0046,
+    "n": 865,
+    "max_drawdown_r": 21.9641,
+    "folds_positive": 6,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=50.0046 > 0 with 6/8 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 865,
+      "net_r": 50.0046,
+      "net_r_fee_only": 68.4633,
+      "max_drawdown_r": 21.9641,
+      "by_outcome": {
+        "trail_stop": 656,
+        "stop": 165,
+        "take_profit": 43,
+        "timeout": 1
+      },
+      "mean_bars_held": 14.436,
+      "net_r_per_capital_day": 0.0961,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2020-10-15 00:00:00+00:00",
+      "data_end": "2025-10-06 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-10-15 00:00:00+00:00",
+          "end": "2021-05-30 05:52:30+00:00",
+          "trades": 107,
+          "net_r": 16.4041
+        },
+        {
+          "fold": 2,
+          "start": "2021-05-30 05:52:30+00:00",
+          "end": "2022-01-12 11:45:00+00:00",
+          "trades": 104,
+          "net_r": 10.9828
+        },
+        {
+          "fold": 3,
+          "start": "2022-01-12 11:45:00+00:00",
+          "end": "2022-08-27 17:37:30+00:00",
+          "trades": 104,
+          "net_r": 8.4429
+        },
+        {
+          "fold": 4,
+          "start": "2022-08-27 17:37:30+00:00",
+          "end": "2023-04-11 23:30:00+00:00",
+          "trades": 113,
+          "net_r": -5.4768
+        },
+        {
+          "fold": 5,
+          "start": "2023-04-11 23:30:00+00:00",
+          "end": "2023-11-25 05:22:30+00:00",
+          "trades": 107,
+          "net_r": -9.5369
+        },
+        {
+          "fold": 6,
+          "start": "2023-11-25 05:22:30+00:00",
+          "end": "2024-07-09 11:15:00+00:00",
+          "trades": 108,
+          "net_r": 15.0995
+        },
+        {
+          "fold": 7,
+          "start": "2024-07-09 11:15:00+00:00",
+          "end": "2025-02-21 17:07:30+00:00",
+          "trades": 105,
+          "net_r": 10.4276
+        },
+        {
+          "fold": 8,
+          "start": "2025-02-21 17:07:30+00:00",
+          "end": "2025-10-06 23:00:00+00:00",
+          "trades": 117,
+          "net_r": 3.6601
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261016-c56e-14/38982209722/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261016-c56e-14/38982209722/arms/B__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2020-10-15",
+        "--end",
+        "2025-10-06 23:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-10-15",
+    "end": "2025-10-06 23:00",
+    "fetch_days": 2240,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "60",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2020-10-15 00:00:00+00:00",
+      "2021-05-30 05:52:30+00:00",
+      "2022-01-12 11:45:00+00:00",
+      "2022-08-27 17:37:30+00:00",
+      "2023-04-11 23:30:00+00:00",
+      "2023-11-25 05:22:30+00:00",
+      "2024-07-09 11:15:00+00:00",
+      "2025-02-21 17:07:30+00:00",
+      "2025-10-06 23:00:00+00:00"
+    ]
+  }
+}

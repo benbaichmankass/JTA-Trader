@@ -84,24 +84,13 @@ def test_order_allowed_when_halt_flag_path_not_configured():
 
 
 # ---------------------------------------------------------------------------
-# Guard 4 — MAX_OPEN_POSITIONS
+# Guard 4 — MAX_OPEN_POSITIONS: RETIRED 2026-10-21 (RETIRE-GLOBAL-POSCAP)
 # ---------------------------------------------------------------------------
 
 
-def test_order_refused_when_open_positions_at_limit():
-    settings = _settings(MAX_OPEN_POSITIONS="3", CURRENT_OPEN_POSITIONS="3")
-    with pytest.raises(ValueError, match="MAX_OPEN_POSITIONS"):
-        safe_place_order(_order(), settings, _Client())
-
-
-def test_order_refused_when_open_positions_exceed_limit():
+def test_order_not_refused_on_open_position_count():
+    # The global open-position cap was retired; the keys are inert.
     settings = _settings(MAX_OPEN_POSITIONS="3", CURRENT_OPEN_POSITIONS="5")
-    with pytest.raises(ValueError, match="MAX_OPEN_POSITIONS"):
-        safe_place_order(_order(), settings, _Client())
-
-
-def test_order_allowed_when_open_positions_below_limit():
-    settings = _settings(MAX_OPEN_POSITIONS="5", CURRENT_OPEN_POSITIONS="2")
     result = safe_place_order(_order(), settings, _Client())
     assert result["status"] == "submitted"
 

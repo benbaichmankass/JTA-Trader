@@ -208,3 +208,16 @@ def test_guard_passes_on_the_current_tree():
     beside the planted-violation tests above.
     """
     assert guard.main() == 0
+
+
+def test_checks_e_to_h_catch_every_planted_long_soak_and_keep_controls_quiet():
+    # SOAK-REDEFINE 2026-10-15: the long soak was re-taught in new words
+    # (a cost-fidelity exit, n=10, end dates) that checks A-C could not see.
+    assert guard.self_test() == 0
+
+
+def test_live_tree_teaches_no_long_soak():
+    assert guard.check_live_language() == []
+    assert guard.check_contracts() == []
+    assert guard.check_generators() == []
+    assert guard.check_canonical_once() == []

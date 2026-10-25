@@ -1,0 +1,20 @@
+{
+  "based_on": "20261016T073649863736Z-305d5b07.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the guard matches the record's ruleset to the target account's backtest_ruleset, or the record is per (leg, ruleset); or killed with a stated reason",
+    "due_date": "2026-10-23",
+    "kind": "date"
+  },
+  "id": "PI-20261016-X57LREEA-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane P5-PROP-BACKLOG-1016 (session_01V7WcGdgRbZur21X57LReea), read of check_prop_roster_gate.py record_problems + comms/prop_survival/README.md",
+    "rerun": "read scripts/ci/check_prop_roster_gate.py record_problems/grade: does a roster add on account X check record.ruleset against X's backtest_ruleset?"
+  },
+  "routed_to": "PROP-GATE-PARITY (REGISTER-SWEEP-W43 2026-10-24: prop gate keyed by leg)",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[prop-gate-per-ruleset] comms/prop_survival/<leg>.json (prop-roster-gate-guard, scripts/ci/check_prop_roster_gate.py::record_problems) is keyed by LEG alone and checks only that `ruleset` is non-empty, but the same leg trades under three firm rulesets (velotrade_classic_1step, tradeify_247_1step, breakout_turbo_1step; config/accounts.yaml). A record that passed under one firm therefore admits the leg to a roster add on any prop account, e.g. a Velotrade PASS opens breakout_2 whose Turbo 3% static DD ended the account in 99.7% of simulated lives in RQ-20261014-f516-03 (p_breach_max_dd 0.997, n=4000 lives per seed, seed 1 of 5, 355 + 132 committed trades). The P5 gate units (programme nodes P5-GATE-VELO/TRAD/BRK, research/programmes/05-prop.yaml) grade per (leg, account). Fix: the guard requires the record's ruleset to equal the target account's backtest_ruleset (or the record becomes <leg>.<account>.json / a per-ruleset list). Tier-1 CI change."
+}

@@ -8,6 +8,17 @@ Stage-1 soak books (``bybit_1``, ``alpaca_paper``) make decisions on live data
 continuously and nobody reads them. This script reads them, on a cadence, and
 grades EVERY leg on that roster into one of four dispositions.
 
+⚠️ SINCE 2026-10-15 THIS IS ONGOING MONITORING, NOT THE SOAK'S EXIT. The
+operator redefined the soak that day (verbatim: "A soak is a mechanical
+verification that was already proven in backtesting, and nothing needs to soak
+for more than one or two trades"): a Stage-1 soak PASSES or FAILS on its
+mechanical checklist over 1-2 clean trades, graded by
+``scripts/ops/soak_state.py`` against ``docs/claude/work/SOAKS.json``. R5's cost
+fidelity read (and live-vs-backtest) is the ONGOING monitor of every Stage-1
+book — the Gate-2 demotion signal and the underperformer first step. An R5
+``insufficient-data`` for want of fills NEVER holds a soak open, and an R5
+``healthy`` is not a soak pass.
+
 NOT EXPECTANCY. Stage 1 never decides edge (root ``CLAUDE.md`` § "The
 promotion ladder" — "a live or paper book never establishes edge. It checks
 mechanics and cost."). This script grades exactly those two things, reusing

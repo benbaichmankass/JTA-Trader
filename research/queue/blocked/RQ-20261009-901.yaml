@@ -99,6 +99,12 @@ routing:
 
 blocked_on:
 - what: >-
+    STATUS 2026-10-14 (ML-LEG-CORPUS): step 1's corpus lever is built (PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum)); step 1 still has to run
+    and PASS. The `tp-policy-overlay` lever below is NOT built by that row and remains open (clause 2).
+  ref: ML-LEG-CORPUS; RQ-20261014-736c-01; RQ-20261009-900
+  clears_when: >-
+    Unchanged: clause (1) and (2) below.
+- what: >-
     (1) RQ-20261009-900 must land a PASS (requires_result). (2) No per-trade
     take-profit overlay exists: grep of scripts/ src/ tests/ for per-trade TP
     policy / overlay finds nothing, backtest_trend.py --tp-r is ONE constant for

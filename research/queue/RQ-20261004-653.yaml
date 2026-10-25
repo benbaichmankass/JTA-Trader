@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261004-653
 title: 'E35 bracket-geometry sweep: ief_pullback_1d (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -71,7 +71,9 @@ grading:
   graded_at: '2026-10-06'
   grader: scripts/research/queue_grade.py
   latest: true
-  needs_review: true
+  needs_review: false
+  triaged: '2026-10-23 research-ops: unit is status retired (reason on the unit); the stale needs_review was never refreshed because the superseded e35 rows no longer tag it (PI-20261006-1VPYTX8E-0001). Disposition = retirement.'
   reason: base_oos_trades 8 < 39 (unresolvable_at_current_n)
   rows: 199
   verdict: indeterminate
+retired_reason: '2026-10-14 RESEARCH-PIPE-UNSTICK: ief_pullback_1d: its 2026-10-05 sweep run (37280054032) succeeded but wrote no corpus rows under this unit; the leg''s 199 rows landed under sibling unit RQ-20261005-001 (sweep_generated_at 2026-10-06T06:29, after this unit''s stamp). Duplicate point, answered elsewhere. Corpus rows are tagged by research_unit; verified by grouping docs/research/e35-bracket-corpus.jsonl on (research_unit, leg, sweep_generated_at).'

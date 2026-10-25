@@ -286,6 +286,26 @@ def test_a_result_landed_after_the_grading_means_the_confirmatory_run_already_ra
     assert not dq.confirmatory_requeue({}, None)
 
 
+def test_a_same_day_requeue_with_a_date_only_graded_at_is_still_a_requeue(tmp_path, monkeypatch):
+    """The grader writes graded_at as a DATE. A first FAIL graded the same day its
+    result landed (19:14) must still read as a deliberate re-queue, not a lost stamp
+    (RQ-20261015-4941-01/-02 closed 'two consecutive FAIL passes' on ONE run)."""
+    day = {"confirmatory_run": 1, "graded_at": "2030-01-09"}
+    assert dq.confirmatory_requeue({"grading": day}, datetime(2030, 1, 9, 19, 14, tzinfo=timezone.utc))
+    assert not dq.confirmatory_requeue({"grading": day}, datetime(2030, 1, 10, 1, tzinfo=timezone.utc))
+    # With an evidence list, the files already READ decide, whatever the clock says.
+    root = _results(tmp_path, UID, [_row("2030-01-09T19:14:25+00:00", run_id="55")], run_id="55")
+    monkeypatch.setattr(dq, "RESULTS_ROOT", root)
+    ev = {**day, "evidence": [f"research/results/{UID}/55.jsonl"]}
+    late = datetime(2030, 1, 12, tzinfo=timezone.utc)
+    assert dq.confirmatory_requeue({"id": UID, "grading": ev}, late)
+    (root / UID / "77.jsonl").write_text(_row("2030-01-12T00:00:00+00:00", run_id="77") + "\n")
+    assert not dq.confirmatory_requeue({"id": UID, "grading": ev}, late)
+    # ... so stamp_lost never re-stamps a same-day re-queue from run 1's own row.
+    (root / UID / "77.jsonl").unlink()
+    assert dq.stamp_lost({"id": UID, "last_dispatched_at": None, "grading": ev}) is None
+
+
 # ── 4. the workflow lands each throwaway branch from the checked-out base ────
 
 def test_each_landing_returns_to_the_checked_out_base():
@@ -305,3 +325,154 @@ def test_each_landing_returns_to_the_checked_out_base():
     assert any(receipt < r < stamp for r in resets), "the stamp landing starts from the base"
     stamp_reset = next(steps[r] for r in resets if receipt < r < stamp)
     assert str(stamp_reset.get("if", "")).strip() == "env.FIRE == 'true'", "gated like the stamp step itself"
+
+
+# ── 4. stranded stamp PRs (RQ-DISPATCH-STALL, 2026-10-10) ─────────────────────
+
+def _stamp_patch(ts: str) -> str:
+    return f"@@ -73,4 +73,4 @@ related:\n- x\n-last_dispatched_at: null\n+last_dispatched_at: '{ts}'"
+
+
+_OLD = (NOW - timedelta(hours=9)).isoformat().replace("+00:00", "Z")
+_NEW = (NOW - timedelta(minutes=20)).isoformat().replace("+00:00", "Z")
+STRANDED_PULLS = [
+    {"number": 7, "created_at": _OLD, "head": {"ref": f"{dq.STAMP_BRANCH_PREFIX}-1-1"}},
+    {"number": 9, "created_at": _NEW, "head": {"ref": f"{dq.STAMP_BRANCH_PREFIX}-3-1"}},
+    {"number": 8, "created_at": _OLD, "head": {"ref": "automation/research-result-2-1"}},
+]
+STRANDED_FILES = {
+    7: [{"filename": f"research/queue/{UID}.yaml", "patch": _stamp_patch("2030-01-10T01:02:03+00:00")},
+        {"filename": ".github/merge-slots/x.json"}],
+    9: [{"filename": f"research/queue/{UID2}.yaml", "patch": _stamp_patch("2030-01-10T11:40:00+00:00")}],
+    8: [{"filename": f"research/queue/{UID2}.yaml", "patch": _stamp_patch("2030-01-10T02:00:00+00:00")}],
+}
+
+
+def test_only_stamp_prs_older_than_the_bound_are_stranded_and_carry_their_original_stamp():
+    got = dq.stranded_stamp_adoptions(NOW, 3.0, _api(STRANDED_PULLS, STRANDED_FILES))
+    assert set(got) == {UID}                       # #9 is fresh, #8 is not a stamp branch
+    when, src = got[UID]
+    assert when == datetime(2030, 1, 10, 1, 2, 3, tzinfo=timezone.utc) and "PR #7" in src
+
+
+def test_a_stranded_pr_with_no_readable_patch_adopts_nothing():
+    files = {7: [{"filename": f"research/queue/{UID}.yaml"}], 9: [], 8: []}   # patch omitted by GitHub
+    assert dq.stranded_stamp_adoptions(NOW, 3.0, _api(STRANDED_PULLS, files)) == {}
+
+
+def test_stranded_adoption_is_none_when_github_cannot_be_asked():
+    assert dq.stranded_stamp_adoptions(NOW, 3.0, lambda path: None) is None
+    assert dq.stranded_stamp_adoptions(NOW, 3.0, _api(STRANDED_PULLS, {7: None})) is None
+
+
+def test_a_stranded_stamp_is_adopted_not_refired_and_lands_in_this_cycles_tree(tmp_path, monkeypatch):
+    when = datetime(2030, 1, 10, 1, 2, 3, tzinfo=timezone.utc)
+    monkeypatch.setattr(dq, "stranded_stamp_adoptions",
+                        lambda now, hours=3.0, api=None: {UID: (when, "PR #7 (automation/research-queue-stamp-1-1)")})
+    fired, dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {}), (UID2, {})],
+                                pending={UID: "PR #7 (automation/research-queue-stamp-1-1)"})
+    assert fired == [f"research_unit={UID2}"]                      # UID was NOT dispatched a second time
+    assert dec[UID]["outcome"] == dq.NOT_DUE and "cadence=once and it ran at" in dec[UID]["reason"]
+    assert stamps[UID] == "2030-01-10T01:02:03+00:00"              # the ORIGINAL dispatch time, on this tree
+    assert stamps[UID2] is not None
+
+
+def test_adoption_never_moves_a_newer_stamp_backwards(tmp_path, monkeypatch):
+    when = datetime(2030, 1, 10, 1, 2, 3, tzinfo=timezone.utc)
+    monkeypatch.setattr(dq, "stranded_stamp_adoptions",
+                        lambda now, hours=3.0, api=None: {UID: (when, "PR #7 (automation/research-queue-stamp-1-1)")})
+    _fired, _dec, stamps = _cycle(tmp_path, monkeypatch,
+                                  [(UID, {"last_dispatched_at": "2030-01-10T05:00:00+00:00"})],
+                                  pending={UID: "PR #7 (automation/research-queue-stamp-1-1)"})
+    assert stamps[UID] == "2030-01-10T05:00:00+00:00"
+
+
+def test_a_stranded_stamp_is_never_adopted_over_a_deliberate_rearm(tmp_path, monkeypatch):
+    """PI-20261013-HOPS1447-0001: #17853 restored the stamps of the OPEN stranded stamp PR #17809 onto
+    RQ-20261009-903 / RQ-20261012-75b2-19, whose `last_dispatched_at: null` was #17829's re-arm."""
+    now = datetime.now(timezone.utc)
+    old = (now - timedelta(hours=8)).replace(microsecond=0)
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=9)).isoformat())]))
+    src = "PR #7 (automation/research-queue-stamp-1-1)"
+    monkeypatch.setattr(dq, "stranded_stamp_adoptions", lambda now, hours=3.0, api=None: {UID: (old, src)})
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is True
+    fired, _dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={UID: src})
+    assert fired == [f"research_unit={UID}"]        # the re-arm is honoured: the unit runs again ...
+    assert stamps[UID] != old.isoformat()           # ... and carries THIS fire's stamp, never the old one
+
+
+def test_cleared_on_purpose_is_false_for_a_dropped_stamp_and_a_stamped_unit(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is False        # no rows: a dropped stamp
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, [_row((now - timedelta(hours=2)).isoformat())]))
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is False        # a real verdict: not a re-arm
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=2)).isoformat())]))
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=now.isoformat())) is False   # stamped
+
+
+# ── 5. non-verdict rows do not consume a once-unit (RQ-REARM-PRODUCER-FAILED) ──
+
+def _state_row(read_state: str, generated_at: str) -> str:
+    return json.dumps({"research_unit": UID, "verdict": "indeterminate", "read_state": read_state,
+                       "generated_at": generated_at})
+
+
+def _stamped_now_minus(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+
+def test_a_producer_failed_only_once_unit_with_a_cleared_stamp_refires(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=3)).isoformat())]))
+    due, why = dq._is_due(_entry(last_dispatched_at=None), now)
+    assert due is True and "re-armed" in why
+    assert dq.stamp_lost(_entry(last_dispatched_at=None)) is None   # not undone by the repair
+
+
+def test_the_stamp_still_blocks_a_producer_failed_once_unit(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=3)).isoformat())]))
+    due, why = dq._is_due(_entry(last_dispatched_at=_stamped_now_minus(0)), now)
+    assert due is False and "cadence=once" in why
+
+
+def test_a_real_verdict_keeps_a_once_unit_done_even_beside_a_failed_row(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    rows = [_state_row("producer_failed", (now - timedelta(hours=5)).isoformat()),
+            _row((now - timedelta(hours=3)).isoformat(), run_id="2", verdict="pass")]
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, rows))
+    due, why = dq._is_due(_entry(last_dispatched_at=None), now)
+    assert due is False and "result-based idempotence" in why
+
+
+def test_the_retry_cap_stops_the_refire_and_is_flagged(tmp_path, monkeypatch, capsys):
+    now = datetime.now(timezone.utc)
+    ok = dq.MAX_NONVERDICT_RETRIES   # rows == cap -> one more retry allowed
+    rows = [_state_row("producer_failed", (now - timedelta(hours=10 - i)).isoformat()) for i in range(ok)]
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, rows))
+    assert dq._is_due(_entry(last_dispatched_at=None), now)[0] is True
+    rows.append(_state_row("no_data", (now - timedelta(hours=1)).isoformat()))
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, rows))
+    due, why = dq._is_due(_entry(last_dispatched_at=None), now)
+    assert due is False and dq.RETRY_CAP_MARK in why
+
+
+def test_main_warns_when_a_unit_is_at_the_retry_cap(tmp_path, monkeypatch, capsys):
+    now = datetime.now(timezone.utc)
+    rows = [_state_row("producer_failed", (now - timedelta(hours=10 - i)).isoformat())
+            for i in range(dq.MAX_NONVERDICT_RETRIES + 1)]
+    _results(tmp_path, UID, rows)
+    fired, dec, _stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={})
+    assert fired == [] and dq.RETRY_CAP_MARK in dec[UID]["reason"]
+    assert f"::warning::{UID}" in capsys.readouterr().err
+
+
+def test_main_refires_a_cleared_producer_failed_unit(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    _results(tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=2)).isoformat())])
+    fired, _dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={})
+    assert fired == [f"research_unit={UID}"] and stamps[UID]

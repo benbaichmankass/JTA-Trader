@@ -281,6 +281,16 @@ their `n_filled` should be 0 (shadow does not place live orders) — if
 not, that's an anomaly. Closed-trade attribution joins by
 `trades.strategy_name`.
 
+⚠️ **Shadow is not a refusal** (PI-20261010-ERFFUW41-0001). Every
+`execution: shadow` dispatch journals an order package with `status:
+rejected`, `close_reason: NULL` and reason `dry_run_no_order_placed`
+(`src/units/accounts/execute.py`, the non-live rejection row). Count those
+as `n_shadow`, never in `n_rejected`, and never list a shadow leg's
+packages as "rejected with no recorded cause" — on 2026-10-10 that flagged
+`mgc_trend_1h` (16/16 "rejected", all shadow by design) as an anomaly and
+would have hidden a real refusal among them. `n_rejected` is the remainder:
+a package refused for a cause, on a leg that is `execution: live`.
+
 ## Per-decision scoring (PERSISTED, keyed by order package)
 
 The score belongs to the **strategy DECISION**, so it is keyed by
@@ -417,6 +427,8 @@ scripts read these corpora, so a consumer EXISTS. This asks one level over:
 **was a consumer RUN, on THIS batch, and did a decision come out of it.** A tool
 that *could* have read a result is not a record that anyone did.
 
+> **Routine cadence (2026-10-10):** Stages 1–2 and the read-what-landed half of Stage 3 run 4x/day as `.claude/skills/research-ops/SKILL.md`; this review reads its latest record (`comms/research/ops/`) rather than re-deriving them.
+
 ### Stage 1 — is the pipeline HEALTHY (are jobs queued and routable)?
 
 Read `research/queue/*.yaml` through `scripts/research/research_queue.py`. Report
@@ -508,6 +520,15 @@ it turns a strategy off at a regime bottom, discards a real edge, and (worst)
 learns nothing about *why* it underperformed, so the same mistake recurs. This
 is the strategy-level analogue of the `drift-remediation` skill's one rule;
 follow it before ANY demote/kill enters `proposed_tweaks[]`.
+
+**Step 0 — always first (operator, 2026-10-15: "that should be a first step for any
+underperforming strategy"):** run `python3 scripts/research/live_vs_backtest.py --leg <leg>`
+and record its verdict beside the leg. It says whether the live cumulative R is inside the
+p5-p95 band the leg's own committed backtest predicts for the same number of trades.
+`CONSISTENT` → the result is luck-sized: keep accruing, no tune, no demote proposal (R4
+decides at its threshold). `BELOW_BACKTEST` → fidelity/regime problem, proceed to 1-3 and file
+the investigation unit. `NO_BACKTEST` → file a backtest unit. `INSUFFICIENT_N` /
+`NO_LIVE_TRADES` → say so; do not grade on it.
 
 When a live strategy underperforms in the window, the mandatory next step is a
 **root-cause diagnosis + robust re-test**, not a proposal to turn it off:
@@ -807,6 +828,16 @@ Emit a single JSON object conforming to
 Each `note`/`rationale` ≤240 chars; cite `order_package_id`,
 `trade_id`, strategy name, and numbers so the operator can verify
 fast.
+
+## Hand-off: `/perf-followup` (operator, 2026-10-10)
+
+Grading is not the end of the review. Once the response JSON is committed, say in the
+PR body and the Claude-channel ping that the review **hands off to `/perf-followup`**
+(`.claude/skills/perf-followup/SKILL.md`): the routine that tunes underperformers, runs
+the wider-context lessons post-mortem, extrapolates lessons, and files portfolio-level
+research. The manager dispatches it as one lane when this review's PR merges — you do
+not run it in this session. Anything in this review you leave open for research
+(`proposed_tweaks[]` demote candidates, `grade_drift`, benchmark verdicts) is its input.
 
 ## What you DO write (and what you don't)
 

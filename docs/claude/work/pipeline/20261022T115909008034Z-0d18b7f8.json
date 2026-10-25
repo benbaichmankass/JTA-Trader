@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-ZN6FCHUM-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "HANDOFF-LAND-1022",
+    "rerun": "python3 scripts/ci/check_manager_scope.py on a manager commit touching docs/DOCUMENT-INDEX.md"
+  },
+  "state": "queued",
+  "what": "manager SKILL § Manager handover step 1 says the manager commits the handoff doc via a self-land PR, but check_manager_scope refuses the required docs/DOCUMENT-INDEX.md row from a manager session, so every handover doc must be routed to a lane (PREREAD-LAND-1022 / HANDOFF-LAND-1022 on 2026-10-22). Fix: put docs/claude/work/handoffs/** and its index row on the manager surface, or change the skill text."
+}

@@ -1,0 +1,132 @@
+id: RQ-20261025-d7e6-03
+title: 'Giveback SELECTOR bank (variant of eba2-07/-08 after RESULTS-GRADE-1025; leg 2 of 5): on xrp_pullback_2h, does banking 25% at +1 R ONLY on trades the vol-controlled predictor
+  flags at P >= 0.7 beat the declared exit, the same bank on every trade, and a matched-rate random flag?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'RQ-20261022-eba2-07/-08 (ada/xrp pullback 2h) banked 50% at +1 R on every trade the bar-6 giveback metric flagged at P >= 0.5 (53% of trades) and lost (MB50 pooled per entry
+  -0.031 R, CI [-0.060, -0.004], MEASURED from the committed arm emits, n 796); the unconditional bank lost more. Diagnosis (P1-RG1025-giveback-trigger-variant): the metric RANKS giveback
+  but does not size it, so a half-size bank on half of all trades is the wrong dose and the wrong selectivity. On xrp_pullback_2h over 2020-07-01 .. 2026-10-15 23:59 (replace grade,
+  6 calendar folds by entry), with out-of-fold triggers at P >= 0.7 and a 25% bank, does arm MB beat the declared exit A, the unconditional 25% bank UB AND the matched-rate random bank
+  RB? The per-leg verdict is a LEAD; the decision is the POOLED read of the five legs (unit RQ-20261025-d7e6-07), because one leg cannot resolve the effect (paired sd 0.37 R, MDE 0.051
+  R/trade at n 402).'
+why_this_matters: The node P1-RG1025-giveback-trigger-variant. The giveback predictor passed rung 1 twice (eba2-01, eba2-04) while every exit lever built on it failed; 9a7e-* tests the
+  TIGHTEN lever as a gate, this tests the BANK lever as a gate, the other half of the same question. A first-test fail is a lead, not a dead idea (operator 2026-10-22); no family is
+  retired.
+power:
+  expected_n: 380
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.37
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'PAIRED per-entry difference (MB minus A), sd 0.366 R MEASURED from the committed arm emits of eba2-07/-08 (pooled ada+xrp, n 796, bank 50% at P>=0.5; a 25% bank at P>=0.7 changes
+    fewer trades so its sd is lower). Floor for d = 0.03/0.37 = 0.081 is 1195 trades POOLED over the five legs (expected 5 x ~380 = ~1900: ada 402, xrp 394, eth ~371 MEASURED in earlier
+    records, sol/avax estimated); one leg alone reaches 0.051 R/trade MDE and cannot resolve the 0.03 bar, which is why this unit grades as a LEAD and the pooled unit decides.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025-D7E6-03-BANK-SELECTOR-XRP-PULLBACK-2H
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --grade replace on xrp_pullback_2h with arms A (declared exit), MB (bank 25% of the position at +1.0 R on trades flagged by the
+    out-of-fold trigger), UB (the same 25% bank on every trade open at bar 6) and RB (the same bank on a seeded matched-rate random flag draw). Trigger: path_metric_giveback.oof_triggers,
+    FULL model (vol_ratio_k in the baseline) fit on the OTHER calendar folds only, k=6, big-quantile 0.5, flag when P(big giveback) >= 0.7 (a SELECTIVE gate: eba2-07/08 flagged 53% of
+    trades at 0.5). Window 2020-07-01 .. 2026-10-15 23:59, 6 calendar folds, net of the full cost stack (resolve_cost_policy, recorded per arm). Per arm: n, net_total_r, max_drawdown_r,
+    net R per fold.'
+  rule: 'PER-LEG LEAD (the decision is the pooled unit RQ-20261025-d7e6-07): INDETERMINATE IF n(A) < 39 or MB is byte-identical to A (no flag fired). MB PASSES the lead iff net_r(MB)
+    > net_r(A) AND delta vs A >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(MB) <= maxDD(A) x 1.35 AND net_r(MB) > net_r(UB) AND net_r(MB) > net_r(RB), each with folds_ge >= 5
+    of 6 (the harness enforces it via --vs-control). A per-leg FAIL means "this leg alone shows nothing at its n", NOT that the lever lost; the pooled unit decides. Thresholds (P 0.7,
+    bar 6, 1.0 R, 25%, seed 20261025) are not changed after any result.'
+  what_it_does_not_do: Edits no config (no src/, no config/), places no order, is not a promotion case. Out-of-fold triggers make the harness honest; a live gate would be fit on all
+    history and needs a live producer of the bar-6 path metrics. The harness fills a stop at the stop price, not at a gap; MB vs RB cancels that artifact (same number of banks) and MB
+    vs A does not. Does not re-test the 50% bank (closed twice) or the tighten gate (9a7e-*). Does not pool with any committed record.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: giveback is the operator standing priority; the tighten gate is already queued (9a7e-*), this is its bank twin; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window and reads no trainer data; CPU only, minutes.
+  est_minutes: 30
+  basis: One exit_lever_ablation.py invocation, 4 arms; the comparable 5-arm eba2-07 run on ada_pullback_2h took well under 30 min (2 arms on xrp_pullback_2h took 74 s MEASURED 2026-10-16).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --trigger-from-path-metrics
+  - '6'
+  - --trigger-baseline-extra
+  - vol_ratio_k
+  - --trigger-p-threshold
+  - '0.7'
+  - --trigger-shuffle-seed
+  - '20261025'
+  - --arm
+  - A=
+  - --arm
+  - MB=--trigger-action=bank;--bank-frac=0.25;--bank-at-r=1.0;--trigger-file=@trigger_file
+  - --arm
+  - UB=--trigger-action=bank;--bank-frac=0.25;--bank-at-r=1.0;--trigger-all=6
+  - --arm
+  - RB=--trigger-action=bank;--bank-frac=0.25;--bank-at-r=1.0;--trigger-file=@trigger_file_random
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --vs-control
+  - MB=UB
+  - --vs-control
+  - MB=RB
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261025-d7e6-03
+    trigger_producer: built in -- exit_lever_ablation.py --trigger-from-path-metrics 6 --trigger-baseline-extra vol_ratio_k --trigger-p-threshold 0.7 --trigger-shuffle-seed 20261025
+      (tokens @trigger_file, @trigger_file_random)
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261022-eba2-07.yaml
+- research/queue/RQ-20261022-eba2-08.yaml
+- research/queue/RQ-20261024-9a7e-01.yaml
+- comms/research/grading/RESULTS-GRADE-1025.json
+- scripts/research/pool_arm_diff.py
+requires_result:
+  unit: RQ-20261022-eba2-04
+  verdict: pass
+programme: P1
+last_dispatched_at: '2026-10-25T09:30:47+00:00'

@@ -1,0 +1,123 @@
+id: RQ-20261022-4b82-12
+title: 'HOT-vol trail-tighten (not skip) on xrp_pullback_2h: does tightening the trail in the hot-ATR tail beat the declared real-money leg?'
+status: done
+cadence: once
+roadmap:
+- L-REGIME
+theme: regime
+priority: 2
+kind: experiment
+question: RQ-20261014-f0e2-11 (hot-vol entry skip on xrp_pullback_2h at 0.8/0.9/0.95) graded FAIL. On xrp_pullback_2h, over 2020-07-01..2026-10-15
+  23:59 (6 calendar folds by entry time, the harness's venue-aware fee + slippage + funding stack), does any arm (TV80, TV90, TV95) beat the leg
+  as declared (B) by >= 0.5 R net in >= 4 of 6 folds with max drawdown no worse? The pre-registered hypothesis is that the hot-tail trail-tighten
+  reduces giveback without removing the entries.
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered
+  VARIANT of that first test. First test: RQ-20261014-f0e2-11 (hot-vol entry skip on xrp_pullback_2h at 0.8/0.9/0.95) graded FAIL. DIAGNOSIS (one
+  line): the skip arms cut entries on a leg that trades below its own backtest (8bbc-01: -8.84 R over 16, 3.4th pct), but no arm beat B by +1
+  R with dDD <= 0 in 3 of 4 folds; the leg''s backtest gives back most of its peak (RQ-20261022-fd06-02 why-this-matters), so an exit-side vol
+  rule is the unmeasured half. Lane AUTHOR-FLOOR-1022 (research runnable floor 33 vs 65 at 17:40Z). Prior ids: RQ-20261014-f0e2-11, RQ-20261022-fd06-02.
+  regime theme was short in the 17:40Z health check.'
+power:
+  expected_n: 90
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n is an ESTIMATE from the leg's committed
+    730 d record (comms/strategy_evidence/runs/2026-10-05-730d-expand/) scaled to the longer window, not a measurement; below 39 the unit grades
+    indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261022-4B82-12-XRP2H-HOTVOL-TRAIL
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg xrp_pullback_2h --grade sweep, baseline B = the leg as declared in config/strategies.yaml,
+    arms fixed now: TV80=--trail-vol-above-pctl=0.8;--trail-vol-tight-mult=2.5; TV90=--trail-vol-above-pctl=0.9;--trail-vol-tight-mult=2.5; TV95=--trail-vol-above-pctl=0.95;--trail-vol-tight-mult=2.0;
+    --folds 6 --fold-majority 4 --n-floor 39 --delta-r 0.5; per arm: n, net_total_r, max_drawdown_r, net R per fold; dR = net_r(arm) - net_r(B),
+    dDD = maxDD(arm) - maxDD(B).'
+  rule: 'INDETERMINATE IF n(B) < 39 (underpowered; never FAIL on thin n). A candidate arm PASSES iff dR >= 0.5 R AND dDD <= 0 AND it beats B in
+    >= 4 of 6 folds. PASS IF any arm passes (best = highest dR): a LEAD, followed by ONE confirmation unit on a disjoint window with the same
+    statistic and bar; only a confirmed pass becomes a Tier-3 PROPOSAL note on the owning checklist row for the manager, never a config edit.
+    FAIL IF none passes with n(B) >= 39: this variant is closed on this window and the record names the arm that moved closest. Thresholds are
+    fixed now and not changed after any result. Two passing arms within 0.5 R of each other are reported as a tie (take the milder).'
+  what_it_does_not_do: 'Edits no config and no roster, places no order. A PASS also needs a live producer (see the leg''s monitor) and a Tier-3
+    declare with the mirror in the same PR; it is not a promotion case. The arm set is the whole search: no arm is added after the run, and the
+    baseline is the declared leg, not a tuned one.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a regime lever on a money leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - TV80=--trail-vol-above-pctl=0.8;--trail-vol-tight-mult=2.5
+  - --arm
+  - TV90=--trail-vol-above-pctl=0.9;--trail-vol-tight-mult=2.5
+  - --arm
+  - TV95=--trail-vol-above-pctl=0.95;--trail-vol-tight-mult=2.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '0.5'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261022-4b82-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+related:
+- scripts/research/exit_lever_ablation.py
+- config/regime_policy.yaml
+- RQ-20261014-f0e2-11
+- RQ-20261022-fd06-02
+- AUTHOR-FLOOR-1022
+last_dispatched_at: '2026-10-22T21:13:15+00:00'
+grading:
+  attested: RULE-RQ20261022-4B82-12-XRP2H-HOTVOL-TRAIL
+  auto: true
+  decision_rule_id: RULE-RQ20261022-4B82-12-XRP2H-HOTVOL-TRAIL
+  evidence:
+  - research/results/RQ-20261022-4b82-12/39855498979.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

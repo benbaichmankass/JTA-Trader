@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the next sl-only amend on breakout_2 records amend_status amended with fails 0, or the ticket closed and the cause of the sheet_not_open refusal is stated",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-KERS1025-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane BLOCKERS-1025 reading GET /api/bot/prop/tickets?account_id=breakout_2 and /api/diag/phone_captures",
+    "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/bot/prop/tickets?account_id=breakout_2&limit=5' and read phone_trail.amend_status / fails per ticket"
+  },
+  "state": "queued",
+  "what": "breakout_2 phone executor: sl-only amend prop-manual-2e786ef17c05#a4 (2349.55 from 2409.58) was refused at 2026-10-24T23:00Z with fails 4 (phone_sheet_diag state amend_sheet_sheet_not_open), after #19072 and the 10-22 amend that succeeded. Separately a positions_miss 'side_unread miss=side' event repeats about every 30 min. The trail replay wants an exit (price through the replayed stop), so the stop is not moving on that ticket. Diagnose from the capture runs, fix the sheet open, then re-observe an amended status."
+}

@@ -1,0 +1,23 @@
+{
+  "based_on": "20261018T145318447038Z-621ec138.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json)",
+    "kind": "observation",
+    "soak": {
+      "declared_at": "2026-10-15",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "bybit_1/trend_donchian_sol_prop"
+    }
+  },
+  "id": "PI-SOAK-20261018-bybit_1-trend_donchian_sol_prop",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "routed_to": "AUD-20261019-SOAK-ITEMS-LONG-EXIT (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target SOAK-WATCH is done; item still open) | was: SOAK-WATCH — shadow soak graded weekly by soak_report.py; due only when not accruing (BACKLOG-BURNDOWN-2 2026-10-04)",
+  "state": "routed",
+  "what": "SOAK (stage1): bybit_1/trend_donchian_sol_prop — Stage-1 soak leg. Exit: mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing."
+}

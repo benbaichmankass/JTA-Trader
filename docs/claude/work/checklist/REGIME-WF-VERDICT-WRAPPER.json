@@ -1,0 +1,22 @@
+{
+  "id": "REGIME-WF-VERDICT-WRAPPER",
+  "title": "Lever: verdict.json wrapper so regime_cell_walkforward / regime_adx_cutpoint_sweep can land queue results (live-leg cell evidence)",
+  "phase": "R",
+  "state": "queued",
+  "owner": "research-ops",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found by QUEUE-FILL-W41. The two real cell-evidence tools write stdout/--json only and their workflows (regime-cell-walkforward.yml, regime-adx-cutpoint-sweep.yml) take no research_unit input, so a queue unit cannot land a result from them; research-script-run.yml needs verdict.json. Build: a scripts/research/ wrapper that runs the walkforward over a list of (strategy, regime) cells and writes verdict.json with one record per cell (stable_drag / fold_sensitive / insufficient_n), then regime units per live leg lacking cell evidence (regime-selectivity Rule 2). Closes when a queue unit built on it lands a result record. Roadmap L-REGIME. [2026-10-21 PIPELINE-HEALTH-1021] Operator answer (via manager, ~19:10Z) on PI-20261021-WG8OPB7N-0004: \"Assign to research-ops (Recommended)\". Owner is now research-ops; the next RESEARCH-OPS pass unblocks what can run and retires the rest with stated reasons. [mgr 2026-10-25 review] ranked 17 to clear its blocked research unit(s) (PI-20261021-WG8OPB7N-0004): build the lever rather than retire the unit; dispatch by capacity.",
+  "updated_at": "2026-10-25T05:56:33Z",
+  "updated_by": "session_016v5FrVaSAmNoz8u6ct9HqC",
+  "roadmap": [
+    "L-REGIME"
+  ],
+  "priority_rank": 17,
+  "_seq": 442
+}

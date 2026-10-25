@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Implements the operator's popup decision of 2026-10-24 ~15:05Z (manager session_01UETC6mFiwMgXk6URsuWzZb, checklist row SLV-PB1D-DEMOTE), answer verbatim 'Demote to Stage 1 (Recommended)': remove slv_pullback_1d from the alpaca_live and alpaca_portfolio rosters (strict mirror equality kept; the mirror becomes strategies: [] explicitly); it stays on alpaca_paper. Evidence (row SLV-PB1D-RETENTION-T3): Stage-0 FAIL at power on RQ-20261016-c56e-17, RQ-20261023-9ffb-01, RQ-20261023-9ffb-02, RQ-20261023-9ffb-03. Also drops the now-stale alpaca_live/alpaca_portfolio slv baseline lines in check_tp_doctrine.py and check_roster_promotion_evidence.py. Held for the manager, who shows it to the operator before merging. Revert: restore `- slv_pullback_1d` on both rosters (Tier 3). Closing observation: /api/bot/config on the running sha shows slv_pullback_1d absent from alpaca_live and alpaca_portfolio and present on alpaca_paper.",
+  "why": "Tier-3 by content: removes a leg from a real-money roster (config/accounts.yaml alpaca_live). The decision is the operator's popup answer; the hold routes the merge to the manager."
+}

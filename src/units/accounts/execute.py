@@ -645,6 +645,44 @@ def execute_pkg(
                     order["symbol"], _ve,
                 )
 
+    # REDUCE-FILL-QTY: read back what a reduce-only order actually FILLED, so
+    # the journal shrinks its parents by the units the venue closed rather than
+    # the units we asked for. The venue cuts a reduce-only request to the
+    # position it holds; a short fill means the journal held units the venue
+    # did not, which is a divergence a reader needs to see.
+    reduce_fill = None
+    if reduce_only:
+        reduce_fill = read_reduce_fill(
+            exchange_client, account_cfg, symbol=order["symbol"],
+            order_id=trade_id, requested_qty=float(order.get("qty") or 0.0),
+        )
+        if reduce_fill.get("state") == "short_fill":
+            logger.warning(
+                "execute_pkg: reduce-only %s %s SHORT-FILLED: %s — the journal "
+                "held units the venue did not; parents are shrunk by the "
+                "filled qty only. trade_id=%s",
+                account_id, order["symbol"], reduce_fill.get("reason"), trade_id,
+            )
+            try:
+                from src.runtime.outcomes import Level, report
+                report(
+                    "execute_pkg",
+                    "reduce_short_fill",
+                    level=Level.WARN,
+                    reason=(
+                        f"{order['symbol']} reduce-only {reduce_fill.get('reason')}"
+                        " — journal held more units than the venue"
+                    ),
+                    symbol=order["symbol"],
+                    account_id=str(account_id),
+                    strategy=order.get("strategy"),
+                    requested_qty=float(order.get("qty") or 0.0),
+                    filled_qty=reduce_fill.get("filled_qty"),
+                )
+            except Exception:  # noqa: BLE001 — observability only
+                logger.debug("execute_pkg: reduce_short_fill report failed",
+                             exc_info=True)
+
     # CLAUDE.md § Architecture rules § 3 + architecture-audit-2026-05-02
     # P0-2: every executed trade must land a row in the trade log so
     # ``/last5`` / ``/strategies`` / hourly-report aggregations have
@@ -667,6 +705,7 @@ def execute_pkg(
         # each shrunk parent's own tracked protective leg. Every other insert
         # path ignores it, so no non-reduce journal write changes.
         exchange_client=exchange_client,
+        reduce_fill=reduce_fill,
     )
 
     # P3 observe-only exit-ladder soak: for a live OPENING order (reduce-only
@@ -1957,6 +1996,139 @@ def resize_tracked_protective_legs(
         return _all("failed", f"{type(exc).__name__}: {exc}")
 
 
+# ---------------------------------------------------------------------------
+# REDUCE-FILL-QTY — size the partial close from the FILLED qty, not the request
+# ---------------------------------------------------------------------------
+#
+# A Bybit reduce-only order never fills MORE than the venue position on its
+# book: a request larger than the position is cut to the position by the
+# venue. Until 2026-10-12 the journal shrank parents by the REQUESTED qty
+# regardless, so whenever the journal already held more units than the venue
+# (a venue-side close the journal had not yet seen), the reduce "closed" units
+# that the venue never closed at the reduce price.
+#
+# MEASURED 2026-10-12 (diag journal, all 6,576 trade rows, against
+# /api/bot/pnl/exchange/fills 90d, untruncated per account x symbol): 9 of the
+# 71 reduce legs that could be matched to the fill store filled short, all
+# between 2026-07-24 and 2026-08-08. In all 9 the venue position on that symbol,
+# rebuilt from the fills back from the live position, was EXACTLY the filled qty
+# before the reduce and 0.0 after it — the venue's reduce-only cut, not a
+# partial fill and not a unit mismatch. Example: bybit_1 4358 asked for 0.839
+# BTC and filled 0.01, because parent 4324's 3.199 BTC had already been closed
+# at the venue 33 h earlier while its journal row was still open.
+#
+# Three states, never collapsed:
+#   filled      the order is terminal and filled the whole request.
+#   short_fill  the order is terminal and filled less (0 included). The
+#               shortfall is units the journal holds and the venue did not.
+#   unknown     WE COULD NOT READ IT — no client, not Bybit, the lookup raised
+#               or the order was not terminal after the retries. The caller
+#               falls back to the REQUESTED qty, which is the pre-2026-10-12
+#               behaviour: a reduce-only fill can never exceed its request, so
+#               the request is an upper bound, and not shrinking at all would
+#               make the intent layer re-send the same reduce next tick (the
+#               #5101 churn loop) against units the venue may really hold.
+REDUCE_FILL_STATES = ("filled", "short_fill", "unknown")
+
+# Bybit V5 ``orderStatus`` values after which ``cumExecQty`` can no longer move.
+_BYBIT_TERMINAL_ORDER_STATUSES = frozenset({
+    "Filled", "PartiallyFilledCanceled", "Cancelled", "Rejected", "Deactivated",
+})
+
+
+def read_reduce_fill(
+    exchange_client: Any,
+    account_cfg: Optional[dict],
+    *,
+    symbol: str,
+    order_id: Optional[str],
+    requested_qty: float,
+    attempts: int = 3,
+    retry_sleep_s: float = 0.25,
+    sleep: Any = None,
+) -> dict:
+    """Read how much of a just-placed reduce-only order the venue FILLED.
+
+    Returns ``{"state": <one of REDUCE_FILL_STATES>, "filled_qty": float|None,
+    "avg_price": float|None, "order_status": str|None, "reason": str|None}``.
+    ``filled_qty`` is set only for ``filled`` / ``short_fill``.
+
+    Read-only (``get_open_orders`` / ``get_order_history`` by ``orderId``).
+    Never raises: it runs on the order path after the order is placed, and any
+    failure is the ``unknown`` state.
+    """
+    out = {"state": "unknown", "filled_qty": None, "avg_price": None,
+           "order_status": None, "reason": None}
+    try:
+        cfg = account_cfg or {}
+        if exchange_client is None:
+            out["reason"] = "no exchange_client"
+            return out
+        if str(cfg.get("exchange") or "bybit").lower() != "bybit":
+            out["reason"] = "not a bybit account"
+            return out
+        if not order_id:
+            out["reason"] = "no order id"
+            return out
+        from src.units.accounts.clients import _bybit_order_status_lookup
+        category = _bybit_category(cfg)
+        _sleep = sleep
+        if _sleep is None:
+            import time as _time
+            _sleep = _time.sleep
+        n = max(int(attempts), 1)
+        for i in range(n):
+            rec = _bybit_order_status_lookup(
+                exchange_client, category=category, order_id=str(order_id),
+            )
+            if isinstance(rec, dict):
+                status = str(rec.get("orderStatus") or "")
+                out["order_status"] = status or None
+                if status in _BYBIT_TERMINAL_ORDER_STATUSES:
+                    try:
+                        filled = float(rec.get("cumExecQty"))
+                    except (TypeError, ValueError):
+                        out["reason"] = (
+                            f"terminal status {status} with unusable "
+                            f"cumExecQty {rec.get('cumExecQty')!r}"
+                        )
+                        return out
+                    try:
+                        avg = float(rec.get("avgPrice"))
+                        out["avg_price"] = avg if avg > 0 else None
+                    except (TypeError, ValueError):
+                        pass
+                    req = float(requested_qty or 0.0)
+                    out["filled_qty"] = filled
+                    # Same relative tolerance the settlement uses to call a
+                    # fill complete; absolute floor for tiny requests.
+                    if filled >= req - max(1e-9, 1e-6 * req):
+                        out["state"] = "filled"
+                    else:
+                        out["state"] = "short_fill"
+                        out["reason"] = (
+                            f"venue filled {filled:g} of {req:g} "
+                            f"(orderStatus={status})"
+                        )
+                    return out
+                out["reason"] = f"order not terminal (orderStatus={status!r})"
+            else:
+                out["reason"] = "order not found by id"
+            if i < n - 1:
+                _sleep(retry_sleep_s)
+        out["reason"] = f"{out['reason']} after {n} reads"
+        return out
+    except Exception as exc:  # noqa: BLE001 — never crash the order path
+        logger.warning(
+            "read_reduce_fill: raised for symbol=%s order=%s: %s",
+            symbol, order_id, exc,
+        )
+        out["state"] = "unknown"
+        out["filled_qty"] = None
+        out["reason"] = f"{type(exc).__name__}: {exc}"
+        return out
+
+
 def apply_intent_reduce_partial_close(
     db: Any,
     *,
@@ -2212,8 +2384,14 @@ def _log_trade_to_journal(
     sl_order_id: Optional[str] = None,
     tp_order_id: Optional[str] = None,
     exchange_client: Any = None,
+    reduce_fill: Optional[dict] = None,
 ) -> bool:
     """Insert a row into ``trade_journal.db::trades`` for an executor event.
+
+    ``reduce_fill`` (intent-reduce only) is :func:`read_reduce_fill`'s result.
+    When its state is ``filled`` / ``short_fill`` the parents are shrunk by the
+    FILLED qty; when it is absent or ``unknown`` they are shrunk by
+    ``order['qty']`` (the request), as before REDUCE-FILL-QTY.
 
     Three call patterns:
 
@@ -2309,6 +2487,18 @@ def _log_trade_to_journal(
             account_cfg.get("account_id") or account_cfg.get("id") or "unknown"
         )
         reduce_qty = float(order.get("qty") or 0.0)
+        # REDUCE-FILL-QTY: what the venue FILLED, when we could read it. The
+        # requested qty stays the fallback for `unknown` (see REDUCE_FILL_STATES).
+        requested_reduce_qty = reduce_qty
+        reduce_fill_state = str((reduce_fill or {}).get("state") or "unknown")
+        if reduce_fill_state not in REDUCE_FILL_STATES:
+            reduce_fill_state = "unknown"
+        if intent_reduce and reduce_fill_state in ("filled", "short_fill"):
+            try:
+                reduce_qty = max(float(reduce_fill["filled_qty"]), 0.0)
+            except (KeyError, TypeError, ValueError):
+                reduce_fill_state = "unknown"
+                reduce_qty = requested_reduce_qty
         # Intent-mode reduce of a REAL placed order (status would otherwise be
         # 'open'): model it as a FIFO PARTIAL CLOSE of the parent position
         # rather than a new opposite-direction open row (the phantom-short
@@ -2340,6 +2530,20 @@ def _log_trade_to_journal(
                 # status=='open'); pnl/pnl_percent left NULL (deferred).
                 audit_notes = dict(notes_payload)
                 audit_notes["intent_reduce_allocations"] = reduce_result["allocations"]
+                # REDUCE-FILL-QTY: which qty sized the shrink, and why. The
+                # row's position_size is the SHRINK qty (filled, or requested
+                # when the fill could not be read).
+                audit_notes["reduce_fill_state"] = reduce_fill_state
+                audit_notes["reduce_requested_qty"] = requested_reduce_qty
+                if reduce_fill_state != "unknown":
+                    audit_notes["reduce_filled_qty"] = reduce_qty
+                    if (reduce_fill or {}).get("avg_price") is not None:
+                        audit_notes["reduce_fill_avg_price"] = reduce_fill["avg_price"]
+                if reduce_fill_state == "short_fill":
+                    audit_notes["reduce_unfilled_qty"] = round(
+                        requested_reduce_qty - reduce_qty, 10)
+                if reduce_fill_state != "filled" and (reduce_fill or {}).get("reason"):
+                    audit_notes["reduce_fill_reason"] = str(reduce_fill["reason"])[:160]
                 if reduce_result["leftover"] > 1e-9:
                     audit_notes["over_reduce_leftover"] = reduce_result["leftover"]
                 if reduce_result["no_parent_position"]:
@@ -2352,6 +2556,11 @@ def _log_trade_to_journal(
                     audit_notes["legs_left_resting_on_closed_rows"] = \
                         reduce_result["legs_left_resting_on_closed_rows"]
                 audit_notes["pnl_source"] = "deferred_intent_reduce"
+                # ORDER-AUDIT-4 (PI-20261015-PD85QJEZ-0003): the reason on this
+                # row is the intent layer's own decision, so say so. A literal,
+                # pinned to src/runtime/provenance.py by a test (the order path
+                # keeps its imports minimal).
+                audit_notes.setdefault("exit_reason_source", "intent_reduce_order")
                 now_iso = datetime.now(timezone.utc).isoformat()
                 db.insert_trade({
                     "timestamp": now_iso,
@@ -2375,6 +2584,13 @@ def _log_trade_to_journal(
                     "account_id": resolved_account_id,
                     "notes": dump_capped(audit_notes, 2000),
                     "order_package_id": pkg_id,
+                    # XRP-REDUCE-OTHER-CLOSES: the reduce order's venue orderId,
+                    # same join key the legacy insert below stamps. Without it
+                    # every reduce leg read broker_order_id NULL although
+                    # notes.trade_id held the filled order (bybit_2 6533/6539,
+                    # both Filled at the venue), so the broker-truth cost sweep
+                    # could never reach a reduce leg. Observability-only.
+                    "broker_order_id": trade_id,
                 })
                 # Reduce handled as a partial close — done. The package
                 # linked_trade_id slot is owned by the primary entry, not a
@@ -2542,6 +2758,7 @@ def log_rejection_to_journal(
     is_dry: bool = False,
     margin_basis: Optional[dict] = None,
     dry_cause: Optional[str] = None,
+    extra_notes: Optional[dict] = None,
 ) -> bool:
     """Public wrapper: log a refusal event to the trade journal.
 
@@ -2597,6 +2814,8 @@ def log_rejection_to_journal(
             _extra["margin_basis"] = margin_basis
         if dry_cause:
             _extra["dry_cause"] = str(dry_cause)
+        if extra_notes:
+            _extra.update(extra_notes)
         return _log_trade_to_journal(
             pkg, account_cfg, order,
             trade_id=None, is_dry=is_dry,
@@ -3193,6 +3412,84 @@ def _ib_sibling_open_qty(
         return 0.0
 
 
+def _bybit_close_headroom(
+    exchange_client: Any, category: str, account_cfg: dict, symbol: str,
+    direction: str, trade_id: Optional[Any],
+) -> tuple:
+    """How much of the live Bybit position this trade's close may take.
+
+    SOAK-MECH-FAULTS class C (bybit_1 trade 6171, 2026-09-26): under one-way
+    netting two same-direction journal trades share ONE venue position. When
+    trade A's own Partial SL leg fills at the venue and the monitor then sends
+    its own ``sl_cross`` reduce-only close for A's full qty, Bybit clamps the
+    reduce-only qty to what is left -- which is trade B's share -- and B is
+    flattened with no journal close (it later lands as ``reconciler_filled`` at
+    a candle price). Measured: venue PartialStopLoss 87674.6 filled 09:11:18;
+    monitor reduce-only Market Sell clamped to 1221.9 (B's exact size) at
+    09:11:56. This is the Bybit twin of the IB sibling clamp
+    (``_ib_sibling_open_qty``), and it reuses that journal read.
+
+    Returns ``(headroom, state)``:
+
+    * ``(None, "not_applicable")`` -- spot, or the caller gave no ``trade_id``
+      (byte-for-byte the pre-fix path).
+    * ``(None, "position_unread")`` -- the position read failed; the caller
+      sends the pre-fix qty rather than blocking a close.
+    * ``(float, "read")`` -- live same-direction size minus the same-direction
+      sibling journal qty. ``<= 0`` means this trade's own share is gone.
+    """
+    if category == "spot" or trade_id is None:
+        return None, "not_applicable"
+    want_side = "buy" if direction == "long" else "sell"
+    try:
+        pos_resp = exchange_client.get_positions(category=category, symbol=symbol)
+        if not isinstance(pos_resp, dict) or pos_resp.get("retCode") not in (0, "0"):
+            return None, "position_unread"
+        prows = (pos_resp.get("result") or {}).get("list")
+        if not isinstance(prows, list):
+            return None, "position_unread"
+        live = 0.0
+        for row in prows:
+            try:
+                size = abs(float(row.get("size") or 0.0))
+            except (TypeError, ValueError):
+                return None, "position_unread"
+            if size > 0 and str(row.get("side") or "").lower() == want_side:
+                live += size
+    except Exception as exc:  # noqa: BLE001
+        logger.info("_bybit_close_headroom: get_positions failed %s: %s",
+                    symbol, exc)
+        return None, "position_unread"
+    sibling = _ib_sibling_open_qty(
+        account_cfg.get("account_id"), symbol, trade_id, direction=direction,
+    )
+    return live - sibling, "read"
+
+
+def _bybit_own_legs_resting(
+    exchange_client: Any, category: str, symbol: str,
+    sl_order_id: Optional[str], tp_order_id: Optional[str],
+) -> Optional[bool]:
+    """True if either of this trade's tracked Partial-tpsl legs is still
+    resting at the venue; False if neither is; None if unknown (no tracked
+    id, or the read failed)."""
+    own = {str(x) for x in (sl_order_id, tp_order_id) if x}
+    if not own:
+        return None
+    try:
+        oo = exchange_client.get_open_orders(
+            category=category, symbol=symbol, orderFilter="StopOrder",
+        )
+        if not isinstance(oo, dict) or oo.get("retCode") not in (0, "0"):
+            return None
+        rows = (oo.get("result") or {}).get("list")
+        if not isinstance(rows, list):
+            return None
+    except Exception:  # noqa: BLE001
+        return None
+    return any(str(o.get("orderId") or "") in own for o in rows)
+
+
 def close_open_position(
     exchange_client: Any,
     account_cfg: dict,
@@ -3267,6 +3564,53 @@ def close_open_position(
             from src.units.accounts.qty_legalize import snap_artifact_qty
 
             category = _bybit_category(account_cfg)
+            # SOAK-MECH-FAULTS class C: never let a reduce-only close eat a
+            # same-direction sibling trade's share of a netted position.
+            headroom, headroom_state = _bybit_close_headroom(
+                exchange_client, category, account_cfg, symbol, direction,
+                trade_id,
+            )
+            if headroom is not None and headroom < qty:
+                # The venue holds less on our side than our qty plus the
+                # same-side siblings' recorded qty. Act on that ONLY when our
+                # own tracked legs are gone (they fired, so our share really
+                # shrank). If they still rest -- or we cannot tell -- a sibling
+                # row is the likelier stale party, so send the pre-fix qty
+                # rather than under-close (the IB clamp's 2026-09-28 lesson).
+                own_resting = _bybit_own_legs_resting(
+                    exchange_client, category, symbol, sl_order_id, tp_order_id,
+                )
+                if own_resting is False and headroom <= 1e-12:
+                    logger.warning(
+                        "close_open_position: account=%s symbol=%s trade=%s "
+                        "own share already flat at venue (own legs gone; the "
+                        "live same-side size is reserved by sibling journal "
+                        "rows) -- NOT sending a reduce-only close that would "
+                        "take a sibling's share",
+                        account_cfg.get("account_id"), symbol, trade_id,
+                    )
+                    return {"ok": False,
+                            "exchange_response": {"own_share_already_flat": True,
+                                                  "headroom": headroom},
+                            "exchange_order_id": None,
+                            "error": "own share already flat; remainder "
+                                     "belongs to sibling trade(s)"}
+                if own_resting is False:
+                    logger.warning(
+                        "close_open_position: account=%s symbol=%s trade=%s qty "
+                        "%s clamped to %s so a sibling's share is not closed",
+                        account_cfg.get("account_id"), symbol, trade_id, qty,
+                        headroom,
+                    )
+                    qty = headroom
+                else:
+                    logger.warning(
+                        "close_open_position: account=%s symbol=%s trade=%s "
+                        "journal/venue divergence (headroom %s < qty %s, own "
+                        "legs resting=%s) -- sending the unclamped qty",
+                        account_cfg.get("account_id"), symbol, trade_id,
+                        headroom, qty, own_resting,
+                    )
             # Repair a float ARTIFACT before it reaches the wire (MI-139,
             # WO-20260906-A-BYBIT-REDUCE-ONLY-CLOSE-IS-REJECTED). `str(qty)` on a
             # raw journal residual sends e.g. "33.299999999999955", which Bybit

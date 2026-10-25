@@ -1,0 +1,186 @@
+name: compute-util-telemetry
+
+# Daily CPU / memory / network / disk utilisation for the live VM, trainer VM and
+# IB gateway; a committed rolling ledger; Oracle's idle-reclaim check; the tenancy
+# A1 limits read; and the per-VM spare-capacity figure the research router reads.
+# Rows COMPUTE-UTIL-TELEMETRY + COMPUTE-OCI-QUOTA-CHECK. Logic and the read-state
+# rules live in scripts/ops/compute_util.py; this file only wires credentials.
+#
+# READ-ONLY on every VM and on OCI: list_instances, Monitoring summarize, Limits
+# reads, and one `df`/`/proc` read per host over SSH. The gateway has no public IP
+# and the trainer lacks its key, so it is read via ProxyJump through the live VM
+# (same transport as vm-ib-gateway-selftest) — and also, independently, via the
+# OCI Monitoring API, which needs no SSH at all.
+#
+# Host addresses come ONLY from repo variables (VM_SSH_HOST, TRAINER_VM_IP,
+# IB_GATEWAY_HOST); none is written here. If a variable is unset the host's disk
+# is recorded `could_not_look` — never 0.
+#
+# Drive on demand with a `compute-util-telemetry`-labelled issue.
+
+on:
+  schedule:
+    # Daily 06:37 UTC. Oracle's rule is a 7-day window, so daily is ample; the run
+    # re-reads the last 7 days each time, so a missed day self-heals.
+    - cron: "37 6 * * *"
+  workflow_dispatch: {}
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: compute-util-telemetry
+  cancel-in-progress: false
+
+jobs:
+  telemetry:
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       (github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'compute-util-telemetry'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    env:
+      LIVE_HOST: ${{ secrets.VM_SSH_HOST }}
+      TRAINER_HOST: ${{ secrets.TRAINER_VM_IP }}
+      GATEWAY_HOST: ${{ vars.IB_GATEWAY_HOST }}
+      VM_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
+    steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # commit-to-main pushes with the checkout's credential; the PAT makes
+          # the PR it opens receive its required checks.
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install OCI SDK
+        run: pip install --quiet oci
+
+      - name: Resolve host addresses from the OCI API (masked; nothing committed)
+        continue-on-error: true
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+        run: |
+          mkdir -p /tmp/cu && echo '{}' > /tmp/cu/hosts.json
+          python3 scripts/ops/compute_util.py hosts --out /tmp/cu/hosts.json
+
+      - name: Sample disk / load / memory over SSH (best-effort, read-only)
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/cu ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          # One read-only probe; prints a single JSON object or nothing.
+          cat > /tmp/cu/probe.sh <<'PROBE'
+          disk=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+          load=$(cut -d' ' -f1 /proc/loadavg)
+          mem=$(awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf "%.1f", (t-a)*100/t}' /proc/meminfo)
+          printf '{"disk_pct": %s, "load1": %s, "mem_used_pct": %s}' "$disk" "$load" "$mem"
+          PROBE
+          addr() { python3 -c "import json,sys; print(json.load(open('/tmp/cu/hosts.json')).get('$1',{}).get('$2') or '')"; }
+          [ -z "$LIVE_HOST" ] && LIVE_HOST=$(addr live public_ip)
+          [ -z "$TRAINER_HOST" ] && TRAINER_HOST=$(addr trainer public_ip)
+          [ -z "$GATEWAY_HOST" ] && GATEWAY_HOST=$(addr gateway private_ip)
+          SSHO="-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15"
+          probe() {  # $1=alias $2=target-host $3..=extra ssh args
+            local alias="$1" host="$2"; shift 2
+            if [ -z "$host" ]; then echo "$alias: host variable unset -> could_not_look"; return 0; fi
+            out=$(ssh -i ~/.ssh/id_rsa $SSHO "$@" "${VM_USER}@${host}" 'bash -s' < /tmp/cu/probe.sh 2>/dev/null) || out=""
+            if echo "$out" | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
+              echo "$alias=$out" >> /tmp/cu/samples.kv; echo "$alias: sampled"
+            else
+              echo "$alias: ssh read failed -> could_not_look"
+            fi
+          }
+          : > /tmp/cu/samples.kv
+          probe live "$LIVE_HOST"
+          probe trainer "$TRAINER_HOST"
+          [ -n "$LIVE_HOST" ] && probe gateway "$GATEWAY_HOST" -o "ProxyJump=${VM_USER}@${LIVE_HOST}" || echo "gateway: no jump host -> could_not_look"
+          python3 - <<'PY'
+          import json
+          d = {}
+          for line in open("/tmp/cu/samples.kv"):
+              k, _, v = line.partition("="); d[k] = json.loads(v)
+          json.dump(d, open("/tmp/cu/ssh.json", "w"))
+          print("ssh samples for:", sorted(d))
+          PY
+
+      - name: Collect metrics + limits, update ledger, evaluate Oracle idle rule
+        id: collect
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+        run: |
+          set -uo pipefail
+          python3 scripts/ops/compute_util.py collect --ssh-samples /tmp/cu/ssh.json | tee /tmp/cu/out.json
+          {
+            echo '## compute-util-telemetry'; echo; echo '```json'
+            head -c 20000 /tmp/cu/out.json; echo; echo '```'
+            echo; echo '### tenancy limits'; echo '```json'; cat comms/cloud/oci_limits.json; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Red alert — a VM trends toward Oracle's idle-reclaim criteria
+        id: operator_ping
+        continue-on-error: true
+        if: steps.collect.outputs.alert == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.CLAUDE_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEXT: ${{ steps.collect.outputs.alert_text }}
+        run: |
+          set -euo pipefail
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          PYTHONPATH=. python scripts/notify_session.py alert \
+            --summary "🚨 OCI idle-reclaim risk — ${TEXT}" --link "${RUN_URL}"
+
+      - name: Operator ping confirmed sent [operator-ping]
+        if: steps.operator_ping.outcome == 'success'
+        run: echo "Telegram accepted the operator ping."
+
+      - name: Land ledger / spare / state / limits on main
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/cloud/compute_util_ledger.jsonl comms/cloud/compute_spare.json comms/cloud/compute_reclaim_state.json comms/cloud/oci_limits.json
+          message: "compute-util-telemetry: daily utilisation ledger"
+          pr-title: "compute-util-telemetry: daily ledger"
+          pr-body: "Automated daily data commit (auto-merge): comms/cloud utilisation ledger, spare capacity, reclaim state, OCI limits."
+          verify-merged: "true"
+
+      - name: Fail the run if any host could not be measured
+        # A host we could not read is a finding, not a pass. Runs last so the
+        # ledger still lands first.
+        if: steps.collect.outputs.unmeasured != ''
+        run: |
+          echo "::error::unmeasured/insufficient hosts: ${{ steps.collect.outputs.unmeasured }} — see ledger read_state"
+          exit 1

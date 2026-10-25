@@ -1,6 +1,6 @@
 name: trainer-vm-diag
 
-# Full-visibility diag relay for the trainer VM (158.178.209.121).
+# Full-visibility diag relay for the trainer VM (<TRAINER_VM_IP>).
 #
 # The trainer VM is fully autonomous Claude territory
 # (docs/claude/trainer-vm-mode.md § 3 + § 9). Claude may open
@@ -59,7 +59,7 @@ name: trainer-vm-diag
 #                          the trainer VM's ubuntu account.
 #
 # Required repo variables (or hardcoded defaults):
-#   * TRAINER_VM_IP      — defaults to 158.178.209.121
+#   * TRAINER_VM_IP      — defaults to <TRAINER_VM_IP>
 #   * TRAINER_VM_USER    — defaults to ubuntu
 #
 # Required repo label:
@@ -175,6 +175,13 @@ jobs:
     # (research-exit-head-build.yml pattern), not this scarce 1-OCPU relay.
     timeout-minutes: 60
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Dedup — bail if a bot comment already exists (2026-06-08)
         if: github.event_name == 'issues'
         id: dedup
@@ -334,7 +341,7 @@ jobs:
         if: steps.dedup.outputs.skip != 'true'
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           if [ -z "${VM_SSH_KEY}" ]; then
@@ -393,7 +400,7 @@ jobs:
       - name: Run command on trainer VM
         if: steps.dedup.outputs.skip != 'true'
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -euo pipefail
@@ -405,6 +412,11 @@ jobs:
           # keepalives the SSH session is torn down mid-run and the relay reports
           # a spurious empty/failed result (BL-20260721-TRAINERDIAG-SILENT-SSH-DROP).
           # 30s x 10 = tolerate ~5 min of silence before declaring the link dead.
+          # Remote `timeout` (TRAINER-RUNAWAY-PROC): when the job is cancelled or hits
+          # its 60 min cap the ssh client dies but a no-tty remote `bash -s` is
+          # reparented to init and keeps running — on 2026-10-12 an orphaned
+          # `bash -s` + `python3 -` burned ~66% of the 1-OCPU trainer for ~3 days.
+          # 3540 s stays under timeout-minutes: 60; timeout signals its whole group.
           ssh -i ~/.ssh/trainer_key \
               -o BatchMode=yes \
               -o StrictHostKeyChecking=accept-new \
@@ -412,7 +424,7 @@ jobs:
               -o ServerAliveInterval=30 \
               -o ServerAliveCountMax=10 \
               "${TRAINER_USER}@${TRAINER_IP}" \
-              'bash -s' < /tmp/trainer_diag_cmd.sh \
+              'timeout --kill-after=30 3540 bash -s' < /tmp/trainer_diag_cmd.sh \
               > /tmp/trainer_diag_output.txt 2>&1 || true
           wc -c /tmp/trainer_diag_output.txt
 

@@ -1,0 +1,75 @@
+id: RQ-20261016-1fa6-09
+title: 'M28 valuation ORIENTATION check: per symbol, does the bond cheap_score (real-yield percentile, higher_is_cheaper: false) carry a significantly NEGATIVE IC
+  at 180/365 d on TLT and IEF -- i.e. is the bond orientation inverted?'
+status: blocked
+cadence: once
+theme: macro
+priority: 2
+kind: experiment
+question: horizon_ic_scan over comms/macro/valuation_snapshots_backfill.jsonl with ONE symbol's candles at a time (TLT, then IEF), horizons 180 and 365 days, rebalance
+  every 30 d, non-overlapping windows, zero fee (an orientation question, not a money question).
+why_this_matters: 'FIELD FINDING 2026-10-16: config/macro_valuation.yaml:27 declares TLT/IEF real_yield_10y with higher_is_cheaper: false and the comment ''high real
+  yield => duration RICH''. For a bond, a high yield IS a cheap price, so cheap_score = 1 - pct labels TLT ''cheap'' at LOW real yields. The pooled M28 calibration
+  (thesis_p4_scorecard calibration_rank -0.005, horizon_ic_scorecard |t| < 1.2 at 7-180 d) pools these bond reads with GLD/SLV, so a sign error on two of five symbols
+  can cancel a real effect. Outside: Asness-Moskowitz-Pedersen 2013 (value works cross-sectionally in bonds); Campbell-Shiller 1998 / Goyal-Welch 2008 (time-series
+  valuation predicts at long horizons, fails at short ones) -- so 180/365 d is the minimum horizon worth asking.'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Non-overlapping 180 d windows over ~2005-2026 ~ 40 per symbol; 365 d ~ 20. INFERRED from the snapshot span, not measured per symbol. Floor (2.8/0.45)^2
+    = 39: the 180 d read is at the floor, the 365 d read is UNDERPOWERED BY DESIGN and is reported, not gating. Real yields are persistent, so effective n is lower
+    still: a FAIL is weak evidence.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed point-in-time valuation backfill + public daily closes; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-1fa6-09-ORIENT
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'Per symbol (TLT, IEF): Spearman IC of cheap_score vs forward return at 180 d (gating) and 365 d (reported), with its t on non-overlapping windows.'
+  rule: INVERTED IF the 180 d IC is NEGATIVE with t <= -2.0 on BOTH TLT and IEF -> a Tier-3 orientation-fix PROPOSAL on row IR-MACRO-VALUE-ORIENT (flip higher_is_cheaper
+    for the bond metrics), followed by a re-run of the pooled M28 calibration with the corrected orientation; never a config edit by this unit. CORRECT IF the 180
+    d IC is POSITIVE with t >= 2.0 on both. INDETERMINATE otherwise (expected at this n; then the orientation is decided on economics + the pooled re-run, stated
+    as such). Not changed after any result.
+  what_it_does_not_do: Not a money test (fee 0). Does not test GLD/SLV/SPY orientation. Does not test cross-sectional value (a separate lever on IR-MACRO-VALUE-ORIENT).
+blocked_on:
+- kind: work_item
+  ref: IR-MACRO-VALUE-ORIENT
+  what: horizon_ic_scan.py lives in scripts/macro/ (script_run.py executes only scripts/research/* and scripts/backtest*.py) and writes no verdict.json; candles must
+    be fetched per symbol.
+  clears_when: A scripts/research wrapper runs the per-symbol scan and writes verdict.json; then fill run.command and git mv this file into research/queue/.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Two daily-close fetches and a rank correlation per horizon.
+run:
+  workflow: null
+  note: 'Deliberately null: the runner-reachable instrument does not exist yet (see blocked_on).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- IR-MACRO-VALUE-ORIENT
+- config/macro_valuation.yaml
+- src/units/strategies/macro_thesis/valuation.py
+- scripts/macro/horizon_ic_scan.py
+- docs/research/idea-family-review-2026-10-16.md
+outside_evidence:
+- Asness, Moskowitz, Pedersen 2013 JF 'Value and Momentum Everywhere', https://pages.stern.nyu.edu/~lpederse/papers/ValMomEverywhere.pdf (primary)
+- Campbell & Shiller 1998, https://papers.ssrn.com/abstract=266191 (primary)
+- Goyal & Welch 2008 RFS, https://academic.oup.com/rfs/article-abstract/21/4/1455/1565737 (primary)
+origin:
+  lane: IDEA-REVIEW-1016
+  family: M28 valuation read
+  family_verdict: A narrow (possible bond orientation inversion + horizon mismatch); C for 7-180 d time-series value timing
+last_dispatched_at: null

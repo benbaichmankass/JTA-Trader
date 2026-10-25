@@ -1,0 +1,54 @@
+name: pytest-rerun
+
+# AUTO-PYTEST-RERUN (checklist row, plan docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md act M-b).
+# When a `pytest-run` finishes cancelled-at-its-timeout, or died before the tests started,
+# re-queue it ONCE. The decision is scripts/ci/pytest_rerun.py (pure, tested): it NEVER reruns
+# a failed test step, never a superseded run, and never a second time for the same head sha.
+# It only re-queues the identical run - no test is skipped, disabled or quarantined.
+#
+# SAFE TRIGGER SHAPE: `workflow_run` executes the DEFAULT branch's copy of this file and we
+# check out `main`, never the PR head, so PR code cannot run here. Run ids/names reach the
+# script through env, not shell interpolation.
+
+on:
+  workflow_run:
+    workflows: [pytest-run]
+    types: [completed]
+
+permissions:
+  actions: write   # POST .../rerun
+  contents: read
+  pull-requests: read
+
+# GH-CAPACITY-INFRA-FIRST (2026-10-15, operator: "give infra preference on github capacity").
+# Keyed on the triggering run's BRANCH, cancel-in-progress. MEASURED 08:21Z: 23 pytest-rerun runs
+# queued for the repo's 20-job runner cap, one per completed pytest-run (most of them PR runs
+# CANCELLED by a newer push), each waiting a runner only to decide "superseded -> no rerun".
+# A newer completion on the same branch makes the older decision moot: pytest_rerun.py already
+# refuses a run whose branch head moved on, so cancelling it loses nothing. (The run's own
+# head_branch is the default branch for workflow_run; the TRIGGERING run's branch is
+# github.event.workflow_run.head_branch.) pytest-rerun is not in claude-run-failure-alert's
+# watch list, so a cancelled decision run pages nobody.
+concurrency:
+  group: pytest-rerun-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  rerun:
+    # Cheap pre-filter; the script re-checks everything.
+    if: >-
+      github.event.workflow_run.run_attempt == 1 &&
+      (github.event.workflow_run.conclusion == 'cancelled' ||
+       github.event.workflow_run.conclusion == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Decide and rerun at most once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: python3 scripts/ci/pytest_rerun.py --repo "$REPO" --run-id "$RUN_ID"

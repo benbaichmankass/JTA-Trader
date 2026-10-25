@@ -1,0 +1,27 @@
+{
+  "id": "XRP4H-PIN-RESTATE",
+  "title": "Re-state the mandate-resolver real-Stage-2 pin from the 1460d xrp_4h record (Tier-1 test edit)",
+  "phase": "research",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17722
+  ],
+  "blocked_on": [],
+  "note": "[RESEARCH-OPS-20261012-0847] RQ-20261007-023 PASS (RULE-RQ1007-XRP4H-STAGE0-1460D): comms/strategy_evidence/trend_donchian_xrp_4h.json now holds the 1460d record (n_oos 46, exp +0.177R, 3/4 folds, faithful), replacing the 365d n=16 one. Rule: tests/test_mandate_resolver.py::test_real_stage2_thresholds_match_the_operators_pricing is re-stated from it in a separate Tier-1 PR, and SIGNAL-0005 pricing is reported to the operator as a report, not a question. PI-20261002-84ZIQNJD-0001 closes on the same evidence. The roster keeps trend_donchian_xrp_4h (leg is not cut).  [UPDATE] Pin re-stated IN PR #17722 (CI pytest-run failed otherwise: the 1460d record's p10 is -3.88511 so the pin flips to False). The operator's SIGNAL-0005 pricing (xrp_4h positive p10) is therefore CHANGED: xrp_4h's own Stage-0 block p10 is now negative on the powered record (n=46). Report this to the operator; the roster is not edited by research-ops. [2026-10-17 RESEARCH-AUTHOR-GRADE-1017] DONE, measured on main f03d9032: PR #17722 merged 2026-10-12 11:00Z; tests/test_mandate_resolver.py::test_real_stage2_thresholds_match_the_operators_pricing pins xrp_4h False and all 7 asserted legs reproduce today via mandate_resolver.stage0_block_p10 (trend_donchian_xrp_4h -3.885, ief +14.94, iaum +11.31, xrp_pullback_2h -5.95, ada_pullback_2h -4.38, eth_4h -5.01, slv -3.33; pytest is not installed in this lane so the assertion was re-run directly, not through pytest). NOT established: whether the operator was told SIGNAL-0005's xrp_4h pricing changed; the manager should carry it in the next brief's decisions section.",
+  "updated_at": "2026-10-17T21:33:53Z",
+  "updated_by": "research-author-grade-1017-fork",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "writeback": {
+    "roadmap": "none: test pin re-stated, no milestone changed",
+    "arch": "none: no component changed"
+  },
+  "_seq": 431
+}

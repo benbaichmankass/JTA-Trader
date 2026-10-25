@@ -3,7 +3,7 @@ title: >-
   Time-stop keyed to momentum decay instead of R: on the same six legs, does closing a
   trade at bar N only when ADX has fallen below its entry value (and below the chop
   cut-point) beat both the config-exact base and the shipped R-keyed stale stop?
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -101,3 +101,15 @@ related:
 - docs/research/exit-refinement-coverage.json
 - docs/research/M20-exit-refinement-2026-07-12.md
 last_dispatched_at: '2026-10-08T14:55:04+00:00'
+grading:
+  decision_rule_id: RULE-RQ1007-043-MOMENTUM-STALE-STOP
+  graded_at: '2026-10-16'
+  graded_by: P1-ATM-BACKLOG-1016 (lane session, manager dispatch 2026-10-16)
+  read_state: measured
+  needs_review: false
+  verdict: indeterminate
+  reason: 'The PASS clause needs walk-forward wins >= 4 of 6 and the stale-swapped base (b) for eth_prop,
+    which no row carries. Gate-only honest_negative clause, MEASURED research/results/RQ-20261007-043/37796457348.jsonl:
+    honest_negative on trend_donchian_xrp_4h (0/4, OOS 31), xrp_pullback_2h (0/4, 49), ada_pullback_2h
+    (0/4, 49), trend_donchian_sol_prop (0/4, 48). Gate passes awaiting folds: trend_donchian_eth_4h ms12_a20/ms12_a25,
+    trend_donchian_eth_prop ms8_a25. Follow-up: P1-Q4-eth4h-momentum-confirm, P1-Q4-ethprop-exit-confirm.'

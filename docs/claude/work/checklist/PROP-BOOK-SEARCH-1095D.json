@@ -1,0 +1,21 @@
+{
+  "id": "PROP-BOOK-SEARCH-1095D",
+  "title": "Prop book search over the admitted ETH/SOL/XRP 4h Donchian legs at the 1095d/1460d records",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[RESEARCH-OPS-20261012-0847] RQ-20261007-030 admitted trend_donchian_eth_4h (n=116, +0.287R, 4/4) and trend_donchian_sol_4h (n=116, +0.390R, 3/4) at 1095d, faithful; RQ-20261007-023 re-stated xrp_4h at 1460d (n=46, +0.177R, 3/4, faithful). Rule says the follow-on prop_book_search unit is registered at that time. Trade files: comms/strategy_evidence/runs/2026-10-12-1095d/*__trades.jsonl and 2026-10-12-1460d/. Shape: RQ-20261005-902 (scripts/research/prop_book_search.py --firm tradeify|velotrade --legs LEG=PATH, session-local, minutes). Not authored by research-ops: no dispatchable form (the script writes no verdict.json) and a session-local unit would re-create the NEEDS_LANE class. Admission to the candidate POOL only; no roster change. [2026-10-15 research-ops 0247] RQ-20261014-f516-09 (tradeify_1) and -10 (velotrade_1) graded PASS pool admission for trend_donchian_eth_4h + trend_donchian_sol_4h (ev>0 all seeds, every arm). Next rung authored: RQ-20261015-6504-01/-02 (head-to-head, cushion_vs_flat, landing hold).  [2026-10-15 research-ops 2047, TIER-3 PROPOSAL NOTE FOR THE MANAGER, no config edit] RQ-20261015-ee68-01 (velotrade_1 C4H risk sweep, run 38757570688, read_state measured, 5 seeds, n=355 ETH-prop trades pinned) read PASS under its pre-registered any_c_dominates rule: C4H025/035/045 each beat A@0.005 on ev AND p_alive on all 5 seeds; highest mean ev = C4H045 (ev 640-667 vs A 159-175; p_alive 0.38-0.40 vs A 0.27) so the rule's selected level is risk_pct 0.0045 with the 4h ETH+SOL Donchian pair added. CONFOUND, stated before anyone reads this as 'add the pair': every C4H arm moves book-wide risk AND the roster; A@0.005 survives only ~0.27 while C4H025 survives ~0.92 (ev 300-315), so much of the gain may be lower risk, not the pair. Matched-risk controls registered (incumbents-only vs +4h pair at the SAME risk): RQ-20261015-8bbc-03 (0.0045), -04 (0.0025), -05 (0.0035). Recommend the manager does not act on the roster add until those read. Landing: ee68-01 closes on the next research-queue-grade run (graded mechanically; dry-run on main lists it). [research-ops 2026-10-16 02:47Z, Tier-3 NOTE for the manager, no config edit] The three matched-risk controls read (all measured, 5 seeds, n=355 ETH-prop trades, grade any_c_dominates, population velotrade_1 stack): RQ-20261015-8bbc-04 (risk 0.0025) PASS and -05 (0.0035) PASS -- the 4h ETH+SOL Donchian pair (C4H) beats the 2-leg 1h book at the SAME risk on ev AND survival on all 5 seeds; RQ-20261015-8bbc-03 (0.0045) FAIL -- C4H fails to dominate on seeds 1,3,4. Reading: the ee68-01 gain is NOT only a risk-level effect (the pair adds at 0.0025 and 0.0035), but it does not hold at the top level, so 'add the pair' is supported at book risk <=0.0035 and not shown at 0.0045. Open gap before any roster add: neither 4h leg has a Stage-0 record at its configured params under the PROP venue cost stack (PI-20261015-WNBZB5WN-0003, now routed here). Recommend: file/run that Stage-0 first; the add is a Tier-3 roster decision for the manager/operator.",
+  "updated_at": "2026-10-16T02:53:56Z",
+  "updated_by": "research-ops-lane-20261016-0247",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 430
+}

@@ -8,12 +8,15 @@ Operator popup ~17:30Z 2026-10-03, verbatim: "Build executor, then go live
 What is pinned:
 
 - breakout_1 is UNCHANGED: the exact python argv, its paths
-  (``feed/session_state.json``, ``executor/``, ``login.lock``, ``feed/tripped``)
-  and its kill switch ``PROP_EXECUTOR_MODE``;
-- tradeify_1 uses ONLY its own session, state dir, lock, trip marker and
+  (``feed/session_state.json``, ``executor/``, ``login.lock``) and its kill
+  switch ``PROP_EXECUTOR_MODE``;
+- tradeify_1 uses ONLY its own session, state dir, lock and
   ``PROP_EXECUTOR_MODE_TRADEIFY_1``, and never sees ``PROP_EXECUTOR_MODE``;
-- the two accounts never share a lock: one account's held lock / trip / off
-  switch never stops the other;
+- the two accounts never share a lock: one account's held lock / off switch
+  never stops the other;
+- NO-HALT (operator directive 2026-10-09, "There is no halting.";
+  PI-20261009-72XUJX8U-0002): the feed's backoff, or a stale ``feed/tripped``
+  marker from the old code, never stops the executor;
 - an account with no platform entry, or a non-plain id, is refused before any
   path is built;
 - the templated units exist, are opt-in, and sit on their own minute slot;
@@ -120,16 +123,28 @@ def test_breakout_1_default_invocation_is_exactly_the_old_one(tmp_path):
     assert not (base / "accounts").exists()
 
 
-def test_breakout_1_lock_trip_and_off_are_its_own(tmp_path):
+def _argv_calls(calls):
+    return [ln for ln in _lines(calls) if ln.startswith("ARGV")]
+
+
+def test_breakout_1_lock_and_off_are_its_own_and_the_feed_never_stops_it(tmp_path):
     repo, base, calls = _setup(tmp_path)
     with _held(base / "login.lock"):
         r = _tick(tmp_path, repo, base)
     assert r.returncode == 0 and _lines(calls) == [] and "skipping this executor tick" in r.stdout + r.stderr
     (base / "feed").mkdir(parents=True)
+    # A stale pre-NO-HALT trip marker no longer stops the executor ...
     (base / "feed" / "tripped").write_text("x")
     r = _tick(tmp_path, repo, base)
-    assert r.returncode == 0 and _lines(calls) == [] and "TRIPPED" in r.stdout + r.stderr
+    assert r.returncode == 0 and len(_argv_calls(calls)) == 1, r.stdout + r.stderr
+    # ... nor does the feed's backoff: it is logged and the tick runs.
+    (base / "feed" / "backoff").write_text("consecutive_failures=5\nflagged=1\nreason=feasibility stop\n")
+    r = _tick(tmp_path, repo, base)
+    assert r.returncode == 0 and len(_argv_calls(calls)) == 2
+    assert "feed is backing off (feasibility stop)" in r.stdout + r.stderr
     (base / "feed" / "tripped").unlink()
+    (base / "feed" / "backoff").unlink()
+    calls.write_text("")
     (repo / ".env").write_text("PROP_EXECUTOR_MODE=off\n")
     r = _tick(tmp_path, repo, base)
     assert r.returncode == 0 and _lines(calls) == [] and "PROP_EXECUTOR_MODE=off" in r.stdout + r.stderr
@@ -175,7 +190,7 @@ def test_tradeify_1_is_not_stopped_by_anything_of_breakout_1(tmp_path):
     assert _lines(calls)[1] == "ENV global=<unset> tradeify=<unset>"   # unset -> python reads read_only
 
 
-def test_tradeify_1_lock_trip_and_off_are_its_own(tmp_path):
+def test_tradeify_1_lock_and_off_are_its_own_and_the_feed_never_stops_it(tmp_path):
     repo, base, calls = _setup(tmp_path)
     acct = base / "accounts" / "tradeify_1"
     with _held(acct / "login.lock"):
@@ -183,9 +198,13 @@ def test_tradeify_1_lock_trip_and_off_are_its_own(tmp_path):
     assert r.returncode == 0 and _lines(calls) == [] and str(acct / "login.lock") in r.stdout + r.stderr
     (acct / "feed").mkdir(parents=True)
     (acct / "feed" / "tripped").write_text("x")
+    (acct / "feed" / "backoff").write_text("consecutive_failures=3\nflagged=1\nreason=unknown_page\n")
     r = _tick(tmp_path, repo, base, account="tradeify_1")
-    assert r.returncode == 0 and _lines(calls) == [] and "TRIPPED" in r.stdout + r.stderr
+    assert r.returncode == 0 and len(_argv_calls(calls)) == 1, r.stdout + r.stderr
+    assert "feed is backing off (unknown_page)" in r.stdout + r.stderr
     (acct / "feed" / "tripped").unlink()
+    (acct / "feed" / "backoff").unlink()
+    calls.write_text("")
     (repo / ".env").write_text("PROP_EXECUTOR_MODE_TRADEIFY_1=off\n")
     r = _tick(tmp_path, repo, base, account="tradeify_1")
     assert r.returncode == 0 and _lines(calls) == [] and "PROP_EXECUTOR_MODE_TRADEIFY_1=off" in r.stdout + r.stderr
@@ -385,3 +404,45 @@ def test_wrapper_exports_the_accounts_login_keys_for_a_rest_tick():
     sh = (Path(__file__).resolve().parents[2] / "scripts/ops/prop_executor_tick.sh").read_text()
     assert 'LOGIN_KEYS="$(cd "${REPO_DIR}" && python3 scripts/prop/prop_env_keys.py "${ACCOUNT}"' in sh
     assert "for ckey in ${MODE_KEY} ${LOGIN_KEYS:-} DASHBOARD_API_TOKEN; do" in sh
+
+
+# ── exit 6 (session wait) is a hand-off to the feed, not a unit failure ──
+# 2026-10-17 05:13Z: Tradeify's "Platform maintenance" page expired the saved
+# session; every tick exited 6 and systemd's OnFailure pinged "unit FAILED"
+# while the feed was already retrying (it owns that red flag at failure 3).
+
+
+def test_session_wait_exits_0_and_escalates_only_when_it_persists_with_a_healthy_feed(tmp_path):
+    repo, base, calls = _setup(tmp_path)
+    acct = base / "accounts" / "tradeify_1"
+    env = {"STUB_RC": "6", "PROP_EXECUTOR_SESSION_WAIT_MAX": "3"}
+    for k in (1, 2):
+        r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert f"session wait {k}/3" in r.stdout + r.stderr
+    r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+    assert r.returncode == 6 and "session wait 3/3" in r.stdout + r.stderr
+    assert len(_argv_calls(calls)) == 3          # every tick still ran: no halt
+    # A good tick resets the count.
+    r = _tick(tmp_path, repo, base, account="tradeify_1")
+    assert r.returncode == 0 and not (acct / "executor" / "session_wait").exists()
+    r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+    assert r.returncode == 0 and "session wait 1/3" in r.stdout + r.stderr
+
+
+def test_session_wait_never_fails_the_unit_while_the_feed_is_backing_off(tmp_path):
+    repo, base, calls = _setup(tmp_path)
+    acct = base / "accounts" / "tradeify_1"
+    (acct / "feed").mkdir(parents=True)
+    (acct / "feed" / "backoff").write_text("consecutive_failures=4\nflagged=1\nreason=unknown_page\n")
+    env = {"STUB_RC": "6", "PROP_EXECUTOR_SESSION_WAIT_MAX": "2"}
+    for _ in range(4):
+        r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert "the feed is backing off and owns the red flag" in r.stdout + r.stderr
+
+
+def test_other_failures_still_fail_the_unit(tmp_path):
+    repo, base, calls = _setup(tmp_path)
+    r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env={"STUB_RC": "3"})
+    assert r.returncode == 3

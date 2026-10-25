@@ -284,6 +284,56 @@ def get_lot_bounds_stated(
     return None
 
 
+# ---------------------------------------------------------------------------
+# Venue minimum ORDER VALUE (MIRROR-QTY-DIVERGE, 2026-10-12)
+# ---------------------------------------------------------------------------
+# Bybit linear perps carry a minimum notional per order
+# (``lotSizeFilter.minNotionalValue``) INDEPENDENT of ``minOrderQty``. Nothing
+# read it, so an intent-mode top-up delta that cleared the 0.1 XRP min-qty but
+# was worth $0.70 reached the venue and was bounced with ErrCode 110094 ("Order
+# does not meet minimum order value 5USDT") — trade 6544 on the real-money
+# bybit_2, 2026-10-09T06:02Z, while its mirror filled the same package.
+#
+# Static fallback: 5 USDT for linear USDT perps. MEASURED from the venue's own
+# 110094 rejection text on trade 6544 ("minimum order value 5USDT"), not
+# chosen. ``None`` = could not look (non-linear category, no live read) and
+# never collapses to 0.
+_STATIC_MIN_NOTIONAL_LINEAR_USDT = "5"
+_MIN_NOTIONAL_CACHE: Dict[Tuple[str, str], Tuple[Optional[str], float]] = {}
+
+
+def get_min_notional(
+    client: Any, symbol: str, category: str,
+) -> Optional[Decimal]:
+    """Venue minimum order VALUE (quote currency) for ``symbol``, or ``None``.
+
+    Cache (2-hour TTL) → live ``lotSizeFilter.minNotionalValue`` → static
+    linear-USDT fallback → ``None``. Never raises.
+    """
+    key = (symbol.upper(), category.lower())
+    now = time.monotonic()
+    entry = _MIN_NOTIONAL_CACHE.get(key)
+    if entry is not None and now - entry[1] < _CACHE_TTL_SECONDS:
+        return Decimal(entry[0]) if entry[0] is not None else None
+    live: Optional[str] = None
+    if client is not None:
+        try:
+            resp = client.get_instruments_info(category=key[1], symbol=key[0])
+            items = ((resp or {}).get("result") or {}).get("list") or []
+            lot = ((items[0] or {}).get("lotSizeFilter") or {}) if items else {}
+            raw = lot.get("minNotionalValue")
+            if raw not in (None, "") and Decimal(str(raw)) > 0:
+                live = str(raw)
+        except Exception as exc:  # noqa: BLE001 — never block on a lookup
+            logger.debug("min_notional live lookup failed for %s: %s", key, exc)
+    if live is not None:
+        _MIN_NOTIONAL_CACHE[key] = (live, now)
+        return Decimal(live)
+    if key[1] == "linear" and key[0].endswith("USDT"):
+        return Decimal(_STATIC_MIN_NOTIONAL_LINEAR_USDT)
+    return None
+
+
 def get_lot_bounds(
     client: Any, symbol: str, category: str,
 ) -> Optional[Tuple[Decimal, Decimal, Optional[Decimal]]]:

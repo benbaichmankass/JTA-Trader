@@ -204,6 +204,17 @@ def lever_in_baseline(lever: str | None, present, dropped) -> str:
             else "lever_absent_from_baseline")
 
 
+def _holdout_fields(h: dict | None) -> dict:
+    """The leg's holdout record flattened onto every row (None when the run had none)."""
+    h = h if isinstance(h, dict) else {}
+    plan = h.get("plan") if isinstance(h.get("plan"), dict) else {}
+    return {"holdout_boundary": plan.get("boundary"), "holdout_share_used": plan.get("share_used"),
+            "holdout_state": plan.get("state"), "holdout_span": plan.get("holdout_span"),
+            "holdout_discovery_span": plan.get("discovery_span"),
+            "holdout_base_trades": h.get("base_trades"), "holdout_selected_from": h.get("selected_from"),
+            "holdout_confirmation": h.get("confirmation")}
+
+
 def measurement_key(row: dict) -> tuple:
     """WHAT this row measured — the merge identity. Never includes the run.
 
@@ -257,13 +268,18 @@ def measurement_key(row: dict) -> tuple:
     by construction, not assumed from a default. Keying it as unknown instead
     would fragment all 808 pre-existing rows away from every future
     config-exact row for no informational gain.
+
+    `holdout_boundary` joins it (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16): a cell
+    selected on history BEFORE a held-back span and the same cell swept over full history are two
+    different measurements -- discovery saw ~25% less data. `None` (no holdout) keys distinctly.
     """
     _dropped = row.get("declared_levers_dropped")
     return (row.get("kind"), row.get("leg"), row.get("cell"),
             row.get("split"), row.get("tp_cap_pct"), row.get("regime_router"),
             row.get("min_oos_trades_floor"), row.get("fee_bps_roundtrip"),
             row.get("min_confidence_override"),
-            tuple(sorted(_dropped)) if isinstance(_dropped, list) else ())
+            tuple(sorted(_dropped)) if isinstance(_dropped, list) else (),
+            row.get("holdout_boundary"))
 
 
 class ForeignVerdictsSchema(ValueError):
@@ -453,7 +469,8 @@ def rows_from_verdicts(doc: dict, run_id: str) -> list[dict]:
                         "regime_gate_delta": _gate_delta(
                             leg, v.get("regime_gate_delta")),
                         "leg_status": v.get("status") or "no_levers",
-                        "leg_status_why": v.get("error")})
+                        "leg_status_why": v.get("error"),
+                        **_holdout_fields(v.get("holdout"))})
             continue
 
         base = v.get("base_book") or {}
@@ -502,6 +519,9 @@ def rows_from_verdicts(doc: dict, run_id: str) -> list[dict]:
             "base_book_present": base_present,
             "cells_tried": sel.get("cells_tried"),
             "cells_withheld_inert": sel.get("cells_withheld_inert"),
+            # PRE-REGISTERED HOLDOUT (m20_holdout; operator 2026-10-16). All None on a run
+            # without `--holdout-frac`, which keys distinctly in measurement_key.
+            **_holdout_fields(v.get("holdout")),
         }
         for w in ("IS", "OOS"):
             b = _win(base, w)
@@ -584,6 +604,7 @@ def rows_from_verdicts(doc: dict, run_id: str) -> list[dict]:
                            _dl),
                        "cell": e.get("cell"), "verdict": e.get("verdict"),
                        "is_oos_pass": e.get("is_oos_pass"),
+                       "holdout_verdict": (e.get("holdout") or {}).get("holdout_verdict"),
                        "path_b_candidate": bool(e.get("path_b_candidate")),
                        # THREE-STATE, and NOT `bool(...)`: True / False / None
                        # ("no window was gradeable") are three different findings

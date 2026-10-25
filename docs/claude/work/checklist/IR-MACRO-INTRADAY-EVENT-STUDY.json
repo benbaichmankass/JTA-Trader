@@ -1,0 +1,21 @@
+{
+  "id": "IR-MACRO-INTRADAY-EVENT-STUDY",
+  "title": "Build: intraday panel mode for macro_event_study_run.py (windows [-5m,+30m] and [+30m, close] around scheduled_at) so the survey-surprise family can be measured where the literature says the effect lives",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: macro survey-surprise (verdict A/B, docs/research/idea-family-review-2026-10-16.md). Every one of the 14 units measured daily post-release drift; Balduzzi-Elton-Green 2001 put the bond adjustment within ~1 minute. scheduled_at is already in the UTC snapshots. FIRST STEP: probe Dukascopy 5m depth for the MES proxy (scripts/ops/fetch_backtest_candles.py --source dukascopy --symbol MES --interval 5 --start-date 2015-01-01) and for any Treasury instrument in scripts/ops/dukascopy_instruments.py; record coverage per release kind. CLOSES when one intraday unit lands a measured verdict. Gate: RQ-20261016-1fa6-01..03 (daily release-day positive controls; programme 04 Q2 'rung 6' needs_authoring node) -- if 0/3 pass, fix the consensus join before building this.",
+  "updated_at": "2026-10-16T09:08:34Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 532
+}

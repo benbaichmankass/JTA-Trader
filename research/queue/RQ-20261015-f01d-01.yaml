@@ -1,0 +1,121 @@
+id: RQ-20261015-f01d-01
+title: 'MORE FOLDS for the MD-PROMOTE-S1-S2 fold-majority clause: is trend_donchian_sol_prop positive in a MAJORITY of 8 calendar folds over ~6 years of
+  SOLUSDT 1h, net of the full cost stack, at its declared params?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: 'MD-PROMOTE-S1-S2''s bar.fold_majority refuses trend_donchian_sol_prop for bybit_2 (mandate_resolver: REFUSE R-FOLDS ''positive in 2 of 4 folds
+  -- not a majority'', 2026-10-15). The committed record covers ONE year in 4 folds of ~3 months, n=65. This unit re-measures the SAME config (declared
+  params, config-exact argv via regime_debt_matrix.build_harness_cmd) over the longest window both prop legs share on Binance Vision SOLUSDT 1h (2020-10-15
+  .. 2026-09-24 (~2171 days); SOLUSDT perps list 2020-09, so 2020-10-15 leaves a month of warm-up and both legs use the same start) in 8 equal calendar
+  folds.'
+why_this_matters: 'Operator decision 2026-10-15 ~21:35Z (popup, verbatim ''Hold, run more folds (Recommended)''): PR #18440 (sol_prop -> bybit_2 + bybit_portfolio,
+  real money) stays draft until this grades. A 4-fold split of one year cannot distinguish a leg that is positive in most regimes from one carried by two
+  good quarters.'
+power:
+  expected_n: 390
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n is an ESTIMATE: the record''s rate (65/yr) times ~5.9 years, not a measurement of this window. The E35 floor is 39 trades (d=0.45,
+    alpha 0.05, power 0.8). WHY 8 FOLDS: ~9 months each over ~6 years, so each fold spans a multi-month regime and carries ~48 trades at the record''s rate;
+    an 8-way split with a STRICT majority (5 of 8) is a harder bar than the 4-fold mandate split, and more folds than that would thin SOL''s folds toward
+    the floor. The rule is the unit''s, fixed here before the graded run.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261015F01D01
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (no lever change). From the harness''s own --json summary with the full
+    cost stack (fee + slippage + funding resolved by execution_costs.resolve_cost_policy, never a zero default): net_total_r, total_trades, max_drawdown_r,
+    and net_r per fold over 8 equal calendar spans of the pinned window (exit_lever_ablation.py --folds 8, --grade stage0).'
+  rule: 'POSITIVE CONTROL FIRST: arm B restricted to trades entered on/after the committed record''s data_start must reproduce that record (comms/strategy_evidence/runs/2026-09-25/trend_donchian_sol_prop__bt.json)
+    within 2% of n and 0.5 R, else INDETERMINATE (the config or data drifted; nothing is read). indeterminate IF n < 39. PASS iff net_total_r > 0 AND at
+    least 5 of the 8 folds are net-positive (a strict majority). FAIL otherwise. On PASS: write a new evidence record for trend_donchian_sol_prop from this
+    run, re-run mandate_resolver --from S1 --to S2 --account bybit_2; if it returns FIRE (or, for eth_prop, only NETTED-SLICES blocks), PR #18440 is undrafted
+    for the operator to merge. On FAIL: the leg is not promoted to bybit_2 on this evidence and PR #18440 is closed with the reason (sol) / eth_prop stays
+    off bybit_2. Bars fixed here and unchanged after any result.'
+  what_it_does_not_do: Does not re-tune or select params; does not edit config or any roster; does not touch the prop rosters or bybit_1. A PASS is an input
+    to the mandate resolver, never a promotion by itself.
+  disclosed_before_registration: 'A plumbing smoke test of --folds 8 was run on eth_prop''s OWN one-year record window (2025-10-07..2026-10-06) before this
+    rule was written: control reproduced exactly (163 trades, +9.324 R) and 4 of 8 folds were positive. That window is a subset of this unit''s; the bar
+    (strict majority, net > 0) is the manager''s instruction, not chosen after the smoke run.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'stand-in: one real-money leg plus its mirror at bybit_2 sizing; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: One keyless Binance Vision fetch of ~2230 days of 1h candles and one harness pass; GitHub-hosted runner.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - B=
+  - --days
+  - '2230'
+  - --start
+  - '2020-10-15'
+  - --end
+  - 2026-09-24 23:00
+  - --control
+  - B=comms/strategy_evidence/runs/2026-09-25/trend_donchian_sol_prop__bt.json
+  - --control-since
+  - --grade
+  - stage0
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261015-f01d-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261015-f01d-01/<run_id>.jsonl via the batch collector; verdict.json + arms under comms/research/RQ-20261015-f01d-01/<run_id>/.
+roadmap:
+- L-LADDER
+- L-PROP
+related:
+- PROMOTE-PROP-LEGS
+- 'PR #18440'
+- MD-PROMOTE-S1-S2
+- scripts/ops/mandate_resolver.py
+- comms/strategy_evidence/runs/2026-09-25/trend_donchian_sol_prop__bt.json
+- RQ-20261015-f01d-02
+last_dispatched_at: '2026-10-15T23:42:10+00:00'
+grading:
+  attested: RULE-RQ20261015F01D01
+  auto: true
+  decision_rule_id: RULE-RQ20261015F01D01
+  evidence:
+  - research/results/RQ-20261015-f01d-01/38825176384.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

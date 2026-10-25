@@ -1,0 +1,22 @@
+# Learner packages for scripts/research/ml_bakeoff.py on the GitHub-hosted research runners
+# (ML-NONGBDT-RUNNERS, 2026-10-22). Installed by research-script-run.yml and research-script-run-data.yml,
+# and only for a unit whose command runs ml_bakeoff.py. NOT installed on the live trader and NOT in
+# requirements-backtest.txt (CI runners must not pull torch).
+#
+# Why: those workflows installed numpy/pandas/pyyaml/requests only, so every non-GBDT arm (and lightgbm /
+# scikit-learn / catboost) landed `unavailable` -- "not importable" three times on FRONTIER-LEVER-TABULAR.
+# The trainer venv gets the same packages from requirements-trainer-frontier.txt (trainer_bootstrap.sh).
+# Versions match that file; torch is the CPU build (install with --extra-index-url https://download.pytorch.org/whl/cpu).
+#
+# LICENCE: tabpfn CODE is Apache-2.0 but its WEIGHTS are Prior Labs non-commercial and need TABPFN_TOKEN
+# (ML-TABPFN-LICENCE). The package importing proves nothing about weights; research-eval only, never served.
+numpy
+pandas
+scikit-learn
+lightgbm
+pyarrow
+catboost==1.2.10
+torch==2.9.1
+einops
+tabicl==2.2.0
+tabpfn==9.1.0

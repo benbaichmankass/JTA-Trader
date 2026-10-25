@@ -1,0 +1,42 @@
+{
+  "unit": "RQ-20261016-1fa6-02",
+  "run_id": "39157784738",
+  "commit_sha": "9c2bf1a75aae54c3efa6d764fa793ecaa5e59928",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39157784738",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "cpi_mom",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ZN=F",
+        "--anchor-shift-td",
+        "-1",
+        "--horizons",
+        "1",
+        "--primary-horizons",
+        "1",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "negative",
+        "--population",
+        "cpi_mom releases with a defined survey surprise; RELEASE-DAY window (prior close -> release-day close) on ZN=F daily closes",
+        "--out",
+        "comms/research/RQ-20261016-1fa6-02/39157784738"
+      ],
+      "log": "comms/research/RQ-20261016-1fa6-02/39157784738/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.7
+    }
+  ],
+  "all_ok": true
+}

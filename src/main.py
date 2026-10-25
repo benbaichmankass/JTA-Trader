@@ -525,6 +525,25 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
     except Exception:  # noqa: BLE001
         _per_strategy_tf = {}
 
+    # Per-strategy candle LIMIT. 200 for every leg (unchanged) EXCEPT a leg
+    # running the vol_trail ATR percentile (declared, or the shadow
+    # instrument's leg): there 200 minus the forming bar left 199 < the
+    # 200-bar window, so the percentile was never computable live and the
+    # lever silently returned the base mult (PR #17212 P5 parity, measured
+    # 56/76 null closed percentiles on ada_pullback_2h). Sized from the leg's
+    # own params by trail_vol.monitor_fetch_limit; IB-routed legs get the same
+    # number, and _duration_str scales the request to it. Best-effort: a
+    # config-load failure leaves the map empty → 200 everywhere, as before.
+    try:
+        from src.units.strategies import load_strategy_config
+        from src.runtime.trail_vol import monitor_fetch_limit
+        _per_strategy_limit = {
+            name: monitor_fetch_limit(name, cfg or {})
+            for name, cfg in (load_strategy_config() or {}).items()
+        }
+    except Exception:  # noqa: BLE001
+        _per_strategy_limit = {}
+
     # --- The per-pass IB circuit breaker (R2, Tier-2, operator-approved
     # DEC-20260910-EXIT-EVAL-60S-REMEDY, chosen `r2_only`, 2026-09-10T07:52Z) --
     #
@@ -620,7 +639,7 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
             symbol, timeframe,
             settings=settings,
             exchange_client=client,
-            limit=200,
+            limit=_per_strategy_limit.get(strategy_name, 200),
         )
 
         if ib_routed:
@@ -967,22 +986,17 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("dup-key check skipped: %s", exc)
 
-    # S-021: log open packages per strategy on every startup so the operator
-    # can see at a glance that monitoring will resume (BUG-048 observability gap).
+    # TELEGRAM-RESTART-MSG (2026-10-15): ONE restart ping — status headline,
+    # cause line, and a per-account journal <-> broker reconcile (positions,
+    # tracked, measured SL/TP) — replacing the S-021 per-strategy package list
+    # and the Sprint A-3 Bybit-only ghost alert. Runs on a daemon thread; boot waits
+    # at most boot_audit.REPORT_WAIT_S for it, so a slow broker read cannot hold
+    # the first tick back longer than that. Never raises.
     try:
-        from src.runtime.boot_audit import report_open_packages_on_boot
-        report_open_packages_on_boot()
+        from src.runtime.boot_audit import start_restart_report_thread
+        start_restart_report_thread()
     except Exception as exc:  # noqa: BLE001
-        logger.warning("boot_audit skipped: %s", exc)
-
-    # Sprint A-3: compare journal open rows against live Bybit positions.
-    # Ghost rows (journal open, Bybit flat) get a Telegram alert immediately
-    # on startup — before the first tick — so the operator can investigate.
-    try:
-        from src.runtime.boot_audit import reconcile_journal_vs_exchange_on_boot
-        reconcile_journal_vs_exchange_on_boot()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("boot_reconcile skipped: %s", exc)
+        logger.warning("boot restart report skipped: %s", exc)
 
     # S-PERSIST-CANON: snapshot the active strategies.yaml into the
     # (previously dead) trade_journal.db::strategy_versions table so the
@@ -1184,6 +1198,18 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("macro_thesis_tick failed")
 
+            # Account-level daily-DD switch (operator 2026-10-09, rule 7's one
+            # sanctioned off): fold one on-disk equity reading per ARMED
+            # account every tick, so day-start equity, the trip alert and the
+            # reset alert do not wait for a signal. OBSERVE-ONLY — the refusal
+            # stays in RiskManager.evaluate. No broker call; best-effort.
+            try:
+                from src.units.accounts.daily_dd_switch import observe_armed_accounts
+                with _tick_hook("daily_dd_switch"):
+                    observe_armed_accounts()
+            except Exception:  # noqa: BLE001
+                logger.exception("daily_dd_switch tick observe failed")
+
             # Prop trades are a manual bridge (no broker feed), so the
             # order_monitor above never sees them. Emit a periodic
             # "still monitoring" pulse per open prop position instead so
@@ -1195,6 +1221,15 @@ def main() -> None:
                 run_prop_monitor_pulse()
             except Exception:  # noqa: BLE001
                 logger.exception("prop_monitor_pulse tick failed")
+
+            # A resting prop limit the system itself placed becomes a known (ESTIMATED) open position when the candles
+            # trade through it, without waiting for the phone's Positions read (operator 2026-10-13: "the system
+            # opened that position, it should be aware of it"). Rate-limited inside; best-effort.
+            try:
+                from src.prop.fill_inference import run_inference_tick
+                run_inference_tick()
+            except Exception:  # noqa: BLE001
+                logger.exception("prop fill_inference tick failed")
 
             # A prop ticket that passed its validity window with no report-back
             # is silent drift — the bot can't tell whether it was

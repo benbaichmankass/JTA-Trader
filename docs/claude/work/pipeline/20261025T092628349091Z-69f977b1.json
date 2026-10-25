@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "python3 scripts/research/infra_selftest.py --check roadmap_ref_valid reports verdict pass (RQ-20261012-5bd1-02/-03/-04/-07/-08 carry roadmap as a list, e.g. [M28])",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-THEMEAUTHOR1025-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane THEME-AUTHOR-1025: infra_selftest.py --check roadmap_ref_valid, first run on main 2026-10-25",
+    "rerun": "python3 scripts/research/infra_selftest.py --check roadmap_ref_valid --out /tmp/x && cat /tmp/x/verdict.json"
+  },
+  "state": "queued",
+  "what": "Five queued units RQ-20261012-5bd1-02/-03/-04/-07/-08 declare `roadmap: M28` as a bare string. Code that iterates the field reads characters (M, 2, 8) and the unit -> milestone map breaks silently. Fix = change each to a one-element list (`roadmap:` / `- M28`); not done in THEME-AUTHOR-1025 because editing an existing queue unit is outside the generator-only surface that queue_replenish --verify tolerates on a replenish PR. Until fixed, the new roadmap_ref_valid unit (P6-Q6-roadmap-ref-valid) reads FAIL, which is the true state."
+}

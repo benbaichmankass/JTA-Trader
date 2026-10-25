@@ -1,0 +1,38 @@
+{
+  "id": "PHONE-POSITIONS-READ-CONTEXT",
+  "title": "Phone executor: Positions/Closed read waits for the tab chips on the /trade terminal; a miss dumps where it is",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane (PHONE-POSITIONS-READ-CONTEXT)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    17813
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-13 lane, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] positions_state=no_tab on every breakout_2 account_status since the #17793 deploy. ROOT CAUSE (from code; the live page was not inspected): (1) the no_tab path returned a bare {state:no_tab} so the miss dump's headers:[] controls:[] were an ARTEFACT of the miss object carrying no dump, not evidence the document was empty; (2) readView clicked once with no wait, but the bottom-panel chips render after readyState complete and readAccount ran right after settle()/load (background engine path bgJob: load home() -> settle(document complete) -> readAccount) gated only on terminal().ready, which other signals (order control, probe) can satisfy before the chips exist; (3) clickText only matches button/[role=tab]/[role=button]/a, so a plain div/span chip with a count badge is invisible to it. FIX: readView waits up to 12 s for __ex.tabChips(), opens terminalHref when on an account page that is not /trade (not while the operator is using the screen), clicks via clickTab (adds leaf div/span/li chips), and a genuine miss now posts state 'no_tab d<path_depth> c<chips> t<trade>' plus a masked leaf-text list and controls; server scrubs the miss state. Read-only; no order path; reconcile stays report_only, >15-row refusal untouched. landed_unproven until the APK ships and a live read returns positions_state=read. [scope add 2026-10-13 05:14Z, manager/operator 'the system opened that position, it should be aware of it'] src/prop/fill_inference.py: a journal `placed` limit is inferred filled-open (entry = limit, ESTIMATED, external_order_id inferred-<ticket>, reason INFERRED...) when 5m candles trade strictly through it after placement, and inferred closed at SL/TP by a LATER bar (both in one bar = no guess + one flag); a clean phone Positions read is the arbiter (absent -> not inferred; present -> overwritten MEASURED, never inferred closed). Hooked into the main tick via run_inference_tick (5 min, phone prop accounts). Not covered: a later clean Closed-orders read does not yet overwrite an inferred CLOSE's exit. [scope add 2026-10-13 05:42-05:59Z] CLOSED ORDERS (operator: live tab layout transcribed by the manager; screenshot not committed): readView re-reads no_table/empty_unconfirmed up to 4x after the click; clickText/clickTab scrollIntoView the clipped last chip; closed read now REQUIRES a Type/Status column (the 05:34Z closed_empty_unconfirmed was most likely the still-shown flat Positions grid matching the generic closed shape); parseRow adds reduce=true for the '(Reduce)' span; server keeps reduce, and an exit row must be Filled (cancelled/other status refused) and reduce!=false (the plain 'Short Limit' entry row is never an exit). fill_unpriced_closes now also overrides INFERRED (ESTIMATED) closes with the MEASURED exit + P&L. Inference judges placed->filled->closed in one pass. UNKNOWN: the real Closed-orders column header texts beyond Market|Side|Type; if the next live read still misses, its closed_* diag carries the masked headers + controls. [2026-10-13T21:18Z LIVE-SILENCE-DIAG lane session_01BdcEyUMZD1P1cCSdr6xtGo] GAP MEASURED: fill_inference cannot resolve a placed order that FILLED AND CLOSED before a clean read. prop-manual-762f959676fd (ETH short 2491.47, SL 2535.25): ETH 1h 22:00Z high 2498.49 (through the limit), 10-13 05:00Z high 2538.67 (> SL); balance 4947.72 -> 4921.50; phone clean read flat. Rule 'placed not on the venue list -> not inferred filled' reads that flat account as never-filled, so the row stays placed for ever and the reticket guard blocks every later breakout_2 ETHUSDT short (no time window). Interim: LIVE-SILENCE-DIAG closes this one ticket via prop-report-close from_placed. Owed here: when the clean read is flat AND candles show fill + a LATER SL/TP touch (and the balance moved by ~the risk), infer filled+closed ESTIMATED instead of leaving placed. [2026-10-15 housekeeping lane] state in_flight -> landed_unproven: #17813 merged 2026-10-13T07:36Z, so the blocked_on merge approval is cleared. Original due_by 2026-10-15T00:00Z observation (positions_state read, ticket 762f.. open) now partly met: positions_state=read on breakout_2 status; the 762f / rows 106-109 MEASURED-exit claim not re-checked here. Owed gap (flat-read after fill+close) unchanged.",
+  "updated_at": "2026-10-24T06:01:09Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "observation": {
+    "what": "breakout_2 positions_state==read (seen 2026-10-15) AND ticket prop-manual-762f959676fd resolved with MEASURED exit",
+    "how_to_check": "/api/bot/prop/status raw.positions_state + /api/bot/prop/fills?account_id=breakout_2",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: phone-executor read path under L-PROP",
+    "arch": "none: no contract change"
+  },
+  "_seq": 446
+}

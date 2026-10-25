@@ -1,0 +1,120 @@
+id: RQ-20261014-9d20-03
+title: 'AI trader / exit line: is a large peak-to-exit giveback (giveback_frac > 0.5) predictable WITHIN a leg from the decision-time
+  columns the committed ledgers carry, or is the exit model''s information all in-trade (which the emits do not yet record)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+requires_result:
+  unit: RQ-20261014-9d20-01
+  verdict: pass
+question: On trades with a positive peak (mfe_r > 0) in each leg with >= 100 such trades (16 legs, MEASURED 2026-10-14), under the
+  same purged walk-forward as RQ-20261014-9d20-02, does a logit on confidence / direction / entry hour-day / adx_at_entry /
+  regime_weight beat the class prior on AUC for the label giveback_gt = (giveback_frac > 0.5), and does keeping the trades it scores
+  as low-giveback raise mean net_r? The point is to learn WHERE the exit model's information lives before building one -- if
+  entry-time columns say nothing, the exit line needs in-trade features (peak_r trajectory, bars_since_peak), which is the
+  per-bar telemetry lever the Active Trade Management plan owns.
+why_this_matters: 'Three exit-head lines failed on price features (ML-S2). The committed corpus gives back more than half its peak
+  on ~78% of positive-peak trades (authoring census read, 2026-10-14, see RQ-20261014-9d20-01 for the registered record). Whether
+  that is predictable at entry decides whether an exit model is an entry-conditioned bracket choice (cheap, no new telemetry) or a
+  genuinely in-trade decision (needs the per-bar history that position_telemetry does not keep today -- it is an upsert snapshot).'
+power:
+  expected_n: 1700
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = out-of-sample positive-peak test trade; 4,774 positive-peak rows across 54 legs, 16 legs at n >= 100 (MEASURED 2026-10-14);
+    the same fold plan as 9d20-02 yields ~1,700 test trades (estimate from the 1,796 of the won-label run, minus negative-peak rows).
+    Per-leg power is low, so the rule uses the fold interval and reads an underpowered leg as not-detected.'
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Committed harness ledgers; nothing accrues. n grows only with new evidence runs.
+decision_rule:
+  id: RULE-RQ20261014-9D20-03-GIVEBACK-PREDICTABLE-AT-ENTRY
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per leg, per arm (numpy_logit vs prior) fold-mean AUC minus 0.5 with paired t-interval; selection_lift_r for keeping
+    trades scored below the train-fold 80th percentile of P(giveback_gt) -- the harness implements this as the generic skip of the
+    bottom scored quantile, so the label is inverted inside the unit's reading, documented in the record note.
+  rule: 'PASS IF at least one (leg, arm) has AUC gain >= 0.05 with interval lower bound > 0 AND selection_lift_r >= 0.05 R: giveback
+    is partly predictable at entry; the exit line''s next unit is an entry-conditioned bracket (exit-refinement skill), not a new
+    head. FAIL IF every evaluated arm on every leg has an AUC interval containing 0.5: the exit information is not in these entry
+    columns; the exit line routes through the in-trade telemetry lever (Active Trade Management plan) and the bandit unit RQ-20261011-9da8-04.
+    INDETERMINATE otherwise or if an arm is unavailable.'
+  min_n: 100 positive-peak trades per leg; 3 usable folds.
+  what_it_does_not_do: >-
+    Builds no exit head; changes no lever or bracket (Tier-3 via exit-refinement). mfe_r is a lagged lower bound,
+    so the label is conservative. Says nothing about live positions.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: decides which of two exit-model builds to fund (cheap entry-conditioned bracket vs in-trade telemetry + head); not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: 'Same harness and corpus as 9d20-02 (~90 s measured there).'
+run:
+  command:
+  - python3
+  - scripts/research/ledger_metalabel.py
+  - --mode
+  - classify
+  - --target
+  - giveback_gt
+  - --threshold
+  - '0.5'
+  - --learners
+  - prior,numpy_logit
+  - --min-leg-n
+  - '100'
+  - --folds
+  - '4'
+  - --embargo
+  - '5'
+  - --skip-quantile
+  - '0.2'
+  - --auc-gain
+  - '0.05'
+  - --lift-r
+  - '0.05'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-9d20-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M20
+- M23
+related:
+- RQ-20261014-9d20-01
+- AI-TRADER-PROGRAMME
+- docs/research/programmes/02-AI-TRADER.md
+- RQ-20261011-9da8-04
+- ML-LEG-CORPUS
+last_dispatched_at: '2026-10-16T10:58:10+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261014-9D20-03-GIVEBACK-PREDICTABLE-AT-ENTRY
+  evidence:
+  - research/results/RQ-20261014-9d20-03/38890734627.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

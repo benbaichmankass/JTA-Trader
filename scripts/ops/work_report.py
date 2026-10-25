@@ -26,7 +26,7 @@ CONTENTS — the brief is NOT re-rendered here. It is BRIEF-FIX's
 renderer. Above it sits the attention summary from
 ``attention_watch.build()``:
   * alarms — expected-signal-missing probes, ``ok``/``breached``/``unknown``;
-  * soaks — ``soak_state.soak_states()`` (SOAK-WATCH, live), dead/overdue/ready first;
+  * soaks — ``soak_state.soak_states()`` (SOAK-WATCH, live), mechanical_fail/unknown/passed first;
   * ask_operator — the open decisions;
   * due — the top items, ranked.
 
@@ -98,8 +98,10 @@ def session_debt(queue_dir: Path | None = None) -> dict:
     Operator principle (research/queue/README.md, 2026-10-06): a step that waits on a session is
     debt. Two kinds, over every ``research/queue/*.yaml`` whose ``status`` is ``queued``:
 
-      * ``session_bound``: ``run.workflow`` is not a ``*.yml``/``*.yaml`` file, so the dispatcher can
-        never fire it;
+      * ``session_bound``: ``run.workflow`` is not a ``*.yml``/``*.yaml`` file AND the compute router
+        (``compute_router.plan``, the same call ``dispatch_queue`` makes) cannot inject one, so the
+        dispatcher can never fire it. A ``run.command`` + ``compute`` unit carries no ``run.workflow``
+        by design (the router picks it) and is NOT bound — until 2026-10-14 this counted them as bound;
       * ``session_graded``: hand-written (no ``generated``) and no ``grading.auto``, so
         ``queue_grade.py`` can never close it.
 
@@ -107,6 +109,8 @@ def session_debt(queue_dir: Path | None = None) -> dict:
     skipped a corrupt file would read as less debt.
     """
     import yaml  # noqa: PLC0415
+    from scripts.research import compute_router as cr  # noqa: PLC0415
+    cfg = cr.load_config()
     d = queue_dir or QUEUE_DIR
     bound: list[str] = []
     graded: list[str] = []
@@ -121,7 +125,7 @@ def session_debt(queue_dir: Path | None = None) -> dict:
         queued += 1
         uid = str(u.get("id") or f.stem)
         wf = str((u.get("run") or {}).get("workflow") or "")
-        if not wf.endswith((".yml", ".yaml")):
+        if not wf.endswith((".yml", ".yaml")) and not (not wf.strip() and cr.plan(u, cfg).ok):
             bound.append(uid)
         elif not u.get("generated") and not (u.get("grading") or {}).get("auto"):
             graded.append(uid)
@@ -151,7 +155,7 @@ def generate(now: datetime | None = None) -> dict:
     def _soaks() -> tuple[Any, bool]:
         if view["soak_read"] == "unreadable":
             raise RuntimeError("soak_state.soak_states() raised — see the journal")
-        order = {"dead": 0, "overdue": 1, "ready": 2}
+        order = {"mechanical_fail": 0, "unknown": 1, "passed": 2, "in_progress": 3}
         rows = sorted(view["soaks"], key=lambda r: (order.get(str(r.get("state")), 9),
                                                      str(r.get("id"))))
         return rows, not rows
@@ -218,8 +222,8 @@ def render(now: datetime, sections: dict) -> str:
     s = sections.get("soaks", {})
     if s.get("state") == "ok":
         for r in s["data"]:
-            L.append(f"- **{r.get('state')}** `{r.get('id')}` end {r.get('end_date') or '—'} "
-                     f"· {_short(r.get('progress') or r.get('reason'), 120)}")
+            L.append(f"- **{r.get('state')}** `{r.get('id')}` {r.get('progress') or '—'} "
+                     f"· {_short(r.get('reason'), 120)}")
     elif s.get("state") == "empty":
         L.append("- soak_states() returned no soaks")
     elif s.get("state") == "absent":
@@ -373,6 +377,9 @@ def _self_test() -> int:
         (q / "RQ-3.yaml").write_text("id: RQ-3\nstatus: queued\nrun:\n  workflow: x.yml\ngenerated:\n  key: k\n")
         (q / "RQ-4.yaml").write_text("id: RQ-4\nstatus: queued\nrun:\n  workflow: x.yml\ngrading:\n  auto: {rule: r}\n")
         (q / "RQ-5.yaml").write_text("id: RQ-5\nstatus: done\nrun:\n  workflow: none\n")
+        # a command unit with no run.workflow is router-dispatched (the f0e2-03 shape), not session-bound
+        (q / "RQ-7.yaml").write_text("id: RQ-7\nstatus: queued\ncompute: cpu_light\nrun:\n  command: [python3, x.py]\n"
+                                     "grading:\n  auto: true\n")
         sdb = session_debt(q)
         check("session debt: bound, graded and the clean/closed units are told apart",
               sdb["session_bound"] == ["RQ-1"] and sdb["session_graded"] == ["RQ-2"]

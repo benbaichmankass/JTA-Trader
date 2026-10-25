@@ -345,6 +345,30 @@ def test_classify_confirmation(positions, orders, want):
     assert pe.classify_confirmation(SPEC, found) == want
 
 
+def test_classify_confirmation_bracket_tolerance_is_one_price_step():
+    # OA-07(b), PI-20261004-GCFA5DOR-0004: a 2% relative tolerance let a
+    # terminal-default SL within 2% of the typed one (118.0 -> 116.5, 1.3%)
+    # read as bracketed. With the venue's price_step declared, SL/TP must
+    # agree within ONE step.
+    stepped = {**SPEC, "price_step": 0.01}
+    for leg, far_px in (("stop_loss", 116.5), ("take_profit", 124.0)):
+        far = {leg: far_px}
+        assert pe.classify_confirmation(stepped, {"orders": [_o(**far)], "positions": []}) == "partial_no_sl_tp", leg
+        assert pe.classify_confirmation(stepped, {"orders": [], "positions": [_p(**far)]}) == "partial_no_sl_tp", leg
+    # Within one step (the terminal rounds what it shows) still confirms.
+    assert pe.classify_confirmation(stepped, {"orders": [_o(stop_loss=118.01, take_profit=125.99)],
+                                              "positions": []}) == "placed"
+    assert pe.classify_confirmation(stepped, {"orders": [], "positions": [_p(stop_loss=117.99)]}) == "open"
+    assert pe.classify_confirmation(stepped, {"orders": [_o(stop_loss=118.02)], "positions": []}) == "partial_no_sl_tp"
+
+
+def test_classify_confirmation_without_a_price_step_keeps_the_relative_tolerance():
+    # No step resolvable (a legacy ledger row): the previous behaviour, never a failure.
+    for spec in (SPEC, {**SPEC, "price_step": None}, {**SPEC, "price_step": 0}):
+        assert pe.classify_confirmation(spec, {"orders": [_o(stop_loss=116.5)], "positions": []}) == "placed"
+        assert pe.classify_confirmation(spec, {"orders": [_o(stop_loss=110.0)], "positions": []}) == "partial_no_sl_tp"
+
+
 def test_open_from_fills_keeps_the_newest_row_per_identity():
     fills = [
         {"id": 1, "account_id": "b", "symbol": "SOLUSDT", "direction": "long", "status": "open", "created_at": "1"},
@@ -599,11 +623,12 @@ def test_disconnect_with_a_position_open_needs_nothing(env):
     assert res.halted and ad.calls == []
 
 
-def test_orphan_position_halts_and_is_never_touched(env):
+def test_orphan_position_is_alerted_never_touched_and_never_latches(env):
     ad = FakeAdapter(positions=[_p()])
     res = run(ad, FakeApi([ticket()]), env)
-    assert res.halted and "orphan" in res.halted
-    assert ad.calls == [] and env[1].halted()
+    assert any(a.startswith("FAILED: orphan") for a in res.alerts)
+    # the SOL ticket is refused by the busy-symbol guard, per ticket; nothing latches
+    assert ad.calls == [] and env[1].halted() is None
 
 
 def test_journal_open_but_terminal_closed_reports_closed_after_two_reads(env):
@@ -1509,89 +1534,173 @@ def test_ticket_panel_dump_anchors_on_the_sidebar_not_the_work_area(tpage):
     assert "Quantity" in texts and "Place Order" in texts and not any(t and t.startswith("SYM") for t in texts)
 
 
-# ── auto-revert triggers (operator go-live criteria, 2026-09-28) ──────────
+# ── NO-HALT (operator directive 2026-10-09): failures are per ticket, retried,
+# and red-flagged once; nothing ever latches the executor ────────────────────
 
 
-def test_one_read_error_does_not_trip_two_consecutive_do(env):
+def _red_flags(res):
+    return [a for a in res.alerts if "RED FLAG" in a]
+
+
+def test_read_errors_never_latch_and_red_flag_once_on_the_third(env):
     _, state = env
     ad = FakeAdapter(read_error="no positions table")
-    run(ad, FakeApi([ticket()]), env)
-    assert state.halted() is None
-    res = run(ad, FakeApi([ticket()]), env)
-    assert state.halted() and "2 consecutive ticks" in state.halted()
-    assert any(a.startswith("AUTO-REVERT") for a in res.alerts)
+    res1 = run(ad, FakeApi([ticket()]), env)
+    assert any(a.startswith("FAILED: terminal read failed") for a in res1.alerts)
+    res2 = run(ad, FakeApi([ticket()]), env)
+    assert not any(a.startswith("FAILED") for a in res2.alerts)          # already said
+    res3 = run(ad, FakeApi([ticket()]), env)
+    assert len(_red_flags(res3)) == 1 and "3 consecutive cycles" in _red_flags(res3)[0]
+    res4 = run(ad, FakeApi([ticket()]), env)
+    assert _red_flags(res4) == []                                        # ONE red flag
+    assert state.halted() is None and not state.halt_file.exists()
     assert ad.calls == []
+
+
+def test_the_cycle_after_read_errors_takes_the_ticket(env):
+    _, state = env
+    for _ in range(4):
+        run(FakeAdapter(read_error="x"), FakeApi([ticket()]), env)
+    ad = FakeAdapter()
+    res = run(ad, FakeApi([ticket()]), env)
+    assert any(c[0] == "place_bracket" for c in ad.calls)
+    assert any(a.startswith("RECOVERED") for a in res.alerts)
 
 
 def test_a_clean_read_resets_the_error_count(env):
     _, state = env
     run(FakeAdapter(read_error="x"), FakeApi(), env)
     run(FakeAdapter(), FakeApi(), env)                    # clean cycle in between
-    run(FakeAdapter(read_error="x"), FakeApi(), env)
+    res = run(FakeAdapter(read_error="x"), FakeApi(), env)
+    assert any(a.startswith("FAILED") for a in res.alerts) and _red_flags(res) == []
     assert state.halted() is None
 
 
-def test_read_only_never_writes_the_latch(env):
+def test_read_only_never_writes_state_and_alerts_each_failure(env):
     _, state = env
     for _ in range(3):
         res = run(FakeAdapter(read_error="x"), FakeApi(), env, mode="read_only")
-    assert state.halted() is None and any(a.startswith("AUTO-REVERT") for a in res.alerts)
+    assert state.halted() is None and not state.halt_file.exists()
+    assert any(a.startswith("FAILED") for a in res.alerts)
+    assert "failure_streaks" not in state.load()
 
 
-def test_partial_no_sl_tp_after_submit_trips_at_once(env):
-    _, state = env
+def test_partial_no_sl_tp_after_submit_is_contained_and_never_latches(env):
+    ledger, state = env
     ad = FakeAdapter(after_submit=([_p(stop_loss=None, quantity=0.5)], []))
     res = run(ad, FakeApi([ticket()]), env)
-    assert state.halted() and "partial_no_sl_tp" in state.halted()
-    assert any(a.startswith("AUTO-REVERT") for a in res.alerts)
+    assert res.halted and "partial_no_sl_tp" in res.halted                # this cycle only
+    assert any(a.startswith("FAILED") and "partial_no_sl_tp" in a for a in res.alerts)
+    assert state.halted() is None and not state.halt_file.exists()
 
 
-def test_partial_found_by_a_later_reconcile_trips(env):
+def test_a_contained_partial_no_sl_tp_does_not_block_the_next_ticket(env):
+    # velotrade_1, 2026-10-08: one contained ticket latched the account for
+    # ~17h. Now the unprotected order is cancelled, the ticket ends on its own
+    # reads, and the NEXT ticket is placed -- never refused "executor halted".
     ledger, state = env
     ledger.record("t1", "submitted", spec=SPEC)
-    run(FakeAdapter(positions=[_p(stop_loss=None)]), FakeApi(), env)
-    assert state.halted() and "t1: partial_no_sl_tp" in state.halted()
+    nxt = ticket(ticket_id="prop-manual-next")
+    ad = FakeAdapter(orders=[_o(stop_loss=None)])
+    res = run(ad, FakeApi([nxt]), env)
+    assert "t1: partial_no_sl_tp" in (res.halted or "")
+    assert any(c[0] == "cancel_order" for c in ad.calls)              # the bad order is contained
+    assert ledger.state("prop-manual-next") is None                   # held this cycle, NOT refused
+    placed = False
+    for _ in range(cfg().unconfirmed_reads + 1):
+        ad = FakeAdapter()
+        run(ad, FakeApi([nxt]), env)
+        if any(c[0] == "place_bracket" for c in ad.calls):
+            placed = True
+            break
+        assert ledger.state("prop-manual-next") in (None,)            # still never refused
+    assert placed and ledger.state("prop-manual-next") != "refused"
+    assert state.halted() is None and not state.halt_file.exists()
 
 
-def test_duplicate_trips(env):
+def test_partial_found_by_a_later_reconcile_is_a_failure_not_a_latch(env):
     ledger, state = env
     ledger.record("t1", "submitted", spec=SPEC)
-    run(FakeAdapter(orders=[_o(order_id="O1"), _o(order_id="O2")]), FakeApi(), env)
-    assert state.halted() and "duplicate" in state.halted()
+    res = run(FakeAdapter(positions=[_p(stop_loss=None)]), FakeApi(), env)
+    assert "t1: partial_no_sl_tp" in (res.halted or "")
+    assert state.halted() is None
 
 
-def test_unconfirmed_placement_trips_after_the_configured_reads(env):
+def test_duplicate_is_a_failure_not_a_latch(env):
+    ledger, state = env
+    ledger.record("t1", "submitted", spec=SPEC)
+    res = run(FakeAdapter(orders=[_o(order_id="O1"), _o(order_id="O2")]), FakeApi(), env)
+    assert "duplicate" in (res.halted or "") and state.halted() is None
+
+
+def test_unconfirmed_placement_is_skipped_and_never_latches(env):
     ledger, state = env
     ledger.record("t1", "submitted", spec=SPEC)
     for _ in range(cfg().unconfirmed_reads):
-        run(FakeAdapter(), FakeApi(), env)
+        res = run(FakeAdapter(), FakeApi(), env)
     assert ledger.state("t1") == "skipped"
-    assert state.halted() and "unconfirmed placement" in state.halted()
+    assert "unconfirmed placement" in (res.halted or "") and state.halted() is None
 
 
-def test_two_consecutive_readback_refusals_trip(env):
+def test_consecutive_readback_refusals_red_flag_once_and_keep_taking_tickets(env):
     _, state = env
     bad = PlaceAttempt(stage="refused", detail="form read-back mismatch: quantity: typed 0.5, form shows 5")
-    run(FakeAdapter(attempt=bad), FakeApi([ticket()]), env)
+    flags = []
+    for i in range(4):
+        ad = FakeAdapter(attempt=bad)
+        res = run(ad, FakeApi([ticket(ticket_id=f"prop-manual-r{i}")]), env)
+        assert any(c[0] == "place_bracket" for c in ad.calls)            # every cycle still tries
+        flags += _red_flags(res)
+    assert len(flags) == 1 and "3 consecutive read-back refusals" in flags[0]
     assert state.halted() is None
-    run(FakeAdapter(attempt=bad), FakeApi([ticket(ticket_id="prop-manual-bbb")]), env)
-    assert state.halted() and "2 consecutive read-back refusals" in state.halted()
 
 
 def test_a_non_readback_refusal_does_not_count(env):
     _, state = env
     other = PlaceAttempt(stage="refused", detail="no unique submit control in the form")
     run(FakeAdapter(attempt=other), FakeApi([ticket()]), env)
-    run(FakeAdapter(attempt=other), FakeApi([ticket(ticket_id="prop-manual-bbb")]), env)
-    assert state.halted() is None
+    res = run(FakeAdapter(attempt=other), FakeApi([ticket(ticket_id="prop-manual-bbb")]), env)
+    assert state.halted() is None and _red_flags(res) == []
 
 
-def test_a_tripped_latch_refuses_the_next_ticket(env):
+def test_a_stale_halted_file_is_removed_on_start_and_ignored(env):
     _, state = env
-    state.halt("AUTO-REVERT: test")
+    state.dir.mkdir(parents=True, exist_ok=True)
+    state.halt_file.write_text("2026-10-08T15:28:00+00:00 AUTO-REVERT: t1: partial_no_sl_tp\n")
     ad = FakeAdapter()
-    run(ad, FakeApi([ticket()]), env)
-    assert not any(c[0] == "place_bracket" for c in ad.calls)
+    res = run(ad, FakeApi([ticket()]), env)
+    assert any(c[0] == "place_bracket" for c in ad.calls)
+    assert not state.halt_file.exists()
+    assert any(a["what"] == "stale_latch_ignored" for a in res.actions)
+    rows = [json.loads(ln) for ln in (state.dir / "halt_clears.jsonl").read_text().splitlines()]
+    assert rows[-1]["latch"] == "halted" and "partial_no_sl_tp" in rows[-1]["prior"]
+
+
+def test_read_only_ignores_a_stale_halted_file_without_removing_it(env):
+    _, state = env
+    state.dir.mkdir(parents=True, exist_ok=True)
+    state.halt_file.write_text("AUTO-REVERT: old\n")
+    res = run(FakeAdapter(), FakeApi([ticket()]), env, mode="read_only")
+    assert state.halt_file.exists()
+    assert any(a["what"] == "would_click" for a in res.actions)
+
+
+def test_failure_kind_masks_ticket_ids_and_prices():
+    a = pe.failure_kind("prop-manual-df6e8938ab89: partial_no_sl_tp at 2471.31")
+    b = pe.failure_kind("prop-manual-2ac3f6d3f6ff: partial_no_sl_tp at 2433.8")
+    assert a == b
+
+
+def test_the_same_failure_on_three_tickets_red_flags_once(env):
+    ledger, state = env
+    flags = []
+    for i in range(4):
+        tid = f"prop-manual-{i}aaaaaa1"
+        ledger.record(tid, "submitted", spec=SPEC)
+        res = run(FakeAdapter(orders=[_o(stop_loss=None)]), FakeApi(), env)
+        flags += _red_flags(res)
+    assert len(flags) == 1 and "partial_no_sl_tp" in flags[0]
+    assert state.halted() is None
 
 
 class JournalDownApi(FakeApi):
@@ -1622,20 +1731,15 @@ def test_one_journal_read_failure_blocks_entries_but_does_not_latch(env):
     assert state.halted() is None and not (res.halted or "").startswith("journal read failed")
 
 
-def test_two_consecutive_journal_read_failures_latch(env):
+def test_consecutive_journal_read_failures_red_flag_once_and_never_latch(env):
     _, state = env
-    run(FakeAdapter(), JournalDownApi(down=1), env)
-    assert state.halted() is None
-    res = run(FakeAdapter(), JournalDownApi(down=1), env)
-    assert state.halted() and "2 consecutive ticks" in state.halted() and "journal read failed" in state.halted()
-    assert any(a.startswith("AUTO-REVERT") for a in res.alerts)
-
-
-def test_a_terminal_error_then_a_journal_error_share_the_count(env):
-    _, state = env
-    run(FakeAdapter(read_error="x"), FakeApi(), env)
-    run(FakeAdapter(), JournalDownApi(down=1), env)
-    assert state.halted() and "2 consecutive ticks" in state.halted()
+    flags = []
+    for _ in range(4):
+        res = run(FakeAdapter(), JournalDownApi(down=1), env)
+        assert res.halted and "journal read failed" in res.halted       # this cycle only
+        flags += _red_flags(res)
+    assert len(flags) == 1 and "journal read failed" in flags[0]
+    assert state.halted() is None and not state.halt_file.exists()
 
 
 def test_a_clean_tick_resets_the_journal_error_count(env):
@@ -1666,13 +1770,12 @@ def test_journal_read_failures_never_write_the_latch_in_read_only(env):
     assert state.halted() is None
 
 
-def test_record_tick_error_trips_on_the_second(tmp_path):
-    assert pe.record_tick_error(tmp_path, True, "TimeoutError") is None
-    trip = pe.record_tick_error(tmp_path, True, "TimeoutError")
-    assert trip and "2 consecutive ticks" in trip and pe.ExecutorState(tmp_path).halted()
-    assert pe.record_tick_error(tmp_path / "ro", False, "x") is None
-    assert pe.record_tick_error(tmp_path / "ro", False, "x") is None
-    assert pe.ExecutorState(tmp_path / "ro").halted() is None
+def test_record_tick_error_red_flags_once_on_the_third_and_never_latches(tmp_path):
+    out = [pe.record_tick_error(tmp_path, True, "TimeoutError") for _ in range(5)]
+    assert out[:2] == [None, None] and out[3:] == [None, None]
+    assert out[2] and "RED FLAG" in out[2] and "3 consecutive ticks" in out[2]
+    assert not pe.ExecutorState(tmp_path).halt_file.exists()
+    assert all(pe.record_tick_error(tmp_path / "ro", False, "x") is None for _ in range(4))
 
 
 def test_ticket_panel_dump_ignores_the_charts_symbol_input(tpage):
@@ -1930,6 +2033,38 @@ def test_submit_label_mismatch_refuses_the_opposite_side():
     assert submit_label_mismatch("Sell 0.01 ETH/USD at 2,678.650", short_eth) == ""
     assert "states side 'Sell'" in submit_label_mismatch("Sell 0.01 ETH/USD at 2,678.650", long_eth)
     assert "states side 'Buy'" in submit_label_mismatch("Buy 0.01 ETH/USD at 2,678.650", short_eth)
+
+
+def test_submit_label_mismatch_refuses_a_limit_price_that_moved():
+    # OA-07(a), PI-20261004-GCFA5DOR-0004: tradeify's price field reverts to a
+    # market-derived price unless it sees typing; a label moved from
+    # "at 120.91" to "at 120.94". A LIMIT spec with a declared price_step now
+    # refuses a label price more than one step from the typed limit.
+    from src.prop.platform.dxtrade import submit_label_mismatch
+    sol = BracketSpec("t", "SOLUSD", "long", 65.78, 119.77, 127.75, "limit", 120.91, price_step=0.01)
+    assert submit_label_mismatch("Buy 65.78 SOLUSD at 120.91", sol) == ""
+    assert submit_label_mismatch("Buy 65.78 SOLUSD at 120.92", sol) == ""   # one tick: display rounding
+    why = submit_label_mismatch("Buy 65.78 SOLUSD at 120.94", sol)
+    assert "states price 120.94, not the typed limit 120.91" in why, why
+    # The measured tradeify revert (#15930): typed 2683.59, label at 2,683.584.
+    eth = BracketSpec("t", "ETHUSD", "long", 0.01, 2656.75, 2710.43, "limit", 2683.59, price_step=0.001)
+    assert "states price 2683.584" in submit_label_mismatch("Buy 0.01 ETH/USD at 2,683.584", eth)
+    assert submit_label_mismatch("Buy 0.01 ETH/USD at 2,683.590", eth) == ""
+    # The measured fixed fill (#16003): typed 2680.645 holds exactly.
+    eth_ok = BracketSpec("t", "ETHUSD", "long", 0.01, 2656.75, 2710.43, "limit", 2680.645, price_step=0.001)
+    assert submit_label_mismatch("Buy 0.01 ETH/USD at 2,680.645", eth_ok) == ""
+    # A LIMIT label with no readable price is refused (cannot be compared).
+    assert "no readable 'at <price>'" in submit_label_mismatch("Buy 65.78 SOLUSD", sol)
+
+
+def test_submit_label_price_is_not_compared_for_market_or_undeclared_step():
+    from src.prop.platform.dxtrade import submit_label_mismatch
+    # MARKET: the label states the market price; nothing to compare.
+    mkt = BracketSpec("t", "SOLUSD", "long", 0.01, 118.0, 126.0, "market", None, price_step=0.01)
+    assert submit_label_mismatch("Buy 0.01 SOLUSD at 130.00", mkt) == ""
+    # No price_step declared: previous behaviour (display precision unknown).
+    nostep = BracketSpec("t", "SOLUSD", "long", 0.01, 118.0, 126.0, "limit", 120.0)
+    assert submit_label_mismatch("Buy 0.01 SOLUSD at 120.94", nostep) == ""
 
 
 def test_measured_sidebar_label_stating_the_typed_qty_passes(tpage):
@@ -3060,8 +3195,9 @@ def test_a_close_that_did_not_confirm_never_trips_the_reconcile(env):
         # never re-read as a submit: no confirm / skip action for a close row
         assert not any(str(a.get("ticket_id", "")).startswith("roundtrip-solusd-") and a["what"] != "close_resolved"
                        for a in res.actions), res.actions
-    # the stale closes never tripped anything; the real submit did, on its own
-    assert state.halted() and "t-real-submit" in state.halted()
+    # the stale closes never failed anything; the real submit did, on its own
+    # (a per-ticket failure: NO-HALT 2026-10-09, nothing latches)
+    assert ledger.state("t-real-submit") == "skipped" and state.halted() is None
     assert not any("roundtrip-solusd-" in a for a in res.alerts)
     # and, the terminal being flat, both closes resolved on the first clean read
     assert ledger.state("roundtrip-solusd-stale") == "close_confirmed"
@@ -3130,7 +3266,7 @@ def test_a_genuinely_unconfirmed_entry_submit_still_trips(tmp_path):
     ledger.record("t-real-submit", "submitted", spec={**_STALE_SPEC, "ticket_id": "t-real-submit"})
     ledger.record("t-real-submit", "unconfirmed", misses=2)
     res = _cycle(FakeAdapter(account=acct(4724.0, 4724.0)), FakeApi([]), env)
-    assert state.halted() and "t-real-submit" in state.halted() and "t-real-submit" in res.halted
+    assert state.halted() is None and "t-real-submit" in res.halted        # this cycle only
     assert ledger.state("t-real-submit") == "skipped"
     assert ledger.state("roundtrip-solusd-stale") == "close_confirmed"      # resolved, flat; not the trip
 
@@ -3304,7 +3440,7 @@ def test_a_failed_cancel_is_not_recorded_as_requested_and_retries_then_gives_up_
     assert not any(p.get("status") == "skipped" for p in api.posts)
 
 
-def test_a_partial_fill_showing_the_full_order_size_is_contained_and_halts(env):
+def test_a_partial_fill_showing_the_full_order_size_is_contained_not_latched(env):
     # 0.2 of 0.5 filled while the order row still reads its full 0.5: the
     # order matches, the 0.2 position does not.
     vu = (NOW + timedelta(minutes=30)).isoformat()
@@ -3312,7 +3448,7 @@ def test_a_partial_fill_showing_the_full_order_size_is_contained_and_halts(env):
                                 positions=[_p(quantity=0.2)])
     assert not any(c[0] == "cancel_order" for c in ad.calls)
     assert env[0].state("prop-manual-aaa") == "contained"
-    assert env[1].halted() and "partial_fill_suspected" in env[1].halted()
+    assert "partial_fill_suspected" in (res.halted or "") and env[1].halted() is None
     assert not any(p.get("status") == "skipped" for p in api.posts)
 
 
@@ -3438,10 +3574,10 @@ def test_reviewer_scenario_partial_fill_with_no_stop_fails_closed_end_to_end(env
     ad, api, res = _placed_then(env, NOW + timedelta(minutes=5), vu, [_o(quantity=0.3)],
                                 positions=[_p(quantity=0.2, stop_loss=None, take_profit=None)])
     first = res.alerts
-    assert any("partial_fill_suspected" in a and "halted" in a for a in first)
+    assert any(a.startswith("FAILED") and "partial_fill_suspected" in a for a in first)
     assert any("NO STOP OR TARGET" in a for a in first)
     assert ledger.state("prop-manual-aaa") == "contained"
-    assert state.halted()
+    assert state.halted() is None
     later_alerts = []
     for k in range(10, 305, 5):
         r = pe.run_cycle(adapter=ad, page=None, api=api, cfg=cfg(), mode="live", ledger=ledger, state=state,
@@ -3456,7 +3592,8 @@ def test_reviewer_scenario_partial_fill_with_no_stop_fails_closed_end_to_end(env
                  now=NOW + timedelta(minutes=310))
     assert not any(c[0] == "cancel_order" for c in ad.calls)  # nothing cancelled on a guess
     assert not any(p.get("status") == "skipped" for p in api.posts)  # never written off
-    assert state.halted()  # still halted until a person clears it
+    assert state.halted() is None  # NO-HALT: alerted and red-flagged, never latched
+    assert sum("RED FLAG" in a for a in later_alerts) == 1
 
 
 def test_a_manual_position_on_the_symbol_side_does_not_hide_behind_a_resting_claim(env):
@@ -3465,7 +3602,7 @@ def test_a_manual_position_on_the_symbol_side_does_not_hide_behind_a_resting_cla
     ledger, state = env
     vu = (NOW + timedelta(minutes=30)).isoformat()
     ad, api, res = _placed_then(env, NOW + timedelta(minutes=5), vu, [_o()], positions=[_p(quantity=3.0)])
-    assert ledger.state("prop-manual-aaa") == "contained" and state.halted()
+    assert ledger.state("prop-manual-aaa") == "contained" and state.halted() is None
     r = pe.run_cycle(adapter=ad, page=None, api=api, cfg=cfg(), mode="live", ledger=ledger, state=state,
                      now=NOW + timedelta(minutes=10))
     assert any("orphan" in a for a in r.alerts)
@@ -3485,7 +3622,7 @@ def test_a_partial_fill_before_the_first_confirm_read_is_never_written_off_uncon
     res = pe.run_cycle(adapter=ad, page=None, api=api, cfg=cfg(), mode="live", ledger=ledger, state=state,
                        now=NOW + timedelta(minutes=5))
     assert any("partial_fill_suspected" in a for a in res.alerts)
-    assert state.halted() and ledger.state("prop-manual-aaa") == "contained"
+    assert state.halted() is None and ledger.state("prop-manual-aaa") == "contained"
     for k in (10, 15, 20):
         pe.run_cycle(adapter=ad, page=None, api=api, cfg=cfg(), mode="live", ledger=ledger, state=state,
                      now=NOW + timedelta(minutes=k))
@@ -4056,18 +4193,24 @@ def test_the_action_wrapper_reports_a_deferred_test_as_deferred_not_failed():
     assert "deferred" in block and "exit 0" in block
 
 
-def test_contain_passes_the_accounts_rollout_latch_and_a_guard_refusal_falls_through_to_close(env):
+def test_contain_passes_the_accounts_rollout_record_and_a_guard_refusal_falls_through_to_close(env):
     # DIALOG-MEASURE rollout guard (manager 2026-10-02): the partial_no_sl_tp
     # repair types SL AND TP, so under the guard it is refused before any
     # click; the existing next-cycle close-at-market then takes over.
+    # NO-HALT (2026-10-09): the record is non-blocking and a stale latch file
+    # left by the old code is moved aside, so the repair path still runs.
     ledger, _ = env
+    stale = Path(ledger.path).parent / "modify_rollout.json"
+    stale.parent.mkdir(parents=True, exist_ok=True)
+    stale.write_text('{"state": "verified"}')
     ledger.record("t1", "submitted", spec=SPEC)
     ad = FakeAdapter(positions=[_p(stop_loss=None)])
     ad.modify_result = {"ok": False, "clicked": False,
                         "why": "rollout refused: rollout step must leave the take profit unchanged"}
     res = run(ad, FakeApi(), env)
     assert ("modify_bracket", "SOLUSD", True) in ad.calls
-    assert ad.rollout.path == Path(ledger.path).parent / "modify_rollout.json"
+    assert ad.rollout.latch_path == stale and not stale.exists() and ad.rollout.stale_retired
+    assert ad.rollout.path == Path(ledger.path).parent / "modify_rollout_last.json"
     assert any("rollout refused" in al for al in res.alerts)
     run(ad, FakeApi(), env)
     assert ("flatten", "SOLUSD", True) in ad.calls
@@ -4459,8 +4602,8 @@ def test_open_row_whose_sl_disappears_alerts_then_is_contained(env):
     assert ad.calls == [] and state.halted() is None              # one read never clicks
     res = run(ad, FakeApi([], OPEN_FILL), env)
     assert [c[0] for c in ad.calls] == ["modify_bracket", "flatten"]   # repair refused -> same-cycle close
-    assert state.halted() and "t1: naked_open" in state.halted()
-    assert any(a.startswith("AUTO-REVERT") for a in res.alerts)
+    assert "t1: naked_open" in (res.halted or "") and state.halted() is None
+    assert any(a.startswith("FAILED") and "naked_open" in a for a in res.alerts)
     assert ledger.state("t1") == "contained" and ledger.latest()["t1"]["verdict"] == "naked_open"
 
 
@@ -4470,7 +4613,8 @@ def test_open_row_missing_the_tp_the_journal_expects_is_naked(env):
     ad = FakeAdapter(positions=[_p(take_profit=None)])
     run(ad, FakeApi([], OPEN_FILL), env)
     res = run(ad, FakeApi([], OPEN_FILL), env)
-    assert any("NO TP" in a for a in res.alerts) and state.halted()
+    assert any("NO TP" in a for a in res.alerts) and "naked_open" in (res.halted or "")
+    assert state.halted() is None
 
 
 def test_open_row_with_no_sl_column_on_the_read_is_not_contained(env):
@@ -4485,12 +4629,14 @@ def test_open_row_with_no_sl_column_on_the_read_is_not_contained(env):
     assert any(a["what"] == "naked_check_unreadable" for a in res.actions)
 
 
-def test_naked_open_position_without_a_ledger_row_halts_and_is_not_touched(env):
+def test_naked_open_position_without_a_ledger_row_is_flagged_and_not_touched(env):
     ad = FakeAdapter(positions=[_p(stop_loss=None)])
     run(ad, FakeApi([], OPEN_FILL), env)
     res = run(ad, FakeApi([], OPEN_FILL), env)
-    assert ad.calls == [] and env[1].halted() and "naked_open" in env[1].halted()
+    assert ad.calls == [] and env[1].halted() is None
+    assert any(a.startswith("FAILED") and "naked_open" in a for a in res.alerts)
     assert any("not touched" in a for a in res.alerts)
+    assert res.halted is None            # not ours, nothing clicked: entries are not held
 
 
 def test_a_repair_that_did_not_click_closes_in_the_same_cycle(env):
@@ -4503,24 +4649,57 @@ def test_a_repair_that_did_not_click_closes_in_the_same_cycle(env):
     assert ledger.state("t1") == "contained"
 
 
-def test_a_close_that_did_not_click_is_retried_up_to_the_bound(env):
-    ledger, _ = env
+def test_a_naked_leg_whose_close_does_not_click_is_retried_every_cycle(env):
+    # NO-HALT (operator 2026-10-09): never "gave up" on a naked leg.
+    ledger, state = env
     ledger.record("t1", "submitted", spec=SPEC)
     ad = _NoClose(positions=[_p(stop_loss=None)])
     ad.modify_result = REFUSED
-    for k in range(1, pe.NAKED_CLOSE_MAX_ATTEMPTS):
+    alerts = []
+    for k in range(1, pe.NAKED_CLOSE_MAX_ATTEMPTS + 3):
         res = run(ad, FakeApi(), env)
-        assert ledger.state("t1") == "unconfirmed"                # still watched, not parked
+        alerts += res.alerts
+        assert ledger.state("t1") == "unconfirmed"                # still watched, never parked
         assert ledger.latest()["t1"]["close_attempts"] == k
-        assert any(f"attempt {k}/{pe.NAKED_CLOSE_MAX_ATTEMPTS}" in a for a in res.alerts)
-    res = run(ad, FakeApi(), env)
-    assert ledger.state("t1") == "contained" and ledger.latest()["t1"]["close_gave_up"] is True
-    assert any("gave up" in a for a in res.alerts)
-    assert [c[0] for c in ad.calls].count("flatten") == pe.NAKED_CLOSE_MAX_ATTEMPTS
+    assert [c[0] for c in ad.calls].count("flatten") == pe.NAKED_CLOSE_MAX_ATTEMPTS + 2
     assert [c[0] for c in ad.calls].count("modify_bracket") == 1
+    assert sum("still retrying every cycle" in a for a in alerts) == 1
+    assert sum("RED FLAG" in a for a in alerts) == 1
+    assert not any("gave up" in a for a in alerts) and state.halted() is None
+
+
+def test_an_open_naked_position_is_protected_or_flattened_every_cycle_with_bounded_alerts(env):
+    # NO-HALT: a journal-open position that loses its SL is flattened on every
+    # cycle until it is gone; the alerts do not repeat every tick, ONE red flag.
+    ledger, state = env
+    ledger.record("t1", "open", spec=SPEC)
+    ad = _NoClose(positions=[_p(stop_loss=None)])
+    ad.modify_result = REFUSED
+    alerts = []
+    for _ in range(8):
+        res = run(ad, FakeApi([], OPEN_FILL), env)
+        alerts += res.alerts
+    assert [c[0] for c in ad.calls].count("flatten") == 7          # read 1 alerts only; then every cycle
+    assert sum("containing it" in a for a in alerts) == 1
+    assert sum("RED FLAG" in a for a in alerts) == 1
+    assert len(alerts) <= 8 and state.halted() is None
+
+
+def test_a_contained_naked_position_still_open_is_flattened_again_every_cycle(env):
+    # ours (partial_no_sl_tp), closed once, but the position is still naked
+    ledger, state = env
+    ledger.record("t1", "submitted", spec=SPEC)
+    ad = FakeAdapter(positions=[_p(stop_loss=None)])
+    ad.modify_result = REFUSED
+    run(ad, FakeApi(), env)
+    assert ledger.state("t1") == "contained"
+    for _ in range(3):
+        run(ad, FakeApi(), env)                                   # the position did not go away
+    assert [c[0] for c in ad.calls].count("flatten") == 4
+    ad.positions = []
     n = len(ad.calls)
     run(ad, FakeApi(), env)
-    assert len(ad.calls) == n                                       # parked: no further clicks
+    assert len(ad.calls) == n                                     # gone: nothing more to do
 
 
 # ── pre-submit quote guard (PI-20261005-BRKBLOCK-0001) ──
@@ -4784,3 +4963,122 @@ def test_cancel_reports_when_the_click_produced_nothing(tpage):
     p = tpage(html=_orders_page(["18912998"], controls=_MODIFY_BTN + inert))
     r = DXtradeAdapter(timeout_ms=3_000).cancel_order(p, WorkingOrder(symbol="ETHUSD", order_id="18912998"), arm=True)
     assert r["clicked"] is True and "nothing new appeared" in r["why"] and "row still present=True" in r["why"], r
+
+
+# ── PROP-MARKETABLE-ENTRY (2026-10-10): a REST executor takes a favourably
+# marketable entry at market, same SL/TP/size; browser/phone keep waiting ──
+# MEASURED 2026-10-10 14:33Z (velotrade_1 executor journal): ETH long limit
+# 2506.92, ask 2504.16 (in band 2503.67..2510.17) -> presubmit_marketable, not
+# placed; 14:38Z ask 2511.48 left the band -> ended NOT PLACED. Trade missed.
+
+class RestAdapter(SpecAdapter):
+    MARKETABLE_ENTRY_AT_MARKET = True
+    ATOMIC_BRACKET = False
+
+
+def test_only_the_rest_adapter_takes_a_marketable_entry_at_market():
+    from src.prop.platform.dxtrade_api import DXtradeApiAdapter
+    from src.prop.platform import dxtrade, breakout_terminal
+    assert DXtradeApiAdapter.MARKETABLE_ENTRY_AT_MARKET is True
+    browser = [c for m in (dxtrade, breakout_terminal) for c in vars(m).values()
+               if isinstance(c, type) and c.__module__ == m.__name__ and hasattr(c, "place_bracket")]
+    assert browser and not any(getattr(c, "MARKETABLE_ENTRY_AT_MARKET", False) for c in browser)
+
+
+@pytest.mark.parametrize("direction,sl,tp,quote,fill", [
+    ("long", 118.0, 126.0, {"bid": 119.70, "ask": 119.80}, 119.80),    # ask below the long limit 120.0
+    ("long", 118.0, 126.0, {"bid": 119.99, "ask": 120.00}, 120.00),    # ask == limit
+    ("short", 122.0, 114.0, {"bid": 120.20, "ask": 120.30}, 120.20),   # bid above the short limit 120.0
+])
+def test_rest_marketable_entry_is_placed_at_market_with_the_same_bracket(env, direction, sl, tp, quote, fill):
+    ledger, _ = env
+    pos = _p(side=direction, entry_price=fill, stop_loss=sl, take_profit=tp)
+    ad = RestAdapter(quote=quote, after_submit=([pos], []))
+    api = FakeApi([ticket(direction=direction, sl=sl, tp=tp)])
+    res = _rcycle(ad, api, env, 0)
+    assert len(_places(ad)) == 1
+    s = ad.specs[0]
+    limit_spec = pe.bracket_from_ticket(ticket(direction=direction, sl=sl, tp=tp), cfg())[0]
+    assert s.order_type == "market" and s.limit_price is None
+    assert (s.quantity, s.stop_loss, s.take_profit) == (limit_spec.quantity, sl, tp)   # size NOT widened
+    row = ledger.latest()["prop-manual-aaa"]
+    assert row["state"] == "open" and row["intended_limit"] == 120.0 and row["fill_price"] == fill
+    assert row["entry_mode"] == "marketable_at_market"
+    opened = [p for p in api.posts if p.get("status") == "open"]
+    assert opened and opened[0]["entry_price"] == fill
+    assert not any("NOT PLACED" in a or "WORSE" in a for a in res.alerts)
+    fills = [a for a in res.actions if a["what"] == "marketable_entry_fill"]
+    assert fills and fills[0]["worse_than_limit"] is False
+
+
+def test_rest_market_fill_worse_than_the_limit_is_alerted_once(env):
+    ledger, _ = env
+    ad = RestAdapter(quote={"bid": 119.70, "ask": 119.80}, after_submit=([_p(entry_price=120.05)], []))
+    api = FakeApi([ticket()])
+    res = _rcycle(ad, api, env, 0)
+    assert [a for a in res.alerts if "WORSE than the limit" in a]
+    res = _rcycle(ad, api, env, 1)
+    assert not [a for a in res.alerts if "WORSE" in a]
+
+
+@pytest.mark.parametrize("message,quote,why", [
+    ("  Entry    : 120.0   (only if live price is within 119.9 … 120.5)",
+     {"bid": 119.7, "ask": 119.8}, "outside the ticket's entry band"),
+    ("  Entry    : 120.0   (only if live price is within 117.0 … 120.5)",
+     {"bid": 117.9, "ask": 118.0}, "not strictly between SL"),           # band wider than the SL
+    ("  Entry    : 120.0   (only if live price is within 119.5 … 120.5)",
+     {"bid": 120.1, "ask": 120.2}, "would rest"),
+    ("  Entry    : 120.0   (only if live price is within 119.5 … 120.5)",
+     {"bid": None, "ask": None}, "could not look"),
+    ("no band here", {"bid": 119.7, "ask": 119.8}, "entry band unreadable"),
+])
+def test_marketable_entry_spec_fails_closed(message, quote, why):
+    t = ticket(message=message)
+    spec = pe.bracket_from_ticket(t, cfg())[0]
+    got, msg = pe._marketable_entry_spec(RestAdapter(quote=quote), None, spec, t)
+    assert got is None and why in msg
+
+
+def test_rest_marketable_entry_refused_by_the_fresh_quote_keeps_waiting_and_alerts_once(env):
+    ledger, _ = env
+
+    class Moving(RestAdapter):
+        def read_quote(self, page, venue):
+            self.n = getattr(self, "n", 0) + 1
+            # band check + presubmit see 119.8 (marketable, in band); the
+            # conversion's fresh read sees the price already beyond the band
+            return {"bid": 119.7, "ask": 119.8} if self.n % 3 else {"bid": 119.3, "ask": 119.4}
+    ad = Moving()
+    api = FakeApi([ticket()])
+    res = _rcycle(ad, api, env, 0)
+    assert _places(ad) == [] and ledger.state("prop-manual-aaa") == pe.AWAIT_REST_STATE
+    assert [a for a in res.alerts if "not taken at market" in a]
+
+
+def test_rest_awaiting_row_from_before_the_fix_is_placed_at_market(env):
+    # a ticket left AWAITING by the old guard (or a browser cycle) is taken
+    # at market on the next REST cycle while still in band
+    ledger, _ = env
+    api = FakeApi([ticket()])
+    _rcycle(SpecAdapter(quote={"bid": 119.7, "ask": 119.8}), api, env, 0)
+    assert ledger.state("prop-manual-aaa") == pe.AWAIT_REST_STATE
+    ad = RestAdapter(quote={"bid": 119.7, "ask": 119.8}, after_submit=([_p(entry_price=119.8)], []))
+    res = _rcycle(ad, api, env, 1)
+    assert [a["what"] for a in res.actions if a["what"] == "marketable_entry_retry"]
+    assert len(_places(ad)) == 1 and ad.specs[0].order_type == "market"
+    assert ledger.state("prop-manual-aaa") == "open"
+
+
+def test_browser_marketable_entry_keeps_waiting_with_one_alert_per_state_change(env):
+    # the 03:40Z regression stays for browser executors: never clicked, and
+    # three waiting cycles raise ONE start alert, then ONE end alert
+    ledger, _ = env
+    ad = SpecAdapter(quote={"bid": 119.7, "ask": 119.8})
+    api = FakeApi([ticket()])
+    alerts = [_rcycle(ad, api, env, k).alerts for k in range(3)]
+    assert _places(ad) == []
+    assert sum("pre-submit guard (marketable)" in a for al in alerts for a in al) == 1
+    ad.quote = {"bid": 121.0, "ask": 121.1}                     # left the band
+    alerts.append(_rcycle(ad, api, env, 3).alerts)
+    assert len(_end_alerts(alerts)) == 1 and _places(ad) == []
+    assert len(_end_alerts([_rcycle(ad, api, env, 4).alerts])) == 0

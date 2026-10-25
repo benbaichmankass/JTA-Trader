@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261005-013
 title: 'E35 bracket-geometry sweep: mhg_pullback_1d (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -62,16 +62,25 @@ generated:
     leg: mhg_pullback_1d
     symbol: MHG
     timeframe: 1d
-last_dispatched_at: '2026-10-07T14:12:55+00:00'
+last_dispatched_at: '2026-10-07T15:24:28+00:00'
 grading:
   auto: true
   decision_rule_id: RULE-TPL-E35-BRACKET-IS-OOS-GATE
   evidence:
   - docs/research/e35-bracket-corpus.jsonl
-  graded_at: '2026-10-09'
+  graded_at: '2026-10-16'
   grader: scripts/research/queue_grade.py
   latest: true
-  needs_review: true
+  note: 'base_oos_trades 11 < floor 39/3: the monthly re-ask cannot reach the floor; re-checked every
+    90 days instead (not retired)'
+  power: infeasible_at_cadence
   reason: base_oos_trades 11 < 39 (unresolvable_at_current_n)
+  recheck_after_days: 90
   rows: 199
   verdict: indeterminate
+retired_reason: "2026-10-16 P1-ATM-BACKLOG-1016, on the manager's programme-01 audit input (STOP: docs/research/programmes/reviews/2026-10-16/01-ATM.md\
+  \ \xA7 5.6): the per-leg monthly e35 sweep on mhg_pullback_1d graded base_oos_trades 11 < 39 (this unit's\
+  \ own grading block), and a 1d leg cannot reach the floor on any cadence -- the grader's 90-day recheck\
+  \ would only re-measure the same shortfall. The powered form is the pooled e35 gate lever RQ-20261015-1bf3-01\
+  \ (blocked/, build named there). Overrides research-ops SKILL's 'do not retire for that' line by manager\
+  \ direction; stated, not silent."

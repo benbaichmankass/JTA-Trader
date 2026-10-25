@@ -222,9 +222,10 @@ These overrides fire **before** the matrix and short-circuit it:
    `demote_shadow` and `execution` is already `shadow`, escalate to
    `kill` if the regime slice supports it; otherwise stay `hold` with
    evidence that the strategy continues to lose in shadow.
-4. **Promote requires N cohort weeks.** `promote` is never emitted if
-   the shadow soak window is shorter than 14 days, even with strong
-   in-window PnL — promotion needs cohort time, not just sample size.
+4. **(Removed 2026-10-15.)** This override was a calendar gate on
+   `promote` (a minimum time in shadow). A soak is mechanical and has no
+   calendar: [`OPERATING-PLAN` § 2 "The soak is
+   MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
 5. **TUNE BEFORE DEMOTE** (operator directive 2026-08-23, binding —
    `CLAUDE-RULES-CANONICAL.md` § "Tune before demote"). Fires **LAST**,
    because unlike the others it grades the matrix's own output. When

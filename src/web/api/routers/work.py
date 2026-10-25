@@ -73,6 +73,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 # The manager checklist's ONE grading owner. Imported whole rather than
 # cherry-picking helpers, so a reader of this route can see that every status
 # reading here is `manager_status`'s and none of it is re-derived locally.
+from src.web.api._swr import SWRCache
 from src.runtime import manager_status
 from src.runtime.decision_subject import (
     SUBJECT_GONE,
@@ -891,6 +892,7 @@ def _checklist_item(
         "lane": item.get("lane"),
         "tier": item.get("tier"),
         "priority": item.get("priority"),
+        "priorityRank": item.get("priority_rank"),
         "status": {
             # `value` is what a renderer groups and labels by. `basis` says how
             # it was arrived at and is NOT inferable from `value`: an
@@ -1190,6 +1192,109 @@ def get_work_checklist() -> dict[str, Any]:
                           "note": "payload build failed before provenance was read"},
         }
     _checklist_cache = (now, payload)
+    return payload
+
+
+# ── /snapshot — the Overview's work-queue glance (UI-UPGRADE-1 item 2) ─────────
+#
+# The full /checklist envelope is ~435 KB (every row with its note and lane
+# history) — far too heavy to put on the Overview. This is the four lists the
+# Overview shows, each row cut to id/title/state/owner/updated_at:
+#
+#   closedRecent    last 5 rows in a terminal state (done | dropped), newest
+#                   `updated_at` first.
+#   openNow         every in_flight row (a lane is on it now).
+#   next            the first 5 rows of the RANKED RUNNABLE QUEUE
+#                   (`checklist_store.queue`: queued, nothing in blocked_on, by
+#                   `priority_rank`, unranked last in `_seq` order) -- the order
+#                   the manager dispatches from (manager SKILL § "The operating loop").
+#   waitingOnOperator  every open row (not done/dropped) with a typed
+#                   blocked_on edge of kind `operator_decision` or `operator`.
+#                   Rows whose OWNER merely names the operator are NOT counted:
+#                   an owner is who does the work, not a pending ask.
+#
+# `landed_unproven` is open-but-merged: it is counted in `counts`, never listed
+# as closed — it is not `done` (CLAUDE.md § Every session, step 5).
+
+_SNAPSHOT_CLOSED = ("done", "dropped")
+_SNAPSHOT_OPERATOR_KINDS = ("operator_decision", "operator")
+_SNAPSHOT_CACHE_TTL_S = 20.0
+_snapshot_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": row.get("id"),
+        "title": row.get("title"),
+        "state": row.get("state"),
+        "owner": row.get("owner"),
+        "lane": row.get("lane"),
+        "tier": row.get("tier"),
+        "priorityRank": row.get("priority_rank"),
+        "updatedAt": row.get("updated_at"),
+    }
+
+
+def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
+    edges = row.get("blocked_on")
+    if not isinstance(edges, list):
+        return []
+    return [e for e in edges
+            if isinstance(e, dict) and e.get("kind") in _SNAPSHOT_OPERATOR_KINDS]
+
+
+def _work_snapshot_payload() -> dict[str, Any]:
+    from src.runtime import checklist_store
+
+    rows = [r for r in checklist_store.load(Path(repo_root())).get("items", [])
+            if isinstance(r, dict)]
+    counts: dict[str, int] = {}
+    for r in rows:
+        key = r.get("state") or "(no state)"
+        counts[key] = counts.get(key, 0) + 1
+    closed = sorted((r for r in rows if r.get("state") in _SNAPSHOT_CLOSED),
+                    key=lambda r: str(r.get("updated_at") or ""), reverse=True)
+    waiting = []
+    for r in rows:
+        if r.get("state") in _SNAPSHOT_CLOSED:
+            continue
+        edges = _operator_edges(r)
+        if edges:
+            waiting.append({**_snapshot_row(r),
+                            "asks": [{"what": e.get("what"), "ref": e.get("ref")}
+                                     for e in edges]})
+    return {
+        "present": True,
+        "reason": None,
+        "total": len(rows),
+        "counts": counts,
+        "closedRecent": [_snapshot_row(r) for r in closed[:5]],
+        "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
+        "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
+        "waitingOnOperator": waiting,
+    }
+
+
+@router.get("/snapshot")
+def get_work_snapshot() -> dict[str, Any]:
+    """Small work-queue glance for the Overview. Read-only, file-backed.
+
+    An unreadable store degrades to ``present: false`` with a reason and EMPTY
+    lists — never lists that read as "no work".
+    """
+    global _snapshot_cache
+    now = time.monotonic()
+    cached = _snapshot_cache
+    if cached is not None and (now - cached[0]) < _SNAPSHOT_CACHE_TTL_S:
+        return cached[1]
+    try:
+        payload = _work_snapshot_payload()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason; a Tier-1 read surface must not 5xx
+        logger.warning("work: snapshot build failed: %s", exc, exc_info=True)
+        return {"present": False, "reason": f"checklist read failed: {exc}",
+                "total": None, "counts": {}, "closedRecent": [], "openNow": [],
+                "next": [], "waitingOnOperator": []}
+    _snapshot_cache = (now, payload)
     return payload
 
 
@@ -2145,7 +2250,10 @@ def get_work_receipts() -> dict[str, Any]:
 # file serves at process start.
 
 _BRIEF_CACHE_TTL_S = 20.0
-_brief_cache: tuple[float, dict[str, Any]] | None = None
+#: Served-at-once ceiling for a brief snapshot older than the TTL. The brief is
+#: a once-a-day document; ten minutes of staleness is far inside its grain.
+_BRIEF_STALE_S = 600.0
+_BRIEF_SWR = SWRCache(name="work-brief", fresh_s=_BRIEF_CACHE_TTL_S, stale_s=_BRIEF_STALE_S)
 
 
 def _brief_payload() -> dict[str, Any]:
@@ -2194,13 +2302,12 @@ def get_work_brief() -> dict[str, Any]:
     a failure to build the brief degrades to ``present: false`` WITH a
     reason, never a 5xx and never a stale/blank page passed off as current.
     """
-    global _brief_cache
-    now = time.monotonic()
-    cached = _brief_cache
-    if cached is not None and (now - cached[0]) < _BRIEF_CACHE_TTL_S:
-        return cached[1]
+    # UI-UPGRADE-1: stale-while-revalidate. Measured 2026-10-11 the render
+    # took ~16 s, and with a plain 20 s TTL every request after expiry paid it
+    # in the request path. Now a snapshot up to _BRIEF_STALE_S old is served at
+    # once while one background render runs; the payload says how old it is.
     try:
-        payload = _brief_payload()
+        payload, age_s, state = _BRIEF_SWR.get("brief", _brief_payload)
     except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason. A Tier-1 read surface must not 5xx (roadmap.py's contract); a brief that 500s is invisible rather than absent.
         logger.warning("work: brief build failed: %s", exc, exc_info=True)
         return {
@@ -2210,8 +2317,7 @@ def get_work_brief() -> dict[str, Any]:
             "markdown": None,
             "inputs": {}, "pipelineStats": None, "coverageComplete": False,
         }
-    _brief_cache = (now, payload)
-    return payload
+    return {**payload, "snapshot": {"ageSeconds": round(age_s, 1), "state": state}}
 
 
 # ── /schedule — A9: cadenced sessions, decisions owed, monitoring coming ──

@@ -1,0 +1,20 @@
+{
+  "run": "RESEARCH-OPS-2026-10-20-2047", "finished_at": "2026-10-20T21:05:00Z", "by": "session_01P8qVYwxWScAbPMHYJbyVrJ",
+  "floor": 44, "floor_basis": "computed_floor(fired_24h 55)", "authoring_queue_depth": 29,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"], "needs_review_triaged": 0, "needs_review_left": 40,
+  "throughput": {"runnable_before": 22, "runnable_after": 50, "queued": 152, "fired_24h": 55,
+                 "results_landed_24h": 55, "hours_since_last_dispatch": 1.3, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "not_run", "collector": "ok (55 landed/24h)", "stranded_stamp_prs": "not_checked", "incident": null},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": []},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": ["RQ-20261020-001..003 (programme:P4-Q2-ppi-rty-{early,late,placebo}, node was ready)",
+                     "RQ-20261020-004..028 (programme:P1-Q9 {adx,momentum,tp3,timeout,giveback} x {gld,tlt,gdx}1d; stale x {ief,slv,gld,tlt,gdx}1d and {eth,xrp,sol,ada,avax}4h)"],
+  "followups_filed": [],
+  "authoring": {"queue_depth": 29, "nodes_drafted": 28, "nodes": ["P1-Q9-{gld,tlt,gdx}1d-{adx,momentum,tp3,timeout,giveback}-replace", "P1-Q9-{ief,slv,gld,tlt,gdx}1d-stale-replace", "P1-Q9-{eth,xrp,sol,ada,avax}4h-stale-replace"],
+                "theme_shortfall": {"regime": 10, "ml_health": 6, "new_strategy_prop": 12, "infra": 4, "timeframes": 2}},
+  "not_run": ["blocked/ audit (manager addendum: RESEARCH-BLOCKED-AUDIT)", "needs_review triage (wind-down)", "step D results read (wind-down; RESULTS-UNDISPOSITIONED 4)", "stranded-PR and dispatch-receipt checks"],
+  "handoff": ["MANAGER (held PR): merge the run PR; it hand-edits the P1 programme file and emits queue units (E57 hold, landing hold unvouchable_paths)",
+              "The new Q9 units are cloned from the ief/xrppb/eth4h Q9 nodes; gld/tlt/gdx expected_n 60 is an ASSUMPTION (n(A)<39 grades INDETERMINATE); stale arms sizes (3/6 daily, 12/24 4h) chosen a priori; stale_exit_below_r at harness default",
+              "Authoring queue 29 nodes remain gated on builds (LIVE-BT-STAGE-B, MOMENTUM-LEVERS-LIVE) or verdicts; P3-Q8-new-symbols needs a per-symbol instrument decision",
+              "H1-THEME shortfalls regime/ml_health/new_strategy_prop/infra/timeframes unmet: cheap-compute authoring for those themes is post-reset work"]
+}

@@ -1,0 +1,154 @@
+id: RQ-20261018-ef5d-05
+title: >-
+  Programme 07 TIMEFRAMES, long arm A3: WEEKLY-bar Donchian-20 trend on the 14 Alpaca ETFs and 3 IBKR micro-futures proxies
+  pooled, ~2006-2026 (Yahoo daily resampled to 1W) -- long-only vs both sides -- does a months-long position trade clear Stage
+  0 with breadth?
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  On Yahoo daily candles resampled to weekly bars (right-labelled) for SPY QQQ IWM GLD SLV TLT IEF USO GDX TQQQ QLD SPLG IAUM
+  SCHA and ES=F GC=F HG=F (the MES/MGC/MHG proxies), each over its own listing history up to 7300 days, does scripts/backtest_trend.py
+  at Donchian 20 on weekly bars (2.5 x ATR14 stop, 3 x ATR trail, harness defaults) read net-positive POOLED across the 17
+  cells with >= 4 of 6 calendar folds at pooled n >= 39 and pass on at least half the powered cells (n >= 10), for arm LO
+  (--long-only) or arm BOTH?
+why_this_matters: >-
+  The equity half of the long arm. The alpaca books decide on 1d bars with holds of days; a weekly Donchian holds for months
+  (SPY weekly smoke 2026-10-18: 17 trades in 20 years, mean hold 260 days, +12.9 R, 4/6 folds, p 0.056 -- underpowered alone,
+  which is why the design pools 17 symbols). Outside evidence puts equity/commodity trend at 1-12 month horizons (Moskowitz-Ooi-Pedersen
+  2012; Hurst-Ooi-Pedersen, both primary). Costs: Alpaca ETFs are commission-free + 5 bps slippage (execution_costs); the
+  futures proxies carry the 7.5 bps default rather than a per-contract commission (stated). Prior short-horizon work this
+  builds on and does NOT repeat: RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop
+  had NO Stage-A survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue
+  the 15m scalp book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration
+  class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+requires_result:
+  unit: RQ-20261018-ef5d-01
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    39 pooled trades at d=0.45 (the standing floor). expected_n=150 is an ESTIMATE: SPY weekly long-only made 17 trades in
+    20 years (smoke 2026-10-18); 17 symbols with 5-20 years of history give ~100-200 pooled per arm. Cells are graded at n
+    >= 10 for breadth only.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on fetched Yahoo daily candles (period uncapped for 1d) over each symbol's listing history; nothing accrues.
+      Yahoo continuous futures (ES=F/GC=F/HG=F) carry roll artifacts; those three cells are reported but the arm's breadth
+      clause does not depend on them alone.
+decision_rule:
+  id: RULE-P7-A3-WEEKLY-ETF-TREND
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family trend --timeframe 1w (fetch 1d, harness --resample 1W), arms LO (--long-only) and BOTH (both
+    sides), --days 7300; per cell n, net_r, max_drawdown_r, 6 calendar folds over the cell's own window, net_r_per_capital_day,
+    hold_days; pooled across the 17 cells.
+  rule: >-
+    Arms fixed now: LO and BOTH. Flags: --folds 6 --fold-majority 4 --n-floor 10 --pooled-n-floor 39 --breadth-frac 0.5 --non-crypto-source
+    yfinance. PASS iff any arm passes -> node P7-A3-overlap (the passing weekly arm's trades against the live alpaca 1d legs'
+    records: correlation of weekly R series and combined drawdown; SPY/QQQ/QLD/TQQQ/SPLG/IWM/SCHA are one equity-beta factor
+    and must be read as such) then a re-entry case under MD-PROMOTE-S0-S1 on alpaca_paper. FAIL iff every arm fails -> weekly
+    Donchian-20 at these params closed on this history (node P7-A3-fail). INDETERMINATE otherwise. Verdicts are the script's
+    own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND
+    >= fold_majority of folds calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM
+    pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= half the POWERED cells
+    (n >= n_floor) pass, indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured
+    (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values across
+    the arm's cells are REPORTED, not graded. A PASS is a LEAD: it opens the programme-07 node named in the tree (a same-symbol
+    overlap read against the live legs, then a re-entry case under MD-PROMOTE-S0-S1 built as a new evidence record), never
+    a roster act; a FAIL closes the CONFIGURATION on this window, never the family (idea-family review 2026-10-16 negative-result
+    protocol). Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Yahoo daily (adjusted=False) resampled
+    to weekly; futures are continuous-contract proxies with roll artifacts; no funding applies to spot/futures (execution_costs
+    is venue-aware). All stated in the record.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.25
+  bucket: frontier
+  basis: >-
+    stand-in: a candidate months-horizon equity leg at alpaca_live's per-leg risk; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 25
+  basis: >-
+    17 Yahoo daily fetches (~2-5k rows each, ~2 s) x 2 arms = 34 harness passes over ~1,000 weekly bars; seconds each. Estimate.
+  why_runner: >-
+    harness_stage0.py fetches Yahoo candles (yfinance==1.7.0 is installed by research-script-run.yml) and runs the repo harness;
+    nothing here is in metis-market-data.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - SPY,QQQ,IWM,GLD,SLV,TLT,IEF,USO,GDX,TQQQ,QLD,SPLG,IAUM,SCHA,MES,MGC,MHG
+  - --timeframe
+  - 1w
+  - --days
+  - '7300'
+  - --arm
+  - LO=--long-only
+  - --arm
+  - BOTH=
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '10'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --non-crypto-source
+  - yfinance
+  - --rule-id
+  - RULE-P7-A3-WEEKLY-ETF-TREND
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261018-ef5d-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- L-LADDER
+programme: P7
+related:
+- RQ-20261018-ef5d-01
+- scripts/research/harness_stage0.py
+- scripts/backtest_trend.py
+- RQ-20261016-c56e-19
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T14:40:05+00:00'
+grading:
+  attested: RULE-P7-A3-WEEKLY-ETF-TREND
+  auto: true
+  decision_rule_id: RULE-P7-A3-WEEKLY-ETF-TREND
+  evidence:
+  - research/results/RQ-20261018-ef5d-05/39124033697.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

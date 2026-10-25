@@ -1,0 +1,220 @@
+name: ml-data-export-kaggle
+
+# ML-DATA-OFF-TRAINER (2026-10-13): publish the MARKET-ONLY ML shards the research queue reads as a PRIVATE Kaggle
+# dataset (`metis-market-data`), so ML/frontier units can run on Kaggle or a GitHub runner instead of queueing on
+# the saturated 1-OCPU trainer. Operator direction 2026-10-13 ~15:50Z (recorded_decision operator_decision): export
+# MARKET data; anything OURS (trades, fills, order packages, signals, account/PnL, outcome labels) is NOT approved
+# for publication and is not in the allowlist (scripts/research/market_data_export.py::ALLOW; classification in
+# docs/research/ml-data-classification-2026-10-13.md).
+#
+# HOW. The RUNNER pulls the allowlisted files over the existing trainer SSH route (the same key research-script-run-
+# trainer.yml uses), at nice 19 / ionice idle / 20 MB/s so a 1-OCPU box is not starved, stages them with a
+# MANIFEST (sha256, rows, first/last ts, stale flag), versions the Kaggle dataset, then PROVES the published copy:
+# job `verify-runner` downloads it on a GitHub runner and re-hashes; job `verify-kaggle` mounts it in a CPU Kaggle
+# kernel and re-hashes there. No new timer and no credential on the VM -> Tier 1 (reads existing files over the
+# existing route). KAGGLE_API_TOKEN is the existing secret; the Kaggle username is masked and scrubbed.
+#
+# CADENCE. Daily 06:40Z: after the nightly dataset rebuild (shards rewritten ~05:20-05:45Z) and the 04:00Z
+# promotion sweep (~99 min). A source file modified in the last 10 min makes the job wait once, then refuse.
+#
+# A shard that disagrees with its own metadata row_count is WITHHELD (MANIFEST.withheld): on 2026-10-13 the BTC and
+# SOL 15m market_raw files held 151,000 / 64,000 rows against 175,296 / 175,104 in their metadata (cut short by a
+# later rewrite; writer not yet identified, row ML-SHARD-TRUNCATED), so the first export ships ETH and withholds BTC/SOL.
+# A consistent-but-old shard is shipped and flagged (MANIFEST.stale_shards, stale_days).
+#
+# no-durable-result: data-publishing job (a private dataset + verification artifacts), computes no research verdict or measurement
+#
+# Tier-1: writes only the private Kaggle dataset + a 14-day artifact.
+
+on:
+  schedule:
+    - cron: "40 6 * * *"
+  workflow_dispatch:
+    inputs:
+      skip_kernel_verify:
+        description: "Skip the Kaggle-kernel verification (the runner verification always runs)"
+        default: "false"
+      verify_only:
+        description: "Skip the export and only run the verification jobs against the dataset as published"
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ml-data-export-kaggle
+  cancel-in-progress: false
+
+jobs:
+  export:
+    if: ${{ inputs.verify_only != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+      TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+      TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
+    steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "kaggle>=2.0"
+      - name: Self-test the exporter
+        run: python3 scripts/research/market_data_export.py self-test
+      - name: Pull the allowlisted shards from the trainer
+        run: |
+          set -uo pipefail
+          [ -n "${KAGGLE_API_TOKEN}" ] || { echo "::error::KAGGLE_API_TOKEN is empty"; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
+          SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          python3 scripts/research/market_data_export.py list-paths > /tmp/files.txt
+          for attempt in 1 2; do
+            # Only the files this job will copy count (first run 2026-10-14 00:52Z refused on 22 shards it never exports).
+            BUSY=$(grep 'data.jsonl$' /tmp/files.txt | $SSH "${TRAINER_USER}@${TRAINER_IP}" "cd /home/ubuntu/ict-trading-bot/datasets-out && xargs -r -I{} find {} -mmin -10 2>/dev/null | wc -l" 2>/dev/null | tr -d ' ')
+            [ "${BUSY:-x}" = "0" ] && break
+            echo "a shard was modified in the last 10 min (busy=${BUSY:-unreadable}); attempt ${attempt}"
+            [ "$attempt" = "1" ] && sleep 660
+          done
+          [ "${BUSY:-x}" = "0" ] || { echo "::error::source shards still being rewritten or the trainer is unreadable; refusing to publish a partial copy"; exit 1; }
+          mkdir -p /tmp/src
+          rsync -az --partial --bwlimit=20000 --files-from=/tmp/files.txt \
+            --rsync-path="nice -n 19 ionice -c3 rsync" -e "$SSH" \
+            "${TRAINER_USER}@${TRAINER_IP}:/home/ubuntu/ict-trading-bot/datasets-out/" /tmp/src/ 2>&1 | sed "s|${TRAINER_IP}|<trainer>|g" | tail -5
+          rc=${PIPESTATUS[0]}
+          # 23/24 = some allowlisted files absent on the trainer (recorded in MANIFEST.absent, not an error)
+          [ "$rc" = "0" ] || [ "$rc" = "23" ] || [ "$rc" = "24" ] || { echo "::error::rsync exit $rc"; exit 1; }
+          rm -f ~/.ssh/trainer_key
+          du -sh /tmp/src
+      - name: Stage with MANIFEST and publish the private dataset
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          python3 scripts/research/market_data_export.py build --src /tmp/src --out /tmp/stage --username "$USERNAME" | tee /tmp/build.json
+          if kaggle datasets status "$USERNAME/metis-market-data" >/dev/null 2>&1; then
+            # The CLI can exit non-zero while the dataset is still being created/versioned (observed 2026-10-14, run
+            # 38503995602: upload OK, "Your private Dataset is being created", exit 1). The exit code is NOT the verdict;
+            # the `ready` poll below is. `|| true` also covers the pipeline's pipefail under bash -e.
+            kaggle datasets version -p /tmp/stage -r zip -m "export $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          else
+            kaggle datasets create -p /tmp/stage -r zip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          fi
+          READY=0
+          for i in $(seq 1 80); do
+            st=$(kaggle datasets status "$USERNAME/metis-market-data" 2>&1 | scrub)
+            echo "dataset: $st"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
+            sleep 15
+          done
+          [ "$READY" = "1" ] || { echo "::error::dataset never became ready"; exit 1; }
+          mkdir -p out && cp /tmp/stage/MANIFEST.json out/ && cp /tmp/build.json out/
+          sed -i "s|$USERNAME|<user>|g" out/MANIFEST.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ml-data-export-${{ github.run_id }}
+          path: out
+          retention-days: 14
+
+  verify-runner:
+    needs: export
+    if: ${{ !cancelled() && (needs.export.result == 'success' || inputs.verify_only == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "kaggle>=2.0"
+      - name: Download the published dataset on a GitHub runner and re-hash it
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          python3 scripts/research/published_data.py download --dataset metis-market-data --dest /tmp/dl
+          python3 scripts/research/market_data_export.py verify --root /tmp/dl | tee verify-runner.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ml-data-verify-runner-${{ github.run_id }}
+          path: verify-runner.json
+          retention-days: 14
+
+  verify-kaggle:
+    needs: export
+    if: ${{ !cancelled() && inputs.skip_kernel_verify != 'true' && (needs.export.result == 'success' || inputs.verify_only == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "kaggle>=2.0"
+      - name: Mount the dataset in a CPU Kaggle kernel and re-hash it
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          mkdir -p /tmp/k && cp scripts/research/kaggle_data_verify/kernel_verify.py /tmp/k/
+          python3 - "$USERNAME" <<'PY'
+          import json, sys
+          u = sys.argv[1]
+          json.dump({"id": f"{u}/metis-market-data-verify", "title": "metis-market-data-verify",
+                     "code_file": "kernel_verify.py", "language": "python", "kernel_type": "script",
+                     "is_private": "true", "enable_gpu": "false", "enable_tpu": "false", "enable_internet": "false",
+                     "dataset_sources": [f"{u}/metis-market-data"], "competition_sources": [],
+                     "kernel_sources": [], "model_sources": []}, open("/tmp/k/kernel-metadata.json", "w"), indent=1)
+          PY
+          timeout 300 kaggle kernels push -p /tmp/k 2>&1 | scrub | tee /tmp/push.txt
+          grep -qi "error\|fail" /tmp/push.txt && { echo "::error::kernel push failed"; exit 1; }
+          deadline=$(( $(date +%s) + 2400 ))
+          while :; do
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-market-data-verify" 2>&1 | scrub); echo "$(date -u +%H:%M:%S) $s"
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "::error::kernel timed out"; exit 1; }
+            sleep 30
+          done
+          mkdir -p kout && timeout 300 kaggle kernels output "$USERNAME/metis-market-data-verify" -p kout 2>&1 | scrub | tail -3
+          cat kout/result.json | tee verify-kaggle.json
+          python3 -c "import json,sys; r=json.load(open('verify-kaggle.json')); sys.exit(0 if r.get('ok') else 1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ml-data-verify-kaggle-${{ github.run_id }}
+          path: verify-kaggle.json
+          retention-days: 14

@@ -837,6 +837,12 @@ def main():
     # asked for and the one `answerable_route()` resolves to. This absence is
     # asserted by test; do not re-add it without withdrawing the constraint.
 
+    # TELEGRAM-CHANNELS part C: the ONE settings menu, SYSTEM channel. Mounted
+    # BEFORE the catch-all handler so `ns:` taps reach it.
+    from src.bot.notification_settings_menu import register as _register_settings
+
+    _register_settings(application, "system", service="ict-telegram-bot")
+
     application.add_handler(CallbackQueryHandler(callback_handler))
 
     # ── declare what THIS process polls, now that the handlers are attached ───
@@ -865,7 +871,7 @@ def main():
         record_poll,
     )
 
-    _polled_prefixes = (CB_PREFIX, "propexp")
+    _polled_prefixes = (CB_PREFIX, "propexp", "ns")
 
     async def _register_poll(_ctx) -> None:
         await asyncio.to_thread(

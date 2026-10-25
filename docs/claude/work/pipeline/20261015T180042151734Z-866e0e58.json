@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "each remaining literal is either read from an env var/setting or listed with the reason it must stay",
+    "event": "the workflows hold PR (claude/ip-to-secrets) is merged and its canary passed",
+    "kind": "event"
+  },
+  "id": "PI-20261015-KXMANT1S-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-FRONTIER-W42 / IP-to-secrets hold PR (manager instruction 2026-10-15 17:57Z)",
+    "rerun": "grep -rnE '141\\.145\\.193\\.91|158\\.178\\.209\\.121' src deploy config scripts | wc -l   # count of remaining literals outside workflows"
+  },
+  "routed_to": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "IP-IN-PUBLIC-LOGS follow-up: literal VM addresses remain in src/runtime/trainer_reachability_alert.py, config/accounts.yaml (comment), deploy/caddy/Caddyfile, deploy/training-vm-cloud-init.yaml, deploy/trainer/ict-promotion-readiness.service, scripts/ops/{diag_fetch,publish_trainer_mirror,sync_trainer_data}.sh, scripts/oci_vm_ssh.sh, scripts/ops/dashboard_edge_watch.py and docs. The workflows PR (claude/ip-to-secrets) removes them from .github/workflows only and adds workflow-vm-literal-guard. Decide per file: read from an env var / setting where the file can (src alert text, the .service Environment=, ops scripts), keep a literal where the file cannot (Caddyfile, cloud-init) and say why; rotation then means changing the secret plus the few kept literals."
+}

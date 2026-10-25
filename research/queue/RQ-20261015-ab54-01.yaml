@@ -1,0 +1,172 @@
+id: RQ-20261015-ab54-01
+title: 'AI trader / family diversity, EXTEND n: RQ-20261014-9d20-05 (ExtraTrees / small MLP vs LightGBM, BTC+ETH 1h regime head) read INDETERMINATE at tail_rows 20000; re-ask on the full published history per symbol, same learners, same rule bar'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the published BTCUSDT and ETHUSDT 1h v002 market_features shards, same six base features, purged 5-fold walk-forward with
+  a 24-row embargo and a final-90-day holdout, does sklearn ExtraTrees or a small sklearn MLP come within 0.01 macro-F1 of LightGBM
+  (non-inferior) or beat it by >= 0.01 on BOTH symbols? ensemble_stack has 0 registered models and 1 open plan item; this asks the
+  question where the data and the libraries already are (research-script-run-data.yml installs lightgbm and scikit-learn), instead
+  of on the trainer whose heavy-lock wait timed out RQ-20261013-1414-06 after 3,601 s.
+why_this_matters: 'ml_plan_status.py --diversity 2026-10-14: gbdt 75 of 96 registered models; ensemble_stack 0 registered, 1 open item
+  (RQ-20261013-1414-07, trainer-bound). The trainer twin stays queued; this twin is the one that can run this week. DATA PATHS UNVERIFIED
+  FROM THIS SANDBOX: the BTC/ETH 1h v002 paths are inside scripts/research/market_data_export.py::ALLOW and RQ-20261014-65cc-09 reads
+  them with the same six features; a withheld or stale shard lands as no_data / producer_failed (a ROUTE FAULT, never a verdict).'
+power:
+  expected_n: 20000
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = bar in test folds; tail_rows 43000 per symbol (the shards hold ~43.8k rows) at min_train_frac 0.4 leaves ~12,000 test rows per symbol over 5 folds
+    plus a ~2,160-row 90-day holdout; d=0.05 paired needs 3,140 rows. Bars are autocorrelated so effective n is lower; the rule also
+    requires the same direction on both symbols and min_folds 3.'
+  feasibility:
+    source: none
+    accrual_basis: 'Nightly-rebuilt published shard: the history read is fixed, nothing accrues.'
+decision_rule:
+  id: RULE-RQ20261015-AB54-01-EXTRATREES-MLP-1H-FULL
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  registered_before_run_note: identical pass bar and fail floor to RQ-20261014-9d20-05 (registered 2026-10-14, read INDETERMINATE between the bars); only the history length changes, so the two records are comparable and no bar was moved after seeing a number
+  statistic: >-
+    Paired per-fold macro-F1 difference (candidate minus LightGBM) on identical purged folds and on the holdout, per symbol;
+    mean over folds; applied by ml_bakeoff.py evaluate_rule from this unit's ml_bakeoff.rule.
+  rule: 'PASS (non-inferior or better) IF a candidate reaches >= -0.010 vs LightGBM on the CV mean AND on the holdout on BOTH symbols:
+    the family is a registrable alternative; file the candidate-manifest proposal (Tier-3 note on FRONTIER-RESEARCH) and append
+    families.ensemble_stack.history PASS. FAIL IF no candidate reaches >= -0.030 vs LightGBM on the CV mean on any symbol AND both
+    arms were evaluated: closes these two learners at these settings on this feature set (history FAIL). INDETERMINATE otherwise, if
+    folds < 3, or if an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows.
+  what_it_does_not_do: >-
+    Cannot move a mean that sits between the bars; more rows only tightens the interval, so a second INDETERMINATE closes these two learners at these settings as unresolved (history entry, no third run). Trains or registers nothing, touches no manifest, stage or config; unweighted LightGBM incumbent (a family
+    comparison, not a re-grade of the shipped heads). Says nothing about trade P&L.
+compute: auto
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 120
+  confidence: 0.25
+  basis: 'stand-in: a non-inferior non-boosted family is a second opinion for the advisory heads and a diversity record either way; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: 'Estimate, NOT measured: ExtraTrees 300 trees + MLP 2x64 x 5 folds x 2 symbols on 43k rows; the first run replaces it.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 43000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - extratrees
+  - mlp
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    extratrees:
+      kind: sklearn_extratrees
+      params:
+        n_estimators: 300
+        min_samples_leaf: 20
+    mlp:
+      kind: sklearn_mlp
+      params:
+        hidden_layer_sizes:
+        - 64
+        - 64
+        max_iter: 300
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: &id001
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.01
+    - group: *id001
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: -0.01
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.03
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261015-ab54-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261014-9d20-05
+- RQ-20261013-1414-07
+- RQ-20261014-65cc-09
+- FRONTIER-RESEARCH
+- AI-TRADER-PROGRAMME
+- scripts/research/research_compute.yaml
+last_dispatched_at: '2026-10-15T17:12:34+00:00'
+grading:
+  attested: RULE-RQ20261015-AB54-01-EXTRATREES-MLP-1H-FULL
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261015-AB54-01-EXTRATREES-MLP-1H-FULL
+  evidence:
+  - research/results/RQ-20261015-ab54-01/38775453747.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -1,0 +1,127 @@
+{
+ "reviewed_at": "2026-10-17T07:40:00Z",
+ "reviewer": "claude",
+ "lane": "HEALTH-REVIEW-20261017",
+ "window": "2026-10-09T20:00Z..2026-10-17T07:40Z (anchor: newest comms/reviews/health file 2026-10-09)",
+ "overall_assessment": "caution",
+ "operator_attention_required": false,
+ "coverage_statement": "PARTIAL. $6 lane. Live pulls done: health latest + 168h history (757 snapshots), services, status, exchange_positions, audit tail 600, trades 100, order_packages 100, orphan_events, ssh.service (200 lines, oldest end only: ends 2026-10-13T20:42Z). NOT done: trainer-VM service touch, shadow/soak model sweep, research SLO files, secret-scanning, sprint-doc review, rotating compliance section, db integrity checker.",
+ "findings": {
+  "services": {
+   "status": "ok",
+   "note": "ict-trader-live and ict-web-api active; restart 07:10Z; running sha bb5731e71, on-disk e63722439 (later commits not yet restarted)"
+  },
+  "health_snapshot": {
+   "status": "watch",
+   "note": "755 of 757 snapshots ok in 168h; the 2 non-ok (04:28Z, 07:25Z today) are disk"
+  },
+  "disk": {
+   "status": "concern",
+   "note": "root fs 93.1% used, 4.2 GB free; first warn today; cause unknown; filed PI-20261017-VSMHZYHF-0001 due 2026-10-19"
+  },
+  "broker_reachability": {
+   "status": "ok",
+   "note": "exchange_positions returned positions with error null for bybit_1, bybit_2, bybit_portfolio (first three read in full; remaining accounts' rows not individually verified); health accounts_api: all 8 broker-API accounts ok, 4 manual-bridge + 2 shelved not checked by design"
+  },
+  "orphans": {
+   "status": "ok",
+   "note": "orphan_events: 61 lines, last 2026-09-17T01:27Z, 0 since window start (probe shown able to read: 61 parsed). Trades sample: 0 adopted_orphan rows"
+  },
+  "data_validity": {
+   "status": "ok",
+   "note": "trades limit 100: 67 closed, none with closed_at<opened, none missing pnl or exit_reason; reconcile_status null on all (not a signal here)"
+  },
+  "close_reasons": {
+   "status": "watch",
+   "note": "1 stuck_strategy_watchdog close in 100 trades: id 6634 bybit_1 pairs_sol_eth_b 2026-10-15T17:23Z pnl -22.85. Fix bb5731e7 (watchdog closes from venue order) is the running sha since 07:10Z; not yet observed on a new close"
+  },
+  "rejections": {
+   "status": "watch",
+   "note": "mgc_trend_1h: 13 rejected packages in last 100 (11 close_reason NULL), newest 2026-10-16T09:09Z; execution: shadow by design per PI-20261010-ERFFUW41-0001"
+  },
+  "security": {
+   "status": "ok",
+   "note": "ssh.service sample: accepted logins only ubuntu publickey from the trainer VM address; others are Invalid user brute force. Sample covers oldest 200 lines only (to 10-13T20:42Z) so 10-13..10-17 is could_not_look. Secret scanning not run."
+  },
+  "research_pipeline": {
+   "status": "could_not_look",
+   "note": "comms/research/health not read this run"
+  },
+  "trainer_service": {
+   "status": "skip",
+   "note": "not pulled"
+  }
+ },
+ "security_check": {
+  "status": "partial",
+  "sources_checked": [
+   "ssh.service (partial)"
+  ],
+  "signals": [],
+  "note": "no breach signal in the sample read; NOT a full clean: other sources unchecked"
+ },
+ "soak_decisions_due": [
+  {
+   "what": "pipeline soak report: 5 ready, 1 dead of 17 tracked",
+   "gate_met": "per brief section 0 (not re-derived)",
+   "owner_skill": "performance-review/manager",
+   "sla_state": "unknown"
+  }
+ ],
+ "new_work_compliance": {
+  "commits_audited": 351,
+  "prs_audited": "not enumerated",
+  "findings": [],
+  "note": "Not a full audit. Scoped checks only: 3 commits touched config/strategies.yaml or accounts.yaml (#18500, #18445, #18394), all titled Tier-3 HOLD; the approval/merge record was NOT verified. 13 commits touched .github/workflows, all authored 'Ben' (squash author, indistinguishable from the operator or a session). #18240 Tier-2 HOLD likewise unverified."
+ },
+ "backlog_coverage": {
+  "sources": [
+   "pipeline",
+   "checklist"
+  ],
+  "pipeline_open": 872,
+  "pipeline_due_at_start": 110,
+  "open_at_start": 110,
+  "triaged": 5,
+  "resolved": 0,
+  "fixed_now": 0,
+  "closed_stale": 0,
+  "kept_open": 4,
+  "filed_new": 1,
+  "count_untriaged": 105,
+  "complete": false,
+  "note": "GATE NOT MET. 105 of 110 due pipeline items not walked. A $6 lane cannot re-validate 110 items against live state. Checklist rows owned by this review not enumerated."
+ },
+ "backlog_drain": [
+  {
+   "id": "PI-20261010-WQAPZD8B-0001",
+   "disposition": "kept-open",
+   "note": "reproduces: id 6634 watchdog close 10-15; redated to 10-24"
+  },
+  {
+   "id": "PI-20261010-17XH6SAQ-0001",
+   "disposition": "kept-open",
+   "note": "reports newest 2026-09-09, 44 reports; redated"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0002",
+   "disposition": "kept-open",
+   "note": "13 mgc rejects, newest 10-16; redated"
+  },
+  {
+   "id": "PI-20261015-OAKREDEF-0003",
+   "disposition": "kept-open",
+   "note": "accounts.yaml:229 text still present; Tier-3 file; redated"
+  },
+  {
+   "id": "PI-20261017-VSMHZYHF-0001",
+   "disposition": "filed-new",
+   "note": "disk 93.1% used"
+  }
+ ],
+ "anomalies": [
+  "Disk 93.1% used on live VM (new)",
+  "health-snapshot reports 8/8 ok yet 6 accounts 'NOT CHECKED' by design; 4 prop/manual accounts have no reachability probe at all"
+ ],
+ "recommended_action": "Identify what is filling the live VM root disk before 2026-10-19; complete the due-item walk in a lane with a larger ceiling."
+}

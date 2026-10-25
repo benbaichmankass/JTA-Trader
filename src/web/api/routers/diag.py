@@ -34,6 +34,7 @@ from typing import Any, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from src.runtime import telegram_settings as _telegram_settings
 from src.runtime.exit_loop_health import (
     STATE_FILE_NAME as EXIT_LOOP_HEALTH_STATE_FILE,
 )
@@ -355,6 +356,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     "ict-prop-executor@velotrade_1.timer",
     "ict-exchange-funding-pull.service",
     "ict-exchange-funding-pull.timer",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018) — daily purge of phone step
+    # captures older than 7 days; queryable so a session can confirm the TTL
+    # job fires and tail its one-line result.
+    "ict-phone-capture-purge.service",
+    "ict-phone-capture-purge.timer",
     "ict-mes-ibkr-pull.service",
     "ict-mes-ibkr-pull.timer",
     # 2026-07-31 (full-system audit P2.4) — the HOURLY IBKR executions pull
@@ -389,6 +395,7 @@ _CONVICTION_ARBITRATION_LOG = runtime_logs_dir() / "conviction_arbitration.jsonl
 _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
+_VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
 _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # The protection RE-ASSERT soak (2026-08-23). At the default `annotate` mode
 # this is the exact row list to review before flipping PROTECTION_REASSERT_MODE
@@ -499,7 +506,7 @@ _PROP_TICKET_RISK_SOAK_LOG = (
 # always the same: "the mechanism stopped firing" and "the mechanism fired and
 # the condition simply persists" are indistinguishable from outside, so a
 # broken cadence looks exactly like a quiet one.
-_DAILY_CAP_ALERT_STATE = runtime_logs_dir() / "daily_cap_alert_state.json"
+_DAILY_DD_SWITCH_STATE = runtime_logs_dir() / "daily_dd_switch_state.json"
 _EXIT_LOOP_HEALTH_ALERT_STATE = (
     runtime_logs_dir() / "exit_loop_health_alert_state.json"
 )
@@ -546,6 +553,14 @@ _WORK_DIGEST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "work_digest_receipt.json"
 )
 
+# TELEGRAM-CHANNELS-3 (2026-10-11, item 6). The stored Telegram notification
+# settings (mutes, per-update cadence, last_sent, updated_at/updated_by). On
+# 2026-10-11 the MANAGER update moved from hourly to 4h and nobody could read
+# WHO changed it: the file is not otherwise reachable from a session. Holds no
+# secrets -- kind names, cadence choices and timestamps. Resolved through the
+# store's own path function so reader and writer cannot split.
+_TELEGRAM_SETTINGS = _telegram_settings._path()
+
 # WORK-SYSTEM (2026-10-04). The attention pass's receipt — stamped on every
 # pass. The pass rides ict-work-digest (no unit of its own), so it is anchored
 # to repo_root() for the same reason as the entry above.
@@ -554,10 +569,12 @@ _ATTENTION_WATCH_RECEIPT = (
 )
 
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
-# pause latch (`modify_rollout.json`) and per-ticket replay state
-# (`trail_state.json`) live in the executor's state dir on the VM, outside
-# runtime_logs/, so a relay-bound session could not tell "the trail is paused
-# awaiting executor-clear-rollout" from "the trail is running". The path mirrors
+# former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
+# present only if old code wrote it -- the next trail pass moves it aside), its
+# last armed step's NON-blocking record (`modify_rollout_last.json`) and the
+# per-ticket replay state (`trail_state.json`: fail_streak / next_try_at /
+# red_flagged per ticket) live in the executor's state dir on the VM, outside
+# runtime_logs/, so a relay-bound session could not otherwise read them. The path mirrors
 # the WRITER's resolver (scripts/prop/prop_executor_tick.py::default_state_dir
 # and scripts/ops/prop_executor_tick.sh): breakout_1 keeps `<base>/executor`,
 # every other account is `<base>/accounts/<account>/executor`. Contents carry no
@@ -577,6 +594,7 @@ _LOG_FILES: dict[str, Path] = {
     # not by trusting an `OnCalendar=` line. This repo has measured that a
     # declared cadence is not a run.
     "work_digest_receipt": _WORK_DIGEST_RECEIPT,
+    "telegram_settings": _TELEGRAM_SETTINGS,
     # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     "status": _STATUS_JSON,
@@ -643,6 +661,7 @@ _LOG_FILES: dict[str, Path] = {
     # docs/research/M20-exit-refinement-2026-07-12.md § 5). Absent until the
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
+    "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
@@ -874,10 +893,12 @@ _LOG_FILES: dict[str, Path] = {
     #
     #   * `heartbeat_check_state.json`  <- scripts/check_heartbeat.py, the EXTERNAL
     #     dead-man switch behind ict-liveness-watchdog.timer. Its state keys are
-    #     `autoheal_attempts`, `autoheal_exhausted_alerted`,
-    #     `last_autoheal_attempt_ts`. THIS is the restart budget. Once exhausted
-    #     the watchdog goes alert-only and stops auto-restarting the trader, so
-    #     without a read surface "the watchdog will restart the trader if it
+    #     `autoheal_attempts`, `autoheal_red_flag_alerted`,
+    #     `autoheal_next_backoff_s`, `last_autoheal_attempt_ts`. THIS is the
+    #     restart pacing. Since 2026-10-09 (NO-HALT) it never stops restarting:
+    #     past --max-restarts it raises one red flag and backs off up to
+    #     --max-backoff-min (until then it went EXHAUSTED and alert-only).
+    #     Without a read surface "the watchdog will restart the trader if it
     #     stalls" is an assumption, not an observation.
     #
     #   * `liveness_watchdog_state.json` <- src/runtime/liveness_watchdog.py, a
@@ -891,7 +912,7 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "heartbeat_check_state.json",
     "liveness_watchdog_state":
         runtime_logs_dir() / "liveness_watchdog_state.json",
-    "daily_cap_alert_state": _DAILY_CAP_ALERT_STATE,
+    "daily_dd_switch_state": _DAILY_DD_SWITCH_STATE,
     # THE OPERATOR-ALERT RING (BL-20260901-OPERATOR-ALERTS-HAS-NO-READ-SURFACE).
     # `execution_diagnostics._append_operator_alert` writes every alert that
     # reaches the `/api/bot/notifications` banner feed here -- close_failure,
@@ -981,18 +1002,26 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "prop_fills_staleness_state.json",
     "prop_trail_latch_breakout_1":
         _prop_executor_state_dir("breakout_1") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout_last.json",
     "prop_trail_state_breakout_1":
         _prop_executor_state_dir("breakout_1") / "trail_state.json",
     "prop_trail_latch_breakout_2":
         _prop_executor_state_dir("breakout_2") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout_last.json",
     "prop_trail_state_breakout_2":
         _prop_executor_state_dir("breakout_2") / "trail_state.json",
     "prop_trail_latch_tradeify_1":
         _prop_executor_state_dir("tradeify_1") / "modify_rollout.json",
+    "prop_trail_last_step_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout_last.json",
     "prop_trail_state_tradeify_1":
         _prop_executor_state_dir("tradeify_1") / "trail_state.json",
     "prop_trail_latch_velotrade_1":
         _prop_executor_state_dir("velotrade_1") / "modify_rollout.json",
+    "prop_trail_last_step_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout_last.json",
     "prop_trail_state_velotrade_1":
         _prop_executor_state_dir("velotrade_1") / "trail_state.json",
     "target_naked_alert_state":
@@ -2274,7 +2303,8 @@ def get_journalctl(
 # OA-14); tests/test_diag_restart_pending_lockstep.py now pins the two equal.
 _NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
-    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
+    r"|tools/phone-executor/|tools/phone-probe/)"
 )
 # ...except these scripts/research modules, which the web-api's brief imports
 # in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
@@ -2314,6 +2344,82 @@ def _restart_pending(running: str, on_disk: str) -> bool | None:
     return any(_is_runtime_path(line) for line in out.stdout.splitlines())
 
 
+TRADER_UNIT = "ict-trader-live.service"
+WEB_API_UNIT = "ict-web-api.service"
+
+
+def _trader_running_sha() -> str:
+    """The sha the TRADER process loaded (``runtime_status.json::git_sha_running``,
+    written by the trader itself). ``"unknown"`` when unreadable -- never the
+    checkout, which is what ``git_sha`` in that file means."""
+    try:
+        st = json.loads((runtime_logs_dir() / "runtime_status.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "unknown"
+    sha = st.get("git_sha_running") if isinstance(st, dict) else None
+    return str(sha) if sha else "unknown"
+
+
+@functools.lru_cache(maxsize=4)
+def _trader_closure_for(on_disk: str):
+    """The deploy's trader closure (committed file UNION a live walk) for the
+    checkout at ``on_disk``; cached per sha because the walk takes ~2 s."""
+    from scripts.ops.trader_import_closure import deploy_closure
+    closure, _notes = deploy_closure(repo_root())
+    return closure
+
+
+def _trader_restart_pending(running: str, on_disk: str) -> bool | None:
+    """Per-unit (TRADER-RESTART-GATE): True when the deploy WOULD restart the
+    trader for the diff between what the trader loaded and the checkout --
+    the same rule as scripts/deploy_pull_restart.sh's trader gate. Three-way:
+    None = could not look."""
+    if running == "unknown" or on_disk == "unknown":
+        return None
+    if running == on_disk:
+        return False
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--no-renames", "--name-only", running, on_disk],
+            cwd=str(repo_root()),
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("trader restart_pending: git diff could not run: %s", exc)
+        return None
+    if out.returncode != 0:
+        return None
+    changed = [ln for ln in out.stdout.splitlines() if ln]
+    try:
+        from scripts.ops.trader_import_closure import classify_path
+        closure = _trader_closure_for(on_disk)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: no closure is NOT empty -- it falls to the deploy's any-runtime-path restart rule below
+        logger.debug("trader restart_pending: closure unavailable: %s", exc)
+        closure = None
+    if closure is None:
+        # The deploy restarts the trader on ANY runtime path when it has no closure.
+        return any(not _NON_RUNTIME_PATHS_RE.match(p) for p in changed)
+    return any(classify_path(p, closure, _NON_RUNTIME_PATHS_RE) for p in changed)
+
+
+def _deployed_sha_by_unit() -> dict[str, str | None]:
+    """The deploy markers: ``deployed_sha.txt`` (every unit but the trader) and
+    ``deployed_sha_trader.txt`` (the trader, TRADER-RESTART-GATE). None = absent.
+
+    Read from ``<repo>/runtime_logs/`` -- where scripts/deploy_pull_restart.sh
+    writes them (``${REPO_DIR}/runtime_logs``) -- NOT ``runtime_logs_dir()``,
+    which on the live VM resolves to the data dir. OBSERVED 2026-10-15T12:17Z
+    (diag issue #18314): reading runtime_logs_dir() returned null for both."""
+    out: dict[str, str | None] = {}
+    marker_dir = Path(repo_root()) / "runtime_logs"
+    for unit, name in ((WEB_API_UNIT, "deployed_sha.txt"), (TRADER_UNIT, "deployed_sha_trader.txt")):
+        try:
+            out[unit] = (marker_dir / name).read_text(encoding="utf-8").strip() or None
+        except OSError:
+            out[unit] = None
+    return out
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -2332,6 +2438,8 @@ def get_version(request: Request) -> dict[str, Any]:
     on_disk = _resolve_git_sha()
     # Three-way, never collapsed: None = we could not look (see _restart_pending).
     restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
+    trader_sha = _trader_running_sha()
+    trader_pending = _trader_restart_pending(trader_sha, on_disk)
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -2346,6 +2454,15 @@ def get_version(request: Request) -> dict[str, Any]:
         # 2026-05-09 incident state. False when the shas differ only by files
         # the deploy skips restarts for (FIX-SA-11). None = could not look.
         "restart_pending": restart_pending,
+        # PER UNIT (TRADER-RESTART-GATE): the deploy may leave the trader on an
+        # older sha whose loaded code is identical, so the trader has its own
+        # running sha and its own pending flag. Same three-way None.
+        "trader_git_sha": trader_sha,
+        "restart_pending_by_unit": {
+            WEB_API_UNIT: restart_pending,
+            TRADER_UNIT: trader_pending,
+        },
+        "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -3202,6 +3319,7 @@ def get_bybit_wallet_truth(
     request: Request,
     account_id: str | None = None,
     days: int = 30,
+    by_day: bool = False,
 ) -> dict[str, Any]:
     """**Live** account-level wallet truth for Bybit, from the venue's own
     transaction log — the read surface for the API figure that replaced a
@@ -3272,6 +3390,10 @@ def get_bybit_wallet_truth(
                 window_start_ms=start_ms, window_end_ms=end_ms,
             )
             d = v.as_dict()
+            if by_day:
+                # Per-UTC-day series for the journal-vs-wallet delta
+                # (LEDGER-REFRESH); sums to the headline `realized_usd`.
+                d["daily"] = _wt.daily_buckets(rows)
             if not rows:
                 # The store holding nothing for this account is ambiguous from
                 # the store alone: never pulled, or pulled and genuinely empty.
@@ -3469,6 +3591,55 @@ def get_position_telemetry(
             detail={"error": "telemetry_unavailable", "detail": str(exc)},
         ) from exc
     return read_records(limit=limit, strategy=strategy)
+
+
+@router.get("/position_path_history")
+def get_position_path_history(
+    request: Request,
+    order_package_id: str | None = None,
+    trade_id: str | None = None,
+    strategy: str | None = None,
+    since: str | None = None,
+    limit: int = 2000,
+) -> dict[str, Any]:
+    """EXIT-PATH-TELEMETRY-LIVE — the per-bar PATH of each open position.
+
+    ``position_telemetry`` (above) holds ONE upserted row per package, so a
+    trade's trajectory is overwritten bar by bar. ``position_path_history`` is
+    its append-only twin: one row per (package, bar), projected from the same
+    record on the same pass, plus ``mae_r``, ``sl_r``/``tp_r`` and ATR/ADX. It
+    is the live side of the in-trade exit model's parity check (row
+    IN-TRADE-EXIT-MODEL).
+
+    Filter by ``order_package_id`` or ``trade_id`` to get one trade's path in
+    BAR order; otherwise rows are newest-written first. ``present: false`` =
+    the table does not exist yet (not "no rows"). ``peak_r``/``mae_r`` are
+    bar-extreme reconstructions — ESTIMATED, never measured. ``passes`` says
+    how many exit-loop passes a bar row summarises; ``atr_source`` says
+    whether ATR is the trail's own (``monitor``), recomputed
+    (``computed_wilder14``), or ``unavailable``.
+
+    BRACKET-ADVISOR-SHADOW: ``advisor_sl_r``/``advisor_tp_r`` are the stop and
+    target a confirmed-but-undeclared lever WOULD set on that bar (same harness
+    functions; ``src/runtime/bracket_advisor.py``), ``advisor_source`` names the
+    lever and its evidence version, and ``advisor_state`` says why a value is
+    absent (enum in the envelope's ``advisor_states``). All four NULL = the
+    advisor did not run on that row. No exit path reads them.
+
+    Observe-only: one read-only SQLite connection, no socket, no order path.
+    Tier 2.5, token-gated.
+    """
+    _require_diag_token(request)
+    try:
+        from src.runtime.position_path_history import read_history
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503
+        logger.warning("get_position_path_history: import failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "path_history_unavailable", "detail": str(exc)},
+        ) from exc
+    return read_history(order_package_id=order_package_id, trade_id=trade_id,
+                        strategy=strategy, since=since, limit=limit)
 
 
 @router.get("/tick_cost")
@@ -4093,3 +4264,80 @@ async def get_alpaca_open_orders(
         "count": len(out),
         "accounts": out,
     }
+
+
+# ---------------------------------------------------------------------------
+# Phone step captures (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18): the
+# manager's read side of what the Breakout phone executor recorded at each step
+# of a flow (off-screen WebView bitmap + sanitized DOM snapshot, posted to
+# POST /api/bot/prop/phone/capture, stored on the VM data volume, 7-day TTL).
+# Token-gated like every diag read; file reads are name-validated and never
+# leave the run's directory (src.prop.phone_captures.read_file).
+# ---------------------------------------------------------------------------
+
+
+@router.get("/phone_captures")
+def get_phone_captures(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """Capture runs for a phone account, newest first: run_id, flow, step count, failed steps, ticket, app
+    version, bytes. ``present: false`` = no capture directory yet (the phone never posted one), distinct from an
+    empty list."""
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        return pcap.list_runs(account_id, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_capture")
+def get_phone_capture(request: Request, run_id: str, account_id: str = "breakout_2") -> dict[str, Any]:
+    """One run: every step's meta (seq, step, ok, note, image/dom file names) in order."""
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        run = pcap.get_run(account_id, run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if run is None:
+        raise HTTPException(status_code=404, detail="no such capture run")
+    return run
+
+
+@router.get("/phone_capture_file")
+def get_phone_capture_file(request: Request, run_id: str, name: str, account_id: str = "breakout_2"):
+    """One stored file of a run (the step's image or its DOM snapshot JSON), raw, with its content type."""
+    from fastapi.responses import Response
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        got = pcap.read_file(account_id, run_id, name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if got is None:
+        raise HTTPException(status_code=404, detail="no such capture file")
+    data, ctype = got
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/phone_drill")
+def get_phone_drill(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """The phone executor's REHEARSAL drills (PHONE-EXEC-OBSERVABLE-1018): the pending request (requested /
+    claimed, or null), the live sheet-edit gate (`enabled`, `source` config|drills, consecutive `passes` toward
+    `passes_to_arm`), and the recent results newest first (per-step pass/fail, failed steps, the capture run id to
+    read on /api/diag/phone_capture). Pure file read."""
+    _require_diag_token(request)
+    from src.prop import phone_drill
+    try:
+        return phone_drill.status(account_id, limit=max(1, min(int(limit), 200)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_exec_js")
+def get_phone_exec_js(request: Request) -> dict[str, Any]:
+    """The signed remote exec.js state (PHONE-EXEC-OBSERVABLE-1018): the working tree's version/sha256, the stored
+    CI signature record (never the signature itself), and `served` -- whether GET /phone/exec.js would hand the
+    phone a script right now. Pure file read; no script body."""
+    _require_diag_token(request)
+    from src.prop import phone_exec_js
+    return phone_exec_js.status()

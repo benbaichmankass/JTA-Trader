@@ -1,0 +1,144 @@
+name: research-script-run-data
+
+# THE PUBLISHED-DATA TWIN of research-script-run.yml (ML-DATA-OFF-TRAINER, 2026-10-13).
+#
+# WHY. ML/frontier units used to run on the 1-OCPU trainer only because their dataset shards lived only there. The
+# shards they read are MARKET data only (docs/research/ml-data-classification-2026-10-13.md) and are now published
+# as a PRIVATE Kaggle dataset (ml-data-export-kaggle.yml). A unit that declares `routing.published_data` is sent HERE
+# by the router (scripts/research/research_compute.yaml): same contract as research-script-run.yml (same two inputs,
+# same allowlisted command, same artifact -> collector -> record path), plus ONE extra step that downloads the dataset,
+# re-hashes it against its MANIFEST, and exports ML_DATA_ROOT.
+#
+# SECRETS. The ordinary runner holds nothing beyond GITHUB_TOKEN (check_research_script_run.py R3). This twin also
+# holds KAGGLE_API_TOKEN, in the environment of the FETCH step only; the unit's command (the next step) runs without
+# it. The checkout persists no credential. The fetch step runs published_data.py, which the unit cannot influence
+# (its code is on main; the unit supplies only an id that is validated against the queue).
+#
+# landed-by: scripts/research/collect_runner_results.py
+#
+# Tier-1: runs on the GitHub-hosted runner, reads the repo and the private dataset, writes only comms/research/** and
+# research/results/**. No live path, no order path, no VM.
+
+on:
+  workflow_dispatch:
+    inputs:
+      research_unit:
+        description: "The queue unit to run (RQ-YYYYMMDD-NNN). Its run.command is read from research/queue/<id>.yaml on this ref."
+        required: true
+      power_state:
+        description: "Pass-through dispatcher power-state label, if any (never a command)"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per unit at a time: two runs of the same unit would race on the
+  # same comms/research/<unit>/ landing PR. Different units run in parallel.
+  group: research-script-run-data-${{ github.event.inputs.research_unit }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    # 360 = the runner brain's MAX_TIMEOUT_MIN (330) + install/checkout/upload.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The unit's script must not be able to reach any credential.
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas pyyaml requests
+      - name: Install the ml_bakeoff learners (catboost / tabicl / tabpfn / torch) and probe them
+        # ML-NONGBDT-RUNNERS (2026-10-22). Only for a unit that runs ml_bakeoff.py; every other unit skips the ~1 GB torch wheel.
+        # Absent, lightgbm/catboost/tabicl/tabpfn/torch_gru all landed `unavailable` on this backend. A failed install is reported
+        # by the probe line below and the unit still runs (an unavailable arm is a recorded fact, never a halt).
+        continue-on-error: true
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          if grep -qs "ml_bakeoff" "research/queue/${UNIT}.yaml"; then
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu -r scripts/research/requirements-learners.txt
+            python3 scripts/research/probe_learners.py --backend github_runner_data
+          else
+            echo "unit does not run ml_bakeoff: learners not installed"
+          fi
+      - name: Check the unit's declared command against the allowlist
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/script_run.py --self-test
+          python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" --check
+      - name: Fetch the unit's PUBLISHED ML data (token in this step only)
+        # continue-on-error: a failed fetch must still reach the run step so the unit lands an honest
+        # producer_failed record (missing shard) rather than a red job with nothing derived.
+        continue-on-error: true
+        env:
+          UNIT: ${{ inputs.research_unit }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          pip install "kaggle>=2.0" lightgbm scikit-learn pyarrow
+          python3 scripts/research/published_data.py self-test
+          python3 scripts/research/published_data.py fetch --unit "${UNIT}" --dest "${RUNNER_TEMP}/mldata" --run-id "${GITHUB_RUN_ID}"
+      - name: Run the unit's command(s)
+        id: run
+        # continue-on-error so a failing script still uploads its manifest and
+        # logs and derives a `producer_failed` record — a run that exits red
+        # having produced nothing is the invisible failure this runner exists
+        # to end. The last step re-asserts the failure.
+        continue-on-error: true
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" --run
+      - name: Derive the result record into the artifact
+        if: always()
+        env:
+          UNIT: ${{ inputs.research_unit }}
+          POWER_STATE: ${{ inputs.power_state }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" \
+            --derive-record --power-state "${POWER_STATE}" > /dev/null
+          test -s "comms/research/${UNIT}/${GITHUB_RUN_ID}/record-inputs.json"
+      - name: Upload the run outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-script-run-data-${{ inputs.research_unit }}-${{ github.run_id }}
+          path: comms/research/${{ inputs.research_unit }}/${{ github.run_id }}
+          retention-days: 14
+          if-no-files-found: error
+      - name: Summarize
+        if: always()
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          {
+            echo "### research-script-run-data — ${UNIT}"
+            echo
+            echo "* command(s): \`${{ steps.run.outcome }}\`"
+            echo "* outputs + record-inputs.json uploaded as artifact; landed in one batch by the next research-queue-dispatch cycle"
+            echo
+            echo '```'
+            cat "comms/research/${UNIT}/${GITHUB_RUN_ID}/run-manifest.json" 2>/dev/null || echo "(no run-manifest.json)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Re-assert the failure the run step swallowed with continue-on-error,
+      # now that the manifest, logs and the producer_failed record inputs are
+      # in the artifact.
+      - name: Fail if the unit's command failed
+        if: always() && steps.run.outcome != 'success'
+        run: |
+          echo "::error::the unit's command did not complete (run step: ${{ steps.run.outcome }}) — its manifest/logs and a producer_failed record are in the artifact and land with the next cycle."
+          exit 1
+

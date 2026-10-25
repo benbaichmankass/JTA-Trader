@@ -1,0 +1,31 @@
+{
+  "id": "NEWS-ALPHA-FEATURES",
+  "title": "Lever: news feature-family builder -> point-in-time hourly + daily panels (attention/count shock, breadth, tone level/change/novelty, dispersion, topic intensities, event classes, entity vs macro) plus adapters for the live news_decisions log and the Kalshi PM expectation path",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Features computed ONLY from items with available_at < bar open (L1 assertion per row, test on a real slice). Missing = null, never 0 (collapsed-states rule). Event-class keyword/theme map frozen and committed BEFORE any outcome is computed. PM adapter reuses scripts/macro/pm_surprise.py and writes derived panels only (no quotes in the repo). Live-log adapter: runner-readable export of runtime_logs/news_decisions.jsonl (13,173 rows 2026-06-11..2026-10-09) de-duplicated to symbol-hours. Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM. [2026-10-16 lane NEWS-ALPHA-HARNESS-1016] GDELT PART BUILT: scripts/research/news_alpha_features.py (#18558) -- attention/breadth shock z (same hour-of-week, prior 4 weeks), tone level/24h change/novelty z/dispersion, 5 macro topic intensities from MACRO theme shares, event-class counts; hourly and daily bars; partially-read hours NaN (never 0); L1 holds by construction (test). STILL OPEN (row stays queued): the live news_decisions.jsonl adapter (U01) and the Kalshi PM adapter (U09); both need data that lives on the VM / trainer.",
+  "updated_at": "2026-10-16T09:08:59Z",
+  "updated_by": "session_01NScR4y1z9Wb8UpMQUf9a3a",
+  "roadmap": [
+    "M28"
+  ],
+  "priority": "high",
+  "writeback": {
+    "roadmap": "none: lever row; M28 write-back happens on NEWS-ALPHA-PROGRAM",
+    "arch": "none: research tooling, no runtime contract"
+  },
+  "observation": {
+    "what": "Panels exist for crypto20 / ETF6 / SP100 / PM series and the L1 leakage test passes on a real slice",
+    "how_to_check": "python3 -m pytest tests/test_news_alpha_features.py; the builder prints per-population row counts and null shares",
+    "due_by": "2026-11-02"
+  },
+  "_seq": 436
+}

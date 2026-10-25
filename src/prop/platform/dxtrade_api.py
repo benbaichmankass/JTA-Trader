@@ -221,6 +221,24 @@ def build_bracket_body(spec: BracketSpec) -> Dict[str, Any]:
     }
 
 
+def _attach_group_children(orders: List[WorkingOrder]) -> None:
+    """PROP-LATCH: when the IF-THEN children of a resting entry are listed,
+    copy their prices onto the entry (``<base>-E`` <- ``<base>-S`` stop,
+    ``<base>-T`` limit; :func:`client_ids`), so the read says what protects
+    it. Children not listed -> fields stay None (never guessed)."""
+    by_id = {o.order_id: o for o in orders if o.order_id}
+    for o in orders:
+        oid = o.order_id or ""
+        if not oid.endswith("-E") or o.raw.get("positionEffect") == "CLOSE":
+            continue
+        base = oid[:-2]
+        sl_o, tp_o = by_id.get(base + "-S"), by_id.get(base + "-T")
+        if o.stop_loss is None and sl_o is not None:
+            o.stop_loss = sl_o.price
+        if o.take_profit is None and tp_o is not None:
+            o.take_profit = tp_o.price
+
+
 @dataclass
 class DXtradeApiAdapter(PropPlatformAdapter):
     """One DXtrade REST session on one account. ``login_url`` is the REST base
@@ -230,6 +248,20 @@ class DXtradeApiAdapter(PropPlatformAdapter):
     # TP doctrine B1: modify_bracket PUTs the TP child's limitPrice (one
     # conditional PUT per leg, spec'd and built for VELOTRADE-GOLIVE).
     TP_AMEND_SUPPORTED = True
+    # PROP-LATCH (2026-10-09): entry + SL + TP go out as ONE IF-THEN group
+    # (``build_bracket_body``), so a resting entry is protected server-side
+    # and the executor's confirmation checks SL/TP on the FILLED position
+    # (``prop_executor.classify_confirmation(atomic_bracket=True)``).
+    ATOMIC_BRACKET = True
+    # PROP-MARKETABLE-ENTRY (2026-10-10): an entry LIMIT the market has already
+    # moved through IN THE TRADE'S FAVOUR (long: ask <= limit; short: bid >=
+    # limit) is placed as a MARKET parent of the same IF-THEN group -- same
+    # quantity, same SL/TP children -- instead of waiting for price to come
+    # back. The POST is answered synchronously (200 / 409-100 / reject) and the
+    # filled position is read back with its SL/TP children like any other
+    # entry. Browser and phone executors do NOT set this: a marketable click on
+    # a terminal (2026-10-04 03:40Z) produced no order, and they keep waiting.
+    MARKETABLE_ENTRY_AT_MARKET = True
     transport: Transport = field(default=urllib_transport)
     sleep: Callable[[float], None] = field(default=time.sleep)
     timeout_s: float = 25.0
@@ -350,6 +382,21 @@ class DXtradeApiAdapter(PropPlatformAdapter):
                 quantity=_f(p.get("quantity")), entry_price=_f(p.get("openPrice")),
                 stop_loss=_f(p.get("stopLossPrice")), take_profit=_f(p.get("takeProfitPrice")),
                 raw={"positionCode": str(p.get("positionCode") or "")}))
+        if any(p.stop_loss is None or p.take_profit is None for p in out):
+            # PROP-LATCH: the spec'd Position carries no SL/TP field; the
+            # protection IS the working CLOSE STOP / CLOSE LIMIT children
+            # (the same orders ``modify_bracket`` re-prices). Read them, so
+            # a protected position is not read as naked. A failed orders
+            # read leaves the fields None (naked until proven otherwise).
+            try:
+                for pos in out:
+                    sl_o, tp_o = self._protection_orders(pos)
+                    if pos.stop_loss is None and sl_o is not None:
+                        pos.stop_loss = sl_o.price
+                    if pos.take_profit is None and tp_o is not None:
+                        pos.take_profit = tp_o.price
+            except Exception:
+                pass
         return out
 
     def read_orders(self, page: Any = None) -> List[WorkingOrder]:
@@ -368,10 +415,12 @@ class DXtradeApiAdapter(PropPlatformAdapter):
             out.append(WorkingOrder(
                 symbol=str(o.get("instrument") or ""), side="long" if o.get("side") == "BUY" else "short",
                 order_type=str(o.get("type") or "").lower(), quantity=_f(leg.get("quantity")),
-                price=_f(leg.get("price")), order_id=str(o.get("clientOrderId") or o.get("orderCode") or ""),
+                price=_f(leg.get("price")) if leg.get("price") is not None else _f(o.get("stopPrice") or o.get("limitPrice")),
+                order_id=str(o.get("clientOrderId") or o.get("orderCode") or ""),
                 raw={"positionEffect": str(leg.get("positionEffect") or ""),
                      "positionCode": str(leg.get("positionCode") or ""),
                      "status": str(o.get("status") or ""), "side": str(o.get("side") or "")}))
+        _attach_group_children(out)
         return out
 
     def read_quote(self, page: Any, venue_symbol: str) -> Optional[Dict[str, float]]:
@@ -386,9 +435,14 @@ class DXtradeApiAdapter(PropPlatformAdapter):
 
     def read_history(self, client_order_ids: List[str]) -> List[Dict[str, Any]]:
         """Final + working orders for these client ids, with their TRADE fills
-        (``lastPrice`` x ``lastQuantity``). No account code in the output."""
+        (``lastPrice`` x ``lastQuantity``). No account code in the output.
+        Raises ``RuntimeError`` on a non-200 (VELO-UNCONFIRMED-1008): an error
+        body has no ``orders`` and parsed as ``[]``, so "could not look" read
+        the same as "the venue has no such order"."""
         q = urllib.parse.quote(",".join(client_order_ids), safe=",")
         r = self._request("GET", f"/accounts/{self._acct()}/orders/history?with-client-id={q}")
+        if not r.ok:
+            raise RuntimeError(f"order history read failed {self.redact(json.dumps(r.error()))}")
         return _history_rows(r.body)
 
     def read_history_today(self, instrument: str) -> List[Dict[str, Any]]:
@@ -397,14 +451,25 @@ class DXtradeApiAdapter(PropPlatformAdapter):
         return _history_rows(r.body)
 
     def read_trade_history(self, page: Any = None, restore: Optional[str] = None,
-                           query: str = "period=today") -> List[Dict[str, Any]]:
+                           query: str = "") -> List[Dict[str, Any]]:
         """READ-ONLY (``GET .../orders/history``): executed trades in the shape
         ``prop_executor.match_exit`` consumes from the browser adapter's Trade
-        History read (:func:`trade_history_rows`). ``page`` / ``restore`` are
-        accepted and ignored. Raises ``RuntimeError`` on a non-200 (the caller
-        then keeps the close unread, never guessed); ``[]`` means the read
-        succeeded and found no executions."""
-        r = self._request("GET", f"/accounts/{self._acct()}/orders/history?{query}")
+        History read (:func:`trade_history_rows`), plus each row's own
+        ``client_id`` so the executor names the exit by ORDER IDENTITY
+        (``<base>-S`` stop / ``<base>-T`` target, :func:`client_ids`).
+        ``page`` / ``restore`` are accepted and ignored. Raises
+        ``RuntimeError`` on a non-200 (the caller then keeps the close unread,
+        never guessed); ``[]`` means the read succeeded and found no executions.
+
+        The default is NO ``period`` (VELO-CLOSE-RECON, MEASURED on velotrade_1,
+        issues #17076 / #17459 / #17505): ``period=today`` returned 0 orders at
+        2026-10-11 05:57Z for a close at 03:52Z the same UTC day (its bracket
+        orders were issued 2026-10-10; which field "today" filters on is not
+        established), ``period=yesterday`` is a 400 (error 32),
+        and the unfiltered read returned the 2026-10-06 round trip five days
+        later alongside the 2026-10-11 close."""
+        path = f"/accounts/{self._acct()}/orders/history" + (f"?{query}" if query else "")
+        r = self._request("GET", path)
         if not r.ok:
             raise RuntimeError(f"trade history read failed {self.redact(json.dumps(r.error()))}")
         return trade_history_rows(r.body)
@@ -620,8 +685,10 @@ def trade_history_rows(js: Any) -> List[Dict[str, Any]]:
     (``lastQuantity``), ``price`` (``lastPrice``), ``commission``,
     ``closed_pnl`` and ``net_closed_pnl`` (None unless the venue sent them: the
     REST order model is not known to carry realized P&L, and an absent figure is
-    never filled in). Order and account identifiers are NOT carried. An
-    execution without a usable price or quantity is skipped, not defaulted."""
+    never filled in), ``client_id`` (the order's ``clientOrderId`` -- OUR id,
+    derived from the ticket by :func:`client_ids`, or None) and ``order_type``.
+    The venue's own order code and the account are NOT carried. An execution
+    without a usable price or quantity is skipped, not defaulted."""
     orders = js.get("orders") if isinstance(js, dict) else js
     out: List[Dict[str, Any]] = []
     for o in orders or []:
@@ -647,6 +714,8 @@ def trade_history_rows(js: Any) -> List[Dict[str, Any]]:
                 "commission": _f(e.get("commission")),
                 "closed_pnl": _f(e.get("closedPnl") if e.get("closedPnl") is not None else e.get("closedPL")),
                 "net_closed_pnl": _f(e.get("netClosedPnl")),
+                "client_id": str(o.get("clientOrderId") or e.get("clientOrderId") or "") or None,
+                "order_type": str(o.get("type") or "").lower() or None,
             })
     out.sort(key=lambda r: (r["ts"] is None, r["ts"] or datetime.min.replace(tzinfo=timezone.utc)))
     return out

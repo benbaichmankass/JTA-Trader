@@ -1,0 +1,63 @@
+{
+  "reviewed_at": "2026-10-21T18:40:00Z",
+  "reviewer": "claude",
+  "lane": "HEALTH-REVIEW-2026-10-21 (post-reset week, $6 ceiling, Sonnet, Tier 1)",
+  "window": "opened at 2026-10-17 review; live pulls cover 2026-10-19..2026-10-21 only (partial)",
+  "overall_assessment": "investigate",
+  "operator_attention_required": true,
+  "coverage_statement": "PARTIAL by design of the $6 lane: ran checks (a) and (b) end to end plus services, broker reachability and the pipeline open count. NOT run this pass: security-breach sweep, new-work compliance audit, sprint-doc review, research-pipeline SLO read, trainer touch, full 916-item open-set drive. backlog_coverage is therefore NOT satisfied (count_untriaged != 0) and this must not be read as a completed review.",
+  "findings": {
+    "max_open_positions_guard": {
+      "status": "concern",
+      "note": "MEASURED: global guard not enforced on real-money books. safe_place_order has 0 production callers in src/ (only tests + scripts/smoke_test_trade.py); separately risk_counters logged 'bybit requires \"apiKey\" credential' at 2026-10-21T15:01:42Z on an actionable ETHUSDT buy so CURRENT_OPEN_POSITIONS is never injected. UNVERIFIED: whether MAX_OPEN_POSITIONS is set in the live env (no read-only diag route). Filed PI-20261021-ZRSAEUMT-0001."
+    },
+    "liveness_watchdog": {
+      "status": "concern",
+      "note": "MEASURED false URGENT: last alert 2026-10-19T14:00Z signals=5 trades=0; the 5 counted rows were SELLs from long-only ETF legs (side_filter: long on Alpaca live+mirror). Trades rows for that hour not pulled. Filed PI-20261021-ZRSAEUMT-0002."
+    },
+    "broker_reachability": {
+      "status": "ok",
+      "note": "exchange_positions: bybit_1/bybit_2/bybit_portfolio and alpaca_paper/portfolio/live readable with error=null. positions=None only on shelved ib_live/oanda_practice and API-less prop bridges (breakout_1/2, tradeify_1, velotrade_1) - expected. Per-account Bybit clients authenticate fine; only the process-level client lacks apiKey."
+    },
+    "services": {
+      "status": "watch",
+      "note": "core units active (trader-live, web-api, caddy, ssh, telegram-bot). ict-web-api-watchdog.service read 'activating' at one sample; oneshot units inactive is normal between timer runs. Not re-sampled."
+    },
+    "pipeline_open_set": {
+      "status": "watch",
+      "note": "pipeline --stats: open 916, due 256, unrouted 25 (oldest 24d). Not triaged this pass."
+    }
+  },
+  "security_check": {
+    "status": "could_not_look",
+    "sources_checked": [],
+    "signals": [],
+    "note": "Not run this pass. Neither clean nor flagged."
+  },
+  "soak_decisions_due": [],
+  "new_work_compliance": {
+    "prs_audited": 0,
+    "commits_audited": 0,
+    "findings": [],
+    "note": "Not run this pass."
+  },
+  "backlog_coverage": {
+    "open_at_start": null,
+    "triaged": 0,
+    "resolved": 0,
+    "fixed_now": 0,
+    "closed_stale": 0,
+    "kept_open": 0,
+    "count_untriaged": null,
+    "sources": [
+      "pipeline"
+    ],
+    "note": "Gate NOT satisfied; pipeline 916 open/256 due read from --stats only."
+  },
+  "backlog_drain": [],
+  "anomalies": [
+    "The two PI ids named in the dispatch (PI-20261021-ZRSAEUMT-0001, PI-20261021-ZRSAEUMT-0002) did not exist anywhere in docs/claude/work on main at start (git grep origin/main empty); filed here under those exact ids with intent=new so the references resolve.",
+    "Two diag requests returned HTTP 400/timeout (log_file?name=signal_audit, one audit_query) - transient or wrong param; not root-caused."
+  ],
+  "recommended_action": "Operator/Tier-2 decision: wire or retire the global MAX_OPEN_POSITIONS guard (PI-...0261021B-0001); patch liveness watchdog to ignore side-filtered signals (PI-...20261021-0001). Schedule the skipped sections."
+}

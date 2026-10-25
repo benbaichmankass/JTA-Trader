@@ -1,0 +1,192 @@
+{
+  "run": "RESEARCH-OPS-20261012-1447",
+  "finished_at": "2026-10-12T15:05:00Z",
+  "by": "session_01YArsVWjGMeYC9qyATgsqmP",
+  "baseline": "comms/research/ops/20261012T0930Z.json",
+  "floor": 25,
+  "throughput": {
+    "runnable_before": 12,
+    "runnable_after": 11,
+    "queued": 165,
+    "fired_24h": 34,
+    "fired_7d": 228,
+    "results_landed_24h": 37,
+    "hours_since_last_dispatch": 1.9,
+    "idle_alarm": false,
+    "as_of": "2026-10-12T14:49Z",
+    "note": "runnable_after = 11 MEASURED on the branch tree at 15:02Z (check_research_queue_throughput.py), i.e. 12 at 14:49Z + 1 new unit (RQ-20261012-158e-01) - 2 that the 14:50Z dispatch run fired meanwhile. Floor 25 not met: check_research_queue_health.py H1 'templates hold only 1 point(s) for a deficit of 13'; intake sources still exhausted (see handoff). Three replenish PRs (#17698, #17717, #17731) that would add template units are themselves stranded (see mechanism)."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (liveness 'fresh', 7.62h old at 14:49Z; dispatch workflow runs 38240176703, 38246153964, 38251964630, 38258571093 all success at ~hourly spacing; 38265839533 in progress)",
+    "collector": "ok: result commits for 353c-19/-20, 1fce-01..03, 8753-01..08 landed on main since 09:30Z; grade run 38256036623 success 13:29Z",
+    "stranded_stamp_prs": [
+      17652
+    ],
+    "stranded_automation_prs": {
+      "population": "open PRs with head automation/research* at 14:55Z = 12",
+      "stranded": {
+        "17652": "dirty (conflicts), checks green",
+        "17674": "pytest-run cancelled (50-min timeout)",
+        "17698": "pytest-run failure + guards failure",
+        "17702": "dirty, no checks on head",
+        "17731": "no checks on head",
+        "17717": "unknown",
+        "17170": "pytest-run cancelled (timeout); update-branch done this pass",
+        "17085": "research-results-guard R3 (producer/guard contradiction)"
+      },
+      "owners": "CI-PYTEST-TIMEOUT-HEADROOM (new), RESULTS-STORE-R3-ARTIFACTS (new), PI-20261006-LCEVL8D5-0001 (RQ-INFRA), STAMP-RACE-2"
+    },
+    "incident": "pytest-run 'cancelled' on checklist PRs #17726/#17751 is the 50-min timeout-minutes, NOT concurrency: attempt-1 jobs 114773969290 and 114808253597 ran 50.2/50.3 min, pytest printed [100%] with 0 failures 5 s before the cancel; attempt 2 of the same SHAs ran the same step in 32.8 min and passed. Filed as checklist row CI-PYTEST-TIMEOUT-HEADROOM; workflow logic NOT touched."
+  },
+  "results_read": {
+    "pass": 1,
+    "fail": 12,
+    "indeterminate": 0,
+    "units": [
+      {
+        "unit": "RQ-20261010-353c-19",
+        "verdict": "pass",
+        "net_total_r": 0.5108,
+        "n": 66,
+        "note": "pullback SOL 1h Stage-0; expectancy +0.0077R/trade (noise-level); rule names no follow-up; no prop-fit donor requested -> no action, because the rule names none"
+      },
+      {
+        "unit": "RQ-20261010-353c-20",
+        "verdict": "fail",
+        "net_total_r": -5.2673,
+        "n": 261,
+        "note": "squeeze LINK 2h, FIRST fail; rule re-queues one confirmatory run -> RQ-20261012-158e-01"
+      },
+      {
+        "unit": "RQ-20261011-1fce-01",
+        "verdict": "fail",
+        "net_total_r": -47.5988,
+        "n": 417,
+        "note": "pullback BNB 1h confirmatory, SECOND fail: cell closed (kill)"
+      },
+      {
+        "unit": "RQ-20261011-1fce-02",
+        "verdict": "fail",
+        "net_total_r": -14.4487,
+        "n": 390,
+        "note": "trend BNB 2h confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-1fce-03",
+        "verdict": "fail",
+        "net_total_r": -81.5712,
+        "n": 1822,
+        "note": "trend ADA 15m confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-01",
+        "verdict": "fail",
+        "net_total_r": -120.395,
+        "n": 1396,
+        "note": "squeeze ADA 15m confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-02",
+        "verdict": "fail",
+        "net_total_r": -73.0356,
+        "n": 1392,
+        "note": "squeeze DOGE 15m confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-03",
+        "verdict": "fail",
+        "net_total_r": -36.049,
+        "n": 1840,
+        "note": "trend DOGE 15m confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-04",
+        "verdict": "fail",
+        "net_total_r": -214.9396,
+        "n": 1960,
+        "note": "trend BNB 15m confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-05",
+        "verdict": "fail",
+        "net_total_r": -9.1804,
+        "n": 968,
+        "note": "pullback ADA 15m confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-06",
+        "verdict": "fail",
+        "net_total_r": -4.1224,
+        "n": 718,
+        "note": "trend AAVE 1h confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-07",
+        "verdict": "fail",
+        "net_total_r": -33.4872,
+        "n": 532,
+        "note": "squeeze AAVE 1h confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261011-8753-08",
+        "verdict": "fail",
+        "net_total_r": -2.0824,
+        "n": 716,
+        "note": "trend LINK 1h confirmatory, SECOND fail: cell closed"
+      }
+    ],
+    "branch_only_results_read": [
+      {
+        "unit": "RQ-20261005-814",
+        "pr": 17170,
+        "verdict": "pass (1 of 24 cells, spy_trend_long_1d decay_stall6_t2; base OOS n 49, power accruing)",
+        "disposition": "no new follow-up, because the same cell is the already-filed Tier-3 candidate from RQ-20261004-772 (PI-20261004-UQ9JJPRQ-0004, done); the rule ships nothing; 1/24 cells is a multiple-testing-sized pass. PR branch updated so it can land."
+      },
+      {
+        "unit": "RQ-20261007-004",
+        "pr": 17085,
+        "verdict": "no_action_warranted on all 7 legs",
+        "disposition": "RULE-RQ1007-004-SCALP-TARGET-REVISION: PASS needs a cell that improves calibration AND clears the gate in IS+OOS; none did on any leg (xrp_15m: 2 cells cleared the gate without improving calibration = not a pass). Result not on main: blocked by RESULTS-STORE-R3-ARTIFACTS."
+      }
+    ],
+    "g1_g2_directive": "RQ-20261009-902 (G1) read FAIL on its narrow question already landed (#17740); RQ-20261009-903 (G2) has NOT landed (queued, last_dispatched_at null, no research/results/RQ-20261009-903/). Per operator directive 2026-10-12 no retire/kill follow-up filed for the news layer or WEPE.",
+    "rule_applied": "each unit's registered rule verbatim; Stage-0 verdicts are the harness_dispatch_result.py mechanical grade. 'Cell closed' = the confirmatory rule's 'a second FAIL closes the cell (kill, stated reason)'; no unit status was edited and the disposition ledger (corpus-keyed e35/m20/gld_compat) does not apply to queue results.",
+    "not_read": "research_disposition.py --unread-only still lists the 16 e35 + 9 m20 leg-level corpus rows from 2026-10-04..12 (not queue results), unchanged from the 08:47Z pass."
+  },
+  "pr_dispositions": {
+    "17085": "left open; blocked by research-results-guard R3 (7 measurements/*.verdicts.json); lever RESULTS-STORE-R3-ARTIFACTS",
+    "17170": "update-branch issued (result jsonl only, guards green, pytest-run had hit the 50-min timeout)",
+    "16233": "pushed baa7a2942 to claude/prop-evidence-exit-head-fix: merged main + landing hold/unvouchable_paths (R5 refused self-land on scripts/ml/exit_head_replay.py); 17 tests in tests/test_exit_head_replay.py pass locally; a human merges; RQ-20260927-003 is still queued waiting on it",
+    "16723": "closed: stale, 1 of 3 tests fails on current main (ModifyRollout.blocked removed), stray automation/pr-* relay files",
+    "14674": "closed: superseded (#14663/#14672/#14673 merged, tradeify_1 live, WSTCE9FH done) and soak-contract-guard fails",
+    "15027": "closed: superseded (PI-20260929-AQRK6CL1-0014 killed on main 2026-10-04) and pipeline-guard NEW collision"
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "pytest-run 50-min timeout headroom",
+      "ref": "CI-PYTEST-TIMEOUT-HEADROOM"
+    },
+    {
+      "lever": "collector/guard contradiction on measurements/*.verdicts.json",
+      "ref": "RESULTS-STORE-R3-ARTIFACTS"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261012-158e-01"
+  ],
+  "authoring_note": "158e-01 = rule-mandated confirmatory re-run of 353c-20 (squeeze LINK 2h); cloned from the 8753-01 shape. Hand-authored => landing hold (unvouchable_paths).",
+  "followups_filed": [],
+  "not_run": [
+    "blocked/ unit audit beyond blocker_watch (13 NOT_RUNNING: 1 NEEDS_LANE RQ-20260928-001 under HTF-FILTER-AB-LANE; 903/1469-01..04/ca47-01..06/8753-08-era units are would_dispatch, waiting on dispatcher throughput)",
+    "guards run on the full tree (ran the research-queue decision-rule guard and compared main for the four failing guards)",
+    "no top-up beyond the one mandated unit: intake sources exhausted, authoring excess would be speculative"
+  ],
+  "handoff": [
+    "Manager: merge #16233 (hold) once CI is green; RQ-20260927-003 then needs its two single-leg re-dispatches.",
+    "Manager: CI-PYTEST-TIMEOUT-HEADROOM and RESULTS-STORE-R3-ARTIFACTS are Tier-1 build lanes; the first is why checklist/automation PRs keep stalling.",
+    "Next pass: grade RQ-20261012-158e-01 (second FAIL closes squeeze LINK 2h), RQ-20261012-1469-01..04 and ca47-01..06 as they fire; RQ-20261009-903 when it lands (apply its rule verbatim, no retire follow-up).",
+    "Floor 25 needs a new intake source (perf-followup output, a 2h/4h prop-fit donor, ML plan units once FRONTIER-LEVER-TRAINER-DEPS lands) or the three stranded replenish PRs (#17698/#17717/#17731) landing."
+  ]
+}

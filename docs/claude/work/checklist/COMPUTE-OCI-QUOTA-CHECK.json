@@ -1,0 +1,34 @@
+{
+  "id": "COMPUTE-OCI-QUOTA-CHECK",
+  "title": "COMPUTE-OCI-QUOTA-CHECK: resolve 4/24 vs 2/12 and idle-reclaim exposure",
+  "phase": "process",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17858,
+    17866,
+    17867
+  ],
+  "blocked_on": [],
+  "note": "OCI-STATE-CHECK 2026-10-13 (docs/plans/OCI-STATE-CHECK-2026-10-13.md): inventory 2026-10-12 clean (3 A1 match 4/24, MEASURED). Live+trainer not idle at sampled instants; GATEWAY UNMEASURED (trainer lacks SSH key; needs ProxyJump read). Account type + 7d p95 not readable from repo OCI path. Open: add limits+monitoring read to oci_inventory.py (T1), gateway read probe (T1), versioned trade_journal.db backup (T2; only copy is the trainer's unversioned daily pull). Row stays queued until limits and gateway p95 are read.  | 2026-10-13: limits+monitoring+gateway read built in compute-util-telemetry (Tier-1 PR); closes when the first run records oci_limits.json and gateway p95. Versioned trade_journal.db backup (T2) still open, not built here.  | 2026-10-13 ANSWER: Limits API (run 38400278448) standard-a1-core-count=250, memory=1666GB in the AD, used 4/24 - tenancy is not capped at 2/12; billing overage unverified (console).  | CLOSED 2026-10-13: limits (250 cores/1666 GB, used 4/24) and gateway p95 read via compute-util-telemetry. Off-VM journal backup is tracked separately (JOURNAL-OFFVM-BACKUP); billing overage unverified.",
+  "updated_at": "2026-10-13T13:51:18Z",
+  "updated_by": "session_01EexLtAgHjQJ2ZpCWhqaeoQ",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "Account type, A1 limits, and 7-day p95 CPU/mem/net for all three A1 VMs (gateway first) are read and recorded",
+    "how_to_check": "oci-inventory run output with limits+metrics, recorded in docs/reference/vm-topology.md",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: telemetry/limits read only; milestone L-OPS measure unchanged until first run lands values",
+    "arch": "none: Tier-1 read path; documented in docs/reference/vm-topology.md"
+  },
+  "_seq": 447
+}

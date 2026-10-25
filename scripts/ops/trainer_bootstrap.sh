@@ -68,6 +68,26 @@ echo "+ installing requirements.txt + requirements-backtest.txt"
 "$PIP" install --quiet -r "$REPO_ROOT/requirements.txt" \
                        -r "$REPO_ROOT/requirements-backtest.txt"
 
+# Frontier research arms (FRONTIER-LEVER-TRAINER-DEPS). One package per pip call under constraints
+# frozen from the venv's current stack, so an arm that cannot coexist fails ALONE and cannot move
+# torch / transformers / huggingface-hub / numpy / ... (no halting: a failed arm is reported by the
+# probe below and the bootstrap carries on).
+FRONTIER_REQ="$REPO_ROOT/requirements-trainer-frontier.txt"
+if [ -f "$FRONTIER_REQ" ]; then
+    CONSTRAINTS="$(mktemp)"
+    "$PIP" freeze 2>/dev/null | grep -iE '^(torch|transformers|huggingface[-_]hub|numpy|pandas|scipy|scikit-learn|lightgbm|chronos-forecasting|safetensors|tokenizers)==' > "$CONSTRAINTS" || true
+    echo "+ installing frontier arms under $(wc -l < "$CONSTRAINTS") frozen constraints"
+    grep -vE '^\s*(#|$)' "$FRONTIER_REQ" | while read -r spec; do
+        if "$PIP" install --quiet -c "$CONSTRAINTS" "$spec"; then
+            echo "  installed: $spec"
+        else
+            echo "  FAILED (left out, venv stack protected by constraints): $spec" >&2
+        fi
+    done
+    rm -f "$CONSTRAINTS"
+    "$PY" "$REPO_ROOT/scripts/ops/trainer_capability_probe.py" || true
+fi
+
 echo
 echo "=== resolved manifest ==="
 "$PY" - <<'PYEOF'

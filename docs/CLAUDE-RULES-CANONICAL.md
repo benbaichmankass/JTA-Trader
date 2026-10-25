@@ -722,8 +722,9 @@ guard was re-pointed by E45. Filed rather than left implied — do not read the
 `soak_alarm.py` itself still reads the archived register and grades nothing.
 The live port works like this:
 - `scripts/ops/soak_report.py` grades every Stage-1 leg and every
-  `execution: shadow` strategy into `ready` / `dead` (was `not_writing`) /
-  `could-not-look` (was `unknown`) / `accruing`.
+  `execution: shadow` strategy into `ready` (its SOAKS.json contract carries a
+  mechanical PASS) / `dead` (was `not_writing`) / `could-not-look` (was
+  `unknown`) / `accruing`. It never readies a soak on cost fidelity.
 - It writes the result to `docs/claude/work/soak-state.json` and
   `docs/claude/work/SOAK-REPORT.md`, and files one `PI-SOAK-*` pipeline item per
   soak, carrying `due_when.soak`.
@@ -733,9 +734,10 @@ The live port works like this:
 
 **Two forms of definition of done, both enforced by `soak-contract-guard`**
 (manager, 2026-10-04):
-- **A soak**: something that ACCRUES, such as a Stage-1 leg or a shadow
-  strategy. It needs a contract in `docs/claude/work/SOAKS.json`, or
-  `due_when.soak` on its pipeline item.
+- **A soak**: a Stage-1 leg or a shadow strategy. It needs a contract in
+  `docs/claude/work/SOAKS.json`, or `due_when.soak` on its pipeline item. What
+  that contract may say is the soak rule:
+  [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
 - **A one-shot observation**: something that happens ONCE, such as "the 05:30Z
   report was produced" or "the tick ran clean on the new sha". It carries
   `observation: {what, how_to_check, due_by}` on its `check_observation` item
@@ -792,7 +794,7 @@ bind:
    into it, never add a second digest timer). The message leads with what is
    NEW and actionable, as computed by `scripts/ops/attention_watch.py`:
    - new `ask_operator` items;
-   - soaks moving to `ready`, `overdue` or `dead`;
+   - soaks moving to `passed` or `mechanical_fail`;
    - silence alarms breaching or clearing.
 
    Once a day it adds the ranked summary. Otherwise it is one quiet line. Extend
@@ -802,12 +804,11 @@ bind:
    carries a probe that fires when it does NOT arrive. A probe that could not
    look reads `unknown`, and `unknown` never clears an alarm. This is the
    collapsed-states rule above, applied to time.
-3. **Every soak carries a contract.** It states what it verifies, the expected
-   event rate from the backtest, the n and power it needs, an **end date**, and
-   a pass/fail rule registered before it starts. An end date beyond ~2 weeks
-   means the design is wrong and must be fixed before placement. This extends §
-   "A soak must carry its own alarm". It does not replace it: the alarm says
-   *when to look*, and the contract says *what ends the wait*.
+3. **Every soak carries a contract** in `docs/claude/work/SOAKS.json`, and the
+   contract is the soak rule:
+   [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
+   This extends § "A soak must carry its own alarm". It does not replace it: the
+   alarm says *when to look*, and the contract says *what ends the wait*.
 4. **The manager reviews a persisted report, on a schedule, twice a day.**
    - `ict-work-report.timer` (05:30 UTC) writes `WR-YYYYMMDD-HHMMZ`, served at
      `GET /api/bot/work/report`.
@@ -1027,6 +1028,15 @@ what this system needs to measure is learning. `ROADMAP.md` carries its own
 header saying nobody has verified its status — it is context, not instruction.
 Levels 3 and 4 are now the plan and the checklist.
 
+⚠️ **Amended 2026-10-11 (operator, ROADMAP-LOOP).** `ROADMAP.md` stays at level 8 as an
+instruction source, but its generated **"Live roadmap" block** (source
+`docs/roadmap/milestones.yaml`) is the high-level plan the work queue is built and prioritised
+FROM: every checklist row and research-queue unit carries a `roadmap` milestone ref, and a closing
+row writes its outcome back to the roadmap and to `docs/ARCHITECTURE-CANONICAL.md` (`writeback`
+field). The roadmap informs what is built and authorizes nothing; it is not a third category of
+work (a build is a checklist row, a question is a queue unit). Contract:
+`.claude/skills/manager/SKILL.md` § "The roadmap loop"; guard `roadmap-map-guard`.
+
 Historical notes remain available for context only. **Newer canonical
 documents override older materials.**
 
@@ -1169,6 +1179,51 @@ decides whether to intervene.
    - **What was removed:** the fold, its reader, the file and the API field.
    - **Why no account changed mode:** every entry read `dry_run: false` on main and on the VM at retirement.
    - **Result:** the two gates above are the only execution gates, and `canonical-doc-coherence` requires any such fold that returns to be named here.
+
+7. **There is no halting (operator directive 2026-10-09, binding).** The
+   operator, verbatim:
+
+   > "I never asked for a functionality for it to halt myself, nor was it made clear to me in any design spec that that's something that would happen. There is no halting. If something doesn't work, it tries to figure it out and try again. If it consistently is incapable, then yes, it obviously needs to raise a red flag so that somebody knows to help it. But there is, this is going back to the same thing as adding more and more gates that don't need to be there. Under absolutely no circumstances does any pipeline halt training on its own without getting verbatim permission from me, the operator. That should not happen under any circumstances. There is no halting. There's no halting."
+
+   What it means, for **every** pipeline — trading, prop execution,
+   training, research and data:
+   - **No pipeline halts itself.** No latch, breaker, kill-switch file, trip
+     marker, quarantine or "gave up" state that makes a pipeline stop doing
+     its job until a person clears it. This is rule 2 extended from account
+     mode to every pipeline.
+   - **A failure is retried, with diagnosis.** Contain the specific bad item
+     (cancel an unprotected resting order; protect or flatten a genuinely
+     naked position, every cycle until it is resolved), mark THAT item failed
+     with its cause, and try again on the next cycle. A refusal is per item,
+     as in rule 3.
+   - **Persistent failure raises a red flag and keeps trying.** When the same
+     failure repeats (e.g. three consecutive cycles or items), ONE red flag
+     reaches the operator with the evidence. The pipeline keeps running and
+     keeps retrying; the flag asks for help, it does not stop anything.
+   - **Any self-halt needs the operator's verbatim permission, recorded in
+     the repo** (a quoted sentence on a checklist row, a PR body or this
+     file) naming that halt. A paraphrase, a manager decision, a PR-level
+     "merge it" or a design-doc label is not that permission.
+   - **What this changed.** The prop executor's AUTO-REVERT `halted` latch
+     (`src/prop/prop_executor.py`) is gone: failures are per ticket, entries
+     are held for the one cycle whose read predates a containment, a stale
+     `halted` file is removed on start, and `executor-clear-halt` is a
+     harmless no-op. The inventory of the other self-halts, and which carry
+     verbatim permission, is on checklist row `NO-HALT`.
+   - **The ONE sanctioned exception: the account-level daily drawdown
+     switch** (operator, 2026-10-09, same day). Verbatim:
+
+     > "I overreacted regarding the halting. There is one thing that I want to take back, and that is the daily drawdown on at the account level. That's the only place I want there to be like a automatic off switch, basically, where if we lose more than a defined amount from the account in a day, then the account automatically turns off until it resets the next day. But that should be a default off. We'll arm all of them, but I, the default for when it's built should be off so that like we know that it's something that has to actively be done and turned on. And the default setting should be, for the prop accounts, obviously it should be like the prop accounts daily drawdown with a buffer. And for the other accounts, it should be 3%."
+
+     Popup answers the same day: **keep open, block new** (open positions
+     keep their SL/TP; only new entries are refused until the daily reset;
+     one alert on trip, one on reset) and a prop buffer of **20% of the <!-- population-ok: an operator-chosen config parameter, not a measurement -->
+     firm's limit** (limit = 0.8 × the firm's daily limit, at the firm's
+     reset time). Config: `config/accounts.yaml::<acct>.risk.daily_dd_switch`;
+     `armed` defaults to `false` in code and arming is an explicit
+     per-account YAML act. It is a per-trade `RiskManager` refusal (rule 3),
+     never a `mode:` flip (rule 2). Checklist row `DAILY-DD-SWITCH`. It
+     sanctions no other self-halt.
 
 ### What this rules out (queued for the safeguards PR follow-on)
 
@@ -1757,7 +1812,8 @@ new strategy cell (e.g. an `ict_scalp` alt leg) wired to a paper/demo account
 **mechanics check, not a performance test**. Its edge is decided by the
 offline live-faithful backtest + backfill BEFORE it is wired; the soak only
 confirms the live executions match the simulator, which needs **1–2 executed
-trades**, not calendar time. Never frame an alt-leg paper-soak as a
+trades**, not calendar time (the rule: [`OPERATING-PLAN` § 2 "The soak is
+MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md)). Never frame an alt-leg paper-soak as a
 calendar-time wait to see if the edge holds — that is the recurring drift this
 rule kills (the operational how-to lives in the `new-strategy` skill and is
 CI-guarded by `scripts/check_soak_doctrine.py`). A handful of early losing paper

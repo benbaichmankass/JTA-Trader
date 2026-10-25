@@ -1,0 +1,151 @@
+id: RQ-20261022-b7e1-10
+title: 'Q14 lever (PROP, both directions of the efficiency ratio): on trend_donchian_eth_prop, once a trade is >= 2 R up AND
+  the 6-bar efficiency ratio is HIGH (> 0.60 / 0.70) or LOW (< 0.25 / 0.35), does tightening the 3.5-ATR trail to 2.5 x ATR
+  beat the declared exit AND the ungated tighten, on net R in 5 of 6 folds, TP 6R untouched?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'The discovery run read the efficiency ratio on the prop legs with the OPPOSITE sign to the pullback legs (eth_prop
+  AUC 0.70, sol_prop 0.62: HIGH ER -> more giveback, i.e. a parabolic, one-directional run reverses), at a tiny base rate
+  (2.5% / 10.8% for X=1.0). Both directions are therefore pre-registered as separate arms (a two-sided test; the 5-of-6 fold
+  bar and the ungated control guard the multiplicity): PH60 / PH70 (er_6 > thr) and PL25 / PL35 (er_6 < thr), each with peak_r
+  >= 2.0 -> tight 2.5 x ATR, against A and the ungated UT20 (peak >= 2.0 -> 2.5).'
+why_this_matters: 'Operator idea (IDEAS.md 2026-10-21): surf the volatility instead of holding through it. Today''s results
+  say acting on EVERY trade fails (fixed 50% bank -43..-68 R on ada_pullback_2h, level-triggered tightening, 1R giveback stop;
+  RQ-20261022-fd06-*, -001..006): the declared wide trail earns its R in the right tail. This unit asks the SELECTIVE form
+  with a feature chosen from the in-trade path measurement. Level-triggered tightening on this leg read LS +2.2 R at n 1085
+  (2 of 6 folds, RQ-20261022-001..006): the swing is thin; a state-conditioned form is the open question. Prop = a superset
+  bar (prop EV/survival gate against the firm DD limits BEFORE any proposal).'
+power:
+  expected_n: 1085
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades; incumbent n is MEASURED per leg in the sibling
+    units (ada_pb 402, xrp_pb 394, eth_prop 1085). Trade sequences autocorrelate: the fold majority carries the rest.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P1-Q14-PROP-ER-TRAIL-10
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_eth_prop, window 2020-07-01 ..
+    2026-10-15 23:59, 6 equal calendar folds by entry time, net of the full cost stack (resolve_cost_policy, recorded per
+    arm). Per arm: n, net_total_r, max_drawdown_r, net R per fold. A = the leg as declared. Arms: PH60, PH70, PL25, PL35;
+    controls: UT20. Gate flags are the build PATHSTATE-TRAIL-GATE contract (path-state features computed from bars <= t of
+    the trade, in R/ATR units, by the SAME function the path_state_giveback.py study uses).'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the gate never fired). A candidate C
+    PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35 AND
+    net_r(C) > net_r(UT20) (the UNCONDITIONAL control: the same action on every trade the gate would reach, so a PASS cannot
+    be "any early action"). PASS IF one or more pass: ONE confirmation unit on a disjoint partition (a PASS on one window
+    is a discovery), then Q6 parity and a Tier-3 declare proposal -- never a config edit. FAIL IF none passes: the family
+    is NOT retired -- variants queued: (1) arm R 1.5 and 3.0, (2) the sol_prop leg as its own unit (RESEARCH-MULTICMD-OUTDIR:
+    one leg per unit), (3) tight mult 3.0. Thresholds and the arm grid are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and places no order. A PASS needs a live producer that computes the path state bar
+    by bar (position_path_history exists; the monitor does not read it for exits; src/runtime/trail_decay.py is the nearest
+    live producer) and a Tier-3 declare with the mirror in the same PR plus the prop EV/survival gate against the firm DD
+    limits (prop legs clear a superset of the ladder). TP is untouched (every arm keeps the leg''s declared TP), so the TP
+    doctrine''s zero-materiality compliance bar does not apply; each arm is graded on the normal Path B bar (0.02 R/trade
+    materiality). PRIOR INFORMATION, disclosed: the fixed bank, level-triggered tightening and the 1R giveback stop all failed
+    vs the declared exit on the Bybit money legs on 2026-10-22; the in-trade measurement (docs/research/exit-path-metrics-2026-10-22.md)
+    screens a full exit at the first flagged state as LOSING vs the declared exit on every pullback/trend leg (so these arms
+    tighten or partially bank, never exit outright, except the time-in-chop unit). No look at any arm here was taken before
+    registration.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  basis: 'stand-in: money/prop leg; the operator named giveback the standing priority; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: One harness invocation per arm on freshly fetched public candles (74 s wall for 2 arms on xrp_pullback_2h MEASURED
+    2026-10-16; the 5-leg path_state_giveback measurement run took ~15 min wall, 1h legs dominating).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --arm
+  - A=
+  - --arm
+  - PH60=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.6;--trail-state-arm-r=2.0;--trail-state-tight-mult=2.5
+  - --arm
+  - PH70=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.7;--trail-state-arm-r=2.0;--trail-state-tight-mult=2.5
+  - --arm
+  - PL25=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.25;--trail-state-arm-r=2.0;--trail-state-tight-mult=2.5
+  - --arm
+  - PL35=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.35;--trail-state-arm-r=2.0;--trail-state-tight-mult=2.5
+  - --arm
+  - UT20=--trail-decay-arm-r=2.0;--trail-decay-tight-mult=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-b7e1-10
+    gate_flags_contract: PATHSTATE-TRAIL-GATE
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/IDEAS.md
+- scripts/research/path_state_giveback.py
+- research/queue/RQ-20261022-007.yaml
+- docs/research/exit-path-metrics-2026-10-22.md
+- research/queue/RQ-20261022-eba2-03.yaml
+- src/research/trail_levers.py
+programme_node:
+  programme: P1
+  node: P1-Q14-prop-er-trail-eth
+  goal: G1
+last_dispatched_at: '2026-10-23T20:56:16+00:00'
+grading:
+  attested: RULE-P1-Q14-PROP-ER-TRAIL-10
+  auto: true
+  decision_rule_id: RULE-P1-Q14-PROP-ER-TRAIL-10
+  evidence:
+  - research/results/RQ-20261022-b7e1-10/40023075668.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

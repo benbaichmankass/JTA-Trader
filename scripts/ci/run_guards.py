@@ -91,6 +91,21 @@ HARNESS_PATHS = (
 
 GUARDS: List[Dict[str, Any]] = [
     {
+        # TRADER-RESTART-GATE (operator decision 2026-10-15): the deploy leaves
+        # ict-trader-live running when a diff's src/ and scripts/ .py files are
+        # all outside config/trader_import_closure.txt, so that list must be the
+        # trader's real import closure. Any .py can add or drop an import.
+        "name": "trader-import-closure",
+        "when": {"globs": [
+            "**/*.py",
+            "config/trader_import_closure.txt",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_trader_import_closure.py", "--self-test"],
+            ["python3", "scripts/ci/check_trader_import_closure.py"],
+        ],
+    },
+    {
         # SIGNAL-CATALOG — every input a strategy / ML head / regime router /
         # macro producer reads needs an entry in docs/reference/signal-catalog.yaml.
         # Keying rule per family is in the guard's header.
@@ -277,6 +292,18 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ops/work_report.py", "--self-test"]],
     },
     {
+        # BLOCKER-WATCH, 2026-10-10: blocked rows whose blocker is finished, queued
+        # research units never dispatched, landed_unproven past due. The self-test
+        # includes a positive control (every finding kind is shown it can fire) and
+        # a smoke run against the live stores.
+        "name": "blocker-watch",
+        "when": {"globs": ["scripts/ops/blocker_watch.py", "scripts/ops/attention_watch.py",
+                            "scripts/ops/render_daily_brief.py", "scripts/ops/manager_preflight.py",
+                            "tests/test_blocker_watch.py", "research/queue/**",
+                            "docs/claude/work/checklist/**"]},
+        "steps": [["python3", "scripts/ops/blocker_watch.py", "--self-test"]],
+    },
+    {
         # FIX-SA-09, 2026-09-29: the SessionStart hook, three slash commands and
         # four skills told sessions to drain review backlogs archived on
         # 2026-09-21. This is the detector: no live `.claude/` line may name a
@@ -337,6 +364,17 @@ GUARDS: List[Dict[str, Any]] = [
         "when": {"globs": ["scripts/**/*.py", "src/**/*.py", "scripts/ci/check_checklist_readers.py"]},
         "steps": [["python3", "scripts/ci/check_checklist_readers.py", "--self-test"],
                   ["python3", "scripts/ci/check_checklist_readers.py"]],
+    },
+    {
+        # ROADMAP-LOOP (operator, 2026-10-11): milestone <-> checklist row <-> queue unit is a FIELD
+        # (`roadmap`), closing rows carry `writeback`, and the ROADMAP.md live block is generated.
+        # Whole-store checks always; enforcement on rows/units the DIFF touches only.
+        "name": "roadmap-map-guard",
+        "when": {"globs": ["docs/roadmap/**", "ROADMAP.md", "docs/claude/work/checklist/**",
+                            "research/queue/**", "scripts/ops/roadmap_map.py",
+                            "docs/ARCHITECTURE-CANONICAL.md"]},
+        "steps": [["python3", "scripts/ops/roadmap_map.py", "--self-test"],
+                  ["python3", "scripts/ops/roadmap_map.py", "--check", "--base", "origin/main"]],
     },
     {
         # PI-20261005-4GA8WQPA-0002 (the lapse wave): a pipeline item whose
@@ -1301,8 +1339,19 @@ GUARDS: List[Dict[str, Any]] = [
         "when": None,
         "steps": [
             ["python3", "scripts/research/script_run.py", "--self-test"],
+            ["python3", "scripts/research/kaggle_run.py", "self-test"],
             ["python3", "scripts/ci/check_research_script_run.py", "--self-test"],
             ["python3", "scripts/ci/check_research_script_run.py"],
+        ],
+    },
+    {
+        # IP-IN-PUBLIC-LOGS (operator 2026-10-15): the live-trader and trainer addresses come from the VM_SSH_HOST /
+        # TRAINER_VM_IP repository secrets (masked in logs, one place to rotate), never a literal in a workflow.
+        "name": "workflow-vm-literal-guard",
+        "when": None,
+        "steps": [
+            ["python3", "scripts/ci/check_workflow_vm_literals.py", "--self-test"],
+            ["python3", "scripts/ci/check_workflow_vm_literals.py"],
         ],
     },
     {
@@ -1316,6 +1365,19 @@ GUARDS: List[Dict[str, Any]] = [
                    "--base", "origin/{base_ref}"]],
     },
     {
+        # RESEARCH-ENGINE-1016 (2026-10-16): every question a programme PLAN asks
+        # (docs/research/programmes/<NN>-*.md) must have a node in its machine-read tree
+        # (research/programmes/<NN>-*.yaml), or nothing ever reaches the authoring queue. A
+        # RATCHET (scripts/research/programme_coverage_baseline.json): today's gap is work for
+        # the programme lanes, so the guard fails only when the uncovered count RISES.
+        "name": "programme-coverage",
+        "when": {"globs": ["docs/research/programmes/**", "research/programmes/**",
+                            "scripts/research/programme_coverage.py",
+                            "scripts/research/programme_coverage_baseline.json"]},
+        "steps": [["python3", "scripts/research/programme_coverage.py", "--self-test"],
+                  ["python3", "scripts/research/programme_coverage.py", "--check"]],
+    },
+    {
         # RQ-RUN (2026-09-28): the queue's self-replenishment + mechanical
         # grading + health alarm. Self-tests only: the live health read is
         # the DISPATCHER's alarm (it pages), not a PR gate -- a PR must not go
@@ -1326,6 +1388,8 @@ GUARDS: List[Dict[str, Any]] = [
             ["python3", "scripts/research/queue_replenish.py", "--self-test"],
             ["python3", "scripts/research/queue_grade.py", "--self-test"],
             ["python3", "scripts/ci/check_research_queue_health.py", "--self-test"],
+            ["python3", "scripts/research/result_disposition_check.py", "--self-test"],
+            ["python3", "scripts/research/research_slo.py", "--self-test"],
         ],
     },
     {
@@ -1524,6 +1588,19 @@ GUARDS: List[Dict[str, Any]] = [
         # here before the scan is trusted to say anything.
         "steps": [["python3", "scripts/ci/check_tp_doctrine.py", "--self-test"],
                   ["python3", "scripts/ci/check_tp_doctrine.py"]],
+    },
+    {
+        "name": "prop-harness-full-costs-guard",
+        # PROP-EVAL-COSTS (operator 2026-10-15): no caller of the portfolio engine
+        # (prop evaluator / Monte-Carlo / alt-prop / compat matrix / panel builder /
+        # walk-forwards) may run fee-only. Extends the D1 cost-stack verification.
+        "when": {"globs": [
+            "scripts/backtest_system.py", "scripts/prop/*.py", "scripts/walkforward_*.py",
+            "scripts/research/build_backtest_panel.py", "src/research/run_costs.py",
+            "config/prop_rulesets/*.yaml", "scripts/ci/check_prop_harness_full_costs.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_prop_harness_full_costs.py", "--self-test"],
+                  ["python3", "scripts/ci/check_prop_harness_full_costs.py"]],
     },
     {
         "name": "automerge-trigger-guard",
@@ -1949,6 +2026,47 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "same-symbol-allocation-guard",
+        # Operator 2026-10-15 (re-scoped ~20:25Z): legs MAY share a netted position if we know how much of it belongs
+        # to each strategy. Whole-tree: a shared (account, symbol) needs slice support for the account (empty until lane
+        # NETTED-SLICES lands its config) or a committed allocation-weights record in comms/same_symbol_allocation/.
+        # Today's pairs are grandfathered BY NAME with the unit that feeds them and a due date inside the script.
+        # Checklist row SAME-SYMBOL-ALLOCATION.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "comms/same_symbol_allocation/**",
+            "scripts/ci/check_same_symbol_allocation.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_same_symbol_allocation.py", "--self-test"],
+            ["python3", "scripts/ci/check_same_symbol_allocation.py"],
+        ],
+    },
+    {
+        "name": "prop-roster-gate-guard",
+        # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
+        # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
+        # (bybit_1/alpaca_paper roster or a SOAK-stage1 contract) AND a comms/prop_survival/<leg>.json
+        # record, ON TOP of what roster-promotion-evidence-guard already demands of every risk-bearing
+        # roster. Diff-scoped + roster-membership keyed; demotion free; the two pre-rule legs are
+        # grandfathered BY NAME with a due date inside the script.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "docs/claude/work/SOAKS.json",
+            "comms/prop_survival/**",
+            "scripts/ci/check_prop_roster_gate.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_prop_roster_gate.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_prop_roster_gate.py",
+                         "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
         "name": "manifest-scope-constants",
         # The ML manifest<->dataset contract, at COMMIT time. It was previously
         # validated ONLY at train time, on the trainer, inside a cycle that
@@ -2146,6 +2264,24 @@ GUARDS: List[Dict[str, Any]] = [
         "steps": [["python3", "scripts/secret_scan.py"]],
     },
     {
+        "name": "lane-reconcile-guard",
+        # 2026-10-18: the manager's CLOSE step (§ "Archive protocol") archives only what
+        # lane_reconcile lists, so its archive-scope test (operator: archive ONLY this project's
+        # sessions; a foreign repo is never eligible) must not silently regress.
+        "when": {"regex": r"^scripts/ops/lane_reconcile\.py$"},
+        "steps": [["python3", "scripts/ops/lane_reconcile.py", "--self-test"]],
+    },
+    {
+        "name": "manager-pacing-guard",
+        # 2026-10-18 (MANAGER-PACING-STRUCTURAL): the manager's pacing is stated ONCE, in manager
+        # SKILL.md § "The operating loop". Fails if a live doc/skill/the spend meter brings back a
+        # retired idiom ("dispatch in parallel", "spend the daily budget", ...) or the section or
+        # its Start-of-session pointer goes missing. Self-test plants each retired idiom + controls.
+        "when": None,
+        "steps": [["python3", "scripts/ci/check_manager_pacing.py", "--self-test"],
+                  ["python3", "scripts/ci/check_manager_pacing.py"]],
+    },
+    {
         "name": "silent-empty-guard",
         "when": {"regex": r"\.py$|\.ya?ml$|\.sh$"},
         "steps": [["python3", "scripts/check_silent_empty_in_diff.py", "{pr_diff}"]],
@@ -2154,7 +2290,11 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "soak-doctrine-guard",
         "when": None,
-        "steps": [["python3", "scripts/check_soak_doctrine.py"]],
+        # 2026-10-15 (SOAK-REDEFINE, operator: "I can't keep re-explaining it"): checks E-H scan
+        # every live doc/skill/plan and the soak generators' OUTPUT for the long-soak SHAPE, and
+        # the self-test plants each historical teaching (it must be caught) plus controls.
+        "steps": [["python3", "scripts/check_soak_doctrine.py", "--self-test"],
+                  ["python3", "scripts/check_soak_doctrine.py"]],
     },
     {
         "name": "strategy-coverage-guard",
