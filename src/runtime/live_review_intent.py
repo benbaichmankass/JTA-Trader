@@ -31,7 +31,17 @@ from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 ACTIONS = ("tighten_sl", "flag", "no_action")
-VERDICTS = ("approve", "clip", "refuse")
+#: The verdict set (registered with collapsed-state-guard). ``could_not_look``
+#: is NEITHER approve nor refuse: a venue stop, mark, ATR, leg stop or position
+#: read failed, so nothing is applied, the next cycle retries, and ONE flag is
+#: raised after :data:`COULD_NOT_LOOK_FLAG_AFTER` consecutive cycles (Prime
+#: Directive rule 7: no halting, a red flag that keeps trying).
+V_APPROVE = "approve"
+V_CLIP = "clip"
+V_REFUSE = "refuse"
+V_COULD_NOT_LOOK = "could_not_look"
+VERDICTS = (V_APPROVE, V_CLIP, V_REFUSE, V_COULD_NOT_LOOK)
+COULD_NOT_LOOK_FLAG_AFTER = 3
 APPLY_MODES = ("off", "recommend", "apply")
 DEFAULT_APPLY_MODE = "recommend"
 DEFAULT_MIN_BUFFER_ATR = 1.0
@@ -55,8 +65,6 @@ R_NOISE_FLOOR = "inside_noise_floor"
 R_RATE = "one_amend_per_package_per_bar"
 R_DRY = "account_mode_dry_run"
 R_SHADOW = "strategy_execution_shadow"
-R_DD = "DAILY_DD_SWITCH"
-R_DD_UNREAD = "daily_dd_switch_could_not_look"
 R_NO_PATH = "no_amend_path"
 R_APPLY_OFF = "apply_mode_off"
 
@@ -101,13 +109,13 @@ class AmendAccountView:
 @dataclass(frozen=True)
 class AmendVerdict:
     account_id: str
-    verdict: str                 # approve | clip | refuse
-    level: Optional[float]       # the level this account may apply (None on refuse)
+    verdict: str                 # approve | clip | refuse | could_not_look
+    level: Optional[float]       # the level this account may apply (None unless approve/clip)
     reason: str
 
     @property
     def ok(self) -> bool:
-        return self.verdict in ("approve", "clip")
+        return self.verdict in (V_APPROVE, V_CLIP)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -137,16 +145,23 @@ def floor_level(direction: str, mark: float, atr: float, buffer_atr: float) -> f
 
 
 def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
-                 dry_run: bool, dd_blocks: Optional[bool],
+                 dry_run: bool,
                  account_min_buffer_atr: Optional[float] = None) -> AmendVerdict:
-    """The per-account decision. Pure. ``dd_blocks`` is the account's daily-DD
-    switch: True = tripped, False = clear or disarmed, None = armed and could
-    not look. The noise floor is the LARGER of the intent's and the account's
-    own ``min_buffer_atr`` (an account may only be stricter)."""
+    """The per-account decision. Pure. The noise floor is the LARGER of the
+    intent's and the account's own ``min_buffer_atr`` (an account may only be
+    stricter).
+
+    The daily-DD switch does NOT refuse a tighten (manager decision
+    2026-10-25, desk design § 3.0): a tighten only reduces risk, and the
+    operator's switch refuses NEW ENTRIES while keeping open positions
+    protected -- ``RiskManager.evaluate(..., opening=False)`` semantics."""
     aid = view.account_id
 
     def refuse(reason: str) -> AmendVerdict:
-        return AmendVerdict(aid, "refuse", None, reason)
+        return AmendVerdict(aid, V_REFUSE, None, reason)
+
+    def could_not_look(reason: str) -> AmendVerdict:
+        return AmendVerdict(aid, V_COULD_NOT_LOOK, None, reason)
 
     if intent.action != "tighten_sl":
         return refuse(R_NOT_TIGHTEN)
@@ -160,15 +175,10 @@ def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
         return refuse(R_SHADOW)
     if dry_run:
         return refuse(R_DRY)
-    # "Keep open, block new" (operator, 2026-10-09): while the switch is
-    # tripped the open positions KEEP their SL/TP until the daily reset.
-    if dd_blocks is None:
-        return refuse(R_DD_UNREAD)
-    if dd_blocks:
-        return refuse(R_DD)
     mark, atr, cur = _f(intent.mark), _f(intent.atr), _f(view.leg_sl)
     if mark is None or atr is None or cur is None:
-        return refuse(R_COULD_NOT_LOOK)
+        missing = [n for n, v in (("mark", mark), ("atr", atr), ("leg_sl", cur)) if v is None]
+        return could_not_look(f"{R_COULD_NOT_LOOK}:{','.join(missing)}")
     # At most one amend per package per closed bar, per account.
     if intent.bar_ts and view.last_amend_bar and str(view.last_amend_bar) == str(intent.bar_ts):
         return refuse(R_RATE)
@@ -186,11 +196,11 @@ def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
     floor = floor_level(direction, mark, atr, buf)
     inside = new_sl < floor if direction == "short" else new_sl > floor
     if not inside:
-        return AmendVerdict(aid, "approve", new_sl, "within_bounds")
+        return AmendVerdict(aid, V_APPROVE, new_sl, "within_bounds")
     # Clip back to the noise floor when that is still a real tighten for THIS
     # account; otherwise there is nothing this account may do.
     if all(is_tighter(direction, floor, ref) for ref in refs):
-        return AmendVerdict(aid, "clip", floor,
+        return AmendVerdict(aid, V_CLIP, floor,
                             f"clipped_to_noise_floor:{buf:g}xATR")
     return refuse(R_NOISE_FLOOR)
 
@@ -260,9 +270,9 @@ def floor_blocks(direction: Any, candidate_sl: Any, floor: Optional[float]) -> b
 def account_read(verdict: AmendVerdict, *, applied: Optional[bool] = None) -> str:
     """Map a verdict onto the review row's ``account_reads.read`` vocabulary
     (``comms/schema/live_review.schema.json``)."""
-    if verdict.ok:
+    if verdict.verdict in (V_APPROVE, V_CLIP):
         return "would_apply"
-    if verdict.reason in (R_COULD_NOT_LOOK, R_DD_UNREAD):
+    if verdict.verdict == V_COULD_NOT_LOOK:
         return "unknown"
     if verdict.reason in (R_SHADOW, R_ALREADY, R_NOT_TIGHTEN, R_NO_PATH, R_APPLY_OFF):
         return "no_action"

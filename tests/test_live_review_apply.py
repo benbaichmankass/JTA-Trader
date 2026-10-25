@@ -36,8 +36,8 @@ def _view(**kw) -> lri.AmendAccountView:
     return lri.AmendAccountView(**base)
 
 
-def _decide(intent=None, view=None, *, dry_run=False, dd_blocks=False, own=None):
-    return lri.decide_amend(intent or _intent(), view or _view(), dry_run=dry_run, dd_blocks=dd_blocks,
+def _decide(intent=None, view=None, *, dry_run=False, own=None):
+    return lri.decide_amend(intent or _intent(), view or _view(), dry_run=dry_run,
                             account_min_buffer_atr=own)
 
 
@@ -86,18 +86,6 @@ def test_a_shadow_leg_takes_no_action():
     assert lri.account_read(v) == "no_action"
 
 
-def test_a_dd_switch_tripped_account_keeps_its_stop():
-    v = _decide(dd_blocks=True)
-    assert (v.verdict, v.reason) == ("refuse", lri.R_DD)
-    assert lri.account_read(v) == "refused_by_account_risk"
-
-
-def test_an_unreadable_dd_switch_is_could_not_look_not_clear():
-    v = _decide(dd_blocks=None)
-    assert (v.verdict, v.reason) == ("refuse", lri.R_DD_UNREAD)
-    assert lri.account_read(v) == "unknown"
-
-
 def test_dry_run_account_and_non_tighten_actions_refuse():
     assert _decide(dry_run=True).reason == lri.R_DRY
     assert _decide(_intent(action="flag")).reason == lri.R_NOT_TIGHTEN
@@ -110,11 +98,19 @@ def test_one_amend_per_package_per_closed_bar():
     assert _decide(view=_view(last_amend_bar="2026-10-25T16:00:00Z")).verdict == "approve"
 
 
-def test_wrong_side_of_mark_and_missing_inputs_refuse():
+def test_wrong_side_of_mark_refuses_and_already_tighter_is_no_action():
     assert _decide(_intent(new_sl=0.1990)).reason == lri.R_WRONG_SIDE
-    assert _decide(_intent(mark=None)).reason == lri.R_COULD_NOT_LOOK
-    assert _decide(view=_view(leg_sl=None)).reason == lri.R_COULD_NOT_LOOK
-    assert _decide(view=_view(leg_sl=0.2100)).reason == lri.R_ALREADY
+    v = _decide(view=_view(leg_sl=0.2100))
+    assert v.reason == lri.R_ALREADY and lri.account_read(v) == "no_action"
+
+
+@pytest.mark.parametrize("kw", [{"intent": {"mark": None}}, {"intent": {"atr": None}}, {"view": {"leg_sl": None}}])
+def test_a_failed_read_is_could_not_look_never_refuse_or_approve(kw):
+    v = _decide(_intent(**kw.get("intent", {})), _view(**kw.get("view", {})))
+    assert v.verdict == lri.V_COULD_NOT_LOOK and v.level is None and not v.ok
+    assert v.reason.startswith(lri.R_COULD_NOT_LOOK)
+    assert lri.account_read(v) == "unknown"
+    assert set(lri.VERDICTS) == {"approve", "clip", "refuse", "could_not_look"}
 
 
 # --------------------------------------------------- RiskManager.approve_amend
@@ -142,13 +138,13 @@ def _rm(switch=None, dry=False, **risk):
     return rm
 
 
-def test_risk_manager_routes_through_its_own_switch_without_observing_it():
-    sw = _Switch(armed=True, tripped=True)
-    v = _rm(sw).approve_amend(_intent(), _view())
-    assert v.reason == lri.R_DD and sw.observed == 0
-    assert _rm(_Switch(armed=False, tripped=True)).approve_amend(_intent(), _view()).verdict == "approve"
-    unread = _rm(_Switch(armed=True, tripped=False, read="could_not_look")).approve_amend(_intent(), _view())
-    assert unread.reason == lri.R_DD_UNREAD
+def test_a_tripped_dd_switch_does_not_refuse_a_tighten():
+    """Manager decision 2026-10-25: a tighten only reduces risk; the switch
+    refuses NEW ENTRIES (evaluate(..., opening=False) semantics)."""
+    for sw in (_Switch(armed=True, tripped=True), _Switch(armed=True, tripped=False, read="could_not_look")):
+        v = _rm(sw).approve_amend(_intent(), _view())
+        assert (v.verdict, v.level) == ("approve", 0.2100)
+        assert sw.observed == 0
 
 
 def test_risk_manager_dry_run_and_own_buffer():
@@ -162,7 +158,7 @@ def test_prop_risk_manager_inherits_approve_amend():
 
     rm = PropRiskManager({"risk": {}, "account_size_usd": 5000}, account_name=None)
     rm.dd_switch = _Switch(armed=True, tripped=True)
-    assert rm.approve_amend(_intent(), _view(account_id="tradeify_1")).reason == lri.R_DD
+    assert rm.approve_amend(_intent(), _view(account_id="tradeify_1")).verdict == "approve"
 
 
 # ----------------------------------------------------------------- apply_mode
@@ -292,7 +288,7 @@ def _trade(tid, account, sl=0.2200):
 
 PKG = {"order_package_id": "P", "status": "open", "strategy_name": "ada_pullback_2h", "symbol": "ADAUSDT",
        "direction": "short", "sl": 0.2200, "tp": 0.1900}
-ACCOUNTS = {"bybit_2": {"exchange": "bybit", "mode": "live", "risk": {}},
+ACCOUNTS = {"bybit_2": {"exchange": "bybit", "mode": "live", "account_class": "real_money", "risk": {}},
             "bybit_portfolio": {"exchange": "bybit", "mode": "live", "risk": {}},
             "alpaca_live": {"exchange": "alpaca", "mode": "live", "risk": {}},
             "tradeify_1": {"exchange": "breakout", "type": "prop", "mode": "live", "risk": {}},
@@ -303,50 +299,79 @@ STRATS = {"ada_pullback_2h": {"execution": "live", "timeframe": "2h"}}
 @pytest.fixture
 def wired(monkeypatch):
     """Every seam faked: no DB file, no venue, no prop journal."""
-    state: Dict[str, Any] = {"tickets": [], "tripped": set(), "exec": [], "pings": []}
+    state: Dict[str, Any] = {"tickets": [], "dry": set(), "buffers": {}, "exec": [], "pings": [],
+                             "alerts": [], "bybit_result": None}
     monkeypatch.setattr(lra, "_get_package", lambda db, pid: dict(db.pkg) if pid == "P" else None)
     monkeypatch.setattr(lra, "_prop_tickets", lambda pid: [dict(t) for t in state["tickets"]])
     monkeypatch.setattr(lra, "_is_phone", lambda aid: aid == "breakout_2")
 
     def _rm(aid, cfg):
-        rm = RiskManager({}, dry_run=cfg.get("mode") == "dry_run", account_id="")
-        rm.dd_switch = _Switch(armed=True, tripped=aid in state["tripped"])
+        risk = {"live_review_min_buffer_atr": state["buffers"][aid]} if aid in state["buffers"] else {}
+        rm = RiskManager(risk, dry_run=aid in state["dry"], account_id="")
+        rm.dd_switch = _Switch(armed=True, tripped=True)   # tripped everywhere: must not matter
         return rm
     monkeypatch.setattr(lra, "_risk_manager", _rm)
 
     def _bybit(db, leg, pkg, level, intent):
         state["exec"].append(("bybit", leg["account_id"], level))
+        if state["bybit_result"]:
+            return dict(state["bybit_result"])
         db.update_trade(int(leg["row"]["id"]), {"stop_loss": level, "notes": json.dumps(
             {"sl_floor": {"level": level}})})
         return {"result": "applied", "venue_after": level}
     monkeypatch.setattr(lra, "_exec_bybit", _bybit)
     monkeypatch.setattr(lra, "_exec_prop_vm",
                         lambda leg, level, intent: state["exec"].append(("prop_vm", leg["account_id"], level))
-                        or {"result": "floor_set"})
+                        or {"result": lra.X_APPLIED})
     monkeypatch.setattr(lra, "_exec_phone",
                         lambda leg, level, intent: state["exec"].append(("phone", leg["account_id"], level))
-                        or {"result": "amend_emitted", "amend_id": "t#a1"})
+                        or {"result": lra.X_APPLIED, "amend_id": "t#a1"})
     monkeypatch.setattr(lra, "_ping", lambda pkg, aid, level, intent: state["pings"].append((aid, level)))
+    monkeypatch.setattr(lra, "_alert", lambda pkg, aid, line: state["alerts"].append((aid, line)))
     return state
 
 
-def _run(db, wired, *, mode="apply", apply=True, granted=frozenset({lri.MANDATE_ID}), **ikw):
+def _run(db, wired, *, mode="apply", apply=True, granted=frozenset({lri.MANDATE_ID}), state=None, **ikw):
     return lra.run(_intent(**ikw), apply=apply, db=db, accounts=ACCOUNTS, strategies=STRATS,
-                   review_cfg={"apply_mode": mode}, granted=set(granted), write_log=False)
+                   review_cfg={"apply_mode": mode}, granted=set(granted), write_log=False,
+                   state=state if state is not None else {})
 
 
 def test_every_account_decides_for_itself_and_the_package_stop_holds(wired):
     db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
-    wired["tripped"].add("bybit_portfolio")
+    wired["dry"].add("bybit_portfolio")
     res = _run(db, wired)
     by = {a["account_id"]: a for a in res["accounts"]}
     assert by["bybit_2"]["verdict"] == "approve" and by["bybit_2"]["executed"] is True
-    assert by["bybit_portfolio"]["reason"] == lri.R_DD and not by["bybit_portfolio"].get("executed")
-    assert wired["exec"] == [("bybit", "bybit_2", 0.2100)]
+    assert by["bybit_portfolio"]["reason"] == lri.R_DRY and not by["bybit_portfolio"].get("executed")
+    assert wired["exec"] == [("bybit", "bybit_2", 0.2100)]           # the refusing account's leg is never touched
     assert res["package_sl_moved"] is False and db.package_writes == []   # siblings disagree → floors, not the shared stop
     assert wired["pings"] == [("bybit_2", 0.2100)]
     reads = {r["account_id"]: r["read"] for r in res["writeback"]["account_reads"]}
     assert reads == {"bybit_2": "would_apply", "bybit_portfolio": "refused_by_account_risk"}
+
+
+def test_a_clip_on_one_account_never_reaches_another_accounts_leg(wired, monkeypatch):
+    """Account-scoped execution (desk design § 3.0): bybit_portfolio's own
+    stricter floor clips it to 0.2120 while bybit_2 applies 0.2100. Each leg
+    gets ITS level, the shared package stop does not move, and the order
+    monitor then holds each leg at its own applied level."""
+    db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
+    wired["buffers"]["bybit_portfolio"] = 3.0
+    res = _run(db, wired)
+    assert sorted(wired["exec"]) == [("bybit", "bybit_2", 0.2100), ("bybit", "bybit_portfolio", pytest.approx(0.2120))]
+    assert res["package_sl_moved"] is False and db.package_writes == []
+    floors = {t: json.loads(u["notes"])["sl_floor"]["level"] for t, u in db.trade_writes}
+    assert floors == {1: 0.2100, 2: pytest.approx(0.2120)}
+    # the next trail candidate (0.2110) reaches only bybit_portfolio: it is looser than bybit_2's 0.2100
+    legs = [{**_mleg(1, "bybit_2", 0.2100, json.dumps({"sl_floor": {"level": 0.2100}})), "symbol": "ADAUSDT"},
+            {**_mleg(2, "bybit_portfolio", 0.2120, json.dumps({"sl_floor": {"level": 0.2120}})), "symbol": "ADAUSDT"}]
+    mdb = _MonDB(legs)
+    seen = []
+    monkeypatch.setattr(om, "_send_modify_to_exchange",
+                        lambda trade, **kw: seen.append((trade["account_id"], kw.get("sl"))) or {"ok": True})
+    om._apply_update(mdb, {**PKG, "linked_trade_id": 1}, {"sl": 0.2110}, om._StrategyTickSummary())
+    assert seen == [("bybit_portfolio", 0.2110)]
     assert res["writeback"]["disposition"]["route"] == "auto_applied"
     assert res["writeback"]["disposition"]["mandate"] == lri.MANDATE_ID
 
@@ -412,7 +437,7 @@ def test_a_clip_is_applied_at_the_clipped_level(wired):
 
 def test_dry_run_cli_prints_every_account_and_writes_nothing(wired, monkeypatch, capsys):
     db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
-    wired["tripped"].add("bybit_portfolio")
+    wired["dry"].add("bybit_portfolio")
     monkeypatch.setattr(lra, "_open_db", lambda: db)
     monkeypatch.setattr(lra, "_open_packages", lambda d: [dict(PKG)])
     monkeypatch.setattr(lra, "_accounts", lambda: ACCOUNTS)
@@ -424,7 +449,7 @@ def test_dry_run_cli_prints_every_account_and_writes_nothing(wired, monkeypatch,
     out = capsys.readouterr().out
     assert rc == 0
     assert ">>> P ada_pullback_2h bybit_2 [bybit/recommend]: approve" in out      # probe at the floor
-    assert ">>> P ada_pullback_2h bybit_portfolio [bybit/recommend]: refuse None — DAILY_DD_SWITCH" in out
+    assert ">>> P ada_pullback_2h bybit_portfolio [bybit/recommend]: refuse None — account_mode_dry_run" in out
     assert wired["exec"] == [] and db.trade_writes == [] and db.package_writes == []
 
 
@@ -437,3 +462,108 @@ def test_atr_from_candles():
     c = _candles(20)
     assert lra.atr_from_candles(c) == pytest.approx(2.0)
     assert lra.atr_from_candles(pd.DataFrame()) is None
+
+
+# ------------------------------------------- could_not_look, readback, pings
+
+def test_could_not_look_retries_every_cycle_and_flags_once_after_three(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    wired["bybit_result"] = {"result": lra.X_COULD_NOT_LOOK, "detail": "venue read read_failed"}
+    st: Dict[str, Any] = {}
+    for cycle in range(1, 6):
+        res = _run(db, wired, state=st)
+        rec = res["accounts"][0]
+        assert rec["verdict"] == lri.V_COULD_NOT_LOOK and rec["read"] == "unknown"
+        assert rec["could_not_look_streak"] == cycle
+        assert res["exit"] == lra.EXIT_UNREADABLE
+    assert len(wired["exec"]) == 5                       # retried every cycle: no halting
+    assert len(wired["alerts"]) == 1 and "3 cycles" in wired["alerts"][0][1]
+    assert db.trade_writes == [] and db.package_writes == []
+    wired["bybit_result"] = None                         # the read recovers
+    res = _run(db, wired, state=st)
+    assert res["accounts"][0]["executed"] is True and "P|bybit_2" not in st["could_not_look"]
+
+
+def test_readback_mismatch_is_apply_failed_and_pings_once(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    wired["bybit_result"] = {"result": lra.X_APPLY_FAILED, "detail": "venue reads 0.22 after the amend"}
+    st: Dict[str, Any] = {}
+    for _ in range(3):
+        res = _run(db, wired, state=st)
+        assert res["accounts"][0]["executed"] is False and res["exit"] == lra.EXIT_FAILED
+    assert len(wired["alerts"]) == 1 and "apply_failed" in wired["alerts"][0][1]
+    assert wired["pings"] == [] and db.package_writes == []
+
+
+def test_a_refusal_on_a_real_money_account_pings_once_paper_never(wired):
+    accounts = {**ACCOUNTS, "bybit_2": {**ACCOUNTS["bybit_2"], "account_class": "real_money"},
+                "bybit_portfolio": {**ACCOUNTS["bybit_portfolio"], "account_class": "paper"}}
+    db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
+    wired["dry"].update({"bybit_2", "bybit_portfolio"})
+    st: Dict[str, Any] = {}
+    for _ in range(2):
+        lra.run(_intent(), apply=True, db=db, accounts=accounts, strategies=STRATS,
+                review_cfg={"apply_mode": "apply"}, granted={lri.MANDATE_ID}, write_log=False, state=st)
+    assert [a for a, _ in wired["alerts"]] == ["bybit_2"]
+
+
+def test_recommend_runs_never_ping_or_count_streaks(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    st: Dict[str, Any] = {}
+    res = _run(db, wired, apply=False, mode="recommend", state=st, mark=None)
+    assert res["accounts"][0]["verdict"] == lri.V_COULD_NOT_LOOK
+    assert wired["alerts"] == [] and not st.get("could_not_look")
+
+
+class _FakeAps:
+    """Seams of amend_position_sl for _exec_bybit: a venue whose stop reads
+    `after` once the modify is sent."""
+
+    def __init__(self, before, after, read_after="resolved"):
+        self.before, self.after, self.read_after, self.sent = before, after, read_after, 0
+
+    def _build_client(self, aid):
+        return object(), {"exchange": "bybit", "mode": "live"}
+
+    def _venue_state(self, client, cfg, sym, direction, oid):
+        if self.sent:
+            return {"read_state": self.read_after, "position": {"size": 1}, "venue_sl": self.after}
+        return {"read_state": "resolved", "position": {"size": 1}, "venue_sl": self.before}
+
+    def _send_modify(self, leg, **kw):
+        self.sent += 1
+        return {"ok": True}
+
+    def _tick_size(self, *a):
+        return 0.0001
+
+    @staticmethod
+    def same_level(a, b, tol):
+        return a is not None and b is not None and abs(a - b) <= tol
+
+
+@pytest.mark.parametrize("after,read_after,want", [
+    (0.2100, "resolved", "applied"),
+    (0.2200, "resolved", "apply_failed"),       # the venue still shows the old stop
+    (None, "read_failed", "apply_failed"),      # sent, but could not read it back
+])
+def test_exec_bybit_reads_the_venue_back(monkeypatch, after, read_after, want):
+    import scripts.ops.amend_position_sl as aps_mod
+
+    fake = _FakeAps(before=0.2200, after=after, read_after=read_after)
+    for name in ("_build_client", "_venue_state", "_send_modify", "_tick_size", "same_level"):
+        monkeypatch.setattr(aps_mod, name, getattr(fake, name))
+    db = _MonDB([])
+    res = lra._exec_bybit(db, {"row": _trade(1, "bybit_2")}, PKG, 0.2100, _intent())
+    assert res["result"] == want
+    assert (db.trade_writes != []) is (want == "applied")    # journal written only after a matching read-back
+
+
+def test_exec_bybit_venue_read_failure_is_could_not_look_and_sends_nothing(monkeypatch):
+    import scripts.ops.amend_position_sl as aps_mod
+
+    fake = _FakeAps(before=None, after=None)
+    for name in ("_build_client", "_venue_state", "_send_modify", "_tick_size", "same_level"):
+        monkeypatch.setattr(aps_mod, name, getattr(fake, name))
+    res = lra._exec_bybit(_MonDB([]), {"row": _trade(1, "bybit_2")}, PKG, 0.2100, _intent())
+    assert res["result"] == lra.X_COULD_NOT_LOOK and fake.sent == 0

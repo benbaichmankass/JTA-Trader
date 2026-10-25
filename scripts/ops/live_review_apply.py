@@ -17,7 +17,10 @@ script is the review's path instead:
 2. Find every account carrying the package: its open ``trades`` legs and its
    placed/filled ``prop_tickets``.
 3. For each account: ``RiskManager.approve_amend(intent, view)`` →
-   approve / clip / refuse, with a reason.
+   approve / clip / refuse / could_not_look, with a reason. ``could_not_look``
+   (a venue stop, mark, ATR, position or leg read failed) applies nothing, is
+   retried on the next cycle, and raises ONE flag after 3 consecutive cycles
+   (no halting). A tripped daily-DD switch does NOT refuse a tighten.
 4. ``apply_mode`` (``config/live_trade_review.yaml``, per account) decides
    what happens next — ``off``: nothing computed; ``recommend``: the verdict
    is recorded only; ``apply``: an approved/clipped level is handed to that
@@ -36,6 +39,12 @@ script is the review's path instead:
      * phone accounts — ``phone_trail.request_sl_tighten`` through the
        one-slot amend channel (+ ``meta.sl_floor`` so the trail re-emits it).
      * Alpaca (and anything else) — refused, ``no_amend_path`` (LTR-9).
+   Every apply is READ BACK (Bybit: the venue stop; prop VM: the ticket's
+   ``meta.sl_floor``; phone: the emitted amend); a mismatch is
+   ``apply_failed``. The first refuse / no-op / ``apply_failed`` on a
+   real-money or prop account sends ONE ping per package+account+kind
+   (PHONE-AMEND-REFUSED-1025: six silent refusals). Streaks and the once-only
+   keys live in ``runtime_logs/live_review/apply_state.json``.
 5. Every account's outcome is written back in the review row's
    ``account_reads`` / ``disposition`` shape (``comms/schema/live_review.schema.json``)
    to ``runtime_logs/live_review/applied.jsonl`` and printed; every applied
@@ -74,6 +83,8 @@ from src.runtime import live_review_intent as lri  # noqa: E402
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 APPLIED_LOG = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "applied.jsonl"
+#: could-not-look streaks + once-only alert keys, across cycles (VM-local).
+STATE_FILE = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "apply_state.json"
 _PROP_PARENT = ("placed", "filled")
 
 
@@ -279,8 +290,18 @@ def market_state(pkg: Dict[str, Any], strategies: Dict[str, Any]) -> Dict[str, A
 # Executors (each account's EXISTING path)
 # --------------------------------------------------------------------------
 
+#: Executor results. ``applied`` = the venue (or the account's own executor
+#: channel) reads the level back; ``apply_failed`` = we sent it and the
+#: read-back does not show it; ``could_not_look`` = a read failed, nothing was
+#: sent, retried next cycle; ``refused`` = the executor declined (no change).
+X_APPLIED, X_APPLY_FAILED, X_COULD_NOT_LOOK, X_REFUSED = (
+    "applied", "apply_failed", "could_not_look", "refused")
+
+
 def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
                 intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Amend ONLY this account's leg (never a sibling's), then re-read the
+    venue stop. Journal fields are written only after the read-back matches."""
     from scripts.ops import amend_position_sl as aps
     from src.utils.json_notes import dump_capped
 
@@ -288,20 +309,24 @@ def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
     aid, sym, direction = t["account_id"], str(t.get("symbol") or "").upper(), intent.direction
     client, cfg = aps._build_client(aid)
     if client is None or not cfg:
-        return {"result": "could_not_look", "detail": f"no client for {aid}"}
+        return {"result": X_COULD_NOT_LOOK, "detail": f"no exchange client for {aid}"}
     before = aps._venue_state(client, cfg, sym, direction, t.get("sl_order_id"))
     if before["read_state"] != "resolved" or before["position"] is None or before["venue_sl"] is None:
-        return {"result": "could_not_look", "detail": f"venue read {before.get('read_state')}", "venue": before}
-    if lri.is_looser(direction, level, before["venue_sl"]):
-        return {"result": "refused", "detail": f"venue stop {before['venue_sl']} already tighter"}
-    qty = _f(t.get("position_size"))
-    sent = aps._send_modify(t, sl=level, side=direction, qty=qty,
-                            cur_sl=_f(pkg.get("sl")), cur_tp=_f(pkg.get("tp")))
+        return {"result": X_COULD_NOT_LOOK, "detail": f"venue read {before.get('read_state')}"
+                f" position={before.get('position') is not None} venue_sl={before.get('venue_sl')}"}
+    if not lri.is_tighter(direction, level, before["venue_sl"]):
+        return {"result": X_REFUSED, "detail": f"resting venue stop {before['venue_sl']} is already at or "
+                                               f"inside {level}"}
+    sent = aps._send_modify(t, sl=level, side=direction, qty=_f(t.get("position_size")),
+                            cur_sl=_f(t.get("stop_loss")) or _f(pkg.get("sl")), cur_tp=_f(pkg.get("tp")))
     after = aps._venue_state(client, cfg, sym, direction, t.get("sl_order_id"))
     tick = aps._tick_size(client, cfg, sym)
     tol = (tick / 2.0) if tick else max(level * 1e-6, 1e-9)
-    if not (after["read_state"] == "resolved" and aps.same_level(after.get("venue_sl"), level, tol)):
-        return {"result": "not_verified", "detail": f"venue reads {after.get('venue_sl')!r}", "send": sent}
+    if after["read_state"] != "resolved":
+        return {"result": X_APPLY_FAILED, "detail": "sent, but the venue read-back failed", "send": sent}
+    if not aps.same_level(after.get("venue_sl"), level, tol):
+        return {"result": X_APPLY_FAILED, "detail": f"venue reads {after.get('venue_sl')!r} after the amend",
+                "send": sent}
     now = datetime.now(timezone.utc).isoformat()
     notes = _notes(t.get("notes"))
     amends = notes.get("sl_amends") if isinstance(notes.get("sl_amends"), list) else []
@@ -310,12 +335,28 @@ def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
                    "from": _f(t.get("stop_loss")), "to": level,
                    "venue_before": before.get("venue_sl"), "venue_after": after.get("venue_sl")})
     notes["sl_amends"] = amends[-10:]
+    # THIS account's applied level: the order monitor never trails this leg
+    # looser than it (order_monitor._apply_update -> held_by_floor).
     notes["sl_floor"] = {"level": level, "source": lri.PROVENANCE, "review_id": intent.review_id, "at": now}
     db.update_trade(int(t["id"]), {"stop_loss": level, "notes": dump_capped(notes, 2000)})
-    return {"result": "applied", "venue_after": after.get("venue_sl")}
+    return {"result": X_APPLIED, "venue_after": after.get("venue_sl")}
+
+
+def _ticket_meta(ticket_id: str) -> Optional[Dict[str, Any]]:
+    from src.prop import prop_journal
+    from src.prop.phone_trail import _meta
+
+    conn = prop_journal._connect(read_only=True)
+    try:
+        r = conn.execute("SELECT meta FROM prop_tickets WHERE ticket_id = ?", (ticket_id,)).fetchone()
+        return _meta(r["meta"]) if r is not None else None
+    finally:
+        conn.close()
 
 
 def _exec_prop_vm(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Record THIS ticket's floor; the VM executor's trail tightens to it
+    through its own guards. Read-back: the ticket's ``meta.sl_floor``."""
     from src.prop import prop_journal
     from src.prop.phone_trail import _cas, _meta
 
@@ -324,30 +365,40 @@ def _exec_prop_vm(leg: Dict[str, Any], level: float, intent: lri.LiveReviewInten
     try:
         r = conn.execute("SELECT meta, status FROM prop_tickets WHERE ticket_id = ?",
                          (tk["ticket_id"],)).fetchone()
-        if r is None or r["status"] not in _PROP_PARENT:
-            return {"result": "refused", "detail": "ticket no longer placed/filled"}
+        if r is None:
+            return {"result": X_COULD_NOT_LOOK, "detail": "ticket not readable"}
+        if r["status"] not in _PROP_PARENT:
+            return {"result": X_REFUSED, "detail": f"ticket is {r['status']}, not placed/filled"}
         m = _meta(r["meta"])
         m["sl_floor"] = {"level": level, "source": lri.PROVENANCE, "review_id": intent.review_id,
                          "bar": intent.bar_ts, "mandate": intent.mandate,
                          "at": datetime.now(timezone.utc).isoformat()}
-        ok = _cas(conn, tk["ticket_id"], r["meta"], m)
+        _cas(conn, tk["ticket_id"], r["meta"], m)
     finally:
         conn.close()
-    # The VM executor's next trail step tightens to the floor; that venue
-    # confirmation arrives as its own ``amend`` report, not here.
-    return {"result": "floor_set" if ok else "not_verified",
-            "detail": "VM trail tightens to meta.sl_floor next step" if ok else "concurrent write"}
+    back = lri.sl_floor_from(_ticket_meta(tk["ticket_id"]))
+    if back is None or abs(back - level) > max(level * 1e-9, 1e-12):
+        return {"result": X_APPLY_FAILED, "detail": f"ticket floor reads {back!r} after the write"}
+    # The terminal's own confirmation arrives as the executor's `amend` report.
+    return {"result": X_APPLIED, "detail": "meta.sl_floor recorded; the VM trail steps the terminal stop to it"}
 
 
 def _exec_phone(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
-    from src.prop.phone_trail import request_sl_tighten
+    """Publish through the one-slot amend channel. Read-back: the ticket's
+    emitted amend carries this level. The phone's own verified result comes
+    back through ``record_amend_result`` (its failures ping there)."""
+    from src.prop.phone_trail import KEY, request_sl_tighten
 
     tk = leg["row"]
     r = request_sl_tighten(tk["account_id"], tk["ticket_id"], level,
                            reason=f"mandate {intent.mandate}", review_id=intent.review_id)
-    if r.get("ok"):
-        return {"result": "amend_emitted", "amend_id": r.get("amend_id"), "sl": r.get("sl")}
-    return {"result": "floor_set" if r.get("floor_recorded") else "refused", "detail": r.get("why")}
+    if not r.get("ok"):
+        return {"result": X_REFUSED, "detail": r.get("why"), "floor_recorded": r.get("floor_recorded")}
+    am = ((_ticket_meta(tk["ticket_id"]) or {}).get(KEY) or {}).get("amend") or {}
+    if am.get("id") != r.get("amend_id") or _f(am.get("sl")) != _f(r.get("sl")):
+        return {"result": X_APPLY_FAILED, "detail": f"emitted amend reads {am!r}"}
+    return {"result": X_APPLIED, "amend_id": r.get("amend_id"), "sl": r.get("sl"),
+            "detail": "amend emitted; the phone verifies it against the venue before any click"}
 
 
 def _ping(pkg: Dict[str, Any], account_id: str, level: float, intent: lri.LiveReviewIntent) -> None:
@@ -362,6 +413,36 @@ def _ping(pkg: Dict[str, Any], account_id: str, level: float, intent: lri.LiveRe
         print(f">>> live-review-apply: trade-update ping failed (amend stands): {exc}")
 
 
+def _alert(pkg: Dict[str, Any], account_id: str, line: str) -> None:
+    """ONE ping for a refuse / no-op / mismatch / repeated could-not-look on a
+    real-money or prop account (PHONE-AMEND-REFUSED-1025: six silent refusals)."""
+    try:
+        from src.runtime.execution_diagnostics import enqueue_trade_update
+
+        enqueue_trade_update(symbol=pkg.get("symbol") or "?", account=account_id,
+                             strategy=pkg.get("strategy_name"), priority="high",
+                             changes=[f"⚠️ live-review amend NOT applied: {line}"])
+    except Exception as exc:  # noqa: BLE001
+        print(f">>> live-review-apply: alert ping failed: {exc}")
+
+
+def _load_state() -> Dict[str, Any]:
+    try:
+        return json.loads(STATE_FILE.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_state(st: Dict[str, Any]) -> None:
+    try:
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = STATE_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(st, default=str))
+        tmp.replace(STATE_FILE)
+    except OSError as exc:
+        print(f">>> live-review-apply: state write failed: {exc}")
+
+
 # --------------------------------------------------------------------------
 # Core
 # --------------------------------------------------------------------------
@@ -369,26 +450,44 @@ def _ping(pkg: Dict[str, Any], account_id: str, level: float, intent: lri.LiveRe
 def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         accounts: Optional[Dict[str, Any]] = None, strategies: Optional[Dict[str, Any]] = None,
         review_cfg: Optional[Dict[str, Any]] = None, granted: Optional[set] = None,
-        write_log: bool = True) -> Dict[str, Any]:
+        write_log: bool = True, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """One apply cycle for one intent. ``state`` (per package+account
+    could-not-look streaks and the once-only alert keys) is loaded from and
+    saved to :data:`STATE_FILE` on an ``apply`` run when not passed in; a
+    dry run never writes it."""
     db = db or _open_db()
     accounts = accounts if accounts is not None else _accounts()
     strategies = strategies if strategies is not None else _strategies()
     review_cfg = review_cfg if review_cfg is not None else lri.load_config()
+    persist = apply and state is None
+    st = state if state is not None else (_load_state() if apply else {})
     out: Dict[str, Any] = {"intent": intent.to_dict(), "apply": apply, "accounts": [],
-                           "exit": EXIT_OK, "package_sl_moved": False}
+                           "exit": EXIT_OK, "package_sl_moved": False, "flags": []}
     pkg = _get_package(db, intent.order_package_id)
     if not pkg or pkg.get("status") != "open":
         out.update(exit=EXIT_REFUSED, detail=f"package {intent.order_package_id} not open")
         return out
     mandate_ok = bool(intent.mandate) and intent.mandate in (granted if granted is not None else _granted_mandates())
     execution = str((strategies.get(pkg.get("strategy_name")) or {}).get("execution") or "live")
+    streaks = st.setdefault("could_not_look", {})
+    alerted = st.setdefault("alerted", {})
     trade_applied: Dict[str, float] = {}
     n_trade_legs = 0
+
+    def alert_once(aid: str, cls_money: bool, kind: str, line: str) -> None:
+        key = f"{intent.order_package_id}|{aid}|{kind}"
+        if not (apply and cls_money) or alerted.get(key):
+            return
+        alerted[key] = datetime.now(timezone.utc).isoformat()
+        out["flags"].append({"account_id": aid, "kind": kind, "line": line})
+        _alert(pkg, aid, line)
+
     for leg in gather_legs(db, pkg):
         aid = leg["account_id"]
         rec: Dict[str, Any] = {"account_id": aid, "leg_kind": leg["kind"]}
         if leg["kind"] == "prop_unreadable":
-            rec.update(account_class="prop", verdict="refuse", level=None, reason=lri.R_COULD_NOT_LOOK,
+            v = lri.AmendVerdict(aid, lri.V_COULD_NOT_LOOK, None, f"{lri.R_COULD_NOT_LOOK}:prop_tickets")
+            rec.update(account_class="prop", verdict=v.verdict, level=None, reason=v.reason,
                        read="unknown", evidence=leg.get("error"))
             out["accounts"].append(rec)
             out["exit"] = max(out["exit"], EXIT_UNREADABLE)
@@ -397,50 +496,77 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             n_trade_legs += 1
         cfg = accounts.get(aid) or {}
         cls = account_class(aid, cfg) if cfg else "other"
+        money = str(cfg.get("account_class") or "").lower() in ("real_money", "prop") or cls in ("prop_vm", "phone")
         mode = lri.apply_mode_for(aid, review_cfg)
         rec.update(account_class=cls, apply_mode=mode,
                    trade_id=(leg["row"].get("id") if leg["kind"] == "trade" else None),
                    ticket_id=(leg["row"].get("ticket_id") if leg["kind"] == "ticket" else None))
         if mode == "off":
-            v = lri.AmendVerdict(aid, "refuse", None, lri.R_APPLY_OFF)
+            v = lri.AmendVerdict(aid, lri.V_REFUSE, None, lri.R_APPLY_OFF)
         elif not cfg:
-            v = lri.AmendVerdict(aid, "refuse", None, f"{lri.R_COULD_NOT_LOOK}:account_not_in_accounts_yaml")
+            v = lri.AmendVerdict(aid, lri.V_COULD_NOT_LOOK, None,
+                                 f"{lri.R_COULD_NOT_LOOK}:account_not_in_accounts_yaml")
         else:
             view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
                                         leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"))
             v = _risk_manager(aid, cfg).approve_amend(intent, view)
             if v.ok and cls in ("alpaca", "other"):
-                v = lri.AmendVerdict(aid, "refuse", None, lri.R_NO_PATH)
-        rec.update(verdict=v.verdict, level=v.level, reason=v.reason, read=lri.account_read(v),
-                   evidence=f"approve_amend:{v.verdict}:{v.reason}")
+                v = lri.AmendVerdict(aid, lri.V_REFUSE, None, lri.R_NO_PATH)
+        result: Optional[str] = None
         if v.ok and mode == "apply" and apply:
             if not mandate_ok:
-                rec.update(executed=False, executor={"result": "refused",
-                                                     "detail": f"mandate {intent.mandate!r} not granted"})
-                out["exit"] = max(out["exit"], EXIT_REFUSED)
-            else:
-                if cls == "bybit":
-                    res = _exec_bybit(db, leg, pkg, v.level, intent)
-                elif cls == "prop_vm":
-                    res = _exec_prop_vm(leg, v.level, intent)
-                else:  # phone
-                    res = _exec_phone(leg, v.level, intent)
-                rec.update(executed=res.get("result") in ("applied", "floor_set", "amend_emitted"),
-                           executor=res)
-                if res.get("result") == "applied":
-                    trade_applied[str(leg["row"].get("id"))] = v.level
-                if rec["executed"]:
+                res = {"result": X_REFUSED, "detail": f"mandate {intent.mandate!r} not granted"}
+            elif cls == "bybit":
+                res = _exec_bybit(db, leg, pkg, v.level, intent)
+            elif cls == "prop_vm":
+                res = _exec_prop_vm(leg, v.level, intent)
+            else:  # phone
+                res = _exec_phone(leg, v.level, intent)
+            result = res.get("result")
+            rec["executor"] = res
+            rec["executed"] = result == X_APPLIED
+            if result == X_COULD_NOT_LOOK:
+                # A read failed at the venue: the verdict becomes could_not_look.
+                v = lri.AmendVerdict(aid, lri.V_COULD_NOT_LOOK, None, f"{lri.R_COULD_NOT_LOOK}:{res.get('detail')}")
+        rec.update(verdict=v.verdict, level=v.level, reason=v.reason, read=lri.account_read(v),
+                   evidence=f"approve_amend:{v.verdict}:{v.reason}")
+
+        # -- the four verdicts, never collapsed --------------------------------
+        skey = f"{intent.order_package_id}|{aid}"
+        if v.verdict == lri.V_COULD_NOT_LOOK:
+            n = int(streaks.get(skey) or 0) + (1 if apply else 0)
+            if apply:
+                streaks[skey] = n
+            rec["could_not_look_streak"] = n
+            if apply and n >= lri.COULD_NOT_LOOK_FLAG_AFTER:
+                # ONE red flag; the next cycle still retries (no halting).
+                alert_once(aid, True, "could_not_look",
+                           f"could not look {n} cycles in a row ({v.reason}); still retrying")
+            out["exit"] = max(out["exit"], EXIT_UNREADABLE)
+        else:
+            if apply:
+                streaks.pop(skey, None)
+            if v.verdict == lri.V_REFUSE:
+                if apply and mode == "apply" and rec["read"] != "no_action":
+                    alert_once(aid, money, "refuse", f"refused by {aid}'s risk manager: {v.reason}")
+            elif v.verdict in (lri.V_APPROVE, lri.V_CLIP):
+                if result == X_APPLIED:
                     rec["read"] = "applied"
+                    if leg["kind"] == "trade":
+                        trade_applied[str(leg["row"].get("id"))] = v.level
                     _ping(pkg, aid, v.level, intent)
-                elif res.get("result") == "could_not_look":
-                    out["exit"] = max(out["exit"], EXIT_UNREADABLE)
-                else:
+                elif result == X_APPLY_FAILED:
+                    alert_once(aid, money, "apply_failed", f"apply_failed: {rec['executor'].get('detail')}")
                     out["exit"] = max(out["exit"], EXIT_FAILED)
+                elif result == X_REFUSED:
+                    alert_once(aid, money, "noop", f"not applied: {rec['executor'].get('detail')}")
+                    out["exit"] = max(out["exit"], EXIT_REFUSED)
         out["accounts"].append(rec)
 
     # The shared package stop: moved only when EVERY trade leg applied the SAME
     # level (live = mirror identical whenever every account agrees). Otherwise
-    # each applied leg is held by its own sl_floor and the trail keeps working.
+    # each applied leg is held at ITS OWN applied level (notes.sl_floor) and the
+    # trail keeps working for the untouched legs -- account-scoped execution.
     levels = set(trade_applied.values())
     if n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1:
         lvl = levels.pop()
@@ -461,17 +587,18 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         "disposition": {"route": "auto_applied" if applied_any else "recommended",
                         "mandate": intent.mandate if applied_any else None, "action_issue": None,
                         "applied_at": datetime.now(timezone.utc).isoformat() if applied_any else None,
-                        "verified_readback": (all(a.get("executor", {}).get("result") == "applied"
-                                                  for a in out["accounts"]
-                                                  if a.get("executed") and a.get("account_class") == "bybit")
+                        "verified_readback": (all((a.get("executor") or {}).get("result") == X_APPLIED
+                                                  for a in out["accounts"] if a.get("executor"))
                                               if applied_any else None)},
     }
+    if persist:
+        _save_state(st)
     if write_log and apply:
         try:
             APPLIED_LOG.parent.mkdir(parents=True, exist_ok=True)
             with APPLIED_LOG.open("a") as fh:
-                fh.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), **out["writeback"]},
-                                    default=str) + "\n")
+                fh.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), **out["writeback"],
+                                     "flags": out["flags"]}, default=str) + "\n")
         except OSError as exc:
             out["writeback_error"] = str(exc)
     return out

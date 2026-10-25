@@ -890,34 +890,20 @@ class RiskManager:
         the package level and each account decides inside its own bounds).
 
         ``intent`` is a ``LiveReviewIntent``, ``account`` this account's
-        ``AmendAccountView``. Returns an ``AmendVerdict`` — approve / clip /
-        refuse, with a reason. It enforces tighten-only, the ``min_buffer_atr``
-        noise floor (the larger of the intent's and this account's own
-        ``risk.live_review_min_buffer_atr``), one amend per package per closed
-        bar, the account mode, the strategy's ``execution: shadow`` and the
-        daily-DD switch ("keep open, block new": a tripped account's open
-        positions keep their SL/TP until the reset). Never a halt; never
-        writes ``mode``; a refusal is for this intent on this account only."""
+        ``AmendAccountView``. Returns an ``AmendVerdict`` -- approve / clip /
+        refuse / could_not_look, with a reason. It enforces tighten-only, the
+        ``min_buffer_atr`` noise floor (the larger of the intent's and this
+        account's own ``risk.live_review_min_buffer_atr``), one amend per
+        package per closed bar, the account mode and the strategy's
+        ``execution: shadow``. The daily-DD switch is NOT consulted: a tighten
+        only reduces risk, so it has ``evaluate(..., opening=False)``
+        semantics (manager decision 2026-10-25). Never a halt; never writes
+        ``mode``; a refusal is for this intent on this account only."""
         from src.runtime import live_review_intent as _lri
 
-        # The switch as the trader LAST OBSERVED it (no observe() here: an
-        # amend gate must not move the switch's own state or send its alerts).
-        dd_blocks: Optional[bool]
-        if not self.dd_switch.cfg.armed:
-            dd_blocks = False
-        else:
-            try:
-                blocks = self.dd_switch.blocks_new_entries()
-                read = (self.dd_switch.status() or {}).get("read_state")
-                dd_blocks = None if (not blocks and read in (
-                    _dd.READ_UNREADABLE, _dd.READ_NOT_OBSERVED)) else blocks
-            except Exception as exc:  # noqa: BLE001 — could not look, never "clear"
-                logger.warning("approve_amend: dd switch read failed for %s: %s",
-                               self.account_id, exc)
-                dd_blocks = None
         own = getattr(self, "live_review_min_buffer_atr", None)
         return _lri.decide_amend(intent, account, dry_run=self.dry_run,
-                                 dd_blocks=dd_blocks, account_min_buffer_atr=own)
+                                 account_min_buffer_atr=own)
 
     def note_live_equity(self, equity_usd: Optional[float]) -> None:
         """Feed this dispatch's live TOTAL equity to the daily-DD switch."""
