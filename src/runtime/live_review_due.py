@@ -189,7 +189,7 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     idx = _review_index(reviews)
     floor_accounts = set((cfg["events"].get("daily_floor") or {}).get("accounts") or [])
     exempt = set(cfg.get("cooldown_exempt") or [])
-    stale_after = timedelta(minutes=float(cfg.get("stale_telemetry_minutes", 30)))
+    stale_after = timedelta(minutes=float(cfg.get("telemetry_max_age_minutes", 30)))
     default_tf = str(cfg.get("default_timeframe", "2h"))
 
     due: List[Dict[str, Any]] = []

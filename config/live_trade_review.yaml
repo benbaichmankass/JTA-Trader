@@ -14,7 +14,7 @@ due:
   default_timeframe: 2h
   # An open telemetry row not refreshed for this long is still evaluated but
   # flagged `telemetry_stale` (the exit loop writes it every pass).
-  stale_telemetry_minutes: 30
+  telemetry_max_age_minutes: 30
   events:
     r_milestone:
       first_r: 1.0      # first level; then every `step_r`

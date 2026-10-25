@@ -7,7 +7,6 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
-import pytest
 import yaml
 
 from src.runtime import live_review_due as lrd
@@ -108,6 +107,8 @@ def test_timeframe_from_suffix():
     assert lrd.timeframe_seconds("weird", "2h") == 7200
 
 
+# collapsed-state: measured -- fixture rows only need the measured peak state; the
+# production reader (live_review_due) does not branch on peak_state at all.
 def _db(path, rows):
     c = sqlite3.connect(path)
     c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT)")
