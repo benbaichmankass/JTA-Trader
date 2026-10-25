@@ -2,17 +2,19 @@
   "id": "RESEARCH-OPS-20261025-2047",
   "title": "Research-ops pass 2026-10-25 20:47Z",
   "phase": "research",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_0181bMMnkm5RpJ5iGYmwRmSb",
   "model": null,
   "ceiling_usd": 5,
-  "spend_usd": null,
+  "spend_usd": 2.2,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20171
+  ],
   "blocked_on": [],
-  "note": "[lane session_0181bMMnkm5RpJ5iGYmwRmSb] 20:47Z pass. Results since 15:00Z read (22 units: 9a7e-01..04, 1d5c-08..12, 4b82-20/21, 001, 008, 3947-03 FAIL; 3947-19 INDETERMINATE). Authored RQ-20261025-916f-01 (non-tree learner follow-up to HGB indeterminate). Closed 2 stale authoring nodes (P1-Q12 eba2-03 FAIL, P5-GATE-BRK-read all-PASS records exist). Repointed blocker ref on RQ-20261011-9da8-03. Stranded-PR list + grade runs read: none stranded. Record comms/research/ops/20261025T2100Z.json.",
-  "updated_at": "2026-10-25T20:58:27Z",
+  "note": "[lane session_0181bMMnkm5RpJ5iGYmwRmSb] 20:47Z pass. Results since 15:00Z read (22 units: 9a7e-01..04, 1d5c-08..12, 4b82-20/21, 001, 008, 3947-03 FAIL; 3947-19 INDETERMINATE). Authored RQ-20261025-916f-01 (non-tree learner follow-up to HGB indeterminate). Closed 2 stale authoring nodes (P1-Q12 eba2-03 FAIL, P5-GATE-BRK-read all-PASS records exist). Repointed blocker ref on RQ-20261011-9da8-03. Stranded-PR list + grade runs read: none stranded. Record comms/research/ops/20261025T2100Z.json.  HELD PR #20171 (unvouchable_paths): manager merge needed; merge-slot claim committed.",
+  "updated_at": "2026-10-25T21:09:41Z",
   "updated_by": "session_0181bMMnkm5RpJ5iGYmwRmSb",
   "roadmap": [
     "L-LADDER"
@@ -20,6 +22,11 @@
   "writeback": {
     "roadmap": "none: operations pass",
     "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261025-916f-01 dispatched and its result lands on main; queue_replenish authoring queue reads 34 or fewer",
+    "how_to_check": "ls research/results/RQ-20261025-916f-01; python3 scripts/research/queue_replenish.py --authoring-queue | python3 -c \"import json,sys;print(len(json.load(sys.stdin)))\"",
+    "due_by": "2026-11-01T00:00Z"
   },
   "_seq": 694
 }
