@@ -1,7 +1,7 @@
 id: RQ-20261016-65ff-27
 title: 'Drift remediation (PI-20261016-P3PFA1GK-0001): is the persistent drift flag on the same 9 heads an INSTRUMENT artifact (scores pooled across model
   versions / input mix) or model decay?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -93,3 +93,17 @@ related:
 - RQ-20261016-65ff-24
 - P2-AI-REGIME-BACKLOG-1016
 last_dispatched_at: '2026-10-25T12:41:11+00:00'
+grading:
+  attested: RULE-RQ2026101665ff27-DRIFT-ARTIFACT
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ2026101665ff27-DRIFT-ARTIFACT
+  evidence:
+  - research/results/RQ-20261016-65ff-27/40194255231.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -1,6 +1,6 @@
 id: RQ-20261023-1d5c-11
 title: 'Prop pace trend at 4h on six alt perps: SLOWER Donchian (40/55) against 20, the entry-speed axis 4b82-06 does not vary'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -114,3 +114,16 @@ related:
 - RQ-20261010-419b-03
 - RQ-20261022-4b82-06
 last_dispatched_at: '2026-10-25T16:31:11+00:00'
+grading:
+  attested: RULE-RQ202610231D5C11-TR4H-A-SLOW
+  auto: true
+  decision_rule_id: RULE-RQ202610231D5C11-TR4H-A-SLOW
+  evidence:
+  - research/results/RQ-20261023-1d5c-11/40212114103.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

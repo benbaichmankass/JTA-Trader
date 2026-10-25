@@ -2,7 +2,7 @@ id: RQ-20261024-9a7e-04
 title: 'EXIT-GIVEBACK-PREDICTOR-GATE: on trend_donchian_ada_4h, does tightening the trail ONLY on trades a vol-controlled
   giveback predictor flags (P>=0.6 at bar 6) beat the declared exit, the same tightening on every trade, AND the same tightening
   on a matched-rate random draw, net R in 5 of 6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -141,3 +141,16 @@ what_it_does_not_do: 'Edits no config (no src/, no config/), places no order. Ou
   stop price, not at a gap: the control arms share the flatter but A does not, so MT vs A is biased toward the lever and MT
   vs RT is not.'
 last_dispatched_at: '2026-10-25T17:31:00+00:00'
+grading:
+  attested: RULE-9A7E-04-TREND-DONCHIAN-ADA-4H
+  auto: true
+  decision_rule_id: RULE-9A7E-04-TREND-DONCHIAN-ADA-4H
+  evidence:
+  - research/results/RQ-20261024-9a7e-04/40216893950.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
