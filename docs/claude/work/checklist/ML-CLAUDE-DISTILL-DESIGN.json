@@ -1,0 +1,22 @@
+{
+  "id": "ML-CLAUDE-DISTILL-DESIGN",
+  "title": "Design doc: turn Claude's real-time trade analyses/decisions and post-trade grades/reviews into ML training data (labels, features, teacher signals) so the models learn from Claude's wider context",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "design lane (manager dispatch)",
+  "lane": "session_01RZCFHTX8qJV4rvexgkqeko",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-25 ~14:02Z in chat, verbatim: \"Ok, I also just want to make sure that we have a clear and robust mechanism in place for using Claude's realtime analyses and decisions, as well as the post trade grading and reviews, to train our models that we're building, so that they also learn from Claude's wider context and broader knowledge - let me know how we plan to migrate Claude's outputs into the ml frameworks\". MEASURED by manager session_01SrYqLY4Ui9RKns12r2zthj on main: comms/claude_strategy_scores.jsonl has 4348 per-order-package grades and comms/claude_trade_scores.jsonl has 0 rows past its header; neither is read by anything under ml/ (consumers: src/runtime/insights/data_sources.py, src/web/api/routers/order_packages.py). ml/configs/baseline-setup-quality-audit.yaml's description says it uses 'the post-hoc reviewer's setup grades' but it reads the pipeline's signal_audit.jsonl patterns: description drift to fix. Design doc first; build only after operator approval. Dispatched 2026-10-25 14:05Z by session_01SrYqLY4Ui9RKns12r2zthj: fresh Opus lane (ML design judgment: leakage, label validity), ceiling $10, doc only (docs/plans/ml-claude-distillation-DESIGN.md), PR held for operator review.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-25T14:05:48Z",
+  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 655
+}
