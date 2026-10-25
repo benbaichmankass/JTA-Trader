@@ -1,0 +1,68 @@
+{
+  "_comment": "Schema for comms/live_review/reviews.jsonl and comms/live_review/outcomes.jsonl (LTR-2-RECORDS; design docs/plans/live-trade-review-DESIGN.md sections 3, 5, 8; ML fields from docs/plans/ml-claude-distillation-DESIGN.md section 4.4). APPEND-ONLY JSONL, one JSON object per line; both files start EMPTY (zero bytes); a leading {\"_meta\": ...} line is allowed and skipped. CANONICAL SOURCE: trade_journal.db order_packages / trades, joined on `order_package_id` (reviews also carry `trade_id` = trades.id). These files are a PROJECTION of review judgement keyed to that source, never a second copy of trade state; the numbers in `state` are what the reviewer was shown at `info_cutoff_at`, not a re-derivation. COLLAPSED-STATE RULE: an unmeasured value is null, never 0; `null` and 0 are different facts. Validated by scripts/ci/check_live_review_records.py (guard `live-review-records-guard`). Operator Q1 (2026-10-25): the APPLY bound is 0.25R; every review also records the SHADOW 0.5R arm so the two can be compared.",
+  "schema_version": 1,
+  "enums": {
+    "action": ["hold", "tighten_sl", "tp_revise", "partial_close", "close", "flag_mechanics", "file_hypothesis", "no_recommendation"],
+    "route": ["auto_applied", "recommended", "operator_ask", "none"],
+    "confidence": ["measured", "suggestive", "anecdote"],
+    "basis": ["preference_within_bound", "ev_positive", "operator_ask", "insufficient_n", "mechanics", "default_hold", "record_only"],
+    "peak_provenance": ["measured", "estimated", "fabricated", "unverified"],
+    "mechanics_verdict": ["match", "mismatch", "could_not_look"],
+    "pnl_provenance": ["measured", "estimated", "fabricated", "unverified"],
+    "account_read": ["would_apply", "refused_by_account_risk", "unknown", "no_action"]
+  },
+  "bounds": {"apply_bound_r": 0.25, "shadow_bound_r": 0.5},
+  "reviews": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema_version", "review_id", "reviewed_at", "order_package_id", "trade_id", "leg", "accounts", "trigger", "info_cutoff_at", "state", "features_at_review", "mechanics", "options", "outcome_table_source", "recommendation", "judge_prior", "applied", "apply_policy", "shadow_policy", "context_flags", "account_reads", "disposition", "model", "session", "prompt_sha", "skill_sha"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [1]},
+      "review_id": {"type": "string", "pattern": "^LR-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "reviewed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "order_package_id": {"type": "string", "minLength": 1},
+      "trade_id": {"type": ["integer", "null"]},
+      "leg": {"type": "string", "minLength": 1},
+      "accounts": {"type": "array", "items": {"type": "string"}},
+      "trigger": {"type": "object", "required": ["event", "level", "l0_snapshot_at"], "properties": {"event": {"type": "string"}, "level": {"type": ["number", "null"]}, "l0_snapshot_at": {"type": ["string", "null"]}}},
+      "info_cutoff_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "state": {"type": "object", "required": ["open_r", "peak_r", "peak_provenance", "giveback_r", "bars_held", "sl", "tp", "atr_now_over_entry", "regime_cell_now", "regime_cell_entry"], "properties": {"open_r": {"type": ["number", "null"]}, "peak_r": {"type": ["number", "null"]}, "peak_provenance": {"type": "string", "enum_ref": "peak_provenance"}, "giveback_r": {"type": ["number", "null"]}, "bars_held": {"type": ["integer", "null"]}, "sl": {"type": ["number", "null"]}, "tp": {"type": ["number", "null"]}, "atr_now_over_entry": {"type": ["number", "null"]}, "regime_cell_now": {"type": ["string", "null"]}, "regime_cell_entry": {"type": ["string", "null"]}}},
+      "features_at_review": {"type": "object", "values": {"type": ["number", "null"]}},
+      "mechanics": {"type": "object", "required": ["verdict", "evidence"], "properties": {"verdict": {"type": "string", "enum_ref": "mechanics_verdict"}, "evidence": {"type": ["string", "null"]}}},
+      "options": {"type": "array", "items": {"type": "object", "required": ["action", "n", "mean_r", "sd_r", "worst_r", "net"], "properties": {"action": {"type": "string", "enum_ref": "action"}, "level": {"type": ["number", "null"]}, "n": {"type": ["integer", "null"], "minimum": 0}, "mean_r": {"type": ["number", "null"]}, "sd_r": {"type": ["number", "null"]}, "worst_r": {"type": ["number", "null"]}, "net": {"type": ["boolean", "null"]}}}},
+      "outcome_table_source": {"type": ["string", "null"]},
+      "recommendation": {"type": "object", "required": ["action", "level", "level_atr", "ev_delta_r", "worst_case_delta_r", "basis", "confidence"], "properties": {"action": {"type": "string", "enum_ref": "action"}, "level": {"type": ["number", "null"]}, "level_atr": {"type": ["number", "null"]}, "ev_delta_r": {"type": ["number", "null"]}, "worst_case_delta_r": {"type": ["number", "null"]}, "basis": {"type": "string", "enum_ref": "basis"}, "confidence": {"type": "string", "enum_ref": "confidence"}}},
+      "judge_prior": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+      "applied": {"type": "boolean"},
+      "apply_policy": {"type": "object", "required": ["bound_r", "within_bound", "tighten_r"], "properties": {"bound_r": {"type": "number", "enum": [0.25]}, "within_bound": {"type": ["boolean", "null"]}, "tighten_r": {"type": ["number", "null"], "minimum": 0}}},
+      "shadow_policy": {"type": "object", "required": ["bound_r", "within_bound", "would_apply", "tighten_r"], "properties": {"bound_r": {"type": "number", "enum": [0.5]}, "within_bound": {"type": ["boolean", "null"]}, "would_apply": {"type": ["boolean", "null"]}, "tighten_r": {"type": ["number", "null"], "minimum": 0}}},
+      "context_flags": {"type": "array", "items": {"type": "string"}},
+      "account_reads": {"_comment": "LTR-3 (operator structural directive 2026-10-25): the recommendation is a PACKAGE-level intent; each account carrying the package applies it only through its own risk layer/executor. One entry per account, read-only.", "type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["account_id", "account_class", "read", "evidence"], "properties": {"account_id": {"type": "string", "minLength": 1}, "account_class": {"type": ["string", "null"]}, "read": {"type": "string", "enum_ref": "account_read"}, "evidence": {"type": ["string", "null"]}}}},
+      "disposition": {"type": "object", "required": ["route", "mandate", "action_issue", "applied_at", "verified_readback"], "properties": {"route": {"type": "string", "enum_ref": "route"}, "mandate": {"type": ["string", "null"]}, "action_issue": {"type": ["integer", "null"]}, "applied_at": {"type": ["string", "null"]}, "verified_readback": {"type": ["boolean", "null"]}}},
+      "model": {"type": "string", "minLength": 1},
+      "session": {"type": "string", "minLength": 1},
+      "prompt_sha": {"type": ["string", "null"]},
+      "skill_sha": {"type": ["string", "null"]}
+    }
+  },
+  "outcomes": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema_version", "review_id", "order_package_id", "trade_id", "closed_at", "computed_at", "net_r", "pnl_provenance", "cf_r", "cf_r_shadow_0_5", "cf_method", "cf_provenance", "exit_reason"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [1]},
+      "review_id": {"type": "string", "pattern": "^LR-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "order_package_id": {"type": "string", "minLength": 1},
+      "trade_id": {"type": ["integer", "null"]},
+      "closed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "computed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "net_r": {"type": ["number", "null"]},
+      "pnl_provenance": {"type": "string", "enum_ref": "pnl_provenance"},
+      "cf_r": {"type": ["number", "null"]},
+      "cf_r_shadow_0_5": {"type": ["number", "null"]},
+      "cf_method": {"type": ["string", "null"]},
+      "cf_provenance": {"type": "string", "enum": ["computed"]},
+      "exit_reason": {"type": ["string", "null"]}
+    }
+  }
+}
