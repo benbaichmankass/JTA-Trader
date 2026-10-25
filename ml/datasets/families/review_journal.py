@@ -1,5 +1,11 @@
 """`review_journal` dataset family (S-AI-WS5-E).
 
+**RETIRED 2026-10-25 (CJ-0 F5)** — superseded by the planned `claude_judgments`
+family (docs/plans/ml-claude-distillation-DESIGN.md). Its source (`comms/requests`
+free text) has materialised 0 rows since 2026-05 and its manifest has been
+`.yaml.disabled` since 2026-05-19. The module and registry entry are kept so
+existing tests and history stay valid; do not write a new manifest against it.
+
 Source-of-truth: comms request artifacts written by the
 `/health-review` skill. The skill emits a JSON payload conforming
 to `comms/schema/health_review_response.template.json`; the

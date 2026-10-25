@@ -31,7 +31,7 @@
 | `trade_outcomes` | 1 (data) | Realized trade results; derived `won = pnl > 0` label; `source` (`live`/`backtest`) col + `include_backtest` flag (S-MLOPT-S7) | `src/units/`, `trade_journal.db` | `trade_journal.db::trades` (CLOSED, non-null pnl; `is_backtest=0` unless `include_backtest`) | per closed trade | outcome probability model (WS5-A onwards); backtest-augmented training (S-MLOPT-S7) |
 | `backtest_results` | 1 (data) | ⚠️ **HISTORICAL — NO PRODUCER.** The M5 `/test` writer was removed 2026-08-20; it ran one hardcoded ICT engine regardless of the strategy named and stamped `sharpe_ratio`/`total_pnl_pct`/`max_drawdown_pct` as literal `0.0`, so those columns are **FABRICATED, not measured**. Rows kept as a record. | *(none — writer removed)* | `trade_journal.db::backtest_results` | *(no longer written)* | **Do not use as evidence.** Real backtests: `/api/bot/backtests/sweeps`. |
 | `account_context` | 2 (feature/context) | Account state, funding phase, prop-firm restrictions, mission state | `src/units/accounts/`, `config/accounts.yaml` | accounts unit + per-account state | aligned to candidate evaluation | prop mission policy assist (WS5-F) |
-| `review_journal` | 1 (data) | Post-trade reviews, mistake tagging, narrative annotations | future `docs/ml/`, M7 | operator + post-trade review model | per trade close | post-trade review model (WS5-E), retraining triggers (WS8) |
+| `review_journal` **(RETIRED 2026-10-25, superseded by `claude_judgments`; 0 rows ever)** | 1 (data) | Post-trade reviews, mistake tagging, narrative annotations | future `docs/ml/`, M7 | operator + post-trade review model | per trade close | post-trade review model (WS5-E), retraining triggers (WS8) |
 
 ## Builder availability
 

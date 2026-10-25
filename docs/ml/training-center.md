@@ -321,15 +321,17 @@ When the operator runs a training session (or when a future
 session needs to retrain a baseline against fresh data), follow
 this workflow rather than reinventing:
 
-1. **Refresh the labelled feedstock.** The autonomous `/health-review`
-   skill produces per-trade `trade_decision_grades[]` for every trade
-   since the last review and persists each one — keyed by `trade_id` — to
-   `comms/claude_trade_scores.jsonl` (a durable, repo-tracked log; see
-   `comms/schema/claude_trade_scores.schema.json`). These grades are the
-   labelled training signal that the per-trade baselines (WS5-A outcome
-   probability, WS5-C setup quality, future WS5-E post-trade review,
-   WS5-F prop mission policy) consume. Run `/health-review` so the fresh
-   scores land on `main` before the training run.
+1. **Labels come from the journal, not from Claude grades.**
+   ⚠️ Corrected 2026-10-25 (CJ-0 F2): this step used to tell sessions to run
+   `/health-review` to refresh `comms/claude_trade_scores.jsonl` as "the
+   labelled training signal". That file is retired (0 rows; superseded by
+   `comms/claude_strategy_scores.jsonl`), and **nothing under `ml/` reads
+   either file** (MEASURED: `grep -rn "claude_strategy_scores\|claude_trade_scores" ml/`
+   returns nothing). The per-trade baselines (WS5-A outcome probability, WS5-C
+   setup quality, WS5-F prop mission policy) train on realized outcomes from
+   the journal. 4,127 of the 4,347 grade rows are a deterministic rubric
+   script, so they are not a Claude signal. How Claude's judgments will become
+   training data: [`docs/plans/ml-claude-distillation-DESIGN.md`](../plans/ml-claude-distillation-DESIGN.md).
 2. **Build the dataset(s) the baseline needs.** See
    [`docs/data/dataset-taxonomy.md`](../data/dataset-taxonomy.md)
    for the family roster. Each builder writes a versioned

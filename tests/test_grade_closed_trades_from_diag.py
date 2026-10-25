@@ -30,7 +30,8 @@ def test_grades_closed_real_money_only():
     assert by["pkg-8ba3"]["decision_grade"] == "C"   # conf .32 late, sl_appropriate
     assert by["pkg-9f79"]["decision_grade"] == "D"   # conf .19 should_skip
     for r in recs:
-        assert r["status"] == "closed" and r["reviewer"] == "claude"
+        assert r["status"] == "closed" and r["reviewer"] == "rubric_script"
+        assert r["author_kind"] == "rubric_script" and r["rubric_version"]
         assert r["exit_quality"] in ("sl_appropriate","tp_appropriate","premature_exit","unknown")
 
 def test_include_paper_and_since():
