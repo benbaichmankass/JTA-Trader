@@ -189,7 +189,7 @@ def _nn(x: float) -> Optional[float]:
 
 # --------------------------------------------------------------------------- the join
 def join_flow(rows: Sequence[dict], tf_min: int, imb: pd.Series, funding: pd.DataFrame, oi: pd.DataFrame,
-              *, oi_lag_min: int = 5, candles: Optional[pd.DataFrame] = None) -> List[dict]:
+              *, oi_lag_min: int = 5) -> List[dict]:
     """Add the flow_* fields to every path row of ONE leg; refuse the result if any field looks forward.
 
     Bar t's CLOSE is its open ts + tf. Funding is read at the close, OI at close - oi_lag_min. Entry-relative
