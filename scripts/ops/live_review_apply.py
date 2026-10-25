@@ -402,6 +402,9 @@ def _exec_phone(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent)
 
 
 def _ping(pkg: Dict[str, Any], account_id: str, level: float, intent: lri.LiveReviewIntent) -> None:
+    """The SL-moved ping the monitor sends on a trail move. Kind
+    ``trade-update``: ``execution_diagnostics`` routes it to the TRADES channel
+    through ``src.runtime.telegram_channels``."""
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
 
