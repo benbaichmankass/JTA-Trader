@@ -4,7 +4,7 @@
 id: RQ-20261025-002
 title: 'P4-Q2 CONFIRMATION for RQ-20261023-a1f3-17 (ppi_mom -> ES=F PASS, IC -0.287, t -3.52, n 140, one
   full-sample read): does it hold in the LATER (releases >= 2021-01-01) sub-period alone?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M28
@@ -108,3 +108,13 @@ generated:
   params:
     node: P4-Q2-ppi-es-late
 last_dispatched_at: '2026-10-25T07:01:43+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P4-Q2-ppi-es-late
+  evidence:
+  - research/results/RQ-20261025-002/40171280995.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

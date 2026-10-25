@@ -567,6 +567,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/RESEARCH-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/SYSTEM-AUDIT-PROPOSAL-2026-09-27.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/plans/live-trade-review-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-producers-milestones-2026-10-08.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ops-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/review-pack-2026-09-27.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -914,6 +915,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/m20-u50-two-of-the-three-payments-never-touched-the-surface-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-u51-the-stanza-round-trips-as-text-and-not-as-evidence-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-u52-the-netting-remeasure-is-runnable-and-under-powered-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/m20-u8-stop-attribution-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-u9-netting-close-venue-adjudication-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-what-remains-2026-08-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m30-to-m16-integration-backbone-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
