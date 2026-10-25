@@ -9,10 +9,12 @@
   "ceiling_usd": 16,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    20150
+  ],
   "blocked_on": [],
   "note": "Operator directive 2026-10-25 ~19:00Z via Manager Session 2026-10-25 (session_01UKBXozpiJicMHHyMp47MnN). Inventory: docs/audits/amend-parity-2026-10-25.md (14 accounts; every live account resolves a modify path; OANDA dry-run is the one gap). Built: src/units/accounts/alpaca_amend.py (tighten-only, readback -> apply_failed, partial-fill refuse, OCO leg ids, wedge refuse, read-only CLI), tests/test_amend_parity_guard.py, new-broker step 4b. landing: hold (Tier 3). Follow-ups on this row: (a) wire alpaca_amend.exec_trade_leg into live_review_apply.run once #20139 lands (replaces no_amend_path); (b) route the monitor trail's Alpaca modify through alpaca_amend.tighten so it gets read-back too (live-path change, needs its own OK).",
-  "updated_at": "2026-10-25T19:07:14Z",
+  "updated_at": "2026-10-25T19:10:48Z",
   "updated_by": "session_015mYJh5pY5qRCBbg9REzY5U",
   "roadmap": [
     "L-ATM"
