@@ -22,14 +22,15 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import backtest_ict_scalp as bt
-import regime_debt_matrix as rdm
-
-from src.runtime import execution_costs
-from src.units.strategies import load_strategy_config
-
-
 def run_arm(leg: str, csv: str, out: Path, arm: str) -> dict:
+    # Imported here: the sys.path inserts above must run first, and a function-level
+    # import keeps the module clean under ruff E402 without a noqa that ruff versions disagree on.
+    import backtest_ict_scalp as bt
+    import regime_debt_matrix as rdm
+
+    from src.runtime import execution_costs
+    from src.units.strategies import load_strategy_config
+
     cfg = dict(load_strategy_config()[leg])
     symbol = cfg["symbols"][0]
     fee = rdm.roundtrip_fee_bps(symbol)
