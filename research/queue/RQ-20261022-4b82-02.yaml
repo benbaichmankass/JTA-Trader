@@ -123,15 +123,13 @@ related:
 - AUTHOR-FLOOR-1022
 last_dispatched_at: '2026-10-23T14:13:15+00:00'
 grading:
-  attested: RULE-RQ20261022-4B82-02-PULLBACK-1H-DIRECTION
-  auto: true
+  auto: false
   decision_rule_id: RULE-RQ20261022-4B82-02-PULLBACK-1H-DIRECTION
   evidence:
   - research/results/RQ-20261022-4b82-02/39965645154.jsonl
-  graded_at: '2026-10-23'
-  grader: scripts/research/queue_grade.py
-  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
-    confirmatory re-run)'
-  reason: 1 row(s), all measured, all fail
-  rows: 1
-  verdict: fail
+  graded_at: '2026-10-25'
+  graded_by: RESULTS-GRADE-1025 (Tier 1; supersedes the queue_grade auto verdict fail of 2026-10-23)
+  needs_review: false
+  disposition: underpowered
+  reason: "admitted `accruing` (feasibility.source none); realised pooled n_B 4951 is below the floor for the registered 0.05 R/trade materiality bar computed from the MEASURED per-trade sd of 1.89 R (two-sample, one-sided alpha 0.05, power 0.80 => 17668 per arm). The auto verdict fail is therefore not a pass/fail: `underpowered`. Decision rule untouched."
+  verdict: indeterminate

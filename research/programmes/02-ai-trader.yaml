@@ -1462,3 +1462,20 @@ nodes:
       1: add the set to the 1h regime learner (same folds as RQ-20261014-65cc-10) and grade the LOG-LOSS gain over the
       six shared features on >= 2 of 3 symbols; a PASS feeds the P3 portfolio-overlap reads as well (programme 03 Q7).
       Data check first: the equity/DXY daily series must be in metis-market-data point-in-time, else file the data row.
+
+  # ── RESULTS-GRADE-1025 (2026-10-25) ──
+  - id: P2-RG1025-yz-longtail-eth-btc
+    goal: G1
+    theme: ml_health
+    roadmap:
+    - L-PROGRAMMES
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.25
+    after:
+    - unit: RQ-20261022-3a84-10
+      verdict: any
+    needs_authoring: 'Range-vol (yz/parkinson/rs/gk) lift on the regime head: SOL 1h PASSED (3a84-11) and its longer-tail CONFIRMATION also PASSED (c584-01, ~20k earlier bars never seen) -> a candidate-manifest
+      proposal is noted on row RESULTS-GRADE-1025 (Tier 3, nothing applied). BTC 1h FAILED (3a84-09, no clause) and ETH 15m/1h read INDETERMINATE between the pass bar and fail floor (3a84-08/-10).
+      The SOL lift appeared where the longer tail was added: author the c584-shaped longer-tail unit for ETH 1h and for BTC 1h (same arms, same pre-registered pass_if, folds >= 3), so the first test''s thin
+      history is separated from the absence of a lift. Model-family diversity: the lift is a LightGBM feature lift; pair with one non-GBDT arm per frontier-research.'
