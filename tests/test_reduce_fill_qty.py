@@ -281,3 +281,20 @@ def test_execute_pkg_open_order_reads_no_fill(monkeypatch):
     )
     assert captured["reduce_fill"] is None
     assert client.history_calls == 0
+
+
+# --------------------------------------------------------------------------
+# XRP-REDUCE-OTHER-CLOSES — the reduce audit row carries the venue orderId
+# --------------------------------------------------------------------------
+
+def test_reduce_audit_row_stamps_broker_order_id(db, monkeypatch):
+    """bybit_2 6533/6539: both reduce orders FILLED at the venue (order history
+    + closed-pnl, 2026-10-09), yet both journal rows read broker_order_id NULL
+    because the partial-close insert omitted the column the legacy insert
+    stamps. The orderId was only in notes.trade_id."""
+    _seed(db)
+    audit, notes = _write(db, monkeypatch, {
+        "state": "filled", "filled_qty": 0.839, "avg_price": None,
+    })
+    assert notes["trade_id"] == "oid-1"
+    assert audit["broker_order_id"] == "oid-1"
