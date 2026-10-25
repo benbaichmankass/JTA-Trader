@@ -1,15 +1,15 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-24T05:15:26.722022+00:00",
- "utc_date": "2026-10-24",
+ "generated_at": "2026-10-25T05:13:49.514375+00:00",
+ "utc_date": "2026-10-25",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
- "graded": 28,
+ "graded": 27,
  "verdict_reached": 3,
  "actionable": 3,
  "by_action": {
   "S1:insufficient-data": 18,
   "S1:kill": 3,
-  "S2:abstain": 7
+  "S2:abstain": 6
  },
  "question": "Per leg, graded with the instrument its STAGE calls for: Stage 2 (bybit_2/alpaca_live + mirrors) on MONEY via R4's demotion verdict; Stage 1 (bybit_1, alpaca_paper) on MECHANICS + COST FIDELITY via R5 -- never expectancy, per root CLAUDE.md's promotion ladder ('a live or paper book never establishes edge').",
  "stage2": {
@@ -21,7 +21,7 @@
   "verdict_source": "scripts/ops/r4_demotion_gate.py (R4)",
   "window": "last40",
   "since": null,
-  "n_legs": 7,
+  "n_legs": 6,
   "verdict_reached": 0,
   "actionable": 0
  },
@@ -91,9 +91,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=20, exit=7); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 2 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=21, exit=8); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=20, exit n=7; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=21, exit n=8; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -273,9 +273,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "a per-tick account-election read (e.g. the conviction_arbitration/arbitration_fanout_soak log, or a live dispatch trace) showing this leg either winning at least once, or never winning across a large contested-tick sample",
+   "n_needed": "needs 0 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=12, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (24 intent(s), 0 received, no open position) but contends its symbol on this SAME account against live sibling(s) ['trend_donchian_eth_prop'] — src/runtime/intents.py elects only ONE strategy per (account, symbol) per tick, so losing that election every time produces this exact shape without the leg ever being mechanically dead. Cannot be graded kill without a live per-tick election trace."
+   "reason": "flowing; cost fidelity insufficient_n (entry n=12, exit n=2; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -287,9 +287,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 3 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=7, exit=6); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 3 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=7, exit=7); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=7, exit n=6; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=7, exit n=7; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -343,17 +343,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 16,
+   "n_closed": 17,
    "pnl_coverage_measured": 1.0,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -26.9776,
-   "net_r_net_of_full_cost": -6.6809,
-   "r_population": 16,
+   "net_usd_measured": -20.153,
+   "net_r_net_of_full_cost": -4.3311,
+   "r_population": 17,
    "t3_windows_r": [],
    "t3_p10": -2.56135,
    "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 16 closed rows < min_trades 40"
+   "reason": "fewer than 40 closed trades on either book: 17 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -379,28 +379,6 @@
   },
   {
    "stage": "S2",
-   "account": "alpaca_live",
-   "strategy": "slv_pullback_1d",
-   "verdict_source": "scripts/ops/r4_demotion_gate.py (R4)",
-   "proposed_action": "S2:abstain",
-   "verdict_reached": false,
-   "actionable": false,
-   "r4_status": "abstain_thin",
-   "chosen_source": "real_money",
-   "n_closed": 1,
-   "pnl_coverage_measured": 1.0,
-   "coverage_floor": 0.6,
-   "min_trades": 40,
-   "net_usd_measured": -3.9568,
-   "net_r_net_of_full_cost": -1.0255,
-   "r_population": 1,
-   "t3_windows_r": [],
-   "t3_p10": -2.08126,
-   "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
-  },
-  {
-   "stage": "S2",
    "account": "bybit_2",
    "strategy": "trend_donchian_eth_4h",
    "verdict_source": "scripts/ops/r4_demotion_gate.py (R4)",
@@ -409,17 +387,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 15,
-   "pnl_coverage_measured": 0.6,
+   "n_closed": 16,
+   "pnl_coverage_measured": 0.625,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": 12.0673,
-   "net_r_net_of_full_cost": 7.2912,
-   "r_population": 15,
+   "net_usd_measured": 9.0423,
+   "net_r_net_of_full_cost": 6.201,
+   "r_population": 16,
    "t3_windows_r": [],
    "t3_p10": -6.80765,
    "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 15 closed rows < min_trades 40"
+   "reason": "fewer than 40 closed trades on either book: 16 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
