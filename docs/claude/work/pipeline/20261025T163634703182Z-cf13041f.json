@@ -1,0 +1,19 @@
+{
+  "based_on": "20261025T163220805030Z-aa097f0a.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a decision is recorded on whether a trail-EXIT amend (plan action exit, strategy already closed) keeps the 1/2/4/8-bar backoff or retries every closed bar, and the code matches it",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-11CORKKG-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PHONE-AMEND-REFUSED-1025 (PR #20122)",
+    "rerun": "grep -n 'BACKOFF_CAP_BARS\\|def _backoff_bars\\|exit_ = False' src/prop/phone_trail.py"
+  },
+  "routed_to": "checklist:PHONE-AMEND-REFUSED-1025",
+  "state": "done",
+  "terminal_reason": "Decided and built in PR #20122 commit bb78486b under the operator's 2026-10-25 direction (via manager: 'let the system sort it out'): an exit amend, or a ticket whose package is closed, now retries every closed bar; non-exit amends keep the 1/2/4/8 backoff. Tests: test_failed_exit_amend_retries_every_closed_bar_not_with_backoff, test_non_exit_amend_keeps_its_backoff.",
+  "what": "src/prop/phone_trail.py backs off a failed amend 1,2,4,8,8 closed bars (BACKOFF_CAP_BARS) whatever the amend is. For a trail-EXIT amend the strategy has already closed the package, so each skipped bar is a bar of live prop exposure the strategy no longer wants: on breakout_2 prop-manual-2e786ef17c05 only 6 attempts ran in ~24h after the 2026-10-24 sl_cross. Question (Tier 3, prop order path; manager/operator call): should an exit amend retry every closed bar (still per-item, never a latch), with the hand-set alert per refusal unchanged?"
+}
