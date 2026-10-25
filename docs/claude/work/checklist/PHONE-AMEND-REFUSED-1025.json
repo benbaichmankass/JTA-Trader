@@ -14,10 +14,19 @@
   ],
   "blocked_on": [],
   "note": "MERGED #20122 (5cb2b0b48) 17:42Z; DEPLOYED: /api/diag/version 18:33Z ict-web-api.service at 4d0b01957 (contains the fix). OBSERVED 18:33Z (/api/bot/prop/tickets): breakout_2 prop-manual-2e786ef17c05 exit amends #a7 and #a8 both 'amended' and read back on the terminal; resting stop 2409.58 (-1R) -> 2362.79 -> 2361.92 (inside the 2367.4 entry: the stop now locks a small profit), fails 0. Venue 18:28Z: short still open, mark 2354.43. The ticket remains open-vs-closed-package BY DESIGN until that stop fills (no close control on the phone path). CLOSES WHEN: python3 scripts/ops/check_ticket_package_divergence.py exits 0 (the stop filled and the ticket reconciled). Follow-up PI-20261025-11CORKKG-0001 (sheet_not_open) open; PI-...-0002 done.",
-  "updated_at": "2026-10-25T18:33:58Z",
+  "updated_at": "2026-10-25T18:48:44Z",
   "updated_by": "session_01E6AQpa6i4TYdGD11corkkG",
   "roadmap": [
     "L-PROP"
   ],
+  "observation": {
+    "what": "breakout_2 prop-manual-2e786ef17c05 leaves the venue on its trailed stop (now 2361.92) and the ticket reconciles to closed, so no prop ticket stays open past its closed package",
+    "how_to_check": "python3 scripts/ops/check_ticket_package_divergence.py exits 0; /api/bot/prop/status?account_id=breakout_2 shows no ETHUSDT position",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: an incident fix inside L-PROP (phone exit amends); no milestone measure or status changes",
+    "arch": "none: no contract changed; the phone trail amend path keeps its shape (qty value, retry cadence and exit buffer only)"
+  },
   "_seq": 675
 }
