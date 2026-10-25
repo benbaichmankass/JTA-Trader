@@ -15784,10 +15784,35 @@ nodes:
     usd_at_stake_per_month: 150
     confidence: 0.2
   after:
-  - unit: RQ-20261022-eba2-08
+  - unit: RQ-20261025-d7e6-07
     verdict: any
-  needs_authoring: 'Q11 rung 1b/1d PASSED (eba2-01: log-loss gain +0.0115, 5/6 folds, n 1209; eba2-04: +0.0145, 5/6 folds, volatility-controlled) but every exit lever rung 2 and the
+  needs_authoring: 'STATUS 2026-10-25 (lane EXITS-ROUND2-1026): AUTHORED as hand units RQ-20261025-d7e6-02..06 (25% bank at +1 R, trigger P >= 0.7, one per pullback-2h leg: ada, xrp, eth, sol, avax; arms A / MB / UB / RB random control) and the pooled decision unit RQ-20261025-d7e6-07 (scripts/research/pool_arm_diff.py; the node asked for one pooled unit, but the harness takes one --leg per command). Prop stays out, as asked. This node only follows the pooled verdict now: PASS -> ONE confirmation on a disjoint window, then the bar sweep 3/12 (this node asked for 3/6/12; only 6 is registered, the others wait on a PASS so the trial count stays honest), then Q6 parity and a Tier-3 proposal; FAIL -> the bank-selector half is closed at these settings and the sweep is not built. ORIGINAL TEXT: Q11 rung 1b/1d PASSED (eba2-01: log-loss gain +0.0115, 5/6 folds, n 1209; eba2-04: +0.0145, 5/6 folds, volatility-controlled) but every exit lever rung 2 and the
     Q10/Q12/Q13/Q14 variants (eba2-03, -05..-15, 13 units, ada/xrp pullback 2h and eth prop) read "incumbent stands"; R2 gain is negative or ~0, so the metric ranks giveback but
     does not size it. Diagnosis: the lever, not the signal -- a 50%-at-+1R bank fires on the metric trigger regardless of the predicted size. Author ONE unit that uses the metric as a
     SELECTOR (bank 25%/50% only when predicted P(big giveback) is in the top tercile, trigger bar swept 3/6/12 pre-registered, same net R / fold / drawdown bar) pooled across the three legs.
     Prop (eba2-02) had no gain over bars+R: keep the prop legs out of the first run. No family is retired: the lever families have each failed twice, below the policy trigger.'
+# ── EXITS-ROUND2-1026 (2026-10-25) ──
+- id: P1-ATM-pooled-tighten-gate-read
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  after:
+  - unit: RQ-20261025-d7e6-01
+    verdict: any
+  needs_authoring: 'Hand unit RQ-20261025-d7e6-01 (pooled paired read of the 9a7e-01/-02/-03 tighten gate; bar 0.07 R per trade because the measured paired sd of a tight trail is 0.82 R). This node only follows its verdict. PASS -> ONE confirmation on a disjoint window, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> the tighten gate is closed on the pullback-2h legs at P 0.6 / 2.5 x ATR; try sol and avax pullback 2h before calling the family dead (they are not in the pool). INDETERMINATE with MDE above the bar -> add sol/avax tighten units rather than lowering the bar. No family is retired.'
+- id: P1-ATM-remaining-move-flow-variant
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.1
+  after:
+  - unit: RQ-20261024-09a6-02
+    verdict: pass
+  needs_authoring: 'VARIANT of the failed AI-ATM rung B1 (RQ-20261024-09a6-03: 6 legs, 2558 trades, 50926 bar states; clause 1 failed at tau 0.5 and 0.7, 1 of 6 folds better than the open-R bucket quantile Q0, tau-0.5 coverage 0.617 against a nominal 0.5; clause 2 was decisively negative too: the pulled-in TP earned 51.2 R against 409.6 R as traded, mean diff -0.140 R/trade CI [-0.188, -0.092], 0.036 vs 0.107 R per capital-day, and pulled the TP on 99% of trades). DIAGNOSIS: the EDGE failed on price state, not the design: n is large, the reference is a plain open-R bucket quantile, and the loss is both decisive and in the same direction in every fold. A2 (RQ-20261024-09a6-02) asks whether flow adds exit information beyond price. If A2 PASSES, author ONE unit that re-runs scripts/research/remaining_move_head.py with the flow block joined by scripts/research/path_flow_join.py (same legs, taus, clause 1 thresholds and clause 2 thresholds as 09a6-03; flow columns on >= 80% of states or the leg is dropped and named). If A2 FAILS or is INDETERMINATE the B1 head is not rebuilt on price alone. Not retired: one price-only test is a first test.'

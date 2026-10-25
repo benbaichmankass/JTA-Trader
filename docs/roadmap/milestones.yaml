@@ -115,6 +115,13 @@ milestones:
       cap-clamped, worse per capital-day) -> width 0.5 confirm authored (P1-Q3-eth4h-measured-move-w05-confirm). The 12
       priority-1 P1 units (RQ-20261016-004..011, -014..-016, RQ-20261017-002) fired 2026-10-18 06:20Z after the dispatcher
       starved them; per-leg doctrine path table in 01-ACTIVE-TRADE-MANAGEMENT.md § 2026-10-18.
+      2026-10-25 (lane EXITS-ROUND2-1026, MEASURED from the committed arm emits): of 35 candidate arms in the 13 failed eba2
+      units, 7 lose decisively (CI below 0), 7 are resolved nulls, 21 cannot be told apart from zero by one leg (MDE 0.03-0.13
+      R/trade vs the 0.02 bar) -- the selective giveback levers are an unanswered question, not a refuted one. Round 2
+      (RQ-20261025-d7e6-01..11, docs/research/exits-round2-1026.md): bank-selector on five pullback-2h legs + pooled paired
+      readers (scripts/research/pool_arm_diff.py), exit arms of the two underpowered prop-pace units on disjoint baskets,
+      and design fixes for A2 (OI-era window) and C1 (entry-set-clean arms). B1 remaining-move head failed on edge
+      (pulled-in TP 51 R vs 409 R as traded).
     architecture: ["TP doctrine"]
     owner: manager
     reviewed: 2026-10-14

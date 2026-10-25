@@ -1,0 +1,108 @@
+id: RQ-20261025-d7e6-10
+title: 'AI-ATM rung A2 VARIANT (OI-era window): does FLOW add per-bar exit information beyond the price state once every leg actually HAS open interest (window from 2021-12-15)?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M23
+programme: P1
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'RQ-20261024-09a6-02 read INDETERMINATE (read_state measured): 471 trades remained, the rule needs 600, because four of six legs were dropped for an open-interest column on
+  < 80% of states (OI share 0.739 eth_4h, 0.757 eth_prop, 0.787 xrp_pb, 0.790 ada_pb; 0.847 xrp_4h and 0.846 sol_prop were kept). The cause is the window, not the legs: Binance Vision
+  open-interest metrics start 2021-12-01 (day-probed 2026-10-25 by path_flow_join), so every state before it carries no OI. The same six legs PLUS three more roster legs (eth_pullback_2h,
+  sol_pullback_2h, trend_donchian_sol_4h) to lift n above the floor the measured sd demands, same rule and thresholds, window 2021-12-15 .. 2026-10-15 (14 days of margin after the first
+  OI day). The nine legs are decided pooled, as in the parent; the three added legs are named in the record: does adding the flow block (taker imbalance, settled funding, open interest)
+  to the price state raise OOS log-loss gain by >= 0.002 nats, CI lower > 0, >= 4 of 6 folds, slope in [0.7, 1.3]?'
+why_this_matters: 'Design failure, not an edge failure: the registered coverage floor and the window disagreed, and 09a6-02 could not say anything. The window start is the one change
+  to the rule; three legs are ADDED, none removed, because the measured sd needs more trades (below), and thresholds are not touched. Trade count after the cut is estimated from the
+  09a6-02 per-leg counts (2627 trades over 2020-07..2026-10) at the OI-era share of states (0.74-0.85): about 2000 on the six original legs and ~2800 with the three added, versus the
+  600 the rule needs and the ~2390 the measured sd needs.'
+power:
+  expected_n: 2800
+  min_detectable_effect: 0.002
+  effect_units: nats per trade
+  sd: 0.0349
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'sd 0.0349 nats per trade MEASURED from 09a6-01 (n 2627 trades, CI [0.00095, 0.00361] => se 0.00068 => sd = se x sqrt(2627)). Floor for the 0.002 nat bar (repo required_n: two-sided
+    0.05, power 0.80) is 2390 trades. The six parent legs give ~2000 inside the OI era (2627 x 0.77 of the window), which would sit BELOW that floor; eth_pullback_2h (~371), sol_pullback_2h
+    (~330 est.) and trend_donchian_sol_4h (267) add ~770 at the same share, so ~2800 expected, 17% above the floor. If the added legs fail the parity or coverage control the rule drops
+    them by name and the unit may grade INDETERMINATE; it is never lowered to fit.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025-D7E6-10-A2-OI-ERA
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'As 09a6-02: scripts/research/path_flow_join.py --mode grade --reference auto over the six parent legs plus eth_pullback_2h, sol_pullback_2h and trend_donchian_sol_4h run
+    config-exact (--harness-legs), window 2021-12-15 .. 2026-10-15 23:59; reference = R1 if 09a6-01''s own rule PASSES on these trades else R0; candidate = reference + the flow block;
+    trade-weighted OOS log-loss gain, trade-cluster bootstrap (2000), per-fold sign, calibration slope; the share of states carrying each flow column is reported per leg.'
+  rule: 'INDETERMINATE IF any flow column is present on < 80% of states for a leg (that leg is dropped and named) or fewer than 600 trades remain. PASS IF pooled gain >= 0.002 nats AND
+    CI lower > 0 AND >= 4 of 6 folds positive AND calibration slope in [0.7, 1.3] -> the flow block joins the policy rung state and a live flow producer is a named prerequisite of any
+    shadow (Programme 02 Q6); it also releases P1-ATM-remaining-move-flow-variant. FAIL IF CI upper < 0.002 nats: flow adds no exit information on these legs at bar resolution in the
+    OI era. Thresholds are the parent''s and are not changed after any result.'
+  min_n: 600 trades pooled
+  what_it_does_not_do: Edits no config and places no order; harness paths, not live paths. A flow edge seen only from 2021-12 says nothing about earlier regimes. Does not pool with 09a6-02
+    (a different window).
+blocked_on: []
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+  basis: 'stand-in: the prize is the giveback (book keeps ~13% of peak R, 90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md); not a P&L measurement of this lever.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  why_runner: Keyless public candles + config-exact harness runs; reads no trainer data.
+  basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16) plus the fit.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/path_flow_join.py
+  - --harness-legs
+  - trend_donchian_eth_4h,trend_donchian_xrp_4h,xrp_pullback_2h,ada_pullback_2h,trend_donchian_eth_prop,trend_donchian_sol_prop,eth_pullback_2h,sol_pullback_2h,trend_donchian_sol_4h
+  - --days
+  - '2330'
+  - --start
+  - '2021-12-15'
+  - --end
+  - 2026-10-15 23:59
+  - --mode
+  - grade
+  - --reference
+  - auto
+  - --min-coverage
+  - '0.8'
+  - --min-gain-nats
+  - '0.002'
+  - --min-folds
+  - '4'
+  - --min-n
+  - '600'
+  - --n-folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261025-d7e6-10
+  note: 'PATH-FLOW-JOIN (scripts/research/path_flow_join.py). --reference auto = R1 if 09a6-01''s own rule (same code, same thresholds) passes R1 vs R0 on these trades, else R0. Funding/OI/taker
+    come from Binance Vision (keyless). The unit''s decision_rule is applied literally: a leg with any flow column on < 80% of states is dropped and named.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261024-09a6-02.yaml
+- comms/research/grading/RESULTS-GRADE-1025.json
+top_notdo: Changes no config; builds no live producer. A PASS earns flow a place in the policy state and makes a live flow producer a prerequisite of any shadow; it is not a promotion.

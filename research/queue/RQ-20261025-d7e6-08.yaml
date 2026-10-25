@@ -1,0 +1,120 @@
+id: RQ-20261025-d7e6-08
+title: 'Squeeze-1h EXIT arms (break-even floor, stale exit) re-asked on 16 cells DISJOINT from 4b82-03, sized from the MEASURED sd: do BE1 or ST12 beat B by >= 0.05 R/trade pooled?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- L-PROP
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: 'RQ-20261022-4b82-03 (6 cells ADA/XRP/LINK/AAVE/DOGE/BNB) read PASS for WIDE only, and was demoted to underpowered by RESULTS-GRADE-1025: realised pooled n_B 6891 against 9488
+  per arm, the floor for the registered 0.05 R/trade bar at the MEASURED per-trade sd of 1.385 R (two-sample, one-sided 0.05, power 0.80). The two EXIT arms (BE1 break-even floor at
+  +1 R; ST12 stale exit after 12 bars below +0.3 R) never had the n to be judged. WIDE is a compression-definition (entry) lever and is already being replicated off-symbol by RQ-20261024-71e8-01;
+  it is NOT re-run here. On 16 perps (AVAX, NEAR, ATOM, FIL, TRX, ETC, ETH, SOL, DOT, LTC, BCH, XLM, ALGO, XTZ, EOS, IOTA; none was in the first run) at 1h over 2020-06-01..2026-10-22,
+  expected pooled n_B ~16,000 (6891 over 6 cells = ~1150/cell), does BE1 or ST12 pass the pooled Stage-0 rule with breadth AND beat B by >= 0.05 R/trade pooled?'
+why_this_matters: 'RESULTS-GRADE-1025 demoted 4b82-03 to underpowered because its n_B was 27% short of the floor the registered bar needs at the measured sd. The design fix is more cells,
+  not a lower bar or a looser n: an exit-arm answer needs ~9,500 baseline trades and this basket reaches it. Closes the BE1/ST12 half of the 4b82-03 question that WIDE''s pass left unanswered.'
+power:
+  expected_n: 16000
+  min_detectable_effect: 0.05
+  effect_units: R per trade
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Repo floor (research_queue.required_n, two-sample, two-sided 0.05, power 0.80) for d = 0.05/1.385 = 0.0361 is 12,046 per arm; the RESULTS-GRADE-1025 one-sided figure was 9,488.
+    sd 1.385 R MEASURED from the 4b82-03 baseline arm (n_B 6891). Cells: 4b82-03 gave ~1150 baseline trades per cell; 16 disjoint cells give ~18,400, of which later-listed NEAR/FIL/ATOM/DOT
+    are shorter, hence the 16,000 estimate, 33% above the stricter floor. The candidate arms BE1/ST12 remove or shorten trades, so their n stays within a few percent of B. Below the
+    floor the unit grades INDETERMINATE, never FAIL (parent rule).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+  sd: 1.385
+decision_rule:
+  id: RULE-RQ20261025-D7E6-08-SQUEEZE-1H-EXITS-TRANSFER
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'scripts/research/harness_stage0.py --family squeeze --timeframe 1h, arms fixed now: B=; BE1=--be-floor-r=1.0; ST12=--stale-exit-bars=12;--stale-exit-below-r=0.3; WIDE=--bb-std=2.5;--kc-mult=1.0;
+    baseline B; per cell and pooled across 6 cells; flags --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor 88 --breadth-frac 0.5 --baseline B --delta-r-per-trade 0.05; cost
+    = the harness venue-aware fee + slippage + funding stack (execution_costs.resolve_cost_policy), recorded per cell.'
+  rule: 'Arms and thresholds are fixed now and are not changed after any result. A candidate PASSES iff it passes the pooled Stage-0 rule (pooled n >= 88, pooled net_r > 0, >= 4 of 6
+    calendar folds net positive, >= half of the powered cells pass) AND beats B''s pooled net R/trade by >= 0.05 R. PASS IF one or more candidates pass: the best by pooled net R is named
+    and the follow-up is ONE confirmation unit on a disjoint window with the same statistic and bar (a pass on one window is a lead), then the prop/real-money SUPERSET ladder; never
+    a roster edit. FAIL IF every candidate fails (n >= floor) -> this variant is closed on this window and the record names which arm moved closest, so the next variant is aimed. INDETERMINATE
+    IF pooled n < 88 or fewer than half the cells measured (a fetch/harness fault is recorded per cell, never dropped).'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A best-of-k arm is a LEAD (programme 03 rung S0-C), never a finding. Candles are Binance
+    USD-M (a PROXY for Bybit linear); the funding term is a directionless magnitude (execution_costs P1); both are stated in the record. Does not pool with any committed record. Does
+    not re-run WIDE (71e8-01 owns it) and does not pool with 4b82-03: a PASS here is an independent lead on disjoint cells.'
+compute: cpu_long
+value:
+  bucket: structural
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  basis: 'stand-in: re-ask of two exit arms that never had the n to be judged; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; the dispatcher's idle backends cannot hold it (no published-data shard for these symbols);
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - squeeze
+  - --symbols
+  - AVAXUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT,ETHUSDT,SOLUSDT,DOTUSDT,LTCUSDT,BCHUSDT,XLMUSDT,ALGOUSDT,XTZUSDT,EOSUSDT,IOTAUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-22'
+  - --arm
+  - B=
+  - --arm
+  - BE1=--be-floor-r=1.0
+  - --arm
+  - ST12=--stale-exit-bars=12;--stale-exit-below-r=0.3
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261025-D7E6-08-SQUEEZE-1H-EXITS-TRANSFER
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261025-d7e6-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- research/queue/RQ-20261022-4b82-03.yaml
+- comms/research/grading/RESULTS-GRADE-1025.json
+- RQ-20261006-006
+- RQ-20261006-010
+- RQ-20261006-022
+- RQ-20261010-353c-12
+- RQ-20261011-8753-07
+- RQ-20261018-ef5d-08
