@@ -167,7 +167,16 @@ def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
         return refuse(R_NOT_TIGHTEN)
     direction = str(intent.direction or "").lower()
     new_sl = _f(intent.new_sl)
-    if direction not in ("long", "short") or new_sl is None:
+    if direction not in ("long", "short"):
+        return refuse(R_BAD_INPUT)
+    if new_sl is None:
+        # A probe carries no level; it is derived from mark + ATR. When those
+        # reads failed there is no level BECAUSE we could not look -- that is
+        # could_not_look (retried), not bad_input. An explicit level that did
+        # not parse is genuinely malformed.
+        missing = [n for n, v in (("mark", _f(intent.mark)), ("atr", _f(intent.atr))) if v is None]
+        if intent.new_sl is None and missing:
+            return could_not_look(f"{R_COULD_NOT_LOOK}:{','.join(missing)}")
         return refuse(R_BAD_INPUT)
     # The strategy's own execution gate: a shadow leg sends no live order, so
     # the review takes no action on it either.

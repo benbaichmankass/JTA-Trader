@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "id": "PI-20261025-QBV5GOQX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AZiErvK92E59gCqBV5GoQX, receipt check 2026-10-25 22:00Z",
+    "rerun": "gh api repos/benbaichmankass/Metis-Insights/actions/workflows/research-watchdog.yml/runs?per_page=20 --jq '.workflow_runs[].created_at'"
+  },
+  "state": "queued",
+  "what": "[research watchdog / liveness] research-watchdog.yml is scheduled '*/15 * * * *' (96 runs/day) but MEASURED 2026-10-25 22:00Z: 6 runs in the prior 24h (00:01, 04:41, 09:26, 13:51, 17:26, 19:53Z), gaps up to 4.7 h; none since 19:53Z. Consequence: incident conflicted_automation@20261025T1954Z (PR #20130) stayed un-resolved on ops-flags #17895 for 1h45m+ after #20130 merged at 20:14Z, and a NEW incident could go unseen for hours. Also: runs with a 'bad' check exit 1 and show as workflow failure (4 of 6 'failure'), though the workflow comment says rc 1 is the escalation, not a red run. Fix candidates: drive the watchdog from a VM timer (like the other token-free monitors) or a self-re-dispatching loop; map rc 1 to success. Tier 1/2 depending on path."
+}

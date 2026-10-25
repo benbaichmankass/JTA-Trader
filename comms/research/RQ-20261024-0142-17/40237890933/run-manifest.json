@@ -1,0 +1,52 @@
+{
+  "unit": "RQ-20261024-0142-17",
+  "run_id": "40237890933",
+  "commit_sha": "80786096a20c26a6e1948544b64d9acbd60b1e80",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40237890933",
+  "timeout_minutes": 150,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "eth_pullback_2h",
+        "--arm",
+        "A=",
+        "--arm",
+        "TV80=--trail-vol-above-pctl=0.8;--trail-vol-tight-mult=4.0",
+        "--arm",
+        "TV90=--trail-vol-above-pctl=0.9;--trail-vol-tight-mult=3.5",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "replace",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--delta-r-per-trade",
+        "0.02",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--dd-tol-frac",
+        "0.35",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261024-0142-17/40237890933"
+      ],
+      "log": "comms/research/RQ-20261024-0142-17/40237890933/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 37.3
+    }
+  ],
+  "all_ok": true
+}

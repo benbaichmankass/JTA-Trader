@@ -113,6 +113,52 @@ def test_a_failed_read_is_could_not_look_never_refuse_or_approve(kw):
     assert set(lri.VERDICTS) == {"approve", "clip", "refuse", "could_not_look"}
 
 
+def test_probe_with_unread_market_is_could_not_look_naming_the_missing_fields():
+    for kw, want in (({"mark": None, "atr": None}, "mark,atr"), ({"atr": None}, "atr"), ({"mark": None}, "mark")):
+        v = _decide(_intent(new_sl=None, **kw))
+        assert v.verdict == lri.V_COULD_NOT_LOOK, v
+        assert v.reason == f"{lri.R_COULD_NOT_LOOK}:{want}"
+        assert lri.account_read(v) == "unknown"
+
+
+def test_malformed_intent_stays_bad_input():
+    assert _decide(_intent(direction="sideways")).reason == lri.R_BAD_INPUT
+    assert _decide(_intent(direction="sideways", mark=None)).reason == lri.R_BAD_INPUT
+    # an explicit level that will not parse is malformed even if the market read failed
+    v = _decide(_intent(new_sl="not-a-number", mark=None))
+    assert (v.verdict, v.reason) == ("refuse", lri.R_BAD_INPUT)
+    # no level and a good market read is not a read failure either
+    assert _decide(_intent(new_sl=None)).reason == lri.R_BAD_INPUT
+
+
+def test_candle_fetch_uses_a_dedicated_ib_client_id_disjoint_from_the_others():
+    from pathlib import Path
+
+    import yaml
+
+    from scripts.ops import live_review_apply as lra
+
+    cid = int(lra.LIVE_REVIEW_IB_MD_CLIENT_ID)
+    accts = yaml.safe_load(Path("config/accounts.yaml").read_text())["accounts"]
+    used = {600}  # web-api candle fetcher (src/web/api/routers/candles.py)
+    for cfg in accts.values():
+        if isinstance(cfg, dict) and cfg.get("ib_client_id") is not None:
+            base = int(cfg["ib_client_id"])
+            used |= {base, base + 1} | {base + 100 * k for k in range(6)}
+    assert cid not in used
+
+
+def test_candles_pass_the_dedicated_client_id_to_the_connector(monkeypatch):
+    from scripts.ops import live_review_apply as lra
+    from src.runtime import market_data as md
+
+    seen = {}
+    monkeypatch.setattr(md, "connector_for_symbol", lambda sym, settings=None: seen.update(s=settings) or "C")
+    monkeypatch.setattr(md, "fetch_candles", lambda *a, **k: seen.update(client=k.get("exchange_client")) or [])
+    lra._candles("MGC", "1d")
+    assert seen["s"] == {"IB_MD_CLIENT_ID": lra.LIVE_REVIEW_IB_MD_CLIENT_ID} and seen["client"] == "C"
+
+
 # --------------------------------------------------- RiskManager.approve_amend
 
 class _Switch:
@@ -320,6 +366,9 @@ def wired(monkeypatch):
             {"sl_floor": {"level": level}})})
         return {"result": "applied", "venue_after": level}
     monkeypatch.setattr(lra, "_exec_bybit", _bybit)
+    monkeypatch.setattr(lra, "_exec_alpaca",
+                        lambda db, leg, level, intent: state["exec"].append(("alpaca", leg["account_id"], level))
+                        or {"result": lra.X_APPLIED, "venue_after": level})
     monkeypatch.setattr(lra, "_exec_prop_vm",
                         lambda leg, level, intent: state["exec"].append(("prop_vm", leg["account_id"], level))
                         or {"result": lra.X_APPLIED})
@@ -391,11 +440,12 @@ def test_account_types_route_to_their_own_executors(wired):
          "sl": 0.2200, "meta": json.dumps({"phone_trail": {"resting_sl": 0.2180}})}]
     res = _run(db, wired)
     by = {a["account_id"]: a for a in res["accounts"]}
-    assert by["alpaca_live"]["reason"] == lri.R_NO_PATH and by["alpaca_live"]["read"] == "no_action"
+    # AMEND-PARITY-ALL-ACCOUNTS: Alpaca has its own executor now (was no_amend_path).
+    assert by["alpaca_live"]["account_class"] == "alpaca" and by["alpaca_live"]["executed"] is True
     assert by["tradeify_1"]["account_class"] == "prop_vm" and by["tradeify_1"]["executed"] is True
     assert by["breakout_2"]["account_class"] == "phone" and by["breakout_2"]["executed"] is True
-    assert sorted(e[0] for e in wired["exec"]) == ["bybit", "phone", "prop_vm"]
-    assert res["package_sl_moved"] is False        # the alpaca trade leg did not apply
+    assert sorted(e[0] for e in wired["exec"]) == ["alpaca", "bybit", "phone", "prop_vm"]
+    assert res["package_sl_moved"] is True         # both trade legs applied the same level
 
 
 def test_recommend_mode_computes_but_never_executes(wired):
