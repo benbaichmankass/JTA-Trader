@@ -2,7 +2,7 @@
   "id": "RESEARCH-AUTHOR-1025PM",
   "title": "Authoring lane: close the research floor gap (runnable 43 vs floor 65, research-ops 2026-10-25 14:47Z) from the programme plans, short themes first; include a re-run unit for PI-20261009-NKGUCEDN-0001 (backtest_trend --emit-trades ADX attribution for the 5 momentum_trail cells)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "authoring lane (manager dispatch)",
   "lane": "session_01F56Jfoq7sgEeNKpR42WWX5",
   "model": "claude-sonnet-5-5",
@@ -11,12 +11,18 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Dispatched 2026-10-25 15:01Z by session_01SrYqLY4Ui9RKns12r2zthj per manager SKILL \u00a7 Research SLO escalation (floor gap 22 is due work today): fresh Sonnet lane, ceiling $6.",
+  "note": "Dispatched 2026-10-25 15:01Z by session_01SrYqLY4Ui9RKns12r2zthj per manager SKILL \u00a7 Research SLO escalation (floor gap 22 is due work today): fresh Sonnet lane, ceiling $6. Landed 2026-10-25: 27 units (regime 8, live_strategy 4+1 attribution, new_strategy_prop 2, macro 4, ml_health 8). Runnable 43 -> 70 vs floor 65 (queue health, local tree). NOT done: ready needs_authoring nodes were not consumed (authoring queue still 35; most are verdict-conditional follow-ups) -> handoff to next research-ops pass. PI-20261009-NKGUCEDN-0001 routed to RQ-20261025-3947-27.",
   "priority_rank": 1,
-  "updated_at": "2026-10-25T15:01:25Z",
-  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "updated_at": "2026-10-25T15:18:53Z",
+  "updated_by": "session_01F56Jfoq7sgEeNKpR42WWX5",
   "roadmap": [
     "L-PROGRAMMES"
   ],
+  "observation": {
+    "what": "the 27 units RQ-20261025-3947-01..27 dispatch and land results with a verdict; 3947-27 yields a per-cell trail_adx_tightened split",
+    "how_to_check": "ls research/results/RQ-20261025-3947-*; python3 scripts/ci/check_research_queue_health.py (H1-THEME clear); python3 scripts/ops/pipeline.py --due (PI-20261009-NKGUCEDN-0001 closes on 3947-27 verdict)",
+    "due_by": "2026-11-02"
+  },
+  "writeback": "docs/roadmap/milestones.yaml L-PROGRAMMES: floor gap 22 closed by supply (runnable 43->70 vs floor 65, dry run); units by theme in PR body",
   "_seq": 673
 }
