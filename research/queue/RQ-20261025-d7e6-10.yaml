@@ -1,6 +1,6 @@
 id: RQ-20261025-d7e6-10
 title: 'AI-ATM rung A2 VARIANT (OI-era window): does FLOW add per-bar exit information beyond the price state once every leg actually HAS open interest (window from 2021-12-15)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -107,3 +107,16 @@ related:
 - comms/research/grading/RESULTS-GRADE-1025.json
 top_notdo: Changes no config; builds no live producer. A PASS earns flow a place in the policy state and makes a live flow producer a prerequisite of any shadow; it is not a promotion.
 last_dispatched_at: '2026-10-25T07:01:43+00:00'
+grading:
+  attested: RULE-RQ20261025-D7E6-10-A2-OI-ERA
+  auto: true
+  decision_rule_id: RULE-RQ20261025-D7E6-10-A2-OI-ERA
+  evidence:
+  - research/results/RQ-20261025-d7e6-10/40171278356.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

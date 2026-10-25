@@ -1,7 +1,7 @@
 id: RQ-20261025-d7e6-06
 title: 'Giveback SELECTOR bank (variant of eba2-07/-08 after RESULTS-GRADE-1025; leg 5 of 5): on avax_pullback_2h, does banking 25% at +1 R ONLY on trades the vol-controlled predictor
   flags at P >= 0.7 beat the declared exit, the same bank on every trade, and a matched-rate random flag?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -130,3 +130,16 @@ requires_result:
   verdict: pass
 programme: P1
 last_dispatched_at: '2026-10-25T11:41:22+00:00'
+grading:
+  attested: RULE-RQ20261025-D7E6-06-BANK-SELECTOR-AVAX-PULLBACK-2H
+  auto: true
+  decision_rule_id: RULE-RQ20261025-D7E6-06-BANK-SELECTOR-AVAX-PULLBACK-2H
+  evidence:
+  - research/results/RQ-20261025-d7e6-06/40189960132.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

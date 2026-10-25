@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-22
 title: 'Placebo rung for the initial_jobless_claims -> ZN=F release-day PASS: is the edge also present ten trading days BEFORE the print (an artifact)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M28
@@ -87,3 +87,16 @@ related:
 - P4-Q2-ppi-rty-placebo
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T08:54:32+00:00'
+grading:
+  attested: RULE-RQ202610240142-22-INITIALJOBLESSCLAIMS-PLACEBO
+  auto: true
+  decision_rule_id: RULE-RQ202610240142-22-INITIALJOBLESSCLAIMS-PLACEBO
+  evidence:
+  - research/results/RQ-20261024-0142-22/40178528024.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-06
 title: 'Later-armed, milder ER gate on trend_donchian_sol_4h: does tightening only after a 2.5-3.0 R run, to 3.0-3.5 x ATR, beat the declared exit?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -116,3 +116,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T08:54:32+00:00'
+grading:
+  attested: RULE-RQ20261024014206-SOL4HERLATEARM
+  auto: true
+  decision_rule_id: RULE-RQ20261024014206-SOL4HERLATEARM
+  evidence:
+  - research/results/RQ-20261024-0142-06/40178526353.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
