@@ -180,6 +180,7 @@ on:
           - backfill-tpsl-leg-ids
           - reattach-stranded-package-legs
           - amend-position-sl
+          - live-review-dry-run
       reason:
         description: "Why this action is being run (audit trail; required for Tier-2)"
         required: false
@@ -800,7 +801,7 @@ jobs:
         run: |
           set -euo pipefail
           case "${ACTION}" in
-            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code)
+            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
             pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl)
@@ -1788,6 +1789,7 @@ jobs:
             validate-bybit-naked-rearm)         SCRIPT="validate_bybit_naked_rearm_action.sh" ;;
             cancel-stale-tpsl-legs)             SCRIPT="cancel_stale_tpsl_legs_action.sh" ;;
             amend-position-sl)                  SCRIPT="amend_position_sl_action.sh" ;;
+            live-review-dry-run)                SCRIPT="live_review_dry_run_action.sh" ;;
             backfill-tpsl-leg-ids)              SCRIPT="backfill_tpsl_leg_ids_action.sh" ;;
             reattach-stranded-package-legs) SCRIPT="reattach_stranded_package_legs_action.sh" ;;
             repair-prop-fill-direction)         SCRIPT="repair_prop_fill_direction_action.sh" ;;

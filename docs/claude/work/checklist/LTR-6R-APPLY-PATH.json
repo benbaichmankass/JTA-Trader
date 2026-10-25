@@ -9,12 +9,14 @@
   "ceiling_usd": 18,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    20139
+  ],
   "blocked_on": [],
-  "note": "[2026-10-25 17:38Z session_01UKBXozpiJicMHHyMp47MnN] Operator ~17:37Z: 'Ideally, we would want to have a prototype running in the next few hours and ... at least ready for live trading, up and running for when markets open Monday morning.' Plan: tonight LTR-4 interim routine in recommend mode once #20121/#20127 land; this lane builds the per-account apply path tonight (hold PR, Tier 3 merge needs operator approval); operator grants MD-LIVE-TIGHTEN-SL and flips apply_mode in a commit Sunday/Monday before open.",
+  "note": "Lane session_01354wy5zWA5J3AcLp2NbdKo: PR #20139 (Tier 3, landing: hold). Built: LiveReviewIntent; RiskManager.approve_amend -> approve/clip/refuse/could_not_look (collapsed-state contract; 3-cycle flag); per-account executors (Bybit leg modify + venue readback, prop VM meta.sl_floor, phone request_sl_tighten, Alpaca no_amend_path); per-leg sl_floor held by order monitor + prop trail; apply_mode=recommend in config/live_trade_review.yaml (apply also needs granted MD-LIVE-TIGHTEN-SL; flip diff in PR body); live-review-dry-run Tier-1 system-action. Manager design-review changes 1-4 and operator scope 'All accounts' folded in. Closing observation: after merge+deploy, action live-review-dry-run on the VM prints one verdict per account per open package. TIER-3 APPROVAL RECORD (operator popup on #20139, ~19:57Z 2026-10-25, relayed by manager session_01MdQiC8UqKBLj287KWFWN71): (Q1) \"Merge + deploy now (Recommended)\" -- merge, one pull-and-deploy, then live-review-dry-run on the VM; nothing applies yet. (Q2) \"After VM dry-run passes (Recommended)\" -- the manager grants MD-LIVE-TIGHTEN-SL and flips apply_mode to apply only after the VM dry-run shows a correct verdict for every account, before Monday open.",
   "priority_rank": 2,
-  "updated_at": "2026-10-25T17:37:02Z",
-  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
+  "updated_at": "2026-10-25T20:00:04Z",
+  "updated_by": "session_01354wy5zWA5J3AcLp2NbdKo",
   "roadmap": [
     "L-ATM"
   ],

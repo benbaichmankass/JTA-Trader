@@ -106,6 +106,25 @@ _REGISTRY_PATH = Path(__file__).resolve()
 
 CONTRACTS: List[Dict[str, object]] = [
     {
+        "name": "live_review_intent.amend_verdict",
+        "producer": "src/runtime/live_review_intent.py",
+        "producer_field": "",
+        "consumer_token": r"\bV_COULD_NOT_LOOK\b",
+        "states": ["approve", "clip", "refuse", "could_not_look"],
+        "why": (
+            "LTR-6R-APPLY-PATH, 2026-10-25 (desk design review, manager). "
+            "THE PAIR THAT MUST NOT COLLAPSE is `refuse` vs `could_not_look`. "
+            "A refusal is the account's risk manager deciding, on facts it "
+            "read, that this tighten is outside its bounds; could_not_look is "
+            "a venue stop / mark / ATR / position read that FAILED, so nothing "
+            "was decided. Folding a failed read into `refuse` turns a broken "
+            "feed into a silent per-account opt-out (no retry, no flag); "
+            "folding it into `approve` sends an amend priced on a number "
+            "nobody saw. could_not_look is retried every cycle and raises ONE "
+            "flag after 3 in a row (Prime Directive rule 7: no halting)."
+        ),
+    },
+    {
         "name": "loaded_config.process_state",
         "producer": "src/runtime/loaded_config.py",
         # The producer OWNS the vocabulary: the three values are module

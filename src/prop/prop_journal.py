@@ -394,6 +394,12 @@ def _supersede_meta(meta: Any) -> Optional[Dict[str, Any]]:
     return cand if isinstance(cand, dict) else None
 
 
+def _sl_floor_meta(meta: Any) -> Optional[float]:
+    """``prop_tickets.meta.sl_floor.level`` (LTR-6R), None when absent or unreadable (never 0)."""
+    from src.runtime.live_review_intent import sl_floor_from
+    return sl_floor_from(meta)
+
+
 def _phone_trail_meta(meta: Any) -> Optional[Dict[str, Any]]:
     """The phone trail's state for a ticket (PI-20261015-JWMGXOTH-0001): what stop the trail last ASKED the phone to
     set, the stop it believes is resting, and the latest replay -- the only place the trail target lived was
@@ -549,6 +555,9 @@ def list_outbound_tickets(
             # PHONE-TRAIL READ SURFACE (PI-20261015-JWMGXOTH-0001): the trail's asked / resting / replay stop
             # (None = no trail state on this ticket; each absent field None, never 0)
             "phone_trail": _phone_trail_meta(tk.get("meta")),
+            # LTR-6R: the live-review stop floor this account approved for the ticket (``meta.sl_floor``);
+            # the VM executor's trail tightens to it and never plans looser. None = no floor.
+            "sl_floor": _sl_floor_meta(tk.get("meta")),
         }
 
     for r in op_rows:
