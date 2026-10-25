@@ -11,12 +11,12 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [
-    "LTR-2-RECORDS"
+    "DESK-DESIGN"
   ],
   "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 4. Tier 2 (order path): landing hold, manager merge on data. [2026-10-25 16:14Z session_01UKBXozpiJicMHHyMp47MnN] OPERATOR STRUCTURAL DIRECTIVE 2026-10-25 ~16:12Z (paraphrase of chat, binding on LTR-6/8/9): the Claude review acts at the strategy ticket / order package level (the trade and market conditions) and never does per-account risk management; every action it takes must still be routed through EACH account's risk manager so each account (bybit_2, mirror, each prop account) decides within its own bounds and drawdown limits. FINDING (MEASURED, read of design \u00a74 + src/units/accounts/risk.py:876): the design's apply path (amend_position_sl.py moving the shared package SL on every leg) does not pass through RiskManager; RiskManager.approve() covers new packages only. LTR-6 must be re-scoped before dispatch: package-level amend intent -> per-account risk gate (approve_amend) -> per-account executor; one path for Bybit, prop (LTR-8) and Alpaca (LTR-9).",
   "priority_rank": 9,
-  "updated_at": "2026-10-25T16:13:49Z",
-  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "updated_at": "2026-10-25T17:35:46Z",
+  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
   "roadmap": [
     "L-ATM"
   ],
