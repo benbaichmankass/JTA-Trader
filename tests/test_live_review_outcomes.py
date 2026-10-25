@@ -152,9 +152,10 @@ def test_ada_case_parity_hold_n32_319():
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "LTR-0 finding: the TIGHTEN half of the ADA hand calc (+2.96, PR #19891) does NOT reproduce with "
-    "atr:1.5 at atr_stop_mult 1.5: the tool gives +2.87 (n=32). The hand calc's tighten parameters are "
-    "not recorded; +2.96 is hit only by other settings (e.g. atr:1.0 @ stop mult 1.5 = 2.958). The "
-    "assertion is NOT loosened; strict xfail flips red if the tool ever produces 2.96 here."))
+    "LTR-0 finding: the TIGHTEN half of the ADA hand calc (+2.96, PR #19891) does NOT reproduce. The design's "
+    "level 0.2053 is 1.51 ATR behind the 0.2009 low (not ~1.0) and +2.50 R: the tool gives atr:1.5 = 2.87 "
+    "and the fixed level r:2.5 = 2.94 (worst 1.31, sd 0.81; design says worst 2.32, sd 0.56). 2.958 appears "
+    "only at atr:1.0, which is not the level the operator set. The assertion is NOT loosened; strict xfail "
+    "flips red if the tool ever produces 2.96 here."))
 def test_ada_case_parity_tighten_296():
     assert round(_parity_table()["options"][1]["mean_r"], 2) == 2.96
