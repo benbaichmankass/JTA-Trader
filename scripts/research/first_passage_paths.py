@@ -139,7 +139,7 @@ def build_trades(leg: str, path_rows: List[dict], trade_rows: List[dict], tf: Op
             slip_gap.append(abs(cx - float(t["cost_slippage_r"])))
         g = lambda f: np.array([np.nan if r.get(f) is None else float(r[f]) for r in rows], dtype=float)  # noqa: E731
         trades.append({
-            "leg": leg, "family": _family(leg), "symbol": t.get("symbol"), "tfm": tfm,
+            "leg": leg, "family": _family(leg), "symbol": t.get("symbol"), "tfm": tfm, "trade_key": k,
             "entry_time": pd.Timestamp(t["entry_time"]), "exit_time": pd.Timestamp(t["exit_time"]),
             "exit_reason": str(t.get("exit_reason") or rows[-1].get("exit_reason")),
             "exit_r": exit_r, "net_r": float(t["net_r"]), "c_exit": cx,
