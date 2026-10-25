@@ -1,6 +1,6 @@
 id: RQ-20261011-6e85-01
 title: Is the SOL/BTC advisory regime heads' live score drift input-mix shift or model decay?
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -48,6 +48,7 @@ decision_rule:
     Does not demote, promote or retrain anything; every outcome that touches a
     stage is a Tier-3 proposal in the next /ml-review.
 
+compute: needs_vm_data
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false
@@ -57,19 +58,23 @@ routing:
     Reads the shadow log (active + gz archives) joined to realised labels; the
     shadow log lives on the live/trainer mirrors, not on a runner.
 
-blocked_on:
-  - what: >-
-      No script computes the per-window label share and served-score AUC from
-      the rotated shadow archives joined to labels.
-    ref: ML-DRIFT-SPLIT-INSTRUMENT
-    clears_when: >-
-      scripts/research/drift_regime_mix.py exists, writes verdict.json with
-      read_state, and its first run reproduces the KS 0.230 figure for SOL.
-
 run:
-  workflow: null
-  note: >-
-    Null on purpose: the instrument does not exist yet; see blocked_on.
+  command:
+  - python3
+  - scripts/research/drift_regime_mix.py
+  - --mode
+  - split
+  - --head
+  - sol-regime-15m-lgbm-fc-pcv-v2=SOLUSDT/15m
+  - --head
+  - btc-regime-15m-lgbm-fc-pcv-v2=BTCUSDT/15m
+  - --as-of
+  - '2026-10-11T09:45:00Z'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261011-6e85-01
 
 lands:
   store: research/results/

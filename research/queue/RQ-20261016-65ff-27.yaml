@@ -1,7 +1,7 @@
 id: RQ-20261016-65ff-27
 title: 'Drift remediation (PI-20261016-P3PFA1GK-0001): is the persistent drift flag on the same 9 heads an INSTRUMENT artifact (scores pooled across model
   versions / input mix) or model decay?'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 1
@@ -49,16 +49,35 @@ routing:
   peak_memory_gb: 1.5
   est_minutes: 20
   basis: Reads trainer-resident runtime_logs/shadow_predictions.jsonl (+gz archives) and drift_retrain.jsonl; trainer idle window.
-blocked_on:
-- kind: work_item
-  ref: ML-DRIFT-SPLIT-INSTRUMENT
-  what: The drift recompute per model_version does not exist; this unit widens that row's scope from the two advisory heads (RQ-20261011-6e85-01) to the
-    9 persistently flagged heads.
-  clears_when: The row's script merged with a --by-version mode; then git mv, status queued, run.command set (compute needs_vm_data).
 run:
-  workflow: null
-  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill run.command (no run.workflow: compute class routes it) when the lever
-    row closes.'
+  command:
+  - python3
+  - scripts/research/drift_regime_mix.py
+  - --mode
+  - by-version
+  - --head
+  - eth-regime-5m-lgbm-v1
+  - --head
+  - mes-regime-5m-baseline-v1
+  - --head
+  - setup-quality-baseline-v0
+  - --head
+  - sol-regime-15m-lgbm-fc-pcv-v1
+  - --head
+  - sol-regime-15m-lgbm-fc-pcv-v2
+  - --head
+  - sol-regime-5m-lgbm-v1
+  - --head
+  - btc-regime-15m-lgbm-yz-v1
+  - --head
+  - btc-regime-1h-lgbm-v2
+  - --head
+  - btc-regime-1h-lgbm-yz-v1
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261016-65ff-27
 lands:
   store: research/results/
   assert_field: read_state

@@ -1,7 +1,6 @@
 id: RQ-20261011-17f4-02
-title: 'ML label wall: does any strategy x symbol cell reach the pooled-label gate (n>=300 parity-held) that a per-cell take/skip head needs? -- blocked
-  on the cell-count script'
-status: blocked
+title: 'ML label wall: does any strategy x symbol cell reach the pooled-label gate (n>=300 parity-held) that a per-cell take/skip head needs?'
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -27,21 +26,26 @@ decision_rule:
     accrual rate, not a guessed date) IF no cell qualifies. NEEDS-BACKFILL IF a cell is short only because market_raw coverage is short: file the backfill
     row. Thresholds are not edited after the run.'
   what_it_does_not_do: Does not train or register any model, and does not change a threshold to manufacture a GO.
+compute: needs_vm_data
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false
   peak_memory_gb: 1.5
   est_minutes: 20
   basis: An estimate.
-blocked_on:
-- what: No script emits the per-cell count table; m23_phase2_labelvol.sh builds label volume but does not report cell-vs-gate.
-  ref: ML-LABEL-WALL (docs/claude/work/checklist/)
-  clears_when: Read-only count script merged; then git mv this unit to research/queue/ and fill run.workflow/lands.
 run:
-  workflow: null
-  note: Deliberately null until blocked_on clears.
+  command:
+  - python3
+  - scripts/research/label_wall_census.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261011-17f4-02
 lands:
-  store: research/results/ (once promoted)
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
 related:
 - ML-LABEL-WALL
 - ML-PRODUCERS
