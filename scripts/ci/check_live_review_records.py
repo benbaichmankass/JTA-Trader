@@ -24,6 +24,7 @@ Exit: 0 clean / 1 refused.   Usage: check_live_review_records.py [--self-test]
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 import sys
@@ -33,6 +34,7 @@ REPO = Path(__file__).resolve().parents[2]
 SCHEMA = REPO / "comms/schema/live_review.schema.json"
 REVIEWS = REPO / "comms/live_review/reviews.jsonl"
 OUTCOMES = REPO / "comms/live_review/outcomes.jsonl"
+PACKETS = REPO / "comms/live_review/packets"
 
 
 def _is_num(v) -> bool:
@@ -99,12 +101,12 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
         out.append("applied disagrees with disposition.route (auto_applied <=> applied)")
     if disp["route"] == "auto_applied" and ap["within_bound"] is not True:
         out.append("auto_applied outside the 0.25R apply bound")
-    if ap["tighten_r"] is not None and ap["within_bound"] is not None:
-        if ap["within_bound"] != (ap["tighten_r"] <= ap["bound_r"]):
-            out.append("apply_policy.within_bound contradicts tighten_r vs 0.25R")
-    if sh["tighten_r"] is not None and sh["within_bound"] is not None:
-        if sh["within_bound"] != (sh["tighten_r"] <= sh["bound_r"]):
-            out.append("shadow_policy.within_bound contradicts tighten_r vs 0.5R")
+    if (ap["tighten_r"] is not None and ap["within_bound"] is not None
+            and ap["within_bound"] != (ap["tighten_r"] <= ap["bound_r"])):
+        out.append("apply_policy.within_bound contradicts tighten_r vs 0.25R")
+    if (sh["tighten_r"] is not None and sh["within_bound"] is not None
+            and sh["within_bound"] != (sh["tighten_r"] <= sh["bound_r"])):
+        out.append("shadow_policy.within_bound contradicts tighten_r vs 0.5R")
     if rec["action"] == "tighten_sl" and (ap["tighten_r"] is None or sh["tighten_r"] is None):
         out.append("tighten_sl recommendation must record tighten_r on both the apply and shadow arms")
     if rec["basis"] == "insufficient_n" and rec["action"] != "no_recommendation":
@@ -117,6 +119,19 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     if set(accts) != set(row["accounts"]):
         out.append("account_reads must cover exactly the accounts in `accounts`")
     return out
+
+
+def packet_problems(row: dict, packets: Path) -> list[str]:
+    """A recorded packet_sha must be the sha256 of the committed decision packet
+    (canonical JSON: sort_keys, compact) -- the join from a decision to exactly what was seen."""
+    sha = row.get("packet_sha")
+    if not sha:
+        return []
+    f = packets / f"{row.get('review_id')}.json"
+    if not f.exists():
+        return [f"packet_sha set but {f.name} is missing from comms/live_review/packets/"]
+    got = hashlib.sha256(json.dumps(json.loads(f.read_text()), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return [] if got == sha else [f"packet_sha does not match {f.name}"]
 
 
 def _rows(path: Path):
@@ -148,6 +163,7 @@ def findings(reviews: Path = REVIEWS, outcomes: Path = OUTCOMES, schema_path: Pa
                 continue
             out += [f"{tag}: {m}" for m in row_problems(r, kind, schema)]
             if kind == "reviews":
+                out += [f"{tag}: {m}" for m in packet_problems(r, PACKETS)]
                 if r.get("review_id") in ids:
                     out.append(f"{tag}: duplicate review_id {r.get('review_id')}")
                 ids.add(r.get("review_id"))
@@ -238,6 +254,16 @@ def _self_test() -> int:
         oc.write_text(json.dumps(GOOD_OUTCOME) + "\n")
         c = not findings(rv, oc)
         print(f"  {'PASS' if c else 'FAIL'}  a consistent pair passes")
+        ok &= c
+        pk = Path(d) / "packets"
+        pk.mkdir()
+        (pk / f"{GOOD_REVIEW['review_id']}.json").write_text(json.dumps({"a": 1}))
+        good_sha = hashlib.sha256(b'{"a":1}').hexdigest()
+        c = not packet_problems(mut(GOOD_REVIEW, lambda r: r.update(packet_sha=good_sha)), pk)
+        print(f"  {'PASS' if c else 'FAIL'}  a packet_sha matching its packet passes")
+        ok &= c
+        c = bool(packet_problems(mut(GOOD_REVIEW, lambda r: r.update(packet_sha="0" * 64)), pk))
+        print(f"  {'PASS' if c else 'FAIL'}  a packet_sha not matching its packet is refused")
         ok &= c
         rv.write_text("not json\n")
         c = bool(findings(rv, oc))

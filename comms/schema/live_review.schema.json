@@ -42,7 +42,8 @@
       "model": {"type": "string", "minLength": 1},
       "session": {"type": "string", "minLength": 1},
       "prompt_sha": {"type": ["string", "null"]},
-      "skill_sha": {"type": ["string", "null"]}
+      "skill_sha": {"type": ["string", "null"]},
+      "packet_sha": {"_comment": "LTR-3 / manager 2026-10-25: sha256 of the canonical JSON (sort_keys, compact) of the decision packet the reviewer judged, stored at comms/live_review/packets/<review_id>.json, so each decision joins to exactly what was seen. Optional until the packet generator (scripts/ops/live_review_packet.py) exists.", "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
     }
   },
   "outcomes": {

@@ -1,0 +1,184 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "real_money",
+   "account_id": "bybit_2",
+   "evidence": "package intent changes nothing (no apply)",
+   "read": "no_action"
+  },
+  {
+   "account_class": "paper",
+   "account_id": "bybit_portfolio",
+   "evidence": "package intent changes nothing (no apply) (Stage-2 mirror)",
+   "read": "no_action"
+  },
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "package intent changes nothing (no apply) (Stage-1 soak)",
+   "read": "no_action"
+  }
+ ],
+ "assembled_by": "hand (LTR-3 first live run); generator scripts/ops/live_review_packet.py not built yet",
+ "cost": {
+  "basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 4,
+  "giveback_r": 0.6378,
+  "open_r": 0.2126,
+  "peak_r": 0.8504,
+  "r_to_stop": 1.2126,
+  "r_to_target": 3.7874
+ },
+ "info_cutoff_at": "2026-10-25T16:16:30Z",
+ "leg": "ada_pullback_2h",
+ "mechanics": {
+  "evidence": "package sl 0.21090357 / tp 0.18738571 = resting PartialStopLoss 0.2109 / PartialTakeProfit 0.1874 on bybit_2, bybit_portfolio and bybit_1 (bybit_open_orders 16:15Z). Stop is still the initial 1R: the 5.0xATR trail sits 3.33R behind the extreme, and at peak 0.85R that is looser than the initial stop, so it has not moved (expected geometry).",
+  "verdict": "match"
+ },
+ "order_package_id": "pkg-465a5d7d27644027",
+ "packet_version": 1,
+ "priced_options": {
+  "biases": [
+   "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+   "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+   "live peak_r is a lower bound on true MFE",
+   "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "corpus": "comms/strategy_evidence/runs/2026-10-18/ada_pullback_2h__trades.jsonl",
+  "n_floor": 20,
+  "options": [
+   {
+    "action": "hold",
+    "mean_r": null,
+    "n": 18,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "state": "insufficient_n",
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 18,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "atr:1.0",
+    "state": "insufficient_n",
+    "stop_at_r_now": 0.1837,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 18,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "atr:1.5",
+    "state": "insufficient_n",
+    "stop_at_r_now": -0.1496,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 18,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "atr:2.0",
+    "state": "insufficient_n",
+    "stop_at_r_now": -0.4829,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 18,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "r:1.0",
+    "state": "invalid_level",
+    "stop_at_r_now": 1.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 18,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "r:2.0",
+    "state": "invalid_level",
+    "stop_at_r_now": 2.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   }
+  ],
+  "population": {
+   "beyond_bars_slack": 0,
+   "comparable": 18,
+   "corpus_trades": 61,
+   "mfe_replay_mismatch": 0,
+   "never_reached_peak": 16,
+   "no_candles": 1,
+   "side_excluded": 26,
+   "side_filter": "short"
+  },
+  "read_state": "insufficient_n",
+  "source": "comms/live_review/tables/LR-20261025T1616Z-pkg-465a5d7d27644027.json"
+ },
+ "regime": {
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null
+ },
+ "review_id": "LR-20261025T1616Z-pkg-465a5d7d27644027",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 11,
+  "giveback_r": 0.6378,
+  "open_r": 0.2126,
+  "peak_provenance": "estimated",
+  "peak_r": 0.8504,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.21090357,
+  "tp": 0.18738571
+ }
+}

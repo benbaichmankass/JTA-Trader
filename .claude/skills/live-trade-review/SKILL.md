@@ -82,6 +82,29 @@ If the union is empty, write that with the reads' timestamps and row counts ("we
 
 ---
 
+## 1b. The decision packet: the repo builds the context, Claude judges (operator, 2026-10-25, binding)
+
+The operator, relayed by the manager on 2026-10-25 at about 16:20Z: the **repo**, not Claude, should build the context for each decision. Claude spends its usage only on the judgment. The context comes out in a fixed shape, so every decision lands in the datasets the models train on.
+
+**The decision packet is the one input contract.** It has one packet per package per review, stored at `comms/live_review/packets/<review_id>.json`, with these fields:
+
+| field | content |
+|---|---|
+| `state` | open_r, peak_r (+ provenance), giveback_r, bars_held, sl, tp, atr_now_over_entry, regime cells |
+| `features_at_review` | the numeric features the ML datasets join on |
+| `priced_options` | the LTR-0 table: source path, read_state, population, corpus, n_floor, options, biases |
+| `regime` | the `(trend, vol)` cell at entry and now, and the ATR ratio |
+| `mechanics` | venue vs journal vs package for every account, with a verdict and evidence |
+| `cost` | the cost basis behind the priced options |
+| `account_bounds` | the per-account read (§ 0.2) |
+| `info_cutoff_at` | when the newest input was read |
+
+- **The reviewer reads the packet and judges. It does not go and research.** The row carries `packet_sha`, the sha256 of the packet's canonical JSON (`sort_keys`, compact separators). The validator refuses a `packet_sha` that does not match the committed packet. That makes every decision joinable to exactly what was seen.
+- **Until the generator `scripts/ops/live_review_packet.py` exists**, the reviewer assembles the packet by hand from the § 1 reads and § 2 inputs, in this exact shape, and writes `assembled_by: hand`.
+- A field it could not fill is `null`, with the reason in `mechanics.evidence` or `context_flags`. It is never guessed. When the generator lands, the reviewer stops reading diag routes itself.
+
+---
+
 ## 2. Inputs per package
 
 | input | source |
@@ -152,7 +175,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 
 ### Step 6. Record, validate, report
 
-1. Append one row per package to `comms/live_review/reviews.jsonl` (schema `comms/schema/live_review.schema.json`).
+1. Write the packet to `comms/live_review/packets/<review_id>.json`, then append one row per package, carrying its `packet_sha`, to `comms/live_review/reviews.jsonl` (schema `comms/schema/live_review.schema.json`).
 2. Run `python3 scripts/ci/check_live_review_records.py`. It must exit 0 **on the real rows**.
 3. Land the rows in a PR (self-landing: automerge file + merge-slot claim, per the manager skill).
 4. Report to the manager. For each package give:
@@ -172,6 +195,7 @@ These are on top of the LTR-2 schema:
 - `basis: record_only` for paper rows.
 - `account_reads`: `[{"account_id", "account_class", "read": would_apply|refused_by_account_risk|unknown|no_action, "evidence"}]`. There is one entry per account carrying the package, and it is required on every review.
 - `trigger.event`: an L0 event name (design § 2). When run by hand, use `manual`. For the first live run of a skill version, use `first_live_run`. For a closed package priced as practice, use `dry_rehearsal`.
+- `packet_sha`: sha256 of the decision packet (§ 1b); the validator checks it against `comms/live_review/packets/<review_id>.json`.
 - `model`: the model TIER from the manager's model table (e.g. `opus-tier`), never a model identifier: the repo is public and identifiers stay out of pushed artifacts. `session`: your session id.
 
 ## 5. What this skill is not
