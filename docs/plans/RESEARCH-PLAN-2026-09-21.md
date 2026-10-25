@@ -104,9 +104,10 @@ is why `MD-PROMOTE-S1-S2` does not arm until **R1** lands.
 - **The soak book is an instrument nobody looks at.** 26 legs on `bybit_1` and
   19 on `alpaca_paper` make decisions on live data continuously and produce no
   read.
-- **Rule:** a standing weekly pass that grades every soak leg on mechanics and
+- **Rule:** a standing weekly pass that MONITORS every soak leg's mechanics and
   cost fidelity (not expectancy — see R3), and files each one into the research
-  queue as either *tweakable with a named hypothesis* or *kill*.
+  queue as either *tweakable with a named hypothesis* or *kill*. It is monitoring,
+  never a soak's exit (OPERATING-PLAN § 2 "The soak is MECHANICAL").
 - This is the part of the flow the operator asked for and that has never
   existed.
 

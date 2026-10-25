@@ -146,6 +146,7 @@ Check:      python3 scripts/ops/pipeline.py --check
 from __future__ import annotations
 
 import argparse
+import collections
 import contextlib
 import io
 import json
@@ -332,6 +333,14 @@ def validate(item: dict) -> dict:
                 "due_when.clears_when: required for observation/event items — "
                 "reason (2). What would have to be TRUE for this to be over?"
             )
+    soak = due_when.get("soak")
+    if soak is not None:
+        if kind != "observation" or not isinstance(soak, dict) or \
+                not isinstance(soak.get("subject"), str) or not soak["subject"].strip():
+            raise PipelineError(
+                "due_when.soak: an observation item's soak block needs a non-empty "
+                "`subject` (the key scripts/ops/soak_report.py grades it under)"
+            )
     every = due_when.get("check_every_days")
     if every is not None and (not isinstance(every, int) or every < 1):
         raise PipelineError(
@@ -509,7 +518,16 @@ def _record_filename(now: datetime | None = None) -> str:
     return f"{now.strftime('%Y%m%dT%H%M%S%f')}Z-{uuid.uuid4().hex[:8]}{RECORD_SUFFIX}"
 
 
-def append(item: dict, store: Path = STORE, *, intent: str) -> dict:
+def version_of(item_id: str, store: Path = STORE) -> str | None:
+    """The VERSION TOKEN of an item's current state: the filename (or
+    `"line N"` for a legacy flat file) holding its LATEST record, or None if the
+    id does not exist. A writer that READS an item and later UPDATES it passes
+    this token back as `append(..., based_on=token)`; see `append()`."""
+    return read_log(store).sources.get(item_id)
+
+
+def append(item: dict, store: Path = STORE, *, intent: str,
+           based_on: str | None = None) -> dict:
     """Validate, then write one NEW record file. Never rewrites history.
 
     `intent` is REQUIRED -- there is deliberately no default, because the
@@ -523,6 +541,18 @@ def append(item: dict, store: Path = STORE, *, intent: str) -> dict:
                   mismatch is refused by name rather than silently folded
                   over the record it would have displaced.
 
+    ⚠️ STALE-SNAPSHOT GUARD (PI-20261004-4GA8WQPA-0002). An "update" must also
+    say WHICH VERSION it read: `based_on` is the token `version_of(id)`
+    returned when the writer read the item, and the write is refused unless
+    that is STILL the item's latest record. `_identity_mismatches` cannot see
+    this: a writer holding an old read passes the identity check and silently
+    reverts a newer update (MEASURED 2026-10-04: PR #16505 restored routing
+    text that had been replaced 25 minutes earlier on 10 items). `based_on` is
+    REQUIRED for "update" -- like `intent`, no default, because having to name
+    the version read is the fix -- and is stored on the record. It guards a
+    writer's own read-to-write window; it cannot see a conflicting record that
+    arrives later through a merge of two branches (`--check` reports those).
+
     Neither path re-derives what "plausibly a state change" means locally --
     that definition lives once, in `_identity_mismatches`, so this function
     and `read_log()`'s own collision detector can never drift apart on it.
@@ -535,6 +565,17 @@ def append(item: dict, store: Path = STORE, *, intent: str) -> dict:
     a caller mid-transition cannot silently start a second store.
     """
     validate(item)
+    # ROUTE-20261012: `routed_to` on a non-routed item is invisible to
+    # unrouted() (which keys on state alone), so the item stays "unrouted"
+    # while its record claims an owner (PI-20261011-YJAYF7GD-0001..4 were
+    # filed that way). Refused on NEW writes only; legacy records are not
+    # re-validated for it, so --check stays green.
+    if str(item.get("routed_to") or "").strip() and \
+            item["state"] not in ("routed",) + tuple(TERMINAL_STATES):
+        raise PipelineError(
+            f"id {item['id']!r}: routed_to={item['routed_to']!r} but "
+            f"state={item['state']!r} -- unrouted() keys on state, so this item "
+            f"would still count as unrouted. Set state='routed' (or drop routed_to).")
     if intent not in ("new", "update"):
         raise PipelineError(f"intent: must be 'new' or 'update', got {intent!r}")
 
@@ -556,6 +597,19 @@ def append(item: dict, store: Path = STORE, *, intent: str) -> dict:
                 f"exists to update -- call append(..., intent='new') to file "
                 f"it for the first time."
             )
+        current = read_log(store).sources.get(item["id"])
+        if based_on is None:
+            raise PipelineError(
+                f"id {item['id']!r}: intent='update' requires based_on= the "
+                f"version you READ (pipeline.version_of({item['id']!r}) -> "
+                f"{current!r} right now). Without it a stale read can silently "
+                f"revert a newer update (PI-20261004-4GA8WQPA-0002).")
+        if based_on != current:
+            raise PipelineError(
+                f"id {item['id']!r}: STALE SNAPSHOT -- you read {based_on!r} but "
+                f"the latest record is {current!r}. Re-read the item, re-apply "
+                f"your change on top of the CURRENT state, and retry.")
+        item = dict(item, based_on=based_on)
         mismatches = _identity_mismatches(prior, item)
         if mismatches:
             raise PipelineError(
@@ -651,7 +705,55 @@ def mint_id(session_ref: str, *, today: date | None = None, store: Path = STORE)
     return f"{prefix}{nxt:04d}"
 
 
-def is_due(item: dict, today: date | None = None) -> bool:
+# ── SOAK-WATCH (2026-10-04): a soak's due-ness comes from its GRADED STATE ───
+# `scripts/ops/soak_alarm.py`'s four states, ported onto this store (that module
+# read the archived OPEN-ITEMS.json and graded nothing after 2026-09-21). An item
+# carrying `due_when.soak.subject` is due when `scripts/ops/soak_report.py`
+# grades that subject ready / dead / could-not-look, and NOT due while it is
+# accruing — a weekly "not ready yet" row is the desensitised alarm the canonical
+# rule refuses. A subject the state file does not carry, or no state file at
+# all, is could-not-look -> due: the safe direction for a missing read.
+SOAK_STATE = Path("docs/claude/work/soak-state.json")
+SOAK_DUE_VERDICTS = ("ready", "dead", "could-not-look")
+_soak_cache: tuple[float, dict] | None = None
+
+
+def load_soak_states(path: Path = SOAK_STATE) -> dict:
+    """``{subject: verdict}`` from the soak state file; ``{}`` if unreadable."""
+    try:
+        doc = json.loads(Path(path).read_text(encoding="utf-8"))
+        return {k: v.get("verdict") for k, v in (doc.get("subjects") or {}).items()}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def _default_soak_states() -> dict:
+    """Re-read when the file changes. The brief route runs inside the long-lived
+    web API process and ict-git-sync rewrites the file weekly, so a process-
+    lifetime cache would serve last week's grades. Anchored at the repo root,
+    not the cwd, for the same reason."""
+    global _soak_cache
+    path = Path(__file__).resolve().parents[2] / SOAK_STATE
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = -1.0
+    if _soak_cache is None or _soak_cache[0] != mtime:
+        _soak_cache = (mtime, load_soak_states(path))
+    return _soak_cache[1]
+
+
+def soak_verdict(item: dict, soak_states: dict | None = None) -> str | None:
+    """The graded verdict for a soak item, ``could-not-look`` if ungraded, or
+    ``None`` for an item that is not a soak."""
+    subj = ((item.get("due_when") or {}).get("soak") or {}).get("subject")
+    if not subj:
+        return None
+    states = _default_soak_states() if soak_states is None else soak_states
+    return states.get(subj) or "could-not-look"
+
+
+def is_due(item: dict, today: date | None = None, soak_states: dict | None = None) -> bool:
     """Is this item asking for attention now?
 
     ⚠️ COMPUTED, NOT DECLARED — this is reason (1). An item does not become due
@@ -662,6 +764,21 @@ def is_due(item: dict, today: date | None = None) -> bool:
         return False
     dw = item.get("due_when") or {}
     today = _today(today)
+
+    sv = soak_verdict(item, soak_states)
+    if sv is not None:
+        return sv in SOAK_DUE_VERDICTS
+
+    # One-shot observation (non-soak definition of done, 2026-10-04): due once
+    # `observation.due_by` is reached, whatever the timer says; an unparseable
+    # due_by is DUE (the safe direction for a broken clock).
+    obs = item.get("observation")
+    if isinstance(obs, dict) and obs.get("due_by"):
+        try:
+            if _parse_date(str(obs["due_by"])[:10], "observation.due_by") <= today:
+                return True
+        except PipelineError:
+            return True
 
     if dw.get("kind") == "date":
         try:
@@ -682,6 +799,136 @@ def is_due(item: dict, today: date | None = None) -> bool:
         return _parse_date(last, "due_when.last_checked") + timedelta(days=every) <= today
     except PipelineError:
         return True
+
+
+def next_due_date(item: dict) -> date | None:
+    """The date `is_due` will next flip True for an OPEN, non-soak item, or
+    None when it is not a clock item (terminal, soak-bound, event kind with no
+    cadence) or is already/always due (no usable cadence -> `date.min`).
+
+    The same three clocks `is_due` reads, folded to one date: the EARLIEST of
+    `observation.due_by`, `due_when.due_date` (kind date), and
+    `last_checked + check_every_days`. Kept next to `is_due` and pinned to it
+    by the self-test so the two cannot fork the definition of "due"."""
+    if item.get("state") in TERMINAL_STATES:
+        return None
+    dw = item.get("due_when") or {}
+    if (dw.get("soak") or {}).get("subject"):
+        return None
+    cands: list[date] = []
+    obs = item.get("observation")
+    if isinstance(obs, dict) and obs.get("due_by"):
+        try:
+            cands.append(_parse_date(str(obs["due_by"])[:10], "observation.due_by"))
+        except PipelineError:
+            return date.min
+    if dw.get("kind") == "date":
+        try:
+            cands.append(_parse_date(dw.get("due_date"), "due_when.due_date"))
+        except PipelineError:
+            return date.min
+    else:
+        every, last = dw.get("check_every_days"), dw.get("last_checked")
+        if not isinstance(every, int) or every < 1 or not isinstance(last, str) or not last.strip():
+            return date.min
+        try:
+            cands.append(_parse_date(last, "due_when.last_checked") + timedelta(days=every))
+        except PipelineError:
+            return date.min
+    return min(cands) if cands else None
+
+
+REDATE_MIN_OBSERVATION_CHARS = 40
+
+
+def redate_problems(prior: dict, new: dict) -> list[str]:
+    """Why `new` is a RE-DATE that carries no new observation (PI-20261005-
+    4GA8WQPA-0002, the lapse wave). A re-date is a record for an OPEN item whose
+    state did not change and whose next-due date moved LATER. Moving a date is
+    free and looks like work; the BACKLOG-BURNDOWN-2 lane took 358 due items to
+    19 that way and left 553 open, all lapsing together again. So the record
+    must carry `redate: {observed_at, observation}` -- what the writer actually
+    READ this time -- and that observation must differ from the previous one.
+    Empty list = not a re-date, or an admissible one."""
+    if new.get("state") != prior.get("state") or new.get("state") in TERMINAL_STATES:
+        return []  # a disposition (routed/killed/done) is not a re-date
+    a, b = next_due_date(prior), next_due_date(new)
+    if a is None or b is None or b <= a:
+        return []
+    rd = new.get("redate")
+    if not isinstance(rd, dict):
+        return [f"next-due moved {a} -> {b} with no `redate` block: a new date is not "
+                f"an observation. Re-run origin.rerun, then record what it showed "
+                f"(`pipeline.py --redate ID --observation TEXT --next-due DATE`), "
+                f"or close/kill the item with a terminal_reason."]
+    out: list[str] = []
+    obs = str(rd.get("observation") or "").strip()
+    if len(obs) < REDATE_MIN_OBSERVATION_CHARS:
+        out.append(f"`redate.observation` must say what was read "
+                   f"(>= {REDATE_MIN_OBSERVATION_CHARS} chars), got {len(obs)}")
+    prev = str(((prior.get("redate") or {}).get("observation")) or "").strip()
+    if obs and obs == prev:
+        out.append("`redate.observation` repeats the previous record's text verbatim -- "
+                   "that is a new date, not a new observation")
+    try:
+        _parse_date(str(rd.get("observed_at") or "")[:10], "redate.observed_at")
+    except PipelineError as exc:
+        out.append(str(exc))
+    return out
+
+
+def redate(item_id: str, *, observation: str, next_due: date, store: Path = STORE,
+           today: date | None = None, evidence: str | None = None) -> dict:
+    """Push an item's next-due date out BECAUSE you re-read it: sets the cadence,
+    `due_when.due_date` (kind date) and `observation.due_by` TOGETHER (changing
+    only one is the PI-20261005-WFBREDQP-0001 trap: `is_due` honours `due_by`
+    regardless of cadence), stamps the `redate` block `redate_problems` demands,
+    and writes through `append()` with the version it read."""
+    today = _today(today)
+    res = read_log(store)
+    prior = res.items.get(item_id)
+    if prior is None:
+        raise PipelineError(f"{item_id!r}: no such item")
+    if prior.get("state") in TERMINAL_STATES:
+        raise PipelineError(f"{item_id!r} is {prior.get('state')}; nothing to re-date")
+    if next_due <= today:
+        raise PipelineError(f"next_due {next_due} is not after today {today}")
+    rec = json.loads(json.dumps(prior))
+    rec.pop("based_on", None)
+    dw = rec.setdefault("due_when", {})
+    if dw.get("kind") == "date":
+        dw["due_date"] = next_due.isoformat()
+    else:
+        dw["last_checked"] = today.isoformat()
+        dw["check_every_days"] = (next_due - today).days
+    if isinstance(rec.get("observation"), dict):
+        rec["observation"]["due_by"] = next_due.isoformat()
+    rec["redate"] = {"observed_at": today.isoformat(), "observation": observation.strip(),
+                     **({"evidence": evidence} if evidence else {})}
+    problems = redate_problems(prior, rec)
+    if problems:
+        raise PipelineError("; ".join(problems))
+    return append(rec, store, intent="update", based_on=res.sources[item_id])
+
+
+def due_bucket(item: dict, today: date | None = None) -> str | None:
+    """WHY an item is due — the same branches as ``is_due``, named. ``None`` iff
+    ``is_due`` is False (a test pins the two together, so this cannot fork the
+    definition of "due"). Buckets: ``date-passed`` · ``no-cadence`` (observation
+    or event with no usable ``check_every_days``) · ``never-checked`` (cadence
+    declared, ``last_checked`` blank) · ``lapsed`` (checked, cadence elapsed)."""
+    if not is_due(item, today):
+        return None
+    dw = item.get("due_when") or {}
+    if dw.get("kind") == "date":
+        return "date-passed"
+    every = dw.get("check_every_days")
+    if not isinstance(every, int) or every < 1:
+        return "no-cadence"
+    last = dw.get("last_checked")
+    if not isinstance(last, str) or not last.strip():
+        return "never-checked"
+    return "lapsed"
 
 
 def due(items: Iterable[dict], today: date | None = None) -> list[dict]:
@@ -753,6 +1000,64 @@ def unrouted_count(items: Iterable[dict], today: date | None = None) -> int:
     return len(unrouted(items, today))
 
 
+# ── HEALTH-GATE-NARROW (operator, 2026-10-24: "Narrow the gate (Recommended)") ─
+# The /health-review per-item drain gate counts ONLY: (1) unrouted items (incl.
+# an owner that cannot be resolved), (2) items whose owner checklist row has
+# CLOSED (done/dropped) while the item is still due, (3) high-severity items.
+# Owner-routed items with a LIVE owner are the owner's job; blocker_watch's
+# UNPROVEN_OVERDUE sweep tracks them. MEASURED 2026-10-24: due 369, 349 routed
+# to a live row. The excluded count is returned, never dropped silently.
+GATE_CLOSED_ROW_STATES = ("done", "dropped")
+_OWNER_TOKEN = re.compile(r"[A-Za-z0-9_.\-]+")
+_OWNER_PR = re.compile(r"PR\s*#\d+")
+
+
+def owner_of(item: dict, rows: dict[str, dict], unit_exists=lambda uid: False) -> tuple[str, str]:
+    """-> (kind, ref) kind in row|unit|pr|unresolved. ``routed_to`` is free text
+    that leads with the owner ('A7', 'checklist row A7 | ...', 'RQ-..', 'PR #1')."""
+    text = re.sub(r"^checklist row\s+", "", str(item.get("routed_to") or "").strip())
+    if _OWNER_PR.match(text):
+        return "pr", _OWNER_PR.match(text).group(0)
+    m = _OWNER_TOKEN.match(text)
+    tok = m.group(0) if m else ""
+    if tok in rows:
+        return "row", tok
+    if tok.startswith("RQ-") and unit_exists(tok):
+        return "unit", tok
+    return "unresolved", tok
+
+
+def gate_set(items: Iterable[dict], rows: dict[str, dict], today: date | None = None,
+             unit_exists=lambda uid: False) -> dict:
+    """The health-review drain-gate population, COMPUTED. Returns the gate ids
+    per class, ``gate`` (union size), and the denominator: ``due`` and
+    ``excluded`` with the reason (live owner row / unit / PR). A due item in
+    several classes counts once, under the first of unrouted > owner_closed > high."""
+    classes: dict[str, list[str]] = {"unrouted": [], "owner_closed": [], "high_severity": []}
+    excluded = {"owner_row_live": 0, "owner_unit": 0, "owner_pr": 0}
+    n_due = 0
+    for it in due(items, today):
+        n_due += 1
+        if it.get("state") != "routed":
+            classes["unrouted"].append(it["id"])
+            continue
+        kind, ref = owner_of(it, rows, unit_exists)
+        if kind == "unresolved":
+            classes["unrouted"].append(it["id"])
+            continue
+        if kind == "row" and rows[ref].get("state") in GATE_CLOSED_ROW_STATES:
+            classes["owner_closed"].append(it["id"])
+            continue
+        if str(it.get("severity") or "").lower() == "high":
+            classes["high_severity"].append(it["id"])
+            continue
+        excluded[{"row": "owner_row_live", "unit": "owner_unit", "pr": "owner_pr"}[kind]] += 1
+    gate = sum(len(v) for v in classes.values())
+    assert gate + sum(excluded.values()) == n_due
+    return {"due": n_due, "gate": gate, "counts": {k: len(v) for k, v in classes.items()},
+            "ids": classes, "excluded": excluded, "excluded_total": n_due - gate}
+
+
 def stats(res: LoadResult, today: date | None = None) -> dict:
     items = list(res.items.values())
     by_state = {s: sum(1 for i in items if i.get("state") == s) for s in STATES}
@@ -805,6 +1110,14 @@ def render_section_0(res: LoadResult, today: date | None = None,
     if alarm["undated"]:
         L += [f"> {alarm['undated']} unrouted item(s) carry no date in their id — "
               f"their age could not be read and is not in the oldest-age figure.", ""]
+    soaks = [i for i in res.items.values()
+             if i.get("state") in OPEN_STATES and soak_verdict(i) is not None]
+    if soaks:
+        c = collections.Counter(soak_verdict(i) for i in soaks)
+        L += [f"> **Soaks ({len(soaks)} tracked):** {c.get('ready', 0)} ready · {c.get('dead', 0)} dead · "
+              f"{c.get('could-not-look', 0)} could-not-look · {c.get('accruing', 0)} accruing (quiet). "
+              f"Ready/dead/could-not-look are listed below as due; the full table is "
+              f"`docs/claude/work/SOAK-REPORT.md`.", ""]
     rows = due(res.items.values(), today)
     if not rows:
         L += ["Nothing came due." if res.healthy else
@@ -812,11 +1125,17 @@ def render_section_0(res: LoadResult, today: date | None = None,
         return L
     L += [f"**{len(rows)} item(s) due. Each needs a disposition today.**", ""]
     far = date.max
-    ordered = sorted(rows, key=lambda r: (r.get("state") == "routed",
+    # A READY or DEAD soak is a decision owed now — listed first so the cap never
+    # hides it behind older unrouted rows (SOAK-WATCH 2026-10-04).
+    ordered = sorted(rows, key=lambda r: (soak_verdict(r) not in ("ready", "dead"),
+                                          r.get("state") == "routed",
                                           filed_date(r) or far, r.get("id", "")))
     shown = ordered if limit is None else ordered[:limit]
     for i in shown:
         owner = f" → `{i['routed_to']}`" if i.get("routed_to") else ""
+        sv = soak_verdict(i)
+        if sv is not None:
+            owner += f" · **soak: {sv}**"
         what = str(i.get("what"))
         if limit is not None and len(what) > 300:
             what = what[:300].rstrip() + "…"
@@ -844,8 +1163,17 @@ def _check_git_merge_safety(check) -> None:
     import subprocess
 
     def git(*args: str, cwd: Path) -> subprocess.CompletedProcess:
+        # `-c gc.auto=0 -c maintenance.auto=false`: a `git merge` may fork a
+        # background `git gc --auto` into the throwaway repo, and that process
+        # can still be writing `.git/objects` while TemporaryDirectory tears
+        # the tree down -- MEASURED on PR #16964's guards job (run 37671602666,
+        # 2026-10-07): `OSError: [Errno 39] Directory not empty: 'objects'`
+        # from the cleanup, with every merge assertion already passed. The
+        # control is about merge semantics, not garbage collection, so
+        # background maintenance is switched off for these calls.
         return subprocess.run(
-            ["git", *args], cwd=str(cwd), capture_output=True, text=True)
+            ["git", "-c", "gc.auto=0", "-c", "maintenance.auto=false", *args],
+            cwd=str(cwd), capture_output=True, text=True)
 
     def base(**over: Any) -> dict:
         item = {
@@ -866,7 +1194,9 @@ def _check_git_merge_safety(check) -> None:
         return
 
     for order in ("a-then-b", "b-then-a"):
-        with tempfile.TemporaryDirectory() as td:
+        # ignore_cleanup_errors: the assertions above are the control; a
+        # cleanup race on the throwaway repo must not read as a failed guard.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             repo = Path(td)
             git("init", "-q", "-b", "main", cwd=repo)
             git("config", "user.email", "test@example.invalid", cwd=repo)
@@ -979,6 +1309,27 @@ def _selftest() -> int:
           not is_due(base(state="killed", terminal_reason="r",
                           due_when={"kind": "date", "due_date": "2020-01-01"}), t))
 
+    print("— SOAK-WATCH: a soak item's due-ness is its graded state —")
+    sk = base(due_when={"kind": "observation", "clears_when": "gate 2", "check_every_days": 7,
+                        "last_checked": "2026-09-01", "soak": {"subject": "bybit_1/x"}})
+    check("an ACCRUING soak is quiet even with its timer long elapsed",
+          not is_due(sk, t, soak_states={"bybit_1/x": "accruing"}))
+    for v in ("ready", "dead", "could-not-look"):
+        check(f"a {v} soak is due", is_due(sk, t, soak_states={"bybit_1/x": v}))
+    check("⚠️ an UNGRADED soak (absent from the state file) is could-not-look -> due, never quiet",
+          is_due(sk, t, soak_states={}))
+    refuses("a soak block with no subject is refused",
+            base(due_when={"kind": "observation", "clears_when": "x", "soak": {}}), "due_when.soak")
+    ob = base(observation={"what": "report produced", "how_to_check": "ls", "due_by": "2026-09-20"},
+              due_when={"kind": "observation", "clears_when": "x", "check_every_days": 30,
+                        "last_checked": "2026-09-20"})
+    check("a one-shot observation past its due_by is due even with its timer not elapsed",
+          is_due(ob, t))
+    check("a one-shot observation before its due_by follows its timer",
+          not is_due(dict(ob, observation=dict(ob["observation"], due_by="2026-12-01")), t))
+    check("a non-soak item ignores soak states entirely",
+          soak_verdict(base(), {"bybit_1/x": "dead"}) is None)
+
     print("— reason (5): the number the operator's page reports —")
     pool = [base(id="A", state="queued"),
             base(id="B", state="routed", routed_to="A7"),
@@ -988,12 +1339,58 @@ def _selftest() -> int:
     check("…and a routed item is still DUE (its owner is being tracked)",
           {i["id"] for i in due(pool, t)} == {"A", "B"})
 
+    print("— re-date must carry a new observation (lapse wave) —")
+    with tempfile.TemporaryDirectory() as td:
+        rs = Path(td) / "p"
+        t0 = date(2026, 10, 7)
+        append(base(id="R", due_when={"kind": "observation", "clears_when": "x",
+                                      "check_every_days": 7, "last_checked": "2026-10-01"}),
+               rs, intent="new")
+        prior = read_log(rs).items["R"]
+        check("next_due_date folds cadence (last_checked + every)", next_due_date(prior) == date(2026, 10, 8))
+        moved = json.loads(json.dumps(prior))
+        moved["due_when"]["last_checked"] = "2026-10-07"
+        check("a bare re-date (new date, no observation) is refused",
+              bool(redate_problems(prior, moved)))
+        try:
+            redate("R", observation="too short", next_due=date(2026, 10, 20), store=rs, today=t0)
+        except PipelineError:
+            check("redate() refuses a one-word observation", True)
+        else:
+            check("redate() refuses a one-word observation", False)
+        out = redate("R", observation="re-ran origin.rerun: 3 of 5 rows still reproduce; cause unchanged",
+                     next_due=date(2026, 10, 20), store=rs, today=t0)
+        check("redate() with a real observation lands and moves next-due",
+              next_due_date(out) == date(2026, 10, 20) and read_log(rs).items["R"]["redate"]["observed_at"] == "2026-10-07")
+        again = json.loads(json.dumps(read_log(rs).items["R"]))
+        again["due_when"]["last_checked"] = "2026-10-20"
+        again["due_when"]["check_every_days"] = 30
+        check("repeating the previous observation verbatim is refused",
+              any("repeats" in p for p in redate_problems(read_log(rs).items["R"], again)))
+        shut = json.loads(json.dumps(prior))
+        shut.update(state="killed", terminal_reason="r")
+        check("closing is not a re-date (needs no observation)", redate_problems(prior, shut) == [])
+        append(base(id="O", observation={"what": "w", "how_to_check": "h", "due_by": "2026-10-08"},
+                    due_when={"kind": "observation", "clears_when": "x", "check_every_days": 7,
+                              "last_checked": "2026-10-01"}), rs, intent="new")
+        o = redate("O", observation="re-read the 05:30Z report: produced, no regression since", next_due=date(2026, 10, 25), store=rs, today=t0)
+        check("redate() moves observation.due_by with the cadence (WFBREDQP-0001 trap)",
+              o["observation"]["due_by"] == "2026-10-25" and not is_due(o, date(2026, 10, 24)))
+
     print("— one file per record, and the unreadable record —")
     with tempfile.TemporaryDirectory() as td:
         store = Path(td) / "pipeline"
         append(base(id="X"), store, intent="new")
-        append(base(id="X", state="routed", routed_to="A7"), store, intent="update")
+        append(base(id="X", state="routed", routed_to="A7"), store, intent="update",
+               based_on=version_of("X", store))
         append(base(id="Y"), store, intent="new")
+        try:
+            append(base(id="Z", state="queued", routed_to="A7"), store, intent="new")
+        except PipelineError as exc:
+            check("routed_to on a non-routed item is refused on append (ROUTE-20261012)",
+                  "unrouted" in str(exc))
+        else:
+            check("routed_to on a non-routed item is refused on append (ROUTE-20261012)", False)
         res = read_log(store)
         check("two records for one id fold to the LAST (append-only state)",
               res.items["X"]["state"] == "routed")
@@ -1051,6 +1448,21 @@ def _selftest() -> int:
         check("PLANTED DEFECT: _check() now FAILS with the sibling file "
               "present, never printing a clean verdict over it",
               rc2 == 1 and "exists ALONGSIDE" in out2.getvalue())
+
+    print("— an id-named record (it would fold out of time order) is caught —")
+    with tempfile.TemporaryDirectory() as td:
+        store = Path(td) / "pipeline"
+        append(base(id="Z"), store, intent="new")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc_ok = _check(store)
+        check("…(negative control) timestamp-named records only -> clean", rc_ok == 0)
+        (store / "PI-Z.json").write_text(json.dumps(base(id="Z")), encoding="utf-8")
+        out3 = io.StringIO()
+        with contextlib.redirect_stdout(out3):
+            rc3 = _check(store)
+        check("PLANTED DEFECT: an id-named record file FAILS _check() "
+              "(PI-20261002-APBY4NTV-0003)",
+              rc3 == 1 and "PI-Z.json" in out3.getvalue())
         check("…and the failure NAMES the fix (the migration script)",
               "migrate_pipeline_to_dir.py" in out2.getvalue())
 
@@ -1084,7 +1496,7 @@ def _selftest() -> int:
             append(base(id="COLL", what="a totally unrelated finding",
                         origin={"kind": "audit", "ref": "#999",
                                 "rerun": "python3 other.py"}),
-                   store, intent="update")
+                   store, intent="update", based_on=version_of("COLL", store))
         except PipelineError as exc:
             check("intent='update' refuses a record whose identity "
                   "(what/origin) does not match the one it claims to update",
@@ -1104,7 +1516,28 @@ def _selftest() -> int:
         # the negative control that proves the checks above are measuring
         # the identity mismatch and not intent='update' itself.
         append(base(id="COLL", state="routed", routed_to="A7"), store,
-               intent="update")
+               intent="update", based_on=version_of("COLL", store))
+        # STALE-SNAPSHOT GUARD (PI-20261004-4GA8WQPA-0002): a writer holding the
+        # version it read BEFORE that update is refused; one that omits it too.
+        sstore = Path(td) / "stale"
+        append(base(id="COLL"), sstore, intent="new")
+        read_v = version_of("COLL", sstore)
+        append(base(id="COLL", state="killed", terminal_reason="superseded"),
+               sstore, intent="update", based_on=read_v)
+        for label, kw, needle in (
+                ("an update based on a SUPERSEDED version is refused", {"based_on": "00000000T000000000000Z-deadbeef.json"}, "STALE SNAPSHOT"),
+                ("an update with NO based_on is refused", {}, "requires based_on")):
+            try:
+                append(base(id="COLL", state="routed", routed_to="A9"), sstore,
+                       intent="update", **kw)
+            except PipelineError as exc:
+                check(label, needle in str(exc))
+            else:
+                check(label, False)
+        check("…and the stale write never landed (state still killed)",
+              read_log(sstore).items["COLL"]["state"] == "killed")
+        check("an accepted update records the version it was based on",
+              read_log(sstore).items["COLL"].get("based_on") == read_v)
         check("…but intent='update' WITH matching identity is accepted "
               "(negative control)",
               read_log(store).items["COLL"]["state"] == "routed")
@@ -1138,7 +1571,7 @@ def _selftest() -> int:
         clean = Path(td) / "clean"
         append(base(id="Y"), clean, intent="new")
         append(base(id="Y", state="routed", routed_to="A7"), clean,
-               intent="update")
+               intent="update", based_on=version_of("Y", clean))
         check("…and a genuine state-change pair raises NO collision "
               "(negative control)",
               read_log(clean).collisions == [])
@@ -1162,8 +1595,8 @@ def _selftest() -> int:
         gb = base(id=gid, what="finding B",
                   origin={"kind": "session", "ref": "sess_2",
                           "rerun": "python3 b.py"})
-        (graveyard / "0001-a.json").write_text(json.dumps(ga), encoding="utf-8")
-        (graveyard / "0002-b.json").write_text(json.dumps(gb), encoding="utf-8")
+        (graveyard / "20260101T000001000000Z-a.json").write_text(json.dumps(ga), encoding="utf-8")
+        (graveyard / "20260101T000002000000Z-b.json").write_text(json.dumps(gb), encoding="utf-8")
         out2 = io.StringIO()
         with contextlib.redirect_stdout(out2):
             rc2 = _check(graveyard)
@@ -1175,6 +1608,35 @@ def _selftest() -> int:
         check("…and the collision is named in the output regardless "
               "(loud, not silently passed)",
               gid in out2.getvalue())
+
+    print("— HEALTH-GATE-NARROW: the drain-gate set is COMPUTED, with its denominator —")
+    gt = date(2026, 9, 21)
+    grows = {"LIVE": {"id": "LIVE", "state": "landed_unproven"},
+             "GONE": {"id": "GONE", "state": "done"},
+             "DROP": {"id": "DROP", "state": "dropped"}}
+    gitems = [
+        base(id="G-UNROUTED", state="queued"),
+        base(id="G-CLOSED-DONE", state="routed", routed_to="checklist row GONE | note"),
+        base(id="G-CLOSED-DROPPED", state="routed", routed_to="DROP (re-routed)"),
+        base(id="G-HIGH", state="routed", routed_to="LIVE", severity="high"),
+        base(id="G-NOROW", state="routed", routed_to="no such row at all"),
+        base(id="X-LIVE", state="routed", routed_to="LIVE | x"),
+        base(id="X-UNIT", state="routed", routed_to="RQ-1 (unit)"),
+        base(id="X-PR", state="routed", routed_to="PR #12 held"),
+        base(id="X-NOTDUE", state="routed", routed_to="GONE",
+             due_when={"kind": "date", "due_date": "2027-01-01"}),
+    ]
+    gs = gate_set(gitems, grows, gt, unit_exists=lambda u: u == "RQ-1")
+    check("planted unrouted item (+ unresolvable owner) is in the gate",
+          sorted(gs["ids"]["unrouted"]) == ["G-NOROW", "G-UNROUTED"])
+    check("planted owner-closed items (done and dropped) are in the gate",
+          sorted(gs["ids"]["owner_closed"]) == ["G-CLOSED-DONE", "G-CLOSED-DROPPED"])
+    check("planted high-severity item with a live owner is in the gate",
+          gs["ids"]["high_severity"] == ["G-HIGH"])
+    check("live-owner row/unit/PR items are EXCLUDED, and counted by reason",
+          gs["excluded"] == {"owner_row_live": 1, "owner_unit": 1, "owner_pr": 1})
+    check("denominator: gate + excluded == due (not-due item in neither)",
+          gs["due"] == 8 and gs["gate"] == 5 and gs["excluded_total"] == 3)
 
     print("— POSITIVE CONTROL: two branches each appending one record merge "
           "cleanly with plain git (the actual property this re-point buys) —")
@@ -1209,6 +1671,10 @@ def _resurrected_legacy_file(store: Path) -> Path | None:
         return None
     legacy = store.parent / "PIPELINE.jsonl"
     return legacy if legacy.exists() else None
+
+
+#: A record name that sorts chronologically: it starts with its own timestamp.
+_TIMESTAMP_LED = re.compile(r"^\d{8}T\d{6}")
 
 
 def _check(store: Path) -> int:
@@ -1270,7 +1736,23 @@ def _check(store: Path) -> int:
                    if _is_grandfathered_collision(c) else "NEW")
             print(f"  {c['id']} at {c['at']}: {c['reason']} [{tag}]")
 
-    if res.unreadable or bad or new_collisions:
+    # ⚠️ load() folds in FILENAME order, and that is chronological only for a
+    # name that starts with its timestamp. An id-named record ('PI-....json')
+    # sorts AFTER every '2026...' record, so it silently overrides any later
+    # update or closure of the same id (PI-20261002-APBY4NTV-0003: the
+    # manager's closure of PI-20261002-UBMITVIS-0001 folded as 'queued').
+    misnamed = sorted(p.name for p in store.glob(f"*{RECORD_SUFFIX}")
+                      if not _TIMESTAMP_LED.match(p.name))
+    if misnamed:
+        print(f"\n::error::pipeline: {len(misnamed)} record file(s) not named "
+              f"by their timestamp. load() folds in filename order, so such a "
+              f"record is folded out of time order and can SHADOW a later "
+              f"update of its id. Rename each to the "
+              f"`YYYYMMDDTHHMMSS...Z-<suffix>.json` of its creation commit.")
+        for name in misnamed:
+            print(f"  {name}")
+
+    if res.unreadable or bad or new_collisions or misnamed:
         return 1
 
     # ⚠️ THE DENOMINATOR IS PART OF THE VERDICT, not decoration. A bare
@@ -1300,6 +1782,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--all", action="store_true",
                     help="with --due: render every due item (no cap, no truncation)")
     ap.add_argument("--stats", action="store_true")
+    ap.add_argument("--gate", action="store_true",
+                    help="print the health-review drain-gate set + its denominator")
+    ap.add_argument("--version-of", metavar="ID",
+                    help="print the version token of ID's latest record (the "
+                         "value append(..., based_on=) needs) and exit")
+    ap.add_argument("--redate", metavar="ID",
+                    help="re-date ID: needs --observation and --next-due (see redate())")
+    ap.add_argument("--observation", help="with --redate: what you READ this time")
+    ap.add_argument("--next-due", help="with --redate: YYYY-MM-DD")
+    ap.add_argument("--evidence", help="with --redate: command/ref the observation came from")
     ap.add_argument("--mint-id", metavar="SESSION_REF",
                     help="print a fresh, session-scoped id and exit -- see "
                          "mint_id()'s docstring for why it is scoped this way")
@@ -1309,12 +1801,41 @@ def main(argv: list[str] | None = None) -> int:
     if args.self_test:
         return _selftest()
     store = Path(args.store)
+    if args.redate:
+        if not (args.observation and args.next_due):
+            ap.error("--redate needs --observation and --next-due")
+        try:
+            rec = redate(args.redate, observation=args.observation,
+                         next_due=_parse_date(args.next_due, "--next-due"),
+                         store=store, evidence=args.evidence)
+        except PipelineError as exc:
+            print(f"pipeline: refused -- {exc}")
+            return 1
+        print(f"pipeline: re-dated {rec['id']} -> next due {next_due_date(rec)}")
+        return 0
+    if args.version_of:
+        v = version_of(args.version_of, store)
+        print(v if v else "")
+        return 0 if v else 1
     if args.mint_id:
         print(mint_id(args.mint_id, store=store))
         return 0
     if args.check:
         return _check(store)
     res = read_log(store)
+    if args.gate:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from src.runtime import checklist_store
+        cl = checklist_store.load()
+        rows = {r["id"]: r for r in (cl.get("rows") or cl.get("items") or [])}
+        if not rows:  # could-not-look must not read as "every owner unresolved"
+            print("pipeline: --gate could not read any checklist rows")
+            return 1
+        qdir = Path(__file__).resolve().parents[2] / "research" / "queue"
+        g = gate_set(res.items.values(), rows,
+                     unit_exists=lambda u: (qdir / f"{u}.yaml").exists())
+        print(json.dumps(g, indent=2, sort_keys=True))
+        return 0 if res.healthy else 1
     if args.stats:
         print(json.dumps(stats(res), indent=2, sort_keys=True))
         return 0 if res.healthy else 1

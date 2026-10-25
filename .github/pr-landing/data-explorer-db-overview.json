@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Held for manager review, as instructed: the guard cannot certify src/web/api/routers/db_explorer.py (the money-DB explorer router) as Tier-1 surface. The diff adds ONE read-only route, GET /api/bot/db/overview, in that file. Review points: (1) it is Depends(require_session) like its two siblings, and tests/test_web_api_db_overview.py::test_requires_a_session pins 401 without a bearer; (2) it reuses _list_tables so the table allowlist and column redaction apply (a test asserts a non-allowlisted table and a device_tokens secret never appear in the payload); (3) both DBs are opened mode=ro and the only column VALUE read is one timestamp per table (highest-rowid row); (4) null-vs-0: failed COUNT -> rows null/count_failed, absent DB -> present false/missing, unopenable DB -> unreadable, integrity not requested is not 'ok'; (5) tests/test_web_api_db_explorer.py::test_every_db_route_is_gated_no_route_left_behind was changed from a count of 2 to a NAMED set of three paths and still asserts require_session on each; (6) no growth/stale verdict is provided and the payload says so in notProvided. Verified locally: 71 passed across the overview, explorer and tier-policy tests; check_api_tier_policy --all OK (142/142).",
+  "why": "DATA-EXPLORER: backs the Overview landing the operator asked for (summary and health stats per database)."
+}

@@ -1,0 +1,38 @@
+{
+  "run": "RESEARCH-OPS-20261013-2047", "finished_at": "2026-10-13T21:00:00Z", "by": "research-ops-lane-20261013-2047",
+  "baseline": "comms/research/ops/20261013T1530Z.json",
+  "floor": 25,
+  "throughput": {"runnable_before": 34, "runnable_after": 34, "queued": 237, "units": 605, "fired_24h": 41, "fired_7d": 264,
+                 "results_landed_24h": 50, "hours_since_last_dispatch": 2.0, "idle_alarm": false, "as_of": "2026-10-13T20:48Z",
+                 "note": "MEASURED check_research_queue_throughput.py. Floor 25 met (34); no top-up authored. Previous pass left it at 10."},
+  "mechanism": {"dispatch_receipt": "ok (liveness script prints 'fresh (37.61h old)' - receipt file age, grew from 31.62h at the previous pass; dispatches land every ~2 h, last 18:48Z)",
+                "collector": "ok: result commits landed since 15:30Z for 75b2-27, 0b07-01/02/03, 1414-10, 407c-01",
+                "stranded_stamp_prs": "not re-audited (budget)",
+                "watchdog": "newest row read: self_healed backend:trainer 19:16Z (idle with 12 runnable routed there, 384 min); no escalated row read without a later resolved row. Only the tail (5 rows) was read, not the full window.",
+                "incident": null},
+  "results_read": {"pass": 3, "fail": 3, "indeterminate": 0, "not_a_verdict": 0,
+    "units": [
+      {"unit": "RQ-20261013-0b07-01/-02/-03", "verdict": "pass", "note": "router smoke, plumbing only. 0b07-01 (gpu, Tesla T4 x2, run 38419107113) and 0b07-03 (gpu, 38449812952) landed measured passes, so the GPU route that had 3 producer_failed rows at the previous pass now works end to end; 0b07-02 (cpu) passes. Says nothing about any strategy. The previous pass's escalation of 0b07-01 is resolved by this observation."},
+      {"unit": "RQ-20261012-75b2-27", "verdict": "fail", "note": "lgbm vs prior macro_f1 (n=12000): 'no candidate reaches the registered floor on any clause'. Engine grade, not re-derived. No action beyond the family history (grouped with 75b2-25/26 from the previous pass)."},
+      {"unit": "RQ-20261013-1414-10", "verdict": "fail", "note": "EIA natgas storage surprise vs NG=F: n=564 releases; 1-day IC -0.038 (t -0.91). Engine grade under the registered rule. No action: no significant surprise-return relation at this n."},
+      {"unit": "RQ-20261013-407c-01", "verdict": "fail", "note": "xrp_pullback_2h bracket-fraction sweep, baseline 122 trades: label no_reachable_lever_beats_removed. F0382 dR +7.44 R, dDD +0.18 R, fold_wins 2 of 4 -> fails the registered 3-of-4 clause; F0618 -8.43; F075 -17.92. Rule applied verbatim: fail. Observation only (not a verdict): F0382 is large positive in pooled R but not fold-stable; a follow-up would be a NEW unit with its own rule, not a re-grade. Not authored this pass (407c owner lane)."},
+      {"unit": "RQ-20261007-020", "verdict": "non_informative", "note": "see retired. The durable 2026-10-08 row graded fail with dR 0.0 because arm W read config after #17002 stripped stale_exit_*."},
+      {"unit": "RQ-20261007-021", "verdict": "valid_unchanged", "note": "Manager listed it with the stale_exit_bars ablations; it is not one. Its arms are trail_decay (S = --trail-decay-arm-r 4.49 explicit flags, R10..R25 explicit flags), none touch stale_exit_*. Its durable row reproduces the committed record exactly (control 122 / 14.6686, diff 0.0) and its premise check S==N holds, so the result stands. The dead lever it measured is also gone from xrp_pullback_2h in config/strategies.yaml (walk of the parsed file found no trail_decay_arm_r on that leg). Left done; no edit."}
+    ],
+    "rule_applied": "engine-evaluated registered rules, plus a hand re-read of the 020 and 021 durable rows (argv, by_outcome, control block) and of 407c-01's candidate table",
+    "not_read": "dispositions not recorded via research_disposition.py --record (the ledger corpora are e35/gld_compat/m20; none of these units belong to one); 36 units with grading.needs_review: true not triaged (skipped for the fifth consecutive pass); research_disposition.py --unread-only still lists only older m20 leg-level rows."
+  },
+  "unlocked": [],
+  "retired": [{"unit": "RQ-20261007-020", "reason": "durable result non-informative: arm W ran without the stale exit after #17002; question already decided and shipped from the valid 2026-10-07 session-local record. status done->retired, non_informative block added, rule and grading untouched."}],
+  "levers_filed": [],
+  "units_authored": [],
+  "followups_filed": ["PI-20261013-HOPS2047-0001: RQ-20261007-002 (queued, not in the manager's list) registers 'eth: stale_exit_bars 12' among the declared levers it keeps; that lever is gone from trend_donchian_eth_prop since #17002. Not edited (rule is registered; cadence/status not mine to rewrite); flagged to the manager in handoff."],
+  "not_run": ["needs_review: true triage (36 units)", "blocked/ audit by reason (blocker_watch ran: 5 NOT_RUNNING, 0 STALE_BLOCK; 1414-11/12 NEEDS_LANE with empty run.workflow, a793-01..03 never dispatched; consistent with the dispatcher caps the manager described, runnable 34 so not an idle-capacity case)", "stranded automation/research-queue-* PR re-audit", "tests/test_research_queue.py if pytest is unavailable", "research-queue workflow run listing via actions_list"],
+  "handoff": [
+    "Manager: RQ-20261007-002 (queued, workflow m20-exit-lever-sweep.yml) keeps 'eth: stale_exit_bars 12' as a declared lever in its registered statistic; the lever was stripped by #17002. Decide whether to retire it and re-register against the current ETH geometry as a new unit before it dispatches. Not verified: whether the sweep reads the lever from config (then B0 silently loses it) or from the rule text.",
+    "Manager: this PR is landing hold (unvouchable_paths, hand-edited queue unit 020); it needs a manager merge.",
+    "Next pass: confirm a793-01..03 and 1414-11/12 get dispatched as capacity frees; escalate only if one stays undispatched while capacity is free.",
+    "Next pass: 407c-01 F0382 (+7.44 R, 2/4 folds) is a candidate for a NEW fold-stability unit if the 407c lane has not already filed one.",
+    "Next pass: triage the 36 needs_review units (five passes running)."
+  ]
+}

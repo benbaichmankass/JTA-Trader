@@ -70,9 +70,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      VM_SSH_HOST: ${{ vars.LIVE_VM_IP || '141.145.193.91' }}
+      VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
       VM_SSH_USER: ${{ vars.LIVE_VM_USER || 'ubuntu' }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Checkout
         uses: actions/checkout@v4
 

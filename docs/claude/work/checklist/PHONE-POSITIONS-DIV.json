@@ -1,0 +1,39 @@
+{
+  "id": "PHONE-POSITIONS-DIV",
+  "title": "Phone executor: parse Breakout's DIV-grid Positions view (no <table>) by header label, fail-closed",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane (session_01EqHit5H4VJTYvnjEWJhaPZ)",
+  "lane": "session_01EqHit5H4VJTYvnjEWJhaPZ",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    17793
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] First live read (19:40Z) gave positions_state=no_table: Positions is a div grid, headers Market|UP&L|Side|Value|Opening price|Current price|TP / SL|Net P&L, empty state 'Start trading with leverage'. exec.js readTable now falls back to a div-grid reader (header row = smallest ancestor with >=4 mapped labels incl side+entry/mark; rows = same-child-count siblings; flat only with empty text INSIDE the tab-bounded panel or tab count 0). No size column: qty derived Value/Current price (qty_src=value/mark, UNMEASURED which price Value uses). upnl = UP&L only; Net P&L -> netpnl. Reconcile stays report_only. closedRead unchanged: no Closed-orders diag exists yet (app only reads it after Positions=read). landed_unproven until a live read after the new APK returns positions_state=read. [2026-10-12 20:0xZ scope add from manager, operator: 'I don't want to give it because we need to verify that the app can fulfill this function'] ACCEPTANCE: the app reads Closed orders unaided and the server fills the MEASURED exit + venue realized P&L of the two closed_unpriced rows (breakout_2 SOLUSDT ticket prop-manual-903de9527c23; ETHUSDT ticket prop-manual-f7933463fec8). Built: closedRead div-grid (layout UNMEASURED, generic; a miss posts 'closed_<state>' masked headers via the positions_miss diag) + phone_reconcile.fill_unpriced_closes (writes even in report_only: fills only rows ALREADY closed with exit NULL; exactly one matching closing-side row, qty within 2%, parsed time not before open, not cancelled, unused; ambiguity writes nothing + one ping). CLOSES WHEN: after merge+deploy+APK, GET /api/bot/prop/fills?account_id=breakout_2 shows both tickets with exit_price set and raw provenance measured. [2026-10-13T02:14Z manager] MERGED #17793 (ee9e35b) under the operator's 2026-10-12 directive + standing Tier-2 auth (recorded_decision on the landing file). Lane session_01EqHit5H4VJTYvnjEWJhaPZ archived, final spend $5.13 (ceiling $12). APK build run 38335904187 on main. NOT YET deployed-verified / observed. Closes when /api/bot/prop/fills?account_id=breakout_2 shows prop-manual-903de9527c23 (SOL) and prop-manual-f7933463fec8 (ETH) with exit_price set and provenance measured, read by the app unaided after the operator installs the new APK. [2026-10-13T02:35Z manager] DEPLOYED: /api/diag/version git_sha = on_disk = ee9e35b (includes #17793). APK built: run 38335904187 artifact phone-executor-1b-apk, link sent to operator. NOT OBSERVED: latest breakout_2 report 02:30Z positions_state=no_tab with empty headers/controls while the heartbeat says background, onAccount=false: the app is not on the terminal page, so it read nothing. That is not a parser verdict. Both target rows are still exit NULL. The report carries no app version, so it is unknown whether the new APK is installed. Next read: after the operator installs and opens the app on the Breakout terminal. [2026-10-15 housekeeping lane] state in_flight -> landed_unproven: #17793 merged 2026-10-13 (ee9e35b). Not superseded by BREAKOUT-POS-UNPARSED (that row is the side-cell parse; this one is the Closed-orders exit fill-in). Measured now: positions_state=read on breakout_2 status, but the two target tickets still have exit_price null.",
+  "updated_at": "2026-10-24T06:01:09Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "priority": "critical",
+  "observation": {
+    "what": "GET /api/bot/prop/fills?account_id=breakout_2 shows prop-manual-903de9527c23 and prop-manual-f7933463fec8 with exit_price set and measured provenance",
+    "how_to_check": "fills endpoint; at 2026-10-15 both closed rows still read exit_price null although status.raw.positions_state is now read",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: phone-executor parsing under L-PROP",
+    "arch": "none: no contract change"
+  },
+  "_seq": 441
+}

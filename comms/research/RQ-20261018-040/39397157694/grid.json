@@ -1,0 +1,480 @@
+{
+  "tool": "scripts/research/prop_ev_grid.py",
+  "sim": "scripts/research/prop_ev_sim.py",
+  "mode": "path",
+  "common": [
+    "--ruleset",
+    "config/prop_rulesets/tradeify_247_1step.yaml",
+    "--lev-cap",
+    "trend_donchian_eth_prop=5",
+    "--no-hedge",
+    "--swap-model",
+    "prorated",
+    "--funded-start",
+    "fresh"
+  ],
+  "arms": {
+    "A": [
+      "--sizing",
+      "balance",
+      "--risk-pct",
+      "0.005"
+    ],
+    "C_T1": [
+      "--sizing",
+      "balance",
+      "--risk-pct",
+      "0.005",
+      "--trades",
+      "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl"
+    ]
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "grade": "cushion_vs_flat",
+  "overall": "all",
+  "legs": {
+    "trend_donchian_eth_prop": {
+      "trades_file": "comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+      "resolved_by": "pinned by --leg",
+      "n_trades": 1085
+    }
+  },
+  "cells": [
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "A",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 2097.9,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed1.json",
+      "stats": {
+        "ev": 199.14,
+        "ev_se": 7.21,
+        "p_net_positive": 0.4592,
+        "p_alive_at_horizon": 0.5605,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.004,
+          "180": 0.061
+        },
+        "rule_v2_verdict": "pass"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "A",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 2079.0,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed2.json",
+      "stats": {
+        "ev": 205.5,
+        "ev_se": 7.27,
+        "p_net_positive": 0.4582,
+        "p_alive_at_horizon": 0.573,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0022,
+          "180": 0.0622
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "A",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 2083.9,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed3.json",
+      "stats": {
+        "ev": 193.3,
+        "ev_se": 7.24,
+        "p_net_positive": 0.4512,
+        "p_alive_at_horizon": 0.5723,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0027,
+          "180": 0.0655
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "A",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 2073.3,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed4.json",
+      "stats": {
+        "ev": 190.14,
+        "ev_se": 7.24,
+        "p_net_positive": 0.4415,
+        "p_alive_at_horizon": 0.578,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0027,
+          "180": 0.0615
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "A",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 2053.7,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__A__seed5.json",
+      "stats": {
+        "ev": 211.84,
+        "ev_se": 7.46,
+        "p_net_positive": 0.4675,
+        "p_alive_at_horizon": 0.566,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0032,
+          "180": 0.061
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "C_T1",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 2093.9,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed1.json",
+      "stats": {
+        "ev": 534.54,
+        "ev_se": 10.56,
+        "p_net_positive": 0.6717,
+        "p_alive_at_horizon": 0.6048,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0067,
+          "180": 0.1235
+        },
+        "rule_v2_verdict": "pass"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "C_T1",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 2089.5,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed2.json",
+      "stats": {
+        "ev": 542.35,
+        "ev_se": 10.43,
+        "p_net_positive": 0.6875,
+        "p_alive_at_horizon": 0.592,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0085,
+          "180": 0.1338
+        },
+        "rule_v2_verdict": "pass"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "C_T1",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 2090.6,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed3.json",
+      "stats": {
+        "ev": 541.13,
+        "ev_se": 10.53,
+        "p_net_positive": 0.6873,
+        "p_alive_at_horizon": 0.5803,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0083,
+          "180": 0.133
+        },
+        "rule_v2_verdict": "pass"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "C_T1",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 954.2,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed4.json",
+      "stats": {
+        "ev": 535.35,
+        "ev_se": 10.56,
+        "p_net_positive": 0.6825,
+        "p_alive_at_horizon": 0.591,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0103,
+          "180": 0.1415
+        },
+        "rule_v2_verdict": "pass"
+      }
+    },
+    {
+      "leg": "trend_donchian_eth_prop",
+      "arm": "C_T1",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 941.1,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/tradeify_247_1step.yaml",
+        "--lev-cap",
+        "trend_donchian_eth_prop=5",
+        "--no-hedge",
+        "--swap-model",
+        "prorated",
+        "--funded-start",
+        "fresh",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.005",
+        "--trades",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261018-040/39397157694/sims/trend_donchian_eth_prop__C_T1__seed5.json",
+      "stats": {
+        "ev": 558.1,
+        "ev_se": 10.5,
+        "p_net_positive": 0.6893,
+        "p_alive_at_horizon": 0.5825,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0063,
+          "180": 0.1318
+        },
+        "rule_v2_verdict": "pass"
+      }
+    }
+  ]
+}

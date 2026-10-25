@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_vs_backtest.py --leg xrp_pullback_2h returns CONSISTENT on bybit_2 realMoney, or an investigation unit has named the cause (regime|cost|execution|overfit) with evidence",
+    "kind": "observation",
+    "last_checked": "2026-10-15"
+  },
+  "id": "PI-20261015-VUVNMUO8-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "live_vs_backtest first step, operator decision 2026-10-15 (session_01PGTY6hpteGz9KPVuVnMUo8)",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h"
+  },
+  "state": "queued",
+  "what": "BELOW_BACKTEST: bybit_2 xrp_pullback_2h live -8.84R over 16 trades (3.4th pct; band p5 -7.81 / p50 +1.84 / p95 +12.66; backtest n=55, fidelity faithful), run 2026-10-15 by scripts/research/live_vs_backtest.py. Live is worse than bad luck explains, so this is a fidelity/regime investigation, NOT a tune or demote: (1) compare each live closed trade to the backtest's trade on the same bar (entry/stop/TP/exit, fees, slippage, funding) for execution divergence; (2) test whether live entries fall in an adverse (trend,vol) regime cell via regime_cell_walkforward.py; (3) check bracket TP/SL parity (TP doctrine). Proposal it would justify (NOT applied; Tier-3): if cause=regime, a regime off-cell; if execution, a bug fix; if neither and n>=40 R4 decides by its pre-registered rule. R4 threshold unchanged."
+}

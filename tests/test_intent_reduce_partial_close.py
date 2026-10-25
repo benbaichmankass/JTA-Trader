@@ -14,6 +14,8 @@ path still inserts a normal open row for a non-reduce leg.
 """
 from __future__ import annotations
 
+import json
+
 import sqlite3
 from types import SimpleNamespace
 
@@ -39,6 +41,8 @@ CREATE TABLE trades (
     take_profit_1 REAL,
     position_size REAL,
     setup_type TEXT,
+    killzone TEXT,
+    bias TEXT,
     entry_reason TEXT,
     exit_reason TEXT,
     pnl REAL,
@@ -315,6 +319,8 @@ def test_log_trade_journal_intent_reduce_is_partial_close(db, monkeypatch):
     assert audit[0]["position_size"] == pytest.approx(0.6)
     assert audit[0]["pnl"] is None
     assert "deferred_intent_reduce" in (audit[0]["notes"] or "")
+    # ORDER-AUDIT-4 (PI-20261015-PD85QJEZ-0003): the reason is sourced.
+    assert json.loads(audit[0]["notes"])["exit_reason_source"] == "intent_reduce_order"
 
     # No-phantom property: no status='open' row in the reduce direction.
     assert db.open_rows(direction="short") == []

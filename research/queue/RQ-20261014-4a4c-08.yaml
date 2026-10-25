@@ -1,0 +1,97 @@
+id: RQ-20261014-4a4c-08
+title: 'P4-Q2 family: does the CORE PCE m/m surprise vs the PIT survey consensus predict ES=F forward returns at 1-5 trading days? (n~136)'
+status: done
+cadence: once
+theme: macro
+priority: 2
+kind: experiment
+question: Using survey-consensus PIT rows only, is Spearman(core_pce_mom surprise, ES=F forward return from the release-day close) negative with |t_eff| >= 2.4 at h=1, 3 or 5?
+why_this_matters: Inflation-surprise family, untested kind; the third member after ppi_mom (PASS) and core_cpi_mom (RQ-20261014-4a4c-07). Core PCE is usually well anticipated after CPI/PPI,
+  so the prior is a SMALLER effect than PPI; a PASS would be surprising and is read with BH over the family (45 tests).
+power:
+  expected_n: 136
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: '136 releases with a defined surprise, only 57 non-zero (heavy ties). rho 0.20 at alpha 0.01 needs ~292: UNDERPOWERED BY DESIGN.'
+  feasibility:
+    source: none
+    accrual_basis: n is bounded by the resolved releases of this kind with a defined survey surprise on file (fixed historical backfill, MEASURED 2026-10-14 via load_resolved_events_multi
+      over the two committed files); the run prints the joined count.
+decision_rule:
+  id: RULE-RQ-20261014-4a4c-08
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: ic_t_eff at horizons 1, 3, 5.
+  rule: PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 2.4 AND negative. FAIL IF every horizon has n >= 100 and none does. INDETERMINATE IF any horizon has n < 100.
+  what_it_does_not_do: As RQ-20261014-4a4c-07.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: confirms or retires the one event-surprise lead that could seed an event-scored conviction axis for the M28 sleeve (alpaca_options_paper); information value, not
+    a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-de02-04 (one daily-close fetch, ~300 snapshot rows, rank correlations); measured run time of that parent was minutes on research-script-run.yml.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - core_pce_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - negative
+  - --population
+  - core_pce_mom releases (live + survey backfill) joined to ES=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-4a4c-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- RQ-20261014-de02-04
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+last_dispatched_at: '2026-10-18T14:40:12+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261014-4a4c-08
+  evidence:
+  - research/results/RQ-20261014-4a4c-08/39135608446.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -213,6 +213,30 @@ CELL_TIMEOUT_S: float = 1800.0
 # Memo for run_cell, keyed on the full invocation. See run_cell's docstring for
 # why this is load-bearing rather than cosmetic.
 _CELL_CACHE: dict[tuple, dict] = {}
+class _NoHoldout:
+    """Inert stand-in for m20_holdout.HoldoutGuard. `m20_holdout` is imported LAZILY, only when
+    `--holdout-frac` is set: this module sits in the web-api brief's in-process import closure,
+    and every module in that closure must be on the deploy's runtime allowlist
+    (tests/test_deploy_pull_restart_runtime_gate.py), a Tier-2 file."""
+    active = False
+
+    def window(self, start, end):
+        return start, end
+
+    def harness_args(self):
+        return []
+
+    def clip_fold(self, fs, fe):
+        return fs, fe
+
+    def end(self):
+        pass
+
+
+#: The lookahead guard for `--holdout-frac` (m20_holdout.HoldoutGuard, installed by main()).
+#: Inactive unless a leg begins a holdout: then every run_cell window and every full-history emit
+#: is capped at the day before the boundary during discovery, and a read past it raises HoldoutLeak.
+_HOLDOUT = _NoHoldout()
 
 FOLDS = [("2021", "2021-01-01", "2022-01-01"), ("2022", "2022-01-01", "2023-01-01"),
          ("2023", "2023-01-01", "2024-01-01"), ("2024", "2024-01-01", "2025-01-01"),
@@ -411,6 +435,25 @@ def declared_levers_present(cfg: dict) -> list[str]:
             if any(cfg.get(k) is not None for k in keys)]
 
 
+def _forward_side(a: list, cfg: dict) -> None:
+    """Forward the leg's live direction gate to the harness (donchian, pullback).
+
+    Live honours ``side_filter: long|short|both`` (legacy ``long_only: true`` ->
+    long). This wrapper forwarded ONLY ``long_only``, so a ``side_filter: short``
+    leg (``trend_donchian_xrp_4h`` since 2026-07-30, ``sol_pullback_2h``) was swept
+    on a TWO-SIDED book -- trades the live leg never takes. Found 2026-10-07 by
+    lane EXIT-PARITY-CHECK: the 2026-10-04 ``trail4`` pass on
+    ``trend_donchian_xrp_4h`` rests on such a book. ``both``/absent passes no
+    flag (harness default), so every non-filtered leg's base is unchanged.
+    """
+    if cfg.get("long_only"):
+        a.append("--long-only")
+        return
+    sf = cfg.get("side_filter")
+    if sf in ("long", "short"):
+        a.extend(["--side-filter", sf])
+
+
 def base_args(name: str, cfg: dict, fam: str, data: str, resample: str | None,  # inert: `name` — the leg id, kept because FIVE external callers pass it positionally (m20_flip_replay_sweep, m21_entry_head_round, m20_exit_head_round, m21_entry_sweep, and this module); every arg is built from `cfg`, so dropping it would be a cross-script signature break for no behavioural gain. It affects NOTHING here — do not add a doc claiming otherwise.
               tp_cap_pct: float = 0.0,
               fee_bps_roundtrip: float | None = None,
@@ -486,8 +529,7 @@ def base_args(name: str, cfg: dict, fam: str, data: str, resample: str | None,  
         opt("--vol-skip-below-pctl", "vol_skip_below_pctl")
         opt("--vol-pctl-window", "vol_pctl_window")
         declared_levers()
-        if cfg.get("long_only"):
-            a.append("--long-only")
+        _forward_side(a, cfg)
     elif fam == "squeeze":
         for flag, key in (("--bb-period", "bb_period"), ("--bb-std", "bb_std"),
                           ("--kc-mult", "kc_mult"), ("--atr-period", "atr_period"),
@@ -550,6 +592,7 @@ def base_args(name: str, cfg: dict, fam: str, data: str, resample: str | None,  
         opt("--vol-skip-below-pctl", "vol_skip_below_pctl")
         opt("--vol-pctl-window", "vol_pctl_window")
         declared_levers()
+        _forward_side(a, cfg)
     # FEE BAND. Passed through verbatim when set, so a fee-survival A/B measures
     # the SAME base at two cost levels rather than two different books. None means
     # "the harness's own default" and is recorded as such -- never silently stamped
@@ -913,12 +956,177 @@ def shipped_lever_cells(cfg: dict,
     return out
 
 
+def momentum_stale_cells() -> list[tuple[str, str, list[str]]]:
+    """MOMENTUM-TRAIL-LEVER `momentum_stale` grid (memo § 4.2): N in {8, 12}
+    (the two shipped stale bar counts) x A in {20, 25} (the regime detector's
+    chop / trending cut-points)."""
+    return [(f"ms{n}_a{a}", "momentum_stale",
+             ["--momentum-stale-bars", str(n),
+              "--momentum-stale-adx-below", str(a)])
+            for n in (8, 12) for a in (20, 25)]
+
+
+# GEOM-B1: the two TP-GEOMETRY lever columns. Backtest-only today -- the LIVE
+# producer of a `{"tp": ...}` verdict is lane TP-DOCTRINE's (BUILD B1) -- and
+# graded by the same Path A/B gate and walk-forward as every other column.
+TP_GEOMETRY_LEVERS = ("tp_extend", "tp_retarget")
+#: Families whose harness carries the `--tp-*` flags (scripts/research/tp_geometry.py).
+TP_GEOMETRY_FAMILIES = ("donchian", "pullback", "scalp")
+#: Calibration-first target grid for the trail families, in R. INFERRED from
+#: docs/research/mi307-offline-mfe-2026-09-18.json: the predictive target on the
+#: real-money legs sits at 2.0-2.5R (reach-rate 25-40%). The leg's own FINITE
+#: declared `tp_r` is added when it differs.
+TP_GEOMETRY_TARGETS_R = (2.0, 2.5)
+
+
+def _tp_geometry_cells(cfg: dict, fam: str | None,
+                      skipped: list | None = None
+                      ) -> list[tuple[str, str, list[str]]]:
+    """The `tp_extend` / `tp_retarget` cells for one leg (opt-in, see `cells_for`).
+
+    `tp_extend`: target x approach_frac x extend_r x max_extends, thesis `native`
+    (the strategy's own continuation test). `tp_retarget`: target x
+    {atr_rescale, stall_pull_in x stall bars}. On the trail families the target
+    is a FINITE entry-time one from `TP_GEOMETRY_TARGETS_R` plus the leg's own
+    declared finite `tp_r`; on the scalp the lever acts on the LIVE `tp_at_r`
+    bracket itself (no `--tp-target-r`), so the cell measures revising the
+    target that actually trades.
+    """
+    if fam not in TP_GEOMETRY_FAMILIES:
+        if skipped is not None:
+            skipped.append({"cell": None, "lever": "tp_extend,tp_retarget",
+                            "reason": f"tp_geometry_not_in_harness:{fam}"})
+        return []
+    if fam == "scalp":
+        targets: list[tuple[str, list[str]]] = [("live", [])]
+    else:
+        vals = list(TP_GEOMETRY_TARGETS_R)
+        declared = cfg.get("tp_r")
+        try:
+            d = float(declared) if declared is not None else None
+        except (TypeError, ValueError):
+            d = None
+        if d is not None and 0.0 < d < 50.0 and d not in vals:
+            vals.append(d)
+        targets = [(f"t{v:g}", ["--tp-target-r", f"{v:g}"]) for v in sorted(vals)]
+    # Grids as REGISTERED in the units' decision rules (before any run):
+    #   trail families  RQ-20261007-001/-003: approach (0.75, 0.85) x extend_r (0.5, 1.0)
+    #                   x max_extends (1, 3); stall bars (6, 10)
+    #   scalp           RQ-20261007-004: approach 0.85 x extend_r (0.5, 1.0); stall bars (3, 6)
+    appr_grid = (0.85,) if fam == "scalp" else (0.75, 0.85)
+    ext_grid = (0.5, 1.0)
+    max_grid = (3,) if fam == "scalp" else (1, 3)
+    stall_grid = (3, 6) if fam == "scalp" else (6, 10)
+    out: list[tuple[str, str, list[str]]] = []
+    for ttag, targs in targets:
+        for appr in appr_grid:
+            for ext_r in ext_grid:
+                for mx in max_grid:
+                    out.append((f"tpx_{ttag}_a{appr:g}_e{ext_r:g}_m{mx}", "tp_extend",
+                                targs + ["--tp-extend-r", f"{ext_r:g}",
+                                         "--tp-approach-frac", f"{appr:g}",
+                                         "--tp-max-extends", str(mx),
+                                         "--tp-thesis", "native"]))
+        out.append((f"tpr_atr_{ttag}", "tp_retarget",
+                    targs + ["--tp-retarget-mode", "atr_rescale"]))
+        for stall in stall_grid:
+            out.append((f"tpr_stall{stall}_{ttag}", "tp_retarget",
+                        targs + ["--tp-retarget-mode", "stall_pull_in",
+                                 "--tp-retarget-stall-bars", str(stall)]))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# GEOM-CELLS-INPUT -- explicit census-keyed cells (`--cells`).
+#
+# The grid in `cells_for` is fixed (gb1R_afterMFE1R/2R, the reference trail-decay
+# cells...). RQ-20261014-9807-04 needs cells KEYED TO A LEG'S OWN measured
+# giveback distribution, which no fixed grid can express. `--cells` takes a JSON
+# list of {leg?, lever, tag, params} and, when non-empty, REPLACES the grid with
+# exactly those cells. Empty/absent = today's grid, byte-for-byte.
+# Unknown leg / lever / param, or a lever the leg's harness does not carry, is
+# refused LOUDLY (exit 2) -- a cell that silently did not run would read as a
+# negative verdict.
+# ---------------------------------------------------------------------------
+CELL_PARAM_FLAGS: dict[str, dict[str, str]] = {
+    "stale_stop": {"stale_exit_bars": "--stale-exit-bars"},
+    "giveback_stop": {"giveback_min_mfe_r": "--giveback-min-mfe-r",
+                      "giveback_r": "--giveback-r"},
+    "trail_geometry": {"trail_mult": "--trail-mult"},
+    "trail_decay": {"trail_decay_arm_r": "--trail-decay-arm-r",
+                    "trail_decay_stall_bars": "--trail-decay-stall-bars",
+                    "trail_decay_tight_mult": "--trail-decay-tight-mult"},
+}
+# Levers whose flags only the donchian/pullback harnesses declare.
+CELL_LEVER_FAMILIES: dict[str, tuple[str, ...]] = {
+    "trail_decay": ("donchian", "pullback"),
+}
+
+
+def parse_cells_spec(raw: str | None, known_legs) -> list[dict]:
+    """Validate a ``--cells`` JSON string. Raises ValueError/TypeError on anything unknown."""
+    if raw is None or not str(raw).strip():
+        return []
+    try:
+        spec = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"cells is not valid JSON: {e}") from e
+    if not isinstance(spec, list):
+        raise TypeError("cells must be a JSON list of {leg?, lever, tag, params}")
+    out, seen = [], set()
+    for i, c in enumerate(spec):
+        if not isinstance(c, dict):
+            raise TypeError(f"cells[{i}] is not an object")
+        leg, lever, tag, params = (c.get("leg"), c.get("lever"), c.get("tag"),
+                                   c.get("params"))
+        if leg is not None and leg not in known_legs:
+            raise ValueError(f"cells[{i}]: unknown leg {leg!r}")
+        if lever not in CELL_PARAM_FLAGS:
+            raise ValueError(f"cells[{i}]: unknown lever {lever!r}; "
+                             f"known: {sorted(CELL_PARAM_FLAGS)}")
+        if not isinstance(tag, str) or not tag.strip():
+            raise ValueError(f"cells[{i}]: tag must be a non-empty string")
+        if not isinstance(params, dict) or not params:
+            raise ValueError(f"cells[{i}]: params must be a non-empty object")
+        bad = sorted(set(params) - set(CELL_PARAM_FLAGS[lever]))
+        if bad:
+            raise ValueError(f"cells[{i}]: unknown param(s) {bad} for lever "
+                             f"{lever!r}; known: {sorted(CELL_PARAM_FLAGS[lever])}")
+        for k, v in params.items():
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                raise TypeError(f"cells[{i}]: param {k!r} must be a number")
+        if (leg, tag) in seen:
+            raise ValueError(f"cells[{i}]: duplicate tag {tag!r} for leg {leg!r}")
+        seen.add((leg, tag))
+        out.append({"leg": leg, "lever": lever, "tag": tag, "params": params})
+    return out
+
+
+def explicit_cells_for(spec: list[dict], leg: str, fam: str | None
+                       ) -> list[tuple[str, str, list[str]]]:
+    """The (tag, lever, extra_args) cells of ``spec`` that apply to ``leg``."""
+    out = []
+    for c in spec:
+        if c["leg"] not in (None, leg):
+            continue
+        need = CELL_LEVER_FAMILIES.get(c["lever"])
+        if need and fam not in need:
+            raise ValueError(f"cell {c['tag']!r}: lever {c['lever']!r} is not "
+                             f"carried by {leg!r}'s harness (family {fam!r})")
+        args: list[str] = []
+        for k, v in c["params"].items():
+            args += [CELL_PARAM_FLAGS[c["lever"]][k], f"{v:g}"]
+        out.append((c["tag"], c["lever"], args))
+    return out
+
+
 def cells_for(cfg: dict, fam: str | None = None,
               skipped: list | None = None,
               *,
               without_declared_levers: frozenset[str] | None = None,
               tp_cap_pct: float = 0.0,
               harness: str | None = None,
+              tp_geometry_cells: bool = False,
               ) -> list[tuple[str, str, list[str]]]:
     """(cell_tag, matrix_lever, extra_args). Config-exact base is implied.
 
@@ -933,6 +1141,12 @@ def cells_for(cfg: dict, fam: str | None = None,
     run, and two rows carrying one tag while measuring two books is the exact
     provenance failure the run-level identity fields exist to prevent. Sweep the
     alternatives in a normal run; use this arm to grade what is already live.
+
+    ``tp_geometry_cells`` (default False) appends the `tp_extend` / `tp_retarget`
+    cells (`_tp_geometry_cells()` above). OPT-IN, not default, on purpose: they are
+    ~24 + ~9 cells per leg, so emitting them by default would multiply every
+    existing sweep and change what an empty `levers` input means. `main()` sets
+    it only when `--levers` names one of them.
     """
     if without_declared_levers:
         dropped = [lev for lev in declared_levers_present(cfg)
@@ -1062,6 +1276,57 @@ def cells_for(cfg: dict, fam: str | None = None,
         for tag, extra in vt:
             out.append((tag, "vol_trail",
                         extra + ["--trail-vol-tight-mult", str(tight)]))
+    # MOMENTUM-TRAIL-LEVER cells (memo docs/research/cross-signal-exits-2026-10-07.md
+    # § 4.1 / § 4.2): a stop that reads MOMENTUM (Wilder ADX), not price path.
+    # `momentum_trail` tightens the trail on bars where ADX < A (k=0) or ADX < A
+    # AND ADX_j < ADX_{j-3} (k=3); T is the same config-relative tight mult the
+    # decay / vol cells use and must sit BELOW the leg's own trail (the lever can
+    # only tighten, and the harness CLI refuses T >= trail_mult). `momentum_stale`
+    # is a time stop keyed to ADX decay instead of open R. trend + pullback only:
+    # squeeze computes no ADX. On a leg that ships a stale stop the COMBO cells
+    # here run against the config-exact base. The stale-SWAP base (shipped
+    # R-keyed stale removed, momentum_stale in its place) is NOT emitted: the
+    # lever-off arm is pinned to `shipped_*` cells only
+    # (tests/test_m20_fleet_capital_report.py, the invariant the arm rests on).
+    if fam in ("donchian", "pullback"):
+        if tm is not None:
+            tight = max(1.5, round(float(tm) / 2.0, 1))
+            if tight < float(tm):
+                for a in (20, 25):
+                    for k in (0, 3):
+                        extra = ["--trail-adx-below", str(a)]
+                        if k:
+                            extra += ["--trail-adx-falling-bars", str(k)]
+                        out.append((f"adx{a}_k{k}_t{tight:g}", "momentum_trail",
+                                    extra + ["--trail-adx-tight-mult",
+                                             str(tight)]))
+            elif skipped is not None:
+                skipped.append({"cell": "adx*", "lever": "momentum_trail",
+                                "reason": f"tight_mult_{tight:g}_not_below_trail_mult_{float(tm):g}"})
+        out += momentum_stale_cells()
+    if tp_geometry_cells:
+        out.extend(_tp_geometry_cells(cfg, fam, skipped))
+    return out
+
+
+def tp_geometry_entry(c_is: dict, c_oos: dict, tp_base: dict | None) -> dict:
+    """The per-cell TP-geometry record: activity, the CALIBRATION share beside the
+    base's, and whether the cell kept it (RQ-20261007-001 statistic (a)).
+
+    REPORTED, never graded here -- the Path A/B gate grades P&L; the doctrine
+    grades calibration BEFORE P&L, so the unit's rule reads this block. `None`,
+    not 0.0, whenever a side could not be read: *we did not look*.
+    """
+    out: dict = {}
+    for w, c in (("IS", c_is), ("OOS", c_oos)):
+        g = c.get("tp_geometry") or {}
+        b = ((tp_base or {}).get(w) or {}).get("tp_geometry") or {}
+        cs, bs = g.get("calibration_share"), b.get("calibration_share")
+        out[w] = {
+            "cell": g or None, "base": b or None,
+            "calibration_share_cell": cs, "calibration_share_base": bs,
+            "calibration_ge_base": (None if cs is None or bs is None else cs >= bs),
+        }
     return out
 
 
@@ -1498,7 +1763,8 @@ def resolve_split(harness: str, base: list[str], mode: str,
     os.close(_fd)
     Path(tmp).unlink(missing_ok=True)
     cmd = [sys.executable, str(REPO / harness), *base,
-           "--emit-trades", tmp, "--json", "/tmp/m20_split_metrics.json"]
+           "--emit-trades", tmp, "--json", "/tmp/m20_split_metrics.json",
+           *_HOLDOUT.harness_args()]
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
         if p.returncode != 0:
@@ -1562,6 +1828,27 @@ def resolve_split(harness: str, base: list[str], mode: str,
     boundary = stamps[-target_oos][:10]          # YYYY-MM-DD
     meta["split"] = boundary
     return boundary, meta
+
+
+def holdout_entry_stamps(harness: str, base: list[str]) -> list[str] | None:
+    """The base's FULL-history entry times, for placing the holdout boundary (m20_holdout.
+    plan_holdout). Run BEFORE the guard is armed, so it is the one read of the held-back span
+    discovery makes -- and it reads only entry TIMES, never an outcome. None = could not look."""
+    _fd, tmp = tempfile.mkstemp(prefix="m20_holdout_emit_", suffix=".jsonl")
+    os.close(_fd)
+    Path(tmp).unlink(missing_ok=True)
+    cmd = [sys.executable, str(REPO / harness), *base,
+           "--emit-trades", tmp, "--json", "/tmp/m20_holdout_metrics.json"]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        if p.returncode != 0:
+            return None
+        return sorted(str(json.loads(ln).get("entry_time")) for ln in Path(tmp).read_text().splitlines()
+                      if ln.strip() and json.loads(ln).get("entry_time"))
+    except (OSError, json.JSONDecodeError, ValueError, TypeError, subprocess.TimeoutExpired):
+        return None
+    finally:
+        Path(tmp).unlink(missing_ok=True)
 
 
 def summary_split_line(leg: str, v: dict) -> str:
@@ -1801,6 +2088,8 @@ def run_cell(harness: str, args: list[str], start=None, end=None) -> dict:
     is handed out so a caller that annotates a result cannot poison the entry
     for the next reader.
     """
+    if _HOLDOUT.active:
+        start, end = _HOLDOUT.window(start, end)   # HoldoutLeak on a read into the held-back span
     key = (harness, tuple(args), start, end)
     hit = _CELL_CACHE.get(key)
     if hit is not None:
@@ -2093,6 +2382,12 @@ def walkforward(harness: str, base_args_: list, cell_args: list,
     wins = usable = inert_wins = 0
     folds = []
     for fname, fs, fe in FOLDS:
+        clipped = _HOLDOUT.clip_fold(fs, fe)
+        if clipped is None:
+            # Wholly inside the held-back span: discovery may not look at it.
+            folds.append({"fold": fname, "usable": False, "why": "held_back_for_holdout"})
+            continue
+        fs, fe = clipped
         fb = run_cell(harness, base_args_, start=fs, end=fe)
         fc = run_cell(harness, cell_args, start=fs, end=fe)
         log({"leg": leg, "cell": f"{tag}@wf{fname}", "window": "fold",
@@ -2243,7 +2538,7 @@ def capital_delta(cell: dict, base: dict) -> dict:
 
 
 def main(argv: list[str]) -> int:
-    global CELL_TIMEOUT_S
+    global CELL_TIMEOUT_S, _HOLDOUT
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data-dir", default=str(REPO / "data"))
     ap.add_argument("--split", default="2025-07-01",
@@ -2269,6 +2564,12 @@ def main(argv: list[str]) -> int:
                          "A thin leg is NOT refused by the higher target: "
                          "resolve_split clamps to len(stamps)//2 and records "
                          "split_target_clamped_from/to.")
+    ap.add_argument("--holdout-frac", type=float, default=0.0,
+                    help="RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16): hold back the latest "
+                         "share of each leg's history (by its base trades) BEFORE selection; cells are "
+                         "chosen on the rest (IS/OOS inside it) and ONLY the selected cells are graded "
+                         "once on the held-back span. The share grows to reach the "
+                         f"{MIN_OOS_TRADES}-trade floor, capped at 40%. 0 = off. The workflow default is 0.25.")
     ap.add_argument("--out", default=str(REPO / "runtime_logs" / "m20_fleet"))
     ap.add_argument("--only", default=None,
                     help="CSV of leg names to restrict to (debug)")
@@ -2279,7 +2580,14 @@ def main(argv: list[str]) -> int:
                          "config/strategies.yaml.")
     ap.add_argument("--levers", default=None,
                     help="CSV of matrix levers to restrict cells to (e.g. "
-                         "trail_decay) — skips already-verdicted cells on a re-run")
+                         "trail_decay) — skips already-verdicted cells on a re-run. "
+                         "tp_extend / tp_retarget (GEOM-B1: a take-profit that "
+                         "moves) are OPT-IN: their cells exist only when named here.")
+    ap.add_argument("--cells", default=None,
+                    help="GEOM-CELLS-INPUT: JSON list of {leg?, lever, tag, params} "
+                         "REPLACING the grid with exactly these cells (census-keyed "
+                         "values). Unknown leg/lever/param is refused. Empty = the "
+                         "ordinary grid, unchanged.")
     ap.add_argument("--list", action="store_true",
                     help="print the run plan (leg -> harness/data/cells) and exit")
     ap.add_argument("--fee-bps-roundtrip", type=float, default=None,
@@ -2367,6 +2675,8 @@ def main(argv: list[str]) -> int:
     only = set(a.only.split(",")) if a.only else None
     fams = set(a.family.split(",")) if a.family else None
     levers = set(a.levers.split(",")) if a.levers else None
+    # GEOM-B1: the tp_extend / tp_retarget cells exist only when asked for by name.
+    tp_cells = bool(levers and levers & set(TP_GEOMETRY_LEVERS))
     without_levers = frozenset(a.without_declared_lever or ())
     if without_levers and a.census:
         # The census measures ONE base per leg and grades nothing. Running it
@@ -2375,6 +2685,15 @@ def main(argv: list[str]) -> int:
         # number computed from a substituted input.
         print("ERROR: --census measures the config-exact base and cannot be "
               "combined with --without-declared-lever.")
+        return 2
+    try:
+        cells_spec = parse_cells_spec(a.cells, set(strategies))
+    except (ValueError, TypeError) as e:
+        print(f"ERROR: --cells refused: {e}")
+        return 2
+    if cells_spec and (without_levers or a.census):
+        print("ERROR: --cells cannot be combined with --without-declared-lever "
+              "or --census.")
         return 2
     data_dir = Path(a.data_dir)
     run_dir = Path(a.out) / datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -2400,9 +2719,17 @@ def main(argv: list[str]) -> int:
             continue
         harness = FAMILY_HARNESS[fam]
         inert: list = []
-        cells = cells_for(cfg, fam, skipped=inert,
-                          without_declared_levers=without_levers,
-                          tp_cap_pct=a.tp_cap_pct, harness=harness)
+        if cells_spec:
+            try:
+                cells = explicit_cells_for(cells_spec, name, fam)
+            except ValueError as e:
+                print(f"ERROR: --cells refused: {e}")
+                return 2
+        else:
+            cells = cells_for(cfg, fam, skipped=inert,
+                              without_declared_levers=without_levers,
+                              tp_cap_pct=a.tp_cap_pct, harness=harness,
+                              tp_geometry_cells=tp_cells)
         # WHAT THIS LEG ACTUALLY HAD REMOVED, against what the run asked for.
         # A leg that never declared the requested lever produces a base
         # byte-identical to the config-exact base; recording only the run-level
@@ -2604,9 +2931,30 @@ def main(argv: list[str]) -> int:
         results.flush()
 
     verdicts: dict = {}
+    if a.holdout_frac > 0:
+        from m20_holdout import (HoldoutGuard, plan_holdout,  # noqa: PLC0415 -- lazy, see _NoHoldout
+                                 confirm_cells as holdout_confirm_cells,
+                                 leg_confirmation as holdout_leg_confirmation)
+        _HOLDOUT = HoldoutGuard()
     for p in plan:
         leg = p["leg"]
         print(f"== {leg} ({p['symbol']} {p['tf']}) ==", flush=True)
+        _HOLDOUT.end()   # a previous leg's `continue` must not leave its boundary armed
+        hold_plan = None
+        if a.holdout_frac > 0:
+            _stamps = holdout_entry_stamps(p["harness"], p["base"])
+            hold_plan = (plan_holdout(_stamps, a.holdout_frac, MIN_OOS_TRADES)
+                         if _stamps is not None else {"state": "emit_unreadable", "boundary": None})
+            if not hold_plan.get("boundary"):
+                # No boundary = no holdout. Sweeping full history here would label a
+                # single-window run as discovery+confirmation, so the leg is not swept.
+                print(f"    holdout: UNPLACEABLE ({hold_plan.get('state')}) -- leg skipped")
+                verdicts[leg] = {"status": "holdout_unplaceable", "holdout": {"plan": hold_plan}}
+                continue
+            print(f"    holdout: from {hold_plan['boundary']} ({hold_plan['holdout_trades_planned']} of "
+                  f"{hold_plan['lifetime_trades']} base trades, share {hold_plan['share_used']}, "
+                  f"{hold_plan['state']}); selection sees only the span before it")
+            _HOLDOUT.begin(hold_plan["boundary"])
         # PER-LEG boundary. A fixed date makes trade FREQUENCY decide whether a
         # leg can be graded at all; see resolve_split(). The split is resolved
         # once per leg and reused for every cell, so IS/OOS means the same thing
@@ -2635,6 +2983,7 @@ def main(argv: list[str]) -> int:
                              "error": base_is.get("error") or base_oos.get("error")}
             continue
         leg_v = {"proxy": p["proxy"], "family": p["family"], "levers": {},
+                 **({"holdout": {"plan": hold_plan}} if hold_plan else {}),
                  **split_meta,
                  # Cells the grid deliberately did not ask, and why. Without
                  # this the verdict file cannot distinguish a cell that was
@@ -2854,6 +3203,18 @@ def main(argv: list[str]) -> int:
             else:
                 print(f"   p80 cell skipped (p80={p80}, tm={tm_val})",
                       flush=True)
+        # GEOM-B1: the config-exact base read WITH `--tp-report` (no exit changes),
+        # so a tp cell's calibration share has a base to be read beside. Kept out of
+        # `base_is`/`base_oos`: the graded base is untouched.
+        tp_base = None
+        if any(lv in TP_GEOMETRY_LEVERS for _, lv, _ in p["cells"]):
+            tp_base = {
+                "IS": run_cell(p["harness"], p["base"] + ["--tp-report"], end=leg_split),
+                "OOS": run_cell(p["harness"], p["base"] + ["--tp-report"],
+                                start=leg_split)}
+            leg_v["tp_geometry_base"] = {
+                w: (r.get("tp_geometry") or {"read_state": "error"})
+                for w, r in tp_base.items()}
         for tag, lever, extra in p["cells"]:
             args = p["base"] + extra
             c_is = run_cell(p["harness"], args, end=leg_split)
@@ -2877,6 +3238,8 @@ def main(argv: list[str]) -> int:
             # be unable to answer the question it was added for.
             entry["capital"] = {"IS": capital_delta(c_is, base_is),
                                 "OOS": capital_delta(c_oos, base_oos)}
+            if lever in TP_GEOMETRY_LEVERS:
+                entry["tp_geometry"] = tp_geometry_entry(c_is, c_oos, tp_base)
             # THE MIN-OOS-TRADES FLOOR (operator decision 2026-08-11: 25).
             #
             # Path A's `beats()` had NO minimum trade count, so a cell cleared it
@@ -3091,6 +3454,30 @@ def main(argv: list[str]) -> int:
                 if e.get("verdict") == "path_b_wf_pass"
                 and e.get("path_b_rate_ok") is None),
         }
+        if hold_plan:
+            # CONFIRMATION on the held-back span: ONLY the cells discovery selected (the
+            # E5 pass definition, `is_oos_pass`), each graded once, same Path A comparison,
+            # same base-trades floor. The selection denominator rides beside the answer.
+            _extra = {tag: extra for tag, _lv, extra in p["cells"]}
+            _sel = [{"cell": e["cell"], "args": p["base"] + _extra[e["cell"]]}
+                    for e in _all_entries if e.get("is_oos_pass") is True and e.get("cell") in _extra]
+            _HOLDOUT.confirm()
+            _conf = holdout_confirm_cells(
+                _sel, lambda args, start: run_cell(p["harness"], p["base"] if args is None else args,
+                                                   start=start),
+                beats, hold_plan["boundary"], MIN_OOS_TRADES)
+            _HOLDOUT.end()
+            _by = {c["cell"]: c for c in _conf["cells"]}
+            for e in _all_entries:
+                e["holdout"] = _by.get(e.get("cell"), {"holdout_verdict": "not_selected"})
+            leg_v["holdout"].update({
+                "selected_from": len(_all_entries), "selected": [x["cell"] for x in _sel],
+                "base_trades": _conf["base_trades"], "base_net_r": _conf["base_net_r"],
+                "confirmation": holdout_leg_confirmation(len(_sel), _conf["cells"]),
+                "cells": _conf["cells"]})
+            log_result({"leg": leg, "cell": "holdout", "window": "HOLDOUT", **leg_v["holdout"]})
+            print(f"    holdout: {leg_v['holdout']['confirmation']} -- {len(_sel)} selected of "
+                  f"{len(_all_entries)} cells, holdout base n={_conf['base_trades']}", flush=True)
         # The proposed arm's reachability check rides in the verdict, so a
         # downstream reader never has to re-derive it from the run log.
         leg_v["p80_arm_reach"] = arm_ceiling
@@ -3150,6 +3537,9 @@ def main(argv: list[str]) -> int:
          # empty or wholly-ungraded run for a measurement without branching on
          # it. The per-cell records were always honest; nothing rolled them up.
          "grading_census": _census,
+         # PRE-REGISTERED HOLDOUT share requested (0 = none); per-leg boundary + result
+         # live in each leg's `holdout` block (m20_holdout).
+         "holdout_frac": a.holdout_frac,
          "split_fallback_date": a.split, "split_mode": a.split_mode,
          "split_target_oos": a.split_target_oos, "tp_cap_pct": a.tp_cap_pct,
          # The router value ACTUALLY used by the harness runs above — recorded

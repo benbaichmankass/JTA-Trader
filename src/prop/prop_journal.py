@@ -250,14 +250,54 @@ def record_ticket(ticket: Dict[str, Any]) -> str:
     return ticket_id
 
 
-def set_ticket_status(ticket_id: str, status: str) -> int:
+def set_ticket_status(
+    ticket_id: str, status: str, *, account_id: Optional[str] = None,
+) -> int:
+    """Set a ticket's status. With ``account_id`` the UPDATE is scoped to that
+    account, so a report from one prop account can never advance another
+    account's ticket (TRADEIFY-WIRE F1): a mismatched pair updates 0 rows."""
     conn = _connect()
     try:
         ensure_tables(conn)
-        cur = conn.execute(
-            "UPDATE prop_tickets SET status = ? WHERE ticket_id = ?",
-            (status, ticket_id),
-        )
+        if account_id:
+            cur = conn.execute(
+                "UPDATE prop_tickets SET status = ? "
+                "WHERE ticket_id = ? AND account_id = ?",
+                (status, ticket_id, account_id),
+            )
+        else:
+            cur = conn.execute(
+                "UPDATE prop_tickets SET status = ? WHERE ticket_id = ?",
+                (status, ticket_id),
+            )
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
+
+
+def transition_ticket_status(
+    ticket_id: str, to_status: str, *, from_statuses: Any,
+    account_id: Optional[str] = None,
+) -> int:
+    """Compare-and-set a ticket's status: the UPDATE applies only while the row
+    is still in one of ``from_statuses`` (and, with ``account_id``, belongs to
+    that account). Returns the rows changed, 0 when the ticket moved on first,
+    so a sweep or a Telegram tap can never overwrite a claim, a placement or a
+    fill that landed in between (PROP-FLOW-SEPARATION, 2026-10-07)."""
+    froms = [str(s) for s in (from_statuses or ())]
+    if not froms:
+        return 0
+    conn = _connect()
+    try:
+        ensure_tables(conn)
+        sql = (f"UPDATE prop_tickets SET status = ? WHERE ticket_id = ? "
+               f"AND status IN ({','.join('?' * len(froms))})")
+        params: List[Any] = [to_status, ticket_id, *froms]
+        if account_id:
+            sql += " AND account_id = ?"
+            params.append(account_id)
+        cur = conn.execute(sql, params)
         conn.commit()
         return cur.rowcount
     finally:
@@ -289,6 +329,20 @@ def list_tickets(
         conn.close()
 
 
+def get_ticket(ticket_id: str) -> Optional[Dict[str, Any]]:
+    """One ticket by id, or ``None`` (also when the tables are absent)."""
+    if not ticket_id or not tables_present():
+        return None
+    conn = _connect(read_only=True)
+    try:
+        row = conn.execute(
+            "SELECT * FROM prop_tickets WHERE ticket_id = ?", (str(ticket_id),),
+        ).fetchone()
+        return _ticket_row(row) if row else None
+    finally:
+        conn.close()
+
+
 def _prop_scope(account_id: Optional[str] = None) -> set:
     """Resolve the strategy names that belong to prop accounts.
 
@@ -315,6 +369,71 @@ def _prop_scope(account_id: Optional[str] = None) -> set:
         for s in (a.get("strategies") or []):
             strategies.add(str(s))
     return strategies
+
+
+def _phone_result(meta: Any) -> Optional[Dict[str, Any]]:
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(meta, dict):
+        return None
+    res = (meta.get("phone") or {}).get("result")
+    return res if isinstance(res, dict) else None
+
+
+def _supersede_meta(meta: Any) -> Optional[Dict[str, Any]]:
+    """A suppressed ticket's supersede candidate (PROP-SUPERSEDE), or None."""
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except (TypeError, ValueError):
+            return None
+    cand = meta.get("supersede") if isinstance(meta, dict) else None
+    return cand if isinstance(cand, dict) else None
+
+
+def _phone_trail_meta(meta: Any) -> Optional[Dict[str, Any]]:
+    """The phone trail's state for a ticket (PI-20261015-JWMGXOTH-0001): what stop the trail last ASKED the phone to
+    set, the stop it believes is resting, and the latest replay -- the only place the trail target lived was
+    ``prop_tickets.meta.phone_trail``, which no session-reachable read returned. A projection, not a copy: absent
+    fields are None (never 0); None when the ticket has no trail state at all."""
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except (TypeError, ValueError):
+            return None
+    tr = meta.get("phone_trail") if isinstance(meta, dict) else None
+    if not isinstance(tr, dict):
+        return None
+
+    def num(v: Any) -> Optional[float]:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        return f if f == f else None  # NaN -> None
+
+    am = tr.get("amend") if isinstance(tr.get("amend"), dict) else {}
+    lp = tr.get("last_plan") if isinstance(tr.get("last_plan"), dict) else {}
+    return {
+        "amend_id": am.get("id"),
+        "amend_kind": am.get("kind"),
+        "amend_status": am.get("status"),
+        "amend_sl": num(am.get("sl")),
+        "amend_from_sl": num(am.get("from_sl")),
+        "amend_emitted_at": am.get("emitted_at"),
+        "amend_reported_at": am.get("reported_at"),
+        "replay_sl": num(lp.get("replay_sl")),
+        "last_plan_at": lp.get("at"),
+        "last_plan_action": lp.get("action"),
+        "last_plan_why": lp.get("why"),
+        "resting_sl": num(tr.get("resting_sl")),
+        "resting_tp": num(tr.get("resting_tp")),
+        "human_hold": tr.get("human_hold") or None,
+        "fails": tr.get("fails"),
+    }
 
 
 def list_outbound_tickets(
@@ -351,21 +470,46 @@ def list_outbound_tickets(
                 (*sorted(strategies), cap),
             ).fetchall()
         tk_rows = []
+        # Sidecar rows for OTHER accounts on the same order package (the
+        # package id is shared across every account that rosters the leg) —
+        # read only to tell "this package was ticketed for someone else" from
+        # "this package predates the sidecar".
+        other_opids: set = set()
         if "prop_tickets" in present:
-            tk_rows = conn.execute(
-                "SELECT * FROM prop_tickets ORDER BY created_at DESC LIMIT ?",
-                (cap,),
-            ).fetchall()
+            # SCOPED TO THE ACCOUNT (TRADEIFY-RISK-75, 2026-10-04). This read was
+            # unfiltered and keyed by order_package_id alone, so when breakout_1
+            # and tradeify_1 both ticketed one package, ONE sidecar row won and
+            # BOTH accounts' views returned it: tradeify_1's executor fetched
+            # breakout_1's $75 ticket (1.5% x $5k) and refused it against its own
+            # $50 cap, so the live account could never trade.
+            if account_id:
+                tk_rows = conn.execute(
+                    "SELECT * FROM prop_tickets WHERE account_id = ? "
+                    "ORDER BY created_at DESC LIMIT ?",
+                    (account_id, cap),
+                ).fetchall()
+                other_opids = {
+                    r[0] for r in conn.execute(
+                        "SELECT DISTINCT order_package_id FROM prop_tickets "
+                        "WHERE account_id != ? AND order_package_id IS NOT NULL",
+                        (account_id,))
+                }
+            else:
+                tk_rows = conn.execute(
+                    "SELECT * FROM prop_tickets ORDER BY created_at DESC LIMIT ?",
+                    (cap,),
+                ).fetchall()
     finally:
         conn.close()
 
-    tk_by_op: Dict[str, Dict[str, Any]] = {}
+    # A LIST per package: one package can carry one ticket per account.
+    tk_by_op: Dict[str, List[Dict[str, Any]]] = {}
     tk_orphans: List[Dict[str, Any]] = []
     for r in tk_rows:
         d = _ticket_row(r)
         opid = d.get("order_package_id")
         if opid:
-            tk_by_op[opid] = d
+            tk_by_op.setdefault(opid, []).append(d)
         else:
             tk_orphans.append(d)
 
@@ -377,6 +521,7 @@ def list_outbound_tickets(
         return {
             "order_package_id": op.get("order_package_id") or tk.get("order_package_id"),
             "ticket_id": tk.get("ticket_id"),
+            "account_id": tk.get("account_id"),
             "created_at": op.get("created_at") or tk.get("created_at"),
             "signal_time": tk.get("signal_time") or op.get("created_at"),
             "strategy": op.get("strategy_name") or tk.get("strategy"),
@@ -395,18 +540,35 @@ def list_outbound_tickets(
             "close_reason": op.get("close_reason"),
             "message": tk.get("message"),
             "source": "order_package" if op else "prop_ticket",
+            # Phone executor read-back (PHONE-EXEC-1B): result + reason + the ticket form the phone read (control
+            # labels and our own typed values only). Without it a refusal's reason was invisible on this API.
+            "phone_result": _phone_result(tk.get("meta")),
+            # PROP-SUPERSEDE: the candidate a suppressed ticket carries (the
+            # executor reads it here; it never opens the DB).
+            "supersede": _supersede_meta(tk.get("meta")),
+            # PHONE-TRAIL READ SURFACE (PI-20261015-JWMGXOTH-0001): the trail's asked / resting / replay stop
+            # (None = no trail state on this ticket; each absent field None, never 0)
+            "phone_trail": _phone_trail_meta(tk.get("meta")),
         }
 
     for r in op_rows:
         d = dict(r)
         opid = d.get("order_package_id")
         seen.add(opid)
-        out.append(_emit(d, tk_by_op.get(opid, {})))
+        tks = tk_by_op.get(opid)
+        if not tks:
+            if opid in other_opids:
+                # Ticketed for another account only: not this account's ticket.
+                continue
+            tks = [{}]  # pre-sidecar package: still visible, from order_packages
+        for tk in tks:
+            out.append(_emit(d, tk))
     # Sidecar tickets whose order package wasn't in the prop-strategy slice
     # (e.g. a strategy renamed, or scope couldn't resolve) — surface anyway.
-    for opid, tk in tk_by_op.items():
+    for opid, tks in tk_by_op.items():
         if opid not in seen:
-            out.append(_emit(None, tk))
+            for tk in tks:
+                out.append(_emit(None, tk))
     for tk in tk_orphans:
         out.append(_emit(None, tk))
 
@@ -484,6 +646,20 @@ def insert_fill(fill: Dict[str, Any]) -> int:
                 "SELECT id FROM prop_fills WHERE account_id=? AND ticket_id=? AND "
                 "status=? AND qty IS ? AND exit_price IS ? ORDER BY id DESC LIMIT 1",
                 (account_id, ticket_id, status, qty, exit_price),
+            ).fetchone()
+            if r:
+                existing_id = int(r[0])
+        if (existing_id is None and status == "closed" and ticket_id is not None
+                and exit_price is not None):
+            # VELO-CLOSE-RECON: a PRICED close of a ticket whose close was
+            # journaled WITHOUT an exit (the executor could not read it yet)
+            # is the correction of that row, not a second close: the
+            # fallback key above carries exit_price, so it never matched, and
+            # an append would count the one close twice.
+            r = conn.execute(
+                "SELECT id FROM prop_fills WHERE account_id=? AND ticket_id=? AND "
+                "status='closed' AND exit_price IS NULL ORDER BY id DESC LIMIT 1",
+                (account_id, ticket_id),
             ).fetchone()
             if r:
                 existing_id = int(r[0])
@@ -707,6 +883,7 @@ __all__ = [
     "record_ticket",
     "set_ticket_status",
     "list_tickets",
+    "get_ticket",
     "insert_fill",
     "amend_fill_levels",
     "list_fills",

@@ -25,6 +25,7 @@ import pytest
 from src.runtime.liveness_watchdog import (
     DEFAULT_SIGNAL_THRESHOLD,
     check_liveness,
+    count_placed_accounts,
     run_liveness_watchdog,
 )
 
@@ -173,6 +174,50 @@ class TestCheckLiveness:
         result = check_liveness(now_utc=tmp_dirs["now"])
         assert result.fired is False
         assert "below_threshold" in result.reason
+
+    def test_all_accounts_declined_round_does_not_count(self, tmp_dirs):
+        # The 2026-10-19T14:00Z false URGENT: 5 SELLs from long-only legs.
+        # Each round was dispatched, but every account was side-filtered (dry),
+        # refused or errored — nothing was ever expected to land.
+        audit = tmp_dirs["audit"]
+        _write_signal_rows(audit, count=5, now_utc=tmp_dirs["now"], side="sell")
+        rows = [json.loads(line) for line in audit.read_text().splitlines()]
+        declined = [
+            [{"name": "alpaca_live", "trade_id": "dry-abc123", "error": None}],
+            [{"name": "bybit_2", "trade_id": None, "error": "broker_shorting_disabled"}],
+            [{"name": "bybit_2", "trade_id": "rejected_too_small:x", "error": None}],
+        ]
+        audit.write_text("".join(
+            json.dumps({**r, "accounts_placed": count_placed_accounts(declined[i % 3])})
+            + "\n" for i, r in enumerate(rows)
+        ))
+        result = check_liveness(now_utc=tmp_dirs["now"])
+        assert result.signals_actionable == 0
+        assert result.fired is False
+
+    def test_round_that_placed_still_counts_and_legacy_rows_count(self, tmp_dirs):
+        audit = tmp_dirs["audit"]
+        _write_signal_rows(audit, count=3, now_utc=tmp_dirs["now"])  # legacy: no field
+        with audit.open("a", encoding="utf-8") as fh:
+            for i in range(2):
+                fh.write(json.dumps({
+                    "logged_at_utc": (tmp_dirs["now"] - timedelta(minutes=30 + i)).isoformat(),
+                    "event": "pipeline_result", "side": "buy",
+                    "status": "multi_account_dispatched",
+                    "accounts_placed": count_placed_accounts(
+                        [{"trade_id": "abc123", "error": None},
+                         {"trade_id": "dry-x", "error": None}]),
+                }) + "\n")
+        result = check_liveness(now_utc=tmp_dirs["now"])
+        assert result.signals_actionable == 5
+        assert result.fired is True
+
+    def test_count_placed_accounts(self):
+        assert count_placed_accounts(None) == 0
+        assert count_placed_accounts([{"trade_id": "dry-1"}, {"trade_id": None},
+                                      {"trade_id": "t1", "error": "boom"}]) == 0
+        assert count_placed_accounts([{"trade_id": "t1", "error": None},
+                                      {"trade_id": 42}]) == 2
 
     def test_non_actionable_status_does_not_count(self, tmp_dirs):
         # 10 signals but with status='halted' — pipeline never tried to

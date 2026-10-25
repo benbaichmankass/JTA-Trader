@@ -59,7 +59,8 @@ KEEPER_ACTOR = "github-actions[bot]"
 #: The validators whose SLOT matters. stale_hours = "no completed run for this
 #: long means it has stopped" (daily: one missed day + 2h; weekly: 7d + 2h).
 #: Adding a target = add it here AND add the `dedupe` job to its workflow
-#: (tests/test_schedule_keeper.py enforces both halves).
+#: (tests/test_schedule_keeper.py enforces both halves) -- unless the target's own
+#: run is idempotent per slot, declared as `self_dedupes: "<why>"`.
 TARGETS: dict[str, dict] = {
     "r4-demotion-gate.yml": {"stale_hours": 26},
     # PATHB-MANDATE (2026-09-30): the runner for the granted MD-SOAK-EXIT-CELL-PATHB.
@@ -72,18 +73,52 @@ TARGETS: dict[str, dict] = {
     # GRADE-ALERT (2026-09-30): the alarm for the grading hop had 0 runs ever;
     # its first 04:10Z slot never fired. An alarm that can be dropped is silent.
     "grading-freshness-alert.yml": {"stale_hours": 26},
+    # LIVE-PARITY (2026-10-03): the daily live-vs-replay parity check — a dropped
+    # slot would read on the brief as a stale result, so the keeper covers it.
+    "live-replay-parity.yml": {"stale_hours": 26},
     # RQ-OPS-2 (2026-09-28): added after the SAME lag/drop this module exists
     # for stranded a full day of research-queue-dispatch's own cron — its
     # 06:20 UTC slot had not fired by 13:14Z (measured: every other schedule-
     # triggered workflow in the repo fired normally that morning, so this was
     # not a repo-wide GitHub incident). It predates this fix by definition:
     # the keeper was built 2026-09-27 and this workflow was never added.
-    "research-queue-dispatch.yml": {"stale_hours": 26},
+    #
+    # RQ-CADENCE (2026-10-07): the cron is HOURLY (`20 * * * *`) since
+    # 2026-10-06, so 26 h of silence was 26 missed slots before anyone was told.
+    # ⚠️ stale_hours IS NOT WHAT RE-DISPATCHES A MISSED SLOT -- `decide_keep`
+    # dispatches on SLOT AGE (>= GRACE_MIN, no run since the slot), whatever
+    # this number is. Lowering it only makes the keeper REPORT (page) silence
+    # sooner: 3 h = three consecutive slots with no completed run. What bounded
+    # the real cadence (MEASURED 2026-10-07: 18 runs/24 h, largest gap 3h40m)
+    # was each run holding the concurrency group through its commit-to-main
+    # waits, fixed by the dispatch/land split in research-queue-dispatch.yml.
+    # starved_min (RQ-CADENCE-2, 2026-10-13): hourly cadence must not depend on a keeper execution
+    # landing in the [slot+30, slot+60) window. MEASURED 2026-10-13: no dispatch run started 12:50Z
+    # -> 15:59Z because every keeper execution (pushes + a dropped :07 cron) fell inside a slot's
+    # first 30 min (grace) and none in its second half. When the last occupying run is this old the
+    # grace is waived.
+    "research-queue-dispatch.yml": {"stale_hours": 3, "starved_min": 75},
     # RQ-RUN (2026-09-28): the queue's own replenisher (daily) and mechanical
     # grader (every 6 h) are what make it run without a session; a dropped
     # slot on either is exactly the silence this keeper exists to cover.
     "research-queue-replenish.yml": {"stale_hours": 26},
     "research-queue-grade.yml": {"stale_hours": 26},
+    # GH-CAPACITY-PR-CI-FANOUT (manager 2026-10-15T13:06Z): pytest-run's post-merge backstop.
+    # MEASURED: its `13,43 * * * *` cron created 0 runs in its first 5 slots (10:43-12:43Z) while
+    # every other scheduled workflow fired. A 30-min cron's slot never ages past GRACE_MIN, so the
+    # keeper dispatches it only through starved_min: no schedule/dispatch run for 30 min -> dispatch.
+    # It needs no `dedupe` job: each tick is itself a no-op unless main's HEAD code lacks a completed
+    # full-suite run (scripts/ci/pytest_run_backstop.py), and cron + keeper share one serialised
+    # concurrency group. stale_hours 2 = four missed ticks before the keeper pages.
+    "pytest-run.yml": {"stale_hours": 2, "starved_min": 30,
+                       "self_dedupes": "scripts/ci/pytest_run_backstop.py no-ops a tick whose HEAD is already graded"},
+    # RESEARCH-PIPELINE-SLO (manager 2026-10-16): the `41 */2 * * *` cron (merged 11:17Z, #18579)
+    # NEVER fired -- its 12:41Z and 14:41Z slots created no run; the only runs were manual dispatches.
+    # 2-hourly cron => stale_hours 3 (one missed slot + grace pages). It needs no `dedupe` job: the
+    # alert is change-keyed (a run only messages on a CHANGE of the not-ok set, or a realert_hours
+    # reminder), so a late scheduled run after a keeper dispatch re-measures and sends nothing new.
+    "research-slo.yml": {"stale_hours": 3,
+                         "self_dedupes": "alerts are change-keyed (research_slo.py): a second run of one slot re-measures and re-sends nothing"},
 }
 
 #: A slot younger than this is left to GitHub's own scheduler.
@@ -169,13 +204,18 @@ def counts_for_slot(run: dict) -> bool:
 
 
 def decide_keep(crons: list[str], runs: list[dict], now: dt.datetime,
-                stale_hours: float) -> dict:
+                stale_hours: float, starved_min: Optional[float] = None) -> dict:
     slot = latest_slot(crons, now)
     age_min = (now - slot).total_seconds() / 60
     since = [r for r in runs if _ts(r["created_at"]) >= slot
              and (counts_for_slot(r) or r.get("event") == "workflow_dispatch")
              and r.get("conclusion") not in ("cancelled", "skipped")]
-    dispatch = (not since and age_min >= GRACE_MIN
+    occupying = [_ts(r["created_at"]) for r in runs
+                 if (counts_for_slot(r) or r.get("event") == "workflow_dispatch")
+                 and r.get("conclusion") not in ("cancelled", "skipped")]
+    gap_min = (now - max(occupying)).total_seconds() / 60 if occupying else None
+    starved = bool(starved_min and (gap_min is None or gap_min >= starved_min))
+    dispatch = (not since and (age_min >= GRACE_MIN or starved)
                 and age_min <= MAX_CATCHUP_H * 60)
     ran = sorted((r for r in runs if r.get("status") == "completed"
                   and r.get("conclusion") in RAN
@@ -185,7 +225,7 @@ def decide_keep(crons: list[str], runs: list[dict], now: dt.datetime,
     last_age_h = (now - _ts(last)).total_seconds() / 3600 if last else None
     stale = last_age_h is None or last_age_h > stale_hours
     return {"slot": slot.isoformat(), "slot_age_min": round(age_min),
-            "runs_since_slot": len(since), "dispatch": dispatch,
+            "runs_since_slot": len(since), "dispatch": dispatch, "starved": starved,
             "last_completed": last,
             "last_completed_age_h": None if last_age_h is None else round(last_age_h, 1),
             "stale_hours": stale_hours, "stale": stale}
@@ -225,7 +265,7 @@ def cmd_keep(args) -> int:
     rows, stale = [], []
     for wf, spec in TARGETS.items():
         crons = workflow_crons(f".github/workflows/{wf}")
-        d = decide_keep(crons, _runs(wf), now, spec["stale_hours"])
+        d = decide_keep(crons, _runs(wf), now, spec["stale_hours"], spec.get("starved_min"))
         d["workflow"] = wf
         if d["dispatch"] and not args.dry_run:
             _api(f"/actions/workflows/{wf}/dispatches", "POST", {"ref": "main"})
@@ -308,6 +348,38 @@ def self_test() -> int:
     check("never ran -> STALE", d["stale"], True)
     d = decide_keep(["41 7 * * *"], [sched(4, "2026-09-26T12:25:09Z", "failure")], now, 26)
     check("a FAILED run still counts as having run (silence, not failure)", d["stale"], False)
+
+    # RQ-CADENCE (2026-10-07): the hourly dispatch cron. A missed slot is
+    # re-dispatched on slot age alone; stale_hours only decides the page.
+    hc = ["20 * * * *"]
+    h_hist = [sched(20, "2026-10-07T11:20:00Z")]
+    d = decide_keep(hc, h_hist, T("2026-10-07T12:55"), 3)
+    check("hourly: 12:20 slot 35 min old, no run since -> dispatch", d["dispatch"], True)
+    check("hourly: last completed 1.6h ago is not stale at 3h", d["stale"], False)
+    d = decide_keep(hc, h_hist, T("2026-10-07T12:45"), 3)
+    check("hourly: 25 min old slot is inside grace", d["dispatch"], False)
+    d = decide_keep(hc, h_hist + [keep(21, "2026-10-07T12:40:00Z")], T("2026-10-07T12:55"), 3)
+    check("hourly: a keeper run in flight occupies the slot (no double fire)", d["dispatch"], False)
+    d = decide_keep(hc, h_hist, T("2026-10-07T14:55"), 3)
+    check("hourly: 2 slots missed -> still dispatches the latest only", d["dispatch"], True)
+    check("hourly: last completed 3.6h ago -> STALE at 3h", d["stale"], True)
+    # RQ-CADENCE-2: the 2026-10-13 stall -- every keeper execution fell in a slot's first 30 min.
+    sh = [keep(30, "2026-10-13T12:50:00Z", "success", "completed")]
+    d = decide_keep(hc, sh, T("2026-10-13T14:42"), 3, 75)
+    check("hourly starved: 112 min since the last run waives grace (slot 22 min old)", d["dispatch"], True)
+    d = decide_keep(hc, sh, T("2026-10-13T13:35"), 3, 75)
+    check("hourly not yet starved: 45 min since the last run keeps grace", d["dispatch"], False)
+    d = decide_keep(hc, sh, T("2026-10-13T14:42"), 3)
+    check("no starved_min configured -> grace unchanged", d["dispatch"], False)
+    d = decide_keep(hc, sh + [keep(31, "2026-10-13T14:30:00Z", None, "in_progress")], T("2026-10-13T14:42"), 3, 75)
+    check("starved never double-fires over a run already in the slot", d["dispatch"], False)
+    d = decide_dedupe("20 * * * *", sched(22, "2026-10-07T13:50:00Z", None, "in_progress"),
+                      [keep(23, "2026-10-07T13:25:00Z", "success", "completed")])
+    check("hourly: late scheduled run of a keeper-covered slot is skipped", d["skip"], True)
+    d = decide_dedupe("20 * * * *", sched(24, "2026-10-07T14:25:00Z", None, "in_progress"),
+                      [keep(23, "2026-10-07T13:25:00Z", "success", "completed")])
+    check("hourly: the NEXT slot's scheduled run is not suppressed by the previous slot's keeper run",
+          d["skip"], False)
 
     late = sched(10, "2026-09-27T12:25:00Z", None, "in_progress")
     d = decide_dedupe("41 7 * * *", late, [late, keep(2, "2026-09-27T08:20:00Z", "success", "completed")])

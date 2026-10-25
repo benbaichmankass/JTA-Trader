@@ -1,0 +1,117 @@
+id: RQ-20261025-d7e6-09
+title: 'Same-UTC-day-flat Donchian-20 (FLAT, FLATE) and the 2-bar confirmation (CONF) re-asked on 14 cells DISJOINT from 4b82-07, sized from the MEASURED sd: does any arm beat B by >=
+  0.05 R/trade pooled?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- L-PROP
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: 'RQ-20261022-4b82-07 (ETH/SOL/XRP/LINK/ADA/DOGE, trend 1h) was demoted to underpowered by RESULTS-GRADE-1025: realised pooled n_B 8896 against 8908 per arm, the floor for the
+  registered 0.05 R/trade bar at the MEASURED sd of 1.342 R: 12 trades short, so its auto FAIL is "not resolvable", not "refuted". The day-flat rule is a prop-account constraint (no
+  overnight hold), so whether an earlier last-entry cutoff keeps a positive net matters regardless of the lead. On 14 perps none of which was in the first run (AVAX, NEAR, ATOM, FIL,
+  TRX, ETC, DOT, LTC, BCH, XLM, ALGO, XTZ, EOS, IOTA), at 1h over 2020-06-01..2026-10-22, expected pooled n_B ~18,000 (8896 over 6 cells = ~1480/cell), does any arm (FLAT, FLATE, CONF)
+  pass the pooled Stage-0 rule with breadth AND beat B by >= 0.05 R/trade pooled?'
+why_this_matters: RESULTS-GRADE-1025 found 4b82-07 12 trades short of its own floor. The cheapest honest fix is more cells, not a bar change. The day-flat constraint is real for the
+  prop accounts, so the answer is worth having.
+power:
+  expected_n: 18000
+  min_detectable_effect: 0.05
+  effect_units: R per trade
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Repo floor (two-sample, two-sided 0.05, power 0.80) for d = 0.05/1.342 = 0.0373 is 11,311 per arm; the RESULTS-GRADE-1025 one-sided figure was 8,908. sd 1.342 R MEASURED from
+    the 4b82-07 baseline arm (n_B 8896). 4b82-07 gave ~1480 baseline trades per cell; 14 disjoint cells give ~20,700 (later-listed cells shorter: estimate 18,000). FLATE removes the
+    entries after 16:00 UTC (about a third of 1h entries), so its n is ~12,000, still above the floor.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+  sd: 1.342
+decision_rule:
+  id: RULE-RQ20261025-D7E6-09-TREND-1H-DAYFLAT-TRANSFER
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'scripts/research/harness_stage0.py --family trend --timeframe 1h, arms fixed now: B=; FLAT=--flat-at-utc=23:45;--no-entry-after-utc=20:00; FLATE=--flat-at-utc=23:45;--no-entry-after-utc=16:00;
+    CONF=--confirm-bars=2; baseline B; per cell and pooled across 6 cells; flags --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor 88 --breadth-frac 0.5 --baseline B --delta-r-per-trade
+    0.05; cost = the harness venue-aware fee + slippage + funding stack (execution_costs.resolve_cost_policy), recorded per cell.'
+  rule: 'Arms and thresholds are fixed now and are not changed after any result. A candidate PASSES iff it passes the pooled Stage-0 rule (pooled n >= 88, pooled net_r > 0, >= 4 of 6
+    calendar folds net positive, >= half of the powered cells pass) AND beats B''s pooled net R/trade by >= 0.05 R. PASS IF one or more candidates pass: the best by pooled net R is named
+    and the follow-up is ONE confirmation unit on a disjoint window with the same statistic and bar (a pass on one window is a lead), then the prop/real-money SUPERSET ladder; never
+    a roster edit. FAIL IF every candidate fails (n >= floor) -> this variant is closed on this window and the record names which arm moved closest, so the next variant is aimed. INDETERMINATE
+    IF pooled n < 88 or fewer than half the cells measured (a fetch/harness fault is recorded per cell, never dropped).'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A best-of-k arm is a LEAD (programme 03 rung S0-C), never a finding. Candles are Binance
+    USD-M (a PROXY for Bybit linear); the funding term is a directionless magnitude (execution_costs P1); both are stated in the record. Does not pool with any committed record. Does
+    not pool with 4b82-07: a PASS here is an independent lead on disjoint cells.'
+compute: cpu_long
+value:
+  bucket: structural
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  basis: 'stand-in: prop day-flat rule; the first run missed its floor by 12 trades; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; the dispatcher's idle backends cannot hold it (no published-data shard for these symbols);
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - AVAXUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT,DOTUSDT,LTCUSDT,BCHUSDT,XLMUSDT,ALGOUSDT,XTZUSDT,EOSUSDT,IOTAUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-22'
+  - --arm
+  - B=
+  - --arm
+  - FLAT=--flat-at-utc=23:45;--no-entry-after-utc=20:00
+  - --arm
+  - FLATE=--flat-at-utc=23:45;--no-entry-after-utc=16:00
+  - --arm
+  - CONF=--confirm-bars=2
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261025-D7E6-09-TREND-1H-DAYFLAT-TRANSFER
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261025-d7e6-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- research/queue/RQ-20261022-4b82-07.yaml
+- comms/research/grading/RESULTS-GRADE-1025.json
+- RQ-20260930-503

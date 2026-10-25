@@ -708,6 +708,11 @@ LANDING_MACHINERY = [
     "scripts/research/queue_replenish.py",
     "scripts/research/queue_grade.py",
     "research/templates/**",
+    # RESEARCH-LOOP-AUDIT RC2 (2026-10-15): programme question nodes are queue_replenish's
+    # sixth source -- a node's `unit:` is a pre-registration exactly like a template, and
+    # E58 vouches what it emits by re-rendering from the committed node, so an edit to a
+    # node file must be read by a human, never self-landed (E57's property, extended).
+    "research/programmes/**",
     f"{APPROVAL_DIR}/**",
 ]
 
@@ -1392,7 +1397,9 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
                 f"established as either. Passing on the unreadable case rather "
                 f"than failing a branch we did not establish anything about."])
         return ("undeclared", [
-            f"R11 no landing declaration at {decl_rel}. This branch was cut from "
+            f"R11 no landing declaration at {decl_rel}. The filename must be EXACTLY "
+            f"that (slug = branch name with '/' -> '-', no part dropped: "
+            f"`lane/foo` -> `lane-foo.json`). This branch was cut from "
             f"a `main` that already carried {GUARD_REL}, so the rule was "
             f"available to it. Every PR states its tier and how it means to "
             f"land; see {LANDING_DIR}/README.md for the four-line file."], notes)

@@ -1,0 +1,21 @@
+{
+  "id": "REGIME-EQUITY-LEG-FETCH",
+  "title": "Lever: exit_lever_ablation.py fetches non-crypto (equity/ETF) legs on the research runner, so regime-axis units can reach the alpaca_live real-money legs",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P2-AI-REGIME-BACKLOG-1016] MEASURED in the lane sandbox: exit_lever_ablation.py --leg ief_pullback_1d -> regime_debt_matrix._fetch_csv -> ModuleNotFoundError yfinance; .github/workflows/research-script-run.yml installs numpy pandas pyyaml requests python-dotenv dukascopy-python==4.0.1 only, so the same fault would hit on the runner. The dukascopy lane (scripts/ops/fetch_backtest_candles.py --source dukascopy, RQ-20261015-cab7-06) is already installed there and is the cheaper route; yfinance pinned in the workflow is the alternative (Yahoo 429s runner UAs, see regime_debt_matrix._yahoo_empty_reason). UNBLOCKS: blocked/RQ-20261016-65ff-29 (alpaca_live ief/slv/iaum pullback_1d vol axes). DONE WHEN: one exit_lever_ablation unit on a non-crypto leg lands a measured record on the runner and 65ff-29 is split per leg and leaves blocked/. [research-ops 2026-10-17T20:47Z] The predicted fault now has a measured cost: RQ-20261016-c56e-16/-17/-18 (ief/slv/gld 1d, same driver) landed producer_failed, exit 1 in 0.6 s (c56e-18 twice); runner cmd log not on main, so the yfinance cause is INFERRED (local repro + this row), not read. This pass owner-stamped 16/18 here and moved the 7 unfired equity units c56e-20..26 to research/queue/blocked/ (blocked_on this row). P3-Q3-ief-tune requires c56e-16 PASS and is stalled behind it. Clears when research-script-run.yml installs a pinned yfinance OR argv gains --non-crypto-source dukascopy after a span probe shows depth to 2006 (never measured).",
+  "updated_at": "2026-10-17T20:54:46Z",
+  "updated_by": "research-ops-lane-20261017-2047",
+  "roadmap": [
+    "L-REGIME"
+  ],
+  "_seq": 527
+}

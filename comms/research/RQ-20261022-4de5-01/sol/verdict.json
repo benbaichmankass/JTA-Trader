@@ -1,0 +1,243 @@
+{
+ "unit": "RQ-20261022-4de5-01",
+ "rule": "RULE-RQ-20261022-4de5-01",
+ "params": {
+  "folds": 6,
+  "fold_majority": 4,
+  "max_opposite": 1,
+  "floor_r": 1.0,
+  "floor_per_trade_r": 0.02
+ },
+ "generated_at": "2026-10-22T07:11:14+00:00",
+ "data_source": "Binance USD-M perp 1m klines (data.binance.vision); a LABELLED PROXY for Bybit (api.bybit.com is geo-blocked from the research containers)",
+ "window_end_pin": "2026-10-20 23:59",
+ "population": "1 leg runs (trend_donchian_sol_prop); every (account, leg) routing under legs[].routings; arms config-exact to config/strategies.yaml (a __tp<x> run overrides tp_r only); entries on bars with a 200-bar live frame",
+ "complete": true,
+ "legs": {
+  "trend_donchian_sol_prop": {
+   "leg": "trend_donchian_sol_prop",
+   "family": "trend",
+   "symbol": "SOLUSDT",
+   "timeframe": "1h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 3.5,
+    "tp_r": 6.0,
+    "min_confidence": 0.8,
+    "side_filter": "long",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 53345,
+   "first_decision_bar": "2020-09-22 14:00:00+00:00",
+   "last_bar": "2026-10-20 23:00:00+00:00",
+   "A_closed": {
+    "n": 403,
+    "net_r": 52.9266
+   },
+   "B_forming": {
+    "n": 589,
+    "net_r": 36.6333
+   },
+   "shared_n": 312,
+   "union_n": 680,
+   "jaccard": 0.4588,
+   "delta_net_r": -16.2933,
+   "tp_r": 6.0,
+   "tp_variant": false,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_2",
+     "account_class": "real_money",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_portfolio",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "breakout_2",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "tradeify_1",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "velotrade_1",
+     "account_class": "prop",
+     "mode": "live"
+    }
+   ],
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_sol_prop.json",
+    "window": [
+     "2020-10-15 00:00:00+00:00",
+     "2026-09-24 23:00:00+00:00"
+    ],
+    "record_net_r_oos": 60.6043,
+    "record_n": 394,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 394,
+     "net_r": 60.6043
+    },
+    "proxy_forming": {
+     "n": 577,
+     "net_r": 45.5536
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261022-4de5-01",
+    "params": {
+     "folds": 6,
+     "fold_majority": 4,
+     "max_opposite": 1,
+     "floor_r": 1.0,
+     "floor_per_trade_r": 0.02
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-09-22 14:00:00+00:00",
+     "2026-10-20 23:00:00+00:00"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "start": "2020-09-22 14:00:00+00:00",
+      "end": "2021-09-27 11:30:00+00:00",
+      "closed": {
+       "n": 77,
+       "net_r": 16.8803
+      },
+      "forming": {
+       "n": 118,
+       "net_r": 9.0121
+      },
+      "delta_r": 7.8682,
+      "floor_r": 2.36,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 2,
+      "start": "2021-09-27 11:30:00+00:00",
+      "end": "2022-10-02 09:00:00+00:00",
+      "closed": {
+       "n": 55,
+       "net_r": 8.732
+      },
+      "forming": {
+       "n": 80,
+       "net_r": 6.1647
+      },
+      "delta_r": 2.5673,
+      "floor_r": 1.6,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 3,
+      "start": "2022-10-02 09:00:00+00:00",
+      "end": "2023-10-07 06:30:00+00:00",
+      "closed": {
+       "n": 66,
+       "net_r": 9.1178
+      },
+      "forming": {
+       "n": 97,
+       "net_r": 4.8875
+      },
+      "delta_r": 4.2303,
+      "floor_r": 1.94,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 4,
+      "start": "2023-10-07 06:30:00+00:00",
+      "end": "2024-10-11 04:00:00+00:00",
+      "closed": {
+       "n": 72,
+       "net_r": 11.5241
+      },
+      "forming": {
+       "n": 97,
+       "net_r": 14.1986
+      },
+      "delta_r": -2.6745,
+      "floor_r": 1.94,
+      "call": "FORMING"
+     },
+     {
+      "fold": 5,
+      "start": "2024-10-11 04:00:00+00:00",
+      "end": "2025-10-16 01:30:00+00:00",
+      "closed": {
+       "n": 68,
+       "net_r": 6.7495
+      },
+      "forming": {
+       "n": 104,
+       "net_r": -2.5926
+      },
+      "delta_r": 9.3421,
+      "floor_r": 2.08,
+      "call": "CLOSED"
+     },
+     {
+      "fold": 6,
+      "start": "2025-10-16 01:30:00+00:00",
+      "end": "2026-10-20 23:00:00+00:00",
+      "closed": {
+       "n": 65,
+       "net_r": -0.0771
+      },
+      "forming": {
+       "n": 93,
+       "net_r": 4.963
+      },
+      "delta_r": -5.0401,
+      "floor_r": 1.86,
+      "call": "FORMING"
+     }
+    ],
+    "better": "NO_MATERIAL_DIFFERENCE",
+    "folds_closed": 4,
+    "folds_forming": 2,
+    "folds_tie": 0,
+    "delta_r_full": 16.2933,
+    "rule_d1_record_window": {
+     "closed": true,
+     "forming": true,
+     "window": [
+      "2020-10-15 00:00:00+00:00",
+      "2026-09-24 23:00:00+00:00"
+     ]
+    },
+    "preferred": "closed",
+    "adopted": "closed",
+    "verdict": "SWITCH_TO_CLOSED",
+    "reason": "preferred_passes_d1"
+   }
+  }
+ }
+}

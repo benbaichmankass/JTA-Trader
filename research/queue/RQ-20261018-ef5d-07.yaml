@@ -1,0 +1,168 @@
+id: RQ-20261018-ef5d-07
+title: >-
+  Programme 07 TIMEFRAMES, short arm B2: COST-GATED breakout -- Donchian-20 channel breaks on 30m bars for the six Bybit perps,
+  2021-01-01..2026-10-17, taken only when the ATR percentile at entry is >= 50 / 75 / 90 (so the stop, and 1R, is large relative
+  to the fixed bps cost) vs ungated
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  On Binance USD-M 30m candles (proxy for Bybit linear) for BTC/ETH/SOL/XRP/ADA/AVAX over 2021-01-01..2026-10-17, with baseline
+  arm B = scripts/backtest_trend.py Donchian 20, 2.5 x ATR14 stop, 3 x ATR trail (harness defaults), do the candidate arms
+  V50 / V75 / V90 (--vol-skip-below-pctl 50 / 75 / 90: no entry when the signal bar's trailing ATR percentile is below the
+  gate) pass the pooled Stage-0 rule AND beat B's pooled net R per trade by >= 0.05 R? The gate is the cost-aware entry condition
+  in harness form: cost is a fixed bps of notional, R scales with ATR, so a high-vol-only breakout pays less of its R to the
+  venue.
+why_this_matters: >-
+  Operator 2026-10-18: short-horizon breakouts whose expected move per trade clears the full fee+slippage stack. RQ-20260930-504
+  ran trend/pullback/squeeze/fade at 5m/15m/30m UNGATED at live/default params and found no Stage-A survivor outside ict_scalp;
+  the 2026-10-06 batch retired 5m-15m taker as a class. What is new here is the CONDITION (vol-percentile gate = the break-even
+  instrument's cost_r lever applied at entry) at 30m, the shortest bar 504 covered, pooled with calendar folds and a declared
+  baseline. ef5d-02's frontier says whether 30m is viable/marginal/dead for these symbols; this unit runs regardless because
+  the gate exists to move a marginal horizon, and the record states the frontier it was read against. Prior short-horizon
+  work this builds on and does NOT repeat: RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL at taker cost;
+  squeeze/fade/pullback/fvg/chop had NO Stage-A survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07
+  (maker entries do not rescue the 15m scalp book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker
+  FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+requires_result:
+  unit: RQ-20261018-ef5d-02
+power:
+  expected_n: 400
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.3 at alpha 0.05 / power 0.8 needs 88 trades (the 504 floor); expected_n=400 pooled on the ungated arm is an ESTIMATE
+    from 30m Donchian-20 on ~5.8 years x 6 symbols (~60/symbol/year on the 1h record scaled by bars). The gated arms keep
+    a fraction of entries (V90 ~10%) and may read indeterminate; that is reported, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched Binance Vision 30m candles (2200 d) over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P7-B2-COST-GATED-BREAKOUT-30M
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family trend --timeframe 30m --baseline B --delta-r-per-trade 0.05, arms B, V50, V75, V90; per cell
+    n, net_r, max_drawdown_r, 6 calendar folds, net_r_per_capital_day, hold; pooled across the six cells; delta_r_per_trade_vs_baseline
+    per candidate.
+  rule: >-
+    Arms fixed now: B (baseline), V50, V75, V90 (candidates). Flags: --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor
+    88 --breadth-frac 0.5 --baseline B --delta-r-per-trade 0.05. A candidate passes iff it passes the pooled Stage-0 rule
+    AND beats B's pooled net R/trade by >= 0.05 R. PASS iff any candidate passes -> node P7-B2-confirm (the passing gate alone
+    vs B at 15m and 1h: the transfer across bars is the confirmation, no re-selection of the percentile). FAIL iff every candidate
+    fails -> the vol gate does not lift a 30m breakout over its cost on these symbols; the short arm's next lever is a cost
+    change (maker) or a different family (B3/B4). INDETERMINATE otherwise. Verdicts are the script's own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of folds calendar folds
+    net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND
+    pooled net_r > 0 AND pooled folds >= fold_majority AND >= half the POWERED cells (n >= n_floor) pass, indeterminate iff
+    pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded
+    per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values across the arm's cells are REPORTED, not
+    graded. A PASS is a LEAD: it opens the programme-07 node named in the tree (a same-symbol overlap read against the live
+    legs, then a re-entry case under MD-PROMOTE-S0-S1 built as a new evidence record), never a roster act; a FAIL closes the
+    CONFIGURATION on this window, never the family (idea-family review 2026-10-16 negative-result protocol). Thresholds are
+    not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: frontier
+  basis: >-
+    stand-in: a candidate sub-hour crypto leg for the prop and paper books; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: >-
+    6 x 30m fetches over 2200 d (~105k bars each, monthly zips) x 4 arms = 24 passes of the trend harness over ~100k bars
+    (~1-3 min each). Estimate; the first run replaces it.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; 30m crypto bars are not in metis-market-data; CPU-only.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 30m
+  - --days
+  - '2200'
+  - --start
+  - '2021-01-01'
+  - --end
+  - '2026-10-17'
+  - --arm
+  - B=
+  - --arm
+  - V50=--vol-skip-below-pctl=50
+  - --arm
+  - V75=--vol-skip-below-pctl=75
+  - --arm
+  - V90=--vol-skip-below-pctl=90
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P7-B2-COST-GATED-BREAKOUT-30M
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261018-ef5d-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- RQ-20261018-ef5d-02
+- RQ-20260930-504
+- scripts/research/harness_stage0.py
+- scripts/backtest_trend.py
+- docs/research/idea-family-review-2026-10-16.md
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T19:13:09+00:00'
+grading:
+  attested: RULE-P7-B2-COST-GATED-BREAKOUT-30M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-P7-B2-COST-GATED-BREAKOUT-30M
+  evidence:
+  - research/results/RQ-20261018-ef5d-07/39157783308.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

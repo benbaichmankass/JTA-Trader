@@ -2,6 +2,8 @@ id: RQ-20260927-007
 title: Portfolio-level vs per-leg regime weighting — does gating the SHARED trend_4h/pullback_2h book beat gating each leg alone?
 status: blocked
 cadence: once
+theme: regime
+priority: 3
 kind: experiment
 
 question: >-
@@ -86,6 +88,14 @@ routing:
   basis: Same trainer-VM data dependency as the sibling units in this family.
 
 blocked_on:
+  - kind: work_item
+    ref: REGIME-WEIGHT-VARIANTS
+    what: >-
+      Owner named 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016, deliverable 2 of the regime backlog): this unit waits on
+      the soft-weight build (cross-sectional fleet-regime scalar) owned by row REGIME-WEIGHT-VARIANTS, child of REGIME-PROGRAM. The prose entries below are the original diagnosis and stay as written.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/, status queued,
+      run.command set (no run.workflow: declare compute).
   - what: >-
       No harness or orchestrator computes a CROSS-SECTIONAL regime scalar
       (e.g. "fraction of the 5 alt symbols with entry-bar ADX above X") and
@@ -114,6 +124,8 @@ lands:
   assert_field: label
   min_rows: 1
 
+roadmap:
+- L-REGIME
 related:
   - 'RQ-20260927-004 (per-leg ADX weight — the baseline this compares against)'
   - 'scripts/backtest_system.py (the true portfolio-execution harness, explicitly out of scope here)'

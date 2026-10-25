@@ -257,3 +257,51 @@ def bullet_list(items: Sequence[str], empty: str = "(none)") -> str:
     if not items:
         return empty
     return "\n".join(f"- {item}" for item in items)
+
+
+def render_html_fitted(
+    *,
+    header: str,
+    sections: Sequence[Section],
+    footer: Optional[str] = None,
+    limit: int = _TELEGRAM_MAX_CHARS,
+) -> str:
+    """``render_html`` that FITS the 4096-char cap by trimming section BODIES,
+    never by cutting the message tail.
+
+    ``render_html`` alone truncates the whole message, which silently drops
+    whole trailing sections. Here the longest body loses trailing lines first,
+    and every trimmed body ends with an explicit count — *"… 7 more line(s)
+    not shown (of 19)"* — so anything dropped is stated, never silent
+    (TELEGRAM-CHANNELS, 2026-10-11). Sections keep their headings even when
+    their body has to be cut to a single count line.
+    """
+    secs = [Section(summary=x.summary, body=x.body, priority=x.priority,
+                    empty_body_text=x.empty_body_text, body_is_html=x.body_is_html)
+            for x in sections]
+    lines = {id(x): (x.body or "").split("\n") for x in secs}
+    total = {id(x): len(lines[id(x)]) for x in secs}
+    shown = dict(total)
+
+    def _apply(x: Section) -> None:
+        n, of = shown[id(x)], total[id(x)]
+        kept = lines[id(x)][:n]
+        if n < of:
+            kept.append(f"… {of - n} more line(s) not shown (of {of})")
+        x.body = "\n".join(kept)
+
+    for _ in range(10000):
+        out = render_html(header=header, sections=secs, footer=footer)
+        if len(out) <= limit and "…(truncated)" not in out[-20:]:
+            return out
+        # trim the section whose rendered body is currently longest
+        # HTML bodies are never line-cut (a tag may span lines); if only they
+        # remain, render_html's tag-healing truncation is the last resort.
+        cand = [x for x in secs if shown[id(x)] > 0 and not x.body_is_html]
+        if not cand:
+            return out
+        big = max(cand, key=lambda x: len(x.body or ""))
+        shown[id(big)] -= 1
+        _apply(big)
+    return render_html(header=header, sections=secs, footer=footer)
+

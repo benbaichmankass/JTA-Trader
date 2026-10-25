@@ -1,0 +1,33 @@
+{
+  "id": "RESEARCH-OPS-20261022-1447",
+  "title": "Research-ops pass 2026-10-22 14:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261022-1447",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19558,
+    19559
+  ],
+  "blocked_on": [],
+  "note": "[lane] runnable 45 vs floor 59 (fired_24h 74), H1-AUTHOR. 26 result files read since 09:25Z: p6 f14 i4 wiring_only 2. RQ-20261022-511e-01 (ADX25 sibling corroboration) UNIT FAIL -> ADX25 stays bybit_1-only, noted on OPERATOR-DECISIONS-1022 (manager: retire P1-Q6-xrp4h-declare?). bea9 tp_extend PASSes immaterial (~0.001 R/trade, no roster leg), noted on ABLATION-TP-CALIBRATION. 3a84-11 PASS -> confirmation unit RQ-20261022-c584-01 (held PR). 1f8b-01 INDETERMINATE n 58<100 -> PI-20261022-HOPS1447-0001. Defect: 511e-01 two per-leg commands shared one out_dir (only unit affected). Not run: 38 unrouted legacy BL rows (need diag reads; SA-ROUTE), blocked/ re-walk. Record comms/research/ops/20261022T1530Z.json. Queue-unit edits ride a separate held PR (unvouchable_paths).",
+  "updated_at": "2026-10-22T15:00:43Z",
+  "updated_by": "session_019iupCCboS2jsn1kNq46oGU",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "observation": {
+    "what": "both PRs merged (the queue-unit one held, E57); RQ-20261022-c584-01 dispatched on kaggle_cpu",
+    "how_to_check": "ls research/results | grep c584; python3 scripts/ops/pipeline.py --due | grep HOPS1447",
+    "due_by": "2026-10-29"
+  },
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "_seq": 597
+}

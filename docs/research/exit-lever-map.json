@@ -128,6 +128,10 @@
       "state": "needs_column",
       "reason": "MI-165 break-even FLOOR, present on donchian + pullback + squeeze: once the trade has SEEN this many R, the trailing stop may never again sit below entry. It is max()-ed against the chandelier candidate, so it is a one-directional RATCHET distinct from trail_geometry rather than a setting of it. The string `be_floor` appears ZERO times anywhere in the matrix."
     },
+    "--be-floor-lock-r": {
+      "state": "needs_column",
+      "reason": "Profit-lock STEP for --be-floor-r, pullback harness only (ADA-LIVE-EXIT-REVIEW-1024, 2026-10-24): the armed floor sits at entry + k R instead of entry; 0.0 = the plain break-even floor, byte-identical. It is a SUB-KNOB of --be-floor-r, so whoever adds the be_floor column should carry it as that column's lock level rather than a column of its own. First consumer: research/queue/RQ-20261024-4ef5-01.yaml."
+    },
     "--sim-breakeven": {
       "state": "needs_column",
       "reason": "ict_scalp only, and it SIMULATES A LIVE MECHANISM -- 'the LIVE monitor's break-even trail (monitor_breakeven_sl: once a bar closes >= 1R in favour, SL moves to entry +/- be_offset_bps from YAML)'. So unlike --timeout-bars it has a live consumer, which is what makes its absence a gap rather than an n/a. The string `sim_breakeven` appears ZERO times in the matrix, while 8 of the matrix's 52 legs are scalp legs."
@@ -139,6 +143,134 @@
     "--no-tp": {
       "state": "recorded_na",
       "reason": "A measurement-FIDELITY knob, not a lever -- the same class as --exit-grain. It DISABLES the strategy's own take-profit so the harness can observe an excursion the live target would have truncated, which is what makes a target-setting MFE distribution possible at all (MI-312). It changes what the HARNESS can see, never what production does: production always has its target, so there is no production state this flag corresponds to and a matrix column would assert one. Declared by backtest_ict_scalp.py and backtest_fvg_range.py only, because those two get their target from the strategy itself; the trend/pullback/squeeze harnesses need no such flag since --tp-cap-pct 0 already leaves them with no target."
+    },
+    "--tp-revision": {
+      "state": "needs_column",
+      "reason": "TP doctrine B1 (2026-10-07): re-estimates the TP after every closed bar with the declared rule (only donchian_measured_move, src/runtime/tp_revision.py, the SAME core the live trend_donchian monitor() and the prop trail call). A target-MOVING lever, distinct from --tp-r / --tp-cap-pct (which fix the entry target). No matrix column exists for a revised target; graded by RQ-20261007-080 (scripts/research/tp_revision_sweep.py). Adding the column is a coverage-matrix schema change, a manager decision."
+    },
+    "--tp-revision-width-mult": {
+      "state": "needs_column",
+      "reason": "Parameter of --tp-revision: the measured-move multiple of the Donchian channel height (swept {0.5,1.0,1.5,2.0} by RQ-20261007-080). Maps to the same future column as --tp-revision."
+    },
+    "--trail-adx-below": {
+      "state": "needs_column",
+      "reason": "MOMENTUM-TRAIL-LEVER `momentum_trail` (2026-10-08): an ADX-conditioned trail tighten, a stop keyed to MOMENTUM not price path. Swept by m20_fleet_exit_sweep.cells_for (cells adx{20,25}_k{0,3}_t*) under matrix lever `momentum_trail`, but the coverage matrix has NO such column yet - adding one is a schema change to the 765 KB artifact that matrix-corpus-agreement / matrix-config-agreement read, deliberately not made in the lever PR. Open until the first sweep (RQ-20261007-042) produces rows to put in it."
+    },
+    "--trail-adx-falling-bars": {
+      "state": "needs_column",
+      "reason": "MOMENTUM-TRAIL-LEVER `momentum_trail` (2026-10-08): an ADX-conditioned trail tighten, a stop keyed to MOMENTUM not price path. Swept by m20_fleet_exit_sweep.cells_for (cells adx{20,25}_k{0,3}_t*) under matrix lever `momentum_trail`, but the coverage matrix has NO such column yet - adding one is a schema change to the 765 KB artifact that matrix-corpus-agreement / matrix-config-agreement read, deliberately not made in the lever PR. Open until the first sweep (RQ-20261007-042) produces rows to put in it."
+    },
+    "--trail-adx-tight-mult": {
+      "state": "needs_column",
+      "reason": "MOMENTUM-TRAIL-LEVER `momentum_trail` (2026-10-08): an ADX-conditioned trail tighten, a stop keyed to MOMENTUM not price path. Swept by m20_fleet_exit_sweep.cells_for (cells adx{20,25}_k{0,3}_t*) under matrix lever `momentum_trail`, but the coverage matrix has NO such column yet - adding one is a schema change to the 765 KB artifact that matrix-corpus-agreement / matrix-config-agreement read, deliberately not made in the lever PR. Open until the first sweep (RQ-20261007-042) produces rows to put in it."
+    },
+    "--momentum-stale-bars": {
+      "state": "needs_column",
+      "reason": "MOMENTUM-TRAIL-LEVER `momentum_stale` (2026-10-08): a time stop keyed to ADX decay rather than open R. Swept by cells_for (cells ms{8,12}_a{20,25}) under matrix lever `momentum_stale`; the coverage matrix has NO such column yet (same schema-change reason as momentum_trail). Open until RQ-20261007-043 produces rows."
+    },
+    "--momentum-stale-adx-below": {
+      "state": "needs_column",
+      "reason": "MOMENTUM-TRAIL-LEVER `momentum_stale` (2026-10-08): a time stop keyed to ADX decay rather than open R. Swept by cells_for (cells ms{8,12}_a{20,25}) under matrix lever `momentum_stale`; the coverage matrix has NO such column yet (same schema-change reason as momentum_trail). Open until RQ-20261007-043 produces rows."
+    },
+    "--trail-level": {
+      "state": "needs_column",
+      "reason": "P1-Q10 `level_trail` (2026-10-22, lane EXITS-OVERNIGHT-1021): tighten the chandelier trail to --trail-level-tight-mult x ATR on first touch of ONE structural level fixed at entry (prior confirmed swing extreme / nearest unfilled opposing FVG / next round number; src/research/trail_levers.trade_level). Measured by exit_lever_ablation replace units RQ-20261022-001/-002 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has NO level_trail column yet (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-level-tight-mult": {
+      "state": "needs_column",
+      "reason": "P1-Q10 `level_trail` (2026-10-22, lane EXITS-OVERNIGHT-1021): tighten the chandelier trail to --trail-level-tight-mult x ATR on first touch of ONE structural level fixed at entry (prior confirmed swing extreme / nearest unfilled opposing FVG / next round number; src/research/trail_levers.trade_level). Measured by exit_lever_ablation replace units RQ-20261022-001/-002 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has NO level_trail column yet (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-level-lookback": {
+      "state": "needs_column",
+      "reason": "P1-Q10 `level_trail` (2026-10-22, lane EXITS-OVERNIGHT-1021): tighten the chandelier trail to --trail-level-tight-mult x ATR on first touch of ONE structural level fixed at entry (prior confirmed swing extreme / nearest unfilled opposing FVG / next round number; src/research/trail_levers.trade_level). Measured by exit_lever_ablation replace units RQ-20261022-001/-002 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has NO level_trail column yet (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-level-pivot-k": {
+      "state": "needs_column",
+      "reason": "P1-Q10 `level_trail` (2026-10-22, lane EXITS-OVERNIGHT-1021): tighten the chandelier trail to --trail-level-tight-mult x ATR on first touch of ONE structural level fixed at entry (prior confirmed swing extreme / nearest unfilled opposing FVG / next round number; src/research/trail_levers.trade_level). Measured by exit_lever_ablation replace units RQ-20261022-001/-002 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has NO level_trail column yet (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-level-round-step": {
+      "state": "needs_column",
+      "reason": "P1-Q10 `level_trail` (2026-10-22, lane EXITS-OVERNIGHT-1021): tighten the chandelier trail to --trail-level-tight-mult x ATR on first touch of ONE structural level fixed at entry (prior confirmed swing extreme / nearest unfilled opposing FVG / next round number; src/research/trail_levers.trade_level). Measured by exit_lever_ablation replace units RQ-20261022-001/-002 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has NO level_trail column yet (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--giveback-frac": {
+      "state": "mapped_to_column",
+      "column": "giveback_stop"
+    },
+    "--trail-level-min-r": {
+      "state": "needs_column",
+      "reason": "LEVEL-TRAIL-R-GATE (2026-10-23, lane EXIT-BUILDS-W43): gates the P1-Q10 `level_trail` so a level touch latches the tight trail only once peak open profit has reached N R (AND with the level, where --trail-decay-arm-r composes by OR). It modifies --trail-level, which is itself needs_column, so it has no lever column of its own; unit RQ-20261022-eba2-11 tests it on xrp_pullback_2h."
+    },
+    "--bank-state-arm-r": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): gates the --bank-frac/--bank-at-r partial-TP rung on the same in-trade path-state condition (rung may only fill on bars where it held at the previous close). Modifies the bank lever, whose column is exit_ladder, but the gate itself has no column. Measured by unit RQ-20261022-b7e1-08 (raw flags). No live producer."
+    },
+    "--bank-state-feature": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): gates the --bank-frac/--bank-at-r partial-TP rung on the same in-trade path-state condition (rung may only fill on bars where it held at the previous close). Modifies the bank lever, whose column is exit_ladder, but the gate itself has no column. Measured by unit RQ-20261022-b7e1-08 (raw flags). No live producer."
+    },
+    "--bank-state-op": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): gates the --bank-frac/--bank-at-r partial-TP rung on the same in-trade path-state condition (rung may only fill on bars where it held at the previous close). Modifies the bank lever, whose column is exit_ladder, but the gate itself has no column. Measured by unit RQ-20261022-b7e1-08 (raw flags). No live producer."
+    },
+    "--bank-state-thr": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): gates the --bank-frac/--bank-at-r partial-TP rung on the same in-trade path-state condition (rung may only fill on bars where it held at the previous close). Modifies the bank lever, whose column is exit_ladder, but the gate itself has no column. Measured by unit RQ-20261022-b7e1-08 (raw flags). No live producer."
+    },
+    "--bank-state-window": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): gates the --bank-frac/--bank-at-r partial-TP rung on the same in-trade path-state condition (rung may only fill on bars where it held at the previous close). Modifies the bank lever, whose column is exit_ladder, but the gate itself has no column. Measured by unit RQ-20261022-b7e1-08 (raw flags). No live producer."
+    },
+    "--chop-stop-bars": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--chop-stop-feature": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--chop-stop-max-open-frac": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--chop-stop-min-peak-r": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--chop-stop-op": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--chop-stop-thr": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--chop-stop-window": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): time-in-chop stop -- close at the bar close after N consecutive bars on which a path-state condition holds while peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak. Measured by unit RQ-20261022-b7e1-09 (raw flags); no stale/giveback column fits a path-state trigger and the matrix has no such column. No live producer."
+    },
+    "--trail-state-arm-r": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): tightens the chandelier trail to --trail-state-tight-mult x ATR on bars where peak R >= --trail-state-arm-r AND an in-trade path feature (efficiency ratio / choppiness / ATR-vs-entry / distance-from-peak, scripts/research/path_state_giveback.py::state_at, bars <= t only) holds at the previous close; composes by MINIMUM with the other tighteners. Measured by exit_lever_ablation replace units RQ-20261022-b7e1-04..07,10 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has no path_state column (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-state-feature": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): tightens the chandelier trail to --trail-state-tight-mult x ATR on bars where peak R >= --trail-state-arm-r AND an in-trade path feature (efficiency ratio / choppiness / ATR-vs-entry / distance-from-peak, scripts/research/path_state_giveback.py::state_at, bars <= t only) holds at the previous close; composes by MINIMUM with the other tighteners. Measured by exit_lever_ablation replace units RQ-20261022-b7e1-04..07,10 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has no path_state column (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-state-op": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): tightens the chandelier trail to --trail-state-tight-mult x ATR on bars where peak R >= --trail-state-arm-r AND an in-trade path feature (efficiency ratio / choppiness / ATR-vs-entry / distance-from-peak, scripts/research/path_state_giveback.py::state_at, bars <= t only) holds at the previous close; composes by MINIMUM with the other tighteners. Measured by exit_lever_ablation replace units RQ-20261022-b7e1-04..07,10 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has no path_state column (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-state-thr": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): tightens the chandelier trail to --trail-state-tight-mult x ATR on bars where peak R >= --trail-state-arm-r AND an in-trade path feature (efficiency ratio / choppiness / ATR-vs-entry / distance-from-peak, scripts/research/path_state_giveback.py::state_at, bars <= t only) holds at the previous close; composes by MINIMUM with the other tighteners. Measured by exit_lever_ablation replace units RQ-20261022-b7e1-04..07,10 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has no path_state column (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-state-tight-mult": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): tightens the chandelier trail to --trail-state-tight-mult x ATR on bars where peak R >= --trail-state-arm-r AND an in-trade path feature (efficiency ratio / choppiness / ATR-vs-entry / distance-from-peak, scripts/research/path_state_giveback.py::state_at, bars <= t only) holds at the previous close; composes by MINIMUM with the other tighteners. Measured by exit_lever_ablation replace units RQ-20261022-b7e1-04..07,10 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has no path_state column (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--trail-state-window": {
+      "state": "needs_column",
+      "reason": "PATHSTATE-TRAIL-GATE (2026-10-23): tightens the chandelier trail to --trail-state-tight-mult x ATR on bars where peak R >= --trail-state-arm-r AND an in-trade path feature (efficiency ratio / choppiness / ATR-vs-entry / distance-from-peak, scripts/research/path_state_giveback.py::state_at, bars <= t only) holds at the previous close; composes by MINIMUM with the other tighteners. Measured by exit_lever_ablation replace units RQ-20261022-b7e1-04..07,10 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has no path_state column (same schema-change reason as momentum_trail). No live producer."
     }
   },
   "summary_2026_09_12": {

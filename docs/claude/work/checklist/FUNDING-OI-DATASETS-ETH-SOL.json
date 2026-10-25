@@ -1,0 +1,19 @@
+{
+  "id": "FUNDING-OI-DATASETS-ETH-SOL",
+  "title": "Lever: ETHUSDT and SOLUSDT funding/OI-joined market_features datasets on the trainer (blocks RQ-20260929-109 and -110)",
+  "phase": "W6",
+  "state": "queued",
+  "owner": "research-ops",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-10 RESEARCH-NIGHT-1010] Both units need a funding/OI-joined dataset that does not exist for ETH or SOL (BTC has one). Trainer-side build, off-runner. No row referenced either unit. Observation that would close: the dataset builds on the trainer and the two units leave blocked/. [2026-10-14 lane DATA-INFRA-PROGRAMME] SOURCE for this build: Binance Vision UM fundingRate (monthly, 0.9 KB) and metrics (5m OI + taker volume, 11.6 KB/day) for ETHUSDT/SOLUSDT, free, MEASURED reachable 2026-10-14 -- archived by row DATA-DERIV-ARCHIVE (L-DATA). This row keeps the market_features join; no duplicate filed. [2026-10-21 PIPELINE-HEALTH-1021] Operator answer (via manager, ~19:10Z) on PI-20261021-WG8OPB7N-0004: \"Assign to research-ops (Recommended)\". Owner is now research-ops; the next RESEARCH-OPS pass unblocks what can run and retires the rest with stated reasons. [mgr 2026-10-25 review] ranked 18 to clear its blocked research unit(s) (PI-20261021-WG8OPB7N-0004): build the lever rather than retire the unit; dispatch by capacity.",
+  "updated_at": "2026-10-25T05:56:33Z",
+  "updated_by": "session_016v5FrVaSAmNoz8u6ct9HqC",
+  "priority_rank": 18,
+  "_seq": 383
+}

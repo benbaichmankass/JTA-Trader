@@ -1,0 +1,25 @@
+{
+  "id": "TEST-DATEBOMB-PROP-TRACKING",
+  "title": "Fix date bomb in tests/test_prop_tracking.py (hard-coded venue fill time vs now())",
+  "phase": "test-fix",
+  "state": "done",
+  "owner": "lane TEST-DATEBOMB-PROP-TRACKING",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Test hard-coded venue time 2026-10-12 12:01:05 while the journal row opens at now(); phone_reconcile rejects fills before opened-TZ_SLACK(14h), so it failed from 2026-10-13 02:01Z. Test now derives the time from t0. src/ untouched.",
+  "updated_at": "2026-10-13T04:20:21Z",
+  "updated_by": "session_01FGP8uycdokgdAGY2tCYfWy",
+  "writeback": {
+    "roadmap": "none: CI test fix",
+    "arch": "none: test-only"
+  },
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 445
+}

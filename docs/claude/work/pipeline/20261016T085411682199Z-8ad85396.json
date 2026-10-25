@@ -1,0 +1,18 @@
+{
+  "based_on": "20261016T071121568113Z-350aff62.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-LRP-EF728D79",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_sol_prop:dropped_no_order",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "checklist row LIVE-PARITY (research-ops 2026-10-16 08:47Z)",
+  "state": "routed",
+  "what": "Live-vs-replay parity: leg `trend_donchian_sol_prop` — dropped_no_order ×2 (REAL-MONEY roster) in window 2026-10-09T06:45:00+00:00..2026-10-16T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-16.json. Examples: [{\"class\": \"dropped_no_order\", \"bar\": \"2026-10-11T15:00:00+00:00\", \"t\": \"2026-10-11T15:49:44+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-c58bbadd9b9a492f\", \"pkg-5c72deb264e948b1\"], \"gates\": [], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_2\", \"bybit_portfolio\", \"bybit_1\"]}}, {\"class\": \"dropped_no_order\", \"bar\": \"2026-10-11T16:00:00+00:00\", \"t\": \"2026-10-11T16:01:56+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-c58bbadd9b9a492f\"], \"gates\": [], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_2\", \"bybit_portfolio\", \"bybit_1\"]}}]"
+}

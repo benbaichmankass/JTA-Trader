@@ -1,0 +1,666 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "family=pullback timeframe=1h symbols=BNBUSDT,LTCUSDT,BCHUSDT,DOTUSDT,BTCUSDT arms=['B'] window=2020-06-01..2026-10-20 days=2400; 5 of 5 cells measured; trades net of fee+slippage+funding",
+  "n": 4090,
+  "note": "FAIL: B: pooled net_r <= 0 or folds short. Thresholds: n_floor 39, pooled_n_floor 88, folds 6 majority 4, breadth 0.5 over >= 2 powered cells, holm alpha 0.05. Crypto candles are Binance USD-M (PROXY for Bybit linear); the cost stack is the harness's venue-aware fee + slippage + funding. A pass is an input to a re-entry case, never a roster act.",
+  "decision_rule_id": "RULE-RQ1021-7C2B14-PULLBACK-1H-TRANSFER",
+  "data_inputs": [
+    "comms/research/RQ-20261021-7c2b-14/39908867578/data/BCHUSDT_60.csv",
+    "comms/research/RQ-20261021-7c2b-14/39908867578/data/BNBUSDT_60.csv",
+    "comms/research/RQ-20261021-7c2b-14/39908867578/data/BTCUSDT_60.csv",
+    "comms/research/RQ-20261021-7c2b-14/39908867578/data/DOTUSDT_60.csv",
+    "comms/research/RQ-20261021-7c2b-14/39908867578/data/LTCUSDT_60.csv"
+  ],
+  "measurement": {
+    "family": "pullback",
+    "timeframe": "1h",
+    "params": {},
+    "best_arm": null,
+    "thresholds": {
+      "n_floor": 39,
+      "pooled_n_floor": 88,
+      "folds": 6,
+      "fold_majority": 4,
+      "breadth_frac": 0.5,
+      "min_powered_cells": 2,
+      "holm_alpha": 0.05,
+      "baseline": null,
+      "delta_r_per_trade": 0.0
+    },
+    "arms": {
+      "B": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [],
+        "cells": {
+          "BNBUSDT": {
+            "state": "measured",
+            "n": 861,
+            "net_r": -45.6392,
+            "max_drawdown_r": 79.7591,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-24 16:00:00+00:00",
+                "trades": 128,
+                "net_r": 10.6734
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-24 16:00:00+00:00",
+                "end": "2022-07-18 08:00:00+00:00",
+                "trades": 150,
+                "net_r": 7.921
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-18 08:00:00+00:00",
+                "end": "2023-08-11 00:00:00+00:00",
+                "trades": 144,
+                "net_r": -27.3194
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-11 00:00:00+00:00",
+                "end": "2024-09-02 16:00:00+00:00",
+                "trades": 133,
+                "net_r": 6.0765
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-02 16:00:00+00:00",
+                "end": "2025-09-26 08:00:00+00:00",
+                "trades": 153,
+                "net_r": -18.6953
+              },
+              {
+                "fold": 6,
+                "start": "2025-09-26 08:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 153,
+                "net_r": -24.2943
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.025,
+            "mean_bars_held": 50.919,
+            "hold_days_mean": 2.122,
+            "net_r_per_trade": -0.053,
+            "t_one_sided_p": 0.828853451784284,
+            "by_outcome": {
+              "stop": 426,
+              "trail_stop": 398,
+              "timeout": 37
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "trend_lookback": 40,
+              "pullback_lookback": 10,
+              "pullback_frac": 0.5,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 5.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+              "--trend-lookback",
+              "40",
+              "--pullback-lookback",
+              "10",
+              "--pullback-frac",
+              "0.5",
+              "--data",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/data/BNBUSDT_60.csv",
+              "--symbol",
+              "BNBUSDT",
+              "--resample",
+              "1h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "5.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_BNBUSDT_1h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_BNBUSDT_1h_B__bt.json",
+              "--timeframe",
+              "1h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "LTCUSDT": {
+            "state": "measured",
+            "n": 781,
+            "net_r": -25.78,
+            "max_drawdown_r": 48.1148,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-24 16:00:00+00:00",
+                "trades": 135,
+                "net_r": -20.7406
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-24 16:00:00+00:00",
+                "end": "2022-07-18 08:00:00+00:00",
+                "trades": 125,
+                "net_r": 16.7742
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-18 08:00:00+00:00",
+                "end": "2023-08-11 00:00:00+00:00",
+                "trades": 128,
+                "net_r": -12.104
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-11 00:00:00+00:00",
+                "end": "2024-09-02 16:00:00+00:00",
+                "trades": 137,
+                "net_r": 26.3601
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-02 16:00:00+00:00",
+                "end": "2025-09-26 08:00:00+00:00",
+                "trades": 120,
+                "net_r": -17.4479
+              },
+              {
+                "fold": 6,
+                "start": "2025-09-26 08:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 136,
+                "net_r": -18.6231
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0142,
+            "mean_bars_held": 55.88,
+            "hold_days_mean": 2.328,
+            "net_r_per_trade": -0.033,
+            "t_one_sided_p": 0.7105230313445876,
+            "by_outcome": {
+              "stop": 353,
+              "trail_stop": 394,
+              "timeout": 34
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "trend_lookback": 40,
+              "pullback_lookback": 10,
+              "pullback_frac": 0.5,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 5.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+              "--trend-lookback",
+              "40",
+              "--pullback-lookback",
+              "10",
+              "--pullback-frac",
+              "0.5",
+              "--data",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/data/LTCUSDT_60.csv",
+              "--symbol",
+              "LTCUSDT",
+              "--resample",
+              "1h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "5.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_LTCUSDT_1h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_LTCUSDT_1h_B__bt.json",
+              "--timeframe",
+              "1h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "BCHUSDT": {
+            "state": "measured",
+            "n": 836,
+            "net_r": -19.5548,
+            "max_drawdown_r": 78.4425,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-24 16:00:00+00:00",
+                "trades": 152,
+                "net_r": -15.5221
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-24 16:00:00+00:00",
+                "end": "2022-07-18 08:00:00+00:00",
+                "trades": 127,
+                "net_r": 28.5827
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-18 08:00:00+00:00",
+                "end": "2023-08-11 00:00:00+00:00",
+                "trades": 147,
+                "net_r": 6.9052
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-11 00:00:00+00:00",
+                "end": "2024-09-02 16:00:00+00:00",
+                "trades": 131,
+                "net_r": 2.1001
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-02 16:00:00+00:00",
+                "end": "2025-09-26 08:00:00+00:00",
+                "trades": 144,
+                "net_r": -21.8654
+              },
+              {
+                "fold": 6,
+                "start": "2025-09-26 08:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 135,
+                "net_r": -19.7563
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.0109,
+            "mean_bars_held": 51.678,
+            "hold_days_mean": 2.153,
+            "net_r_per_trade": -0.0234,
+            "t_one_sided_p": 0.647649576213847,
+            "by_outcome": {
+              "stop": 412,
+              "trail_stop": 384,
+              "timeout": 40
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "trend_lookback": 40,
+              "pullback_lookback": 10,
+              "pullback_frac": 0.5,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 5.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+              "--trend-lookback",
+              "40",
+              "--pullback-lookback",
+              "10",
+              "--pullback-frac",
+              "0.5",
+              "--data",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/data/BCHUSDT_60.csv",
+              "--symbol",
+              "BCHUSDT",
+              "--resample",
+              "1h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "5.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_BCHUSDT_1h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_BCHUSDT_1h_B__bt.json",
+              "--timeframe",
+              "1h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "DOTUSDT": {
+            "state": "measured",
+            "n": 815,
+            "net_r": -21.4309,
+            "max_drawdown_r": 53.5982,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-08-22 07:00:00+00:00",
+                "end": "2021-09-01 05:50:00+00:00",
+                "trades": 131,
+                "net_r": 1.2383
+              },
+              {
+                "fold": 2,
+                "start": "2021-09-01 05:50:00+00:00",
+                "end": "2022-09-11 04:40:00+00:00",
+                "trades": 139,
+                "net_r": -27.6268
+              },
+              {
+                "fold": 3,
+                "start": "2022-09-11 04:40:00+00:00",
+                "end": "2023-09-21 03:30:00+00:00",
+                "trades": 144,
+                "net_r": -15.5299
+              },
+              {
+                "fold": 4,
+                "start": "2023-09-21 03:30:00+00:00",
+                "end": "2024-09-30 02:20:00+00:00",
+                "trades": 136,
+                "net_r": 17.9196
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-30 02:20:00+00:00",
+                "end": "2025-10-10 01:10:00+00:00",
+                "trades": 140,
+                "net_r": -6.7121
+              },
+              {
+                "fold": 6,
+                "start": "2025-10-10 01:10:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 125,
+                "net_r": 9.2796
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.0125,
+            "mean_bars_held": 50.604,
+            "hold_days_mean": 2.108,
+            "net_r_per_trade": -0.0263,
+            "t_one_sided_p": 0.6656234490684532,
+            "by_outcome": {
+              "trail_stop": 371,
+              "stop": 406,
+              "timeout": 38
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "trend_lookback": 40,
+              "pullback_lookback": 10,
+              "pullback_frac": 0.5,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 5.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-08-22 07:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+              "--trend-lookback",
+              "40",
+              "--pullback-lookback",
+              "10",
+              "--pullback-frac",
+              "0.5",
+              "--data",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/data/DOTUSDT_60.csv",
+              "--symbol",
+              "DOTUSDT",
+              "--resample",
+              "1h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "5.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_DOTUSDT_1h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_DOTUSDT_1h_B__bt.json",
+              "--timeframe",
+              "1h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "BTCUSDT": {
+            "state": "measured",
+            "n": 797,
+            "net_r": 71.6479,
+            "max_drawdown_r": 21.9944,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2020-06-01 00:00:00+00:00",
+                "end": "2021-06-24 16:00:00+00:00",
+                "trades": 128,
+                "net_r": 8.3082
+              },
+              {
+                "fold": 2,
+                "start": "2021-06-24 16:00:00+00:00",
+                "end": "2022-07-18 08:00:00+00:00",
+                "trades": 136,
+                "net_r": 4.4683
+              },
+              {
+                "fold": 3,
+                "start": "2022-07-18 08:00:00+00:00",
+                "end": "2023-08-11 00:00:00+00:00",
+                "trades": 146,
+                "net_r": -6.7508
+              },
+              {
+                "fold": 4,
+                "start": "2023-08-11 00:00:00+00:00",
+                "end": "2024-09-02 16:00:00+00:00",
+                "trades": 126,
+                "net_r": 22.2123
+              },
+              {
+                "fold": 5,
+                "start": "2024-09-02 16:00:00+00:00",
+                "end": "2025-09-26 08:00:00+00:00",
+                "trades": 126,
+                "net_r": 32.7629
+              },
+              {
+                "fold": 6,
+                "start": "2025-09-26 08:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 135,
+                "net_r": 10.6455
+              }
+            ],
+            "folds_pos": 5,
+            "net_r_per_capital_day": 0.0387,
+            "mean_bars_held": 55.714,
+            "hold_days_mean": 2.321,
+            "net_r_per_trade": 0.0899,
+            "t_one_sided_p": 0.10406306709354174,
+            "by_outcome": {
+              "stop": 362,
+              "trail_stop": 394,
+              "timeout": 41
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "trend_lookback": 40,
+              "pullback_lookback": 10,
+              "pullback_frac": 0.5,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 5.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2020-06-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "pass",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+              "--trend-lookback",
+              "40",
+              "--pullback-lookback",
+              "10",
+              "--pullback-frac",
+              "0.5",
+              "--data",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/data/BTCUSDT_60.csv",
+              "--symbol",
+              "BTCUSDT",
+              "--resample",
+              "1h",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "5.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_BTCUSDT_1h_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261021-7c2b-14/39908867578/cells/pullback_BTCUSDT_1h_B__bt.json",
+              "--timeframe",
+              "1h",
+              "--start",
+              "2020-06-01",
+              "--end",
+              "2026-10-20"
+            ]
+          }
+        },
+        "pooled": {
+          "n": 4090,
+          "net_r": -40.7601,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2020-06-01 00:00:00+00:00",
+              "end": "2021-06-24 16:00:00+00:00",
+              "trades": 651,
+              "net_r": -16.9427
+            },
+            {
+              "fold": 2,
+              "start": "2021-06-24 16:00:00+00:00",
+              "end": "2022-07-18 08:00:00+00:00",
+              "trades": 678,
+              "net_r": 39.1222
+            },
+            {
+              "fold": 3,
+              "start": "2022-07-18 08:00:00+00:00",
+              "end": "2023-08-11 00:00:00+00:00",
+              "trades": 714,
+              "net_r": -63.7562
+            },
+            {
+              "fold": 4,
+              "start": "2023-08-11 00:00:00+00:00",
+              "end": "2024-09-02 16:00:00+00:00",
+              "trades": 669,
+              "net_r": 76.6924
+            },
+            {
+              "fold": 5,
+              "start": "2024-09-02 16:00:00+00:00",
+              "end": "2025-09-26 08:00:00+00:00",
+              "trades": 686,
+              "net_r": -25.4501
+            },
+            {
+              "fold": 6,
+              "start": "2025-09-26 08:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 692,
+              "net_r": -50.4257
+            }
+          ],
+          "folds_pos": 2,
+          "max_drawdown_r_sequential": 126.7247,
+          "net_r_per_trade": -0.01,
+          "t_one_sided_p": 0.6403333271696565,
+          "window": [
+            "2020-06-01 00:00:00+00:00",
+            "2026-10-20 00:00:00+00:00"
+          ]
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 1,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": null,
+          "why": "pooled net_r <= 0 or folds short",
+          "role": "arm",
+          "holm_survivors": []
+        }
+      }
+    }
+  }
+}

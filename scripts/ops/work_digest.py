@@ -605,18 +605,30 @@ def _items_at(ref: str, path: str) -> tuple[str, dict[str, dict]]:
     * ``unreadable`` — it exists and we could not parse it. **We could not
       look.** Emphatically not ``absent`` and emphatically not empty.
     """
-    try:
-        raw = subprocess.run(
-            ["git", "show", f"{ref}:{path}"],
-            cwd=REPO_ROOT, capture_output=True, text=True, check=True,
-        ).stdout
-    except subprocess.CalledProcessError:
-        return "absent", {}
-    try:
-        doc = json.loads(raw)
-        items = doc["items"]
-    except (ValueError, KeyError, TypeError):
-        return "unreadable", {}
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    if _ck.is_checklist_path(path):  # monolith before the per-row cutover, rows after
+        try:
+            doc = _ck.load_at(REPO_ROOT, ref)
+        except (ValueError, OSError):
+            return "unreadable", {}
+        if doc is None:
+            return "absent", {}
+        items = doc.get("items")
+    else:
+        try:
+            raw = subprocess.run(
+                ["git", "show", f"{ref}:{path}"],
+                cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+            ).stdout
+        except subprocess.CalledProcessError:
+            return "absent", {}
+        try:
+            doc = json.loads(raw)
+            items = doc["items"]
+        except (ValueError, KeyError, TypeError):
+            return "unreadable", {}
     if not isinstance(items, list):
         return "unreadable", {}
     out: dict[str, dict] = {}
@@ -1122,7 +1134,15 @@ def _self_test() -> int:
     # 10: the source list must not have drifted off disk. A source path that
     # no longer exists reads as `absent` forever — correct-looking, and
     # permanently blind to the register it was meant to watch.
-    missing = [src.path for src in SOURCES if not (REPO_ROOT / src.path).exists()]
+    # The checklist is read through the store (rows are the truth after the
+    # 2026-10-08 cutover; the monolith file no longer exists), so "exists"
+    # means what `_items_at` reads -- `checklist_store.exists`, not a stat.
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    missing = [
+        src.path for src in SOURCES
+        if not (_ck.exists(REPO_ROOT / src.path) if _ck.is_checklist_path(src.path)
+                else (REPO_ROOT / src.path).exists())
+    ]
     check(10, "every declared source exists on disk", not missing, str(missing))
 
     # 11: and it must cover every review backlog, not the ones that existed the

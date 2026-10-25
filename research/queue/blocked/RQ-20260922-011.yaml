@@ -1,6 +1,6 @@
 id: RQ-20260922-011
 title: Is there ANY pairs configuration whose edge survives the fee stack, or is the sleeve structurally unviable?
-status: blocked
+status: retired
 cadence: once
 kind: experiment
 
@@ -113,13 +113,34 @@ blocked_on:
   - kind: work_item
     ref: E37
     what: >-
-      NOTHING ROUTES scripts/backtest_pairs.py TO A WORKFLOW. The harness
-      exists and is net-of-cost by its own argparse description, and
-      pairs_universe_scan.py and pairs_dollar_lots.py exist alongside it —
-      but no .github/workflows entry fires any of them, so this unit names no
-      `run.workflow` and the dispatcher correctly refuses it. Same defect
-      class as E25 (fvg_range) and E28 (ict_scalp). THIS is the blocker: it is
-      about the instrument, not about what happens after a pass.
+      [STALE AS WRITTEN -- corrected 2026-10-07 by the PAIRS-STOCKTAKE lane,
+      rule above UNCHANGED.] This block said "NOTHING ROUTES
+      scripts/backtest_pairs.py TO A WORKFLOW". That stopped being true when
+      E7 landed research-harness-dispatch.yml (harness=pairs; MEASURED: run
+      37188716030 landed research/results/RQ-20260929-105/37188716030.jsonl
+      from scripts/backtest_pairs.py), and since 2026-10-07 a configured-
+      parameter route exists too (scripts/research/pairs_configured_stage0.py
+      via research-script-run.yml -- RQ-20261007-005..008 run the four
+      CONFIGURED pairs net of the full cost stack). What remains blocking THIS
+      unit is narrower: the UNIVERSE SCAN it asks for
+      (scripts/research/pairs_universe_scan.py) needs a directory of candle
+      files for the liquid-perp universe (trainer-resident, no workflow fetches
+      it to a runner) and its own power basis from a dry pass, and the
+      maker-execution arm needs a measured maker fee schedule. E37 (the
+      per-pair evidence record) is served by RQ-20261007-005..008, not by
+      this unit. [!] MUST NOT RUN until the HARNESS-AUDIT-FIXES PR lands
+      (manager relay 2026-10-07 18:39Z, CA-B04): pairs_universe_scan.py
+      screens cointegration with an ADF critical value of -2.86 (its
+      --adf-max-tstat default) where the Engle-Granger 2-variable 5% value
+      is ~-3.34, and its OOS-persistence gate fits the cointegrating vector
+      on the full sample -- both inflate false positives. No landed record
+      names that script (0 of 334 produced_by records), so no landed pairs
+      verdict is affected.
+    clears_when: >-
+      A workflow (or a research-script-run command) can fetch the candidate
+      universe's 1h candles to a runner and run pairs_universe_scan.py with
+      a declared --oos-start, AND a dry pass has produced the n this unit's
+      power block refuses to invent. Then promote with run.workflow filled.
 
 routing:
   needs_trainer_resident_data: false
@@ -133,3 +154,8 @@ routing:
     OF THEM to a workflow — the same defect class as E25 (fvg_range) and E28
     (ict_scalp). est_minutes is null rather than guessed: no run of this
     sweep has been timed.
+retired_reason: >-
+  2026-10-22 RESEARCH-HEALTH-W43: superseded. The per-pair evidence this unit fed (E37) is served by RQ-20261007-005..008 (the four configured
+  pairs, net of the full cost stack), no pairs leg is routed to any account in config/accounts.yaml, and the universe-scan script it needs carries a
+  known false-positive screen (ADF -2.86 vs ~-3.34 critical value; CA-B04) with no owner row to fix it. The registered rule stays in this file; if a
+  pairs universe scan is ever re-proposed, re-register against the then-current harness.

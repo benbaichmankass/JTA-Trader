@@ -1,0 +1,40 @@
+{
+  "id": "ML-LEG-CORPUS",
+  "title": "ML plan X1: ml2-live-leg-corpus lever -- keep per-trade harness emits for the six live legs and extend the bracket-head trainer (unblocks RQ-20261009-900/901)",
+  "phase": "W41",
+  "state": "landed_unproven",
+  "owner": "ML-LEG-CORPUS lane (session_01SP9cU3eUXAjEnQWf9Mi9h9)",
+  "lane": "session_01SP9cU3eUXAjEnQWf9Mi9h9",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18074,
+    18077
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-X1. TP-PREDICT-HEAD's blocked unit RQ-20261009-900 says 'build row to be added by the manager' and none existed (grep of docs/claude/work/checklist, 2026-10-11) -- this is that row. Spec (from the unit's blocked_on): (1) runner building the six legs' config-exact args via m20_fleet_exit_sweep.base_args, run the harness uncapped with --emit-trades and KEEP the emit at a stable path; (2) ml2_bracket_corpus FEATURE_NAMES += adx_at_entry, regime_weight with test_no_outcome_column_is_a_feature still passing; (3) ml2_bracket_train_eval gains --outcome mfe_r and baselines B1/B2/B4 beside B3, graded per stratum. Tier-1 (research tooling). Sonnet, ceiling $8. Observation that would close: ml2_bracket_train_eval --corpus <rows> --outcome mfe_r --per-leg prints the four baselines per quantile, then RQ-20261009-900 is git-mv'd out of research/queue/blocked/ with run.workflow set. [2026-10-14 manager] Decision (b) from RESEARCH-PROGRAMMES (#18012): TOP of the ML lane this week -- it unblocks RQ-20261014-9807-02 and -05 (P1 Q2/Q5), RQ-20261009-900/901 and ML-F4. Dispatch first when ML build capacity frees (post-reset 2026-10-14 kickoff). [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $15. [2026-10-14 ML-LEG-CORPUS lane] BUILT in #18074 (self-land): scripts/research/ml2_live_leg_corpus.py (runner), ml2_bracket_corpus FEATURE_NAMES += adx_at_entry/regime_weight (+LEGACY_FEATURE_NAMES), ml2_bracket_train_eval --outcome mfe_r with B1 declared tp_r / B2 class-default / B3 train R-quantile / B4 train %-of-entry quantile, --per-leg --per-stratum, --legacy-features; tests/test_ml2_live_leg_corpus.py. FINDING: adx_at_entry is NULL in the harness emit for the 4 Donchian legs (no ADX lever armed) -- the unit text said both columns were in the emits; true of the keys, false of the values. The runner adds a no-op --adx-max 100 band for those legs and verifies the trade list is identical to the config-exact run (parity held on all four in the smoke run). SMOKE (local, not the registered run): 6/6 legs ok, 1,831 rows, all usable; usable per stratum S1 211 / S2 438 / S3 1182. S1 eval n ~74 < the 88 floor of RQ-20261009-900 (trend_donchian_xrp_4h: 59 trades config-exact vs 135 in e35) -> S1 will grade INDETERMINATE unless the window is lengthened; flagged on that unit, rule not edited. PRODUCING THE REGISTERED CORPUS: queue unit RQ-20261014-736c-01 (landing: hold PR; dispatcher fires it after merge). OBSERVATION THAT CLOSES: RQ-20261014-736c-01 lands read_state measured + verdict pass and ml2_bracket_train_eval --corpus <landed path> --outcome mfe_r --per-leg --per-stratum prints the four baselines per quantile; then RQ-20261009-900 is git-mv'd out of blocked/. NOT unblocked by this row alone: 9807-02 (needs entry-ATR percentile + reader), 9807-05 (needs per-bar path), 901 (needs tp-policy-overlay).",
+  "updated_at": "2026-10-24T06:01:07Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-ATM",
+    "M23"
+  ],
+  "writeback": {
+    "roadmap": "deferred to close: M23 where/next are owned by the AI-trader programme lane; this row writes the corpus outcome back when RQ-20261014-736c-01 lands (landed_unproven now)",
+    "arch": "none: Tier-1 research tooling and a queue unit; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "RQ-20261014-736c-01 lands read_state measured + verdict pass and ml2_bracket_train_eval --corpus <landed path> --outcome mfe_r --per-leg --per-stratum prints B1..B4 per quantile",
+    "how_to_check": "ls research/results/RQ-20261014-736c-01/; python3 scripts/research/ml2_bracket_train_eval.py --corpus comms/research/RQ-20261014-736c-01/<run_id>/ml2_live_leg_corpus.jsonl --outcome mfe_r --per-leg --per-stratum",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 402
+}

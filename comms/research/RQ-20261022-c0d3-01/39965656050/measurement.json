@@ -1,0 +1,705 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "macro_f1",
+  "higher_is_better": true,
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "lightgbm_wide",
+  "controls": [
+    "lightgbm",
+    "prior"
+  ],
+  "candidates": [
+    "gru_deep"
+  ],
+  "arm_status": {
+    "prior": "ok",
+    "lightgbm": "ok",
+    "lightgbm_wide": "ok",
+    "gru_deep": "ok"
+  },
+  "groups": {
+    "BTCUSDT": {
+      "n_rows": 40000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.48647723382403285,
+                0.49435361537165007,
+                0.4978239035821895,
+                0.4907485995586488,
+                0.4960524105493029,
+                0.49807595783838043,
+                0.49630624580255206,
+                0.49765572672471536
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lightgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.4986499283710537,
+                0.49349991558331924,
+                0.49765572672471536,
+                0.49753191489361703,
+                0.5097588626405614,
+                0.4978239035821895,
+                0.4960524105493029,
+                0.49765572672471536
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lightgbm_wide": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5076581708109437,
+                0.49307198377830347,
+                0.49757159604756324,
+                0.5286251302222592,
+                0.49409780775716694,
+                0.49655982547407285,
+                0.5526522013636176,
+                0.49757159604756324
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "gru_deep": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5519069319152174,
+                0.4931576279776989,
+                0.5298288468917364,
+                0.5802026411657559,
+                0.49324324324324326,
+                0.4971505196111297,
+                0.5292694547228538,
+                0.5589717741935484
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        }
+      }
+    },
+    "ETHUSDT": {
+      "n_rows": 40000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.47192395704981516,
+                0.48638931689779147,
+                0.4959677419354839,
+                0.4781701165420073,
+                0.4870918105659087,
+                0.4957983193277311,
+                0.48962232051718274,
+                0.49358541525995947
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lightgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.507464836061639,
+                0.543045229509364,
+                0.4959677419354839,
+                0.5790983351000811,
+                0.5296899731413309,
+                0.5403989337255263,
+                0.5013894845483042,
+                0.5181868809170718
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lightgbm_wide": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5207691999607776,
+                0.5253097793217908,
+                0.5159663865546218,
+                0.5632733700738276,
+                0.5300212012658095,
+                0.520675105485232,
+                0.5178460406278153,
+                0.5626235588446263
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "gru_deep": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5865619394060195,
+                0.5313131313131313,
+                0.5428186433744797,
+                0.5763251563200296,
+                0.581651083722907,
+                0.5100771174907653,
+                0.4980038209197925,
+                0.5322033898305085
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        }
+      }
+    },
+    "SOLUSDT": {
+      "n_rows": 40000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.4668562288963924,
+                0.4879672299027138,
+                0.4946091644204852,
+                0.4685562444641275,
+                0.47961838681699914,
+                0.4973190348525469,
+                0.4778976679429168,
+                0.4875298940895114
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lightgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5244074713545754,
+                0.547537227949599,
+                0.4936708860759494,
+                0.5846999190697278,
+                0.5750694720127034,
+                0.4969818913480885,
+                0.545693441060405,
+                0.5124783865418033
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lightgbm_wide": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5352817410842523,
+                0.527797396831803,
+                0.49443882709807885,
+                0.5940693258659565,
+                0.615918835678483,
+                0.49706621961441744,
+                0.5819005877237746,
+                0.5162159514011365
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "gru_deep": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6013311343598008,
+                0.5299643677455411,
+                0.4946091644204852,
+                0.5623828548443982,
+                0.6143171002155692,
+                0.4966442953020134,
+                0.5809021366394092,
+                0.5585047648254575
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "BTCUSDT": {
+      "cv": {
+        "prior": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": -0.013789327281252282,
+            "ci95": [
+              -0.032605569926354924,
+              0.005026915363850363
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": -0.003891836977250311,
+            "ci95": [
+              -0.009005073576226217,
+              0.0012213996217255944
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "lightgbm": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": -0.009897490304001971,
+            "ci95": [
+              -0.029159784513212123,
+              0.00936480390520818
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.003891836977250311,
+            "ci95": [
+              -0.0012213996217255944,
+              0.009005073576226217
+            ],
+            "sign_consistent": false
+          }
+        },
+        "gru_deep": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": 0.020740341027461702,
+            "ci95": [
+              -0.0048083253276573375,
+              0.04628900738258074
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": 0.030637831331463673,
+            "ci95": [
+              0.001788675072039083,
+              0.05948698759088826
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.034529668308713984,
+            "ci95": [
+              0.005178386814157342,
+              0.06388094980327062
+            ],
+            "sign_consistent": false
+          }
+        }
+      }
+    },
+    "ETHUSDT": {
+      "cv": {
+        "prior": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": -0.04474195550482764,
+            "ci95": [
+              -0.06358011144833707,
+              -0.025903799561318205
+            ],
+            "sign_consistent": true
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": -0.03958655210536516,
+            "ci95": [
+              -0.0653978627960665,
+              -0.013775241414663807
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "lightgbm": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": -0.00515540339946248,
+            "ci95": [
+              -0.024022215963104766,
+              0.013711409164179806
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.03958655210536516,
+            "ci95": [
+              0.013775241414663807,
+              0.0653978627960665
+            ],
+            "sign_consistent": false
+          }
+        },
+        "gru_deep": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": 0.012808705030391561,
+            "ci95": [
+              -0.015530223879878884,
+              0.04114763394066201
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": 0.01796410842985404,
+            "ci95": [
+              -0.013389368555254182,
+              0.04931758541496226
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.0575506605352192,
+            "ci95": [
+              0.024104891429700986,
+              0.09099642964073741
+            ],
+            "sign_consistent": true
+          }
+        }
+      }
+    },
+    "SOLUSDT": {
+      "cv": {
+        "prior": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": -0.06279187923902614,
+            "ci95": [
+              -0.10825816203665137,
+              -0.01732559644140092
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": -0.05252310550339484,
+            "ci95": [
+              -0.08801396471475219,
+              -0.017032246292037492
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "lightgbm": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": -0.0102687737356313,
+            "ci95": [
+              -0.026830737447322145,
+              0.006293189976059543
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.05252310550339484,
+            "ci95": [
+              0.017032246292037492,
+              0.08801396471475219
+            ],
+            "sign_consistent": false
+          }
+        },
+        "gru_deep": {
+          "lightgbm_wide": {
+            "n_folds": 8,
+            "mean": 0.009495866631846532,
+            "ci95": [
+              -0.015869854869885507,
+              0.03486158813357857
+            ],
+            "sign_consistent": false
+          },
+          "lightgbm": {
+            "n_folds": 8,
+            "mean": 0.019764640367477833,
+            "ci95": [
+              -0.00936978505728812,
+              0.04889906579224379
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 8,
+            "mean": 0.07228774587087267,
+            "ci95": [
+              0.026886060797052885,
+              0.11768943094469245
+            ],
+            "sign_consistent": false
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "indeterminate",
+    "why": "between the pass bar and the fail floor",
+    "candidates": {
+      "gru_deep": {
+        "evaluated": true,
+        "passes_all": false,
+        "clauses": [
+          {
+            "holds": false,
+            "what": "['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] >= 0.01 vs lightgbm_wide/cv"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    },
+    "lightgbm": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "lightgbm_wide": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "gru_deep": {
+      "kind": "torch_gru",
+      "licence": "BSD-3-Clause (torch)",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 8,
+  "seconds": 13084.0
+}

@@ -2,6 +2,11 @@ family: roster-walkforward
 weight: 15
 kind: experiment
 cadence: weekly
+theme: live_strategy
+priority: 3
+# A compute class for the router and the queue views. Plan placement is still the explicit run.workflow below
+# (compute_router.plan honours an explicit workflow first), so this classifies the unit; it does not move it.
+compute: cpu_light
 title: "Walk-forward re-run of {leg}'s harness on fresh data (generated, weekly)"
 question: >-
   Does {leg} ({symbol} {timeframe}, {harness} harness) still show net-of-cost

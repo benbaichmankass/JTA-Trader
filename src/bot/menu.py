@@ -58,6 +58,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
         [_btn("💼 Accounts snapshot", CB_ACCOUNTS),
          _btn("📈 Strategies snapshot", CB_STRATEGIES)],
         [_btn("🚨 Close all positions", CB_CLOSEALL)],
+        # TELEGRAM-CHANNELS part C: the shared notification-settings menu
+        # (src/bot/notification_settings_menu.py), SYSTEM channel.
+        [_btn("⚙️ Settings", "ns:open:system")],
     ])
 
 

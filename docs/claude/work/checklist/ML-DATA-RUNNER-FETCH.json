@@ -1,0 +1,26 @@
+{
+  "id": "ML-DATA-RUNNER-FETCH",
+  "title": "Make the published ML dataset readable off the trainer: runner DownloadDataset 404, or route data units to Kaggle CPU kernels",
+  "phase": "build",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Blocker found by lane ML-DATA-OFF-TRAINER 2026-10-14. Kaggle kernel mount of metis-market-data is VERIFIED (20/20 files, hashes match). GitHub-runner download is not: kaggle 2.2.4 DownloadDataset 404s for the private dataset via CLI, python API and owner/slug/2 (runs 38507974681, 38512183556, 38514877849; verify_only dispatch input exists to retest cheaply). Options: (a) route needs-published-data CPU units to a Kaggle CPU kernel (kaggle backend + class; CPU not metered by 'kaggle quota'; mount path already used by kernel_main.py) - recommended since it is the verified path; (b) find why the download endpoint 404s (try an older kaggle pin, a public-but-unlisted dataset is NOT approved, or the kernel-output route); (c) push the export to a GitHub release/artifact instead (size 77 MB zip; market data only; repo is public so a release asset is public - needs operator decision). Done when one ML bake-off unit lands research/results/<unit>/<run_id>.jsonl from a non-trainer backend. [2026-10-15 lane session_01YH1am2LXDBtyPPp3PFA1gk] Done-condition met by the Kaggle CPU route (KAGGLE-CPU-ROUTE): RQ-20261014-4591-06 landed research/results/RQ-20261014-4591-06/38738478568.jsonl (measured, pass) from backend kaggle_cpu, run 38738478568. The runner download 404 itself is NOT fixed; published-data units no longer depend on it.",
+  "updated_at": "2026-10-15T15:11:35Z",
+  "updated_by": "session_01YH1am2LXDBtyPPp3PFA1gk",
+  "roadmap": [
+    "L-OPS",
+    "M14"
+  ],
+  "writeback": {
+    "roadmap": "none: the M25 where/next line for published-data units on kaggle_cpu is carried by KAGGLE-CPU-ROUTE writeback",
+    "arch": "none: Tier-1 research tooling; no architecture change"
+  },
+  "_seq": 469
+}

@@ -1,0 +1,87 @@
+{
+ "agreement": null,
+ "candidate": {
+  "backend": "kaggle_cpu",
+  "dataset": {
+   "first_ts": "2021-10-24T19:00:00+00:00",
+   "last_ts": "2026-09-30T23:00:00+00:00",
+   "rel_path": "datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl",
+   "rows_bad_ts": 0,
+   "rows_in_file": 43800,
+   "rows_used": 43253,
+   "sha256_used": "abb0d833221ec0a24d30a1fb9882cc5de45d560986d050d9b6f7c78c2526c8b1"
+  },
+  "generated_at": "2026-10-25T04:05:35.413427+00:00",
+  "metrics": {
+   "accuracy": 0.8056872037914692,
+   "f1_range": 0.8885795718167958,
+   "f1_volatile": 0.24108352144469525,
+   "macro_f1": 0.5648315466307455,
+   "n_eval": 8651.0,
+   "precision_range": 0.8321539416511483,
+   "precision_volatile": 0.44798657718120805,
+   "recall_range": 0.9532138794084186,
+   "recall_volatile": 0.16491661519456455,
+   "support_range": 7032.0,
+   "support_volatile": 1619.0,
+   "weighted_f1": 0.7674032794167922
+  },
+  "platform": {
+   "cpus": 4,
+   "machine": "x86_64",
+   "python": "3.13.15",
+   "system": "Linux"
+  },
+  "versions": {
+   "hmmlearn": null,
+   "lightgbm": "4.6.0",
+   "numpy": "2.1.3",
+   "sklearn": "1.6.1"
+  }
+ },
+ "deltas": {},
+ "reasons": [
+  "input differs: trainer 43445 rows sha 162b879953ae vs off-VM 43253 rows sha abb0d833221e -- not the same rows, parity undefined"
+ ],
+ "reference": {
+  "backend": "trainer",
+  "dataset": {
+   "first_ts": "2021-10-16T19:00:00+00:00",
+   "last_ts": "2026-09-30T23:00:00+00:00",
+   "rel_path": "datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl",
+   "rows_bad_ts": 0,
+   "rows_in_file": 43800,
+   "rows_used": 43445,
+   "sha256_used": "162b879953aef6923970a01dc00869b1017dadff850f7860baa8e840c5db2455"
+  },
+  "generated_at": "2026-10-16T11:46:51.075314+00:00",
+  "metrics": {
+   "accuracy": 0.8053861203820923,
+   "f1_range": 0.888449106141566,
+   "f1_volatile": 0.23794502027940517,
+   "macro_f1": 0.5631970632104856,
+   "n_eval": 8689.0,
+   "precision_range": 0.8314606741573034,
+   "precision_volatile": 0.44745762711864406,
+   "recall_range": 0.9538243626062323,
+   "recall_volatile": 0.16206261510128914,
+   "support_range": 7060.0,
+   "support_volatile": 1629.0,
+   "weighted_f1": 0.7664936272752454
+  },
+  "platform": {
+   "cpus": 1,
+   "machine": "aarch64",
+   "python": "3.11.0rc1",
+   "system": "Linux"
+  },
+  "versions": {
+   "hmmlearn": null,
+   "lightgbm": "4.6.0",
+   "numpy": "2.4.4",
+   "sklearn": "1.8.0"
+  }
+ },
+ "rule": "PASS iff same input sha256 + rows, count metrics exact, every score metric |delta| <= 0.01, eval-prediction agreement >= 0.99; FAIL otherwise on the same input; INDETERMINATE if the input differs or either run failed",
+ "verdict": "indeterminate"
+}

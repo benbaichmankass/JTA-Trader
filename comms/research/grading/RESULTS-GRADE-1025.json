@@ -1,0 +1,809 @@
+{
+ "run": "RESULTS-GRADE-1025",
+ "finished_at": "2026-10-25T04:00:00Z",
+ "by": "lane RESULTS-GRADE-1025 (Tier 1)",
+ "population": {
+  "description": "research/queue units of families 4b82, eba2, 7c2b, 3a84, 326f, c584 (ids RQ-20261021-7c2b-*, RQ-20261022-*) with a landed result row",
+  "units_total": 78,
+  "with_landed_result": 67,
+  "queued_no_result": 11,
+  "queued_ids": [
+   "RQ-20261022-326f-06",
+   "RQ-20261022-3a84-05",
+   "RQ-20261022-3a84-06",
+   "RQ-20261022-3a84-07",
+   "RQ-20261022-3a84-12",
+   "RQ-20261022-3a84-13",
+   "RQ-20261022-4b82-09",
+   "RQ-20261022-4b82-18",
+   "RQ-20261022-4b82-19",
+   "RQ-20261022-4b82-20",
+   "RQ-20261022-4b82-21"
+  ],
+  "dispositioned_before_this_pass": 67,
+  "ungraded_before_this_pass": 0,
+  "note": "result_disposition_check.py --list read UNGRADED 0 repo-wide before this pass: queue_grade.py had already put a verdict on all of these. The work was therefore to RE-AUDIT those verdicts against the admission label, not to grade from nothing.",
+  "counts_note": "67 units = every unit of the six families with status done and a graded landed result (pass 9 + fail 47 + underpowered 9 + indeterminate 2). 3a84-12 and 3a84-13 are recurring infra self-tests (blocked_over_age, theme_supply): plumbing checks that say nothing about a strategy or model, status queued, not counted. The 11 queued units have no result yet."
+ },
+ "finding": {
+  "accruing_label": "All 67 units' landed rows carry power_state=accruing (feasibility.source none + accrual_basis: free-lane candle backtests). queue_grade.py does not read power_state, so every auto verdict was recorded without an accrual_override_reason.",
+  "override_basis": "Realised n clears the units own registered floor (required_n at its declared d, alpha, power) in 58 of 67 units (the 9 demoted below are the rest); for those the label is mechanical (history is fully realised at run time, nothing accrues) and the verdict stands, with the override reason recorded here (realised_n vs declared_floor_n per unit).",
+  "measured_sd_floor": "For the 0.05 / 0.10 R-per-trade materiality bars of the trend-family rules the declared d=0.3 sd is inconsistent with the bar (0.05 R at measured sd 1.25-2.3 R is d 0.02-0.04). Floor recomputed from the MEASURED per-trade sd (derived from each baseline arm net_r_per_trade and t_one_sided_p): 2*(z_a+z_b)^2*sd^2/delta^2 per arm, one-sided alpha 0.05, power 0.80. Rows whose pooled n_B is below it are demoted to underpowered (verdict indeterminate, disposition underpowered): 1021-7c2b-02, 1021-7c2b-03, 1021-7c2b-12, 1022-4b82-01, 1022-4b82-02, 1022-4b82-03, 1022-4b82-05, 1022-4b82-06, 1022-4b82-07",
+  "not_derivable": "Rows whose baseline mean is non-positive give no usable sd (t_one_sided_p ~ 1): 4b82-04 (B -0.163 R/trade at n 13k, decisively negative) keeps FAIL; 4b82-08 (B -0.001, sd not derivable) keeps FAIL with this caveat."
+ },
+ "counts_by_family": {
+  "326f": {
+   "fail": 10,
+   "pass": 1
+  },
+  "3a84": {
+   "pass": 2,
+   "fail": 4,
+   "indeterminate": 2
+  },
+  "4b82": {
+   "underpowered": 6,
+   "fail": 11,
+   "pass": 1
+  },
+  "7c2b": {
+   "fail": 9,
+   "underpowered": 3,
+   "pass": 2
+  },
+  "c584": {
+   "pass": 1
+  },
+  "eba2": {
+   "pass": 2,
+   "fail": 13
+  }
+ },
+ "counts_total": {
+  "fail": 47,
+  "underpowered": 9,
+  "pass": 9,
+  "indeterminate": 2
+ },
+ "units": [
+  {
+   "id": "RQ-20261021-7c2b-01",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 37190,
+   "measured_sd_r": 1.281,
+   "sd_floor_per_arm": 8116,
+   "rule": "RULE-P7-B2-COST-GATED-30M-REASK"
+  },
+  {
+   "id": "RQ-20261021-7c2b-02",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 543,
+   "measured_sd_r": 1.958,
+   "sd_floor_per_arm": 4740,
+   "rule": "RULE-P7-A4-VOL-FLOOR-REASK"
+  },
+  {
+   "id": "RQ-20261021-7c2b-03",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 452,
+   "measured_sd_r": 2.279,
+   "sd_floor_per_arm": 6422,
+   "rule": "RULE-P7-Q5-LONG-TRANSFER"
+  },
+  {
+   "id": "RQ-20261021-7c2b-04",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 195,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P7-Q6-D55-TRANSFER"
+  },
+  {
+   "id": "RQ-20261021-7c2b-05",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 31318,
+   "measured_sd_r": 1.248,
+   "sd_floor_per_arm": 7703,
+   "rule": "RULE-P7-Q2-COST-GATED-15M"
+  },
+  {
+   "id": "RQ-20261021-7c2b-06",
+   "family": "7c2b",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 87.2,
+   "realised_n": 1597,
+   "measured_sd_r": 2.246,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P3-Q8-BREADTH-TREND-DONCHIAN-ETH-4H"
+  },
+  {
+   "id": "RQ-20261021-7c2b-07",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 434,
+   "measured_sd_r": 1.436,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P3-Q8-BREADTH-TREND-DONCHIAN-XRP-4H"
+  },
+  {
+   "id": "RQ-20261021-7c2b-08",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 1670,
+   "measured_sd_r": 1.876,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P3-Q8-BREADTH-XRP-PULLBACK-2H"
+  },
+  {
+   "id": "RQ-20261021-7c2b-09",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 1968,
+   "measured_sd_r": 2.261,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P3-Q8-BREADTH-ADA-PULLBACK-2H"
+  },
+  {
+   "id": "RQ-20261021-7c2b-10",
+   "family": "7c2b",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 87.2,
+   "realised_n": 6220,
+   "measured_sd_r": 1.258,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P3-Q8-BREADTH-TREND-DONCHIAN-ETH-PROP"
+  },
+  {
+   "id": "RQ-20261021-7c2b-11",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 8189,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ1021-7C2B11-SQUEEZE-TIME-STOP-1H"
+  },
+  {
+   "id": "RQ-20261021-7c2b-12",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 784.9,
+   "realised_n": 517,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P5-Q2-SIZING-BRK-RUNG2"
+  },
+  {
+   "id": "RQ-20261021-7c2b-13",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 2430,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P3-Q8-BREADTH-TREND-DONCHIAN-SOL-PROP"
+  },
+  {
+   "id": "RQ-20261021-7c2b-14",
+   "family": "7c2b",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 4090,
+   "measured_sd_r": 1.78,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ1021-7C2B14-PULLBACK-1H-TRANSFER"
+  },
+  {
+   "id": "RQ-20261022-326f-01",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 74,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-01-DIRECTION-FILTER"
+  },
+  {
+   "id": "RQ-20261022-326f-02",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 300,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-02-DIRECTION-FILTER"
+  },
+  {
+   "id": "RQ-20261022-326f-03",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 404,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-03-DIRECTION-FILTER"
+  },
+  {
+   "id": "RQ-20261022-326f-04",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 74,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-04-VOL-SKIP-BELOW-PCTL"
+  },
+  {
+   "id": "RQ-20261022-326f-05",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 300,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-05-VOL-SKIP-BELOW-PCTL"
+  },
+  {
+   "id": "RQ-20261022-326f-07",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 176,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-07-VOL-SKIP-ABOVE-PCTL"
+  },
+  {
+   "id": "RQ-20261022-326f-08",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 300,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-08-TP-TARGET-R"
+  },
+  {
+   "id": "RQ-20261022-326f-09",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 13288,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-09-FADE-1H"
+  },
+  {
+   "id": "RQ-20261022-326f-10",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 5842,
+   "measured_sd_r": 1.341,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-10-SQUEEZE-1H"
+  },
+  {
+   "id": "RQ-20261022-326f-11",
+   "family": "326f",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 87.2,
+   "realised_n": 1160,
+   "measured_sd_r": 1.789,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-11-PULLBACK-4H"
+  },
+  {
+   "id": "RQ-20261022-326f-12",
+   "family": "326f",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 1757,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-326F-12-SQUEEZE-4H"
+  },
+  {
+   "id": "RQ-20261022-3a84-01",
+   "family": "3a84",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 38.8,
+   "realised_n": 416,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-01-DIRFILTER"
+  },
+  {
+   "id": "RQ-20261022-3a84-02",
+   "family": "3a84",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 430,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-02-DIRFILTER"
+  },
+  {
+   "id": "RQ-20261022-3a84-03",
+   "family": "3a84",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 396,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-03-DIRFILTER"
+  },
+  {
+   "id": "RQ-20261022-3a84-04",
+   "family": "3a84",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 147,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-04-DIRFILTER"
+  },
+  {
+   "id": "RQ-20261022-3a84-08",
+   "family": "3a84",
+   "auto_verdict": "indeterminate",
+   "disposition": "indeterminate",
+   "declared_floor_n": 784.9,
+   "realised_n": 36000,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-08-YZ-VS-BASE"
+  },
+  {
+   "id": "RQ-20261022-3a84-09",
+   "family": "3a84",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 784.9,
+   "realised_n": 24000,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-09-YZ-VS-BASE"
+  },
+  {
+   "id": "RQ-20261022-3a84-10",
+   "family": "3a84",
+   "auto_verdict": "indeterminate",
+   "disposition": "indeterminate",
+   "declared_floor_n": 784.9,
+   "realised_n": 24000,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-10-YZ-VS-BASE"
+  },
+  {
+   "id": "RQ-20261022-3a84-11",
+   "family": "3a84",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 784.9,
+   "realised_n": 24000,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-3A84-11-YZ-VS-BASE"
+  },
+  {
+   "id": "RQ-20261022-4b82-01",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 26872,
+   "measured_sd_r": 1.363,
+   "sd_floor_per_arm": 9189,
+   "rule": "RULE-RQ20261022-4B82-01-TREND-1H-SLOW"
+  },
+  {
+   "id": "RQ-20261022-4b82-02",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 17794,
+   "measured_sd_r": 1.89,
+   "sd_floor_per_arm": 17668,
+   "rule": "RULE-RQ20261022-4B82-02-PULLBACK-1H-DIRECTION"
+  },
+  {
+   "id": "RQ-20261022-4b82-03",
+   "family": "4b82",
+   "auto_verdict": "pass",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 23776,
+   "measured_sd_r": 1.385,
+   "sd_floor_per_arm": 9488,
+   "rule": "RULE-RQ20261022-4B82-03-SQUEEZE-1H-EXITS"
+  },
+  {
+   "id": "RQ-20261022-4b82-04",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 31683,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-04-FADE-1H-RANGE"
+  },
+  {
+   "id": "RQ-20261022-4b82-05",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 12834,
+   "measured_sd_r": 1.302,
+   "sd_floor_per_arm": 8385,
+   "rule": "RULE-RQ20261022-4B82-05-TREND-2H-SLOW"
+  },
+  {
+   "id": "RQ-20261022-4b82-06",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 6673,
+   "measured_sd_r": 1.251,
+   "sd_floor_per_arm": 7741,
+   "rule": "RULE-RQ20261022-4B82-06-TREND-4H-LONGADX"
+  },
+  {
+   "id": "RQ-20261022-4b82-07",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "underpowered",
+   "declared_floor_n": 87.2,
+   "realised_n": 37477,
+   "measured_sd_r": 1.342,
+   "sd_floor_per_arm": 8908,
+   "rule": "RULE-RQ20261022-4B82-07-TREND-1H-DAYFLAT"
+  },
+  {
+   "id": "RQ-20261022-4b82-08",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 87.2,
+   "realised_n": 25955,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-08-PULLBACK-1H-MANAGED"
+  },
+  {
+   "id": "RQ-20261022-4b82-10",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 275,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-10-ETH4H-HOTVOL-TRAIL"
+  },
+  {
+   "id": "RQ-20261022-4b82-11",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 68,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-11-XRP4H-HOTVOL-TRAIL"
+  },
+  {
+   "id": "RQ-20261022-4b82-12",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 394,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-12-XRP2H-HOTVOL-TRAIL"
+  },
+  {
+   "id": "RQ-20261022-4b82-13",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 267,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-13-SOL4H-HOTVOL-TRAIL"
+  },
+  {
+   "id": "RQ-20261022-4b82-14",
+   "family": "4b82",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 38.8,
+   "realised_n": 371,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-14-ETHPB2H-COLDVOL-WINDOW"
+  },
+  {
+   "id": "RQ-20261022-4b82-15",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 402,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-15-ADA2H-HOTVOL-TRAIL"
+  },
+  {
+   "id": "RQ-20261022-4b82-16",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 275,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-16-ETH4H-FUNDING-HOURS"
+  },
+  {
+   "id": "RQ-20261022-4b82-17",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 267,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-17-SOL4H-FUNDING-HOURS"
+  },
+  {
+   "id": "RQ-20261022-4b82-22",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 784.9,
+   "realised_n": 1011,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-22-GIVEBACK-80"
+  },
+  {
+   "id": "RQ-20261022-4b82-23",
+   "family": "4b82",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 784.9,
+   "realised_n": 1011,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-4B82-23-GIVEBACK-95-3FEAT"
+  },
+  {
+   "id": "RQ-20261022-c584-01",
+   "family": "c584",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 784.9,
+   "realised_n": 26280,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-RQ20261022-C584-01-YZ-CONFIRM"
+  },
+  {
+   "id": "RQ-20261022-eba2-01",
+   "family": "eba2",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 348.8,
+   "realised_n": 1209,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q11-R1B-TRANSFER"
+  },
+  {
+   "id": "RQ-20261022-eba2-02",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 348.8,
+   "realised_n": 796,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q11-R1C-PROP"
+  },
+  {
+   "id": "RQ-20261022-eba2-03",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 402,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q12-ADAPB-R-ARMED-TRAIL"
+  },
+  {
+   "id": "RQ-20261022-eba2-04",
+   "family": "eba2",
+   "auto_verdict": "pass",
+   "disposition": "pass",
+   "declared_floor_n": 348.8,
+   "realised_n": 835,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q11-R1D-VOLCTL"
+  },
+  {
+   "id": "RQ-20261022-eba2-05",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 402,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q12-ADA-PULLBACK-2H-FRAC-GIVEBACK"
+  },
+  {
+   "id": "RQ-20261022-eba2-06",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 394,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q12-XRP-PULLBACK-2H-FRAC-GIVEBACK"
+  },
+  {
+   "id": "RQ-20261022-eba2-07",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 402,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q11-R2-ADA-PULLBACK-2H"
+  },
+  {
+   "id": "RQ-20261022-eba2-08",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 394,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q11-R2-XRP-PULLBACK-2H"
+  },
+  {
+   "id": "RQ-20261022-eba2-09",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 394,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q10V-XRPPB-WIDE-LEVEL"
+  },
+  {
+   "id": "RQ-20261022-eba2-10",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 1085,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q10V-ETHPROP-WIDE-LEVEL"
+  },
+  {
+   "id": "RQ-20261022-eba2-11",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 394,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q10V-XRPPB-LEVEL-RGATE"
+  },
+  {
+   "id": "RQ-20261022-eba2-12",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 402,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q13-ADAPB-BANK-FARRUNG"
+  },
+  {
+   "id": "RQ-20261022-eba2-13",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 394,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q13-XRPPB-BANK-FARRUNG"
+  },
+  {
+   "id": "RQ-20261022-eba2-14",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 1085,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q13-ETHPROP-BANK-FARRUNG"
+  },
+  {
+   "id": "RQ-20261022-eba2-15",
+   "family": "eba2",
+   "auto_verdict": "fail",
+   "disposition": "fail",
+   "declared_floor_n": 38.8,
+   "realised_n": 275,
+   "measured_sd_r": null,
+   "sd_floor_per_arm": null,
+   "rule": "RULE-P1-Q14-ETH4H-ADX-MOMENTUM-LOSS"
+  }
+ ],
+ "tier3_notes_on_row": "RESULTS-GRADE-1025",
+ "no_family_retired": true
+}

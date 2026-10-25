@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "HELD for the manager's merge (TRADEIFY-INSTR-SPECS). scripts/prop/velotrade_api_probe.py is outside the Tier-1 self-land surface (same reason as #17038). Read-only change: GETs are retried on HTTP 429 with the 1/2/4 s schedule dxtrade_api.py uses and paced 0.3 s apart; the login/logout POSTs are never retried; the order-resource refusal is untouched.",
+  "why": "The tradeify_1 REST run 38808598907 drew HTTP 429 on 15 of 40 GETs, so XYZ100/USD and SP500/USD have no account-scoped margin rate or minimum order size. A retry plus a pause lets one more run fill those two rows."
+}

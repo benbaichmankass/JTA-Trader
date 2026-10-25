@@ -1,0 +1,121 @@
+id: RQ-20261024-f08c-19
+title: 'Variant of b7e1-02 (path-state giveback failed at w=12 on xrp/ada pullback and eth_4h): the SHORTER window (w=6) and the smaller label
+  (X=1.0 R) on the two pullback legs'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 3
+kind: experiment
+question: 'At any bar of a trade already >= 1 R up on xrp_pullback_2h and ada_pullback_2h, does a trailing 6-bar path state predict ''gives back
+  >= 1.0 R from here'' beyond open R, peak R, bars-since-peak, bars-in-trade and room-to-stop, by >= 0.01 log-loss in >= 4 of 6 folds? DIAGNOSIS
+  of the first test (b7e1-02): MEASURED in RQ-20261022-b7e1-02 (w=12, X=1.5): pooled ll_gain -0.0009 (2 of 6 folds), AUC 0.666 -> 0.653 (the full
+  model is WORSE out of sample); xrp -0.0204 (4 folds), ada +0.0060 (3 folds); eth_4h indeterminate (94 reaching trades). With 137 and 142 reaching
+  trades per leg and 10 added features, the full model overfits. Class: wrong parameter region (window 12 spans more than a typical hold of a
+  2h pullback: mean bars held about 22) and an overfit feature set at small n; the 6-bar window is what b7e1-01 used. INFERRED: a smaller label
+  on a shorter window has more positive states to learn from.'
+why_this_matters: 'Operator rule 2026-10-22: a first-test fail is diagnosed and re-asked, never retired. Lane EXIT-FAILED-LEVERS-DIAG (2026-10-24),
+  row EXIT-FAILED-LEVERS-DIAG, serves b7e1-02. Diagnosis and evidence: docs/research/exit-failed-levers-diag-2026-10-24.md. Looked before authoring
+  (PLANNING s1): the queue was grepped for the same leg and lever family; no queued or done unit asks this exact arm set. Parents: research/queue/RQ-20261022-b7e1-02.yaml.'
+power:
+  expected_n: 280
+  min_detectable_effect: 0.17
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n = 280 is the MEASURED baseline trade count of xrp_pullback_2h, ada_pullback_2h in the parent verdict(s). Unpaired one-sample MDE =
+    2.8/sqrt(n) = 0.17 sd. Arms share most trades, so the paired difference is far tighter than that (MEASURED in the diag doc: paired sd 0.06-0.5
+    R per entry); the unit''s bar is stated in R and is not claimed to be detectable at the unpaired MDE. A unit whose lever touches a handful
+    of trades is reported with its differing-trade count.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-F08C-19
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/path_state_giveback.py (the SAME features, label and stop-room control as RQ-20261022-b7e1-01..03) on xrp_pullback_2h,
+    ada_pullback_2h, window w=6, min_peak 1.0 R, X in [1.0], 6 calendar folds by entry time, net of the harness venue-aware stack (fee 7.5 bps
+    round trip, slippage 3.0 bps round trip, funding 1.0 bps per 8h window; MEASURED in the parent verdicts' cost_stack); ll_gain = OOS log-loss(baseline)
+    - log-loss(full), pooled.
+  rule: 'INDETERMINATE IF trades-with-a-state < 100. PASS IF ll_gain >= 0.01 AND fold wins >= 4 of 6 AND pooled OOS AUC(full) >= AUC(baseline),
+    at the SAME bar as b7e1-01..03 (thresholds are not relaxed). PASS: the path state carries information beyond stop room on this population,
+    and a gated lever unit is pre-registered on it next (never a config change). FAIL otherwise: no gated lever is queued on this feature set
+    for this population; the idea is not retired. Per-leg results are REPORTED, not graded. Thresholds are not changed after any result. '
+what_it_does_not_do: 'Edits no config and places no order. Not a promotion case: a PASS is a discovery needing one disjoint-window confirmation.
+  HARNESS CAVEAT (code-read 2026-10-24, scripts/backtest_pullback.py / backtest_trend.py): a stop or ratcheted trail that the bar trades through
+  fills AT the stop price, not at a gap-open worse than it, and lever exits fill at the bar close; that flatters every arm in proportion to its
+  stop exits, so it favours tight-trail arms. A PASS must be re-run gap-adjusted before any Tier-3 note. A label study: edits no config, places
+  no order. Harness paths are not live paths. States within a trade are autocorrelated, so the effective n is trades, not states.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: live exit lever on a rostered leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window and runs the harness; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/path_state_giveback.py
+  - --leg
+  - xrp_pullback_2h
+  - --leg
+  - ada_pullback_2h
+  - --window
+  - '6'
+  - --min-peak
+  - '1.0'
+  - --x
+  - '1.0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '100'
+  - --min-ll-gain
+  - '0.01'
+  - --stop-room-control
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-f08c-19
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- docs/research/exit-failed-levers-diag-2026-10-24.md
+- research/queue/RQ-20261022-b7e1-02.yaml
+programme: P1
+last_dispatched_at: '2026-10-24T15:21:41+00:00'
+grading:
+  attested: RULE-F08C-19
+  auto: true
+  decision_rule_id: RULE-F08C-19
+  evidence:
+  - research/results/RQ-20261024-f08c-19/40106664136.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

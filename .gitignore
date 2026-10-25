@@ -60,6 +60,12 @@ reports/
 # But: vendored web templates are tracked (recursively).
 !web/templates/**/*.html
 !web/templates/*.html
+# And: the phone executor's REAL-PAGE fixtures (PHONE-EXEC-OBSERVABLE-1018) are
+# COMMITTED test inputs — number-replaced DOM snapshots, never generated output.
+# Without this line `*.html` above swallowed the sample fixture silently (PR 5
+# shipped its .meta.json/.spec.json with no .html; the checker then found
+# "no fixtures" and exited 0).
+!tools/phone-executor/test/fixtures/*.html
 # And: the consolidated /system-report subsystem is tracked despite the broad
 # `reports/` + `*.html` ignores above — the renderer/docs are code, and the
 # generated reports under comms/reports/ are COMMITTED artifacts (stable GitHub
@@ -182,3 +188,9 @@ artifacts/research/
 # 18 of them into a commit — which is how they reached a PR on 2026-09-12 and
 # was caught only by pr-landing-guard R5 refusing to vouch for the paths.
 .merge_file_*
+
+# PM-COLLECTOR third-party snapshots live on the trainer only; never commit (public repo, source terms unread)
+data/pm_snapshots/
+
+# PM-BACKFILL (one-shot Kalshi history, trainer-only; third-party terms unread, public repo)
+data/pm_backfill/

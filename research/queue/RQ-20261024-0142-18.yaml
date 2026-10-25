@@ -1,0 +1,55 @@
+id: RQ-20261024-0142-18
+title: 'Value coverage: do at least 90 % of queued authored units carry a value block with usd_at_stake_per_month?'
+status: queued
+cadence: daily
+roadmap:
+- L-OPS
+theme: infra
+priority: 2
+kind: deterministic
+question: 'Value coverage: do at least 90 % of queued authored units carry a value block with usd_at_stake_per_month?'
+why_this_matters: 'Lane AUTHOR-FLOOR-1024: research SLO in breach on runnable_floor, authoring_supply_ratio_7d and theme_share_min_ratio on 2026-10-24; the existing
+  infra units (ae17-40..45, 3a84-12/-13) detect plumbing and supply, not unit QUALITY. This puts one more cause on the queue as a daily detector instead of a once-a-week
+  SLO read. MONEY FIRST dispatch ranks by the value score; a unit with no value block falls back to a priority-derived default and loses to every unit that states
+  its money at stake (PLANNING.md s1b, s2).'
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question to power.'
+decision_rule:
+  id: RULE-RQ202610240142-18-VALUE-COVERAGE
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/infra_selftest.py --check value_coverage
+  rule: 'PASS IF >= 90 % of queued authored (non-generated) units carry value.usd_at_stake_per_month. FAIL IF fewer: measurement.sample names units and research-ops
+    step E adds the block. A producer_failed or no_data record is NOT a verdict.'
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account or queue unit.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.4
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent pipeline fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - value_coverage
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261024-0142-18
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/infra_selftest.py
+- AUTHOR-FLOOR-1024
+- RQ-20261022-3a84-13
+last_dispatched_at: '2026-10-24T13:46:03+00:00'

@@ -1,0 +1,39 @@
+{
+  "id": "ROADMAP-LOOP",
+  "title": "Roadmap review + canonical roadmap <-> work-queue <-> architecture loop (manager skill + CLAUDE.md)",
+  "phase": "W41",
+  "state": "landed_unproven",
+  "owner": "manager (HIGH priority, dispatch now)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": 9.85,
+  "tier": 1,
+  "prs": [
+    17557
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-11T09:40Z operator request, close paraphrase, HIGH priority] Review the roadmap, then add to the manager skill the relationship between the roadmap and the work queue. The roadmap is for high-level planning: highly detailed, but a tool for seeing the bigger picture of where we are on the way to the system goals. Build and maintain an effective, consistent process for BUILDING and PRIORITISING the work queue FROM the roadmap, then keeping the roadmap UP TO DATE with the outcomes of work items. The architecture map (docs/ARCHITECTURE-CANONICAL.md) is part of the same loop. Done = roadmap reviewed and corrected against measured state; the loop written into .claude/skills/manager/SKILL.md (+ a CLAUDE.md line) with a recurring step (e.g. in the daily review / evening review) that (a) derives/re-prioritises checklist rows from roadmap milestones, (b) writes outcomes back to the roadmap + architecture map; proven by running it once. [2026-10-11T11:12:33Z lane session_01AULroJXfiHJzkAtxgcSz83] landed_unproven handoff: PR #17557 (merged main in after #17553). Not merged yet; merged!=deployed!=observed. [2026-10-11T15:59:16Z lane] The 169-row backfill of roadmap refs was SPLIT OUT of #17557: it touched ~170 row files other lanes edit constantly, so the PR went dirty after every main merge (5 times). Mapping is committed as docs/roadmap/backfill-2026-10-11.json; apply with: python3 scripts/ops/roadmap_map.py --backfill docs/roadmap/backfill-2026-10-11.json (idempotent; run on a fresh main and push at once). Until applied, the live block shows ~173 unmapped live rows. Enforcement is diff-scoped so this does not fail CI. [update] Instead of a separate backfill PR, rows without a roadmap field now resolve through docs/roadmap/backfill-2026-10-11.json (spec key row_fallback; explicit field wins). Orphans 0 with no row-file edits; ROADMAP-BACKFILL row is now optional materialisation (--backfill) and can be dropped when a lane has spare cycles. New rows still need their own field (diff-scoped guard). [2026-10-11T16:48:50Z lane] MERGED: #17557 is on main as fc906cdb (earlier 'NOT MERGED' notes are superseded). Merged != deployed != observed: this is docs + CI tooling, nothing to deploy; observation still owed = W43 pass (due 2026-10-19) runs from the skill and files W44, and the guard passes on a later lane PR closing a row with a writeback.",
+  "updated_at": "2026-10-24T06:01:13Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "due_by": "2026-10-20T00:00Z",
+  "writeback": {
+    "roadmap": "L-OPS where/next + new milestones.yaml (25 milestones, 7 goals); six stale tokens and the M16 cell corrected in ROADMAP.md",
+    "arch": "added section Promotion ladder, mandates and the roadmap loop + change-log row"
+  },
+  "observation": {
+    "what": "the W43 weekly roadmap pass runs from the manager skill, rewrites milestone where/next, files ROADMAP-PASS-2026W44, and roadmap-map-guard has passed on a later lane PR that closed a row with a writeback",
+    "how_to_check": "git log on docs/roadmap/milestones.yaml for a commit dated >= 2026-10-19; checklist row ROADMAP-PASS-2026W44 exists; python3 scripts/ops/roadmap_map.py --check --base origin/main",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 397
+}

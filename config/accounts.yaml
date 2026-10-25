@@ -220,7 +220,36 @@ accounts:
     market_type: linear                # USDT-margined linear perpetuals — same
                                        # as bybit_2. set-leverage fires at boot
                                        # via _apply_per_account_leverage.
-    strategies: [trend_donchian, ict_scalp_5m, fade_breakout_4h, squeeze_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, trend_donchian_1h, eth_pullback_2h, trend_donchian_eth_4h, trend_donchian_sol_4h, trend_donchian_xrp_4h, trend_donchian_ada_4h, trend_donchian_avax_4h, sol_pullback_2h, xrp_pullback_2h, ada_pullback_2h, avax_pullback_2h, trend_donchian_sol, trend_donchian_eth, eth_pullback_prop_2h, ict_scalp_sol_5m, ict_scalp_xrp_5m, ict_scalp_avax_5m, ict_scalp_xrp_15m, ict_scalp_eth_15m, ict_scalp_sol_15m]
+    position_model: slices             # NETTED-SLICES (operator 2026-10-15, Tier-2 soak):
+                                       # several strategies may each hold a SLICE of one
+                                       # symbol, each with its own qty-scoped Partial bracket;
+                                       # allocation by config/slice_allocation.yaml instead of
+                                       # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
+                                       # together after 1-2 clean multi-slice trades here
+                                       # (mirror equality test). ROLLBACK: delete this line.
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+                                       # 2026-10-15 PROP-GATE-PARITY (Tier-3 roster add on PAPER, operator 'Yes, 1, 2 and 3a'):
+                                       # trend_donchian_eth_prop + trend_donchian_sol_prop join the Stage-1 soak. Operator: "if anything,
+                                       # the prop accounts should have a higher bar to clear because of the DD limits" -- a prop leg must
+                                       # clear everything a real-money leg clears (Stage 0 net of full cost, Stage-1 soak, Gate 2) PLUS the
+                                       # prop EV/survival gate. Both legs went live on breakout_2/tradeify_1/velotrade_1 WITHOUT a bybit_1
+                                       # soak; they STAY LIVE there while this soak accrues (3a). Contracts: SOAK-stage1-bybit_1-<leg> in
+                                       # docs/claude/work/SOAKS.json; row PROP-GATE-PARITY. ROLLBACK: drop the two names. bybit_2 /
+                                       # bybit_portfolio / alpaca rosters untouched (mirror equality tests).
+                                       # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (operator grant
+                                       # 2026-10-04, PR #16548) REMOVED 10 legs whose Stage-1 soak
+                                       # was complete and whose Stage-0 record fails:
+                                       # trend_donchian, squeeze_breakout_4h, eth_pullback_2h,
+                                       # sol_pullback_2h, trend_donchian_sol, trend_donchian_eth,
+                                       # ict_scalp_xrp_5m, ict_scalp_xrp_15m, ict_scalp_eth_15m,
+                                       # ict_scalp_sol_15m. Per-leg evidence: the PR body and
+                                       # `mandate_resolver.py --mandate MD-S1-CUT-ON-STAGE0-FAIL`.
+                                       # A passing re-run re-enters via MD-PROMOTE-S0-S1.
+                                       # 2026-10-05 SOAK-GATE1 (Tier-3, data-backed standing authorization 2026-09-27):
+                                       # REMOVED 11 legs whose committed Stage-0 record FAILS RULE-D1-STAGE0-NET-OF-FULL-COST
+                                       # (net_r_oos <= 0 net of fee+slippage+funding): avax_pullback_2h, eth_pullback_prop_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_sol_4h.
+                                       # Records: comms/strategy_evidence/<leg>.json. bybit_1 only (Stage 1); none is on
+                                       # bybit_2 / bybit_portfolio. All were execution: shadow. ROLLBACK: re-add the names.
                                        # ict_scalp_sol_5m / ict_scalp_xrp_5m / ict_scalp_avax_5m
                                        # added 2026-07-21 (Tier-3, operator-approved M27 P0
                                        # Batch-1 promotion): execution:live demo-soak paper
@@ -343,9 +372,16 @@ accounts:
                                        # %-of-equity cap scales with the account.
       daily_usd: 100                   # absolute FALLBACK only — used when no
                                        # equity snapshot is available (cold start)
-      risk_pct: 0.015                   # 1.5% balance risked per trade (S-026 G2)
+      risk_pct: 0.0075                  # 0.75% per trade (Tier-3, operator 2026-10-22: "Cut its risk
+                                       # to ~0.75%"; OPERATOR-DECISIONS-1022). Was 1.5% (S-026 G2);
+                                       # ROLLBACK: 0.015.
       leverage: 3                      # 3× leverage — same as bybit_2; applied
                                        # via /v5/position/set-leverage at boot.
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # bybit_2: the real-money account on Bybit V5 USDT-margined linear
   # perpetuals at 3× leverage. REAL-MONEY ROSTER = passed-backtest
@@ -387,7 +423,28 @@ accounts:
     market_type: linear                # PR 3 — Bybit V5 USDT-margined
                                        # linear perpetuals. Was
                                        # spot-margin pre-cutover.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+                                       # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
+                                       # ONE LEG ADDED, identically and in the same order on
+                                       # bybit_2 AND bybit_portfolio: trend_donchian_sol_prop.
+                                       # OPERATOR, verbatim 2026-10-15 ~20:15Z: "And if those legs
+                                       # are ready to be promoted, then promote them. You have
+                                       # pre-authorization." Same day: "if they've passed a soak test
+                                       # trading live on the prop accounts, that should count as a
+                                       # pass and they can go live on bybit 2 as well".
+                                       # 2026-10-16 (lane PROMOTE-SOL-S2): operator, verbatim 2026-10-15
+                                       # ~22:47Z: "you can promote the strategies waiting on fold tests
+                                       # if they pass". STAGE 0: comms/strategy_evidence/trend_donchian_sol_prop.json
+                                       #   RQ-20261015-f01d-01: 8 calendar folds, 6/8 positive, net +60.60R
+                                       #   n=394 OOS, full cost stack. mandate_resolver MD-PROMOTE-S1-S2: FIRE.
+                                       # MECHANICAL SOAK (live prop, /api/bot/prop/fills): tradeify_1
+                                       #   ticket prop-manual-c245b7e56125 (pkg-c58bbadd9b9a492f),
+                                       #   fills #102/#103/#105: long, SL+TP rested, exit reason=sl.
+                                       # Risk sizing UNCHANGED. SOLUSDT added to `symbols:` below.
+                                       # trend_donchian_eth_prop is NOT added: it waits on per-strategy
+                                       # netted slices (lane NETTED-SLICES, PI-20261015-FOYBZ9CV-0001).
+                                       # REVERT: remove trend_donchian_sol_prop here and SOLUSDT from
+                                       # `symbols:`, on BOTH bybit_2 and bybit_portfolio.
                                        # ── R8 WIRING, 2026-09-22 (Tier-3). ONE LEG ADDED:
                                        #   ada_pullback_2h   4/4 folds  +21.93R  n=44
                                        # It passes RULE-D1-STAGE0-NET-OF-FULL-COST on the
@@ -674,7 +731,7 @@ accounts:
                                        # normally via native Bybit SL/TP brackets (S3:
                                        # 96% native bracket fires) — de-routing stops
                                        # NEW entries + trail updates, not exits.
-    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT]
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]   # SOLUSDT: PROMOTE-PROP-LEGS 2026-10-15
                                        # ── AVAXUSDT WAS ADDED HERE 2026-09-22 AND THEN
                                        # REVERTED THE SAME DAY. Keeping the record because
                                        # the NEAR-MISS is the point, not the symbol:
@@ -716,6 +773,11 @@ accounts:
       # restart the trader; the set-leverage call will apply the new
       # value at boot.
       leverage: 3
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # bybit_portfolio: PAPER "live-portfolio mirror" of the real-money bybit_2
   # account (added 2026-07-16, operator-directed — S-PAPER-PORTFOLIO).
@@ -754,7 +816,11 @@ accounts:
     mode: live                         # demo = paper money; live is correct.
     market_type: linear                # USDT-margined linear perps (mirrors
                                        # bybit_2); set-leverage fires at boot.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+                                       # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
+                                       # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
+                                       # equality, test_bybit_portfolio_mirrors_bybit_2_exactly).
+                                       # Evidence + revert: see bybit_2's comment.
                                        # ── R8 WIRING, 2026-09-22 — FOLLOWS bybit_2's
                                        # single addition IDENTICALLY AND IN THE SAME
                                        # ORDER, in the same commit. This is not
@@ -819,7 +885,7 @@ accounts:
                                        # execution: live since the 2026-07-20 Tier-3
                                        # re-promotion, so this book was EXECUTING it,
                                        # not shadow-logging it. Field beats comment.
-    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT]  # mirrors bybit_2.symbols.
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]  # mirrors bybit_2.symbols.
     risk:
       max_dd_pct: 0.05                 # mirrors bybit_2's caps.
       daily_loss_pct: 0.05
@@ -827,6 +893,11 @@ accounts:
       risk_pct: 0.015                  # 1.5% — same sizing basis as bybit_2, so
                                        # the paper read is representative of live.
       leverage: 3                      # 3x — same as bybit_2; applied at boot.
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # ------------------------------------------------------------------
   # Interactive Brokers — MES (Micro E-mini S&P 500) futures via CME.
@@ -989,6 +1060,12 @@ accounts:
                                        # (operator-approved 2026-05-28)
       daily_usd: 200                   # absolute FALLBACK only (no equity snapshot)
       risk_pct: 0.015                   # 1.5% balance risked per trade
+      max_gross_exposure_pct: 1.5      # gross notional cap = 1.5x equity (a MULTIPLE, see exposure.py); operator 2026-10-24 "1.5× equity (Recommended)", MGC-SIZING-OVERSIZE
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # ib_live: IB live account U25907316 on the live gateway (7496).
   # mode: dry_run → real money held safe; no socket opened, no orders
@@ -1027,6 +1104,12 @@ accounts:
                                        # (operator-approved 2026-05-28)
       daily_usd: 200                   # absolute FALLBACK only (no equity snapshot)
       risk_pct: 0.015                   # 1.5% balance risked per trade
+      max_gross_exposure_pct: 1.5      # gross notional cap = 1.5x equity (a MULTIPLE, see exposure.py); operator 2026-10-24 "1.5× equity (Recommended)", MGC-SIZING-OVERSIZE
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # oanda_practice: M15 Phase 2 (S-M15-PHASE2-OANDA) — OANDA v20 practice
   # account, the Phase-0 verdict's first new-market wire (XAU/USD:
@@ -1084,6 +1167,11 @@ accounts:
       # buying_power analogue, 2026-06-24). leverage stays unset (=1) so that
       # already-leveraged figure is not multiplied again; on a fetch failure the
       # cap falls back to conservative cash-1x. (Replaced the interim 20x guess.)
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # alpaca_paper: M15 Phase 2b (S-M15-PHASE2B-ALPACA) — Alpaca Trading API
   # paper account, the migration's second platform (daily ETF futures-
@@ -1116,13 +1204,14 @@ accounts:
       - iwm_trend_long_1d              # ETF-breadth daily sweep (2026-06-20,
       - tlt_pullback_1d                # Tier-3): IWM small-cap trend +
       - ief_pullback_1d                # TLT/IEF bond pullback (paper money).
-      - gld_pullback_1h                # Intraday ETF pilot (2026-06-20 § 0e,
-      - slv_trend_1h                   # Tier-3): GLD 1h pullback + SLV 1h
-                                       # bidirectional trend (paper money).
-      - spy_pullback_1h                # Intraday ETF rollout 2b (2026-06-20
-      - qqq_pullback_1h                # § 0e, Tier-3): SPY/QQQ/TLT 1h
-      - tlt_pullback_1h                # bidirectional pullback + USO 1h
-      - uso_trend_1h                   # LONG-ONLY trend (paper money).
+      - slv_trend_1h                   # Intraday ETF pilot (2026-06-20 § 0e,
+                                       # Tier-3): SLV 1h bidirectional trend.
+                                       # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (operator
+                                       # grant 2026-10-04, PR #16548) REMOVED 5 legs:
+                                       # gld_pullback_1h (R-CUT-AFFORD: alpaca_live
+                                       # sizes none of its setups), spy_pullback_1h,
+                                       # qqq_pullback_1h, tlt_pullback_1h, uso_trend_1h
+                                       # (Stage-0 fails; evidence in the PR body).
       - slv_pullback_1d                # daily ETF pullback, sister to gld_pullback_1d — added 2026-06-27 (Tier-3)
       - gdx_pullback_1d                # daily ETF pullback, gold miners — added 2026-06-27 (Tier-3)
       - tqqq_trend_long_1d             # leveraged Nasdaq-100 ETF trend: TQQQ (3x)
@@ -1144,6 +1233,11 @@ accounts:
       daily_loss_pct: 0.05             # daily-loss cap = 5% of equity
       daily_usd: 200                   # absolute fallback (no equity snapshot)
       risk_pct: 0.015                   # 1.5% balance risked per trade (operator 2026-06-24)
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # alpaca_portfolio: PAPER "live-portfolio mirror" of the alpaca_live real-money
   # roster (added 2026-07-16, operator-directed — S-PAPER-PORTFOLIO). Same purpose
@@ -1220,9 +1314,21 @@ accounts:
                                        # Asserted by tests/test_paper_portfolio_accounts.py::
                                        # test_alpaca_portfolio_trade_shaping_fields_equal_alpaca_live.
                                        # ROLLBACK: delete this key (and that test's side_filter row).
-    strategies:                        # alpaca_live's roster MINUS the affordability
-      - ief_pullback_1d                # proxies (SPLG/IAUM) — see ROSTER-SYNC above.
-      - slv_pullback_1d
+    strategies: []                     # alpaca_live's roster MINUS the affordability
+      # ⚠️ EXPLICIT `[]`, NOT A BARE `strategies:` — a key with only comments under it parses as
+      # null. The account loader (src/units/accounts/__init__.py) maps a present-but-null key to
+      # `[]` (block all), but src/runtime/strategy_monocle._accounts_declaring reads null as the
+      # legacy ACCEPT-ALL. `[]` means "block all" to both readers. When re-adding a leg, replace
+      # `[]` with the list.
+      # 2026-10-21 OPERATOR DECISION (popup ~22:15Z, "Move to paper (Recommended)"), Tier 3: ief_pullback_1d
+      # REMOVED from alpaca_portfolio (mirror of alpaca_live, strict equality). Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87.
+      # It keeps trading on alpaca_paper so the record continues. REVERT = add the line back (Tier 3).
+      # 2026-10-24 OPERATOR DECISION (popup ~15:05Z, "Demote to Stage 1 (Recommended)"), Tier 3: slv_pullback_1d
+      # REMOVED from alpaca_portfolio (mirror of alpaca_live, strict equality). Evidence (checklist SLV-PB1D-RETENTION-T3):
+      # Stage-0 FAIL at power on RQ-20261016-c56e-17, RQ-20261023-9ffb-01, -02, -03 (tune-before-demote done).
+      # It keeps trading on alpaca_paper so the record continues. REVERT = add `- slv_pullback_1d` back (Tier 3).
+      # With iaum_pullback_1d the only alpaca_live leg (a declared proxy), this mirror is now EMPTY —
+      # the operator's 2026-09-21 "equality wins, no exception" decision (see the mirror test).
       # ⚠️ CUT FROM 14 TO 2 ON 2026-09-21, BY EXPLICIT OPERATOR APPROVAL, asked
       # and answered directly. The 12 removed were:
       #   spy_trend_long_1d, qqq_trend_long_1d, gld_pullback_1d,
@@ -1251,6 +1357,11 @@ accounts:
       daily_usd: 200                   # absolute fallback (no equity snapshot).
       risk_pct: 0.02                   # 2% — same basis as alpaca_live, so the
                                        # paper read is representative of live.
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # alpaca_live: Alpaca Trading API REAL-MONEY account — the live sibling of
   # alpaca_paper, wired so the two run CONCURRENTLY (paper keeps soaking while
@@ -1491,10 +1602,14 @@ accounts:
       #
       # ROLLBACK: re-add the two lines. Tier-3 again — re-adding a leg to a
       # real-money roster IS the live-trading moment, as the header above says.
-      - ief_pullback_1d      # IEF 1d pullback. 67/67 (1 sh, $0.89-0.94).
-                             # Already in alpaca_portfolio.
-      - slv_pullback_1d      # SLV 1d pullback. 217/217 (1 sh, $3.54-3.90).
-                             # Already in alpaca_portfolio.
+      # 2026-10-21 OPERATOR DECISION (popup ~22:15Z, "Move to paper (Recommended)"), Tier 3: ief_pullback_1d
+      # REMOVED from alpaca_live. Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87.
+      # It keeps trading on alpaca_paper so the record continues. REVERT = add the line back (Tier 3).
+      # 2026-10-24 OPERATOR DECISION (popup ~15:05Z, "Demote to Stage 1 (Recommended)"), Tier 3: slv_pullback_1d
+      # REMOVED from alpaca_live. Evidence (checklist SLV-PB1D-RETENTION-T3): Stage-0 FAIL at power on
+      # RQ-20261016-c56e-17, RQ-20261023-9ffb-01, -02, -03 (tune-before-demote done); the live demotion
+      # signal is unreachable at ~4 trades/yr. It keeps trading on alpaca_paper so the record continues.
+      # REVERT = add `- slv_pullback_1d` back here and on alpaca_portfolio (Tier 3).
       - iaum_pullback_1d     # IAUM 1d pullback — the declared GOLD AFFORDABILITY
                              # PROXY. 79/79 (2 sh, $3.30-3.58).
                              # ⚠️ IT IS DELIBERATELY EXEMPT FROM THE
@@ -1602,7 +1717,8 @@ accounts:
       # remaining headroom. At $200 the budget is $10/trade and $20/day, but
       # the roster's realised per-trade risk is well under budget — the largest
       # is IAUM at $5.48 (2.7% of equity), then GDX $5.28 — so it takes ~4
-      # losing trades, not 2, to trip DAILY_LOSS_CAP. The theoretical worst
+      # losing trades, not 2, to trip DAILY_LOSS_CAP (RETIRED 2026-10-09: folded
+      # into daily_dd_switch below, 3% of day-start equity). The theoretical worst
       # case is the round-up ceiling: 1.5 x $10 = $15 = 7.5% of the account in
       # ONE trade. No symbol on the current roster reaches it (GDX at $5.28 is
       # the widest stop that is also affordable); a future wide-stop addition
@@ -1648,6 +1764,11 @@ accounts:
                                        # above). It takes GDX off the round-up crutch
                                        # and grows IAUM 2 -> 4 shares; SPY/QQQ/GLD/IWM
                                        # stay cash-bound at any risk setting.
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # alpaca_options_paper: Phase-1 Slice-3b (Alpaca L3 options) — an Alpaca PAPER
   # account that EXPRESSES its equity signals as defined-risk DEBIT VERTICALS
@@ -1708,6 +1829,11 @@ accounts:
       risk_pct: 0.015                   # moot for the options path (sizing is by
                                        # options.max_loss_per_trade_usd), kept for
                                        # the account-level daily-loss gate basis.
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
+                                       # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
+                                       # daily_loss_pct / daily_usd above are REPORTED figures only.
 
   # breakout_1: Breakout 1-Step Classic $5k PROP account (PB-20260616-004).
   # POC = TELEGRAM-PING bridge ONLY (no DXTrade API integration). When a
@@ -1737,7 +1863,10 @@ accounts:
     exchange: breakout
     type: prop
     account_class: prop
-    mode: live
+    mode: dry_run  # mode-guard: allow — set-account-mode run 37273806314: Operator approved 2026-10-05 ~06:50Z (AskUserQuestion popup in manager session_01MM8o5js6TcDFeNAPBY4Ntv, verbatim "Set it to dry_run (Recommended)"). breakout_1
+    report_default: true               # a bare Telegram fill report / screenshot (no acct=) is
+                                       # breakout_1's once tradeify_1 is live too (TRADEIFY-WIRE C;
+                                       # src/prop/telegram_report_handler.default_prop_account).
     account_state: evaluation          # eval → funded lifecycle (PropRiskManager).
                                        # Flips to `funded` once the +10% target is
                                        # cleared; the operator/system updates it.
@@ -1747,7 +1876,23 @@ accounts:
     backtest_ruleset: prop_rulesets/breakout.yaml   # the $5k 1-Step ruleset the
                                        # gate EV used (the EV engine reads it).
     account_size_usd: 5000             # 1-Step Classic $5k.
-    strategies:                        # the validated alt variants (Tier-3):
+    strategies: []                     # RETIRED 2026-10-07 — see the note below.
+    retired: true                      # 2026-10-09 (OPS-DECISIONS-1009): src.prop.prop_identity.is_retired_account — hourly snapshot / prop-feed alarm skip it.
+      # ── RETIRED 2026-10-07 (Tier-3, roster cleared; operator-approved) ──
+      # OPERATOR DECISION 2026-10-07 (popup, manager session_01MM8o5js6TcDFeNAPBY4Ntv),
+      # verbatim label: "Dead: clear its roster, retire the row (Recommended)".
+      # MEASURED: breakout_1 balance = equity $4,698.00 against the $4,700 static-drawdown
+      # floor since 2026-10-04 (account breached); mode dry_run since 2026-10-05 (#16568);
+      # the VM executor has been latched since 2026-10-04 03:49Z. breakout_2 is the live
+      # Breakout account.
+      # BEFORE (2): trend_donchian_sol_prop, trend_donchian_eth_prop   AFTER (0): [].
+      # Both legs keep their own `execution:` gate and other routes in strategies.yaml; what
+      # ends is breakout_1 roster membership only. The entry stays (history, journal joins);
+      # mode stays dry_run. NO order flow changes: dry_run already emitted no ticket.
+      # ROLLBACK: re-add `- trend_donchian_sol_prop` and `- trend_donchian_eth_prop` here
+      # AND set a new account via set-account-mode — a breached account cannot trade.
+      #
+      # ── history of the roster (kept: it is the evidence trail) ──
       # trend_donchian_sol + trend_donchian_eth REMOVED from breakout_1 on
       # 2026-08-23 (Tier-3, operator-approved during the full-system audit).
       # THIS IS THE SAME DE-DUP THE eth_pullback PAIR ALREADY GOT on 2026-07-20
@@ -1845,19 +1990,6 @@ accounts:
       #       The R2 cut removed eth_pullback_2h from bybit_2 (and from the
       #       bybit_portfolio mirror). Its `execution:` gate is untouched and
       #       still reads live; what changed is roster membership.
-      - trend_donchian_sol_prop        #   SOL swap-robust EXIT variant (Unit C Phase 0,
-                                       #   DRAFT Tier-3, 2026-06-29): trend_donchian_sol's
-                                       #   entries with tightened exits (trail 3.5 / tp_r 6.0).
-                                       #   execution: shadow (observe-only) until the prop
-                                       #   EV/survival gate (account_compat_matrix -> montecarlo
-                                       #   under breakout.yaml; sol +$696 / P0.79 ROUTE) graduates
-                                       #   it shadow->live (operator-gated).
-      - trend_donchian_eth_prop        #   ETH swap-robust EXIT variant (Unit C Phase 0,
-                                       #   DRAFT Tier-3, 2026-06-29): trend_donchian_eth's
-                                       #   two-sided entries with tightened exits (trail 3.5 /
-                                       #   tp_r 6.0). execution: shadow (observe-only) until the
-                                       #   prop EV/survival gate (eth +$1,205 / P0.87 ROUTE)
-                                       #   graduates it shadow->live (operator-gated).
     symbols: [SOLUSDT, ETHUSDT]        # the validated prop instruments.
     risk:
       max_dd_pct: 0.06                 # Breakout STATIC 6% max-DD = $300.
@@ -1883,3 +2015,223 @@ accounts:
                                        # raises an alert (pinged by its tick) when it
                                        # places through a breach. Every other account
                                        # defaults to `enforce`. Rollback: delete this line.
+
+  # breakout_2: Breakout 1-Step TURBO $5k PROP account, bought 2026-10-05 and executed by the
+  # operator's PHONE (PHONE-EXEC-1B; design docs/integrations/breakout-phone-executor-DESIGN.md).
+  # OPERATOR DIRECTION 2026-10-05 ~15:20Z (relayed by manager session_01MM8o5js6TcDFeNAPBY4Ntv):
+  # "we're now pushing for live on breakout basically as soon as we can ... it's still breakout, so
+  # it should still be the same strategies". The VM cannot reach the new terminal (Cloudflare blocks
+  # its egress, design 7.9), so `exchange: breakout` emits tickets exactly as for breakout_1, and the
+  # phone claims them over /api/bot/prop/phone/* (config/prop_platforms.yaml::phone_accounts). No VM
+  # executor timer exists for this account.
+  #
+  # STARTS DRY: mode dry_run emits NO ticket (execute_pkg's breakout branch journals the package as
+  # shadow), so nothing reaches the phone until set-account-mode flips it. The end-to-end dry check
+  # uses the phone's always-dry test ticket instead. Even when live, the phone submits only when it
+  # is ALSO armed on the device.
+  breakout_2:
+    exchange: breakout
+    type: prop
+    account_class: prop
+    mode: live  # set-account-mode run 37449965576: Operator directive 2026-10-05/06 (manager session_01MM8o5js6TcDFeNAPBY4Ntv): "go live ASAP" on Breakout via the phone app; the gate set at account creation (acc | was: dry-run-guard: allow — new phone-executed prop account starts dry (manager dispatch PHONE-EXEC-1B 2026-10-05: "Start mode dry_run"); go-live is the set-account-mode system-action after the dry end-to-end ticket passes.
+    account_state: evaluation
+    phase_requirements:                # Breakout 1-Step Turbo (FAQ read 2026-10-05; see the ruleset header).
+      target_profit_pct: 0.09
+      min_active_days: 0
+    backtest_ruleset: prop_rulesets/breakout_turbo_1step.yaml
+    account_size_usd: 5000
+    strategies:                        # breakout_1's legs, each kept only if its Turbo fit did not FAIL
+      - trend_donchian_eth_prop        # Turbo fit RQ-20261005-851 / -853: NULL (ev > 0 every seed), kept
+      - trend_donchian_sol_prop        # Turbo fit RQ-20261005-852 / -854: NULL (ev > 0 every seed), kept
+    symbols: [ETHUSDT, SOLUSDT]
+    risk:
+      max_dd_pct: 0.03                 # Turbo STATIC 3% = $150 (floor $4,850).
+      daily_loss_pct: 0.03             # 3% of the 00:30 UTC balance = $150.
+      daily_usd: 150                   # absolute fallback (= 3% of $5k).
+      # risk_pct 0.005 -> 0.0035 (Tier-3, operator decision 2026-10-21 popup "Apply 0.35%"; lane BRK2-RISK-035).
+      #   Evidence: RQ-20261016-029 (rule RULE-P5-Q2-SIZING-BRK; comms/research/RQ-20261016-029/39030716646/):
+      #   C0035 beat A on ev with >= survival on every seed (5 seeds), and p_breach_max_dd fell on every seed in all 4
+      #   modes (realized/bridge/stop/path), e.g. seed 1 realized 0.991 -> 0.838. Now ~$17.50/ticket; the ruleset
+      #   flat cap (max_risk_usd 25) stays a ceiling and is untouched.
+      #   ROLLBACK: set risk_pct back to 0.005.
+      risk_pct: 0.0035                 # was 0.005: FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
+                                       # RQ-20261005-853/814 before the run (ETH -> $25; SOL -> $50 not applied: risk is per account,
+                                       # per-leg sizing PI-20261005-YUVCGTMJ-0006); ruleset sizing.flat.max_risk_usd matches.
+      # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk gate
+      # (src/prop/prop_risk_gate.py). The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
+      # refusals it once also softened were folded into daily_dd_switch below (2026-10-09).
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them"). Limit =
+                                       # 0.8 x the firm's daily limit (backtest_ruleset), at the firm's
+                                       # reset time; trips refuse NEW entries only (DAILY_DD_SWITCH).
+
+  # tradeify_1: Tradeify 247 1-Step $10k crypto evaluation on Tradeify's DXtrade
+  # white-label (dx.tradeify247.co). TRADEIFY-WIRE, 2026-09-30, PR B (Tier-3).
+  # OPERATOR DECISION (manager popup ~08:24Z 2026-09-30, relayed by manager
+  # session_01HYq6XtfesZ57VyaQrK6CL1), verbatim: "Buy the $10k pilot
+  # (Recommended)". Evidence: docs/research/tradeify-portfolio-feasibility-
+  # 2026-09-30.md (PR #14580) — B3 book at 0.5% risk: path EV +$828..+$852 per
+  # account life after the $120 fee, P(net>0) 0.77, registered rule V2
+  # INDETERMINATE (evidence p5 about -$100). MARGINAL: this is a $120 pilot to
+  # measure fills and cost, not a promotion on edge.
+  #
+  # Same shape as breakout_1: exchange `breakout` is the prop ticket bridge
+  # (src/prop/breakout_executor.py), NOT a Breakout-specific venue; the ruleset
+  # + routing below make every number Tradeify's. Terminal: prop_platforms.yaml
+  # tradeify_1 (own login TRADEIFY_DX_*, own kill switch
+  # PROP_EXECUTOR_MODE_TRADEIFY_1, nothing enabled).
+  #
+  # WAS DRY FIRST (PR B): mode dry_run -> execute_pkg's breakout branch emits NO ticket and
+  # NO ping; the order package is journaled with status=shadow /
+  # close_reason=prop_shadow_no_emit. That is the dry evidence the go-live PR
+  # (C) waits on. dry_run is excluded from the prop status-request and
+  # fills-staleness asks (declared_prop_account_ids(live_only=True)).
+  tradeify_1:
+    exchange: breakout
+    type: prop
+    account_class: prop
+    mode: live                         # TRADEIFY-WIRE PR C (Tier-3 go-live, HELD): tickets
+                                       # emit to the prop Telegram channel like breakout_1's.
+                                       # Merge ONLY after: login check exit 0 from the VM,
+                                       # a fresh ict-prop-feed@tradeify_1 snapshot, and shadow
+                                       # order packages observed for the legs (dry evidence).
+                                       # Rollback: set-account-mode tradeify_1 dry_run.
+    account_state: evaluation
+    phase_requirements:                # Tradeify 247 1-Step terms (first-party summary, unconfirmed).
+      target_profit_pct: 0.12          # +12% to pass.
+      min_active_days: 0               # no minimum trading days.
+    backtest_ruleset: prop_rulesets/tradeify_247_1step.yaml
+    account_size_usd: 10000
+    strategies:                        # the memo's B3 book (§ 3.1): one leg per
+                                       # symbol, so the no-hedging rule cannot be
+                                       # tripped by two of our own legs.
+      - trend_donchian_eth_prop        # ETH 1h (n=169, net R +13.03 after Tradeify costs)
+      - trend_donchian_sol_prop        # SOL 1h. RE-ADDED 2026-10-05 ~18:00Z as the second leg
+                                       # of the ETH+SOL book (Tier-3, data-backed under the
+                                       # operator's standing authorization of 2026-09-27; decided
+                                       # by manager session_01MM8o5js6TcDFeNAPBY4Ntv, lane
+                                       # PROP-SMALL-EDITS). Reverses #16598 (14db3bd2) below.
+      # EVIDENCE for the re-add: research unit RQ-20261005-902 (the prop BOOK
+      # search; dispatched as RQ-20261005-812, renumbered in PR #16624 after an
+      # id collision), rule RULE-RQ1005-PROPEXPAND-TRADEIFY registered before
+      # the run (commit 16aa881e). ETH_prop+SOL_prop at flat 0.5% (this
+      # account's risk_pct) on the committed 730d trade records, full cost
+      # stack, 5 seeds of prop_ev_sim under tradeify_247_1step.yaml:
+      # INACTIVITY_SAFE_IMPROVEMENT -- min-seed P(net>0) 0.372 vs ETH alone
+      # 0.284, EV per account life +$179 vs +$58, max entry gap 6.6d (firm
+      # 30d inactivity rule). CONTROL: ETH + a negative-edge leg LOWERS EV
+      # (+$10/+$16 vs +$58), so the gain is the SOL leg, not a generic
+      # more-legs effect. SOL ALONE still fails (RQ-20261005-807, below).
+      # This is NOT a 0.70 pass: no book clears P(net>0) >= 0.70; the verdict
+      # is the registered hedge class. Runs were session-local, not CI
+      # (records: research/results/RQ-20261005-902/, comms/research/RQ-20261005-902/
+      # on PR #16624). tradeify_1 was flat at the re-add (prop status
+      # 2026-10-05 17:56Z: unrealized 0.0, open positions 0).
+      # REVERT: remove the `- trend_donchian_sol_prop` line again (and SOLUSDT
+      # from `symbols:`).
+      # trend_donchian_sol_prop REMOVED from tradeify_1 on 2026-10-05 (Tier-3,
+      # data-backed under the operator's standing authorization of 2026-09-27:
+      # "you can make tier 2 and 3 decisions autonomously as long as they are
+      # backed by data, just let me know that they have happened"; decided by
+      # manager session_01MM8o5js6TcDFeNAPBY4Ntv, lane PROP-FIT-POWER).
+      # EVIDENCE: research unit RQ-20261005-807, rule
+      # RULE-RQ1005-TRADEIFY-FIT-LONG-trend_donchian_sol_prop-f050 (registered
+      # 2026-10-05 before the run, #16567): trend_donchian_sol_prop, Tradeify
+      # 1-Step ruleset, flat 0.5% of balance (this account's risk_pct), 730d
+      # committed trades n=132 (comms/strategy_evidence/runs/2026-10-05-730d/),
+      # full cost stack, 5 seeds: ev_net_usd_per_life -$72..-$75 on every seed,
+      # P(net>0) 0.11-0.12, p_pass_eval 0.20-0.22. Verdict FAIL (rule: ev <= 0 on
+      # any seed). The earlier 365d record (n=65, +4.97R) was UNDERPOWERED; the
+      # longer window answered it. (0.75%, RQ-20261005-808: NULL, P 0.27-0.29,
+      # still far below the 0.70 bar.) trend_donchian_eth_prop is KEPT: NULL
+      # (positive EV, P(net>0) ~0.3), not a fail.
+      # tradeify_1 had no open SOL position or order at removal (prop status
+      # open_positions/open_orders empty 2026-10-05 09:26Z; its SOL tickets are
+      # all shadow/orphaned, none emitted).
+      # REVERT: re-add `- trend_donchian_sol_prop` to this list. (Reverted
+      # 2026-10-05 ~18:00Z on the book evidence above -- the single-leg FAIL
+      # stands; the leg is carried as part of the ETH+SOL book.)
+      # ict_scalp_xrp_15m DROPPED at go-live (OPERATOR DECISION 2026-10-03,
+      # popup relayed by manager session_01MM8o5js6TcDFeNAPBY4Ntv, verbatim:
+      # "Drop it (Recommended)"): it fails its causal rebuild (#15603).
+      # XRPUSDT left the data-pull list with it: no tradeify_1 leg trades XRP,
+      # and `symbols:` is a pull list only (bybit_1 still pulls XRPUSDT).
+    symbols: [ETHUSDT, SOLUSDT]        # SOLUSDT back with trend_donchian_sol_prop (2026-10-05 re-add);
+                                       # `symbols:` is a pull list only.
+    risk:
+      max_dd_pct: 0.06                 # Tradeify 1-Step STATIC 6% = $600 floor at $9,400.
+      daily_loss_pct: 0.03             # 3% daily = $300 (resets 22:00 UTC; ruleset limits).
+      daily_usd: 300                   # absolute fallback (= 3% of $10k).
+      risk_pct: 0.005                  # 0.5% = $50/ticket (memo § 3.2-3.3; ruleset sizing.flat cap 50).
+      # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk
+      # gate (manager review of #14672, 2026-09-30: "'report' places orders through a
+      # breach; it must refuse"). The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
+      # refusals were folded into daily_dd_switch below (operator, 2026-10-09).
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them"). Limit =
+                                       # 0.8 x the firm's daily limit (backtest_ruleset), at the firm's
+                                       # reset time; trips refuse NEW entries only (DAILY_DD_SWITCH).
+
+  # velotrade_1: Velotrade CLASSIC 1-Step $5k crypto evaluation on Velotrade's
+  # DXtrade deployment (dx.velotrade.com). VELOTRADE-WIRE, 2026-10-04 (HELD
+  # Tier-2 PR). OPERATOR DECISION (manager popup ~21:25Z 2026-10-04, relayed by
+  # manager session_01MM8o5js6TcDFeNAPBY4Ntv), verbatim: "Buy one ($54)".
+  # Evidence: docs/research/prop-firm-deepdive-2026-10-04.md § 1.8 + A2 — the
+  # B3 book at 0.5% risk: path EV +$454 ± $8 per $54 account life, P(net>0)
+  # 0.69, registered rule V2 INDETERMINATE (evidence p5 about -$37). A $54
+  # pilot to measure mechanics and cost, not a promotion on edge.
+  #
+  # Same shape as tradeify_1: exchange `breakout` is the prop ticket bridge
+  # (src/prop/breakout_executor.py), NOT a Breakout venue (an exchange
+  # `velotrade` is purged and pinned absent by tests/test_prop_risk_manager.py);
+  # the ruleset + routing make every number Velotrade's. Terminal:
+  # prop_platforms.yaml velotrade_1 (own login VELOTRADE_DX_*, own kill switch
+  # PROP_EXECUTOR_MODE_VELOTRADE_1, nothing enabled, no lot table).
+  #
+  # NOT `prop_velotrade_1`: that id belongs to a purged 2026-06 scaffold whose
+  # rows scripts/ops/backfill_account_class.py pins to the `paper` class.
+  #
+  # DRY, AND NO ROSTER. The roster is Tier-3 on a real-money prop account; the
+  # PR body PROPOSES one (the B3 book) and this entry applies none, so the
+  # account emits nothing: no ticket, no ping, no order package.
+  velotrade_1:
+    exchange: breakout
+    type: prop
+    account_class: prop
+    mode: live                         # VELOTRADE-GOLIVE (Tier-3 go-live, HELD; manager 2026-10-06 06:41Z, operator "Build it + pre-approve test" + parallel go-live 06:35Z): tickets are emitted for velotrade_1. Orders still need PROP_EXECUTOR_MODE_VELOTRADE_1=live on the VM AND a symbol in prop_platforms.yaml enabled_venue_symbols; the roster below is filled from lane VELOTRADE-FIT. Revert: mode dry_run (with its dry-run-guard marker).
+    account_state: evaluation
+    phase_requirements:                # Velotrade CLASSIC 1-Step (first-party, read 2026-10-04, unconfirmed).
+      target_profit_pct: 0.10          # +10% to pass.
+      min_active_days: 5               # 5 QUALIFYING days (each >= +0.8% of the initial balance, realised, 00:30-00:30 UTC).
+    backtest_ruleset: prop_rulesets/velotrade_classic_1step.yaml
+    account_size_usd: 5000
+    strategies:                        # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
+                                       # rule RULE-RQ1006-VELOTRADE-FIT (registered before grading, commit 3769f2b1f):
+                                       # GO_LIVE on all 5 seeds at risk_pct 0.005 -- P(daily-loss breach)/life 0.000,
+                                       # worst realised day -$78 vs the $160 line, max entry gap 6.6d, EV/life +$167..+$188.
+                                       # Operator 2026-10-06 06:40Z: risk-qualified legs go live; 5-qualifying-days tuned after.
+      - trend_donchian_eth_prop        # evidence: comms/strategy_evidence/trend_donchian_eth_prop.json
+      - trend_donchian_sol_prop        # evidence: comms/strategy_evidence/trend_donchian_sol_prop.json
+    symbols: [ETHUSDT, SOLUSDT]
+    risk:
+      max_dd_pct: 0.07                 # 7% STATIC = $350, floor $4,650 for the life of the account.
+      daily_loss_pct: 0.04             # 4% below max(balance, equity) at 00:30 UTC (ruleset limits).
+      daily_usd: 200                   # absolute fallback (= 4% of $5k).
+      risk_pct: 0.005                  # 0.5% = $25/ticket. OPERATOR 2026-10-15 ~05:55Z (verbatim popup choice): "0.5% (Recommended)" --
+                                       # supersedes the 2026-10-06 1% directive below. Evidence RQ-20261014-f516-05 (4,000 lives x 5 seeds,
+                                       # 355 trades): C050 ev $159-175/life p_alive ~0.27; C075 ev $166-182 p_alive ~0.02; 0.01 ev $117-140
+                                       # p_alive ~0.00. Revert: 0.01. (ruleset sizing.flat.max_risk_usd 50 left as is: a cap, non-binding at $25.)
+                                       # PRIOR (superseded): 1.0% = $50/ticket. OPERATOR 2026-10-06 09:20Z (verbatim): "ok, let's move the velotrade
+                                       # risk to 1% - let's also check the impact of doing the same for tradeify and breakout".
+                                       # Evidence RQ-20261006-062 (rule RULE-RQ1006-VELOTRADE-FIT, registered before the run):
+                                       # ETH+SOL at 1.0% GO_LIVE on 5/5 seeds -- P(daily-loss breach)/life 0.015, median 62d
+                                       # to +10%, EV/life +$125..+$142, P(net>0) 0.30. Was 0.005 ($25; deep-dive § 1.8 item 6).
+                                       # Moves with prop_rulesets/velotrade_classic_1step.yaml sizing.flat.max_risk_usd 25 -> 50
+                                       # (the executor caps a ticket there). Revert: 0.005 here and cap 25 in the ruleset.
+      # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk
+      # gate, as tradeify_1. The RiskManager DAILY_LOSS_CAP / INTRADAY_DRAWDOWN
+      # refusals were folded into daily_dd_switch below (operator, 2026-10-09).
+      daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
+        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them"). Limit =
+                                       # 0.8 x the firm's daily limit (backtest_ruleset), at the firm's
+                                       # reset time; trips refuse NEW entries only (DAILY_DD_SWITCH).

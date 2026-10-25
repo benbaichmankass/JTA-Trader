@@ -352,6 +352,16 @@ def main(argv: list[str] | None = None) -> int:
         help="actually write the registry. OFF by default — this ships UNARMED "
              "and a runner-trained model joining the shadow fleet is Tier-2.",
     )
+    ap.add_argument(
+        "--only",
+        action="append",
+        default=None,
+        metavar="MODEL_ID/RUN_ID",
+        help="drain only these drops (repeatable). An --only that matches no index row "
+             "is an error, never 'nothing pending'. KAGGLE-TRAIN-RUNNER-FIRST, 2026-10-16: "
+             "the inbox can hold an older undrained drop that a bare --apply would ingest "
+             "alongside the one the operator approved.",
+    )
     args = ap.parse_args(argv)
 
     if args.self_test:
@@ -364,6 +374,17 @@ def main(argv: list[str] | None = None) -> int:
         print("::error::the inbox index could not be read. This is NOT 'nothing "
               "pending' — we did not look.")
         return 2
+
+    if args.only:
+        wanted = set(args.only)
+        have = {f"{r.get('model_id')}/{r.get('run_id')}" for r in rows}
+        missing = sorted(wanted - have)
+        if missing:
+            print(f"::error::--only names drop(s) not in the index: {missing}. Nothing was drained.")
+            return 2
+        skipped = len(rows) - sum(1 for r in rows if f"{r.get('model_id')}/{r.get('run_id')}" in wanted)
+        rows = [r for r in rows if f"{r.get('model_id')}/{r.get('run_id')}" in wanted]
+        note = f"{note}; --only kept {len(rows)}, left {skipped} other drop(s) untouched"
 
     print(f"offload-drain: {note} (apply={args.apply})")
     counts: dict[str, int] = {}

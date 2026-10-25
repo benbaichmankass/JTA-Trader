@@ -1,0 +1,34 @@
+{
+  "id": "EXIT-PATH-EMIT-OFFLINE",
+  "title": "Offline per-bar in-trade path emit from the backtest harnesses (--emit-paths): the data the in-trade exit model learns from",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane EXIT-EMIT-BUILD-1016",
+  "lane": "EXIT-EMIT-BUILD-1016",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18536
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane IN-TRADE-EXIT-MODEL] THE BINDING GAP for the exit line's destination (operator 2026-10-14: real-time P(SL before TP | trade state now) and an exit-now mechanism; row IN-TRADE-EXIT-MODEL). Today: harness --emit-trades rows are per-TRADE (mfe_r only, a lagged lower bound), live position_telemetry is one upserted row per position, MAE is recorded nowhere. BUILD: every harness that writes --emit-trades gains --emit-paths <file>: one JSONL row per (trade, bar) from the bar after entry to the exit bar, carrying bar ts, open/high/low/close in R from entry, the stop and target IN FORCE at that bar in R (so trailing, TP revision, stale/giveback exits are captured as the leg actually trades), open_r, running peak_r and mae_r, bars_since_peak, ATR and ADX at the bar; plus mae_r on every trade row. Order: scripts/backtest_trend.py + scripts/backtest_pullback.py first (the real-money families: trend_donchian_*_4h, *_pullback_2h), then backtest_ict_scalp.py / backtest_squeeze.py. Must reuse the harness's own bar loop (no re-walk), off by default (no change to any existing emit byte-for-byte), and carry a parity test: per trade, max(peak_r over the path rows) == the trade row's mfe_r. TIER-1 (offline research tooling; no order path, no config). PRIORITY: it does not wait for live data. INTERIM: scripts/research/first_passage.py re-walks committed ledgers over public candles with a FIXED bracket (initial SL, fixed K R) -- enough for the census/baseline/policy units RQ-20261014-d6e7-01..05, NOT for the leg as traded. CONSUMERS: RQ-20261014-d6e7-06 (harness-native first-passage census, blocked on this row), blocked/RQ-20261014-9807-05 (momentum-turn label study: per-bar ADX/ATR/open_r), RQ-20261011-9da8-04 (exit-arm bandit OPE: per-bar states under each ladder arm), Programme 02 Q3.3. DONE WHEN: a config-exact run of the 4 bybit_2 4h/2h legs emits path rows whose per-trade max(peak_r) equals the trade's mfe_r on >= 99% of trades, committed under comms/strategy_evidence/runs/, and d6e7-06 leaves blocked/. [2026-10-14 lane IN-TRADE-EXIT-MODEL, close-out] FINDING this row also resolves: the fixed-bracket re-walk's MFE positive control (re-walked MFE vs the ledger's mfe_r within 0.05 R) FAILS on 4 scalp legs -- ict_scalp_5m 0.786, ict_scalp_eth_15m 0.795, ict_scalp_xrp_15m 0.736 match share (bar 0.80) -- and passes at 0.82-0.83 on the other 3 scalp legs vs 1.0 on every pullback/donchian/squeeze leg (lane sandbox, 2026-10-14, first_passage.py --mode census over the newest committed ledgers). INFERRED cause, not verified: the ict_scalp harness updates the favourable extreme on different bars (be_stop / stale_stop / timeout semantics) than prop_exit_evidence._walk assumes. Effect: ~370 scalp trades are excluded from d6e7-01..05. The harness-native --emit-paths removes the re-walk and with it this mismatch; the parity test in this row's DONE WHEN (max peak_r over path rows == mfe_r) is the check. RERUN: python3 scripts/research/first_passage.py --mode census --out <dir> and read measurement.legs[].control_match_share. [2026-10-16 lane EXIT-EMIT-BUILD-1016] BUILT (PR #18536): --emit-paths on scripts/backtest_trend.py + scripts/backtest_pullback.py via scripts/research/harness_emit.py::PathRecorder, driven from each harness's own bar loop (no re-walk); rows carry bar o/c/fav/adv in R, stop_r/target_r IN FORCE during the bar, dist to stop/target, open_r/peak_r/mae_r/bars_since_peak after the bar, atr_r, adx_14, is_exit/exit_reason; mae_r added to trade rows when on. Parity pinned in tests/test_harness_emit.py (max peak_r == mfe_r, max mae_r == mae_r, last row = exit, contiguous offsets) on 4 exit arms x 2 harnesses; flag-off byte-identical vs main (filecmp, 6 configs). build_strategy_evidence.py --research-emits passes it through for trend/pullback legs (writes <leg>__paths.jsonl). LANDED_UNPROVEN, NOT done. CLOSES WHEN: a config-exact run of the 4 bybit_2 4h/2h legs with --research-emits (or --emit-paths) is committed under comms/strategy_evidence/runs/ with per-trade max(peak_r)==mfe_r on >=99% of trades, and d6e7-06 leaves blocked/ (it also needs a d6e7-03/05 PASS and a --paths reader on first_passage.py). ict_scalp/squeeze adoption (the scalp re-walk mismatch) NOT built: next step on this row.",
+  "updated_at": "2026-10-16T07:42:19Z",
+  "updated_by": "session_01Q2DsXQey6vFcc5H3MHL4oA",
+  "roadmap": [
+    "L-ATM",
+    "M23",
+    "M20"
+  ],
+  "observation": {
+    "what": "A config-exact run of the 4 bybit_2 4h/2h trend/pullback legs with --emit-paths emits path rows whose per-trade max(peak_r) equals the trade row mfe_r on >= 99% of trades, committed under comms/strategy_evidence/runs/",
+    "how_to_check": "python3 scripts/ops/build_strategy_evidence.py --research-emits --strategy <leg> ... then join <leg>__paths.jsonl to <leg>__trades.jsonl on trade_key (strategy|symbol|entry_time|direction) and count round(max(peak_r),3)==mfe_r",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: offline tooling only; the L-ATM/M23 milestone outcome is written back when the closing harness-native run is graded (d6e7-06)",
+    "arch": "none: opt-in research emit on offline backtest harnesses; no runtime, pipeline or contract change"
+  },
+  "_seq": 497
+}

@@ -292,6 +292,237 @@ def db_tables(
     }
 
 
+# ---------------------------------------------------------------------------
+# /db/overview — summary + health per database (DATA-EXPLORER, 2026-10-14)
+# ---------------------------------------------------------------------------
+# Same gate and same exposure contract as the rest of this file: only
+# allowlisted tables are reported, both DBs are opened ``mode=ro``, and nothing
+# below reads a column VALUE other than one timestamp per table.
+#
+# Every figure carries its own read-state, because a count that reads 0 may mean
+# "we could not look" (CLAUDE.md, collapsed states): ``rows`` is ``None`` with
+# ``rowsState: "count_failed"`` when the COUNT raised, ``empty`` is ``None`` then
+# too, and a DB that is not on disk is ``present: False`` -- never zero tables.
+#
+# NOT provided (and said so rather than faked): 24 h / 7 d growth, and a STALE
+# verdict. Growth needs a per-table timestamp encoding this file cannot assume
+# (BL-20260730-TRADES-TIMESTAMP-FORMAT-MIXED), and "stale" needs a declared
+# writer cadence per table that does not exist. ``ageSeconds`` is the raw fact.
+_TS_COLUMN_CANDIDATES: Tuple[str, ...] = (
+    "updated_at", "created_at", "logged_at_utc", "timestamp", "ts", "recorded_at", "generated_at",
+    "closed_at", "opened_at", "finished_at", "started_at", "time", "date",
+)
+_OVERVIEW_SWR = None  # built lazily so importing this module stays cheap
+
+
+def _parse_any_ts(value: Any) -> Optional[Any]:
+    """An aware UTC datetime from ISO text, 'YYYY-MM-DD HH:MM:SS', epoch seconds
+    or epoch milliseconds -- or None when the value is none of those."""
+    from datetime import datetime, timezone  # noqa: PLC0415
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        v = float(value)
+        if v <= 0:
+            return None
+        if v > 1e11:  # epoch milliseconds
+            v /= 1000.0
+        try:
+            return datetime.fromtimestamp(v, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        d = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return _parse_any_ts(float(text))
+        except ValueError:
+            return None
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+#: Wall-clock budget for ONE table's COUNT(*). An exact count over the ~4M-row `signals` table is a
+#: full b-tree walk; on a slow disk it can take seconds, and the Overview must never hang on it. When
+#: the budget is spent the count is abandoned and the row says so (`count_timed_out`) with a labelled
+#: upper-bound estimate -- never a silent 0 and never an estimate dressed as exact.
+_COUNT_BUDGET_S = 4.0
+#: The Overview is slow-changing and expensive: serve it from cache for this long, and serve a stale
+#: copy (refreshing in the background) for up to `_OVERVIEW_STALE_S`, so a reload is instant.
+_OVERVIEW_FRESH_S = 120.0
+_OVERVIEW_STALE_S = 3600.0
+
+
+def _count_rows(conn: sqlite3.Connection, name: str, budget_s: float | None = None) -> tuple:
+    """(count | None, state, estimate | None, elapsed_ms).
+
+    state is 'read' | 'count_timed_out' | 'count_failed'. SQLite runs COUNT(*) inside one VM opcode,
+    which a progress handler cannot interrupt, so a timer thread calls Connection.interrupt() (safe
+    cross-thread; a no-op when no statement is running, and the timer is always cancelled)."""
+    import threading  # noqa: PLC0415
+    import time  # noqa: PLC0415
+    budget = _COUNT_BUDGET_S if budget_s is None else budget_s
+    timer = threading.Timer(budget, conn.interrupt)
+    t0 = time.monotonic()
+    timer.start()
+    try:
+        count = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+        return count, "read", None, int((time.monotonic() - t0) * 1000)
+    except sqlite3.OperationalError as exc:
+        elapsed = int((time.monotonic() - t0) * 1000)
+        if "interrupt" not in str(exc).lower():
+            logger.exception("db_overview: COUNT failed for %s", name)
+            return None, "count_failed", None, elapsed
+        logger.warning("db_overview: COUNT(*) on %s abandoned after %d ms (budget %.1f s)", name, elapsed, budget)
+        try:   # O(log n): the highest rowid is an upper bound on the row count of an append-mostly table
+            est = conn.execute(f'SELECT MAX(rowid) FROM "{name}"').fetchone()[0]
+        except sqlite3.Error:  # allow-silent: surfaced as rowsEstimate None; the timeout itself is already reported
+            est = None
+        return None, "count_timed_out", est, elapsed
+    except sqlite3.Error:  # allow-silent: surfaced as rowsState "count_failed" (rows None), never as 0
+        logger.exception("db_overview: COUNT failed for %s", name)
+        return None, "count_failed", None, int((time.monotonic() - t0) * 1000)
+    finally:
+        timer.cancel()
+
+
+def _table_overview(conn: sqlite3.Connection, name: str, label: str, now: Any) -> Dict[str, Any]:
+    cols = [c["name"] for c in _columns(conn, name)]
+    count, rows_state, estimate, count_ms = _count_rows(conn, name)
+    ts_col = next((c for c in _TS_COLUMN_CANDIDATES if c in cols), None)
+    newest, newest_state = None, "no_timestamp_column"
+    if count == 0:
+        newest_state = "empty"
+    elif ts_col is not None:
+        try:
+            # Highest rowid = newest INSERTED row. Deliberately not MAX(ts): these
+            # columns mix encodings, so a string MAX can pick the wrong row.
+            raw = conn.execute(
+                f'SELECT "{ts_col}" FROM "{name}" ORDER BY rowid DESC LIMIT 1'
+            ).fetchone()
+            parsed = _parse_any_ts(raw[0]) if raw else None
+            if parsed is None:
+                newest_state = "unparseable" if raw and raw[0] is not None else "null_value"
+            else:
+                newest, newest_state = parsed, "read"
+        except sqlite3.Error:  # allow-silent: surfaced as newestRowState "error"; the table still reports its count
+            logger.exception("db_overview: newest-row read failed for %s", name)
+            newest_state = "error"
+    return {
+        "name": name, "db": label, "rows": count, "rowsState": rows_state,
+        # only when the exact count timed out: an UPPER BOUND (MAX(rowid)), never to be read as exact
+        "rowsEstimate": estimate, "rowsEstimateBasis": "max_rowid_upper_bound" if estimate is not None else None,
+        "countMs": count_ms,
+        "empty": (count == 0) if count is not None else None,
+        "columnCount": len(cols),
+        "newestRowColumn": ts_col,
+        "newestRowAt": newest.strftime("%Y-%m-%dT%H:%M:%SZ") if newest else None,
+        "newestRowState": newest_state,
+        "ageSeconds": max(0, int((now - newest).total_seconds())) if newest else None,
+    }
+
+
+def _db_overview(label: str, path: Path, integrity: str, now: Any) -> Dict[str, Any]:
+    out: Dict[str, Any] = {"db": label, "file": path.name, "present": path.exists()}
+    if not out["present"]:
+        out.update({"readState": "missing", "tables": [], "sizeBytes": None, "walBytes": None,
+                    "journalMode": None, "integrity": {"state": "not_checked", "result": None}})
+        return out
+    try:
+        out["sizeBytes"] = path.stat().st_size
+    except OSError:  # allow-silent: surfaced as sizeBytes None, not 0
+        out["sizeBytes"] = None
+    wal = Path(f"{path}-wal")
+    try:
+        out["walBytes"] = wal.stat().st_size if wal.exists() else 0
+    except OSError:  # allow-silent: surfaced as walBytes None, not 0
+        out["walBytes"] = None
+    try:
+        conn = _connect(path)
+    except sqlite3.Error as exc:  # allow-silent: surfaced as readState "unreadable" + reason, never as zero tables
+        logger.exception("db_overview: open failed for %s", path)
+        out.update({"readState": "unreadable", "reason": type(exc).__name__, "tables": [],
+                    "journalMode": None, "integrity": {"state": "not_checked", "result": None}})
+        return out
+    try:
+        try:
+            out["journalMode"] = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        except sqlite3.Error:  # allow-silent: surfaced as journalMode None
+            out["journalMode"] = None
+        if integrity == "quick":
+            try:
+                res = conn.execute("PRAGMA quick_check").fetchone()[0]
+                out["integrity"] = {"state": "ok" if res == "ok" else "failed", "result": res}
+            except sqlite3.Error as exc:  # allow-silent: surfaced as integrity state "error"
+                out["integrity"] = {"state": "error", "result": type(exc).__name__}
+        else:
+            out["integrity"] = {"state": "not_requested", "result": None}
+        try:
+            out["tables"] = [_table_overview(conn, n, label, now) for n in _list_tables(conn)]
+            out["readState"] = "read"
+        except sqlite3.Error as exc:  # allow-silent: surfaced as readState "unreadable" + reason, never as zero tables
+            logger.exception("db_overview: table listing failed for %s", path)
+            out.update({"readState": "unreadable", "reason": type(exc).__name__, "tables": []})
+    finally:
+        conn.close()
+    return out
+
+
+def _overview_payload(integrity: str) -> Dict[str, Any]:
+    import time  # noqa: PLC0415
+    from datetime import datetime, timezone  # noqa: PLC0415
+    t0 = time.monotonic()
+    now = datetime.now(timezone.utc)
+    _federated_dbs()  # refreshes the trainer-store sidecar from the mirror, as /db/tables does
+    dbs = [_db_overview(lbl, p, integrity, now)
+           for lbl, p in ((_DB_TRADE_JOURNAL, _DB_PATH), (_DB_TRAINER_STORE, _TRAINER_STORE_DB))]
+    tables = [t for d in dbs for t in d["tables"]]
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+    slow = sorted(tables, key=lambda t: t.get("countMs") or 0, reverse=True)[:3]
+    # One line per BUILD (not per request): the journal is the only latency record this endpoint has.
+    logger.info("db_overview built: total_ms=%d integrity=%s tables=%d timed_out=%d slowest=%s", elapsed_ms, integrity,
+                len(tables), sum(1 for t in tables if t["rowsState"] == "count_timed_out"),
+                ",".join(f"{t['name']}:{t.get('countMs')}ms" for t in slow))
+    return {
+        "present": any(d["present"] for d in dbs),
+        "generatedAt": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "elapsedMs": elapsed_ms,
+        "dbs": dbs,
+        "summary": {
+            "tables": len(tables),
+            "emptyTables": sum(1 for t in tables if t["empty"] is True),
+            "unknownRowCount": sum(1 for t in tables if t["rows"] is None),
+            "countTimedOut": sum(1 for t in tables if t["rowsState"] == "count_timed_out"),
+            "dbsUnreadable": sum(1 for d in dbs if d["present"] and d["readState"] != "read"),
+            "dbsMissing": sum(1 for d in dbs if not d["present"]),
+        },
+        "notProvided": ["growth_24h_7d", "stale_verdict"],
+    }
+
+
+@router.get("/db/overview")
+def db_overview(
+    integrity: str = Query("off", pattern="^(off|quick)$"),
+    _session: dict = Depends(require_session),
+) -> Dict[str, Any]:
+    """Per database: size, WAL size, journal mode, optional integrity check; per
+    allowlisted table: row count, empty flag, newest-row timestamp + age.
+
+    ``integrity=quick`` runs ``PRAGMA quick_check`` (can be slow on the 2M-row
+    journal), so it is opt-in and the default reports ``not_requested`` -- which
+    is not ``ok``. Session-gated exactly like ``/db/tables``.
+    """
+    global _OVERVIEW_SWR  # noqa: PLW0603
+    if _OVERVIEW_SWR is None:
+        from src.web.api._swr import SWRCache  # noqa: PLC0415
+        _OVERVIEW_SWR = SWRCache(name="db-overview", fresh_s=_OVERVIEW_FRESH_S, stale_s=_OVERVIEW_STALE_S)
+    key = (integrity, str(_DB_PATH), str(_TRAINER_STORE_DB))
+    data, _age, _state = _OVERVIEW_SWR.get(key, lambda: _overview_payload(integrity))
+    return data
+
+
 @router.get("/db/table/{table}")
 def db_table(
     table: str,

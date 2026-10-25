@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261015-SBAQDDVQ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "TRAINER-RUNAWAY-PROC lane; diag #18268/#18269; PR #18271",
+    "rerun": "trainer-vm-diag: ps -eo pid,ppid,etimes,pcpu,cmd | awk '$2==1 && $3>3600 && /bash -s|python3 -$/'  # any hit = recurred; capture /proc/<ppid>/environ before killing"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Originating workflow of the orphaned trainer process (pid 2400542 'python3 -' under pid 2400541 'bash -s', ppid 1, started 2026-10-12 11:12Z, killed 2026-10-15 via trainer-vm-diag #18269) was NOT identified: parent env had no UNIT/RUN_ID (so not research-script-run-trainer), no stdin script is recoverable. Orphan-on-cancel is a hypothesis only. PR #18271 (16ff85a9) added a remote timeout wrapper to trainer-vm-diag, trainer-diag-relay, trainer-capture-watch and health-snapshot. Closing this item means either (a) 14 days with no orphan recurrence, or (b) a recurrence whose parent env/cmdline names the launcher."
+}

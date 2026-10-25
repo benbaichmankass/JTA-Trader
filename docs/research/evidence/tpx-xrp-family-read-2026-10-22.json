@@ -1,0 +1,199 @@
+{
+  "record": "TP-doctrine family read for xrp_pullback_2h (tp_extend revision, cells X5 / X6)",
+  "generated": "2026-10-22",
+  "lane": "TPX-XRP-DECLARE (session_011SQcruvhK7evd6Yzen5fu2), dispatched by Manager Session 2026-10-22 (session_01Hsp3aD8ccAyhHiyYARqEqh)",
+  "main_sha_read": "55397d3f",
+  "rule": {
+    "id": "RULE-W43-ETHPULLBACK2H-TPX-SIBLING-COMPLIANCE (family clause; identical in RULE-W43-SOLPULLBACK2H-* and RULE-W43-AVAXPULLBACK2H-*)",
+    "source": "research/queue/RQ-20261022-bea9-01.yaml decision_rule.rule",
+    "registered_at": "2026-10-22",
+    "registered_before_run": true,
+    "family_clause": "the tp_extend revision GENERALISES iff the SAME cell (X5 or X6) passes on >= 2 of the 3 sibling units (bea9-01 eth, -02 sol, -04 avax). Generalises -> the evidence record for a Tier-3 proposal of that cell on xrp_pullback_2h (bybit_2 + bybit_portfolio + bybit_1) once the pullback-unit tp producer exists (row TP-DOCTRINE B1).",
+    "per_sibling_pass": "net_r(C) > net_r(S3) AND folds_ge >= 5 of 6 AND maxDD(C) <= 1.35 x maxDD(S3); n(S3) >= 39",
+    "doctrine_read": "forward as 'P&L without a reachable prediction' (not a declare) if tp_share(C) < 0.10 OR lever_fired false OR net_r_per_capital_day(C) < net_r_per_capital_day(S3)"
+  },
+  "harness": "scripts/research/exit_lever_ablation.py --grade replace (arms run through scripts/backtest_pullback.py), --delta-r 0 --delta-r-per-trade 0 --folds 6 --fold-majority 5 --dd-tol-frac 0.35 --n-floor 39",
+  "cells": {
+    "S3": "--tp-target-r 3 (static 3R; on xrp reproduces the declared tp_r 3.0 exactly: RQ-20261019-020 T3 = A = 29.6492 R)",
+    "X5": "tpx_t3_a0.85_e0.5_m3: --tp-target-r 3 --tp-extend-r 0.5 --tp-approach-frac 0.85 --tp-max-extends 3 --tp-thesis native",
+    "X6": "tpx_t3_a0.85_e1_m3: --tp-target-r 3 --tp-extend-r 1 --tp-approach-frac 0.85 --tp-max-extends 3 --tp-thesis native"
+  },
+  "cost_stack": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "resolved_by": "execution_costs.resolve_cost_policy (recorded per arm as cost_stack in every result)"
+  },
+  "data_source": "Binance USD-M perp candles (public), 2h resample; window 2020-07-01 .. 2026-10-15 23:59 (sol/avax data start 2020-09-14 / 2020-09-23, their listing)",
+  "decision_bar": "harness decides on the CLOSED 2h bar",
+  "siblings": {
+    "RQ-20261022-bea9-01": {
+      "leg": "eth_pullback_2h",
+      "result": "research/results/RQ-20261022-bea9-01/39743799754.jsonl",
+      "queue_grade": "pass",
+      "S3": {
+        "n": 375,
+        "net_r": -9.0901,
+        "max_dd_r": 27.5946,
+        "tp_share": 0.301,
+        "net_r_per_capital_day": -0.0071
+      },
+      "X5": {
+        "n": 374,
+        "net_r": -4.9615,
+        "delta": 4.1286,
+        "folds_ge": 6,
+        "max_dd_r": 26.5689,
+        "dd_cap": 37.2527,
+        "tp_share": 0.299,
+        "lever_fired": true,
+        "net_r_per_capital_day": -0.0038,
+        "passes": true,
+        "doctrine_read": "clears"
+      },
+      "X6": {
+        "n": 374,
+        "net_r": -3.6128,
+        "delta": 5.4773,
+        "folds_ge": 6,
+        "max_dd_r": 26.2193,
+        "dd_cap": 37.2527,
+        "tp_share": 0.299,
+        "lever_fired": true,
+        "net_r_per_capital_day": -0.0028,
+        "passes": true,
+        "doctrine_read": "clears"
+      },
+      "best": "X6"
+    },
+    "RQ-20261022-bea9-02": {
+      "leg": "sol_pullback_2h",
+      "result": "research/results/RQ-20261022-bea9-02/39743803265.jsonl",
+      "queue_grade": "pass",
+      "S3": {
+        "n": 148,
+        "net_r": 11.6959,
+        "max_dd_r": 13.4988,
+        "tp_share": 0.399,
+        "net_r_per_capital_day": 0.0281
+      },
+      "X5": {
+        "n": 148,
+        "net_r": 11.8248,
+        "delta": 0.1289,
+        "folds_ge": 6,
+        "max_dd_r": 13.4988,
+        "dd_cap": 18.2234,
+        "tp_share": 0.399,
+        "lever_fired": true,
+        "net_r_per_capital_day": 0.0284,
+        "passes": true,
+        "doctrine_read": "clears"
+      },
+      "X6": {
+        "n": 148,
+        "net_r": 11.8248,
+        "delta": 0.1289,
+        "folds_ge": 6,
+        "max_dd_r": 13.4988,
+        "dd_cap": 18.2234,
+        "tp_share": 0.399,
+        "lever_fired": true,
+        "net_r_per_capital_day": 0.0284,
+        "passes": true,
+        "doctrine_read": "clears"
+      },
+      "best": "X5 (harness tie-break; X5 and X6 are identical on this leg)"
+    },
+    "RQ-20261022-bea9-04": {
+      "leg": "avax_pullback_2h",
+      "result": "research/results/RQ-20261022-bea9-04/39752463864.jsonl",
+      "queue_grade": "pass",
+      "S3": {
+        "n": 422,
+        "net_r": 26.4504,
+        "max_dd_r": 18.9232,
+        "tp_share": 0.377,
+        "net_r_per_capital_day": 0.0288
+      },
+      "X5": {
+        "n": 422,
+        "net_r": 25.9376,
+        "delta": -0.5128,
+        "folds_ge": 5,
+        "max_dd_r": 18.9232,
+        "dd_cap": 25.5463,
+        "tp_share": 0.374,
+        "lever_fired": true,
+        "net_r_per_capital_day": 0.0282,
+        "passes": false,
+        "doctrine_read": "n/a (fails net_r > S3)"
+      },
+      "X6": {
+        "n": 422,
+        "net_r": 26.5597,
+        "delta": 0.1093,
+        "folds_ge": 5,
+        "max_dd_r": 18.9232,
+        "dd_cap": 25.5463,
+        "tp_share": 0.374,
+        "lever_fired": true,
+        "net_r_per_capital_day": 0.0289,
+        "passes": true,
+        "doctrine_read": "clears"
+      },
+      "best": "X6"
+    },
+    "RQ-20261022-bea9-03": {
+      "note": "trend_donchian_sol_prop, a different question (measured move on a Donchian prop leg); graded fail; NOT part of this family read"
+    }
+  },
+  "tp_share_definition": "by_outcome.take_profit / n, computed here from each arm's by_outcome (the harness's own tp_doctrine.reach_ge_6r field is the sentinel-reach read and is not the registered tp_share)",
+  "family_read": {
+    "X6": {
+      "passes_on": [
+        "eth",
+        "sol",
+        "avax"
+      ],
+      "count": 3,
+      "generalises": true
+    },
+    "X5": {
+      "passes_on": [
+        "eth",
+        "sol"
+      ],
+      "count": 2,
+      "generalises": true
+    },
+    "named_cell": "X6 = tpx_t3_a0.85_e1_m3",
+    "why_X6": "passes on 3 of 3 (X5 on 2 of 3, fails avax); on every sibling X6 net R >= X5 net R (eth -3.6128 vs -4.9615, sol tie 11.8248, avax 26.5597 vs 25.9376); on xrp's own spent window X6 +1.748 R vs X5 +1.247 R, both 6/6 folds, maxDD equal (comms/research/RQ-20261016-009/39103734048/verdict.json)",
+    "verdict": "FIRES"
+  },
+  "effect_size_honesty": "The revision is close to P&L-neutral. Delta over S3: eth +5.48 R / 374 trades, sol +0.13 R / 148, avax +0.11 R / 422; on xrp's spent window +1.75 R / 394 with the extension changing exits in 2 of 6 folds. This is the compliance question the rule asks (zero materiality), not evidence of added edge.",
+  "xrp_target": {
+    "leg": "xrp_pullback_2h",
+    "routings": [
+      "bybit_2 (real money)",
+      "bybit_portfolio (mirror)",
+      "bybit_1 (paper)"
+    ],
+    "current_tp_block": "tp_r: 3.0, no tp_revision",
+    "check_tp_doctrine_before": "all 3 routings: entry_tp declared (3, reach 0.246), intent undeclared, producer no_tp_verdict, path plumbed -> FAIL:tp_revision"
+  },
+  "precondition_unmet": {
+    "what": "the registered rule makes the declare conditional on 'the pullback-unit tp producer exists (row TP-DOCTRINE B1)'. It does not exist on main 55397d3f.",
+    "measured": [
+      "src/runtime/tp_revision.py RULES registers exactly one rule: donchian_measured_move. No tp_extend rule.",
+      "src/units/strategies/htf_pullback_trend_2h.py monitor() returns no tp verdict (guard producer state no_tp_verdict on all 3 xrp routings).",
+      "the tp_extend logic exists only in the harness (scripts/backtest_pullback.py --tp-extend-r, GEOM-B1-HARNESS)."
+    ],
+    "consequence": "MEASURED by a probe on this branch (edit reverted, never committed): adding `tp_revision: {rule: tp_extend, extend_r: 1.0, approach_frac: 0.85, max_extends: 3}` to xrp_pullback_2h leaves check_tp_doctrine.py unchanged on all 3 routings (producer no_tp_verdict, FAIL:tp_revision), because the unit's monitor() returns no tp verdict and no tp_extend rule is registered. The declaration would be read by no code: compliance would not move and the live bracket would not change. That is the decorative TP the doctrine forbids, so the config PR is NOT opened. The blocker is the producer build: a tp_extend rule in src/runtime/tp_revision.py plus htf_pullback_trend_2h.monitor() emitting its verdict, with parity against backtest_pullback.py --tp-extend-r."
+  },
+  "live_context": {
+    "decision_bar_closed_19513": "Does not weaken the read; it strengthens transfer. The harness decides on the closed 2h bar; the leg moved to closed today (DECISION-BAR-MATCH, docs/research/evidence/decision-bar-match-2026-10-22.json: xrp closed n 415 +44.71 R vs forming 499 +25.70 R). Before #19513 the live leg traded a different bar from every arm in this read.",
+    "below_backtest_PI-20261021-4ZLRFEV1-0001": "Does not affect the read. A live book never establishes edge, and this is a RELATIVE exit comparison (S3 vs X6 on the same entries). The live shortfall (n 17, -9.92 R, forming-bar era) is an entry/fidelity question owned by its attribution unit; a TP revision neither causes nor cures it."
+  },
+  "what_this_does_not_do": "Edits no config, places no order. Independence across siblings is by symbol path, not by date (shared 2020-07..2026-10 crypto regime). tp_share is a reach proxy, not calibration."
+}

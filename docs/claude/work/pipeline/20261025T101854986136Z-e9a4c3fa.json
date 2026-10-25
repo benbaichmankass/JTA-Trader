@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "clears_when": "the P3-M27-htf-pass disjoint-window confirmation unit has a graded verdict, and the manager has put the keep-ON proposal to the operator or killed it",
+    "kind": "event"
+  },
+  "id": "PI-20261025-1CZRLDTS-0001-A",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "RQ-20260928-001 via lane RQ-20260928-001-RUN, docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json",
+    "rerun": "python3 scripts/research/rq_20260928_001_htf_wire.py <ict_scalp_leg> <15m-or-5m candle csv> <outdir> (see docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json for the feed spec)"
+  },
+  "state": "queued",
+  "what": "TIER-3 PROPOSAL (no config change made by the lane): RQ-20260928-001 graded 6 of 7 ict_scalp variant legs PASS for the HTF filter ON vs forced-OFF (n 263-747 per leg, 365d Binance spot, fee 7.5/slip 3.0/funding 1.0 bps explicit). Proposal = KEEP htf_trend_filter_enabled ON on sol_5m, xrp_5m, avax_5m, xrp_15m, eth_15m, sol_15m (the state ICT-SCALP-HTF shipped); no flip is implied. Do NOT read it as edge: ON still net-negative on 5/6 legs (pooled -97.9R vs -318.3R OFF), and on avax_5m and sol_15m mean R/trade is worse with the filter on. Evidence: docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json. Next step is programme node P3-M27-htf-pass: disjoint-window confirmation before any Tier-3 note to the operator."
+}

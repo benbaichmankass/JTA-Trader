@@ -1,0 +1,39 @@
+{
+  "id": "IN-TRADE-EXIT-MODEL",
+  "title": "North star for exits: real-time P(SL before TP | trade state now) and an exit-now mechanism that turns would-be losers into winners",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "research lane (Opus)",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 20,
+  "spend_usd": 13.62,
+  "tier": 1,
+  "prs": [
+    18104
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-24 lane ATM-AI-MERGE] Programme 01 + Programme 02 Q3 merged into ONE programme: docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md section 'AI active trade management -- the merged programme' (02 Q3 points to it). This row stays the model line's destination. New pre-registered rungs (blocked/, landing:hold PR): RQ-20261024-09a6-01 (A1: as-traded per-bar information, room-to-stop in the reference), -02 (A2: flow), -03 (B1: remaining-move quantile head, pull-in-only TP), -04 (C1: chooser over validated rule exits). Builds (Tier 1 unless stated): FIRST-PASSAGE-ON-PATHS rank 1 (critical path; spec extended), REMAINING-MOVE-HEAD 2, EXIT-ARM-CHOICE-CORPUS 3, PATH-FLOW-JOIN 4, BRACKET-ADVISOR-SHADOW 5 (Tier-2 PROPOSAL: observe-only per-bar advisor SL/TP beside the live bracket on position_path_history; the parity path before any Tier-3 flip).",
+  "updated_at": "2026-10-24T20:37:46Z",
+  "updated_by": "session_01SKceRaKdcBrCiQ6U2MNhN3",
+  "roadmap": [
+    "L-ATM",
+    "M23"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM next: DESTINATION line added (in-trade exit model, units RQ-20261014-d6e7-01..06, rows EXIT-PATH-EMIT-OFFLINE / EXIT-PATH-TELEMETRY-LIVE) in PR #18104",
+    "arch": "none: research plan, queue units, an offline research script and two build rows; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "the harness-native rung runs: FIRST-PASSAGE-ON-PATHS lands a --paths reader on first_passage.py and blocked/RQ-20261014-d6e7-06 is promoted and lands a measured record on the real-money legs as traded (the previous observation -- d6e7-01 landing -- was met: PASS, oracle 0.656 R/trade; the fixed-bracket model rungs then all FAILED, see the 2026-10-18 note)",
+    "how_to_check": "ls research/results/RQ-20261014-d6e7-06/ ; grep -n \"--paths\" scripts/research/first_passage.py",
+    "due_by": "2026-11-01"
+  },
+  "lane_history": [
+    {
+      "lane": "session_013XGrjTs7cTygzVSixTv9Eh",
+      "archived_at": "2026-10-14T22:14:44Z"
+    }
+  ],
+  "_seq": 497
+}

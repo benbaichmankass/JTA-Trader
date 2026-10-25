@@ -1,0 +1,37 @@
+{
+  "run": "ML-ROADMAP-LOOP cycle 1 (session_01BQ281YMGGWKPqyfDWbrKCb) -- first run of the loop; baseline record, no prior record to diff",
+  "finished_at": "2026-10-11T17:00:00Z",
+  "inputs": {
+    "registry": "GET /api/bot/ml/registry read 2026-10-11 ~09:45Z: 96 models, advisory 3 / shadow 25 / candidate 67 / research_only 1",
+    "status": "GET /api/bot/ml/status 2026-10-11 ~09:45Z (cycles_24h 2, failed 0, builds 119 ok / 1 failed, disk 43.8%)",
+    "shadow": "GET /api/bot/shadow/stats 2026-10-11 ~09:45Z (36 models, 69,706 retained rows)",
+    "last_ml_review": "comms/reviews/ml-review-20261004-125000.json (the 2026-10-11 Sunday review runs as a separate lane and is NOT duplicated here)"
+  },
+  "plan_items": 28,
+  "plan_check": {
+    "command": "python3 scripts/ops/ml_plan_status.py --plumbing",
+    "first_run_flags": ["CLOSED-OPEN ML-S2 (ref M19-S2EXIT is done) -> re-pointed to the live unit RQ-20261008-901", "UNPLANNED REGIME-SCOPE -> folded in as ML-R5"],
+    "after_fixes": "0 plan flags"
+  },
+  "plumbing_findings": [
+    {"finding": "four exit heads silent since 2026-10-04/05 (ict_scalp 15m + 5m, donchian 1h + peak) while every regime head logs within the hour", "established": "NOT whether this is no-open-leg or a broken emit", "disposition": "ROW ML-EXIT-HEAD-LIVENESS (observation: verdict with trade ids)"},
+    {"finding": "dataset build failed once (market_raw, Bybit kline retCode 10016, 05:33Z); 119 ok", "established": "single transient exchange error; which symbol/timeframe failed was not recoverable from the mirror's stderr tail", "disposition": "NOTE; the plumbing check reports BUILDS-FAILED each run, a repeat becomes a row"},
+    {"finding": "training staleness: 6 stale + 2 never_trained of 76 scanned", "established": "the 4 enforced audit-refusals are named and now tracked (plumbing.expected_refusing); the other stale/never names are not in the public mirror", "disposition": "tracked under ML-HYGIENE; next run reads the trainer cycle log for the names"},
+    {"finding": "3 constant-output baselines + 2 silent MES baselines", "established": "all already dispositioned by operator decision 2026-10-08 (retire / soft-off) and not yet applied", "disposition": "tracked by ML-STAGE-DECISIONS / ML-HYGIENE via plumbing.tracked so they stop re-alarming without being forgotten"},
+    {"finding": "research-queue-health H1: 20 runnable units < floor 25, template refill capacity 3 for a deficit of 5", "established": "pre-existing, not caused by this lane; note there is NO ML template family in research/templates/ so ML research never auto-refills", "disposition": "handed to research-ops; ML consequence filed as idea in ideas[2]"}
+  ],
+  "results_read": [
+    {"unit": "RQ-20261008-900", "verdict": "FAIL (k=1 of 3 folds, pooled -1.94 R)", "plan_item": "ML-S2", "effect": "XRP exit-head lever retired; S2 line now has three negatives and one remaining registered lever (pullback transfer)"}
+  ],
+  "ideas": [
+    {"id": "RQ-20261011-17f4-03", "source": "a (surfaced by the shadow-log census: BTC 5m/15m/1h heads log concurrently and nobody has asked whether their agreement carries information)", "rule_registered": true, "lever_row": "ML-HEAD-AGREEMENT-JOIN"},
+    {"id": "RQ-20261011-17f4-01", "source": "a (presence-only parity is what let four heads serve defaults; advisory heads are order-influencing)", "rule_registered": true, "lever_row": "ML-PARITY-HARNESS"},
+    {"id": "RQ-20261011-17f4-02", "source": "b (the plan's 'what would change this plan': the label wall is the binding constraint and nothing counts cells against the gate)", "rule_registered": true, "lever_row": "ML-LABEL-WALL"},
+    {"id": "ML-IDEA-ML-TEMPLATE-FAMILY", "source": "c (research/templates/ has 5 families, none ML: the queue refills itself for exits/prop/macro but never for ML)", "rule_registered": false, "note": "candidate only, NOT filed this cycle -- needs a trainer-routing design (units that run on the trainer cannot use research-script-run.yml); revisit at the next cycle"}
+  ],
+  "writebacks": ["ROADMAP.md (new section 'AI trader (ML) -- build plan')", "docs/plans/ml-plan-items.yaml (new)", "CLAUDE.md (one paragraph)", ".claude/skills/{ml-review,research-ops,perf-followup,manager}/SKILL.md"],
+  "rows_filed": ["ML-PARITY-HARNESS", "ML-PRODUCER-FUNDING", "ML-LEG-CORPUS", "ML-EXIT-HEAD-LIVENESS", "ML-LABEL-WALL", "ML-HEAD-AGREEMENT-JOIN"],
+  "units_filed": ["RQ-20261011-17f4-01", "RQ-20261011-17f4-02", "RQ-20261011-17f4-03 (blocked/, hold PR)"],
+  "next_by_value_per_cost": ["ML-PARITY-HARNESS (~$2, unblocks P1 + RQ-...-01)", "ML-EXIT-HEAD-LIVENESS (~$3, may find a dead emit on 4 heads)", "ML-LABEL-WALL (~$5)", "ML-PRODUCER-FUNDING (after P0, Tier-2)", "ML-LEG-CORPUS (~$8)", "REGIME-PROGRAM first wave (own lane)"],
+  "handoff": ["Next cycle = the Sunday /ml-review of 2026-10-18: run ml_plan_status.py --plumbing first; read names of the stale/never_trained manifests from the trainer cycle log; check whether ML-EXIT-HEAD-LIVENESS has a verdict.", "Manager: no new cadence required. Optional: a mid-week plumbing check is only worth scheduling if the Sunday run finds an untracked advisory-head finding."]
+}

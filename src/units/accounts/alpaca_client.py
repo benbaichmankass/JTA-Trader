@@ -918,6 +918,53 @@ class AlpacaClient:
             out["capacity"] = capacity
         return out
 
+    def clock(self) -> Optional[Dict[str, Any]]:
+        """The venue's market clock: ``{is_open, timestamp, next_open, next_close}``.
+
+        Reads ``GET /v2/clock``. ``None`` on any failure — **we could not
+        look**, which a caller must not read as "market closed" (or as open).
+        The venue's own clock, not ``src/runtime/market_hours.py``, because
+        that module models no US holiday calendar or half-day (its own
+        docstring). Read-only; never places an order.
+        """
+        try:
+            self._require_creds("clock")
+        except MissingCredentialsError as exc:
+            logger.warning("%s", exc)
+            return None
+        env = self._request("GET", "/v2/clock")
+        if env.get("retCode") != 0:
+            logger.warning("alpaca clock: %s", env.get("retMsg"))
+            return None
+        res = env.get("result") or {}
+        if "is_open" not in res:
+            return None
+        return {k: res.get(k) for k in ("is_open", "timestamp", "next_open", "next_close")}
+
+    def asset_short_status(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Can *symbol* be sold short here: ``{tradable, shortable, easy_to_borrow,
+        fractionable}`` from ``GET /v2/assets/{symbol}``.
+
+        ``None`` on any failure (we could not look). Alpaca short sales must be
+        whole-share and need ``shortable`` (and, for a plain short with no
+        locate, ``easy_to_borrow``); this is the read that lets a caller refuse
+        a short leg BEFORE sending it rather than learning from a rejection.
+        Read-only; never places an order.
+        """
+        try:
+            self._require_creds("asset_short_status")
+        except MissingCredentialsError as exc:
+            logger.warning("%s", exc)
+            return None
+        env = self._request("GET", f"/v2/assets/{str(symbol).upper()}")
+        if env.get("retCode") != 0:
+            logger.warning("alpaca asset_short_status(%s): %s", symbol, env.get("retMsg"))
+            return None
+        res = env.get("result") or {}
+        keys = ("tradable", "shortable", "easy_to_borrow", "fractionable")
+        out = {k: res.get(k) for k in keys if k in res}
+        return out or None
+
     def positions(self) -> Optional[list]:
         """Open positions as ``[{symbol, side, qty, avg_price, unrealized_pnl}]``.
 
@@ -2546,6 +2593,53 @@ class AlpacaClient:
             return env
         result = env.get("result") or {}
         return {"retCode": 0, "result": {"orderId": str(result.get("id") or "")}}
+
+    def cancel_row_protection(
+        self, symbol: str, *, qty: Any, direction: Any, sibling_qtys: Any,
+    ) -> Dict[str, Any]:
+        """Cancel ONE finalised journal row's own resting protective legs.
+
+        The Alpaca counterpart of :meth:`IBClient.cancel_trade_protection`, for
+        the monitor's flat-FINALISE paths (stuck-strategy watchdog,
+        ``reconciler_filled``, netted-sibling cascade) that close a row without
+        going through :meth:`close`. Before it an Alpaca row finalised flat left
+        its OCO legs resting, and a resting SELL stop on a flat equity OPENS A
+        SHORT (FIX-CA-01 follow-up, PI-20260927-01CGDPN9-0002).
+
+        Ownership is identified exactly as the re-arm does
+        (:meth:`_scoped_rearm_cancel`): protective type, REDUCING side for
+        *direction*, sized to *qty*, and only when no sibling open row on the
+        symbol shares that size. Opening-side orders (a resting entry) and legs
+        of other sizes are never touched. ``sibling_qtys=None`` (the caller
+        could not read them) and a failed open-orders read cancel NOTHING —
+        could-not-look never acts. Never raises.
+        """
+        try:
+            want = {"long": "sell", "buy": "sell",
+                    "short": "buy", "sell": "buy"}.get(str(direction or "").lower())
+            q = abs(float(qty))
+        except (TypeError, ValueError):
+            return {"retCode": 1, "retMsg": f"unreadable qty {qty!r}"}
+        if not want or q <= 0:
+            return {"retCode": 1,
+                    "retMsg": f"unreadable direction/qty {direction!r}/{qty!r}"}
+        sym = str(symbol or "").upper()
+        if sibling_qtys is None:
+            # _scoped_rearm_cancel would cancel nothing; say so rather than
+            # report "OK" — could not look is not success.
+            return {"retCode": 1,
+                    "retMsg": "cancelled nothing: could not look (sibling sizes unreadable)"}
+        if self._open_orders_for_symbol(sym) is None:
+            return {"retCode": 1,
+                    "retMsg": "cancelled nothing: could not look (open-orders read failed)"}
+        try:
+            refusal, _ = self._scoped_rearm_cancel(sym, want, q, sibling_qtys)
+        except Exception as exc:  # noqa: BLE001
+            return {"retCode": 1, "retMsg": f"{type(exc).__name__}: {exc}"}
+        if refusal:
+            return {"retCode": 1, "retMsg": refusal}
+        return {"retCode": 0, "retMsg": "OK",
+                "result": {"symbol": sym, "close_side": want, "qty": q}}
 
     def _scoped_rearm_cancel(
         self, sym: str, close_side: str, qty: int, sibling_qtys: Any = None,

@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "ict-web-api read-path change (src/web/api): needs the manager to merge + deploy the web API and verify post-state timings under the operator's UI-UPGRADE-1 request",
+  "why": "Read-only API performance: stale-while-revalidate snapshot for /api/bot/positions and /api/bot/work/brief, backwards tail for /api/bot/signals, new GET /api/bot/work/snapshot glance. No order path, no writes, no config, CORS untouched.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "UI-UPGRADE-1"}
+}

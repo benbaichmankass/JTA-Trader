@@ -48,6 +48,17 @@ def safe_place_order(order: Dict[str, Any], settings: Any, client: Any) -> dict[
     """
     Validate order payload before real submission.
     Returns a structured status dict for logging/tests.
+
+    ⚠️ NO CALLER IN ``src/`` (re-verified 2026-10-01, ORDER-AUDIT-2 item 2,
+    AUD-20260927-CA-A02-safe-place-order-guards-have-no-callers). Live entries
+    dispatch through ``Coordinator.multi_account_execute`` → ``execute_pkg``,
+    never through here, so NONE of the guards below (halt flag, daily loss,
+    open-position caps, overtrading throttle) protect a live order. The halt
+    flag's second, independent layer is in ``multi_account_execute`` itself
+    (plus ``pairs_executor.run_pairs_tick`` for the isolated pairs sleeve).
+    The ``MAX_*`` guards are unset in every config/env file, so they were
+    no-ops even before this was found; whether to wire or delete them is
+    filed against ORDER-AUDIT-2, not decided here.
     """
     if not isinstance(order, dict):
         return {
@@ -111,17 +122,6 @@ def safe_place_order(order: Dict[str, Any], settings: Any, client: Any) -> dict[
                 raise ValueError(
                     f"Order aborted: daily loss {float(current_loss_raw):.2f} USD has reached"
                     f" MAX_DAILY_LOSS_USD {max_daily_loss}"
-                )
-
-    max_open_raw = _get_value(settings, "MAX_OPEN_POSITIONS", None)
-    if max_open_raw not in (None, ""):
-        max_open = int(float(max_open_raw))
-        current_open_raw = _get_value(settings, "CURRENT_OPEN_POSITIONS", None)
-        if current_open_raw not in (None, ""):
-            if int(float(current_open_raw)) >= max_open:
-                raise ValueError(
-                    f"Order aborted: open positions {int(float(current_open_raw))}"
-                    f" has reached MAX_OPEN_POSITIONS {max_open}"
                 )
 
     # Per-strategy caps (S-005 M2): only applied when the order carries a strategy name.

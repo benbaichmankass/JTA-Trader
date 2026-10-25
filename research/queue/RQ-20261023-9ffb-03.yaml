@@ -1,0 +1,129 @@
+id: RQ-20261023-9ffb-03
+title: 'Trend-strength floor, long-only, real money, held-out: does an ADX floor (adx_min 20, 25) on slv_pullback_1d beat the ungated long-only leg on the latest
+  ~25% of 2006-2025, selected on the earlier span only?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: Selecting on the earliest ~75% of 2006-10-02..2025-04-09, does LONG or ADX20 / ADX25 hold n >= 39, net > 0 and >= 5 of 8 discovery folds positive, and is
+  the selected arm net-positive once on the held-back latest span (>= 25 trades)?
+why_this_matters: 'RQ-20261016-c56e-17 (FAIL, 2026-10-21) graded slv_pullback_1d BOTH sides at a 50 R sentinel TP: 160 trades, net +5.03 R, 4/8 folds positive (needs
+  5), max DD 13.09 R. Diagnosis from its committed trades file (arms/B__trades.jsonl): (1) alpaca_live/alpaca_portfolio are side_filter=long, so 86 of the 160 trades
+  (shorts, +3.27 R) are NOT what the real-money book takes; the traded long subset is 74 trades, +1.76 R (0.024 R/trade), 5/8 folds positive, with losing folds 3-5
+  (2011-05..2018-04, -2.53/-5.82/-6.82 R); (2) the run predates the 2026-10-22 TP declaration (tp_r 3.5, not the 50 R sentinel), so the live exits are not what was
+  graded; (3) it is a regime story, not noise: shorts lose in silver uptrends (fold 8, -6.26 R) and longs lose in the 2011-2018 downtrend. The long-only subset was
+  read AFTER the fail, so it is a diagnosis, not a result. Live: 1 closed trade (INSUFFICIENT_N), so live evidence cannot decide this leg (~4 long entries/yr in the
+  backtest). An ADX floor targets the same diagnosed failure (low-trend chop in folds 3-5) with a different, regime-aware mechanism; skipping entries cuts n, so the
+  n floor and holdout floor decide whether it is even testable.'
+power:
+  expected_n: 74
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (E35 floor). expected_n ~74 long-only entries over 18.5 yr (MEASURED on c56e-17''s trades file, long subset).
+    ADX gating will cut entries; underpowered is a real possible outcome. Cost stack: Alpaca equity fee 0 + the provisional 5 bps slippage (E62) + no funding. Folds
+    8.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610239ffb03
+  registered_at: '2026-10-23'
+  registered_before_run: true
+  statistic: Three arms, each run once over the whole window, graded by --grade holdout as in -02. The harness's --adx-min flag reaches the run via regime_debt_matrix.build_harness_cmd
+    (cfg key adx_min). Full cost stack as c56e-17.
+  rule: 'Per the ''holdout'' grade in exit_lever_ablation.py: SELECT on the earliest span (eligible iff discovery n >= 39, net > 0, >= 5 of 8 discovery folds positive;
+    highest discovery net R wins, tie to LONG), then read the selected arm ONCE on the latest span. PASS/confirmed IF n_holdout >= 25 and net R > 0; FAIL/not_replicated
+    IF n_holdout >= 25 and net R <= 0; FAIL/no_discovery IF no arm is eligible; indeterminate IF underpowered or every arm has < 39 discovery trades (a power shortfall,
+    never evidence against the leg; if ADX arms are underpowered that is recorded as ''gating infeasible at this n'', not as a negative). Values 20/25 fixed here,
+    no mining. Same contamination statement as -02: LONG''s per-fold results are not unseen; the ADX arms are.'
+  what_it_does_not_do: Does not edit config or any roster. A PASS is a Tier-3 proposal input through the manager, never a flip. Windows are not pooled with the committed
+    record's.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.35
+  bucket: own_losses
+  basis: 'stand-in: alpaca_live is a small real-money book; the leg''s share of it. Estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: One keyless candle fetch of ~7414 days and ONE harness pass over the pinned window.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in metis-market-data
+    and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_pullback_1d
+  - --arm
+  - LONG=side_filter=long
+  - --arm
+  - ADX20=side_filter=long;adx_min=20
+  - --arm
+  - ADX25=side_filter=long;adx_min=25
+  - --days
+  - '7414'
+  - --start
+  - '2006-10-02'
+  - --end
+  - '2025-04-09'
+  - --grade
+  - holdout
+  - --baseline
+  - LONG
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261023-9ffb-03
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261023-9ffb-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261023-9ffb-03/<run_id>.jsonl via the batch collector; verdict.json under comms/research/RQ-20261023-9ffb-03/.
+roadmap:
+- L-LADDER
+related:
+- RQ-20261016-c56e-17
+- SLV-PB1D-RETENTION-T3
+- config/mandates.yaml#MD-DEMOTE-S2-S1
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-24T08:23:56+00:00'
+grading:
+  attested: RULE-RQ202610239ffb03
+  auto: true
+  decision_rule_id: RULE-RQ202610239ffb03
+  evidence:
+  - research/results/RQ-20261023-9ffb-03/40077915182.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

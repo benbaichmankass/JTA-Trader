@@ -1,0 +1,14 @@
+Fetching TQQQ D candles 2009-11-01 -> 2026-10-23 (source=dukascopy) …
+dukascopy lane refused the symbol: ProShares UltraPro QQQ is 3x with a DAILY LEVERAGE RESET, so its path is not 3x the QQQ path — a QQQ series is not a substitute at any horizon (see docs/research/dukascopy-coverage-adjudication-2026-08-24.md)
+Traceback (most recent call last):
+  File "/home/runner/work/Metis-Insights/Metis-Insights/scripts/research/exit_lever_ablation.py", line 994, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/work/Metis-Insights/Metis-Insights/scripts/research/exit_lever_ablation.py", line 773, in main
+    feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Metis-Insights/Metis-Insights/scripts/research/exit_lever_ablation.py", line 270, in fetch_candles
+    subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3', '/home/runner/work/Metis-Insights/Metis-Insights/scripts/ops/fetch_backtest_candles.py', '--symbol', 'TQQQ', '--source', 'dukascopy', '--interval', 'D', '--days', '6200', '--output', '/tmp/exit_lever_ablation_0l1afdi1/tqqq_trend_long_1d__data.csv']' returned non-zero exit status 1.

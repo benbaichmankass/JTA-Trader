@@ -1,0 +1,355 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "xrp_pullback_2h: 110 trades in the baseline arm 'B' on XRPUSDT 2h candles 2022-10-05 .. 2024-10-04 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B', 'SA']",
+  "n": 110,
+  "measurement": {
+    "leg": "xrp_pullback_2h",
+    "label": "no_reachable_lever_beats_removed",
+    "grade": {
+      "verdict": "fail",
+      "label": "no_reachable_lever_beats_removed",
+      "baseline": "B",
+      "candidates": {
+        "SA": {
+          "delta_net_r": -2.6407,
+          "delta_max_drawdown_r": 3.2489,
+          "fold_wins": 1,
+          "passes": false
+        }
+      },
+      "delta_r_bar": 1.0,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+    },
+    "arms": {
+      "B": {
+        "reach_ge_6r": 0.0,
+        "n": 110,
+        "net_r": 1.9887,
+        "net_r_fee_only": 6.2131,
+        "max_drawdown_r": 9.212,
+        "by_outcome": {
+          "stop": 61,
+          "take_profit": 33,
+          "trail_stop": 13,
+          "timeout": 3
+        },
+        "mean_bars_held": 52.291,
+        "net_r_per_capital_day": 0.0041,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 6.0,
+          "min_confidence": 0.0,
+          "adx_min": 25.0,
+          "adx_period": 14
+        },
+        "data_start": "2022-10-05 00:00:00+00:00",
+        "data_end": "2024-10-04 22:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-10-05 00:00:00+00:00",
+            "end": "2023-04-05 17:59:45+00:00",
+            "trades": 30,
+            "net_r": -4.3384
+          },
+          {
+            "fold": 2,
+            "start": "2023-04-05 17:59:45+00:00",
+            "end": "2023-10-05 11:59:30+00:00",
+            "trades": 27,
+            "net_r": 3.6486
+          },
+          {
+            "fold": 3,
+            "start": "2023-10-05 11:59:30+00:00",
+            "end": "2024-04-05 05:59:15+00:00",
+            "trades": 27,
+            "net_r": -5.2359
+          },
+          {
+            "fold": 4,
+            "start": "2024-04-05 05:59:15+00:00",
+            "end": "2024-10-04 23:59:00+00:00",
+            "trades": 26,
+            "net_r": 7.9143
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "XRPUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "6.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/B__bt.json",
+          "--adx-min",
+          "25",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.0",
+          "--start",
+          "2022-10-05",
+          "--end",
+          "2024-10-04 23:59"
+        ]
+      },
+      "SA": {
+        "reach_ge_6r": 0.0,
+        "n": 103,
+        "net_r": -0.652,
+        "net_r_fee_only": 3.1498,
+        "max_drawdown_r": 12.4609,
+        "by_outcome": {
+          "stop": 57,
+          "take_profit": 29,
+          "trail_stop": 14,
+          "timeout": 3
+        },
+        "mean_bars_held": 49.408,
+        "net_r_per_capital_day": -0.0015,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 6.0,
+          "min_confidence": 0.0,
+          "skip_hours": "0,1,2,3,4,5,6,7",
+          "adx_min": 25.0,
+          "adx_period": 14
+        },
+        "data_start": "2022-10-05 00:00:00+00:00",
+        "data_end": "2024-10-04 22:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2022-10-05 00:00:00+00:00",
+            "end": "2023-04-05 17:59:45+00:00",
+            "trades": 26,
+            "net_r": -5.6838
+          },
+          {
+            "fold": 2,
+            "start": "2023-04-05 17:59:45+00:00",
+            "end": "2023-10-05 11:59:30+00:00",
+            "trades": 25,
+            "net_r": 6.4201
+          },
+          {
+            "fold": 3,
+            "start": "2023-10-05 11:59:30+00:00",
+            "end": "2024-04-05 05:59:15+00:00",
+            "trades": 28,
+            "net_r": -7.788
+          },
+          {
+            "fold": 4,
+            "start": "2024-04-05 05:59:15+00:00",
+            "end": "2024-10-04 23:59:00+00:00",
+            "trades": 24,
+            "net_r": 6.3997
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "XRPUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "6.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/SA__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/SA__bt.json",
+          "--adx-min",
+          "25",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.0",
+          "--skip-hours",
+          "0,1,2,3,4,5,6,7",
+          "--start",
+          "2022-10-05",
+          "--end",
+          "2024-10-04 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2022-10-05",
+      "end": "2024-10-04 23:59",
+      "fetch_days": 1480,
+      "feed": {
+        "source": "binance",
+        "ticker": "XRPUSDT",
+        "interval": "120",
+        "resample": "2h"
+      },
+      "fold_edges": [
+        "2022-10-05 00:00:00+00:00",
+        "2023-04-05 17:59:45+00:00",
+        "2023-10-05 11:59:30+00:00",
+        "2024-04-05 05:59:15+00:00",
+        "2024-10-04 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "B": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "XRPUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "6.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/B__bt.json",
+          "--adx-min",
+          "25",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.0",
+          "--start",
+          "2022-10-05",
+          "--end",
+          "2024-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      },
+      "SA": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "XRPUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "6.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/SA__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-65ff-01/38895970580/arms/SA__bt.json",
+          "--adx-min",
+          "25",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.0",
+          "--skip-hours",
+          "0,1,2,3,4,5,6,7",
+          "--start",
+          "2022-10-05",
+          "--end",
+          "2024-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--skip-hours",
+          "0,1,2,3,4,5,6,7"
+        ],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "FAIL / no_reachable_lever_beats_removed: no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+}

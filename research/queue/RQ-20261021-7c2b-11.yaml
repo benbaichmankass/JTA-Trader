@@ -1,0 +1,141 @@
+id: RQ-20261021-7c2b-11
+title: >-
+  NEW FAMILY (pace), unblocked: volatility-breakout (squeeze harness) with a TIME STOP of 6 / 12 / 24 bars vs the 48-bar default on
+  DOGE, ADA and LINK 1h -- supersedes blocked RQ-20261007-241
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: >-
+  On Binance USD-M 1h candles for DOGEUSDT/ADAUSDT/LINKUSDT over 2023-10-20..2026-10-20 (1095 d), do T6 / T12 / T24 (timeout_bars 6/12/24)
+  pass the pooled Stage-0 rule AND keep net R per trade within 0.0 R of the 48-bar default T48 (--delta-r-per-trade 0.0, i.e. not worse),
+  while cutting mean bars held?
+why_this_matters: >-
+  RQ-20261007-241 pre-registered this on 2026-10-07 and has been blocked on an instrument: research-harness-dispatch.yml could not pass
+  --timeout-bars and backtest_squeeze.py writes no verdict.json. harness_stage0.py (2026-10-18) is that instrument: cfg timeout_bars
+  is a mapped key, it writes verdict.json, and it grades with calendar folds and breadth. Pace for a prop account is net R per calendar
+  day; net_r_per_capital_day is reported per arm. Same symbols and arms as 241; the window is re-pinned to today and its rule re-stated
+  in harness_stage0 terms (241 never ran; nothing was seen).
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    MEASURED in batch 1: DOGE 549, ADA 514, LINK 526 entries at 1095 d (RQ-20261006-018/-010/-022); a timeout cannot lower n.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ1021-7C2B11-SQUEEZE-TIME-STOP-1H
+  registered_at: '2026-10-21'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family squeeze --timeframe 1h, arms T48 (baseline, harness default), T6, T12, T24; per cell and pooled; net_r_per_capital_day
+    and mean_bars_held reported per arm.
+  rule: >-
+    PASS iff a T arm passes (breadth 2 of 3) and is not worse than T48 per trade -> the shortest passing timeout is a pace lead for
+    the prop books: node P5-Q6 (prop EV/survival on the operator's B6 bar), never a roster act. FAIL -> a time stop does not keep the
+    squeeze edge on these cells; 241's question is answered. INDETERMINATE otherwise. Verdicts are the script's own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail
+    iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled
+    folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline's pooled net R/trade
+    by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness
+    fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds
+    are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does not pool
+    windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: a faster-resolving leg for the prop books; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: >-
+    Estimate from the ef5d-0x harness_stage0 runs (2026-10-18/20) scaled by cells x arms x bars; the first run replaces it.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; CPU-only; not trainer-resident.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - squeeze
+  - --symbols
+  - DOGEUSDT,ADAUSDT,LINKUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '1095'
+  - --start
+  - '2023-10-20'
+  - --end
+  - '2026-10-20'
+  - --arm
+  - T48=timeout_bars=48
+  - --arm
+  - T6=timeout_bars=6
+  - --arm
+  - T12=timeout_bars=12
+  - --arm
+  - T24=timeout_bars=24
+  - --baseline
+  - T48
+  - --delta-r-per-trade
+  - '0.0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.67'
+  - --rule-id
+  - RULE-RQ1021-7C2B11-SQUEEZE-TIME-STOP-1H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261021-7c2b-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-PROP
+programme: P5
+related:
+- research/queue/blocked/RQ-20261007-241.yaml
+- RQ-20261006-018
+- RQ-20261006-010
+- RQ-20261006-022
+- scripts/backtest_squeeze.py
+last_dispatched_at: '2026-10-21T19:25:06+00:00'
+grading:
+  attested: RULE-RQ1021-7C2B11-SQUEEZE-TIME-STOP-1H
+  auto: true
+  decision_rule_id: RULE-RQ1021-7C2B11-SQUEEZE-TIME-STOP-1H
+  evidence:
+  - research/results/RQ-20261021-7c2b-11/39661519219.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

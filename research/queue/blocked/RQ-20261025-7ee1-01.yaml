@@ -1,0 +1,113 @@
+id: RQ-20261025-7ee1-01
+title: 'Frontier: Timestral-209M (Mistral, Modified-MIT) as a frozen forecaster arm on the BTC/ETH/SOL 15m volatility-regime head -- a NEW unit that amends nothing in RQ-20261011-9da8-01'
+status: blocked
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: Under purged 8-fold walk-forward CV on the SAME rows and the SAME controls as RQ-20261011-9da8-01, does Timestral-209M used as a frozen quantile forecaster (the same six scale-free fc_* columns build_forecasts.py emits, context 64, stride 4, horizon 1) lift the BTC/ETH/SOL 15m volatility-regime head's macro_f1 over the incumbent fc features (Chronos-Bolt-Tiny) AND over the HAR-RV control?
+why_this_matters: 'RQ-20261011-9da8-01 graded FAIL twice (2026-10-22 and 2026-10-24) but for Chronos-2 zero-shot ONLY; TimesFM-2.5, TiRex-2, Kronos and TTM never ran (no loader). Timestral-209M tops GIFT-Eval / TIME / fev-bench on its own card (MASE 0.658 vs Chronos-2 0.698) and was named in the 2026-10-21 weekly walk-through as an arm to add. Authored as a NEW unit because 9da8-01 has already run: its decision_rule and power block are not edited. Licence read 2026-10-25 from the primary source (hf://models/mistralai/Timestral-209M/LICENSE): Modified MIT -- permits use, copy, modify, publish, sell WITHOUT restriction EXCEPT that rights lapse if the user''s (or employer''s) global consolidated monthly revenue exceeds USD 20M. Research evaluation is therefore clear; live serving is clear only if that revenue test is met (a fact about the operator that this unit cannot establish) -- the question is on checklist row ML-READ-1025 for the manager. The Hub tag is license:other because the licence is bespoke.'
+power:
+  expected_n: 78000
+  min_detectable_effect: 0.025
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = out-of-sample test row, same population as 9da8-01 (3 symbols x ~26000 cv test rows). Fold-level sd of the paired macro_f1 delta was MEASURED in 9da8-01 run 40074055932: BTC cv chronos2-vs-incumbent 95% CI half-width 0.0090 over 5 folds => SD ~0.0073; with 8 folds SE ~0.0026 and the 80%-power detectable delta ~0.0072, below the +0.010 bar, so the bar is resolvable at 8 folds on BTC (unlike the 5-fold 9da8-01, whose FAIL floor of +0.005 needed ~17 folds). Rows are autocorrelated; the rule therefore keeps a same-sign-on-all-symbols guard rather than relying on a row-level test.'
+  feasibility:
+    source: none
+    accrual_basis: 'Nothing accrues: fixed history. The Timestral side-streams are built once on the trainer (datasets-out/forecasts/<SYM>/15m/ts209-v001) once the loader exists.'
+decision_rule:
+  id: RULE-RQ20261025-7EE1-01-TIMESTRAL
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (timestral minus reference) on identical rows, 8 folds, references = incumbent fc, har_rv_control, var_control, and chronos2 (the 9da8-01 candidate, as a same-run comparator); plus the post-2025-09-01 holdout delta. Feature-lift gate only, not a P&L figure.'
+  rule: 'PASS IF delta macro_f1 >= +0.010 vs the incumbent AND >= +0.010 vs har_rv_control AND > 0 vs var_control on BTC (cv), the delta vs the incumbent is > 0 on ETH and SOL (cv), AND the BTC holdout delta vs the incumbent is > 0. FAIL IF delta macro_f1 vs the incumbent is <= +0.005 on every symbol AND the BTC 95% fold CI upper bound is < +0.010 (a measured, not assumed, floor); a FAIL closes only Timestral-209M, zero-shot, on this head, and the family is not closed. INDETERMINATE otherwise, if folds < 6, or the arm is unavailable. If Timestral does not beat chronos2 on BTC while passing the clauses above, REPORT that as the headline.'
+  what_it_does_not_do: 'Does not train, promote or serve anything; touches no config; no live-box dependency (torch stays trainer-side, forecasts are mirror-published like fc). A PASS earns a candidate manifest and the downstream net-of-cost regime-cell walk-forward, nothing more. Live serving of Timestral weights additionally needs the licence revenue question on ML-READ-1025 answered by the operator.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT: {path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl}
+      ETHUSDT: {path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl}
+      SOLUSDT: {path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl}
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    extra_columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel]
+    holdout_after: '2025-09-01'
+  common_rows: true
+  cv: {folds: 8, embargo_rows: 96, min_train_frac: 0.4}
+  baseline: incumbent
+  controls: [har_rv_control, var_control, chronos2]
+  candidates: [timestral]
+  learners:
+    incumbent:
+      kind: lightgbm
+      params: &lgbm {n_estimators: 200, learning_rate: 0.05, num_leaves: 31, min_child_samples: 50}
+      feature_blocks:
+        - {kind: df_columns, columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel], require_finite: true}
+    har_rv_control:
+      kind: lightgbm
+      params: *lgbm
+      feature_blocks:
+        - {kind: har_rv, d: 1, w: 5, m: 22, bars_per_unit: 96}
+    var_control:
+      kind: lightgbm
+      params: *lgbm
+      feature_blocks:
+        - kind: var_price_vector
+          own: '{group}'
+          lags: 4
+          window: 2000
+          refit_every: 96
+          peers:
+            BTCUSDT: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+            ETHUSDT: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+            SOLUSDT: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    chronos2:
+      kind: lightgbm
+      params: *lgbm
+      feature_blocks:
+        - {kind: join_columns, path: 'datasets-out/forecasts/{group}/15m/c2-v002/data.jsonl', columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel], require_finite: true}
+    timestral:
+      kind: lightgbm
+      params: *lgbm
+      feature_blocks:
+        - {kind: join_columns, path: 'datasets-out/forecasts/{group}/15m/ts209-v001/data.jsonl', columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel], require_finite: true}
+  rule:
+    min_folds: 6
+    pass_if:
+      - {group: [BTCUSDT], vs: baseline, window: cv, op: '>=', value: 0.01}
+      - {group: [BTCUSDT], vs: har_rv_control, window: cv, op: '>=', value: 0.01}
+      - {group: [BTCUSDT], vs: var_control, window: cv, op: '>', value: 0.0}
+      - {group: [ETHUSDT, SOLUSDT], vs: baseline, window: cv, op: '>', value: 0.0}
+      - {group: [BTCUSDT], vs: baseline, window: holdout, op: '>', value: 0.0}
+    fail_if_no_candidate_reaches:
+      - {group: any, vs: baseline, window: cv, op: '>', value: 0.005}
+blocked_on:
+- kind: work_item
+  ref: FRONTIER-LEVER-TSFM-TIMESTRAL
+  what: 'ml/datasets/forecast_features.py::FORECAST_BACKENDS has chronos-bolt-tiny/-small and chronos-2 only; resolve_backend raises for anything else. Needs (1) a timestral forecast_fn + backend entry "timestral-209m" with a test pinning the six fc_* names/shape (same bar as the chronos-2 backend), (2) the timestral package (pip install git+https://github.com/mistralai/timestral.git, Python >= 3.10, torch >= 2.4) in the trainer venv -- Tier-2 pip, pinned, via the trainer bootstrap path, (3) the ts209-v001 side-streams built for BTC/ETH/SOL 15m (209M params on a 1-CPU trainer: measure per-10000-forecast time on a 2,000-bar smoke first; Chronos-2 took ~7 min per 10000).'
+  clears_when: 'A smoke build emits a non-zero ts209-v001 side-stream with finite fc_* columns for all three symbols; then move this file to research/queue/ and fill run: from RQ-20261011-9da8-01.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 240
+  basis: 'Estimate from the 9da8-01 Chronos-2 run; the first run replaces it.'
+run:
+  workflow: null
+  note: 'Deliberately null: no timestral loader yet (see blocked_on). Copy the run: block of RQ-20261011-9da8-01 when the lever closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261011-9da8-01
+- FRONTIER-LEVER-TSFM
+- ML-READ-1025
+- docs/reviews/2026-10-21-weekly-walkthrough.md

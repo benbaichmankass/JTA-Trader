@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane PAIRS-R-SCALE-FIX-1016 (Manager Session 2026-10-16): pairs order-path + sizing change, Tier 3 by path (src/units/strategies/**), HELD for the manager/operator to merge. Freezes beta at entry for hedge_beta: rolling pairs: the stop, reversion z, target and the R unit the legs are sized on are read on the fixed-beta spread. Bybit paper-leg notionals grow by the measured inflation factor. No config change, no orders.",
+  "why": "PAIRS-R-SCALE: with hedge_beta rolling, risk = stop_z x std of the rolling-beta spread was inflated by beta drift (~87x on the planted fixture, ~775x measured on SOL/ETH 1h), so every Bybit pair leg was undersized and its exits were read on a drifting series."
+}

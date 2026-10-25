@@ -882,3 +882,140 @@ def test_journal_snapshot_still_serves_bare_lists(client, fake_runtime):
     body = client.get("/api/diag/snapshot?limit=5", headers=_bearer(_TOKEN)).json()
     assert isinstance(body["trades"], list)
     assert [r["id"] for r in body["trades"]] == [3, 2, 1]
+
+
+# ── /log_aggregate (PI-20261004-4GA8WQPA-0003) ──────────────────────────────
+def _soak_rows(path: Path, rows: list[dict]) -> None:
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\nnot json\n", encoding="utf-8")
+
+
+def test_log_aggregate_counts_across_utc_days_not_just_the_tail(client, fake_runtime, monkeypatch):
+    soak = fake_runtime["runtime_logs"] / "bybit_coverage_soak.jsonl"
+    rows = (
+        [{"logged_at_utc": f"2026-10-0{d}T0{h}:00:00+00:00", "account_id": "bybit_1",
+          "mode": "annotate", "verdicts_differ": False} for d in (1, 2, 3) for h in range(3)]
+        + [{"logged_at_utc": "2026-10-03T09:00:00+00:00", "account_id": "bybit_2",
+            "mode": "apply", "verdicts_differ": True}]
+        + [{"no_timestamp": 1}]
+    )
+    _soak_rows(soak, rows)
+    monkeypatch.setitem(diag_router._LOG_FILES, "bybit_coverage_soak", soak)
+    r = client.get("/api/diag/log_aggregate?name=bybit_coverage_soak&fields=mode&count_true=verdicts_differ",
+                   headers=_bearer(_TOKEN))
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["read_state"] == "complete"
+    assert b["distinct_utc_days"] == 3 and (b["first_day"], b["last_day"]) == ("2026-10-01", "2026-10-03")
+    assert b["days"]["2026-10-03"]["rows"] == 4
+    assert b["days"]["2026-10-03"]["by_account"] == {"bybit_1": 3, "bybit_2": 1}
+    assert b["days"]["2026-10-03"]["values"]["mode"] == {"annotate": 3, "apply": 1}
+    assert b["days"]["2026-10-03"]["true_counts"] == {"verdicts_differ": 1}
+    assert "true_counts" in b["days"]["2026-10-01"] and b["days"]["2026-10-01"]["true_counts"] == {}
+    assert b["unparseable_lines"] == 1 and b["rows_without_day"] == 1, "nothing is silently dropped"
+
+
+def test_log_aggregate_time_budget_is_reported_not_hidden(tmp_path):
+    p = tmp_path / "x.jsonl"
+    p.write_text("\n".join(json.dumps({"logged_at_utc": "2026-10-01T00:00:00+00:00"}) for _ in range(5000)))
+    out = diag_router.aggregate_jsonl(p, [], [], time_budget_s=-1.0)
+    assert out["read_state"] == "time_budget_hit" and out["scanned_lines"] < 5000
+
+
+def test_log_aggregate_rejects_unknown_name_bad_field_and_no_token(client, fake_runtime):
+    h = _bearer(_TOKEN)
+    assert client.get("/api/diag/log_aggregate?name=/etc/passwd", headers=h).status_code == 400
+    assert client.get("/api/diag/log_aggregate?name=audit&fields=a;b", headers=h).status_code == 400
+    assert client.get("/api/diag/log_aggregate?name=audit").status_code in (401, 403)
+
+
+# ---- TRADER-RESTART-GATE: restart_pending PER UNIT --------------------------
+
+def _trader_repo(tmp_path, monkeypatch, *, changed_path):
+    """A real two-commit repo with a fake trader (src.main -> src.core), a
+    committed trader closure, and runtime_status.json naming the trader's
+    running sha = the first commit."""
+    import json as _json
+    import subprocess
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    files = {"src/__init__.py": "", "src/main.py": "from src import core\n",
+             "src/core.py": "X = 1\n", "src/web/__init__.py": "", "src/web/r.py": "Y = 1\n",
+             "config/trader_import_closure.txt":
+                 "src/__init__.py\nsrc/core.py\nsrc/main.py\n"}
+    for rel, text in files.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    git("add", ".")
+    git("commit", "-qm", "base")
+    base = git("rev-parse", "--short", "HEAD")
+    (tmp_path / changed_path).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / changed_path).write_text("# changed\n")
+    git("add", ".")
+    git("commit", "-qm", "next")
+    head = git("rev-parse", "--short", "HEAD")
+    # The VM layout: runtime_status.json lives in runtime_logs_dir() (the DATA
+    # dir), the deploy markers in <repo>/runtime_logs (where the deploy script
+    # writes them). Two different directories -- a test that made them one
+    # directory hid the bug observed on the VM (diag issue #18314).
+    data_logs = tmp_path / "data" / "runtime_logs"
+    data_logs.mkdir(parents=True, exist_ok=True)
+    (data_logs / "runtime_status.json").write_text(_json.dumps({"git_sha": head, "git_sha_running": base}))
+    repo_logs = tmp_path / "runtime_logs"
+    repo_logs.mkdir(exist_ok=True)
+    (repo_logs / "deployed_sha.txt").write_text(head + "\n")
+    (repo_logs / "deployed_sha_trader.txt").write_text(base + "\n")
+    monkeypatch.setattr(diag_router, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(diag_router, "runtime_logs_dir", lambda: data_logs)
+    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", base)
+    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: head)
+    diag_router._trader_closure_for.cache_clear()
+    return base, head
+
+
+def test_web_api_only_change_is_pending_for_the_web_api_not_the_trader(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    base, head = _trader_repo(tmp_path, monkeypatch, changed_path="src/web/r.py")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["trader_git_sha"] == base
+    assert body["restart_pending"] is True
+    assert body["restart_pending_by_unit"] == {
+        "ict-web-api.service": True, "ict-trader-live.service": False}
+    assert body["deployed_sha_by_unit"] == {
+        "ict-web-api.service": head, "ict-trader-live.service": base}
+
+
+def test_trader_loaded_change_is_pending_for_the_trader(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    _trader_repo(tmp_path, monkeypatch, changed_path="src/core.py")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["restart_pending_by_unit"]["ict-trader-live.service"] is True
+
+
+def test_trader_pending_without_a_closure_is_any_runtime_change(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    """The deploy restarts the trader on any runtime path when the closure is
+    unreadable, so diag must say pending, not skip."""
+    _trader_repo(tmp_path, monkeypatch, changed_path="src/web/r.py")
+    (tmp_path / "config" / "trader_import_closure.txt").unlink()
+    diag_router._trader_closure_for.cache_clear()
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["restart_pending_by_unit"]["ict-trader-live.service"] is True
+
+
+def test_trader_pending_is_none_when_the_trader_sha_is_unreadable(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    _trader_repo(tmp_path, monkeypatch, changed_path="src/core.py")
+    (tmp_path / "data" / "runtime_logs" / "runtime_status.json").unlink()
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["trader_git_sha"] == "unknown"
+    assert body["restart_pending_by_unit"]["ict-trader-live.service"] is None

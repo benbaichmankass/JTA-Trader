@@ -1,0 +1,38 @@
+{
+  "id": "RESEARCH-PIPELINE-SLO",
+  "title": "Research pipeline SLOs: one config, a 2-hourly monitor + status files, one Telegram/ops-flags red flag per state change, brief \u00a70 table, Saturday/Monday audits, same-day manager escalation",
+  "phase": "W6",
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-PIPELINE-SLO-1016",
+  "lane": "session_018ABsHGSDkK7dx99UJfUj7t",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18579
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane RESEARCH-PIPELINE-SLO-1016] Built on research_watchdog (15-min liveness) and RESEARCH-ENGINE-1016 (#18542). Baseline 2026-10-16T09:44Z (comms/research/health/2026-10-16.json, --no-gh): 9 ok / 5 breach / 2 could_not_look. Breaches: grade_latency_p90_d 7 (<=2, n=385), undispositioned_24h 38 (<=5: 19 ungraded + 19 needs_review unowned), programme_coverage_pct 45.8 (>=75: 22/48), theme_share_min_ratio 0.05 (>=0.5: infra 1 fire of 199 vs 9.5% weight; regime 0.42), research_ops_not_run 5 (<=2). could_not_look locally (no gh token): grader_age_h, hold_pr_wait_h -- hold_pr_wait measured separately via the GitHub API at ~177 h (#17182, open since 2026-10-09; 5 unit PRs open).  [2026-10-16 lane SLO-SCHEDULE-KEEPER-1016] The 12:53Z manual run delivered (telegram=true, ops-flags comment). The cron '41 */2 * * *' (merged 11:17Z, #18579) has NEVER fired on schedule: the 12:41Z and 14:41Z slots created no run; only manual dispatches exist (12:53Z, ~15:10Z). Remedy: research-slo.yml added to scripts/ops/schedule_keeper.py (stale_hours 3, self_dedupes). Stays landed_unproven. [2026-10-18 lane DISPATCH-MONEY-FIRST-1018] theme_share_min_ratio: the dispatcher now ranks due units ACROSS themes by value (operator 'money first'); THEMES weight only breaks ties, programme nodes count as asked units. Expect this SLO to recover more slowly / read red longer: a theme holding only low-value units fires on spare capacity or at starve_hours (240 h > the 7 d window). Threshold deliberately unchanged (research_slo.yaml comment says why); the lever is authoring valuable units in the short theme (H1-THEME), not the threshold. Row DISPATCH-MONEY-FIRST-1018.",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "observation": {
+    "what": "research-slo.yml runs on schedule in production, writes comms/research/health/<date>.json on main, a real (or planted via workflow_dispatch) breach delivers ONE Telegram system-channel message + ONE research-slo comment on the ops-flags PR (delivered.telegram true in runs[]), and GET /api/bot/work/brief shows the SLO table in \u00a70 with researchSlo.readState=read; CLOSES ONLY when brief \u00a70 shows the SLO table AND a SCHEDULED (event=schedule, not workflow_dispatch) run lands -- manual runs do not count (cron never fired as of 2026-10-16 15Z; schedule-keeper now covers it)",
+    "how_to_check": "git log -- comms/research/health on main; jq .runs[] of the newest status file; curl /api/bot/work/brief | jq .researchSlo",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: observability of the research loop; no milestone measure changes",
+    "arch": "none: no contract change; research pipeline gains SLO monitoring beside research-watchdog"
+  },
+  "_seq": 531
+}

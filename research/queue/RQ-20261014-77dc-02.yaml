@@ -1,0 +1,104 @@
+id: RQ-20261014-77dc-02
+title: 'Macro / information: PLACEBO for the PPI m/m ES=F effect (de02-04): move each release anchor 10 trading days later and re-run'
+status: done
+cadence: once
+theme: macro
+priority: 2
+kind: experiment
+question: With every PPI release anchor shifted +10 trading days (no information event at the anchor), does the 3-day negative IC still reach |t_eff| >= 2.4?
+why_this_matters: 'The cheapest check that de02-04 is tied to the release date and not to a drift/vol pattern in the surprise series. Placebo semantics: PASS = the placebo ALSO reproduces
+  the effect (evidence AGAINST de02-04); FAIL = placebo clean (consistent with a release-specific effect, still not proof). PARENT: this placebo grades against RQ-20261014-de02-04 (the
+  +10 trading-day post-release placebo of that exact study, 3d horizon, same 139 releases). It complements, and does not duplicate, the P4 family placebo RQ-20261014-4a4c-03 (the -10
+  trading-day pre-release placebo).'
+power:
+  expected_n: 139
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: Same 139 releases as de02-04, anchors moved; n unchanged (checked by the run).
+  feasibility:
+    source: none
+    accrual_basis: fixed historical backfill; a short join lands INDETERMINATE, never padded.
+decision_rule:
+  id: RULE-RQ_20261014_77DC_02
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: Overlap-corrected Spearman t (ic_t_eff) of PPI m/m surprise vs forward ES=F return, 3-trading-day horizon only (the horizon at which RQ-20261014-de02-04 peaked, t=-3.43,
+    n=139), graded by macro_event_study_run.py grade().
+  rule: 'PASS (placebo reproduces) IF n >= 100 AND the 3-day IC is negative with |ic_t_eff| >= 2.4 at the shifted anchor: de02-04 is treated as not release-specific. FAIL (placebo clean)
+    IF n >= 100 and that t is not reached. INDETERMINATE IF n < 100.'
+  min_n: '100'
+  what_it_does_not_do: Not a promotion case, not a leg, not a config change, not a P&L figure; daily closes only. News layer and WEPE are not retired or confirmed by this result. A clean
+    placebo is necessary, not sufficient.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: replication gate on the one pass of the macro survey-surprise family (de02-04); information value, not a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 'Estimate (same shape as RQ-20261014-65cc-05, which this copies): one daily-close fetch, a few hundred snapshot rows, a rank correlation per horizon.'
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - '3'
+  - --primary-horizons
+  - '3'
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - negative
+  - --anchor-shift-td
+  - '10'
+  - --population
+  - ppi_mom releases, anchor shifted +10 trading days (placebo), ES=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-77dc-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+related:
+- ROADMAP_MACRO.md M1/M2
+- scripts/macro/econ_event_study.py
+- comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+- .claude/skills/macro-research/SKILL.md
+- RQ-20261014-65cc-05
+- RQ-20261014-de02-04
+- RQ-20261014-4a4c-01
+- RQ-20261014-4a4c-03
+last_dispatched_at: '2026-10-16T04:03:21+00:00'
+grading:
+  attested: RULE-RQ_20261014_77DC_02
+  auto: true
+  decision_rule_id: RULE-RQ_20261014_77DC_02
+  evidence:
+  - research/results/RQ-20261014-77dc-02/38848643900.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

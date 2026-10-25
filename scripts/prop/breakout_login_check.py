@@ -56,8 +56,13 @@ raise ``NotImplementedError`` and this script never calls them.
 Exit codes:
   0  login ok and every read parsed
   3  login ok, but part of the read path did not parse (selector work needed)
-  4  feasibility stop: challenge / CAPTCHA / 2FA / login rejected / timeout /
-     no credentials. Printed as ``feasibility: <reason>``.
+  4  feasibility stop: challenge / CAPTCHA / 2FA / login rejected /
+     password expired / no credentials / ASN block / access denied. Printed as
+     ``feasibility: <reason>``. The scheduled feed backs these off to its cap.
+  7  transient terminal outage: the login page timed out or rendered something
+     unrecognised (``feasibility: timeout`` / ``unknown_page``). Still printed
+     as ``feasibility: <reason>``; the feed retries it on the ordinary
+     3-failure path (PROP-FEED-RETRY) instead of the 2 h cap.
   5  environment: Playwright or Chromium is not usable on this host
   1  anything else
 """
@@ -75,9 +80,19 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from src.prop.platform import FeasibilityError, adapter_for_platform, load_platform_config  # noqa: E402
+from src.prop.platform import API_PLATFORMS, FeasibilityError, adapter_for_platform, load_platform_config  # noqa: E402
 
 EXIT_OK, EXIT_ERROR, EXIT_UNPARSED, EXIT_FEASIBILITY, EXIT_ENV = 0, 1, 3, 4, 5
+EXIT_TRANSIENT = 7  # prop_executor_tick.py owns 6 (no session); keep the codes distinct
+# Environment-class findings: the terminal was slow or briefly not itself,
+# which says nothing about the account or the login. Every other reason
+# (captcha, 2fa, challenge, login_rejected, password_expired, no_credentials,
+# asn_blocked, access_denied, ...) stays a hard feasibility stop (rc 4).
+TRANSIENT_REASONS = frozenset({"timeout", "unknown_page"})
+
+
+def feasibility_rc(fe: FeasibilityError) -> int:
+    return EXIT_TRANSIENT if fe.reason in TRANSIENT_REASONS else EXIT_FEASIBILITY
 
 # BTCUSD/ETHUSD/SOLUSD are the operator-confirmed DXtrade symbols in
 # config/prop_rulesets/breakout_routing.yaml (2026-06-23). ADAUSD/XRPUSD are
@@ -216,11 +231,90 @@ def _redact(text: str, *secrets: str, limit: int = 0) -> str:
     return out if not limit or len(out) <= limit else out[:limit] + "…"
 
 
+def layout_watchlist_line(adapter: Any, page: Any, *, polls: int = 3, wait_ms: int = 1_000) -> str:
+    """``layout_watchlist: ok n=<k> symbols=<...>`` or ``layout_watchlist: MISSING (<why>)``.
+    Polls a slow-rendering watchlist a few times; a read that cannot look is
+    MISSING with its reason (the feed decides what to do with it)."""
+    wl: Dict[str, Any] = {}
+    for i in range(polls):
+        wl = adapter.watchlist_symbols(page) or {}
+        if wl.get("readable"):
+            syms = list(wl.get("symbols") or [])
+            return f"layout_watchlist: ok n={len(syms)} symbols={','.join(syms)}"
+        if i + 1 < polls:
+            page.wait_for_timeout(wait_ms)
+    return f"layout_watchlist: MISSING ({wl.get('why') or 'not readable'})"
+
+
+
+def api_status_check(args, cfg, username: str, password: str) -> int:
+    """The status read for a REST platform (``dxtrade_api``; VELOTRADE-GOLIVE).
+
+    No browser: REST login, the three reads, the same ``account_status``
+    report (``--emit-status``) the browser feed posts, logout. Every
+    browser-only option (dump, structure, instruments capture, layout canary)
+    is skipped and said so."""
+    adapter = adapter_for_platform(cfg["platform"])
+    try:
+        adapter.login(None, cfg["login_url"], username, password)
+    except FeasibilityError as fe:
+        print(_redact(f"feasibility: {fe.reason} ({fe.detail})", username, password))
+        return feasibility_rc(fe)
+    secrets = (username, password, *getattr(adapter, "_secrets", ()))
+    print("login: ok (rest)")
+    rc = EXIT_OK
+    try:
+        snap = adapter.read_account(None).as_dict()
+        print("account: " + json.dumps({k: v for k, v in snap.items() if k != "unparsed"}))
+        if snap.get("unparsed"):
+            print(f"account_unparsed: {', '.join(snap['unparsed'])}")
+        if snap.get("balance") is None or snap.get("equity") is None:
+            rc = EXIT_UNPARSED
+        read_rows: Dict[str, Optional[list]] = {"positions": None, "orders": None}
+        for label, reader in (("positions", adapter.read_positions), ("orders", adapter.read_orders)):
+            try:
+                items = [i.as_dict() for i in reader(None)]
+                read_rows[label] = items
+                print(f"{label}: {len(items)}")
+                for it in items:
+                    it.pop("raw", None)
+                    print(_redact(f"  {json.dumps(it)}", *secrets))
+            except Exception as exc:
+                print(_redact(f"{label}: UNPARSED ({type(exc).__name__}: {exc})", *secrets))
+                rc = EXIT_UNPARSED
+        print("browser-only reads: SKIPPED (REST platform)")
+        if args.emit_status:
+            report = build_status_report(args.account, snap,
+                                         positions=read_rows["positions"], orders=read_rows["orders"])
+            if report is None:
+                print("emit_status: SKIPPED (balance and equity both unread)")
+            else:
+                try:
+                    res = post_status(report, args.api_base)
+                    print(f"emit_status: ok id={res.get('id')}")
+                except Exception as exc:
+                    print(_redact(f"emit_status: FAILED ({type(exc).__name__}: {exc})", *secrets))
+                    rc = rc or EXIT_ERROR
+        else:
+            print("emit_status: off (default)")
+    except Exception as exc:
+        print(_redact(f"read: ERROR ({type(exc).__name__}: {exc})", *secrets)[:600])
+        rc = EXIT_ERROR
+    finally:
+        try:
+            adapter.logout()
+        except Exception:
+            pass
+    return rc
+
 def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--account", default="breakout_1")
     ap.add_argument("--emit-status", action="store_true",
                     help="post ONE account_status through POST /api/bot/prop/report (default: off)")
+    ap.add_argument("--layout-canary", action="store_true",
+                    help="print a click-free 'layout_watchlist:' line (TRADEIFY-GOLIVE: the feed pings once "
+                         "when the watchlist widget disappears); never affects the exit code")
     ap.add_argument("--api-base", default="http://127.0.0.1:8001")
     ap.add_argument("--timeout-s", type=int, default=45)
     ap.add_argument("--dump-tables", action="store_true",
@@ -251,6 +345,9 @@ def main(argv: Optional[list] = None) -> int:
         print(f"feasibility: no_credentials (sync {cfg.get('username_env') or '?'} / "
               f"{cfg.get('password_env') or '?'} to the VM .env first)")
         return EXIT_FEASIBILITY
+
+    if platform in API_PLATFORMS:
+        return api_status_check(args, cfg, username, password)
 
     adapter = adapter_for_platform(platform)
 
@@ -314,7 +411,7 @@ def main(argv: Optional[list] = None) -> int:
                         discard_storage_state(args.storage_state)
                         print(_redact(f"feasibility: {fe.reason}" + (f" ({fe.detail})" if fe.detail else ""),
                                       username, password))
-                        return EXIT_FEASIBILITY
+                        return feasibility_rc(fe)
                     except Exception as exc:
                         st = f"error {type(exc).__name__}"
                     if st == "logged_in":
@@ -351,7 +448,7 @@ def main(argv: Optional[list] = None) -> int:
                     except Exception as exc:
                         print(_redact(f"page_shape: FAILED ({type(exc).__name__}: {exc})",
                                       username, password, limit=300))
-                return EXIT_FEASIBILITY
+                return feasibility_rc(fe)
             except Exception as exc:
                 # Playwright errors can echo call logs; redact before printing.
                 print(_redact(f"login: ERROR ({type(exc).__name__}: {exc})",
@@ -379,6 +476,13 @@ def main(argv: Optional[list] = None) -> int:
                 print(f"account_unparsed: {', '.join(snap['unparsed'])}")
             if snap.get("balance") is None or snap.get("equity") is None:
                 rc = EXIT_UNPARSED
+
+            # Layout canary (TRADEIFY-GOLIVE, manager-approved 2026-10-01):
+            # tradeify_1's "My Trading Account" lost its Watchlist between
+            # 16:33Z and 20:47Z for a cause nobody could see, and every opener
+            # silently had nothing to act on. Click-free; never affects rc.
+            if args.layout_canary and hasattr(adapter, "watchlist_symbols"):
+                print(layout_watchlist_line(adapter, page), flush=True)
 
             # None = the read raised (UNPARSED below) = "we did not look";
             # kept distinct from `[]` all the way into the posted report

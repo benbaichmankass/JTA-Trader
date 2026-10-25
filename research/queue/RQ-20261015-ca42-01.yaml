@@ -1,0 +1,195 @@
+id: RQ-20261015-ca42-01
+title: >-
+  Tradeify non-crypto at the MEASURED leverage: SILVER fade (SLV 1h) and USOIL trend (USO 1h) re-run at --lev-cap 5 (marginRate 0.2, 5:1 INFERRED); does the 2:1 cap in RQ-20261015-24ca-01/-05 decide their verdicts?
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+roadmap:
+- L-PROP
+question: >-
+  RQ-20261015-24ca-01 (SILVER) and -05 (USOIL) cap leverage at 2 (--lev-cap), the strictest reading of a firm page that named 2:1 for indices and stocks and left
+  metals and oil unnamed. TRADEIFY-INSTR-SPECS then MEASURED the account-scoped instrument margin rate on tradeify_1: marginRate FLAT 0.2 for SILVER/USD and USOIL/USD
+  (REST run 38808598907, issue #18452), i.e. 5:1 if leverage = 1/marginRate. That reading is INFERRED, not stated by the API (the same inference the velotrade memo made).
+  Holding every other input of -01 and -05 fixed, does moving the cap from 2 to 5 change the prop-survival verdict of either leg?
+why_this_matters: >-
+  -01 already graded FAIL at cap 2 (ev_net_usd_per_life -15.7 to -27.4 per life across seeds, p_net_positive ~0.14-0.15, 518 trades; research/results/RQ-20261015-24ca-01/38781718886.jsonl).
+  A cap only bites when the stop is tight enough that 0.5% risk implies more notional than the cap allows; whether it bites for these legs is unmeasured. This unit measures it
+  instead of arguing it, and settles whether a leverage-cap follow-up is needed at all. The firm's own leverage rule for metals/oil is still unconfirmed, so this is a
+  sensitivity to the MEASURED terminal figure, not a claim about what the firm will enforce.
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Same ledgers as -01 and -05 (identical harness arguments), so n is the harness trade count: 518 for SLV fade on the trainer history per -01's landed row.
+    The floor is the repo's prop-fit n >= 88 (d=0.3 at alpha 0.05 / power 0.8). Below 88 the unit grades UNDERPOWERED (indeterminate), never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      A fixed historical backfill on the trainer's 2018-2026 SLV/USO 1h candles: nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261015-ca42-01
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: >-
+    Per seed 1-5, for each leg: prop_ev_sim path-mode ev_net_usd_per_life and p_net_positive over that leg's trade ledger, as graded by scripts/research/prop_ev_grid.py
+    --grade pass_all_seeds. The SILVER leg writes verdict.json at the unit's out_dir root (the graded row); the USOIL leg writes its own verdict.json under out_dir/uso/.
+  rule: >-
+    SILVER LEG (the auto-graded row): PASS IF n_trades >= 88 AND ev_net_usd_per_life > 0 on ALL 5 seeds AND p_net_positive >= 0.70 on ALL 5 seeds (prop_ev_sim path mode,
+    config/prop_rulesets/tradeify_247_1step.yaml, flat 0.5% risk, --lev-cap slv_fade_1h=5, --no-hedge, prorated swap, funded-start fresh; costs unchanged from -01: 8 bps
+    commission round trip + 3 bps declared slippage + 0.033%/day swap, all firm-declared and UNCONFIRMED). FAIL IF ev_net_usd_per_life <= 0 on ANY seed. INDETERMINATE
+    (UNDERPOWERED) IF n_trades < 88; INDETERMINATE (NULL) IF ev > 0 on all seeds but p_net_positive < 0.70 on any seed.
+    USOIL LEG (read by hand from out_dir/uso/verdict.json under the identical criteria, with --lev-cap uso_trend_1h=5; the auto-grader does not read it).
+    CAP-BINDING READING, registered now: the ledgers are identical to -01 / -05 (same harness arguments), so the simulation is deterministic per seed and the ONLY thing that can differ
+    is position sizing under the cap. If a leg's per-seed ev AND p_net_positive at cap 5 equal its cap-2 values to the second decimal on all 5 seeds, the cap is NOT BINDING for that leg and
+    its verdict cannot depend on leverage; no leverage-cap follow-up is filed. If they differ, the leg's cap-5 verdict is reported next to its cap-2 verdict and the manager decides
+    whether a unit at a firm-confirmed cap is due. For USOIL the cap-2 comparison is RQ-20261015-24ca-05, which has not run yet: until it lands, the USOIL reading stands alone.
+    OPERATOR RULE (2026-10-15, binding on every prop leg): a prop leg clears the full real-money path, not a shortcut: Stage 0 net of the full cost stack, THEN a soak (live prop trading
+    counts), THEN cost fidelity, PLUS prop DD survival. A PASS here authorizes NO roster edit, NO account opening and NO order.
+  what_it_does_not_do: >-
+    Does not touch config/strategies.yaml, config/accounts.yaml or config/prop_platforms.yaml, places no order, and does not edit RQ-20261015-24ca-01..05 (their pre-registered
+    rules stand). 5:1 is the INFERRED reading of marginRate 0.2; it is not the firm's stated leverage for metals/oil, which is unconfirmed. Spread (measured 0.13-1.74 bps at one
+    snapshot, run 38807791311), swap and commission are not re-priced: the declared stack is kept (swap and commission accepted as firm-declared by the manager, 2026-10-15).
+    Candles are the trainer's ETF series, not the Hyperliquid-fed synthetic perp's own history.
+compute: needs_vm_data
+value:
+  bucket: structural
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: >-
+    stand-in, not a measurement: settles whether a leverage-cap question is open for the two non-crypto legs before any follow-up is built
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  basis: >-
+    Two harness runs over ~8 years of 1h candles (SLV, USO) + two 5-seed prop_ev_sim grids; reads trainer-resident data/<SYM>_<tf>.csv (not in metis-market-data, so not Kaggle-CPU routable).
+run:
+  commands:
+  - - python3
+    - scripts/backtest_fade.py
+    - --symbol
+    - SLV
+    - --timeframe
+    - 1h
+    - --fee-bps-roundtrip
+    - '8.0'
+    - --slippage-bps-roundtrip
+    - '3.0'
+    - --funding-bps-per-window
+    - '3.3'
+    - --funding-window-hours
+    - '24'
+    - --emit-trades
+    - '{out_dir}/silver_trades.jsonl'
+    - --json
+    - '{out_dir}/silver_harness.json'
+  - - python3
+    - scripts/research/prop_ev_grid.py
+    - --leg
+    - slv_fade_1h={out_dir}/silver_trades.jsonl
+    - --arm
+    - A=--sizing balance --risk-pct 0.005
+    - --common
+    - >-
+      --ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap slv_fade_1h=5 --no-hedge --swap-model prorated --funded-start fresh
+    - --seeds
+    - 1,2,3,4,5
+    - --grade
+    - pass_all_seeds
+    - --p-floor
+    - '0.70'
+    - --n-floor
+    - '88'
+    - --out
+    - '{out_dir}'
+    - --jobs
+    - '2'
+  - - python3
+    - scripts/backtest_trend.py
+    - --symbol
+    - USO
+    - --timeframe
+    - 1h
+    - --long-only
+    - --donchian
+    - '24'
+    - --atr-period
+    - '14'
+    - --atr-stop-mult
+    - '2.0'
+    - --trail-mult
+    - '4.0'
+    - --tp-r
+    - '4.0'
+    - --giveback-min-mfe-r
+    - '1.0'
+    - --giveback-r
+    - '1.0'
+    - --fee-bps-roundtrip
+    - '8.0'
+    - --slippage-bps-roundtrip
+    - '3.0'
+    - --funding-bps-per-window
+    - '3.3'
+    - --funding-window-hours
+    - '24'
+    - --emit-trades
+    - '{out_dir}/uso_trades.jsonl'
+    - --json
+    - '{out_dir}/uso_harness.json'
+  - - python3
+    - scripts/research/prop_ev_grid.py
+    - --leg
+    - uso_trend_1h={out_dir}/uso_trades.jsonl
+    - --arm
+    - A=--sizing balance --risk-pct 0.005
+    - --common
+    - >-
+      --ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap uso_trend_1h=5 --no-hedge --swap-model prorated --funded-start fresh
+    - --seeds
+    - 1,2,3,4,5
+    - --grade
+    - pass_all_seeds
+    - --p-floor
+    - '0.70'
+    - --n-floor
+    - '88'
+    - --out
+    - '{out_dir}/uso'
+    - --jobs
+    - '2'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261015-ca42-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-INSTR-SPECS
+- docs/research/tradeify-platforms-2026-10-15.md
+- config/prop_rulesets/tradeify_247_1step.yaml
+- research/queue/RQ-20261015-24ca-01.yaml
+- research/queue/RQ-20261015-24ca-05.yaml
+- research/results/RQ-20261015-24ca-01/38781718886.jsonl
+last_dispatched_at: '2026-10-16T03:01:41+00:00'
+grading:
+  attested: RULE-RQ-20261015-ca42-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-ca42-01
+  evidence:
+  - research/results/RQ-20261015-ca42-01/38843463461.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

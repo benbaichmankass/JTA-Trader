@@ -1,0 +1,26 @@
+{
+  "run": "RESEARCH-OPS-20261014-0020", "finished_at": "2026-10-14T00:40:00Z", "by": "research-ops-lane-20261014-0020",
+  "baseline": "comms/research/ops/20261013T2100Z.json",
+  "floor": 25,
+  "throughput": {"runnable_before": 14, "runnable_after": 27, "queued": 237, "units": 605, "fired_24h": 55, "fired_7d": 281,
+                 "results_landed_24h": 65, "hours_since_last_dispatch": 1.2, "idle_alarm": false, "as_of": "2026-10-14T00:18Z",
+                 "note": "MEASURED: check_research_queue_throughput.py before (runnable 14); dispatch_queue.py dry run after adding the 13 units: would_dispatch=27 (14 + 13). 'after' is the dry-run count on this branch, not yet observed on main."},
+  "mechanism": {"dispatch_receipt": "not_run", "collector": "not_run", "stranded_stamp_prs": "not_run", "watchdog": "not_run (only the task named runnable floor + results)", "incident": "watchdog incident queue@20261013T2318Z open per the manager; this pass's top-up addresses its cause (runnable below floor); the replenisher fix is PR #17950."},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": [], "note": "not_run: results since the 20:47Z pass were not read in this lane (budget spent on the floor top-up). Next pass reads them."},
+  "unlocked": [], "retired": [],
+  "levers_filed": [],
+  "units_authored": ["RQ-20261014-f0e2-01..13"],
+  "units_authored_detail": {
+    "by_bucket": {"structural": 6, "own_losses": 7, "information": 0, "ai_trader": 0, "frontier": 0},
+    "by_backend": {"github_runner (cpu_light)": 13, "kaggle_gpu": 0, "trainer": 0},
+    "mix_note": "Mix skews to own_losses/structural (46%/54% of the 13) versus the 30/25/20/15/10 target. Cheap, harnessed, runner-routable instruments exist only for the entry-refinement ablation family; information/ai_trader/frontier units need harnesses or the saturated trainer and were not authored here. Handed off."
+  },
+  "followups_filed": [],
+  "not_run": ["pipeline mechanism checks (dispatch liveness, grader, stranded PRs)", "results read since 20:47Z", "blocked/ audit", "needs_review triage", "pytest (not installed in this container; check_research_queue_decision_rule.py and the dispatch dry run were run instead)"],
+  "handoff": [
+    "Next pass: read the f0e2 results as they land and apply each registered rule verbatim; session and cooldown pass counts across sibling legs are only a LEAD.",
+    "Manager: author information/ai_trader/frontier units (macro_event_study_run.py cpu_light has an unused series set; ml_bakeoff units need Kaggle/trainer capacity) to move the bucket mix toward 30/25/20/15/10.",
+    "Manager: optional new pre-registered grid axes for the exhausted templates (research/templates/*.yaml) were NOT proposed in this PR to avoid a template-edit landing hold.",
+    "Hold PR: hand-authored queue units are unvouchable_paths; manager merges."
+  ]
+}

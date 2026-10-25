@@ -122,13 +122,20 @@ jobs:
     # kill the job mid-wait and report a false failure (which now pages, since
     # this workflow is on claude-run-failure-alert's watch list). Matches
     # econ-calendar-produce.yml, the sibling using the same action.
-    timeout-minutes: 45
+    timeout-minutes: 95  # was 65: shared commit-to-main wait 50->80 (W41)
     env:
-      VM_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+      VM_HOST: ${{ secrets.VM_SSH_HOST }}
       VM_USER: ubuntu
       VM_REPO: /home/ubuntu/ict-trading-bot
       WINDOW_DAYS: "7"
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Checkout
         uses: actions/checkout@v4
         with:

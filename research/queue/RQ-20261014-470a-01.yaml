@@ -1,0 +1,119 @@
+id: RQ-20261014-470a-01
+title: 'CONFIRM RQ-20261014-f0e2-05 on a fresh window: does eth_pullback_2h adx_min=22 still beat the declared 25 on the 730 days BEFORE the window
+  it was chosen on, net of the full cost stack, with no re-selection?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'RQ-20261014-f0e2-05 PASSED (A22: dR +10.18 R, dDD -2.15 R, 4/4 folds, n(B)=116, 2024-10-05..2026-10-04) but A22 was the best of THREE
+  pre-registered arms on ONE leg on ONE window, so its dR carries selection inflation. This unit re-asks the single chosen arm against the declared
+  setting on the disjoint, immediately preceding 730-day window (2022-10-05 .. 2024-10-04 23:59), which the selection never saw. Two arms only
+  (B, A22): there is nothing to select among, so the verdict is A22''s alone. The f0e2-05 window is NOT pooled with this one.'
+why_this_matters: The only PASS the 2026-10-14 entry-axis batch produced; a best-of-3 single-window pass promoted to a config change is exactly
+  the selection error the promotion ladder exists to refuse. eth_pullback_2h is on NO roster (config/accounts.yaml read 2026-10-14; it left every
+  roster on 2026-10-05, MD-S1-CUT-ON-STAGE0-FAIL), so a CONFIRMED is a Stage-0 input to a re-entry case under MD-PROMOTE-S0-S1 at adx_min=22 (a
+  new evidence record at the new configured params), never a config edit by this unit.
+power:
+  expected_n: 110
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=110 is an ESTIMATE from the f0e2-05 window's
+    n(B)=116 over the same 730-day length (ETH 2h pullback cadence), not a measurement of this window. Below 39 baseline trades the unit grades
+    indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance test; the 3-of-4 calendar-fold
+    majority refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing
+      accrues.
+decision_rule:
+  id: RULE-RQ20261014470a01
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full
+    cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r,
+    plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (adx_min 25); A22 = adx_min=22.
+    No other arm.. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported
+    per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+  rule: 'indeterminate IF the positive control fails (no committed record exists on this window, so no control is passed: the B arm is reported
+    and is itself the baseline) or n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <=
+    0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR). FAIL IF none passes: the declared value stands and the axis is
+    recorded honest_negative on this window for this leg. PASS here reads CONFIRMED: the f0e2-05 lead survives out of sample; the owning row gets
+    a Tier-3 PROPOSAL note (re-entry case at adx_min=22 via MD-PROMOTE-S0-S1, evidence = both records). FAIL reads NOT CONFIRMED: the f0e2-05
+    PASS is recorded as a selection/period artifact, adx_min stays 25, and the axis is honest_negative for eth_pullback_2h on both windows. indeterminate
+    (n(B) < 39): re-ask once on 2020-10-05 .. 2022-10-04 23:59 with the same two arms and bars, nothing else changed. The 1.0 R bar, the drawdown
+    clause, the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: 'Does not re-select: one candidate arm, fixed before any run. Does not pool the in-sample window. Does not edit config
+    or any roster; a CONFIRMED is a proposal input via the manager, never a promotion case on its own. Does not test any other axis or leg.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 90
+  confidence: 0.4
+  bucket: own_losses
+  basis: 'stand-in: same placeholder as f0e2-05 (one adx_min setting on a small book); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: One keyless Binance Vision fetch of ~1480 days and 2 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - A22=adx_min=22
+  - --days
+  - '1480'
+  - --start
+  - '2022-10-05'
+  - --end
+  - 2024-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261014-470a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261014-470a-01/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261014-470a-01/<run_id>/.
+roadmap:
+- M21
+- L-LADDER
+related:
+- P3-STRATEGY-PROGRAMME
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-15T08:17:30+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261014470a01
+  evidence:
+  - research/results/RQ-20261014-470a-01/38689218649.jsonl
+  first_fail: 2 row(s), all measured, all fail
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

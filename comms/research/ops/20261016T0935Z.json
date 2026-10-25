@@ -1,0 +1,90 @@
+{
+ "run": "RESEARCH-OPS-2026-10-16-0847",
+ "finished_at": "2026-10-16T09:35:00Z",
+ "by": "research-ops-lane-20261016-0847",
+ "floor": 50,
+ "floor_basis": "computed_floor(fired_24h 62)",
+ "authoring_queue_depth": 6,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle"
+ ],
+ "needs_review_triaged": 8,
+ "needs_review_left": 34,
+ "needs_review_note": "34 units in the bucket at start; the 8 oldest were read one by one (RQ-20260927-003, -20260928-030/-031, -20260929-004/-009/-016/-017/-018) and the rest grouped by cause. Nothing hand-closed (hand edits hold the PR). Causes: 14 wiring_only roster-walkforward rows (PI-20261006-1VPYTX8E-0001, routed, due 10-29); 7 stale E35 flags whose corpus rows were superseded by a later sweep of the same leg, one of them retired (NEW PI-20261016-10160847-0001); 2 producer_failed prop exit-head rows (RQ-20260927-003 -> lever on RESEARCH-TOOLING-GAPS); the rest NOT GRADABLE as registered (rows carry a generic M20 gate) -- unchanged, still need a session read.",
+ "throughput": {
+  "runnable_before": 71,
+  "runnable_after": 71,
+  "queued": 176,
+  "fired_24h": 62,
+  "results_landed_24h": 72,
+  "hours_since_last_dispatch": 0.6,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok: liveness fresh (0.6h)",
+  "collector": "ok: 27 verdict files landed since 03:20Z, all read_state measured, 0 unreadable",
+  "stranded_stamp_prs": "not_checked (list_pull_requests returned 140k chars; not parsed this pass)",
+  "incident": null,
+  "watchdog": "newest row in watchdog_incidents.jsonl is 2026-10-13 self_healed; no open escalated incident"
+ },
+ "results_read": {
+  "pass": 2,
+  "fail": 8,
+  "indeterminate": 3,
+  "wiring_only": 0,
+  "units": [
+   "RQ-20261015-eda2-01 PASS: lgbm beats class prior on log-loss, CV +0.033/+0.052/+0.124 nats (BTC/ETH/SOL), holdout +0.023/+0.044/+0.133, n=315,492 -> rule: raises FRONTIER-LEVER-CONFORMAL (noted); ML-F17 closed",
+   "RQ-20261016-8b93-01 PASS: train parity (already written back in 73f473b7)",
+   "RQ-20261014-4a4c-06 FAIL: PPI sign book on ES loses to all-long floor net of 12.5 bps; 77dc-02 FAIL = placebo clean; 4a4c-07 core CPI FAIL; 4a4c-08 core PCE FAIL -> note on P4-MACRO-PROGRAMME, no build",
+   "RQ-20261015-ca42-01 FAIL: SLV fade and USO trend at 5:1 on Tradeify prop-fit ev<=0 on at least one seed (518 trades slv) -> no action, because the rule's FAIL closes the leverage-rescue question",
+   "RQ-20261006-006/-007/-010/-012/-013/-014 FAIL (2nd pass of confirmatory): Stage-0 net_total_r<=0 at n 552..1133 for XRP/ADA/BNB faster prop legs -> closes the PI-20261006-APBY4NTV-0001 slice-1 candidates; the grader closes them mechanically on its next run (dry run shows status done); not hand-closed",
+   "RQ-20261016-001 INDETERMINATE: MLP vs LightGBM macro-F1 CV BTC -0.033 (ci -0.058..-0.008) / ETH -0.0025; ExtraTrees -0.146/-0.045; n=51,600 -> n was not the limit, shard exhausted; family history appended (ensemble_stack 3x INDETERMINATE), ML-F18 added; redesign belongs to the weekly frontier scan (no further n-extension possible)",
+   "RQ-20261016-002/-003 INDETERMINATE (prop-fit sol_prop bal005/room050): the grader closes them as complete-not-pass (awaiting more_data)",
+   "RQ-20261009-903 FAIL (ML-N3, WEPE G2): both intervals span 0 -> plan item closed; news layer and WEPE NOT retired"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "grader cannot refresh stale needs_review on superseded E35 units; retired units counted in the bucket",
+   "ref": "PI-20261016-10160847-0001"
+  },
+  {
+   "lever": "RQ-20260927-003 driver cannot finish in a diag window -> compute: cpu_long route",
+   "ref": "RESEARCH-TOOLING-GAPS (note)"
+  }
+ ],
+ "units_authored": [],
+ "followups_filed": [
+  "PI-20261016-10160847-0001"
+ ],
+ "routed_pipeline_items": [
+  "PI-20260924-MQ3CDMU6-0005",
+  "PI-20260928-4UNXYJIA-0001",
+  "PI-20261012-GNRBKIGG-0004 -> PROP-TRACKING",
+  "PI-20261015-JWMGXOTH-0004 -> BREAKOUT-UNTRACKED-1014",
+  "PI-20261009-BKKVRSVQ-0002 -> DAILY-DD-SWITCH",
+  "PI-20261009-KR9P9ZKE-0001 -> CA",
+  "PI-20261009-VQIPJE2H-0002 -> CI-PYTEST-TIMEOUT-HEADROOM",
+  "PI-20261015-KXMANT1S-0001 -> IP-IN-PUBLIC-LOGS",
+  "PI-20261016-LRP-156968F7/-288AF95B/-EF728D79 -> LIVE-PARITY",
+  "PI-20261016-WLA6MBZD-0001 -> RESEARCH-TOOLING-GAPS"
+ ],
+ "escalated_to_manager": [
+  "live-vs-replay parity DIVERGENT 2026-10-16: historical_positive control FAIL (7/22 packages matched), 5 real-money divergences",
+  "trend_donchian_sol_prop f01d-01 stage0 PASS escalation from the previous pass still awaits a manager decision (PR #18440) -- not rechecked this pass"
+ ],
+ "not_run": [
+  "stranded automation/research-queue-* PR listing (GitHub list returned 140k chars)",
+  "authoring from the programme queue (runnable 71 >= floor 50, so top-up not required; no units authored so the PR can self-land)",
+  "the other ~26 needs_review units were grouped, not individually read",
+  "the 100+ accruing e35 'unread' rows (power=accruing: cannot answer yet)"
+ ],
+ "handoff": [
+  "needs_review: 34 left; next pass reads the 'NOT GRADABLE as registered' group (RQ-20261007-001/-002/-003/-017/-024/-042/-043, RQ-20261014-9807-03) and closes each with a session grading block",
+  "author P2-Q3.1-fail, P1-Q8.2-fail, P1-Q2-alpaca-1d-pooled, P2-Q2.1-fail, P2-Q2.5-pooling-parity, P2-Q1.5-conformal from the authoring queue; P2-Q1.5 conformal unit still needs scripts/research/conformal_abstain_eval.py (FRONTIER-LEVER-CONFORMAL, now unblocked on sequencing)",
+  "list stranded research-queue PRs with a filtered query (head prefix), not an unfiltered list"
+ ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ML-RQ-RUNNER",
+  "title": "ML research runner: ML units flow dispatcher -> trainer runner -> result record -> research-ops rule -> follow-up, like strategy units",
+  "phase": "W41",
+  "state": "blocked",
+  "owner": "lane ML-RQ-RUNNER (session_01QRNxMhicEy4xbthzaZ9su7); HIGH priority rank 1 (infra first)",
+  "lane": "ML-RQ-RUNNER",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    17609,
+    17610,
+    17611
+  ],
+  "blocked_on": [
+    "FRONTIER-LEVER-TSFM",
+    "FRONTIER-LEVER-CONFORMAL",
+    "ML-HEAD-AGREEMENT-JOIN"
+  ],
+  "note": "[2026-10-11 operator directive, verbatim] \"let's get all of this into the roadmap and into the work que, the first couple of sessions should be high priority to get the work flow/infra sorted out, then we need to have the same continuous research-test-improve flow we have for the strategies to push the roadmap forward\". Deliverables: (A) ROADMAP 'Model frontier program' + queue order + priorities; (B) generic ML bake-off engine scripts/research/ml_bakeoff.py (learner list + dataset + metric + baseline + machine form of the unit's registered rule -> verdict.json in the E5 shape research-ops reads) and the trainer-side twin of the token-free runner .github/workflows/research-script-run-trainer.yml, landing through the EXISTING collector; (C) loop wiring in the frontier-research skill (the one place) with pointers from research-ops/ml-review/model-training; (D) move RQ-20261011-9da8-01/-03 out of blocked/ once their inputs exist. Closes when (observation): smoke unit RQ-20261011-0ac8-01 is dispatched by the queue to the trainer and lands as a measured/pass E5 record at research/results/RQ-20261011-0ac8-01/<run_id>.jsonl (produced by research-script-run-trainer.yml) AND the next research-ops run record lists it in results_read. landed_unproven until that record exists.  [2026-10-11T21Z RESEARCH-OPS-20261011-2047] Smoke unit RQ-20261011-0ac8-01 DISPATCHED 19:51:45Z (dispatcher run 38169703925 -> research-script-run-trainer run 38169810099, success, 3.8s) and its E5 record reads verdict=pass read_state=measured n=2880: logit-vs-prior delta macro_f1 +0.159 (G0) / +0.134 (G1), 4 folds each, rule threshold +0.05; arm_status prior/logit/lightgbm all ok (lightgbm IS installed on the trainer). Record is in open auto-merge PR #17629 (not yet on main at 21:00Z); ML-F6 closes when it is on main and listed in a run record's results_read (this pass lists it as read-from-PR). 9da8-01..07 NOT unblocked: none is blocked by the trainer route alone (levers: TSFM backend, tabular installs, conformal scorer + joiner, ML-LEG-CORPUS, FRONTIER-LEVER-XSEC-RUNNER, FRONTIER-LEVER-LEADLAG). [2026-10-12 RESEARCH-OPS-20261012-0247] OBSERVED on main: research/results/RQ-20261011-0ac8-01/38169810099.jsonl reads verdict=pass read_state=measured (logit vs prior macro_f1 +0.159/+0.134, 4 folds each, threshold +0.05; lightgbm control ok). Listed in comms/research/ops/20261012T0330Z.json results_read, so the first half of ML-F6's close text is met. NOT closed: the second half (RQ-20261011-9da8-01/-03 out of blocked/) is not met - their levers (FRONTIER-LEVER-TSFM, FRONTIER-LEVER-CONFORMAL, ML-HEAD-AGREEMENT-JOIN) are all still queued, unchanged since 2026-10-11. [2026-10-17 RESEARCH-AUTHOR-GRADE-1017] Field state on main f03d9032: deliverables A-C and the smoke close are OBSERVED (RQ-20261011-0ac8-01 measured pass; listed in comms/research/ops/20261011T2100Z.json and 20261012T0330Z.json). Ride-along: 27 units RQ-20261012-75b2-16..27 ran through research-script-run-trainer.yml and landed graded records, so the trainer route works at volume. Deliverable D is NOT met: RQ-20261011-9da8-01..07 are all still in research/queue/blocked/ (no results dir), and their three levers FRONTIER-LEVER-TSFM, FRONTIER-LEVER-CONFORMAL and ML-HEAD-AGREEMENT-JOIN are all state queued, unchanged since 2026-10-11. State is blocked on those three rows; the runner itself is not what blocks. [2026-10-18 lane ML-UNBLOCK-1018] Deliverable D moved: FRONTIER-LEVER-CONFORMAL is built (PR #18890) -- 9da8-03 now has ONE blocker (ML-HEAD-AGREEMENT-JOIN) and its 1h published twin 65ff-25 is queued. FRONTIER-LEVER-TSFM is still queued after a THIRD scan (W41, W42, this lane): raised to the manager as THE blocker of 9da8-01/-08/-09; note chronos-forecasting 2.3.0 is in the trainer venv and build_forecasts.py already takes --model-id, so a chronos-2 side-stream may need only --model-id amazon/chronos-2 (UNVERIFIED: Chronos2Pipeline's predict_quantiles signature not checked from this sandbox) before the timesfm/tirex/ttm backends. Runner proof unchanged.",
+  "updated_at": "2026-10-18T07:01:10Z",
+  "updated_by": "session_019BtYk72AWwvaGkwH81nW96",
+  "priority": "high",
+  "priority_rank": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 412
+}

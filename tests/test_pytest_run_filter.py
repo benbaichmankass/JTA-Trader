@@ -74,6 +74,11 @@ def _matches(path: str) -> bool:
 # Trees the suite ASSERTS OVER using non-.py files. A change to any of these can
 # redden the suite, so a diff touching them must not short-circuit.
 COVERED = {
+    "tools/phone-executor/test/fixtures":
+        "tests/test_phone_fixture_tool.py asserts over the COMMITTED real-page "
+        "fixtures (every <name>.html carries a .meta.json and a .spec.json and no "
+        "account/position id); a fixtures-only PR must run the suite, else a "
+        "capture that leaks an id merges on a green that executed nothing",
     "scripts/ops/purge_vm_runner.sh":
         "tests/ops/test_system_actions_workflow.py reads scripts/ops/*.sh (OPS_DIR)",
     "deploy/ict-trader-live.service":
@@ -229,9 +234,12 @@ COVERED = {
         "segmented spelling for the same file. Population: 1 of the 1188 files "
         "under tests/ uses that spelling today. Filed as "
         "BL-20260917-THE-PYTEST-RUN-COMMITTED-READER-SCANS-ARE-BLIND-TO-THE-OS-PATH-JOIN-SPELLING-SO-AN-UNCOVERED-READER-WAS-FOUND-BY-ACCIDENT",
-    "docs/claude/work/MANAGER-CHECKLIST.json":
-        "tests/ops/test_merge_json_register.py::test_real_register_merge_produces_valid_json "
-        "reads THIS REAL file via os.path.join(ROOT, ...) — the Call-node "
+    "docs/claude/work/checklist/_header.json":
+        "(was MANAGER-CHECKLIST.json until the per-row seed cutover; the rows now live "
+        "one file each under docs/claude/work/checklist/, so a manager's row-only commit "
+        "touches THIS tree alone) tests/ops/test_merge_json_register.py::"
+        "test_real_register_merge_produces_valid_json and test_manager_wake's brief test "
+        "read THE REAL checklist (rendered back from the store) — the Call-node "
         "spelling that motivated the fix above — and feeds it through the real "
         "merge driver, asserting the output still parses. Found while grading "
         "that same row: the general AST scan below now resolves Call-node "

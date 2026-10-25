@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-FVTMGYXW-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane TPX-PULLBACK-PRODUCER (session_019e4aiFMZNMs91KFVtMgyXW), PR #19615",
+    "rerun": "python3 scripts/ci/check_lever_wiring.py | grep -A1 'tp_extend'  (still 'exempt' + units=0 => open)"
+  },
+  "severity": "low",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[guard] lever-wiring-guard exempts tp_extend as runnable-exempt because scripts/ops/exit_mechanism_coverage.MECHANISMS has no detector for tp_revision rules; a live producer now exists (htf_pullback_trend_2h.monitor -> tp_revision rule tp_extend, PR #19615; and donchian_measured_move since 2026-10-07). Teach exit_mechanism_coverage.module_implements to recognise a unit whose monitor() calls plan_tp_revision for a registered rule (mirror check_tp_doctrine's producer test), then drop the tp_extend exemption so the guard sees it as VISIBLE in htf_pullback_trend_2h."
+}

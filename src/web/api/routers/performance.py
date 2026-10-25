@@ -116,6 +116,7 @@ from src.runtime.provenance import (
     _ABSENT_RAW as _ABSENT_LABEL_SOURCE,
     ESTIMATED,
     EXIT_LABEL_REFUSED_UNMEASURED,
+    EXIT_LABEL_VERDICT_VENUE_FLAT,
     FABRICATED,
     MEASURED,
     UNVERIFIED,
@@ -727,7 +728,11 @@ def _aggregate(rows: List[sqlite3.Row], window: str, since: Optional[str]) -> Di
         # the exact error this block exists to expose — reading a number off a
         # population it does not describe.
         _label_src = str(classify_row(r, "exit_reason_source")[1] or "")
-        if not _label_src or _label_src == _ABSENT_LABEL_SOURCE:
+        # `strategy_verdict_venue_flat` says the bucket key is NOT evidence:
+        # the venue was already flat when the verdict's close was sent
+        # (ORDER-AUDIT-3). Counting it `attested` would invert its meaning.
+        if (not _label_src or _label_src == _ABSENT_LABEL_SOURCE
+                or _label_src == EXIT_LABEL_VERDICT_VENUE_FLAT):
             ebucket["label_unattested"] += 1
         elif _label_src == EXIT_LABEL_REFUSED_UNMEASURED:
             ebucket["label_refused"] += 1
@@ -1476,9 +1481,18 @@ def get_performance_recent(
             env["mirror"]["readState"] = "accounts_unreadable"
         elif portfolio_ids:
             pp_rows = _query(_DB_PATH, None, demo=True, account_ids=portfolio_ids)
+            # Operator decision 2026-10-05 (PI-20261004-J4SFBKU9-0001): legacy
+            # mirror-only trades with no live twin are not part of the Gate-2
+            # window. Published, never silent; an unreadable file is surfaced.
+            from src.config.mirror_exclusions import load_mirror_exclusions
+            excl = load_mirror_exclusions()
+            excl_ids = {int(e["trade_id"]) for e in excl["exclusions"] if "trade_id" in e}
+            pp_rows = [r for r in pp_rows if _rget(r, "trade_id") not in excl_ids]
             env["mirror"] = {
                 "readState": "ok",
                 "accountIds": portfolio_ids,
+                "excludedTradeIds": sorted(excl_ids),
+                "exclusionsReadState": excl["readState"],
                 "newestClosedAt": _newest_close(pp_rows),
                 "perStrategy": _book_blocks(pp_rows, n, RECENT_BLOCK, rosters["portfolioLegs"]),
             }

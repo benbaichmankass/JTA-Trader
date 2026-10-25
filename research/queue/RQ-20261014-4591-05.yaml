@@ -1,0 +1,155 @@
+id: RQ-20261014-4591-05
+title: 'Frontier / model-family diversity on direction: does CatBoost or sklearn HistGradientBoosting beat the class prior on 1h direction_label LOG-LOSS (BTC, ETH)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: Does CatBoost or HistGradientBoosting beat the class prior by >= 0.002 nats of log-loss on the CV mean on BOTH symbols, with LightGBM and the logit as controls?
+why_this_matters: Direction is the label where the incumbent family has never beaten the prior; the family-diversity mandate says to try different families on it before concluding the
+  label is empty. Controls are reported so a candidate win is read against the incumbent.
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 40000 with min_train_frac 0.4 leaves ~24000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows, so each symbol is above the row floor on rows,
+    but bars are autocorrelated so effective n is lower: the rule also requires the same-direction CV mean on BOTH symbols.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up is a larger
+      or different dataset, not a re-run.'
+decision_rule:
+  id: RULE-RQ20261014-4591-05-DIRECTION-FAMILIES-VS-PRIOR-1H
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: Paired per-fold difference on identical purged folds (5, embargo 24 rows), mean over folds, per symbol; positive = candidate better.
+  rule: PASS IF a candidate (catboost or hgb) beats the class prior by >= +0.002 nats on the CV mean on BOTH symbols. FAIL IF no candidate beats the prior by >= 0 on the CV mean on ANY
+    symbol AND both arms were evaluated. INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure.
+compute: auto
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 100
+  confidence: 0.12
+  basis: 'stand-in: gates whether a downstream ML lever is worth building; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 20
+  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); compute: auto routes it to the Kaggle CPU kernel (published data; not metered by the GPU quota).'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: direction_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls:
+  - lgbm
+  - logit
+  candidates:
+  - catboost
+  - hgb
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    logit:
+      kind: numpy_logit
+    catboost:
+      kind: catboost
+      params:
+        iterations: 300
+        learning_rate: 0.05
+        depth: 6
+        verbose: 0
+    hgb:
+      kind: sklearn_hgb
+      params:
+        max_iter: 200
+        learning_rate: 0.05
+        max_leaf_nodes: 31
+        min_samples_leaf: 50
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.002
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261014-4591-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261014-65cc-10
+- scripts/research/ml_bakeoff.py
+- RQ-20261014-4591-02
+last_dispatched_at: '2026-10-14T09:10:30+00:00'
+grading:
+  attested: RULE-RQ20261014-4591-05-DIRECTION-FAMILIES-VS-PRIOR-1H
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261014-4591-05-DIRECTION-FAMILIES-VS-PRIOR-1H
+  evidence:
+  - research/results/RQ-20261014-4591-05/38540464626.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

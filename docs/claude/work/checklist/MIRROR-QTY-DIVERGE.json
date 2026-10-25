@@ -1,0 +1,39 @@
+{
+  "id": "MIRROR-QTY-DIVERGE",
+  "title": "bybit_2 vs bybit_portfolio mirror divergence: bybit_2 XRP short sent qty 0.5 (intended 57.4) -> rejected <5USDT min; mirror holds the trade since 10-09; qty ratios inconsistent across legs",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane (session_01Vtqkf7hNHtVFYZLfDSWfcG)",
+  "lane": "session_01Vtqkf7hNHtVFYZLfDSWfcG",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": 12.45,
+  "tier": 3,
+  "prs": [
+    17696
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-12T06:30Z manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR-RAISED 06:25Z: any open-trade mismatch between bybit_2 and bybit_portfolio is an issue. MEASURED 06:20Z (diag journal trades limit 1000 + /api/diag/exchange_positions): journal and venue agree; bybit_2 venue = ADAUSDT Buy 548; bybit_portfolio venue = ADAUSDT Buy 166397 + XRPUSDT Sell 160.9 (uPnL -9.47). Divergence = xrp_pullback_2h short 2026-10-09T06:02Z: row 6545 bybit_portfolio filled 160.9; row 6544 bybit_2 intended position_size 57.4 but the POST to /v5/order/create carried qty '0.5' (tpSize/slSize 0.5) -> ErrCode 110094 min order value 5USDT -> exchange_rejected. Also: same-trade qty ratios portfolio/bybit_2 = ADA 303.6x vs XRP 2.8x (identical entry/stop) -> a sizing path differs per leg or account. Scope: root-cause 57.4->0.5 (qty step/precision/margin clamp?), check how often a real-money order qty differed from its journal size (all bybit_2 rows 90d), explain the ratio inconsistency, prepare the fix as a HOLD PR, and decide the open XRP mirror position (mirror carries a trade live does not). [manager 12:25Z] #17696 merged+deployed. XRP mirror short left on its SL/TP; mirror-orphan-watch expected red until row 6545 closes. Lane session_01Vtqkf7 archived, spend $12.45 (Opus). [2026-10-18T10:40Z lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx, operator-raised via manager 10:10Z: XRPUSDT short on bybit_portfolio and bybit_1 but not bybit_2] RE-READ against the live VM. Cause confirmed from journal rows 6544/6545 (pkg-63b56da53bfe4d64, xrp_pullback_2h short 2026-10-09T06:02Z): a top-up DELTA of 0.5 XRP (~0.70 USDT) on bybit_2 refused by the venue (ErrCode 110094, min order value 5 USDT) while the mirror's 160.9 XRP delta filled; the 06:40Z donchian stop then took both parents (6528/6529), leaving the mirror alone in XRP. NOT the daily-DD switch and NOT a RiskManager refusal: no DAILY_DD_SWITCH or risk row exists for bybit_2 on that package. Classification: bug in dispatch, FIXED by #17696 (merged 2026-10-12 09:10Z): sub-min-notional delta -> noop before the venue, and a mirror follows its primary's placement outcome in the same call. DEPLOYED: running git_sha 4498acf06 (bot_uptime 2212 s at 10:05Z) is a descendant of 1ba751bfc. NOT OBSERVED: 0 journal rows carry intent_sub_min_notional_delta / mirror_primary_not_placed since deploy (no sub-min top-up has occurred); the observation on this row stands. The visible divergence today is the RESIDUAL orphan: row 6545 still open (venue bybit_portfolio XRPUSDT Sell 160.9), held on its bracket by the 2026-10-12 12:25Z manager decision; scripts/ops/check_mirror_orphans.py on a 10:35Z exchange_positions pull: 1 ORPHAN (that row), 2 stale_ack (TLT 5912, IEF 4195: positions gone), 0 unreadable. mirror-orphan-watch has been red on every scheduled run since at least 2026-10-13 (5 runs) and the workflow has NO alert step, so a NEW orphan would be indistinguishable from this decided hold. Other legs, last 7 days: bybit_2 vs bybit_portfolio 4 packages (ADA x2, ETH x2) all matched; alpaca_live vs alpaca_portfolio 2 packages both refused identically (dry_cause side_filter:long, sanctioned). Decision filed as PI-20261018-XRPORPHAN-0001; watch alert gap as PI-20261018-ORPHANWATCH-0001. [2026-10-18T11:25Z lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx] ORPHAN CLEARED. Operator decision via manager ~10:55Z: flatten. system-actions #18948 (dry run) -> #18949 (apply: reduce-only BUY 160.9 XRPUSDT on bybit_portfolio, broker read flat, exchange order bab442c9) -> reconciler closed row 6545 11:11:29Z -> #18954 mark-operator-flattened (6545 now operator_flatten_reconciled). check_mirror_orphans on a ~11:12Z exchange_positions pull: OK, 0 ORPHAN; bybit_2 and bybit_portfolio both hold ADAUSDT only. Observation part 2 of this row ('mirror-orphan-watch green after row 6545 closes') is now checkable at the next 15:40Z scheduled run; part 1 (next sub-min top-up is a no-op on both) still awaits a sub-min delta. PI-20261018-XRPORPHAN-0001 closed done. [2026-10-21 WEEKLY-AUDIT-2026-10-19 C6] Observation past due_by 2026-10-19. MEASURED 2026-10-21T18:13Z /api/diag/exchange_positions: bybit_2 and bybit_portfolio hold the same symbols/sides (ADAUSDT Sell, ETHUSDT Buy, SOLUSDT Buy); XRP row 6545 closed 2026-10-18 (operator_flatten_reconciled). Journal 2026-10-07..21: bybit_2 14 / bybit_portfolio 15 opened trades, the only unmatched one is the 10-09 XRP pair (6544 exchange_rejected 110094). NOT OBSERVED: a new below-minimum top-up on bybit_2 (the clause that proves the fix) - none occurred in the window. Stays landed_unproven; due_by should be re-dated by the owner. [2026-10-24 REGISTER-SWEEP-W43] lane session_01Vtqkf7hNHtVFYZLfDSWfcG get_session cost_usd=12.45 (read after archive; SESSION_STATUS_ARCHIVED)",
+  "updated_at": "2026-10-24T06:01:06Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "M39"
+  ],
+  "priority": "critical",
+  "observation": {
+    "what": "next bybit_2 top-up below the venue minimum is a no-op on BOTH bybit_2 and bybit_portfolio; mirror-orphan-watch green after XRP row 6545 closes",
+    "how_to_check": "diag exchange_positions bybit_2 vs bybit_portfolio + mirror-orphan-watch run",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-19",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: owed at close (M39)",
+    "arch": "none: owed at close; mirror placement rule in ARCHITECTURE-CANONICAL Stage 2"
+  },
+  "_seq": 425
+}

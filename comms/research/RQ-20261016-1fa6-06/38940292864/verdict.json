@@ -1,0 +1,362 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 695 trades on 10 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
+  "n": 695,
+  "measurement": {
+    "legs": [
+      {
+        "leg": "ada_pullback_2h",
+        "symbol": "ADAUSDT",
+        "tf": "2h",
+        "n_ledger": 57,
+        "horizon_bars": 59,
+        "n_walked": 57,
+        "n_unaligned": 0,
+        "control_n": 57,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2025-10-02 00:00:00+00:00",
+        "data_end": "2026-10-15 22:00:00+00:00"
+      },
+      {
+        "leg": "avax_pullback_2h",
+        "symbol": "AVAXUSDT",
+        "tf": "2h",
+        "n_ledger": 57,
+        "horizon_bars": 65,
+        "n_walked": 57,
+        "n_unaligned": 0,
+        "control_n": 57,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2025-09-28 00:00:00+00:00",
+        "data_end": "2026-10-15 22:00:00+00:00"
+      },
+      {
+        "leg": "eth_pullback_2h",
+        "symbol": "ETHUSDT",
+        "tf": "2h",
+        "n_ledger": 116,
+        "horizon_bars": 96,
+        "n_walked": 116,
+        "n_unaligned": 0,
+        "control_n": 114,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2024-10-03 00:00:00+00:00",
+        "data_end": "2026-10-15 22:00:00+00:00"
+      },
+      {
+        "leg": "sol_pullback_2h",
+        "symbol": "SOLUSDT",
+        "tf": "2h",
+        "n_ledger": 36,
+        "horizon_bars": 75,
+        "n_walked": 36,
+        "n_unaligned": 0,
+        "control_n": 36,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2024-10-25 00:00:00+00:00",
+        "data_end": "2026-10-15 22:00:00+00:00"
+      },
+      {
+        "leg": "trend_donchian_ada_4h",
+        "symbol": "ADAUSDT",
+        "tf": "4h",
+        "n_ledger": 46,
+        "horizon_bars": 38,
+        "n_walked": 46,
+        "n_unaligned": 0,
+        "control_n": 45,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2025-09-21 00:00:00+00:00",
+        "data_end": "2026-10-15 20:00:00+00:00"
+      },
+      {
+        "leg": "trend_donchian_avax_4h",
+        "symbol": "AVAXUSDT",
+        "tf": "4h",
+        "n_ledger": 50,
+        "horizon_bars": 16,
+        "n_walked": 50,
+        "n_unaligned": 0,
+        "control_n": 47,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2025-09-27 00:00:00+00:00",
+        "data_end": "2026-10-15 20:00:00+00:00"
+      },
+      {
+        "leg": "trend_donchian_eth_4h",
+        "symbol": "ETHUSDT",
+        "tf": "4h",
+        "n_ledger": 116,
+        "horizon_bars": 40,
+        "n_walked": 116,
+        "n_unaligned": 0,
+        "control_n": 113,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2023-10-10 00:00:00+00:00",
+        "data_end": "2026-10-15 20:00:00+00:00"
+      },
+      {
+        "leg": "trend_donchian_sol_4h",
+        "symbol": "SOLUSDT",
+        "tf": "4h",
+        "n_ledger": 116,
+        "horizon_bars": 37,
+        "n_walked": 116,
+        "n_unaligned": 0,
+        "control_n": 111,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2023-10-11 00:00:00+00:00",
+        "data_end": "2026-10-15 20:00:00+00:00"
+      },
+      {
+        "leg": "trend_donchian_xrp_4h",
+        "symbol": "XRPUSDT",
+        "tf": "4h",
+        "n_ledger": 46,
+        "horizon_bars": 15,
+        "n_walked": 46,
+        "n_unaligned": 0,
+        "control_n": 44,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2022-10-29 00:00:00+00:00",
+        "data_end": "2026-10-15 20:00:00+00:00"
+      },
+      {
+        "leg": "xrp_pullback_2h",
+        "symbol": "XRPUSDT",
+        "tf": "2h",
+        "n_ledger": 55,
+        "horizon_bars": 121,
+        "n_walked": 55,
+        "n_unaligned": 0,
+        "control_n": 55,
+        "control_match_share": 1.0,
+        "state": "included",
+        "data_start": "2025-10-04 00:00:00+00:00",
+        "data_end": "2026-10-15 22:00:00+00:00"
+      }
+    ],
+    "skipped": [],
+    "construction": "fixed_bracket_reconstruction_from_ledger_plus_public_candles",
+    "model": {
+      "n_oos_trades": 444,
+      "mean_gain_nats": -0.00848,
+      "ci95": [
+        -0.01484,
+        -0.00212
+      ],
+      "folds_positive": 0,
+      "folds": [
+        {
+          "fold": 0,
+          "n_train_trades": 139,
+          "n_test_trades": 105,
+          "gain_vs_ref_nats": -0.0148,
+          "gain_vs_base_nats": 0.16688
+        },
+        {
+          "fold": 1,
+          "n_train_trades": 273,
+          "n_test_trades": 112,
+          "gain_vs_ref_nats": -0.01669,
+          "gain_vs_base_nats": 0.13947
+        },
+        {
+          "fold": 2,
+          "n_train_trades": 416,
+          "n_test_trades": 113,
+          "gain_vs_ref_nats": -0.00201,
+          "gain_vs_base_nats": 0.13425
+        },
+        {
+          "fold": 3,
+          "n_train_trades": 555,
+          "n_test_trades": 114,
+          "gain_vs_ref_nats": -0.00102,
+          "gain_vs_base_nats": 0.16982
+        }
+      ],
+      "calibration_slope": 0.942,
+      "reference": "model",
+      "features": [
+        "logit_p0",
+        "dist_tp_atr",
+        "dist_sl_atr",
+        "log_bars",
+        "open_r",
+        "log_since_peak",
+        "giveback",
+        "mom3_atr",
+        "mom6_atr",
+        "adx",
+        "adx_slope3",
+        "range3_atr",
+        "clv",
+        "atr_pct"
+      ],
+      "K": 3.0
+    },
+    "policy": {
+      "pooled": {
+        "n": 556,
+        "fixed_net_r_per_capital_day": 0.0302,
+        "policy_net_r_per_capital_day": -0.0666,
+        "diff_r_per_capital_day": -0.0968,
+        "fixed_net_r_per_trade": 0.0833,
+        "policy_net_r_per_trade": -0.0254,
+        "early_exit_share": 0.8687
+      },
+      "per_leg": {
+        "ada_pullback_2h": {
+          "n": 57,
+          "fixed_net_r_per_capital_day": 0.142,
+          "policy_net_r_per_capital_day": -0.0491,
+          "diff_r_per_capital_day": -0.1911,
+          "fixed_net_r_per_trade": 0.2614,
+          "policy_net_r_per_trade": -0.0122,
+          "early_exit_share": 0.8772
+        },
+        "avax_pullback_2h": {
+          "n": 57,
+          "fixed_net_r_per_capital_day": 0.0196,
+          "policy_net_r_per_capital_day": 0.0668,
+          "diff_r_per_capital_day": 0.0472,
+          "fixed_net_r_per_trade": 0.0496,
+          "policy_net_r_per_trade": 0.0141,
+          "early_exit_share": 0.9474
+        },
+        "eth_pullback_2h": {
+          "n": 101,
+          "fixed_net_r_per_capital_day": 0.0331,
+          "policy_net_r_per_capital_day": -0.1328,
+          "diff_r_per_capital_day": -0.1659,
+          "fixed_net_r_per_trade": 0.1132,
+          "policy_net_r_per_trade": -0.0415,
+          "early_exit_share": 0.901
+        },
+        "sol_pullback_2h": {
+          "n": 31,
+          "fixed_net_r_per_capital_day": -0.0013,
+          "policy_net_r_per_capital_day": -0.3026,
+          "diff_r_per_capital_day": -0.3013,
+          "fixed_net_r_per_trade": -0.0044,
+          "policy_net_r_per_trade": -0.0382,
+          "early_exit_share": 1.0
+        },
+        "trend_donchian_ada_4h": {
+          "n": 46,
+          "fixed_net_r_per_capital_day": 0.0041,
+          "policy_net_r_per_capital_day": -0.1946,
+          "diff_r_per_capital_day": -0.1987,
+          "fixed_net_r_per_trade": 0.012,
+          "policy_net_r_per_trade": -0.1467,
+          "early_exit_share": 0.8478
+        },
+        "trend_donchian_avax_4h": {
+          "n": 50,
+          "fixed_net_r_per_capital_day": -0.1355,
+          "policy_net_r_per_capital_day": -0.5946,
+          "diff_r_per_capital_day": -0.4591,
+          "fixed_net_r_per_trade": -0.1743,
+          "policy_net_r_per_trade": -0.226,
+          "early_exit_share": 0.72
+        },
+        "trend_donchian_eth_4h": {
+          "n": 73,
+          "fixed_net_r_per_capital_day": 0.1249,
+          "policy_net_r_per_capital_day": 0.3092,
+          "diff_r_per_capital_day": 0.1843,
+          "fixed_net_r_per_trade": 0.3671,
+          "policy_net_r_per_trade": 0.1553,
+          "early_exit_share": 0.9041
+        },
+        "trend_donchian_sol_4h": {
+          "n": 63,
+          "fixed_net_r_per_capital_day": -0.0618,
+          "policy_net_r_per_capital_day": -0.0705,
+          "diff_r_per_capital_day": -0.0087,
+          "fixed_net_r_per_trade": -0.1497,
+          "policy_net_r_per_trade": -0.0502,
+          "early_exit_share": 0.6667
+        },
+        "trend_donchian_xrp_4h": {
+          "n": 23,
+          "fixed_net_r_per_capital_day": -0.0169,
+          "policy_net_r_per_capital_day": 0.2621,
+          "diff_r_per_capital_day": 0.279,
+          "fixed_net_r_per_trade": -0.0282,
+          "policy_net_r_per_trade": 0.0836,
+          "early_exit_share": 0.8696
+        },
+        "xrp_pullback_2h": {
+          "n": 55,
+          "fixed_net_r_per_capital_day": 0.038,
+          "policy_net_r_per_capital_day": -0.1141,
+          "diff_r_per_capital_day": -0.1521,
+          "fixed_net_r_per_trade": 0.1588,
+          "policy_net_r_per_trade": -0.0168,
+          "early_exit_share": 0.9818
+        }
+      },
+      "per_fold": {
+        "0": {
+          "n": 139,
+          "fixed_net_r_per_capital_day": 0.0677,
+          "policy_net_r_per_capital_day": 0.3388,
+          "diff_r_per_capital_day": 0.2711,
+          "fixed_net_r_per_trade": 0.2035,
+          "policy_net_r_per_trade": 0.1158,
+          "early_exit_share": 0.8921
+        },
+        "1": {
+          "n": 139,
+          "fixed_net_r_per_capital_day": 0.0865,
+          "policy_net_r_per_capital_day": -0.092,
+          "diff_r_per_capital_day": -0.1785,
+          "fixed_net_r_per_trade": 0.2494,
+          "policy_net_r_per_trade": -0.0544,
+          "early_exit_share": 0.7914
+        },
+        "2": {
+          "n": 139,
+          "fixed_net_r_per_capital_day": 0.0037,
+          "policy_net_r_per_capital_day": -0.5719,
+          "diff_r_per_capital_day": -0.5756,
+          "fixed_net_r_per_trade": 0.01,
+          "policy_net_r_per_trade": -0.0981,
+          "early_exit_share": 0.9353
+        },
+        "3": {
+          "n": 139,
+          "fixed_net_r_per_capital_day": -0.0529,
+          "policy_net_r_per_capital_day": -0.1538,
+          "diff_r_per_capital_day": -0.1009,
+          "fixed_net_r_per_trade": -0.1297,
+          "policy_net_r_per_trade": -0.0651,
+          "early_exit_share": 0.8561
+        }
+      },
+      "folds_positive_per_trade": 1,
+      "trade_diff_ci95": [
+        -0.2321,
+        0.0016
+      ],
+      "capital_day_diff_ci95": [
+        -0.2247,
+        0.0321
+      ],
+      "null_policy_exit_share": 0.0
+    }
+  },
+  "note": "policy: policy - fixed CI [-0.2321, 0.0016] R/trade, upper < 0.1"
+}

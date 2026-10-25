@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Test-isolation fix only (tests/test_runtime_paths_alignment.py). main's pytest-run has been red since f314e0ed on tests/test_notify_unit_failure.py because this file reloads src.web.api.routers.* under a patched DATA_DIR and leaves the stale module bound to a tmp path for later tests in the same xdist worker. No runtime, order path, config or queue unit touched."
+}

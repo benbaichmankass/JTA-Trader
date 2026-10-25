@@ -8,6 +8,7 @@ a first FAIL re-queues rather than kills).
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -247,3 +248,53 @@ def test_the_dispatcher_alarm_refills_a_fillable_gap_and_pages_the_rest():
     from scripts.ci import check_research_queue_health as hc
     assert hc.EXIT_REFILL == 3
     assert hc._exit_code(["H1-REFILL x"]) == 3 and hc._exit_code(["H1 x"]) == 1 and hc._exit_code(["H1-REFILL x", "H2 y"]) == 1
+
+
+def test_generated_ids_never_enter_the_hand_band():
+    """PI-20261005-RQ-ID-RACE-0001: generated units mint 001-899; hand-authored ones own 900-999."""
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "queue_replenish", Path(__file__).resolve().parents[1] / "scripts/research/queue_replenish.py")
+    qr = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(qr)
+    day = "2030-01-01"
+    # a hand unit at 905 must not make the generator continue from 906
+    units = {"RQ-20300101-003": {}, "RQ-20300101-905": {}}
+    assert qr.next_ids(units, day, 2) == ["RQ-20300101-004", "RQ-20300101-005"]
+    # a full band yields FEWER ids rather than crashing or spilling into 900+
+    full = {"RQ-20300101-897": {}}
+    assert qr.next_ids(full, day, 5) == ["RQ-20300101-898", "RQ-20300101-899"]
+    assert qr.next_ids({"RQ-20300101-899": {}}, day, 3) == []
+
+
+def test_router_class_units_count_as_dispatchable_not_prose_notes():
+    """QUEUE-FILL-1013: a unit declaring `compute:` and NO `run.workflow` (PLANNING.md 1b) is
+    runnable to the census exactly when the router can place it. It read as 0 before, so the
+    25-unit floor and the health alarm were blind to every router-era unit."""
+    from scripts.research.queue_replenish import dispatchable
+    base = {"status": "queued", "cadence": "once"}
+    assert dispatchable({**base, "compute": "cpu_light", "run": {"command": ["python3", "x.py"]}})
+    assert dispatchable({**base, "compute": "auto", "routing": {"est_minutes": 10, "peak_memory_gb": 1}})
+    assert not dispatchable({**base, "compute": "no_such_class"})                      # unplaceable class
+    assert not dispatchable({**base, "compute": "cpu_light", "run": {"workflow": "none -- session-local"}})  # author said: no runner
+    assert not dispatchable({**base})                                                   # neither workflow nor class
+    assert not dispatchable({"status": "done", "compute": "cpu_light"})
+
+
+def test_grader_closes_a_hand_written_unit_only_when_its_rows_attest_its_own_rule(tmp_path):
+    """RESEARCH-GRADE-BACKLOG (2026-10-15): 130 hand-written units sat queued with
+    results whose every row named the unit's own rule id; nobody closed them."""
+    uid = "RQ-20310101-002"
+    (tmp_path / "research/queue").mkdir(parents=True)
+    d = tmp_path / "research/results" / uid
+    d.mkdir(parents=True)
+    text = (f"id: {uid}\nstatus: queued\ncadence: once\ndecision_rule:\n  id: RULE-H\nlands:\n  min_rows: 1\n"
+            "last_dispatched_at: '2031-01-01T00:00:00+00:00'\n")
+    row = lambda v, rid: json.dumps({"verdict": v, "read_state": "measured", "decision_rule": {"id": rid}})  # noqa: E731
+    (d / "1.jsonl").write_text(row("pass", "RULE-E7-HARNESS-DISPATCHABLE") + "\n")
+    assert queue_grade.grade_unit(tmp_path, uid, text, "2031-01-02") is None
+    (d / "1.jsonl").write_text(row("fail", "RULE-H") + "\n")
+    new = queue_grade.grade_unit(tmp_path, uid, text, "2031-01-02")
+    assert new and "status: done" in new and "verdict: fail" in new and "attested: RULE-H" in new
+    assert "last_dispatched_at: null" not in new

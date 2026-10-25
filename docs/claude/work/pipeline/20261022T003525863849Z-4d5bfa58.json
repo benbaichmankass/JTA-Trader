@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the census fires within one dispatcher cycle of its weekly anniversary for two consecutive weeks",
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-IGHT1021-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "EXITS-OVERNIGHT-1021 manager item (census)",
+    "rerun": "python3 -c \"import sys,yaml;sys.path[:0]=['.','scripts/research'];import dispatch_queue as d;from datetime import datetime,timezone;u=yaml.safe_load(open('research/queue/RQ-20261014-9807-01.yaml'));print(u['last_dispatched_at'],d._is_due(u,datetime.now(timezone.utc)))\""
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[cadence drift, trainer] The weekly giveback census RQ-20261014-9807-01 slips about a day per cycle. Since 2026-10-06, dispatch_queue measures cadence from the LATER of last_dispatched_at and the latest result's generated_at (result-based idempotence). The trainer backend only releases units into windows_utc 03:00-05:00 / 07:00-24:00, and the dispatcher cron runs at :20. MEASURED 2026-10-22: stamp 10-15T03:05Z, result 10-15T04:43Z, so due 10-22T04:43Z. The 04:20 run is before due and 05:20 is outside the window, so the first fire is ~07:20Z, and each cycle's later result pushes the next due later still. Fix options (Tier-1, dispatch_queue): for cadence != once, anchor the due time to the stamp rather than to max(stamp, result), or subtract a run-length allowance from the result time."
+}

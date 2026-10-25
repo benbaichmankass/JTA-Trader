@@ -196,7 +196,7 @@ def test_manifest_parses():
     from ml.manifest import TrainingManifest
 
     m = TrainingManifest.from_yaml(
-        Path("ml/configs/baseline-setup-quality.yaml")
+        Path("ml/configs/retired/baseline-setup-quality.yaml")
     )
     assert m.model_id == "setup-quality-baseline-v0"
     assert m.trainer == _TRAINER

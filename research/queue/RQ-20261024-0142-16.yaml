@@ -1,0 +1,106 @@
+id: RQ-20261024-0142-16
+title: 'Stale-exit bars on eth_pullback_2h: does exiting a trade that has not reached +0.5 R within 8 / 12 / 20 bars beat the declared exit?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On eth_pullback_2h over the pinned window, does a stale exit (stale_exit_bars 8 / 12 / 20 with stale_exit_below_r 0.5, declared now) beat the declared exit
+  A by >= 0.02 R/trade in >= 4 of 6 folds within the drawdown bar?
+why_this_matters: Lane AUTHOR-FLOOR-1024 (live_strategy 3 vs share 11). The M20 stale-exit lever exists in the harness and has been read on xrp_pullback_2h, ada_pullback_2h
+  and the 1d ETF legs, but the matrix of exit_lever_ablation tokens by leg (2026-10-24) shows no stale_exit_bars arm on eth_pullback_2h or sol_pullback_2h. Dead-money
+  time is a capital-day cost; the registered arms test whether cutting it pays net of the full cost stack.
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=120 is an ESTIMATE from sibling units on this leg/window, not
+    a measurement; below 39 the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261024014216-ETHPBSTALEEXIT
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg eth_pullback_2h --grade replace, window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds by entry
+    time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the
+    leg as declared in config/strategies.yaml; candidates S8, S12, S20. Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta
+    >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named and the follow-up
+    is ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), then a live-producer check and a Tier-3 declare PROPOSAL with the mirror
+    in the same PR, never a config edit. FAIL IF none passes with n(A) >= 39: this arm grid is closed on eth_pullback_2h for this window and the family is NOT retired;
+    the record names the arm that moved closest and the next variant (the stale threshold at 0.0 R or 1.0 R, or the same arms on sol_pullback_2h). Thresholds and
+    the arm grid are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A stale exit is a bar-close exit lever: a PASS also needs a live
+    producer (check the leg''s monitor) and a Tier-3 declare. The arm grid is the whole search.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a time-stop exit lever on a live leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 35
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - S8=stale_exit_bars=8;stale_exit_below_r=0.5
+  - --arm
+  - S12=stale_exit_bars=12;stale_exit_below_r=0.5
+  - --arm
+  - S20=stale_exit_bars=20;stale_exit_below_r=0.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261024-0142-16
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- RQ-20261022-3a84-03
+- RQ-20260928-019
+- scripts/research/exit_lever_ablation.py
+- AUTHOR-FLOOR-1024

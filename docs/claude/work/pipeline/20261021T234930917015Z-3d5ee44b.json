@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "each money-leg Q9 PASS has a confirmation unit on main (or is killed with a stated reason)",
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "id": "PI-20261021-IGHT1021-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "EXITS-OVERNIGHT-1021 step 4",
+    "rerun": "grep -L confirm_unit research/queue/RQ-20261018-035.yaml research/queue/RQ-20261019-0{01,13,16,17,21,26}.yaml research/queue/RQ-20261020-0{06,14}.yaml research/queue/RQ-20261018-053.yaml; grep -rl 'RQ-20261019-021' research/programmes/"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[confirmation gap, P1] 10 P1-Q9 replace PASSes (2026-10-19..21) have NO confirmation unit, although each unit's own rule says a PASS 'feeds ONE confirmation unit on a disjoint window': RQ-20261018-035 xrp4h decay, RQ-20261019-017 xrp4h retarget, RQ-20261019-016 xrp4h adx, RQ-20261019-021 ief1d adx, RQ-20261019-026 slv1d adx, RQ-20261020-006 slv1d stale, RQ-20261020-014 gld1d adx, RQ-20261019-001 ada4h decay, RQ-20261019-013 sol4h decay, RQ-20261018-053 sol4h tp3 (ada4h/sol4h are on no roster). Cause: queue_grade.template_cell() excludes programme units from the auto-confirm on purpose ('their DAG registers its own confirmation nodes') and no lane authored the nodes. Obstacles, MEASURED 2026-10-21: (a) no earlier disjoint window -- Binance Vision USDT-M klines for these perps start 2019-12/2020-01 and the Q9 window already starts 2020-07; (b) a forward window needs years at these trade rates (xrp4h ~11 trades/yr vs n floor 39); (c) exit_lever_ablation --grade holdout is Stage-0 shaped (selected arm net > 0 on the held-back span), not 'candidate beats incumbent', so it is a weak confirmation of a REPLACE. PROPOSED BUILD (Tier-1): a 'replace-holdout' grade in exit_lever_ablation -- boundary fixed from baseline entry times as --grade holdout does, select among candidates on discovery trades only with the replace rule, then apply the replace rule ONCE on the held-back span (incumbent vs selected); then author one confirmation node per money-leg PASS (xrp4h x3, ief1d, slv1d x2; gld1d paper last). Also re-read slv1d momentum_stale 8/20 (RQ-20261016-016 PASS) beside the failing 12/20 arm (RQ-20261019-028) under the same grade before any declare."
+}

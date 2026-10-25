@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261024-0247",
+  "title": "Research-ops pass 2026-10-24 02:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261024-0247",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane] runnable 44 vs floor 59 (fired_24h 74); mechanism healthy (last dispatch 1.2 h). Closed the three steps the 20:47Z pass left not_run: (1) authoring: 2 programme nodes drafted and emitted (P2-Q1.5-fail -> RQ-20261024-001 conformal variant, mondrian none; new P2-Q1.6-yz-sol-logloss -> RQ-20261024-002), both ml_health, both route to idle kaggle_cpu; (2) needs_review: bucket 30, UNOWNED 0, retired 4a3b-01 (redesign 38be-01 ran), 29 left owned; (3) blocker_watch re-run: 48 NOT_RUNNING (47 queued never-yet-dispatched, 1 NEEDS_LANE RQ-20260928-001 owned by HTF-FILTER-AB-LANE), 3 STALE_BLOCK dangling refs. NOT done: live_strategy and infra shortfalls (4 and 6) got no unit; step A stranded-PR list, watchdog read and individual result reads not run. Record comms/research/ops/20261024T0330Z.json. Landing hold (queue/programme edits, E57).",
+  "updated_at": "2026-10-24T03:30:00Z",
+  "updated_by": "session_01V7gqYXmxAvnZYmyYbwMKmp",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261024-001 and RQ-20261024-002 dispatch on kaggle_cpu and land a measured verdict",
+    "how_to_check": "ls research/results/RQ-20261024-001 research/results/RQ-20261024-002",
+    "due_by": "2026-10-31"
+  },
+  "_seq": 620
+}

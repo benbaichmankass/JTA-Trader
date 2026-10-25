@@ -1,0 +1,71 @@
+id: RQ-20261011-17f4-03
+title: 'New idea: does AGREEMENT across the 5m/15m/1h BTC regime heads predict forward realized volatility
+  better than the best single head? -- blocked on the shadow-log joiner'
+status: blocked
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: 'On the shadow-log window (retained since 2026-09-26, 69,706 rows across 36 models), using concurrent
+  BTC heads at 5m, 15m (advisory fc-pcv-v2) and 1h on a common 15m clock: is the forward 5-bar realized-volatility
+  excess (vs trailing median) separated more strongly (AUC and top-decile lift) by the unanimity of the
+  three heads'' volatile calls than by the best single head? Out of sample by time (first 60% fit thresholds,
+  last 40% grade).'
+why_this_matters: Each head is soaked and judged alone. A consensus signal costs nothing to serve (all
+  three already log) and could lift f1_volatile without a new model -- the REGIME-PROGRAM 'when to apply
+  each strategy' lever with zero training spend. Plan item ML-N1.
+power:
+  expected_n: 15
+  min_detectable_effect: 0.03
+  effect_units: AUC
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (not measured): expected_n counts independent 1-day blocks (the bootstrap block), NOT
+    bars: ~15 retained days. Bars within a day are autocorrelated, so counting them would overstate n.
+    sd=0.1 is an ASSUMED standard deviation of the AUC difference under block bootstrap (not measured);
+    the effect 0.03 is 0.3 sd, so the floor is (1.96+0.8416)^2/0.3^2 = 87 independent blocks, i.e. ~87
+    days of 1-day blocks -- the retained log covers ~15, so this unit will most likely land UNDERPOWERED
+    (descriptive AUC difference only) until more days accrue. That is stated now, not discovered later.'
+  feasibility:
+    source: none
+    accrual_basis: 'ESTIMATE: ~15 day-blocks retained in the shadow log (oldest_retained 2026-09-26, /api/bot/shadow/stats
+      log_coverage, read 2026-10-11) plus 4 archived windows folded by the drift reader; +1 day-block
+      per day. Needs ~87; the unit is expected to land underpowered first and is re-dispatchable.'
+  sd: 0.1
+decision_rule:
+  id: RULE-RQ1011-17F4-03-HEAD-AGREEMENT
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: AUC of unanimity-of-volatile-calls vs forward vol-excess label on the last 40% by time; same
+    for each single head; difference in AUC with a block bootstrap (block = 1 day) 95% interval.
+  rule: PASS IF consensus AUC exceeds the best single head's AUC by >=0.03 with the bootstrap interval
+    excluding 0, on the held-out 40%, AND the lift holds in each half of that 40%. FAIL IF the interval
+    includes 0 or the sign flips in a half. UNDERPOWERED IF fewer than 87 independent held-out day-blocks
+    exist after the joiner (the power floor above) (report the AUC difference descriptively only). Never
+    re-cut the split after seeing results.
+  what_it_does_not_do: A PASS is a research finding that justifies a Tier-3 proposal to serve a consensus
+    feature; it changes no head, gate, or order path.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.5
+  est_minutes: 20
+  basis: An estimate.
+blocked_on:
+- what: No joiner puts shadow-log head scores on a common clock beside realized forward vol.
+  ref: ML-HEAD-AGREEMENT-JOIN (docs/claude/work/checklist/); overlaps REGIME-PROGRAM deliverable 3
+  clears_when: Joiner merged and emits one row per 15m bar with the three head scores and forward realized
+    vol; then git mv to research/queue/ and fill run.workflow.
+run:
+  workflow: null
+  note: Deliberately null until blocked_on clears.
+  inputs:
+    research_unit: RQ-20261011-17f4-03
+lands:
+  store: research/results/ (once promoted)
+related:
+- ML-HEAD-AGREEMENT-JOIN
+- REGIME-PROGRAM
+- ML-ROADMAP-LOOP
+last_dispatched_at: null

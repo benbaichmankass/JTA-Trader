@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "why": "RESEARCH-PIPE-UNSTICK root-cause fix. Tier-1 research tooling, but scripts/research/queue_replenish.py is the generator check_pr_landing E58 re-runs to vouch for replenish PRs, so R12 requires one human read. Change: (1) generated units now carry a `roadmap` ref (roadmap-map-guard failed every replenish PR without it); (2) the self-test no longer asserts the LIVE grids still have unminted points, which failed on the PR that minted the last one. No guard weakened.",
+  "hold_text": "Edits queue_replenish.py, the generator E58 re-runs to vouch replenish PRs: please read the roadmap-ref emission and the self-test change once, then merge."
+}

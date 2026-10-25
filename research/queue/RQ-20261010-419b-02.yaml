@@ -1,0 +1,115 @@
+id: RQ-20261010-419b-02
+title: >-
+  Pullback short side: is the 2h pullback's SHORT side a durable drag on the live legs (xrp_pullback_2h,
+  ada_pullback_2h), or window luck? (perf-followup 2026-W41 L1)
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: >-
+  MEASURED 2026-10-10 on bybit_1, bucket-A closed trades with initial risk recovered from order_packages.exit_plan_state.risk,
+  2026-06-18..2026-10-09: pullback family n=37, win 18.9%, sum -6.8R, -$8,858; SHORT n=17 sum -5.7R -$7,140
+  (win 17.6%), LONG n=20 sum -1.1R -$1,718 (ids: shorts 6548 6514 6135 5839 5837 5694 5669 5402 5358 5087
+  4585 4571 4148 4008 3441 3408 2739). Prior art: PB-20260729-CRYPTO-PULLBACK-2H-LONG-DRAG claimed the
+  LONG side was the drag and #7915 refuted it on walk-forward -- this is the opposite direction. Question:
+  at live params, net of cost, over 1830 d split into 4 contiguous folds, is the SHORT net R negative
+  in a strict majority of folds AND pooled negative (direction_walkforward stable_drag mirrored to the
+  short side), per leg and for the two legs pooled, with >= 39 short trades?
+why_this_matters: >-
+  Real money: both legs are on bybit_2 (+ bybit_portfolio, bybit_1). The paper bleed is dominated by legs
+  already cut on 2026-10-05 (avax/sol/eth pullback), so the live question is narrower: do the two surviving
+  pullback legs need a side_filter: long? One bad paper quarter is not evidence; a 4-fold walk-forward
+  at live params is.
+power:
+  expected_n: 140
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    expected_n = SHORT trades of the smaller leg over 1830 d: e35 base trades xrp_pullback_2h 289, ada_pullback_2h
+    288 (IS+OOS, docs/research/e35-bracket-corpus.jsonl 2026-10-09); half are shorts -> ~140. Floor d=0.45
+    -> 39 per direction ((1.96+0.8416)^2/0.45^2). Folds multiply nothing: the fold test is a sign-majority
+    count, not a power claim.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      No committed per-direction trade count exists for these legs at live params: the e35 corpus stores
+      IS/OOS base counts per leg, not a long/short split. The
+
+      unit's first output IS that split; below the floor (39 trades per direction, d=0.45) it grades indeterminate,
+      never FAIL.
+decision_rule:
+  id: RULE-RQ-20261010-419b-02-PREREG
+  registered_at: '2026-10-10'
+  registered_before_run: true
+  statistic: >-
+    Per leg and pooled: per-fold SHORT net R (net of resolve_cost_policy cost stack) from direction_walkforward
+    on harness emits at config-exact live params; n_short; folds_negative_short; pooled_short_net_r.
+  rule: >-
+    CONFIRMED (stable short drag) IF n_short >= 39 AND folds_negative_short >= 3 of 4 AND pooled_short_net_r
+    < 0 for BOTH legs, or for the pool with neither leg positive -> Tier-3 proposal side_filter: long
+    on xrp_pullback_2h and ada_pullback_2h across bybit_2, bybit_portfolio, bybit_1 in one PR (mirror
+    equality), data-backed so decide-ship-notify under the 2026-09-27 authorization. NOT CONFIRMED (honest_negative:
+    the paper short bleed is window luck, close the claim) IF n_short >= 39 AND folds_negative_short <=
+    2 of 4 OR pooled_short_net_r >= 0. MIXED (legs disagree) -> per-leg proposal only for a leg that meets
+    CONFIRMED on its own. INDETERMINATE IF n_short < 39.
+  what_it_does_not_do: >-
+    Touches no config; says nothing about the long side (already refuted as a drag by #7915); not a demotion
+    of either leg.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  basis: >-
+    Runner, one leg-replay-emit invocation (harness over 1830 d binance_vision candles, stdlib folds).
+    An estimate, not a measurement.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/leg_replay_emit.py
+  - --legs
+  - xrp_pullback_2h,ada_pullback_2h
+  - --days
+  - '1830'
+  - --rule
+  - short-drag
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261010-419b-02
+  note: >-
+    Unblocked 2026-10-11 by PERF-FU-LEG-REPLAY: scripts/research/leg_replay_emit.py replays the legs config-exact
+    (m20_fleet_exit_sweep.base_args) over 1830 d of binance_vision candles, runs direction_walkforward per leg
+    and pooled, writes per-leg daily-R series, and grades with this unit's decision_rule thresholds verbatim
+    (--rule short-drag). The decision_rule block is unchanged from registration.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261010-419b-02/<run_id>.jsonl (E5 contract); raw emits, daily_r series and replay.json land under comms/research/RQ-20261010-419b-02/<run_id>/.
+related:
+- comms/perf_followup/perf-followup-20261010-191000.json
+- PI-20261010-WQAPZD8B-0004
+- scripts/research/direction_walkforward.py
+- RQ-20260928-016
+- RQ-20260928-019
+last_dispatched_at: '2026-10-11T06:05:57+00:00'
+grading:
+  attested: RULE-RQ-20261010-419b-02-PREREG
+  auto: true
+  decision_rule_id: RULE-RQ-20261010-419b-02-PREREG
+  evidence:
+  - research/results/RQ-20261010-419b-02/38116959391.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

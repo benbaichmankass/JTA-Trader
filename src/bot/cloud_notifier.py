@@ -275,20 +275,78 @@ async def _drain_one_ping_dir(context, chat_id: str, pings_dir: str,
             prefix = _PRIORITY_ICONS.get(priority, _PRIORITY_ICONS["normal"])
             text = f"{prefix} {body}"
 
-        try:
-            await (bot or context.bot).send_message(
-                chat_id=chat_id, text=text,
-                parse_mode=parse_mode,
-                disable_web_page_preview=True,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("ping inbox: send failed for %s — %s", name, exc)
+        # TELEGRAM-CHANNELS (2026-10-11): a producer may stamp the CHANNEL its
+        # ping belongs to (src/runtime/telegram_channels.py owns the table) —
+        # trade lifecycle pings carry ``channel: trades``. When that channel's
+        # route is its own bot, deliver there; on ANY failure fall through to
+        # this drainer's own bot (SYSTEM), so the move can never lose a ping.
+        if await _deliver_via_channel(payload, text, parse_mode, name):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+            continue
+
+        # TELEGRAM-CHANNELS (2026-10-11): split an oversized body into <=4096
+        # parts delivered in order (resume after a partial failure); a repeated
+        # non-length 4xx -> .broken + ONE red flag on SYSTEM. Before this a
+        # too-long ping failed here every 5 s forever ("Message is too long").
+        from src.runtime import telegram_split
+
+        sender = bot or context.bot
+
+        async def _send(part: str) -> bool:
+            await sender.send_message(chat_id=chat_id, text=part, parse_mode=parse_mode,
+                                      disable_web_page_preview=True)
+            return True
+
+        outcome = await telegram_split.process_ping_async(
+            path, payload, text, parse_mode, _send, where=f"ping inbox {pings_dir}")
+        if outcome != "sent":
             continue
 
         try:
             os.unlink(path)
         except OSError:
             pass
+
+
+async def _deliver_via_channel(payload: dict, text: str, parse_mode, name: str) -> bool:
+    """Deliver a ping stamped with a non-SYSTEM ``channel`` via that channel's
+    own bot. Returns True only on a CONFIRMED send; False means "not mine to
+    deliver here / failed" and the caller delivers it on its own bot instead.
+    Never raises."""
+    channel = str(payload.get("channel") or "").strip().lower()
+    if channel not in ("trades", "manager"):
+        return False
+    try:
+        import asyncio
+
+        from src.runtime import telegram_channels as _tc
+        from src.runtime.notify import send_telegram_direct
+
+        kind = str(payload.get("kind") or "")
+        if kind and not _tc.enabled(kind):
+            logger.info("ping inbox: %s (kind %s) muted in settings — dropped", name, kind)
+            return True  # deliberately not sent; the file is consumed
+        route = _tc.channel_route(channel)
+        if not (route.deliverable and route.isolated):
+            return False  # the channel IS this bot today — deliver normally
+        from src.runtime.telegram_split import split_message
+
+        # Oversized bodies are split (TELEGRAM-CHANNELS 2026-10-11). Partial
+        # delivery here falls through to the SYSTEM bot, which may repeat the
+        # parts already sent — a duplicate, never a loss.
+        for part in split_message(text, parse_mode):
+            if not await asyncio.to_thread(
+                    send_telegram_direct, part, parse_mode=parse_mode, mirror_to_fcm=False,
+                    bot_token=route.token, chat_id=route.chat_id):
+                return False
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ping inbox: %s channel send failed for %s (%s) — delivering "
+                       "on the SYSTEM bot instead", channel, name, type(exc).__name__)
+        return False
 
 
 async def _drain_pending_pings(context, chat_id: str | None = None,

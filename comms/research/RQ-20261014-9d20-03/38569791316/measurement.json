@@ -1,0 +1,1049 @@
+{
+  "mode": "classify",
+  "bars": {
+    "auc_gain": 0.05,
+    "lift_r": 0.05,
+    "min_leg_n": 100,
+    "skip_quantile": 0.2,
+    "folds": 4,
+    "embargo": 5
+  },
+  "files": [
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_5m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_avax_5m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_eth_15m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_sol_15m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_sol_5m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_xrp_15m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ict_scalp_xrp_5m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/ada_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/avax_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/fade_breakout_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/gdx_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24/gld_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-28/gld_pullback_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/htf_pullback_trend_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/iwm_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/mes_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/mgc_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/mgc_trend_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/mhg_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/qld_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/qqq_pullback_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24/qqq_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/scha_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/slv_trend_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-05-730d-expand/sol_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-29/spy_pullback_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/spy_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/squeeze_breakout_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/tlt_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/tlt_pullback_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/tqqq_trend_long_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e69/trend_donchian_ada_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e69/trend_donchian_avax_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_eth__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_sol__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/uso_trend_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-05-730d-expand/eth_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/eth_pullback_prop_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/iaum_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-02/ief_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-24-e55/slv_pullback_1d__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/trend_donchian__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07/trend_donchian_eth_prop__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-12-1460d/trend_donchian_xrp_4h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-08/xrp_pullback_2h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-09-25/fvg_range_15m__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/fade_slv_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_ada_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_doge_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_link_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/squeeze_doge_1h__trades.jsonl"
+  ],
+  "verdict": "fail",
+  "label": "every evaluated arm's AUC interval contains the class prior on every leg",
+  "target": "giveback_gt",
+  "threshold": 0.5,
+  "features": [
+    "confidence",
+    "direction_long",
+    "hour_of_day",
+    "dayofweek",
+    "adx_at_entry",
+    "regime_weight"
+  ],
+  "learners": [
+    "prior",
+    "numpy_logit"
+  ],
+  "arm_status": {
+    "prior": null,
+    "numpy_logit": null
+  },
+  "legs": {
+    "eth_pullback_2h": {
+      "n": 113,
+      "base_rate": 0.7168141592920354,
+      "folds": 0,
+      "arms": {},
+      "note": "too few folds or a single class"
+    },
+    "ict_scalp_5m": {
+      "n": 143,
+      "base_rate": 0.7552447552447552,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            -0.16125238095238092,
+            -0.04542272727272729,
+            -0.19078571428571428,
+            -0.1406227272727272
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.5204081632653061,
+            0.29411764705882354,
+            0.7333333333333333,
+            0.6388888888888888
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.04668700813658795,
+            "ci95": [
+              -0.2549322096564777,
+              0.3483062259296536
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.016825396825396854,
+            0.18154272727272724,
+            -0.01882481203007519,
+            -0.061882272727272786
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": 0.021002561422495604,
+            "ci95": [
+              -0.15245831205912652,
+              0.19446343490411772
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 72,
+          "take_all_fold_mean_net_r": [
+            -0.16125238095238092,
+            -0.04542272727272729,
+            -0.19078571428571428,
+            -0.1406227272727272
+          ]
+        }
+      }
+    },
+    "ict_scalp_avax_5m": {
+      "n": 172,
+      "base_rate": 0.7674418604651163,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            -0.23653076923076924,
+            -0.3070653846153846,
+            -0.21144230769230768,
+            -0.25057692307692303
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.3523809523809524,
+            0.7666666666666667,
+            0.5208333333333334,
+            0.625
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.06622023809523812,
+            "ci95": [
+              -0.2115160562349231,
+              0.34395653242539936
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            0.11668576923076923,
+            0.00722252747252744,
+            0.030837307692307664,
+            0.08562692307692302
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": 0.06009313186813184,
+            "ci95": [
+              -0.019488178972687523,
+              0.13967444270895119
+            ],
+            "sign_consistent": true
+          },
+          "kept_test_trades": 85,
+          "take_all_fold_mean_net_r": [
+            -0.23653076923076924,
+            -0.3070653846153846,
+            -0.21144230769230768,
+            -0.25057692307692303
+          ]
+        }
+      }
+    },
+    "ict_scalp_sol_5m": {
+      "n": 188,
+      "base_rate": 0.723404255319149,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            -0.09285714285714285,
+            -0.33122142857142867,
+            0.18087857142857144,
+            -0.23501034482758623
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.525,
+            0.625,
+            0.4947916666666667,
+            0.717391304347826
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.09054574275362319,
+            "ci95": [
+              -0.07050972328014603,
+              0.2516012087873924
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            0.08945126050420169,
+            -0.012537662337662236,
+            0.047795112781954835,
+            -0.10914617691154418
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": 0.0038906335092375247,
+            "ci95": [
+              -0.13326622009876077,
+              0.1410474871172358
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 81,
+          "take_all_fold_mean_net_r": [
+            -0.09285714285714285,
+            -0.33122142857142867,
+            0.18087857142857144,
+            -0.23501034482758623
+          ]
+        }
+      }
+    },
+    "ict_scalp_xrp_5m": {
+      "n": 165,
+      "base_rate": 0.7454545454545455,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            -0.3771333333333333,
+            -0.17916800000000002,
+            -0.11261600000000005,
+            0.07236000000000002
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.0,
+            0.3888888888888889,
+            0.5714285714285714,
+            0.5625
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": -0.11929563492063494,
+            "ci95": [
+              -0.544649592320513,
+              0.3060583224792432
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.05218939393939398,
+            0.018372545454545502,
+            -0.037049217391304345,
+            0.011969411764705881
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": -0.014724163527861735,
+            "ci95": [
+              -0.07067363115925983,
+              0.04122530410353635
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 84,
+          "take_all_fold_mean_net_r": [
+            -0.3771333333333333,
+            -0.17916800000000002,
+            -0.11261600000000005,
+            0.07236000000000002
+          ]
+        }
+      }
+    },
+    "mgc_trend_1h": {
+      "n": 117,
+      "base_rate": 0.7948717948717948,
+      "folds": 0,
+      "arms": {},
+      "note": "too few folds or a single class"
+    },
+    "pullback_ada_1h": {
+      "n": 368,
+      "base_rate": 0.8288043478260869,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.3460054545454545,
+            0.7740818181818181,
+            -0.008334545454545442,
+            0.2211125000000001
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.4766666666666667,
+            0.6183510638297872,
+            0.6815476190476191,
+            0.49696969696969695
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.06838376162844248,
+            "ci95": [
+              -0.08754177123522838,
+              0.22430929449211334
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.0691476767676768,
+            -0.4911769401330376,
+            -0.06861745454545458,
+            0.14186130952380954
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": -0.12177019048058983,
+            "ci95": [
+              -0.5442670798082149,
+              0.3007266988470352
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 178,
+          "take_all_fold_mean_net_r": [
+            0.3460054545454545,
+            0.7740818181818181,
+            -0.008334545454545442,
+            0.2211125000000001
+          ]
+        }
+      }
+    },
+    "pullback_doge_1h": {
+      "n": 382,
+      "base_rate": 0.8507853403141361,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.4720438596491228,
+            0.5265362068965517,
+            -0.08901578947368424,
+            -0.18001551724137932
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.3527777777777778,
+            0.43333333333333335,
+            0.36153846153846153,
+            0.8339622641509434
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": -0.004597040799870972,
+            "ci95": [
+              -0.36825649649880277,
+              0.3590624148990609
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            0.06204364035087723,
+            0.06596166544387383,
+            0.05751971104231168,
+            -0.2606524827586207
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": -0.018781866480389486,
+            "ci95": [
+              -0.2753846587583733,
+              0.23782092579759434
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 188,
+          "take_all_fold_mean_net_r": [
+            0.4720438596491228,
+            0.5265362068965517,
+            -0.08901578947368424,
+            -0.18001551724137932
+          ]
+        }
+      }
+    },
+    "pullback_link_1h": {
+      "n": 391,
+      "base_rate": 0.8695652173913043,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            -0.012277586206896557,
+            -0.03892372881355932,
+            -0.20251525423728814,
+            -0.06025084745762709
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.6375,
+            0.4175824175824176,
+            0.7703703703703704,
+            0.6296296296296297
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.1137706043956044,
+            "ci95": [
+              -0.11829713762590531,
+              0.3458383464171141
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.20752241379310343,
+            -0.011578543913713463,
+            -0.1400663784157731,
+            0.006850847457627089
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": -0.08807912216624073,
+            "ci95": [
+              -0.251968629460145,
+              0.0758103851276635
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 183,
+          "take_all_fold_mean_net_r": [
+            -0.012277586206896557,
+            -0.03892372881355932,
+            -0.20251525423728814,
+            -0.06025084745762709
+          ]
+        }
+      }
+    },
+    "squeeze_doge_1h": {
+      "n": 541,
+      "base_rate": 0.7966728280961183,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.24221111111111115,
+            0.18679506172839505,
+            0.1973666666666667,
+            -0.028407317073170738
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.4707070707070707,
+            0.48032786885245904,
+            0.5916666666666667,
+            0.5625
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0263004015565491,
+            "ci95": [
+              -0.0691032415812353,
+              0.1217040446943335
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            0.08145605306799336,
+            -0.02881119076065311,
+            -0.01776376811594199,
+            -0.1322280675422139
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": -0.024336743337703907,
+            "ci95": [
+              -0.16332823192753115,
+              0.11465474525212332
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 263,
+          "take_all_fold_mean_net_r": [
+            0.24221111111111115,
+            0.18679506172839505,
+            0.1973666666666667,
+            -0.028407317073170738
+          ]
+        }
+      }
+    },
+    "trend_donchian_eth": {
+      "n": 223,
+      "base_rate": 0.8430493273542601,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.2723454545454545,
+            0.47560000000000013,
+            -0.024536363636363634,
+            -0.06138235294117645
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.5864197530864198,
+            0.5555555555555556,
+            0.7283950617283951,
+            0.296875
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.041811342592592615,
+            "ci95": [
+              -0.2442533919908832,
+              0.3278760771760684
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.1720040752351097,
+            -0.09224615384615398,
+            -0.09856018808777427,
+            0.14616635294117647
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": -0.05416101605696537,
+            "ci95": [
+              -0.27430966921879,
+              0.1659876371048593
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 109,
+          "take_all_fold_mean_net_r": [
+            0.2723454545454545,
+            0.47560000000000013,
+            -0.024536363636363634,
+            -0.06138235294117645
+          ]
+        }
+      }
+    },
+    "trend_donchian_eth_4h": {
+      "n": 113,
+      "base_rate": 0.672566371681416,
+      "folds": 0,
+      "arms": {},
+      "note": "too few folds or a single class"
+    },
+    "trend_donchian_eth_prop": {
+      "n": 155,
+      "base_rate": 0.8129032258064516,
+      "folds": 4,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.11353043478260869,
+            -0.09981739130434786,
+            -0.01673913043478261,
+            0.10176666666666667
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.4868421052631579,
+            0.5238095238095238,
+            0.47368421052631576,
+            0.48412698412698413
+          ],
+          "auc_minus_prior": {
+            "n_folds": 4,
+            "mean": -0.007884294068504591,
+            "ci95": [
+              -0.042691077020275414,
+              0.026922488883266232
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.004785990338164223,
+            0.03362364130434786,
+            0.15175788043478264,
+            -0.06654791666666668
+          ],
+          "selection_lift_r": {
+            "n_folds": 4,
+            "mean": 0.028511903683574903,
+            "ci95": [
+              -0.11777019980231837,
+              0.17479400716946816
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 66,
+          "take_all_fold_mean_net_r": [
+            0.11353043478260869,
+            -0.09981739130434786,
+            -0.01673913043478261,
+            0.10176666666666667
+          ]
+        }
+      }
+    },
+    "trend_donchian_sol": {
+      "n": 116,
+      "base_rate": 0.8017241379310345,
+      "folds": 0,
+      "arms": {},
+      "note": "too few folds or a single class"
+    },
+    "trend_donchian_sol_4h": {
+      "n": 111,
+      "base_rate": 0.6216216216216216,
+      "folds": 0,
+      "arms": {},
+      "note": "too few folds or a single class"
+    },
+    "trend_donchian_sol_prop": {
+      "n": 129,
+      "base_rate": 0.8217054263565892,
+      "folds": 2,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 2,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.10072,
+            0.2543250000000001
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.28125,
+            0.35333333333333333
+          ],
+          "auc_minus_prior": {
+            "n_folds": 2,
+            "mean": -0.18270833333333333,
+            "ci95": [
+              -0.64065375,
+              0.2752370833333333
+            ],
+            "sign_consistent": true
+          },
+          "fold_selection_lift_r": [
+            0.10818588235294124,
+            -0.07501166666666667
+          ],
+          "selection_lift_r": {
+            "n_folds": 2,
+            "mean": 0.016587107843137286,
+            "ci95": [
+              -1.1472669210784319,
+              1.1804411367647063
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 32,
+          "take_all_fold_mean_net_r": [
+            0.10072,
+            0.2543250000000001
+          ]
+        }
+      }
+    }
+  },
+  "passing": [],
+  "n_test_trades": 1680
+}

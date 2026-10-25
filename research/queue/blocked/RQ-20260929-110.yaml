@@ -2,6 +2,8 @@ id: RQ-20260929-110
 title: 'Does a serveable funding-augmented regime head lift f1_volatile for SOLUSDT the way it does for BTCUSDT?'
 status: blocked
 cadence: once
+theme: regime
+priority: 2
 kind: experiment
 
 question: >-
@@ -76,6 +78,14 @@ routing:
   basis: Same order of cost as RQ-20260929-109's ETH build.
 
 blocked_on:
+  - kind: work_item
+    ref: FUNDING-OI-DATASETS-ETH-SOL
+    what: >-
+      Owner named 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016, deliverable 2 of the regime backlog): this unit waits on
+      the SOLUSDT funding/OI-joined market_features dataset (row FUNDING-OI-DATASETS-ETH-SOL; source archive row DATA-DERIV-ARCHIVE). The prose entries below are the original diagnosis and stay as written.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/, status queued,
+      run.command set (no run.workflow: declare compute).
   - what: >-
       NO SOLUSDT funding/OI-joined market_features dataset exists at any
       cadence (checked ml/configs/ this session -- every sol-regime-*.yaml
@@ -99,6 +109,8 @@ run:
 lands:
   store: comms/reviews/ or a new ml/configs/sol-regime-*-funding-svble-v1.yaml, once trained
 
+roadmap:
+- L-REGIME
 related:
   - RQ-20260929-109 (the ETH analog of this same question)
   - 'ml/configs/btc-regime-1h-lgbm-funding-svble-v1.yaml (MB-20260613-001) -- the BTC head this asks whether SOL replicates'

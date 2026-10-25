@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a disposition is recorded: new-version fix merged, head retired, or cause shown to be non-model",
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261021-K43EKTZA-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DRIFT-REMEDIATION-9 (session_017RN2dTgPqsaRoGk43eKTZa), trainer-vm-diag #19369 #19374; parent PI-20261016-P3PFA1GK-0001",
+    "rerun": "trainer-vm-diag: grep setup-quality-baseline-v0 runtime_logs/trainer_mirror/promotion_readiness/$(date -u +%F)/SUMMARY.md"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[persistent-capability] setup-quality-baseline-v0 (shadow regression head) is DEGENERATE, not drifting: shadow scores sit at -0.16 (sd 0.036, 72 distinct values over 25k records, flat since a 09-02 level step), readiness gates non_degenerate, beats_baseline, sample_sufficiency, live_agreement and drift_clean all fail, and 172 daily retrains have not changed it (eval mae 0.96). A retrain cannot fix this; it needs a label/feature fix shipped as a NEW model_id under drift-remediation step 3, or retire the head. Not an arm candidate."
+}

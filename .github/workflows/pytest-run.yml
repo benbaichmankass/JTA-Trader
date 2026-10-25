@@ -63,6 +63,16 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # POST-MERGE BACKSTOP (GH-CAPACITY-PR-CI-FANOUT, 2026-10-15). PRs run only the import-graph-
+  # affected tests, so the full suite on main is what catches a break a PR's selection missed --
+  # and push runs do not carry it reliably: an auto-merged (GITHUB_TOKEN) merge commit starts no
+  # run, and the next push run's `before...sha` range starts AT that commit, so its code is outside
+  # the range. Every 30 min this tick asks scripts/ci/pytest_run_backstop.py whether main's HEAD
+  # code is already graded by a completed full run; if not, it runs the full suite (no-op otherwise).
+  # Bound: a post-merge break is detected within ~30 min + the suite's run time + runner queueing.
+  # Off the hour on purpose (most crons sit on :00). Pinned by tests/test_pytest_run_backstop.py.
+  schedule:
+    - cron: '13,43 * * * *'
   # Manually dispatchable so a FEATURE BRANCH can always run the suite.
   # Without this, `push` is main-only and `pull_request` is the sole event that
   # can run these tests on a branch — so the one confirmed dropped
@@ -72,6 +82,16 @@ on:
   # "a check went red", it is "a check silently did not run", which renders
   # identically to green.
   workflow_dispatch:
+    inputs:
+      backstop:
+        # GH-CAPACITY-PR-CI-FANOUT (manager 2026-10-15T13:06Z): GitHub never fired this file's
+        # cron in its first 5 slots, so schedule-keeper ALSO dispatches pytest-run on main with
+        # default inputs. On main, backstop=true runs the post-merge backstop decision (full suite
+        # unless HEAD's code is already graded); backstop=false forces the full suite. On any other
+        # ref the input is ignored and the full suite runs, as before.
+        description: "On main: run the full suite only if HEAD's code has no completed full run"
+        type: boolean
+        default: true
 
 # Concurrency (2026-08-10, BL-20260810-REQUIRED-WORKFLOWS-NO-CONCURRENCY-GROUP).
 # Without a group, a re-queue (a second push to the same PR, or the
@@ -94,16 +114,36 @@ concurrency:
 # for pull_request/merge_group/dispatch; for push the running run finishes and
 # GitHub keeps at most ONE pending run in the group (a newer push replaces the
 # pending one), bounding cost at one running + one pending instead of one per merge.
-  group: pytest-run-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'push' }}
+  # The post-merge backstop (the schedule tick, and the keeper's workflow_dispatch on main) shares
+  # ONE constant group and never cancels: a cancelling tick would kill the full run it exists to
+  # finish, and serialising cron + keeper means the second one sees the first's completed full run
+  # and no-ops. Every other event keeps its per-event, per-PR/ref group.
+  group: >-
+    ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    && 'pytest-run-backstop-main'
+    || format('pytest-run-{0}-{1}', github.event_name, github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main') }}
 
 permissions:
   contents: read
+  actions: read  # the schedule backstop reads this workflow's own run history
 
 jobs:
   pytest-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 -> 50 (2026-10-03, lane CI-TIMEOUT). The full suite had no headroom:
+    # of the last 100 completed runs on this workflow (run ids 37104578054..
+    # 37115481899, one page of the API, 2026-10-03 06:54Z-10:10Z) 26 ran longer
+    # than 8 min. Of the full-suite runs that reached the end, 11 succeeded at
+    # a median of 26.5 min (range 19.4-30.0, the slowest AT the old limit), and
+    # 6 pull_request runs (attempts 1-2 of run 37110623445 among them) were
+    # cancelled at 30.4-30.6 min by this limit. 50 gives ~1.7x the median.
+    # 50 -> 75 (2026-10-13, lane CARRYOVER-1013, row CI-PYTEST-TIMEOUT-HEADROOM). The suite
+    # (~22.7k tests) takes 33-41 min on a good runner and 48+ min on a slow one; attempt-1 jobs
+    # were cancelled at ~50.2 min with pytest already at [100%] (runs 38238044098, 38248466083).
+    # 75 is ~1.5x the slowest observed full run. Sharding was not chosen: it multiplies runner
+    # cost and the cap is the only thing failing.
+    timeout-minutes: 75
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,8 +152,29 @@ jobs:
 
       - name: Determine relevant changed files
         id: changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           set -e
+          if [ "${{ github.event_name }}" = "schedule" ] || { [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ inputs.backstop }}" != "false" ]; }; then
+            # Post-merge backstop: full suite on main's HEAD unless its code is already graded.
+            DECISION=$(python3 scripts/ci/pytest_run_backstop.py --head "${{ github.sha }}")
+            echo "$DECISION"
+            if echo "$DECISION" | grep -qx 'run=true'; then
+              echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "mode=full" >> "$GITHUB_OUTPUT"
+              echo "$DECISION" | grep '^reason=' >> "$GITHUB_OUTPUT"
+            else
+              echo "relevant=false" >> "$GITHUB_OUTPUT"
+              echo "mode=none" >> "$GITHUB_OUTPUT"
+              {
+                echo "### pytest-run backstop: HEAD already graded"
+                echo "$DECISION" | sed -n 's/^reason=//p'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+            exit 0
+          fi
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch origin "${{ github.base_ref || 'main' }}" --quiet
             RANGE="origin/${{ github.base_ref || 'main' }}...HEAD"
@@ -121,12 +182,15 @@ jobs:
             BEFORE="${{ github.event.before }}"
             if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
               echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "mode=full" >> "$GITHUB_OUTPUT"
               echo "::notice::No prior commit to diff against — running the full check."
               exit 0
             fi
             RANGE="$BEFORE...${{ github.sha }}"
           fi
-          FILES=$(git diff --name-only $RANGE || true)
+          # --no-renames: list the OLD path of a rename too, so moving a file OUT of a
+          # suite-read tree is seen (CI-DIET; only ever widens the relevant set).
+          FILES=$(git diff --name-only --no-renames $RANGE || true)
           echo "Changed files ($RANGE):"
           echo "$FILES"
           # Run the full suite when the diff touches code/test-config OR
@@ -278,11 +342,35 @@ jobs:
           # on the backlog row; it is a bigger change than this one.
           #
           # Pinned in tests/test_pytest_run_filter.py::COVERED.
-          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/MANAGER-CHECKLIST\.json$|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$'; then
+          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/checklist/|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$|^tools/phone-executor/test/fixtures'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
+            # CI-DIET (2026-10-13): of the relevant diffs, a DATA-ONLY one (checklist
+            # rows, pipeline rows, research queue/results, comms/ outputs, pr-landing /
+            # automerge / merge-slot request files) cannot change what the ~1,300 test
+            # files that do not read those trees observe. It runs exactly the test files
+            # that DO read them instead of the whole ~36-minute suite. The allowlist is
+            # explicit and lives in scripts/ci/pytest_run_scope.py (pinned by
+            # tests/test_pytest_run_scope.py); a path not named there runs the full
+            # suite, so the failure direction is "more tests", never "fewer".
+            # The `guards` job is untouched and still runs everything it ran before.
+            # AFFECTED MODE (GH-CAPACITY-PR-CI-FANOUT, operator 2026-10-15: "Yes, affected tests
+            # on PRs"). On pull_request ONLY, a code diff runs the test files the import graph says
+            # can observe it (importers, path readers, fixture users, tree scanners), falling back
+            # to the full suite on conftest / requirements / .github / scripts/ci / guard scripts /
+            # config-named or high-fan-in modules / anything undecidable. Push to main keeps the
+            # full suite (per-sha, never cancelled) and pages via claude-run-failure-alert if red.
+            # Pinned by tests/test_pytest_run_affected.py.
+            printf '%s\n' "$FILES" \
+              | python3 scripts/ci/pytest_run_scope.py --event "${{ github.event_name }}" --tests-out /tmp/affected-tests.txt \
+              | tee -a "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "mode=none" >> "$GITHUB_OUTPUT"
             echo "::notice::No code/config/workflow files changed — skipping the pip install + test-run steps (short-circuit, MB-20260706-CI-MINUTES)."
+            {
+              echo "### pytest-run: PASSED WITHOUT RUNNING TESTS (by design)"
+              echo "The diff touches no path the suite reads (see the relevance filter in this workflow, pinned by tests/test_pytest_run_filter.py). The \`guards\` job still ran."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Set up Python 3.11
@@ -298,9 +386,45 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          # CI-only parallel runner (CI-DIET); kept out of requirements-test.txt so the
+          # sandbox/dev install is unchanged. Major-pinned.
+          pip install "pytest-xdist>=3.5,<4"
+
+      - name: Explain the scope of this run
+        if: steps.changed.outputs.relevant == 'true'
+        env:
+          # via env, never inline: the reason embeds PR file names (untrusted).
+          SCOPE_MODE: ${{ steps.changed.outputs.mode }}
+          SCOPE_REASON: ${{ steps.changed.outputs.reason }}
+        run: |
+          {
+            echo "### pytest-run scope: \`${SCOPE_MODE}\`"
+            echo "${SCOPE_REASON}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run tests (data-only diff - every test file that reads the data trees)
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'data'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python3 scripts/ci/pytest_run_scope.py --select-tests > /tmp/data-tests.txt
+          echo "selected $(wc -l < /tmp/data-tests.txt) test files"
+          pytest -q -n auto --dist loadfile $(cat /tmp/data-tests.txt) \
+            --ignore=tests/test_main_loop.py \
+            --junitxml=pytest-report.xml
+
+      - name: Run tests (pull_request code diff - import-graph affected test files)
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'affected'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          echo "selected $(wc -l < /tmp/affected-tests.txt) test files"
+          pytest -q -n auto --dist loadfile $(cat /tmp/affected-tests.txt) \
+            --ignore=tests/test_main_loop.py \
+            --junitxml=pytest-report.xml
 
       - name: Run tests
-        if: steps.changed.outputs.relevant == 'true'
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode != 'data' && steps.changed.outputs.mode != 'affected'
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -314,7 +438,14 @@ jobs:
           # a multi-round guess (the 2026-05-28 time-bomb-test incident: a
           # clock-relative insights test reddened pytest-run and it took a
           # full local-repro to name it).
-          pytest -q tests/ \
+          # -n auto --dist loadfile (CI-DIET, 2026-10-13): the hosted runner has 4 vCPUs and the
+          # serial suite used one. MEASURED on 3 probe runs of this exact suite: 14.4 min vs 33-46
+          # min serial. loadfile keeps every test FILE on one worker, in file order, so intra-file
+          # state sharing behaves as before. No test is skipped or deselected; the junit report and
+          # the failure summary below work unchanged. Cross-file order dependencies surfaced by
+          # parallel scheduling are fixed in the tests (tests/conftest.py autouse resets), never
+          # by deselecting.
+          pytest -q -n auto --dist loadfile tests/ \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 

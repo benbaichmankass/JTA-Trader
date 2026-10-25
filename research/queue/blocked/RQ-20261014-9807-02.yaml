@@ -1,0 +1,113 @@
+id: RQ-20261014-9807-02
+title: 'Programme 01 Q2, conditioned entry target: is the per-leg MFE-quantile take-profit better CALIBRATED when conditioned on
+  entry volatility tercile and ADX regime than the unconditioned quantile, on the 7 real-money legs? BLOCKED: no retained
+  per-trade harness emits (ML-LEG-CORPUS)'
+status: retired
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: >-
+  Doctrine clause 1: the TP at entry is where the leg's OWN history says the move runs out. docs/research/ml2-predictive-bracket-
+  2026-09-06.md found the per-leg MFE quantile in R is the predictive-bracket answer and a conditional MODEL is not; the
+  2026-09-18 uncapped distribution (docs/research/mi307-offline-mfe-2026-09-18.json) puts the calibrated real-money targets at
+  roughly 2.0-2.5 R (INFERRED, to be re-derived here). The operator's 2026-10-14 framing adds the conditioning: TP at entry from
+  the leg's MFE distribution CONDITIONED on volatility and regime. Question: on config-exact uncapped harness emits for the 7
+  real-money legs (bybit_2: xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h; alpaca_live:
+  ief/slv/iaum_pullback_1d), does the MFE quantile q* per (leg x entry-ATR-percentile tercile x ADX bucket {<20, 20-30, >30})
+  have lower calibration error (|share reaching the target - (1 - q*)|) than the unconditioned per-leg quantile, out of sample,
+  and does the conditioned bracket hold net R per capital-day net of the full cost stack?
+power:
+  expected_n: 90
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Nine cells per leg (3 vol terciles x 3 ADX buckets); a calibration-error difference of d = 0.3 per cell needs
+    (1.96 + 0.8416)^2 / 0.3^2 = 87.2 -> 88 trades per cell, i.e. ~800 per leg uncapped over the harness window. mi307 reads
+    cap_r_n 253 (ada_2h), 268 (xrp_2h), 146 (trend_donchian_xrp_4h) and 4-10 per 1d alpaca leg -- so the per-cell design is
+    infeasible per leg; the rule therefore pools the two conditioning axes (3 cells each, ~88 per cell needs ~265 per leg) and
+    grades the 1d alpaca legs as a pooled family only. Declared expected_n 90 per pooled cell.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      The instrument does not exist yet: no committed per-trade emit file for the live legs (m20_fleet_exit_sweep reads
+      summaries; mi307 --run discards the emits). ML-LEG-CORPUS retains them; until then no corpus statistic can be grounded.
+      When it lands, replace this block with source corpus over the retained emits.
+decision_rule:
+  id: RULE-RQ20261014-9807-02-CONDITIONED-MFE-TARGET
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per leg (or pooled 1d family) and per conditioning axis (vol tercile; ADX bucket): out-of-sample calibration error of the
+    conditioned quantile target vs the unconditioned per-leg quantile target at q* in {0.70, 0.75, 0.80}; OOS net R per
+    capital-day of a bracket placed at each; n per cell. Costs via execution_costs.resolve_cost_policy. Harness-uncapped
+    distribution for SETTING the target; capped (0.099) re-run for GRADING the bracket.
+  rule: >-
+    PASS (condition on that axis) IF the conditioned target's OOS calibration error is lower in >= 2 of 3 cells of the axis on
+    every real-money stratum with n >= 88 per cell AND the conditioned bracket's OOS net R per capital-day >= the unconditioned
+    bracket's -> Programme 01 Q6 carries the conditioned rule into the producer design; the unconditioned quantile stays the
+    fallback cell. RETIRE the conditioning on an axis IF it fails the calibration test on every stratum (the ML-2 finding
+    stands: the plain quantile is the answer). INDETERMINATE for a stratum under n (report it; the 1d family pools or waits).
+    This unit's PASS is NOT a promotion case: a declared target is Tier-3 and needs the capped-bracket gate on its own leg.
+  what_it_does_not_do: >-
+    Builds no head (that is blocked/RQ-20261009-900/901, which stays behind this rung). Changes no tp_r. Says nothing about
+    revision (Q3) or stops (Q4).
+blocked_on:
+- what: >-
+    STATUS 2026-10-14 (ML-LEG-CORPUS): the per-trade emit keeper is built (PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum)); its roster is the six legs of RQ-20261009-900
+    (4 bybit_2 + 2 prop); the alpaca 1d legs are NOT in it, so check this unit's leg list against that roster. The corpus carries mfe_r, risk_frac (the
+    ATR-at-entry proxy, risk/entry), adx_at_entry, entry_time/exit_time (bars_held derivable) but NOT an entry-ATR
+    PERCENTILE and has no stratified-quantile reader. Those two remain to build before this unit can run.
+  ref: ML-LEG-CORPUS; RQ-20261014-736c-01
+  clears_when: >-
+    Unchanged (below), narrowed: RQ-20261014-736c-01 has landed its corpus, and a stratified-quantile reader
+    (entry-ATR percentile computed from candles) exists.
+- what: >-
+    No driver keeps per-trade harness emits for the live legs: m20_fleet_exit_sweep.py runs config-exact but reads the summary;
+    mi307_offline_mfe.py --run runs uncapped but keeps only percentiles. The stratification needs per-trade mfe_r with
+    entry-time ATR percentile and ADX.
+  ref: docs/claude/work/checklist/ML-LEG-CORPUS.json (ML plan X1; also unblocks RQ-20261009-900/901 and ML-F4)
+  clears_when: >-
+    ML-LEG-CORPUS lands a committed runner that emits per-trade rows (mfe_r, entry ATR pct, entry ADX, bars_held) for the seven
+    real-money legs config-exact and uncapped, plus a stratified-quantile reader. Then git mv to research/queue/, status queued,
+    set run.command to that reader with --unit/--out, set feasibility to source corpus over the emits, and declare compute
+    cpu_light (public candles) or needs_vm_data if the emits are trainer-resident.
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.35
+  basis: >-
+    stand-in: 4 real-money routings carry a sentinel entry TP today (check_tp_doctrine 2026-10-14); the prior from ML-2 is that
+    conditioning adds little, so confidence is below default-high. No balances stated.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: Estimate; depends on where ML-LEG-CORPUS keeps the emits (public candles -> runner).
+run:
+  workflow: null
+  note: Null until the emit retention exists (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M20
+related:
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q2 rung 3)
+- RQ-20261010-419b-01 / RQ-20261006-061 (the unconditioned finite-target rungs, queued; not duplicated)
+- blocked/RQ-20261009-900 / RQ-20261009-901 (the head version, behind this rung)
+- docs/research/mi307-offline-mfe-2026-09-18.json (the unconditioned distribution and reach-rates)
+- docs/research/ml2-predictive-bracket-2026-09-06.md (ML-2 refuted; per-leg quantile is the answer)
+last_dispatched_at: null
+retired_reason: "2026-10-16 P1-ATM-BACKLOG-1016 (manager audit input, docs/research/programmes/reviews/2026-10-16/01-ATM.md\
+  \ \xA7 4.6): superseded by RQ-20261015-cab7-05, which ran the regime-conditioned entry TP (entry-vol\
+  \ tercile; the emits carry no adx_at_entry) pooled over the four Bybit real-money legs and closed INDETERMINATE\
+  \ (OOS delta vs unconditioned +0.029 R/trade, CI [-0.054, +0.105], n_oos 262; research/results/RQ-20261015-cab7-05/38792318689.jsonl).\
+  \ Re-asking per leg on fewer trades cannot be better powered; cab7-05's own rule names a DIFFERENT conditioning\
+  \ as the only reason to revive this."

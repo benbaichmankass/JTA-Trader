@@ -91,6 +91,19 @@ def ingest_report(report: Dict[str, Any]) -> Dict[str, Any]:
     if kind == "amend":
         return _ingest_amend(account_id, report)
 
+    if kind == "supersede":
+        # PROP-SUPERSEDE (operator 2026-10-08): release the suppressed ticket
+        # that superseded a cancelled resting entry. Every check is in
+        # prop_supersede.release; a refusal leaves the ticket suppressed.
+        from src.prop import prop_supersede
+
+        new_id = str(report.get("ticket_id") or "").strip()
+        old_id = str(report.get("supersedes") or "").strip()
+        if not new_id or not old_id:
+            raise ValueError("supersede report needs ticket_id and supersedes")
+        return {"ok": True, "kind": "supersede",
+                **prop_supersede.release(account_id, new_id, old_id)}
+
     # --- fill / close ---
     status = str(report.get("status") or "closed").strip().lower()
     if status not in _FILL_STATUSES:
@@ -179,7 +192,11 @@ def ingest_report(report: Dict[str, Any]) -> Dict[str, Any]:
     try:
         fill["ticket_id"] = prop_reconcile.match_fill_to_ticket(fill)
     except Exception as exc:  # noqa: BLE001 — linking is best-effort
-        logger.warning("prop_report: ticket match failed: %s", exc)
+        # A failed match links NOTHING: keeping the report's own ticket_id
+        # would let a report from one account advance another account's
+        # ticket (manager review of #14756, F1-1).
+        fill["ticket_id"] = None
+        logger.warning("prop_report: ticket match failed, fill left unlinked: %s", exc)
 
     row_id = prop_journal.insert_fill(fill)
 
@@ -193,7 +210,8 @@ def ingest_report(report: Dict[str, Any]) -> Dict[str, Any]:
                 else "skipped" if status == "skipped"
                 else "placed" if status == "placed"
                 else "filled")
-            prop_journal.set_ticket_status(fill["ticket_id"], new_status)
+            prop_journal.set_ticket_status(
+                fill["ticket_id"], new_status, account_id=account_id or None)
         except Exception as exc:  # noqa: BLE001
             logger.warning("prop_report: ticket status update failed: %s", exc)
 

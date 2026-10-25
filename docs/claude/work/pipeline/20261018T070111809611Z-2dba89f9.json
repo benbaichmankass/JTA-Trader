@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "after #18891 is on main and one ict-trainer cycle ran: /api/bot/ml/status dataset_builds_24h.failed == 0 AND each of the four shards above is whole (rows within 2,000 of 5 years of bars, last ts = the previous UTC day) -- then ML-SHARD-TRUNCATED and PR #18891 move to done; if a shard is still short, the adapter's RuntimeError line in journalctl -u ict-trainer names the bar it stopped at and that is the next finding",
+    "kind": "observation"
+  },
+  "id": "PI-20261018-WH81NW96-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-21",
+    "how_to_check": "origin.rerun (the /api/bot/ml/status read + the trainer-vm-diag wc -l / tail -1 loop)",
+    "what": "after the first ict-trainer cycle on a main that carries PR #18891 (merged 2026-10-18 07:19Z): /api/bot/ml/status dataset_builds_24h.failed == 0 AND the four market_raw shards (BTCUSDT 1h, BTCUSDT 5m, ETHUSDT 1h, ADAUSDT 15m) are whole (last ts = the previous UTC day, rows not a page multiple)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / ML-SHARD-TRUNCATED / PR #18891",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/ml/status | python3 -c \"import json,sys; d=json.load(sys.stdin)['status']; print(d['dataset_builds_24h'], d['last_cycle']['ts'])\" ; trainer-vm-diag cmd: for f in datasets-out/market_raw/{BTCUSDT/1h,BTCUSDT/5m,ETHUSDT/1h,ADAUSDT/15m}/v002/data.jsonl; do echo $f $(wc -l < $f) $(tail -n1 $f | grep -o '\"ts\": *\"[^\"]*\"'); done"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 2,
+  "what": "[ml] PR #18891 (Bybit 10016 retry + empty-page handling + atomic shard write) is landed_unproven: the next trainer cycle must show 0 failed dataset builds AND whole market_raw shards (BTCUSDT 1h ~43,8xx rows ending the previous day, BTCUSDT 5m ~525,8xx, ETHUSDT 1h, ADAUSDT 15m) instead of the page-multiple prefixes measured 2026-10-18"
+}

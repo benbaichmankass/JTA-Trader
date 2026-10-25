@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "HOLD for the manager: runtime change in order_monitor._bybit_position_protection (CA-A01-056) \u2014 an unparseable Bybit position stopLoss now refuses the coverage read instead of grading the position FULLY covered. Affects naked-position detection/re-arm on live venues. Evidence: strict-xfail detector in #17683 (tests/test_protection_price.py) fails on current main. Revert: drop this commit.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager approval sought: _bybit_position_protection now refuses (returns None) on an unparseable Bybit stopLoss instead of grading the position fully covered (CA-A01-056)."
+}

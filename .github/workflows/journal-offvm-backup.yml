@@ -1,0 +1,135 @@
+name: journal-offvm-backup
+
+# JOURNAL-OFFVM-BACKUP (Tier 2, operator-approved 2026-10-13: "yes make the off-vm backup";
+# daily workflow approved by the operator in-session, same day).
+#
+# A versioned, PRIVATE, off-VM copy of the live trader's trade_journal.db (the money DB).
+# Before this, the only off-VM copy was the trainer's daily pull, which overwrites itself.
+#
+# READ-ONLY on the live VM: the DB is opened mode=ro and copied with SQLite's online
+# backup API (scripts/ops/journal_snapshot_remote.py). No order path, no service touched.
+#
+# WHY AN ACTIONS CRON (not a systemd timer on the VM): the OCI API key then never lands on
+# the box that holds the exchange keys. The runner already holds both secret sets and this
+# is the repo's established pattern (health-snapshot.yml SSHes in; oci-inventory.yml uses OCI_CLI_*).
+#
+# Destination: OCI Object Storage bucket `ict-journal-backups` -- NoPublicAccess, versioning
+# Enabled (both asserted from the bucket's fields on every run, not assumed from the create flag).
+# Nothing is committed, released or uploaded as an Actions artifact. Output is sizes/counts only.
+#
+# Failure handling (no-halt doctrine): per-DB retry x3 with backoff, then ONE Telegram flag and a
+# red run. Nothing else is stopped; tomorrow's cron simply tries again.
+
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "backup | status | restore-test"
+        required: true
+        default: "backup"
+        type: choice
+        options: [backup, status, restore-test]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: journal-offvm-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: |
+      github.event_name != 'issues' ||
+      ((github.event.issue.user.login == github.repository_owner ||
+        github.event.issue.user.login == 'github-actions[bot]') &&
+       contains(github.event.issue.labels.*.name, 'journal-backup-request'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VM_HOST: ${{ secrets.VM_SSH_HOST }}
+      VM_USER: ubuntu
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+      OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+    steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install OCI CLI
+        run: python -m pip install --quiet oci-cli
+
+      - name: Set up SSH key
+        run: |
+          set -eu
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VM_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa > /dev/null
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Resolve mode
+        id: mode
+        run: |
+          m="${{ inputs.mode }}"
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            m="$(printf '%s' "$ISSUE_BODY" | sed -n 's/^mode:[[:space:]]*//p' | head -1 | tr -d '\r ')"
+          fi
+          case "$m" in backup|status|restore-test) ;; *) m=backup ;; esac
+          echo "mode=$m" >> "$GITHUB_OUTPUT"
+
+      - name: Run
+        id: run
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          export SCRATCH="$RUNNER_TEMP/journal_backup"; mkdir -p "$SCRATCH"
+          bash scripts/ops/journal_offvm_backup.sh "${{ steps.mode.outputs.mode }}" 2>&1 | tee "$RUNNER_TEMP/out.txt"
+
+      - name: Report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let out = '(no output)';
+            try { out = fs.readFileSync(process.env.RUNNER_TEMP + '/out.txt', 'utf8').slice(-3500); } catch (e) {}
+            const body = `journal-offvm-backup (${{ steps.mode.outputs.mode }}): **${{ steps.run.outcome }}**\n\n\`\`\`\n${out}\n\`\`\`\n\n[run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+            await core.summary.addRaw(body).write();
+            if (context.eventName === 'issues') {
+              await github.rest.issues.createComment({...context.repo, issue_number: context.issue.number, body});
+              await github.rest.issues.update({...context.repo, issue_number: context.issue.number, state: 'closed'});
+            }
+
+      - name: Red flag (one Telegram message)
+        if: steps.run.outcome != 'success'
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.CLAUDE_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          PYTHONPATH=. python scripts/notify_session.py alert \
+            --summary "🚨 journal off-VM backup FAILED after retries (${{ steps.mode.outputs.mode }}). Trader unaffected; next daily run retries." \
+            --link "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Fail the run if the backup failed
+        if: steps.run.outcome != 'success'
+        run: exit 1

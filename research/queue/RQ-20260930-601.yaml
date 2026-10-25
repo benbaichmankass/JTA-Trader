@@ -1,7 +1,15 @@
 id: RQ-20260930-601
 title: 'M16 re-scope, Stage 0: inside ONE leg, do trades that enter with relatively higher `confidence` earn more full-cost R? (lane M16-RESCOPE)'
-status: queued
+status: done
 cadence: once
+theme: live_strategy
+priority: 2
+status_reason: >-
+  2026-09-30 (RESEARCH-W7, manager 20:12Z): graded FAIL, record research/results/RQ-20260930-601/36732230587.jsonl
+  (rho 0.019, p 0.197, n_eval 2328; conditions A and E true, B, C, D false). The rule's "re-queues once for a
+  confirmatory run" is NOT done by re-firing this unit: the statistic is a seeded permutation over the same committed
+  ledgers, so a same-data rerun reproduces the FAIL exactly. The confirmatory run is RQ-20260930-602, blocked until
+  the ledgers have grown by >= 500 eval trades.
 kind: experiment
 
 question: >-
@@ -123,3 +131,23 @@ related:
   - docs/research/C1-conviction-sizing-evidence-2026-08-04.md
   - docs/research/ranking-key-ab/2026-09-08-secondary-powered-ttl96/REPORT.txt
 last_dispatched_at: '2026-09-30T14:51:18+00:00'
+grading:
+  decision_rule_id: RULE-RQ0930-601-M16-WITHIN-LEG-CONFIDENCE
+  evidence:
+  - research/results/RQ-20260930-601/36732230587.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: 'Closes the within-leg confidence-percentile tilt as registered (pooled, all families). The rule''s
+    ''one confirmatory re-run'' is not dispatched: the statistic is deterministic (fixed ledgers, permutation
+    seed 20260930), so a re-run reproduces rho 0.019 -- the attested-unit policy (queue_grade, manager
+    2026-10-15) closes a deterministic FAIL. Per-family rho is informational only (trend_donchian +0.126
+    n=453, other +0.153 n=182): a per-family re-scope would be a NEW pre-registered unit, not a re-read
+    of this one. No config, sizing or risk change.'
+  population: 2328 eval trades, 28 legs (comms/strategy_evidence/ cost-complete ledgers)
+  read_state: measured
+  reason: 'FAIL: (A) n_eval 2328 >= 1500 holds; (B) rho +0.019 < +0.08; (C) one-sided permutation p 0.197
+    > 0.05; (D) min LOFO rho -0.0097 (trend_donchian removed) < +0.04; (E) delta +24.38 R > 0. B, C and
+    D fail. Population: 2328 trades over 28 measured legs with >= 40 usable trades (21 thinner legs excluded),
+    after the 20-trade per-leg warm-up, full-cost net_r from each leg''s committed source_run ledger.'
+  rows: 1
+  verdict: fail

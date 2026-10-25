@@ -1,0 +1,30 @@
+{
+  "id": "COMPUTE-GPU-WIRE",
+  "title": "COMPUTE-GPU-WIRE: compute review recommendation",
+  "phase": "process",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Let a research queue unit request the M19 GPU burst (compute: gpu -> labelled gpu-burst-train issue with est_cost/max_minutes); start with status_only to read GPU_BURST_ARMED/GPU_PROVIDER/key state; read why 3 of 7 July runs failed. $10 cap unchanged. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations). [2026-10-13 RESEARCH-ROUTER lane] A queue unit now requests GPU with compute: gpu (or gpu_preferred) and the token-free dispatcher routes it to research-script-run-kaggle.yml under the weekly Kaggle quota (30 GPU h/week observed; floor 3 h; waits, never halts). DESIGN CHOICE: the M19 RunPod burst is NOT auto-routed (scripts/research/research_compute.yaml auto_route: false): it needs an issue-shaped request, GPU_BURST_ARMED and the $10/month ledger, all operator-armed; a unit can still name gpu-burst-train.yml explicitly. Kaggle first because it is free and proven (pilot run 38383862376). landed_unproven until a gpu unit lands a measured record through the collector (proof: RQ-20261013-0b07-01).",
+  "updated_at": "2026-10-13T12:24:00Z",
+  "updated_by": "session_0152EFvvZYHZhJrsuocihAGg",
+  "roadmap": [
+    "M14"
+  ],
+  "observation": {
+    "what": "Let a research queue unit request the M19 GPU burst (compute: gpu -> labelled gpu-burst-train issue with est_cost/max_minutes); start with status_only to read GPU_BURST_ARMED/GPU_PROVIDER/key state; read why 3 of 7 July runs failed",
+    "how_to_check": "status_only comment on an issue shows arm state; a queue unit completes a burst and a ledger row appears in comms/gpu_spend_ledger.json",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 448,
+  "writeback": {
+    "roadmap": "M14 where/next: a unit requests GPU with compute: gpu and is routed to Kaggle under the weekly quota; RunPod stays explicit and operator-armed",
+    "arch": "none: Tier-1 research tooling; no architecture change"
+  }
+}

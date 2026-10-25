@@ -3,7 +3,7 @@ name: trainer-diag-relay
 # Git-push-triggered TRAINER-VM diag relay — the MCP-independent read path.
 #
 # ─── WHY THIS EXISTS ───────────────────────────────────────────────────────
-# The trainer VM (158.178.209.121) has NO HTTP diag API. `CLAUDE.md` and
+# The trainer VM (<TRAINER_VM_IP>) has NO HTTP diag API. `CLAUDE.md` and
 # `docs/claude/diag-relay.md` both say it is reachable only through the
 # `trainer-vm-diag` ISSUE relay (open an issue labelled `trainer-vm-diag-request`
 # carrying a `cmd:` block). That is true, and it is the only documented path.
@@ -165,6 +165,15 @@ jobs:
     # and polled by a follow-up request, not held in one SSH session.
     timeout-minutes: 60
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
@@ -173,7 +182,7 @@ jobs:
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           if [ -z "${VM_SSH_KEY}" ]; then
@@ -187,7 +196,8 @@ jobs:
 
       - name: Run pending trainer-diag requests
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
+          LIVE_IP: ${{ secrets.VM_SSH_HOST }}   # scope tripwire only (a request must not name the live box)
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -230,7 +240,7 @@ jobs:
 
             # Scope tripwire -- see the header. Accident guard, not a boundary.
             hit=""
-            for tok in 141.145.193.91 158.178.210.252 10.0.0.251 ict-bot.duckdns.org ict-bot-arm ict-trader-live ict-web-api; do
+            for tok in "${LIVE_IP:-__live_ip_unset__}" 158.178.210.252 10.0.0.251 ict-bot.duckdns.org ict-bot-arm ict-trader-live ict-web-api; do
               if grep -qF -- "$tok" "$req"; then hit="$tok"; break; fi
             done
             if [ -n "$hit" ]; then
@@ -268,7 +278,7 @@ jobs:
                 -o ServerAliveInterval=30 \
                 -o ServerAliveCountMax=10 \
                 "${TRAINER_USER}@${TRAINER_IP}" \
-                'bash -s' < /tmp/td_script.sh > /tmp/td_out.txt 2>&1 || true
+                'timeout --kill-after=30 3540 bash -s' < /tmp/td_script.sh > /tmp/td_out.txt 2>&1 || true
 
             # The sentinel is the ONLY proof the script reached the trainer and
             # ran to completion. ssh's own exit code cannot say this: 255 is

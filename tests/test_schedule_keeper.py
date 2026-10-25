@@ -32,6 +32,12 @@ def test_every_target_exists_is_scheduled_and_dedupes():
         for c in sk.workflow_crons(str(path)):
             sk.parse_cron(c)  # the keeper's grammar must cover every target cron
         jobs = d["jobs"]
+        if sk.TARGETS[wf].get("self_dedupes"):
+            # declared idempotent per slot; the reason must be real text, and such a target
+            # must not ALSO carry a half-wired dedupe job
+            assert len(sk.TARGETS[wf]["self_dedupes"]) > 20, wf
+            assert "dedupe" not in jobs, f"{wf}: declare self_dedupes OR a dedupe job, not both"
+            continue
         assert "dedupe" in jobs, f"{wf} lacks the dedupe job"
         assert jobs["dedupe"]["if"] == "github.event_name == 'schedule'"
         others = [k for k in jobs if k != "dedupe"]
@@ -52,3 +58,15 @@ def test_keeper_workflow_pages_only_on_its_paging_cron():
     page = [s for s in d["jobs"]["keep"]["steps"] if s.get("name", "").startswith("Page")][0]
     assert any(c in page["if"] for c in crons)
     assert "push" in d[True], "the keeper must not depend only on the scheduler it compensates for"
+
+
+def test_research_slo_is_kept_planted_and_clean():
+    """research-slo's `41 */2` cron never fired (2026-10-16): it must stay a keeper target.
+
+    planted: the real target is registered with a 2-hourly-fit stale window and a declared dedupe.
+    clean: a workflow that is NOT a target (a made-up one) is absent, so the check can fail.
+    """
+    t = sk.TARGETS["research-slo.yml"]
+    assert t["stale_hours"] == 3
+    assert t["self_dedupes"]
+    assert "research-slo-not-a-real-workflow.yml" not in sk.TARGETS

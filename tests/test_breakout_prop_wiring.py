@@ -58,7 +58,10 @@ def test_prop_account_config():
     assert a["exchange"] == "breakout"
     assert a["type"] == "prop"                     # mission-aware PropRiskManager
     assert a["account_class"] == "prop"            # third funding category
-    assert a["mode"] == "live"                     # always-live ping (operator gates per-signal)
+    # 2026-10-05 (operator, set-account-mode run 37273806314, "Set it to
+    # dry_run"): breakout_1 is dry_run; tradeify_1 is the live prop account.
+    assert a["mode"] == "dry_run"
+    assert _accounts()["tradeify_1"]["mode"] == "live"
     assert a["account_state"] == "evaluation"      # eval→funded lifecycle tracked
     assert a["phase_requirements"]["target_profit_pct"] == 0.10
     # 2026-06-25 (Tier-3, operator-approved): the swap-robust variant
@@ -88,7 +91,11 @@ def test_prop_account_config():
     # the leg is "still LISTED but demoted to shadow", the routing roster being
     # orthogonal to the execution gate — described exactly that situation and no
     # longer applies, so it is replaced rather than left to read as current.
-    assert set(a["strategies"]) == {
+    # 2026-10-07 (Tier-3, operator: "Dead: clear its roster, retire the row"):
+    # breakout_1 is breached and RETIRED, so its roster is empty. breakout_2 is
+    # the live Breakout account and carries the _prop twins.
+    assert a["strategies"] == []
+    assert set(_accounts()["breakout_2"]["strategies"]) == {
         "trend_donchian_sol_prop", "trend_donchian_eth_prop"}
     assert set(a["symbols"]) == {"SOLUSDT", "ETHUSDT"}
 

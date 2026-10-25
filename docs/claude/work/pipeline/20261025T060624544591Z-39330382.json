@@ -1,0 +1,19 @@
+{
+  "based_on": "20261024T123130340910Z-0c3097c3.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "the harness fills a through-price stop at the bar open (or the gap is killed with a stated reason), and momentum_levers_parity reports no 'live price guard' divergence",
+    "kind": "observation"
+  },
+  "id": "PI-20261024-ZUPNKHZR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "MOMENTUM-LEVERS-PARITY (session_01AYVhF79YumXBY7ZuPNkhZr)",
+    "rerun": "python3 scripts/research/momentum_levers_parity.py --candles <XRPUSDT_4h.csv> --leg trend_donchian_xrp_adx25 --symbol XRPUSDT  # look for 'live price guard' in DIV lines"
+  },
+  "routed_2026_10_25": "Checked on main 2026-10-25: backtest_trend.py has no stop gap-fill path.",
+  "routed_to": "checklist:MOMENTUM-PARITY-FOLLOWUPS",
+  "state": "routed",
+  "what": "[research-harness] scripts/backtest_trend.py ratchets the chandelier trail THROUGH the next bar's open and then fills the stop at the trail price (an optimistic fill the venue cannot give; live refuses such a ratchet -- trend_donchian._trail_verdict requires the candidate on the correct side of price). Found by MOMENTUM-LEVERS-PARITY: the only residual stop-path divergence after the live fixes (xrp_adx25 1 of 71 trades; eth_4h a handful, Binance-spot 4h bars 2020-07..2026-10). Fix proposal: fill a stop already beyond the bar open at the OPEN (gap fill), default-off flag first, measure the corpus re-grade before flipping the default."
+}

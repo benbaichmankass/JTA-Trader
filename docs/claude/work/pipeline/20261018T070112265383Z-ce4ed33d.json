@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "gate-check btc-regime-1h-lgbm-v2 prints labels_accruing pass (labeled fraction >= 0.30) on a run after the BTCUSDT 1h shard is whole; else file the join as its own bug",
+    "kind": "observation"
+  },
+  "id": "PI-20261018-WH81NW96-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-23",
+    "how_to_check": "origin.rerun (trainer-vm-diag gate-check, grep labels_accruing)",
+    "what": "gate-check on btc-regime-1h-lgbm-v2 prints labels_accruing pass (labeled fraction >= 0.30) once the BTCUSDT 1h shard is whole"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / trainer-vm-diag #18887 #18888",
+    "rerun": "trainer-vm-diag cmd: cd /home/ubuntu/ict-trading-bot && timeout 900 .venv/bin/python -m ml gate-check btc-regime-1h-lgbm-v2 --db data/trade_journal.db --datasets-root datasets-out --shadow-log runtime_logs/shadow_predictions.jsonl 2>&1 | grep -E 'labels_accruing|live_parity|ready'"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[ml] 1h regime heads cannot accrue labels (gate-check labels_accruing 0/2667 on btc/eth 1h, relay #18887) because the realized-label candle base (market_raw <sym>/1h/v002) ends in 2024: re-run gate-check on one 1h head after the shards rebuild whole and confirm labels_accruing > 0.3, which re-opens the 1h heads' promotion path"
+}

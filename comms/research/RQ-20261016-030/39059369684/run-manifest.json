@@ -1,0 +1,44 @@
+{
+  "unit": "RQ-20261016-030",
+  "run_id": "39059369684",
+  "commit_sha": "1a53b30d6c880b6a4976a03c0fe46f42cbc2675e",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39059369684",
+  "timeout_minutes": 330,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl",
+        "--arm",
+        "A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8",
+        "--arm",
+        "C0030=--sizing balance --risk-pct 0.003 --dd-switch-frac 0.8",
+        "--arm",
+        "C0040=--sizing balance --risk-pct 0.004 --dd-switch-frac 0.8",
+        "--arm",
+        "C0060=--sizing balance --risk-pct 0.006 --dd-switch-frac 0.8",
+        "--arm",
+        "CROOM=--sizing room --risk-pct 0.0075 --room-frac 0.45 --dd-switch-frac 0.8",
+        "--common",
+        "--trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "any_c_dominates",
+        "--out",
+        "comms/research/RQ-20261016-030/39059369684",
+        "--jobs",
+        "4",
+        "--note",
+        "P5 Q2 rung 2 sizing grid, velotrade_1"
+      ],
+      "log": "comms/research/RQ-20261016-030/39059369684/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 7104.3
+    }
+  ],
+  "all_ok": true
+}

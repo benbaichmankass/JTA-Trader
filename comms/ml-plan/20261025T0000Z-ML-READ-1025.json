@@ -1,0 +1,81 @@
+{
+  "run": "ML-READ-1025 (lane, session_01Uu4FohckqnmdhhZa4iUaT2; Sonnet; manager session_016v5FrVaSAmNoz8u6ct9HqC)",
+  "finished_at": "2026-10-25T00:00:00Z",
+  "question": "What do the landed ML research results say by their own pre-registered rules, and what follows?",
+  "population": "14 units found by grep of family ids/model names in research/queue and research/results: 9da8-01 (Chronos-2 bake-off), TabICL/TabPFN units 1414-06, eda2-02, ff8f-02, 38be-01, 4a3b-01 (retired, producer timed out), 65cc-06/-07/-08, GRU units ff8f-04, c0d1, c0d2, c0d3, plus 4591-02 (direction, tabular learners not involved; read for completeness). All 14 have >=1 result row; 9da8-02 (meta-label tabular bake-off) is in blocked/ with NO result. TimesFM-2.5, TiRex-2, Kronos, TTM: no unit run (no loader).",
+  "results_read": [
+    {
+      "unit": "RQ-20261011-9da8-01",
+      "machine_verdict": "fail (2 consecutive measured rows 39844193455, 40074055932; 1 producer_failed row 39923386978)",
+      "lane_verdict": "underpowered for the FAIL; PASS rejected",
+      "reasoning": "power_state accruing and no accrual_override_reason. From the MEASURED fold sd (BTC cv chronos2-vs-incumbent CI half-width 0.009 over 5 folds, SD ~0.0073) the +0.005 FAIL floor needs ~17 folds, 5 were run, so the FAIL cannot be certified. The PASS is rejected: BTC delta vs incumbent -0.0030 (CI -0.0148..+0.0087) and -0.0057 (CI -0.0146..+0.0033); upper bound below the +0.010 bar in both runs. Same-data re-run moved single deltas by up to 0.014 (BTC holdout vs incumbent -0.0187 -> -0.0041; n 78,873 -> 78,735), so run-to-run instrument noise is comparable to the effect. Headlines: HAR-RV and VAR controls did NOT match the incumbent on BTC cv (-0.0144/-0.0107 vs incumbent, run 1/2); the neural forecaster adds nothing detectable here and nothing is lost by the controls being weaker. Holdout deltas are single-fold, no interval."
+    },
+    {
+      "unit": "RQ-20261015-eda2-02 (TabPFN small n)",
+      "verdict": "indeterminate",
+      "reasoning": "MES 1d tabpfn-vs-lgbm +0.0210 (CI +0.0017..+0.0403, sign-consistent) clears +0.010; BTC 15m last-3000 delta is exactly 0.0000 because all three arms (lgbm, prior, tabpfn) return the identical fold scores (1.0 / 0.4958 ...): the BTC group is degenerate (collapse to the class prior), so the both-datasets PASS clause cannot hold. tabpfn arm_status ok here (the licence error seen on 2026-10-14/15 in 1414-06 did not recur)."
+    },
+    {
+      "unit": "RQ-20261013-1414-06 (TabICL+TabPFN small n)",
+      "verdict": "indeterminate",
+      "reasoning": "tabicl: MES +0.0141 (CI -0.0007..+0.0289), BTC -0.0033; tabpfn arm error (licence/token) = route fault. Earlier rows producer_failed (exit 75) and two re-grades."
+    },
+    {
+      "unit": "RQ-20261018-ff8f-02 (TabICL, 12k rows)",
+      "verdict": "indeterminate",
+      "reasoning": "tabicl vs lightgbm cv macro_f1 BTC +0.0001, ETH -0.0005, SOL -0.0966; no clause holds, every CI spans 0. tabpfn control error = CPU >5,000-sample refusal (instrument, fixed same day)."
+    },
+    {
+      "unit": "RQ-20261022-38be-01 (TabICL capped ensemble, wide features)",
+      "verdict": "indeterminate",
+      "reasoning": "tabicl_ens vs lightgbm BTC -0.0132, ETH -0.0123, SOL +0.0079; only SOL > 0 holds. Its only sign-consistent finding is tabicl_ens beats the PRIOR on SOL (+0.0530, CI +0.0059..+0.1001) -- the same size as lightgbm-vs-prior there (+0.0451), i.e. a feature effect, not a TabICL effect."
+    },
+    {
+      "unit": "RQ-20261022-4a3b-01",
+      "verdict": "not_applicable",
+      "reasoning": "producer timed out at 300 min; status retired; redesigned as 38be-01."
+    },
+    {
+      "unit": "RQ-20261014-65cc-06/-07/-08 (Kaggle GPU TabICL/TabPFN 1h)",
+      "verdict": "indeterminate (all three)",
+      "reasoning": "tabicl and tabpfn not importable on the backend: arms unavailable, so nothing candidate-side was measured; the rows only measured the lgbm/logit/prior controls (65cc-08: lgbm beats prior on macro_f1 by 0.135 BTC / 0.227 ETH, sign-consistent)."
+    },
+    {
+      "unit": "RQ-20261014-4591-02 (direction 1h logloss)",
+      "verdict": "fail",
+      "reasoning": "machine verdict fail, power_state accruing, no override => lane reads it as underpowered; recorded for completeness, not part of the asked families."
+    },
+    {
+      "unit": "RQ-20261018-ff8f-04 (GRU 32-bar)",
+      "verdict": "indeterminate",
+      "reasoning": "gru vs lightgbm BTC +0.0018 / ETH +0.0163 / SOL +0.0060, every CI spans 0; confounded (GRU saw 10 features, lightgbm 6)."
+    },
+    {
+      "unit": "RQ-20261022-c0d1/c0d2/c0d3 (GRU variants: fair control, window sweep, deep/slow)",
+      "verdict": "indeterminate (all three)",
+      "reasoning": "vs the FAIR wide lightgbm: c0d1 BTC +0.0088 / ETH +0.0035 / SOL +0.0007; c0d2 w16/w64/w96 BTC +0.015/+0.007/+0.023, ETH +0.012/+0.006/+0.010, SOL -0.005/+0.004/+0.006; c0d3 gru_deep +0.0207/+0.0128/+0.0095 (8 folds). 17 of 18 symbol-configs point positive but none has a CI excluding 0 and none clears +0.010 on all three symbols (c0d3 SOL 0.0095). The measured fold sd of the delta is ~0.03 (c0d3 BTC CI half-width 0.0255 over 8 folds), so detecting +0.010 needs ~70 folds: the GRU question is underpowered by design, not answered. Not a FAIL, not a PASS."
+    }
+  ],
+  "rule_discipline": "No decision_rule or power block edited. 9da8-01 stays as run; the Timestral arm is a NEW unit.",
+  "timestral": {
+    "source": "hf://models/mistralai/Timestral-209M/LICENSE and README.md read 2026-10-25",
+    "terms": "Modified MIT: permission to use, copy, modify, merge, publish, distribute, sublicense and/or sell the weights, subject to (1) attribution/permission notice kept, (2) no rights if the licensee's (or employer's) global consolidated monthly revenue exceeded USD 20M in the preceding month; commercial licence at Mistral's discretion. README adds: no use that infringes third-party rights. Hub tag license:other = bespoke text.",
+    "research_use": "clear (revenue cap not approached by a research evaluation; no non-commercial clause)",
+    "live_serving": "permitted under the same terms; depends on the revenue test, which is a fact about the operator and not established here -> preference/confirmation question on the ML-READ-1025 row",
+    "action": "New unit research/queue/blocked/RQ-20261025-7ee1-01.yaml (8 folds, power from measured sd) + lever row FRONTIER-LEVER-TSFM-TIMESTRAL; blocked: no timestral backend in ml/datasets/forecast_features.py::FORECAST_BACKENDS and the package is not in the trainer venv (Tier-2 pip). Not runnable this week."
+  },
+  "fails_diagnosis_and_variants": "9da8-01: diagnosis = (1) Chronos-2 at context 64 / horizon 1 may give no more than the incumbent on a 4.6%-base-rate class, (2) 5 folds cannot resolve a 0.005 floor, (3) run-to-run noise ~0.01. Variants: ML-F28 (Timestral, 8 folds) registered; other loaders PI-20261022-5AEVV1RL-0001; a longer-context / multi-horizon Chronos-2 side-stream with 8+ folds is a needs_authoring node folded into ML-F28's lever (not authored this run). Family ts_foundation_model not closed.",
+  "observations": [
+    "ML-F2T says the Prior Labs token is absent (0 occurrences, 2026-10-18) but eda2-02 (2026-10-15) and ff8f-02 (2026-10-18) show the tabpfn arm past the licence gate (ok / CPU size error). Field beats comment: the licence error did not recur after 1414-06; ML-F2T text is stale or the gate was cleared another way. Not verified further here (trainer env not read).",
+    "BTC 15m last-3000 regime head collapses to the class prior in all arms (identical fold scores) -- that group cannot discriminate learners; treat small-n BTC results as uninformative.",
+    "Macro-F1 deltas below ~0.02 are unresolvable with 5-8 purged folds on ~5y history (fold sd 0.007-0.03); plan units should carry computed power, not 'accruing'."
+  ],
+  "writebacks": [
+    "docs/plans/ml-plan-items.yaml: ML-F22 open->done (INDETERMINATE), ML-F28 (Timestral) and ML-F29 (needs_authoring resolvable GRU test) added",
+    "checklist: FRONTIER-LEVER-TSFM-TIMESTRAL added; ML-READ-1025 note + closed"
+  ],
+  "units_filed": [
+    "RQ-20261025-7ee1-01"
+  ],
+  "manager_question": "Preference (not decided here): Timestral-209M live serving is allowed only while your/employer's global consolidated monthly revenue is <= USD 20M. Does the operator confirm that holds for the serving entity (and that trading P&L is not counted as 'revenue')? Research use needs no answer."
+}

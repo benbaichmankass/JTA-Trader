@@ -1,0 +1,118 @@
+id: RQ-20261018-ef5d-01
+title: >-
+  Programme 07 TIMEFRAMES, long arm, FIRST unit: cost-aware break-even by horizon -- at 4h / 1d / 1w bars and holds of 1-30
+  bars (4 hours .. 30 weeks), what move per trade clears the full fee+slippage+funding stack on every venue/symbol the books
+  trade, and how often does the market deliver it?
+status: done
+cadence: once
+theme: timeframes
+priority: 1
+kind: deterministic
+question: >-
+  For each (symbol, bar, hold) cell over the fetched history -- the six Bybit perps (Binance USD-M proxy candles, 1825 d),
+  the 14 Alpaca ETFs and the 3 IBKR micro-futures proxies (Yahoo, 1d uncapped; 4h resampled from the ~730 d 1h lane; 1w from
+  1d) -- what is the round-trip cost in bps (execution_costs.resolve_cost_policy + profile_loader fee + expected 8h funding
+  windows x hold), the cost in R against a 2.5 x ATR14 stop (median over bars), the break-even win rate at 1:1 and 2:1, and
+  P(|log move over the hold| >= 2 x cost)? Which horizons are VIABLE (median cost_r <= 0.10 and coverage >= 0.50), MARGINAL
+  (cost_r <= 0.25) or DEAD?
+why_this_matters: >-
+  Operator 2026-10-18: test longer horizons (daily bars, weeks-long holds) to extract large P&L per trade. Before any strategy
+  is tried on a horizon the programme needs the cost floor per horizon, so its runs go where a trade CAN pay. The long arm
+  is where cost should be negligible; this unit measures it rather than assumes it, and gives the per-horizon move distribution
+  (median and p90 |move|) that the trend/pullback units' expected R per trade is read against. Nothing in the repo measures
+  cost against the move distribution by horizon today (checked 2026-10-18: ws_a_s3b_fee_breakeven.py is a fee grid over two
+  futures configs; maker_economics.py re-prices emitted trades). Prior short-horizon work this builds on and does NOT repeat:
+  RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop had NO Stage-A
+  survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue the 15m scalp
+  book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md
+  s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+why_not_inferential: >-
+  A descriptive measurement over every bar of the fetched history (overlapping |log return| windows per hold, ATR per bar):
+  the cell grades are threshold reads on medians and empirical frequencies, not a hypothesis test on a sample of trades. Power
+  is the history length, reported per frame as n_bars and window_days; a frame below 500 bars is `thin_window` and not graded.
+decision_rule:
+  id: RULE-P7-BREAKEVEN-LONG
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/timeframe_breakeven.py --arm long: per (symbol, bar in {4h,1d,1w}, hold in {1,2,3,5,10,20,30} bars):
+    cost_bps (fee: profile_loader.roundtrip_fee_bps_for else execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP; slippage and funding-per-window:
+    execution_costs.resolve_cost_policy; funding x hold_hours/8 for perps only), stop_bps_median (2.5 x Wilder ATR14 / close),
+    cost_r_median and p75, wr_breakeven_rr1 = (1+cost_r)/2, wr_breakeven_rr2 = (1+cost_r)/3, mv_bps median and p90, p_mv_ge_cost,
+    p_mv_ge_2cost, ret_sd_bps; report-only maker_cost_bps (fee 0) and prop_cost_bps (ETH/SOL: 8+3 bps + 0.033%/day swap).
+    Grade per cell: viable iff cost_r_median <= 0.10 AND p_mv_ge_2cost >= 0.50; marginal iff cost_r_median <= 0.25; else dead.
+  rule: >-
+    PASS iff at least one (bar, hold) cell is viable on at least half of the MEASURED core symbols (the six perps): the long
+    arm has horizons that can pay, and the frontier table (shortest viable hold per symbol) is the floor every long-arm strategy
+    unit must sit above. FAIL iff no cell is viable on any measured symbol (every long horizon is dead at taker cost -- a
+    cost change, not a better entry, is the next unit). INDETERMINATE iff fewer than half the declared (symbol, bar) frames
+    measured, or viable cells exist on fewer than half the core symbols. read_state producer_failed iff nothing measured (a
+    fetch/route fault, never a verdict). The thresholds 0.10 / 0.25 / 0.50 and the 2.5 x ATR14 stop basis are not changed
+    after any result; a different stop basis is a separately registered unit.
+  what_it_does_not_do: >-
+    Measures no strategy and proposes no leg; says nothing about edge, only about the cost floor and the move distribution.
+    Equity fees are Alpaca commission-free (0 bps) + 5 bps slippage; IBKR futures use the 7.5 bps default, not a per-contract
+    commission (stated, not modelled). Funding is a directionless magnitude. Does not touch config or any roster.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.5
+  bucket: frontier
+  basis: >-
+    stand-in: it gates where the long arm's Stage-0 runs are spent; information value, not P&L; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: >-
+    23 symbols x 3 bars = 69 keyless fetches (Binance Vision daily/4h zips are small; Yahoo 1d/1h fast) + numpy over <= ~45k
+    bars per frame. Estimate; the first run replaces it.
+  why_runner: >-
+    timeframe_breakeven.py fetches public candles (Binance Vision, Yahoo) and runs numpy; nothing is in metis-market-data
+    at these bars and no model is involved.
+run:
+  command:
+  - python3
+  - scripts/research/timeframe_breakeven.py
+  - --arm
+  - long
+  - --days-crypto
+  - '1825'
+  - --days-equity
+  - '7300'
+  - --rule-id
+  - RULE-P7-BREAKEVEN-LONG
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261018-ef5d-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+programme: P7
+related:
+- RQ-20261018-ef5d-02
+- scripts/research/timeframe_breakeven.py
+- src/runtime/execution_costs.py
+- IR-CRYPTO-DAILY-TREND
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T10:53:57+00:00'
+grading:
+  attested: RULE-P7-BREAKEVEN-LONG
+  auto: true
+  decision_rule_id: RULE-P7-BREAKEVEN-LONG
+  evidence:
+  - research/results/RQ-20261018-ef5d-01/39121076582.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

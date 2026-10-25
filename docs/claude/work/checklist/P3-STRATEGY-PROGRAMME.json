@@ -1,0 +1,41 @@
+{
+  "id": "P3-STRATEGY-PROGRAMME",
+  "title": "03-STRATEGY-IMPROVEMENT programme plan + first 2 weeks of pre-registered units (incl. walk-forward confirm of RQ-20261014-f0e2-05 PASS)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "research lane (Opus)",
+  "lane": "session_011NgbCF6CGFggZ2wf8DYmGP",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 20,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18072
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-14 manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched per weekly planning 2026-10-14 (programme order P1..P5; plan doc https://claude.ai/code/artifact/27fd3e97-ed3f-49ba-be2c-5e56997df95a). Deliverables: docs/research/programmes/03-STRATEGY-IMPROVEMENT.md in the shape of 01; first-2-week units, runnable first (queue below floor: runnable 12 vs 25); a walk-forward confirmation unit for RQ-20261014-f0e2-05 (eth_pullback_2h adx_min=22, dR +10.18 R, n=116, 4/4 folds, best-of-3, single leg) -- no config change until it reads. Units land landing:hold; the manager merges. Model Opus (programme design is a judgement task, operator-set), fresh (context is on disk). [2026-10-14 lane session_011NgbCF6CGFggZ2wf8DYmGP] LANDED on merge of this lane's PR (hold for the manager): docs/research/programmes/03-STRATEGY-IMPROVEMENT.md; scripts/research/stage0_capital_day_census.py (self-test OK; MEASURED Stage-0 census: real money 3/7 pull weight, xrp_pullback_2h drag on 2/4 folds, ief/slv/iaum underpowered n 3-11; prop 0/2, both drag 2/4 folds); research/queue RQ-20261014-470a-01..11 (11 runnable, all would_dispatch route=runner in dispatch_queue.py dry run; every ablation argv smoke-tested on synthetic candles) + blocked/RQ-20261014-470a-12. f0e2-05 confirm unit = RQ-20261014-470a-01 (B vs A22 only on the disjoint preceding window 2022-10-05..2024-10-04, no re-selection). NEW FINDING filed as row PAIRS-R-SCALE: backtest_pairs.py rolling-beta R scale understates cost-in-R ~775x, so RQ-20261007-005..008 PASSes are unreadable. Field-beats-comment: eth_pullback_2h is on NO roster (f0e2-05 said live-roster). landed_unproven -> done WHEN 470a-01 lands a measured record and research-ops records its disposition. [2026-10-15 research-ops 0847] 470a batch read, each under its own registered rule. FAIL/honest_negative (declared value stands, axis closed for the leg/window): 470a-01 eth_pullback_2h adx_min=22 on the preceding 730d (dR -3.78, 1/4 folds; the f0e2-05 PASS is NOT CONFIRMED = selection/period artifact; eth_pullback_2h is on no roster so nothing to change), 470a-02 xrp adx_min=22 (dR -9.26, 0/4), 470a-03 ada adx_min=22 (dR -26.2, 0/4), 470a-04 xrp pullback_frac (best F0382 dR +7.44 but dDD +0.18 and 2/4 folds, fails), 470a-06 trend_donchian_xrp_4h cooldown CD4/8/16 (all three arms identical to B, n=46: the lever never binds on this leg), 470a-08 trend_donchian_eth_4h cooldown (best CD16 dR +6.16 but dDD +1.44, worse DD, fails). LEADS (a best-of-3 PASS opens exactly one fresh-window confirmation, no Tier-3 proposal until CONFIRMED): 470a-05 ada_pullback_2h pullback_frac=0.618 (dR +11.76, dDD -5.81, 3/4 folds, n=111) -> RQ-20261015-4941-01 (F0618 vs B only, preceding 730d 2022-10-05..2024-10-04); 470a-09 trend_donchian_eth_4h min_confidence=0.7 (dR +2.50 vs 2.0 bar, dDD -5.23, 3/4 folds, n=116, thin margin) -> RQ-20261015-4941-02 (MC07 vs B only, preceding 1095d 2020-10-13..2023-10-12). Both real-money legs; NO config change proposed. 470a-11 census dispositions (its ACTIONS clause): real-money drag xrp_pullback_2h (2/4 folds) has had both entry axes (adx_min, pullback_frac) read honest_negative above, next lever is exit-side (route through exit-refinement; first weekly drag read, so not yet the two-consecutive-runs raise); alpaca_live ief/slv/iaum underpowered n=3-11 = no action, because daily legs accrue slowly and the e35 infeasible-power units are re-asked quarterly (#18191); prop eth/sol Donchian drag on 2/4 folds is owned by P5-PROP-PROGRAMME (1bf3-05/06 re-measure the incumbent).  [research-ops 1447] Weekly roster re-tests read by hand (their rows land wiring_only because the mapper does not evaluate the template rule shape; lever PI-20261006-1VPYTX8E-0001, due 2026-10-29): gld_pullback_1d PASS (n46, +16.7R), gld_pullback_1h PASS (n63, +22.4R, 10-08), ada_pullback_2h indeterminate (n35<39, -3.5R), eth_pullback_2h indeterminate (n38<39, -7.2R), gdx_pullback_1d FAIL on 3 consecutive weekly runs (n41; -3.9R, -3.9R, -2.1R). gdx is on alpaca_paper and alpaca_options_paper only (no live or mirror book), so no Gate-2 consequence; the three runs share ~all of a 10y window so they are one measurement, not three independent confirmations. No config change proposed; the weekly run continues. [RESEARCH-FOLLOWUP-1016 2026-10-16] S0-C confirmations READ, both NOT CONFIRMED -> NO Tier-3 proposal, declared values stand. RQ-20261015-4941-01 (ada_pullback_2h F0618 vs B, 2022-10-05..2024-10-04, n(B)=114): dR -1.17 R (B 39.21 vs F0618 38.04, fold sums re-added by hand), dDD -5.76, fold_wins 1/4 -> FAIL; pullback_frac stays 0.5 and the 470a-05 pass is a selection/period artifact (honest_negative on the earlier window). RQ-20261015-4941-02 (trend_donchian_eth_4h MC07 vs B, 2020-10-13..2023-10-12, n(B)=117): dR +0.81 R (< 2.0 bar), dDD +0.96 (worse), fold_wins 3/4 -> FAIL; min_confidence stays 0.6. Context: ada_pullback_2h also reads BELOW_BACKTEST live (RQ-20261015-8bbc-02, queued). Caveat: the grader closed both as 'two consecutive FAIL passes' but each has ONE run (evidence one file); the harness is deterministic on a pinned window so the verdict stands, the closure label does not -- grader fix on RQ-CONFIRM-SELFREAD. [2026-10-16 lane P3-STRATEGY-BACKLOG-1016] PR #18537 (HOLD, manager merge): research/programmes/03-strategy-improvement.yaml (29 nodes; 5 ready authoring asks incl. P3-Q1-live-bt-stage-b) + 22 runnable units RQ-20261016-c56e-05..26: 05-09 multi-fold entry sweeps on real-money legs (8 folds over ~6 yr, 7-of-8 -- the audit's selection-inflation rule); 10-13 L-LADDER Stage 0 on the window before each bybit_2 record; 14 eth_prop fold clause (re-asks f01d-02, whose control_failed was ONE warm-up trade); 15 SOL 4h breadth; 16-26 Q3 alpaca 1d legs at power (gld = iaum proxy). 01-04 (xrp_pullback_2h single-window sweeps) withdrawn per audit. Rows filed: ABLATION-CONTROL-WARMUP, LIVE-BT-STAGE-B, GRADER-FAIL-WORDING, P3-QUEUE-HYGIENE. landed_unproven until the units dispatch and land results.",
+  "updated_at": "2026-10-24T06:01:08Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "M21",
+    "M22",
+    "M27",
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "M21 next + reviewed 2026-10-14: fresh-window confirmation (rung S0-C) required before any entry lever reopens the milestone; leads f0e2-05/-10 under confirmation (470a-01/-10), real-money entry-axis sweeps 470a-02..09. M22 next: the four pairs Stage-0 PASSes are unreadable (rolling-beta R scale), PAIRS-R-SCALE then 470a-12. M27: no change (blocked on ICT-SCALP-HTF). L-LADDER: Stage-0 capital-day census 470a-11 (weekly).",
+    "arch": "none: research plan, units, a read-only census script; no architecture change"
+  },
+  "observation": {
+    "what": "RQ-20261014-470a-01 (fresh-window confirmation of RQ-20261014-f0e2-05) lands a measured record and research-ops records its disposition",
+    "how_to_check": "ls research/results/RQ-20261014-470a-01/*.jsonl; read_state measured; python3 scripts/research/research_disposition.py --report lists it read",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 492
+}

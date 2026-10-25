@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Does this diff put a strategy leg onto a RISK-BEARING roster, and if so does
-a committed evidence record clear the operator's four-clause bar?
+a committed evidence record clear the operator's five-clause bar?
 
 WHY THIS EXISTS — THE ASYMMETRY, MEASURED
 -----------------------------------------
@@ -22,15 +22,35 @@ the list, in either direction; a guard watching set membership cannot. That also
 covers the mandate case: `MD-PROMOTE-S1-S2` adds a leg to a roster, which is
 exactly the edit the line-matching guard cannot see.
 
-THE BAR — DECIDED BY THE OPERATOR 2026-09-21
---------------------------------------------
+THE BAR — DECIDED BY THE OPERATOR 2026-09-21, C5 ADDED 2026-10-11
+-----------------------------------------------------------------
 A leg may reach a real-money roster only on a COMMITTED EVIDENCE RECORD carrying
-exactly these four clauses:
+these clauses:
 
   C1  a named harness
   C2  a stated n
   C3  net of the FULL cost stack
   C4  clearing a rule registered BEFORE the run
+  C5  measured FAITHFULLY — `fidelity: faithful`, i.e. the harness modelled
+      every lever the leg's config declares (operator, 2026-10-11, popup answer
+      verbatim "Add it, re-measure the 3 now"; checklist GUARD-FIDELITY,
+      pipeline PI-20260928-HK3BKCKE-0001, evidence RQ-20260922-004).
+
+⚠️ WHY C5 EXISTS. Until 2026-10-11 nothing downstream read `fidelity`, so an
+`approximate` record — one whose harness run OMITTED a lever the live leg runs —
+cleared C1–C4 exactly like a faithful one. RQ-20260922-004 measured what that
+hides on xrp_pullback_2h: simulating the omitted trail_decay lever moved OOS net
+R by 5.6–11.0R on 4 of 5 cells, in the FLATTERING direction. C5 is fail-closed
+like everything else here: only the literal `faithful` passes; `approximate`,
+`null` and an absent field all fail.
+
+⚠️ C5 HAS A NAMED BASELINE, AND IT IS NOT A GRANDFATHER CLAUSE. The legs already
+on a real-money roster on an `approximate` record when C5 landed are listed in
+`FIDELITY_BASELINE`, each citing the research unit that re-measured it with the
+omitted lever simulated. An entry exists only while that leg's committed record
+still reads `approximate`; it is removed when the record is regenerated
+faithful. NEVER add an entry to quiet a finding — an entry needs a re-measure
+unit whose faithful arm cleared the leg's original Stage-0 rule.
 
 ⚠️ A CLAIM IN A PR BODY IS NOT A RECORD. That distinction is the entire safety
 property once `B5` takes the human out of the path, and it is why this guard
@@ -78,15 +98,16 @@ THE PAIRS SLEEVE IS A SECOND DOOR, SO IT IS COVERED
 The M22 market-neutral sleeve is an ISOLATED 2-leg order path
 (`src.units.strategies.pairs_executor`) whose gate lives in `config/pairs.yaml`,
 not in `strategies.yaml`. Measured 2026-09-21: `account_id: bybit_1` (paper) with
-`pairs_bnb_btc` and `pairs_sol_eth` at `execution: live`. So repointing ONE
-`account_id:` line arms two live pairs on a real-money account, touching neither
+`pairs_bnb_btc` and `pairs_sol_eth` at `execution: live` (both shadow since
+2026-10-16, PAIRS-R-SCALE; only non-shadow pairs are counted). So repointing ONE
+`account_id:` line could arm every live pair on a real-money account, touching neither
 roster this guard would otherwise read. That is the same question through a
 different file, so it is the same guard.
 
 WHAT THIS GUARD DOES NOT DO — STATED, NOT HIDDEN
 ------------------------------------------------
   * It does not grade the QUALITY of an edge. It checks that a record exists,
-    is about this leg, and carries the four clauses. A record can clear the bar
+    is about this leg, and carries the five clauses. A record can clear the bar
     and still describe a bad strategy; that is a research question, not a CI one.
   * It does not guard `mode: dry_run -> live` on an account. That is the
     `set-account-mode` system-action, Tier-3 and operator-gated, and it already
@@ -97,7 +118,7 @@ WHAT THIS GUARD DOES NOT DO — STATED, NOT HIDDEN
     would fail `main` on day one over 12 legs nobody is proposing to promote,
     which is the desensitised alarm this repo treats as its own P1. The standing
     census is reported by `--population` instead, which never fails a build.
-  * `--population` MEASURES the existing roster against the same four clauses.
+  * `--population` MEASURES the existing roster against the same five clauses.
     Run it to see the debt; it exits 0 by design.
 
 Exit codes: 0 clean · 1 findings · 2 COULD NOT MEASURE (an unreadable base or an
@@ -154,6 +175,25 @@ MEASURED_STATE = "measured"
 
 MACHINE_PREFIX = "ROSTER_PROMOTION_EVIDENCE"
 
+#: C5 holds only for this `fidelity` value (fail closed — see the docstring).
+FAITHFUL = "faithful"
+
+#: C5 BASELINE — (account, leg) slots that were ALREADY on a risk-bearing roster
+#: on an `approximate` record when C5 landed (2026-10-11), each citing the unit
+#: that re-measured it with the omitted lever(s) SIMULATED. Measured by parsing
+#: config/accounts.yaml + comms/strategy_evidence on main 2026-10-11: exactly
+#: these three slots, out of 13 risk-bearing slots (ief left the roster 2026-10-21 and slv
+#: 2026-10-24, both by operator decision; one remains)
+#: (bybit_2/xrp_pullback_2h's record already reads `faithful` on main). Remove an entry when the
+#: leg's record is regenerated `fidelity: faithful`. Do not add one without a
+#: faithful re-measure that cleared the leg's original Stage-0 rule.
+FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
+    # alpaca_live — omitted trail_decay_stall_bars / trail_decay_tight_mult.
+    # RQ-20261011-6707-01 faithful arm, record window, full cost stack: ief +2.33R
+    # (n=8), slv +2.48R (n=11), iaum +9.85R (n=8) — all clear RULE-D1.
+    ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-6707-01",
+}
+
 
 # --------------------------------------------------------------------------
 # config reading
@@ -202,10 +242,24 @@ def is_risk_bearing(account_class: Optional[str]) -> bool:
 
 
 def pairs_state(pairs_text: Optional[str]) -> Dict[str, Any]:
-    """`{"account_id": str|None, "live_pairs": [name]}` for config/pairs.yaml."""
+    """`{"account_id": str|None, "live_pairs": [name], "live_pair_accounts":
+    {name: account_id|None}}` for config/pairs.yaml.
+
+    `live_pair_accounts` is the EFFECTIVE account per live pair: the pair's own
+    `account_id` when it declares one, else the top-level default. This is
+    exactly what `src.units.strategies.pairs_executor.run_pairs_tick` reads
+    (`pair.get("account_id") or default_account`), so a per-pair override is a
+    second way to route a live pair onto a real-money account. Until 2026-10-07
+    this function read ONLY the top-level line (PAIRS-STOCKTAKE lane, MEASURED
+    by reading both files): an edit adding `account_id: bybit_2` under ONE pair
+    would have armed it on real money without touching the line this guard
+    watched. `account_id` / `live_pairs` are kept for the existing callers.
+    """
     data = _load_yaml(pairs_text, PAIRS_REL)
     acct = data.get("account_id")
+    default_acct = None if acct is None else str(acct)
     live: List[str] = []
+    live_accounts: Dict[str, Optional[str]] = {}
     entries = data.get("pairs")
     if isinstance(entries, list):
         for item in entries:
@@ -216,8 +270,12 @@ def pairs_state(pairs_text: Optional[str]) -> Dict[str, Any]:
             # would make the guard quiet on the very edit that adds a pair
             # without declaring one.
             if str(item.get("execution", "live")).strip().lower() != "shadow":
-                live.append(str(item.get("name") or "<unnamed>"))
-    return {"account_id": None if acct is None else str(acct), "live_pairs": live}
+                name = str(item.get("name") or "<unnamed>")
+                live.append(name)
+                own = item.get("account_id")
+                live_accounts[name] = default_acct if own is None else str(own)
+    return {"account_id": default_acct, "live_pairs": live,
+            "live_pair_accounts": live_accounts}
 
 
 def canonical_account_classes(module_text: Optional[str]) -> Optional[frozenset]:
@@ -272,11 +330,31 @@ def _iso(value: Any) -> Optional[str]:
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def clause_verdicts(record: Optional[Dict[str, Any]]) -> List[Tuple[str, bool, str]]:
-    """`[(clause, ok, detail)]` for the operator's four clauses, in order."""
+def _research_grade_blocks(record: Dict[str, Any]) -> bool:
+    """True when a `research_grading` block is present and does not read pass.
+
+    Absent block -> False (D1 alone decides). A block that is present but
+    malformed, or whose `powered_verdict` is anything but "pass", blocks:
+    unknown is not permission.
+    """
+    g = record.get("research_grading")
+    if g is None:
+        return False
+    if not isinstance(g, dict):
+        return True
+    return _iso(g.get("powered_verdict")) != "pass"
+
+
+def clause_verdicts(record: Optional[Dict[str, Any]], account: Optional[str] = None,
+                    leg: Optional[str] = None) -> List[Tuple[str, bool, str]]:
+    """`[(clause, ok, detail)]` for the operator's clauses C1–C5, in order.
+
+    `account`/`leg` name the roster slot being graded; they matter only to C5's
+    `FIDELITY_BASELINE`. Omitted, no slot is baselined (fail closed).
+    """
     if record is None:
         absent = "no committed record at comms/strategy_evidence/<leg>.json"
-        return [(c, False, absent) for c in ("C1", "C2", "C3", "C4")]
+        return [(c, False, absent) for c in ("C1", "C2", "C3", "C4", "C5")]
 
     out: List[Tuple[str, bool, str]] = []
 
@@ -350,9 +428,37 @@ def clause_verdicts(record: Optional[Dict[str, Any]]) -> List[Tuple[str, bool, s
         elif verdict != "pass":
             out.append(("C4", False, f"decision_rule {rid!r} verdict={verdict!r} (not 'pass') "
                                      f"— the record does not say the rule was cleared"))
+        elif _research_grade_blocks(record):
+            # The producer stamps only RULE-D1 (net_r_oos > 0, no n floor, no fold
+            # majority). A research unit may have registered a STRICTER rule for
+            # the same record and graded it under that rule, including a powered
+            # re-run. A D1 `pass` must not clear the bar over the unit's own
+            # FAIL/UNDERPOWERED. Measured 2026-10-04: ict_scalp_xrp_15m read D1
+            # pass at 365d while RQ-20261002-701 graded it FAIL at its
+            # pre-registered 730d escalation.
+            g = record["research_grading"]
+            g = g if isinstance(g, dict) else {"powered_verdict": f"malformed:{type(g).__name__}"}
+            out.append(("C4", False,
+                        f"decision_rule {rid!r} verdict=pass, but research_grading "
+                        f"{g.get('research_unit')!r} rule {g.get('rule_id')!r} graded "
+                        f"powered_verdict={g.get('powered_verdict')!r} (not 'pass')"))
         else:
             out.append(("C4", True, f"decision_rule {rid!r} registered {registered_at} "
                                     f"< run {generated_at}, verdict=pass"))
+
+    # C5 — measured FAITHFULLY (operator, 2026-10-11). Fail closed.
+    fidelity = _iso(record.get("fidelity"))
+    baseline_unit = FIDELITY_BASELINE.get((account, leg)) if account and leg else None
+    if fidelity == FAITHFUL:
+        out.append(("C5", True, "fidelity=faithful"))
+    elif baseline_unit and fidelity == "approximate":
+        out.append(("C5", True, f"fidelity=approximate, BASELINED for {account}/{leg} — "
+                                f"faithful re-measure {baseline_unit} cleared Stage 0"))
+    else:
+        out.append(("C5", False,
+                    f"fidelity={fidelity!r} (not {FAITHFUL!r}), omitted_levers="
+                    f"{record.get('omitted_levers')!r} — the harness did not model every lever "
+                    f"the leg runs, so this is not Stage-0 evidence for a risk-bearing slot"))
     return out
 
 
@@ -360,9 +466,10 @@ def identity_verdict(record: Optional[Dict[str, Any]], leg: str,
                      strategies: Dict[str, Any]) -> Tuple[bool, str]:
     """Is the record ABOUT the leg being armed, as currently configured?
 
-    ⚠️ THIS IS NOT A FIFTH CLAUSE OF THE BAR, and it is reported separately so it
-    cannot be mistaken for one. The operator set four clauses and declined a
-    fifth. This checks a precondition all four depend on: without it, C1–C4 can
+    ⚠️ THIS IS NOT A CLAUSE OF THE BAR, and it is reported separately so it
+    cannot be mistaken for one. (The fifth clause the operator DECLINED on
+    2026-09-21 was an n floor; the C5 added 2026-10-11 is fidelity, not this.)
+    This checks a precondition every clause depends on: without it, C1–C4 can
     all hold for a record describing a DIFFERENT configuration of the leg, and
     the bar is satisfied by evidence about something else.
     """
@@ -433,17 +540,23 @@ def promotions(base_accounts: Optional[str], head_accounts: Optional[str],
 
     if head_pairs is not None:
         ph, pb = pairs_state(head_pairs), pairs_state(base_pairs)
-        target = ph["account_id"]
-        if target and ph["live_pairs"]:
+        # PER PAIR, on the EFFECTIVE account (own `account_id`, else the
+        # top-level default) -- the same resolution the executor performs. A
+        # (pair, account) routing is a finding when the account is risk-bearing
+        # and the base did not already carry that exact routing live: a new
+        # live pair, a repointed default, or a per-pair override are all the
+        # same question through different lines.
+        base_routes = pb["live_pair_accounts"]
+        for name, target in sorted(ph["live_pair_accounts"].items()):
+            if not target:
+                continue
             acct_cfg = head.get(target)
             cls = acct_cfg["class"] if acct_cfg else None
-            was_target = pb["account_id"]
-            was_safe = was_target != target or set(pb["live_pairs"]) != set(ph["live_pairs"])
-            if is_risk_bearing(cls) and was_safe:
-                for name in ph["live_pairs"]:
-                    found.append({"kind": "pairs_repoint", "account": target, "leg": name,
-                                  "why": f"{PAIRS_REL} account_id={target!r} "
-                                         f"(account_class={cls!r}), pair not shadow"})
+            already_live_there = base_routes.get(name) == target
+            if is_risk_bearing(cls) and not already_live_there:
+                found.append({"kind": "pairs_repoint", "account": target, "leg": name,
+                              "why": f"{PAIRS_REL} routes {name} to account_id={target!r} "
+                                     f"(account_class={cls!r}), pair not shadow"})
     return found
 
 
@@ -454,7 +567,7 @@ def grade(found: Sequence[Dict[str, str]], strategies: Dict[str, Any],
     for item in found:
         leg = item["leg"]
         record = load_record(leg, evidence_dir)
-        clauses = clause_verdicts(record)
+        clauses = clause_verdicts(record, item["account"], leg)
         ident_ok, ident_detail = identity_verdict(record, leg, strategies)
         failed = [(c, d) for c, ok, d in clauses if not ok]
         if not failed and ident_ok:
@@ -480,7 +593,7 @@ def census(accounts_text: Optional[str], strategies: Dict[str, Any],
     for acct, cfg in sorted(risk.items()):
         for leg in cfg["legs"]:
             record = load_record(leg, evidence_dir)
-            clauses = clause_verdicts(record)
+            clauses = clause_verdicts(record, acct, leg)
             ident_ok, ident_detail = identity_verdict(record, leg, strategies)
             slots.append({
                 "account": acct, "leg": leg, "account_class": cfg["class"],
@@ -558,6 +671,7 @@ _GOOD_RECORD = {
     "decision_rule": {"id": "DR-TEST-1", "rule": "net_r_oos > 0 over >=4 folds",
                       "registered_at": "2026-09-01T00:00:00+00:00", "verdict": "pass"},
     "generated_at": "2026-09-10T00:00:00+00:00",
+    "fidelity": "faithful",
 }
 _STRATS = {"leg_ok": {"a": 1}, "leg_bad": {"b": 2}, "leg_new": {"c": 3}}
 
@@ -632,6 +746,8 @@ def self_test() -> int:
                                 "registered_at": "2026-09-20T00:00:00+00:00"}}, "C4"),
             ("C4 rule not cleared",
              {"decision_rule": {**_GOOD_RECORD["decision_rule"], "verdict": "fail"}}, "C4"),
+            ("C5 fidelity approximate", {"fidelity": "approximate"}, "C5"),
+            ("C5 fidelity null", {"fidelity": None}, "C5"),
         ):
             rec = {**good, **mutate}
             bad_ones = [c for c, ok, _ in clause_verdicts(rec) if not ok]
@@ -640,8 +756,17 @@ def self_test() -> int:
         # P6: identity — a record about a DIFFERENT configuration of the leg.
         stale = {**good, "config_fingerprint": "sha256:" + "0" * 32}
         check("P6 stale config_fingerprint fails identity", identity_verdict(stale, "leg_ok", _STRATS)[0], False)
-        check("P6 ...while all four clauses still PASS (so identity is load-bearing)",
-              [ok for _, ok, _ in clause_verdicts(stale)], [True, True, True, True])
+        check("P6 ...while every clause still PASSES (so identity is load-bearing)",
+              [ok for _, ok, _ in clause_verdicts(stale)], [True, True, True, True, True])
+        # P8: C5 baseline is SLOT-keyed — a baselined leg added to ANOTHER
+        #     risk-bearing account is not covered by the baseline.
+        approx = {**good, "fidelity": "approximate"}
+        check("P8 baselined leg on a non-baselined account fails C5",
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "iaum_pullback_1d"))["C5"],
+              False)
+        check("P8b baselined slot passes C5",
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
+              True)
 
         # P7: the pairs sleeve — one `account_id:` line.
         pairs_base = yaml.safe_dump({"account_id": "paper_acct",
@@ -655,6 +780,26 @@ def self_test() -> int:
         p7b = promotions(base, base, pairs_base,
                          yaml.safe_dump({"account_id": "real_acct", "pairs": [{"name": "p2"}]}))
         check("P7b pair with absent execution treated as live", len(p7b), 1)
+        # P7c: a PER-PAIR `account_id` override is the executor's second
+        # routing line (pair.get("account_id") or default). Top-level default
+        # stays paper; ONE pair is pointed at real money -> that pair, only.
+        p7c = promotions(base, base, pairs_base, yaml.safe_dump({
+            "account_id": "paper_acct",
+            "pairs": [{"name": "p1", "execution": "live", "account_id": "real_acct"},
+                      {"name": "p3", "execution": "live"}]}))
+        check("P7c per-pair account_id override onto real money is detected",
+              [(x["kind"], x["leg"], x["account"]) for x in p7c],
+              [("pairs_repoint", "p1", "real_acct")])
+        # P7d: a NEW live pair added under a default that already points at
+        # real money is a promotion of that pair (the old pair stays silent).
+        p7d = promotions(base, base,
+                         yaml.safe_dump({"account_id": "real_acct",
+                                         "pairs": [{"name": "p1", "execution": "live"}]}),
+                         yaml.safe_dump({"account_id": "real_acct",
+                                         "pairs": [{"name": "p1", "execution": "live"},
+                                                   {"name": "p4", "execution": "live"}]}))
+        check("P7d new live pair under a real-money default is detected, old one not",
+              [(x["kind"], x["leg"]) for x in p7d], [("pairs_repoint", "p4")])
 
         print("NEGATIVE CONTROLS — each must stay silent:")
         # N1: DEMOTION IS FREE. This is the one the guard must never break.
@@ -769,7 +914,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"  paper accounts        : {', '.join(rep['paper_accounts']) or '(none)'}")
         print(f"  roster slots          : {rep['roster_slots']} "
               f"({rep['distinct_legs']} distinct legs)")
-        print(f"  clear the four-clause bar : {rep['passing']}/{rep['roster_slots']}")
+        print(f"  clear the five-clause bar : {rep['passing']}/{rep['roster_slots']}")
         print(f"  do NOT clear it           : {rep['failing']}/{rep['roster_slots']}")
         for s in rep["slots"]:
             mark = "PASS" if s["passes_bar"] else "FAIL"
@@ -798,15 +943,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     findings = grade(found, strategies, evidence_dir)
     if not findings:
         print(f"roster-promotion-evidence: clean ({len(found)} promotion(s), all carrying a "
-              f"committed evidence record that clears the four-clause bar)")
+              f"committed evidence record that clears the five-clause bar)")
         for item in found:
             print(f"  armed: {item['leg']} -> {item['account']} [{item['kind']}]")
         return 0
 
     print("🚨 ROSTER PROMOTION GUARD: a leg reaches a RISK-BEARING roster without a "
-          "committed evidence record clearing the operator's four-clause bar.", file=sys.stderr)
+          "committed evidence record clearing the operator's five-clause bar.", file=sys.stderr)
     print("   The bar (operator, 2026-09-21): a named harness · a stated n · net of the FULL "
-          "cost stack · clearing a rule registered BEFORE the run.", file=sys.stderr)
+          "cost stack · clearing a rule registered BEFORE the run · measured FAITHFULLY "
+          "(C5, operator 2026-10-11).", file=sys.stderr)
     print("   A claim in a PR body is not a record. Fix the record at "
           f"{EVIDENCE_DIR_REL}/<leg>.json, or drop the leg from the roster "
           "(demotion needs nothing).\n", file=sys.stderr)

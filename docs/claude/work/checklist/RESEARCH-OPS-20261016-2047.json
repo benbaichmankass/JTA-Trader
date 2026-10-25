@@ -1,0 +1,36 @@
+{
+  "id": "RESEARCH-OPS-20261016-2047",
+  "title": "Research-ops pass 2026-10-16 20:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261016-2047",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": 2,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane done] runnable 117 vs floor 67 (met); 13 results read (p6/f5/i2); 0 units authored, 0 programme nodes drafted (OPS-AUTHOR-SKIPPED persists); 5 needs_review units owned in HELD PR claude/research-ops-triage-20261016-2047 (needs manager merge); Tier-3 evidence noted on PROMOTION-BAR-MULTIPLICITY (077e-01/02/03) and REGIME-PROGRAM (64d6-01 FAIL). Not run: due-item routing, blocked/ audit, stranded-stamp check. Record comms/research/ops/20261016T2130Z.json.",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "run record 20261016T2130Z on main; held triage PR claude/research-ops-triage-20261016-2047 merged by the manager",
+    "how_to_check": "git log origin/main --oneline -3 -- comms/research/ops/20261016T2130Z.json; python3 scripts/research/result_disposition_check.py --list (want UNOWNED 0)",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-18",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 544
+}

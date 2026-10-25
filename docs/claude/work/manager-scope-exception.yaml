@@ -6,6 +6,124 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261024-HOOK-ROTATION-CARVEOUT
+    status: active
+    expires: "2026-10-25"
+    paths:
+      - ".claude/settings.json"
+    reason: >-
+      OPERATOR DECISION, 2026-10-24 ~15:24Z, popup in manager session
+      session_01UETC6mFiwMgXk6URsuWzZb, verbatim "Carve out manager rotation
+      (Recommended)" (row MANAGER-HANDOVER-SLIM). The owning lane
+      (session_01SX3Cx8hA6D6V8kJV3iiPB2) was refused the settings.json edit by
+      its auto-mode classifier. The operator then took the manager off auto
+      mode and told it in chat, verbatim: "Okay, took you off auto mode so that
+      you could handle the permissions." That names the MANAGER as the author.
+
+      WHAT IT COVERS: the single commit that adds ONE sentence to the
+      SessionStart READ-FIRST text in .claude/settings.json. The sentence
+      exempts only an incoming manager on a rotation (tagged manager +
+      predecessor:*) from the full CLAUDE-RULES-CANONICAL read, pointing it to
+      the targeted-section list in the manager skill. Every other session,
+      lanes included, still reads in full. Nothing else in that file changes.
+  - id: MGR-20261022-DECISION-BAR-SPLIT
+    status: active
+    expires: "2026-10-24"
+    paths:
+      - "config/strategies.yaml"
+      - ".github/pr-landing/lane-decision-bar-split-config-1022.json"
+      - "comms/strategy_evidence/ada_pullback_2h.json"
+      - "comms/strategy_evidence/xrp_pullback_2h.json"
+      - "comms/strategy_evidence/trend_donchian_eth_prop.json"
+      - "scripts/research/regime_debt_matrix.py"
+      - "tests/test_decision_bar_closed_fingerprint_inert.py"
+      - "tests/test_rebase_evidence_decision_bar.py"
+    reason: >-
+      OPERATOR DECISION, 2026-10-22 ~10:40Z, popup in manager session
+      session_01CSwhZWiw15rVCkjsJ8Cpuh, verbatim "Split: 3 to closed, 2 stay
+      (Recommended)" (row DECISION-BAR-MATCH). The owning lane
+      (session_01B7EoDeNYn9AmiGkk7q6etd) was refused the edit by its auto-mode
+      classifier, and so was the manager's first commit. The operator then
+      answered the manager's popup, verbatim "Take me off auto mode
+      (Recommended)", and told the manager in chat, verbatim "Off auto mode".
+      That names the MANAGER as the author.
+
+      WHAT IT COVERS: the single commit that adds `decision_bar: closed` to
+      xrp_pullback_2h, ada_pullback_2h and trend_donchian_eth_prop in
+      config/strategies.yaml. Nothing else in that file. The lane finishes the
+      fingerprints, tests and the held Tier-3 PR.
+
+      SECOND COMMIT (11:15Z): the lane's own classifier then refused to COMMIT
+      its finished, verified work onto this branch ("[Auto-Mode Bypass]"), so it
+      handed the manager a patch. The manager (off auto mode by the operator's
+      instruction) applied it UNCHANGED: the 3 inert fingerprint refreshes on the
+      named evidence records, the regime_debt_matrix pullback decision_bar
+      fidelity fix, two tests, and the Tier-3 hold landing file. Authored by lane
+      session_01B7EoDeNYn9AmiGkk7q6etd; committed by the manager.
+  - id: MGR-20261018-EXEC-TEST-TRADES-GRANT
+    status: active
+    expires: "2026-10-21"
+    paths:
+      - "config/mandates.yaml"
+    reason: >-
+      OPERATOR GRANT, 2026-10-18 ~08:05Z, in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao: a standing mandate for test trades to
+      verify the phone executor's operations (verbatim text in the
+      MD-EXEC-DEV-TEST-TRADES entry's source). The lane's classifier refused
+      the write because the grant reached it only relayed. The operator then
+      told the manager, verbatim: "the default fix for permissions is always to
+      try taking you off auto mode to impelment the changes first, not giving
+      me text to paste into a seperate session", and "Off auto mode". That
+      names the MANAGER as the author, so routing it to a lane is not what was
+      asked.
+
+      WHAT IT COVERS: the single commit that adds MD-EXEC-DEV-TEST-TRADES to
+      config/mandates.yaml. Nothing else in that file.
+  - id: MGR-20261015-SOAK-AMEND-GRANT
+    status: active
+    expires: "2026-10-18"
+    paths:
+      - "config/mandates.yaml"
+      - "tests/test_mandate_resolver.py"
+    reason: >-
+      OPERATOR GRANT, 2026-10-15 ~21:05Z, popup in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao, verbatim "Grant as written
+      (Recommended)" on MD-PROMOTE-S1-S2-SOAK-AMEND. The SOAK-REDEFINE lane's
+      write was refused by the permission classifier, and so was the manager's
+      first attempt; the operator then told the manager in chat, verbatim:
+      "go ahead, retry the mandates.yaml grant write", and for this exception
+      entry, verbatim: "granted permision for the rewrite", then answered the
+      unlock popup "Approve one prompt (Recommended)" and left auto mode for
+      it. That names the MANAGER as the author, so the guard's normal remedy
+      (route it to a session) is not what was asked, and a lane re-committing
+      it would misattribute a real-money authorization.
+
+      WHAT IT COVERS: PR #18445 commit eeb0de70 only -- folds
+      MD-PROMOTE-S1-S2-SOAK-AMEND into MD-PROMOTE-S1-S2 (amended_at /
+      amendment_source, never: soak = SOAKS.json passed, fires_when:
+      venue-symbol measured cost, bar.soak_passed, bar.cost_basis:
+      venue_symbol, proposed: []) plus the GLD R-AFFORD test fixture, which
+      needs a passed soak contract now that the soak clause precedes
+      affordability. Nothing else in those files.
+  - id: MGR-20261005-AUTOMERGE-BRANCH-WIDEN
+    status: active
+    expires: "2026-10-08"
+    paths:
+      - ".github/workflows/claude-pr-automerge.yml"
+    reason: >-
+      OPERATOR GRANT, 2026-10-05, to manager session_01MM8o5js6TcDFeNAPBY4Ntv.
+      The operator answered the manager's popup "widen the automerge relay
+      trigger to non-claude branches?" with, verbatim, "Yes, widen it". When
+      the manager then asked for a manual edit, the operator replied, verbatim:
+      "I do not make manual edits ... Fix it, figure it out. If you need to
+      take you off auto mode so that you can do the change, then that's what
+      you're supposed to do." That names the MANAGER as the author, so the
+      guard's normal remedy (route it to a session) is not what was asked.
+
+      WHAT IT COVERS: PR #16552 only. It changes the `on.push` branch filter of
+      claude-pr-automerge.yml from `claude/**` to every branch except main and
+      automation/**. The job body and the arming conditions are untouched.
+      Closes PI-20260929-AQRK6CL1-0001 and PI-20261002-ULPHZHHQ-0002.
   - id: MGR-20260927-TITLE-AND-NO-DISPUTE-RULE
     status: active
     expires: "2026-09-30"

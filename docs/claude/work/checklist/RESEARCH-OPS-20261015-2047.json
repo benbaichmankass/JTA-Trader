@@ -1,0 +1,36 @@
+{
+  "id": "RESEARCH-OPS-20261015-2047",
+  "title": "Research-ops pass 2026-10-15 20:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261015-2047",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": 3,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane done] 20 results landed since 15:30Z (p3/f6/i10/wiring1); ee68-01 PASS -> Tier-3 note on PROP-BOOK-SEARCH-1095D with confound + 3 matched-risk controls (8bbc-03..05); diagnosis stage-A units 8bbc-01/-02 + verdict adapter (reproduced against the live route on 2026-10-15: xrp_pullback_2h live cumulative R below its bootstrap p5 over 16 closed trades with an R basis, ada_pullback_2h over 15, both bybit_2 realMoney book, not bybit_1); build lever PI-20261015-10152047-0001; runnable 12->18 vs computed floor 41 (NOT met, refill capacity 0, 7 authoring nodes untouched); 10 needs_review examined 0 closed (wiring_only defect PI-20261006-1VPYTX8E-0001). Record comms/research/ops/20261015T2115Z.json. Hold PR.",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "manager merges the hold PR; 8bbc-01/-02 dispatch on the runner and land read_state measured (not no_data); ee68-01 closes on the next grade run",
+    "how_to_check": "python3 scripts/research/dispatch_queue.py | grep 8bbc; ls research/results/RQ-20261015-8bbc-01; git show origin/main:research/queue/RQ-20261015-ee68-01.yaml | grep ^status",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 521
+}

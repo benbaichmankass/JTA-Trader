@@ -1,0 +1,21 @@
+{
+  "id": "UI-UPGRADE-1-AUTH-HARDEN",
+  "title": "Harden the site sign-in before SITE_AUTH_ENFORCE is flipped (8 review findings a-h)",
+  "phase": "W41",
+  "state": "queued",
+  "owner": "build lane (manager dispatch)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Hardening findings from the security review of #17624 (Manager Session 2026-10-11, MERGE-WITH-NITS). EACH MUST BE DONE BEFORE SITE_AUTH_ENFORCE IS FLIPPED. (a) a ws_ session can add a passkey with no step-up, and there is no passkey list/revoke route; session revoke leaves passkeys in place. (b) require_site_session is a sync dependency, so it costs a threadpool hop per request even with the gate off; make it async (keep the sqlite lookup off the event loop, e.g. run_in_threadpool only when the gate is on). (c) register/finish does not re-check that a via-session begin still has a live session. (d) the assertion challenge is not bound to the pre-auth ticket that began it. (e) the WS ticket path skips the ALLOWED_EMAIL check. (f) _fail_log in web_sessions.py grows without bound. (g) the enrol code is burned at begin, so a cancelled ceremony wastes it. (h) 'testclient' is in the trusted-proxy host list in runtime code (src/web/api/routers/auth_google.py::_client_ip). Related rows: PI-20261011-CFUJ7YFR-0001 (Caddy access log + 24h consumer check), -0002 (service-bearer retrofit). Parent: UI-UPGRADE-1-AUTH.",
+  "updated_at": "2026-10-11T21:36:23Z",
+  "updated_by": "session_011uiQyRqUbP23WPcfuj7Yfr",
+  "roadmap": [
+    "M6"
+  ],
+  "_seq": 414
+}

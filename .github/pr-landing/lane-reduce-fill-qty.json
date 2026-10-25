@@ -1,0 +1,12 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Lane REDUCE-FILL-QTY dispatch (manager session_01G16FfyYSmDPQuuW55BuTmK, pipeline item PI-20261011-YJAYF7GD-0001): order-path change, Tier-3; open with landing HOLD, do NOT arm auto-merge -- the manager decides with the evidence in the PR body.",
+  "why": "src/units/accounts/execute.py: an intent reduce-only leg now reads its own fill back from Bybit (get_open_orders/get_order_history by orderId, read-only) and shrinks the parent rows by the FILLED qty instead of the requested qty; an unreadable fill falls back to the requested qty (the old behaviour). Order path, so Tier-3 by the lane's dispatch.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "REDUCE-FILL-QTY PI-20261011-YJAYF7GD-0001 2026-09-27 data-backed standing authorization; manager approval 2026-10-12T07:25Z",
+    "evidence": "docs/research/reduce-fill-qty-2026-10-12.md"
+  }
+}

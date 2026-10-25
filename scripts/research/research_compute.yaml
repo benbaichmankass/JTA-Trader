@@ -1,0 +1,196 @@
+# scripts/research/research_compute.yaml -- the ONE place research compute is described (RESEARCH-ROUTER, 2026-10-13).
+#
+# A queue unit declares WHAT KIND of test it is (`compute: <class>`) and, optionally, what it is WORTH
+# (`value:` block). Everything below -- which backend runs it, how much of that backend may be busy,
+# how a due unit ranks against another -- is decided HERE by scripts/research/compute_router.py and
+# scripts/research/dispatch_queue.py, with no Claude tokens. Claude authors the unit; it never picks a
+# runner by hand. A unit that still names an explicit `run.workflow` keeps it (back-compat): `workflow:`
+# beats `compute:`.
+#
+# Authoring contract: research/queue/PLANNING.md § "Compute class and value" and
+# .claude/skills/research-ops/SKILL.md § E.
+#
+# Not a gate on trading: this decides where RESEARCH runs. Nothing here touches a book, a roster or a risk cap.
+
+backends:
+  github_runner:
+    workflow: research-script-run.yml
+    max_concurrent: 3          # == the dispatcher's historical --max-research-inflight 3, unchanged
+    cost_weight: 1.0           # relative cost of one hour here (free, but it shares the repo's runner pool)
+    # A unit with routing.published_data runs on this backend's published twin instead. KAGGLE-CPU-ROUTE (2026-10-14): the twin is
+    # kaggle_cpu, NOT github_runner_data -- kaggle 2.2.4 DownloadDataset 404s for the private dataset from a GitHub runner (runs
+    # 38507974681 / 38512183556 / 38514877849, row ML-DATA-RUNNER-FETCH), while a Kaggle kernel mounts it (verified 20/20 files).
+    published_variant: kaggle_cpu
+    what: "GitHub-hosted runner: free, ~20 concurrent repo-wide, 6 h/job"
+  github_runner_data:
+    workflow: research-script-run-data.yml
+    max_concurrent: 2          # shares the runner pool with github_runner; each run downloads ~1.5 GB, so it is capped lower
+    cost_weight: 1.0
+    what: "GitHub-hosted runner + the private published ML dataset (ML-DATA-OFF-TRAINER): explicit run.workflow only since KAGGLE-CPU-ROUTE; its fetch 404s from a runner"
+  kaggle_cpu:
+    workflow: research-script-run-kaggle-cpu.yml
+    max_concurrent: 1          # one CPU kernel + bundle dataset slug (metis-research-run-cpu); separate from the GPU slot, so both can run
+    cost_weight: 1.5           # free and NOT metered by the GPU quota; the runner job only polls, the kernel does the work
+    # NO `quota:` block, deliberately: a CPU kernel does not draw the weekly GPU hours (enable_gpu=false), so there is nothing to gate on.
+    what: "Kaggle CPU kernel (internet off): reads the private published dataset by mount; units with routing.published_data"
+  trainer:
+    workflow: research-script-run-trainer.yml
+    max_concurrent: 1          # 1 OCPU / 6 GB; the workflow's own concurrency group is global
+    cost_weight: 3.0           # scarce: shares the box with the daily cycle and promotion sweep
+    what: "trainer VM over SSH: only for units that read trainer-resident data"
+    # The trainer is its OWN queue (ML-DATA-OFF-TRAINER, operator 2026-10-13): a unit bound here is released only into an
+    # IDLE WINDOW, never into the training cycle. Windows are DERIVED from the measured hour-of-day occupancy of the
+    # trainer's own services (comms/cloud/trainer_workload_profile.json, 7 days to 2026-10-13 16:00Z); a test fails if
+    # a window here opens an hour the profile says is busy. A unit must FIT: start + est_minutes x safety_factor <= window end.
+    # Same dispatcher, not a second cron: stamping, landing and the liveness receipt are single-writer, and a second
+    # dispatcher could fire the same unit twice.
+    queue:
+      windows_utc: ["03:00-05:00", "07:00-24:00"]
+      safety_factor: 1.5
+      profile: comms/cloud/trainer_workload_profile.json
+  kaggle:
+    workflow: research-script-run-kaggle.yml
+    max_concurrent: 1
+    cost_weight: 5.0           # GPU hours are the scarcest budget we have
+    # Weekly GPU quota, read from `kaggle quota` by the dispatch workflow (docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md).
+    # Below `floor_hours` remaining no GPU unit is routed here: it WAITS (deferred, with the refresh time) or, for a
+    # class that lists a fallback, goes to the next backend. The queue itself never halts.
+    quota: {resource: GPU, floor_hours: 3.0, default_unit_hours: 1.0}
+    what: "Kaggle kernel, 2x T4, ~30 GPU h/week, internet off; code travels as a private dataset bundle"
+  runpod:
+    workflow: gpu-burst-train.yml
+    max_concurrent: 1
+    cost_weight: 8.0
+    # "fallback" (ML-DATA-OFF-TRAINER, operator 2026-10-13 (d)): never a class's first choice. Reached only when every earlier
+    # backend of the class is out of quota/capacity AND the unit declares a request it can serve (`routing.runpod:
+    # {manifest, est_cost_usd}` -- the pod trains a registered ML manifest; it does not run arbitrary scripts) AND the
+    # spend fits the ledger cap. GPU_BURST_ARMED still decides whether a pod launches at all. An explicit
+    # run.workflow: gpu-burst-train.yml keeps working exactly as before.
+    auto_route: fallback
+    ledger: comms/gpu_spend_ledger.json     # month-to-date + estimate must stay <= its budget_usd_per_month ($10)
+    rate_usd_per_h: 0.22                    # RTX 3090 spot, July 2026 ledger
+    estimate_margin: 2.0                    # estimate = est_hours x rate x margin when the unit declares no est_cost_usd
+    what: "RunPod spot GPU burst (M19): operator-armed, ledger-capped; GPU fallback when Kaggle quota is short"
+
+# Datasets published OFF the trainer (ML-DATA-OFF-TRAINER, 2026-10-13). A unit that sets `routing.published_data: <name>`
+# reads its shards from this dataset instead of trainer-resident files, so it can run on a runner or Kaggle. The router
+# CHECKS the claim: every ml_bakeoff.dataset path of the unit must be in scripts/research/market_data_export.py::ALLOW.
+# Market data only; OURS (trades, fills, signals, account, outcome labels) is never published. Private Kaggle dataset.
+published_data:
+  metis-market-data:
+    kaggle_dataset: metis-market-data      # owner = the KAGGLE_API_TOKEN user
+    exporter: .github/workflows/ml-data-export-kaggle.yml
+    refresh: "daily 06:40Z, after the nightly shard rebuild"
+    env: ML_DATA_ROOT                      # the dir that CONTAINS datasets-out/ ; ml_bakeoff resolves relative paths from it
+
+# Class -> ordered backend preference. The first backend that is not over capacity / quota wins.
+# A class with one backend WAITS when it is full; listing a second backend is the declared fallback.
+classes:
+  cpu_light:      {backends: [github_runner], what: "<= ~30 min, public data / repo data, no GPU"}
+  cpu_long:       {backends: [github_runner], what: "30 min .. 5.5 h, public data / repo data, no GPU"}
+  needs_vm_data:  {backends: [trainer],       what: "reads trainer-resident data / weights; fits in 6 GB"}
+  gpu:            {backends: [kaggle, runpod], what: "needs a GPU; Kaggle first, RunPod burst (ledger-capped, manifest requests only) when Kaggle quota is short; never runs on CPU"}
+  gpu_preferred:  {backends: [kaggle, github_runner], what: "GPU if quota allows, else the CPU path (the script must support both). Refused for an ml_bakeoff whose learners are all CPU-only (it would burn GPU quota for nothing): use compute: auto"}
+
+# Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
+# these bound the sum, so research can never saturate the runner pool a system-action waits in.
+#
+# CAP MEASUREMENT 2026-10-13 (lane RESEARCH-UTIL; population: Actions jobs of 4,176 runs created 2026-10-12T19Z..10-13T20Z, all
+# `ubuntu-latest`, 5-min buckets, bucket MAXIMUM of jobs running by started_at/completed_at, 288 buckets):
+#   CI (pull_request+push, non-research) p50 9 · p90 16 · p99 21 · max 30      all non-research p90 17
+#   research p90 5 · max 8                                                     everything p50 12 · p90 20 · p99 28 · max 34
+#   Queue wait (created->started): p50 0s · p90 5s · p99 536s; 197 of 4,464 jobs waited > 120 s and ~90% of those started
+#   with 18-20 jobs already running -> the shared pool IS binding at ~20. The planned 20 - CI_p90 - 2 = 2 is BELOW today's 3.
+#   So the caps are NOT raised: more research slots would queue CI/merge jobs. Also, last measured dispatch cycle
+#   (comms/research/utilization, 16:05Z): github_runner in-flight 0/3, due_waiting 0 -- the runner backend had nothing waiting;
+#   the waiting units (5) were routed to `trainer` (cap 1, compute_spare saturated, deliberately unchanged).
+#   research-script-run.yml's concurrency group is per-unit, so --max-fires-per-workflow=1 does not throttle it.
+limits:
+  max_total_inflight: 8        # runner 3 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1
+  max_repo_queued: 10          # unchanged from the dispatcher's flag default
+  # YIELD TO INFRA (GH-CAPACITY-INFRA-FIRST, operator 2026-10-15): while any fresh run of one of these
+  # workflows (gh `workflowName`, i.e. the file's `name:`) is QUEUED, the dispatcher fires nothing -- every
+  # backend's workflow, trainer and Kaggle included, holds a GitHub runner while it polls. Research uses
+  # GitHub capacity only when infra is not waiting. Class backend order already puts the dedicated backend
+  # first wherever the unit can run there (gpu/gpu_preferred -> kaggle; published-data cpu units ->
+  # kaggle_cpu via published_variant; needs_vm_data -> trainer); github_runner is the spill-over.
+  infra_workflows:
+    - system-actions
+    - system-actions-cancel-guard
+    - deploy-candidate
+    - deploy-trainer-bootstrap
+    - phone-executor-apk
+    - trainer-vm-diag
+    - trainer-diag-relay
+    - arm-candidate-diag
+    - vm-bybit-diag
+    - vm-caddy-deploy
+    - vm-cloud-fix
+    - vm-cloud-open-ib-port
+    - vm-devnull-deploy-bootstrap
+    - vm-devnull-source-diagnose
+    - vm-diag-snapshot
+    - vm-driver
+    - vm-fix-devnull
+    - vm-git-credential-bootstrap
+    - vm-ib-gateway-deploy
+    - vm-ib-gateway-live-login-test
+    - vm-ib-gateway-recover
+    - vm-ib-gateway-selftest
+    - vm-ib-gateway-stop
+    - vm-ib-gateway-watchdog-enable
+    - vm-net-diag
+    - vm-net-fix
+    - vm-resize-live
+    - vm-web-api-recover
+
+# Value ranking. score = usd_per_month * confidence * bucket_boost * hand_written_boost * age_boost / cost
+#   usd_per_month  unit.value.usd_at_stake_per_month, else priority_usd[declared priority]
+#   confidence     unit.value.confidence, else default_confidence      (P(the answer changes a decision), 0..1)
+#   bucket_boost   target_share / observed_share of the unit's bucket over the share window, clamped to [min,max]
+#   hand_written   someone ASKED this question; a template refill did not (kept from the 2026-10-04 measurement)
+#   age_boost      1 + age_step per aging step waited (aging_hours in THEMES.yaml)
+#   cost           (1 + est_hours) * backend.cost_weight   -- est_hours from routing.est_minutes
+# starve_hours: a unit DUE longer than this sorts ahead of every score, in its theme and across themes. Nothing starves.
+#
+# MONEY FIRST (operator 2026-10-18, popup verbatim "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018). This score
+# orders due units ACROSS themes, not only inside one. Until then dispatch_queue.fair_order round-robined the themes
+# by (fires in THEMES.yaml share_window_hours + picks) / weight and the score ordered units only within a theme:
+# run 39098686264 (2026-10-18 04:56Z) gave github_runner's 3 slots to two regime units scoring 6.5 and one infra unit
+# at 30.7 while the P1 real-money units (own_losses, 141.9 down) deferred on "at capacity". The operator declined to
+# raise the runner cap. Now: starved first, then the operator's programme_priority (below), then the highest score in
+# any theme; theme share (THEMES.yaml weight)
+# only breaks an EQUAL score; inside a theme an asked unit (authored or programme node) still precedes a template
+# refill. Consequence, stated on purpose: a theme holding only low-value units fires when capacity is spare or when
+# its units reach starve_hours, so research_slo.yaml theme_share_min_ratio recovers more slowly (supply of VALUABLE
+# units in a short theme is how it recovers; check_research_queue_health.py theme_supply names the short themes).
+value:
+  # PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim: "Those two items are our highest priority, we need to make sure
+  # we're pushing forward on them" -- P1 active trade management, P2 AI trader; relayed by the manager to lane
+  # DISPATCH-MONEY-FIRST-1018). An ORDERED list of programme ids (research/programmes/*.yaml `programme:`). A due unit of a
+  # listed programme (`programme_node.programme`, or `generated.family: programme:<id>`) ranks FIRST on every backend --
+  # above every other theme and programme, earlier entries before later ones -- then the money-first value order below,
+  # then theme share for ties / spare capacity. Only a STARVED unit (starve_hours) goes ahead of it: nothing waits forever.
+  # Edit this list to change the operator's priority; the dispatcher prints `pick=programme:<id>` on each such decision line.
+  programme_priority: [P1, P2]
+  default_confidence: 0.3
+  priority_usd: {1: 300, 2: 100, 3: 30}     # stand-ins when a unit carries no value block; derived from priority only
+  hand_written_boost: 1.25
+  age_step: 0.5
+  starve_hours: 240
+  bucket_boost: {min: 0.5, max: 2.0}
+  # The STRATEGY-REALIGN research mix (operator 2026-10-13, ~07:30Z): the target SHARE of fires per bucket.
+  buckets:
+    own_losses: 0.30
+    structural: 0.25
+    information: 0.20
+    ai_trader: 0.15
+    frontier: 0.10
+  # Used only when a unit declares no value.bucket. A unit's own bucket always wins.
+  theme_bucket:
+    live_strategy: own_losses
+    regime: structural
+    new_strategy_prop: structural
+    macro: information
+    ml_health: ai_trader
+    infra: information

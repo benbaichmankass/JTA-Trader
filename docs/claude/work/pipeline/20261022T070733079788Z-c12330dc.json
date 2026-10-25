@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "filed": "2026-10-22",
+  "id": "PI-20261022-LOWUPW43-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane PERF-FOLLOWUP-2026W43 (comms/perf_followup/perf-followup-20261021-walkthrough.json L3/X1); review docs/reviews/2026-10-21-weekly-walkthrough.md PERFORMANCE section",
+    "rerun": "python3 scripts/research/as_traded_stage0.py --leg xrp_pullback_2h --leg ada_pullback_2h --leg trend_donchian_eth_4h --leg trend_donchian_xrp_4h --leg trend_donchian_eth_prop --leg trend_donchian_sol_prop --arms-dir comms/research/RQ-20261018-2a10-01/arms --out /tmp/ats --n-floor 39 --folds 4 --fold-majority 3 --holdout-frac 0.25 --holdout-min 25"
+  },
+  "routed_to": "DECISION-BAR-MATCH",
+  "severity": "high",
+  "state": "routed",
+  "tier": 3,
+  "what": "[strategy][tier-3 proposal][real-money] The operator's 2026-10-22 'match the bar' answer (checklist DECISION-BAR-MATCH: 'No -- match the bar', a closed-bar backtest does not count as evidence for a forming-bar leg) names eth_prop and xrp_pullback_2h, but it applies to every money leg that trades the FORMING bar on a closed-bar Stage-0 record. MEASURED from config/strategies.yaml (main 66cc9083, 2026-10-22): of the six crypto money legs only trend_donchian_xrp_4h declares decision_bar: closed; ada_pullback_2h, xrp_pullback_2h, trend_donchian_eth_4h (bybit_2 + bybit_portfolio), trend_donchian_sol_prop (bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1) and trend_donchian_eth_prop (3 prop accounts) decide on the forming bar. Re-evidence on the bar each trades -- scripts/research/as_traded_stage0.py over the committed arms of RQ-20261018-2a10-01 (Binance 1m proxy, config-exact, full cost stack; 4 equal calendar folds over each arm's own span; holdout = latest 25% of trades by entry time; EXPLORATORY, this lane): ada_pullback_2h forming n=656 +63.79R, holdout +10.13R (n=164), folds -8.4/+23.9/+44.9/+3.3 -> PASS; trend_donchian_eth_4h forming n=420 +80.82R, holdout +29.05R, 3/4 folds -> PASS; trend_donchian_sol_prop forming n=588 +36.89R, holdout +9.95R, 4/4 -> PASS; trend_donchian_eth_prop forming n=1682 +74.68R, holdout +7.69R, 4/4 -> PASS (population differs from the popup's record-window figure: +9.32 closed vs -9.45 forming on the record window; both stated); xrp_pullback_2h forming n=499 +26.24R but folds 3-4 -0.04/-0.86R, holdout +0.17R over 125 trades -> MIXED; trend_donchian_xrp_4h closed (its incumbent) n=74 +14.25R, 4/4 -> PASS, already matched. PROPOSAL {scope: DECISION-BAR-MATCH, tier: 3}: (a) for the four PASS forming legs, the match is satisfied by RE-EVIDENCING on the forming arm (restate comms/strategy_evidence/<leg>.json from the forming arm under the same rule as the record, no builder change) rather than switching the builder; (b) xrp_pullback_2h: the as-traded set shows no edge over its latest ~20 months (holdout +0.17R/125) while the closed arm holds (+14.82R/100 on the 10-18 holdout) -- run the operator's pre-registered closed-vs-forming IMPROVEMENT unit for it (DECISION-BAR-MATCH note 2026-10-18) and, if neither variant clears RULE-D1, its demotion clauses apply. Risk: re-evidencing changes the record mandate_resolver reads for MD-PROMOTE/MD-DEMOTE; the restatement must be one PR per leg with the old record kept in git. Nothing is applied by this item."
+}

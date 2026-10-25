@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "a unit with compute: gpu and data derived from trainer shards has landed a measured record through research-script-run-kaggle.yml, or the operator kills GPU ML research with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261013-CAZHXZNE-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-27",
+    "how_to_check": "grep -l 'compute: gpu' research/queue/*.yaml | wc -l",
+    "what": "count of dispatchable (not blocked/) queue units with compute gpu beyond the router smoke"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-1013B session_018hu7aZBjo4GePaCAZhXznE, 2026-10-13",
+    "rerun": "grep -l 'compute: gpu' research/queue/*.yaml; ls research/queue/blocked | grep 1414-0[89]"
+  },
+  "state": "queued",
+  "what": "No GPU-class research unit can be DISPATCHED today: the Kaggle kernel has internet off and carries only the repo bundle, while every ML test's data (datasets-out/market_features/*) is trainer-resident. QUEUE-FILL-1013B therefore parked its two GPU units (RQ-20261013-1414-08 LoRA, -09 covariates) in research/queue/blocked/. Needed: a sanitized shard-to-Kaggle data-bundle path (or a GPU-capable route that reads trainer data), a RESEARCH-ROUTER-lane build."
+}

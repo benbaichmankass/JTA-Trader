@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2: adds an allowlisted system-action (prop-report-close) that WRITES the live trade_journal.db prop_fills and prop_tickets tables on the live VM, via the existing prop_report.ingest_report path. Requested by Manager Session 2026-10-11 (session_01G16FfyYSmDPQuuW55BuTmK): breakout_2 SOLUSDT long (prop_fills 107) is closed on the terminal but listed open, and no sanctioned path journals a prop close. Scope: ONE position close, dry-run by default, SQLite backup before apply, exit price optional (absent -> NULL/UNVERIFIED), close notification suppressed. Merging changes no runtime behaviour; nothing runs until a labelled issue is opened. Revert: git revert of the merge commit.",
+  "why": "No sanctioned path journals a prop close (Streamlit form retired, SPA has no form); breakout_2 SOLUSDT long still shows open after being closed on the terminal.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "PROP-TRACKING 2026-09-27 data-backed standing authorization; operator observed breakout_2 SOL row 107 closed on the terminal 2026-10-12 ~13:44Z and reported it still showing open; manager review 2026-10-12T15:25Z",
+    "evidence": "docs/claude/system-actions.md"
+  }
+}

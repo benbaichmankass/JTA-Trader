@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "research-slo grade_latency_p90_d <= 2 (it is the p90 over units graded in the last 7 d; the 2026-10-15/16/17 backlog gradings carry latencies of 8-20 d and age out of the window around 2026-10-24/25). If it is still red after 2026-10-25 and no unit was graded late, root-cause the new tail instead of waiting",
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "id": "PI-20261018-RADE1017-0004",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-25",
+    "how_to_check": "comms/research/health/<date>.json latest[slo=grade_latency_p90_d].value",
+    "what": "grade_latency_p90_d <= 2 once the 2026-10-16/17 backlog gradings leave the 7-day window"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-GRADE-1017: latency recomputed with research_slo.grade_latency's own definition on main cb0db42a",
+    "rerun": "python3 scripts/research/research_slo.py --help; python3 -c \"import json;print([s for s in json.load(open('comms/research/health/'+__import__('datetime').date.today().isoformat()+'.json'))['latest'] if s['slo']=='grade_latency_p90_d'])\""
+  },
+  "routed_to": "RESEARCH-AUTHOR-GRADE-1017",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[research-slo] grade_latency_p90_d stays 8.0 after the grading PRs because it is measured over units GRADED in the last 7 d, as days from the unit's newest result to graded_at. MEASURED 2026-10-18 (n=475): graded 10-15: 162 units, 76 with latency >= 3 d (max 9); 10-16: 121 units, 30 >= 8 d (max 17); 10-17: 106 units, 21 >= 8 d (max 20). 51 of 475 (10.7%) are >= 8 d, so the p90 reads 8; clearing the 2 d bar by dilution would need ~1,460 fast gradings. The only route is aging: the 10-15 batch leaves ~10-23, the 10-16 batch ~10-24, the 10-17 batch ~10-25. Fresh gradings run 0-1 d (the 6-hourly grader), so p50 is already 1.0. The threshold was not touched."
+}

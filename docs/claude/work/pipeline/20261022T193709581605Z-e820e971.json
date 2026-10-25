@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-FVTMGYXW-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane TPX-PULLBACK-PRODUCER (session_019e4aiFMZNMs91KFVtMgyXW), PR #19615",
+    "rerun": "grep -n 'trend_lookback' src/units/strategies/htf_pullback_trend_2h.py; then read runtime_logs/target_extension_soak*.jsonl on the live VM (diag relay) and count htf_pullback rows whose thesis.reason == 'no_trend_lookback_declared'"
+  },
+  "severity": "low",
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "[observability] htf_pullback_trend_2h.monitor()'s target-extension ANNOTATE soak calls _pullback_thesis_intact(meta, ...), whose trend-structure fallback reads meta['trend_lookback']; order_package never threaded trend_lookback into meta (until #19615, and there only under a tp_revision declaration). So for pullback legs WITHOUT adx_min the soak's thesis likely reads 'no_trend_lookback_declared' (thesis_unknown) on every row -- the comment claims 13 legs are graded by trend structure. Code-read only, NOT verified on live rows. Verify on the soak log; if confirmed, fall back to cfg['trend_lookback'] in the soak (observe-only, Tier-1) or thread it unconditionally."
+}

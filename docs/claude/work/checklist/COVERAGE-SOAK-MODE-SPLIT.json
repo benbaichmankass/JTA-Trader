@@ -1,0 +1,21 @@
+{
+  "id": "COVERAGE-SOAK-MODE-SPLIT",
+  "title": "bybit_coverage_soak logs two global_mode values for bybit_1 (annotate/not_apply vs apply/allowlisted): find the second writer, make the mode single-valued",
+  "phase": null,
+  "state": "queued",
+  "owner": "unowned (manager dispatches)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 ROUTE-20261012] Owns PI-20261008-BFOAI4ZM-0002. MEASURED 2026-10-08: apply=3,181 of 137,172 rows (2.3%), bybit_1 only, never a whole day. Find which writer (ict-trader-live vs ict-web-api env, or a per-row re-read of BYBIT_GRADED_COVERAGE_MODE near order_monitor.py ~12195) produces apply; verdicts_differ was 0 so exposure is latent. Fix is Tier-2 (order-monitor path): prepare + validate, one operator OK.",
+  "updated_at": "2026-10-12T06:03:28Z",
+  "updated_by": "session_01J5MrX74iaf4XaTW17dJLhP",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 424
+}

@@ -357,7 +357,7 @@ def run(monkeypatch, roster):
         veto=False, decision="ok", adjustment=0.0, item_count=0, reason="ok"))
     monkeypatch.setattr(pipeline, "news_is_active", lambda *a, **k: False)
     monkeypatch.setattr(pipeline, "event_risk_for_symbol", lambda s: (0.0, None))
-    monkeypatch.setattr(pipeline, "inject_runtime_counters", lambda s, c: s)
+    monkeypatch.setattr(pipeline, "inject_runtime_counters", lambda s: s)
     monkeypatch.setattr(pipeline, "inject_per_strategy_counters", lambda s, n: s)
     monkeypatch.setenv("MULTI_ACCOUNT_DISPATCH", "true")
     monkeypatch.delenv("CENTRALIZED_ALLOCATOR", raising=False)

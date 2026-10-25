@@ -1,0 +1,39 @@
+{
+  "id": "RESEARCH-OPS-20261014-0020",
+  "title": "Research-ops pass 2026-10-14 00:20Z (runnable floor top-up)",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261014-0020",
+  "model": null,
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17954
+  ],
+  "blocked_on": [],
+  "note": "Runnable 14 vs floor 25; template grids exhausted. Authoring 13 pre-registered exit_lever_ablation units RQ-20261014-f0e2-01..13 (cpu_light, github_runner). Hold PR needs manager merge.  [lane done] PR #17954 (draft, hold): 13 units f0e2-01..13, dry-run runnable 14->27; record comms/research/ops/20261014T0040Z.json. Not yet observed on main.  || [2026-10-15 DUE-ROUTE-20261015] RE-DATED to 2026-10-22; READ: 13 f0e2 result dirs exist (dispatch half met) but runnable=16 < 25 floor (check_research_queue_throughput 2026-10-15). Effect did not happen: template grids exhausted, filed as row RESEARCH-GRIDS-EXTEND.",
+  "updated_at": "2026-10-24T06:01:10Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-REGIME",
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "13 f0e2 units dispatch and land results; runnable >= 25 on the next throughput read",
+    "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 468
+}

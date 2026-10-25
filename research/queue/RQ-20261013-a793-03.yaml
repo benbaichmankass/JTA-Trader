@@ -1,0 +1,123 @@
+id: RQ-20261013-a793-03
+title: >-
+  Feature ablation: ETHUSDT 15m regime_label, LightGBM + HAR-RV horizons (d/w/m realised-variance) vs LightGBM on
+  the shipped features
+status: done
+cadence: once
+theme: ml_health
+priority: 3
+kind: experiment
+question: >-
+  On datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl (last 60000 rows), does adding the causal HAR-RV regressors
+  (day/week/month realised variance of log_return, ml_bakeoff feature block har_rv, bars_per_unit 96) to the shipped
+  feature set lift macro-F1 under purged CV and the final-90-day holdout? rolling_log_return_vol is already a feature,
+  so a null says the multi-horizon variance structure adds nothing the 20-bar vol does not.
+why_this_matters: >-
+  FOLLOW-UP of RQ-20261012-75b2-23 (INDETERMINATE, research-ops 2026-10-13 14:47Z). EXTEND-N: 75b2-23 read INDETERMINATE (CV lgbm_har-lgbm +0.0128, CI95 [-0.018,+0.043]; holdout -0.018 on one fold). tail_rows doubled 60000 -> 120000 (if the shard is shorter the whole shard is used and n_rows is reported); everything else unchanged.
+  Theme ml_health (w3) had one runnable unit. Regime heads (btc/eth/sol-regime-15m-lgbm-*) drive the vol axis the
+  router reads; drift or implementation dependence there is the cheapest ML-health signal and is not measured by
+  any queued unit. Uses the generic ml_bakeoff engine (ML-RQ-RUNNER) on trainer-resident nightly shards, no new
+  tooling. This tests the LABEL the shipped head predicts (regime_label, frozen-spec) and says nothing about trade
+  P&L. DATASET PATH UNVERIFIED FROM THIS SANDBOX: BTC/ETH/SOL 15m v002 shards were MEASURED present on the trainer
+  2026-10-11 (RQ-20261011-9da8-01 blocked_on note); column names are taken from ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml.
+  A missing column lands as dead-feature NaN or producer_failed, which research-ops must read as a route fault,
+  not a verdict.
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit = bar in the holdout window (~8640 rows: 90 days x 96 15m-bars); d=0.05 sd paired needs (1.96+0.8416)^2/0.05^2
+    = 3140 rows, floor met on rows. Rows are autocorrelated, so effective n is far lower; the rule therefore also
+    requires the CV fold-mean delta (min_folds 3), and the first run replaces this estimate with measured n_rows.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Nightly shard: history is fixed for the window used and the shard is rebuilt daily; nothing needs to accrue
+      for the rows this unit reads.
+decision_rule:
+  id: RULE-RQ1013-75B2-23-ML-HAR-ETH
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: >-
+    Paired per-fold macro-F1 difference (candidate minus reference) on identical purged expanding walk-forward folds
+    (5 folds, embargo 96 rows, min_train_frac 0.4) and on one holdout window; mean over folds. Target regime_label
+    (classification, classes taken from the data), features ['rolling_log_return_vol', 'log_return', 'log_return_lag_1',
+    'log_return_lag_2', 'hour_of_day', 'dayofweek']. ml_bakeoff.py evaluate_rule applies the machine form in this
+    unit's ml_bakeoff.rule.
+  rule: >-
+    PASS IF lgbm_har - lgbm macro-F1 >= +0.01 on the CV mean AND >= 0 on the holdout (a feature-set candidate for
+    the next regime-head manifest). FAIL IF lgbm_har < lgbm on the CV mean (HAR-RV adds nothing; closes the idea
+    at this n). INDETERMINATE between, or if folds < 3 or an arm is unavailable.
+  min_n: >-
+    3 usable CV folds; holdout >= 20 rows; if the shard has fewer rows than tail_rows the whole shard is used and
+    n_rows is reported.
+  what_it_does_not_do: >-
+    Retrains no registered model, touches no registry, manifest, stage or config, and promotes/demotes nothing (Tier-3).
+    Grades the regime LABEL only, not trade P&L, and not the fc_*/vol_bucket features.
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 15
+  basis: >-
+    Estimate, not a measurement: tail_rows-bounded read of one 15m shard (the loader keeps only declared columns),
+    200-tree LightGBM x 5 folds.
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 45
+  command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+  inputs: {research_unit: RQ-20261013-a793-03}
+lands: {store: research/results/, assert_field: read_state, min_rows: 1}
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
+    tail_rows: 120000
+    holdout_after: '2026-07-12'
+  cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}
+  baseline: lgbm
+  controls: [prior]
+  candidates: [lgbm_har]
+  learners:
+    prior: {kind: prior}
+    lgbm:
+      kind: lightgbm
+      params: &id001 {n_estimators: 200, learning_rate: 0.05, num_leaves: 31, min_child_samples: 50}
+    lgbm_har:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - {kind: har_rv, return_col: log_return, bars_per_unit: 96}
+  rule:
+    min_folds: 3
+    pass_if:
+    - {group: ALL, vs: baseline, window: cv, op: '>=', value: 0.01}
+    - {group: ALL, vs: baseline, window: holdout, op: '>=', value: 0.0}
+    fail_if_no_candidate_reaches:
+    - {group: ALL, vs: baseline, window: cv, op: '>=', value: 0.0}
+roadmap: [M25]
+related: [ML-RQ-RUNNER, scripts/research/ml_bakeoff.py, ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, .claude/skills/ml-review/SKILL.md]
+last_dispatched_at: '2026-10-14T17:18:34+00:00'
+grading:
+  attested: RULE-RQ1013-75B2-23-ML-HAR-ETH
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ1013-75B2-23-ML-HAR-ETH
+  evidence:
+  - research/results/RQ-20261013-a793-03/38605591796.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -244,7 +244,7 @@ so one bad manifest costs one skip, not the rest of the fleet.
 invocation reads/writes `runtime_logs/trainer/cycle_progress_<UTC-date>.json`
 and skips any manifest already `done`/`skipped` today, so a same-day
 re-run (either a manual retry or the `ict-trainer-catchup.timer` at
-`05:00 UTC`) resumes from where the prior run stopped instead of
+`08:00 UTC`) resumes from where the prior run stopped instead of
 retraining everything. `ict-trainer.service` also now caps memory
 (`MemoryHigh=4G`/`MemoryMax=5G`, `OOMPolicy=continue`) so a single
 manifest's OOM no longer takes the whole cycle down. Full design:

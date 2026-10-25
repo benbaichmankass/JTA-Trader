@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-R3DFW7IK-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "RESEARCH-OPS-20261022-0247 step E.0: authoring queue head needs builds",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep -c '\"node\"'"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research] Step E.0 drafted 0 of 23 ready nodes: the head of the authoring queue needs an instrument, not authoring. Build lever for P3-Q3-soak-equity-overlap: a script reading the committed per-arm trade files of RQ-20261016-c56e-19..23 (comms/research/<unit>/<run>/arms/*__trades.jsonl) and emitting daily-R overlap + leave-one-out for gdx/qqq/spy/iwm/qld with a verdict.json; then the node becomes a unit. P3-Q3-ief-fail/slv-fail are retention cases already with the manager/operator (PR 19403 moves ief to paper) and need a programme-node disposition, not a unit. Theme shortfall: ml_health and infra hold 0 runnable units."
+}

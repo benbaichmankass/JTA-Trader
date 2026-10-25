@@ -1,0 +1,469 @@
+diff --git a/webapp/src/lib/passkey.ts b/webapp/src/lib/passkey.ts
+new file mode 100644
+index 0000000..43ea217
+--- /dev/null
++++ b/webapp/src/lib/passkey.ts
+@@ -0,0 +1,153 @@
++// UI-UPGRADE-1-AUTH (SPA side) — Google ID token + WebAuthn passkey flows.
++import { authCall, saveSession } from './session';
++
++declare const google: any; // Google Identity Services (https://accounts.google.com/gsi/client)
++
++interface IssuedSession {
++  session_token: string;
++  session_handle: string;
++  expires_at: number;
++}
++
++const b64uToBuf = (s: string): ArrayBuffer => {
++  const p = s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4);
++  const bin = atob(p);
++  const out = new Uint8Array(bin.length);
++  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
++  return out.buffer;
++};
++const bufToB64u = (b: ArrayBuffer): string => {
++  let s = '';
++  new Uint8Array(b).forEach((c) => (s += String.fromCharCode(c)));
++  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
++};
++
++export function loadGoogleScript(): Promise<void> {
++  return new Promise((resolve, reject) => {
++    if ((window as any).google?.accounts?.id) return resolve();
++    const el = document.createElement('script');
++    el.src = 'https://accounts.google.com/gsi/client';
++    el.async = true;
++    el.onload = () => resolve();
++    el.onerror = () => reject(new Error('google_script_failed'));
++    document.head.appendChild(el);
++  });
++}
++
++/** Renders the Google button; resolves with the pre-auth ticket once the API accepts the ID token. */
++export async function googleSignIn(
++  container: HTMLElement,
++): Promise<{ preauth: string; passkeyEnrolled: boolean }> {
++  const cfg = await authCall<{ google_client_id: string | null }>('/api/auth/config', { token: null });
++  if (!cfg.google_client_id) throw { status: 503, error: 'auth_unavailable' };
++  await loadGoogleScript();
++  return new Promise((resolve, reject) => {
++    google.accounts.id.initialize({
++      client_id: cfg.google_client_id,
++      callback: async (resp: { credential: string }) => {
++        try {
++          const r = await authCall<{ preauth_ticket: string; passkey_enrolled: boolean }>(
++            '/api/auth/google',
++            { body: { id_token: resp.credential }, token: null },
++          );
++          resolve({ preauth: r.preauth_ticket, passkeyEnrolled: r.passkey_enrolled });
++        } catch (e) {
++          reject(e);
++        }
++      },
++    });
++    google.accounts.id.renderButton(container, { theme: 'outline', size: 'large', text: 'signin_with' });
++  });
++}
++
++function toRequestOptions(o: any): PublicKeyCredentialRequestOptions {
++  return {
++    ...o,
++    challenge: b64uToBuf(o.challenge),
++    allowCredentials: (o.allowCredentials ?? []).map((c: any) => ({ ...c, id: b64uToBuf(c.id) })),
++  };
++}
++function toCreationOptions(o: any): PublicKeyCredentialCreationOptions {
++  return {
++    ...o,
++    challenge: b64uToBuf(o.challenge),
++    user: { ...o.user, id: b64uToBuf(o.user.id) },
++    excludeCredentials: (o.excludeCredentials ?? []).map((c: any) => ({ ...c, id: b64uToBuf(c.id) })),
++  };
++}
++
++function creationToJson(c: PublicKeyCredential) {
++  const r = c.response as AuthenticatorAttestationResponse;
++  return {
++    id: c.id,
++    rawId: bufToB64u(c.rawId),
++    type: c.type,
++    response: {
++      clientDataJSON: bufToB64u(r.clientDataJSON),
++      attestationObject: bufToB64u(r.attestationObject),
++      transports: (r as any).getTransports?.() ?? [],
++    },
++  };
++}
++function assertionToJson(c: PublicKeyCredential) {
++  const r = c.response as AuthenticatorAssertionResponse;
++  return {
++    id: c.id,
++    rawId: bufToB64u(c.rawId),
++    type: c.type,
++    response: {
++      clientDataJSON: bufToB64u(r.clientDataJSON),
++      authenticatorData: bufToB64u(r.authenticatorData),
++      signature: bufToB64u(r.signature),
++      userHandle: r.userHandle ? bufToB64u(r.userHandle) : null,
++    },
++  };
++}
++
++function store(s: IssuedSession): void {
++  saveSession({ token: s.session_token, handle: s.session_handle, expiresAt: s.expires_at });
++}
++
++/** Returning device: passkey assertion -> device session. */
++export async function passkeySignIn(preauth: string, deviceLabel: string): Promise<void> {
++  const b = await authCall<{ challenge_id: string; options: any }>('/api/auth/passkey/assert/begin', {
++    body: { preauth_ticket: preauth },
++    token: null,
++  });
++  const cred = (await navigator.credentials.get({ publicKey: toRequestOptions(b.options) })) as PublicKeyCredential;
++  const s = await authCall<IssuedSession>('/api/auth/passkey/assert/finish', {
++    body: {
++      preauth_ticket: preauth,
++      challenge_id: b.challenge_id,
++      credential: assertionToJson(cred),
++      device_label: deviceLabel,
++    },
++    token: null,
++  });
++  store(s);
++}
++
++/** First device: pre-auth ticket + the one-time enrolment code from the SYSTEM ping. Signs the device in. */
++export async function enrolFirstDevice(preauth: string, enrolCode: string, label: string): Promise<void> {
++  const b = await authCall<{ challenge_id: string; options: any }>('/api/auth/passkey/register/begin', {
++    body: { preauth_ticket: preauth, enrol_code: enrolCode, label },
++    token: null,
++  });
++  const cred = (await navigator.credentials.create({ publicKey: toCreationOptions(b.options) })) as PublicKeyCredential;
++  const s = await authCall<IssuedSession>('/api/auth/passkey/register/finish', {
++    body: { challenge_id: b.challenge_id, credential: creationToJson(cred) },
++    token: null,
++  });
++  store(s);
++}
++
++/** Additional device from an already-signed-in one (no enrolment code). */
++export async function addThisDevice(label: string): Promise<void> {
++  const b = await authCall<{ challenge_id: string; options: any }>('/api/auth/passkey/register/begin', {
++    body: { label },
++  });
++  const cred = (await navigator.credentials.create({ publicKey: toCreationOptions(b.options) })) as PublicKeyCredential;
++  await authCall('/api/auth/passkey/register/finish', {
++    body: { challenge_id: b.challenge_id, credential: creationToJson(cred) },
++  });
++}
+diff --git a/webapp/src/lib/session.ts b/webapp/src/lib/session.ts
+new file mode 100644
+index 0000000..2ccb357
+--- /dev/null
++++ b/webapp/src/lib/session.ts
+@@ -0,0 +1,106 @@
++// UI-UPGRADE-1-AUTH (SPA side) — device-session store + signed fetch.
++//
++// The API issues a 30-day sliding, revocable device session (`ws_…` bearer)
++// after Google + passkey sign-in. localStorage is deliberate (the SPA is on
++// github.io and the API on duckdns.org, so a cookie would be third-party and
++// blocked by Safari ITP) — the cost is XSS exposure, which the Pages site's CSP
++// and instant server-side revocation mitigate (design §2a.5).
++//
++// Wire-up: call configureSession({ apiBase }) once at start-up with the same
++// base URL api.ts uses, and have api.ts's single fetch call site spread
++// `authHeaders()` into its headers (see README).
++
++const KEY = 'metis.session.v1';
++
++export interface StoredSession {
++  token: string;
++  handle: string;
++  expiresAt: number; // epoch seconds, as issued by the server
++}
++
++let base = 'https://ict-bot.duckdns.org';
++export function configureSession(opts: { apiBase: string }): void {
++  base = opts.apiBase.replace(/\/+$/, '');
++}
++export function apiBase(): string {
++  return base;
++}
++
++export function loadSession(): StoredSession | null {
++  try {
++    const raw = localStorage.getItem(KEY);
++    if (!raw) return null;
++    const s = JSON.parse(raw) as StoredSession;
++    return s && typeof s.token === 'string' && s.token.startsWith('ws_') ? s : null;
++  } catch {
++    return null;
++  }
++}
++
++export function saveSession(s: StoredSession): void {
++  try {
++    localStorage.setItem(KEY, JSON.stringify(s));
++  } catch {
++    /* private mode: the session simply lasts for this page view */
++    memory = s;
++  }
++}
++let memory: StoredSession | null = null;
++
++export function clearSession(): void {
++  memory = null;
++  try {
++    localStorage.removeItem(KEY);
++  } catch {
++    /* ignore */
++  }
++}
++
++export function currentToken(): string | null {
++  return (loadSession() ?? memory)?.token ?? null;
++}
++
++/** Headers api.ts spreads into its one fetch call site. Empty when signed out. */
++export function authHeaders(): Record<string, string> {
++  const t = currentToken();
++  return t ? { Authorization: `Bearer ${t}` } : {};
++}
++
++/** Raw JSON call to /api/auth/*; throws {status, error} on non-2xx. */
++export async function authCall<T>(
++  path: string,
++  init: { method?: string; body?: unknown; token?: string | null } = {},
++): Promise<T> {
++  const tok = init.token === undefined ? currentToken() : init.token;
++  const res = await fetch(base + path, {
++    method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
++    headers: {
++      Accept: 'application/json',
++      ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
++      ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
++    },
++    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
++  });
++  const j = await res.json().catch(() => ({}));
++  if (!res.ok) {
++    const e = (j as any)?.detail?.error ?? (j as any)?.detail ?? `http_${res.status}`;
++    throw { status: res.status, error: String(e) };
++  }
++  return j as T;
++}
++
++/** A 401 from any API call means the session is gone/revoked: drop it, show sign-in. */
++export function onUnauthorized(handler: () => void): void {
++  window.addEventListener('metis:unauthorized', handler);
++}
++export function signalUnauthorized(): void {
++  clearSession();
++  window.dispatchEvent(new Event('metis:unauthorized'));
++}
++
++/** Single-use 60 s ticket for WS /ws/market?ticket=… (a browser WebSocket cannot send headers). */
++export async function marketSocketUrl(query = ''): Promise<string> {
++  const { ticket } = await authCall<{ ticket: string }>('/api/auth/ws-ticket', { method: 'POST' });
++  const wsBase = base.replace(/^http/, 'ws');
++  return `${wsBase}/ws/market?${query ? query + '&' : ''}ticket=${encodeURIComponent(ticket)}`;
++}
+diff --git a/webapp/src/routes/Devices.svelte b/webapp/src/routes/Devices.svelte
+new file mode 100644
+index 0000000..e9830a7
+--- /dev/null
++++ b/webapp/src/routes/Devices.svelte
+@@ -0,0 +1,84 @@
++<script lang="ts">
++  // UI-UPGRADE-1-AUTH — Admin → Devices: the revocable device-session list.
++  import { onMount } from 'svelte';
++  import { authCall, clearSession, signalUnauthorized } from '../lib/session';
++  import { addThisDevice } from '../lib/passkey';
++
++  interface Row {
++    handle: string; label: string; user_agent: string; ip: string;
++    created_at: number; last_seen_at: number; expires_at: number;
++    revoked_at: number | null; active: boolean; current: boolean;
++  }
++  let rows: Row[] = [];
++  let err = '';
++  let busy = false;
++
++  const when = (t: number | null) => (t ? new Date(t * 1000).toLocaleString() : '—');
++
++  async function load() {
++    try {
++      rows = (await authCall<{ sessions: Row[] }>('/api/auth/sessions')).sessions;
++      err = '';
++    } catch (e: any) {
++      if (e?.status === 401) return signalUnauthorized();
++      err = 'Could not load devices.';
++    }
++  }
++  // POST twin of DELETE: the API's CORS allow-list is GET/POST only.
++  async function revoke(r: Row) {
++    if (!confirm(`Sign out “${r.label}”?`)) return;
++    busy = true;
++    try {
++      await authCall(`/api/auth/sessions/${r.handle}/revoke`, { method: 'POST', body: {} });
++      if (r.current) return signalUnauthorized();
++      await load();
++    } finally { busy = false; }
++  }
++  async function signOutEverywhere() {
++    if (!confirm('Sign out every other device?')) return;
++    busy = true;
++    try { await authCall('/api/auth/sessions/revoke-others', { method: 'POST', body: {} }); await load(); }
++    finally { busy = false; }
++  }
++  async function addDevice() {
++    busy = true;
++    try { await addThisDevice(prompt('Name for this device’s passkey', 'This device') || 'This device'); err = ''; }
++    catch { err = 'Passkey registration failed or was cancelled.'; }
++    finally { busy = false; }
++  }
++  onMount(load);
++</script>
++
++<section>
++  <h2>Devices</h2>
++  <p>Each row is a signed-in device (30-day sliding session). Revoking takes effect on its next request.</p>
++  <div class="bar">
++    <button disabled={busy} on:click={addDevice}>Register a passkey on this device</button>
++    <button disabled={busy} on:click={signOutEverywhere}>Sign out everywhere else</button>
++    <button on:click={() => { clearSession(); signalUnauthorized(); }}>Sign out here</button>
++  </div>
++  {#if err}<p class="err" role="alert">{err}</p>{/if}
++  <table>
++    <thead><tr><th>Device</th><th>Last seen</th><th>Created</th><th>Expires</th><th>IP</th><th></th></tr></thead>
++    <tbody>
++      {#each rows as r (r.handle)}
++        <tr class:revoked={!r.active}>
++          <td title={r.user_agent}>{r.label}{#if r.current} <b>(this device)</b>{/if}</td>
++          <td>{when(r.last_seen_at)}</td><td>{when(r.created_at)}</td>
++          <td>{r.revoked_at ? 'revoked ' + when(r.revoked_at) : when(r.expires_at)}</td>
++          <td>{r.ip || '—'}</td>
++          <td>{#if r.active}<button disabled={busy} on:click={() => revoke(r)}>Revoke</button>{/if}</td>
++        </tr>
++      {/each}
++    </tbody>
++  </table>
++</section>
++
++<style>
++  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
++  .err { color: #c0392b; }
++  .revoked { opacity: 0.5; }
++  table { width: 100%; border-collapse: collapse; }
++  th, td { text-align: left; padding: 4px 8px; }
++  @media (max-width: 640px) { table { display: block; overflow-x: auto; } }
++</style>
+diff --git a/webapp/src/routes/SignIn.svelte b/webapp/src/routes/SignIn.svelte
+new file mode 100644
+index 0000000..8863835
+--- /dev/null
++++ b/webapp/src/routes/SignIn.svelte
+@@ -0,0 +1,102 @@
++<script lang="ts">
++  // UI-UPGRADE-1-AUTH — sign-in screen: Google, then passkey (or first-device enrolment).
++  import { onMount, createEventDispatcher } from 'svelte';
++  import { googleSignIn, passkeySignIn, enrolFirstDevice } from '../lib/passkey';
++
++  const dispatch = createEventDispatcher<{ signedin: void }>();
++
++  let googleBtn: HTMLElement;
++  let preauth = '';
++  let passkeyEnrolled = true;
++  let enrolCode = '';
++  let label = guessLabel();
++  let busy = false;
++  let msg = '';
++
++  function guessLabel(): string {
++    const ua = navigator.userAgent;
++    const os = /iPhone|iPad/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Device';
++    const br = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : 'browser';
++    return `${os} · ${br}`;
++  }
++
++  const WORDS: Record<string, string> = {
++    email_not_allowlisted: 'That Google account is not allowed here.',
++    email_not_verified: 'That Google account has no verified email.',
++    invalid_google_token: 'Google sign-in could not be verified. Try again.',
++    invalid_enrol_code: 'That enrolment code is wrong, used or expired.',
++    invalid_preauth_ticket: 'Sign-in timed out. Start again.',
++    too_many_attempts: 'Too many attempts. Wait a few minutes.',
++    assertion_failed: 'Passkey check failed.',
++    auth_unavailable: 'Sign-in is not configured on the server yet.',
++    no_passkey_enrolled: 'No passkey is enrolled yet — enter the enrolment code.',
++  };
++  const say = (e: any) => (msg = WORDS[e?.error] ?? (e?.name === 'NotAllowedError' ? 'Passkey prompt was cancelled.' : 'Sign-in failed.'));
++
++  onMount(async () => {
++    try {
++      const r = await googleSignIn(googleBtn);
++      preauth = r.preauth;
++      passkeyEnrolled = r.passkeyEnrolled;
++      msg = '';
++    } catch (e) {
++      say(e);
++    }
++  });
++
++  async function usePasskey() {
++    busy = true;
++    msg = '';
++    try {
++      await passkeySignIn(preauth, label);
++      dispatch('signedin');
++    } catch (e) {
++      say(e);
++    } finally {
++      busy = false;
++    }
++  }
++  async function enrol() {
++    busy = true;
++    msg = '';
++    try {
++      await enrolFirstDevice(preauth, enrolCode.trim(), label);
++      dispatch('signedin');
++    } catch (e) {
++      say(e);
++    } finally {
++      busy = false;
++    }
++  }
++</script>
++
++<main class="signin">
++  <h1>Metis Insights</h1>
++  {#if !preauth}
++    <p>Sign in with Google, then confirm with your passkey.</p>
++    <div bind:this={googleBtn}></div>
++  {:else}
++    <label>Device name <input bind:value={label} maxlength="80" /></label>
++    {#if passkeyEnrolled}
++      <button disabled={busy} on:click={usePasskey}>Use passkey</button>
++      <details>
++        <summary>New device with no passkey yet?</summary>
++        <input placeholder="enrolment code" bind:value={enrolCode} autocomplete="off" />
++        <button disabled={busy || !enrolCode.trim()} on:click={enrol}>Enrol this device</button>
++        <p class="hint">Ask for a code with the <code>passkey-enrol-code</code> system action; it arrives in the private SYSTEM chat.</p>
++      </details>
++    {:else}
++      <p>No passkey is registered yet. Enter the one-time enrolment code from the SYSTEM chat.</p>
++      <input placeholder="enrolment code" bind:value={enrolCode} autocomplete="off" />
++      <button disabled={busy || !enrolCode.trim()} on:click={enrol}>Enrol this device</button>
++    {/if}
++  {/if}
++  {#if msg}<p class="err" role="alert">{msg}</p>{/if}
++</main>
++
++<style>
++  .signin { max-width: 24rem; margin: 12vh auto; padding: 0 16px; display: grid; gap: 12px; }
++  .err { color: #c0392b; }
++  .hint { opacity: 0.7; font-size: 0.85em; }
++  input { width: 100%; box-sizing: border-box; }
++</style>

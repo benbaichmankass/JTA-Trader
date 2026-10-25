@@ -122,7 +122,15 @@ UNATTRIBUTED = "_unattributed"
 #: Closed set. `not_applicable` is NOT a verdict about the world; it is the
 #: only legal verdict when `read_state` says we could not look, and
 #: `validate()` refuses it in any other combination.
-VERDICTS = ("pass", "fail", "no_action_warranted", "indeterminate", "not_applicable")
+#:
+#: `wiring_only` (added 2026-10-04, PI-20261004-FOJGFIZF-0004) is its mirror
+#: image: legal ONLY with `read_state: measured`. The run measured something
+#: (n is real) but its producer could NOT apply the unit's pre-registered rule,
+#: so the row is explicitly NOT a decision. `queue_grade.grade_e5` treats any
+#: verdict outside pass/fail/no_action_warranted/indeterminate as
+#: non-mechanical -> `needs_review`, so it can never close a unit.
+VERDICTS = ("pass", "fail", "no_action_warranted", "indeterminate", "not_applicable",
+            "wiring_only")
 
 #: Closed set, ordered "we looked" first. See the module docstring.
 READ_STATES = ("measured", "no_data", "producer_failed", "not_attempted")
@@ -131,7 +139,7 @@ READ_STATES = ("measured", "no_data", "producer_failed", "not_attempted")
 #: world. Named once so the rule below and the guard cannot drift apart.
 NON_MEASURED = tuple(s for s in READ_STATES if s != "measured")
 
-_UNIT_RE = re.compile(r"^RQ-\d{8}-\d{3}$")
+_UNIT_RE = re.compile(r"^RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2})$")
 _RUN_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
@@ -205,6 +213,18 @@ def validate(record: Dict[str, Any]) -> List[str]:
         run_id = str(produced.get("run_id") or "")
         if run_id and not _RUN_RE.match(run_id):
             problems.append(f"produced_by.run_id {run_id!r} is not path-safe")
+        fp = produced.get("data_fingerprint", None)
+        if "data_fingerprint" in produced:
+            # Optional (absent on every record before 2026-10-16), but when present it must say which
+            # of the two things it is: a hash, or a stated reason there is none. An empty object would
+            # read as "fingerprinted" to a careless reader -- the collapsed state this field exists to end.
+            if not isinstance(fp, dict) or fp.get("state") not in ("fingerprinted", "not_established"):
+                problems.append("produced_by.data_fingerprint must be an object whose `state` is "
+                                "`fingerprinted` or `not_established`")
+            elif fp["state"] == "fingerprinted" and not re.fullmatch(r"[0-9a-f]{64}", str(fp.get("sha256") or "")):
+                problems.append("produced_by.data_fingerprint.state is `fingerprinted` but `sha256` is not a 64-hex digest")
+            elif fp["state"] == "not_established" and not str(fp.get("why") or "").strip():
+                problems.append("produced_by.data_fingerprint.state is `not_established` with no `why`")
 
     pop = record.get("population")
     if not isinstance(pop, dict):
@@ -295,9 +315,14 @@ def build(*, research_unit: Optional[str], decision_rule_id: str,
           power_state: str = "", measurement: Optional[Dict[str, Any]] = None,
           artifact_store: str = "", artifact_locator: str = "",
           rows_landed: Optional[int] = None,
-          note: str = "") -> Dict[str, Any]:
-    """Assemble a record. Does NOT validate — the caller does, and refuses."""
-    return {
+          note: str = "",
+          data_fingerprint: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Assemble a record. Does NOT validate — the caller does, and refuses.
+
+    `data_fingerprint` (RESEARCH-TRIAL-LEDGER, 2026-10-16) is what `script_run.data_fingerprint`
+    hashed of the run's INPUT data; it lands as `produced_by.data_fingerprint` and is omitted when
+    the producer passed none (records from before 2026-10-16 never carried it)."""
+    rec = {
         "schema_version": SCHEMA_VERSION,
         "research_unit": research_unit or None,
         "power_state": power_state or None,
@@ -331,6 +356,19 @@ def build(*, research_unit: Optional[str], decision_rule_id: str,
         "note": note,
         "generated_at": _utc_now(),
     }
+    if data_fingerprint is not None:
+        rec["produced_by"]["data_fingerprint"] = data_fingerprint
+    return rec
+
+
+def _parse_fingerprint(raw: str) -> Optional[Dict[str, Any]]:
+    """`--data-fingerprint` is a JSON object string or empty (absent). Raises ValueError on junk."""
+    if not raw or not raw.strip():
+        return None
+    val = json.loads(raw)
+    if not isinstance(val, dict):
+        raise ValueError("--data-fingerprint must be a JSON object")
+    return val
 
 
 def write(records: List[Dict[str, Any]], *, research_unit: Optional[str],
@@ -386,6 +424,11 @@ def _emit_many(args: argparse.Namespace) -> int:
     rule and the provenance are shared and come from the flags, so they cannot
     disagree between rows of one run.
     """
+    try:
+        fingerprint = _parse_fingerprint(args.data_fingerprint)
+    except ValueError as exc:
+        print(f"::error::--data-fingerprint: {exc}", file=sys.stderr)
+        return 1
     raw = Path(args.records_file).read_text(encoding="utf-8")
     records: List[Dict[str, Any]] = []
     for i, line in enumerate(raw.splitlines(), 1):
@@ -418,6 +461,7 @@ def _emit_many(args: argparse.Namespace) -> int:
             artifact_locator=str(part.get("artifact_locator") or args.artifact_locator),
             rows_landed=_coerce_n(part.get("rows_landed")),
             note=str(part.get("note") or args.note),
+            data_fingerprint=fingerprint,
         ))
     try:
         path = write(records, research_unit=args.research_unit or None,
@@ -464,6 +508,11 @@ def _emit(args: argparse.Namespace) -> int:
                   file=sys.stderr)
             return 1
     rows_landed = None if not args.rows_landed else int(args.rows_landed)
+    try:
+        fingerprint = _parse_fingerprint(args.data_fingerprint)
+    except ValueError as exc:
+        print(f"::error::--data-fingerprint: {exc}", file=sys.stderr)
+        return 1
     rec = build(
         research_unit=args.research_unit or None,
         decision_rule_id=args.decision_rule_id,
@@ -475,7 +524,7 @@ def _emit(args: argparse.Namespace) -> int:
         commit_sha=args.commit_sha, tool=args.tool,
         power_state=args.power_state, measurement=measurement,
         artifact_store=args.artifact_store, artifact_locator=args.artifact_locator,
-        rows_landed=rows_landed, note=args.note,
+        rows_landed=rows_landed, note=args.note, data_fingerprint=fingerprint,
     )
     try:
         path = write([rec], research_unit=rec["research_unit"],
@@ -687,6 +736,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--artifact-locator", default="")
     ap.add_argument("--rows-landed", default="")
     ap.add_argument("--note", default="")
+    ap.add_argument("--data-fingerprint", default="",
+                    help="JSON object from script_run.data_fingerprint -> produced_by.data_fingerprint")
     args = ap.parse_args(argv)
 
     if args.self_test:

@@ -1,0 +1,228 @@
+id: RQ-20261018-ff8f-01
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'Shadow->advisory champion-challenger for the BTC/SOL 15m regime head: the range-vol (yz) feature set vs the ADVISORY fc feature set vs both, on
+  identical purged folds (the offline evidence a swap proposal needs)'
+status: done
+priority: 1
+question: 'On the published BTC/SOL 15m v002 market_features shards (the advisory btc/sol-regime-15m-lgbm-fc-pcv-v2 train on BTC/SOL 15m v002), with LightGBM
+  on identical purged folds: does the shadow head btc-regime-15m-lgbm-yz-v1''s feature set (base 6 + 4 range-vol estimators) beat the advisory head''s feature
+  set (base 6 + 6 fc_* Chronos quantile features) by >= +0.010 macro-F1 on BTC, with the same sign on SOL and on the post-2026-07-12 holdout, and does combining
+  both beat either?'
+why_this_matters: 'Task 4 of lane ML-UNBLOCK-1018 (shadow->advisory readiness). MEASURED 2026-10-18 (trainer-vm-diag #18887, gate-check with --datasets-root
+  + --shadow-log): btc-regime-15m-lgbm-yz-v1 passes oos_edge (+0.246 macro-F1 vs the constant baseline), drift_clean (KS 0.055), labels_accruing (0.997)
+  and cross_run_stability; only live_parity is insufficient_data (12 rows since the 00:29Z retrain; the daily retrain resets the window). But oos_edge is
+  measured against a CONSTANT baseline, and the registry''s macro_f1 (yz-v1 0.596 vs fc-pcv-v2 0.573) is over different n_eval (35,054 vs 87,636) -- not
+  a comparison. A swap or a second advisory head on the same (symbol, timeframe) needs the challenger measured against the INCUMBENT''s feature set on identical
+  rows. This unit is that comparison; the trading metric follows it (see decision_rule).'
+power:
+  expected_n: 36000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: tail_rows 60000 with min_train_frac 0.4 leaves ~36,000 OOS rows over 5 folds per symbol (as RQ-20261013-1414-04); d=0.1 paired needs ~785 rows,
+    so rows are not the limit; bars are autocorrelated so the rule also needs the same sign on SOL and on the holdout.
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt published shard); n does not grow with waiting. The published BTC 15m shard was
+      whole on 2026-10-18 (175,296 rows, trainer-vm-diag #18889); the exporter withholds a cut shard, which lands as producer_failed (a route fault, never
+      a verdict).'
+decision_rule:
+  id: RULE-RQ20261018-FF8F-01-YZ-VS-FC-CHAMPION-CHALLENGER
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (candidate minus lgbm_fc, the advisory feature set) on identical rows, and the same delta on the
+    post-2026-07-12 holdout; f1_class:volatile reported as the headline check. Feature-set comparison within LightGBM -- NOT a P&L figure.'
+  rule: 'PASS IF lgbm_yz or lgbm_yz_fc beats lgbm_fc by >= +0.010 macro_f1 on BTC (CV mean) AND > 0 on SOL (CV mean) AND > 0 on the BTC holdout. A PASS
+    is NOT a promotion: it releases the trading-metric gate -- the net-of-cost regime-cell walk-forward (scripts/research/regime_cell_walkforward.py) on
+    the legs the BTC 15m vol verdict gates, with the incumbent fc head as the baseline to beat in net R; only a PASS there becomes a Tier-3 swap/promotion
+    proposal (note on row ML-UNBLOCK-1018 / the ml-review). FAIL IF no candidate reaches > +0.005 vs lgbm_fc on BTC: the yz feature set is not a better
+    advisory head than fc on these shards (closes only this feature-set comparison; yz-v1 stays shadow and no second advisory head is proposed). INDETERMINATE
+    otherwise or if folds < 3 or an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 test rows.
+  what_it_does_not_do: Promotes nothing, edits no manifest, stage or config. A feature-lift PASS is not edge; the regime-cell walk-forward net of cost is
+    the gate that decides whether any of this reaches an order.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 250
+  confidence: 0.3
+  basis: 'stand-in: the BTC/SOL 15m vol verdict gates the bybit_2 legs'' intents; a better advisory head changes which trades are refused. Not a measured
+    P&L.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  basis: 'Estimate, NOT measured: 2 shards x 4 LightGBM arms x 5 folds + holdout at tail_rows 60000 (RQ-20261013-1414-04 ran the same shape on the trainer);
+    Kaggle CPU via published data. Re-declare from the first run.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+    extra_columns:
+    - fc_ret_med
+    - fc_range_rel
+    - fc_up_prob
+    - fc_skew
+    - fc_q10_rel
+    - fc_q90_rel
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm_fc
+  controls:
+  - prior
+  - lgbm_base
+  candidates:
+  - lgbm_yz
+  - lgbm_yz_fc
+  learners:
+    prior:
+      kind: prior
+    lgbm_base:
+      kind: lightgbm
+      params: &id001
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    lgbm_fc:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: df_columns
+        columns:
+        - fc_ret_med
+        - fc_range_rel
+        - fc_up_prob
+        - fc_skew
+        - fc_q10_rel
+        - fc_q90_rel
+    lgbm_yz:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: df_columns
+        columns:
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+    lgbm_yz_fc:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: df_columns
+        columns:
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+        - fc_ret_med
+        - fc_range_rel
+        - fc_up_prob
+        - fc_skew
+        - fc_q10_rel
+        - fc_q90_rel
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    - group:
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+    - group:
+      - BTCUSDT
+      vs: baseline
+      window: holdout
+      op: '>'
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group:
+      - BTCUSDT
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.005
+    headline_checks:
+    - name: fc_beats_base_btc
+      learner: lgbm_fc
+      vs: lgbm_base
+      group:
+      - BTCUSDT
+      op: '>'
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261018-ff8f-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+- L-REGIME
+related:
+- btc-regime-15m-lgbm-yz-v1
+- btc-regime-15m-lgbm-fc-pcv-v2
+- RQ-20261013-1414-04
+- ML-UNBLOCK-1018
+- 'trainer-vm-diag #18887'
+last_dispatched_at: '2026-10-18T08:55:18+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-01-YZ-VS-FC-CHAMPION-CHALLENGER
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261018-FF8F-01-YZ-VS-FC-CHAMPION-CHALLENGER
+  evidence:
+  - research/results/RQ-20261018-ff8f-01/39113342384.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

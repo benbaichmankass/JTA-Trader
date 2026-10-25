@@ -62,6 +62,7 @@ STAGE_OF_ACCOUNT = {
     "bybit_2": "S2", "alpaca_live": "S2", "ib_live": "S2",
     "bybit_portfolio": "S2-mirror", "alpaca_portfolio": "S2-mirror",
 }
+PAIRS_PREFIX = "pairs_"
 SL_FAMILY = {"sl", "sl_cross", "giveback_stop"}
 E62_DEPLOY = "2026-09-24T18:18:38+00:00"  # #12878 boot, row E62
 RATE_WINDOW_DAYS = 60
@@ -114,6 +115,27 @@ def grade(entry: List[float], exit_: List[float], modelled: Optional[float],
     return out
 
 
+def mark_pairs_exit_ungradable(cell: Dict[str, Any], leg: str,
+                               excluded: Dict[str, int]) -> Dict[str, Any]:
+    """PAIRS-GAPS / PI-20261007-N6TXSAL6-0001: say WHY a pairs cell cannot clear.
+
+    A pairs close is a SPREAD exit (pairs_revert / pairs_stop) with no
+    order-package price reference, so d3.measure() excludes every one as
+    ``exit_measured_no_reference``. n_exit stays 0 however long the soak runs:
+    the generic "need >= N each" wording would imply accrual fixes it, and it
+    cannot. The verdict is left to the registered rule; only the reason is added.
+    """
+    if not leg.startswith(PAIRS_PREFIX) or cell.get("n_exit"):
+        return cell
+    n = sum(v for k, v in excluded.items()
+            if k.startswith("exit_measured_no_reference:pairs_"))
+    cell["structurally_ungradable"] = "exit"
+    cell["why"] = (cell.get("why", "") + "; exit side is structurally ungradable "
+                   "(pairs closes are spread exits with no price reference; "
+                   f"{n} pairs exit rows excluded across all pairs legs)")
+    return cell
+
+
 def _record(leg: str) -> Optional[dict]:
     p = EVIDENCE_DIR / f"{leg}.json"
     return json.load(open(p)) if p.exists() else None
@@ -125,9 +147,37 @@ def _brief(t: dict) -> dict:
             "closed_at": t.get("closed_at")}
 
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
 def _ts(s: str) -> datetime:
     d = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
     return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+def _close_ts(t: dict) -> Optional[datetime]:
+    """``closed_at`` as a datetime, or ``None`` when it is absent OR unparseable.
+
+    MEASURED 2026-10-04 (soak-book-grade run 37174464732): one live trade row
+    carried a ``closed_at`` that ``fromisoformat`` rejects ("month must be in
+    1..12"), and the bare ``_ts`` call raised out of ``run`` — so the weekly R5
+    grade wrote NO record at all over one bad row. A malformed timestamp is a
+    data defect to REPORT (``population.malformed_closed_at``), not a reason to
+    lose the whole pass; such a row is excluded from every date-windowed count.
+    """
+    v = t.get("closed_at")
+    if not v:
+        return None
+    try:
+        return _ts(v)
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
+def _malformed_closed_at(trades: List[dict]) -> List[dict]:
+    return [{"trade_id": t.get("id"), "account_id": t.get("account_id"),
+             "closed_at": str(t.get("closed_at"))}
+            for t in trades if t.get("closed_at") and _close_ts(t) is None]
 
 
 def _leg_verdict(cells: List[dict]) -> Dict[str, Any]:
@@ -180,6 +230,7 @@ def run(in_dir: Path, as_of: datetime) -> dict:
             c = grade(g["entry"], g["exit"], modelled, tol)
             if rec is None and c["verdict"] != INSUFFICIENT:
                 c["verdict"] = NO_RECORD
+            mark_pairs_exit_ungradable(c, leg, m["excluded"])
             klass = (acfg.get(acct) or {}).get("account_class")
             c.update({"account_id": acct, "account_class": klass,
                       "basis": "market" if klass == "real_money" else "simulator",
@@ -204,6 +255,11 @@ def run(in_dir: Path, as_of: datetime) -> dict:
             DIVERGENT: "DEMOTE one stage AND invalidate the Stage-0 record (rule § consequence)",
             CONSISTENT: "Gate-1 cost clause PASSES",
         }.get(lv, "none: keep accruing")
+        if lv == INSUFFICIENT and any(c.get("structurally_ungradable") for c in cells):
+            per_leg[leg]["action"] = (
+                "none: exit side structurally ungradable under RULE-R3 (spread "
+                "exits carry no price reference) -- accruing does not clear it; "
+                "needs a pairs-specific cost rule (PAIRS-GAPS)")
 
     # ---- per venue x basis, pooled (D3's floor) -----------------------------
     per_venue: Dict[str, dict] = {}
@@ -236,17 +292,17 @@ def run(in_dir: Path, as_of: datetime) -> dict:
     def _hit(t: dict) -> bool:
         return d3._notes(t).get("exit_price_source") == "exchange_fill"
 
-    post = [t for t in alp if t.get("closed_at") and _ts(t["closed_at"]) >= _ts(E62_DEPLOY)]
+    post = [t for t in alp if (_close_ts(t) or _EPOCH) >= _ts(E62_DEPLOY)]
     hits = [t for t in post if _hit(t)]
     # A pre-deploy exchange_fill close was written by some OTHER path than the
     # #12878 fix, so it cannot be the observation that proves the fix.
     pre_hits = [t for t in alp if _hit(t) and t not in post]
     alp_closes_post_any = [t for t in trades if str(t.get("account_id") or "").startswith("alpaca")
                            and not t.get("is_backtest") and t.get("status") == "closed"
-                           and t.get("closed_at") and _ts(t["closed_at"]) >= _ts(E62_DEPLOY)]
+                           and (_close_ts(t) or _EPOCH) >= _ts(E62_DEPLOY)]
     src_census = collections.Counter(str(d3._notes(t).get("exit_price_source")) for t in post)
     since = as_of - timedelta(days=RATE_WINDOW_DAYS)
-    in_win = [t for t in alp if t.get("closed_at") and _ts(t["closed_at"]) >= since]
+    in_win = [t for t in alp if (_close_ts(t) or _EPOCH) >= since]
 
     def _fc(k: int) -> dict:
         rate = k / RATE_WINDOW_DAYS
@@ -298,6 +354,7 @@ def run(in_dir: Path, as_of: datetime) -> dict:
                                                 and r.get("ref_source") == "order_packages"),
             "legs_reported": len(per_leg), "cells": sum(len(v["cells"]) for v in per_leg.values()),
             "excluded_counts": m["excluded"],
+            "malformed_closed_at": _malformed_closed_at(trades),
         },
         "leg_verdict_counts": dict(verdicts),
         "per_venue": venue_out,

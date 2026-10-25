@@ -1,0 +1,199 @@
+id: RQ-20261012-5bd1-03
+title: 'NEWS-ALPHA U03: does GDELT news TONE (level, change, novelty) predict crypto forward returns, by ADX regime cell?'
+status: queued
+roadmap: M28
+program: NEWS-ALPHA-PROGRAM
+cadence: once
+kind: experiment
+theme: macro
+priority: 1
+question: 'Feature: GKG V2Tone (computed by GDELT on the FULL article text, not the title -- the gap that made the NEWS-HIST-REPLAY
+  corpus title-only) aggregated per coin per hour: level, 24h change, and novelty z vs trailing 30 d. Target: forward return.
+  Split by ADX-14 trend cell (src/runtime/regime/detector.wilder_adx + regime_label: all / trending / chop).'
+why_this_matters: 'The direct standalone direction question; regime split answers ''edge only in some market conditions''.
+  Program index: docs/research/news-alpha-program-2026-10-12.md.'
+populations: majors (BTC ETH SOL) and alts (17) from BTC ETH SOL XRP BNB DOGE ADA AVAX LINK DOT LTC BCH TRX NEAR SUI APT ARB
+  OP ATOM UNI (USDT perps; Binance USDM klines from data.binance.vision as the runner-reachable proxy, Bybit cost policy;
+  an asset enters only from its listing date)
+grid:
+  features:
+  - tone_level
+  - tone_change_24h
+  - tone_novelty_z
+  targets:
+  - fwd_ret
+  horizons:
+  - 1h
+  - 4h
+  - 1d
+  - 5d
+  populations:
+  - majors
+  - alts
+  regime:
+  - all
+  - trending
+  - chop
+grid_cells: 72
+cell_statistic: Spearman IC, time-series pooled with per-symbol demeaning
+power:
+  expected_n: 2190
+  min_detectable_effect: 0.08
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Effect is a rank correlation r treated as d (n ~ 7.85/r^2): floor 1226.4 at d=0.08. Primary cell = 1d majors non-overlapping:
+    3 x 730 = 2,190 on the short corpus; regime sub-cells are smaller (chop ~45% of bars) and each states its own n. The floor
+    is per-test and unadjusted; the unit''s 72 cells are controlled by the family BH over 600 declared tests (rule), so survival
+    needs |t| well above 2 -- the conservative direction.'
+  feasibility:
+    source: none
+    accrual_basis: 'No observed news-feature data exists in the repo or on the trainer today: the NEWS-HIST-REPLAY GKG corpus
+      (2023-10-01..2026-10-12, 1.42M title-only items) lived in that session''s scratch and is not persisted. expected_n is
+      arithmetic from the window and population, to be replaced by the harness''s measured n.'
+decision_rule:
+  id: RULE-RQ1012-5bd1-03-NEWS-ALPHA
+  registered_at: '2026-10-12'
+  registered_before_run: true
+  statistic: 'Per registered cell (feature x target x horizon x population, enumerated in `grid` and counted in `grid_cells`):
+    on the DISCOVERY window only, the cell statistic named in `cell_statistic` with its two-sided p from a Newey-West t (lag
+    = ceil(1.5 x horizon in bars)) for time-series cells, from the NW t of the per-period cross-sectional IC series for cross-sectional
+    cells, and from a 2,000-resample day-block bootstrap against the matched non-event baseline for event cells; n stated
+    per cell. Discovery survivors = cells whose p <= 0.10 x r / 600 where r is the cell''s p-rank WITHIN THIS UNIT (family
+    BH at q=0.10 over the declared wave-1 budget of 600 tests, unrun cells counted as p=1 -- conservative and computable per
+    unit). Each survivor gets ONE confirmatory test on the sealed holdout 2025-10-01..2026-09-30 (same cell, same sign required),
+    Holm-adjusted across ALL program holdout tests at alpha 0.05, cap 20 holdout tests in wave 1, logged in research/news_alpha/TEST-LEDGER.jsonl.
+    Leakage tests run before any statistic and gate the run (failure => read_state producer_failed): (L1) every feature row
+    asserts max(item available_at) < the bar time the target window opens (GDELT: V2.1DATE ingest time; publisher time is
+    never used for availability); (L2) a +1-bar FUTURE-shifted feature is computed and reported -- if the true feature''s
+    IC is not materially below the future-shifted one on the volatility cells, the alignment is suspect and is reported; (L3)
+    a circular-shift placebo (shift by a random offset >= 30 days, 200 draws) must put the true cell outside the placebo''s
+    central 95% to count; (L4) holdout rows are not readable in --phase discovery (harness refuses).'
+  rule: 'DIRECTION cells (target = forward return): PASS additionally requires the sign-of-feature (time-series) or quintile
+    long-short (cross-sectional) strategy''s holdout mean return NET of the full cost stack (src/runtime/execution_costs.resolve_cost_policy
+    per symbol: fee + slippage + perp funding, charged per unit turnover) to have NW t >= 2.0 and the discovery-window net
+    mean > 0; a cell that confirms in rank but not net of cost reads PASS_RANK_ONLY (information, not edge). VOL/VOLUME cells
+    (target = realized vol, |return| or volume): graded SEPARATELY -- PASS iff the holdout QLIKE (vol) or MSE-of-log (volume)
+    loss of baseline+feature beats the declared baseline (HAR-RV for vol; AR(5) of log volume for volume) by >= 2% with a
+    one-sided Diebold-Mariano p < 0.05 after the same Holm adjustment; a vol PASS is a sizing/risk input, never direction.
+    VERDICTS: pass = >= 1 cell PASS (direction or vol, reported separately); fail = n >= the unit floor on every primary cell
+    AND no discovery survivor, or every survivor fails its holdout (a DISCOVERY_ONLY cell is a FAIL for that exact configuration);
+    indeterminate = any primary cell below its n floor, or a leakage check fails (then read_state producer_failed, never a
+    verdict). Cells with unadjusted p < 0.05 that do not survive are reported as LEADS: they may seed a wave-2 unit only on
+    data the discovery window did not touch. A FAIL closes ONLY the configuration tested (feature definition, source, population,
+    horizon) -- never ''news''. Every PASS also files a PROSPECTIVE unit graded on data after 2026-10-12 (the holdout window
+    was partly viewed by RQ-20261012-2a7b-01, disclosed in docs/research/news-alpha-program-2026-10-12.md).'
+  what_it_does_not_do: 'Touches no config, no order path, no NEWS_VETO_ENABLED, no roster. A PASS is not a promotion: a direction
+    PASS earns a Stage-0 new_strategy unit on an existing cost-complete harness; a vol PASS earns a sizing/risk research unit.
+    Does not evaluate the live veto overlay (that is RQ-20261009-902 / RQ-20261012-2a7b-01). Does not retire the news layer
+    on a FAIL (operator 2026-10-12: retirement is off the table).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: Panel IC / event study over a precomputed feature panel; no model fitting beyond HAR/AR baselines.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  commands:
+  - - python3
+    - scripts/research/news_alpha_ic.py
+    - --unit
+    - '{unit}'
+    - --phase
+    - discovery
+    - --out
+    - '{out_dir}'
+  - - python3
+    - scripts/research/news_alpha_ic.py
+    - --unit
+    - '{unit}'
+    - --phase
+    - holdout
+    - --out
+    - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261012-5bd1-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/news-alpha-program-2026-10-12.md
+- research/news_alpha/TEST-LEDGER.jsonl
+- docs/claude/work/checklist/NEWS-ALPHA-PROGRAM.json
+- docs/claude/work/checklist/WEPE-BUILDOUT.json
+last_dispatched_at: '2026-10-16T16:06:10+00:00'
+news_alpha:
+  source: gdelt_panel
+  panel_dir: comms/news_alpha/gdelt_panel
+  price_source: binance_vision
+  discovery_start: '2023-10-01'
+  holdout:
+  - '2025-10-01'
+  - '2026-09-30'
+  design: ts
+  bar: 1h
+  populations:
+    majors:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    alts:
+    - XRPUSDT
+    - BNBUSDT
+    - DOGEUSDT
+    - ADAUSDT
+    - AVAXUSDT
+    - LINKUSDT
+    - DOTUSDT
+    - LTCUSDT
+    - BCHUSDT
+    - TRXUSDT
+    - NEARUSDT
+    - SUIUSDT
+    - APTUSDT
+    - ARBUSDT
+    - OPUSDT
+    - ATOMUSDT
+    - UNIUSDT
+  binding_note: 'Data binding added 2026-10-16 by lane NEWS-ALPHA-HARNESS-1016 BEFORE any run: it restates the registered
+    population, the sealed holdout and the short-corpus discovery window the power.basis already names (''else 2023-10-01..'');
+    panel = NEWS-ALPHA-CORPUS-SLICE1 (comms/news_alpha/gdelt_panel/, frozen map research/news_alpha/entity_map_v1.json); prices
+    = Binance USDM klines (data.binance.vision), cost stack = Bybit policy via src/runtime/execution_costs. Disclosed as an
+    amendment row in research/news_alpha/TEST-LEDGER.jsonl.'
+resolved_blockers:
+- what: Persistent point-in-time GDELT GKG corpus with tone/themes/entities columns on the trainer
+  ref: checklist NEWS-ALPHA-CORPUS (extends scripts/research/news_hist_fetch.py from NEWS-HIST-REPLAY)
+  clears_when: 'NEWS-ALPHA-CORPUS is done: corpus 2019-01-01.. on the trainer with a gap ledger and a daily forward append'
+  resolved_by: NEWS-ALPHA-CORPUS-SLICE1
+  resolved_at: '2026-10-16'
+- what: Feature-family builder producing the point-in-time feature panel this unit reads
+  ref: checklist NEWS-ALPHA-FEATURES
+  clears_when: NEWS-ALPHA-FEATURES is done and its L1 leakage assertion test passes on a real slice
+  resolved_by: 'NEWS-ALPHA-FEATURES (GDELT part: scripts/research/news_alpha_features.py)'
+  resolved_at: '2026-10-16'
+- what: Generic signal->target harness with sealed holdout, BH/Holm, HAC p, net-of-cost and HAR/AR baselines
+  ref: checklist NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py)
+  clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
+  resolved_by: NEWS-ALPHA-HARNESS
+  resolved_at: '2026-10-16'
+grading:
+  attested: RULE-RQ1012-5bd1-03-NEWS-ALPHA
+  auto: true
+  decision_rule_id: RULE-RQ1012-5bd1-03-NEWS-ALPHA
+  evidence:
+  - research/results/RQ-20261012-5bd1-03/38929312274.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: NEWS-VETO-EVAL
+  owner_reason: 47 cells measured FAIL and 25 INDETERMINATE (72 rows). The unit rule makes the unit INDETERMINATE
+    only if a PRIMARY cell is below its n floor, and results rows do not label which of the 25 are primary;
+    until the owner classifies primary vs secondary cells the unit verdict cannot be applied verbatim.
+    The 47 FAIL cells close only their exact configurations; news and WEPE are NOT retired.
+  reason: 'verdicts not unanimous-mechanical: [''fail'', ''indeterminate'']'
+  rows: 72
+  verdict: null

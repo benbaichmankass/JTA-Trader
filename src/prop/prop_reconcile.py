@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.prop import prop_balance, prop_journal
 
@@ -91,9 +91,30 @@ def match_fill_to_ticket(fill: Dict[str, Any]) -> Optional[str]:
       operator-confirmed/prompted ticket whose later fill/close must link back.
     """
     explicit = fill.get("ticket_id")
-    if explicit:
-        return str(explicit)
     account_id = str(fill.get("account_id") or "").strip()
+    if explicit:
+        # An explicit id that names an EXISTING ticket is honoured only when
+        # that ticket belongs to the reporting account (TRADEIFY-WIRE F1 +
+        # manager review): with two prop accounts a report from one must never
+        # link to — and so advance — the other's ticket. A blank owner or a
+        # blank reporting account cannot be shown to match, so it returns None
+        # too: the fill is journaled unlinked, never cross-linked.
+        #
+        # An id with NO ticket row belongs to no account, so it cannot
+        # cross-link, and it is kept: the fill dedup keys on it (a relay retry
+        # of an open report re-sends the same ticket_id; refusing it would
+        # journal a second fill and double-count open risk —
+        # tests/test_prop_open_risk_e66.py).
+        ticket = prop_journal.get_ticket(str(explicit))
+        if ticket is None:
+            return str(explicit)
+        owner = str(ticket.get("account_id") or "").strip()
+        if not account_id or not owner or owner != account_id:
+            logger.warning(
+                "prop_reconcile: explicit ticket %s not linkable for reporting account "
+                "%r (owner %r) — fill left unlinked", explicit, account_id, owner)
+            return None
+        return str(explicit)
     if not account_id:
         return None
     symbol = str(fill.get("symbol") or "").upper()
@@ -127,9 +148,14 @@ def match_fill_to_ticket(fill: Dict[str, Any]) -> Optional[str]:
 
 def find_unacted_tickets(
     *, account_id: Optional[str] = None, now: Optional[datetime] = None,
-    limit: int = 200,
+    limit: int = 200, statuses: Tuple[str, ...] = ("emitted",),
 ) -> List[Dict[str, Any]]:
     """Emitted tickets past ``valid_until`` with no matching fill reported.
+
+    ``statuses`` widens the population for the expiry sweep, which also ends
+    unanswered ``expiry_prompted`` / ``invalidated_prompted`` tickets
+    (PROP-FLOW-SEPARATION, 2026-10-07). The default is the drift view's
+    ``emitted`` only.
 
     A ticket is considered acted-on if a ``prop_fills`` row references its
     ``ticket_id`` OR matches its account+symbol+direction. Anything still
@@ -199,7 +225,7 @@ def find_unacted_tickets(
 
     out: List[Dict[str, Any]] = []
     for t in tickets:
-        if t.get("status") != "emitted":
+        if t.get("status") not in statuses:
             continue
         if t.get("ticket_id") in acted_ids:
             continue
@@ -228,6 +254,19 @@ def _ruleset_for(account_id: str):
         logger.warning("prop_reconcile: ruleset lookup failed for %s: %s",
                        account_id, exc)
         return None
+
+
+def _ruleset_limits_raw(account_id: str) -> Dict[str, Any]:
+    """The account ruleset file's raw ``limits:`` ({} when unknown)."""
+    try:
+        from src.prop import prop_rule_guards
+        from src.prop.account_rulesets import all_account_units
+
+        unit = all_account_units().get(account_id)
+        return prop_rule_guards.load_limits(getattr(unit, "source", None)) if unit else {}
+    except Exception as exc:  # noqa: BLE001 — fail soft to "undeclared"
+        logger.warning("prop_reconcile: raw limits lookup failed for %s: %s", account_id, exc)
+        return {}
 
 
 def _status_freshness(status: Dict[str, Any]) -> tuple:
@@ -485,6 +524,12 @@ def compute_open_risk(account_id: str) -> Dict[str, Any]:
     }
 
 
+def _qualifying_days(account_id: str) -> Dict[str, Any]:
+    from src.prop import qualifying_days
+
+    return qualifying_days.compute(account_id)
+
+
 def compute_rule_distance(
     account_id: str, status: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
@@ -528,6 +573,16 @@ def compute_rule_distance(
         daily_loss_pct * day_basis
         if (daily_loss_pct is not None and day_basis is not None) else None
     )
+    # A ruleset may declare the AMOUNT as a share of the account size instead
+    # (Tradeify 247: prior close minus 3% of the account size; TRADEIFY-WIRE
+    # T2, src/prop/prop_rule_guards.py). Undeclared = unchanged.
+    amount_basis = _ruleset_limits_raw(account_id).get("daily_loss_amount_basis")
+    if amount_basis:
+        from src.prop import prop_rule_guards
+
+        daily_loss_limit_usd = prop_rule_guards.daily_loss_amount(
+            daily_loss_pct=daily_loss_pct, day_start_balance=day_basis,
+            account_size_usd=account_size, amount_basis=amount_basis)
     # Day P&L = realized today + unrealized (equity-basis, like Breakout).
     #
     # ⚠️ A MISSING TERM MUST NOT BECOME ZERO.
@@ -692,6 +747,9 @@ def compute_rule_distance(
         "after_open_risk_state": after_state,
         "distance_to_dd_floor_after_open_risk_usd": dd_after,
         "distance_to_daily_loss_after_open_risk_usd": daily_after,
+        # Evaluation-rule standing (Velotrade qualifying days); state
+        # `not_declared` for rulesets with no such gate. See qualifying_days.py.
+        "qualifying_days": _qualifying_days(account_id),
         "status_present": bool(status),
         "status_age_hours": age_hours,
         "status_freshness": freshness,

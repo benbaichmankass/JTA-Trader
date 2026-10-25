@@ -51,6 +51,7 @@ import json
 import logging
 import math
 import os
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -851,11 +852,18 @@ def _package_open_legs(db, open_pkg: dict) -> tuple:
                 rows = ([hit[0]] if hit and hit[0].get("status") == "open"
                         else [])
             else:
-                m = _find_trade_by_match(
+                # ...and ONLY to a row no OTHER package owns
+                # (PI-20260930-MEK2XMWT-0002, ORDER-AUDIT-3). Since #14590 the
+                # per-account gate lets two open packages for one
+                # strategy+symbol coexist (e.g. a Stage-1 soak package on
+                # alpaca_paper and a Stage-2 one on alpaca_live), and the bare
+                # strategy+symbol match handed this package the newest open row
+                # on ANY package -- so its trail/close verdict could be
+                # effectuated against the other package's trade. A row stamped
+                # with a different order_package_id is never this package's leg.
+                rows = _find_unowned_trades_by_match(
                     db, strategy=open_pkg.get("strategy_name"),
-                    symbol=open_pkg.get("symbol"),
-                )
-                rows = [m] if m else []
+                    symbol=open_pkg.get("symbol"), pkg_id=pkg_id)[:1]
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "order_monitor: package-leg lookup failed for pkg=%s: %s",
@@ -894,6 +902,49 @@ def _legs_after_failed(legs: list, failed_id) -> list:
 # row is still open and the next close attempt meets the venue's own "position
 # is zero" answer (30031/110017/110025), which already routes to the DB update.
 _EXCHANGE_CLOSED_PENDING_DB: Dict[str, tuple] = {}
+
+
+# Bybit V5 codes meaning "there is no position to reduce": 30031 (position size
+# is zero) and 110017 (current position is zero, cannot fix reduce-only order
+# qty). 110025 is NOT one of them — it is "position mode not modified", unrelated
+# to flatness — and was dropped from the matcher (CA-A01-005).
+_BYBIT_ALREADY_FLAT_CODES = frozenset({30031, 110017})
+_BYBIT_ALREADY_FLAT_CODE_RE = re.compile(
+    r"(?:retCode\s*[=:]\s*|ErrCode:\s*)(\d+)\b", re.IGNORECASE,
+)
+
+
+def _venue_reports_position_already_flat(
+    err_str: str, exchange_response: Any = None,
+) -> bool:
+    """True when a refused close says the position is ALREADY flat on the venue.
+
+    ⚠️ The previous matcher looked for ``retCode=110017`` and ``position size is
+    zero``, but pybit raises ``InvalidRequestError: current position is zero,
+    cannot fix reduce-only order qty (ErrCode: 110017) ...`` and the non-raising
+    branch formats ``retMsg`` without the code — so the real rejection matched
+    NEITHER and an SL/TP-already-fired close was paged as a close FAILURE
+    (CA-A01-005, PI-20260927-KFWRL9R1-0002). This reads the structured
+    ``retCode`` when the envelope carries one, then the code in either text
+    format, then the message wording.
+    """
+    if isinstance(exchange_response, dict):
+        # SOAK-MECH-FAULTS class C: close_open_position refused because this
+        # trade's share of a netted position is already gone (its own venue
+        # leg filled); what is left belongs to a sibling trade.
+        if exchange_response.get("own_share_already_flat") is True:
+            return True
+        try:
+            if int(exchange_response.get("retCode")) in _BYBIT_ALREADY_FLAT_CODES:
+                return True
+        except (TypeError, ValueError):
+            pass
+    text = str(err_str or "")
+    for m in _BYBIT_ALREADY_FLAT_CODE_RE.finditer(text):
+        if int(m.group(1)) in _BYBIT_ALREADY_FLAT_CODES:
+            return True
+    low = text.lower()
+    return "position size is zero" in low or "current position is zero" in low
 
 
 def _finish_package_after_leg_close(db, open_pkg: dict, matched_trade: dict,
@@ -1249,9 +1300,7 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             # consecutive-close-failure streak, no "won't flatten" alarm. The
             # protective bracket (closed) / working limit (extended) handles the
             # exit; the monitor re-attempts next tick.
-            if ("exit deferred" in err_str.lower()
-                    or "deferring" in err_str.lower()
-                    or "market closed" in err_str.lower()):
+            if _is_session_defer(err_str):
                 logger.info(
                     "order_monitor: exchange close DEFERRED (market session) "
                     "for pkg=%s account=%s → %s — DB left open, no alarm.",
@@ -1283,16 +1332,15 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                 summary.no_change_count += 1
                 return
             # Bybit signals "position already gone" with retCode 30031
-            # (position size is zero) or 110017 / 110025. When the
-            # exchange's internal SL/TP fires before the monitor's close
-            # attempt, we get one of these. Treat as exchange-closed so
-            # the DB is updated and the reconciler doesn't have to clean
-            # up a stale open row.
-            _already_closed = (
-                "position size is zero" in err_str.lower()
-                or "retCode=30031" in err_str
-                or "retCode=110017" in err_str
-                or "retCode=110025" in err_str
+            # (position size is zero) or 110017 (current position is zero,
+            # cannot fix reduce-only order qty). When the exchange's internal
+            # SL/TP fires before the monitor's close attempt, we get one of
+            # these. Treat as exchange-closed so the DB is updated and the
+            # reconciler doesn't have to clean up a stale open row.
+            # Recognised in every format the close path actually emits
+            # (CA-A01-005) — see _venue_reports_position_already_flat.
+            _already_closed = _venue_reports_position_already_flat(
+                err_str, ex_result.get("exchange_response"),
             )
             if _already_closed:
                 logger.info(
@@ -1495,8 +1543,34 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             else:
                 _exit_source = _prov_unmeasured_marker()
             existing_notes = _decode_notes(matched_trade.get("notes"))
+            _notes_changed = False
             if not existing_notes.get("exit_price_source"):
                 existing_notes["exit_price_source"] = _exit_source
+                _notes_changed = True
+            # ── AND THE REASON'S SOURCE (ORDER-AUDIT-3) ──────────────────
+            # PI-20260929-TWEW1FZJ-0002. This branch wrote `exit_reason` from
+            # the verdict and never said where it came from, so every
+            # monitor-decided close (`sl_cross`, `tp_cross`, `stale_stop`, ...)
+            # carried NO `exit_reason_source`. MEASURED 2026-10-15 over
+            # real-money closes since 2026-10-08 (n=16): 4 of 4 `sl_cross` rows
+            # unstamped (6565, 6566, 6593, 6594) — and all 4 had in fact been
+            # closed by the venue's own SL order before this branch ran, i.e.
+            # they reached it through `already_closed_on_exchange`, so the
+            # verdict's reason was not why the position ended.
+            #
+            # Two values, never collapsed: the monitor sent the close itself
+            # (`strategy_verdict`), or the venue was already flat
+            # (`strategy_verdict_venue_flat` — a pending state the
+            # bracket-order sweep resolves from venue order identity). Same
+            # never-overwrite rule as the price stamp above.
+            if not existing_notes.get("exit_reason_source"):
+                existing_notes["exit_reason_source"] = (
+                    VERDICT_VENUE_FLAT_LABEL_SOURCE
+                    if ex_result.get("skipped") == "already_closed_on_exchange"
+                    else VERDICT_LABEL_SOURCE
+                )
+                _notes_changed = True
+            if _notes_changed:
                 close_updates["notes"] = dump_capped(existing_notes, 2000)
             trade_id = matched_trade.get("id")
             if trade_id is not None:
@@ -1631,8 +1705,9 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             cur_tp=_coerce_float(open_pkg.get("tp")),
         )
         logger.info(
-            "order_monitor: exchange modify for pkg=%s trade=%s account=%s → %s",
+            "order_monitor: exchange modify for pkg=%s trade=%s account=%s → %s%s",
             pkg_id, leg.get("id"), leg.get("account_id"), ex_result,
+            f" (tp_reason: {decision.tp_reason})" if decision.tp_reason else "",
         )
         if ex_result.get("ok"):
             leg_outcomes.append({"leg": leg, "outcome": "applied"})
@@ -1756,7 +1831,9 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         if "sl" in updates:
             changes.append(f"SL → {updates['sl']:g}")
         if "tp" in updates:
-            changes.append(f"TP → {updates['tp']:g}")
+            # TP doctrine: a moved TP names the prediction that moved it.
+            changes.append(f"TP → {updates['tp']:g}"
+                           + (f" ({decision.tp_reason})" if decision.tp_reason else ""))
         # ONE ping per package, not per leg — N pings for a single trail move
         # is the desensitized-alarm shape. But say how many legs moved, so a
         # multi-account package does not read as a single-leg one.
@@ -1825,6 +1902,27 @@ def _find_trade_by_match(db, *, strategy: Optional[str],
     return rows[0] if rows else None
 
 
+def _find_unowned_trades_by_match(db, *, strategy: Optional[str],
+                                  symbol: Optional[str],
+                                  pkg_id: Any) -> List[Dict[str, Any]]:
+    """Open, non-backtest rows for strategy+symbol that belong to NO other
+    order package (``order_package_id`` empty or equal to *pkg_id*), most
+    recent first. Raises on a read failure so the caller's ``read_failed``
+    state is preserved (``_find_trade_by_match`` swallows it into ``None``)."""
+    if not strategy or not symbol:
+        return []
+    rows = db.get_trades(
+        filters={"strategy_name": strategy, "symbol": symbol, "status": "open"},
+        limit=50,
+    )
+    return [
+        r for r in rows
+        if not r.get("is_backtest")
+        and (not r.get("order_package_id")
+             or str(r.get("order_package_id")) == str(pkg_id))
+    ]
+
+
 def _close_trade_by_match(db, *, strategy: Optional[str], symbol: Optional[str],
                           updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Best-effort: find the most-recent open trade row matching the
@@ -1856,6 +1954,23 @@ def _close_trade_by_match(db, *, strategy: Optional[str], symbol: Optional[str],
 # (the ``MONITOR_APPLY_TO_EXCHANGE`` shadow-mode gate was removed; the senders
 # short-circuit only on ``mode == "dry_run"``, never on an env flag).
 # ---------------------------------------------------------------------------
+
+
+def _account_mode(acc) -> str:
+    """``"dry_run"`` | ``"live"`` for a loaded account, from ``acc.dry_run``.
+
+    ⚠️ TradingAccount has NO ``.mode`` attribute — the resolved state is
+    ``acc.dry_run`` (``_resolve_mode``). Reading ``getattr(acc, "mode",
+    "live")`` resolved EVERY account to "live", ib_live and oanda_practice
+    included, so the monitor's dry_run short-circuit on close / partial-close /
+    modify could never fire (AUD-20260927-CA-A04, ORDER-AUDIT-2 item 3).
+    ``is True`` so a MagicMock's fabricated attribute never reads as dry; a
+    test double that sets a string ``.mode`` is still honoured.
+    """
+    if getattr(acc, "dry_run", None) is True:
+        return "dry_run"
+    mode = getattr(acc, "mode", None)
+    return mode if isinstance(mode, str) and mode else "live"
 
 
 def _build_account_client(account_id):
@@ -1894,7 +2009,9 @@ def _build_account_client(account_id):
                 # exchange-side wiring (``_send_close_to_exchange``,
                 # ``_send_modify_to_exchange``) can short-circuit on
                 # paper accounts without ever calling ``place_order``.
-                "mode": getattr(acc, "mode", "live") or "live",
+                #
+                # See _account_mode: TradingAccount has no ``.mode``.
+                "mode": _account_mode(acc),
                 # Required by bybit_client_for() to route demo accounts to
                 # api-demo.bybit.com instead of api.bybit.com.
                 "demo": getattr(acc, "demo", False),
@@ -2004,6 +2121,9 @@ def _cancel_resting_protection_after_flat(
     trade_id: Optional[Any] = None,
     sl_order_id: Optional[str] = None,
     tp_order_id: Optional[str] = None,
+    row_qty: Any = None,
+    row_direction: Any = None,
+    sibling_qtys: Any = None,
 ) -> None:
     """Cancel resting protective bracket legs for (account, symbol) after the
     RECONCILER concludes the position is flat on the exchange. Best-effort.
@@ -2083,6 +2203,8 @@ def _cancel_resting_protection_after_flat(
         _cancel_trade_scoped_protection(
             client, cfg, account_id, symbol, trade_id=trade_id,
             sl_order_id=sl_order_id, tp_order_id=tp_order_id,
+            row_qty=row_qty, row_direction=row_direction,
+            sibling_qtys=sibling_qtys,
         )
         return
     cancel_fn = getattr(client, "cancel_resting_protection", None)
@@ -2106,6 +2228,7 @@ def _cancel_resting_protection_after_flat(
 def _cancel_trade_scoped_protection(
     client: Any, cfg: Dict[str, Any], account_id: str, symbol: str,
     *, trade_id: Any, sl_order_id: Optional[str], tp_order_id: Optional[str],
+    row_qty: Any = None, row_direction: Any = None, sibling_qtys: Any = None,
 ) -> None:
     """The ``trade_id`` half of :func:`_cancel_resting_protection_after_flat`.
 
@@ -2115,6 +2238,20 @@ def _cancel_trade_scoped_protection(
     per-trade resting leg this path can address and is a no-op. Never raises.
     """
     try:
+        # Alpaca: no per-trade group or tracked leg id, so the row's own legs
+        # are identified by reducing side + unique size (FIX-CA-01 follow-up,
+        # PI-20260927-01CGDPN9-0002). Siblings unknown → cancels nothing.
+        row_fn = getattr(client, "cancel_row_protection", None)
+        if callable(row_fn):
+            resp = row_fn(symbol, qty=row_qty, direction=row_direction,
+                          sibling_qtys=sibling_qtys) or {}
+            logger.warning(
+                "order_monitor: flat-close cancel of trade %s's own Alpaca "
+                "protection on %s/%s (qty=%s dir=%s siblings=%s) → retCode=%s %s",
+                trade_id, account_id, symbol, row_qty, row_direction,
+                sibling_qtys, resp.get("retCode"), resp.get("retMsg"),
+            )
+            return
         group_fn = getattr(client, "cancel_trade_protection", None)
         if callable(group_fn):
             resp = group_fn(symbol, trade_id) or {}
@@ -2191,6 +2328,11 @@ def _cancel_closed_row_protection(row: Any, db: Any = None) -> None:
         _cancel_resting_protection_after_flat(
             _g("account_id"), _g("symbol"), trade_id=int(tid),
             sl_order_id=sl_id, tp_order_id=tp_id,
+            row_qty=_g("position_size"), row_direction=_g("direction"),
+            # The re-arm's own sibling read: None (never []) when unreadable,
+            # so a size-scoped Alpaca cancel then cancels nothing.
+            sibling_qtys=_open_sibling_qtys(
+                db, {"id": tid}, _g("account_id"), _g("symbol")),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: _cancel_closed_row_protection raised: %s", exc)
@@ -2553,11 +2695,60 @@ _DEFAULT_SNAPSHOT_MIN_FILL_AGE_SECONDS = 300
 # wiped all 8 positions at once), not a set of individual disappearances.
 # RISK-1 (BL-20260707-RECONCILER-MASS-FALSE-CLOSE): a suspected reset is NO
 # LONGER auto-closed — mass-closing N live rows on one inference is the
-# amplifier that turned a bad read into 7 false closes. It fires ONE latched
-# alert and leaves the rows OPEN for the operator. 3 keeps a normal 1-2 position
-# exit on the individual-close path while routing any wholesale vanish to
-# alert-first.
+# amplifier that turned a bad read into 7 false closes. It fires ONE alert and
+# marks the rows RESET-SUSPECT. 3 keeps a normal 1-2 position exit on the
+# individual-close path while routing any wholesale vanish to alert-first.
+#
+# NO-HALT (operator directive 2026-10-09, "There is no halting."): a suspect row
+# is NO LONGER left open for manual resolution — that parked the row forever and
+# the strategy-monocle open-package gate then blocked every new entry for that
+# strategy+symbol until a human closed it. Each suspect row is now RE-VERIFIED
+# against the venue on every pass (``_RESET_SUSPECT_ROWS`` below): venue shows
+# it → it stays open and is managed normally; venue confirms flat on
+# ``_RESET_SUSPECT_CONFIRM_READS`` consecutive clean reads (plus, on venues
+# with no per-symbol check, a ``_RESET_SUSPECT_MIN_SPAN_INTERVALS`` span or a
+# populated snapshot) → it is closed as ``exchange_reset_flat`` with its PnL
+# DECLARED unmeasured (never priced from a mark) and ONLY its own protection
+# cancelled; a read failure resolves nothing and is retried next pass. A row
+# with ``_RESET_SUSPECT_FLAG_AFTER`` failed passes raises ONE red flag per
+# account; recovery is announced once. The suspect status survives a restart
+# via ``trades.notes`` (fresh streak on re-hydration).
 _ACCOUNT_RESET_SNAPSHOT_THRESHOLD = 3
+
+# Consecutive clean venue-flat reads (each >= _close_confirm_seconds() after the
+# previous counted one) required, AFTER the reset-suspect detection pass, before
+# a suspect row is resolved closed. The detection itself already needed two
+# observations (arm + confirm), so a resolved row has read flat on >= 4.
+_RESET_SUSPECT_CONFIRM_READS = 2
+
+# False-flat hardening for integrations WITHOUT a per-symbol presence check
+# (IB, OANDA read the whole portfolio in one call, so a partial-but-persistent
+# snapshot would otherwise satisfy _RESET_SUSPECT_CONFIRM_READS in ~3-4 min).
+# On those, a suspect row resolves only when, in addition to the consecutive
+# clean flat reads, EITHER
+#   * the streak of counted flat reads spans >= this many x
+#     ``_close_confirm_seconds()`` (first counted flat read → the resolving
+#     read), OR
+#   * at least one counted flat read came from a POPULATED account snapshot
+#     (>= 1 position on the account) — proof the venue answered with real
+#     book data rather than an empty/blank portfolio.
+# Integrations WITH a per-symbol presence check (alpaca) are unchanged: every
+# counted read there is already a broker-confirmed flat for that symbol.
+_RESET_SUSPECT_MIN_SPAN_INTERVALS = 5
+
+# FAILED verification passes (venue read failed / per-symbol presence could not
+# be confirmed / the resolve write failed) a RESET-SUSPECT row may accumulate
+# before ONE red flag is raised for its account. Passes spent waiting on the
+# clean-read streak or the span requirement above are normal progress and do
+# not count, so a row that is settling never raises the flag.
+_RESET_SUSPECT_FLAG_AFTER = 3
+
+# Key in ``trades.notes`` that persists a row's RESET-SUSPECT status across a
+# process restart. On restart the row is re-hydrated from this marker with a
+# FRESH streak (flat_reads=0, no span credit), so a restart can only lengthen
+# the resolution requirement, never shorten it — and the row can never fall
+# through to the weaker individual (< threshold) 2-observation close path.
+_RESET_SUSPECT_NOTES_KEY = "reset_suspect"
 
 # Exit-coverage reattach-or-close (2026-06-15): an open ``orphan_adopt`` trade
 # with NO recoverable order package has no rational exit strategy and is
@@ -2568,6 +2759,72 @@ _ACCOUNT_RESET_SNAPSHOT_THRESHOLD = 3
 # (fail-safe — never closes early). Cleared the moment a row becomes
 # reattachable.
 _PENDING_ORPHAN_NOSTRAT_CLOSE: Dict[int, datetime] = {}
+
+# (account, symbol, side) → "armed" (seen once) / "alerted" (paged). A venue
+# surplus over the journal is paged once, on the SECOND consecutive pass that
+# sees it (an entry fill whose journal write is a moment behind must not page),
+# and re-armed only after it clears (CA-A01-020).
+_VENUE_SURPLUS_STATE: Dict[tuple, str] = {}
+
+
+def _check_venue_surplus(
+    *, aid: str, sym: str, side: str, venue_size: Any,
+    journal_size: Optional[float], entry_price: Any,
+    summary: Dict[str, int],
+) -> None:
+    """Detect a venue position LARGER than the journal's open rows on a known
+    (symbol, side) — the untracked surplus the membership-only orphan test
+    never saw (CA-A01-020, PI-20260927-KFWRL9R1-0007).
+
+    DETECT-ONLY: alerts, never adopts or closes. Unreadable sizes on either
+    side are "could not look" and neither arm nor clear the state.
+    """
+    key = (aid, sym, side)
+    try:
+        venue = abs(float(venue_size))
+    except (TypeError, ValueError):
+        return
+    if journal_size is None:
+        return
+    surplus = venue - journal_size
+    if surplus <= max(venue, journal_size) * _BYBIT_QTY_DIVERGENCE_FRAC:
+        _VENUE_SURPLUS_STATE.pop(key, None)
+        return
+    summary["surplus_found"] = summary.get("surplus_found", 0) + 1
+    state = _VENUE_SURPLUS_STATE.get(key)
+    if state is None:
+        _VENUE_SURPLUS_STATE[key] = "armed"
+        logger.warning(
+            "_reconcile_orphan_exchange_positions: venue SURPLUS seen — "
+            "account=%s symbol=%s side=%s venue=%s journal_open=%s "
+            "(awaiting a second confirming pass before alerting)",
+            aid, sym, side, venue, journal_size,
+        )
+        return
+    if state == "alerted":
+        return
+    _VENUE_SURPLUS_STATE[key] = "alerted"
+    note = (
+        f"venue {sym}/{side} size {venue:g} exceeds the journal's open rows "
+        f"({journal_size:g}) by {surplus:g} on two consecutive passes — the "
+        "surplus is NOT tracked by any journal row (no exits, no risk read). "
+        "Detect-only: nothing was adopted or closed (CA-A01-020)."
+    )
+    logger.error("_reconcile_orphan_exchange_positions: %s account=%s", note, aid)
+    try:
+        from src.runtime.execution_diagnostics import (
+            enqueue_exchange_orphan_adoption,
+        )
+        enqueue_exchange_orphan_adoption(
+            account=aid, symbol=sym, side=side, size=surplus,
+            entry_price=float(entry_price or 0.0), db_trade_id=None,
+            policy="detect_only", note=note,
+        )
+    except Exception as exc:  # noqa: BLE001 — a notify failure never aborts the sweep
+        logger.warning(
+            "_reconcile_orphan_exchange_positions: surplus alert enqueue "
+            "failed account=%s symbol=%s: %s", aid, sym, exc,
+        )
 
 # Reverse-reconciler half of the same idea (BL-20260614-ORPHANBLIP). The
 # close-on-disappear pass in ``_reconcile_orphan_exchange_positions`` must NOT
@@ -2617,10 +2874,28 @@ _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM: Dict[int, datetime] = {}
 # suspected wholesale-RESET alert (>= _ACCOUNT_RESET_SNAPSHOT_THRESHOLD
 # strategy-attributed positions confirmed absent in one pass) fires ONCE, not
 # every confirm window while the anomaly persists. Cleared when the account no
-# longer presents a mass vanish (event resolved / rows manually reconciled).
+# longer presents a mass vanish (suspect rows re-verified and resolved, or read
+# back present). It only bounds ALERT volume — it never stops reconciliation.
 # In-process (a restart re-arms from scratch — fail-safe toward re-alerting,
 # never toward a silent mass-close).
 _RESET_ALERT_LATCHED: set = set()
+
+# NO-HALT (2026-10-09): per-row RESET-SUSPECT re-verification state, keyed by
+# trades.id → {"account", "symbol", "side", "since", "passes", "fail_passes",
+# "flat_reads", "first_flat_at", "last_flat_at", "populated_flat"}. ``passes``
+# counts verification passes the row has stayed suspect (detection = 1);
+# ``fail_passes`` counts the FAILED ones (drives the red flag); ``flat_reads``
+# counts CONSECUTIVE clean venue-flat reads since detection (any read failure /
+# unconfirmed read resets it, ``first_flat_at`` and ``populated_flat`` to their
+# empty values). The dict is in-process, but the suspect STATUS is persisted in
+# ``trades.notes[_RESET_SUSPECT_NOTES_KEY]``: a restart re-hydrates the row
+# with a fresh streak (never closes early, never takes the individual path).
+_RESET_SUSPECT_ROWS: Dict[int, Dict[str, Any]] = {}
+
+# Accounts that have had their ONE "reset-suspect not settling" red flag this
+# episode. Cleared — with ONE recovery announcement — once the account has no
+# suspect rows left. Bounds alert volume; never gates anything.
+_RESET_SUSPECT_FLAGGED: set = set()
 
 # 2-observation confirm cache for the STUCK-STRATEGY WATCHDOG's "position flat
 # at exchange → finalize closed" branch (BL-20260708-WATCHDOG-FALSEFLAT-FLAP).
@@ -2636,6 +2911,41 @@ _RESET_ALERT_LATCHED: set = set()
 # the counter). In-process (a restart re-arms from scratch — fail-safe, never
 # finalizes early).
 _PENDING_WATCHDOG_FLAT_CONFIRM: Dict[int, datetime] = {}
+
+# What the forward reconciler last concluded about each OPEN trade it walked
+# (keyed by trades.id): a short verdict such as ``order_read_failed``,
+# ``order_live:new``, ``flat_pending_confirm`` or ``close_write_failed:<exc>``.
+# Read ONLY by :func:`_watchdog_stuck_strategies` when it finalises a trade the
+# reconciler should have closed first, so that close carries the reason the
+# reconciler did not (WATCHDOG-CLOSE-RECURRENCE). Bybit trades 6528 and 6549
+# (bybit_2) were finalised by the watchdog ~2.4 min after their own venue stop
+# filled, and by the time anyone looked the trader journal had rotated past
+# them, so why the reconciler (which runs EARLIER in the same tick, with the
+# same flat confirm) did not close them first could not be recovered.
+# Bookkeeping only: nothing branches on it. In-process; a restart starts empty
+# and the watchdog then records ``not_seen_this_process``.
+_RECONCILER_LAST_SEEN: Dict[int, str] = {}
+_RECONCILER_LAST_SEEN_CAP = 5000
+
+
+def _note_reconciler_seen(trade_id: Any, verdict: str) -> None:
+    """Record the forward reconciler's last verdict for an open trade. Never
+    raises; bounded so a long-lived process cannot grow it without limit."""
+    try:
+        tid = int(trade_id)
+    except (TypeError, ValueError):
+        return
+    if (tid not in _RECONCILER_LAST_SEEN
+            and len(_RECONCILER_LAST_SEEN) >= _RECONCILER_LAST_SEEN_CAP):
+        _RECONCILER_LAST_SEEN.pop(next(iter(_RECONCILER_LAST_SEEN)), None)
+    _RECONCILER_LAST_SEEN[tid] = str(verdict)[:60]
+
+
+def _reconciler_last_seen(trade_id: Any) -> str:
+    try:
+        return _RECONCILER_LAST_SEEN.get(int(trade_id), "not_seen_this_process")
+    except (TypeError, ValueError):
+        return "not_seen_this_process"
 
 # Per-tick set of ``(account_id, symbol)`` the monitor ATTEMPTED an active close
 # on this tick (BL-20260708-ALPACA-REARM-VS-CLOSE-FIGHT). Cleared at the top of
@@ -2901,6 +3211,70 @@ def _clear_close_fail_alert_state(key: tuple) -> None:
     _CLOSE_FAIL_STREAK.pop(key, None)
     _CLOSE_FAIL_ALERT_AT.pop(key, None)
     _CLOSE_FAIL_ALERT_COUNT.pop(key, None)
+
+
+def _us_equity_session(now: Optional[datetime] = None) -> str:
+    """Seam over `market_hours.us_equity_session` so tests pin the clock."""
+    from src.runtime.market_hours import us_equity_session
+    return us_equity_session(now)
+
+
+def _is_session_defer(err_str: str, now: Optional[datetime] = None) -> bool:
+    """Is this close result a market-session DEFER ("not now"), not a failure?
+
+    A defer clears the close-failure streak and never pages; a failure counts
+    toward the "won't flatten" alarm. Detection used to be three phrases only,
+    and AlpacaClient's extended-hours TRADE-SCOPED defer ("… trade-scoped exit
+    of N of M on SYM DEFERRED to the regular session … (protective bracket left
+    armed; nothing placed)") matched none of them. So it was booked as a
+    FAILURE on every tick of an extended session. MEASURED 2026-09-30 on
+    alpaca_paper SPY pkg-51f1eff527d44b2e: 49 ERROR lines in 28 min and 7 false
+    "won't flatten" PAGES (20:02:30–20:39:18Z) for a close the venue had merely
+    deferred to the open (PI-20260930-ZIFJ1RKM-0003). That phrase, "deferred
+    to the regular session", is now recognised.
+
+    ⚠️ Detection is by PHRASE ONLY, never by ``retCode == 2``. AlpacaClient's
+    ``_resolve_close_scope`` also returns retCode 2 ("position size for SYM
+    unreadable — a trade-scoped close … is DEFERRED rather than falling back
+    …") on the REGULAR-hours path, and that is a real failure that must page;
+    Bybit's raw exchange_response can carry retCode 2 too (#14899 review).
+
+    ⚠️ An ALPACA defer seen during regular trading hours is NOT a defer. Every
+    Alpaca defer text names the session it is waiting out ("us_equity market
+    closed" / "extended-hours"), so if the clock says RTH the defer is stale or
+    the client and monitor disagree about the session — either way it counts
+    toward the streak and pages, so no deferral wording can stay silent past
+    the open. IB defers ("IB venue for SYM is closed") follow the IB venue's
+    own session, not the US equity clock, and are not escalated here.
+
+    ⚠️ The generic phrases are honoured ONLY on text a session venue emits
+    (PI-20260930-ZIFJ1RKM-0006, ORDER-AUDIT-3). They used to match on EVERY
+    venue, so a Bybit "market closed for maintenance" rejection cleared the
+    close-failure streak and never paged. A defer must now carry the signature
+    of the integration that emits it: AlpacaClient ("us_equity market closed"
+    / an "extended-hours" prefix) or IBClient ("IB venue for SYM is closed").
+    Anything else is a failure and counts toward the streak.
+    """
+    low = str(err_str or "").lower()
+    if not ("exit deferred" in low or "deferring" in low or "market closed" in low
+            or "deferred to the regular session" in low):
+        return False
+    is_alpaca = "us_equity market closed" in low or low.startswith("extended-hours")
+    is_ib = "ib venue for " in low and " is closed" in low
+    if not (is_alpaca or is_ib):
+        return False
+    if is_alpaca:
+        try:
+            if _us_equity_session(now) == "rth":
+                return False
+        except Exception:  # noqa: BLE001
+            # An UNKNOWN session must not silence a close: count it toward
+            # the streak so a stuck clock still reaches the alarm.
+            logger.warning(
+                "order_monitor: us_equity_session failed — treating the Alpaca "
+                "defer as a failure", exc_info=True)
+            return False
+    return True
 
 
 def _close_retry_decision_for(matched_trade: dict):
@@ -3357,16 +3731,32 @@ def _orphan_position_policy() -> str:
     return "adopt"
 
 
+def _send_reset_alert(msg: str, *, caller: str) -> None:
+    """Telegram + WARNING FCM, best-effort — never raises into the sweep."""
+    try:
+        from src.runtime.notify import send_telegram_direct
+        send_telegram_direct(msg, parse_mode=None, mirror_to_fcm=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("%s: telegram send failed: %s", caller, exc)
+    try:
+        from src.runtime.mobile_push import publish_event
+        from src.runtime.mobile_push.event_kinds import WARNING
+        publish_event(WARNING, {"text": msg})
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("%s: fcm WARNING publish failed: %s", caller, exc)
+
+
 def _alert_account_reset(account_id: str, symbols: List[str]) -> None:
     """One consolidated 'account reset SUSPECTED' alert (Telegram + WARNING FCM).
 
     Fired once (latched per account) when the position-snapshot reconciler finds
     >= ``_ACCOUNT_RESET_SNAPSHOT_THRESHOLD`` positions for one account confirmed
     absent in a single pass. RISK-1 (BL-20260707-RECONCILER-MASS-FALSE-CLOSE):
-    the reconciler NO LONGER auto-closes on a mass vanish — mass-closing N live
-    rows on one inference is the amplifier that turned a bad 2026-07-07 read into
-    7 false closes. The rows are left OPEN; this alert asks the operator to
-    resolve. Best-effort — never raises into the reconcile sweep.
+    the reconciler does NOT mass-close on that one inference — mass-closing N
+    live rows on one read is the amplifier that turned a bad 2026-07-07 read
+    into 7 false closes. NO-HALT (2026-10-09): the rows are not parked for the
+    operator either; each is re-verified against the venue every pass and
+    resolved automatically. Best-effort — never raises into the reconcile sweep.
     """
     uniq: List[str] = []
     for s in symbols:
@@ -3378,23 +3768,355 @@ def _alert_account_reset(account_id: str, symbols: List[str]) -> None:
         f"{n} open position(s) vanished from the exchange in one snapshot "
         f"({', '.join(uniq[:12])}{' …' if len(uniq) > 12 else ''}). A wholesale "
         "vanish is treated as an account-level anomaly (external reset/wipe / "
-        "auth-scope change / broker incident), NOT strategy exits — so the DB "
-        "rows are left OPEN, NOT auto-closed (mass-closing on one read is how a "
-        "bad snapshot false-closed live positions on 2026-07-07). Please verify "
-        "on the broker whether these are genuinely flat; if so, close them "
-        "manually. If this recurs, check who/what has reset access to the account."
+        "auth-scope change / broker incident), NOT strategy exits — so the rows "
+        "are NOT mass-closed on this one read. Each is re-verified against the "
+        f"venue every pass: it closes (exit_reason=exchange_reset_flat, PnL "
+        f"declared unmeasured) only after {_RESET_SUSPECT_CONFIRM_READS} more "
+        "consecutive clean flat reads (on venues without a per-symbol check, "
+        f"also spanning >= {_RESET_SUSPECT_MIN_SPAN_INTERVALS} confirm intervals "
+        "or seen in a populated account snapshot), and stays open if the venue "
+        "shows it. "
+        "No action needed unless a follow-up red flag says re-verification is "
+        "not settling. If this recurs, check who/what has reset access to the "
+        "account."
+    )
+    _send_reset_alert(msg, caller="_alert_account_reset")
+
+
+def _alert_reset_suspect_stuck(account_id: str, items: List[Dict[str, Any]]) -> None:
+    """The ONE red flag: suspect rows on *account_id* have not settled after
+    ``_RESET_SUSPECT_FLAG_AFTER`` counted passes. Reconciliation keeps running
+    and retrying; this only asks somebody to look."""
+    desc = ", ".join(
+        f"#{it.get('trade_id')} {it.get('symbol')}/{it.get('side')} "
+        f"(passes={it.get('passes')}, last={it.get('last_read')})"
+        for it in items[:12]
+    )
+    msg = (
+        f"\U0001F6A9 [RED FLAG] Reset-suspect rows not settling: {account_id}\n"
+        f"{len(items)} row(s) still RESET-SUSPECT after "
+        f"{_RESET_SUSPECT_FLAG_AFTER}+ failed verification passes: {desc}. The venue "
+        "read keeps failing or cannot confirm flat, so nothing has been closed. "
+        "The reconciler keeps re-reading every pass and will resolve on its own "
+        "once the venue answers; please check the broker connection / account. "
+        "One flag per episode; recovery will be announced once."
+    )
+    _send_reset_alert(msg, caller="_alert_reset_suspect_stuck")
+
+
+def _alert_reset_suspect_recovered(account_id: str) -> None:
+    """ONE recovery announcement once a flagged account has no suspect rows."""
+    msg = (
+        f"\u2705 [RECOVERED] Reset-suspect rows settled: {account_id}\n"
+        "Every RESET-SUSPECT row on this account was re-verified against the "
+        "venue and resolved (closed as exchange_reset_flat on confirmed flat, or "
+        "kept open because the venue shows the position)."
+    )
+    _send_reset_alert(msg, caller="_alert_reset_suspect_recovered")
+
+
+def _reset_suspect_bump(tid: int, state: Dict[str, Any], last_read: str,
+                        *, failed: bool = False) -> None:
+    """Count one more verification pass for a still-suspect row (and, when
+    *failed*, one more FAILED pass toward the red flag)."""
+    state["passes"] = int(state.get("passes", 0)) + 1
+    if failed:
+        state["fail_passes"] = int(state.get("fail_passes", 0)) + 1
+    state["last_read"] = last_read
+
+
+def _reset_suspect_break_streak(state: Dict[str, Any]) -> None:
+    """A failed / unconfirmed read: the clean-read streak, its span credit and
+    its populated-snapshot credit all start over."""
+    state["flat_reads"] = 0
+    state["first_flat_at"] = None
+    state["last_flat_at"] = None
+    state["populated_flat"] = False
+
+
+def _new_reset_suspect_state(aid: str, sym: str, side: str, since: str,
+                             last_read: str) -> Dict[str, Any]:
+    return {
+        "account": aid, "symbol": sym, "side": side, "since": since,
+        "passes": 1, "fail_passes": 0, "flat_reads": 0,
+        "first_flat_at": None, "last_flat_at": None, "populated_flat": False,
+        "last_read": last_read,
+    }
+
+
+def _set_reset_suspect_marker(db, tid: int, marker: Optional[Dict[str, Any]]) -> bool:
+    """Persist (``marker`` dict) or clear (``None``) the RESET-SUSPECT marker in
+    ``trades.notes`` so the status survives a restart. Re-reads the row's notes
+    by id right before writing so a concurrent notes update is not clobbered by
+    the stale copy from the pass's batch read. Best-effort — never raises;
+    returns whether the write landed."""
+    try:
+        conn = db.connect()
+        try:
+            got = conn.execute(
+                "SELECT notes FROM trades WHERE id=?", (int(tid),),
+            ).fetchone()
+        finally:
+            conn.close()
+        if got is None:
+            return False
+        notes = _decode_notes(got[0])
+        if marker is None:
+            if _RESET_SUSPECT_NOTES_KEY not in notes:
+                return True
+            notes.pop(_RESET_SUSPECT_NOTES_KEY, None)
+        else:
+            notes[_RESET_SUSPECT_NOTES_KEY] = marker
+        db.update_trade(int(tid), {"notes": dump_capped(notes, 2000)})
+        return True
+    except Exception as exc:  # noqa: BLE001 — degrade to in-process state only
+        logger.warning(
+            "_reconcile_orphan_exchange_positions: RESET-SUSPECT marker %s "
+            "failed for trade_id=%s: %s (in-process state still holds it)",
+            "write" if marker is not None else "clear", tid, exc,
+        )
+        return False
+
+
+def _reset_suspect_maybe_flag(aid: str) -> None:
+    """Raise the account's ONE red flag when any of its suspect rows has
+    accumulated ``_RESET_SUSPECT_FLAG_AFTER`` FAILED verification passes."""
+    if aid in _RESET_SUSPECT_FLAGGED:
+        return
+    stuck = [
+        {"trade_id": tid, **st}
+        for tid, st in _RESET_SUSPECT_ROWS.items()
+        if st.get("account") == aid
+        and int(st.get("fail_passes", 0)) >= _RESET_SUSPECT_FLAG_AFTER
+    ]
+    if not stuck:
+        return
+    _RESET_SUSPECT_FLAGGED.add(aid)
+    logger.error(
+        "_reconcile_orphan_exchange_positions: RESET-SUSPECT RED FLAG account=%s "
+        "— %d row(s) unsettled after %d+ verification passes (%s); still "
+        "re-verifying every pass.",
+        aid, len(stuck), _RESET_SUSPECT_FLAG_AFTER,
+        ", ".join(str(it["trade_id"]) for it in stuck),
     )
     try:
-        from src.runtime.notify import send_telegram_direct
-        send_telegram_direct(msg, parse_mode=None, mirror_to_fcm=False)
+        _alert_reset_suspect_stuck(aid, stuck)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("_alert_account_reset: telegram send failed: %s", exc)
+        logger.warning("reset-suspect red flag send failed account=%s: %s", aid, exc)
+
+
+def _reset_suspect_maybe_recover(aid: str) -> None:
+    """Announce recovery ONCE when a flagged account has no suspect rows left."""
+    if aid not in _RESET_SUSPECT_FLAGGED:
+        return
+    if any(st.get("account") == aid for st in _RESET_SUSPECT_ROWS.values()):
+        return
+    _RESET_SUSPECT_FLAGGED.discard(aid)
+    logger.warning(
+        "_reconcile_orphan_exchange_positions: RESET-SUSPECT recovered "
+        "account=%s — every suspect row resolved.", aid,
+    )
     try:
-        from src.runtime.mobile_push import publish_event
-        from src.runtime.mobile_push.event_kinds import WARNING
-        publish_event(WARNING, {"text": msg})
+        _alert_reset_suspect_recovered(aid)
     except Exception as exc:  # noqa: BLE001
-        logger.debug("_alert_account_reset: fcm WARNING publish failed: %s", exc)
+        logger.warning("reset-suspect recovery send failed account=%s: %s", aid, exc)
+
+
+def _reset_suspect_note_read_failure(aid: str) -> None:
+    """The account's venue snapshot could not be read this pass. Resolve
+    NOTHING; break every suspect row's consecutive-flat streak (a clean read
+    must follow a clean read), count the pass, and maybe raise the red flag.
+    Reconciliation simply retries next pass."""
+    touched = False
+    for tid, st in _RESET_SUSPECT_ROWS.items():
+        if st.get("account") != aid:
+            continue
+        _reset_suspect_break_streak(st)
+        _reset_suspect_bump(tid, st, "snapshot_read_failed", failed=True)
+        touched = True
+    if touched:
+        _reset_suspect_maybe_flag(aid)
+
+
+def _reverify_reset_suspect_row(
+    db, r, *, state: Dict[str, Any], aid: str, cfg: Any, sym: str,
+    canonical: str, exchange_positions: set, now_dt: datetime, now_iso: str,
+    summary: Dict[str, int], supports_presence: bool,
+    position_present: Callable[[Any, str], Optional[bool]],
+    snapshot_populated: bool = False,
+) -> str:
+    """Re-read the venue for one RESET-SUSPECT row (NO-HALT, 2026-10-09).
+
+    Returns ``"present"`` (venue shows the position → kept open, managed
+    normally), ``"resolved"`` (venue confirmed flat → closed), or
+    ``"suspect"`` (still verifying / venue could not confirm → retried next
+    pass). Evidence standard is the reconciler's own: absent from a SUCCESSFUL
+    batch snapshot AND, where the integration supports it, a per-symbol
+    broker-confirmed flat (``False``); consecutive counted reads must be at
+    least ``_close_confirm_seconds()`` apart. An unconfirmed (``None``)
+    per-symbol read resolves nothing and breaks the streak.
+
+    Resolution needs ``_RESET_SUSPECT_CONFIRM_READS`` consecutive counted flat
+    reads. Where there is NO per-symbol check (IB, OANDA) it additionally needs
+    the streak to span ``_RESET_SUSPECT_MIN_SPAN_INTERVALS`` x
+    ``_close_confirm_seconds()`` OR one counted read whose account snapshot was
+    populated (*snapshot_populated*: >= 1 position) — a blank-but-"successful"
+    portfolio read that persists for a few minutes cannot resolve the row.
+    """
+    tid_int = int(r["id"])
+    if (sym, canonical) in exchange_positions:
+        summary["snapshot_reset_cleared_present"] = (
+            summary.get("snapshot_reset_cleared_present", 0) + 1
+        )
+        logger.warning(
+            "_reconcile_orphan_exchange_positions: RESET-SUSPECT cleared — "
+            "trade_id=%s account=%s symbol=%s side=%s is PRESENT on the venue; "
+            "kept open and managed normally.", tid_int, aid, sym, canonical,
+        )
+        return "present"
+    if supports_presence:
+        present = position_present(cfg, sym)
+        if present is True:
+            summary["snapshot_reset_cleared_present"] = (
+                summary.get("snapshot_reset_cleared_present", 0) + 1
+            )
+            logger.warning(
+                "_reconcile_orphan_exchange_positions: RESET-SUSPECT cleared — "
+                "trade_id=%s account=%s symbol=%s side=%s per-symbol broker "
+                "check reads OPEN (batch list was partial); kept open.",
+                tid_int, aid, sym, canonical,
+            )
+            return "present"
+        if present is not False:
+            # Could not confirm — resolve nothing; streak broken; retry.
+            _reset_suspect_break_streak(state)
+            _reset_suspect_bump(tid_int, state, "presence_unconfirmed", failed=True)
+            summary["snapshot_reset_suspect"] = (
+                summary.get("snapshot_reset_suspect", 0) + 1
+            )
+            return "suspect"
+    last_flat = state.get("last_flat_at")
+    if (
+        last_flat is not None
+        and (now_dt - last_flat).total_seconds() < _close_confirm_seconds()
+    ):
+        # Inside the spacing window — this read is not counted; wait.
+        summary["snapshot_reset_suspect"] = (
+            summary.get("snapshot_reset_suspect", 0) + 1
+        )
+        return "suspect"
+    if int(state.get("flat_reads", 0)) == 0 or state.get("first_flat_at") is None:
+        state["first_flat_at"] = now_dt
+    state["flat_reads"] = int(state.get("flat_reads", 0)) + 1
+    state["last_flat_at"] = now_dt
+    if snapshot_populated:
+        state["populated_flat"] = True
+    if state["flat_reads"] >= _RESET_SUSPECT_CONFIRM_READS:
+        _span_needed = _RESET_SUSPECT_MIN_SPAN_INTERVALS * _close_confirm_seconds()
+        _span = (now_dt - state["first_flat_at"]).total_seconds()
+        _evidence_ok = (
+            supports_presence
+            or bool(state.get("populated_flat"))
+            or _span >= _span_needed
+        )
+        if not _evidence_ok:
+            # Enough clean reads, but on a venue without a per-symbol check
+            # every one of them came from an EMPTY portfolio read inside the
+            # span window — a partial/blank snapshot can look like this.
+            # Keep re-reading (normal progress, not a failed pass).
+            _reset_suspect_bump(tid_int, state, "flat_awaiting_span")
+            summary["snapshot_reset_suspect"] = (
+                summary.get("snapshot_reset_suspect", 0) + 1
+            )
+            logger.info(
+                "_reconcile_orphan_exchange_positions: RESET-SUSPECT trade_id=%s "
+                "account=%s symbol=%s flat on %d reads over %.0fs; awaiting "
+                "%.0fs span or a populated snapshot before resolving",
+                tid_int, aid, sym, state["flat_reads"], _span, _span_needed,
+            )
+            return "suspect"
+        try:
+            _resolve_reset_suspect_row(
+                db, r, aid=aid, sym=sym, canonical=canonical,
+                now_iso=now_iso, summary=summary,
+            )
+            return "resolved"
+        except Exception as exc:  # noqa: BLE001 — retried next pass
+            logger.warning(
+                "_reconcile_orphan_exchange_positions: RESET-SUSPECT resolve "
+                "failed trade_id=%s account=%s symbol=%s: %s — retrying next "
+                "pass", tid_int, aid, sym, exc,
+            )
+            summary["errors"] += 1
+            _reset_suspect_bump(tid_int, state, "resolve_failed", failed=True)
+            return "suspect"
+    _reset_suspect_bump(tid_int, state, "flat")
+    summary["snapshot_reset_suspect"] = summary.get("snapshot_reset_suspect", 0) + 1
+    return "suspect"
+
+
+def _resolve_reset_suspect_row(db, r, *, aid: str, sym: str, canonical: str,
+                               now_iso: str, summary: Dict[str, int]) -> bool:
+    """Close a RESET-SUSPECT row the venue has confirmed flat on
+    ``_RESET_SUSPECT_CONFIRM_READS`` consecutive clean reads.
+
+    Honest close: ``exit_reason='exchange_reset_flat'`` (excluded from strategy
+    analytics by ``_clean_trades.exclude_reset_flat_predicate``), ``exit_price``
+    and ``pnl`` left NULL and DECLARED unmeasured (``pnl_source`` =
+    ``provenance.UNMEASURED_MARKER``) — the venue never showed us this exit, so
+    no price is invented; ``_sweep_local_pnl_for_unpriced`` skips the reason.
+    The linked package is cascade-closed so the strategy-monocle gate clears.
+    """
+    from src.runtime.provenance import UNMEASURED_MARKER
+    tid_int = int(r["id"])
+    notes = _decode_notes(r["notes"])
+    # The row is leaving RESET-SUSPECT: drop the restart marker (kept as
+    # history under a non-active key).
+    _marker = notes.pop(_RESET_SUSPECT_NOTES_KEY, None)
+    if _marker is not None:
+        notes["reset_suspect_history"] = _marker
+    notes.update({
+        "closed_at": now_iso,
+        "closed_by": "position_snapshot_reconciler",
+        "reset_event": True,
+        "closed_reason": (
+            "RESET-SUSPECT auto-resolved: vanished in a wholesale account "
+            "vanish, then re-verified flat on "
+            f"{_RESET_SUSPECT_CONFIRM_READS} further consecutive venue reads "
+            "(per-symbol broker check where supported). Exit not observed."
+        ),
+        "pnl_source": UNMEASURED_MARKER,
+        "unmeasured_reason": "account_reset_exit_unobserved",
+    })
+    db.update_trade(tid_int, {
+        "status": "closed",
+        "exit_reason": "exchange_reset_flat",
+        "closed_at": now_iso,
+        "notes": dump_capped(notes, 2000),
+    })
+    _cascade_close_linked_package(
+        db, tid_int,
+        close_reason="exchange_reset_flat",
+        caller="_reconcile_orphan_exchange_positions(reset_suspect)",
+    )
+    # TRADE-SCOPED protection cancel (CA-A01-001): only THIS trade's own legs
+    # — IB keyed group oca-protect-t<id>, Bybit tracked sl/tp ids, Alpaca
+    # size-scoped with siblings — never the legacy symbol-wide sweep, which on
+    # a netted contract would strip a sibling trade's protection (and on a
+    # false-flat would strip a live position's SL/TP). The helper reads the
+    # row's sl_order_id/tp_order_id by id (best-effort, so a pre-migration
+    # journal still closes the row) and the open sibling sizes.
+    _cancel_closed_row_protection(r, db)
+    summary["snapshot_reset_resolved"] = summary.get("snapshot_reset_resolved", 0) + 1
+    logger.warning(
+        "_reconcile_orphan_exchange_positions: RESET-SUSPECT RESOLVED — "
+        "trade_id=%s account=%s symbol=%s side=%s strategy=%s closed as "
+        "exchange_reset_flat (venue flat on %d consecutive re-reads; PnL "
+        "declared unmeasured)",
+        tid_int, aid, sym, canonical, r["strategy_name"],
+        _RESET_SUSPECT_CONFIRM_READS,
+    )
+    return True
 
 
 def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
@@ -3448,6 +4170,10 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         "checked_accounts": 0,
         "checked_positions": 0,
         "orphans_found": 0,
+        # Venue size above the journal's summed open size on a KNOWN
+        # (symbol, side), beyond _BYBIT_QTY_DIVERGENCE_FRAC — confirmed on a
+        # 2nd pass, alerted (detect-only), never adopted (CA-A01-020).
+        "surplus_found": 0,
         "adopted": 0,
         "closed": 0,
         "detect_only": 0,
@@ -3482,15 +4208,23 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
         # this pass but inside the 2-observation confirm window (snapshot_pending).
         "snapshot_closed": 0,
         # RISK-1 (BL-20260707-RECONCILER-MASS-FALSE-CLOSE): kept at 0 for
-        # back-compat — a wholesale RESET is NO LONGER auto-closed. A mass vanish
-        # now ALERTS (snapshot_reset_alerted) and leaves the rows OPEN. (Historical
-        # exchange_reset_flat rows from before this change still exist and are
-        # still excluded from strategy metrics by _clean_trades.)
+        # back-compat — a wholesale RESET is NEVER mass-closed on the detection
+        # read. A mass vanish ALERTS (snapshot_reset_alerted) and marks the rows
+        # RESET-SUSPECT; they are resolved per row by re-verification
+        # (snapshot_reset_resolved). exchange_reset_flat rows are excluded from
+        # strategy metrics by _clean_trades.
         "snapshot_reset_closed": 0,
         # Strategy-attributed rows confirmed absent in a suspected wholesale
         # RESET (>= _ACCOUNT_RESET_SNAPSHOT_THRESHOLD in one pass): alerted +
-        # left OPEN, never auto-closed on inference.
+        # marked RESET-SUSPECT, never closed on that one inference.
         "snapshot_reset_alerted": 0,
+        # NO-HALT (2026-10-09): RESET-SUSPECT rows re-verified this pass and
+        # still suspect (awaiting further clean flat reads / venue unreadable),
+        # resolved closed on confirmed flat, or cleared because the venue shows
+        # the position (kept open, managed normally).
+        "snapshot_reset_suspect": 0,
+        "snapshot_reset_resolved": 0,
+        "snapshot_reset_cleared_present": 0,
         # Rows absent from the batch LIST but NOT closed because a positive
         # per-symbol broker check (alpaca) said still-open (True) or could-not-
         # confirm (None) — only a broker-confirmed flat closes (RISK-1).
@@ -3552,7 +4286,10 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
             # close-on-disappear). _reconcile_open_trades observed the
             # same condition and bumped skipped_no_creds. Conservative
             # by design: we don't close an adopted_orphan row on the
-            # basis of a transient creds-read failure.
+            # basis of a transient creds-read failure. RESET-SUSPECT rows on
+            # this account resolve NOTHING this pass (streak broken, pass
+            # counted, red flag if unsettled) and are retried next pass.
+            _reset_suspect_note_read_failure(aid)
             continue
 
         # Read DB-open trades for this account in one batch so we don't
@@ -3585,6 +4322,9 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
             continue
 
         known: set = set()
+        # Summed open journal size per (symbol, side); None once any row's
+        # size is unreadable — "could not sum" is never "summed to less".
+        journal_qty: Dict[tuple, Optional[float]] = {}
         for r in open_rows:
             sym = r["symbol"]
             side = str(r["direction"] or "").lower()
@@ -3592,6 +4332,15 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                          "sell": "short", "short": "short"}.get(side)
             if sym and canonical:
                 known.add((sym, canonical))
+                _k = (sym, canonical)
+                try:
+                    _q = abs(float(r["position_size"]))
+                except (TypeError, ValueError):
+                    _q = None
+                if _q is None or (_k in journal_qty and journal_qty[_k] is None):
+                    journal_qty[_k] = None
+                else:
+                    journal_qty[_k] = (journal_qty.get(_k) or 0.0) + _q
 
         # Build the set of exchange-side (symbol, canonical_side) pairs
         # ONCE so both the adopt pass and the close-on-disappear pass
@@ -3648,7 +4397,14 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                         # flatten, which is strictly worse than the bug.
                         position_size=r["position_size"],
                     )
-                    if _attr.refused:
+                    if _attr.read_failed:
+                        # We could not look (package read raised). Unknown is
+                        # not "no candidate": hold the position on its static
+                        # stop and drop any armed no-strategy close, so a
+                        # flatten needs two clean reads again (CA-A01-019).
+                        _PENDING_ORPHAN_NOSTRAT_CLOSE.pop(tid_int, None)
+                        summary["errors"] += 1
+                    elif _attr.refused:
                         # A candidate EXISTS; we just cannot prove it owns this
                         # size. That is not "no rational exit strategy", so the
                         # position keeps resting on its static stop.
@@ -3761,10 +4517,21 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
             # then decide AFTER the loop whether this is a wholesale account RESET
             # (>= _ACCOUNT_RESET_SNAPSHOT_THRESHOLD positions vanishing at once —
             # the 2026-07-07 alpaca_paper paper-reset signature) vs individual
-            # disappearances. RISK-1: a suspected reset is NOT auto-closed — it
-            # fires ONE latched alert and leaves the rows OPEN; only individual
-            # (< threshold) confirmed-flat disappearances auto-close.
+            # disappearances. RISK-1: a suspected reset is NOT closed on that one
+            # inference — it fires ONE latched alert and marks the rows
+            # RESET-SUSPECT; only individual (< threshold) confirmed-flat
+            # disappearances close on the detection pass. NO-HALT (2026-10-09):
+            # suspect rows are re-verified every pass below and resolved on the
+            # venue's evidence — never parked for a human.
             _snapshot_to_close: List[Tuple[Any, int, str, str]] = []
+            # Drop suspect state for rows of this account that are no longer
+            # open (closed by another path) — nothing left to verify.
+            _open_ids = {int(_r["id"]) for _r in open_rows}
+            for _stid in [
+                t for t, st in _RESET_SUSPECT_ROWS.items()
+                if st.get("account") == aid and t not in _open_ids
+            ]:
+                _RESET_SUSPECT_ROWS.pop(_stid, None)
             # Track whether ANY strategy row for this account read absent from
             # the batch snapshot this pass (armed / pending / confirmed alike).
             # Used only to clear the reset-alert latch when the account is
@@ -3783,6 +4550,44 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 if not sym or not canonical:
                     continue
                 tid_int = int(r["id"])
+                _suspect = _RESET_SUSPECT_ROWS.get(tid_int)
+                if _suspect is None:
+                    # Restart re-hydration: a row persisted as RESET-SUSPECT in
+                    # its notes resumes verification with a FRESH streak — it
+                    # never re-enters the arm → confirm path, so it can never be
+                    # closed by the weaker individual 2-observation close.
+                    _marker = _decode_notes(r["notes"]).get(_RESET_SUSPECT_NOTES_KEY)
+                    if isinstance(_marker, dict):
+                        _suspect = _new_reset_suspect_state(
+                            aid, sym, canonical,
+                            str(_marker.get("since") or now_iso), "rehydrated",
+                        )
+                        _RESET_SUSPECT_ROWS[tid_int] = _suspect
+                        _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
+                        logger.warning(
+                            "_reconcile_orphan_exchange_positions: RESET-SUSPECT "
+                            "re-hydrated from notes after restart — trade_id=%s "
+                            "account=%s symbol=%s side=%s (since=%s); "
+                            "re-verifying with a fresh streak.",
+                            tid_int, aid, sym, canonical, _suspect["since"],
+                        )
+                if _suspect is not None:
+                    # NO-HALT re-verification of a RESET-SUSPECT row.
+                    if (sym, canonical) not in exchange_positions:
+                        _any_absent = True
+                    _verdict = _reverify_reset_suspect_row(
+                        db, r, state=_suspect, aid=aid, cfg=cfg, sym=sym,
+                        canonical=canonical, exchange_positions=exchange_positions,
+                        now_dt=now_iso_dt, now_iso=now_iso, summary=summary,
+                        supports_presence=supports_position_presence(cfg),
+                        position_present=account_position_present,
+                        snapshot_populated=len(positions) >= 1,
+                    )
+                    if _verdict != "suspect":
+                        _RESET_SUSPECT_ROWS.pop(tid_int, None)
+                    if _verdict == "present":
+                        _set_reset_suspect_marker(db, tid_int, None)
+                    continue
                 if (sym, canonical) in exchange_positions:
                     # Still open on the exchange — clear any pending arming.
                     _PENDING_SNAPSHOT_DISAPPEAR_CONFIRM.pop(tid_int, None)
@@ -3880,7 +4685,7 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
 
             # ── decide: wholesale account RESET vs individual disappearance ──
             # RISK-1 (BL-20260707-RECONCILER-MASS-FALSE-CLOSE): a mass vanish is
-            # NEVER auto-closed. Even though each collected row here is already
+            # NEVER closed on the detection pass. Even though each collected row here is already
             # per-symbol-confirmed flat (alpaca 404) or two-observation-confirmed
             # absent (IB/OANDA), >= _ACCOUNT_RESET_SNAPSHOT_THRESHOLD positions
             # disappearing from ONE account in a single pass is an account-level
@@ -3888,9 +4693,13 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
             # independent strategy exits — and mass-closing N live rows with a
             # fabricated local-mark PnL is the exact amplifier that turned one bad
             # 2026-07-07 read into 7 false closes + re-adoptions. So a suspected
-            # reset ALERTS (once, latched) and leaves the rows OPEN for an operator
-            # to resolve; only an INDIVIDUAL (< threshold) confirmed-flat
-            # disappearance auto-closes.
+            # reset ALERTS (once, latched) and marks the rows RESET-SUSPECT; only
+            # an INDIVIDUAL (< threshold) confirmed-flat disappearance closes now.
+            # NO-HALT (operator, 2026-10-09: "There is no halting."): suspect rows
+            # are NOT parked for an operator — each is re-verified against the
+            # venue every pass (_reverify_reset_suspect_row) and resolved on
+            # consecutive clean flat reads, kept open if the venue shows it, and
+            # retried when the read fails; ONE red flag if it does not settle.
             _is_reset = (
                 len(_snapshot_to_close) >= _ACCOUNT_RESET_SNAPSHOT_THRESHOLD
             )
@@ -3903,11 +4712,19 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 logger.warning(
                     "_reconcile_orphan_exchange_positions: RESET-SUSPECT for "
                     "account=%s — %d strategy-attributed positions confirmed "
-                    "absent in ONE pass (%s). NOT auto-closing (RISK-1: never "
-                    "mass-close on inference); leaving the rows OPEN for manual "
-                    "resolution and alerting the operator.",
+                    "absent in ONE pass (%s). NOT closing on this one read "
+                    "(RISK-1: never mass-close on inference); marking them "
+                    "RESET-SUSPECT for per-row venue re-verification every pass "
+                    "(NO-HALT 2026-10-09).",
                     aid, len(_snapshot_to_close), ", ".join(_vanished_syms),
                 )
+                for (_r, _t, _s, _c) in _snapshot_to_close:
+                    _RESET_SUSPECT_ROWS[_t] = _new_reset_suspect_state(
+                        aid, _s, _c, now_iso, "detected",
+                    )
+                    # Persist so a restart resumes verification instead of
+                    # re-entering the weaker individual close path.
+                    _set_reset_suspect_marker(db, _t, {"since": now_iso})
                 # Latch so the alert fires ONCE per account per episode, not on
                 # every confirm window while the anomaly persists.
                 if aid not in _RESET_ALERT_LATCHED:
@@ -3978,6 +4795,10 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
             # duplicate alert.
             if not _any_absent:
                 _RESET_ALERT_LATCHED.discard(aid)
+            # ONE red flag per account for rows not settling; ONE recovery
+            # announcement once none remain. Never gates reconciliation.
+            _reset_suspect_maybe_flag(aid)
+            _reset_suspect_maybe_recover(aid)
 
         if not positions:
             # No exchange positions to walk for the adopt pass; the
@@ -3996,6 +4817,12 @@ def _reconcile_orphan_exchange_positions(db) -> Dict[str, int]:
                 # Unrecognised position shape — skip, don't orphan.
                 continue
             if (sym, canonical_side) in known:
+                _check_venue_surplus(
+                    aid=aid, sym=str(sym), side=canonical_side,
+                    venue_size=p.get("size"),
+                    journal_size=journal_qty.get((sym, canonical_side)),
+                    entry_price=p.get("entry_price"), summary=summary,
+                )
                 continue
 
             # Orphan found.
@@ -4220,13 +5047,54 @@ class _OrphanAttribution:
       size.** The position has a plausible owner we simply cannot confirm.
       Flattening it would exit a live position for a bookkeeping reason, which
       is strictly worse than the mis-attribution this gate exists to prevent.
+    * ``read_failed=True`` — **we could not look.** The order-package read
+      raised (e.g. SQLite ``database is locked``), so whether a candidate
+      exists is UNKNOWN. This is NOT the ``refused=False`` "no candidate"
+      state and must never be acted on as one: a flatten on it would exit a
+      live position that a successful read might have reattached
+      (CA-A01-019, PI-20260927-KFWRL9R1-0006).
     """
 
     package: Optional[dict] = None
     refused: bool = False
+    #: The package read raised: "could not look", never "found nothing".
+    read_failed: bool = False
     #: The rejected candidate's claimed strategy, for the operator alert only.
     refused_strategy: Optional[str] = None
     detail: str = ""
+
+
+#: An orphan can only be the position of a package that is still plausibly
+#: live. MEASURED 2026-10-11 over every reverse-reconciler reattach in the live
+#: journal (21 trades, 6,566-row journal): 16 attached packages <= 6 days old;
+#: 5 ib_paper MES trades (5830, 5835, 5852, 5853, 5856) attached packages 44-106
+#: days old. 14 days sits in the empty 6-44 day gap.
+ORPHAN_PACKAGE_MAX_AGE_DAYS = 14.0
+
+
+def _orphan_package_stale(package: dict, *, now: Optional[datetime] = None) -> Optional[str]:
+    """Reason string when *package* is too old to own a fresh orphan, else ``None``.
+
+    An unparseable/absent ``created_at`` returns ``None``: "could not look" is
+    not "stale", so the previous (age-blind) behaviour is kept for that row.
+    """
+    raw = package.get("created_at")
+    if not raw:
+        return None
+    try:
+        created = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    age_days = ((now or datetime.now(timezone.utc)) - created).total_seconds() / 86400.0
+    if age_days > ORPHAN_PACKAGE_MAX_AGE_DAYS:
+        return (
+            f"package {package.get('order_package_id')} is {age_days:.1f} days old "
+            f"(> {ORPHAN_PACKAGE_MAX_AGE_DAYS:g}); price match alone cannot "
+            f"prove it opened this position"
+        )
+    return None
 
 
 def _recover_orphan_attribution(
@@ -4273,8 +5141,17 @@ def _recover_orphan_attribution(
         return _OrphanAttribution(detail="no direction or no entry price")
     try:
         candidates = db.get_recent_order_packages_for_symbol(symbol, limit=limit)
-    except Exception:  # noqa: BLE001 — best-effort; fall back to orphan_adopt
-        return _OrphanAttribution(detail="order-package read failed")
+    except Exception as exc:  # noqa: BLE001 — best-effort; fall back to orphan_adopt
+        # "Could not look" is its own state: the flatten probe in
+        # _reconcile_orphan_exchange_positions must not read it as "no
+        # candidate exists" (CA-A01-019).
+        logger.warning(
+            "_recover_orphan_attribution: order-package read failed for %s: %s "
+            "— attribution UNKNOWN (not 'no candidate')", symbol, exc,
+        )
+        return _OrphanAttribution(
+            read_failed=True, detail="order-package read failed",
+        )
     for c in candidates:
         if _canon_dir(c.get("direction")) != want:
             continue
@@ -4286,6 +5163,23 @@ def _recover_orphan_attribution(
                 continue
         except (TypeError, ValueError, ZeroDivisionError):
             continue
+
+        stale = _orphan_package_stale(c)
+        if stale:
+            # STALE IS A REFUSAL, NOT "NO CANDIDATE" (same reasoning as the
+            # size refusal below): a candidate exists, so the position is not
+            # flattened for a bookkeeping reason; it stays a bare orphan on its
+            # static stop. Applies to the size-ungated callers too -- the
+            # PROV-IB incident (ib_paper 5830/5852/5853/5856, MES) reattached a
+            # 106-day-old package by price alone.
+            claimed = str(c.get("strategy_name") or "")
+            logger.warning(
+                "_recover_orphan_attribution: %s REFUSED attribution to %r - %s",
+                symbol, claimed, stale,
+            )
+            return _OrphanAttribution(
+                refused=True, refused_strategy=claimed, detail=stale,
+            )
 
         if position_size is None:
             return _OrphanAttribution(package=c, detail="price match, size ungated")
@@ -4330,6 +5224,51 @@ def _recover_orphan_order_package(
         db=db, symbol=symbol, direction=direction, entry_price=entry_price,
         max_rel_diff=max_rel_diff, limit=limit,
     ).package
+
+
+def _relink_recovered_package(db, package: dict, trade_id: int) -> bool:
+    """Reopen a recovered orphan's package; link it ONLY if the link is free.
+
+    ⚠️ The adopt/reattach paths used to write ``linked_trade_id = <orphan>``
+    unconditionally. One package is shared by every account a signal fans out
+    to, and the orphan matcher is symbol-only, so a PAPER-mirror orphan (e.g.
+    ``bybit_portfolio``, which mirrors ``bybit_2`` exactly) stole the link from
+    the open REAL-MONEY leg — and ``_apply_partial_close`` resolves only
+    ``linked_trade_id`` (CA-A01-021, PI-20260927-KFWRL9R1-0008; invariant
+    BL-20260729 "the link points at the real trade").
+
+    Now the link is written only when it is empty, already names this trade,
+    or names a trade that is NOT open. If the current link names an open trade
+    — or we cannot read whether it is open — the link is kept; the orphan is
+    still a leg through its own ``trades.order_package_id``. The package is
+    reopened either way so ``run_monitor_tick`` governs the recovered leg.
+
+    Returns True when ``linked_trade_id`` was written.
+    """
+    opid = package.get("order_package_id")
+    current = package.get("linked_trade_id")
+    link_free = current in (None, "") or str(current) == str(trade_id)
+    if not link_free:
+        try:
+            hit = db.get_trades(filters={"id": int(current)})
+            link_free = not (hit and str(hit[0].get("status")) == "open")
+        except Exception as exc:  # noqa: BLE001 — could not look ≠ link free
+            logger.warning(
+                "_relink_recovered_package: read of linked trade %s for pkg=%s "
+                "failed (%s) — keeping the existing link", current, opid, exc,
+            )
+            link_free = False
+    updates: Dict[str, Any] = {"status": "open", "close_reason": None}
+    if link_free:
+        updates["linked_trade_id"] = int(trade_id)
+    else:
+        logger.info(
+            "_relink_recovered_package: pkg=%s keeps linked_trade_id=%s (an open "
+            "leg); recovered orphan trade %s joins as a leg via order_package_id",
+            opid, current, trade_id,
+        )
+    db.update_order_package(opid, updates)
+    return link_free
 
 
 def _reattach_adopted_orphans(db, summary: Dict[str, int]) -> None:
@@ -4410,12 +5349,13 @@ def _reattach_adopted_orphans(db, summary: Dict[str, int]) -> None:
                 "entry_reason": "reverse_reconciler_reattached_existing_orphan",
                 # Now tied back to its real strategy + order package (item #4).
                 "reconcile_status": "reconciled",
+                # The leg back-reference: _package_open_legs resolves a
+                # package's legs by trades.order_package_id, so the row is
+                # managed even when the package's linked_trade_id is (rightly)
+                # kept on another open leg (CA-A01-021).
+                "order_package_id": opid,
             })
-            db.update_order_package(opid, {
-                "status": "open",
-                "linked_trade_id": int(r["id"]),
-                "close_reason": None,
-            })
+            _relink_recovered_package(db, recovered, int(r["id"]))
         except Exception as exc:  # noqa: BLE001 — best-effort per row
             logger.warning(
                 "_reattach_adopted_orphans: re-attach of trade %s failed: %s",
@@ -4676,11 +5616,7 @@ def _adopt_orphan_position(
         # Reopen + re-link the original package so run_monitor_tick picks it
         # up under the recovered strategy and applies its monitor() exits.
         try:
-            db.update_order_package(opid, {
-                "status": "open",
-                "linked_trade_id": trade_id,
-                "close_reason": None,
-            })
+            _relink_recovered_package(db, recovered, trade_id)
         except Exception as exc:  # noqa: BLE001 — trade row already adopted; log only
             logger.warning(
                 "_adopt_orphan_position: re-link of package %s failed: %s",
@@ -4808,6 +5744,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             and (now - created).total_seconds() < grace_seconds
         ):
             summary["skipped_recent"] += 1
+            _note_reconciler_seen(r["id"], "grace_window")
             continue
         ripe_rows.append(r)
 
@@ -4836,9 +5773,13 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
         cfg = cfgs.get(aid)
         if cfg is None:
             summary["skipped_no_cfg"] += len(trade_rows)
+            for _r in trade_rows:
+                _note_reconciler_seen(_r.get("id"), "account_no_cfg")
             continue
         if str(cfg.get("mode") or "live").lower() in {"dry", "dry_run", "dry-run", "paper"}:
             summary["skipped_dry"] += len(trade_rows)
+            for _r in trade_rows:
+                _note_reconciler_seen(_r.get("id"), "account_dry")
             continue
 
         # Lazy positions cross-check cache: at most ONE call to
@@ -4858,12 +5799,14 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                 # which also rejected Bybit V5 UUID-format orderIds
                 # and silently turned this reconciler into a no-op
                 # for every linear-perp account; see _is_real_order_id.
+                _note_reconciler_seen(row.get("id"), "non_order_id")
                 summary["skipped_non_numeric"] += 1
                 continue
 
             order_status = account_order_status(cfg, trade_id_str)
             if order_status is None:
                 # Read failure → skip conservatively.
+                _note_reconciler_seen(row.get("id"), "order_read_failed")
                 summary["skipped_no_creds"] += 1
                 continue
 
@@ -4872,6 +5815,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
 
             if status_str in _BYBIT_LIVE_ORDER_STATUSES:
                 # Order still live on Bybit — leave the DB row alone.
+                _note_reconciler_seen(row.get("id"), f"order_live:{status_str}")
                 continue
 
             # Order is in a terminal state OR genuinely unknown.
@@ -4904,11 +5848,13 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                         )
                     if positions_cache is None:
                         # Could not look → never orphan on a half-known view.
+                        _note_reconciler_seen(row.get("id"), "not_found_positions_unreadable")
                         summary["skipped_no_creds"] += 1
                         continue
                     if row.get("symbol") in unreadable_syms:
                         # FIX-CA-08: absent on an unreadable symbol is not
                         # "position absent" — no orphan, no confirm armed.
+                        _note_reconciler_seen(row.get("id"), "not_found_symbol_unreadable")
                         summary["skipped_no_creds"] += 1
                         continue
                     _nf_tid = row.get("id")
@@ -4922,15 +5868,18 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                             "%s %s OPEN", trade_id_str, _nf_tid, aid,
                             row.get("symbol"), _nf_side,
                         )
+                        _note_reconciler_seen(row.get("id"), "not_found_position_alive")
                         continue
                     if _nf_tid is not None:
                         _nf_first = _PENDING_CLOSE_CONFIRM.get(int(_nf_tid))
                         if _nf_first is None:
                             _PENDING_CLOSE_CONFIRM[int(_nf_tid)] = now
+                            _note_reconciler_seen(row.get("id"), "not_found_pending_confirm")
                             summary["pending_close"] += 1
                             continue
                         if ((now - _nf_first).total_seconds()
                                 < _close_confirm_seconds()):
+                            _note_reconciler_seen(row.get("id"), "not_found_pending_confirm")
                             summary["pending_close"] += 1
                             continue
                         _PENDING_CLOSE_CONFIRM.pop(int(_nf_tid), None)
@@ -4983,6 +5932,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             if positions_cache is None:
                 # Position-read failed → skip conservatively (don't
                 # close on a half-known view).
+                _note_reconciler_seen(row.get("id"), "positions_read_failed")
                 summary["skipped_no_creds"] += 1
                 continue
 
@@ -4990,6 +5940,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             if sym in unreadable_syms:
                 # FIX-CA-08: this symbol's read failed — absent is not flat.
                 # Skip: no close, and no close-confirm armed on it.
+                _note_reconciler_seen(row.get("id"), "symbol_unreadable")
                 summary["skipped_no_creds"] += 1
                 continue
             side = str(row["direction"] or "").lower()
@@ -5003,6 +5954,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                 # reconciler half — only a flat that PERSISTS closes a trade.
                 if _tid is not None:
                     _PENDING_CLOSE_CONFIRM.pop(int(_tid), None)
+                _note_reconciler_seen(row.get("id"), "position_alive")
                 continue
 
             # Order filled, position flat → trade closed by exchange
@@ -5023,11 +5975,13 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                     # First net-flat observation — arm the confirmation and
                     # wait for the next tick to confirm.
                     _PENDING_CLOSE_CONFIRM[_tid_int] = now
+                    _note_reconciler_seen(row.get("id"), "flat_pending_confirm")
                     summary["pending_close"] += 1
                     continue
                 if (now - _first_flat).total_seconds() < _close_confirm_seconds():
                     # Seen flat before but the confirm window hasn't elapsed
                     # yet — keep waiting (still might recover to open).
+                    _note_reconciler_seen(row.get("id"), "flat_pending_confirm")
                     summary["pending_close"] += 1
                     continue
                 # Flat confirmed across the window → close, clear the pending.
@@ -5046,6 +6000,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                     "trade_id=%s account=%s symbol=%s: %s",
                     row.get("id"), aid, sym, exc,
                 )
+                _note_reconciler_seen(row.get("id"), f"close_write_failed:{type(exc).__name__}")
                 summary["errors"] += 1
                 continue
 
@@ -5741,6 +6696,52 @@ def _prorate_netted_broker_pnl(
     return float(pnl), False
 
 
+def _venue_entry_price(
+    journal_entry: Any, order_status: Optional[Dict[str, Any]],
+) -> Optional[float]:
+    """The entry price to match a broker closed-pnl record against.
+
+    WATCHDOG-PAST-STOP (2026-10-10). ``trades.entry_price`` is the package's
+    INTENDED entry, not the fill. The closed-pnl matcher drops any record whose
+    ``avgEntryPrice`` is more than 10 bps from its target, so ordinary market-
+    entry slippage made the venue's own record unmatchable. MEASURED on bybit_2
+    (real money): trade 6549 ADAUSDT journal 0.2394 vs fill 0.2391 (12.5 bps),
+    trade 6528 XRPUSDT journal 1.3464 vs fill 1.3478 (10.4 bps). Both closes
+    were their own stop-loss orders, yet both fell to the watchdog's
+    unmatched branch and were booked off a candle at detection time.
+
+    Comparing the venue's record against the venue's entry fill keeps the
+    #1411/#1419 disambiguation (same tolerance, same opened_at filter) and
+    removes the slippage from the comparison. Falls back to the journal value
+    when the entry order's average price is unknown.
+    """
+    avg = _safe_float((order_status or {}).get("avg_price"))
+    if avg and avg > 0:
+        return avg
+    return _safe_float(journal_entry)
+
+
+def _entry_order_status_for(
+    cfg: Optional[Dict[str, Any]], trade_row: Any,
+) -> Optional[Dict[str, Any]]:
+    """The entry order's venue status for *trade_row*, or ``None``.
+
+    Best-effort and only for a real exchange order id; never raises. Used by the
+    watchdog's flat branch, which (unlike the forward reconciler) has no order
+    status in hand when it asks for the broker's closed-pnl record.
+    """
+    if cfg is None or trade_row is None:
+        return None
+    try:
+        tid = _extract_trade_id_from_notes(trade_row["notes"])
+        if tid is None or not _is_real_order_id(tid):
+            return None
+        from src.units.accounts.clients import account_order_status
+        return account_order_status(cfg, tid)
+    except Exception:  # noqa: BLE001 — a lookup aid, never a tick breaker
+        return None
+
+
 def _recover_close_from_broker_pnl(
     db,
     trade_row: Any,
@@ -5785,7 +6786,12 @@ def _recover_close_from_broker_pnl(
             direction=str(trade_row["direction"] or ""),
             opened_at_ms=opened_at_ms,
             qty=_safe_float(trade_row["position_size"]),
-            entry_price=_safe_float(trade_row["entry_price"]),
+            # WATCHDOG-PAST-STOP: the venue's entry fill, not the intended
+            # entry — see _venue_entry_price.
+            entry_price=_venue_entry_price(
+                trade_row["entry_price"],
+                _entry_order_status_for(cfg, trade_row),
+            ),
         )
     except Exception as exc:  # noqa: BLE001 — best-effort; fall back to orphan
         logger.warning(
@@ -6242,6 +7248,13 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                     db, trade_row, cfg, now_iso,
                 )
                 if recovered is not None:
+                    try:
+                        _rnotes = _decode_notes(recovered.get("notes"))
+                        _rnotes["reconciler_last"] = _reconciler_last_seen(
+                            trade_row["id"])
+                        recovered["notes"] = dump_capped(_rnotes, 500)
+                    except Exception:  # noqa: BLE001 — a stamp never blocks the close
+                        pass
                     db.update_trade(int(trade_row["id"]), recovered)
                     # CA-A01-001: flat-finalise → cancel THIS trade's own
                     # resting protection (keyed group / tracked legs).
@@ -6259,9 +7272,10 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                         "_watchdog_stuck_strategies: RECOVERED close via "
                         "broker closed-pnl instead of orphaning — trade_id=%s "
                         "account=%s symbol=%s side=%s pnl=%s (position flat at "
-                        "exchange; Bybit closed-pnl confirmed a real close)",
+                        "exchange; Bybit closed-pnl confirmed a real close; "
+                        "reconciler_last=%s)",
                         trade_row["id"], aid, symbol, direction,
-                        recovered.get("pnl"),
+                        recovered.get("pnl"), _reconciler_last_seen(trade_row["id"]),
                     )
                 else:
                     # Position CONFIRMED FLAT at the exchange + package stuck >
@@ -6301,6 +7315,8 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                             f"account); package stuck > {int(threshold_minutes)} "
                             "min; finalized closed with local-compute pnl"
                         ),
+                        # Why the forward reconciler had not closed it first.
+                        "reconciler_last": _reconciler_last_seen(trade_row["id"]),
                     })
                     # package-cascade: HANDLED, not missing. The package was
                     # already force-closed ABOVE on this same branch
@@ -6328,8 +7344,9 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                         "account=%s symbol=%s side=%s (position flat at exchange; "
                         "broker closed-pnl unmatched — expected per-leg on a "
                         "netting account; _sweep_local_pnl_for_unpriced prices it "
-                        "next tick)",
+                        "next tick; reconciler_last=%s)",
                         trade_row["id"], aid, symbol, direction,
+                        _reconciler_last_seen(trade_row["id"]),
                     )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
@@ -7084,7 +8101,10 @@ def _close_trade_from_order_status(
                     direction=str(row.get("direction") or ""),
                     opened_at_ms=opened_at_ms,
                     qty=_safe_float(row.get("position_size")),
-                    entry_price=_safe_float(row.get("entry_price")),
+                    # WATCHDOG-PAST-STOP: match on the venue's entry FILL, not
+                    # the journal's intended entry (see _venue_entry_price).
+                    entry_price=_venue_entry_price(
+                        row.get("entry_price"), order_status),
                     reduce_leg=is_reduce_leg,
                 )
         except Exception as exc:  # noqa: BLE001
@@ -8201,7 +9221,12 @@ def _emit_bybit_over_cover_alert(
     the side-blind sum, because that sum is the UNION of both conditions:
     narrowing the trigger to same-book coverage would make the orphan case go
     SILENT, which is strictly worse than mislabelling it. What changed in
-    #10739 is only what the page SAYS once it has fired.
+    #10739 is only what the page SAYS once it has fired. ONE exception since
+    PI-20261009-GXEDZJQE-0001 (2026-10-15): when the venue's own read reports a
+    LIVE sibling book, the caller grades each book's legs against that book's
+    own size (``bybit_leg_sides.over_cover_trip``). Those legs protect a live
+    position and are not stranded, so they no longer page. Stranded legs (no
+    live sibling) still trip on the side-blind sum.
 
     ⚠️ **AND "ONLY WHAT THE PAGE SAYS" NO LONGER DESCRIBES THE WHOLE SYSTEM,
     THOUGH IT STILL DESCRIBES THIS FUNCTION.** Since 2026-09-02 the naked
@@ -8941,6 +9966,72 @@ def _record_rearm_attempt(account_id: str, trade_id: Any) -> None:
         logger.exception("_record_rearm_attempt: %s/%s", account_id, trade_id)
 
 
+# Consecutive sweeps a RESTING stop has been confirmed through by a fresh
+# regular-session print. A stop legitimately sits breached for a moment while it
+# fires; persisting across sweeps means the venue is not executing it.
+_RESTING_STOP_BREACH_SWEEPS = 3
+_RESTING_STOP_BREACH_STREAK: Dict[str, int] = {}
+
+
+def _resting_stop_not_executing(client, account_id: str, symbol: str, row,
+                                state: Dict[str, Any]) -> bool:
+    """True once the row's resting venue stop has been CONFIRMED through the
+    market (`_breach_state` == ``confirmed``: a fresh RTH trade at/through it)
+    on `_RESTING_STOP_BREACH_SWEEPS` consecutive sweeps; pages once per
+    cooldown via `_page_rearm_refusal`. Never raises; any read failure or a
+    non-breach resets the streak and returns False (the old behaviour)."""
+    key = f"{account_id}|{symbol}|{row['id']}"
+    try:
+        want = _dir_side(row["direction"])
+        prices = [float(p) for p in (state.get("stop_prices") or []) if p]
+        if want is None or not prices:
+            _RESTING_STOP_BREACH_STREAK.pop(key, None)
+            return False
+        # The stop that fires FIRST: the highest sell stop under a long, the
+        # lowest buy stop over a short.
+        stop = max(prices) if want == "long" else min(prices)
+        bstate, binfo = _breach_state(client, symbol, want, stop, None, None, None)
+        if bstate != "confirmed":
+            _RESTING_STOP_BREACH_STREAK.pop(key, None)
+            return False
+        n = _RESTING_STOP_BREACH_STREAK.get(key, 0) + 1
+        _RESTING_STOP_BREACH_STREAK[key] = n
+        if n < _RESTING_STOP_BREACH_SWEEPS:
+            return False
+        if _has_standing_wedge(account_id, symbol, row["direction"]):
+            # KNOWN: the close path already evidenced this position as a
+            # broker wedge and `close_wedge_standing` re-pages it on its own
+            # floor (operator, 2026-10-15, on GLD: "Leave it for now"). Count
+            # it, log it, never page a second channel for the same position.
+            logger.warning(
+                "_resting_stop_not_executing: %s/%s trade_id=%s resting stop "
+                "%s not executing — known standing wedge, not re-paged here",
+                account_id, symbol, row["id"], stop)
+            return True
+        _page_rearm_refusal(
+            "resting_stop_not_executing", account_id, symbol, row["id"],
+            f"a {want} stop at {stop} rests at the venue but a fresh trade at "
+            f"{(binfo.get('trade') or {}).get('price')} has been through it for "
+            f"{n} consecutive sweeps without a fill — the venue is not executing "
+            "this stop; the position is effectively unprotected",
+            verb="detected")
+        return True
+    except Exception:  # noqa: BLE001 — a detector must never break the sweep
+        logger.exception("_resting_stop_not_executing: %s/%s", account_id, symbol)
+        _RESTING_STOP_BREACH_STREAK.pop(key, None)
+        return False
+
+
+def _has_standing_wedge(account_id: str, symbol: str, direction: Any) -> bool:
+    """Is (account, symbol, side) an evidenced standing wedge in
+    ``close_wedge_standing``? Unreadable -> False (page rather than hide)."""
+    try:
+        from src.runtime.close_wedge_standing import _load, wedge_key
+        return wedge_key(account_id, symbol, direction) in (_load().get("wedges") or {})
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
                         trade_id: Any, reason: str, *, verb: str = "refused") -> None:
     """Log every refusal; page CRITICAL (per symbol+kind cooldown).
@@ -9502,6 +10593,9 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         "active_close_skipped": 0,
         "no_client": 0,
         "stop_resting": 0,
+        # A stop rests at the venue but a fresh RTH print has been through it
+        # for several sweeps without it filling (ORDER-AUDIT-3 P0).
+        "stop_resting_breached": 0,
         "no_levels": 0,
         "venue_holding_duplicate": 0,
         "rearm_failed": 0,
@@ -9780,6 +10874,20 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                 # A confirmed resting stop refills this row's re-arm budget
                 # (REVIEW-14241 item 4).
                 _reset_rearm_attempts(account_id, row["id"])
+                # A resting stop is only protection if the venue EXECUTES it.
+                # ORDER-AUDIT-3 P0: alpaca_paper GLD (pkg-6a8e3fb325464be3)
+                # held a 39-sh OCO stop at 416.09 for ~15 days with GLD ~379 --
+                # ~37 points through, never filled, and a cancel Alpaca
+                # ACCEPTED left both legs in place (cancel_accepted_ineffective).
+                # This branch counted it as a healthy `stop_resting` every
+                # sweep. A stop a FRESH regular-session print has been through
+                # for _RESTING_STOP_BREACH_SWEEPS consecutive sweeps is not
+                # executing: counted apart and flagged ONCE (per cooldown)
+                # through the existing re-arm refusal pager. Nothing is placed
+                # or cancelled here -- the close path owns the exit.
+                if _resting_stop_not_executing(client, account_id, symbol, row, state):
+                    summary["stop_resting_breached"] += 1
+                    continue
                 summary["stop_resting"] += 1
                 continue  # stop side is armed — nothing for THIS pass to do
             summary["broker_naked"] += 1
@@ -10362,7 +11470,18 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                 )
                 continue
             size = float(cov.get("size") or 0.0)
-            covered = float(cov.get("covered_qty") or 0.0)
+            # ⚠️ GRADED ON THE STOP SIDE (CA-A01-048,
+            # PI-20260927-KFWRL9R1-0011). `covered_qty` is stop OR target per
+            # OCA group, so a book holding a full take-profit and NO stop read
+            # fully covered: never re-armed, never paged. A take-profit cannot
+            # stop a loss. `stop_qty` is the side-aware figure the client
+            # returns; `covered_qty` is only the fallback for a coverage dict
+            # that predates it. `_rearm_credit` is this sweep's own re-arms.
+            _stop_side = cov.get("stop_qty")
+            covered = float(
+                (_stop_side if _stop_side is not None else cov.get("covered_qty"))
+                or 0.0
+            ) + float(cov.get("_rearm_credit") or 0.0)
             if size <= 0:
                 continue  # flat at the broker — nothing to protect
             if cov.get("unknown_qty_legs"):
@@ -10570,6 +11689,75 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
             if covered >= size - _IB_COVERAGE_EPSILON:
                 summary["covered"] += 1
                 continue  # fully covered (STOP side; see the target check above)
+            # Something rests but the STOP side is short of the position —
+            # partial stop cover, or a target-only book. Paged CRITICAL once per
+            # symbol per sweep, as the Alpaca sweep does: the uncovered qty can
+            # only run (CA-A01-048/-049).
+            if (cov.get("legs") or 0) > 0 and not cov.get("_partial_paged"):
+                cov["_partial_paged"] = True
+                summary["stop_short_paged"] = summary.get("stop_short_paged", 0) + 1
+                _emit_partial_stop_coverage_alert(
+                    account_id=account_id, symbol=protect_symbol, size=size,
+                    stop_qty=covered, target_qty=cov.get("target_qty"),
+                    trade_ids=[row["id"]], venue="ib",
+                )
+            # This row's OWN bracket is intact: its keyed group
+            # `oca-protect-t<id>` already rests a stop for its qty, so the
+            # shortfall belongs to a sibling. Re-arming it would cancel and
+            # re-place a good bracket every sweep while the genuinely naked
+            # sibling is skipped forever (CA-A01-049,
+            # PI-20260927-KFWRL9R1-0012).
+            _own = (cov.get("stop_groups") or {}).get(f"oca-protect-t{row['id']}")
+            try:
+                _own_intact = _own is not None and float(_own) >= (
+                    float(row["position_size"] or 0.0) - _IB_COVERAGE_EPSILON
+                ) > 0
+            except (TypeError, ValueError):
+                _own_intact = False
+            if _own_intact:
+                summary["own_group_intact"] = summary.get("own_group_intact", 0) + 1
+                continue
+            # ⚠️ A FOREIGN TARGET CAN BLOCK THE RE-ARM (#16496 review).
+            # place_protective arms a stop AND a full-row-qty target in
+            # `oca-protect-t<id>`. Target qty already resting OUTSIDE that group
+            # (another group, or ungrouped), plus targets this sweep already
+            # re-armed, plus this row's new one must not exceed the position:
+            # IB limit orders are not reduce-only, so an over-covered target
+            # side can fill past flat into a reverse position — the reason the
+            # target-naked branch above alerts and does not re-arm. A sibling's
+            # own bracket (target == its share) still leaves room, so the
+            # partial-netted repair is unaffected. Unreadable side-aware fields
+            # are "could not look" and block. The CRITICAL page above has fired.
+            _tq = cov.get("target_qty")
+            _tg = cov.get("target_groups")
+            try:
+                if _tq is None or _tg is None:
+                    # A coverage dict predating the side-aware fields: only a
+                    # combined figure above the stop side reveals a target.
+                    _outside = max(
+                        0.0, float(cov.get("covered_qty") or 0.0) - covered)
+                else:
+                    _outside = float(_tq) - float(
+                        _tg.get(f"oca-protect-t{row['id']}") or 0.0)
+                _outside += float(cov.get("_rearm_credit") or 0.0)
+                _target_overfill = (
+                    _outside + float(row["position_size"] or 0.0)
+                    > size + _IB_COVERAGE_EPSILON
+                )
+            except (TypeError, ValueError, AttributeError):
+                _target_overfill = True
+            if _target_overfill:
+                summary["rearm_blocked_foreign_target"] = (
+                    summary.get("rearm_blocked_foreign_target", 0) + 1)
+                logger.error(
+                    "_check_broker_naked_ib_positions: %s/%s stop short "
+                    "(%s of %s) but target qty resting outside trade %s's own "
+                    "group would push the target side past the position — NOT "
+                    "re-arming (a second target could open a reverse "
+                    "position); paged, resolve by hand",
+                    account_id, protect_symbol, covered, size, row["id"],
+                )
+                continue
             # Partially covered is the case the old boolean could not see: a
             # surviving sibling leg made the whole netted position read
             # PROTECTED while this trade's own protection was gone.
@@ -10609,7 +11797,7 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                 # that is the boolean defect in miniature. Crediting the qty
                 # keeps a still-uncovered sibling visible on this same sweep.
                 try:
-                    cov["covered_qty"] = float(cov.get("covered_qty") or 0.0) + float(
+                    cov["_rearm_credit"] = float(cov.get("_rearm_credit") or 0.0) + float(
                         row["position_size"] or 0.0
                     )
                 except (TypeError, ValueError):
@@ -10845,6 +12033,24 @@ def _bybit_position_protection(client, category: str, symbol: str,
     pos = selection.row
     size = selection.size
     side = _norm_position_side(pos.get("side"))
+    # PI-20261009-GXEDZJQE-0001: the summed size of the OTHER live books, taken
+    # from this same venue read, and only when the venue reported >= 2 live
+    # books (a per-book read of a hedge symbol). `None` means no live sibling
+    # was established. It never means "the sibling is flat" and is never 0.0.
+    # The over-cover trip uses it to grade a live sibling's legs against that
+    # sibling's own size (`bybit_leg_sides.over_cover_trip`).
+    sibling_live_size: Optional[float] = None
+    if selection.live_count >= 2:
+        _sib = 0.0
+        for _r in rows:
+            if _r is pos or not isinstance(_r, dict):
+                continue
+            try:
+                _sib += abs(float(_r.get("size")))
+            except (TypeError, ValueError):
+                _sib = None
+                break
+        sibling_live_size = _sib if (_sib is not None and _sib > 0) else None
     # THE VENUE'S POSITION MODE, carried so the leg-side split can say whether
     # an OPPOSITE book could exist at all (0 = one-way netting ⇒ it cannot;
     # 1/2 = hedge ⇒ it may be a live sibling). Never defaulted to 0 — see
@@ -10869,6 +12075,13 @@ def _bybit_position_protection(client, category: str, symbol: str,
         # the venue's own value will not parse — *we could not look*, never
         # "the price is fine", and never a fabricated 0.0.
         _px = _bybit_sl_leg_trigger({"price": pos_sl})
+        if _px is None:
+            # CA-A01-056: an unparseable stopLoss is "we could not look" -- it
+            # must not grade FULLY covered. Refuse (None => callers SKIP, never
+            # re-arm on an unconfirmed read).
+            if refusal is not None:
+                refusal["state"] = "stop_unparseable"
+            return None
         return {
             "size": size, "side": side, "covered_qty": size,
             "source": "full_position_stop",
@@ -10942,6 +12155,8 @@ def _bybit_position_protection(client, category: str, symbol: str,
     return {
         "size": size, "side": side, "covered_qty": covered,
         "source": "partial_sl_legs",
+        # Size of the OTHER live book(s) on this symbol, or None (see above).
+        "sibling_book_live_size": sibling_live_size,
         # The VENUE's position mode for this book (0 one-way / 1 hedge-long
         # / 2 hedge-short), carried so the coverage soak can say WHY two
         # bases disagreed. ⚠️ `None` means the venue did not report it —
@@ -11727,6 +12942,10 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
         # exists to stop. `over_cover_split_ungraded` is *we could not tell
         # which* — emphatically not a third finding, and not a clean read.
         "over_cover_other_book": 0, "over_cover_split_ungraded": 0,
+        # PI-20261009-GXEDZJQE-0001: the side-blind sum was over the factor,
+        # but the venue reported a live sibling book and each book's legs are
+        # within that book's own size. No trip and no page; counted here.
+        "over_cover_live_sibling_explained": 0,
         # ---- the staged graded-book coverage basis (2026-09-02) -----------
         # ⚠️ THREE COUNTERS, THREE DIFFERENT FACTS, NEVER POOLED.
         # `coverage_graded_basis_bound` — rows where the GRADED figure actually
@@ -12047,10 +13266,37 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                 # Live example: bybit_1 XRPUSDT, position 32557.2, legs
                 # 144789.3 (444.7%) — if the first leg trips it OVER-closes,
                 # and the rest are stranded.
-                if (
-                    state["source"] == "partial_sl_legs"
-                    and covered > size * _BYBIT_OVERCOVER_FACTOR
-                ):
+                # PI-20261009-GXEDZJQE-0001: the trip stays side-blind EXCEPT
+                # where the venue reported a LIVE sibling book in this same
+                # read. Those legs then protect that sibling and are graded
+                # against ITS size. Before this, a 0.12 long fully covered by
+                # its own leg paged at ERROR because a live 19.69 short's own
+                # 19.69 SL sat in the side-blind sum (bybit_1/ETHUSDT,
+                # 2026-10-08 and every ~2.3 min on 2026-10-15). Stranded
+                # other-book legs (no live sibling) still trip as before.
+                _oc_trips = False
+                if state["source"] == "partial_sl_legs":
+                    _oc_trips, _oc_basis = _bybit_leg_sides.over_cover_trip(
+                        size=size, side_blind_qty=covered,
+                        split=state.get("leg_side_split"),
+                        sibling_live_size=state.get("sibling_book_live_size"),
+                        factor=_BYBIT_OVERCOVER_FACTOR,
+                    )
+                    if (not _oc_trips and _oc_basis
+                            == _bybit_leg_sides.OVER_COVER_BASIS_PER_BOOK):
+                        # Counted, so "the side-blind sum was over but a live
+                        # sibling explains it" stays visible in the summary.
+                        summary["over_cover_live_sibling_explained"] += 1
+                        logger.debug(
+                            "_check_broker_naked_bybit_positions: %s/%s "
+                            "side-blind SL total %s exceeds size %s, but the "
+                            "excess protects a LIVE sibling book (size %s); "
+                            "each book is within its own size. Not an "
+                            "over-cover.",
+                            account_id, symbol, covered, size,
+                            state.get("sibling_book_live_size"),
+                        )
+                if _oc_trips:
                     summary["over_covered"] += 1
                     # ⚠️ The TRIP is side-blind (see below); the DESCRIPTION is
                     # not. Before 2026-09-02 this line said "resting SL legs
@@ -12524,6 +13770,37 @@ def _check_naked_positions(db) -> Dict[str, int]:
     return summary
 
 
+#: trade id -> the entry order's venue avg fill price (or None when the venue
+#: could not say). The pending-pnl sweep runs every tick and a row the broker
+#: can never match stays selected for 7 days; without this, each such row would
+#: cost one extra entry-order status call per tick. Bounded; cleared when full.
+_SWEEP_VENUE_ENTRY_CACHE: Dict[Any, Optional[float]] = {}
+_SWEEP_VENUE_ENTRY_CACHE_MAX = 500
+
+
+def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
+                       row: Dict[str, Any]) -> Optional[float]:
+    """The venue's entry fill for *row*, or ``None`` — cached per trade id.
+
+    Only the venue's own ``avg_price`` is returned (never the journal value):
+    the caller already tried the journal entry and needs a DIFFERENT target.
+    """
+    key = row.get("id")
+    if key in _SWEEP_VENUE_ENTRY_CACHE:
+        return _SWEEP_VENUE_ENTRY_CACHE[key]
+    status = _entry_order_status_for(cfg, row)
+    avg = _safe_float((status or {}).get("avg_price"))
+    value = avg if avg and avg > 0 else None
+    if len(_SWEEP_VENUE_ENTRY_CACHE) >= _SWEEP_VENUE_ENTRY_CACHE_MAX:
+        _SWEEP_VENUE_ENTRY_CACHE.clear()
+    if key is not None and status is not None:
+        # Cache only an ANSWER (a fill or a fill-less status). A failed read
+        # (`status is None`) is retried next tick — "we could not ask" must
+        # not be remembered as "the venue had no fill".
+        _SWEEP_VENUE_ENTRY_CACHE[key] = value
+    return value
+
+
 def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
     """Fill ``pnl`` / ``exit_price`` / the broker-PnL note for any DB-closed
     trade that hasn't yet been reconciled against its broker's authoritative
@@ -12660,6 +13937,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 summary["still_pending"] += 1
                 continue
 
+            journal_entry = _safe_float(row.get("entry_price"))
             try:
                 rec = account_closed_pnl_for_trade(
                     cfg,
@@ -12667,8 +13945,33 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                     direction=str(row.get("direction") or ""),
                     opened_at_ms=opened_at_ms,
                     qty=_safe_float(row.get("position_size")),
-                    entry_price=_safe_float(row.get("entry_price")),
+                    entry_price=journal_entry,
                 )
+                # CLOSE-PNL-NULL (2026-10-12): WATCHDOG-PAST-STOP (2026-10-10)
+                # taught the reconciler and the watchdog to match the venue's
+                # record against the venue's entry FILL (`_venue_entry_price`)
+                # and missed this, the third caller — the one that prices every
+                # monitor-decided close. MEASURED on bybit_2 (real money): trade
+                # 6565 ADAUSDT closed `sl_cross` with journal entry 0.2492; the
+                # venue's own SL order 71c1cc1e filled at 0.2432 and booked a
+                # closed-pnl record (closedPnl -3.28194216) whose avgEntryPrice
+                # is the fill, 0.2489 — 12 bps off, past the matcher's 10 bps,
+                # so the record was refused every tick and the row showed "—".
+                # Retry ONCE on a miss with the venue's entry fill; the journal
+                # value stays the first try so a matching row costs no extra
+                # call, and the tolerance and opened_at filter are unchanged.
+                if rec is None or not rec.get("avg_exit_price"):
+                    venue_entry = _sweep_venue_entry(cfg, row)
+                    if (venue_entry and venue_entry > 0
+                            and venue_entry != journal_entry):
+                        rec = account_closed_pnl_for_trade(
+                            cfg,
+                            symbol=str(row.get("symbol") or ""),
+                            direction=str(row.get("direction") or ""),
+                            opened_at_ms=opened_at_ms,
+                            qty=_safe_float(row.get("position_size")),
+                            entry_price=venue_entry,
+                        )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "_sweep_pending_pnl_from_bybit: closed-pnl lookup "
@@ -12871,6 +14174,67 @@ def _exit_anchor_fetches_per_tick() -> int:
         return 3
 
 
+#: Reduce legs closed within this window are settled by the monitor sweep.
+#: Older rows are the backfill's (scripts/ops/backfill_intent_reduce_pnl.py),
+#: which prints its diff before writing — so deploying this sweep cannot
+#: silently rewrite history the dry-run has not shown.
+_REDUCE_SETTLE_WINDOW_DAYS = 3
+#: A refusal is only RECORDED once the close is this old. Before that the fill
+#: may simply not be pulled yet (the Bybit fills puller is hourly), so the row
+#: is left unstamped and retried next tick — "not pulled yet" is not
+#: "unverifiable".
+_REDUCE_SETTLE_REFUSAL_GRACE_MS = 24 * 3600 * 1000
+
+
+def _sweep_settle_intent_reduce_legs(db) -> Dict[str, int]:
+    """Book an ``intent_reduce`` leg's realised PnL from its venue fills.
+
+    PERF-FU-REDUCE-PNL: a reduce that PARTIALLY consumes a parent shrinks the
+    parent row, so the reduced units' realised PnL sat on no row (the
+    ``deferred_intent_reduce`` marker assumed the parent carried it; a shrunk
+    parent does not). This settles it on the reduce audit row from two MEASURED
+    venue fills — see :mod:`src.runtime.reduce_leg_settlement`. Local SQLite
+    reads only (journal + fills store), no broker call, never raises.
+    """
+    summary: Dict[str, int] = {"scanned": 0, "settled": 0, "absorbed": 0,
+                               "unverified": 0, "retry_later": 0, "errors": 0}
+    try:
+        from src.runtime import reduce_leg_settlement as rls
+        conn = db.connect()
+        try:
+            cand = rls.select_candidates(
+                conn, window_days=_REDUCE_SETTLE_WINDOW_DAYS, limit=50)
+        finally:
+            conn.close()
+        if not cand["rows"]:
+            return summary
+        fills = rls.fills_by_order_from_store(cand["order_ids"])
+    except Exception as exc:  # noqa: BLE001 — incl. FillsStoreUnavailable: we did not look, so stamp nothing
+        logger.warning("_sweep_settle_intent_reduce_legs: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+
+    now = datetime.now(timezone.utc)
+    now_ms = int(now.timestamp() * 1000)
+    for row in cand["rows"]:
+        summary["scanned"] += 1
+        try:
+            plan = rls.plan_settlement(row, cand["parents_by_id"], fills)
+            if plan.state == rls.UNVERIFIED_STATE:
+                closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
+                if closed_ms is None or now_ms - closed_ms < _REDUCE_SETTLE_REFUSAL_GRACE_MS:
+                    summary["retry_later"] += 1
+                    continue
+            rls.apply_settlement(db, row, plan, now_iso=now.isoformat())
+            summary[{rls.SETTLED_STATE: "settled",
+                     rls.ABSORBED_STATE: "absorbed"}.get(plan.state, "unverified")] += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("_sweep_settle_intent_reduce_legs: trade %s failed: %s",
+                           row.get("id"), exc)
+            summary["errors"] += 1
+    return summary
+
+
 def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
     """Local-compute the realised ``pnl`` the broker can't provide — the
     **universal fallback** half of the bot's PnL-resolution contract.
@@ -12953,6 +14317,12 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
                 # src.web.api._clean_trades.exclude_reduce_leg_predicate.
                 "   AND COALESCE(setup_type, '') != 'intent_reduce' "
                 "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                # NO-HALT (2026-10-09): a RESET-SUSPECT row auto-resolved as
+                # exchange_reset_flat is DECLARED unmeasured at close — the venue
+                # never showed its exit and closed_at is the re-verification
+                # time, not the exit time, so a close-time bar would be a price
+                # for the wrong moment. Never price it here.
+                "   AND COALESCE(exit_reason, '') != 'exchange_reset_flat' "
                 # MI-128: the window keys on the CLOSE, not the OPEN.
                 # `created_at` is when the position was OPENED; the value this
                 # sweep exists to recover is a property of the CLOSE. Keyed on
@@ -13014,7 +14384,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             contract_value_usd_for,
         )
         from src.runtime.exit_anchor import ANCHOR_SOURCE, AnchorBudget, bar_close_at
-        from src.runtime.fills_pnl import FILL_EXIT_SOURCE
+        from src.runtime.fills_pnl import FILL_EXIT_SOURCE, exit_from_one_order_fills
         from src.runtime.provenance import UNMEASURED_MARKER
         from src.units.accounts.clients import account_has_broker_pnl_reader
     except Exception as exc:  # noqa: BLE001
@@ -13104,6 +14474,39 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             # not where THIS order filled.
             exit_price = _safe_float(row.get("exit_price"))
             exit_source = "recorded_exit_price"
+            own_fill: Optional[Dict[str, Any]] = None
+            if (not exit_price or exit_price <= 0) and row.get("closed_at"):
+                # SOAK-MECH-B / PI-20261010-RNCT2YDP-0001: before the candle,
+                # the ONE venue order that closed this row. The broker sweep's
+                # cumulative fills read refuses on a netted position (a
+                # sibling's fills overshoot the qty), which is how bybit_1 6171
+                # was booked at the 1.5399 candle with its 1.5428 fill on disk.
+                # Bounded by the close (+60 s skew), never open-ended.
+                _open_ms = _isoformat_to_ms(row.get("created_at"))
+                _close_ms = _isoformat_to_ms(row.get("closed_at"))
+                if _open_ms is not None and _close_ms is not None:
+                    _own_ids: tuple = ()
+                    try:
+                        _c = db.connect()
+                        try:
+                            _r = _c.execute(
+                                "SELECT sl_order_id, tp_order_id FROM trades "
+                                " WHERE id = ?", (int(row["id"]),)).fetchone()
+                        finally:
+                            _c.close()
+                        _own_ids = tuple(_r) if _r else ()
+                    except Exception:  # noqa: BLE001 — no leg ids: qty match only
+                        _own_ids = ()
+                    own_fill = exit_from_one_order_fills(
+                        account_id=str(aid or ""), symbol=symbol,
+                        direction=str(row.get("direction") or ""),
+                        opened_at_ms=_open_ms, closed_at_ms=_close_ms + 60_000,
+                        qty=qty,
+                        own_order_ids=_own_ids,
+                    )
+                if own_fill:
+                    exit_price = _safe_float(own_fill.get("avg_exit_price"))
+                    exit_source = FILL_EXIT_SOURCE
             if not exit_price or exit_price <= 0:
                 anchored, anchor_status = bar_close_at(
                     symbol, row.get("closed_at"), budget=anchor_budget,
@@ -13158,6 +14561,13 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
 
             notes = _decode_notes(row.get("notes"))
             updates_exit_reason: Optional[str] = None
+            if own_fill:
+                notes["close_fees_usd"] = own_fill.get("fees") or 0.0
+                # Detail only: unprotected, so the 500-char cap may shed it;
+                # exit_price_source (protected) is what consumers grade.
+                notes["exit_fill"] = {"order_id": own_fill.get("order_id"),
+                                      "match": own_fill.get("match")}
+                notes["exit_price_source"] = FILL_EXIT_SOURCE
             # Net out the close-side fees when the exit came from real fills
             # that recorded them (stamped at close by the fills resolver). This
             # arithmetic was fee-BLIND, and that is a CORRECTNESS bug, not a
@@ -13196,7 +14606,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             # branch did not — it only read a number already on the row — so it
             # must not claim to know where that number came from, and must
             # leave any existing stamp alone.
-            if exit_source == ANCHOR_SOURCE or not notes.get("exit_price_source"):
+            if exit_source in (ANCHOR_SOURCE, FILL_EXIT_SOURCE) or not notes.get("exit_price_source"):
                 notes["exit_price_source"] = exit_source
             notes["contract_value_usd"] = cvu
             # A row that previously declared itself unmeasured and has now been
@@ -13333,8 +14743,15 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
 #: ended, and so may be replaced by the bracket leg the venue says filled.
 #: A real reason (sl, tp, sl_cross, pairs_*, intent_reduce_*, operator_*, ...)
 #: is never in this set and is never overwritten.
+#:
+#: ``stuck_strategy_watchdog`` joined 2026-10-10 (WATCHDOG-PAST-STOP): the
+#: watchdog's flat branch finalises a position it found already flat, so its
+#: label records the DETECTOR, not the exit. MEASURED on bybit_2 (real money):
+#: trades 6528 and 6549 carried it while their closing fills were on their own
+#: ``sl_order_id`` (a189d840…, e3bf5ffb…), and nothing could ever correct it.
 _BRACKET_ORDER_RELABEL_REASONS = (
     "", "reconciler_filled", "netting_attributed", _SNAPSHOT_FLAT_REASON,
+    "stuck_strategy_watchdog",
 )
 
 #: `exit_reason_source` for a label taken from venue ORDER IDENTITY: a fill in
@@ -13342,6 +14759,24 @@ _BRACKET_ORDER_RELABEL_REASONS = (
 #: `tp_order_id`. Registered MEASURED in `src/runtime/provenance.py`, because
 #: the venue itself attributes that fill to the stop or target order.
 BRACKET_ORDER_LABEL_SOURCE = "venue_bracket_order"
+
+#: `exit_reason_source` stamped by `_apply_update`'s full-close branch
+#: (ORDER-AUDIT-3). Literals rather than a provenance import because this is
+#: the live close path (same reasoning as `_prov_unmeasured_marker`); a test
+#: pins them to `src/runtime/provenance.py`, where they are registered.
+#: `strategy_verdict`: the strategy's verdict authored the reason and the
+#: monitor sent the close (ESTIMATED). `strategy_verdict_venue_flat`: the venue
+#: was already flat when the close was sent, so the verdict's reason is not
+#: evidence (UNVERIFIED) — `_sweep_exit_label_from_bracket_order` resolves it.
+VERDICT_LABEL_SOURCE = "strategy_verdict"
+VERDICT_VENUE_FLAT_LABEL_SOURCE = "strategy_verdict_venue_flat"
+
+#: The exact substring a `dump_capped` notes blob carries when stamped with
+#: VERDICT_VENUE_FLAT_LABEL_SOURCE (json.dumps default separators, the same
+#: shape the `"intent_reduce": true` LIKE predicates below rely on).
+_VENUE_FLAT_NOTES_LIKE = (
+    f'%"exit_reason_source": "{VERDICT_VENUE_FLAT_LABEL_SOURCE}"%'
+)
 
 
 #: Relative qty tolerance for "this bracket order closed the whole position".
@@ -13481,7 +14916,12 @@ def _sweep_exit_label_from_bracket_order(
                 "  FROM trades "
                 " WHERE status = 'closed' "
                 "   AND COALESCE(is_backtest, 0) = 0 "
-                f"  AND COALESCE(exit_reason, '') IN ({placeholders}) "
+                # ORDER-AUDIT-3: a verdict close that found the venue already
+                # flat keeps the verdict's (real-looking) reason, so it is
+                # selected by its MARKER, never by the reason — a verdict close
+                # the monitor actually sent is still never relabelled.
+                f"  AND (COALESCE(exit_reason, '') IN ({placeholders}) "
+                "        OR COALESCE(notes, '') LIKE ?) "
                 "   AND (COALESCE(sl_order_id, '') != '' "
                 "        OR COALESCE(tp_order_id, '') != '') "
                 "   AND COALESCE(setup_type, '') != 'intent_reduce' "
@@ -13490,7 +14930,7 @@ def _sweep_exit_label_from_bracket_order(
                 "       >= datetime('now', '-14 days') "
                 " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
                 " LIMIT 100",
-                _BRACKET_ORDER_RELABEL_REASONS,
+                (*_BRACKET_ORDER_RELABEL_REASONS, _VENUE_FLAT_NOTES_LIKE),
             ).fetchall()]
         finally:
             conn.close()
@@ -13542,12 +14982,19 @@ def _sweep_exit_label_from_bracket_order(
                 # close/SL-TP notification hook has nothing to fire for.
                 wconn = db.connect()
                 try:
+                    # A marker-selected row (ORDER-AUDIT-3) is re-checked on
+                    # its marker AND the exact reason read above, so a
+                    # concurrent mark that changed the reason still wins.
                     cur = wconn.execute(
                         "UPDATE trades SET exit_reason = ?, notes = ? "  # writer-conformance: allow conditional relabel; update_trade cannot guard its WHERE (REVIEW-14106 a) and does no normalisation for exit_reason/notes
                         " WHERE id = ? "
-                        f"  AND COALESCE(exit_reason, '') IN ({placeholders})",
+                        f"  AND (COALESCE(exit_reason, '') IN ({placeholders}) "
+                        "       OR (COALESCE(exit_reason, '') = ? "
+                        "           AND COALESCE(notes, '') LIKE ?))",
                         (leg, dump_capped(notes, 500), int(row["id"]),
-                         *_BRACKET_ORDER_RELABEL_REASONS),
+                         *_BRACKET_ORDER_RELABEL_REASONS,
+                         str(row.get("exit_reason") or ""),
+                         _VENUE_FLAT_NOTES_LIKE),
                     )
                     wconn.commit()
                     changed = cur.rowcount
@@ -13569,6 +15016,184 @@ def _sweep_exit_label_from_bracket_order(
             pass
     if summary["relabelled"] or summary["errors"] or summary["lost_race"]:
         logger.info("_sweep_exit_label_from_bracket_order: %s", summary)
+    return summary
+
+
+#: How far back an OPEN row is checked for its own bracket fill. The exchange
+#: fills pullers keep 90 days; a row older than that has no fills to read.
+_OWN_LEG_FILL_LOOKBACK_DAYS = 90
+
+
+def _sweep_open_row_own_leg_fill(
+    db, *, fills_conn_factory=None,
+) -> Dict[str, int]:
+    """Close an OPEN trade row whose OWN stop or target order filled the whole
+    position at the venue.
+
+    ORDER-AUDIT-4 item 19 (PI-20260930-3QNHBGND-0002). MEASURED 2026-09-30 on
+    alpaca_paper SPY row 6131 (8 sh): its own stop leg filled 8 @ 763.70 while
+    sibling row 4347 kept the symbol long, so the venue held 11 and the journal
+    16 for two weeks. Every flat-close path keys on (account, symbol, side)
+    ABSENCE, so on a netted symbol none of them can see ONE of two rows go;
+    nothing read the row's own leg fill. On a real-money account the same shape
+    leaves a row open with no position behind it, and its resting sibling leg
+    then protects (or fires against) the other row's position.
+
+    The rule is the stricter half of `bracket_leg_from_exit_fills`: the row's
+    OWN `sl_order_id` (or `tp_order_id`) filled at least the whole position
+    (5% qty tolerance) and the other leg's did not. "Last exit fill" is NOT
+    used here: on an open netted symbol the last fill can be a sibling's.
+    A venue order id belongs to one row, so a full fill on it is the venue
+    saying this row's position ended. LOCAL read of the exchange-fills store,
+    never a broker call to decide; an unreadable store is "could not look".
+
+    On a match: the row closes through `db.update_trade` (so the close ping
+    fires) as `sl`/`tp` with `exit_reason_source=venue_bracket_order`, the
+    VWAP of that order's fills as `exit_price` (`exchange_fill`), and the last
+    fill's time as `closed_at`. PnL is left to `_sweep_local_pnl_for_unpriced`
+    and the broker sweeps, like every flat-finalise path. Then the row's own
+    remaining protection is cancelled (row-scoped, CA-A01-001) and its package
+    cascade runs through the FIX-CA-05 open-leg hold. Never raises.
+    """
+    summary: Dict[str, int] = {
+        "scanned": 0, "closed": 0, "no_own_leg_fill": 0,
+        "store_unreadable": 0, "lost_race": 0, "errors": 0,
+    }
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, "
+                "       created_at, notes, sl_order_id, tp_order_id, "
+                "       order_package_id "
+                "  FROM trades "
+                " WHERE status = 'open' "
+                "   AND COALESCE(is_backtest, 0) = 0 "
+                "   AND (COALESCE(sl_order_id, '') != '' "
+                "        OR COALESCE(tp_order_id, '') != '') "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                "   AND datetime(created_at) >= datetime('now', ?) "
+                " ORDER BY id DESC LIMIT 200",
+                (f"-{_OWN_LEG_FILL_LOOKBACK_DAYS} days",),
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_open_row_own_leg_fill: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+
+    try:
+        if fills_conn_factory is not None:
+            fconn = fills_conn_factory()
+        else:
+            import sqlite3 as _sq
+            from src.runtime.exchange_fills_store import get_fills_db_path
+            path = get_fills_db_path()
+            fconn = (
+                _sq.connect(f"file:{path}?mode=ro", uri=True)
+                if path.exists() else None
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_sweep_open_row_own_leg_fill: fills store open failed: %s", exc)
+        fconn = None
+    if fconn is None:
+        summary["store_unreadable"] = len(rows)
+        return summary
+
+    try:
+        for row in rows:
+            try:
+                size = _safe_float(row.get("position_size"))
+                if not size or size <= 0:
+                    summary["no_own_leg_fill"] += 1
+                    continue
+                legs = {"sl": str(row.get("sl_order_id") or "") or None,
+                        "tp": str(row.get("tp_order_id") or "") or None}
+                own: Dict[str, List[Any]] = {}
+                for leg, oid in legs.items():
+                    if not oid:
+                        continue
+                    own[leg] = [f for f in fconn.execute(
+                        "SELECT price, qty, exec_time, symbol FROM exchange_fills "
+                        " WHERE account_id = ? AND order_id = ? AND side = ? "
+                        " ORDER BY datetime(exec_time) ASC",
+                        (str(row.get("account_id") or ""), oid,
+                         {"long": "sell", "short": "buy"}.get(
+                             str(row.get("direction") or "").lower(), "")),
+                    ).fetchall()]
+                floor = size * (1.0 - _BRACKET_ORDER_QTY_TOLERANCE)
+                full = [leg for leg, fs in own.items()
+                        if sum(_safe_float(f[1]) or 0.0 for f in fs) >= floor]
+                if len(full) != 1:
+                    summary["no_own_leg_fill"] += 1
+                    continue
+                leg = full[0]
+                fs = own[leg]
+                qty = sum(_safe_float(f[1]) or 0.0 for f in fs)
+                vwap = sum((_safe_float(f[0]) or 0.0) * (_safe_float(f[1]) or 0.0)
+                           for f in fs) / qty
+                closed_at = str(fs[-1][2])
+                # Re-read: another path this tick may already have closed it.
+                rconn = db.connect()
+                try:
+                    cur = rconn.execute(
+                        "SELECT status FROM trades WHERE id = ?",
+                        (int(row["id"]),)).fetchone()
+                finally:
+                    rconn.close()
+                if cur is None or str(cur[0]) != "open":
+                    summary["lost_race"] += 1
+                    continue
+                notes = _decode_notes(row.get("notes"))
+                notes.update({
+                    "closed_at": closed_at,
+                    "closed_by": "own_leg_fill_attribution",
+                    "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+                    "exit_price_source": "exchange_fill",
+                    "own_leg_fill": {"leg": leg, "order_id": legs[leg],
+                                     "qty": qty, "fills": len(fs)},
+                })
+                db.update_trade(int(row["id"]), {
+                    "status": "closed",
+                    "exit_reason": leg,
+                    "exit_price": round(vwap, 10),
+                    "closed_at": closed_at,
+                    "notes": dump_capped(notes, 2000),
+                })
+                summary["closed"] += 1
+                logger.warning(
+                    "_sweep_open_row_own_leg_fill: CLOSED trade_id=%s "
+                    "account=%s %s %s %s: its own %s order %s filled %s of %s "
+                    "@ %.6g (%s) while the row was still open",
+                    row["id"], row.get("account_id"), row.get("symbol"),
+                    row.get("direction"), size, leg, legs[leg], qty, size,
+                    vwap, closed_at,
+                )
+                # The other leg of THIS row now protects nothing of its own.
+                _cancel_closed_row_protection(row, db)
+                _cascade_close_linked_package(
+                    db, row["id"], close_reason=leg,
+                    caller="_sweep_open_row_own_leg_fill",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "_sweep_open_row_own_leg_fill: row %s: %s",
+                    row.get("id"), exc)
+                summary["errors"] += 1
+    finally:
+        try:
+            fconn.close()
+        except Exception:  # noqa: BLE001
+            pass
+    if summary["closed"] or summary["errors"] or summary["lost_race"]:
+        logger.info("_sweep_open_row_own_leg_fill: %s", summary)
     return summary
 
 
@@ -14119,6 +15744,32 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: local-pnl sweep raised: %s", exc,
+        )
+
+    # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue
+    # fills (a partially-consumed parent is shrunk, so nothing else books it).
+    try:
+        with _phase("sweep_settle_intent_reduce_legs"):
+            reduce_settle = _sweep_settle_intent_reduce_legs(db)
+        if reduce_settle.get("settled") or reduce_settle.get("unverified") \
+                or reduce_settle.get("errors"):
+            summaries["__reduce_leg_settlement__"] = reduce_settle
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: reduce-leg settlement sweep raised: %s", exc,
+        )
+
+    # ORDER-AUDIT-4 item 19: an OPEN row whose own stop/target order filled
+    # the whole position is closed here. A netted sibling keeps the symbol
+    # non-flat, so no absence-keyed reconciler can see it go.
+    try:
+        with _phase("sweep_open_row_own_leg_fill"):
+            own_leg = _sweep_open_row_own_leg_fill(db)
+        if own_leg.get("closed") or own_leg.get("errors"):
+            summaries["__own_leg_fill__"] = own_leg
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: own-leg fill sweep raised: %s", exc,
         )
 
     # EXIT-CLUSTER: a close whose own stop/target ORDER has a venue fill is an

@@ -1,0 +1,18 @@
+{
+  "id": "PROP-PER-LEG-EV-GRID",
+  "title": "Data task: mixed-risk arm for breakout_2 per-leg prop sizing (ETH $25 / SOL $50) so the held config can be decided",
+  "phase": null,
+  "state": "dropped",
+  "owner": "research lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ROUTE-AND-ASK-TRIAGE] Owns PI-20261005-YUVCGTMJ-0006. The mechanism is merged (#16958, sizing.flat.per_leg_risk_usd, unset = unchanged); the ETH $25 / SOL $50 config stays unapplied because both source records RQ-20261005-853/854 are indeterminate (P(net>0) < 0.7), per the PROP-PER-LEG-SIZING row note. Per the 2026-09-29 operator ruling this is a data task, not a popup: run a prop_ev_grid with a mixed-risk arm, with the decision rule registered before the run. Closes when a record clears P(net>0) >= 0.7 for the mixed arm (then Tier-3 data-backed apply) or fails (then kill the proposal). [2026-10-16 lane P5-PROP-BACKLOG-1016] DROPPED (killed), terminal reason RQ-20261014-f516-04 (the mixed-risk arm this row asked for, rule RULE-RQ1014-F516-04): breakout_2 Turbo, ETH at 0.5% start sizing + SOL at $50, 5 seeds x 4,000 lives, 355 + 132 committed trades: EV $19-22/life, P(net>0) 0.16-0.17 on all 5 seeds, graded indeterminate (not P >= 0.70), and below the uniform book's $32-36 (f516-03). The unit's own rule: anything but a PASS kills the held proposal with this record as the terminal reason. The ETH $25 / SOL $50 config stays unapplied. The opposite direction (SOL DOWN) on tradeify_1 is programme node P5-Q3-PERLEG-TRAD. Manager audit 2026-10-16 \u00a7 5 recommended this kill.",
+  "updated_at": "2026-10-16T08:01:04Z",
+  "updated_by": "session_01V7WcGdgRbZur21X57LReea",
+  "_seq": 395
+}

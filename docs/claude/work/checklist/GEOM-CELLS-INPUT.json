@@ -1,0 +1,39 @@
+{
+  "id": "GEOM-CELLS-INPUT",
+  "title": "m20-exit-lever-sweep.yml: accept a census-keyed 'cells' input (unblocks RQ-20261014-9807-04)",
+  "phase": "research-infra",
+  "state": "landed_unproven",
+  "owner": "manager (dispatch by capacity)",
+  "lane": "session_01WzkFeZ7iDz8aXpavBZSz2o",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18063,
+    18064,
+    18070,
+    18071,
+    18124,
+    18125
+  ],
+  "blocked_on": [
+    "RQ-20261014-9807-01 (census result is producer_failed; 9807-04 stays blocked until it lands)"
+  ],
+  "note": "[2026-10-15 lane] 9807-01 failed a 2nd time (run 38630247072, exit 0, 0.6s): giveback_census.py never wrote <out>/verdict.json, which script_run.py requires to derive a record (contract mismatch, independent of the peak_state bug fixed by #18070). Fix #18124 (self-land); re-arm #18125 (hold, after #18124). This is the LAST automatic re-arm (2 of MAX_NONVERDICT_RETRIES=2).",
+  "updated_at": "2026-10-15T00:16:54Z",
+  "updated_by": "session_01WzkFeZ7iDz8aXpavBZSz2o",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "none: harness/workflow input only; L-ATM milestone unchanged until a cells= run lands",
+    "arch": "none: no architecture contract changed (m20 sweep workflow input)"
+  },
+  "observation": {
+    "what": "a dispatch of m20-exit-lever-sweep.yml with cells=<json> ran only those cells (RQ-20261014-9807-04, once its census lands)",
+    "how_to_check": "open the m20-exit-lever-sweep run for RQ-20261014-9807-04; the per-leg SUMMARY lists exactly the named cell tags",
+    "due_by": "2026-10-28T00:00Z"
+  },
+  "_seq": 489
+}

@@ -1,0 +1,94 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "ppi_mom releases (live + survey backfill) joined to RTY=F daily closes",
+  "n": 110,
+  "measurement": {
+    "kind": "ppi_mom",
+    "symbol": "RTY=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 140,
+    "releases_with_value": 140,
+    "price_bars": 2337,
+    "first_release": "2015-01-15",
+    "last_release": "2026-10-15",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 140,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 110,
+        "ic": -0.074072,
+        "ic_t": -0.772,
+        "overlap_factor": 1.0,
+        "n_eff": 110.0,
+        "ic_t_eff": -0.772,
+        "pearson": -0.152629,
+        "sign_hit_rate": 0.489362,
+        "mean_fwd_return": 0.002743
+      },
+      {
+        "horizon_days": 3,
+        "n": 110,
+        "ic": -0.225796,
+        "ic_t": -2.409,
+        "overlap_factor": 1.0,
+        "n_eff": 110.0,
+        "ic_t_eff": -2.409,
+        "pearson": -0.270547,
+        "sign_hit_rate": 0.404255,
+        "mean_fwd_return": 0.002168
+      },
+      {
+        "horizon_days": 5,
+        "n": 109,
+        "ic": -0.113987,
+        "ic_t": -1.187,
+        "overlap_factor": 1.0,
+        "n_eff": 109.0,
+        "ic_t_eff": -1.187,
+        "pearson": -0.150573,
+        "sign_hit_rate": 0.451613,
+        "mean_fwd_return": 0.001793
+      }
+    ],
+    "summary": {
+      "max_n": 110,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": true,
+      "any_flagged_horizon_overlap_corrected": true,
+      "strongest_ic_horizon_days": 3,
+      "strongest_ic": -0.225796,
+      "strongest_ic_t": -2.409,
+      "strongest_ic_t_eff": -2.409,
+      "t_flag": 2.0,
+      "verdict": "surprise_predicts_forward_return"
+    },
+    "rule": {
+      "primary": [
+        3
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "negative"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 3,
+        "n": 110,
+        "ic": -0.225796,
+        "ic_t_eff": -2.409,
+        "n_ok": true,
+        "t_reached": true,
+        "sign_ok": true
+      }
+    ]
+  },
+  "note": "a pre-registered horizon reached the t-bar in the expected sign (evidence for a build row, not a leg: costs, tradeable timing and a placebo are still owed)"
+}

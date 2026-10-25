@@ -37,6 +37,11 @@ name: claude-run-failure-alert
 on:
   workflow_run:
     workflows:
+      # ML-DATA-OFF-TRAINER (2026-10-13): the daily market-data export; its death would leave ML units on a stale dataset.
+      - ml-data-export-kaggle
+      # LEDGER-REFRESH (2026-10-10): the broker-truth freshness grader; its death
+      # would silently end the only alarm on a stale ledger.
+      - broker-truth-freshness
       # E57 (2026-09-24): the research loss detector. It FAILS DELIBERATELY when
       # a question could not be read, and its death is otherwise silent until
       # its receipt goes stale in CI 36h later.
@@ -88,6 +93,7 @@ on:
       # The reaper is the only thing recording what a killed session left behind.
       # A dead reaper run is invisible in the worst way: its ledger simply stops
       # advancing, and a stale ledger reads exactly like a quiet week.
+      # (manual-dispatch only since 2026-10-04; no push/cron trigger — see its header)
       - session-reaper
       - work-digest
       # The coordination board's proof that it is ALIVE. This entry is the
@@ -123,6 +129,8 @@ on:
       # left the graded hop silent 21 days.
       - grade-closed-trades
       - grading-freshness-alert
+      # LIVE-PARITY (2026-10-03): daily live-vs-replay parity check.
+      - live-replay-parity
       - strategy-review-packets
       - sunset-pass
       - trainer-vm-diag
@@ -214,6 +222,8 @@ on:
       - doc-audit-weekly
       - econ-calendar-produce
       - econ-event-study
+      # Added 2026-10-16 with the workflow itself (NEWS-ALPHA-CORPUS-SLICE1): no self-notify path.
+      - news-gdelt-panel
       - macro-producer-liveness
       - macro-valuation-snapshot
       - purge-artifacts
@@ -237,11 +247,17 @@ on:
       # a VERIFIED successful `[operator-ping]` step, leaving their genuinely
       # silent modes (pre-notify step failure, cancelled, timed_out) covered.
       - oci-inventory
+      - journal-offvm-backup
+      - compute-util-telemetry
+      - research-watchdog
+      # RESEARCH-PIPELINE-SLO (2026-10-16): the 2-hourly research SLO monitor; its death would leave the brief's SLO table stale and breaches unannounced.
+      - research-slo
       - Health Snapshot
       # ── added 2026-08-31: the two the hand-maintained list had missed.
       #    research-queue-dispatch is the research queue's scheduler and
       #    had already failed twice unobserved when this was measured.
       - alpaca-settlement-soak-watch
+      - mirror-orphan-watch
       - research-queue-dispatch
       # RQ-RUN (2026-09-28): the queue's replenisher and mechanical grader are
       # what keep it running without a session; a dead scheduled run on either
@@ -290,7 +306,23 @@ on:
       # run that dies here notifies nobody otherwise — the exact class every
       # other cron entry above exists for.
       - soak-book-grade-weekly
+      # GH-CAPACITY-PR-CI-FANOUT (2026-10-15): PRs now run only the import-graph-affected
+      # tests, so a cross-module break can merge. The FULL suite still runs on push to main;
+      # a red one there is the post-merge signal and must page. PUSH/SCHEDULE ON MAIN ONLY (the
+      # schedule arm is the 30-min post-merge backstop) -- the
+      # job `if:` below drops pull_request / merge_group / dispatch runs of this workflow,
+      # which are visible on their PR (ordinary CI is deliberately out of scope here).
+      - pytest-run
     types: [completed]
+    # MAIN ONLY at the trigger (manager decision 2026-10-16, lane RESEARCH-DISPATCH-STALL-1016). `branches`
+    # filters on the WATCHED run's head_branch, so a PR's pytest-run completion no longer CREATES a run here
+    # at all. Before, every one did and then skipped on the job `if:` below -- MEASURED 2026-10-16: 72 of the
+    # last 100 runs ended `skipped`, 13 were created 09:35-09:45Z, and those queued listener runs pushed the
+    # repo-wide queued count past the research dispatcher's cap and deferred every research fire. Of the 57
+    # watched workflows only pytest-run has a pull_request/merge_group trigger; the other 56 ran off main
+    # only for lane debugging (board-rotate pushes 2026-09-08, research-loss-detector dispatches 2026-09-26)
+    # in the last 50 runs each, which the dispatching session watches itself.
+    branches: [main]
 
 permissions:
   contents: read
@@ -306,9 +338,13 @@ jobs:
     # `timed_out` covers the rarer explicit-timeout conclusion. `success` and
     # `skipped` never alert.
     if: >
-      github.event.workflow_run.conclusion == 'failure' ||
-      github.event.workflow_run.conclusion == 'cancelled' ||
-      github.event.workflow_run.conclusion == 'timed_out'
+      (github.event.workflow_run.conclusion == 'failure' ||
+       github.event.workflow_run.conclusion == 'cancelled' ||
+       github.event.workflow_run.conclusion == 'timed_out') &&
+      (github.event.workflow_run.name != 'pytest-run' ||
+       ((github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'schedule') &&
+        github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -391,8 +427,53 @@ jobs:
             echo "No successful [operator-ping] step on this run — alerting."
           fi
 
+      # ── SUPERSEDED-BY-CONCURRENCY IS NOT DEAD (REAPER-NOISE, 2026-10-04) ──
+      # A workflow whose concurrency group has `cancel-in-progress: false` still
+      # has its PENDING runs cancelled when a newer run queues behind them. That
+      # surfaces as `cancelled` and used to page "STOP waiting — it is dead" for a
+      # run that was merely replaced (16 of session-reaper's last 30 runs).
+      # Rule: a `cancelled` run is `superseded` when the SAME workflow has a
+      # newer run (created after it, any status) AND the cancelled run never
+      # started a job (no job with a started_at). A run that began work and was
+      # cancelled (timeout, manual cancel) never qualifies, so real cancellations
+      # still ping. `could_not_check` pings anyway, as above.
+      - name: Was the cancelled run merely superseded by a newer one?
+        id: superseded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WF_ID: ${{ github.event.workflow_run.workflow_id }}
+          CREATED: ${{ github.event.workflow_run.created_at }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          if [ "${CONCLUSION}" != "cancelled" ]; then
+            echo "state=not_applicable" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          api() { curl -sS --max-time 30 -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${REPO}/$1"; }
+          jobs="$(api "actions/runs/${RUN_ID}/jobs?per_page=100")" || jobs=""
+          newer="$(api "actions/workflows/${WF_ID}/runs?per_page=30")" || newer=""
+          if ! printf '%s' "${jobs}" | jq -e '.jobs' >/dev/null 2>&1 \
+             || ! printf '%s' "${newer}" | jq -e '.workflow_runs' >/dev/null 2>&1; then
+            echo "state=could_not_check" >> "$GITHUB_OUTPUT"
+            echo "::warning::could not read run/jobs — alerting anyway."
+            exit 0
+          fi
+          started="$(printf '%s' "${jobs}" | jq '[.jobs[] | select(.started_at != null)] | length')"
+          n_newer="$(printf '%s' "${newer}" | jq --arg c "${CREATED}" --argjson id "${RUN_ID}" \
+            '[.workflow_runs[] | select(.id != $id) | select(.created_at > $c)] | length')"
+          if [ "${started:-1}" -eq 0 ] && [ "${n_newer:-0}" -gt 0 ]; then
+            echo "state=superseded" >> "$GITHUB_OUTPUT"
+            echo "Suppressing: cancelled before any job started, and ${n_newer} newer run(s) exist."
+          else
+            echo "state=genuine" >> "$GITHUB_OUTPUT"
+            echo "Cancelled run started ${started} job(s), ${n_newer} newer run(s) — alerting."
+          fi
+
       - name: Loud Telegram flag — a Claude-driven run just died
-        if: steps.selfping.outputs.state != 'self_pinged'
+        if: steps.selfping.outputs.state != 'self_pinged' && steps.superseded.outputs.state != 'superseded'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

@@ -1,0 +1,113 @@
+id: RQ-20261014-4a4c-06
+title: 'P4-Q2 net of cost: does a PPI-surprise SIGN BOOK on ES (enter release-day close, hold 3 days) make money net of the full MES cost stack AND beat the all-long naive floor? (n~118
+  trades)'
+status: done
+cadence: once
+theme: macro
+priority: 1
+kind: experiment
+question: 'Per ppi_mom release with a non-zero survey surprise: short ES if the surprise is positive, long if negative, entered at the release-day close and held 3 trading days, charged
+  the MES round-trip cost stack (fee from profile_loader.roundtrip_fee_bps_for, None -> execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP 7.5 bps; slippage 5.0 bps from resolve_cost_policy;
+  no perp funding). Is the mean net return > 0 with t >= 2.0, and greater than the all-long book on the same windows at the same cost?'
+why_this_matters: 'Parent: RQ-20261014-de02-04 PASSED 2026-10-14 (run 38605585550): ppi_mom survey surprise vs ES=F forward return, n=139 releases 2015-01-15..2026-09-10, IC h1 -0.183
+  (t -2.17), h3 -0.281 (t -3.43), h5 -0.247 (t -2.98), expected negative sign. It was 1 PASS of 13 kinds x 3 horizons = 39 tests landed 2026-10-13/14; normal-approx two-sided p at t=-3.43
+  is ~0.0006, under the BH rank-1 threshold 0.05/39 = 0.0013, so it survives the family read, but a single-sample IC on daily closes is a lead: stability, a placebo, a second instrument
+  and a net-of-cost book are owed before it can feed a conviction axis (programme 04-MACRO-SLEEVE.md, Q2). An IC is not money (macro-research invariant 5: beat the naive floor). The
+  programme''s measure is net R vs the naive floor, so this is the first rung that speaks that unit.'
+power:
+  expected_n: 118
+  min_detectable_effect: 0.27
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one trade = one release with a non-zero surprise: 118 of 139 MEASURED. Floor (2.80/0.27)^2 = 108 at d=0.27: CLEARED at the declared effect. Monthly releases with a 3-day
+    hold never overlap, so trades are not autocorrelated by construction.'
+  feasibility:
+    source: none
+    accrual_basis: 'n is bounded by the resolved ppi_mom releases with a defined survey surprise on file (a fixed historical backfill, MEASURED 2026-10-14 with econ_event_study.load_resolved_events_multi
+      over the two committed files: 139 total, 71 before 2021-01-01, 68 on/after; 118 with a non-zero surprise). Not an accrual: ~12 releases/yr add slowly; the run prints the joined
+      count and a short join lands INDETERMINATE, never padded.'
+decision_rule:
+  id: RULE-RQ-20261014-4a4c-06
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'macro_event_study_run.py grade_trade() over sign_book(): book_net {n, mean, t}, floor_all_long_net {mean}, cost_stack (recorded in the result).'
+  rule: 'PASS IF n >= 100 AND book mean net > 0 with t >= 2.0 AND book mean net > all-long floor mean net. FAIL IF n >= 100 and not PASS. INDETERMINATE IF n < 100. no_data / producer_failed:
+    a route fault. The IC grade is reported beside it and does not decide.'
+  what_it_does_not_do: 'Not an options book: the sleeve trades debit verticals on alpaca_options_paper, and an options cost/payoff model is RQ-20260928-010''s question; this is the linear-futures
+    upper bound on what the signal can pay. Daily closes; release-day-close entry assumes the fill at the official close. No config, no leg.'
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: confirms or retires the one event-surprise lead that could seed an event-scored conviction axis for the M28 sleeve (alpaca_options_paper); information value, not
+    a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-de02-04 (one daily-close fetch, ~300 snapshot rows, rank correlations); measured run time of that parent was minutes on research-script-run.yml.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - '3'
+  - --primary-horizons
+  - '3'
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - negative
+  - --trade-horizon
+  - '3'
+  - --cost-symbol
+  - MES
+  - --trade-t-bar
+  - '2.0'
+  - --population
+  - ppi_mom releases with a non-zero survey surprise; sign book on ES=F daily closes, MES cost stack
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-4a4c-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- RQ-20261014-de02-04
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+last_dispatched_at: '2026-10-18T14:40:10+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261014-4a4c-06
+  evidence:
+  - research/results/RQ-20261014-4a4c-06/39135604524.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

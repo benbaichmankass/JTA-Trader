@@ -1,0 +1,442 @@
+{
+  "leg": "trend_donchian_eth_4h",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "B",
+    "candidates": {
+      "VH80": {
+        "delta_net_r": -9.0252,
+        "delta_max_drawdown_r": 2.3879,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "VH90": {
+        "delta_net_r": -2.8333,
+        "delta_max_drawdown_r": 2.3879,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "VH95": {
+        "delta_net_r": -5.7938,
+        "delta_max_drawdown_r": 2.3879,
+        "fold_wins": 0,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 2.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": {
+      "ok": true,
+      "record_n": 85,
+      "record_net_r": 27.1002,
+      "arm_n": 85,
+      "arm_net_r": 27.1002,
+      "n_frac_diff": 0.0,
+      "net_r_abs_diff": 0.0,
+      "tol_n": 0.02,
+      "tol_r": 0.5
+    },
+    "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+  },
+  "arms": {
+    "B": {
+      "n": 85,
+      "net_r": 27.1002,
+      "net_r_fee_only": 29.9109,
+      "max_drawdown_r": 12.5173,
+      "by_outcome": {
+        "take_profit": 29,
+        "trail_stop": 9,
+        "stop": 46,
+        "timeout": 1
+      },
+      "mean_bars_held": 16.835,
+      "net_r_per_capital_day": 0.1136,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6
+      },
+      "data_start": "2024-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-05 00:00:00+00:00",
+          "end": "2025-04-05 11:59:45+00:00",
+          "trades": 20,
+          "net_r": 3.7693
+        },
+        {
+          "fold": 2,
+          "start": "2025-04-05 11:59:45+00:00",
+          "end": "2025-10-04 23:59:30+00:00",
+          "trades": 21,
+          "net_r": 16.7493
+        },
+        {
+          "fold": 3,
+          "start": "2025-10-04 23:59:30+00:00",
+          "end": "2026-04-05 11:59:15+00:00",
+          "trades": 22,
+          "net_r": -4.537
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 11:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 22,
+          "net_r": 11.1188
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "VH80": {
+      "n": 71,
+      "net_r": 18.075,
+      "net_r_fee_only": 20.6356,
+      "max_drawdown_r": 14.9052,
+      "by_outcome": {
+        "take_profit": 21,
+        "trail_stop": 7,
+        "stop": 42,
+        "timeout": 1
+      },
+      "mean_bars_held": 17.831,
+      "net_r_per_capital_day": 0.0857,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6,
+        "vol_skip_above_pctl": 0.8,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2024-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-05 00:00:00+00:00",
+          "end": "2025-04-05 11:59:45+00:00",
+          "trades": 18,
+          "net_r": 0.1149
+        },
+        {
+          "fold": 2,
+          "start": "2025-04-05 11:59:45+00:00",
+          "end": "2025-10-04 23:59:30+00:00",
+          "trades": 15,
+          "net_r": 16.7635
+        },
+        {
+          "fold": 3,
+          "start": "2025-10-04 23:59:30+00:00",
+          "end": "2026-04-05 11:59:15+00:00",
+          "trades": 18,
+          "net_r": -8.0234
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 11:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 20,
+          "net_r": 9.22
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/VH80__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/VH80__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--vol-skip-above-pctl",
+        "0.8",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "VH90": {
+      "n": 77,
+      "net_r": 24.2669,
+      "net_r_fee_only": 26.9422,
+      "max_drawdown_r": 14.9052,
+      "by_outcome": {
+        "take_profit": 25,
+        "trail_stop": 7,
+        "stop": 44,
+        "timeout": 1
+      },
+      "mean_bars_held": 17.364,
+      "net_r_per_capital_day": 0.1089,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6,
+        "vol_skip_above_pctl": 0.9,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2024-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-05 00:00:00+00:00",
+          "end": "2025-04-05 11:59:45+00:00",
+          "trades": 20,
+          "net_r": 3.7693
+        },
+        {
+          "fold": 2,
+          "start": "2025-04-05 11:59:45+00:00",
+          "end": "2025-10-04 23:59:30+00:00",
+          "trades": 18,
+          "net_r": 19.7097
+        },
+        {
+          "fold": 3,
+          "start": "2025-10-04 23:59:30+00:00",
+          "end": "2026-04-05 11:59:15+00:00",
+          "trades": 19,
+          "net_r": -9.0552
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 11:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 20,
+          "net_r": 9.8432
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/VH90__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/VH90__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--vol-skip-above-pctl",
+        "0.9",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "VH95": {
+      "n": 80,
+      "net_r": 21.3064,
+      "net_r_fee_only": 24.0626,
+      "max_drawdown_r": 14.9052,
+      "by_outcome": {
+        "take_profit": 25,
+        "trail_stop": 9,
+        "stop": 45,
+        "timeout": 1
+      },
+      "mean_bars_held": 17.488,
+      "net_r_per_capital_day": 0.0914,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6,
+        "vol_skip_above_pctl": 0.95,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2024-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-10-05 00:00:00+00:00",
+          "end": "2025-04-05 11:59:45+00:00",
+          "trades": 20,
+          "net_r": 3.7693
+        },
+        {
+          "fold": 2,
+          "start": "2025-04-05 11:59:45+00:00",
+          "end": "2025-10-04 23:59:30+00:00",
+          "trades": 21,
+          "net_r": 16.7493
+        },
+        {
+          "fold": 3,
+          "start": "2025-10-04 23:59:30+00:00",
+          "end": "2026-04-05 11:59:15+00:00",
+          "trades": 19,
+          "net_r": -9.0552
+        },
+        {
+          "fold": 4,
+          "start": "2026-04-05 11:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 20,
+          "net_r": 9.8432
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/VH95__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261014-f0e2-09/38530097736/arms/VH95__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--vol-skip-above-pctl",
+        "0.95",
+        "--start",
+        "2024-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2024-10-05",
+    "end": "2026-10-04 23:59",
+    "fetch_days": 760,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2024-10-05 00:00:00+00:00",
+      "2025-04-05 11:59:45+00:00",
+      "2025-10-04 23:59:30+00:00",
+      "2026-04-05 11:59:15+00:00",
+      "2026-10-04 23:59:00+00:00"
+    ]
+  }
+}

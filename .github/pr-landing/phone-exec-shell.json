@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "PHONE-EXEC-OBSERVABLE-1018 PR 2 of 5 (manager session_01VduHYzdaXe27wTDBLSu8ao; operator decision 2026-10-18): the phone-app shell, the ONE APK. Tier 2 by path (tools/phone-executor is the live prop order path for breakout_2). What lands: per-step off-screen WebView bitmap + sanitized DOM snapshot with on-device redaction, posted to POST /phone/capture (PR 1); the rehearsal drill runner (claims PR 3's drill, runs the stop-amend flow to the final Confirm and CANCELS, never Confirm); signed remote exec.js (fetched from GET /phone/exec.js, ed25519-verified with the embedded public key, bundled fallback; PR 4); the live pencil/Confirm gate now comes from the server's claim config (sheet_edit, armed by 3 consecutive drill passes) instead of a compiled constant. No new order path; FLAG_SECURE stays on for credential screens. Revert = reinstall the previous APK (#18901). AFTER MERGE: build the APK after PR 4 so the public key is embedded; ONE install.",
+  "why": "operator 2026-10-18 (popups ~08:00Z): the app must know what it is doing, record its own actions without anything popping up on screen, and show what it did right and wrong -- built once, then the logic ships without reinstalling."
+}

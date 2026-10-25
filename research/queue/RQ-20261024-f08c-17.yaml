@@ -1,0 +1,132 @@
+id: RQ-20261024-f08c-17
+title: 'Transfer of the level-trail 006 / fd06-03 questions from the n=68 leg to trend_donchian_avax_4h: FVG lookback-120 trail and a far-rung
+  bank'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'On trend_donchian_avax_4h (n about 263, adequately powered), does an FVG-level trail with lookback 120 (tight 2.5/3.0) or a 25% bank
+  at 2.5 R replace the declared exit on net R in 5 of 6 folds over 2020-07..2026-10, at the venue cost stack? DIAGNOSIS of the first test (006,
+  fd06-03): MEASURED: RQ-20261022-006 and fd06-03 ran on n(A)=68 trades in 4 folds of about 17 (the leg simply produced few entries), with a bar
+  of 0.02 R x 68 = 1.36 R. In 006 the FVG arm LF was byte-identical to A (lever_fired False: no unfilled opposing FVG was touched at the default
+  60-bar lookback), so one of three arms never ran; LS dR -0.49, LR dR -4.02. In fd06-03 B1 / B15 / B1E dR -4.84 / -2.63 / -4.92, and a1f3-01
+  (far-rung) P25 +0.32 with 4 of 4 folds. Class: underpowered (n=68) with an inert arm; the leg cannot discriminate a 1.4 R effect. MEASURED near-miss
+  to transfer: RQ-20261023-a1f3-05 on trend_donchian_sol_4h F30 (FVG, tight 3.0, lookback 120) dR +5.38 vs a 5.34 bar, folds 3 (needed 4), maxDD
+  15.7 vs 12.8; the swing arms there were -13/-11. The sibling legs carry the n the xrp leg lacks.'
+why_this_matters: 'Operator rule 2026-10-22: a first-test fail is diagnosed and re-asked, never retired. Lane EXIT-FAILED-LEVERS-DIAG (2026-10-24),
+  row EXIT-FAILED-LEVERS-DIAG, serves 006, fd06-03. Diagnosis and evidence: docs/research/exit-failed-levers-diag-2026-10-24.md. Looked before
+  authoring (PLANNING s1): the queue was grepped for the same leg and lever family; no queued or done unit asks this exact arm set. Parents: research/queue/RQ-20261022-006.yaml,
+  research/queue/RQ-20261022-fd06-03.yaml, research/queue/RQ-20261023-a1f3-05.yaml.'
+power:
+  expected_n: 263
+  min_detectable_effect: 0.17
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n = 263 is the MEASURED baseline trade count of trend_donchian_avax_4h in the parent verdict(s). Unpaired one-sample MDE = 2.8/sqrt(n)
+    = 0.17 sd. Arms share most trades, so the paired difference is far tighter than that (MEASURED in the diag doc: paired sd 0.06-0.5 R per entry);
+    the unit''s bar is stated in R and is not claimed to be detectable at the unpaired MDE. A unit whose lever touches a handful of trades is
+    reported with its differing-trade count.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-F08C-17
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_avax_4h, window 2020-07-01 .. 2026-10-15 23:59, 6 calendar
+    folds, net_r per arm net of the harness venue-aware stack (fee 7.5 bps round trip, slippage 3.0 bps round trip, funding 1.0 bps per 8h window;
+    MEASURED in the parent verdicts' cost_stack); baseline A = the leg as declared.
+  rule: 'INDETERMINATE IF n(A) < 39, or IF every C arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A)
+    AND delta >= 0.02 R x n(A) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named and
+    the follow-up is ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), never a config edit; before any Tier-3
+    proposal the winner is re-run with stop fills gap-adjusted (see what_it_does_not_do). FAIL IF none passes: the declared exit stands for THESE
+    arms on this leg; the idea is not retired (the operator''s 2026-10-22 rule) and the diagnosis in this unit decides the next variant. Thresholds
+    are not changed after any result.'
+what_it_does_not_do: 'Edits no config and places no order. Not a promotion case: a PASS is a discovery needing one disjoint-window confirmation.
+  HARNESS CAVEAT (code-read 2026-10-24, scripts/backtest_pullback.py / backtest_trend.py): a stop or ratcheted trail that the bar trades through
+  fills AT the stop price, not at a gap-open worse than it, and lever exits fill at the bar close; that flatters every arm in proportion to its
+  stop exits, so it favours tight-trail arms. A PASS must be re-run gap-adjusted before any Tier-3 note. '
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: live exit lever on a rostered leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window and runs the harness; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_avax_4h
+  - --arm
+  - A=
+  - --arm
+  - F30=--trail-level=fvg;--trail-level-tight-mult=3.0;--trail-level-lookback=120
+  - --arm
+  - F25=--trail-level=fvg;--trail-level-tight-mult=2.5;--trail-level-lookback=120
+  - --arm
+  - P25=--bank-frac=0.25;--bank-at-r=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-f08c-17
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- docs/research/exit-failed-levers-diag-2026-10-24.md
+- research/queue/RQ-20261022-006.yaml
+- research/queue/RQ-20261022-fd06-03.yaml
+- research/queue/RQ-20261023-a1f3-05.yaml
+programme: P1
+last_dispatched_at: '2026-10-25T03:54:30+00:00'
+grading:
+  attested: RULE-F08C-17
+  auto: true
+  decision_rule_id: RULE-F08C-17
+  evidence:
+  - research/results/RQ-20261024-f08c-17/40159965167.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

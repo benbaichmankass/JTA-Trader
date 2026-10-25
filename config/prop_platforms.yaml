@@ -47,6 +47,7 @@
 accounts:
   breakout_1:
     platform: dxtrade
+    ticket_flow: manual          # no live executor: a human places its tickets (§ "Prop ticket flow")
     # login_url: the dxtrade default, https://wss.breakoutprop.com/ (above).
     # Env-var NAMES (never values) holding the login. They reach the VM .env
     # via .github/workflows/sync-vm-secrets.yml as optional secrets.
@@ -73,12 +74,21 @@ accounts:
         # multiplier 1, quantityPrecision 2 -> lot_units 1, lot_step 0.01.
         # The venue MINIMUM was NOT in the served fields: min_lots is null
         # (no local minimum check); fill it from the probe / Instrument Details.
-        ETHUSD: {lot_units: 1, lot_step: 0.01, min_lots: null}
+        # ETHUSD price_step 0.01: MEASURED 2026-10-01 (B3, symbol-switch-dry issue
+        # #14999, run 36807550409, code 847034b3f): the watchlist row reads
+        # ["ETHUSD", "2,683.58", "2,683.59"] -- both quotes 2 decimals, last digits
+        # non-zero, so no trailing-zero ambiguity. Display precision, cross-checked
+        # by the ETH round-trip-dry (B4) form read-back before ETHUSD is enabled.
+        # ETHUSD min_lots 0.01: MEASURED 2026-10-01 (B4 round-trip-dry, issue
+        # #15021, run 36813539419, code f7e55264f): the venue accepted a typed
+        # 0.01 with no clamp -- submit label "Buy 0.01 ETHUSD at 2,697.81" -- so
+        # the minimum is <= 0.01, and the lot step is 0.01, so it IS 0.01.
+        ETHUSD: {lot_units: 1, lot_step: 0.01, min_lots: 0.01, price_step: 0.01}
         # SOLUSD price_step 0.01: MEASURED 2026-09-29 (dry run #13965, run
         # 36526339732): the watchlist quotes 118.01 / 118.02, the submit label
         # reads "at 118.02", and the ticket rounded a typed 119.2002 to 119.2.
         # The executor types SL / TP rounded to it and accepts a read-back
-        # within one step (criterion D3). ETHUSD's step is not measured: unset.
+        # within one step (criterion D3).
         SOLUSD: {lot_units: 1, lot_step: 0.01, min_lots: null, price_step: 0.01}
         # BTCUSD: {lot_units: ?, lot_step: ?, min_lots: ?}   # UNMEASURED (no fields served)
       # The watched click / round trip places at most this many lots of the
@@ -92,14 +102,26 @@ accounts:
       # the typed 0.01 (a clamp to a higher minimum) REFUSES
       # (dxtrade.submit_label_mismatch). If the dry run passes at 0.01, the
       # minimum is 0.01. min_lots above stays null until then.
-      watched_click_max_lots: {SOLUSD: 0.01}
+      # ETHUSD 0.01 (PROP-ETH-DOM B4, 2026-10-01): the lot step (#13500), on the
+      # same reasoning as SOLUSD; it lets the ETH round-trip-dry walk run. It
+      # ARMS nothing: ETHUSD is not in enabled_venue_symbols below, and every
+      # armed path (the ticket cycle, round-trip-live) refuses a symbol that is
+      # not.
+      watched_click_max_lots: {SOLUSD: 0.01, ETHUSD: 0.01}
       # Venue symbols the executor may ACT on (manager 2026-09-28: SOL-only
       # go-live; the sidebar sits on SOLUSD and symbol switching is not built).
       # Any other ticket is SKIPPED `symbol_not_enabled` before the form is
       # touched (never a refusal, never an AUTO-REVERT count) and stays manual
       # via Telegram. A symbol joins only after symbol switching lands AND it
       # passes the D1-D7 dry run. Env override: PROP_EXECUTOR_SYMBOLS.
-      enabled_venue_symbols: [SOLUSD]
+      # 2026-10-01 (PROP-ETH-DOM B5): ETHUSD JOINS. Per-ticket symbol switching
+      # is built and merged (#15070: the ticket's own Symbol field, else the
+      # verified watchlist click; place_bracket refuses any form not naming the
+      # ticket's symbol). ETHUSD specs are all MEASURED: lot_units / lot_step /
+      # cvpp (#13500), price_step 0.01 (B3, #14999), min_lots 0.01 (B4, #15021,
+      # form verified and never submitted). Risk caps unchanged ($75/ticket).
+      # Operator go-live rule 2026-10-01: if we can execute trades, go live.
+      enabled_venue_symbols: [SOLUSD, ETHUSD]
 
   # tradeify_1: Tradeify 247 1-Step $10k crypto evaluation on Tradeify's
   # DXtrade white-label (TRADEIFY-WIRE, 2026-09-30; operator decision ~08:24Z
@@ -115,9 +137,47 @@ accounts:
   # Error 1005. NOT measured: a login, the post-login DOM, symbol names, lots.
   tradeify_1:
     platform: dxtrade
+    # Ticket flow (docs/ARCHITECTURE-CANONICAL.md § "Prop ticket flow"): its browser
+    # executor places the tickets (MEASURED 2026-10-06: env_mode live on every
+    # ict-prop-executor@tradeify_1 tick until the 18:27Z feed trip), so it is a
+    # machine flow: no Telegram prompt states, expiry = terminal `expired`.
+    ticket_flow: browser
     login_url: https://dx.tradeify247.co/
     username_env: TRADEIFY_DX_USERNAME
     password_env: TRADEIFY_DX_PASSWORD
+    # The watchlist search's query form (TRADEIFY-GOLIVE, MEASURED #15444):
+    # Tradeify names symbols with a slash (ETH/USD); typing ETHUSD opened the
+    # result panel with NO rows. instrument-probe types SOL/USD etc. Read
+    # only by the manual instrument-probe; breakout_1 declares none.
+    search_query_style: slash
+    # The order-ticket opener (TRADEIFY-DRY 2026-10-03). The ONLY measured
+    # opener on this terminal is the symbol's watchlist Ask "Buy" price button
+    # (#15743 dump; #15827 one guarded click opened the docked New Order
+    # sidebar, margin 0 after). The sidebar does not persist into a new
+    # session (#15834: 0 order panels, every default opener failed).
+    # ``ask_button`` adds DXtradeAdapter._ask_button_open to the chain: one
+    # click, only with exactly one matching button, no dialog, and one-click
+    # re-read OFF on the measured toggle immediately before the click.
+    # breakout_1 declares none and keeps the default chain.
+    # OPERATOR DECISION 2026-10-03 (popup, relayed by the manager), verbatim:
+    # "Allow, dry only for now (Recommended)" -- SUPERSEDED for live orders by
+    # OPERATOR DECISION 2026-10-03 ~16:55Z (popup, relayed by manager
+    # session_01MM8o5js6TcDFeNAPBY4Ntv), verbatim: "Allow, all 3 symbols".
+    # The ask_button opener is approved for LIVE orders on ETHUSD, SOLUSD and
+    # XRPUSD. Its guards are unchanged (one-click re-read OFF, exactly one
+    # matching button, no dialog).
+    ticket_opener: ask_button
+    # The LIMIT price field's fill method (TRADEIFY-PRICE-FILL 2026-10-03).
+    # MEASURED: round-trip-dry,limit ETHUSD #15975 (run 37132594478, code
+    # bc377c508) typed 2679.725 and the field read back 2,679.719 on all 3
+    # fill passes (submit label "Buy 0.01 ETH/USD at 2,679.719"); #15930 typed
+    # 2683.59 and read back 2,683.584. SL / TP took the same page.fill exactly.
+    # INFERRED, not measured: the field keeps its own price unless it sees key
+    # events. ``keys`` types the limit price key by key (focus, select all,
+    # delete, type, blur; never Enter) and logs each step's read-back.
+    # breakout_1 declares none and keeps page.fill (scripts/prop/
+    # prop_executor_tick.py::limit_price_fill_mode; an unknown value raises).
+    limit_price_fill: keys
     # Kill switch: PROP_EXECUTOR_MODE_TRADEIFY_1 (off | read_only | live,
     # default read_only). It NEVER reads breakout_1's PROP_EXECUTOR_MODE.
     # Ruleset + routing: accounts.yaml::tradeify_1.backtest_ruleset and that
@@ -130,11 +190,124 @@ accounts:
       # measured. A symbol with no entry is REFUSED by the structure guard.
       # Fill from the login check's passive instrument-spec read (default
       # --symbols includes ETHUSD, SOLUSD, XRPUSD) once it has run.
-      lots: {}
+      #
+      # ETHUSD (TRADEIFY-DRY 2026-10-03) -- ONLY so the DRY round-trip walk
+      # (round-trip-dry, limit) can reach the form; it arms nothing (not in
+      # enabled_venue_symbols, mode dry_run, executor read_only). From the
+      # sidebar ticket the guarded Ask click opened (#15827, run 37104633199):
+      #   lot_units 1   MEASURED: quantity label "Lots x 1 ETH".
+      #   min_lots 0.01 MEASURED-ish: the field opened at 0.01 with its
+      #                 decrement button disabled; the round-trip-dry submit
+      #                 label ("Buy 0.01 ETH/USD at ...") re-checks it.
+      #   lot_step 0.01 INFERRED: the default shows 2 decimals; a finer true
+      #                 step still accepts 0.01. Unmeasured: the increment.
+      #   price_step 0.01 INFERRED, deliberately coarse: the ask displayed as
+      #                 2,678.650 (3 decimals), so the true step may be 0.001;
+      #                 0.01 is a multiple of either, so a typed SL/TP is
+      #                 always a valid price.
+      # The passive spec read did not run on a reused session (#15839).
+      #
+      # SOLUSD / XRPUSD (TRADEIFY-DRY 2026-10-03, after #15846): read from the
+      # tickets the guarded Ask click opened (probe-ticket-ask SOLUSD #15905
+      # run 37117995552; XRPUSD #15907 run 37118069890; both flat after, 0
+      # orders, nothing submitted). Neither is in enabled_venue_symbols or
+      # watched_click_max_lots, so this arms nothing.
+      #   lot_units 1   MEASURED: quantity labels "Lots x 1 SOL" / "Lots x 1 XRP".
+      #   min_lots 0.01 MEASURED-ish: each field opened at 0.01 with its
+      #                 decrement button disabled.
+      #   lot_step 0.01 INFERRED: 2-decimal default; increment unmeasured.
+      #   price_step    MEASURED-ish: the disabled SL/TP fields default to one
+      #                 tick -- SOL 0.001, XRP 0.00001 -- matching the quote
+      #                 decimals (symbol-switch-dry #15902 "119.475", #15904
+      #                 "1.48335"). ETHUSD's tick read the same way is 0.001.
+      # ETHUSD price_step 0.01 -> 0.001 (TRADEIFY-DRY 2026-10-03): the coarse
+      # 0.01 HID a fill that did not stick. round-trip-dry,limit (#15930 run
+      # 37121646646) typed limit 2683.59 and read back the terminal's own
+      # 2,683.584; the one-tick tolerance (0.01) accepted the 0.006 gap. At the
+      # measured tick (0.001) that read-back refuses.
+      lots:
+        ETHUSD: {lot_units: 1, lot_step: 0.01, min_lots: 0.01, price_step: 0.001}
+        SOLUSD: {lot_units: 1, lot_step: 0.01, min_lots: 0.01, price_step: 0.001}
+        XRPUSD: {lot_units: 1, lot_step: 0.01, min_lots: 0.01, price_step: 0.00001}
+      # SOLUSD 0.01 (TRADEIFY-EXECUTOR, 2026-10-03, #16035): the minimum lot, so
+      # the DRY round-trip-dry,limit SOLUSD can reach the form and read back the
+      # LIMIT fill. A watched-click cap only; what may be ACTED on is
+      # enabled_venue_symbols below, and every armed path also needs
+      # PROP_EXECUTOR_MODE_TRADEIFY_1=live on the VM.
+      watched_click_max_lots: {ETHUSD: 0.01, SOLUSD: 0.01}
+      # DRY WALK ONLY (TRADEIFY-SOL-SIZE 2026-10-04, PI-20261003-ILZMCTFQ-0002):
+      # round-trip-dry,limit SOLUSD at 0.01 (#16090, run 37156182423) found the
+      # Buy submit DISABLED (disabled + pointer-events:none) with every field
+      # read back exactly; ETHUSD at 0.01 passes. 1.0 SOL (~$120 notional) asks
+      # whether the disable is a minimum-size rule. Read ONLY by
+      # run_round_trip(arm=False), which never clicks submit; round-trip-live,
+      # the watched click and the ticket cycle never read it, so it arms
+      # nothing and watched_click_max_lots above is unchanged.
+      dry_walk_max_lots: {SOLUSD: 1.0}
+      # GO-LIVE (TRADEIFY-WIRE C, #14673): operator 2026-10-03 "Allow, all 3
+      # symbols". Dry evidence: ETHUSD round-trip-dry,limit form_verified with
+      # the key-by-key limit fill (#16003, run 37137185991). SOLUSD:
+      # round-trip-dry,limit read every field back exactly but REFUSED at the
+      # submit hit-test twice (#16049, #16053; PI-20261003-ILZMCTFQ-0002), so a
+      # live SOL ticket is refused at submit (no order) until that is fixed.
+      # XRPUSD: symbol-switch-dry only (#15904) and no rostered leg
+      # (ict_scalp_xrp_15m dropped, accounts.yaml), so it emits no ticket. The
+      # executor still acts only when PROP_EXECUTOR_MODE_TRADEIFY_1=live on the
+      # VM (default read_only).
+      enabled_venue_symbols: [ETHUSD, SOLUSD, XRPUSD]
+
+  # velotrade_1: Velotrade CLASSIC 1-Step $5k crypto evaluation on Velotrade's
+  # DXtrade deployment (VELOTRADE-WIRE, 2026-10-04; operator decision ~21:25Z
+  # "Buy one ($54)", relayed by manager session_01MM8o5js6TcDFeNAPBY4Ntv).
+  # Memo: docs/research/prop-firm-deepdive-2026-10-04.md § 1 + addenda.
+  #
+  # login_url MUST be explicit: the dxtrade DEFAULT is Breakout's host.
+  # MEASURED 2026-10-04 19:47Z (addendum A1, issue #16458, run 37229332977, one
+  # GET per URL from the live VM egress): GET https://dx.velotrade.com/ -> 200,
+  # server envoy, no Cloudflare, loginForm-main / #username / #password -- the
+  # same login markers the Breakout/Tradeify selectors were measured on.
+  # NOT measured: a login, the post-login DOM, symbol display names, lots,
+  # price steps, the order-ticket opener, one-click state.
+  # Velotrade also serves the DXtrade REST API (/dxsca-web, deep-dive § 1.1).
+  #
+  # platform dxtrade_api (VELOTRADE-API-EXEC, 2026-10-05; operator decision
+  # relayed by manager session_01MM8o5js6TcDFeNAPBY4Ntv, verbatim "Build it +
+  # pre-approve test"; design docs/research/velotrade-api-executor-design-2026-10-05.md):
+  # orders go over the REST API (src/prop/platform/dxtrade_api.py), not the
+  # browser ticket. login_url is the REST BASE. MEASURED: the REST login and
+  # reads work from the VM egress (#16616); the account is positionBased: true
+  # (#16631), so a bracket is ONE IF-THEN POST with no naked window.
+  # The browser scripts (breakout_login_check, prop_executor_tick) REFUSE an
+  # API platform (exit feasibility) rather than drive a REST host as a page.
+  # Revert to the browser path: platform: dxtrade, login_url: https://dx.velotrade.com/
+  velotrade_1:
+    platform: dxtrade_api
+    login_url: https://dx.velotrade.com/dxsca-web
+    username_env: VELOTRADE_DX_USERNAME
+    password_env: VELOTRADE_DX_PASSWORD
+    # Kill switch: PROP_EXECUTOR_MODE_VELOTRADE_1 (off | read_only | live,
+    # default read_only when unset). It NEVER reads breakout_1's
+    # PROP_EXECUTOR_MODE or tradeify_1's.
+    # No search_query_style / ticket_opener / limit_price_fill yet: each was a
+    # MEASURED Tradeify quirk; set them only from velotrade_1's own probes.
+    executor:
+      safety_margin_usd: 5
+      unconfirmed_reads: 3
+      confirm_rel_tol: 0.02
+      # MEASURED 2026-10-05 12:43Z over REST, account-scoped instruments
+      # (issue #16616, run 37311474412; docs/research/velotrade-api-probe-2026-10-05.md
+      # § 1). Units = lots (lotSize 1). SOLUSD min is 0.1 here, NOT Tradeify's
+      # 0.01; XRPUSD steps in 10s. These SIZE nothing on their own:
+      # enabled_venue_symbols stays empty and the roster is empty.
+      lots:
+        ETHUSD: {lot_units: 1, lot_step: 0.01,  min_lots: 0.01,  price_step: 0.01}
+        SOLUSD: {lot_units: 1, lot_step: 0.1,   min_lots: 0.1,   price_step: 0.001}
+        XRPUSD: {lot_units: 1, lot_step: 10,    min_lots: 10,    price_step: 0.00001}
+        BTCUSD: {lot_units: 1, lot_step: 0.001, min_lots: 0.001, price_step: 0.01}
       watched_click_max_lots: {}
-      # Nothing enabled: every ticket is SKIPPED `symbol_not_enabled` before
-      # the form is touched. Set in the go-live PR only, after the dry evidence.
-      enabled_venue_symbols: []
+      # Nothing may be acted on. A symbol joins only after its lots are
+      # measured AND it passes the dry round trip, in a separate go-live PR.
+      enabled_venue_symbols: [ETHUSD, SOLUSD]   # VELOTRADE-GOLIVE (HELD): the roster's venues (RQ-20261006-062)
 
 # Read-only terminal PROBES (not traded accounts): run by the
 # `breakout-terminal-probe` system-action (scripts/prop/breakout_terminal_probe.py)
@@ -148,3 +321,39 @@ probes:
     platform: breakout_terminal
     username_env: BREAKOUT_DX_USERNAME
     password_env: BREAKOUT_DX_PASSWORD
+
+# ---------------------------------------------------------------------------
+# phone_accounts: prop accounts driven by the operator's PHONE, not the VM
+# (PHONE-EXEC-1B, 2026-10-05; design docs/integrations/breakout-phone-executor-DESIGN.md).
+# A separate section on purpose: load_platform_config() reads only `accounts:` /
+# `probes:`, so the VM executor and the login check can never pick these up, and
+# no ict-prop-executor@<account> timer exists for them. The phone talks to
+# /api/bot/prop/phone/* (src/prop/phone_executor.py), which refuses (409) any
+# device pinned to an account that is not declared here with
+# platform: breakout_phone.
+#
+# instruments: bot symbol -> venue symbol + the increments the phone rounds to.
+# UNMEASURED on the new Breakout terminal: the venue names (the symbol strip's
+# labels were redacted in the 1a captures) and the steps (copied from the DXtrade
+# measurements in `accounts.breakout_1.executor.lots` above). The phone refuses
+# any ticket whose symbol it cannot verify on the ticket, and reports the form
+# dump, so the dry end-to-end check is what measures them.
+# ---------------------------------------------------------------------------
+phone_accounts:
+  breakout_2:
+    platform: breakout_phone
+    terminal_url: https://trade.breakoutprop.com/
+    # One-shot dry end-to-end test without the operator (src/prop/phone_executor.py::serve_dry_test_request):
+    # on the phone's next claim, ONE always-dry ETH test ticket is written for this id. Change the id to ask again.
+    # Faster, no CI run: the Tier-1 `phone-dry-test` system-action (docs/claude/system-actions.md) writes the same ticket.
+    dry_test_request: 2026-10-06-bg-2   # overlay granted; retest of the self bring-to-front (#16764, PI-20261006-APBY4NTV-0006)
+    # PROP-TRACKING journal reconcile against the terminal's Positions list (src/prop/phone_reconcile.py):
+    # write = a journal-open row absent from MISS_READS (2) consecutive CLEAN Positions reads >= 60 s apart is
+    # journaled closed (exit from Closed orders; between SL and TP and neither leg -> `manual`, INFERRED); an
+    # unclean / failed read changes nothing. Operator decision 2026-10-15 ("Yes" to option (ii) of
+    # PI-20261015-JWMGXOTH-0004), after the 14:14Z hand close stayed open under report_only. `report_only` =
+    # compute + alert what WOULD be written, write nothing (closes PI-20261012-GNRBKIGG-0004).
+    reconcile: write
+    instruments:
+      ETHUSDT: {venue: ETHUSD, qty_step: 0.01, price_step: 0.01}
+      SOLUSDT: {venue: SOLUSD, qty_step: 0.01, price_step: 0.01}

@@ -52,11 +52,12 @@ path read the same source of truth.
 | File | Role |
 |---|---|
 | `scripts/ops/run_backtest_sweep.sh` | Entry-point orchestrator. Composes the four steps below. |
-| `scripts/ops/trainer_bootstrap.sh` | Step 1. Creates `$REPO_ROOT/.venv` (python3.11) if missing; installs `requirements.txt` + `requirements-backtest.txt`. Idempotent. |
+| `scripts/ops/trainer_bootstrap.sh` | Step 1. Creates `$REPO_ROOT/.venv` (python3.11) if missing; installs `requirements.txt` + `requirements-backtest.txt`, then each pin in `requirements-trainer-frontier.txt` one at a time under constraints frozen from the venv's current stack, and runs `scripts/ops/trainer_capability_probe.py`. Idempotent. |
 | `scripts/ops/fetch_qashdev_btc_archive.py` | Step 2. Refreshes the 3-year monthly CSV cache in `/home/ubuntu/ict-trader-data/raw/` and consolidates to a parquet at `/home/ubuntu/ict-trader-data/btc_5m.parquet`. Incremental — only fetches months not already cached, only rebuilds the parquet when raw is newer. |
 | `experiments/2026-05-17-post-incident-validation/scripts/run.py` | Step 3. The variant harness. Runs vwap V_BASELINE + V_PROD, turtle_soup TS_PROD + extended T3 sweep (`min_sweep_buffer_bps ∈ {3, 5, 7, 10, 12}`), turtle_soup 5m naive port. Imports the backtest engine from the 2026-05-08 harness via `importlib` (dir name starts with a digit so cannot be a regular Python package). |
 | `scripts/backtest_ict_scalp.py` | Step 4. Existing ict_scalp_5m backtest CLI; the orchestrator invokes it for the v2 re-validation. |
 | `requirements-backtest.txt` | Pyarrow + requests + python-dateutil. Pandas/numpy are already in `requirements.txt`. |
+| `requirements-trainer-frontier.txt` | Trainer-only research arms (catboost, timesfm, tirex-ts, tabpfn, tabicl) for `scripts/research/ml_bakeoff.py`. Never on the live trader or CI runners. TabPFN weights are non-commercial: research-eval only. |
 
 ## Gate criteria
 

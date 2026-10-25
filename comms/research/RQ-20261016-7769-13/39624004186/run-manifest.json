@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261016-7769-13",
+  "run_id": "39624004186",
+  "commit_sha": "22bccf56662a48df22dbac85e536104d2f3b689e",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39624004186",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "jolts_job_openings",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ES=F",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "3",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.0",
+        "--expected-sign",
+        "either",
+        "--population",
+        "jolts_job_openings releases (live + survey backfill) joined to ES=F daily closes",
+        "--out",
+        "comms/research/RQ-20261016-7769-13/39624004186"
+      ],
+      "log": "comms/research/RQ-20261016-7769-13/39624004186/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.7
+    }
+  ],
+  "all_ok": true
+}

@@ -1,0 +1,639 @@
+{
+  "leg": "gld_pullback_1d",
+  "label": "no_reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "B",
+    "candidates": {
+      "F0382": {
+        "delta_net_r": -31.1351,
+        "delta_max_drawdown_r": 5.1276,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "F05": {
+        "delta_net_r": -29.6743,
+        "delta_max_drawdown_r": 2.718,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "F075": {
+        "delta_net_r": -4.2363,
+        "delta_max_drawdown_r": 1.9623,
+        "fold_wins": 2,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 1.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0074,
+      "n": 135,
+      "net_r": 46.3103,
+      "net_r_fee_only": 49.121,
+      "max_drawdown_r": 8.6957,
+      "by_outcome": {
+        "trail_stop": 41,
+        "take_profit": 26,
+        "stop": 68
+      },
+      "mean_bars_held": 21.333,
+      "net_r_per_capital_day": 0.0161,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2006-10-02 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-10-02 00:00:00+00:00",
+          "end": "2011-05-20 00:00:00+00:00",
+          "trades": 36,
+          "net_r": 14.4426
+        },
+        {
+          "fold": 2,
+          "start": "2011-05-20 00:00:00+00:00",
+          "end": "2016-01-05 00:00:00+00:00",
+          "trades": 37,
+          "net_r": 2.5142
+        },
+        {
+          "fold": 3,
+          "start": "2016-01-05 00:00:00+00:00",
+          "end": "2020-08-22 00:00:00+00:00",
+          "trades": 31,
+          "net_r": 20.4128
+        },
+        {
+          "fold": 4,
+          "start": "2020-08-22 00:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 31,
+          "net_r": 8.9405
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ]
+    },
+    "F0382": {
+      "reach_ge_6r": 0.0,
+      "n": 87,
+      "net_r": 15.1752,
+      "net_r_fee_only": 17.0326,
+      "max_drawdown_r": 13.8233,
+      "by_outcome": {
+        "trail_stop": 28,
+        "take_profit": 14,
+        "stop": 44,
+        "timeout": 1
+      },
+      "mean_bars_held": 21.207,
+      "net_r_per_capital_day": 0.0082,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.382,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2006-10-02 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-10-02 00:00:00+00:00",
+          "end": "2011-05-20 00:00:00+00:00",
+          "trades": 22,
+          "net_r": 12.9411
+        },
+        {
+          "fold": 2,
+          "start": "2011-05-20 00:00:00+00:00",
+          "end": "2016-01-05 00:00:00+00:00",
+          "trades": 24,
+          "net_r": 3.0215
+        },
+        {
+          "fold": 3,
+          "start": "2016-01-05 00:00:00+00:00",
+          "end": "2020-08-22 00:00:00+00:00",
+          "trades": 19,
+          "net_r": 0.0023
+        },
+        {
+          "fold": 4,
+          "start": "2020-08-22 00:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 22,
+          "net_r": -0.7896
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.382",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/F0382__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/F0382__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ]
+    },
+    "F05": {
+      "reach_ge_6r": 0.0,
+      "n": 113,
+      "net_r": 16.636,
+      "net_r_fee_only": 18.9928,
+      "max_drawdown_r": 11.4137,
+      "by_outcome": {
+        "trail_stop": 34,
+        "stop": 61,
+        "take_profit": 18
+      },
+      "mean_bars_held": 21.319,
+      "net_r_per_capital_day": 0.0069,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2006-10-02 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-10-02 00:00:00+00:00",
+          "end": "2011-05-20 00:00:00+00:00",
+          "trades": 29,
+          "net_r": 11.8369
+        },
+        {
+          "fold": 2,
+          "start": "2011-05-20 00:00:00+00:00",
+          "end": "2016-01-05 00:00:00+00:00",
+          "trades": 32,
+          "net_r": 7.4424
+        },
+        {
+          "fold": 3,
+          "start": "2016-01-05 00:00:00+00:00",
+          "end": "2020-08-22 00:00:00+00:00",
+          "trades": 23,
+          "net_r": 2.8666
+        },
+        {
+          "fold": 4,
+          "start": "2020-08-22 00:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 29,
+          "net_r": -5.5101
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/F05__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/F05__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ]
+    },
+    "F075": {
+      "reach_ge_6r": 0.0131,
+      "n": 153,
+      "net_r": 42.074,
+      "net_r_fee_only": 45.2551,
+      "max_drawdown_r": 10.658,
+      "by_outcome": {
+        "trail_stop": 47,
+        "take_profit": 27,
+        "stop": 79
+      },
+      "mean_bars_held": 21.118,
+      "net_r_per_capital_day": 0.013,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.75,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2006-10-02 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-10-02 00:00:00+00:00",
+          "end": "2011-05-20 00:00:00+00:00",
+          "trades": 41,
+          "net_r": 20.5593
+        },
+        {
+          "fold": 2,
+          "start": "2011-05-20 00:00:00+00:00",
+          "end": "2016-01-05 00:00:00+00:00",
+          "trades": 40,
+          "net_r": 3.0565
+        },
+        {
+          "fold": 3,
+          "start": "2016-01-05 00:00:00+00:00",
+          "end": "2020-08-22 00:00:00+00:00",
+          "trades": 36,
+          "net_r": 13.0069
+        },
+        {
+          "fold": 4,
+          "start": "2020-08-22 00:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 36,
+          "net_r": 5.4506
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.75",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/F075__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/F075__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ]
+    }
+  },
+  "window": {
+    "start": "2006-10-02",
+    "end": "2025-04-09",
+    "fetch_days": 7414,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "GLD",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2006-10-02 00:00:00+00:00",
+      "2011-05-20 00:00:00+00:00",
+      "2016-01-05 00:00:00+00:00",
+      "2020-08-22 00:00:00+00:00",
+      "2025-04-09 00:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "B": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ]
+    },
+    "F0382": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.382",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/F0382__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/F0382__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ],
+      "cfg_set": {
+        "pullback_frac": 0.382
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ]
+    },
+    "F05": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/F05__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/F05__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ],
+      "cfg_set": {
+        "pullback_frac": 0.5
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ]
+    },
+    "F075": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.75",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261018-005/39693289511/arms/F075__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261018-005/39693289511/arms/F075__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ],
+      "cfg_set": {
+        "pullback_frac": 0.75
+      },
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ]
+    }
+  }
+}

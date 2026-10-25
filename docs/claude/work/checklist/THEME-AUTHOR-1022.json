@@ -1,0 +1,31 @@
+{
+  "id": "THEME-AUTHOR-1022",
+  "title": "Research SLO same-day work: author pre-registered units for the short themes (new_strategy_prop about 7 short, live_strategy about 3 short per RESEARCH-HEALTH-W43) to clear theme_share_min_ratio 0.33 vs 0.5 and authoring_supply_ratio_7d 0.94 vs 1 (research-slo 09:26Z)",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01AzdkTHz7vzx2nSUREXf26J",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": 1.88,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-10-22 lane THEME-AUTHOR-1022: authored 12 pre-registered units RQ-20261022-326f-01..12 (regime 5, live_strategy 3, new_strategy_prop 4); all would_dispatch on the dispatch_queue dry run; decision-rule guard OK. MEASURED before: runnable 46, theme supply new_strategy_prop 7/13, regime 11/11; research_slo theme_share_min_ratio 0.33 (binding theme = regime: 32 of 426 7-day fires vs 22.7% weight share), authoring_supply 0.94. After (same tree, units committed): runnable 58, authoring_supply 1.0 ok, regime 16, new_strategy_prop 11/13; theme_share stays 0.33 because it is a 7-day FIRES measure and fires lag supply. Landing: hold (E57, human merge). Merged != observed. [2026-10-24 REGISTER-SWEEP-W43] lane session_01AzdkTHz7vzx2nSUREXf26J get_session cost_usd=1.88 (read after archive; SESSION_STATUS_ARCHIVED) [2026-10-25 ROUTE-1025] Also owns the follow-through of PI-20261018-ARBVJQYT-0001 (MONEY FIRST). MEASURED 2026-10-25 python3 scripts/research/research_slo.py --json --no-gh: theme_share_min_ratio 0.22 (>= 0.5 breach), binding theme new_strategy_prop (27 fires, share 0.061 vs weight share 0.273); population = the SLO's 7-day fires, 7 themes, every theme has >= 15 fires so NO theme sat at 0 fires -- the 'supply work' branch is not triggered; the remaining branch is the decision on starve_hours (240 h in research_compute.yaml, whether <= 168 h) or restating the SLO threshold. Do not loosen the SLO silently: decide when this row's own 2026-10-29 theme_share observation is read.",
+  "priority_rank": 7,
+  "updated_at": "2026-10-25T06:05:44Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "research SLO theme_share ok on the next post-merge run",
+    "how_to_check": "python3 scripts/research/research_slo.py | grep theme_share_min_ratio (>= 0.5)",
+    "due_by": "2026-10-29T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: research units authored; no milestone status change",
+    "arch": "none: no architecture change"
+  },
+  "_seq": 595
+}

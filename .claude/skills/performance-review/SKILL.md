@@ -126,9 +126,9 @@ pulls:
 
 | Pull | Path | Use |
 |---|---|---|
-| Order packages (decision-level) | `GET /api/bot/order-packages?since=<iso>&limit=500&include_paper=true` | one row per decision; **`include_paper=true` so PAPER + PROP packages are graded too, not just real-money** (operator directive 2026-06-22); includes `claudeScore` from prior reviews so dedupe is trivial |
-| Closed trades | `GET /api/bot/trades/closed?since=<iso>&limit=500&include_paper=true` | realized PnL + exit reason (all funding classes) |
-| Paper-book trades | `GET /api/bot/trades/closed?account_id=bybit_1&limit=500` | the diversified paper cohort's closed trades, for the tracker (§ "Diversified paper-book tracker"). `account_id=` returns that account incl. paper; pull the **full** book (no `since`) so the tracker's recency split + cumulative trajectory are correct |
+| Order packages (decision-level) | `GET /api/bot/order-packages?since=<iso>&limit=200&include_paper=true` (⚠️ the router caps `limit` at **200** and has NO `offset`; a `limit=500` call returns HTTP 422 — page the window per strategy with `&strategy=<name>`, measured 2026-10-04) | one row per decision; **`include_paper=true` so PAPER + PROP packages are graded too, not just real-money** (operator directive 2026-06-22); includes `claudeScore` from prior reviews so dedupe is trivial |
+| Closed trades | `GET /api/bot/trades/closed?since=<iso>&limit=200&offset=<n>&include_paper=true` (cap 200 per page; walk `offset`) | realized PnL + exit reason (all funding classes) |
+| Paper-book trades | `GET /api/bot/trades/closed?account_id=bybit_1&limit=200&offset=<n>` (walk `offset` to the end) | the diversified paper cohort's closed trades, for the tracker (§ "Diversified paper-book tracker"). `account_id=` returns that account incl. paper; pull the **full** book (no `since`) so the tracker's recency split + cumulative trajectory are correct |
 | Journal — order_packages | `journal?table=order_packages&limit=200` (diag) | redundant cross-check; carries `signal_logic` blob |
 | Journal — trades | `journal?table=trades&limit=200` (diag) | exit_reason, pnl, position_size |
 | Audit tail | `audit?limit=600` (diag) | `*_eval` events for context around each decision |
@@ -222,6 +222,13 @@ python scripts/analysis/classify_paper_records.py --limit 500 --format md   # on
 python scripts/analysis/classify_paper_records.py --json trades.json --reconstruct
 ```
 
+⚠️ **Feed it JOURNAL-shaped rows (`/api/diag/journal?table=trades`), not the
+`/api/bot/trades/closed` shape.** The classifier keys on `exit_reason`; the
+closed-trades endpoint collapses every non-sl/tp/reconciler reason into
+`closeReason: "other"`, so fed that shape it buckets every pairs exit as
+`unclassified:other` (bucket B). Measured 2026-10-04 on one window: API shape
+A=27/B=86/P=0, journal shape A=16/B=1/C=4/P=54 — same trades.
+
 It buckets each record (`src/analysis/paper_record_classifier.py`):
 
 - **A — gradeable** (clean SL/TP / monitor exit): the **only** rows that drive
@@ -273,6 +280,16 @@ the window:
 their `n_filled` should be 0 (shadow does not place live orders) — if
 not, that's an anomaly. Closed-trade attribution joins by
 `trades.strategy_name`.
+
+⚠️ **Shadow is not a refusal** (PI-20261010-ERFFUW41-0001). Every
+`execution: shadow` dispatch journals an order package with `status:
+rejected`, `close_reason: NULL` and reason `dry_run_no_order_placed`
+(`src/units/accounts/execute.py`, the non-live rejection row). Count those
+as `n_shadow`, never in `n_rejected`, and never list a shadow leg's
+packages as "rejected with no recorded cause" — on 2026-10-10 that flagged
+`mgc_trend_1h` (16/16 "rejected", all shadow by design) as an anomaly and
+would have hidden a real refusal among them. `n_rejected` is the remainder:
+a package refused for a cause, on a leg that is `execution: live`.
 
 ## Per-decision scoring (PERSISTED, keyed by order package)
 
@@ -410,6 +427,8 @@ scripts read these corpora, so a consumer EXISTS. This asks one level over:
 **was a consumer RUN, on THIS batch, and did a decision come out of it.** A tool
 that *could* have read a result is not a record that anyone did.
 
+> **Routine cadence (2026-10-10):** Stages 1–2 and the read-what-landed half of Stage 3 run 4x/day as `.claude/skills/research-ops/SKILL.md`; this review reads its latest record (`comms/research/ops/`) rather than re-deriving them.
+
 ### Stage 1 — is the pipeline HEALTHY (are jobs queued and routable)?
 
 Read `research/queue/*.yaml` through `scripts/research/research_queue.py`. Report
@@ -501,6 +520,15 @@ it turns a strategy off at a regime bottom, discards a real edge, and (worst)
 learns nothing about *why* it underperformed, so the same mistake recurs. This
 is the strategy-level analogue of the `drift-remediation` skill's one rule;
 follow it before ANY demote/kill enters `proposed_tweaks[]`.
+
+**Step 0 — always first (operator, 2026-10-15: "that should be a first step for any
+underperforming strategy"):** run `python3 scripts/research/live_vs_backtest.py --leg <leg>`
+and record its verdict beside the leg. It says whether the live cumulative R is inside the
+p5-p95 band the leg's own committed backtest predicts for the same number of trades.
+`CONSISTENT` → the result is luck-sized: keep accruing, no tune, no demote proposal (R4
+decides at its threshold). `BELOW_BACKTEST` → fidelity/regime problem, proceed to 1-3 and file
+the investigation unit. `NO_BACKTEST` → file a backtest unit. `INSUFFICIENT_N` /
+`NO_LIVE_TRADES` → say so; do not grade on it.
 
 When a live strategy underperforms in the window, the mandatory next step is a
 **root-cause diagnosis + robust re-test**, not a proposal to turn it off:
@@ -686,6 +714,10 @@ Every run:
    and, if a cell/family warrants follow-up, add a `SRQ-…` item to the
    backlog.
 
+⚠️ Measured 2026-10-04: the tracker had not been appended since 2026-07-22 —
+the 2026-09-24 and 2026-09-27 reviews skipped this step (their records carry
+`paper_book_tracker: null`). The append is part of the run, not optional.
+
 The tracker file is append-only history — **never rewrite prior
 snapshot lines** (same discipline as the scores jsonl). Updating the
 cohort itself (adding/removing a cell) is a Tier-3 config change to
@@ -796,6 +828,16 @@ Emit a single JSON object conforming to
 Each `note`/`rationale` ≤240 chars; cite `order_package_id`,
 `trade_id`, strategy name, and numbers so the operator can verify
 fast.
+
+## Hand-off: `/perf-followup` (operator, 2026-10-10)
+
+Grading is not the end of the review. Once the response JSON is committed, say in the
+PR body and the Claude-channel ping that the review **hands off to `/perf-followup`**
+(`.claude/skills/perf-followup/SKILL.md`): the routine that tunes underperformers, runs
+the wider-context lessons post-mortem, extrapolates lessons, and files portfolio-level
+research. The manager dispatches it as one lane when this review's PR merges — you do
+not run it in this session. Anything in this review you leave open for research
+(`proposed_tweaks[]` demote candidates, `grade_drift`, benchmark verdicts) is its input.
 
 ## What you DO write (and what you don't)
 

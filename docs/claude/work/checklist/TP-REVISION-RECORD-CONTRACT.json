@@ -1,0 +1,21 @@
+{
+  "id": "TP-REVISION-RECORD-CONTRACT",
+  "title": "tp_revision_sweep.py writes per-leg records research_result.py --emit refuses (no population.n / verdict), so a measured PASS never reaches research/results; and --recollect-orphans is scheduled nowhere",
+  "phase": "research-infra",
+  "state": "queued",
+  "owner": "manager (Tier-1 build lane)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P1-ATM-BACKLOG-1016, manager audit input] MEASURED: RQ-20261007-080 run 38747768830 (commit 9f401d81, all_ok true) wrote comms/research/RQ-20261007-080/38747768830/{verdict.json,records.jsonl,record-inputs.json} with verdict pass, but research/results/RQ-20261007-080/ holds only the earlier producer_failed row. Re-emitting through collect_runner_results.emit_record (the recollect path) is REFUSED by research_result.py --emit: 'record 4: population.n must be PRESENT' -- the producer's per-leg rows in records.jsonl carry arms/tp_revision_counts but no population or verdict. The grader therefore read only the stale producer_failed row and left the unit needs_review; it was session-graded PASS from the committed artifacts in the P1-ATM-BACKLOG-1016 PR. SECOND GAP: collect_runner_results.py --recollect-orphans is invoked by no workflow (grep .github/workflows: 0 hits); 2 orphans exist on main today (RQ-20261007-080/38747768830, RQ-20261014-470a-11/38663651638). BUILD: (a) tp_revision_sweep.py emits per-leg rows with population {description, n = control_trades} and verdict (per-leg improved / not; the unit's pooled verdict on a pooled row), self-test with research_result.py --emit; (b) schedule --recollect-orphans in the collector workflow (or the dispatcher's collect step) so an orphan is retried every cycle. RERUN: python3 -c \"import glob,os; print([p for p in glob.glob('comms/research/*/*/record-inputs.json') if p.split('/')[3].isdigit() and not os.path.exists('research/results/%s/%s.jsonl' % (p.split('/')[2], p.split('/')[3]))])\" -> [] when fixed.",
+  "updated_at": "2026-10-16T07:47:42Z",
+  "updated_by": "session_01Kseu6sKgBb9ir5EcHMiBAx",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 528
+}

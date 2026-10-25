@@ -73,6 +73,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 # The manager checklist's ONE grading owner. Imported whole rather than
 # cherry-picking helpers, so a reader of this route can see that every status
 # reading here is `manager_status`'s and none of it is re-derived locally.
+from src.web.api._swr import SWRCache
 from src.runtime import manager_status
 from src.runtime.decision_subject import (
     SUBJECT_GONE,
@@ -891,6 +892,7 @@ def _checklist_item(
         "lane": item.get("lane"),
         "tier": item.get("tier"),
         "priority": item.get("priority"),
+        "priorityRank": item.get("priority_rank"),
         "status": {
             # `value` is what a renderer groups and labels by. `basis` says how
             # it was arrived at and is NOT inferable from `value`: an
@@ -1190,6 +1192,109 @@ def get_work_checklist() -> dict[str, Any]:
                           "note": "payload build failed before provenance was read"},
         }
     _checklist_cache = (now, payload)
+    return payload
+
+
+# ── /snapshot — the Overview's work-queue glance (UI-UPGRADE-1 item 2) ─────────
+#
+# The full /checklist envelope is ~435 KB (every row with its note and lane
+# history) — far too heavy to put on the Overview. This is the four lists the
+# Overview shows, each row cut to id/title/state/owner/updated_at:
+#
+#   closedRecent    last 5 rows in a terminal state (done | dropped), newest
+#                   `updated_at` first.
+#   openNow         every in_flight row (a lane is on it now).
+#   next            the first 5 rows of the RANKED RUNNABLE QUEUE
+#                   (`checklist_store.queue`: queued, nothing in blocked_on, by
+#                   `priority_rank`, unranked last in `_seq` order) -- the order
+#                   the manager dispatches from (manager SKILL § "The operating loop").
+#   waitingOnOperator  every open row (not done/dropped) with a typed
+#                   blocked_on edge of kind `operator_decision` or `operator`.
+#                   Rows whose OWNER merely names the operator are NOT counted:
+#                   an owner is who does the work, not a pending ask.
+#
+# `landed_unproven` is open-but-merged: it is counted in `counts`, never listed
+# as closed — it is not `done` (CLAUDE.md § Every session, step 5).
+
+_SNAPSHOT_CLOSED = ("done", "dropped")
+_SNAPSHOT_OPERATOR_KINDS = ("operator_decision", "operator")
+_SNAPSHOT_CACHE_TTL_S = 20.0
+_snapshot_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": row.get("id"),
+        "title": row.get("title"),
+        "state": row.get("state"),
+        "owner": row.get("owner"),
+        "lane": row.get("lane"),
+        "tier": row.get("tier"),
+        "priorityRank": row.get("priority_rank"),
+        "updatedAt": row.get("updated_at"),
+    }
+
+
+def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
+    edges = row.get("blocked_on")
+    if not isinstance(edges, list):
+        return []
+    return [e for e in edges
+            if isinstance(e, dict) and e.get("kind") in _SNAPSHOT_OPERATOR_KINDS]
+
+
+def _work_snapshot_payload() -> dict[str, Any]:
+    from src.runtime import checklist_store
+
+    rows = [r for r in checklist_store.load(Path(repo_root())).get("items", [])
+            if isinstance(r, dict)]
+    counts: dict[str, int] = {}
+    for r in rows:
+        key = r.get("state") or "(no state)"
+        counts[key] = counts.get(key, 0) + 1
+    closed = sorted((r for r in rows if r.get("state") in _SNAPSHOT_CLOSED),
+                    key=lambda r: str(r.get("updated_at") or ""), reverse=True)
+    waiting = []
+    for r in rows:
+        if r.get("state") in _SNAPSHOT_CLOSED:
+            continue
+        edges = _operator_edges(r)
+        if edges:
+            waiting.append({**_snapshot_row(r),
+                            "asks": [{"what": e.get("what"), "ref": e.get("ref")}
+                                     for e in edges]})
+    return {
+        "present": True,
+        "reason": None,
+        "total": len(rows),
+        "counts": counts,
+        "closedRecent": [_snapshot_row(r) for r in closed[:5]],
+        "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
+        "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
+        "waitingOnOperator": waiting,
+    }
+
+
+@router.get("/snapshot")
+def get_work_snapshot() -> dict[str, Any]:
+    """Small work-queue glance for the Overview. Read-only, file-backed.
+
+    An unreadable store degrades to ``present: false`` with a reason and EMPTY
+    lists — never lists that read as "no work".
+    """
+    global _snapshot_cache
+    now = time.monotonic()
+    cached = _snapshot_cache
+    if cached is not None and (now - cached[0]) < _SNAPSHOT_CACHE_TTL_S:
+        return cached[1]
+    try:
+        payload = _work_snapshot_payload()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason; a Tier-1 read surface must not 5xx
+        logger.warning("work: snapshot build failed: %s", exc, exc_info=True)
+        return {"present": False, "reason": f"checklist read failed: {exc}",
+                "total": None, "counts": {}, "closedRecent": [], "openNow": [],
+                "next": [], "waitingOnOperator": []}
+    _snapshot_cache = (now, payload)
     return payload
 
 
@@ -2145,7 +2250,10 @@ def get_work_receipts() -> dict[str, Any]:
 # file serves at process start.
 
 _BRIEF_CACHE_TTL_S = 20.0
-_brief_cache: tuple[float, dict[str, Any]] | None = None
+#: Served-at-once ceiling for a brief snapshot older than the TTL. The brief is
+#: a once-a-day document; ten minutes of staleness is far inside its grain.
+_BRIEF_STALE_S = 600.0
+_BRIEF_SWR = SWRCache(name="work-brief", fresh_s=_BRIEF_CACHE_TTL_S, stale_s=_BRIEF_STALE_S)
 
 
 def _brief_payload() -> dict[str, Any]:
@@ -2194,13 +2302,12 @@ def get_work_brief() -> dict[str, Any]:
     a failure to build the brief degrades to ``present: false`` WITH a
     reason, never a 5xx and never a stale/blank page passed off as current.
     """
-    global _brief_cache
-    now = time.monotonic()
-    cached = _brief_cache
-    if cached is not None and (now - cached[0]) < _BRIEF_CACHE_TTL_S:
-        return cached[1]
+    # UI-UPGRADE-1: stale-while-revalidate. Measured 2026-10-11 the render
+    # took ~16 s, and with a plain 20 s TTL every request after expiry paid it
+    # in the request path. Now a snapshot up to _BRIEF_STALE_S old is served at
+    # once while one background render runs; the payload says how old it is.
     try:
-        payload = _brief_payload()
+        payload, age_s, state = _BRIEF_SWR.get("brief", _brief_payload)
     except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason. A Tier-1 read surface must not 5xx (roadmap.py's contract); a brief that 500s is invisible rather than absent.
         logger.warning("work: brief build failed: %s", exc, exc_info=True)
         return {
@@ -2210,8 +2317,7 @@ def get_work_brief() -> dict[str, Any]:
             "markdown": None,
             "inputs": {}, "pipelineStats": None, "coverageComplete": False,
         }
-    _brief_cache = (now, payload)
-    return payload
+    return {**payload, "snapshot": {"ageSeconds": round(age_s, 1), "state": state}}
 
 
 # ── /schedule — A9: cadenced sessions, decisions owed, monitoring coming ──
@@ -2293,3 +2399,54 @@ def get_work_schedule() -> dict[str, Any]:
         }
     _schedule_cache = (now, payload)
     return payload
+
+
+# ── /report — WORK-SYSTEM: the persisted, scheduled daily work report ───────
+#
+# Added 2026-10-04 (WORK-SYSTEM). `/brief` above is the LIVE view; this serves
+# the REVIEWED one — `scripts/ops/work_report.py`, generated daily at 05:30Z by
+# `ict-work-report.timer` and persisted under runtime_logs/work_reports/ with a
+# `report_id` (WR-YYYYMMDD-HHMMZ) and `generated_at`, so "what did the manager
+# see, and when" is answerable after the fact. `?since=` adds the hourly
+# digest log (runtime_logs/work_reports/digest_log.jsonl). Read-only, file-backed, no DB,
+# no secrets, no write surface. Absent and unreadable are reported as such,
+# never as an empty report. No cache: it is one small file read.
+
+
+@router.get("/report")
+def get_work_report(report_id: str | None = None, since: str | None = None) -> dict[str, Any]:
+    """The latest persisted work report, or one by ``report_id``.
+
+    ``since=<ISO timestamp>`` also returns ``digestLog``: every hourly digest
+    block SENT after that time (what Telegram carried, since a session cannot
+    read Telegram) — the manager passes its ``last_review.reviewed_at``."""
+    from scripts.ops import work_report as _wr
+
+    log_block: dict[str, Any] = {}
+    if since is not None:
+        try:
+            log_state, entries = _wr.read_digest_log(since)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged and surfaced as digestLogState; a Tier-1 read surface must not 5xx.
+            logger.warning("work: digest log read failed: %s", exc, exc_info=True)
+            log_state, entries = "unreadable", []
+        log_block = {"since": since, "digestLogState": log_state, "digestLog": entries}
+
+    try:
+        if report_id:
+            state, rep = _wr.read_report(report_id)
+        else:
+            state, rep = _wr.read_latest()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged and surfaced as present:false + readState; a Tier-1 read surface must not 5xx.
+        logger.warning("work: report read failed: %s", exc, exc_info=True)
+        state, rep = "unreadable", None
+    if rep is None:
+        return {**log_block, "present": False, "readState": state, "reportId": report_id,
+                "schedule": _wr.SCHEDULE,
+                "reason": ("no persisted report — ict-work-report has not produced one"
+                           if state == "absent" else "report file could not be parsed")}
+    return {**log_block, "present": True, "readState": "read", "reportId": rep.get("report_id"),
+            "generatedAt": rep.get("generated_at"), "schedule": rep.get("schedule"),
+            "erroredSections": rep.get("errored_sections") or [],
+            "bytes": rep.get("bytes"), "markdown": rep.get("markdown"),
+            "sections": {k: {kk: vv for kk, vv in v.items() if kk != "trace"}
+                         for k, v in (rep.get("sections") or {}).items()}}

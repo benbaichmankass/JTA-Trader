@@ -1,0 +1,122 @@
+id: RQ-20261016-c56e-06
+title: 'Trend definition length, real money, multi-fold: does moving ada_pullback_2h''s trend_lookback (20, 60, 80 bars) beat the declared trend_lookback
+  40 in >= 7 of 8 folds over ~6 years, net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On 2020-10-05 .. 2026-10-04 23:59, does any of the 3 pre-registered trend_lookback (20, 60, 80 bars) arms on ada_pullback_2h beat the leg as declared
+  by >= 3.0 R over the window, with no worse drawdown, winning >= 7 of 8 equal calendar folds? Arm values fixed here before any run.
+why_this_matters: 'ada_pullback_2h is a real-money leg (bybit_2 + mirror); live BELOW_BACKTEST (RQ-20261015-8bbc-02: -7.04 R over 15 closes, 4.7th pct),
+  and its declared baseline DECAYED between equal windows (+39.2 R n=114 on 2022-24, RQ-20261015-4941-01, vs +11.9 R n=111 on 2024-26, 470a-05). Axes already
+  graded: adx_min transfer (470a-03 FAIL), pullback_frac (470a-05 single-window PASS, NOT CONFIRMED by 4941-01). trend_lookback has never been swept on
+  any pullback leg in the M21 matrix.'
+power:
+  expected_n: 330
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=330 is an ESTIMATE: 470a-05 arm B measured n=111
+    on 2024-10..2026-10 and n=114 on 2022-10..2024-10 (RQ-20261015-4941-01) -> ~56/yr x 6 yr. Window ~6 years with no control arm (no committed record spans
+    it; precedent RQ-20261014-470a-01): the argv is built by the same builder the record used.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ20261016c56e06
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd from config/strategies.yaml plus the arm''s
+    tokens; full cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r,
+    max_drawdown_r, plus net_r per fold over EIGHT equal calendar spans (~9 months each) (same boundaries every arm). Arms: B = leg as declared (trend_lookback
+    40); TL20=trend_lookback=20; TL60=trend_lookback=60; TL80=trend_lookback=80. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
+    = folds in which C out-earns B. Also reported per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+  rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR >= 3.0 R over the whole ~6-year window
+    AND dDD <= 0 AND fold_wins >= 7 of 8. PASS IF any candidate passes (best = highest dR). FAIL IF none passes: the declared value stands and the axis
+    is recorded honest_negative over ~6 years for this leg (it does NOT mean the declared param is dead config -- the exit_lever_ablation ''strip them''
+    wording is wrong for entry sweeps, build row GRADER-FAIL-WORDING). WHY 7 of 8 and not an S0-C unit: on 2026-10-14..15 all four single-window best-of-3
+    PASSes (f0e2-05, f0e2-10, 470a-05, 470a-09) failed their fresh-window confirmation; with 3 arms, a null arm wins >= 7 of 8 independent folds with p
+    ~= 0.035 each (~0.10 for any of 3), so the fold clause carries the confirmation inside one registered unit (the audit''s ''multi-fold, f01d style'').
+    A PASS is a Tier-3 PROPOSAL input sent through the manager with the mandate resolver read first; no further S0-C unit. The 3.0 R bar, drawdown clause,
+    7-of-8 majority and 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config or any roster. Does not mine values (fixed here). A PASS is a Tier-3 proposal input, never a flip.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: a real-money 2h pullback leg plus its mirror (470a-05 basis); estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: One keyless Binance Vision fetch of ~2240 days and 4 harness passes over ~6 years.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
+    metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - TL20=trend_lookback=20
+  - --arm
+  - TL60=trend_lookback=60
+  - --arm
+  - TL80=trend_lookback=80
+  - --days
+  - '2240'
+  - --start
+  - '2020-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '3.0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '7'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261016-c56e-06
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-c56e-06/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-06/<run_id>/.
+roadmap:
+- M21
+related:
+- P3-STRATEGY-BACKLOG-1016
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-17T17:14:08+00:00'
+grading:
+  attested: RULE-RQ20261016c56e06
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e06
+  evidence:
+  - research/results/RQ-20261016-c56e-06/39052421068.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

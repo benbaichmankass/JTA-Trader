@@ -1,0 +1,98 @@
+# scripts/research/research_slo.yaml -- research-pipeline SLOs (RESEARCH-PIPELINE-SLO, operator 2026-10-16).
+# Read by scripts/research/research_slo.py; edit thresholds HERE, never in code.
+#
+# Operator, 2026-10-16: "The health of the research pipeline must be something we monitor, report on and audit, so
+# we never again end up realizing there's no actual work getting done. It's a pipeline like the other pipelines and
+# needs the same infra setup as the trading pipeline."
+#
+# Each SLO: `op` (min = value must be >= threshold, max = value must be <= threshold) and `threshold`.
+# A value that could not be read is `could_not_look` -- never `ok`, never 0.
+# Thresholds were set from what the pipeline is FOR (the floor formula, the grader's cadence, the research-ops
+# cadence), not tuned so that today's numbers pass -- the 2026-10-16 baseline breaches several of them on purpose.
+
+slos:
+  runnable_floor:
+    what: "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))"
+    op: min
+    threshold: computed      # the ONE floor formula; not a number here
+  fires_24h:
+    what: "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)"
+    op: min
+    threshold: 24            # one per hour: the dispatcher is hourly
+  lands_24h:
+    what: "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)"
+    op: min
+    threshold: 12
+  # grading.graded_at is a DATE (measured 2026-10-16: 495 of 495 values are YYYY-MM-DD), so latency is in whole
+  # DAYS: 0 = graded the day its newest result row landed.
+  grade_latency_p50_d:
+    what: "days from a unit's newest result row to the grading stamped on or after it, p50 over units whose newest result landed in the last 7 d (re-grades of an unchanged old result are not latency; fresh results with no grading are counted in ungraded_fresh)"
+    op: max
+    threshold: 1             # the grader runs 6-hourly: most results are graded the same or next day
+  grade_latency_p90_d:
+    what: "same population, p90"
+    op: max
+    threshold: 2
+  undispositioned_24h:
+    what: "units with a landed result older than 24 h and no verdict / no owned needs_review (result_disposition_check findings)"
+    op: max
+    threshold: 5
+  authoring_supply_ratio_7d:
+    what: "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d"
+    op: min
+    threshold: 1.0           # supply must at least replace what is consumed
+  programme_coverage_pct:
+    what: "plan questions with a programme-tree node or a reasoned discharge / all plan questions (programme_coverage.py)"
+    op: min
+    threshold: 75
+  theme_share_min_ratio:
+    what: "worst theme's (fire share over 7 d) / (weight share in research/THEMES.yaml)"
+    op: min
+    # MONEY FIRST (operator 2026-10-18, lane DISPATCH-MONEY-FIRST-1018): the dispatcher now ranks due units across
+    # themes by value and uses the weight share only to break ties, so this ratio recovers MORE SLOWLY than under the
+    # 2026-10-16 round-robin -- a theme holding only low-value units fires on spare capacity or at starve_hours
+    # (240 h, longer than this 7 d window). The threshold is deliberately NOT lowered: a breach here is the signal to
+    # author valuable units in the short theme (research-ops step E, H1-THEME), which is the recovery path the operator
+    # chose over raising the runner cap. Re-threshold only by a PR that says why.
+    threshold: 0.5
+  blocked_over_age:
+    what: "blocked units whose id date is older than blocked_age_days (no blocked_at field exists; id date is an upper bound)"
+    op: max
+    threshold: 10
+    blocked_age_days: 21
+  dispatcher_age_h:
+    what: "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)"
+    op: max
+    threshold: 3
+  collector_age_h:
+    what: "hours since the newest commit on main touching research/results/ (a result landed)"
+    op: max
+    threshold: 6
+  grader_age_h:
+    what: "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)"
+    op: max
+    threshold: 14            # cron 50 */6 + one missed cycle + scheduler lag
+  research_ops_age_h:
+    what: "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day"
+    op: max
+    threshold: 8
+  research_ops_not_run:
+    what: "steps the newest research-ops pass declared not_run"
+    op: max
+    threshold: 2
+  hold_pr_wait_h:
+    what: "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)"
+    op: max
+    threshold: 24
+
+alerting:
+  # A breach set that is unchanged is re-announced at most this often (a reminder, not a new incident).
+  realert_hours: 24
+  # Same marker scheme as research_watchdog: a hidden JSON state in each ops-flags comment (the manager subscribes).
+  comment_marker: "research-slo"
+  # SLOs whose condition the 15-minute watchdog already escalates: while that watchdog incident is OPEN, this
+  # monitor leaves the SLO out of its flag so the operator gets ONE red flag per condition, not two.
+  watchdog_overlap:
+    runnable_floor: queue
+    dispatcher_age_h: dispatcher
+    collector_age_h: collector

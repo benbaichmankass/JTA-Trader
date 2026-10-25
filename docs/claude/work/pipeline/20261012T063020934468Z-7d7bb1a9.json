@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "GET /api/bot/prop/overview shows breakout_2 unrealized_state venue_snapshot (measured) while a position is open, after the APK carrying the change is installed.",
+    "kind": "observation"
+  },
+  "id": "PI-20261012-RXNHREPJ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "BREAKOUT-UNRECORDED lane session_01Y64bAh35jy1RpBRXnHrEpJ",
+    "rerun": "grep -n 'account_status' tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt  # does the post carry unrealized/positions"
+  },
+  "state": "queued",
+  "what": "PHONE-APP-POSITIONS: make the phone app (tools/phone-executor MainActivity.kt) read the terminal's Positions table into its account_status post: venue unrealized (the server already accepts an optional finite `unrealized`, PR #17693) plus a position list with an explicit positions_read flag, so the overview can show a measured uPnL for breakout_2 and a measured flat. Parsing needs a real Positions-table fixture (uPnL column text) from the terminal; none is committed, so this cannot be built blind."
+}

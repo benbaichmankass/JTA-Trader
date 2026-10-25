@@ -1,0 +1,35 @@
+{
+  "id": "DATA-STORE-PARQUET-GC",
+  "title": "PROPOSAL (Tier-2): market_features JSONL -> Parquet and GC of one-off versions on the trainer; fix the stale disk figures in scripts/ops/trainer_dataset_gc.py",
+  "phase": "build",
+  "state": "done",
+  "owner": "build lane; operator OK required (Tier-2: deletes on the trainer)",
+  "lane": "session_012is6hyqg4ANLMGrmawzbzJ",
+  "model": "opus",
+  "ceiling_usd": 20,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18169,
+    18174,
+    18319,
+    18492
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-15T05:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] OPERATOR popup 2026-10-15 ~05:53Z, verbatim choice: 'Go, dry-run first (Recommended)'. Lane Opus $20: build, post dry-run delete list to manager, manager checks, then ship and verify disk. [2026-10-15 lane session_012is6hyqg4ANLMGrmawzbzJ] (1)+(2) BUILT, PR #18169 (draft, hold tier_2_3_needs_approval, manager merges): market_features writes data.parquet beside data.jsonl; runner/oos_edge/live_parity/market_sequences read it via ml/datasets/parquet_sidecar.load_dataset_rows; GC docstring de-staled. Parity MEASURED on trainer #18162: BTC 1h v003 43,800 rows + BTC 15m v513 175,272 rows PARITY (391.3 MB JSONL -> 20.2 MB parquet); new builder on real data PARITY. (3) DRY-RUN MEASURED #18160: 111 scanned, 86 kept, 25 candidates 1.32 GB; sent to manager (trigger trig_01JWaqZ3qHGipqBVpMfugqFx) as GO 20 dirs 1,133.3 MB + HOLD 5 dirs 181.9 MB (side-stream provenance inputs of pinned frozen versions). NOTHING DELETED; waiting for manager 'go'. Baseline #18154: root 47.3/103.9 GB (46%), datasets-out 12.6 GB, market_features 10.7 GB. Follow-up row DATA-STORE-JSONL-RETIRE (the real disk saving). [2026-10-15T06:40Z lane session_012is6hyqg4ANLMGrmawzbzJ] (4) DELETE DONE under operator OK via manager (trigger trig_014rHxrFfgWNzz2XEsHhhZcf, edited list of 17), trainer #18177: 16 deleted, 1 skipped by the pre-rm re-check (backtest_results/all/all/v001 is now a doc_ref, named by docs/integrations/huggingface-datasets.md). MEASURED freed 513,067,944 B (sum of per-dir du); datasets-out 12,616,403,279 -> 12,103,335,582 B; root used 47,335,124,992 -> 46,821,998,592 B (46% before and after). The 8 dirs the manager kept are all present. A training read of a kept dataset (btc-regime-1h-lgbm-base-pcv-v003, main code, --no-register) returned rc=0 with 43,800 rows. GC tool gained doc_ref (fixed-string docs/ minus docs/archive) on #18169 as the manager asked. OPEN: #18169 merge (manager); sidecars only appear after the merge plus a nightly build; that is landed_unproven until a cycle log shows parquet_sidecar written. Follow-up row: DATA-STORE-JSONL-RETIRE. [2026-10-15T12:25Z lane session_012is6hyqg4ANLMGrmawzbzJ] #18169 MERGED 2026-10-15T08:46Z (43e1b065), CI green. DEPLOYED to the trainer: HEAD eb4237e75 contains 43e1b065, parquet_sidecar.py present, MarketFeaturesBuilder.parquet_sidecar=True, pyarrow 24.0.0 (#18316). NOT YET OBSERVED: 0 data.parquet under datasets-out/market_features; the first nightly after the merge is ict-trainer.timer 2026-10-16T00:54Z. -> landed_unproven with that observation. [2026-10-16T03:10Z lane session_012is6hyqg4ANLMGrmawzbzJ] OBSERVED (trainer #18490). The first nightly after #18169 ran from cycle_start 01:15Z to cycle_end 01:44Z, overall_rc 0 (67 trained, 6 skipped, 0 failed). data.parquet count under datasets-out/market_features went from 0 to 8; every market_features version rebuilt tonight has a sidecar (BTC 15m/1h/5m, ETH 1h, MES 15m/1d/5m, SOL 1h v002; e.g. BTC 5m 1,348 MB JSONL -> 51 MB parquet). parquet_sidecar verify on BTC 15m v002: PARITY, 175,272 rows. Disk: root 44%; datasets-out 9,551,089,434 B; market_features 8,044,894,291 B. NOT VERIFIED: which file each training run read (the runner prefers a fresh sidecar by construction, but nothing logs it); the build stderr files were cleaned, so per-version refusals could not be read. The log line's label was being overwritten (my bug), fixed in #18492 (held for the manager). datasets-out also fell about 2.5 GB since 2026-10-15T06:40Z for a reason this lane did not establish and does not claim. -> done.",
+  "updated_at": "2026-10-16T03:04:51Z",
+  "updated_by": "session_012is6hyqg4ANLMGrmawzbzJ",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "observation": {
+    "what": "The first nightly ict-trainer cycle after #18169 writes data.parquet beside data.jsonl for the market_features builds, and one of them verifies PARITY",
+    "how_to_check": "trainer-vm-diag: find datasets-out/market_features -name data.parquet | wc -l (baseline 0 at 2026-10-15T12:21Z, #18316) and .venv/bin/python -m ml.datasets.parquet_sidecar verify datasets-out/market_features/BTCUSDT/15m/v002 -> status PARITY. Note the builder prints its parquet_sidecar status to stderr, which build_trainer_datasets.sh captures to /tmp/bld_market_features_*.err, so read the files, not training_cycle.jsonl.",
+    "due_by": "2026-10-17T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DATA where: appended 2026-10-15 outcome (513 MB freed, MES 1m v001 deleted so only BTC 1m v001 remains, parquet sidecar landed, saving needs DATA-STORE-JSONL-RETIRE)",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md Change log row 2026-10-15 DATA-STORE-PARQUET-GC (added in #18169)"
+  },
+  "_seq": 502
+}

@@ -1,0 +1,197 @@
+{
+ "run": "RESEARCH-OPS-20261014-1447",
+ "finished_at": "2026-10-14T15:05:00Z",
+ "by": "research-ops-lane-20261014-1447",
+ "baseline": "comms/research/ops/20261014T0930Z.json",
+ "floor": 25,
+ "throughput": {
+  "runnable_before": 6,
+  "runnable_after": 12,
+  "queued": 231,
+  "units": 655,
+  "fired_24h": 82,
+  "fired_7d": 324,
+  "results_landed_24h": 101,
+  "hours_since_last_dispatch": 0.9,
+  "idle_alarm": false,
+  "as_of": "2026-10-14T14:57Z",
+  "note": "MEASURED: check_research_queue_throughput.py on origin/main (runnable 6; the 08:47 pass left 29, the dispatcher fired 82 units in 24h and drained them) and on this branch with 6 new units (12). FLOOR NOT MET: 12 < 25. check_research_queue_health exits H1 with the templates holding 0 unclaimed points, so a refill cannot close the gap; fired_24h rose 57 -> 82, which exceeds the 'moves by a third' re-derive trigger for the floor (the floor still stands, supply is what is short)."
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok: liveness fresh (0.91h old), last dispatch 13:54Z",
+  "collector": "ok: result_files_unreadable 0; 21 verdict.json committed since 09:30Z",
+  "stranded_stamp_prs": "not listed this pass (GitHub PR list not queried; stamps and receipts visible on main in git log)",
+  "watchdog": "newest row in watchdog_incidents.jsonl is the 2026-10-13T19:16Z backend:trainer self_healed row (tail read only)",
+  "incident": "none in the mechanism. Engine bug found in results: ml_bakeoff._mk_catboost passed verbose twice when a unit declared it (TypeError), landing the catboost arm 'unavailable' on RQ-20261014-4591-04. Fixed in this PR (defaults first, unit params override; same for lightgbm) with a regression test."
+ },
+ "results_read": {
+  "pass": 3,
+  "fail": 11,
+  "indeterminate": 7,
+  "producer_failed": 0,
+  "population": "21 verdict.json files under comms/research/ committed since 2026-10-14T09:30Z, one per unit, all read_state measured",
+  "units": [
+   {
+    "unit": "RQ-20261014-9d20-01",
+    "verdict": "pass",
+    "detail": "peak-to-exit census: exit headroom present (pullback 1.540 R/trade >= 0.25). mfe_r is a lagged lower bound (368 rows gross_r > mfe_r) so headroom is understated; oracle bound unattainable. Census, not a promotion case. ML-M1 updated."
+   },
+   {
+    "unit": "RQ-20261014-4591-03",
+    "verdict": "pass",
+    "detail": "LightGBM beats the numpy logit by >= 0.003 nats on BOTH BTC and ETH 1h regime (n=48000). Rule names a candidate-manifest note at most; nothing is swapped. No plan item carries this ref."
+   },
+   {
+    "unit": "RQ-20261013-1414-05",
+    "verdict": "pass",
+    "detail": "ExtraTrees non-inferior to LightGBM on MES 1d regime (n=1764). Shadow context head; ML-F11 updated; linear_logit history PASS."
+   },
+   {
+    "unit": "RQ-20261013-1414-10",
+    "verdict": "fail",
+    "detail": "EIA natgas storage surprise (n=564): no horizon reached the t-bar in the expected sign. Closes this definition only."
+   },
+   {
+    "unit": "RQ-20261013-1414-11",
+    "verdict": "fail",
+    "detail": "EIA crude stocks surprise (n=585): same."
+   },
+   {
+    "unit": "RQ-20261013-1414-12",
+    "verdict": "fail",
+    "detail": "CPI m/m surprise vs ES=F (n=139): same."
+   },
+   {
+    "unit": "RQ-20261014-65cc-02",
+    "verdict": "fail",
+    "detail": "continuing jobless claims surprise (n=559): same."
+   },
+   {
+    "unit": "RQ-20261014-65cc-04",
+    "verdict": "fail",
+    "detail": "Michigan sentiment surprise (n=278): same."
+   },
+   {
+    "unit": "RQ-20261014-65cc-05",
+    "verdict": "fail",
+    "detail": "retail sales m/m surprise (n=142): same. Macro survey-surprise family: 0 passes of 8 graded this cycle (65cc-01/-03 at the 08:47 pass plus these six); News/WEPE layers are NOT retired on these results."
+   },
+   {
+    "unit": "RQ-20261013-407c-08",
+    "verdict": "fail",
+    "detail": "scalp timeout-bars arms (n=169): no reachable lever beats removed; declared value stands. No config edit."
+   },
+   {
+    "unit": "RQ-20261014-f0e2-12",
+    "verdict": "fail",
+    "detail": "eth pullback vol-skip arms (n=116): declared value stands."
+   },
+   {
+    "unit": "RQ-20261014-4591-02",
+    "verdict": "fail",
+    "detail": "1h direction label: neither LightGBM nor the logit beats the class prior by 0.002 nats on any clause (n=48000). Direction line: closes these two arms on this feature set only."
+   },
+   {
+    "unit": "RQ-20261014-9d20-02",
+    "verdict": "fail",
+    "detail": "meta-label on thin decision-time columns: every arm AUC interval contains the prior on every leg (17 legs, 3638 trades). Closes ONLY these columns; makes METALABEL-EMIT-FEATURES (ML-M4) the gating lever."
+   },
+   {
+    "unit": "RQ-20261014-9d20-03",
+    "verdict": "fail",
+    "detail": "giveback not predictable at entry from the thin columns on 16 legs. Same disposition; in-trade telemetry lever is the next step (ML-M4)."
+   },
+   {
+    "unit": "RQ-20261012-75b2-19",
+    "verdict": "indeterminate",
+    "detail": "ML family (HGB) vs LightGBM on 15m BTC regime, between pass bar and fail floor."
+   },
+   {
+    "unit": "RQ-20261013-1414-07",
+    "verdict": "indeterminate",
+    "detail": "ExtraTrees/MLP vs LightGBM, 15m regime heads, between pass bar and fail floor. ML-F13 updated."
+   },
+   {
+    "unit": "RQ-20261014-4591-04",
+    "verdict": "indeterminate",
+    "detail": "CatBoost arm unavailable (engine TypeError, FIXED in this PR); ET and HGB evaluated, between pass bar and fail floor. Re-asked by RQ-20261014-de02-01."
+   },
+   {
+    "unit": "RQ-20261014-4591-05",
+    "verdict": "indeterminate",
+    "detail": "direction vs prior: catboost not importable on that backend; evaluated arms do not reach the floor. A FAIL is not allowed with an unavailable arm. Lever: catboost package on the Kaggle/runner env (see handoff)."
+   },
+   {
+    "unit": "RQ-20261014-9d20-05",
+    "verdict": "indeterminate",
+    "detail": "ExtraTrees/MLP vs LightGBM on 1h published shards, between pass bar and fail floor. ML-F16 updated; ensemble_stack history INDETERMINATE."
+   },
+   {
+    "unit": "RQ-20261014-f0e2-02",
+    "verdict": "indeterminate",
+    "detail": "donchian skip-hour arms: baseline n=25 < n_floor 39 (underpowered)."
+   },
+   {
+    "unit": "RQ-20261014-f0e2-13",
+    "verdict": "indeterminate",
+    "detail": "donchian cooldown arms: baseline n=25 < 39 (underpowered)."
+   }
+  ],
+  "note": "Counted from the units list by verdict: pass 3 + fail 11 + indeterminate 7 = 21 (= the 21 verdict.json files). No result changes live config."
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "catboost (and tabicl/tabpfn) packages on the research runner envs",
+   "ref": "FRONTIER-LEVER-TABULAR (already filed; 4591-05 is a second observation, note appended)"
+  }
+ ],
+ "pipeline_routed": [
+  {
+   "item": "PI-20261014-MVBJLVJ3-0001",
+   "to": "ML-HYGIENE"
+  },
+  {
+   "item": "PI-20261014-MVBJLVJ3-0002",
+   "to": "SIGNAL-CATALOG"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261014-de02-01 (catboost re-ask, 1h regime)",
+  "RQ-20261014-de02-02 (nfp / ES=F)",
+  "RQ-20261014-de02-03 (ism_manufacturing / ES=F)",
+  "RQ-20261014-de02-04 (ppi_mom / ES=F, negative)",
+  "RQ-20261014-de02-05 (adp_employment_change / ES=F)",
+  "RQ-20261014-de02-06 (api_crude_stocks / CL=F, negative)"
+ ],
+ "units_authored_detail": {
+  "by_bucket": {
+   "information": 5,
+   "frontier": 1,
+   "ai_trader": 0,
+   "own_losses": 0,
+   "structural": 0
+  },
+  "by_backend": {
+   "github_runner (cpu_light)": 5,
+   "github_runner_data (gpu_preferred, kaggle first)": 1
+  },
+  "note": "The five event-study units are clones of RQ-20261014-65cc-05 on kinds with n >= 100 MEASURED via load_resolved_events_multi (nfp 140, ism 141, ppi 139, adp 139, api_crude 106). Each registers its own sign and rule before the run. Honest caveat: the family is 0 for 8, so these are floor fillers on an under-served bucket, low confidence 0.15, not a belief the family will pass."
+ },
+ "not_run": [
+  "stranded-PR listing via GitHub MCP",
+  "full watchdog_incidents.jsonl read",
+  "blocked/ audit beyond blocker_watch.py output",
+  "needs_review triage (37 units carry grading.needs_review)",
+  "full pytest (ran test_research_queue.py + test_ml_bakeoff.py only)"
+ ],
+ "handoff": [
+  "Manager: PR holds (hand-authored units E57, scripts/research path). Review and merge; units RQ-20261014-de02-01..06.",
+  "FLOOR GAP: runnable 12 vs 25 with the templates at 0 unclaimed points. The dispatcher fired 82 in 24h (57 at the last pass), draining the queue between passes. Next pass or topic lane: either new templates (research/templates/) or a larger intake; a manager decision on weights is needed, I did not touch THEMES.yaml.",
+  "Next pass: blocker_watch NOT_RUNNING on RQ-20261013-a793-01..03 (trainer; dry run says would_dispatch on trainer but never dispatched) and RQ-20261014-005 and RQ-20260928-001 (NEEDS_LANE, HTF-FILTER-AB-LANE owns it). Decide whether to re-route a793 to Kaggle/runner.",
+  "Next pass: read de02-* as they land; check published-data.json beside the ML ones; de02-01 should show catboost arm_status ok. If it is still unavailable the package is missing on that backend (FRONTIER-LEVER-TABULAR).",
+  "Next pass: longer-window twins for the sol_pullback_2h / trend_donchian_xrp_4h axes (n < 39 on 730d); 37 grading.needs_review units to triage.",
+  "AI-TRADER-PROGRAMME: 9d20-02/-03 FAIL means METALABEL-EMIT-FEATURES (ML-M4) now gates the meta-label line; blocker_watch also lists AI-TRADER-PROGRAMME as STALE_BLOCK (its blocked_on ref 'PR #18015 held for the manager' matches no edge)."
+ ]
+}

@@ -1,0 +1,373 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "1144 harness trades still open after bar 6 across ['trend_donchian_eth_prop', 'trend_donchian_sol_prop'] (1488 trades in all), window 2020-07-01 .. 2026-10-15 23:59, config-exact, net of the harness's venue-aware cost stack; features from bars 1..k only, label = the trade's own peak-to-exit R",
+  "n": 1144,
+  "measurement": {
+    "k": 6,
+    "pooled": {
+      "n": 1144,
+      "n_floor": 100,
+      "folds": 6,
+      "fold_majority": 4,
+      "min_r2_gain": 0.02,
+      "min_ll_gain": 0.01,
+      "big_quantile": 0.5,
+      "verdict": "fail",
+      "label": "no_gain_over_bars_and_r",
+      "why": "OOS R2 base 0.0129 full 0.0257 (gain +0.0128, 5/6 folds); log-loss base 0.6831 full 0.6777 (gain +0.0053, 5/6 folds)",
+      "r2_base": 0.0129,
+      "r2_full": 0.0257,
+      "r2_gain": 0.0128,
+      "ll_base": 0.6831,
+      "ll_full": 0.6777,
+      "ll_gain": 0.0053,
+      "r2_fold_wins": 5,
+      "ll_fold_wins": 5,
+      "usable_folds": 6,
+      "big_share": 0.4991,
+      "giveback_mean": 0.9746,
+      "per_fold": [
+        {
+          "fold": 0,
+          "n": 199,
+          "usable": true,
+          "r2_base": 0.0146,
+          "r2_full": 0.0318,
+          "ll_base": 0.6794,
+          "ll_full": 0.6752
+        },
+        {
+          "fold": 1,
+          "n": 186,
+          "usable": true,
+          "r2_base": 0.0285,
+          "r2_full": 0.0413,
+          "ll_base": 0.6733,
+          "ll_full": 0.6677
+        },
+        {
+          "fold": 2,
+          "n": 172,
+          "usable": true,
+          "r2_base": -0.0282,
+          "r2_full": -0.0335,
+          "ll_base": 0.698,
+          "ll_full": 0.6881
+        },
+        {
+          "fold": 3,
+          "n": 198,
+          "usable": true,
+          "r2_base": 0.0346,
+          "r2_full": 0.0454,
+          "ll_base": 0.676,
+          "ll_full": 0.6677
+        },
+        {
+          "fold": 4,
+          "n": 205,
+          "usable": true,
+          "r2_base": 0.0121,
+          "r2_full": 0.0317,
+          "ll_base": 0.696,
+          "ll_full": 0.7022
+        },
+        {
+          "fold": 5,
+          "n": 184,
+          "usable": true,
+          "r2_base": 0.0309,
+          "r2_full": 0.0457,
+          "ll_base": 0.676,
+          "ll_full": 0.6645
+        }
+      ]
+    },
+    "per_leg": {
+      "trend_donchian_eth_prop": {
+        "n": 832,
+        "n_floor": 100,
+        "folds": 6,
+        "fold_majority": 4,
+        "min_r2_gain": 0.02,
+        "min_ll_gain": 0.01,
+        "big_quantile": 0.5,
+        "verdict": "fail",
+        "label": "no_gain_over_bars_and_r",
+        "why": "OOS R2 base 0.0084 full 0.0179 (gain +0.0095, 5/6 folds); log-loss base 0.6918 full 0.6893 (gain +0.0025, 4/6 folds)",
+        "r2_base": 0.0084,
+        "r2_full": 0.0179,
+        "r2_gain": 0.0095,
+        "ll_base": 0.6918,
+        "ll_full": 0.6893,
+        "ll_gain": 0.0025,
+        "r2_fold_wins": 5,
+        "ll_fold_wins": 4,
+        "usable_folds": 6,
+        "big_share": 0.5373,
+        "giveback_mean": 0.933,
+        "per_fold": [
+          {
+            "fold": 0,
+            "n": 155,
+            "usable": true,
+            "r2_base": 0.0185,
+            "r2_full": 0.033,
+            "ll_base": 0.6793,
+            "ll_full": 0.6865
+          },
+          {
+            "fold": 1,
+            "n": 133,
+            "usable": true,
+            "r2_base": 0.0142,
+            "r2_full": 0.0241,
+            "ll_base": 0.6861,
+            "ll_full": 0.6783
+          },
+          {
+            "fold": 2,
+            "n": 128,
+            "usable": true,
+            "r2_base": 0.0281,
+            "r2_full": 0.0397,
+            "ll_base": 0.6937,
+            "ll_full": 0.6817
+          },
+          {
+            "fold": 3,
+            "n": 135,
+            "usable": true,
+            "r2_base": 0.0142,
+            "r2_full": 0.0424,
+            "ll_base": 0.6877,
+            "ll_full": 0.6842
+          },
+          {
+            "fold": 4,
+            "n": 151,
+            "usable": true,
+            "r2_base": -0.0226,
+            "r2_full": -0.0447,
+            "ll_base": 0.7217,
+            "ll_full": 0.7266
+          },
+          {
+            "fold": 5,
+            "n": 130,
+            "usable": true,
+            "r2_base": 0.0209,
+            "r2_full": 0.0342,
+            "ll_base": 0.6804,
+            "ll_full": 0.6733
+          }
+        ],
+        "n_trades": 1085,
+        "n_exited_by_k": 253,
+        "cost_policy": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        }
+      },
+      "trend_donchian_sol_prop": {
+        "n": 312,
+        "n_floor": 100,
+        "folds": 6,
+        "fold_majority": 4,
+        "min_r2_gain": 0.02,
+        "min_ll_gain": 0.01,
+        "big_quantile": 0.5,
+        "verdict": "pass",
+        "label": "path_metrics_predict_giveback",
+        "why": "OOS R2 base 0.0341 full 0.0404 (gain +0.0063, 3/6 folds); log-loss base 0.6809 full 0.6229 (gain +0.0580, 6/6 folds)",
+        "r2_base": 0.0341,
+        "r2_full": 0.0404,
+        "r2_gain": 0.0063,
+        "ll_base": 0.6809,
+        "ll_full": 0.6229,
+        "ll_gain": 0.058,
+        "r2_fold_wins": 3,
+        "ll_fold_wins": 6,
+        "usable_folds": 6,
+        "big_share": 0.5865,
+        "giveback_mean": 1.0854,
+        "per_fold": [
+          {
+            "fold": 0,
+            "n": 56,
+            "usable": true,
+            "r2_base": 0.1128,
+            "r2_full": 0.1516,
+            "ll_base": 0.7327,
+            "ll_full": 0.6244
+          },
+          {
+            "fold": 1,
+            "n": 47,
+            "usable": true,
+            "r2_base": 0.0769,
+            "r2_full": 0.0647,
+            "ll_base": 0.6578,
+            "ll_full": 0.6242
+          },
+          {
+            "fold": 2,
+            "n": 43,
+            "usable": true,
+            "r2_base": -0.3385,
+            "r2_full": -0.4475,
+            "ll_base": 0.6625,
+            "ll_full": 0.6547
+          },
+          {
+            "fold": 3,
+            "n": 60,
+            "usable": true,
+            "r2_base": 0.0162,
+            "r2_full": -0.0026,
+            "ll_base": 0.7265,
+            "ll_full": 0.6667
+          },
+          {
+            "fold": 4,
+            "n": 53,
+            "usable": true,
+            "r2_base": 0.2347,
+            "r2_full": 0.3051,
+            "ll_base": 0.6596,
+            "ll_full": 0.6069
+          },
+          {
+            "fold": 5,
+            "n": 53,
+            "usable": true,
+            "r2_base": 0.0485,
+            "r2_full": 0.058,
+            "ll_base": 0.6311,
+            "ll_full": 0.5609
+          }
+        ],
+        "n_trades": 403,
+        "n_exited_by_k": 91,
+        "cost_policy": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        }
+      }
+    },
+    "runs": {
+      "trend_donchian_eth_prop": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "3.5",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/path_metric_giveback_k71wrgjn/trend_donchian_eth_prop__trades.jsonl",
+          "--json",
+          "/tmp/path_metric_giveback_k71wrgjn/trend_donchian_eth_prop__bt.json",
+          "--trail-decay-arm-r",
+          "2.99",
+          "--trail-decay-stall-bars",
+          "10",
+          "--trail-decay-tight-mult",
+          "1.8",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59",
+          "--emit-paths",
+          "/tmp/path_metric_giveback_k71wrgjn/trend_donchian_eth_prop__paths.jsonl"
+        ],
+        "feed": {
+          "source": "binance",
+          "ticker": "ETHUSDT",
+          "interval": "60",
+          "resample": "1h"
+        }
+      },
+      "trend_donchian_sol_prop": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "3.5",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/path_metric_giveback_k71wrgjn/trend_donchian_sol_prop__trades.jsonl",
+          "--json",
+          "/tmp/path_metric_giveback_k71wrgjn/trend_donchian_sol_prop__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "6.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59",
+          "--emit-paths",
+          "/tmp/path_metric_giveback_k71wrgjn/trend_donchian_sol_prop__paths.jsonl"
+        ],
+        "feed": {
+          "source": "binance",
+          "ticker": "SOLUSDT",
+          "interval": "60",
+          "resample": "1h"
+        }
+      }
+    },
+    "features": {
+      "base": [
+        "open_r_k",
+        "peak_r_k",
+        "bars_since_peak_k"
+      ],
+      "path": [
+        "chop_k",
+        "er_k",
+        "shape_k",
+        "early_k"
+      ]
+    }
+  },
+  "note": "FAIL / no_gain_over_bars_and_r: OOS R2 base 0.0129 full 0.0257 (gain +0.0128, 5/6 folds); log-loss base 0.6831 full 0.6777 (gain +0.0053, 5/6 folds)"
+}

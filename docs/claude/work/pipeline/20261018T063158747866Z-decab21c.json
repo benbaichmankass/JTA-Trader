@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "id": "PI-20261018-ARBVJQYT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DISPATCH-MONEY-FIRST-1018 (manager session_01VduHYzdaXe27wTDBLSu8ao, operator popup 2026-10-18 ~06:40Z)",
+    "rerun": "python3 scripts/research/research_slo.py --json --no-gh | python3 -c \"import json,sys; d=json.load(sys.stdin); print(d['facts']['theme_share_min_ratio'] if 'facts' in d else d)\""
+  },
+  "state": "queued",
+  "what": "MONEY FIRST follow-through: after dispatch_queue.fair_order ranks across themes by value (PR lane DISPATCH-MONEY-FIRST-1018, operator 2026-10-18 'Fix now, money first'), theme_share_min_ratio is expected to recover more slowly. In one week read the SLO and the per-theme fire counts: if a theme with due work has had 0 fires in 7 d, that is SUPPLY work (author valuable units there) unless its units are all low-value by honest measure -- then the decision for the manager/operator is whether starve_hours (240 h, research_compute.yaml) should drop to <= 168 h so the per-unit starve guard fires inside the SLO's 7 d window, or whether the SLO threshold should be restated. Do not loosen the SLO silently."
+}
