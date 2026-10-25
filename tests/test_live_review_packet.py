@@ -192,6 +192,7 @@ def test_packet_sha_matches_every_golden_row():
 
 
 @needs_gold
+@pytest.mark.skipif(not (REPO / "scripts/ci/check_live_review_records.py").exists(), reason="validator lands with PR #20121")
 def test_generated_packet_passes_the_validators_sha_check():
     spec = importlib.util.spec_from_file_location("clrr", REPO / "scripts/ci/check_live_review_records.py")
     v = importlib.util.module_from_spec(spec)

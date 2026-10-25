@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - run by a live-review reviewer session (skill live-trade-review § 1b) and, once LTR-4 lands, by the routine that spawns it; no scheduled caller exists yet.
 """Decision-packet generator for the live trade review (LTR-11-PACKET).
 
     python3 scripts/ops/live_review_packet.py pkg-b1e4fdf9b9d049a3          # one package
@@ -189,9 +190,8 @@ def packet_sha(packet: dict) -> str:
 
 
 def _accounts_cfg() -> Dict[str, dict]:
-    import yaml
-    cfg = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text())
-    return cfg.get("accounts", cfg)
+    from src.config.accounts_loader import load_accounts_dict
+    return load_accounts_dict()
 
 
 def _close(a: Optional[float], b: Optional[float]) -> bool:
@@ -277,6 +277,7 @@ def trend_now(bars: List[dict]) -> Tuple[Optional[str], Optional[float]]:
     """ADX-14 trend label, via the SAME functions the live detector uses (src.runtime.regime.detector)."""
     try:
         import pandas as pd
+
         from src.runtime.regime.detector import detect_regime
     except Exception:  # allow-silent: reported as a missing input by the caller
         return None, None
@@ -334,7 +335,7 @@ def _phone_refusal(s: Snapshot, account: str, ticket: dict) -> dict:
             "refusal_reason_state": "read" if reason else "not_in_phone_events"}
 
 
-def _mechanics(s: Snapshot, pkg: str, view: dict, accts: List[dict], sl: Optional[float], tp: Optional[float],
+def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], tp: Optional[float],
                direction: str, symbol: str) -> Tuple[dict, List[dict]]:
     """Venue vs journal vs package for every account; one verdict plus the evidence, and the per-account reads."""
     ev: List[str] = []
@@ -406,8 +407,6 @@ def _mechanics(s: Snapshot, pkg: str, view: dict, accts: List[dict], sl: Optiona
                 else:
                     item["evidence"] += "; no apply path for this exchange yet (LTR-9 / none)"
         bounds.append(item)
-    if pkg_status == "closed" and not any("package" in e for e in ev) and any(b["account_class"] != "prop" and b.get("evidence") for b in bounds):
-        pass
     verdict = "mismatch" if bad else ("could_not_look" if looked_fail and not accts else "match")
     if not bad and looked_fail:
         verdict = "match" if looked_fail < len(accts) else "could_not_look"
@@ -527,7 +526,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     if cell_entry is None:
         miss("regime.cell_entry", f"entry meta regime={ent_t!r} vol_regime={ent_v!r}: not both known")
 
-    mech, bounds = _mechanics(s, pkg, view, accts, sl, tp, direction or "", symbol or "")
+    mech, bounds = _mechanics(s, view, accts, sl, tp, direction or "", symbol or "")
     if p is not None and p.get("status") != "open":
         mech["evidence"] = f"order_packages status={p.get('status')} close_reason={p.get('close_reason')}; " + mech["evidence"]
 
