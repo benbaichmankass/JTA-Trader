@@ -915,6 +915,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/m20-u50-two-of-the-three-payments-never-touched-the-surface-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-u51-the-stanza-round-trips-as-text-and-not-as-evidence-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-u52-the-netting-remeasure-is-runnable-and-under-powered-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/m20-u8-stop-attribution-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-u9-netting-close-venue-adjudication-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m20-what-remains-2026-08-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m30-to-m16-integration-backbone-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
