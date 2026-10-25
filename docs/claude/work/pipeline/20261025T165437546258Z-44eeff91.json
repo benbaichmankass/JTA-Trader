@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "config/economic_calendar.yaml on main carries an event dated after today (the producer is refreshing it), or the calendar input is killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-8BRWED6K-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-11-PACKET session_017YfAAmprJiMhCa8BrwED6k 2026-10-25",
+    "rerun": "python3 - <<'X'\nimport re,sys;t=open('config/economic_calendar.yaml').read();print(max(re.findall(r'time: \"(\\d{4}-\\d{2}-\\d{2})',t)))\nX"
+  },
+  "state": "queued",
+  "what": "config/economic_calendar.yaml is STALE: its newest event is 2026-07-30 (checked 2026-10-25), though the file header says the Bigdata.com producer (scripts/macro/econ_calendar_produce.py --emit-config) auto-populates it. The news-influence layer and the live-review decision packet both read it, so 'no event risk' is NOT known for MES/MNQ/MGC/MHG/MCL/BTC/ETH. The packet reports state=stale instead of an empty list. Find why the producer stopped refreshing (no workflow/timer, token, or the emit step) and restore it."
+}

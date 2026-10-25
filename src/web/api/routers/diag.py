@@ -3687,6 +3687,34 @@ def get_position_path_history(
                         strategy=strategy, since=since, limit=limit)
 
 
+@router.get("/live_review_due")
+def get_live_review_due(request: Request) -> dict[str, Any]:
+    """LTR-1 -- which OPEN order packages are due for a live trade review now.
+
+    The L0 of ``docs/plans/live-trade-review-DESIGN.md``: joins the open
+    ``position_telemetry`` rows to the declared thresholds
+    (``config/live_trade_review.yaml``) and subtracts what
+    ``comms/live_review/reviews.jsonl`` already covers, returning each due
+    package with the event that made it due (``r_milestone`` / ``new_peak`` /
+    ``giveback`` / ``near_target`` / ``daily_floor``) and the closed bar it
+    belongs to.
+
+    ``read_state`` is ``looked`` or ``could_not_look``, never collapsed:
+    ``due_count`` is ``null`` -- not ``0`` -- when we could not look, and a
+    caller must not treat that as "nothing due". ``events_not_evaluated`` names
+    the design events whose inputs this does not read yet (swing, vol_regime,
+    funding, calendar, mechanics), so "not checked" never reads as "did not
+    fire". ``reviews_state`` (absent / read / unreadable) states whether the
+    dedupe log was there.
+
+    Pure read: one read-only SQLite connection plus two file reads; no socket,
+    no order path, writes nothing. Tier 1, token-gated.
+    """
+    _require_diag_token(request)
+    from src.runtime.live_review_due import live_review_due
+    return live_review_due()
+
+
 @router.get("/tick_cost")
 def get_tick_cost(request: Request) -> dict[str, Any]:
     """Per-tick wall-clock cost of the trader's hook chain (2026-08-09).
