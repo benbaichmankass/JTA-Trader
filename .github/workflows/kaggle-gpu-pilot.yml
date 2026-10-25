@@ -1,0 +1,94 @@
+name: kaggle-gpu-pilot
+
+# COMPUTE-KAGGLE-GPU pilot (docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md, rec. 6).
+# Question: can a workflow push a private GPU kernel to Kaggle, poll it and pull
+# its output back, with no session babysitting? Tier 1, manual dispatch only,
+# public data only (the kernel prints nvidia-smi + a matmul benchmark).
+#
+# no-durable-result: infrastructure pilot; its outcome is written by hand to docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md, not the research/results queue.
+#
+# AUTH (read from kaggle 2.2.4 source, not guessed): the client reads
+# KAGGLE_API_TOKEN (a KGAT_ token) from the environment and derives the
+# username by introspecting the token, so KAGGLE_USERNAME is NOT needed.
+# The token is never printed; the username is masked before use.
+
+on:
+  workflow_dispatch:
+    inputs:
+      poll_minutes:
+        description: "Max minutes to wait for the kernel"
+        required: false
+        default: "25"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaggle-gpu-pilot
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      POLL_MINUTES: ${{ inputs.poll_minutes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install kaggle client (>=2 for KGAT tokens)
+        run: pip install -q "kaggle>=2.0"
+      - name: Auth smoke test + quota
+        run: |
+          if [ -z "$KAGGLE_API_TOKEN" ]; then echo "KAGGLE_API_TOKEN secret is empty"; exit 1; fi
+          echo "::add-mask::$KAGGLE_API_TOKEN"
+          kaggle --version
+          mkdir -p out
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          if [ -z "$USERNAME" ]; then echo "AUTH FAILED: token did not resolve to a user"; exit 1; fi
+          echo "::add-mask::$USERNAME"
+          echo "USERNAME=$USERNAME" >> "$GITHUB_ENV"
+          echo "AUTH OK (username resolved from token, masked)"
+          kaggle quota 2>&1 | tee out/quota-before.txt || echo "quota call failed (non-fatal)"
+      - name: Push kernel
+        run: |
+          mkdir -p k && cp scripts/research/kaggle_gpu_pilot/pilot.py k/
+          sed "s|__USERNAME__|$USERNAME|" scripts/research/kaggle_gpu_pilot/kernel-metadata.json > k/kernel-metadata.json
+          date -u +%s > out/t_push
+          kaggle kernels push -p k 2>&1 | sed "s|$USERNAME|<user>|g" | tee out/push.txt
+          grep -qi "error\|fail" out/push.txt && { echo "PUSH FAILED"; exit 1; } || true
+      - name: Poll to completion
+        run: |
+          deadline=$(( $(date +%s) + POLL_MINUTES*60 ))
+          while :; do
+            s=$(kaggle kernels status "$USERNAME/metis-gpu-pilot" 2>&1 | sed "s|$USERNAME|<user>|g")
+            echo "$(date -u +%H:%M:%S) $s"
+            echo "$s" > out/status.txt
+            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+            [ "$(date +%s)" -gt "$deadline" ] && { echo "TIMEOUT"; break; }
+            sleep 30
+          done
+          date -u +%s > out/t_done
+          echo "wall_seconds=$(( $(cat out/t_done) - $(cat out/t_push) ))" | tee out/wall.txt
+      - name: Download output + quota after
+        if: always() && env.USERNAME != ''
+        run: |
+          kaggle kernels output "$USERNAME/metis-gpu-pilot" -p out/kernel 2>&1 | sed "s|$USERNAME|<user>|g" || true
+          kaggle quota 2>&1 | tee out/quota-after.txt || true
+          grep -l "$USERNAME" -r out 2>/dev/null | xargs -r sed -i "s|$USERNAME|<user>|g"
+      - uses: actions/upload-artifact@v4
+        if: always() && env.USERNAME != ''
+        with:
+          name: kaggle-gpu-pilot
+          path: out/
+          retention-days: 14

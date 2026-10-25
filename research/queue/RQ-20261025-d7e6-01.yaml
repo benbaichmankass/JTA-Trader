@@ -1,0 +1,104 @@
+id: RQ-20261025-d7e6-01
+title: 'POOLED read of the giveback-predictor TIGHTEN gate (9a7e-01/-02/-03): does MT beat A, UT and the random flag RT on net R per trade across ada, xrp and eth pullback 2h together?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'RQ-20261024-9a7e-01..03 each ask, on ONE leg, whether tightening the trail only on trades the vol-controlled predictor flags (P >= 0.6 at bar 6) beats the declared exit, the
+  same tightening on every trade and a matched-rate random flag, at a 0.02 R/trade bar. MEASURED 2026-10-25 from the committed arm emits of eba2-07/-08: the paired per-entry sd of a
+  tight trail against the incumbent is 0.82 R pooled (0.69 R per leg), so one leg of n ~400 resolves only 0.086 R/trade at power 0.80 and 0.02 is 4x below it. Pooled over the three pullback
+  legs (n ~1170) the MDE is ~0.06 R/trade. Does the POOLED paired difference MT - A clear 0.07 R per baseline trade with the controls beaten?'
+why_this_matters: 'RESULTS-GRADE-1025 finding: the per-leg tests of this family sit below their own minimum detectable effect (paired sd 0.3-0.8 R, n ~400). The eba2-07 MT arm was +4.6
+  R on ada (n 402, 4 of 6 folds) against a 8.04 R bar: small, consistent, not refuted. A pooled read is the only design that can answer it.'
+power:
+  expected_n: 1170
+  min_detectable_effect: 0.07
+  effect_units: R per trade
+  sd: 0.82
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: PAIRED sd 0.821 R MEASURED (tight trail MT vs A, ada+xrp pooled n 796, from the eba2-07/-08 arm emits; a P>=0.6 gate flags fewer trades than eba2's P>=0.5, so the true sd is
+    likely lower). n(A) = ada 402 + xrp 394 + eth ~371 = ~1170 (eth MEASURED in 4b82-14, n 371). Repo floor for d = 0.07/0.82 = 0.085 is 1086 trades (two-sided 0.05, power 0.80); one-sided
+    MDE at n 1170 = 0.060 R/trade <= the 0.07 bar. If the measured sd is higher the script reports INDETERMINATE with the MDE, never a verdict.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads the kept arm emits of units that replay history on pinned public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025-D7E6-01-POOLED-TIGHT-GATE
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'scripts/research/pool_arm_diff.py: the arms are paired on (leg, entry_time, direction) across the legs'' kept emits (comms/research/<unit>/<run>/arms/<ARM>__trades.jsonl),
+    a side missing from one arm counts 0 R; pooled diff per baseline trade, month-block bootstrap CI (4000 resamples, seed 20261025), 6 calendar folds by entry, pooled maxDD, minimum
+    detectable effect 2.487 x paired sd / sqrt(n(A)). Candidate MT, baseline A, controls UT, RT.'
+  rule: 'INDETERMINATE (read_state unmeasured: re-fire, not a verdict) IF any leg''s arm emits are missing; INDETERMINATE IF pooled n(A) < 1100 OR the MDE exceeds the bar 0.07 R/trade
+    (the pool cannot resolve the bar: said so, never graded). PASS IF pooled MT - A >= 0.07 R per baseline trade AND the bootstrap CI lower bound > 0 AND >= 5 of 6 pooled folds MT >=
+    A AND pooled maxDD(MT) <= 1.35 x maxDD(A) AND for every control (UT, RT) MT - control > 0 with >= 5 of 6 folds. FAIL IF the CI upper bound of (MT - A) < 0.07. OTHERWISE INDETERMINATE
+    (unresolved; the rule has no third outcome, so none is invented). Thresholds are not changed after any result. PASS -> ONE confirmation unit on a disjoint window or legs, then Q6
+    live parity and a Tier-3 proposal; never a config edit.'
+  what_it_does_not_do: Edits no config (no src/, no config/), places no order, is not a promotion case. Reads only emits the per-leg units already produced; fetches no data. The harness
+    fills a stop at the stop price, not at a gap (the controls share that artifact; A does not, so cand - A is biased toward the lever and cand - control is not). Does not pool with
+    any committed record outside the named units. Does not re-run or edit 9a7e-*; their per-leg rules stand and this is their pooled reader.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the pooled read is what lets the lever family be decided at all (per-leg MDE 0.05-0.09 R/trade vs the 0.02 bar); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window and reads no trainer data; CPU only, minutes.
+  est_minutes: 5
+  basis: Reads ~10 small jsonl files and bootstraps 4000 month-block resamples; seconds on a runner (smoke on the 796-trade eba2-07/-08 pool, 2026-10-25).
+run:
+  command:
+  - python3
+  - scripts/research/pool_arm_diff.py
+  - --unit
+  - ada_pullback_2h=RQ-20261024-9a7e-01
+  - --unit
+  - xrp_pullback_2h=RQ-20261024-9a7e-02
+  - --unit
+  - eth_pullback_2h=RQ-20261024-9a7e-03
+  - --baseline
+  - A
+  - --candidate
+  - MT
+  - --control
+  - UT
+  - --control
+  - RT
+  - --bar
+  - '0.07'
+  - --min-n
+  - '1100'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-mult
+  - '1.35'
+  - --seed
+  - '20261025'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261025-d7e6-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/pool_arm_diff.py
+- tests/test_pool_arm_diff.py
+- comms/research/grading/RESULTS-GRADE-1025.json
+requires_result:
+  unit: RQ-20261024-9a7e-03
+not_before: '2026-10-27T00:00:00Z'
+programme: P1

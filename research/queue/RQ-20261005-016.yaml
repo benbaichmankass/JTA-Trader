@@ -63,15 +63,22 @@ generated:
     leg: slv_pullback_1d
     symbol: SLV
     timeframe: 1d
-last_dispatched_at: '2026-10-08T12:04:23+00:00'
+last_dispatched_at: '2026-10-22T13:53:29+00:00'
 grading:
   auto: true
   decision_rule_id: RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST
   evidence:
-  - research/results/RQ-20261005-016/37774156478.jsonl
-  graded_at: '2026-10-12'
+  - research/results/RQ-20261005-016/39790965706.jsonl
+  graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-TOOLING-GAPS
+  owner_reason: 'Rule not applicable as registered: RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST grades ''net-of-cost
+    OOS R'', but research-harness-dispatch''s payload carries only the WHOLE-WINDOW net_total_r (no OOS
+    split), so the mapper lands wiring_only every week. Newest row: whole-window net_total_r +24.91 R
+    over 50 trades (2016-10-17..2026-10-14) -- NOT the registered statistic, not a verdict. Fix owned
+    by PI-20261006-1VPYTX8E-0001 (re-register the template on the mapper''s shape, or add an OOS figure
+    to the payload), due 2026-10-29.'
   reason: 'verdicts not unanimous-mechanical: [''wiring_only'']'
   rows: 1
   verdict: null

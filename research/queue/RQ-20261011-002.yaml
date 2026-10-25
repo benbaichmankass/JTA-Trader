@@ -68,10 +68,15 @@ grading:
   decision_rule_id: RULE-TPL-E35-BRACKET-IS-OOS-GATE
   evidence:
   - docs/research/e35-bracket-corpus.jsonl
-  graded_at: '2026-10-12'
+  graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
   latest: true
   needs_review: true
+  owner: RESEARCH-OPS-20261022-0847
+  owner_reason: 'n-bound, not a defect: base_oos_trades 29 < 39 on trend_donchian_xrp_4h (E35 gate floor);
+    the unit is monthly and the grader re-asks it, so it resolves itself when the leg''s OOS trade count
+    reaches 39. No lever to build; sibling units at 5-9 base OOS trades were retired. Triaged by RESEARCH-OPS-20261022-0847;
+    re-read when the next monthly result lands.'
   reason: base_oos_trades 29 < 39 (unresolvable_at_current_n)
   rows: 199
   verdict: indeterminate

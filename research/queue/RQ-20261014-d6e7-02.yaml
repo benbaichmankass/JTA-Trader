@@ -1,0 +1,131 @@
+id: RQ-20261014-d6e7-02
+title: >-
+  In-trade exit line, rung 2: does a SIMPLE in-trade state (open R, bars since peak, giveback from peak) predict SL-before-TP beyond
+  the calibrated distance-only reference, out of sample?
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+requires_result:
+  unit: RQ-20261014-d6e7-01
+  verdict: pass
+question: >-
+  At each bar close of an open trade before its first passage (K = 2 R, Fixed-bracket reconstruction: each trade in the newest
+  committed ledger per USDT leg is re-walked bar by bar over public Binance Vision candles from its entry bar, with the ledger's
+  INITIAL stop at -1 R and a fixed TP at K R; SL before TP on a shared bar; timeout at H = max(10, p90 of the leg's realised holds);
+  a leg enters only if >= 80% of its controllable trades re-walk to the ledger's own mfe_r within 0.05 R (n >= 10). Costs: every
+  arm pays the trade's ledger cost_total_r (fee + slippage + funding via execution_costs.resolve_cost_policy()); an early exit
+  pays cost_slippage_r once more.), does an L2 logistic on the simple state -- logit of the gambler's-ruin p0, distance to TP and
+  to SL in ATR, log bars in trade, open R, log bars since the running peak, giveback from the peak -- beat a calibrated reference
+  on the distance-only state (logit p0, distances in ATR, log bars in trade) on trade-weighted out-of-sample log-loss for the label
+  SL-first, under time-ordered purged folds?
+why_this_matters: >-
+  This is the operator's question asked of the cheapest honest state. The reference is calibrated, not p0 itself: on bars, discrete
+  passage, SL-first on a shared bar and the horizon let a model 'beat' p0 on a pure random walk (first_passage.py --self-test measures
+  it), so the claim that the path shape carries information must beat 'where the trade is now'. Different from the three failed
+  ML-S2 exit heads: per-bar labels (not per-trade), a ~3,000-trade corpus (not one leg's ~50-150 OOS trades), and a first-passage
+  target (not 'did the trade end positive').
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit = OOS test trade (its bar events share one weight). ~3,000 trades after the control, timeouts excluded from the label,
+    4 of 5 time blocks tested -> ~1,500-2,000 OOS trades (estimate). A 0.1 sd per-trade log-loss gain needs ~785; the 300 floor
+    in the rule is a floor.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Committed ledgers + public candles; nothing accrues. n is set by the corpus the census RQ-20261014-d6e7-01 re-walks: 3,926
+      trades passed the MFE control in the lane authoring read of 2026-10-14; the OOS non-timeout share of those is the unit.
+decision_rule:
+  id: RULE-RQ20261014-D6E7-02-SIMPLE-STATE-VS-DISTANCE
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per OOS trade: mean over its bar events of logloss(reference) - logloss(model), trade-weighted; pooled mean with a 1,000-draw
+    trade bootstrap 95% CI; sign per fold (4 expanding, purged time folds); calibration slope of the label on the model's OOS logit.
+    Reported: gain vs the train base rate, per-fold gains. Model: L2 logistic (numpy IRLS), features `simple`; reference: `dist`
+    fitted on the same train folds.
+  rule: >-
+    PASS IF pooled gain >= 0.002 nats AND bootstrap CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope in
+    [0.7, 1.3] -> the state carries information about SL-before-TP beyond where the trade is; a PASS releases the exit-policy simulation
+    RQ-20261014-d6e7-03. FAIL IF the CI upper bound < 0.002 nats: this feature set adds nothing beyond the reference on this corpus
+    -- close it, say so on IN-TRADE-EXIT-MODEL. INDETERMINATE otherwise or under n.
+  min_n: 300 OOS trades with a first passage (timeouts excluded)
+  what_it_does_not_do: >-
+    Ships no exit rule (rung 3 grades the policy). Same fixed-bracket reconstruction as d6e7-01. Pooled across legs by design (the
+    label is a first-passage event in R, comparable across legs); per-leg gains are reported, not graded.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.25
+  basis: 'stand-in: the probability model behind the operator''s exit-now mechanism; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  basis: >-
+    MEASURED 2026-10-14 in the lane sandbox -- with per-leg fetches the census's candle fetch did not finish inside 30 min (since
+    fixed to one fetch per symbol x timeframe); budget 90 min, timeout 240 (runner cap 360). Same candle fetch as d6e7-01 (fresh
+    runner, no shared cache); a few hundred thousand bar events through a numpy logistic, seconds per fold.
+run:
+  command:
+  - python3
+  - scripts/research/first_passage.py
+  - --mode
+  - baseline
+  - --features
+  - simple
+  - --ref
+  - dist
+  - --policy-tp-r
+  - '2.0'
+  - --min-gain-nats
+  - '0.002'
+  - --min-folds
+  - '3'
+  - --min-n
+  - '300'
+  - --cache-dir
+  - '{out_dir}/candles'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261014-d6e7-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+- M23
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q8, the destination of the exit line)
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- scripts/research/first_passage.py
+- EXIT-PATH-EMIT-OFFLINE
+- >-
+  RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
+last_dispatched_at: '2026-10-15T12:55:32+00:00'
+grading:
+  attested: RULE-RQ20261014-D6E7-02-SIMPLE-STATE-VS-DISTANCE
+  auto: true
+  decision_rule_id: RULE-RQ20261014-D6E7-02-SIMPLE-STATE-VS-DISTANCE
+  evidence:
+  - research/results/RQ-20261014-d6e7-02/38738469340.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

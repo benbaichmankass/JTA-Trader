@@ -1,0 +1,32 @@
+{
+  "id": "AUTO-PYTEST-RERUN",
+  "title": "workflow_run on pytest-run cancelled or zero-tests-collected: rerun once (run_attempt==1)",
+  "phase": "automation",
+  "state": "landed_unproven",
+  "owner": "AUTO-WAVE1 lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17844
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-13 AUTO-WAVE1] .github/workflows/pytest-rerun.yml (workflow_run on pytest-run) + scripts/ci/pytest_rerun.py. Reruns ONCE per head sha only when the Run tests step was cancelled at the job timeout (timeout read from pytest-run.yml minus 3 min) or the job died before tests started; never a failed test step, a superseded head, or attempt >1. Built, not yet observed live.",
+  "updated_at": "2026-10-13T10:00:35Z",
+  "updated_by": "session_AUTO-WAVE1",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "AUTO-PYTEST-RERUN built and measured against its estimate",
+    "how_to_check": "cancel a run on a scratch PR: exactly one rerun, then its own result stands",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: CI reliability tooling",
+    "arch": "none: no contract change"
+  },
+  "_seq": 449
+}

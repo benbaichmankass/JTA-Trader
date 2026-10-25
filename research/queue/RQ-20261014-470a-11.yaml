@@ -1,0 +1,68 @@
+id: RQ-20261014-470a-11
+title: 'Programme 03 measure, Stage-0 half: net R per capital-day per routed leg at CONFIGURED params, by account class (real / prop / mirror
+  / paper), from the committed evidence records'
+status: queued
+cadence: weekly
+theme: live_strategy
+priority: 1
+kind: deterministic
+question: For every (account, leg) routing on a live-mode account, what does the leg's committed evidence record say about its Stage-0 net R per
+  capital-day, n and fold consistency at the parameters it is configured with -- and which legs are `drag`, `underpowered` or `no_record`?
+why_this_matters: The operator's headline measure (2026-10-14) is net P&L per capital-day per strategy. Its live half is row HEADLINE-MEASURE-CAPITAL-DAY;
+  this is the Stage-0 half, which decides where P3's tune-before-retire work goes (every `drag` or `underpowered` real-money leg gets a unit).
+  The records already carry the column; nothing read it.
+why_not_inferential: 'A census over committed records: no sample is drawn and no hypothesis is tested; the record IS the deliverable. Its thresholds
+  (n floor 39 = the standing E35 floor; fold share 0.75 = the 3-of-4 fold majority every P3 unit uses) are the repo''s existing bars, not chosen
+  on this output.'
+decision_rule:
+  id: RULE-RQ20261014470a11-CENSUS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per (class, account, leg): from comms/strategy_evidence/<leg>.json and the __bt.json its cost_stack.source names -- n_trades_oos,
+    net_r_oos, folds_positive/folds, window_days, capital_days, net_r_per_capital_day. Grade: no_record (no readable record/bt: could-not-look,
+    never zero) | underpowered (n < 39) | drag (net_r_per_capital_day <= 0 OR folds_positive/folds < 0.75) | pulls_weight.'
+  rule: 'Verdict no_action_warranted / read_state measured when >= 1 leg is read (no_data otherwise): a census. ACTIONS, fixed here: every real-money
+    or prop leg graded drag or underpowered must carry an open P3 unit or a stated ''no action, because'' on the P3-STRATEGY-PROGRAMME row by
+    the next weekly pass; a real-money leg graded drag on two consecutive weekly runs with no open unit is raised to the manager as a tune-before-retire
+    case (perf-followup Track 1), never a demotion by this unit. no_record on a routed leg is a build gap (its evidence record) filed by research-ops.'
+  what_it_does_not_do: 'Runs no harness and fetches nothing. Does not compare levels across different record windows (only signs and grades).
+    Does not weight by capital (needs live equity: HEADLINE-MEASURE-CAPITAL-DAY). Changes no config or roster.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.5
+  bucket: structural
+  basis: steers every P3 tuning unit toward the real-money legs that drag; estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 2
+  basis: Reads ~40 committed JSON files; no network.
+run:
+  command:
+  - python3
+  - scripts/research/stage0_capital_day_census.py
+  - --n-floor
+  - '39'
+  - --fold-share
+  - '0.75'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 10
+  inputs:
+    research_unit: RQ-20261014-470a-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261014-470a-11/<run_id>.jsonl; verdict.json + one record row per routing under comms/research/RQ-20261014-470a-11/<run_id>/.
+roadmap:
+- L-LADDER
+- M21
+related:
+- P3-STRATEGY-PROGRAMME
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- scripts/research/stage0_capital_day_census.py
+- HEADLINE-MEASURE-CAPITAL-DAY
+last_dispatched_at: '2026-10-22T01:46:28+00:00'

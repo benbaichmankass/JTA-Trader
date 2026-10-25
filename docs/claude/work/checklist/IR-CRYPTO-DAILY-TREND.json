@@ -1,0 +1,22 @@
+{
+  "id": "IR-CRYPTO-DAILY-TREND",
+  "title": "Build: daily-bar crypto trend Stage-0 route (resample 1D through a verdict.json wrapper) + >=1095 d BTC/ETH/SOL corpus, then pooled-alt daily Donchian units with folds and Holm across cells",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: Stage-0 breadth screens (A, docs/research/idea-family-review-2026-10-16.md). Trend at 1h on 3 years passed 10/13 alts, but the screen rule was net>0 & n>=39 with no folds and no multiplicity correction over ~60 cells; BTC/ETH/SOL 1h-4h ran on 180-day windows (n 20-66) because fetch_backtest_corpus.py pins roster pairs to 180 d; NO crypto daily bars exist in the corpus. Outside: Liu & Tsyvinski 2021 RFS -- crypto time-series momentum at 1-4 WEEK horizons (primary); Borgards 2021 (primary); Zarattini-Pagani-Barbon 2025 multi-lookback Donchian on BTC+alts (secondary). FIRST STEP: add BTC/ETH/SOL 1h at 1095 d to the corpus candidate table and a resample input (or a scripts/research wrapper running backtest_trend.py --timeframe 1d --resample 1D --donchian 20|55 per alt over 4 --start/--end folds, writing verdict.json). Then: (a) confirm the 10 1h PASS cells over 4 folds with Holm; (b) pooled daily alt Donchian, PASS iff net > 0, >= 3/4 folds, n >= 88. 2026-10-18 lane FRONTIER-TIMEFRAMES-1018: the FIRST STEP (a scripts/research wrapper running backtest_trend.py --timeframe 1d --resample 1D per symbol over calendar folds, writing verdict.json) is delivered by scripts/research/harness_stage0.py (programme 07 TIMEFRAMES; self-test + smoke on real ETHUSDT daily candles 2026-10-18). Step (b) -- pooled daily alt Donchian with folds and Holm across cells -- is registered as RQ-20261018-ef5d-03 (BTC/ETH/SOL/XRP/ADA/AVAX, Donchian 20 and 55, 2020-01-01..2026-10-17, 6 folds >= 4, pooled n >= 39, Holm reported). Step (a), the 4-fold Holm confirmation of the ten 1h PASS cells, is NOT covered by this lane and stays on this row.",
+  "updated_at": "2026-10-18T06:31:01Z",
+  "updated_by": "lane-FRONTIER-TIMEFRAMES-1018",
+  "roadmap": [
+    "L-PROP",
+    "L-LADDER"
+  ],
+  "_seq": 540
+}

@@ -1,6 +1,6 @@
 id: RQ-20261007-080
 title: "TP doctrine B1, rule 1: does the Donchian measured-move TP revision beat each money leg's bracket as it trades today?"
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -140,4 +140,27 @@ related:
   - 'RQ-20261006-060 (the entry-side question for trend_donchian_eth_4h: a finite tp_r vs the sentinel)'
   - 'scripts/research/be_floor_sweep.py (the fold/gate machinery reused verbatim)'
   - '.claude/skills/exit-refinement/SKILL.md (harness lever -> E0 -> live parity; tests/test_tp_revision_donchian_rule.py pins harness/live parity)'
-last_dispatched_at: '2026-10-08T03:51:53+00:00'
+last_dispatched_at: '2026-10-15T14:01:33+00:00'
+grading:
+  decision_rule_id: RULE-RQ1007-080-MEASURED-MOVE-TP-REVISION
+  graded_at: '2026-10-16'
+  graded_by: P1-ATM-BACKLOG-1016 (lane session, manager dispatch 2026-10-16)
+  read_state: measured
+  needs_review: false
+  verdict: pass
+  evidence:
+  - comms/research/RQ-20261007-080/38747768830/verdict.json
+  - comms/research/RQ-20261007-080/38747768830/sweep.json
+  reason: 'Graded from the run''s committed artifacts (run 38747768830, commit 9f401d81, all_ok true);
+    research/results holds only the earlier producer_failed row because the producer''s per-leg records
+    lack population.n/verdict and research_result.py --emit refuses them (build row TP-REVISION-RECORD-CONTRACT).
+    Under the registered rule: arm width_mult 1.0 clears the pooled gate -- pooled net R 155.219 vs control
+    130.8661 (d +24.3529 over 1,439 control trades on 4 graded legs; arithmetic re-checked: +24.1397 eth_4h
+    -0.7718 eth_prop -3.3041 sol_prop +4.2891 xrp_4h), majority of exercised folds won at k=3 (7/12),
+    4 (10/16), 5 (12/20) -- with 46.1% of applied revisions cap-bound (<= 50%). Arms 1.5 and 2.0 also
+    clear the pooled gate but are cap-bound above 50% on eth_4h (4671/4744, 4735/4744), so 1.0 is the
+    best passing arm. PASS -> per the rule, a Tier-3 proposal to declare tp_revision {rule: donchian_measured_move,
+    width_mult: 1.0} on the graded legs that improved under it: trend_donchian_eth_4h (27.35 -> 51.49
+    R, maxDD 12.21 -> 8.36) and trend_donchian_xrp_4h (11.62 -> 15.91 R); NOT eth_prop or sol_prop (both
+    worse). Per-leg confirmation registered first as programme nodes P1-Q3-eth4h-measured-move-confirm
+    / P1-Q3-xrp4h-measured-move-confirm (longer window 2020-07.., calendar folds, materiality).'

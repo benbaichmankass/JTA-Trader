@@ -1,0 +1,189 @@
+id: RQ-20261022-c0d3-01
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'Sequence learner variant 3/3 -- TRAINING REGIME: deeper/slower GRU (2x64, W48, 30 epochs, lr 5e-4) vs the wide LightGBM'
+status: done
+priority: 3
+question: If under-training (single seed, 8 epochs, lr 3e-3, one BTC fold collapsed to the prior) hid a real GRU signal, does a 2-layer hidden-64 GRU with 30 epochs
+  at lr 5e-4 (seed 7, W48) beat lightgbm_wide by >= +0.010 macro-F1 on all three symbols over 8 folds?
+why_this_matters: 'Isolates the optimisation regime from the window length tested in RQ-20261022-c0d2-01. Variant of RQ-20261018-ff8f-04 (GRU vs LightGBM, INDETERMINATE 2026-10-22:
+  GRU-LGBM macro-F1 BTC +0.002 / ETH +0.016 / SOL +0.006, fold CIs +-0.02-0.04). Operator directive 2026-10-22: an inconclusive first test does not kill an idea;
+  study it and build variants. Diagnosis of ff8f-04 from its result record: (1) CONFOUND -- the GRU saw a 32-bar window of 10 features while LightGBM saw the current
+  bar of 6, so a GRU win could not be told apart from the 4 range-vol features alone; (2) RESOLUTION -- 5 folds, fold SD ~0.02, CI half-widths 0.02-0.04 vs a +0.010
+  bar; (3) the machine rule (pass_if BTC&ETH >= +0.010 and SOL > 0) was stricter than its own prose (''>= 2 of 3''); (4) one seed, 8 epochs, lr 3e-3, and on BTC fold
+  5 the GRU''s score equals the prior''s exactly (collapse to the majority class), so under-training is possible. Outside-source check: a literature search found
+  no purged-CV window-length sweep for volatility-regime heads; LuxAlgo-class commentary and the arXiv 2605.17724 LSTM-vs-GBM intraday study both say label/data quality
+  dominates architecture, so this unit tests the GRU against the FAIR wide baseline rather than assuming the architecture matters.'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Same shard tails as ff8f-04 (40,000 rows/symbol); 8 folds give a tighter fold-level CI than 5; n does not grow with waiting.
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (nightly shard tail).
+decision_rule:
+  id: RULE-RQ20261022C0D301-GRU-VARIANT
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (candidate minus lightgbm_wide) on identical rows, 8 folds; lightgbm_wide sees the SAME 10 features as the
+    GRU (current bar only).'
+  rule: 'PASS IF some candidate beats lightgbm_wide by >= +0.010 macro_f1 (CV mean) on ALL of BTC, ETH and SOL (machine rule == this prose, unlike ff8f-04): family
+    history deep_sequence PASS for this configuration; follow-up is the net-of-cost regime-cell walk-forward with the LightGBM head as the baseline. FAIL IF no candidate
+    reaches > 0 vs lightgbm_wide on ANY symbol and every candidate was evaluated: closes THIS configuration only, not the idea. INDETERMINATE otherwise, if folds
+    < 6, or any candidate arm is unavailable.'
+  min_n: 6 usable CV folds per symbol.
+  what_it_does_not_do: Serves and registers nothing; touches no config; a feature/architecture lift is not edge. An INDETERMINATE or FAIL here does not retire the
+    sequence-learner idea.
+compute: needs_vm_data
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: an untested input shape for a family with one FAIL; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 5.0
+  est_minutes: 150
+  basis: 'Estimate from ff8f-04: 5 folds x 3 symbols, W32 h32 8 epochs took ~11 min wall on the trainer; scaled by folds x epochs x window x hidden. Re-declare from
+    the first run-manifest.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    extra_columns:
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 8
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lightgbm_wide
+  controls:
+  - lightgbm
+  - prior
+  candidates:
+  - gru_deep
+  learners:
+    prior:
+      kind: prior
+    lightgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    lightgbm_wide:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+      feature_blocks:
+      - kind: df_columns
+        columns:
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+    gru_deep:
+      kind: torch_gru
+      params:
+        window_bars: 48
+        hidden: 64
+        layers: 2
+        epochs: 30
+        lr: 0.0005
+        seed: 7
+        max_train_windows: 30000
+      feature_blocks:
+      - kind: df_columns
+        columns:
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+  rule:
+    min_folds: 6
+    pass_if:
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261022-c0d3-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- MB-20260703-001
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-LEVER-SEQUENCE-LEARNER
+- ML-UNBLOCK-1018
+- RQ-20261018-ff8f-04
+- ML-NONGBDT-RUNNERS
+last_dispatched_at: '2026-10-23T13:57:47+00:00'
+grading:
+  attested: RULE-RQ20261022C0D301-GRU-VARIANT
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261022C0D301-GRU-VARIANT
+  evidence:
+  - research/results/RQ-20261022-c0d3-01/39965656050.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

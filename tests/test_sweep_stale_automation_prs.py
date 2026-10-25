@@ -540,3 +540,63 @@ def test_a_stamp_pr_is_graded_on_what_it_changed_even_after_main_moved_on(qrepo:
     _branch(qrepo, "automation/research-queue-grade-8-1", {
         _UNIT: _unit("'2026-10-07T10:05:38+00:00'", extra="grading:\n  verdict: fail\n")})
     assert _classify(qrepo, 8, "automation/research-queue-grade-8-1")["state"] == sweep.UNDATED_PAYLOAD
+
+
+# --------------------------------------------------------------------------
+# CONFLICTED STAMP / RECEIPT PRs (#18004, #18014, 2026-10-14) -- a data-only
+# conflict used to be "left alone for a human" and sat unmergeable for hours.
+# --------------------------------------------------------------------------
+
+def _conflict_setup(repo: Path, main_unit: str, branch_unit: str, other: dict | None = None):
+    def g(*a: str) -> int:
+        return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True, check=False).returncode
+    unit = "research/queue/RQ-20261006-023.yaml"
+    (repo / "research/queue").mkdir(parents=True)
+    (repo / unit).write_text("id: RQ-20261006-023\nstatus: queued\nlast_dispatched_at: null\n")
+    g("add", "-A")
+    g("commit", "-q", "-m", "unit")
+    g("checkout", "-q", "-b", "automation/research-queue-stamp-1")
+    (repo / unit).write_text(branch_unit)
+    for rel, text in (other or {}).items():
+        (repo / rel).write_text(text)
+    g("add", "-A")
+    g("commit", "-q", "-m", "stamp")
+    g("checkout", "-q", "main")
+    (repo / unit).write_text(main_unit)
+    g("add", "-A")
+    g("commit", "-q", "-m", "main edits the same unit")
+    g("checkout", "-q", "automation/research-queue-stamp-1")
+    assert g("merge", "main", "-m", "m") != 0, "setup must produce a real conflict"
+    return unit
+
+
+def _conflicted(repo: Path) -> str:
+    return subprocess.run(["git", "-C", str(repo), "diff", "--name-only", "--diff-filter=U"],
+                          capture_output=True, text=True, check=False).stdout
+
+
+def test_a_conflicting_stamp_keeps_mains_edit_and_the_branchs_stamp(repo: Path) -> None:
+    unit = _conflict_setup(
+        repo,
+        main_unit="id: RQ-20261006-023\nstatus: done\nlast_dispatched_at: null\n",
+        branch_unit="id: RQ-20261006-023\nstatus: queued\nlast_dispatched_at: '2026-10-14T06:02:00+00:00'\n")
+    assert sweep.resolve_data_conflicts(_conflicted(repo), cwd=repo) is True
+    text = (repo / unit).read_text()
+    assert "status: done" in text and "2026-10-14T06:02:00" in text and "<<<<" not in text
+    assert _conflicted(repo).strip() == ""
+
+
+def test_a_conflict_outside_regenerable_data_is_still_left_for_a_human(repo: Path) -> None:
+    def g(*a: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True, text=True)
+    g("checkout", "-q", "-b", "automation/x")
+    (repo / "reg.json").write_text('{"v": "branch"}\n')
+    g("commit", "-qam", "b")
+    g("checkout", "-q", "main")
+    (repo / "reg.json").write_text('{"v": "main2"}\n')
+    g("commit", "-qam", "m")
+    g("checkout", "-q", "automation/x")
+    subprocess.run(["git", "-C", str(repo), "merge", "main", "-m", "m"], capture_output=True, check=False)
+    assert sweep.resolve_data_conflicts(_conflicted(repo), cwd=repo) is False
+    assert sweep.resolve_data_conflicts("", cwd=repo) is False
+    assert "reg.json" in _conflicted(repo)   # nothing staged on the refusal path

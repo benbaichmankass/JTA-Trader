@@ -1,0 +1,75 @@
+{
+  "run": "RESEARCH-OPS-20261022-1447",
+  "finished_at": "2026-10-22T15:30:00Z",
+  "by": "session_019iupCCboS2jsn1kNq46oGU",
+  "floor": 59,
+  "floor_basis": "computed_floor(fired_24h 74)",
+  "authoring_queue_depth": 23,
+  "idle_backends": ["github_runner_data", "kaggle"],
+  "needs_review_triaged": 1,
+  "needs_review_left": 36,
+  "needs_review_note": "queue_grade --health lists 37 at start. The one UNOWNED unit (RQ-20261022-511e-01, 1 row vs min_rows 2) now carries a session grading block (verdict fail) in the held PR; result_disposition_check --list reads UNOWNED 0 on that branch. The other 36 already carry an owner + named gap or are retired (counted from the 0925Z record; not re-walked this pass).",
+  "throughput": {
+    "runnable_before": 45,
+    "runnable_after": 46,
+    "queued": 128,
+    "fired_24h": 74,
+    "results_landed_24h": 73,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "dispatch_queue dry run on the held branch: RQ-20261022-c584-01 would_dispatch on kaggle_cpu (an idle backend); 45 + 1"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 0.94 h)",
+    "collector": "ok",
+    "stranded_stamp_prs": "not re-listed this pass; dispatch liveness fresh and stamp commits #19545/#19544 landed on main at the head I started from",
+    "incident": null,
+    "watchdog": "newest 5 rows of watchdog_incidents.jsonl read: all dated 2026-10-17 and self_healed/resolved; nothing newer than the previous record and no escalated row without a resolve"
+  },
+  "results_read": {
+    "pass": 6,
+    "fail": 14,
+    "indeterminate": 4,
+    "units": [
+      {"unit": "RQ-20261022-511e-01", "verdict": "fail", "disposition": "ADX25 sibling corroboration: sol_4h n 267, M2 60.83 vs A 68.61 R, 1 of 4 folds -> FAIL; eth_4h FAIL per cmd-0.log only (its row was overwritten: both per-leg commands wrote one {out_dir}, so 1 row landed vs min_rows 2). Rule needs FAIL on both -> UNIT FAIL; ADX25 stays on the bybit_1 alias, no real-money declare. Noted on OPERATOR-DECISIONS-1022."},
+      {"unit": "RQ-20261022-bea9-01/-02/-04", "verdict": "pass", "disposition": "rule applied verbatim: PASS (6/6, 6/6, 5/6 folds). Effect sizes: eth_pullback_2h X6 +5.48 R on a net-negative leg (-9.09 R, n 375); sol_pullback_2h +0.13 R (n 148); avax_pullback_2h X6 +0.11 R (n 422), X5 failed. None is on a roster and the size is ~0.001 R/trade (xrp failed the 0.02 R/trade bar). No Tier-3 packet filed; noted on ABLATION-TP-CALIBRATION with the 6-cell denominator."},
+      {"unit": "RQ-20261022-bea9-03", "verdict": "fail", "disposition": "incumbent stands, no follow-up"},
+      {"unit": "RQ-20261022-3a84-11", "verdict": "pass", "disposition": "SOL 1h yz lift PASS is one window and 1 of 5 range-vol cells read (BTC 1h FAIL, ETH 1h/15m INDETERMINATE). Follow-up is a confirmation unit, not a manifest note: RQ-20261022-c584-01."},
+      {"unit": "RQ-20261022-1f8b-01", "verdict": "indeterminate", "disposition": "58 open trades at k=6 < n_floor 100 on the disjoint window: Q11 rung 1 stays unconfirmed and rung 2 is not opened. PI-20261022-HOPS1447-0001."},
+      {"unit": "RQ-20261014-9807-01", "verdict": "pass", "disposition": "giveback census already graded pass (needs_review false); descriptive census, no follow-up beyond its programme node"},
+      {"unit": "RQ-20261022-3a84-08/-10, RQ-20261018-ff8f-04", "verdict": "indeterminate", "disposition": "not a verdict; ETH range-vol cells and the GRU window stay open, no new unit this pass"},
+      {"unit": "RQ-20261021-7c2b-02/-03/-04, 326f-01/-02/-03/-08, 3a84-09/-12, fd06-01/-02/-03", "verdict": "fail", "disposition": "own-rule or engine graded, incumbent stands; no follow-up"},
+      {"unit": "RQ-20260929-017, RQ-20261005-016", "verdict": "wiring_only", "disposition": "not verdicts; owned by RESEARCH-TOOLING-GAPS (PI-20261006-1VPYTX8E-0001)"}
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": ["RQ-20261022-c584-01 (SOL 1h range-vol lift confirmation, ml_health, kaggle_cpu)"],
+  "followups_filed": [
+    "PI-20261022-HOPS1447-0001 (Q11 unconfirmed; decide re-ask on live path history or retire rung 2)",
+    "OPERATOR-DECISIONS-1022 note (ADX25 corroboration FAILED)",
+    "ABLATION-TP-CALIBRATION note (tp_extend cross-symbol PASSes are immaterial)"
+  ],
+  "authoring": {
+    "queue_depth": 23,
+    "nodes_drafted": 0,
+    "nodes": [],
+    "unit_authored_outside_programme": "RQ-20261022-c584-01",
+    "theme_shortfall": {"regime": 1, "live_strategy": 3, "ml_health": 9, "new_strategy_prop": 6, "timeframes": 1},
+    "why_short": "the top of the authoring queue needs builds (P3-Q1 LIVE-BT-STAGE-B, P1-Q6 MOMENTUM-LEVERS-LIVE) or Tier-3 packets (the *-declare and *-pass nodes). I authored one ml_health unit from a result follow-up instead of a node and did not draft a node, so OPS-AUTHOR-SKIPPED will warn again honestly."
+  },
+  "not_run": [
+    "step C blocked/ audit re-walk (blocker_watch output shows only UNPROVEN_OVERDUE checklist rows; the 72-file audit from 0847 was not repeated)",
+    "stranded stamp PR list via GitHub MCP",
+    "routing the 38 unrouted due items (legacy BL-* rows from May-July need a live VM read each to disposition; SA-ROUTE owns them; sampled BL-20260525-005, BL-20260721-XRPTPSL-ENTRYCAPTURE-VERIFY, BL-20260726-CLAUDE-PING-INBOX-SPLIT-BRAIN and none could be closed without a diag read)",
+    "ml_plan_status.py write-back for 3a84-11 (no ml-plan-items ref checked)",
+    "full test suite (pytest not installed in this sandbox)"
+  ],
+  "handoff": [
+    "Manager: confirm retiring programme node P1-Q6-xrp4h-declare now that RQ-20261022-511e-01 FAILED corroboration (note on OPERATOR-DECISIONS-1022).",
+    "Defect, no other unit affected: RQ-20261022-511e-01 ran two exit_lever_ablation.py commands into one {out_dir}, so the second overwrote the first leg's summary (MEASURED: it is the only queue unit with more than one exit_lever_ablation command). Author per-leg units or per-leg out dirs next time.",
+    "H1-THEME shortfall persists: ml_health 0 runnable vs share 9, new_strategy_prop 11/17; both need new questions or builds, not copies of minted template space.",
+    "Next pass: c584-01 result (SOL 1h, tail 60000) applies RULE-RQ20261022-C584-01-YZ-CONFIRM verbatim."
+  ]
+}

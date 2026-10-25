@@ -43,7 +43,6 @@ env:
   VM_INSTANCE_OCID: ocid1.instance.oc1.eu-paris-1.anrwiljrnpsiupacbpuojiksc3dl4twmqlxndtc36jgx5sjq3452vflqr32q
   # SSH host swapped to the live Ampere trader (the read paths — uname/lsblk/git
   # — must hit the running box, not the terminated micro). Was 158.178.210.252.
-  VM_HOST: 141.145.193.91
   VM_USER: ubuntu
   REPO_DIR: /home/ubuntu/ict-trading-bot
 
@@ -53,6 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      VM_HOST: ${{ secrets.VM_SSH_HOST }}
       # OCI CLI reads these env vars natively (since 2.5.x); no
       # ~/.oci/config file needed.
       OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
@@ -62,6 +62,13 @@ jobs:
       OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
       OCI_COMPARTMENT_OCID: ${{ secrets.OCI_CLI_TENANCY }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -84,6 +91,7 @@ jobs:
     environment: production-oci
     timeout-minutes: 30
     env:
+      VM_HOST: ${{ secrets.VM_SSH_HOST }}
       OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
       OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
       OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
@@ -92,6 +100,13 @@ jobs:
       OCI_COMPARTMENT_OCID: ${{ secrets.OCI_CLI_TENANCY }}
       OCI_VOLUME_SIZE_GB: ${{ inputs.volume_size_gb }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5

@@ -1,0 +1,1371 @@
+{
+ "unit": "RQ-20261018-2a10-01",
+ "rule": "RULE-RQ-20261018-2a10-01",
+ "params": {
+  "holdout_frac": 0.25,
+  "holdout_min_trades": 25,
+  "holdout_max_frac": 0.4,
+  "n_floor": 25,
+  "folds": 4,
+  "fold_majority": 3,
+  "select_delta_r": 5.0
+ },
+ "generated_at": "2026-10-18T06:43:35+00:00",
+ "data_source": "Binance USD-M perp 1m klines (data.binance.vision); a LABELLED PROXY for Bybit (api.bybit.com is geo-blocked from the research containers)",
+ "window_end_pin": "2026-10-16 23:59",
+ "population": "6 legs (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, xrp_pullback_2h, trend_donchian_xrp_4h): every (account, leg) routing of each is listed under legs[].routings; arms config-exact to config/strategies.yaml; entries on bars with a 200-bar live frame",
+ "complete": true,
+ "legs_graded": [
+  "ada_pullback_2h",
+  "trend_donchian_eth_4h",
+  "trend_donchian_eth_prop",
+  "trend_donchian_sol_prop",
+  "trend_donchian_xrp_4h",
+  "xrp_pullback_2h"
+ ],
+ "legs": {
+  "ada_pullback_2h": {
+   "leg": "ada_pullback_2h",
+   "family": "pullback",
+   "symbol": "ADAUSDT",
+   "timeframe": "2h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "trend_lookback": 40,
+    "pullback_lookback": 10,
+    "pullback_frac": 0.618,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 5.0,
+    "tp_r": 4,
+    "min_confidence": 0.0,
+    "vol_skip_below_pctl": 0.1,
+    "adx_min": 28.0,
+    "side_filter": "both"
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 29408,
+   "first_decision_bar": "2020-02-16 22:00:00+00:00",
+   "last_bar": "2026-10-16 22:00:00+00:00",
+   "A_closed": {
+    "n": 479,
+    "net_r": 74.9478
+   },
+   "B_forming": {
+    "n": 656,
+    "net_r": 63.7918
+   },
+   "shared_n": 185,
+   "union_n": 950,
+   "jaccard": 0.1947,
+   "delta_net_r": -11.156,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_2",
+     "account_class": "real_money",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_portfolio",
+     "account_class": "paper",
+     "mode": "live"
+    }
+   ],
+   "full_history": {
+    "closed": {
+     "n": 479,
+     "net_r": 74.9478
+    },
+    "forming": {
+     "n": 656,
+     "net_r": 63.7918
+    },
+    "delta_r_closed_minus_forming": 11.156,
+    "jaccard": 0.1947,
+    "month_block_ci90_forming_minus_closed": [
+     -53.923,
+     31.2204
+    ],
+    "mde_80pct_power": 63.7721,
+    "per_year_delta_forming_minus_closed": {
+     "2020": 7.8008,
+     "2021": -6.1937,
+     "2022": -0.6722,
+     "2023": -4.672,
+     "2024": 9.3902,
+     "2025": 4.0803,
+     "2026": -20.8894
+    }
+   },
+   "record_restatement": {
+    "record": "comms/strategy_evidence/ada_pullback_2h.json",
+    "window": [
+     "2025-10-18 00:00:00+00:00",
+     "2026-10-16 22:00:00+00:00"
+    ],
+    "record_net_r_oos": 24.0014,
+    "record_n": 68,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 68,
+     "net_r": 24.0014
+    },
+    "proxy_forming": {
+     "n": 92,
+     "net_r": 0.9247
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261018-2a10-01",
+    "params": {
+     "holdout_frac": 0.25,
+     "holdout_min_trades": 25,
+     "holdout_max_frac": 0.4,
+     "n_floor": 25,
+     "folds": 4,
+     "fold_majority": 3,
+     "select_delta_r": 5.0
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-02-16 22:00:00+00:00",
+     "2026-10-16 22:00:00+00:00"
+    ],
+    "boundary": {
+     "at": "2025-02-15 10:00:00+00:00",
+     "share": 0.25,
+     "grown": false,
+     "short_at_cap": false,
+     "closed_entries_in_holdout": 103
+    },
+    "discovery": {
+     "closed": {
+      "n": 375,
+      "net_r": 51.4047,
+      "expectancy_r": 0.1371
+     },
+     "forming": {
+      "n": 512,
+      "net_r": 61.5714,
+      "expectancy_r": 0.1203
+     },
+     "delta_r": -10.1667,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-02-16 22:00:00+00:00",
+       "end": "2021-05-18 07:00:00+00:00",
+       "closed": {
+        "n": 109,
+        "net_r": -6.0451
+       },
+       "forming": {
+        "n": 151,
+        "net_r": 2.4509
+       },
+       "delta_r": -8.496
+      },
+      {
+       "fold": 2,
+       "start": "2021-05-18 07:00:00+00:00",
+       "end": "2022-08-17 16:00:00+00:00",
+       "closed": {
+        "n": 97,
+        "net_r": 19.6796
+       },
+       "forming": {
+        "n": 131,
+        "net_r": 17.7113
+       },
+       "delta_r": 1.9683
+      },
+      {
+       "fold": 3,
+       "start": "2022-08-17 16:00:00+00:00",
+       "end": "2023-11-17 01:00:00+00:00",
+       "closed": {
+        "n": 81,
+        "net_r": 27.8115
+       },
+       "forming": {
+        "n": 110,
+        "net_r": 15.0577
+       },
+       "delta_r": 12.7538
+      },
+      {
+       "fold": 4,
+       "start": "2023-11-17 01:00:00+00:00",
+       "end": "2025-02-15 10:00:00+00:00",
+       "closed": {
+        "n": 88,
+        "net_r": 9.9587
+       },
+       "forming": {
+        "n": 120,
+        "net_r": 26.3515
+       },
+       "delta_r": -16.3928
+      }
+     ],
+     "folds_closed_ahead": 2,
+     "closed_selected": false
+    },
+    "holdout": {
+     "closed": {
+      "n": 103,
+      "net_r": 24.6286,
+      "expectancy_r": 0.2391
+     },
+     "forming": {
+      "n": 143,
+      "net_r": 3.3127,
+      "expectancy_r": 0.0232
+     },
+     "delta_r": 21.3159
+    },
+    "forming_better_both_spans": false,
+    "verdict": "FORMING_STANDS",
+    "reason": "forming_ahead",
+    "proposal": null
+   }
+  },
+  "trend_donchian_eth_4h": {
+   "leg": "trend_donchian_eth_4h",
+   "family": "trend",
+   "symbol": "ETHUSDT",
+   "timeframe": "4h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 6.0,
+    "tp_r": 50.0,
+    "min_confidence": 0.6,
+    "side_filter": "both",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 14886,
+   "first_decision_bar": "2020-02-03 04:00:00+00:00",
+   "last_bar": "2026-10-16 20:00:00+00:00",
+   "A_closed": {
+    "n": 282,
+    "net_r": 98.5791
+   },
+   "B_forming": {
+    "n": 420,
+    "net_r": 80.82
+   },
+   "shared_n": 203,
+   "union_n": 499,
+   "jaccard": 0.4068,
+   "delta_net_r": -17.7591,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_2",
+     "account_class": "real_money",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_portfolio",
+     "account_class": "paper",
+     "mode": "live"
+    }
+   ],
+   "full_history": {
+    "closed": {
+     "n": 282,
+     "net_r": 98.5791
+    },
+    "forming": {
+     "n": 420,
+     "net_r": 80.82
+    },
+    "delta_r_closed_minus_forming": 17.7591,
+    "jaccard": 0.4068,
+    "month_block_ci90_forming_minus_closed": [
+     -62.2496,
+     27.0707
+    ],
+    "mde_80pct_power": 67.8645,
+    "per_year_delta_forming_minus_closed": {
+     "2020": 3.9172,
+     "2021": 6.9416,
+     "2022": -17.2504,
+     "2023": -14.7756,
+     "2024": -8.4217,
+     "2025": -1.8586,
+     "2026": 13.6884
+    }
+   },
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_eth_4h.json",
+    "window": [
+     "2023-10-19 00:00:00+00:00",
+     "2026-10-16 20:00:00+00:00"
+    ],
+    "record_net_r_oos": 36.6708,
+    "record_n": 127,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 128,
+     "net_r": 42.417
+    },
+    "proxy_forming": {
+     "n": 182,
+     "net_r": 46.7993
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261018-2a10-01",
+    "params": {
+     "holdout_frac": 0.25,
+     "holdout_min_trades": 25,
+     "holdout_max_frac": 0.4,
+     "n_floor": 25,
+     "folds": 4,
+     "fold_majority": 3,
+     "select_delta_r": 5.0
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-02-03 04:00:00+00:00",
+     "2026-10-16 20:00:00+00:00"
+    ],
+    "boundary": {
+     "at": "2025-02-11 22:00:00+00:00",
+     "share": 0.25,
+     "grown": false,
+     "short_at_cap": false,
+     "closed_entries_in_holdout": 80
+    },
+    "discovery": {
+     "closed": {
+      "n": 202,
+      "net_r": 81.0834,
+      "expectancy_r": 0.4014
+     },
+     "forming": {
+      "n": 317,
+      "net_r": 53.3172,
+      "expectancy_r": 0.1682
+     },
+     "delta_r": 27.7662,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-02-03 04:00:00+00:00",
+       "end": "2021-05-07 02:30:00+00:00",
+       "closed": {
+        "n": 58,
+        "net_r": 24.6396
+       },
+       "forming": {
+        "n": 90,
+        "net_r": 32.2389
+       },
+       "delta_r": -7.5993
+      },
+      {
+       "fold": 2,
+       "start": "2021-05-07 02:30:00+00:00",
+       "end": "2022-08-09 01:00:00+00:00",
+       "closed": {
+        "n": 55,
+        "net_r": 11.9331
+       },
+       "forming": {
+        "n": 80,
+        "net_r": 12.8216
+       },
+       "delta_r": -0.8885
+      },
+      {
+       "fold": 3,
+       "start": "2022-08-09 01:00:00+00:00",
+       "end": "2023-11-10 23:30:00+00:00",
+       "closed": {
+        "n": 43,
+        "net_r": 24.2907
+       },
+       "forming": {
+        "n": 71,
+        "net_r": -1.0948
+       },
+       "delta_r": 25.3855
+      },
+      {
+       "fold": 4,
+       "start": "2023-11-10 23:30:00+00:00",
+       "end": "2025-02-11 22:00:00+00:00",
+       "closed": {
+        "n": 46,
+        "net_r": 20.22
+       },
+       "forming": {
+        "n": 76,
+        "net_r": 9.3515
+       },
+       "delta_r": 10.8685
+      }
+     ],
+     "folds_closed_ahead": 2,
+     "closed_selected": false
+    },
+    "holdout": {
+     "closed": {
+      "n": 80,
+      "net_r": 17.4957,
+      "expectancy_r": 0.2187
+     },
+     "forming": {
+      "n": 103,
+      "net_r": 27.5028,
+      "expectancy_r": 0.267
+     },
+     "delta_r": -10.0071
+    },
+    "forming_better_both_spans": false,
+    "verdict": "FORMING_STANDS",
+    "reason": "closed_not_robust",
+    "proposal": null
+   }
+  },
+  "trend_donchian_eth_prop": {
+   "leg": "trend_donchian_eth_prop",
+   "family": "trend",
+   "symbol": "ETHUSDT",
+   "timeframe": "1h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 3.5,
+    "tp_r": 6.0,
+    "min_confidence": 0.6,
+    "trail_decay_stall_bars": 10,
+    "trail_decay_tight_mult": 1.8,
+    "trail_decay_arm_r": 2.99,
+    "side_filter": "both",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 59544,
+   "first_decision_bar": "2020-01-09 07:00:00+00:00",
+   "last_bar": "2026-10-16 23:00:00+00:00",
+   "A_closed": {
+    "n": 1172,
+    "net_r": 89.1436
+   },
+   "B_forming": {
+    "n": 1682,
+    "net_r": 74.6807
+   },
+   "shared_n": 913,
+   "union_n": 1941,
+   "jaccard": 0.4704,
+   "delta_net_r": -14.4629,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "breakout_2",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "tradeify_1",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "velotrade_1",
+     "account_class": "prop",
+     "mode": "live"
+    }
+   ],
+   "full_history": {
+    "closed": {
+     "n": 1172,
+     "net_r": 89.1436
+    },
+    "forming": {
+     "n": 1682,
+     "net_r": 74.6807
+    },
+    "delta_r_closed_minus_forming": 14.4629,
+    "jaccard": 0.4704,
+    "month_block_ci90_forming_minus_closed": [
+     -68.4473,
+     38.3749
+    ],
+    "mde_80pct_power": 80.8061,
+    "per_year_delta_forming_minus_closed": {
+     "2020": 2.2714,
+     "2021": 0.598,
+     "2022": 16.0724,
+     "2023": -19.0213,
+     "2024": -6.6728,
+     "2025": 4.1915,
+     "2026": -11.9021
+    }
+   },
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_eth_prop.json",
+    "window": [
+     "2025-10-07 00:00:00+00:00",
+     "2026-10-06 23:00:00+00:00"
+    ],
+    "record_net_r_oos": 9.3243,
+    "record_n": 163,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 164,
+     "net_r": 10.2603
+    },
+    "proxy_forming": {
+     "n": 250,
+     "net_r": -9.451
+    },
+    "rule_d1_under_forming": "fail",
+    "STANDING_AT_RISK": true
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261018-2a10-01",
+    "params": {
+     "holdout_frac": 0.25,
+     "holdout_min_trades": 25,
+     "holdout_max_frac": 0.4,
+     "n_floor": 25,
+     "folds": 4,
+     "fold_majority": 3,
+     "select_delta_r": 5.0
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-01-09 07:00:00+00:00",
+     "2026-10-16 23:00:00+00:00"
+    ],
+    "boundary": {
+     "at": "2025-02-05 19:00:00+00:00",
+     "share": 0.25,
+     "grown": false,
+     "short_at_cap": false,
+     "closed_entries_in_holdout": 295
+    },
+    "discovery": {
+     "closed": {
+      "n": 877,
+      "net_r": 78.1514,
+      "expectancy_r": 0.0891
+     },
+     "forming": {
+      "n": 1252,
+      "net_r": 73.3573,
+      "expectancy_r": 0.0586
+     },
+     "delta_r": 4.7941,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-01-09 07:00:00+00:00",
+       "end": "2021-04-16 22:00:00+00:00",
+       "closed": {
+        "n": 224,
+        "net_r": 33.2302
+       },
+       "forming": {
+        "n": 307,
+        "net_r": 42.5784
+       },
+       "delta_r": -9.3482
+      },
+      {
+       "fold": 2,
+       "start": "2021-04-16 22:00:00+00:00",
+       "end": "2022-07-24 13:00:00+00:00",
+       "closed": {
+        "n": 211,
+        "net_r": 31.0472
+       },
+       "forming": {
+        "n": 302,
+        "net_r": 36.3524
+       },
+       "delta_r": -5.3052
+      },
+      {
+       "fold": 3,
+       "start": "2022-07-24 13:00:00+00:00",
+       "end": "2023-10-31 04:00:00+00:00",
+       "closed": {
+        "n": 227,
+        "net_r": -16.071
+       },
+       "forming": {
+        "n": 329,
+        "net_r": -31.3825
+       },
+       "delta_r": 15.3115
+      },
+      {
+       "fold": 4,
+       "start": "2023-10-31 04:00:00+00:00",
+       "end": "2025-02-05 19:00:00+00:00",
+       "closed": {
+        "n": 215,
+        "net_r": 29.945
+       },
+       "forming": {
+        "n": 314,
+        "net_r": 25.809
+       },
+       "delta_r": 4.136
+      }
+     ],
+     "folds_closed_ahead": 2,
+     "closed_selected": false
+    },
+    "holdout": {
+     "closed": {
+      "n": 295,
+      "net_r": 10.9922,
+      "expectancy_r": 0.0373
+     },
+     "forming": {
+      "n": 430,
+      "net_r": 1.3234,
+      "expectancy_r": 0.0031
+     },
+     "delta_r": 9.6688
+    },
+    "forming_better_both_spans": false,
+    "verdict": "FORMING_STANDS",
+    "reason": "closed_not_robust",
+    "proposal": null
+   }
+  },
+  "trend_donchian_sol_prop": {
+   "leg": "trend_donchian_sol_prop",
+   "family": "trend",
+   "symbol": "SOLUSDT",
+   "timeframe": "1h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 3.5,
+    "tp_r": 6.0,
+    "min_confidence": 0.8,
+    "side_filter": "long",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 53249,
+   "first_decision_bar": "2020-09-22 14:00:00+00:00",
+   "last_bar": "2026-10-16 23:00:00+00:00",
+   "A_closed": {
+    "n": 402,
+    "net_r": 53.9748
+   },
+   "B_forming": {
+    "n": 588,
+    "net_r": 36.8904
+   },
+   "shared_n": 311,
+   "union_n": 679,
+   "jaccard": 0.458,
+   "delta_net_r": -17.0844,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_2",
+     "account_class": "real_money",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_portfolio",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "breakout_2",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "tradeify_1",
+     "account_class": "prop",
+     "mode": "live"
+    },
+    {
+     "account": "velotrade_1",
+     "account_class": "prop",
+     "mode": "live"
+    }
+   ],
+   "full_history": {
+    "closed": {
+     "n": 402,
+     "net_r": 53.9748
+    },
+    "forming": {
+     "n": 588,
+     "net_r": 36.8904
+    },
+    "delta_r_closed_minus_forming": 17.0844,
+    "jaccard": 0.458,
+    "month_block_ci90_forming_minus_closed": [
+     -49.5723,
+     16.7387
+    ],
+    "mde_80pct_power": 50.0098,
+    "per_year_delta_forming_minus_closed": {
+     "2020": -5.6738,
+     "2021": -8.2527,
+     "2022": 3.4902,
+     "2023": 2.1867,
+     "2024": -11.537,
+     "2025": -5.0548,
+     "2026": 7.757
+    }
+   },
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_sol_prop.json",
+    "window": [
+     "2020-10-15 00:00:00+00:00",
+     "2026-09-24 23:00:00+00:00"
+    ],
+    "record_net_r_oos": 60.6043,
+    "record_n": 394,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 394,
+     "net_r": 60.6043
+    },
+    "proxy_forming": {
+     "n": 577,
+     "net_r": 45.5536
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261018-2a10-01",
+    "params": {
+     "holdout_frac": 0.25,
+     "holdout_min_trades": 25,
+     "holdout_max_frac": 0.4,
+     "n_floor": 25,
+     "folds": 4,
+     "fold_majority": 3,
+     "select_delta_r": 5.0
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-09-22 14:00:00+00:00",
+     "2026-10-16 23:00:00+00:00"
+    ],
+    "boundary": {
+     "at": "2025-04-11 02:45:00+00:00",
+     "share": 0.25,
+     "grown": false,
+     "short_at_cap": false,
+     "closed_entries_in_holdout": 101
+    },
+    "discovery": {
+     "closed": {
+      "n": 301,
+      "net_r": 47.5321,
+      "expectancy_r": 0.1579
+     },
+     "forming": {
+      "n": 441,
+      "net_r": 26.9428,
+      "expectancy_r": 0.0611
+     },
+     "delta_r": 20.5893,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-09-22 14:00:00+00:00",
+       "end": "2021-11-11 23:11:15+00:00",
+       "closed": {
+        "n": 85,
+        "net_r": 25.4481
+       },
+       "forming": {
+        "n": 131,
+        "net_r": 13.1874
+       },
+       "delta_r": 12.2607
+      },
+      {
+       "fold": 2,
+       "start": "2021-11-11 23:11:15+00:00",
+       "end": "2023-01-01 08:22:30+00:00",
+       "closed": {
+        "n": 63,
+        "net_r": 0.6243
+       },
+       "forming": {
+        "n": 86,
+        "net_r": 2.4487
+       },
+       "delta_r": -1.8244
+      },
+      {
+       "fold": 3,
+       "start": "2023-01-01 08:22:30+00:00",
+       "end": "2024-02-20 17:33:45+00:00",
+       "closed": {
+        "n": 83,
+        "net_r": 19.7154
+       },
+       "forming": {
+        "n": 119,
+        "net_r": 24.6045
+       },
+       "delta_r": -4.8891
+      },
+      {
+       "fold": 4,
+       "start": "2024-02-20 17:33:45+00:00",
+       "end": "2025-04-11 02:45:00+00:00",
+       "closed": {
+        "n": 70,
+        "net_r": 1.7443
+       },
+       "forming": {
+        "n": 105,
+        "net_r": -13.2978
+       },
+       "delta_r": 15.0421
+      }
+     ],
+     "folds_closed_ahead": 2,
+     "closed_selected": false
+    },
+    "holdout": {
+     "closed": {
+      "n": 101,
+      "net_r": 6.4427,
+      "expectancy_r": 0.0638
+     },
+     "forming": {
+      "n": 147,
+      "net_r": 9.9476,
+      "expectancy_r": 0.0677
+     },
+     "delta_r": -3.5049
+    },
+    "forming_better_both_spans": false,
+    "verdict": "FORMING_STANDS",
+    "reason": "closed_not_robust",
+    "proposal": null
+   }
+  },
+  "xrp_pullback_2h": {
+   "leg": "xrp_pullback_2h",
+   "family": "pullback",
+   "symbol": "XRPUSDT",
+   "timeframe": "2h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "trend_lookback": 40,
+    "pullback_lookback": 10,
+    "pullback_frac": 0.5,
+    "atr_period": 14,
+    "atr_stop_mult": 2.5,
+    "trail_mult": 6.0,
+    "tp_r": 3.0,
+    "min_confidence": 0.0,
+    "adx_min": 25.0,
+    "side_filter": "both"
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 29647,
+   "first_decision_bar": "2020-01-23 00:00:00+00:00",
+   "last_bar": "2026-10-16 22:00:00+00:00",
+   "A_closed": {
+    "n": 414,
+    "net_r": 44.9074
+   },
+   "B_forming": {
+    "n": 499,
+    "net_r": 26.2411
+   },
+   "shared_n": 152,
+   "union_n": 761,
+   "jaccard": 0.1997,
+   "delta_net_r": -18.6663,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_2",
+     "account_class": "real_money",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_portfolio",
+     "account_class": "paper",
+     "mode": "live"
+    }
+   ],
+   "full_history": {
+    "closed": {
+     "n": 414,
+     "net_r": 44.9074
+    },
+    "forming": {
+     "n": 499,
+     "net_r": 26.2411
+    },
+    "delta_r_closed_minus_forming": 18.6663,
+    "jaccard": 0.1997,
+    "month_block_ci90_forming_minus_closed": [
+     -49.9711,
+     12.9953
+    ],
+    "mde_80pct_power": 47.7684,
+    "per_year_delta_forming_minus_closed": {
+     "2020": -3.8231,
+     "2021": 4.7512,
+     "2022": -3.2371,
+     "2023": -4.0423,
+     "2024": 1.7659,
+     "2025": -1.4805,
+     "2026": -12.6004
+    }
+   },
+   "record_restatement": {
+    "record": "comms/strategy_evidence/xrp_pullback_2h.json",
+    "window": [
+     "2025-10-08 00:00:00+00:00",
+     "2026-10-06 22:00:00+00:00"
+    ],
+    "record_net_r_oos": 7.2287,
+    "record_n": 55,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 57,
+     "net_r": 11.4404
+    },
+    "proxy_forming": {
+     "n": 74,
+     "net_r": -5.8779
+    },
+    "rule_d1_under_forming": "fail",
+    "STANDING_AT_RISK": true
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261018-2a10-01",
+    "params": {
+     "holdout_frac": 0.25,
+     "holdout_min_trades": 25,
+     "holdout_max_frac": 0.4,
+     "n_floor": 25,
+     "folds": 4,
+     "fold_majority": 3,
+     "select_delta_r": 5.0
+    },
+    "incumbent": "forming",
+    "window": [
+     "2020-01-23 00:00:00+00:00",
+     "2026-10-16 22:00:00+00:00"
+    ],
+    "boundary": {
+     "at": "2025-02-09 04:30:00+00:00",
+     "share": 0.25,
+     "grown": false,
+     "short_at_cap": false,
+     "closed_entries_in_holdout": 100
+    },
+    "discovery": {
+     "closed": {
+      "n": 313,
+      "net_r": 30.7488,
+      "expectancy_r": 0.0982
+     },
+     "forming": {
+      "n": 372,
+      "net_r": 27.7258,
+      "expectancy_r": 0.0745
+     },
+     "delta_r": 3.023,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-01-23 00:00:00+00:00",
+       "end": "2021-04-28 01:07:30+00:00",
+       "closed": {
+        "n": 82,
+        "net_r": 21.8911
+       },
+       "forming": {
+        "n": 104,
+        "net_r": 19.8288
+       },
+       "delta_r": 2.0623
+      },
+      {
+       "fold": 2,
+       "start": "2021-04-28 01:07:30+00:00",
+       "end": "2022-08-02 02:15:00+00:00",
+       "closed": {
+        "n": 90,
+        "net_r": 9.8358
+       },
+       "forming": {
+        "n": 98,
+        "net_r": 10.4459
+       },
+       "delta_r": -0.6101
+      },
+      {
+       "fold": 3,
+       "start": "2022-08-02 02:15:00+00:00",
+       "end": "2023-11-06 03:22:30+00:00",
+       "closed": {
+        "n": 71,
+        "net_r": -1.2797
+       },
+       "forming": {
+        "n": 91,
+        "net_r": -6.3336
+       },
+       "delta_r": 5.0539
+      },
+      {
+       "fold": 4,
+       "start": "2023-11-06 03:22:30+00:00",
+       "end": "2025-02-09 04:30:00+00:00",
+       "closed": {
+        "n": 70,
+        "net_r": 0.3016
+       },
+       "forming": {
+        "n": 79,
+        "net_r": 3.7847
+       },
+       "delta_r": -3.4831
+      }
+     ],
+     "folds_closed_ahead": 2,
+     "closed_selected": false
+    },
+    "holdout": {
+     "closed": {
+      "n": 100,
+      "net_r": 14.8154,
+      "expectancy_r": 0.1482
+     },
+     "forming": {
+      "n": 126,
+      "net_r": -0.864,
+      "expectancy_r": -0.0069
+     },
+     "delta_r": 15.6794
+    },
+    "forming_better_both_spans": false,
+    "verdict": "FORMING_STANDS",
+    "reason": "closed_not_robust",
+    "proposal": null
+   }
+  },
+  "trend_donchian_xrp_4h": {
+   "leg": "trend_donchian_xrp_4h",
+   "family": "trend",
+   "symbol": "XRPUSDT",
+   "timeframe": "4h",
+   "execution": "live",
+   "harness_kwargs": {
+    "tp_cap_pct": 0.099,
+    "timeout_bars": 200,
+    "cooldown_bars": 1,
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 2,
+    "trail_mult": 5.0,
+    "stale_exit_bars": 8,
+    "stale_exit_below_r": 0.0,
+    "tp_r": 3,
+    "min_confidence": 0.8,
+    "skip_hours": "0",
+    "vol_skip_above_pctl": 0.9,
+    "trail_decay_arm_r": 2.0,
+    "trail_decay_tight_mult": 2.5,
+    "side_filter": "short",
+    "long_only": false
+   },
+   "unmodelled_yaml_levers": [],
+   "costs": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0
+   },
+   "bars": 14823,
+   "first_decision_bar": "2020-02-08 16:00:00+00:00",
+   "last_bar": "2026-10-16 20:00:00+00:00",
+   "A_closed": {
+    "n": 74,
+    "net_r": 14.2494
+   },
+   "B_forming": {
+    "n": 138,
+    "net_r": 7.0476
+   },
+   "shared_n": 63,
+   "union_n": 149,
+   "jaccard": 0.4228,
+   "delta_net_r": -7.2018,
+   "routings": [
+    {
+     "account": "bybit_1",
+     "account_class": "paper",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_2",
+     "account_class": "real_money",
+     "mode": "live"
+    },
+    {
+     "account": "bybit_portfolio",
+     "account_class": "paper",
+     "mode": "live"
+    }
+   ],
+   "full_history": {
+    "closed": {
+     "n": 74,
+     "net_r": 14.2494
+    },
+    "forming": {
+     "n": 138,
+     "net_r": 7.0476
+    },
+    "delta_r_closed_minus_forming": 7.2018,
+    "jaccard": 0.4228,
+    "month_block_ci90_forming_minus_closed": [
+     -27.4527,
+     13.8706
+    ],
+    "mde_80pct_power": 31.3108,
+    "per_year_delta_forming_minus_closed": {
+     "2020": -2.134,
+     "2021": -7.564,
+     "2022": -2.7715,
+     "2023": 2.9315,
+     "2024": 0.5589,
+     "2025": 9.9746,
+     "2026": -8.1973
+    }
+   },
+   "record_restatement": {
+    "record": "comms/strategy_evidence/trend_donchian_xrp_4h.json",
+    "window": [
+     "2022-10-13 00:00:00+00:00",
+     "2026-10-10 20:00:00+00:00"
+    ],
+    "record_net_r_oos": 8.1437,
+    "record_n": 46,
+    "record_verdict": "pass",
+    "proxy_closed": {
+     "n": 45,
+     "net_r": 7.2492
+    },
+    "proxy_forming": {
+     "n": 77,
+     "net_r": 9.9019
+    },
+    "rule_d1_under_forming": "pass",
+    "STANDING_AT_RISK": false
+   },
+   "grade": {
+    "rule": "RULE-RQ-20261018-2a10-01",
+    "params": {
+     "holdout_frac": 0.25,
+     "holdout_min_trades": 25,
+     "holdout_max_frac": 0.4,
+     "n_floor": 25,
+     "folds": 4,
+     "fold_majority": 3,
+     "select_delta_r": 5.0
+    },
+    "incumbent": "closed",
+    "window": [
+     "2020-02-08 16:00:00+00:00",
+     "2026-10-16 20:00:00+00:00"
+    ],
+    "boundary": {
+     "at": "2024-12-02 00:38:24+00:00",
+     "share": 0.28,
+     "grown": true,
+     "short_at_cap": false,
+     "closed_entries_in_holdout": 25
+    },
+    "discovery": {
+     "closed": {
+      "n": 49,
+      "net_r": 8.7739,
+      "expectancy_r": 0.1791
+     },
+     "forming": {
+      "n": 94,
+      "net_r": 0.8932,
+      "expectancy_r": 0.0095
+     },
+     "delta_r": 7.8807,
+     "folds": [
+      {
+       "fold": 1,
+       "start": "2020-02-08 16:00:00+00:00",
+       "end": "2021-04-23 06:09:36+00:00",
+       "closed": {
+        "n": 10,
+        "net_r": 0.1328
+       },
+       "forming": {
+        "n": 27,
+        "net_r": -7.0823
+       },
+       "delta_r": 7.2151
+      },
+      {
+       "fold": 2,
+       "start": "2021-04-23 06:09:36+00:00",
+       "end": "2022-07-06 20:19:12+00:00",
+       "closed": {
+        "n": 16,
+        "net_r": 8.1366
+       },
+       "forming": {
+        "n": 27,
+        "net_r": 8.8265
+       },
+       "delta_r": -0.6899
+      },
+      {
+       "fold": 3,
+       "start": "2022-07-06 20:19:12+00:00",
+       "end": "2023-09-19 10:28:48+00:00",
+       "closed": {
+        "n": 13,
+        "net_r": -0.3829
+       },
+       "forming": {
+        "n": 24,
+        "net_r": -5.4875
+       },
+       "delta_r": 5.1046
+      },
+      {
+       "fold": 4,
+       "start": "2023-09-19 10:28:48+00:00",
+       "end": "2024-12-02 00:38:24+00:00",
+       "closed": {
+        "n": 10,
+        "net_r": 0.8874
+       },
+       "forming": {
+        "n": 16,
+        "net_r": 4.6365
+       },
+       "delta_r": -3.7491
+      }
+     ],
+     "folds_closed_ahead": 2,
+     "closed_selected": false
+    },
+    "holdout": {
+     "closed": {
+      "n": 25,
+      "net_r": 5.4755,
+      "expectancy_r": 0.219
+     },
+     "forming": {
+      "n": 44,
+      "net_r": 6.1544,
+      "expectancy_r": 0.1399
+     },
+     "delta_r": -0.6789
+    },
+    "forming_better_both_spans": false,
+    "verdict": "KEEP_CLOSED_NOT_SELECTED",
+    "reason": "closed_not_robust",
+    "proposal": null
+   }
+  }
+ },
+ "label_note": "trend_donchian_xrp_4h re-labelled KEEP_CLOSED_NOT_SELECTED after the run (was RESEARCH_FLAG_FORMING_AHEAD): a labelling gap in the closed-incumbent mapping found on the result; statistics, thresholds and every other field unchanged (asserted equal on re-grade from the committed arms)."
+}

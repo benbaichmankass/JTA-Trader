@@ -1,0 +1,18 @@
+{
+  "based_on": "20261016T131920200468Z-695bad45.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "ls research/queue/blocked | sed 's/.yaml//' finds no id that also exists directly under research/queue/",
+    "kind": "event"
+  },
+  "id": "PI-20261016-IKK5NFPO-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-GRADING-BACKLOG-1016 (manager session_01VduHYzdaXe27wTDBLSu8ao)",
+    "rerun": "for i in $(ls research/queue/blocked | sed 's/.yaml//'); do [ -f research/queue/$i.yaml ] && echo DUP $i; done"
+  },
+  "routed_to": "checklist row RQ-ID-ALLOCATOR (research-ops 2026-10-16 14:47Z)",
+  "state": "routed",
+  "what": "RESEARCH QUEUE ID COLLISION: RQ-20260928-006 is TWO units. research/queue/RQ-20260928-006.yaml is the M20 hard-lever sweep (done, legacy prose grade, results in research/results/RQ-20260928-006/36434140504.jsonl); research/queue/blocked/RQ-20260928-006.yaml is an unrelated regime parity re-check added 2026-10-12 (#17742) and referenced by research/programmes/02-ai-trader.yaml:795, docs/roadmap/milestones.yaml and docs/plans/ml-plan-items.yaml ML-R6. queue_replenish.existing_units() keys by stem, so blocked/ wins (sorted rglob) and result_disposition_check counts the M20 results as UNGRADED against the regime unit -- the 1 residual 'ungraded' after this lane. Fix: re-id the BLOCKED regime unit with next_rq_id.py --fetch and update its 3 references (held PR: programme node edit); and check why guard research-queue-id-bands C4 (queue/ vs blocked/ duplicate refusal) did not refuse #17742."
+}

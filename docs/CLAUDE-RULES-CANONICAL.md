@@ -722,8 +722,9 @@ guard was re-pointed by E45. Filed rather than left implied — do not read the
 `soak_alarm.py` itself still reads the archived register and grades nothing.
 The live port works like this:
 - `scripts/ops/soak_report.py` grades every Stage-1 leg and every
-  `execution: shadow` strategy into `ready` / `dead` (was `not_writing`) /
-  `could-not-look` (was `unknown`) / `accruing`.
+  `execution: shadow` strategy into `ready` (its SOAKS.json contract carries a
+  mechanical PASS) / `dead` (was `not_writing`) / `could-not-look` (was
+  `unknown`) / `accruing`. It never readies a soak on cost fidelity.
 - It writes the result to `docs/claude/work/soak-state.json` and
   `docs/claude/work/SOAK-REPORT.md`, and files one `PI-SOAK-*` pipeline item per
   soak, carrying `due_when.soak`.
@@ -733,9 +734,10 @@ The live port works like this:
 
 **Two forms of definition of done, both enforced by `soak-contract-guard`**
 (manager, 2026-10-04):
-- **A soak**: something that ACCRUES, such as a Stage-1 leg or a shadow
-  strategy. It needs a contract in `docs/claude/work/SOAKS.json`, or
-  `due_when.soak` on its pipeline item.
+- **A soak**: a Stage-1 leg or a shadow strategy. It needs a contract in
+  `docs/claude/work/SOAKS.json`, or `due_when.soak` on its pipeline item. What
+  that contract may say is the soak rule:
+  [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
 - **A one-shot observation**: something that happens ONCE, such as "the 05:30Z
   report was produced" or "the tick ran clean on the new sha". It carries
   `observation: {what, how_to_check, due_by}` on its `check_observation` item
@@ -792,7 +794,7 @@ bind:
    into it, never add a second digest timer). The message leads with what is
    NEW and actionable, as computed by `scripts/ops/attention_watch.py`:
    - new `ask_operator` items;
-   - soaks moving to `ready`, `overdue` or `dead`;
+   - soaks moving to `passed` or `mechanical_fail`;
    - silence alarms breaching or clearing.
 
    Once a day it adds the ranked summary. Otherwise it is one quiet line. Extend
@@ -802,12 +804,11 @@ bind:
    carries a probe that fires when it does NOT arrive. A probe that could not
    look reads `unknown`, and `unknown` never clears an alarm. This is the
    collapsed-states rule above, applied to time.
-3. **Every soak carries a contract.** It states what it verifies, the expected
-   event rate from the backtest, the n and power it needs, an **end date**, and
-   a pass/fail rule registered before it starts. An end date beyond ~2 weeks
-   means the design is wrong and must be fixed before placement. This extends §
-   "A soak must carry its own alarm". It does not replace it: the alarm says
-   *when to look*, and the contract says *what ends the wait*.
+3. **Every soak carries a contract** in `docs/claude/work/SOAKS.json`, and the
+   contract is the soak rule:
+   [`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md).
+   This extends § "A soak must carry its own alarm". It does not replace it: the
+   alarm says *when to look*, and the contract says *what ends the wait*.
 4. **The manager reviews a persisted report, on a schedule, twice a day.**
    - `ict-work-report.timer` (05:30 UTC) writes `WR-YYYYMMDD-HHMMZ`, served at
      `GET /api/bot/work/report`.
@@ -1811,7 +1812,8 @@ new strategy cell (e.g. an `ict_scalp` alt leg) wired to a paper/demo account
 **mechanics check, not a performance test**. Its edge is decided by the
 offline live-faithful backtest + backfill BEFORE it is wired; the soak only
 confirms the live executions match the simulator, which needs **1–2 executed
-trades**, not calendar time. Never frame an alt-leg paper-soak as a
+trades**, not calendar time (the rule: [`OPERATING-PLAN` § 2 "The soak is
+MECHANICAL"](plans/OPERATING-PLAN-2026-09-21.md)). Never frame an alt-leg paper-soak as a
 calendar-time wait to see if the edge holds — that is the recurring drift this
 rule kills (the operational how-to lives in the `new-strategy` skill and is
 CI-guarded by `scripts/check_soak_doctrine.py`). A handful of early losing paper

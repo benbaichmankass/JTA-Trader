@@ -110,10 +110,11 @@ def gather(since: datetime, now: datetime, db_path: str | None = None) -> dict[s
             out["repairs"] = q("datetime(t.protection_repair_last_at) >= datetime(?) "
                                "AND datetime(t.protection_repair_last_at) < datetime(?)", (s, e))
         try:
-            out["prop_closed"] = [dict(r) for r in conn.execute(
+            from src.prop.exec_test_trades import exclude_exec_test
+            out["prop_closed"] = exclude_exec_test([dict(r) for r in conn.execute(
                 "SELECT * FROM prop_fills WHERE " + closed_at_norm_sql("closed_at")
                 + " >= datetime(?) AND " + closed_at_norm_sql("closed_at")
-                + " < datetime(?)", (s, e))]
+                + " < datetime(?)", (s, e))], fills=True)   # MD-EXEC-DEV-TEST-TRADES: test trades are not performance
         except sqlite3.Error:
             out["prop_state"] = "absent"
     except sqlite3.Error as exc:

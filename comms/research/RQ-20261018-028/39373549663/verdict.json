@@ -1,0 +1,154 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "1 leg(s) [trend_donchian_eth_prop], 1085 committed trades in total; grade=cushion_vs_flat, overall=all",
+  "n": 1085,
+  "measurement": {
+    "leg_verdicts": {
+      "trend_donchian_eth_prop": "pass"
+    },
+    "grade": "cushion_vs_flat",
+    "overall": "all",
+    "cells": 10
+  },
+  "note": "trend_donchian_eth_prop: CUSHION_FIT_WINS: C_T1 beats A on ev with >= survival on all 5 seeds | P1-Q4-ethprop-ev: T1 vs A under breakout_turbo_1step",
+  "records": [
+    {
+      "verdict": "pass",
+      "read_state": "measured",
+      "population": "trend_donchian_eth_prop: 1085 committed trades from comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 2 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model prorated --lev-cap trend_donchian_eth_prop=5 --no-hedge",
+      "n": 1085,
+      "measurement": {
+        "leg": "trend_donchian_eth_prop",
+        "trades_file": "comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "arms": {
+          "A": {
+            "1": {
+              "ev": 17.27,
+              "ev_se": 1.81,
+              "p_net_positive": 0.1525,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.036,
+                "90": 0.1973,
+                "180": 0.2873
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "2": {
+              "ev": 14.51,
+              "ev_se": 1.63,
+              "p_net_positive": 0.1545,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0333,
+                "90": 0.1898,
+                "180": 0.2752
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "3": {
+              "ev": 17.13,
+              "ev_se": 1.88,
+              "p_net_positive": 0.1477,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0352,
+                "90": 0.1948,
+                "180": 0.278
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "4": {
+              "ev": 13.9,
+              "ev_se": 1.67,
+              "p_net_positive": 0.14,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.031,
+                "90": 0.1948,
+                "180": 0.2752
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "5": {
+              "ev": 14.93,
+              "ev_se": 1.73,
+              "p_net_positive": 0.1522,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0345,
+                "90": 0.1875,
+                "180": 0.2762
+              },
+              "rule_v2_verdict": "indeterminate"
+            }
+          },
+          "C_T1": {
+            "1": {
+              "ev": 38.48,
+              "ev_se": 2.47,
+              "p_net_positive": 0.2055,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0673,
+                "90": 0.2815,
+                "180": 0.375
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "2": {
+              "ev": 43.95,
+              "ev_se": 2.56,
+              "p_net_positive": 0.225,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0602,
+                "90": 0.2885,
+                "180": 0.3917
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "3": {
+              "ev": 41.02,
+              "ev_se": 2.4,
+              "p_net_positive": 0.2248,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0555,
+                "90": 0.2858,
+                "180": 0.379
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "4": {
+              "ev": 39.12,
+              "ev_se": 2.48,
+              "p_net_positive": 0.203,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.055,
+                "90": 0.2752,
+                "180": 0.3705
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "5": {
+              "ev": 41.54,
+              "ev_se": 2.56,
+              "p_net_positive": 0.215,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0615,
+                "90": 0.2722,
+                "180": 0.3723
+              },
+              "rule_v2_verdict": "pass"
+            }
+          }
+        }
+      },
+      "note": "CUSHION_FIT_WINS: C_T1 beats A on ev with >= survival on all 5 seeds | P1-Q4-ethprop-ev: T1 vs A under breakout_turbo_1step"
+    }
+  ]
+}

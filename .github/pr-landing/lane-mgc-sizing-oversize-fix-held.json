@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "touches src/units/accounts/risk.py (exposure measure + clamp) and config/accounts.yaml (ib_paper, ib_live max_gross_exposure_pct: 1.5); Tier-3 sizing. Operator decision (popup, verbatim): \"1.5\u00d7 equity (Recommended)\". Manager merges.",
+  "why": "Makes max_gross_exposure_pct count the futures contract multiplier (qty*price*contract_value_usd) and declares the operator-chosen 1.5x-equity ceiling on ib_paper and ib_live. No other account changes. Evidence: row MGC-SIZING-OVERSIZE, docs/research/mgc-sizing-oversize-2026-10-24.md."
+}

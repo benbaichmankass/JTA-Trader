@@ -12,7 +12,9 @@ name: phone-executor-apk
 #     first runs racing. The keystore file is written to $RUNNER_TEMP and deleted at the end of the job.
 #   - if the secrets are absent AND the PAT is unavailable, the job fails loudly instead of shipping an
 #     unstable debug key.
-# The APK holds no secret: the device token is minted on the phone at first run.
+# The APK holds no secret: the device token is minted on the phone at first run. It embeds the PUBLIC half of
+# the exec.js signing key (assets/exec_pubkey.b64, PHONE-EXEC-OBSERVABLE-1018) so the page-side script can ship
+# signed from our API without a reinstall (phone-exec-js-sign.yml).
 
 on:
   push:
@@ -28,8 +30,55 @@ concurrency:
   group: phone-executor-apk-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
+# TWO JOBS (PI-20261015-QC5PFG9A-0001, MEASURED 2026-10-15 08:06Z-08:48Z): the single job sat in ONE concurrency group
+# (phone-executor-apk-signing), and GitHub keeps only ONE pending job per group -- each newly queued job cancels the
+# one already waiting. Every branch that merges main after a tools/phone-executor change queues a job, so ~8 branch
+# merges in 25 min cancelled each other (runs 215-223) and #18217's compile was cancelled 3 times without running.
+#   check -- compile (debug, no key), JVM unit tests, page-side check. Per-ref group: a newer push to the SAME branch
+#            supersedes it, nothing else can. This is a PR's compile proof.
+#   apk   -- the signed release APK + upload. Only on main and on a manual dispatch (the operator installs from these),
+#            still under the shared signing group, which serialises the one-time key creation below.
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: phone-executor-apk-check-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK packages
+        run: |
+          SM=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)
+          yes | "$SM" --licenses >/dev/null || true
+          "$SM" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile (debug build, no signing key)
+        working-directory: tools/phone-executor
+        run: gradle assembleDebug --no-daemon --stacktrace
+      - name: JVM unit tests (login matcher, liveness, background-ticket routing)
+        working-directory: tools/phone-executor
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+      - name: Page-side check (headless Chromium, synthetic ticket)
+        timeout-minutes: 10
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm i playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          cd "$GITHUB_WORKSPACE" && NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_check.js
+      - name: Real-page fixtures (captured DOM snapshots, numbers replaced; PHONE-EXEC-OBSERVABLE-1018)
+        timeout-minutes: 10
+        run: NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_fixtures_check.js
+
   apk:
+    needs: check
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     concurrency:
       group: phone-executor-apk-signing
@@ -78,22 +127,33 @@ jobs:
           echo "PHONE_EXEC_KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
           # The certificate fingerprint is public (it is in every APK); print it so a reinstall can be checked.
           keytool -list -keystore "$KS" -storepass "$PASS" -alias phoneexec | grep -i "SHA-256" || true
+      - name: Embed the exec.js signing PUBLIC key (PHONE-EXEC-OBSERVABLE-1018)
+        # The phone verifies the SIGNED remote exec.js (GET /phone/exec.js, phone-exec-js-sign.yml) against this
+        # 32-byte ed25519 public key, derived here from the same secret the signer uses. Public by nature (it is
+        # in every APK). Absent secret = the APK runs the bundled script only (RemoteJs: "disabled"), never an
+        # unverified one; the key is created by the first phone-exec-js-sign run, so build again after it.
+        env:
+          KEY_B64: ${{ secrets.PHONE_EXEC_JS_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          ASSET=tools/phone-executor/app/src/main/assets/exec_pubkey.b64
+          if [ -z "${KEY_B64}" ]; then
+            echo "::warning::PHONE_EXEC_JS_SIGNING_KEY is unset: this APK embeds no public key and will run the bundled exec.js only (remote logic disabled). Run phone-exec-js-sign once, then rebuild."
+            rm -f "$ASSET"
+          else
+            KEY="$RUNNER_TEMP/exec-js-signing.pem"
+            printf '%s' "${KEY_B64}" | base64 -d > "$KEY"
+            openssl pkey -in "$KEY" -pubout -outform DER | tail -c 32 | base64 -w0 > "$ASSET"
+            rm -f "$KEY"
+            echo "embedded public key: $(cat "$ASSET")"
+          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
       - name: Build release APK
         working-directory: tools/phone-executor
         run: gradle assembleRelease --no-daemon --stacktrace
-      - name: Login matcher unit tests (JVM, synthetic mails)
-        working-directory: tools/phone-executor
-        run: gradle testReleaseUnitTest --no-daemon --stacktrace
-      - name: Page-side check (headless Chromium, synthetic ticket)
-        timeout-minutes: 10
-        run: |
-          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
-          npm init -y >/dev/null && npm i playwright@1.49.1 >/dev/null
-          npx playwright install --with-deps chromium >/dev/null
-          cd "$GITHUB_WORKSPACE" && NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_check.js
+      # unit tests and the page-side check ran in `check` (this job needs it) on the same commit
       - name: Remove the keystore file
         if: always()
         run: rm -f "$RUNNER_TEMP/phoneexec.jks"

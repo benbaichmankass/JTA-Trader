@@ -1,0 +1,55 @@
+id: RQ-20261011-17f4-02
+title: 'ML label wall: does any strategy x symbol cell reach the pooled-label gate (n>=300 parity-held) that a per-cell take/skip head needs?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+kind: deterministic
+why_not_inferential: A count against a pre-stated threshold is a census, not an estimate.
+question: 'Counting MEASURED-provenance closed trades plus backtest-augmented labels that pass backtest-vs-live feature parity, per (strategy, symbol) cell:
+  how many cells have pooled n>=300 (M23 P2 gate) and how many have MEASURED-only n>=1000 for the conviction stacker (ML-PRODUCERS M5)? Thresholds are judgement
+  calls stated before the run (basis: T0.3 was noise at n_eval=20; M23 records n~78 per cell as the wall).'
+why_this_matters: Every trade-outcome, meta-label and conviction head is label-bound, not compute-bound. Until cells are counted against their gate nobody
+  can say whether those lines are 'build' or 'park', and 'wait for accrual' is unverified (backtest rows are not schedule-bounded). Plan item ML-D2.
+power:
+  expected_n: 1
+  effect_units: cells
+  design: deterministic
+  basis: 'kind: deterministic -- a census of rows against fixed thresholds.'
+decision_rule:
+  id: RULE-RQ1011-17F4-02-LABEL-GATE-CENSUS
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: 'Per cell: n_measured, n_backtest_parity_held, n_pooled; global: number of cells with n_pooled>=300; MEASURED-only conviction n.'
+  rule: 'GO (per-cell meta-head unit may be authored for that cell) IF a cell has n_pooled>=300 with backtest/live parity holding. GO (conviction producer
+    plan) IF MEASURED-only closed trades >=1000 AND a stacker beats the majority baseline offline under purged CV. PARK (record next re-check from the observed
+    accrual rate, not a guessed date) IF no cell qualifies. NEEDS-BACKFILL IF a cell is short only because market_raw coverage is short: file the backfill
+    row. Thresholds are not edited after the run.'
+  what_it_does_not_do: Does not train or register any model, and does not change a threshold to manufacture a GO.
+compute: needs_vm_data
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.5
+  est_minutes: 20
+  basis: An estimate.
+run:
+  command:
+  - python3
+  - scripts/research/label_wall_census.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261011-17f4-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-LABEL-WALL
+- ML-PRODUCERS
+- ROADMAP M23/M24
+last_dispatched_at: '2026-10-25T10:53:29+00:00'
+roadmap:
+- M23

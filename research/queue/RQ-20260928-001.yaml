@@ -3,7 +3,7 @@ title: >-
   Does wiring the HTF trend-bias filter add net-of-cost edge on the 7
   ict_scalp variant legs that declare htf_trend_filter_enabled: true but
   never receive htf_close/htf_ema (CA-A05-001 / JC-CA-02)?
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -197,4 +197,16 @@ related:
   - 'docs/research/M27-P1-15m-findings-2026-07-22.md'
   - 'docs/research/M27-P0-MGC-15m-findings-2026-07-28.md'
 
-last_dispatched_at: null
+last_dispatched_at: '2026-10-25T11:00:00+00:00'
+grading:
+  attested: RULE-RQ0928-001-ICTSCALP-HTF-FILTER-WIRE
+  auto: false
+  decision_rule_id: RULE-RQ0928-001-ICTSCALP-HTF-FILTER-WIRE
+  evidence:
+  - research/results/RQ-20260928-001/session_01BzTTXpd6ik4TCL1czrLdtS.jsonl
+  - docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json
+  graded_at: '2026-10-25'
+  grader: lane RQ-20260928-001-RUN (hand-graded, session-local run)
+  reason: 6 of 7 legs PASS per the registered rule (n>=175, ON net-R > OFF, mean not worse than 0.3); mgc_15m no_data (no 15m feed). PASS is loss-cutting, ON still net-negative on 5 of 6 legs.
+  rows: 7
+  verdict: pass

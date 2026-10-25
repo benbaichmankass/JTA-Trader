@@ -109,7 +109,7 @@ def _stub_runtime(monkeypatch):
     """Common stubs: avoid live coordinator + avoid runtime-counter side effects."""
     monkeypatch.setattr(
         "src.runtime.pipeline.inject_runtime_counters",
-        lambda settings, _client: settings,
+        lambda settings: settings,
     )
     monkeypatch.setattr(
         "src.runtime.pipeline.inject_per_strategy_counters",

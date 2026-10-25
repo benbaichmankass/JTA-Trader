@@ -51,13 +51,15 @@ def _replay_engine(close_a, close_b, params, cooldown_bars=1):
             continue
         entry_idx = i
         pos = pe.OpenPair(direction=sig["direction"], entry_spread=sig["entry_spread"],
-                          stop_spread=sig["stop_spread"], bars_held=0)
+                          stop_spread=sig["stop_spread"], bars_held=0,
+                          beta_entry=sig["beta_entry"])
         outcome = "timeout"
         exit_idx = min(entry_idx + params.max_hold_bars, n - 1)
         for j in range(entry_idx + 1, min(entry_idx + params.max_hold_bars + 1, n)):
             ex = pe.exit_signal(close_a[:j + 1], close_b[:j + 1],
                                 params, pe.OpenPair(pos.direction, pos.entry_spread,
-                                                    pos.stop_spread, j - entry_idx))
+                                                    pos.stop_spread, j - entry_idx,
+                                                    beta_entry=pos.beta_entry))
             if ex is not None:
                 outcome, exit_idx = ex["outcome"], j
                 break

@@ -48,7 +48,7 @@ name: replay-pregate-nightly
 #      optional body lines `ref: <branch>` and `models: <id,id,...>`.
 #
 # Required repo secrets:  VM_SSH_KEY  (authorized on the trainer ubuntu account)
-# Required repo vars (or defaults): TRAINER_VM_IP (158.178.209.121),
+# Required repo vars (or defaults): TRAINER_VM_IP (<TRAINER_VM_IP>),
 #                                   TRAINER_VM_USER (ubuntu)
 # Required repo label:    replay-pregate-now  (bootstrap-labels.yml)
 
@@ -172,6 +172,13 @@ jobs:
     # MB used, 4 GB swap in use on 09-26) is untouched by this and is filed.
     timeout-minutes: 195  # was 165: shared commit-to-main wait 50->80 (W41)
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Resolve run parameters
         id: params
         env:
@@ -218,7 +225,7 @@ jobs:
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
         run: |
           set -euo pipefail
           if [ -z "${VM_SSH_KEY}" ]; then
@@ -304,7 +311,7 @@ jobs:
       # made five consecutive red nights un-actionable.
       - name: Launch the fleet pre-gate on the trainer VM (detached)
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
           PG_REF: ${{ steps.params.outputs.ref }}
           PG_MODELS: ${{ steps.params.outputs.models }}
@@ -325,7 +332,7 @@ jobs:
       - name: Poll for completion, then fetch stdout/stderr/rc
         id: run
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -uo pipefail
@@ -413,7 +420,7 @@ jobs:
         if: steps.run.outputs.completed != '1'
         continue-on-error: true
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
         run: |
           set -uo pipefail

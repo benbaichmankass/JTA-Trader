@@ -100,7 +100,7 @@ _UNMODELLED_SL_LEVERS = ("trail_vol_tight_mult", "be_floor_r")
 @dataclass
 class TrailPlan:
     """What the replay says about one open position."""
-    action: str                        # "tighten" | "hold" | "skip"
+    action: str                        # "tighten" | "hold" | "skip" | "exit"
     why: str
     sl: Optional[float] = None         # the new stop when action == "tighten"
     replay_sl: Optional[float] = None  # the harness stop after the last closed bar
@@ -233,10 +233,46 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
     # latest price (the last row, forming bar included), as monitor() requires.
     px = float(candles["close"].iloc[-1])
     if (long_ and cand >= px) or (not long_ and cand <= px):
-        plan.why = f"replayed stop {cand} is through the current price {px}: not amended"
+        # TRAIL CROSSED (PI-20261015-JWMGXOTH-0002; MEASURED 2026-10-15 13:01Z on breakout_2: replay 2351.13 vs
+        # price 2353.04 on an ETH short whose stop rested at 2504.25). The harness this replay is parity with,
+        # scripts/backtest_trend.py::_stop_or_target, has already EXITED here (a short at the trail once a bar's
+        # high >= trail; a long once low <= trail). Holding left the stale stop resting indefinitely. "exit"
+        # tells the caller to move the stop to the tightest SAFE level (:func:`exit_stop`): price + buffer for a
+        # short, price - buffer for a long. Tighten-only; no close control.
+        plan.action = "exit"
+        plan.why = (f"trail crossed: replayed stop {cand} is through the current price {px}; the harness exits "
+                    "here, so the stop goes to the price + buffer")
+        plan.detail["exit_px"] = px
         return plan
     plan.action, plan.sl, plan.why = "tighten", cand, "replayed trail tightens the resting SL"
     return plan
+
+
+# TRAIL-CROSSED EXIT buffer (PI-20261015-JWMGXOTH-0002): the exit stop clears the current price by the LARGEST of
+# 2 price steps, EXIT_BUF_FRAC x price (the phone executor's own through-price guard, MainActivity.PRICE_BUF_FRAC)
+# and QUOTE_BUFFER_ATR x entry ATR (this module's venue-quote guard), so neither guard refuses it.
+EXIT_BUF_FRAC = 0.001
+
+
+def exit_stop(direction: str, price: float, step: Optional[float], atr: Optional[float]) -> float:
+    """The tightest SAFE stop when the trail has been crossed: ``price + buffer`` for a short, ``price - buffer``
+    for a long, rounded to the venue step on the LOOSE side (away from price). It fills on the next adverse tick,
+    approximating the harness's exit at the trail (worse by the buffer)."""
+    st = step if step and step > 0 else 0.0
+    buf = max(2 * st, EXIT_BUF_FRAC * float(price), QUOTE_BUFFER_ATR * float(atr or 0.0))
+    if direction == "long":
+        raw = float(price) - buf
+        return round(math.floor(raw / st + 1e-9) * st, 10) if st else raw
+    raw = float(price) + buf
+    return round(math.ceil(raw / st - 1e-9) * st, 10) if st else raw
+
+
+def tightens(direction: str, resting_sl: Optional[float], new_sl: float, step: Optional[float]) -> bool:
+    """True when ``new_sl`` is tighter than the resting stop by at least one price step (never a loosen)."""
+    if resting_sl is None:
+        return False
+    m = step if step and step > 0 else 1e-9
+    return new_sl >= resting_sl + m if direction == "long" else new_sl <= resting_sl - m
 
 
 def _load_legs(path: Path = STRATEGIES_PATH) -> Dict[str, Dict[str, Any]]:
@@ -417,6 +453,28 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
                 f"(open_r={plan.detail.get('open_r')}); a resting-SL amend cannot reproduce a "
                 "bar-close exit, so the prop trail does NOT apply it — operator decides")
             tst["close_lever_alerted"] = True
+        if plan.action == "exit":
+            # TRAIL CROSSED (PI-20261015-JWMGXOTH-0002): the harness has exited; move the stop to the venue
+            # quote + buffer (short) / - buffer (long). It then goes through the SAME guards as any tighten
+            # below: the venue-quote buffer, the backoff, the bounded ModifyRollout step and the re-read.
+            q0 = adapter.read_quote(page, venue) or {}
+            px0 = _f(q0.get("bid")) if p.side == "long" else _f(q0.get("ask"))
+            step0 = _f((cfg.symbols.get(bot_sym) or {}).get("price_step"))
+            if px0 is None:
+                res.log("trail_skip", ticket_id=tid, why="trail crossed but no venue quote: no exit amend")
+                return
+            tgt = exit_stop(p.side or "", px0, step0, plan.detail.get("atr"))
+            if not tightens(p.side or "", p.stop_loss, tgt, step0):
+                res.log("trail_skip", ticket_id=tid, why="trail crossed; the resting SL is already at or inside "
+                        "the exit stop", exit_sl=tgt, resting_sl=p.stop_loss)
+                return
+            if not tst.get("exit_alerted"):
+                res.alerts.append(f"{tid}: {venue} trail CROSSED (replay {plan.replay_sl} through the price): the "
+                                  f"harness has exited, so the stop will step toward {tgt} (price {px0} "
+                                  f"{'-' if p.side == 'long' else '+'} buffer, bounded rollout steps). "
+                                  "Tighten-only; no close control")
+                tst["exit_alerted"] = True
+            plan.sl, plan.action = tgt, "tighten"
         if plan.action != "tighten":
             # TP doctrine B1: with no SL step due this tick, the leg's declared
             # TP-revision rule may move the resting TP (one modify per ticket

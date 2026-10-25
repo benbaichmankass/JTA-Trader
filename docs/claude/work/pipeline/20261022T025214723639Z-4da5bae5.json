@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-R3DFW7IK-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "RESEARCH-OPS-20261022-0247 step D: ae17 axis leads",
+    "rerun": "python3 -c \"import json,glob;[print(i,json.loads(open(sorted(glob.glob('research/results/RQ-20261017-ae17-%02d/*.jsonl'%i))[-1]).readline()['verdict']) for i in range(1,5)]\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research] ae17 vol-skip axis: 7 of 24 measured siblings PASS (15 FAIL, 2 INDETERMINATE, 4 not landed), each pass chosen as best of 3 arms; leads include RQ-20261017-ae17-19 (tlt_pullback_1d, VH95 +1.86 R) and -22 (gdx_pullback_1d, VL30 +1.87 R). Rule: a PASS is a LEAD followed by ONE confirmation unit on a disjoint window. The full 2006+ history was consumed by the lead, so a disjoint window does not exist yet: author the confirmation as a forward window (--end >= 2027-02-17, same argv/bar) or on a sibling instrument, one unit per lead, and count the 28 siblings x 3 arms as the multiple-testing denominator (row RESEARCH-TRIAL-LEDGER). No Tier-3 note until confirmed. Also check that --fee-bps-roundtrip 0.0 in the logged argv resolves to the full cost stack (the rule requires it)."
+}

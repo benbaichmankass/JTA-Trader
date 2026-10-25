@@ -1,0 +1,179 @@
+id: RQ-20261014-f516-08
+title: 'Programme 05 Q5 breadth: velotrade_1 incumbent book vs +XRP 1h trend (executable now) vs the trend6 book that passed RQ-20261007-215,
+  head-to-head on the same seeds'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: Under Velotrade Classic 1-Step, does adding p2_trend_xrpusdt (trend_donchian 1h on XRPUSDT, the one trend6 leg with measured
+  prop-terminal lots) at 1.0% or 0.5% -- or the full trend6 book at 0.5% -- beat velotrade_1's configured book (A) on ev_net_usd_per_life
+  with >= survival on every seed, net of the full cost stack?
+why_this_matters: 'RQ-20261007-215 graded PASS (ev > 0 all seeds, p_floor 0) for trend6 under Velotrade at 0.5%: seed ev $366-380/life,
+  P(pass by 90 d) 0.56-0.59 (MEASURED from research/results/RQ-20261007-215/37940126955.jsonl). It was never priced against the incumbent
+  on the same seeds, and no roster change followed (velotrade_1 still trades ETH+SOL only). LINK/ZEC/UNI have no measured lots on any
+  prop terminal, so trend6 itself is not executable; XRP is. This is the first breadth rung from the candidate pool (RESEARCH-MAP P5
+  chain step 3).'
+power:
+  expected_n: 355
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.3 needs ~87-90 observations at alpha 0.05 / power 0.8 (the floor RQ-20260928-011/-012 registered and every prop fit since
+    has used). prop_ev_grid grades on the --leg leg''s n: trend_donchian_eth_prop has 355 committed 730 d trades and trend_donchian_sol_prop
+    132 (wc -l of the two trades files, counted 2026-10-14 before registration). Below 88 the grid grades UNDERPOWERED (indeterminate),
+    never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed 730 d trade evidence under the firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-RQ1014-F516-08-BREADTH-VELOTRADE1
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per seed and arm: path-mode ev_net_usd_per_life, p_alive_at_horizon, p_net_positive, p_pass_by_days, p_breach_*. The XRP/LINK/ZEC/UNI
+    1h trade rows are produced in the same job by p2_breakout_symbol_screen.py --census-only over a 730 d binance-vision window (the
+    RQ-20261007-215 shape). Velotrade''s own stack (ruleset header, first-party 2026-10-04): 6 bps round-trip commission, 3 bps slippage,
+    0.05%/night swap (dxtrade model), --no-hedge, per-leg lev caps ETH 5x / SOL 5x, the $ evaluation fee and payout split from config/prop_rulesets/velotrade_classic_1step.yaml;
+    p2 legs capped at 2x. The committed trade rows already carry the harness''s fee + slippage + funding via execution_costs.resolve_cost_policy()
+    (D1-cleared trend harness); the sim then charges the venue''s own stack on top.'
+  rule: 'prop_ev_grid --grade cushion_vs_flat, mechanically: PASS IF the best C arm by mean ev beats A on ev with >= survival on ALL
+    5 seeds. WHAT IT MEANS: if the best arm is CXRP or CXRP050 -> Tier-3 data-backed roster+sizing proposal for velotrade_1 (add the
+    XRP 1h trend leg; a new strategies.yaml entry is needed, so the manager opens the PR with this record; the live leg must first pass
+    its own Stage-0 record at configured params per the ladder). If the best arm is CT6050 -> no roster change (not executable); file
+    a build row to measure LINK/ZEC/UNI lots on the Velotrade terminal, and CXRP''s own seed-median ev decides the XRP add. FAIL IF
+    A is undominated on any seed -> incumbent stands, breadth for velotrade_1 waits for the next pool admission. NULL otherwise -> incumbent
+    stands; the arm table is attached to 05-PROP.md.'
+  what_it_does_not_do: Changes no roster. The XRP 1h trade rows come from a census screen at harness-default trend parameters, not a
+    config-exact live leg; a PASS is a candidate, and the Stage-0 gate still applies before any routing. Does not check symbol lot sizes.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 150
+  basis: '2-leg prop_ev_sim book, 5 seeds x the unit''s arms at the default 4,000 lives, --jobs 4 (2026-10-14 smoke: 400 lives of the
+    velotrade book in well under a minute).'
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.45
+  basis: 'stand-in: trend6 priced ~2x the incumbent''s ev in separate runs; one live account. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  commands:
+  - - python3
+    - scripts/research/p2_breakout_symbol_screen.py
+    - --symbol
+    - XRPUSDT
+    - --family
+    - trend
+    - --days
+    - '730'
+    - --workdir
+    - '{out_dir}/screen_xrpusdt'
+    - --census-only
+    - --jobs
+    - '4'
+  - - python3
+    - scripts/research/p2_breakout_symbol_screen.py
+    - --symbol
+    - LINKUSDT
+    - --family
+    - trend
+    - --days
+    - '730'
+    - --workdir
+    - '{out_dir}/screen_linkusdt'
+    - --census-only
+    - --jobs
+    - '4'
+  - - python3
+    - scripts/research/p2_breakout_symbol_screen.py
+    - --symbol
+    - ZECUSDT
+    - --family
+    - trend
+    - --days
+    - '730'
+    - --workdir
+    - '{out_dir}/screen_zecusdt'
+    - --census-only
+    - --jobs
+    - '4'
+  - - python3
+    - scripts/research/p2_breakout_symbol_screen.py
+    - --symbol
+    - UNIUSDT
+    - --family
+    - trend
+    - --days
+    - '730'
+    - --workdir
+    - '{out_dir}/screen_uniusdt'
+    - --census-only
+    - --jobs
+    - '4'
+  - - python3
+    - scripts/research/prop_ev_grid.py
+    - --leg
+    - trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl
+    - --arm
+    - A=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8
+    - --arm
+    - CXRP=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8 --trades p2_trend_xrpusdt={out_dir}/screen_xrpusdt/p2_trend_xrpusdt__trades.jsonl
+      --lev-cap p2_trend_xrpusdt=2
+    - --arm
+    - CXRP050=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8 --trades p2_trend_xrpusdt={out_dir}/screen_xrpusdt/p2_trend_xrpusdt__trades.jsonl
+      --lev-cap p2_trend_xrpusdt=2
+    - --arm
+    - CT6050=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8 --trades p2_trend_xrpusdt={out_dir}/screen_xrpusdt/p2_trend_xrpusdt__trades.jsonl
+      --lev-cap p2_trend_xrpusdt=2 --trades p2_trend_linkusdt={out_dir}/screen_linkusdt/p2_trend_linkusdt__trades.jsonl --lev-cap p2_trend_linkusdt=2
+      --trades p2_trend_zecusdt={out_dir}/screen_zecusdt/p2_trend_zecusdt__trades.jsonl --lev-cap p2_trend_zecusdt=2 --trades p2_trend_uniusdt={out_dir}/screen_uniusdt/p2_trend_uniusdt__trades.jsonl
+      --lev-cap p2_trend_uniusdt=2
+    - --common
+    - --trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset
+      config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005
+      --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+    - --seeds
+    - 1,2,3,4,5
+    - --grade
+    - cushion_vs_flat
+    - --out
+    - '{out_dir}'
+    - --jobs
+    - '4'
+    - --note
+    - 'RQ-20261014-f516-08: Programme 05 Q5 breadth head-to-head, velotrade_1'
+  inputs:
+    research_unit: RQ-20261014-f516-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/B6.json
+- scripts/research/prop_ev_sim.py
+- scripts/research/prop_ev_grid.py
+- research/queue/RQ-20261007-215.yaml
+- scripts/research/p2_breakout_symbol_screen.py
+- docs/claude/work/checklist/PROP-ROSTER-EXPAND.json
+last_dispatched_at: '2026-10-14T21:58:15+00:00'
+grading:
+  attested: RULE-RQ1014-F516-08-BREADTH-VELOTRADE1
+  auto: true
+  decision_rule_id: RULE-RQ1014-F516-08-BREADTH-VELOTRADE1
+  evidence:
+  - research/results/RQ-20261014-f516-08/38644319490.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

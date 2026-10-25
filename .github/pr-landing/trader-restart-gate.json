@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Deploy-path change: scripts/deploy_pull_restart.sh (run every ~5 min by ict-git-sync on the live VM) gains a per-unit gate that can leave ict-trader-live running across a runtime deploy. Tier 2 (runtime/deploy/service). The operator approved building it (popup 2026-10-15 ~10:10Z, verbatim \"Build it (Recommended)\", relayed by manager session_01VduHYzdaXe27wTDBLSu8ao). Lane session_013LfwP31TKTdoH5kHsBUyry does not self-land; the manager merges.",
+  "why": "TRADER-RESTART-GATE Phase 1: skip restarting ict-trader-live when the runtime diff touches nothing the trader loads; per-unit trader deployed sha in the deploy marker, restart intent, diag /version and the hourly report. Fail-safe to restart."
+}

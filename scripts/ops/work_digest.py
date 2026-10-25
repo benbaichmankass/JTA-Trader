@@ -1134,7 +1134,15 @@ def _self_test() -> int:
     # 10: the source list must not have drifted off disk. A source path that
     # no longer exists reads as `absent` forever — correct-looking, and
     # permanently blind to the register it was meant to watch.
-    missing = [src.path for src in SOURCES if not (REPO_ROOT / src.path).exists()]
+    # The checklist is read through the store (rows are the truth after the
+    # 2026-10-08 cutover; the monolith file no longer exists), so "exists"
+    # means what `_items_at` reads -- `checklist_store.exists`, not a stat.
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    missing = [
+        src.path for src in SOURCES
+        if not (_ck.exists(REPO_ROOT / src.path) if _ck.is_checklist_path(src.path)
+                else (REPO_ROOT / src.path).exists())
+    ]
     check(10, "every declared source exists on disk", not missing, str(missing))
 
     # 11: and it must cover every review backlog, not the ones that existed the

@@ -1,0 +1,132 @@
+id: RQ-20261014-d6e7-01
+title: >-
+  In-trade exit line, rung 1: first-passage label census -- how often does a trade come within reach of a fixed TP and then hit
+  the SL first, and how much R would a perfect 'exit at the turn' have saved, on ~3,000 committed crypto trades?
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: deterministic
+why_not_inferential: >-
+  This is a census of a FIXED population, not a sample estimate: every trade in the newest committed ledger of every USDT leg is
+  re-walked over public historical candles that do not change, and the record reports population quantities (first-passage shares,
+  the turn-oracle saving, the bracket's net R per capital-day). The same inputs give the same numbers on every run, and the rule
+  compares a population mean to fixed bars; it makes no claim about trades outside the corpus. It sizes the prize and fixes the
+  label for the inferential rungs, which carry their own power and bootstrap CIs (RQ-20261014-d6e7-02..05). The power block is
+  context for the population size.
+question: >-
+  On the committed per-trade ledgers re-walked bar by bar over public candles (Fixed-bracket reconstruction: each trade in the
+  newest committed ledger per USDT leg is re-walked bar by bar over public Binance Vision candles from its entry bar, with the
+  ledger's INITIAL stop at -1 R and a fixed TP at K R; SL before TP on a shared bar; timeout at H = max(10, p90 of the leg's realised
+  holds); a leg enters only if >= 80% of its controllable trades re-walk to the ledger's own mfe_r within 0.05 R (n >= 10). Costs:
+  every arm pays the trade's ledger cost_total_r (fee + slippage + funding via execution_costs.resolve_cost_policy()); an early
+  exit pays cost_slippage_r once more.), for K in {1, 1.5, 2, 3} R: P(TP first), P(SL first), P(timeout) per leg and pooled, against
+  the driftless gambler's-ruin value K/(K+1) at entry; among SL-first trades the share that had first reached 0.5K / 0.75K / 0.9K
+  (the operator's 'very close to the TP'); the turn-oracle saving (best close before the SL minus -1 R, minus the extra exit cost)
+  per SL-first trade and per trade; a per-bar table of observed SL-first against p0 by open-R bucket; and the fixed bracket's net
+  R per capital-day.
+why_this_matters: >-
+  The operator's 2026-10-14 destination for exits (row IN-TRADE-EXIT-MODEL, verbatim there): at every bar of an open trade, P(SL
+  before TP | state now), and an exit-now mechanism that turns would-be losers into winners. This census sizes the prize and fixes
+  the label before any model is fitted. It does NOT measure predictability: a driftless random walk has turn-oracle headroom too
+  (first_passage.py --self-test: 0.52 R/trade on one), so a PASS funds rungs 2-5, it proves nothing about whether the turn can
+  be seen in time.
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit = trade. ~3,000 USDT trades in the newest ledger per leg (5,063 rows across 54 legs, of which the non-USDT legs are excluded;
+    the exact n after the MFE control is in the record). A mean saving of 0.10 R against sd ~1 R needs (1.96 + 0.84)^2 / 0.1^2
+    = 785 trades; the 300 SL-first floor in the rule is a floor, not the power basis.
+  feasibility:
+    source: none
+    accrual_basis: Committed ledgers + public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261014-D6E7-01-FIRST-PASSAGE-CENSUS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Pooled over included legs at K = 2 R: turn_oracle_saving_r_per_trade = sum over SL-first trades of max(0, best close before
+    the SL bar + 1 R - cost_slippage_r) / n trades. Reported beside it for every K and leg: P(TP/SL/timeout first), sl_first_share_reached_{0.5,0.75,0.9}K,
+    the bar calibration table, fixed-bracket net R per capital-day.
+  rule: >-
+    PASS IF n_sl_first >= 300 at K = 2 AND turn_oracle_saving_r_per_trade >= 0.25 R: the prize is large enough to fund rungs 2-5
+    (RQ-20261014-d6e7-02/04 dispatch on this PASS). FAIL IF it is < 0.10 R: even a perfect turn exit is worth less than a tenth
+    of R per trade on this corpus -- retire the in-trade exit model on the fixed-bracket construction and re-ask only on harness-native
+    paths (d6e7-06). INDETERMINATE between the bars, under n, or if no leg passes the MFE control.
+  min_n: 300 SL-first trades at K = 2
+  what_it_does_not_do: >-
+    Fits no model and grades no exit rule. The bracket is a fixed reconstruction, not the leg as traded (trailing, TP revision
+    and stale exits are not modelled). Non-USDT legs are excluded (listed in the record with their reason). Changes no config.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  basis: >-
+    stand-in: sizes the operator's named destination for exits; not a P&L measurement, no balances stated.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  basis: >-
+    MEASURED 2026-10-14 in the lane sandbox -- with per-leg fetches the census's candle fetch did not finish inside 30 min (since
+    fixed to one fetch per symbol x timeframe); budget 90 min, timeout 240 (runner cap 360). Candle fetch dominates (Binance Vision,
+    ~25 symbol x timeframe series, up to ~4 years of 5m-4h bars); the walk is seconds. An authoring dry run is disclosed in the
+    PR.
+run:
+  command:
+  - python3
+  - scripts/research/first_passage.py
+  - --mode
+  - census
+  - --tp-r
+  - 1,1.5,2,3
+  - --policy-tp-r
+  - '2.0'
+  - --pass-saving-r
+  - '0.25'
+  - --fail-saving-r
+  - '0.10'
+  - --min-n
+  - '300'
+  - --cache-dir
+  - '{out_dir}/candles'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261014-d6e7-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+- M23
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q8, the destination of the exit line)
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- scripts/research/first_passage.py
+- EXIT-PATH-EMIT-OFFLINE
+- >-
+  RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
+last_dispatched_at: '2026-10-15T01:04:30+00:00'
+grading:
+  attested: RULE-RQ20261014-D6E7-01-FIRST-PASSAGE-CENSUS
+  auto: true
+  decision_rule_id: RULE-RQ20261014-D6E7-01-FIRST-PASSAGE-CENSUS
+  evidence:
+  - research/results/RQ-20261014-d6e7-01/38663653665.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

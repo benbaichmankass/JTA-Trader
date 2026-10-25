@@ -335,7 +335,7 @@ def test_pending_peek_counts_without_claiming(monkeypatch):
     c = TestClient(api_main.app, raise_server_exceptions=False)
     assert c.get("/api/bot/prop/phone/pending").status_code == 401
     h = {"Authorization": "Bearer " + TOKEN}
-    assert c.get("/api/bot/prop/phone/pending", headers=h).json() == {"ok": True, "pending": 0, "status_age_hours": None}
+    assert c.get("/api/bot/prop/phone/pending", headers=h).json() == {"ok": True, "pending": 0, "status_age_hours": None, "drill": None}
     _ticket("old", minutes=-1)
     _ticket("t1")
     assert c.get("/api/bot/prop/phone/pending", headers=h).json()["pending"] == 1
@@ -602,3 +602,55 @@ def test_account_status_unrealized_is_kept_when_read_and_null_when_not():
     assert prop_journal.latest_account_status("breakout_2")["unrealized"] == -12.5
     pe.record_report(_dev(), {"kind": "account_status", "equity": 5056.86})
     assert prop_journal.latest_account_status("breakout_2")["unrealized"] is None  # unread is NULL, never 0
+
+
+def test_heartbeat_keeps_keepalive_fields(_iso):
+    """PHONE-KEEPALIVE: what keeps the app alive and what had to bring it back is reported, not dropped."""
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"st": "background", "battery_exempt": True, "overlay": False, "fgs_running": True,
+                                       "alarm_exact": False, "restarts_24h": 2,
+                                       "last_restart_reason": "activity_missing(service_tick)",
+                                       "app_version": "1b.200/200", "nope": 1}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["battery_exempt"] is True and st["overlay"] is False and st["fgs_running"] is True
+    assert st["restarts_24h"] == 2 and st["last_restart_reason"] == "activity_missing(service_tick)"
+    assert st["app_version"] == "1b.200/200" and "nope" not in st
+
+
+def test_loop_restarted_is_an_accepted_event_kind(_iso):
+    pe.record_event(_dev(), {"event": "loop_restarted", "reason": "watchdog"}, send=lambda *a, **k: True)
+    assert pe.recent_events("breakout_2")[-1]["kind"] == "loop_restarted"
+
+
+def test_background_ticket_fields_and_fallback_event(_iso):
+    """PHONE-FGS-EXEC: the background-ticket heartbeat fields are kept, the fallback event is accepted and pinged, and
+    the engine tag on a reason survives the scrub."""
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"st": "background", "bg_tickets": 3, "bg_ticket_last": "dry_filled",
+                                       "bg_ticket_off_min": 0}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["bg_tickets"] == 3 and st["bg_ticket_last"] == "dry_filled" and st["bg_ticket_off_min"] == 0
+    sent = []
+    pe.record_event(_dev(), {"event": "bg_ticket_fallback", "reason": "background ticket ended refused (overlay)",
+                             "ticket_id": "t-1"}, send=lambda m, **k: sent.append(m) or True)
+    assert pe.recent_events("breakout_2")[-1]["kind"] == "bg_ticket_fallback" and len(sent) == 1
+    pe.record_event(_dev(), {"event": "dry_fill_ok", "reason": "(bg:overlay) filled + read back"}, send=lambda *a, **k: True)
+    assert pe.recent_events("breakout_2")[-1]["reason"].startswith("(bg:overlay) filled")
+
+
+def test_pending_poll_runs_the_stale_claim_watchdog(tmp_path, monkeypatch, _iso):
+    """BREAKOUT-UNTRACKED-1014: the backgrounded app only polls /phone/pending, never /phone/claim, so a live
+    submit the phone never confirmed sat `claimed` for 5 h with no alert. The pending poll now runs the watchdog."""
+    from src.web.api import main as api_main
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    monkeypatch.setattr(pe, "_now", lambda: later)
+    c = TestClient(api_main.app, raise_server_exceptions=False)
+    r = c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
+    assert r.status_code == 200
+    assert prop_journal.get_ticket(tid)["status"] == "placed"
+    assert any("never confirmed" in m for m in _iso)
+    n = len(_iso)
+    c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
+    assert len(_iso) == n   # idempotent: no second journal row, no second ping
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1

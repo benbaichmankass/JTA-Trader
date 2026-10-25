@@ -66,7 +66,12 @@ added 2026-09-30, PI-20260928-E8Y3BGBS-0003) splits the same way: an equity
 reading that is absent or older than ``ACCOUNT_SNAPSHOT_MAX_AGE_DAYS`` is
 ``NEEDS_DATA``; a measured account on which NONE of the leg's permitted setups
 sizes above zero through ``RiskManager.position_size`` is ``REFUSE``, and it is
-decided BEFORE cost fidelity so an unaffordable leg never files a data task. Everything else that
+decided BEFORE cost fidelity so an unaffordable leg never files a data task. ``R-HOLDOUT``
+(both promotions, when ``bar.holdout_required``; operator decision 2026-10-16, "Require
+holdout") splits the same way: a record with no valid ``holdout_confirmation``, or too few
+held-back trades to read, is ``NEEDS_DATA`` naming the holdout re-run unit; a valid
+confirmation whose selected configuration was not positive net of cost is ``REFUSE``. See
+``_holdout``. Everything else that
 was a REFUSE before this change (mandate not granted or blocked, wrong
 account or account-class drift, an unknown transition, a config-fingerprint
 mismatch, B1's own four clauses, a computed expectancy or fold count that is
@@ -495,12 +500,12 @@ def _soak_data_task(leg: str, soak: Optional[str], mid: str, account: str) -> Di
     return {
         "what": (f"{leg} needs a genuine Stage-1 soak on {soak!r} before {mid} can decide "
                  f"{leg} -> {account}: it must be `execution: live` (not `shadow`) on that "
-                 f"roster, then accrue real fills there -- 'Never a leg that has not soaked "
-                 f"at Stage 1' (the mandate's own `never:`)."),
+                 f"roster, and pass its MECHANICAL soak there -- 'Never a leg that has not "
+                 f"soaked at Stage 1' (the mandate's own `never:`). The soak is 1-2 clean "
+                 f"trades, never a sample size (OPERATING-PLAN § 2 'The soak is MECHANICAL')."),
         "clears_when": (f"config/strategies.yaml::{leg}.execution is not 'shadow' AND {leg} "
-                        f"is on {soak!r}'s roster, with enough real fills there to clear "
-                        f"RULE-R3-GATE1-COST-FIDELITY-v1's floor (>=10 measured entries and "
-                        f">=10 exits per side)"),
+                        f"is on {soak!r}'s roster AND its contract SOAK-stage1-{soak}-{leg} in "
+                        f"docs/claude/work/SOAKS.json reads `passed` (soak_state.soak_states())"),
         "check_every_days": 7,
         "next_action": "dispatch_lane",
     }
@@ -965,6 +970,11 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
                              f"packages on {soak!r} but places no real order, so roster membership "
                              f"there is not a Stage-1 soak",
                              _soak_data_task(leg, soak, m["id"], account))
+        # MD-PROMOTE-S1-S2 as AMENDED 2026-10-15 (operator grant): "has soaked"
+        # means the leg's MECHANICAL soak contract reads `passed` -- roster
+        # membership + `execution: live` alone are not a soak.
+        if bar.get("soak_passed"):
+            _soak_passed(leg, soak, m, root, ctx, account)
 
     # ── the committed record ────────────────────────────────────────────────
     rec_rel = f"{EVIDENCE_DIR_REL}/{leg}.json"
@@ -1040,6 +1050,13 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if (frm, to) == ("S1", "S2"):
         _affordability(leg, account, exchange, record, acfg, root, ctx)
 
+    # ── holdout confirmation (both promotions, bar.holdout_required) ────────
+    # After affordability for the same reason cost fidelity is: an unaffordable
+    # leg must never file a data task (here, a holdout re-run) towards a
+    # promotion that can never trade.
+    if bar.get("holdout_required"):
+        _holdout(leg, frm, to, record, bar, m, root, ctx)
+
     # ── Stage-1 cost fidelity (S1 -> S2 only) ───────────────────────────────
     if (frm, to) == ("S1", "S2"):
         _cost_fidelity(leg, venue, record, m, root, ctx)
@@ -1070,6 +1087,150 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
                                f"{account}'s budget {budget:.4f} ({auto_after}/{roster_after} legs)")
 
 
+# ── R-HOLDOUT: a pass on a pre-registered, never-seen latest span ────────────
+# OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
+# Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; recorded on checklist row
+# PROMOTION-BAR-MULTIPLICITY), verbatim: "From now on, promotion needs a pass on
+# the held-back 25% you just approved. That's one setting tested once, so no
+# deflation is needed. Live legs are not demoted on this number (live
+# net-of-cost results still govern demotion), but all 8 real-money legs get
+# holdout re-runs first." It answers the trial-ledger measurement that 0 of 29
+# Stage-0 PASS records survive DSR > 0.95 with a BHY-haircut expectancy > 0.
+#
+# The confirmation is a block on the Stage-0 record, `holdout_confirmation`:
+# the configuration SELECTED on the earliest span, evaluated ONCE on a
+# pre-registered latest span no selection step read, with the same rule and
+# the full cost stack. Where the three verdicts fall:
+#   NEEDS_DATA  no block; a block that is not a valid confirmation (malformed,
+#               evaluated more than once, rule not registered before the run,
+#               source not committed, cost stack incomplete, spans overlapping,
+#               a different configuration than the record's); or too few
+#               held-back trades to read. "Without it the resolver returns
+#               NEEDS_DATA ... never REFUSE" (the dispatch).
+#   REFUSE      a VALID confirmation that decisively failed: the selected
+#               configuration was not positive net of cost on the held-back
+#               span at n >= the floor, or nothing survived selection.
+#   pass        a valid `confirmed` block, net R > 0 at n >= the floor.
+# Demotion never reads this block: MD-DEMOTE-S2-S1 stays on live net-of-cost.
+HOLDOUT_FIELD = "holdout_confirmation"
+HOLDOUT_CLAUSE = "R-HOLDOUT"
+HOLDOUT_PASS = "confirmed"
+HOLDOUT_FAIL = ("not_replicated", "no_discovery")
+HOLDOUT_THIN = ("underpowered", "insufficient_discovery")
+QUEUE_DIR_REL = "research/queue"
+
+
+def holdout_unit_for(leg: str, root: Path) -> Optional[str]:
+    """The research/queue unit that re-runs `leg` under the holdout protocol,
+    found by its `holdout_rerun.leg` field, or None. The newest id wins."""
+    qdir = root / QUEUE_DIR_REL
+    if not qdir.is_dir():
+        return None
+    hits = []
+    for p in sorted(qdir.glob("RQ-*.yaml")):
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if "holdout_rerun:" not in text or leg not in text:
+            continue
+        doc = _yaml(root, f"{QUEUE_DIR_REL}/{p.name}") or {}
+        hr = doc.get("holdout_rerun") if isinstance(doc, dict) else None
+        if isinstance(hr, dict) and hr.get("leg") == leg:
+            hits.append(str(doc.get("id") or p.stem))
+    return hits[-1] if hits else None
+
+
+def _holdout_data_task(leg: str, frm: str, to: str, why: str, root: Path) -> Dict[str, Any]:
+    unit = holdout_unit_for(leg, root)
+    run = (f"run research unit {unit} ({QUEUE_DIR_REL}/{unit}.yaml)" if unit else
+           f"author and run a holdout re-run unit for {leg} in {QUEUE_DIR_REL}/ (holdout_rerun.leg: "
+           f"{leg}; scripts/research/exit_lever_ablation.py --grade holdout)")
+    return {
+        "what": (f"{leg} needs a holdout confirmation before {frm} -> {to} can be decided ({why}): "
+                 f"select the configuration on the earliest ~75% of history, then evaluate the "
+                 f"selected configuration ONCE on the pre-registered latest ~25% (grown to 25 trades, "
+                 f"capped at 40%), same rule, full cost stack -- {run}; then write the result into "
+                 f"{EVIDENCE_DIR_REL}/{leg}.json as `{HOLDOUT_FIELD}`."),
+        "clears_when": (f"{EVIDENCE_DIR_REL}/{leg}.json carries a valid `{HOLDOUT_FIELD}` block "
+                        f"(verdict {HOLDOUT_PASS!r} or a decisive fail) for the record's own "
+                        f"config_fingerprint"),
+        "check_every_days": 7,
+        "next_action": "dispatch_lane",
+        "research_unit": unit,
+    }
+
+
+def _holdout(leg: str, frm: str, to: str, record: Dict[str, Any], bar: Dict[str, Any],
+             m: Dict[str, Any], root: Path, ctx: Dict[str, Any]) -> None:
+    hc = record.get(HOLDOUT_FIELD)
+    floor = bar.get("holdout_min_n", 25)
+    if not isinstance(floor, int) or isinstance(floor, bool) or floor < 1:
+        raise _Refuse("R-MANDATE-NOT-GRANTED", f"{m['id']} bar.holdout_min_n={floor!r} is not a "
+                                               "positive integer")
+    ev: Dict[str, Any] = {"required": True, "min_n": floor, "unit": holdout_unit_for(leg, root)}
+    ctx["evidence"]["holdout"] = ev
+
+    def need(why: str) -> None:
+        ev["why"] = why
+        raise _NeedsData(HOLDOUT_CLAUSE, f"{leg}: {why}", _holdout_data_task(leg, frm, to, why, root))
+
+    if not isinstance(hc, dict):
+        need(f"the Stage-0 record carries no `{HOLDOUT_FIELD}` -- no configuration has been "
+             "tested once on a held-back span")
+    ev["block"] = {k: hc.get(k) for k in ("verdict", "research_unit", "n_holdout", "net_r_holdout",
+                                          "expectancy_r_holdout", "selected_from", "source_run")}
+    verdict = hc.get("verdict")
+    if verdict not in (HOLDOUT_PASS,) + HOLDOUT_FAIL + HOLDOUT_THIN:
+        need(f"`{HOLDOUT_FIELD}.verdict`={verdict!r} is not one of "
+             f"{(HOLDOUT_PASS,) + HOLDOUT_FAIL + HOLDOUT_THIN}")
+    # no_discovery / insufficient_discovery never read the held-back span (nothing was selected), so 0 is its only
+    # honest count; every other verdict read it, and exactly once.
+    want_evals = 0 if verdict in ("no_discovery", "insufficient_discovery") else 1
+    if hc.get("evaluations_on_holdout") != want_evals:
+        need(f"evaluations_on_holdout={hc.get('evaluations_on_holdout')!r} (verdict {verdict!r} "
+             f"needs {want_evals}) -- the held-back span must be read exactly once, or it is no "
+             "longer never-seen")
+    rule = hc.get("decision_rule") or {}
+    if not (isinstance(rule, dict) and rule.get("id") and rule.get("registered_before_run") is True):
+        need("the holdout decision rule is not stated as registered before the run")
+    if not in_repo(root, hc.get("source_run")):
+        need(f"source_run {hc.get('source_run')!r} is not a committed file")
+    cs = hc.get("cost_stack") or {}
+    if not (isinstance(cs, dict) and _num(cs.get("fees")) and cs["fees"] > 0
+            and _num(cs.get("slippage")) and "funding" in cs):
+        need(f"cost_stack={cs!r} is not the full stack (fees > 0, slippage, funding stated)")
+    disc, hold = hc.get("discovery") or {}, hc.get("holdout") or {}
+    d_end, h_start = _parse_ts(disc.get("end")), _parse_ts(hold.get("start"))
+    if d_end is None or h_start is None or not d_end < h_start:
+        need(f"discovery.end={disc.get('end')!r} is not strictly before holdout.start="
+             f"{hold.get('start')!r} -- the spans are not disjoint")
+    if verdict == "insufficient_discovery":
+        need("too few discovery trades to select a configuration: it cannot decide")
+    if verdict == "no_discovery":
+        # Decisive: the candidate set the unit selected from includes the declared configuration,
+        # and none of them -- the declared one included -- cleared discovery.
+        raise _Refuse(HOLDOUT_CLAUSE, f"{leg}: no configuration survived selection on the discovery "
+                                      "span, so there was nothing to confirm")
+    if hc.get("selected_config_fingerprint") != record.get("config_fingerprint"):
+        need(f"the holdout selected config {hc.get('selected_config_fingerprint')!r}, not this "
+             f"record's {record.get('config_fingerprint')!r} -- the leg's configuration is unconfirmed")
+    n, net = hc.get("n_holdout"), hc.get("net_r_holdout")
+    if not isinstance(n, int) or isinstance(n, bool) or not _finite(net):
+        need(f"n_holdout={n!r}, net_r_holdout={net!r} -- not stated")
+    if verdict in HOLDOUT_THIN or n < floor:
+        need(f"the held-back span holds n={n} trades, below the floor of {floor}: it cannot decide")
+    exp = hc.get("expectancy_r_holdout")
+    if not _finite(exp) or abs(net / n - exp) > 0.01:
+        need(f"expectancy_r_holdout={exp!r} != net_r_holdout/n = {net / n:.4f} -- the block "
+             "disagrees with itself")
+    if verdict in HOLDOUT_FAIL or net <= 0:
+        raise _Refuse(HOLDOUT_CLAUSE, f"{leg}: the selected configuration read net_r={net} over "
+                                      f"n={n} held-back trades (verdict {verdict!r}) -- not > 0 net "
+                                      "of the full cost stack")
+    ev["passed"] = True
+
+
 def _stale_against_record(r3: Dict[str, Any], modelled: Any) -> Optional[str]:
     """Did R3 grade this leg against the slippage its record carries TODAY?
 
@@ -1089,6 +1250,138 @@ def _stale_against_record(r3: Dict[str, Any], modelled: Any) -> Optional[str]:
                 f"{graded} bps, but the committed record now carries {modelled} bps -- "
                 "the verdict answers a question about a record that has since changed")
     return None
+
+
+# --------------------------------------------------------------------------
+# MD-PROMOTE-S1-S2 AMENDED 2026-10-15 (operator grant, popup in manager session
+# session_01VduHYzdaXe27wTDBLSu8ao, verbatim "Grant as written (Recommended)";
+# proposed as MD-PROMOTE-S1-S2-SOAK-AMEND by lane SOAK-REDEFINE). Two clauses
+# change, both switched on by the mandate's own `bar:` so the code follows the
+# field:
+#   bar.soak_passed: true   -> the leg's SOAKS.json contract must read `passed`
+#                              (the mechanical soak: 1-2 clean trades; live prop
+#                              trades count) -- R-SOAK-NOT-PASSED otherwise.
+#   bar.cost_basis: venue_symbol -> clause 3 reads the VENUE's measured cost for
+#                              the leg's SYMBOL, pooled over every leg's fills in
+#                              the committed R3 rows, graded by R3's own rule at
+#                              bar.cost_tolerance_bps. The PER-LEG R3 verdict is
+#                              ongoing monitoring that feeds the demotion mandates.
+# --------------------------------------------------------------------------
+SOAKS_REL = "docs/claude/work/SOAKS.json"
+COST_BASIS_VENUE_SYMBOL = "venue_symbol"
+#: R3 row account_class -> the basis R3 names its cells by. Real money first:
+#: a real fill is the venue's cost; a demo fill is a simulator's.
+VENUE_BASIS_ORDER = (("real_money", "market"), ("paper", "simulator"))
+
+
+def _soak_passed(leg: str, soak: str, m: Dict[str, Any], root: Path,
+                 ctx: Dict[str, Any], account: str) -> None:
+    """The amended soak clause. PASS when the contract carries a committed PASS
+    disposition (with the clean trades it rests on), or the newest FRESH committed
+    soak snapshot lists it `passed`. Anything else is NEEDS_DATA: a soak that has
+    not passed yet is waiting for a trade, never a refusal."""
+    sid = f"SOAK-stage1-{soak}-{leg}"
+    ev: Dict[str, Any] = {"contract": sid, "store": SOAKS_REL}
+    ctx["evidence"]["soak"] = ev
+    doc = _json(root / SOAKS_REL)
+    c = next((x for x in (doc or {}).get("soaks") or []
+              if isinstance(x, dict) and x.get("id") == sid), None)
+    if c is None:
+        raise _NeedsData("R-SOAK-NOT-PASSED", f"no soak contract {sid} in {SOAKS_REL}",
+                         _soak_data_task(leg, soak, m["id"], account))
+    d = c.get("disposition") or {}
+    if d.get("verdict") == "PASS" and d.get("trades"):
+        ev.update({"state": "passed", "basis": "disposition", "decided_at": d.get("decided_at"),
+                   "trades": d.get("trades"), "evidence": d.get("evidence")})
+        return
+    rel, snap = latest_soak_snapshot(root)
+    max_age = (m.get("bar") or {}).get("soak_snapshot_max_age_days", 7)
+    state = None
+    if snap is not None:
+        cap = _parse_ts(snap.get("captured_at"))
+        if cap is not None and _num(max_age):
+            from datetime import datetime, timezone
+            age = (datetime.now(timezone.utc) - cap).total_seconds() / 86400.0
+            if -ACCOUNT_SNAPSHOT_FUTURE_SKEW_DAYS <= age <= float(max_age):
+                row = next((r for r in snap.get("soaks") or []
+                            if isinstance(r, dict) and r.get("id") == sid), None)
+                state = (row or {}).get("state")
+                ev.update({"snapshot": rel, "captured_at": snap.get("captured_at")})
+    ev["state"] = state
+    if state == "passed":
+        ev["basis"] = "snapshot"
+        return
+    raise _NeedsData("R-SOAK-NOT-PASSED",
+                     f"{sid} has not passed its mechanical soak (state {state!r}; a soak passes on "
+                     f"1-2 clean trades -- OPERATING-PLAN § 2 'The soak is MECHANICAL')",
+                     _soak_data_task(leg, soak, m["id"], account))
+
+
+def venue_symbol_cost(venue: str, symbol: str, modelled: Any, tol: float,
+                      root: Path) -> Dict[str, Any]:
+    """The venue's measured round-trip cost for ``symbol``, pooled across every
+    leg's fills in the newest committed R3 rows file, graded by R3's own rule.
+    Real-money fills decide when they clear R3's floor; otherwise the paper
+    fills; otherwise the real-money (or paper) cell's insufficient_n verdict."""
+    rel, _doc = latest_r3(root)
+    out: Dict[str, Any] = {"rule": R3_RULE_ID, "record": rel, "venue": venue, "symbol": symbol,
+                           "modelled_bps": modelled, "tolerance_bps": tol, "verdict": None}
+    rows_rel = rel[:-len(".json")] + "__rows.jsonl" if rel else None
+    if not rows_rel or not (root / rows_rel).is_file() or not in_repo(root, rows_rel):
+        out["why"] = f"no committed R3 rows file beside {rel!r}"
+        return out
+    out["rows"] = rows_rel
+    rows: List[Dict[str, Any]] = []
+    for line in (root / rows_rel).read_text(encoding="utf-8").splitlines():
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(r, dict) and r.get("venue") == venue and r.get("symbol") == symbol \
+                and isinstance(r.get("bps"), (int, float)):
+            rows.append(r)
+    sys.path.insert(0, str(REPO / "scripts" / "research"))
+    import r3_cost_fidelity as r3m  # noqa: PLC0415,E402
+    first = None
+    for cls, basis in VENUE_BASIS_ORDER:
+        ent = [r["bps"] for r in rows if r.get("account_class") == cls and r.get("side") == "entry"]
+        ex = [r["bps"] for r in rows if r.get("account_class") == cls and r.get("side") == "exit"]
+        g = dict(r3m.grade(ent, ex, modelled if _num(modelled) else None, tol), basis=basis)
+        first = first or g
+        if g.get("verdict") != r3m.INSUFFICIENT:
+            out.update(g)
+            return out
+    out.update(first or {})
+    return out
+
+
+def _venue_symbol_cost(leg: str, venue: str, record: Dict[str, Any], modelled: Any, tol: float,
+                       root: Path, ctx: Dict[str, Any]) -> None:
+    symbol = record.get("symbol")
+    if not symbol:
+        strategies = (_yaml(root, STRATEGIES_REL) or {}).get("strategies") or {}
+        cfg = strategies.get(leg) or {}
+        syms = cfg.get("symbols") or []
+        symbol = cfg.get("symbol") or (syms[0] if isinstance(syms, list) and syms else None)
+    g = venue_symbol_cost(venue, str(symbol), modelled, tol, root)
+    g["basis_of_comparison"] = COST_BASIS_VENUE_SYMBOL
+    ctx["evidence"]["cost_fidelity"] = g
+    v = g.get("verdict")
+    if v == R3_CONSISTENT:
+        return
+    if v == R3_DIVERGENT:
+        raise _Refuse("R-COST-FIDELITY",
+                      f"{venue} {symbol} ({g.get('basis')}) realized round-trip {g.get('roundtrip_mean')} "
+                      f"bps: CI95 {g.get('ci95')} lies above modelled {modelled} + {tol} bps "
+                      f"({g.get('rows')})")
+    raise _NeedsData("R-COST-FIDELITY",
+                     f"{venue} {symbol}: venue cost {v!r} -- {g.get('why') or 'not decisive'} "
+                     f"({g.get('rows') or g.get('record')})",
+                     {"what": (f"{leg}: the venue's measured cost for {symbol} on {venue} must be "
+                               f"decisive under {R3_RULE_ID} (pooled across legs, real money first)"),
+                      "clears_when": (f"the newest committed R3 rows grade {venue}|{symbol} `consistent` "
+                                      f"at modelled {modelled} + {tol} bps"),
+                      "check_every_days": 7, "next_action": "check_observation"})
 
 
 def _cost_fidelity(leg: str, venue: Optional[str], record: Dict[str, Any],
@@ -1119,6 +1412,10 @@ def _cost_fidelity(leg: str, venue: Optional[str], record: Dict[str, Any],
                                             "modelled_bps": modelled, "tolerance_bps": tol}
         raise _Refuse("R-COST-FIDELITY", f"venue {venue} rests on the {PROVISIONAL_SLIPPAGE_BPS} "
                                          f"bps placeholder; the record modelled {modelled!r}")
+
+    if (m.get("bar") or {}).get("cost_basis") == COST_BASIS_VENUE_SYMBOL:
+        _venue_symbol_cost(leg, venue, record, modelled, tol, root, ctx)
+        return
 
     r3 = r3_leg_verdict(leg, root)
     cf = dict(r3, venue=venue, modelled_bps=modelled, tolerance_bps=tol,
@@ -1348,8 +1645,9 @@ def _demote_s1_off(leg: str, venue: Optional[str], m: Dict[str, Any], root: Path
 #       identity), source_run committed. A record that is not is NEEDS_DATA --
 #       "could not look" is never a cut signal;
 #   (5) the leg's Stage-1 soak contract (SOAK-stage1-<account>-<leg>) reads a
-#       state in bar.soak_states (ready | overdue) in the newest committed soak
-#       snapshot under comms/mandate_evidence/soak_state/, captured within
+#       state in bar.soak_states (passed | mechanical_fail since the 2026-10-15
+#       mechanical redefinition) in the newest committed soak snapshot under
+#       comms/mandate_evidence/soak_state/, captured within
 #       bar.soak_snapshot_max_age_days. Absent, stale, or any other state is
 #       NEEDS_DATA.
 # A record with no failing clause REFUSEs (R-STAGE0-PASSES): the evidence must
@@ -1386,7 +1684,7 @@ def _soak_snapshot_data_task(leg: str, account: str, why: str) -> Dict[str, Any]
                  f"`python3 scripts/ops/snapshot_soak_state_for_mandate.py` (reads the live "
                  f"brief's SOAKS section, computed by soak_state.soak_states()) and commit it."),
         "clears_when": (f"the newest {SOAK_SNAPSHOT_DIR_REL}/<date>.json is fresh and lists "
-                        f"SOAK-stage1-{account}-{leg} as ready or overdue"),
+                        f"SOAK-stage1-{account}-{leg} in a state listed in bar.soak_states"),
         "check_every_days": 7,
         "next_action": "check_observation",
     }

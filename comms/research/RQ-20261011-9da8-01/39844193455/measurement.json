@@ -1,0 +1,1002 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "macro_f1",
+  "higher_is_better": true,
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "incumbent",
+  "controls": [
+    "har_rv_control",
+    "var_control"
+  ],
+  "candidates": [
+    "chronos2"
+  ],
+  "arm_status": {
+    "incumbent": "ok",
+    "har_rv_control": "ok",
+    "var_control": "ok",
+    "chronos2": "ok"
+  },
+  "groups": {
+    "BTCUSDT": {
+      "n_rows": 175272,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "incumbent": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "fc_ret_med",
+            "fc_range_rel",
+            "fc_up_prob",
+            "fc_skew",
+            "fc_q10_rel",
+            "fc_q90_rel"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5754598665892392,
+                0.5925257845618455,
+                0.5457301462415546,
+                0.586109047204895,
+                0.5079745471808355
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5695460697675099
+              ],
+              "n_test_rows": 9983
+            }
+          }
+        },
+        "har_rv_control": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "har_rv_d",
+            "har_rv_w",
+            "har_rv_m"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5457976738618499,
+                0.5935253025837032,
+                0.5464128541496621,
+                0.5539905608433102,
+                0.4959739263803681
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5374478650042775
+              ],
+              "n_test_rows": 9983
+            }
+          }
+        },
+        "var_control": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "var_ret_BTCUSDT",
+            "var_abs_BTCUSDT",
+            "var_ret_ETHUSDT",
+            "var_abs_ETHUSDT",
+            "var_ret_SOLUSDT",
+            "var_abs_SOLUSDT",
+            "var_ret_own",
+            "var_abs_own"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5495715062901,
+                0.5560394904084724,
+                0.5393413827918621,
+                0.5864897866263789,
+                0.5199751679813029
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5535081743381741
+              ],
+              "n_test_rows": 9983
+            }
+          }
+        },
+        "chronos2": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "fc_ret_med",
+            "fc_range_rel",
+            "fc_up_prob",
+            "fc_skew",
+            "fc_q10_rel",
+            "fc_q90_rel"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5819364102689029,
+                0.5960059820275984,
+                0.5384496658919233,
+                0.5689296654319423,
+                0.5072401227464519
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5508439645288167
+              ],
+              "n_test_rows": 9983
+            }
+          }
+        }
+      },
+      "n_common_rows": 43818
+    },
+    "ETHUSDT": {
+      "n_rows": 175272,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "incumbent": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "fc_ret_med",
+            "fc_range_rel",
+            "fc_up_prob",
+            "fc_skew",
+            "fc_q10_rel",
+            "fc_q90_rel"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6000646059739867,
+                0.5741250064577592,
+                0.6000871718305156,
+                0.5868641558961085,
+                0.5524742744091269
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5792662229909229
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        },
+        "har_rv_control": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "har_rv_d",
+            "har_rv_w",
+            "har_rv_m"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5929734868865216,
+                0.5822422091606673,
+                0.6126073531993405,
+                0.5911848691973106,
+                0.5352260931620605
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5777518610393012
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        },
+        "var_control": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "var_ret_ETHUSDT",
+            "var_abs_ETHUSDT",
+            "var_ret_BTCUSDT",
+            "var_abs_BTCUSDT",
+            "var_ret_SOLUSDT",
+            "var_abs_SOLUSDT",
+            "var_ret_own",
+            "var_abs_own"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5686169647062398,
+                0.562147478858751,
+                0.5796245102566938,
+                0.5772378854717094,
+                0.5281742350105275
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5715143656397125
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        },
+        "chronos2": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "fc_ret_med",
+            "fc_range_rel",
+            "fc_up_prob",
+            "fc_skew",
+            "fc_q10_rel",
+            "fc_q90_rel"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5807057667709719,
+                0.5681886217630306,
+                0.6131005106763336,
+                0.5880779091051964,
+                0.5512908282487465
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5880972168112034
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        }
+      },
+      "n_common_rows": 43818
+    },
+    "SOLUSDT": {
+      "n_rows": 175272,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "incumbent": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "fc_ret_med",
+            "fc_range_rel",
+            "fc_up_prob",
+            "fc_skew",
+            "fc_q10_rel",
+            "fc_q90_rel"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6904436358674391,
+                0.6353946052964151,
+                0.6977352521310083,
+                0.6329420913222036,
+                0.5890683572827693
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.6252432811454262
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        },
+        "har_rv_control": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "har_rv_d",
+            "har_rv_w",
+            "har_rv_m"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.7069032010656177,
+                0.6265087849829077,
+                0.6955352312462888,
+                0.6374049927498145,
+                0.564468987279361
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.6181973605459506
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        },
+        "var_control": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "var_ret_SOLUSDT",
+            "var_abs_SOLUSDT",
+            "var_ret_BTCUSDT",
+            "var_abs_BTCUSDT",
+            "var_ret_ETHUSDT",
+            "var_abs_ETHUSDT",
+            "var_ret_own",
+            "var_abs_own"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.659606832025835,
+                0.6230661534904544,
+                0.6767293045899645,
+                0.6274866461704742,
+                0.5677791495818905
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.6067862041016403
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        },
+        "chronos2": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "fc_ret_med",
+            "fc_range_rel",
+            "fc_up_prob",
+            "fc_skew",
+            "fc_q10_rel",
+            "fc_q90_rel"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6878014725875263,
+                0.6258086067418994,
+                0.6974851922362968,
+                0.6253430113791665,
+                0.5995430312261996
+              ],
+              "n_test_rows": 26291
+            },
+            "holdout": {
+              "fold_metric": [
+                0.6319602805996484
+              ],
+              "n_test_rows": 9959
+            }
+          }
+        }
+      },
+      "n_common_rows": 43818
+    }
+  },
+  "deltas": {
+    "BTCUSDT": {
+      "cv": {
+        "har_rv_control": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.014419814791895247,
+            "ci95": [
+              -0.034217848763069186,
+              0.005378219179278693
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": -0.003143403255844568,
+            "ci95": [
+              -0.03743733014870484,
+              0.0311505236370157
+            ],
+            "sign_consistent": false
+          }
+        },
+        "var_control": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.01127641153605068,
+            "ci95": [
+              -0.03571976333846359,
+              0.013166940266362236
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": 0.003143403255844568,
+            "ci95": [
+              -0.0311505236370157,
+              0.03743733014870484
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "chronos2": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.0030475090823101738,
+            "ci95": [
+              -0.014764346509815136,
+              0.00866932834519479
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": 0.011372305709585074,
+            "ci95": [
+              -0.009017898502382798,
+              0.031762509921552946
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.008228902453740505,
+            "ci95": [
+              -0.02448533402421226,
+              0.040943138931693275
+            ],
+            "sign_consistent": false
+          }
+        }
+      },
+      "holdout": {
+        "har_rv_control": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.03209820476323233,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": -0.016060309333896572,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "var_control": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.016037895429335758,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.016060309333896572,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "chronos2": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.0187021052386932,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.013396099524539129,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": -0.002664209809357443,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        }
+      }
+    },
+    "ETHUSDT": {
+      "cv": {
+        "har_rv_control": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": 0.00012375940768070138,
+            "ci95": [
+              -0.014941247940698971,
+              0.015188766756060373
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.019686587460395776,
+            "ci95": [
+              0.007406987992806667,
+              0.031966186927984884
+            ],
+            "sign_consistent": true
+          }
+        },
+        "var_control": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.019562828052715076,
+            "ci95": [
+              -0.030680207552758826,
+              -0.008445448552671325
+            ],
+            "sign_consistent": true
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": -0.019686587460395776,
+            "ci95": [
+              -0.031966186927984884,
+              -0.007406987992806667
+            ],
+            "sign_consistent": true
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "chronos2": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.002450315600643571,
+            "ci95": [
+              -0.01703694509773179,
+              0.012136313896444647
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": -0.0025740750083242726,
+            "ci95": [
+              -0.017559887268965173,
+              0.012411737252316627
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.017112512452071505,
+            "ci95": [
+              0.0033584236927590716,
+              0.03086660121138394
+            ],
+            "sign_consistent": true
+          }
+        }
+      },
+      "holdout": {
+        "har_rv_control": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.00151436195162169,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.006237495399588733,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "var_control": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.007751857351210423,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": -0.006237495399588733,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "chronos2": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": 0.00883099382028052,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.01034535577190221,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.016582851171490942,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        }
+      }
+    },
+    "SOLUSDT": {
+      "cv": {
+        "har_rv_control": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.0029525489151691177,
+            "ci95": [
+              -0.021945075366125725,
+              0.01603997753578749
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.015230622293074236,
+            "ci95": [
+              -0.00922287012520174,
+              0.039684114711350214
+            ],
+            "sign_consistent": false
+          }
+        },
+        "var_control": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.018183171208243355,
+            "ci95": [
+              -0.030187609162779627,
+              -0.006178733253707084
+            ],
+            "sign_consistent": true
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": -0.015230622293074236,
+            "ci95": [
+              -0.039684114711350214,
+              0.00922287012520174
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "chronos2": {
+          "incumbent": {
+            "n_folds": 5,
+            "mean": -0.001920525545749352,
+            "ci95": [
+              -0.011694995455720067,
+              0.007853944364221365
+            ],
+            "sign_consistent": false
+          },
+          "har_rv_control": {
+            "n_folds": 5,
+            "mean": 0.0010320233694197656,
+            "ci95": [
+              -0.024857233179475,
+              0.02692127991831453
+            ],
+            "sign_consistent": false
+          },
+          "var_control": {
+            "n_folds": 5,
+            "mean": 0.016262645662494003,
+            "ci95": [
+              -0.002610447255608269,
+              0.03513573858059628
+            ],
+            "sign_consistent": false
+          }
+        }
+      },
+      "holdout": {
+        "har_rv_control": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.007045920599475508,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.011411156444310344,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "var_control": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": -0.018457077043785852,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": -0.011411156444310344,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "chronos2": {
+          "incumbent": {
+            "n_folds": 1,
+            "mean": 0.006716999454222217,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "har_rv_control": {
+            "n_folds": 1,
+            "mean": 0.013762920053697725,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "var_control": {
+            "n_folds": 1,
+            "mean": 0.02517407649800807,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "fail",
+    "why": "no candidate reaches the registered floor on any clause",
+    "candidates": {
+      "chronos2": {
+        "evaluated": true,
+        "passes_all": false,
+        "clauses": [
+          {
+            "holds": false,
+            "what": "['BTCUSDT'] >= 0.01 vs incumbent/cv"
+          },
+          {
+            "holds": true,
+            "what": "['BTCUSDT'] >= 0.01 vs har_rv_control/cv"
+          },
+          {
+            "holds": true,
+            "what": "['BTCUSDT'] > 0.0 vs var_control/cv"
+          },
+          {
+            "holds": false,
+            "what": "['ETHUSDT', 'SOLUSDT'] > 0.0 vs incumbent/cv"
+          },
+          {
+            "holds": false,
+            "what": "['BTCUSDT'] > 0.0 vs incumbent/holdout"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [
+    {
+      "name": "har_rv_ge_incumbent_btc",
+      "holds": false,
+      "what": "har_rv_control: ['BTCUSDT'] >= 0.0 vs incumbent/cv"
+    },
+    {
+      "name": "var_ge_incumbent_btc",
+      "holds": false,
+      "what": "var_control: ['BTCUSDT'] >= 0.0 vs incumbent/cv"
+    }
+  ],
+  "licences": {
+    "incumbent": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "har_rv_control": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "var_control": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "chronos2": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 110.1
+}

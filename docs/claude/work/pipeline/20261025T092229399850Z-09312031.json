@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0006",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #12213",
+    "rerun": "read PR #12213 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "queued",
+  "what": "Decision (landing machinery, human merge): PR #12213 PAT-open shim and opener-aware arming gate. Main already has grade(opener=...) with a PAT wait budget in scripts/ci/automerge_arming.py and a fetch-based PAT client in claude-pr-automerge.yml, but not the opener_cannot_attach state or check_automerge_trigger C8. Open question: does a non-required `watch` run still let the gate grade attached for a GITHUB_TOKEN opener? Re-measure on main, then ship only the gap or close."
+}

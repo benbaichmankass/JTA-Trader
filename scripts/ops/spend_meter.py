@@ -14,10 +14,10 @@ as current. Every design choice below serves that one sentence.
 TWO POPULATIONS, NEVER BLENDED (the category error this row already caught
 twice on 2026-09-21 — see A1's `note`):
 
-  (a) THE CONTROL VARIABLE — usage against the DAILY budget (10% of the
-      weekly plan allowance). This is the only number the manager is
-      accountable for, and it is a PERCENT, not a dollar figure or a token
-      count — Settings -> Usage exposes three percent-of-allowance bars
+  (a) THE CONTROL VARIABLE — usage against the weekly plan allowance, paced
+      at the SUSTAINABLE RATE (100 - weekly%) / days to reset (operator,
+      2026-10-18; it replaced the 2026-09-21 "10% a day" share). It is a
+      PERCENT, not a dollar figure or a token count — Settings -> Usage exposes three percent-of-allowance bars
       (session ~5h, weekly, and a separate weekly bar for Fable) with no
       absolute number anywhere, and the allowance is model-weighted, so
       tokens-per-percent is not a constant. Converting to tokens would read
@@ -43,12 +43,12 @@ reading EVER prints `never recorded`, explicitly, not a bare `0%` — `0` here
 would collapse "we have not looked" into "usage is zero", which is exactly the
 class of bug `docs/CLAUDE-RULES-CANONICAL.md` § "Collapsed states" names.
 
-TWO WINDOWS BIND, NOT ONE. The weekly cap is what the 10%/day rule governs;
-the ~5-hour SESSION window is what actually walls a lane mid-run — a day's
-10% spent as one burst can exhaust the session window while the weekly meter
+TWO WINDOWS BIND, NOT ONE. The weekly cap is what the sustainable rate is
+computed from; the ~5-hour SESSION window is what actually walls a lane
+mid-run — a burst can exhaust the session window while the weekly meter
 still reads green. `render_section_5` always shows both, never one alone.
-FABLE carries a separate, additive weekly allowance (row E11 decides what is
-routed there; this module only reports the pool).
+FABLE carries its own weekly allowance (row E11 decides what is routed there;
+this module only reports the pool — it is not spare capacity by default).
 
 PER-LANE DOLLARS: WHAT IS ACTUALLY REACHABLE, ESTABLISHED RATHER THAN GUESSED
 -------------------------------------------------------------------------------
@@ -87,12 +87,15 @@ Check:      python3 scripts/ops/spend_meter.py --check
 Record:     python3 scripts/ops/spend_meter.py --record --window weekly \\
                 --percent 68 --read-at 2026-09-21T14:00:00Z --recorded-by operator
 Section 5:  python3 scripts/ops/spend_meter.py --section-5 [--session-costs FILE]
+Capacity:   python3 scripts/ops/spend_meter.py --capacity [--reset-at ISO] [--pp-per-lane-hour X]
+            (step 2 of the manager's operating loop: sustainable rate -> lane count)
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 from dataclasses import dataclass, field
@@ -113,14 +116,14 @@ STORE = Path("docs/claude/work/USAGE-READINGS.jsonl")
 
 #: THE THREE DECLARED METERS. Never a fourth invented ad hoc, and
 #: `render_section_5` never renders fewer than these three together — the
-#: daily 10% rule binds `weekly`, `session` is what actually walls a lane
-#: mid-run, and `fable_weekly` is a second, additive pool.
+#: sustainable rate is computed from `weekly`, `session` is what actually walls a
+#: lane mid-run, and `fable_weekly` is Fable's own pool.
 WINDOWS = ("session", "weekly", "fable_weekly")
 
 _WINDOW_LABEL = {
     "session": "SESSION (~5h) — what actually walls a lane mid-run",
-    "weekly": "WEEKLY (main pool) — what the 10%/day rule governs",
-    "fable_weekly": "FABLE WEEKLY — a SEPARATE, additive pool (routing: E11)",
+    "weekly": "WEEKLY (main pool) — what the sustainable rate is computed from",
+    "fable_weekly": "FABLE WEEKLY — Fable's own pool (routing: E11)",
 }
 
 _ISO_FORMATS = (
@@ -300,6 +303,78 @@ def _rate_line(records: list[dict], window: str) -> str | None:
     )
 
 
+# ── capacity: step 2 of the manager's operating loop ─────────────────────────
+#
+# Operator, 2026-10-18: "We want to get as much work as possible out of our budget without
+# blowing through it before a reset." The sustainable rate is what is LEFT of the weekly
+# allowance spread over what is LEFT of the week -- (100 - weekly%) / days to reset -- turned
+# into a lane count with a MEASURED cost per lane-hour. The count is advice for the manager's
+# judgment (1..5, at least one lane always runs); this module never enforces a cap.
+
+#: MEASURED 2026-10-18 (USAGE-READINGS.jsonl): weekly 55% at 05:39Z -> 73% at 08:40Z with
+#: 6 lanes running = 18 pp / (3.0 h x 6 lanes) = 1.0 pp per lane-hour. One window, one mix of
+#: models; re-measure with --pp-per-lane-hour when a better reading exists.
+PP_PER_LANE_HOUR = 1.0
+LANES_MIN, LANES_MAX = 1, 5
+#: A reading older than this is the first thing to fix, not a basis for dispatch.
+READING_STALE_H = 12.0
+_RESET_IN_NOTE = re.compile(r"reset\s+(?:[A-Za-z]{3}\s+)?(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})Z?")
+
+
+def capacity(log: LoadResult, *, reset_at: str | None = None,
+             pp_per_lane_hour: float = PP_PER_LANE_HOUR,
+             now: datetime | None = None) -> dict:
+    """The sustainable rate and the lane count it supports. ``state`` is one of
+    ``ok`` / ``never_recorded`` / ``reset_unknown`` / ``reading_from_past_week``; only
+    ``ok`` carries numbers -- a missing input is named, never filled with a guess."""
+    now = now or datetime.now(timezone.utc)
+    rec = latest_by_window(log.records)["weekly"]
+    if rec is None:
+        return {"state": "never_recorded", "lanes": None}
+    read_at = _parse_ts(rec["read_at"], "read_at")
+    out = {"weekly_pct": float(rec["percent"]), "read_at": rec["read_at"],
+           "reading_age_h": round((now - read_at).total_seconds() / 3600, 2)}
+    m = _RESET_IN_NOTE.search(rec.get("note") or "")
+    raw_reset = reset_at or (m.group(1).replace(" ", "T") + ":00Z" if m else None)
+    if raw_reset is None:
+        return {**out, "state": "reset_unknown", "lanes": None}
+    reset = _parse_ts(raw_reset, "reset_at")
+    if reset <= read_at:
+        return {**out, "state": "reading_from_past_week", "reset_at": raw_reset, "lanes": None}
+    days_left = max((reset - now).total_seconds() / 86400, 1 / 24)
+    # usage since the reading is unknown; spreading the remainder over the time left from NOW
+    # is the conservative reading of a dated observation
+    rate_day = max(100.0 - out["weekly_pct"], 0.0) / days_left
+    raw_lanes = rate_day / 24 / pp_per_lane_hour
+    return {**out, "state": "ok", "reset_at": raw_reset, "days_to_reset": round(days_left, 2),
+            "rate_pp_per_day": round(rate_day, 2), "pp_per_lane_hour": pp_per_lane_hour,
+            "lanes_raw": round(raw_lanes, 2),
+            "lanes": min(max(round(raw_lanes), LANES_MIN), LANES_MAX),
+            "stale": out["reading_age_h"] > READING_STALE_H}
+
+
+def render_capacity(c: dict) -> list[str]:
+    if c["state"] != "ok":
+        why = {
+            "never_recorded": "no weekly reading exists",
+            "reset_unknown": "the weekly reading names no reset time (pass --reset-at, or record "
+                             "the reading with --note \"reset <Day> YYYY-MM-DD HH:MMZ\")",
+            "reading_from_past_week": f"the latest reading ({c.get('read_at')}) predates the reset "
+                                      f"it names ({c.get('reset_at')}) -- record this week's reading",
+        }[c["state"]]
+        return [f"CAPACITY: could not compute -- {why}. Record a reading first; meanwhile run "
+                f"ONE lane (the floor), never zero and never a guessed count."]
+    L = [f"CAPACITY: weekly {c['weekly_pct']:.0f}% as of {c['read_at']} ({c['reading_age_h']:.1f}h old); "
+         f"reset {c['reset_at']} ({c['days_to_reset']:.2f}d)",
+         f"  sustainable rate = (100 - {c['weekly_pct']:.0f}) / {c['days_to_reset']:.2f}d = "
+         f"{c['rate_pp_per_day']:.1f} pp/day",
+         f"  at {c['pp_per_lane_hour']:.2f} pp per lane-hour that is {c['lanes_raw']:.2f} lanes "
+         f"continuous -> suggest {c['lanes']} (floor {LANES_MIN}, judgment up to {LANES_MAX}; not a cap)"]
+    if c["stale"]:
+        L.append(f"  ⚠️ reading is over {READING_STALE_H:.0f}h old -- ask for a fresh one before adding lanes")
+    return L
+
+
 # ── per-lane dollars: an OPTIONAL, session-supplied observation ─────────────
 
 def normalise_lane_costs(raw: Any) -> list[dict]:
@@ -387,8 +462,8 @@ def render_section_5(
         L.append("")
 
     L += [
-        "**(a) THE CONTROL VARIABLE** — usage against the DAILY budget "
-        "(10% of the weekly plan allowance). Operator-entered; only a human "
+        "**(a) THE CONTROL VARIABLE** — usage against the weekly plan "
+        "allowance, paced at the sustainable rate. Operator-entered; only a human "
         "can read Settings > Usage. Never `0%` for a window nobody has "
         "read — that would say \"usage is zero\" when the truth is "
         "\"nobody looked\".",
@@ -420,11 +495,12 @@ def render_section_5(
             L.append(rate)
     L.append("")
     L += [
-        "> Context, restated because it is easy to misread: the daily rule "
-        "is **10% of the weekly allowance per day**, spending into the "
-        "resulting 30% margin is AUTHORIZED, and an unspent daily budget is "
-        "a failure too, not a neutral outcome. This meter reports facts; it "
-        "does not grade them.",
+        "> Context, restated because it is easy to misread: the pace is the "
+        "SUSTAINABLE RATE, (100 - weekly%) / days to reset (operator, "
+        "2026-10-18: as much work as possible without blowing through the "
+        "allowance before a reset). `--capacity` turns it into a lane count; "
+        "the manager's operating loop (manager SKILL.md) uses it. This meter "
+        "reports facts; it does not grade them.",
         "",
     ]
 
@@ -610,6 +686,27 @@ def _selftest() -> int:
         check("…an unknown-cost lane is named as unknown, never folded into $0",
               "no known" in rendered_lanes)
 
+    print("— capacity: the sustainable rate, never a guessed count —")
+    cap_now = datetime(2026, 10, 18, 9, 0, tzinfo=timezone.utc)
+    check("no weekly reading -> never_recorded, no lane count",
+          capacity(LoadResult(), now=cap_now) == {"state": "never_recorded", "lanes": None})
+    wk = base(window="weekly", percent=73.0, read_at="2026-10-18T08:40:00Z",
+              note="operator screenshot; reset Wed 2026-10-21 18:00Z")
+    c = capacity(LoadResult(records=[wk]), now=cap_now)
+    check("reset time is read from the reading's note",
+          c["state"] == "ok" and c["reset_at"] == "2026-10-21T18:00:00Z")
+    check("rate = (100 - weekly%) / days to reset",
+          abs(c["rate_pp_per_day"] - 27 / 3.375) < 0.01)
+    check("a low rate still suggests the one-lane floor, never zero", c["lanes"] == 1)
+    c2 = capacity(LoadResult(records=[dict(wk, percent=10.0)]), now=cap_now, pp_per_lane_hour=0.2)
+    check("a high rate suggests at most 5 lanes (advice for judgment, not a cap)", c2["lanes"] == 5)
+    check("a reading with no reset named is reset_unknown, not a guess",
+          capacity(LoadResult(records=[dict(wk, note=None)]), now=cap_now)["state"] == "reset_unknown")
+    check("a reading older than its own reset is from a past week",
+          capacity(LoadResult(records=[wk]), reset_at="2026-10-14T18:00:00Z",
+                   now=cap_now)["state"] == "reading_from_past_week")
+    check("render names the formula", "(100 - 73)" in "\n".join(render_capacity(c)))
+
     print()
     if failures:
         print(f"SELF-TEST FAILED — {len(failures)} check(s):")
@@ -651,6 +748,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--note", default=None)
 
     ap.add_argument("--section-5", action="store_true", help="render brief section 5")
+    ap.add_argument("--capacity", action="store_true",
+                    help="sustainable rate and suggested lane count (manager operating loop, step 2)")
+    ap.add_argument("--reset-at", default=None, help="weekly reset time (ISO); else read from the reading's note")
+    ap.add_argument("--pp-per-lane-hour", type=float, default=PP_PER_LANE_HOUR)
+    ap.add_argument("--json", action="store_true", help="with --capacity: print the dict")
     ap.add_argument("--session-costs", default=None,
                      help="path to a pasted get_session/list_sessions result, or '-' for stdin")
     args = ap.parse_args(argv)
@@ -680,6 +782,12 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"spend_meter: recorded {rec['window']} {rec['percent']}% "
               f"as of {rec['read_at']} (by {rec['recorded_by']})")
+        return 0
+
+    if args.capacity:
+        c = capacity(read_readings(store), reset_at=args.reset_at,
+                     pp_per_lane_hour=args.pp_per_lane_hour)
+        print(json.dumps(c, indent=2) if args.json else "\n".join(render_capacity(c)))
         return 0
 
     if args.section_5:

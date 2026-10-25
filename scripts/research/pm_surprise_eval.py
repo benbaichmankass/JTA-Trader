@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -143,6 +144,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     bdir = a.backfill_dir or (pmc.data_dir() / "pm_backfill" / "kalshi")
     a.out.mkdir(parents=True, exist_ok=True)
+    if a.candles_dir is None:
+        # This command is TRAINER-side by declaration (header), i.e. an off-live-VM host, but the unit's argv cannot
+        # carry env (script_run._INTERPRETERS) and research-script-run-trainer.yml does not set it: without this the
+        # fetch guard raised in 0.3 s (run 38258786887, exit 1). setdefault: an operator-set value still wins.
+        os.environ.setdefault("ICT_OFFVM_BUILD_HOST", "1")
     panel = ees._resolve_panel(a.symbol, a.candles_dir)
     if not panel:
         v = {"verdict": "indeterminate", "read_state": "no_data", "n": None,

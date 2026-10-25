@@ -40,6 +40,14 @@ repo has 404 of them. So:
 If the diag relay fails, run what the review JSON alone supports, say what was not
 pulled, and **do not fabricate** (same rule as `/performance-review`).
 
+## Reading results: a FAIL is not a dead idea
+
+When Step 0 or Track 1 reads a unit that FAILED its registered rule, that settles only the live/config
+question the rule asked. Diagnose why (legs/regime, grid, trigger definition, cost drag, n/power, test
+design), check outside sources, author pre-registered variant units, and record the programme as
+**"first test failed → variants queued"**, never "dead". Policy and operator quote: `research-ops` § D;
+family retirement: `scripts/research/family_retirement_policy.yaml`.
+
 ## Step 0 — close the loop on the PREVIOUS run (always first)
 
 The previous run's units are this run's first input. For each entry in the newest
@@ -77,6 +85,17 @@ the expensive one (see § Cost).
 *Operator point 1.* For each leg the review marks underperforming (negative net window,
 `grade_drift`, a `proposed_tweaks` demote/kill candidate, or a low-grade cluster):
 
+0. **FIRST STEP — is the live result outside what the backtest predicts for this many
+   trades?** (operator, 2026-10-15: *"that should be a first step for any underperforming
+   strategy"*.) Run `python3 scripts/research/live_vs_backtest.py [--leg <leg>]` (reads the
+   canonical journal via `/api/bot/performance/recent?n=200`, bootstraps the leg's committed
+   Stage-0 per-trade `net_r`, reports p5/p50/p95 and the live percentile). The verdict picks
+   the next step: `BELOW_BACKTEST` → a **fidelity/regime investigation unit** (research/queue)
+   and then steps 1-2; `CONSISTENT` → **keep accruing** and let R4 decide at its
+   pre-registered threshold (do not tune on luck-sized evidence); `NO_BACKTEST` → a
+   **backtest unit**; `INSUFFICIENT_N` / `NO_LIVE_TRADES` → keep accruing. R4's 40-trade
+   threshold is NOT changed by this. Limits (i.i.d., ~10% false flags across many legs) are
+   in the script's docstring.
 1. **Run `.claude/skills/performance-review/SKILL.md` § "Underperformance → diagnose, don't
    demote"** (binding; do not restate or shorten it here). Output: `cause ∈ regime | cost |
    execution | overfit` with the robust-retest reference. A demote is the last resort.

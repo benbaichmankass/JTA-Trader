@@ -72,6 +72,10 @@ paragraph exists; the mechanism changed, the obligation did not.)
    **frontier scan** (`frontier-research` skill: outside models/methods →
    pre-registered units, plus `ml_plan_status.py --diversity`; the whole scan → run → read → improve loop is written once in that skill, § "The research → test → improve loop") — operator,
    2026-10-11: the mandate is *better models*, not variations of the first good one.
+9a. **Run the drift scan** (plan-only) and turn drift that persists across
+   2 consecutive weekly reads into drift-remediation rows (§ "The drift
+   scan"). **Weekly, every run** — it replaced the retired ~8/day
+   `ict-drift-retrain.timer` (operator, 2026-10-25).
 10. **Emit the response JSON** + **post a one-line update to the Claude
    channel** (§ "Output" + § "Posting to the Claude channel").
 
@@ -481,6 +485,60 @@ and carry what `scripts/ops/pipeline.py::validate` demands: `id`, `what`,
 `next_action`, `state` (plus `tier`/`severity`); a `done`/`killed` record
 needs a `terminal_reason`.
 
+## The drift scan — REQUIRED each run (operator, 2026-10-25, binding)
+
+**Why it is here and not on a timer.** The `ict-drift-retrain.timer` (~8 scans/day) was retired
+2026-10-25 (row `DRIFT-SCAN-RETIRE`). MEASURED 2026-10-21 (PI-20261021-WG8OPB7N-0002): the scans
+flagged 9 manifests and retrained 0 (`RETRAIN_PLAN_ONLY=1`), while the daily training cycle
+retrained 67. Transient drift therefore self-corrects on the daily cycle; the scan's only value
+is spotting **persistent** drift, which is a multi-day judgement. Operator: *"we still need to at
+least be measuring drift and using that information on the workplan, but it doesn't need to be 8
+times a day"*, and drift as *"part of the regular ML review"*. **`scripts/ops/run_drift_retrain.sh`
+is kept, plan-only.** Do not re-add a timer and do not set `RETRAIN_PLAN_ONLY=0`.
+
+**1. Run it** (one trainer-vm-diag block, batched with the trainer-state block above; the unit is
+a oneshot so `start` returns when the scan is done, and it queues behind the heavy-job lock):
+
+```
+cmd: |
+  sudo systemctl start ict-drift-retrain.service
+  systemctl show ict-drift-retrain.service -p Result,ExecMainStatus
+  python3 - <<'PY'
+  import json, datetime as d
+  cut = (d.datetime.utcnow() - d.timedelta(hours=1)).isoformat()
+  rows = [json.loads(l) for l in open("/home/ubuntu/ict-trading-bot/runtime_logs/drift_retrain.jsonl") if l.strip()]
+  rows = [r for r in rows if r["ts"] >= cut]
+  print(len(rows), "rows;", sorted({r["action"] for r in rows}))
+  for r in rows:
+      if r["action"] in ("dispatch", "skip_no_manifest"):
+          print(r["ts"], r["action"], r["model_id"], r.get("manifest_path"))
+  PY
+```
+
+**Output lands** in `runtime_logs/drift_retrain.jsonl` on the trainer (one JSONL row per head per
+scan: `ts`, `model_id`, `manifest_path`, `action`) and the unit journal. The review **copies the
+drifted list into the run record** (`comms/ml-plan/<stamp>.json`, key `drift`, below), because the
+trainer log is not in git and the next run needs this one as its baseline.
+*Drifted* = `action` is `dispatch` (drift on a head that resolves to a manifest) or
+`skip_no_manifest` (drift, no manifest to retrain: a finding by itself). `skip_no_drift`,
+`skip_thin_data` and `skip_stale_drift` are not drifted. A nonzero rc other than 11, or a missing
+or empty log, is **could-not-look**, never "no drift": record it as an anomaly and file the fix.
+
+**2. The 2-consecutive-weekly-reads rule.** Read the previous record's `drift.drifted` from the
+latest file in `comms/ml-plan/`. A model_id drifted in **this** read **and** the previous one is
+*persistent*; a first-time one, or any model with no previous record, is *watch* (recorded, no
+row). Each persistent model gets a **drift-remediation row** via `scripts/ops/checklist.py add`
+(title `DRIFT-REMEDIATE-<model_id>`, `roadmap` a milestone id, `note` carrying the two read dates
+and the `shadow-drift` numbers), or a `research/queue/` unit if it needs a measurement first. Then
+apply the **`drift-remediation` skill** (`python -m ml shadow-drift --model-id <id>`; drift-only
+with `drift_clean` now passing → no action; a real capability failure → feature/label fix shipped
+as a new version, operator promotes). If a row for that model already exists, add a note, not a
+duplicate. A model absent from one read is *watch* again.
+
+**3. Record** under the run record's `drift` key: `{"scan_rc": 0|11, "heads_scanned": N,
+"drifted": ["model_id", ...], "persistent": [...], "watch": [...], "rows_filed": [...],
+"could_not_look": false}`, and report the persistent list in the response `recommendations`.
+
 ## The ML plan loop — plan vs measured, every run (operator, 2026-10-11, binding)
 
 **Why it exists.** The ML / AI-trader build is a long program (research *and* infra). Without a
@@ -546,6 +604,7 @@ the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker)
    "plumbing_findings": [...], "results_read": [{"unit": "...", "verdict": "...", "plan_item": "..."}],
    "ideas": [{"id": "RQ-…|row", "source": "a|b|c|d", "rule_registered": true}] or "none: <because>",
    "frontier": {…the block defined in the frontier-research skill § "The run record"…},
+   "drift": {…the block defined in § "The drift scan" above…},
    "writebacks": ["ROADMAP.md", "ml-plan-items.yaml", ...], "rows_filed": [], "units_filed": [],
    "next_by_value_per_cost": ["…"], "handoff": ["…"]}`
    and cite its path in the response JSON's `sources` and in the ping.

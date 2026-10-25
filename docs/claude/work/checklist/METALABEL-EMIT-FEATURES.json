@@ -1,0 +1,34 @@
+{
+  "id": "METALABEL-EMIT-FEATURES",
+  "title": "Lever: widen every harness --emit-trades row with the decision-time features the signals catalog names (ADX-14 label, ATR percentile, vol bucket, regime cell, session hour, funding z where available, confidence components, fc_* where served) so the meta-label corpus = test results carry the signals, not only confidence",
+  "phase": "W42",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "EXIT-EMIT-BUILD-1016",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18015,
+    18536
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane AI-TRADER-PROGRAMME] WHY: the committed per-trade ledgers (comms/strategy_evidence/runs, 5,063 trades in the newest ledger per leg, 54 legs, MEASURED 2026-10-14) carry only confidence / direction / entry_time / regime_weight / adx_at_entry (null on ~96%). A meta-label head over ALL strategy signals (M23 revived, operator 2026-10-14) cannot be trained on test results until the emits carry the signals. SCOPE: one shared emit helper used by the trend/pullback/squeeze/fade/ict_scalp harnesses, columns named in docs/research/signals-catalog.yaml feeds.meta_label; keep every existing key byte-identical (build_strategy_evidence.py and build_exit_head_dataset.py read them); add mae_r while there (absent from every harness today). DONE WHEN: one fresh evidence run per family lands ledgers with the new columns non-null on >= 90% of rows, and RQ-20261014-9d20-05 (blocked/) moves to the queue. Unblocks the M23 P3 within-family test. [2026-10-16 lane EXIT-EMIT-BUILD-1016] BUILT (PR #18536) for the trend + pullback families only: --emit-features adds mae_r + features_schema=harness_decision_v1 + f_adx_14, f_regime, f_atr_pct, f_atr_pctl, f_atr_pctl_bucket, f_regime_cell (OFFLINE PROXY: trend label x ATR-pctl tercile, NOT the live calm/volatile vol_regime, which needs registry bucket edges), f_rlr_vol_20, f_ret_20, f_hour_utc, f_dow_utc via the shared helper scripts/research/harness_emit.py::DecisionContext (live wilder_adx/regime_label/rolling_log_return_vol). Existing keys byte-identical in value and order (tests/test_harness_emit.py). NOT emitted: funding z, fc_*, confidence components (not in harness candles). NOT YET ADOPTED: squeeze, fade, ict_scalp harnesses. LANDED_UNPROVEN. CLOSES WHEN: python3 scripts/ops/build_strategy_evidence.py --research-emits lands fresh trend + pullback ledgers with f_* non-null on >=90% of rows, 9d20-04's --features list is filled from those column names and it leaves blocked/; then the remaining three families.",
+  "updated_at": "2026-10-16T07:42:19Z",
+  "updated_by": "session_01Q2DsXQey6vFcc5H3MHL4oA",
+  "roadmap": [
+    "M23",
+    "M25"
+  ],
+  "observation": {
+    "what": "Fresh trend + pullback evidence ledgers built with --research-emits carry the f_* decision-time columns non-null on >= 90% of rows, and RQ-20261014-9d20-04 leaves blocked/ with its --features list filled from those columns",
+    "how_to_check": "python3 scripts/ops/build_strategy_evidence.py --research-emits for the trend/pullback legs; count non-null f_adx_14/f_atr_pctl/f_regime_cell per <leg>__trades.jsonl",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: offline tooling only; the M23 outcome is written back when 9d20-04 is graded",
+    "arch": "none: opt-in research emit columns on offline backtest harnesses; no runtime, pipeline or contract change"
+  },
+  "_seq": 478
+}

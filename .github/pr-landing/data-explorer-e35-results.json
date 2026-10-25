@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Held for manager review as instructed: the guard cannot certify src/runtime/research_catalog.py as Tier-1 surface. Read-only projection change: the catalog now ALSO reads docs/research/e35-bracket-corpus.jsonl (single pass, keeps only the research_unit tag + sweep_generated_at per row) so units whose results landed there stop reading as 'dispatched'/stuck. A row counts as a landed result only when sweep_generated_at >= the unit's last_dispatched_at; verdict comes from the unit's grading block, else null with resultNote 'ungraded'. A missing or damaged corpus is reported in readErrors, never read as 'no rows'. No DB, no secret, no route change, no write. Measured on the live tree: dispatched 41 -> 14 (27 moved to result: 23 with a grading verdict, 4 ungraded); stuck 112 -> 103. Tests: 41 passed (catalog + tier-policy), incl. before/after-stamp, ungraded, missing/damaged corpus and a live-tree positive control.",
+  "why": "DATA-EXPLORER follow-up (manager, PI-20261014-ON01DGFQ-0002): the catalog was blind to the e35 corpus, overstating 'stuck'."
+}

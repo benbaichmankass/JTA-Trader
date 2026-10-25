@@ -107,6 +107,17 @@ clears can still be underpowered; a job that fails is underpowered for certain.
 It also does not adjust for multiplicity — a 40-cell sweep must declare its own
 adjusted `alpha`.
 
+
+## Recurring units that cannot reach their power floor (RESEARCH-LOOP-AUDIT RC5, 2026-10-15)
+
+A RECURRING e35 unit graded `indeterminate` at `base_oos_trades` below a third of its floor
+(`queue_grade.INFEASIBLE_FRACTION`) cannot reach the floor on its own cadence (MEASURED 2026-10-15: daily-bar
+legs at OOS n 0-11 against 39, adding about one trade a month). The grader writes `power: infeasible_at_cadence`
+and `recheck_after_days: 90` into its own grading block (no `needs_review`), and `dispatch_queue.due()` waits
+max(cadence, that). The unit is re-asked quarterly, never retired, and its registered fields never move.
+`recheck_after_days` is honoured only from a grader-written block (`auto: true` + `grader: ...queue_grade.py`)
+and can only lengthen the gap.
+
 ## Fields
 
 ```yaml
@@ -208,18 +219,45 @@ weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
 - Every queued unit carries `theme:` (a key of [`research/THEMES.yaml`](../THEMES.yaml): `regime`,
   `live_strategy`, `ml_health`, `new_strategy_prop`, `macro`, `infra`) and `priority:` 1-3 within the theme.
   `validate` refuses a queued/running/blocked unit without both; `done`/`retired` units are exempt.
-- **Weights live in ONE file, `research/THEMES.yaml`.** `dispatch_queue.fair_order` repeatedly picks the theme
-  with the lowest (stamps in the last `share_window_hours` + picks so far) / weight among themes that still hold
-  a due unit, then that theme's best unit. Low weight means fewer slots, never none: a theme with due work and no
-  recent fire has usage 0 and is served before any theme over its share.
-- **Aging:** every `aging_hours` a unit has waited (since its last stamp, else the date in its id) lowers its
-  effective priority by one (floor 0), so nothing starves inside its theme.
+- **PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim "Those two items are our highest priority, we need to
+  make sure we're pushing forward on them": P1 active trade management, P2 AI trader).** `research_compute.yaml`
+  `value.programme_priority` is an ORDERED list of programme ids; a due unit of a listed programme
+  (`programme_node.programme` / `generated.family: programme:<id>`) ranks first on every backend, above every other
+  theme and programme, earlier entries first, then the rules below. Only a starved unit goes ahead of it. Edit the
+  list to change the priority; the decision line prints `pick=programme:<id>`.
+- **MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** `dispatch_queue.fair_order` takes
+  the theme whose NEXT unit scores highest on the router's value score (`scripts/research/research_compute.yaml`
+  `value:` -- $ at stake x confidence x bucket share x hand-written x age / cost), so a real-money / prop /
+  own-losses unit fires before a cheap unit in any other theme. A unit DUE past `value.starve_hours` goes first in
+  any theme (nothing starves). Inside a theme an ASKED unit (authored, or a programme node `generated.family:
+  programme:*`) precedes a template refill; the refill fires when its theme has nothing asked due, or when starved.
+  MEASURED cause of the rule: run 39098686264 fired two regime units scoring 6.5 and an infra unit at 30.7 while
+  the P1 real-money units (141.9 down) deferred on "github_runner at capacity", because until then the cross-theme
+  step was a round-robin by (stamps in `share_window_hours` + picks) / weight.
+- **Weights live in ONE file, `research/THEMES.yaml`, and they break ties.** Between two themes whose next units
+  score EQUAL, the one with the lower (stamps in the last `share_window_hours` + picks so far) / weight goes
+  first, then the heavier weight. A theme holding only low-value units therefore fires on spare capacity or at
+  starve_hours, and `theme_share_min_ratio` (research_slo.yaml) recovers more slowly than under the round-robin:
+  the share is honoured by SUPPLY of valuable units in the short theme (`H1-THEME`), not by ranking.
+- **Aging:** every `aging_hours` a unit has waited since it came DUE lowers its effective priority by one (floor 0)
+  and lifts its value score by `age_step`; past `starve_hours` it sorts first everywhere.
 - Not candidates, kept in id order after the ranked ones: units that are done, not yet due, invalid, session-bound
   (`run.workflow` is prose) or whose precondition is unmet. Cadence, power and route gates are unchanged.
 - **Preconditions.** `requires_result: {unit, verdict?}` is evaluated: the unit is not due until
   `research/results/<unit>/*.jsonl` holds a `read_state: measured` record (with that verdict, when given). The
   free-text `dispatch_precondition` is **advisory prose for humans and is NOT evaluated**; state a gate that must
   hold as `requires_result`, or it is not a gate.
+- **`not_before: <ISO time>`** (optional): the unit is not due before that moment; an unparseable value is
+  refused, never read as elapsed. The grader writes it on the fresh-window confirmation units it opens.
+- **Fresh-window confirmation (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16).** A PASS on a template
+  cell is a discovery: `queue_grade.py` adds ONE `confirmation:` unit (same rule, data after the PASS run) and
+  the cell may not feed a Tier-3 proposal until that unit grades `confirmation: confirmed`. A deterministic
+  template cell's FAIL closes with no same-window replay; it never retires the family (#18557 owns that).
+- **Pre-registered holdout (operator 2026-10-16, "Holdout re-run").** Every m20 sweep holds back the latest ~25%
+  of each leg's history (grown to the 25-trade floor, capped at 40%) before it selects cells, then grades only the
+  selected cells once on that span (`scripts/research/m20_holdout.py`). The result rows carry
+  `measurement.holdout.confirmation`, so discovery and confirmation come from one run with no wait. A PASS that did
+  not hold out gets one holdout re-run unit (`confirmation.mode: holdout_rerun`), not a forward wait.
 - Intake, planning and the weekly re-weighting: [`PLANNING.md`](PLANNING.md).
 
 ## Allocating a unit id (RQ-ID-ALLOCATOR)
@@ -306,9 +344,13 @@ without Claude."* Three scheduled workflows own that:
 A generated or graded unit self-lands ONLY because `check_pr_landing.py` (E58)
 re-runs the producer's `--verify` at the merge-base and gets the same bytes;
 a hand-edited unit, a new hand-written unit, or a rule rewrite still holds for
-a human (E57). Mechanical grading applies to template-generated units and to
-hand-written ones that opt in with `grading: {auto: true}`; every other
-hand-written unit is graded by a session, as before. The `needs_review`
+a human (E57). Mechanical grading applies to template-generated units, to hand-written
+ones that opt in with `grading: {auto: true}`, and (RESEARCH-GRADE-BACKLOG,
+2026-10-15) to hand-written `once` units whose every result row carries the
+unit's own `decision_rule.id` (`attested`). A hand-written unit opts OUT with
+`grading: {auto: false}` or by carrying any session-written `grading:` block --
+the grader never overwrites a human read -- and a multi-dispatch unit declares
+`lands.runs: N` so the grader waits for N result files (RESEARCH-LOOP-AUDIT RC1). The `needs_review`
 bucket is `grep -l "needs_review: true" research/queue/*.yaml`. The alarm
 (`scripts/ci/check_research_queue_health.py`, run from the dispatcher) pages
 through the send-ping system-action when nothing has dispatched in 12 h or runnable units (same definition) < 25 AND the
@@ -386,3 +428,25 @@ confirmed here) — `research/queue/README.md` and `dispatch_queue.py` are silen
 on it. If that pickup mechanism is real, it is undocumented; if it is not, all
 6 units are effectively unrouted. Either way the dispatcher's own grading does
 not distinguish them from a real workflow-routed unit today.
+
+## The programme source -- plans become units without a session (RESEARCH-LOOP-AUDIT, 2026-10-15)
+
+`queue_replenish.py` has a sixth source besides `research/templates/`: **`research/programmes/*.yaml`**,
+one file per research programme (`docs/research/programmes/<NN>-*.md` is the prose plan; the YAML is its
+question tree). Each node names its `goal` (G1 first), `roadmap`, `value`, `after` (prerequisite units or
+nodes and the CLOSED verdict each must reach -- `pass`, `fail`, `indeterminate`, `no_action_warranted` or
+`any`) and either a full pre-registered `unit:` body or `needs_authoring:` (one line).
+
+- A **`unit:` node** is emitted as a queue unit (generated band, `generated.key: programme:<node>`) on the
+  first replenish run after its `after` holds -- whenever ready, not only to fill a template deficit, at most
+  `PROGRAMME_MAX_PER_RUN` per run. E58 vouches it because `verify()` re-renders it from the committed node and
+  checks the node was ready on the merge-base queue. A FAIL branch registered in the plan is therefore as
+  pre-registered as a PASS chain.
+- A **`needs_authoring:` node** never becomes a unit here. Once its `after` holds it is in the **authoring
+  queue**, ranked goal-first then value: `python3 scripts/research/queue_replenish.py --authoring-queue`.
+  research-ops drafts from it first (SKILL § E).
+- `--programme-state` prints every node as `answered` / `in_queue` / `ready` / `waiting` / `moot` (a branch
+  not taken) / `retired`. It is computed on read, so there is no state file to go stale.
+- `research/programmes/**` is landing machinery (`check_pr_landing.py`): every edit holds for a human merge,
+  because a node's `unit:` is a registration.
+

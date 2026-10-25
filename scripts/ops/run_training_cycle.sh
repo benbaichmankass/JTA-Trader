@@ -109,7 +109,7 @@ fi
 cd "$REPO_ROOT"
 
 # --- Concurrency guard -------------------------------------------------------
-# Stops the new catch-up timer (ict-trainer-catchup.timer, ~05:00 UTC) from
+# Stops the new catch-up timer (ict-trainer-catchup.timer, ~08:00 UTC) from
 # ever racing a still-running primary cycle (or two manual invocations
 # overlapping). A run that can't acquire the lock exits 0 immediately —
 # "another cycle is already handling this" is not a failure.

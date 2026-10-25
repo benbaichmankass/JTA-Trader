@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Research-ops pass 14:47Z. Hold (manager merges): the diff adds three hand-authored queue units (RQ-20261013-a793-01..03, rule-mandated redesign/extend follow-ups of three INDETERMINATE HAR-RV results) and resets two unit stamps (RQ-20261009-903 and RQ-20261012-75b2-19 last_dispatched_at -> null, re-arming producer_failed-only once-units that stamp PR #17853 had re-stamped), which check_pr_landing R5/E57 will not vouch for on a self-landing PR. Also Tier-1: run record comms/research/ops/20261013T1530Z.json, checklist row, and pipeline records (3 filed, 14 routed). No src/, config/, workflow, risk or order-path change; no roster edit.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Three hand-authored queue units (RQ-20261013-a793-01..03) and two hand-reset stamps are registrations the landing guard cannot vouch for (E57); the manager reads and merges."
+}

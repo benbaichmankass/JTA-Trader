@@ -1,0 +1,133 @@
+id: RQ-20261013-407c-05
+title: >-
+  Entry trend-strength floor, ada_pullback_2h: does moving adx_min (22, 25, 32, 35 vs the declared 28) beat the declared floor
+  net of the full cost stack?
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: >-
+  adx_min is the pullback family's only trend-strength entry gate and the depth_threshold column of docs/research/entry-refinement-coverage.json
+  (adx_min + pullback_frac band) is PENDING for the family. ada_pullback_2h declares adx_min 28. On the pinned 730d window
+  (ADAUSDT 2h, 2024-10-05 .. 2026-10-04 23:59), same cost stack as the evidence builder, does any adx_min in [22, 25, 32,
+  35] beat the declared floor by a material margin, with no worse drawdown and in at least 3 of 4 calendar folds?
+why_this_matters: >-
+  ada_pullback_2h is a live leg that has been net negative recently (perf-followup 2026-10-10); a stricter floor removes marginal-trend
+  entries (the failure mode trend_donchian_sol's adx_min 30 declaration addressed), a looser one tests whether the floor itself
+  costs trades that pay.
+power:
+  expected_n: 110
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor, RQ-20261006-002/-004/-060). expected_n
+    = 110 is an ESTIMATE from the nearest committed record or the leg's trade cadence, not a measurement of this exact arm
+    set. Below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The 1.0 R bar is a MATERIALITY
+    bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority is what refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless Binance Vision candles (ada_pullback_2h, pinned window 2024-10-05 .. 2026-10-04
+      23:59); the harness replays history, nothing accrues. expected_n is an estimate, so power_state stays accruing and a
+      thin baseline grades indeterminate.
+decision_rule:
+  id: RULE-20261013407C05-ADX
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_pullback.py (argv built by regime_debt_matrix.build_harness_cmd,
+    the evidence builder's own, plus the arm's raw tokens; full cost stack: fee + resolved slippage + funding, never a zero
+    default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans of the window
+    (same date boundaries every arm). Arms: B = leg as declared, A22 = adx_min=22, A25 = adx_min=25, A32 = adx_min=32, A35
+    = adx_min=35. Per candidate C in {A22, A25, A32, A35}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
+    = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict, extend the window or redesign; never
+    FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes
+    (best = highest dR; the script's generic label reads 'reachable_lever_beats_removed'): a Tier-3 PROPOSAL note on the owning
+    checklist row for the manager, never a config edit; two passing candidates within 0.5 R of each other is a preference,
+    not a finding. FAIL IF none passes (script label 'no_reachable_lever_beats_removed'): the declared adx_min stands; the
+    axis is recorded honest_negative on this window. The 1.0 R bar, the drawdown clause, the 3-of-4 fold majority and the
+    39 floor are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config; does not touch ada_pullback_2h's pullback_frac, bracket or exit levers (separate units); a PASS
+    is a Tier-3 proposal input only. No committed 730d record exists for ada_pullback_2h, so no positive control is available.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: own_losses
+  basis: >-
+    stand-in: live leg, recent bleed, entry gate untested on the current window; ~0.04R/month at the bar. Estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: >-
+    One keyless Binance Vision fetch of ~760 days and 5 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - A22=adx_min=22
+  - --arm
+  - A25=adx_min=25
+  - --arm
+  - A32=adx_min=32
+  - --arm
+  - A35=adx_min=35
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261013-407c-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    research/results/RQ-20261013-407c-05/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
+    trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-05/<run_id>/.
+roadmap:
+- M21
+related:
+- QUEUE-FILL-1013
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+last_dispatched_at: '2026-10-13T20:15:24+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-20261013407C05-ADX
+  evidence:
+  - research/results/RQ-20261013-407c-05/38453797930.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

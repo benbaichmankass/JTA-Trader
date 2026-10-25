@@ -1,0 +1,19 @@
+{
+  "run": "RESEARCH-OPS-2026-10-19-0247", "finished_at": "2026-10-19T03:00:00Z", "by": "session_research_ops_20261019_0247",
+  "floor": 57, "floor_basis": "computed_floor(fired_24h 71)", "authoring_queue_depth": 19,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"], "needs_review_triaged": 0, "needs_review_left": 38,
+  "throughput": {"runnable_before": 73, "runnable_after": 93, "queued": 221, "fired_24h": 71, "results_landed_24h": 86, "hours_since_last_dispatch": 1.4, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok", "collector": "ok", "stranded_stamp_prs": [], "incident": null},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": []},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": ["RQ-20261019-001..020 (programme:P1-Q9-* replace-grade, cloned from existing Q9 nodes)"],
+  "followups_filed": [],
+  "authoring": {"queue_depth": 19, "nodes_drafted": 20, "nodes": ["P1-Q9-{ethprop,eth4h,sol4h,ada4h,avax4h}-momentum/adx/decay/retarget gaps (14)", "P1-Q9-{xrppb,adapb}-{tp3,timeout,giveback} (6)"], "theme_shortfall": {"regime": 13, "ml_health": 8, "new_strategy_prop": 13, "timeframes": 3}},
+  "not_run": ["step C needs_review triage and blocked/ audit (addendum: audit deferred to RESEARCH-BLOCKED-AUDIT; lean pass)", "pipeline due-item routing", "stranded stamp PR listing", "step D result reads: only 1 UNGRADED unit (RQ-20261016-1fa6-05), not dispositioned"],
+  "handoff": [
+    "MANAGER (held PR): merge the run PR; it hand-edits the P1 programme file and emits queue units (E57 hold)",
+    "Runnable 93 (floor 57) is above ~1 day of throughput (fired_24h 71) but all 20 new units are github_runner cpu_light: templates are exhausted (0 candidates) and the 19 authoring-queue nodes are gated on builds or verdicts; regime/ml_health/new_strategy_prop/timeframes H1-THEME shortfalls and idle trainer/kaggle backends remain",
+    "Cloned pullback (xrppb/adapb) tp3/timeout/giveback units inherit donchian-derived arm flags; read their arm_status for unavailable arms before grading",
+    "RQ-20261016-1fa6-05 landed UNGRADED; needs rule applied or owner"
+  ]
+}

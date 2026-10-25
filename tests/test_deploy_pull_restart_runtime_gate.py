@@ -238,6 +238,11 @@ def test_empty_diff_fails_safe_to_restart(fake_repo):
     "comms/macro/econ_calendar_captures/x.json",
     # scripts/research/ outside the brief's import closure stays non-runtime
     "scripts/research/queue_throughput_notes.py",
+    # TRADER-RESTART-GATE 2026-10-15: Android app sources built on a GitHub
+    # runner; no VM reader (grep in the deploy script's comment)
+    "tools/phone-executor/app/src/main/assets/exec.js",
+    "tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt",
+    "tools/phone-probe/app/build.gradle.kts",
     "scripts/research/x/queue_throughput.py",
 ])
 def test_widened_non_runtime_paths_skip_restart(fake_repo, path):

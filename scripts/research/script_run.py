@@ -99,7 +99,13 @@ WORKFLOW = "research-script-run.yml"
 #: trainer-resident data, torch/lightgbm weights or the trainer's disk. Same unit shape, same verdict.json,
 #: same artifact -> collector -> record path; only WHERE the command runs differs.
 TRAINER_WORKFLOW = "research-script-run-trainer.yml"
-WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW)
+#: RESEARCH-ROUTER (2026-10-13): the Kaggle GPU twin -- the same contract executed inside a Kaggle kernel.
+KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
+#: ML-DATA-OFF-TRAINER (2026-10-13): the published-data twin -- a runner that first fetches the unit's private Kaggle dataset.
+DATA_WORKFLOW = "research-script-run-data.yml"
+#: KAGGLE-CPU-ROUTE (2026-10-14): the Kaggle CPU twin (published-data units; not metered by the GPU quota).
+KAGGLE_CPU_WORKFLOW = "research-script-run-kaggle-cpu.yml"
+WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW, KAGGLE_CPU_WORKFLOW)
 OUT_ROOT = Path("comms") / "research"
 
 #: The only script families the runner will execute. Anchored, no `..`, no
@@ -212,7 +218,12 @@ def plan(unit: str, *, run_id: str, queue_dir: Path = _DEFAULT_QUEUE,
     if not isinstance(run, dict):
         errs.append("`run` must be a mapping")
         run = {}
-    if str(run.get("workflow") or "").strip() not in WORKFLOWS:
+    wf_decl = str(run.get("workflow") or "").strip()
+    # A unit may declare `compute:` instead of a workflow; the dispatcher picks the backend, and every
+    # backend of a script-run class runs this same contract, so the command is checked either way.
+    if wf_decl == "" and raw.get("compute"):
+        pass
+    elif wf_decl not in WORKFLOWS:
         errs.append(f"run.workflow must be one of {WORKFLOWS!r} for this runner, got "
                     f"{run.get('workflow')!r}")
     if "command" in run and "commands" in run:
@@ -387,6 +398,23 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
 
 
 # ── record derivation ───────────────────────────────────────────────────────
+def manifest_mismatch(manifest: Any, unit: str, run_id: str) -> List[str]:
+    """Why a run-manifest does NOT belong to `comms/research/<unit>/<run_id>/` (empty = it does).
+
+    The one predicate behind the kaggle runner's post-fetch verify and the guard's R4 (all backends). A
+    manifest is written from the plan's own unit and out_dir, so a disagreement with the directory it sits in
+    means the files came from another run -- 2026-10-13: a Kaggle kernel that mounted a stale dataset version
+    executed the PREVIOUS run's spec and its output was filed under the new run's directory."""
+    if not isinstance(manifest, dict):
+        return ["run-manifest.json is not a JSON object"]
+    out = []
+    if manifest.get("unit") != unit:
+        out.append(f"manifest unit {manifest.get('unit')!r} != directory unit {unit!r}")
+    if str(manifest.get("run_id")) != str(run_id):
+        out.append(f"manifest run_id {manifest.get('run_id')!r} != directory run_id {run_id!r}")
+    return out
+
+
 def _read_json(path: Path) -> Optional[Dict[str, Any]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -395,17 +423,102 @@ def _read_json(path: Path) -> Optional[Dict[str, Any]]:
     return raw if isinstance(raw, dict) else None
 
 
+#: RESEARCH-TRIAL-LEDGER (2026-10-16): bounds on what the data fingerprint hashes. A run that names a
+#: data DIRECTORY gets every file under it hashed; the caps keep a pathological tree from stalling
+#: the derive step, and a capped walk says so (`truncated`) rather than passing for a full one.
+FINGERPRINT_MAX_FILES = 5000
+FINGERPRINT_LISTED_FILES = 50
+
+
+def data_fingerprint(p: Plan, verdict: Optional[Dict[str, Any]], *, repo: Path = _REPO) -> Dict[str, Any]:
+    """What DATA this run read, as hashes -- so a result can be re-derived after a shard is re-cut.
+
+    WHY (RESEARCH-TRIAL-LEDGER, benchmark docs/research/research-ops-benchmark-2026-10-16.md § 2
+    "Reproducibility"): `produced_by` carried commit_sha + run_id, which fix the CODE, but nothing fixed
+    the INPUT -- `ML-SHARD-TRUNCATED` is a live case of a result that cannot be re-derived once its
+    candles change. Two sources, both declared by the run itself, never guessed:
+
+      * every argv token after the script that names an existing FILE or DIRECTORY in the checkout
+        (outside the run's own out_dir, which is output, not input) -- e.g. ``--data data/rq-x``;
+      * ``verdict.json`` ``data_inputs`` (repo-relative paths the script says it read) and
+        ``data_window`` (an object, e.g. ``{start, end, last_ts}``), passed through verbatim.
+
+    Returns ``{"state": "fingerprinted", "sha256", "n_files", "files", "window", "truncated"}`` or
+    ``{"state": "not_established", "why"}``. ⚠️ `not_established` is a statement that the run named no
+    input we could hash -- never "the data did not matter"."""
+    import hashlib
+    out_abs = (repo / p.out_dir).resolve()
+    # getattr: callers (tests, the hyro/leg-replay contract checks) pass a duck-typed plan carrying only
+    # unit/out_dir/rule fields; a plan with no commands named no argv input, which is not an error.
+    commands = [a for a in (getattr(p, "commands", None) or []) if isinstance(a, list)]
+    script_toks = {argv[1] for argv in commands if len(argv) > 1}
+    cands: List[str] = []
+    for argv in commands:
+        cands.extend(t for t in argv[2:] if t not in script_toks)
+    v = verdict if isinstance(verdict, dict) else {}
+    declared = v.get("data_inputs")
+    if isinstance(declared, list):
+        cands.extend(str(x) for x in declared if isinstance(x, str))
+    files: List[Path] = []
+    truncated = False
+    seen: set = set()
+    for tok in cands:
+        if not tok or ".." in tok or tok.startswith("/") or tok.startswith("-"):
+            continue
+        cand = (repo / tok)
+        try:
+            res = cand.resolve()
+        except OSError:
+            continue
+        if res == out_abs or out_abs in res.parents or not (res == repo.resolve() or repo.resolve() in res.parents):
+            continue
+        if res.is_file():
+            walk = [res]
+        elif res.is_dir() and res != repo.resolve():
+            walk = sorted(f for f in res.rglob("*") if f.is_file())
+        else:
+            continue
+        for f in walk:
+            if f in seen:
+                continue
+            if len(files) >= FINGERPRINT_MAX_FILES:
+                truncated = True
+                break
+            seen.add(f)
+            files.append(f)
+    window = v.get("data_window") if isinstance(v.get("data_window"), dict) else None
+    if not files:
+        return {"state": "not_established",
+                "why": "the run named no existing input file or directory in its argv or in "
+                       "verdict.json data_inputs" + ("; data_window was declared" if window else ""),
+                **({"window": window} if window else {})}
+    rows = []
+    for f in sorted(files):
+        h = hashlib.sha256()
+        with f.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        rows.append({"path": f.relative_to(repo.resolve()).as_posix(), "sha256": h.hexdigest(),
+                     "bytes": f.stat().st_size})
+    combined = hashlib.sha256("\n".join(f"{r['sha256']}:{r['path']}" for r in rows).encode("utf-8")).hexdigest()
+    return {"state": "fingerprinted", "sha256": combined, "n_files": len(rows),
+            "files": rows[:FINGERPRINT_LISTED_FILES], "truncated": truncated, "window": window}
+
+
 def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
     """Map the run's outputs to the research-result action's inputs.
 
     Returns a flat dict of the action's `with:` keys (snake_case), plus
     `records_file`/`min_rows` when the verdict fans out per leg. Every
     branch states which of the three cases it took in `note`.
+    `data_fingerprint` (a JSON string, see ``data_fingerprint``) rides on every branch: a run that
+    failed still read what it read.
     """
     out_dir = repo / p.out_dir
     manifest = _read_json(out_dir / "run-manifest.json") or {}
     verdict = _read_json(out_dir / "verdict.json")
     base = {
+        "data_fingerprint": json.dumps(data_fingerprint(p, verdict, repo=repo), sort_keys=True),
         "decision_rule_id": p.rule_id,
         "decision_rule_registered_at": p.rule_registered_at,
         "artifact_store": p.out_dir.as_posix(),
@@ -468,7 +581,11 @@ def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
         rpath = out_dir / "records.jsonl"
         with rpath.open("w", encoding="utf-8") as fh:
             for r in records:
-                fh.write(json.dumps(r) + "\n")
+                # A fanned-out row inherits the run's declared read_state when it names none: the
+                # emitter refuses a row without one, and the collector then reported the whole run
+                # `lost` (RQ-20261007-005..008, pairs_configured_stage0). Nothing is invented -- the
+                # run's own verdict.json said `measured`; a row that names its own state keeps it.
+                fh.write(json.dumps({"read_state": rs, **r}) + "\n")
         base["records_file"] = (p.out_dir / "records.jsonl").as_posix()
         base["min_rows"] = str(len(records))
     return base
@@ -524,7 +641,7 @@ def _self_test() -> int:
             "import json,sys,os\n"
             "out=sys.argv[sys.argv.index('--out')+1]\nos.makedirs(out,exist_ok=True)\n"
             "json.dump({'verdict':'pass','read_state':'measured','population':'p','n':3,"
-            "'measurement':{'x':1},'records':[{'verdict':'pass','read_state':'measured',"
+            "'measurement':{'x':1},'records':[{'verdict':'pass',"
             "'population':'leg a','n':3}]}, open(os.path.join(out,'verdict.json'),'w'))\n")
         (repo / "scripts" / "research" / "_st_silent.py").write_text("print('ran')\n")
         (repo / "scripts" / "research" / "_st_fail.py").write_text("import sys; sys.exit(3)\n")
@@ -545,8 +662,12 @@ def _self_test() -> int:
         rec = derive_record(p, repo=repo)
         assert rec["verdict"] == "pass" and rec["read_state"] == "measured" and rec["n"] == "3", rec
         assert rec["records_file"].endswith("records.jsonl") and rec["min_rows"] == "1", rec
+        # a fanned-out row that names no read_state inherits the run's (RESEARCH-PIPE-UNSTICK)
+        assert json.loads((repo / rec["records_file"]).read_text().splitlines()[0])["read_state"] == "measured"
         assert (repo / rec["measurement_file"]).is_file()
         assert rec["decision_rule_id"] == "RULE-ST"
+        # the command named no input, so the data fingerprint says so -- never an empty "ok"
+        assert json.loads(rec["data_fingerprint"])["state"] == "not_established", rec["data_fingerprint"]
 
         # 2. a script that runs green but writes no verdict.json is NOT measured.
         write_unit(qdir, run={"command": ["python3", "scripts/research/_st_silent.py"]})

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20261015-SBAQDDVQ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "TRAINER-RUNAWAY-PROC lane; ML-FRONTIER diag run 38717446413 sampled 2026-10-15T10:03Z",
+    "rerun": "trainer-vm-diag: ps -eo pid,etimes,cmd | grep -E 'backtest_ict_scalp|_trainer_heavy_lock' ; ls -l runtime_logs/trainer/.heavy.lock  # a holder with etimes>3600 = still open"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Trainer heavy-lock hold: scripts/backtest_ict_scalp.py (a calibration corpus run) held runtime_logs/trainer/.heavy.lock (0-byte flock, holder found via ps) for 70+ min on 2026-10-15 (ML-FRONTIER finding), producing 3600 s heavy-lock waits that waste research runs and GitHub runners. NOT investigated by the TRAINER-RUNAWAY-PROC lane: it is unclear whether the hold is legitimate runtime of one big job or a missing per-job cap; the lock path was only learned from the manager. Question to answer: what is the expected runtime of the calibration corpus run, and should heavy-lock holders carry a cap or a queue-depth signal?"
+}

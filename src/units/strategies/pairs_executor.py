@@ -74,10 +74,34 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
                 risk_budget_usd: float, correlation_open: int,
                 execution_mode: str = "live", corr_factor: float = 0.5,
                 backstop_mult: float = 3.0,
-                min_leg_notional_usd: float = 10.0) -> PairDecision:
+                min_leg_notional_usd: float = 10.0,
+                whole_units: bool = False,
+                leg_tp: str = "backstop",
+                require_fixed_beta_risk: bool = False) -> PairDecision:
     """PURE decision for one pair this tick. No I/O. `execution_mode` 'shadow'
     downgrades an would-be open/close to a shadow_* soak event with the legs still
-    computed (observe-only). Returns a PairDecision."""
+    computed (observe-only). Returns a PairDecision.
+
+    ``whole_units`` floors both legs to whole shares (Alpaca brackets reject
+    fractionals) BEFORE the notional check, so the qty decided is the qty sent
+    and journalled. ``leg_tp``: ``backstop`` (the Bybit sleeve's wide
+    catastrophe TP, unchanged) or ``spread_target`` — each leg's TP is the
+    price at which that leg alone closes the gap to the predicted reversion
+    level (``pairs_engine.leg_target_prices``; TP doctrine clause 1). A
+    ``spread_target`` pair whose target cannot be computed does not open
+    (``skip_no_tp_target``): a backstop TP standing in for it would be the
+    fictional TP the doctrine forbids.
+
+    ``require_fixed_beta_risk`` (the SESSION venue passes True): size only when
+    the R unit the stop and the sizing use IS the fixed-β R unit
+    (``pairs_engine.fixed_beta_risk``, within ``RISK_SCALE_TOLERANCE``);
+    otherwise ``skip_risk_scale`` and nothing is sized — a non-recurrence check
+    on the measured ratio, not on a config field someone could change. Since
+    PAIRS-R-SCALE's fix the engine freezes β at entry and sizes every venue on
+    the fixed-β R unit, so the ratio is 1 on every pair; ``risk_rolling_beta``
+    (the old, inflated R unit) rides on the soak rows so the size of the
+    correction stays measured. ``beta_entry`` is stamped so the exits and the
+    TP revision read the same fixed-β spread."""
     label = _pair_label(params.symbol_a, params.symbol_b)
     base = {"symbol_a": params.symbol_a, "symbol_b": params.symbol_b,
             "execution_mode": execution_mode}
@@ -86,12 +110,14 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     if open_state is not None:
         ex = pe.exit_signal(close_a, close_b, params, open_state)
         if ex is None:
-            return PairDecision("hold", label, soak={**base, "bars_held": open_state.bars_held})
+            return PairDecision("hold", label, soak={**base, "bars_held": open_state.bars_held,
+                                                     "beta_entry": open_state.beta_entry})
         ev = "shadow_close" if execution_mode == "shadow" else "close"
         return PairDecision(ev, label, close=(execution_mode != "shadow"),
                             soak={**base, "outcome": ex.get("outcome"),
                                   "exit_spread": ex.get("exit_spread"),
-                                  "bars_held": open_state.bars_held})
+                                  "bars_held": open_state.bars_held,
+                                  "beta_entry": open_state.beta_entry})
 
     # --- FLAT: check entry ---
     sig = pe.entry_signal(close_a, close_b, params)
@@ -102,11 +128,26 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
         return PairDecision("skip_concurrency", label,
                             soak={**base, "z": sig["z"], "direction": sig["direction"],
                                   "held": sorted(held_symbols)})
+    risk_scale = {"risk": sig["risk"], "risk_fixed_beta": sig.get("risk_fixed_beta"),
+                  "risk_scale_ratio": sig.get("risk_scale_ratio"),
+                  "risk_rolling_beta": sig.get("risk_rolling_beta")}
+    if require_fixed_beta_risk:
+        ratio = sig.get("risk_scale_ratio")
+        if ratio is None or abs(float(ratio) - 1.0) > pe.RISK_SCALE_TOLERANCE:
+            return PairDecision("skip_risk_scale", label,
+                                soak={**base, "z": sig["z"], "direction": sig["direction"],
+                                      "beta": sig["beta"], "hedge_beta": params.hedge_beta,
+                                      **risk_scale})
     # size (with the correlation haircut for already-open correlated pairs)
     haircut = psz.correlation_haircut(correlation_open, factor=corr_factor)
     budget = float(risk_budget_usd) * haircut
     price_a, price_b = float(close_a[-1]), float(close_b[-1])
     sizing = psz.pair_notionals(budget, sig["risk"], sig["beta"], price_a, price_b)
+    if whole_units:
+        from src.units.strategies.pairs_venue import whole_share_legs
+        qa, qb = whole_share_legs(sizing["qty_a"], sizing["qty_b"])
+        sizing = {**sizing, "qty_a": float(qa), "qty_b": float(qb),
+                  "notional_a_usd": qa * price_a, "notional_b_usd": qb * price_b}
     # Skip when a leg can't be sized to a placeable order: qty must be positive
     # AND each leg's $ notional must clear the exchange minimum (rounding a
     # sub-min leg up would break the market-neutral hedge ratio — the qty=0 /
@@ -118,7 +159,7 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
             or sizing["notional_a_usd"] < min_notional
             or sizing["notional_b_usd"] < min_notional):
         return PairDecision("skip_size", label,
-                            soak={**base, "z": sig["z"], "risk": sig["risk"],
+                            soak={**base, "z": sig["z"], **risk_scale,
                                   "budget_usd": round(budget, 2), "haircut": haircut,
                                   "notional_a_usd": round(sizing["notional_a_usd"], 2),
                                   "notional_b_usd": round(sizing["notional_b_usd"], 2),
@@ -126,14 +167,31 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     legdirs = pe.leg_directions(sig["direction"])
     sl_a, tp_a = psz.leg_protective_levels(legdirs["a"], price_a, sig["risk"], backstop_mult)
     sl_b, tp_b = psz.leg_protective_levels(legdirs["b"], price_b, sig["risk"], backstop_mult)
+    tp_basis = "backstop"
+    if leg_tp == "spread_target":
+        tgt = pe.reversion_target_spread(close_a, close_b, params, sig["direction"],
+                                         beta_entry=sig.get("beta_entry"))
+        tps = (pe.leg_target_prices(sig["direction"], price_a, price_b,
+                                    tgt["spread_now"], tgt["target_spread"], tgt["beta"])
+               if tgt else None)
+        if tps is None:
+            return PairDecision("skip_no_tp_target", label,
+                                soak={**base, "z": sig["z"], "direction": sig["direction"],
+                                      "leg_tp": leg_tp})
+        tp_a, tp_b = round(tps["tp_a"], 8), round(tps["tp_b"], 8)
+        tp_basis = "spread_target"
+        base = {**base, "target_spread": round(tgt["target_spread"], 6),
+                "tp_gap_log": round(tps["gap"], 6)}
     legs = [
         LegOrder(params.symbol_a, legdirs["a"], round(sizing["qty_a"], 8), price_a, sl_a, tp_a),
         LegOrder(params.symbol_b, legdirs["b"], round(sizing["qty_b"], 8), price_b, sl_b, tp_b),
     ]
     ev = "shadow_open" if execution_mode == "shadow" else "open"
     soak = {**base, "z": sig["z"], "direction": sig["direction"], "beta": sig["beta"],
-            "risk": sig["risk"], "entry_spread": sig["entry_spread"], "stop_spread": sig["stop_spread"],
+            "beta_entry": sig.get("beta_entry"),
+            **risk_scale, "entry_spread": sig["entry_spread"], "stop_spread": sig["stop_spread"],
             "budget_usd": round(budget, 2), "haircut": haircut, "correlation_open": correlation_open,
+            "tp_basis": tp_basis,
             "pairs_group_id": f"pair-{uuid.uuid4().hex[:12]}",
             "legs": [leg.__dict__ for leg in legs]}
     return PairDecision(ev, label, legs=legs, soak=soak)
@@ -270,6 +328,19 @@ def _pair_is_open(pair: Dict[str, Any], account_id: str, db_path: Optional[str])
     cannot tell ``open`` from ``unreadable`` (both True).
     """
     return _pair_leg_state(pair, account_id, db_path) in ("open", "unreadable")
+
+
+def _pair_holds_legs(pair: Dict[str, Any], account_id: str,
+                     db_path: Optional[str]) -> bool:
+    """The CONCURRENCY view: does this pair hold (or possibly hold) a leg?
+    ``open``, ``half_open`` and ``unreadable`` all do.
+
+    PI-20260927-ECILBBVH-0009 (ORDER-AUDIT-3): the two concurrency helpers used
+    ``_pair_is_open``, which is False for ``half_open`` -- so a sibling pair
+    could open a new position on the symbol of a STRANDED naked leg, stacking
+    onto it under one-way netting. ``_pair_is_open`` keeps its meaning."""
+    return _pair_leg_state(pair, account_id, db_path) in (
+        "open", "half_open", "unreadable")
 
 
 _STATE_ALERT_COOLDOWN_S = 3600.0
@@ -453,7 +524,7 @@ def _held_leg_symbols(pairs: Sequence[Dict[str, Any]], account_id: str,
     for p in pairs:
         if str(p.get("name")) == exclude_name:
             continue
-        if _pair_is_open(p, account_id, db_path):
+        if _pair_holds_legs(p, account_id, db_path):
             held.add(str(p["symbol_a"]))
             held.add(str(p["symbol_b"]))
     return held
@@ -468,7 +539,7 @@ def _count_correlated_open(pair: Dict[str, Any], pairs: Sequence[Dict[str, Any]]
     for p in pairs:
         if str(p.get("name")) == str(pair.get("name")):
             continue
-        if not _pair_is_open(p, account_id, db_path):
+        if not _pair_holds_legs(p, account_id, db_path):
             continue
         if {str(p["symbol_a"]), str(p["symbol_b"])} & my_syms:
             n += 1
@@ -576,8 +647,13 @@ def _open_pair_from_meta(meta: Dict[str, Any]) -> pe.OpenPair:
         opened_dt = opened_dt.replace(tzinfo=timezone.utc)
     held_s = (datetime.now(timezone.utc) - opened_dt).total_seconds()
     bars_held = max(0, int(held_s // max(1, bar_seconds)))
+    # Absent on a package stamped before PAIRS-R-SCALE's fix: that position
+    # exits on the legacy rolling-β basis its stop was computed on.
+    be = meta.get("beta_entry")
+    beta_entry = float(be) if be is not None and math.isfinite(float(be)) else None
     return pe.OpenPair(direction=pd, entry_spread=entry_spread,
-                       stop_spread=stop_spread, bars_held=bars_held)
+                       stop_spread=stop_spread, bars_held=bars_held,
+                       beta_entry=beta_entry)
 
 
 # ── NO-HALT: rebuild an unreadable open-state from the open leg rows ────────
@@ -700,17 +776,25 @@ def _rebuild_open_state_from_legs(params: pe.PairParams, rows: tuple,
         bars_held = max(0, int(held_s // max(1, int(bar_seconds))))
 
     entry_spread = stop_spread = float("nan")
+    beta_entry: Optional[float] = None
     if direction is not None and bars_held is not None:
         try:
             pa, pb = float(ra.get("entry_price")), float(rb.get("entry_price"))
             n = min(len(closes_a), len(closes_b))
-            _, _, std, beta = pe.compute_spread_z(
-                list(closes_a)[-n:], list(closes_b)[-n:], params.lookback, params.hedge_beta)
+            ca, cb = list(closes_a)[-n:], list(closes_b)[-n:]
+            _, _, std, beta = pe.compute_spread_z(ca, cb, params.lookback, params.hedge_beta)
             k = n - 1 - bars_held
-            if (k >= 0 and pa > 0 and pb > 0 and math.isfinite(float(std[k]))
-                    and float(std[k]) > 0 and math.isfinite(float(beta[k]))):
+            sd_k = float(std[k]) if k >= 0 else float("nan")
+            if k >= 0 and params.hedge_beta == "rolling" and math.isfinite(float(beta[k])):
+                # β frozen at the entry bar: the R unit is the fixed-β std
+                # over the same shift-1 window (PAIRS-R-SCALE).
+                w = pe.fixed_beta_window(ca, cb, float(beta[k]), k - params.lookback, k)
+                sd_k = w[1] if w is not None else float("nan")
+                beta_entry = float(beta[k])
+            if (k >= 0 and pa > 0 and pb > 0 and math.isfinite(sd_k)
+                    and sd_k > 0 and math.isfinite(float(beta[k]))):
                 entry_spread = math.log(pa) - float(beta[k]) * math.log(pb)
-                risk = float(params.stop_z) * float(std[k])
+                risk = float(params.stop_z) * sd_k
                 stop_spread = (entry_spread - risk if direction == "long_spread"
                                else entry_spread + risk)
         except Exception as exc:  # noqa: BLE001 — partial rebuild, never raise
@@ -723,13 +807,15 @@ def _rebuild_open_state_from_legs(params: pe.PairParams, rows: tuple,
         not_computable.append("max_hold_bars")
     open_pair = pe.OpenPair(direction=direction or "unknown",
                             entry_spread=entry_spread, stop_spread=stop_spread,
-                            bars_held=bars_held if bars_held is not None else 0)
+                            bars_held=bars_held if bars_held is not None else 0,
+                            beta_entry=beta_entry)
     if not_computable:
         return ("rebuilt_partial", open_pair, None, not_computable)
     meta = {
         "pair_direction": direction,
         "entry_spread": round(entry_spread, 6),
         "stop_spread": round(stop_spread, 6),
+        "beta_entry": round(beta_entry, 6) if beta_entry is not None else None,
         "opened_at_utc": opened_dt.isoformat(),
         "bar_seconds": int(bar_seconds),
         "trade_ids": [ra.get("id"), rb.get("id")],
@@ -930,6 +1016,8 @@ def _place_pair(client: Any, account_cfg: dict, pair: Dict[str, Any],
         "pair_direction": decision.soak.get("direction"),
         "entry_spread": decision.soak.get("entry_spread"),
         "stop_spread": decision.soak.get("stop_spread"),
+        # β frozen at entry (PAIRS-R-SCALE): the exits read this spread.
+        "beta_entry": decision.soak.get("beta_entry"),
         "opened_at_utc": opened_at, "bar_seconds": bar_seconds,
         "signal_logic": f"pairs {decision.pair} {decision.soak.get('direction')} "
                         f"z={decision.soak.get('z')} beta={decision.soak.get('beta')}",
@@ -995,6 +1083,25 @@ def _place_pair(client: Any, account_cfg: dict, pair: Dict[str, Any],
             "leg_placement": leg_placement}
 
 
+def _account_is_dry(account_cfg: dict) -> bool:
+    """True when the account is ``mode: dry_run`` -- the SAME accepted spellings
+    ``execute_pkg`` reads for placement (``dry`` / ``dry_run`` / ``dry-run`` /
+    ``paper``), so a pair that was opened dry is also closed dry.
+
+    PI-20260927-ECILBBVH-0004 (ORDER-AUDIT-3): the close and the leg-imbalance
+    unwind called ``close_open_position`` directly, which has no mode gate, so an
+    account flipped to ``mode: dry_run`` still had pair closes sent to the venue.
+    This mirrors ``order_monitor``'s close helpers, which return
+    ``{"ok": True, "skipped": "dry_run"}`` without reaching the venue."""
+    mode = str((account_cfg or {}).get("mode") or "live").strip().lower()
+    return mode in {"dry", "dry_run", "dry-run", "paper"}
+
+
+def _dry_close_result() -> Dict[str, Any]:
+    return {"ok": True, "skipped": "dry_run", "exchange_response": None,
+            "exchange_order_id": None, "error": None}
+
+
 def _unwind_legs(client: Any, account_cfg: dict, placed: Sequence[tuple]) -> List[Dict[str, Any]]:
     """Flatten already-placed legs after a partial-placement failure and RETURN the
     legs that did NOT confirm flat (still naked).
@@ -1009,6 +1116,10 @@ def _unwind_legs(client: Any, account_cfg: dict, placed: Sequence[tuple]) -> Lis
     naked: List[Dict[str, Any]] = []
     for symbol, direction, qty in placed:
         entry = {"symbol": symbol, "direction": direction, "qty": float(qty)}
+        if _account_is_dry(account_cfg):
+            logger.info("pairs: dry_run account -- unwind of %s (%s qty=%s) not sent "
+                        "to the venue", symbol, direction, qty)
+            continue
         try:
             res = close_open_position(client, account_cfg, symbol=symbol,
                                       side=direction, qty=float(qty))
@@ -1164,10 +1275,15 @@ def _close_pair(client: Any, account_cfg: dict, pair: Dict[str, Any],
             # missing-context problem. `close_open_position` treats a cancel
             # failure as logged-not-fatal (the position IS flat either way), so
             # passing them cannot turn a good close into a failed one.
-            res = close_open_position(client, account_cfg, symbol=symbol,
-                                      side=direction, qty=qty,
-                                      sl_order_id=row.get("sl_order_id"),
-                                      tp_order_id=row.get("tp_order_id"))
+            if _account_is_dry(account_cfg):
+                # Dry account: journal the close (the row was opened dry too),
+                # never reach the venue. See `_account_is_dry`.
+                res = _dry_close_result()
+            else:
+                res = close_open_position(client, account_cfg, symbol=symbol,
+                                          side=direction, qty=qty,
+                                          sl_order_id=row.get("sl_order_id"),
+                                          tp_order_id=row.get("tp_order_id"))
             if not res.get("ok"):
                 logger.warning("pairs: leg close not confirmed %s (%s): %s — row left open",
                                symbol, strat, res.get("error"))
@@ -1353,6 +1469,244 @@ def _legs_below_min_qty(client: Any, account_cfg: dict,
     return blocked
 
 
+# ── SESSION venue (Alpaca) helpers — see src/units/strategies/pairs_venue.py ──
+
+_clock_streaks: Dict[str, Dict[str, Any]] = {}
+
+
+def _clock_streak(account_id: str, *, failing: bool) -> None:
+    """The venue clock could not be read: no decision is taken this tick and
+    the next tick re-reads (NO-HALT, no latch). First failure WARNs, the
+    ``_RED_FLAG_AFTER``-th consecutive one raises ONE red flag, the first
+    readable tick after a flag says so once. Never raises."""
+    try:
+        from src.runtime.outcomes import Level, report
+        if not failing:
+            st = _clock_streaks.pop(account_id, None)
+            if st and st.get("flagged"):
+                report("pairs_clock_unreadable", "recovered", level=Level.WARN,
+                       reason=(f"pairs: {account_id} market clock readable again after "
+                               f"{st.get('n')} consecutive unreadable ticks"),
+                       account_id=account_id, streak=st.get("n"))
+            return
+        st = _clock_streaks.setdefault(account_id, {"n": 0, "flagged": False})
+        st["n"] += 1
+        if st["n"] == 1:
+            report("pairs_clock_unreadable", "unreadable", level=Level.WARN,
+                   reason=(f"pairs: {account_id} market clock unreadable — no pairs "
+                           f"decision this tick; retrying every tick, nothing halted"),
+                   account_id=account_id, streak=1)
+        elif st["n"] >= _RED_FLAG_AFTER and not st["flagged"]:
+            st["flagged"] = True
+            report("pairs_clock_unreadable", "red_flag", level=Level.CRITICAL,
+                   reason=(f"RED FLAG — pairs: {account_id} market clock unreadable for "
+                           f"{st['n']} consecutive ticks; session pairs cannot decide "
+                           f"(open legs keep their broker SL/TP). Still retrying"),
+                   account_id=account_id, streak=st["n"])
+    except Exception as exc:  # noqa: BLE001 — an alert must never break the tick
+        logger.error("pairs: clock streak/alert failed for %s: %s", account_id, exc)
+
+
+_non_paper_alerted: set = set()
+
+
+def _refuse_non_paper(pair: Dict[str, Any], account_id: str, acct_cfg: dict,
+                      execution: str, refusal: str, record, build) -> None:
+    """Report a pairs.yaml entry routed to a non-paper account: ONE CRITICAL
+    alert and ONE soak row per pair per process (the refusal itself repeats
+    every tick, silently). Never raises."""
+    name = str(pair.get("name") or "")
+    logger.error("pairs: %s refused (%s) — account %s account_class=%r paper_role=%r",
+                 name, refusal, account_id, acct_cfg.get("account_class"),
+                 acct_cfg.get("paper_role"))
+    key = f"{name}|{account_id}"
+    if key in _non_paper_alerted:
+        return
+    _non_paper_alerted.add(key)
+    try:
+        from src.runtime.outcomes import Level, report
+        report("pairs_non_paper_account", "refused", level=Level.CRITICAL,
+               reason=(f"pairs {name}: config/pairs.yaml routes it to {account_id} "
+                       f"(account_class={acct_cfg.get('account_class')!r}, "
+                       f"paper_role={acct_cfg.get('paper_role')!r}: {refusal}); the pairs "
+                       f"sleeve trades plain PAPER accounts only — refused every tick, "
+                       f"nothing placed. Other pairs keep running"),
+               pair=name, account_id=account_id, refusal=refusal,
+               account_class=acct_cfg.get("account_class"))
+    except Exception as exc:  # noqa: BLE001 — an alert must never break the tick
+        logger.error("pairs: non-paper alert failed for %s: %s", name, exc)
+    try:
+        record(build(event="skip_non_paper_account", pair=name,
+                     symbol_a=str(pair.get("symbol_a")), symbol_b=str(pair.get("symbol_b")),
+                     account_id=account_id, execution_mode=execution,
+                     account_class=acct_cfg.get("account_class"), refusal=refusal))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _session_open(clock: Optional[Dict[str, Any]]) -> Optional[bool]:
+    """The venue clock's ``is_open`` — True / False, or None when unreadable."""
+    if isinstance(clock, dict) and isinstance(clock.get("is_open"), bool):
+        return clock["is_open"]
+    return None
+
+
+def _session_bars_held(pair: Dict[str, Any], account_id: str, db_path: str,
+                       stamps: Sequence[datetime]) -> tuple:
+    """``(bars_held | None, basis)`` counted in TRADING bars off the candle
+    timestamps (``pairs_venue.bars_after``), from the open time stamped in
+    the package meta (``meta``) or, failing that, the leg rows
+    (``leg_rows``). ``(None, "unknown")`` when neither can be read — the
+    caller keeps the wall-clock count and records that basis."""
+    from src.units.strategies import pairs_venue as pv
+    strat_a, _ = _leg_strats(pair)
+    opened: Optional[datetime] = None
+    basis = "unknown"
+    status, meta = _open_pkg_meta(strat_a, account_id, db_path)
+    if status == "found" and meta:
+        opened = _parse_utc(meta.get("opened_at_utc"))
+        basis = "meta" if opened is not None else basis
+    if opened is None:
+        rows = _open_leg_rows(pair, account_id, db_path)
+        if rows is not None:
+            cands = [d for d in (_parse_utc(r.get("timestamp") or r.get("created_at"))
+                                 for r in rows) if d is not None]
+            if cands:
+                opened, basis = min(cands), "leg_rows"
+    n = pv.bars_after(opened, stamps)
+    return (n, basis) if n is not None else (None, "unknown")
+
+
+def _session_entry_block(client: Any, acct_cfg: dict, account_id: str,
+                         decision: "PairDecision", db_path: str) -> Optional[Dict[str, Any]]:
+    """Session-venue checks on a would-be OPEN, BEFORE any leg is sent, so a
+    refusal can never leave one leg naked. Returns None (proceed; ``decision``
+    legs may have been scaled to fit buying power) or
+    ``{event, retry, **soak}`` — ``retry`` True means "could not look", so
+    the caller un-consumes the bar and the next tick decides fresh."""
+    from src.units.strategies import pairs_venue as pv
+    # 1) Netting: a directional position on a leg symbol would be reduced or
+    #    merged by this leg on a per-symbol-netted venue.
+    states = {leg.symbol: _directional_open_state(account_id, leg.symbol, db_path)
+              for leg in decision.legs}
+    if any(v == "unreadable" for v in states.values()):
+        return {"event": "skip_state_unreadable", "retry": True,
+                "state_read": "directional_open_unreadable", "directional_open": states}
+    if any(v == "present" for v in states.values()):
+        return {"event": "skip_directional_conflict", "retry": False,
+                "directional_open": states}
+    # 2) Shorts: account flag + asset borrow, read from the broker.
+    short_states: Dict[str, str] = {}
+    for leg in decision.legs:
+        if leg.direction != "short":
+            continue
+        reason, st = pv.short_leg_block(client, acct_cfg, leg.symbol)
+        short_states[leg.symbol] = st
+        if reason:
+            return {"event": "skip_short_unavailable", "retry": False,
+                    "short_block": {"symbol": leg.symbol, "reason": reason},
+                    "short_state": short_states}
+    # 3) Buying power: scale the whole pair down (hedge kept) to fit.
+    bp = None
+    try:
+        reader = getattr(client, "buying_power", None)
+        bp = reader() if callable(reader) else None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pairs: buying-power read failed for %s: %s", account_id, exc)
+    la, lb = decision.legs[0], decision.legs[1]
+    fit = pv.fit_buying_power(int(la.qty), int(lb.qty), la.entry_ref, lb.entry_ref, bp)
+    decision.soak["short_state"] = short_states
+    decision.soak["buying_power"] = {"state": fit["bp_state"], "scale": fit["scale"],
+                                     "buying_power_usd": (round(float(bp), 2)
+                                                          if bp is not None else None)}
+    if fit["bp_state"] == "insufficient":
+        return {"event": "skip_size", "retry": False, "size_block": "buying_power_insufficient"}
+    if fit["bp_state"] == "scaled":
+        decision.legs = [
+            LegOrder(la.symbol, la.direction, float(fit["qty_a"]), la.entry_ref, la.sl, la.tp),
+            LegOrder(lb.symbol, lb.direction, float(fit["qty_b"]), lb.entry_ref, lb.sl, lb.tp),
+        ]
+        decision.soak["legs"] = [leg.__dict__ for leg in decision.legs]
+    return None
+
+
+def _dd_switch_blocks(account_id: str, acct_cfg: dict, equity: Optional[float]) -> bool:
+    """The account-level daily-drawdown switch (operator 2026-10-09: the ONE
+    sanctioned automatic off — "keep open, block new"). This sleeve sends its
+    orders through ``execute_pkg`` and never through ``RiskManager.evaluate``,
+    so without this read a tripped account would still OPEN pairs. Refuses new
+    pairs only; closes are never gated. A switch error never refuses
+    (``RiskManager.check_dd_switch``'s own discipline). Never raises."""
+    try:
+        from src.units.accounts.risk import RiskManager
+        rm = RiskManager(acct_cfg.get("risk") or {}, dry_run=False, account_id=account_id)
+        rm.note_live_equity(equity)
+        return bool(rm.check_dd_switch())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pairs: daily-DD switch read failed for %s: %s", account_id, exc)
+        return False
+
+
+def _revise_leg_tps(client: Any, account_cfg: dict, pair: Dict[str, Any],
+                    params: pe.PairParams, closes_a: Sequence[float],
+                    closes_b: Sequence[float], direction: str,
+                    beta_entry: Optional[float] = None) -> List[Dict[str, Any]]:
+    """Re-estimate the reversion target on this bar and move each open leg's
+    resting TP to it (TP doctrine clause 2) through the ONE amend path,
+    ``execute.modify_open_order``, scoped to the leg's own qty. The journal's
+    ``take_profit_1`` follows only a CONFIRMED amend. Returns one row per leg
+    for the soak. Never raises; a failed amend leaves the previous TP resting
+    and is retried at the next bar."""
+    out: List[Dict[str, Any]] = []
+    try:
+        tgt = pe.reversion_target_spread(closes_a, closes_b, params, direction,
+                                         beta_entry=beta_entry)
+        if not tgt:
+            return [{"revised": False, "reason": "target_not_computable"}]
+        tps = pe.leg_target_prices(direction, float(closes_a[-1]), float(closes_b[-1]),
+                                   tgt["spread_now"], tgt["target_spread"], tgt["beta"])
+        if not tps:
+            return [{"revised": False, "reason": "spread_at_or_through_target"}]
+        from src.units.accounts.execute import modify_open_order
+        from src.units.db.database import Database
+        from src.utils.paths import trade_journal_db_path
+        db = Database(db_path=trade_journal_db_path())
+        account_id = str(account_cfg.get("account_id") or "unknown")
+        strat_a, strat_b = _leg_strats(pair)
+        for strat, symbol, new_tp in ((strat_a, str(pair["symbol_a"]), tps["tp_a"]),
+                                      (strat_b, str(pair["symbol_b"]), tps["tp_b"])):
+            rows = db.get_trades(filters={"status": "open", "strategy_name": strat,
+                                          "account_id": account_id}, limit=1)
+            if not rows:
+                out.append({"symbol": symbol, "revised": False, "reason": "no_open_row"})
+                continue
+            row = rows[0]
+            new_tp = round(float(new_tp), 2)
+            cur = row.get("take_profit_1")
+            if cur is not None and abs(float(cur) - new_tp) < 0.01:
+                out.append({"symbol": symbol, "revised": False, "reason": "unchanged",
+                            "tp": new_tp})
+                continue
+            if _account_is_dry(account_cfg):
+                # Dry account: nothing rests at the venue to amend; the journal
+                # TP still follows the prediction. See `_account_is_dry`.
+                res = _dry_close_result()
+            else:
+                res = modify_open_order(client, account_cfg, symbol=symbol, tp=new_tp,
+                                        side=str(row.get("direction") or "").lower(),
+                                        qty=float(row.get("position_size") or 0.0),
+                                        cur_tp=cur, trade_id=row.get("id"))
+            ok = bool(isinstance(res, dict) and res.get("ok"))
+            if ok:
+                db.update_trade(row["id"], {"take_profit_1": new_tp})
+            out.append({"symbol": symbol, "revised": ok, "tp": new_tp, "prev_tp": cur,
+                        "error": None if ok else (res or {}).get("error")})
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pairs: TP revision failed for %s: %s", pair.get("name"), exc)
+        out.append({"revised": False, "reason": f"error: {exc}"})
+    return out
+
+
 def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
     """Once-per-tick hook for the market-neutral pairs sleeve. Best-effort — any
     error is logged and swallowed so the sleeve can never stall the trader loop.
@@ -1418,14 +1772,24 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
             return clients[account_id]
         acct = dict(accounts.get(account_id) or {})
         acct.setdefault("account_id", account_id)
-        try:
-            from src.units.accounts.clients import bybit_client_for
-            clients[account_id] = bybit_client_for(acct) if str(
-                acct.get("exchange") or "").lower() == "bybit" else None
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("pairs: client build failed for %s: %s", account_id, exc)
-            clients[account_id] = None
+        # Venue adapter: Bybit (the original sleeve) or Alpaca (session venue).
+        from src.units.strategies.pairs_venue import build_client
+        clients[account_id] = build_client(acct)
         return clients[account_id]
+
+    # One venue-clock read per session account per tick (Alpaca /v2/clock).
+    clocks: Dict[str, Optional[Dict[str, Any]]] = {}
+
+    def _clock_for(account_id: str) -> Optional[Dict[str, Any]]:
+        if account_id not in clocks:
+            val = None
+            try:
+                reader = getattr(_client_for(account_id), "clock", None)
+                val = reader() if callable(reader) else None
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("pairs: clock read failed for %s: %s", account_id, exc)
+            clocks[account_id] = val
+        return clocks[account_id]
 
     # Per-account risk budget = live balance × risk_pct × pairs_risk_fraction,
     # cached per tick. The canonical basis (execute._fetch_balance is the same
@@ -1434,6 +1798,7 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
     # faithful (a read, never an order). None when the basis is unavailable →
     # the pair skips (never sizes off a guessed/hardcoded number).
     budgets: Dict[str, Optional[float]] = {}
+    balances: Dict[str, Optional[float]] = {}
 
     def _budget_for(account_id: str, acct_cfg: dict) -> Optional[float]:
         if account_id in budgets:
@@ -1444,6 +1809,7 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
             if client is not None:
                 from src.units.accounts.execute import _fetch_balance
                 balance = float(_fetch_balance(client, acct_cfg))
+                balances[account_id] = balance if balance > 0 else None
                 risk_pct = float((acct_cfg.get("risk") or {}).get("risk_pct", 0.01))
                 if balance > 0 and risk_pct > 0:
                     val = balance * risk_pct * pairs_risk_fraction
@@ -1462,14 +1828,42 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
             execution = str(pair.get("execution", "shadow")).strip().lower()
             params = _params_from_cfg(pair)
             limit = max(60, params.lookback + 40)
-            leg_a = _fetch_leg(str(pair["symbol_a"]), timeframe, limit, settings)
-            leg_b = _fetch_leg(str(pair["symbol_b"]), timeframe, limit, settings)
-            if leg_a is None or leg_b is None:
+            from src.units.strategies import pairs_venue as pv
+            # PAPER-ONLY, IN CODE (operator 2026-07-16 "not on real money";
+            # 2026-10-12 "paper soak"). A pairs.yaml entry whose account is not
+            # account_class: paper (alpaca_live, alpaca_portfolio, bybit_2, an
+            # unknown id) — or a Stage-2 mirror (paper_role: portfolio, alpaca_portfolio)
+            # — is refused here, per pair, every tick — nothing else
+            # in this order path checks the account class. One alert per pair
+            # per process; the sleeve and every other pair keep running.
+            refusal = pv.pairs_account_refusal(acct_cfg)
+            if refusal is not None:
+                _refuse_non_paper(pair, account_id, acct_cfg, execution, refusal,
+                                  record_pairs_soak, build_pairs_soak_record)
                 continue
-            closes_a, ts_a = leg_a
-            closes_b, ts_b = leg_b
-            n = min(len(closes_a), len(closes_b))
-            closes_a, closes_b = closes_a[-n:], closes_b[-n:]
+            session = pv.is_session_venue(acct_cfg)
+            stamps: List[datetime] = []
+            if session:
+                # SESSION venue (Alpaca): candles routed by instrument profile,
+                # aligned on timestamp; the forming daily bar is the decision
+                # bar inside the decision window (pairs_venue docstring).
+                fa = pv.fetch_leg_frame(str(pair["symbol_a"]), timeframe, limit, settings)
+                fb = pv.fetch_leg_frame(str(pair["symbol_b"]), timeframe, limit, settings)
+                if fa is None or fb is None:
+                    continue
+                closes_a, closes_b, stamps = pv.align_frames(fa, fb)
+                if not stamps:
+                    continue
+                ts_a = ts_b = stamps[-1].isoformat()
+            else:
+                leg_a = _fetch_leg(str(pair["symbol_a"]), timeframe, limit, settings)
+                leg_b = _fetch_leg(str(pair["symbol_b"]), timeframe, limit, settings)
+                if leg_a is None or leg_b is None:
+                    continue
+                closes_a, ts_a = leg_a
+                closes_b, ts_b = leg_b
+                n = min(len(closes_a), len(closes_b))
+                closes_a, closes_b = closes_a[-n:], closes_b[-n:]
 
             bar_key = f"{ts_a}|{ts_b}"
 
@@ -1539,7 +1933,18 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                         account_id, sym, strat, db_path=db_path)
                 ]
                 cleaned = False
-                if execution == "live":
+                cleanup_deferred = None
+                if execution == "live" and session:
+                    # SESSION venue: send the cleanup close only in regular
+                    # hours. Overnight / pre-market a close cannot fill as a
+                    # market order (AlpacaClient.close defers, or works a
+                    # marketable extended-hours limit); repeating that every
+                    # tick buys nothing, so nothing is sent until the venue
+                    # clock reads open. The stranded leg keeps its resting
+                    # broker SL/TP meanwhile, and the CRITICAL still reports.
+                    if _session_open(_clock_for(account_id)) is not True:
+                        cleanup_deferred = "market_not_open"
+                if execution == "live" and cleanup_deferred is None:
                     # _close_pair skips a leg with no open row, so on a
                     # half-open pair it closes exactly the stranded one.
                     cleaned = bool(_close_pair(
@@ -1559,13 +1964,57 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                             str(pair["symbol_a"]), str(pair["symbol_b"])),
                         symbol_a=str(pair["symbol_a"]), symbol_b=str(pair["symbol_b"]),
                         account_id=account_id, execution_mode=execution,
-                        stranded_legs=stranded, cleanup_confirmed=cleaned)
+                        stranded_legs=stranded, cleanup_confirmed=cleaned,
+                        cleanup_deferred=cleanup_deferred)
                     record_pairs_soak(rec)
                 continue
+
+            # ── SESSION GATE (Alpaca) — decide only inside the close window ──
+            # Above the dedup: outside the window the bar is NOT consumed, so
+            # the in-window tick still decides it. Clock unreadable -> no
+            # decision this tick, retried next tick (no latch, no halt).
+            if session:
+                win = pv.decision_window_state(
+                    _clock_for(account_id),
+                    window_minutes=int(pair.get("decision_window_minutes",
+                                                pv.DEFAULT_DECISION_WINDOW_MINUTES)))
+                _clock_streak(account_id, failing=(win == "unreadable"))
+                if win != "in_window":
+                    continue
+                # The decision bar must be TODAY's session bar (the harness
+                # decides on the close of the bar it fills on). If the fetch
+                # stops at the previous session, today's is appended from the
+                # latest trades; if that cannot be read, no decision this tick.
+                bar_source, closes_a, closes_b, stamps = pv.ensure_session_bar(
+                    str(pair["symbol_a"]), str(pair["symbol_b"]),
+                    closes_a, closes_b, stamps, _clock_for(account_id),
+                    _client_for(account_id))
+                if bar_source == "stale":
+                    logger.warning("pairs: %s no current-session bar on %s this tick "
+                                   "— no decision, retried next tick", name, account_id)
+                    continue
+                bar_key = f"{stamps[-1].isoformat()}|{stamps[-1].isoformat()}"
+                if leg_state == "flat" and decision_bars.get(name) != bar_key:
+                    strat_a_cd, _ = _leg_strats(pair)
+                    cd = pv.cooldown_state(
+                        int(pair.get("cooldown_bars", 0) or 0),
+                        pv.last_close_time(strat_a_cd, account_id, str(db_path)), stamps)
+                    if cd == "unreadable":
+                        continue
+                    if cd == "cooling":
+                        decision_bars[name] = bar_key
+                        decision_bars_dirty = True
+                        record_pairs_soak(build_pairs_soak_record(
+                            event="skip_cooldown", pair=_label,
+                            symbol_a=str(pair["symbol_a"]), symbol_b=str(pair["symbol_b"]),
+                            account_id=account_id, execution_mode=execution,
+                            cooldown_bars=int(pair.get("cooldown_bars", 0) or 0)))
+                        continue
 
             # ── DECISION HALF — once per closed bar, as before ──────────────
             if decision_bars.get(name) == bar_key:
                 continue
+            prev_bar_key = decision_bars.get(name)
             decision_bars[name] = bar_key
             decision_bars_dirty = True
 
@@ -1603,6 +2052,20 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                                   failing=(state_read == kind),
                                   state_source=state_source,
                                   exits_not_computable=not_computable)
+                if open_state is not None and session:
+                    # max_hold_bars counts TRADING bars; the wall-clock count
+                    # above counts weekends. Recount off the candle stamps.
+                    n_held, held_basis = _session_bars_held(
+                        pair, account_id, str(db_path), stamps)
+                    if n_held is not None:
+                        open_state = pe.OpenPair(
+                            direction=open_state.direction,
+                            entry_spread=open_state.entry_spread,
+                            stop_spread=open_state.stop_spread, bars_held=int(n_held),
+                            beta_entry=open_state.beta_entry)
+                    not_computable = list(not_computable)
+                    if held_basis == "unknown":
+                        not_computable.append("bars_held_trading_days")
                 if open_state is None:
                     # Even the leg rows could not be read: nothing to evaluate
                     # exits off this bar. The per-leg exchange backstop SL/TP
@@ -1646,7 +2109,11 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                 params, closes_a, closes_b, open_state=open_state, held_symbols=held,
                 risk_budget_usd=risk_budget, correlation_open=corr_open,
                 execution_mode=execution, corr_factor=corr_factor,
-                backstop_mult=backstop_mult, min_leg_notional_usd=min_leg_notional_usd)
+                backstop_mult=backstop_mult, min_leg_notional_usd=min_leg_notional_usd,
+                whole_units=session, leg_tp=str(pair.get("leg_tp", "backstop")),
+                require_fixed_beta_risk=session)
+            if session:
+                decision.soak["decision_bar_source"] = bar_source
             if is_open:
                 # Where the open-state came from, on every in-position row, so
                 # a hold/close decided off a REBUILT state is never read as one
@@ -1671,6 +2138,30 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                     decision.legs = []
                     decision.close = False
                     decision.soak["min_qty_block"] = min_qty_blocked
+
+            # SESSION-VENUE ENTRY CHECKS (Alpaca): netting, borrow, buying
+            # power — all BEFORE any leg is sent (shadow computes them too,
+            # so a shadow soak shows what live would have done).
+            if session and decision.legs:
+                blk = _session_entry_block(_client_for(account_id), acct_cfg,
+                                           account_id, decision, str(db_path))
+                if blk is not None:
+                    if blk.pop("retry", False):
+                        # could not look: un-consume the bar, re-decide next tick
+                        if prev_bar_key is None:
+                            decision_bars.pop(name, None)
+                        else:
+                            decision_bars[name] = prev_bar_key
+                    decision.event = blk.pop("event")
+                    decision.legs = []
+                    decision.soak.update(blk)
+
+            # ACCOUNT DAILY-DD SWITCH: refuses NEW pairs only ("keep open,
+            # block new"); never a mode flip, never gates a close.
+            if decision.event == "open" and execution == "live":
+                if _dd_switch_blocks(account_id, acct_cfg, balances.get(account_id)):
+                    decision.event = "skip_daily_dd_switch"
+                    decision.legs = []
 
             # TRADER HALT FLAG (AUD-20260927-CA-A02, ORDER-AUDIT-2 item 1): this
             # sleeve runs from src/main.py OUTSIDE pipeline.run — the halt check
@@ -1698,6 +2189,13 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                 client = _client_for(account_id)
                 _close_pair(client, acct_cfg, pair, decision.soak.get("outcome") or "exit",
                             closes_a[-1], closes_b[-1])
+            elif (decision.event == "hold" and execution == "live" and open_state is not None
+                  and str(pair.get("leg_tp", "backstop")) == "spread_target"
+                  and open_state.direction in ("long_spread", "short_spread")):
+                decision.soak["tp_revision"] = _revise_leg_tps(
+                    _client_for(account_id), acct_cfg, pair, params,
+                    closes_a, closes_b, open_state.direction,
+                    beta_entry=open_state.beta_entry)
 
             rec = build_pairs_soak_record(
                 event=decision.event,
@@ -1708,6 +2206,9 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                    if k not in ("symbol_a", "symbol_b")},
                 trade_ids=place_result.get("trade_ids") if place_result else None,
                 place_error=place_result.get("error") if place_result else None,
+                # Legs a failed placement's unwind could NOT confirm flat — the
+                # naked-leg facts belong on the durable row, not only in the alert.
+                naked_legs=place_result.get("naked_legs") if place_result else None,
                 # ALWAYS present on an open/open_failed row (even when every
                 # entry is degraded), so an `open` row with NO `leg_placement`
                 # key can only be a pre-2026-08-30 row. That is the whole

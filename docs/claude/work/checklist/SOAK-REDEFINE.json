@@ -1,0 +1,32 @@
+{
+  "id": "SOAK-REDEFINE",
+  "title": "Redefine the Stage-1 soak as a MECHANICAL check passed on 1-2 clean trades (no sample size, no calendar); migrate all 50 SOAKS.json contracts; move every reader",
+  "phase": "B",
+  "state": "done",
+  "owner": "lane SOAK-REDEFINE",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": 42.65,
+  "tier": 3,
+  "prs": [
+    18445
+  ],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-15 ~20:10Z (verbatim): 'A soak is a mechanical verification that was already proven in backtesting, and nothing needs to soak for more than one or two trades.' Built on branch soak-redefine (landing: hold, governance + guard; the manager merges): soak_state.py mechanical grader + states (passed/mechanical_fail/in_progress/awaiting_first_trade/unknown); soak-contract-guard refuses n_needed>2 and end_date/duration_days/expected_per_week/power; SOAKS.json 50 contracts migrated (5 passed, 11 mechanical_fail, 2 in_progress, 2 awaiting_first_trade, 7 not_soaking, 22 KILLED + 1 REFUSE carried) with evidence comms/research/soak_mechanics/2026-10-15.json; readers moved (brief, work report, attention watch, mandate soak snapshot, MD-S1-CUT bar.soak_states re-map, prop-roster-gate prop_live, R5 note); docs: OPERATING-PLAN s2, CLAUDE.md, ARCHITECTURE-CANONICAL, CLAUDE-RULES-CANONICAL, manager skill. PROPOSED (not granted): MD-PROMOTE-S1-S2-SOAK-AMEND (pipeline PI-20261015-OAKREDEF-0002, ask_operator). Nothing promoted; accounts.yaml untouched. [2026-10-15 ~21:00Z SCOPE EXTENSION, operator via manager: find + fix every source that keeps re-teaching long soaks.] ROOT CAUSE: the 2026-09-21 operating reset (#12668) made REALIZED-COST FIDELITY the Stage-1 exit (OPERATING-PLAN s2 'Leaves when ... realized cost matches', CLAUDE.md ladder) -- a sample statistic the 07-26/07-28 soak-doctrine guard could not see (it read 3 files for one 'days-weeks to prove EDGE' idiom); R3 (#12965) fixed n=10/side; SOAK-WATCH (#16398/#16387) minted it into every contract (N_CLOSES=10, end_date=n/rate), the manager-skill template and the CLAUDE-RULES rule 3; PROP-GATE-PARITY (#18394) copied it to prop. FIXED in this PR: those sources + work-system s5, readiness ladder, review-gate Override 4 (14-day shadow soak promote hold, removed; doctrine ledger 7->6), soak_report.py Stage-1 exit, mandate_resolver soak data task, prop + phone-executor designs, RESEARCH-PLAN R5, milestones/ROADMAP; dated soak records bannered superseded. DETECTOR: soak-doctrine-guard checks E-H (live-surface long-soak SHAPE scan, contracts, generator OUTPUT, rule-stated-once) + planted-defect self-test; canonical-doc-coherence 'soak rule stated once'. Open: config/accounts.yaml comment (line ~229) still says 'while this soak accrues' -- not edited (lane may not touch accounts.yaml). [PR #18445 opened, draft, landing hold; manager merges.] [21:10Z manager follow-up] SOL correction applied: a prop ACCOUNT-ADAPTER fault (no venue read / exit not journaled / no exit price, e.g. breakout_2 before #18413) is recorded against the adapter (row BREAKOUT-SL-AMEND-CLICK), not the leg; n_needed default 1 (one clean trade passes). Re-graded: passed 8 (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, ief_pullback_1d, tqqq_trend_long_1d, shadow slv_trend_1h), mechanical_fail 10, awaiting 2, not_soaking 7, KILLED 22 + REFUSE 1. MD-PROMOTE-S1-S2-SOAK-AMEND: the resolver change is BUILT + tested (bar.soak_passed / bar.cost_basis: venue_symbol, dormant until the granted entry carries them); moving the entry into `mandates:` was DENIED to this lane by the permission classifier (a lane may not write a real-money grant on a relayed claim) -- the manager records the operator's grant. 2026-10-15 22:40Z: PR #18445 CI green on ff87819c, mergeable clean, held for manager merge. MD-PROMOTE-S1-S2 amendment granted (eeb0de70); PI-20261015-OAKREDEF-0002 closed done. Re-graded: passed 8 (adds sol_prop, ief, tqqq), mechanical_fail 10. S1->S2 candidates: trend_donchian_eth_prop (cost NEEDS_DATA: ETHUSDT inconclusive), trend_donchian_sol_prop (cost consistent), tqqq_trend_long_1d. landed_unproven until merged+deployed and the brief/work report show the mechanical states. [2026-10-21 WEEKLY-AUDIT-2026-10-19] Observation MEASURED 2026-10-21 ~18:20Z: GET /api/bot/work/report sections.soaks.data states = passed 9 / mechanical_fail 9 / awaiting_first_trade 2 (n=20), no end date; #18445 merged; lane archived. -> done. spend_usd 42.65 from get_session (row had no ceiling_usd). Residual: 17 open PI-SOAK-20261004-* pipeline items still state a >=10 fills/side exit -> AUD-20261019-SOAK-ITEMS-LONG-EXIT.",
+  "updated_at": "2026-10-21T18:19:29Z",
+  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none until merged+deployed+observed: no milestone line changes at PR time",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md promotion-ladder row + 2026-10-15 SOAK-REDEFINE change-log row (in this PR)"
+  },
+  "observation": {
+    "what": "after merge + deploy, GET /api/bot/work/report sections.soaks shows the mechanical states (passed / mechanical_fail / awaiting_first_trade) with no end date, and the brief SOAKS section lists the 8 passed + 10 mechanical_fail soaks (record comms/research/soak_mechanics/2026-10-15.json)",
+    "how_to_check": "curl -sS https://ict-bot.duckdns.org/api/bot/work/report | jq '.sections.soaks.data[] | {id,state,progress}' ; python3 scripts/check_soak_doctrine.py",
+    "due_by": "2026-10-18"
+  },
+  "_seq": 521
+}

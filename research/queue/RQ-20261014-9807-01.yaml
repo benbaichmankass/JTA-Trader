@@ -1,0 +1,99 @@
+id: RQ-20261014-9807-01
+title: 'Programme 01 Q1, giveback census: how much R does each LIVE leg give back between its peak and its close, and what is its
+  net R per capital-day? (per account class x strategy, weekly, from position_telemetry + trades)'
+status: queued
+cadence: weekly
+theme: live_strategy
+priority: 1
+kind: deterministic
+question: >-
+  Operator weekly planning 2026-10-14: the top pain point is GIVEBACK (trades go deep into profit, pull back before the TP, churn,
+  then stop out) and the headline measure is net P&L per capital-day per strategy. Neither has ever been a per-leg number from the
+  live journal. For every closed trade with a position_telemetry row (M31) and a readable peak_r, joined to trades on
+  order_package_id, per account_class x strategy and pooled per class (never across classes): peak R p50/p75, realised R,
+  giveback R (peak minus realised), giveback share of peak, deep_then_loss (share of trades with peak >= 1R that closed <= 0),
+  and net_r_per_capital_day (sum realised R / sum hold days; size-unweighted, stated). Open trades are excluded (a partial peak
+  is not an MFE); a row with peak_state set has no peak; peak_provenance other than measured is reported as a lower-bound share.
+  The record is the baseline every Programme-01 lever is keyed to (docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md Q1).
+why_not_inferential: >-
+  A census of the realised population, not a test of an effect: every closed trade in the window is read, nothing is sampled
+  and no null is rejected. Sufficiency is stated per row as read_state measured | insufficient_n (n < 20), never as a p-value.
+decision_rule:
+  id: RULE-RQ20261014-9807-01-GIVEBACK-CENSUS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    From the landed record's measurement.pooled_by_class (one row per account_class with n_closed and read_state) and
+    measurement.strategies: giveback_share_of_peak, deep_then_loss, net_r_per_capital_day, n_closed.
+  rule: >-
+    REPORT is the deliverable: the record lands, the real_money and prop pooled rows go into the manager's brief as the giveback
+    line, and the per-leg rows become the backlog order for Programme 01 (worst giveback_share_of_peak first, real money first).
+    ROUTING of the next rung: IF the real_money pooled row has read_state measured AND (deep_then_loss >= 0.25 OR
+    giveback_share_of_peak >= 0.5) THEN Q4's census-keyed cells (blocked/RQ-20261014-9807-04) are the next rung on the
+    real-money legs; ELSE Q3 (RQ-20261014-9807-03) goes first and Q4 waits for the next census. IF read_state is
+    producer_failed (no position_telemetry table on the trainer's synced journal) THEN this is a ROUTE FAULT: re-run from a
+    session with --telemetry-file/--trades-file from two diag pulls; never a verdict. IF no_data THEN report the window as empty
+    and keep the cadence. A per-leg row with n_closed < 20 is listed, never graded.
+  what_it_does_not_do: >-
+    Changes nothing (no config, roster, risk or order path). Does not grade a leg's edge: giveback is a management number, not
+    an expectancy. Does not pool real money with mirror, paper or prop. Does not treat peak_r as MFE-final (lower bound).
+compute: needs_vm_data
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.6
+  basis: >-
+    stand-in, not a measurement: the operator named giveback the top pain point and every Programme-01 lever keys on this
+    number; the figure is the priority-1 default, not a P&L estimate (no balances are stated in the public repo).
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: >-
+    Estimate: two SELECTs over the trainer's synced trade_journal.db (position_telemetry is a few hundred rows; trades since 90 d
+    a few thousand) and stdlib aggregation. Reads trainer-resident data, so needs_vm_data; fits any idle window.
+run:
+  command:
+  - python3
+  - scripts/research/giveback_census.py
+  - --db
+  - data/trade_journal.db
+  - --since-days
+  - '90'
+  - --min-n
+  - '20'
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-9807-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M20
+- M31
+related:
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q1; the ladder this is the first rung of)
+- docs/research/programmes/RESEARCH-MAP.md (feeds P3 per-leg weight and P2 labels from the same record)
+- scripts/research/giveback_census.py (the instrument; --selftest)
+- scripts/research/m31_mfe_parity.py (rule 1: never grade a row whose lifecycle is unknown; inherited here)
+- scripts/research/bracket_calibration_report.py --mfe (the same peak_r basis, percent-of-entry view)
+- RQ-20261007-001 / RQ-20261007-003 (landed 2026-10-08; the revision cells this census orders)
+last_dispatched_at: '2026-10-22T07:53:47+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261014-9807-01-GIVEBACK-CENSUS
+  evidence:
+  - research/results/RQ-20261014-9807-01/39743805939.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: false
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

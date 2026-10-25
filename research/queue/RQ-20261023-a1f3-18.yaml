@@ -1,0 +1,127 @@
+id: RQ-20261023-a1f3-18
+title: 'Programme 07 Q2 variant (first test failed -> variant): cost-gated Donchian-20 breakout at 30m on ADA, AVAX, SOL, gate on the 0-1 ATR-percentile scale'
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: 'RQ-20261021-7c2b-05 (cost-gated Donchian-20 at 15m, G50/G75/G90) graded FAIL. DIAGNOSIS: at 15m the per-trade ATR is half the 30m figure while the roundtrip
+  fee + slippage is fixed in bps, so cost consumes twice the R and no vol gate recovers it; 30m (ef5d-07 B) is the next bar up and still sub-hour. On Binance USD-M
+  30m candles for ADAUSDT/AVAXUSDT/SOLUSDT over 2022-01-01..2026-10-20, do G50 / G75 / G90 (--vol-skip-below-pctl 0.50/0.75/0.90) pass the pooled Stage-0 rule AND
+  beat ungated B by >= 0.05 R per trade?'
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered VARIANT. Lane AUTHOR-FLOOR-1023
+  (research runnable floor 40 vs 57 at 09:14Z). First test: RQ-20261021-7c2b-05. Diagnosis (one line): cost per R doubles at 15m versus 30m, so the same gate may
+  clear at the next bar up.'
+power:
+  expected_n: 1200
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ef5d-07 B at 30m: ~2,700 entries per symbol over 5.8 y; the 4.8 y window across 3 symbols with G90 keeping ~10% gives ~800-1,200 pooled. An ESTIMATE; below
+    the pooled floor 88 the unit grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261023-A1F3-18-COST-GATED-30M
+  registered_at: '2026-10-23'
+  registered_before_run: true
+  statistic: harness_stage0.py --family trend --timeframe 30m, arms B, G50, G75, G90 on ADA/AVAX/SOL; per cell and pooled.
+  rule: 'PASS iff a gated arm passes (breadth 2 of 3 cells) and beats B by >= 0.05 R/trade -> ONE confirmation unit on a disjoint window at 30m. FAIL -> the gate
+    does not rescue 30m breakouts on these perps either; the diagnosis (cost per R) is then closed for the Donchian family and the next lever is maker cost. INDETERMINATE
+    otherwise. Verdicts are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND
+    >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND
+    pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline''s pooled net R/trade
+    by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell,
+    never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does not pool windows
+    with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within a few bps) and the funding term is
+    a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  bucket: frontier
+  basis: stand-in (07 node P7-Q2 weight); an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  basis: Estimate from the ef5d-0x harness_stage0 runs (2026-10-18/20) scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches public candles and runs the repo harnesses; CPU-only; not trainer-resident.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - ADAUSDT,AVAXUSDT,SOLUSDT
+  - --timeframe
+  - 30m
+  - --days
+  - '1760'
+  - --start
+  - '2022-01-01'
+  - --end
+  - '2026-10-20'
+  - --arm
+  - B=
+  - --arm
+  - G50=--vol-skip-below-pctl=0.5
+  - --arm
+  - G75=--vol-skip-below-pctl=0.75
+  - --arm
+  - G90=--vol-skip-below-pctl=0.9
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.67'
+  - --rule-id
+  - RULE-RQ20261023-A1F3-18-COST-GATED-30M
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261023-a1f3-18
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- scripts/research/harness_stage0.py
+- RQ-20261021-7c2b-05
+- AUTHOR-FLOOR-1023
+last_dispatched_at: '2026-10-24T07:24:41+00:00'
+grading:
+  attested: RULE-RQ20261023-A1F3-18-COST-GATED-30M
+  auto: true
+  decision_rule_id: RULE-RQ20261023-A1F3-18-COST-GATED-30M
+  evidence:
+  - research/results/RQ-20261023-a1f3-18/40074060809.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

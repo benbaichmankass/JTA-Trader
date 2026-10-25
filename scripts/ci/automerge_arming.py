@@ -69,9 +69,34 @@ ALL_STATES = (ATTACHED, NONE_ATTACHED, UNREADABLE)
 # repo's required checks attached.
 SELF_JOB = "open-and-automerge"
 
+# AUTOMERGE-ARMING-RACE (2026-10-24). A PAT-opened PR DOES fire `pull_request`,
+# but the required checks attach ~1 min AFTER the opener job's own run, so the
+# first read is `none_attached` for a reason that has nothing to do with
+# GITHUB_TOKEN. Measured on #19748, #19781, #19783: 3 of 3 PAT opens graded
+# NOT ARMING seconds after opening and then sat green, unmerged. For a PAT open
+# `none_attached` therefore means "not yet" -- the caller re-reads for up to
+# this budget. It is NOT "arm anyway": native auto-merge on a head with nothing
+# attached is the blind merge this gate exists to refuse. A GITHUB_TOKEN (or
+# adopted) open never waits -- nothing is ever going to attach to it.
+WAIT_BUDGET_S = 240
+WAIT_OPENERS = ("pat",)
 
-def grade(check_runs, *, checks_read_ok: bool) -> dict:
-    """Pure. `check_runs` is whatever the API returned; nothing is trusted."""
+
+def grade(check_runs, *, checks_read_ok: bool, opener: str | None = None,
+          waited_s: float = 0) -> dict:
+    """Pure. `check_runs` is whatever the API returned; nothing is trusted.
+
+    Adds ``wait`` (never an arm): True only for ``none_attached`` on a PAT open
+    with budget left. The state itself is unchanged, so the three states stay
+    distinct and ``arm`` is still True for ``attached`` alone.
+    """
+    v = _grade(check_runs, checks_read_ok=checks_read_ok)
+    v["wait"] = bool(v["state"] == NONE_ATTACHED and opener in WAIT_OPENERS
+                     and waited_s < WAIT_BUDGET_S)
+    return v
+
+
+def _grade(check_runs, *, checks_read_ok: bool) -> dict:
     if not checks_read_ok:
         return {
             "state": UNREADABLE, "arm": False, "attached": None, "self_only": None,
@@ -176,6 +201,25 @@ def _self_test(quiet: bool = False):
     check("entries with no usable name do not manufacture an attachment",
           r["state"] == NONE_ATTACHED and not r["arm"])
 
+    # AUTOMERGE-ARMING-RACE: a PAT open with nothing attached YET waits, then arms.
+    r = grade(SELF, checks_read_ok=True, opener="pat", waited_s=0)
+    check("PAT open + only the self job: still none_attached, does NOT arm, but WAITS",
+          r["state"] == NONE_ATTACHED and r["arm"] is False and r["wait"] is True)
+    r = grade(REAL, checks_read_ok=True, opener="pat", waited_s=45)
+    check("PAT open, checks attached after the wait: ARMS and stops waiting",
+          r["state"] == ATTACHED and r["arm"] is True and r["wait"] is False)
+    r = grade(SELF, checks_read_ok=True, opener="pat", waited_s=WAIT_BUDGET_S)
+    check("PAT open, budget spent and still nothing attached: REFUSES, no more waiting",
+          r["state"] == NONE_ATTACHED and r["arm"] is False and r["wait"] is False)
+    for op in ("github_token", "adopted", None):
+        r = grade(SELF, checks_read_ok=True, opener=op, waited_s=0)
+        check(f"opener={op}: the GITHUB_TOKEN branch is untouched -- refuses, never waits",
+              r["state"] == NONE_ATTACHED and r["arm"] is False and r["wait"] is False
+              and "GITHUB_TOKEN" in r["why"])
+    r = grade(None, checks_read_ok=False, opener="pat", waited_s=0)
+    check("an unreadable list never waits-then-arms: UNREADABLE refuses",
+          r["state"] == UNREADABLE and r["arm"] is False and r["wait"] is False)
+
     check("arm is True for exactly one state",
           [grade(x, checks_read_ok=k)["arm"]
            for x, k in ((REAL, True), (SELF, True), ([], True), (None, False))]
@@ -220,7 +264,9 @@ def main(argv=None) -> int:
                           "must not wave the merge through."}
     else:
         verdict = grade(payload.get("check_runs"),
-                        checks_read_ok=bool(payload.get("checks_read_ok")))
+                        checks_read_ok=bool(payload.get("checks_read_ok")),
+                        opener=payload.get("opener"),
+                        waited_s=float(payload.get("waited_s") or 0))
 
     print(json.dumps(verdict, indent=2))
     print(f"automerge-arming: {verdict['state']} — "

@@ -1,0 +1,402 @@
+{
+  "mode": "classify",
+  "bars": {
+    "auc_gain": 0.05,
+    "lift_r": 0.05,
+    "min_leg_n": 300,
+    "skip_quantile": 0.3,
+    "folds": 5,
+    "embargo": 5
+  },
+  "files": [
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_ada_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_doge_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_link_1h__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-07-stage0-prop/squeeze_doge_1h__trades.jsonl"
+  ],
+  "verdict": "fail",
+  "label": "every evaluated arm's AUC interval contains the class prior on every leg",
+  "target": "giveback_gt",
+  "threshold": 0.95,
+  "features": [
+    "confidence",
+    "direction_long",
+    "adx_at_entry"
+  ],
+  "learners": [
+    "prior",
+    "numpy_logit"
+  ],
+  "arm_status": {
+    "prior": null,
+    "numpy_logit": null
+  },
+  "legs": {
+    "pullback_ada_1h": {
+      "n": 368,
+      "base_rate": 0.6902173913043478,
+      "folds": 5,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.4283045454545455,
+            0.35202045454545455,
+            0.8676522727272726,
+            -0.3902295454545456,
+            0.40417333333333333
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.5294117647058824,
+            0.41379310344827586,
+            0.6002178649237473,
+            0.5380952380952381,
+            0.3655555555555556
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": -0.010585294654260169,
+            "ci95": [
+              -0.1304792770027467,
+              0.10930868769422634
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            0.2742361952861953,
+            0.41494740259740254,
+            -0.9298417464114832,
+            0.11702398989898993,
+            0.06308738095238098
+          ],
+          "selection_lift_r": {
+            "n_folds": 5,
+            "mean": -0.012109355535302891,
+            "ci95": [
+              -0.6716456999428216,
+              0.6474269888722158
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 120,
+          "take_all_fold_mean_net_r": [
+            0.4283045454545455,
+            0.35202045454545455,
+            0.8676522727272726,
+            -0.3902295454545456,
+            0.40417333333333333
+          ]
+        }
+      }
+    },
+    "pullback_doge_1h": {
+      "n": 382,
+      "base_rate": 0.6727748691099477,
+      "folds": 5,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.42144565217391305,
+            0.2197760869565217,
+            0.8205586956521739,
+            -0.37305652173913034,
+            -0.17718478260869566
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.6817204301075269,
+            0.49032258064516127,
+            0.3465909090909091,
+            0.6759868421052632,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": 0.03892415238977209,
+            "ci95": [
+              -0.1366962320221143,
+              0.2145445368016585
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.4417359747545582,
+            0.019818198757764,
+            0.5518069293478262,
+            -0.06950758082497216,
+            -0.14019703557312255
+          ],
+          "selection_lift_r": {
+            "n_folds": 5,
+            "mean": -0.01596309260941256,
+            "ci95": [
+              -0.46496628157619446,
+              0.4330400963573693
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 170,
+          "take_all_fold_mean_net_r": [
+            0.42144565217391305,
+            0.2197760869565217,
+            0.8205586956521739,
+            -0.37305652173913034,
+            -0.17718478260869566
+          ]
+        }
+      }
+    },
+    "pullback_link_1h": {
+      "n": 391,
+      "base_rate": 0.6930946291560103,
+      "folds": 5,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            -0.05876382978723404,
+            0.13277446808510632,
+            -0.048908510638297875,
+            -0.3971255319148937,
+            -0.021844680851063832
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.4852941176470588,
+            0.47171945701357465,
+            0.45454545454545453,
+            0.5441919191919192,
+            0.5214646464646465
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": -0.0045568810274692504,
+            "ci95": [
+              -0.050137409354862154,
+              0.04102364729992366
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.015571654083733712,
+            0.15104034672970842,
+            -0.0498882635552505,
+            0.07929219858156034,
+            0.2337055504162811
+          ],
+          "selection_lift_r": {
+            "n_folds": 5,
+            "mean": 0.07971563561771314,
+            "ci95": [
+              -0.06543110992717549,
+              0.22486238116260177
+            ],
+            "sign_consistent": false
+          },
+          "kept_test_trades": 136,
+          "take_all_fold_mean_net_r": [
+            -0.05876382978723404,
+            0.13277446808510632,
+            -0.048908510638297875,
+            -0.3971255319148937,
+            -0.021844680851063832
+          ]
+        }
+      }
+    },
+    "squeeze_doge_1h": {
+      "n": 541,
+      "base_rate": 0.6062846580406654,
+      "folds": 5,
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "kind": "prior",
+          "fold_auc": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN
+          ],
+          "selection_lift_r": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "kept_test_trades": 0,
+          "take_all_fold_mean_net_r": [
+            0.11158615384615383,
+            0.3378892307692308,
+            0.21347999999999995,
+            0.16331846153846155,
+            -0.08155384615384616
+          ]
+        },
+        "numpy_logit": {
+          "status": "ok",
+          "kind": "numpy_logit",
+          "fold_auc": [
+            0.6155,
+            0.55,
+            0.4418145956607495,
+            0.5307017543859649,
+            0.5091991341991342
+          ],
+          "auc_minus_prior": {
+            "n_folds": 5,
+            "mean": 0.029443096849169736,
+            "ci95": [
+              -0.04887389343709761,
+              0.10776008713543708
+            ],
+            "sign_consistent": false
+          },
+          "fold_selection_lift_r": [
+            -0.060739999999999975,
+            -0.052756798336798305,
+            -0.003359545454545365,
+            -0.05712846153846156,
+            -0.032883363148479436
+          ],
+          "selection_lift_r": {
+            "n_folds": 5,
+            "mean": -0.04137363369565693,
+            "ci95": [
+              -0.07094815055117734,
+              -0.011799116840136514
+            ],
+            "sign_consistent": true
+          },
+          "kept_test_trades": 206,
+          "take_all_fold_mean_net_r": [
+            0.11158615384615383,
+            0.3378892307692308,
+            0.21347999999999995,
+            0.16331846153846155,
+            -0.08155384615384616
+          ]
+        }
+      }
+    }
+  },
+  "passing": [],
+  "n_test_trades": 1011
+}

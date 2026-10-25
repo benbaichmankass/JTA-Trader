@@ -1,0 +1,103 @@
+id: RQ-20261012-75b2-04
+title: >-
+  Regime impact scoping (TREND axis) on 2h pullback family [pb2h], selection arm min_cell_n=20 loss_se=1: does a
+  realistic-accuracy classifier have headroom in this sub-population?
+status: done
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: >-
+  On the committed per-trade ledgers matching comms/strategy_evidence/runs/*/*pullback*_2h__trades.jsonl (newest
+  ledger per leg, USDT perps with a resolvable timeframe; MEASURED 2026-10-12 locally by the harness's own population
+  filter: 7 legs, 477 trades, ~357 in test blocks), select each leg's losing (ADX-14 trend label x direction) cells
+  on TRAINING blocks only (train n >= 20 and a train loss beyond 1 SE; expanding, K=4 blocks), then drop test-block
+  trades whose classifier-PREDICTED cell is selected, for classifier accuracy A in {0.55, 0.60, 0.70, oracle}. What
+  is the pooled change in full-cost net R per test trade (mean and 5th-95th percentile over 300 seeds)? Same harness
+  and thresholds as RQ-20260930-701; only the population and/or the selection arm differ.
+why_this_matters: >-
+  Theme regime (w5) had no queued unit. RQ-20260930-701 and -703 read no_headroom_trend_axis on the POOLED 22-23
+  legs; a pooled null can hide a sub-population (timeframe / family) with headroom, and can be an artefact of one
+  selection rule. This unit disaggregates by population and/or selection arm. UPPER-BOUND SCOPING INSTRUMENT, NOT
+  A PROMOTION CASE: a pass names a sub-population where regime_cell_walkforward.py on the real 2-D cell is worth
+  running (.claude/skills/regime-selectivity: no cosmetic cell, walk-forward before Tier-3, axis fidelity). VOL
+  AXIS NOT COVERED (no vol labels in the ledgers). One of 15 sibling arms registered together (RQ-20261012-75b2-01..15):
+  a lone pass among them is expected by chance about 0.75 times at the 5th-percentile bar, so a single pass is a
+  lead, not a finding.
+power:
+  expected_n: 357
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit of analysis = test-block trade (blocks 1..3 of 4 per leg, ~75% of the slice). d=0.15 sd per-trade delta
+    needs (1.96+0.8416)^2/0.15^2 = 349 trades; expected_n = floor(0.75 x 477) = 357, MEASURED on origin/main 2026-10-12
+    with regime_impact_scoping.newest_ledgers + leg_symbol/leg_timeframe filters. d is set to what this slice can
+    support, not to the 0.03 R bar (0.03 R is ~0.03 sd of per-trade R, which would need ~8.7k trades): the bar is
+    applied to the pooled mean AND its 5th percentile, and the normal-approximation floor is optimistic because
+    legs sharing a symbol share regimes and trades (effective n is lower).
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-grading of committed trade ledgers with fetched public candles (Binance vision); history is fixed, nothing
+      accrues. n is measured above, not assumed.
+decision_rule:
+  id: RULE-RQ1012-75B2-04-REGIME-HEADROOM-PB2H
+  registered_at: '2026-10-12'
+  registered_before_run: true
+  statistic: >-
+    Pooled DeltaNetR per test trade under the ORDINAL confusion model, pooled by re-sampling legs with replacement
+    per seed, 300 seeds, for A = 0.55 / 0.60 / 0.70 / oracle; UNIFORM confusion model reported as a sensitivity
+    arm, not in the verdict. Cells: ADX-14 label on the last bar CLOSED at entry [chop < 20, transitional < 25,
+    trending >= 25] x direction. Selection: cell has train n >= 20 and a train loss beyond 1 SE, train = earlier
+    blocks only. Net R is the ledger's net_r (fee + venue slippage + funding).
+  rule: >-
+    IF fewer than 5 legs are measured -> could_not_measure (read_state no_data); no verdict. ELSE IF A=0.70 pooled
+    mean >= 0.03 R per test trade AND its 5th percentile > 0 -> headroom_at_realistic_accuracy (verdict pass): this
+    sub-population is a LEAD for regime_cell_walkforward.py on its real 2-D cells (Tier-3 packet only after a stable_drag
+    cell), NOT a cell flip. ELSE IF oracle pooled mean >= 0.03 R AND its 5th percentile > 0 -> headroom_only_with_oracle
+    (verdict indeterminate): classifier accuracy is the bottleneck here. ELSE -> no_headroom_trend_axis (verdict
+    fail): trend-axis gating is not where this sub-population's headroom is. When n_test < the power floor above
+    the fail reads "no headroom DETECTED at this n", never "absent". 0.03 R is the bar because it is of the order
+    of the per-trade cost stack (cost_total_r ~0.24 on the ict_scalp_5m ledger row).
+  min_n: >-
+    5 measured legs; 30 trades per leg; selection-arm minimum train n per cell as above; 300 seeds. Below any of
+    these the leg/cell is excluded and listed, never imputed.
+  what_it_does_not_do: >-
+    Cuts nothing and flips no live gate. NOT A PROMOTION CASE. Says nothing about the vol axis, about equity/futures
+    legs (not_attempted: no committed candle source), or whether any specific cell generalizes. Does not edit config/regime_policy.yaml.
+    Dropping a trade is assumed to leave later trades unchanged; pooled legs on one symbol are not independent.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: >-
+    Same harness as RQ-20260930-701 (20 min for 22 legs x 300 seeds, measured); a sub-population is a subset of
+    that work.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 60
+  command: [python3, scripts/research/regime_impact_scoping.py, --out, '{out_dir}', --seeds, '300', --ledgers, comms/strategy_evidence/runs/*/*pullback*_2h__trades.jsonl,
+    --min-cell-n, '20', --loss-se, '1']
+  inputs: {research_unit: RQ-20261012-75b2-04}
+lands: {store: research/results/, assert_field: read_state, min_rows: 1}
+roadmap: [L-REGIME]
+references: [RQ-20260930-701 (pooled trend-axis null), 'RQ-20260930-703 (selection-sensitivity, full population)',
+  .claude/skills/regime-selectivity/SKILL.md]
+last_dispatched_at: '2026-10-12T22:03:04+00:00'
+grading:
+  attested: RULE-RQ1012-75B2-04-REGIME-HEADROOM-PB2H
+  auto: true
+  decision_rule_id: RULE-RQ1012-75B2-04-REGIME-HEADROOM-PB2H
+  evidence:
+  - research/results/RQ-20261012-75b2-04/38314410633.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

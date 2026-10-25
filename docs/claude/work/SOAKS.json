@@ -1,46 +1,62 @@
 {
- "_comment": "SOAK CONTRACTS \u2014 definitions of done, NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py.",
- "as_of": "2026-10-10",
+ "_comment": "SOAK CONTRACTS \u2014 mechanical definitions of done (operator 2026-10-15: a soak passes on 1-2 clean trades; no calendar, no sample size), NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py. Migrated 2026-10-15 (lane SOAK-REDEFINE) from the retired accrual design (n_needed 10, end dates); evidence comms/research/soak_mechanics/2026-10-15.json.",
+ "as_of": "2026-10-15",
  "soaks": [
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 365,
-   "end_date": "2027-06-27",
-   "expected_per_week": 0.19,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-gdx_pullback_1d",
    "kind": "stage1",
    "leg": "gdx_pullback_1d",
-   "metric": "closed trades on alpaca_paper/gdx_pullback_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "365d at 0.19 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/gdx_pullback_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-27",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 522,
-   "end_date": "2027-11-15",
-   "expected_per_week": 0.13,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-gld_pullback_1d",
    "kind": "stage1",
    "leg": "gld_pullback_1d",
-   "metric": "closed trades on alpaca_paper/gld_pullback_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "522d at 0.13 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/gld_pullback_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -50,96 +66,127 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=90, expectancy +0.365R, net +32.84R, folds 3/4, fidelity faithful, slippage 5.0bps RT; failing clauses: none (Stage-0 passes: 3/4 folds). Cut on R-CUT-AFFORD per the 2026-10-04 verdict (0 of 54 setups size above zero on alpaca_live) \u2014 NOT re-measured this session.",
     "verdict": "KILLED"
    },
-   "duration_days": 41,
-   "end_date": "2026-08-01",
-   "expected_per_week": 1.73,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-gld_pullback_1h",
    "kind": "stage1",
    "leg": "gld_pullback_1h",
-   "metric": "closed trades on alpaca_paper/gld_pullback_1h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "41d at 1.73 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/gld_pullback_1h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 522,
-   "end_date": "2027-12-11",
-   "expected_per_week": 0.13,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-iaum_pullback_1d",
    "kind": "stage1",
    "leg": "iaum_pullback_1d",
-   "metric": "closed trades on alpaca_paper/iaum_pullback_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "522d at 0.13 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/iaum_pullback_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 1217,
-   "end_date": "2029-10-19",
-   "expected_per_week": 0.06,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 4194 (after fault 3267)",
+    "trades": [
+     4194
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-ief_pullback_1d",
    "kind": "stage1",
    "leg": "ief_pullback_1d",
-   "metric": "closed trades on alpaca_paper/ief_pullback_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "1217d at 0.06 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/ief_pullback_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-20",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 457,
-   "end_date": "2027-09-20",
-   "expected_per_week": 0.15,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-iwm_trend_long_1d",
    "kind": "stage1",
    "leg": "iwm_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/iwm_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "457d at 0.15 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/iwm_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-20",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 406,
-   "end_date": "2027-08-11",
-   "expected_per_week": 0.17,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-qld_trend_long_1d",
    "kind": "stage1",
    "leg": "qld_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/qld_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "406d at 0.17 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/qld_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-01",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -149,106 +196,116 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=55, expectancy +0.197R, net +10.84R, folds 2/4, fidelity faithful, slippage 5.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 67,
-   "end_date": "2026-08-27",
-   "expected_per_week": 1.05,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-qqq_pullback_1h",
    "kind": "stage1",
    "leg": "qqq_pullback_1h",
-   "metric": "closed trades on alpaca_paper/qqq_pullback_1h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "67d at 1.05 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/qqq_pullback_1h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 457,
-   "end_date": "2027-09-11",
-   "expected_per_week": 0.15,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-qqq_trend_long_1d",
    "kind": "stage1",
    "leg": "qqq_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/qqq_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "457d at 0.15 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/qqq_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 522,
-   "end_date": "2027-12-11",
-   "expected_per_week": 0.13,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-scha_trend_long_1d",
    "kind": "stage1",
    "leg": "scha_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/scha_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "522d at 0.13 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/scha_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 332,
-   "end_date": "2027-05-25",
-   "expected_per_week": 0.21,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-slv_pullback_1d",
    "kind": "stage1",
    "leg": "slv_pullback_1d",
-   "metric": "closed trades on alpaca_paper/slv_pullback_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "332d at 0.21 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/slv_pullback_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-27",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "no_backtest_rate",
-   "disposition": {
-    "decided_at": "2026-10-10",
-    "evidence": [
-     "comms/strategy_evidence/splg_trend_long_1d.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
-    ],
-    "missing": "a measured Stage-0 record for splg_trend_long_1d (coverage_state measured, n_trades_oos>=30). comms/strategy_evidence/splg_trend_long_1d.json is harness_failed: yfinance returned no rows for SPLG while the SPY control returned rows (a SPLG-specific data gap, not a dependency fault)",
-    "reason": "No backtest rate, so the soak has no end date and cannot be graded. SPLG is a declared affordability proxy for spy_trend_long_1d (CLAUDE.md, the Alpaca mirror carve-out). Resolver S1->S2: REFUSE R-SOURCE-RUN-ABSENT. Options: source SPLG history elsewhere, or evidence the proxy via SPY's record.",
-    "until": "2026-10-24",
-    "verdict": "NEEDS_DATA"
-   },
-   "end_date": null,
-   "expected_per_week": null,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-splg_trend_long_1d",
    "kind": "stage1",
    "leg": "splg_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/splg_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "no comms/strategy_evidence record with n_trades_oos/window_days \u2014 produce the Stage-0 record first (nothing should soak unproven offline)",
+   "metric": "clean closed trades on alpaca_paper/splg_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -258,60 +315,83 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=75, expectancy -0.114R, net -8.55R, folds 2/4, fidelity approximate, slippage 5.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.114R net=-8.55R; R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 49,
-   "end_date": "2026-08-09",
-   "expected_per_week": 1.44,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-spy_pullback_1h",
    "kind": "stage1",
    "leg": "spy_pullback_1h",
-   "metric": "closed trades on alpaca_paper/spy_pullback_1h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "49d at 1.44 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/spy_pullback_1h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 332,
-   "end_date": "2027-05-09",
-   "expected_per_week": 0.21,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-spy_trend_long_1d",
    "kind": "stage1",
    "leg": "spy_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/spy_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "332d at 0.21 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/spy_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 457,
-   "end_date": "2027-09-20",
-   "expected_per_week": 0.15,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-23",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-23.json"
+    ],
+    "reason": "mechanical soak passed: clean: 6650 (after fault 5265)",
+    "trades": [
+     6650
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-tlt_pullback_1d",
    "kind": "stage1",
    "leg": "tlt_pullback_1d",
-   "metric": "closed trades on alpaca_paper/tlt_pullback_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "457d at 0.15 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/tlt_pullback_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-20",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -321,42 +401,61 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=94, expectancy -0.072R, net -6.73R, folds 1/4, fidelity approximate, slippage 5.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.072R net=-6.73R; R-CUT-FOLDS 1/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 39,
-   "end_date": "2026-07-30",
-   "expected_per_week": 1.8,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-tlt_pullback_1h",
    "kind": "stage1",
    "leg": "tlt_pullback_1h",
-   "metric": "closed trades on alpaca_paper/tlt_pullback_1h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "39d at 1.80 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/tlt_pullback_1h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
-   "duration_days": 305,
-   "end_date": "2027-05-02",
-   "expected_per_week": 0.23,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 6395",
+    "trades": [
+     6395
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-tqqq_trend_long_1d",
    "kind": "stage1",
    "leg": "tqqq_trend_long_1d",
-   "metric": "closed trades on alpaca_paper/tqqq_trend_long_1d (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "305d at 0.23 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/tqqq_trend_long_1d (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-01",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -366,54 +465,61 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=56, expectancy +0.462R, net +25.89R, folds 2/4, fidelity faithful, slippage 5.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 66,
-   "end_date": "2026-08-26",
-   "expected_per_week": 1.07,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-uso_trend_1h",
    "kind": "stage1",
    "leg": "uso_trend_1h",
-   "metric": "closed trades on alpaca_paper/uso_trend_1h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "66d at 1.07 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on alpaca_paper/uso_trend_1h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
-    "decided_at": "2026-10-10",
+    "decided_at": "2026-10-15",
     "evidence": [
-     "comms/strategy_evidence/ada_pullback_2h.json",
-     "comms/research/r3_cost_fidelity/2026-10-10.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
+     "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "missing": ">=10 package-referenced measured exit fills per side in one R3 cell (RULE-R3-GATE1-COST-FIDELITY-v1); best cell today ada_pullback_2h on bybit_2 (S2): entry 11 / exit 9, bybit_1 (S1): entry 21 / exit 6",
-    "reason": "Soak closes n reached (>=10) but R3 cannot decide: every cell insufficient_n (exit fills are the short side). Promotion is already done (resolver S1->S2: REFUSE R-NO-OP, leg is on bybit_2 and bybit_portfolio), so no Gate-1 action is owed; the open question is cost fidelity on the real-money cell. Stage-0 record: see evidence.",
-    "until": "2026-10-24",
-    "verdict": "NEEDS_DATA"
+    "reason": "mechanical soak passed: clean: 4496 (after fault 4332)",
+    "trades": [
+     4496
+    ],
+    "verdict": "PASS"
    },
-   "duration_days": 65,
-   "end_date": "2026-08-22",
-   "expected_per_week": 1.09,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ada_pullback_2h",
    "kind": "stage1",
    "leg": "ada_pullback_2h",
-   "metric": "closed trades on bybit_1/ada_pullback_2h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "65d at 1.09 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/ada_pullback_2h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -423,24 +529,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=62, expectancy -0.028R, net -1.74R, folds 1/4, fidelity approximate, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.028R net=-1.74R; R-CUT-FOLDS 1/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 59,
-   "end_date": "2026-08-09",
-   "expected_per_week": 1.19,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-eth_pullback_2h",
    "kind": "stage1",
    "leg": "eth_pullback_2h",
-   "metric": "closed trades on bybit_1/eth_pullback_2h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "59d at 1.19 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/eth_pullback_2h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -450,24 +560,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=78, expectancy +0.017R, net +1.32R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 47,
-   "end_date": "2026-09-07",
-   "expected_per_week": 1.5,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ict_scalp_eth_15m",
    "kind": "stage1",
    "leg": "ict_scalp_eth_15m",
-   "metric": "closed trades on bybit_1/ict_scalp_eth_15m (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "47d at 1.50 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/ict_scalp_eth_15m (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-22",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -477,24 +591,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=84, expectancy -0.066R, net -5.57R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.066R net=-5.57R; R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 44,
-   "end_date": "2026-09-04",
-   "expected_per_week": 1.61,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ict_scalp_sol_15m",
    "kind": "stage1",
    "leg": "ict_scalp_sol_15m",
-   "metric": "closed trades on bybit_1/ict_scalp_sol_15m (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "44d at 1.61 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/ict_scalp_sol_15m (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-22",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -504,24 +622,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=76, expectancy +0.054R, net +4.07R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 49,
-   "end_date": "2026-09-09",
-   "expected_per_week": 1.46,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ict_scalp_xrp_15m",
    "kind": "stage1",
    "leg": "ict_scalp_xrp_15m",
-   "metric": "closed trades on bybit_1/ict_scalp_xrp_15m (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "49d at 1.46 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/ict_scalp_xrp_15m (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-22",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -531,24 +653,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=169, expectancy -0.160R, net -27.00R, folds 0/4, fidelity approximate, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.160R net=-27.00R; R-CUT-FOLDS 0/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 22,
-   "end_date": "2026-08-12",
-   "expected_per_week": 3.24,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ict_scalp_xrp_5m",
    "kind": "stage1",
    "leg": "ict_scalp_xrp_5m",
-   "metric": "closed trades on bybit_1/ict_scalp_xrp_5m (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "22d at 3.24 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/ict_scalp_xrp_5m (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-21",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -558,24 +684,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=18, expectancy +0.255R, net +4.59R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-N n=18<30; R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 203,
-   "end_date": "2027-01-07",
-   "expected_per_week": 0.35,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-sol_pullback_2h",
    "kind": "stage1",
    "leg": "sol_pullback_2h",
-   "metric": "closed trades on bybit_1/sol_pullback_2h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "203d at 0.35 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/sol_pullback_2h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -585,24 +715,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=10, expectancy -0.040R, net -0.40R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-N n=10<30; R-CUT-EXPECTANCY exp=-0.040R net=-0.40R; R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 365,
-   "end_date": "2027-05-24",
-   "expected_per_week": 0.19,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-squeeze_breakout_4h",
    "kind": "stage1",
    "leg": "squeeze_breakout_4h",
-   "metric": "closed trades on bybit_1/squeeze_breakout_4h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "365d at 0.19 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/squeeze_breakout_4h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-05-24",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -612,24 +746,28 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=73, expectancy +0.063R, net +4.60R, folds 2/4, fidelity approximate, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 50,
-   "end_date": "2026-07-14",
-   "expected_per_week": 1.4,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian",
    "kind": "stage1",
    "leg": "trend_donchian",
-   "metric": "closed trades on bybit_1/trend_donchian (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "50d at 1.40 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/trend_donchian (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-05-25",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -639,54 +777,61 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=107, expectancy +0.151R, net +16.18R, folds 2/4, fidelity approximate, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 35,
-   "end_date": "2026-08-11",
-   "expected_per_week": 2.05,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian_eth",
    "kind": "stage1",
    "leg": "trend_donchian_eth",
-   "metric": "closed trades on bybit_1/trend_donchian_eth (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "35d at 2.05 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/trend_donchian_eth (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
-    "decided_at": "2026-10-10",
+    "decided_at": "2026-10-15",
     "evidence": [
-     "comms/strategy_evidence/trend_donchian_eth_4h.json",
-     "comms/research/r3_cost_fidelity/2026-10-10.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
+     "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "missing": ">=10 package-referenced measured exit fills per side in one R3 cell (RULE-R3-GATE1-COST-FIDELITY-v1); best cell today trend_donchian_eth_4h on bybit_2 (S2): entry 12 / exit 5, bybit_1 (S1): entry 11 / exit 0",
-    "reason": "Soak closes n reached (>=10) but R3 cannot decide: every cell insufficient_n (exit fills are the short side). Promotion is already done (resolver S1->S2: REFUSE R-NO-OP, leg is on bybit_2 and bybit_portfolio), so no Gate-1 action is owed; the open question is cost fidelity on the real-money cell. Stage-0 record: see evidence.",
-    "until": "2026-10-24",
-    "verdict": "NEEDS_DATA"
+    "reason": "mechanical soak passed: clean: 6238 (after fault 5925)",
+    "trades": [
+     6238
+    ],
+    "verdict": "PASS"
    },
-   "duration_days": 83,
-   "end_date": "2026-09-09",
-   "expected_per_week": 0.84,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian_eth_4h",
    "kind": "stage1",
    "leg": "trend_donchian_eth_4h",
-   "metric": "closed trades on bybit_1/trend_donchian_eth_4h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "83d at 0.84 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/trend_donchian_eth_4h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -696,72 +841,113 @@
     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=59, expectancy +0.076R, net +4.46R, folds 1/4, fidelity approximate, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 1/4 not a majority.",
     "verdict": "KILLED"
    },
-   "duration_days": 62,
-   "end_date": "2026-09-07",
-   "expected_per_week": 1.13,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian_sol",
    "kind": "stage1",
    "leg": "trend_donchian_sol",
-   "metric": "closed trades on bybit_1/trend_donchian_sol (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "62d at 1.13 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/trend_donchian_sol (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
-   "duration_days": 229,
-   "end_date": "2027-02-02",
-   "expected_per_week": 0.31,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 5249 (after fault 3116)",
+    "trades": [
+     5249
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian_xrp_4h",
    "kind": "stage1",
    "leg": "trend_donchian_xrp_4h",
-   "metric": "closed trades on bybit_1/trend_donchian_xrp_4h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "229d at 0.31 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/trend_donchian_xrp_4h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_xrp_adx25",
+   "kind": "stage1",
+   "leg": "trend_donchian_xrp_adx25",
+   "metric": "clean closed trades on bybit_1/trend_donchian_xrp_adx25 (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 2,
+   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item; plus the MOMENTUM-LEVERS-LIVE observation: a closed 4h bar with ADX(14) < 25 tightens the trail to 2.5 ATR (exit_lever_soak momentum_trail row, applied=true) and the resulting stop amend reaches the venue",
+   "started": "2026-10-22",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
    "disposition": {
-    "decided_at": "2026-10-10",
+    "decided_at": "2026-10-23",
     "evidence": [
-     "comms/strategy_evidence/xrp_pullback_2h.json",
-     "comms/research/r3_cost_fidelity/2026-10-10.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
+     "comms/research/soak_mechanics/2026-10-23.json"
     ],
-    "missing": ">=10 package-referenced measured exit fills per side in one R3 cell (RULE-R3-GATE1-COST-FIDELITY-v1); best cell today xrp_pullback_2h on bybit_2 (S2): entry 12 / exit 7, bybit_1 (S1): entry 14 / exit 1",
-    "reason": "Soak closes n reached (>=10) but R3 cannot decide: every cell insufficient_n (exit fills are the short side). Promotion is already done (resolver S1->S2: REFUSE R-NO-OP, leg is on bybit_2 and bybit_portfolio), so no Gate-1 action is owed; the open question is cost fidelity on the real-money cell. Stage-0 record: see evidence.",
-    "until": "2026-10-24",
-    "verdict": "NEEDS_DATA"
+    "reason": "mechanical soak passed: clean: 6538 (after fault 6171)",
+    "trades": [
+     6538
+    ],
+    "verdict": "PASS"
    },
-   "duration_days": 65,
-   "end_date": "2026-08-22",
-   "expected_per_week": 1.09,
-   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-xrp_pullback_2h",
    "kind": "stage1",
    "leg": "xrp_pullback_2h",
-   "metric": "closed trades on bybit_1/xrp_pullback_2h (each = one entry + one exit fill)",
-   "n_needed": 10,
-   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2)",
-   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
-   "recommended_fix": "65d at 1.09 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "metric": "clean closed trades on bybit_1/xrp_pullback_2h (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
-   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -771,24 +957,25 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=57, expectancy -0.025R, net -1.40R, folds 2/4, fidelity approximate, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.025R net=-1.40R; R-CUT-FOLDS 2/4 not a majority. Shadow signal-parity: 108 packages in 74d vs ~11.5 expected (Poisson95 of observed [88.6,130.4]) -> OUTSIDE the contract's pass rule.",
     "verdict": "KILLED"
    },
-   "duration_days": 65,
-   "end_date": "2026-09-26",
-   "expected_per_week": 1.09,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-avax_pullback_2h",
    "kind": "shadow",
    "leg": "avax_pullback_2h",
-   "metric": "shadow order packages logged for avax_pullback_2h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "65d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for avax_pullback_2h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-07-23",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -798,24 +985,25 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=70, expectancy -0.050R, net -3.52R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.050R net=-3.52R; R-CUT-FOLDS 2/4 not a majority. Shadow signal-parity: 0 packages in 43d vs ~8.2 expected (Poisson95 of observed [0,3.7]) -> OUTSIDE the contract's pass rule. DEAD: 6 packages ever, newest 2026-07-23, none in the 79d since. Cause NOT established; ETHUSDT is contested by several enabled legs and a shadow leg does enter the symbol election (src/runtime/intents.py DEFAULT_PRIORITIES header), but that was not traced to this leg. Moot: Stage-0 fails and the leg is on no roster.",
     "verdict": "KILLED"
    },
-   "duration_days": 53,
-   "end_date": "2026-10-15",
-   "expected_per_week": 1.34,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-eth_pullback_prop_2h",
    "kind": "shadow",
    "leg": "eth_pullback_prop_2h",
-   "metric": "shadow order packages logged for eth_pullback_prop_2h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "53d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for eth_pullback_prop_2h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-08-23",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -825,24 +1013,25 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=27, expectancy -0.596R, net -16.09R, folds 1/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-N n=27<30; R-CUT-EXPECTANCY exp=-0.596R net=-16.09R; R-CUT-FOLDS 1/4 not a majority. Shadow signal-parity: 43 packages in 126d vs ~9.4 expected (Poisson95 of observed [31.1,57.9]) -> OUTSIDE the contract's pass rule.",
     "verdict": "KILLED"
    },
-   "duration_days": 136,
-   "end_date": "2026-10-15",
-   "expected_per_week": 0.52,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-fade_breakout_4h",
    "kind": "shadow",
    "leg": "fade_breakout_4h",
-   "metric": "shadow order packages logged for fade_breakout_4h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "136d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for fade_breakout_4h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-06-01",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -852,24 +1041,25 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=17, expectancy -0.570R, net -9.70R, folds 0/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-N n=17<30; R-CUT-EXPECTANCY exp=-0.570R net=-9.70R; R-CUT-FOLDS 0/4 not a majority. Shadow signal-parity: 0 packages in 69d vs ~3.3 expected (Poisson95 of observed [0,3.7]) -> inside the contract's pass rule. DEAD cause (config, not wiring): config/regime_policy.yaml sets the leg off in every regime cell so the router drops every intent; 1 package ever (2026-06-04, before the soak began).",
     "verdict": "KILLED"
    },
-   "duration_days": 215,
-   "end_date": "2027-02-28",
-   "expected_per_week": 0.33,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-fvg_range_15m",
    "kind": "shadow",
    "leg": "fvg_range_15m",
-   "metric": "shadow order packages logged for fvg_range_15m (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "215d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for fvg_range_15m (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-07-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -879,42 +1069,45 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=86, expectancy -0.057R, net -4.93R, folds 1/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.057R net=-4.93R; R-CUT-FOLDS 1/4 not a majority. Shadow signal-parity: 10 packages in 43d vs ~10.1 expected (Poisson95 of observed [4.8,18.4]) -> inside the contract's pass rule.",
     "verdict": "KILLED"
    },
-   "duration_days": 43,
-   "end_date": "2026-10-05",
-   "expected_per_week": 1.65,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-htf_pullback_trend_2h",
    "kind": "shadow",
    "leg": "htf_pullback_trend_2h",
-   "metric": "shadow order packages logged for htf_pullback_trend_2h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "43d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for htf_pullback_trend_2h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-08-23",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
-   "design": "too_long",
-   "duration_days": 26,
-   "end_date": "2026-10-24",
-   "expected_per_week": 2.78,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "not_soaking",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-ict_scalp_5m",
    "kind": "shadow",
    "leg": "ict_scalp_5m",
-   "metric": "shadow order packages logged for ict_scalp_5m (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "26d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for ict_scalp_5m (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -924,24 +1117,25 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=177, expectancy -0.210R, net -37.12R, folds 0/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.210R net=-37.12R; R-CUT-FOLDS 0/4 not a majority. Shadow signal-parity: 28 packages in 7d vs ~3.4 expected (Poisson95 of observed [18.6,40.5]) -> OUTSIDE the contract's pass rule.",
     "verdict": "KILLED"
    },
-   "duration_days": 21,
-   "end_date": "2026-10-19",
-   "expected_per_week": 3.39,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-ict_scalp_avax_5m",
    "kind": "shadow",
    "leg": "ict_scalp_avax_5m",
-   "metric": "shadow order packages logged for ict_scalp_avax_5m (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "21d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for ict_scalp_avax_5m (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-09-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -951,24 +1145,25 @@
     "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=190, expectancy -0.120R, net -22.72R, folds 0/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-EXPECTANCY exp=-0.120R net=-22.72R; R-CUT-FOLDS 0/4 not a majority. Shadow signal-parity: 13 packages in 7d vs ~3.6 expected (Poisson95 of observed [6.9,22.2]) -> OUTSIDE the contract's pass rule.",
     "verdict": "KILLED"
    },
-   "duration_days": 20,
-   "end_date": "2026-10-18",
-   "expected_per_week": 3.64,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-ict_scalp_sol_5m",
    "kind": "shadow",
    "leg": "ict_scalp_sol_5m",
-   "metric": "shadow order packages logged for ict_scalp_sol_5m (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "20d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for ict_scalp_sol_5m (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-09-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "ib_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
     "decided_at": "2026-10-10",
     "evidence": [
@@ -979,155 +1174,280 @@
     "reason": "Soak question answered, no extension. (1) Stage-0 n=118, +0.217R, net +25.61R but folds 2/4 \u2014 NOT a majority, so the MD-PROMOTE bar's fold clause refuses (PR #16561 called it PASS on the pooled-net rule only). (2) R3 venue cell ibkr_futures|simulator is DIVERGENT: round-trip 20.7bps CI95 [12.5, 29.3] vs 5.0 modelled (n_entry 23, n_exit 19), so the record's cost stack is optimistic. (3) Signal parity: 279 packages in 114d vs ~36.8 expected (Poisson95 of observed [247.2, 313.7]) \u2014 OUTSIDE the contract's pass rule. Resolver S0->S1: REFUSE R-NO-OP (shadow->live flip is not modelled; no mandate covers it). Leg is still shadow on ib_paper; removing it is a Tier-3 proposal.",
     "verdict": "REFUSE"
    },
-   "duration_days": 31,
-   "end_date": "2026-07-19",
-   "expected_per_week": 2.26,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-mgc_trend_1h",
    "kind": "shadow",
    "leg": "mgc_trend_1h",
-   "metric": "shadow order packages logged for mgc_trend_1h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "31d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for mgc_trend_1h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-06-18",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "alpaca_paper,alpaca_options_paper",
-   "design": "too_long",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
    "disposition": {
-    "decided_at": "2026-10-10",
+    "decided_at": "2026-10-15",
     "evidence": [
-     "comms/strategy_evidence/slv_trend_1h.json",
-     "comms/research/r3_cost_fidelity/2026-10-10.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
+     "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "missing": "a trade-level reconciliation of Stage-0 (n=68, +0.781R, 4/4 folds, 5.0bps) against the live record that drove the 2026-08-24 operator demote (0/13 wins, -$5,375): replay the harness over the live window and match entries/exits; THEN a Tier-3 flip to execution: live on alpaca_paper to open a real Stage-1 soak (PI-20261004-JC8KDKLF-0010)",
-    "reason": "Stage-0 passes every bar clause (n=68>=30, +0.781R, 4/4 folds) but is the one leg whose offline window overlaps a live loss and an operator demote, so Gate 1 cannot pass it on the record alone. Signal parity: 22 packages in 47d vs ~8.7 expected on one account; the leg is rostered on two (alpaca_paper, alpaca_options_paper), and 2x expectation (17.4) sits inside Poisson95 [13.8, 33.3] \u2014 plausible, not verified per-account. Venue cell alpaca_equities|simulator is INCONCLUSIVE: 25.3bps round-trip vs 5.0 modelled, CI95 [-0.9, 59.2], n_exit 45. Resolver: NEEDS-DATA R-EXECUTION-SHADOW (S1->S2) / R-NO-OP (S0->S1). No mandate covers the flip; proposal only.",
-    "until": "2026-10-24",
-    "verdict": "NEEDS_DATA"
+    "reason": "mechanical soak passed: clean: pkg-08a3f8a838cc4688",
+    "trades": [
+     "pkg-08a3f8a838cc4688"
+    ],
+    "verdict": "PASS"
    },
-   "duration_days": 54,
-   "end_date": "2026-10-17",
-   "expected_per_week": 1.3,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-slv_trend_1h",
    "kind": "shadow",
    "leg": "slv_trend_1h",
-   "metric": "shadow order packages logged for slv_trend_1h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "54d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for slv_trend_1h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-08-24",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
    "design": "not_soaking",
-   "end_date": null,
-   "expected_per_week": null,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_1h",
    "kind": "shadow",
    "leg": "trend_donchian_1h",
-   "metric": "shadow order packages logged for trend_donchian_1h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
+   "metric": "shadow order packages for trend_donchian_1h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-06-01",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
-   "design": "too_long",
-   "duration_days": 80,
-   "end_date": "2026-12-17",
-   "expected_per_week": 0.88,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "not_soaking",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_ada_4h",
    "kind": "shadow",
    "leg": "trend_donchian_ada_4h",
-   "metric": "shadow order packages logged for trend_donchian_ada_4h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "80d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for trend_donchian_ada_4h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
-   "design": "too_long",
-   "duration_days": 73,
-   "end_date": "2026-12-10",
-   "expected_per_week": 0.96,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "not_soaking",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_avax_4h",
    "kind": "shadow",
    "leg": "trend_donchian_avax_4h",
-   "metric": "shadow order packages logged for trend_donchian_avax_4h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "73d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for trend_donchian_avax_4h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
-   "design": "too_long",
-   "duration_days": 105,
-   "end_date": "2027-01-11",
-   "expected_per_week": 0.67,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "not_soaking",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_sol_4h",
    "kind": "shadow",
    "leg": "trend_donchian_sol_4h",
-   "metric": "shadow order packages logged for trend_donchian_sol_4h (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
-   "recommended_fix": "105d exceeds 14d: verify signal parity by replaying the harness over live candles instead of waiting for packages, or do not shadow this leg",
+   "metric": "shadow order packages for trend_donchian_sol_4h (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
    "design": "not_soaking",
-   "end_date": null,
-   "expected_per_week": null,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-turtle_soup",
    "kind": "shadow",
    "leg": "turtle_soup",
-   "metric": "shadow order packages logged for turtle_soup (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
+   "metric": "shadow order packages for turtle_soup (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-07-07",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
    "account": "-",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
    "design": "not_soaking",
-   "end_date": null,
-   "expected_per_week": null,
-   "fail_rule": "observed rate outside that CI (signal not reproducing offline behaviour)",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-vwap",
    "kind": "shadow",
    "leg": "vwap",
-   "metric": "shadow order packages logged for vwap (any account)",
-   "n_needed": 10,
-   "pass_rule": "observed package rate inside the Poisson 95% CI of the backtest rate",
-   "power": "n=10 packages: a Poisson count \u2014 95% CI roughly x0.5..x1.8 of the rate, so it detects only a gross (>2x) rate mismatch",
+   "metric": "shadow order packages for vwap (any rostered account)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-05-24",
-   "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+   "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: prop:pkg-f17ceb55e3d04304",
+    "trades": [
+     "prop:pkg-f17ceb55e3d04304"
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_eth_prop",
+   "kind": "stage1",
+   "leg": "trend_donchian_eth_prop",
+   "metric": "clean closed trades on bybit_1/trend_donchian_eth_prop (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "sources": [
+    {
+     "accounts": [
+      "breakout_2",
+      "tradeify_1",
+      "velotrade_1"
+     ],
+     "checklist": [
+      "signal_fired",
+      "order_size_side",
+      "ticket_bracket_real",
+      "bracket_real_at_venue",
+      "management_no_fault",
+      "exit_journaled",
+      "fill_recorded"
+     ],
+     "counts_as": "Stage-1 soak trades (operator amendment 2026-10-15: live prop trades count)",
+     "feeds": "MD-PROMOTE-S1-S2 -> a PR adding the leg to bybit_2 AND bybit_portfolio together (mirror equality tests, human merge, not auto-land)",
+     "kind": "prop_live",
+     "n_needed": 1,
+     "n_rule": "DISTINCT signals (one per order package; the same signal fills on up to 3 prop accounts and is counted once); a signal is clean when at least one account's fill clears the prop checklist; an account ADAPTER fault (no venue read, exit not journaled) is recorded against the adapter, not the leg",
+     "portfolio_overlap_required": "BEFORE promotion the evidence record must report correlation of signals/returns and combined drawdown of trend_donchian_eth_prop (1h) vs the existing bybit_2 trend_donchian_eth_4h (two correlated ETH Donchian legs)"
+    }
+   ],
+   "started": "2026-10-15",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: prop:pkg-c58bbadd9b9a492f",
+    "trades": [
+     "prop:pkg-c58bbadd9b9a492f"
+    ],
+    "verdict": "PASS"
+   },
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_sol_prop",
+   "kind": "stage1",
+   "leg": "trend_donchian_sol_prop",
+   "metric": "clean closed trades on bybit_1/trend_donchian_sol_prop (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "sources": [
+    {
+     "accounts": [
+      "breakout_2",
+      "tradeify_1",
+      "velotrade_1"
+     ],
+     "checklist": [
+      "signal_fired",
+      "order_size_side",
+      "ticket_bracket_real",
+      "bracket_real_at_venue",
+      "management_no_fault",
+      "exit_journaled",
+      "fill_recorded"
+     ],
+     "counts_as": "Stage-1 soak trades (operator amendment 2026-10-15: live prop trades count)",
+     "feeds": "MD-PROMOTE-S1-S2 -> a PR adding the leg to bybit_2 AND bybit_portfolio together (mirror equality tests, human merge, not auto-land)",
+     "kind": "prop_live",
+     "n_needed": 1,
+     "n_rule": "DISTINCT signals (one per order package; the same signal fills on up to 3 prop accounts and is counted once); a signal is clean when at least one account's fill clears the prop checklist; an account ADAPTER fault (no venue read, exit not journaled) is recorded against the adapter, not the leg",
+     "portfolio_overlap_required": "BEFORE promotion the evidence record must report overlap with the existing bybit_2 roster (correlation of signals/returns, combined drawdown)"
+    }
+   ],
+   "started": "2026-10-15",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   }
  ]
 }

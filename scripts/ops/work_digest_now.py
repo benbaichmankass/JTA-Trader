@@ -192,6 +192,14 @@ def run(dry_run: bool = False, force: bool = False) -> int:
             aw.commit(prep, "dry_run")
         return 0
 
+    # PHONE-KEEPALIVE: a stale phone heartbeat is its own SYSTEM-channel alert (+ one recovery message), not only a
+    # line in the collapsed "Manager watch" section below. Never raises.
+    try:
+        from scripts.ops import phone_hb_alert  # noqa: PLC0415
+        phone_hb_alert.run()
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: phone-hb-alert failed: {exc}")
+
     from send_ping import enqueue  # noqa: PLC0415
 
     try:
@@ -281,6 +289,11 @@ def _research_prepare():
         return {"error": f"{type(exc).__name__}: {exc}"}, None
 
 
+#: The "nothing to decide" line. It rides the HEADER; the Needs-you section is
+#: only built when there is an ask, or the same line printed twice.
+NO_ASK_PREFIX = "🟢 No new decisions for you"
+
+
 def route_attention(prep: dict) -> tuple[str, str, str]:
     """Split the attention pass's messages by WHO acts (operator, 2026-10-11):
     ``Needs you`` holds ONLY genuine operator decisions (❓ ask_operator);
@@ -296,7 +309,7 @@ def route_attention(prep: dict) -> tuple[str, str, str]:
     rest = [m for m in msgs if not m.startswith(("❓", "🔎"))]
     n_open = (prep.get("receipt") or {}).get("ask_operator_open")
     tail = f"open ask_operator items: {'—' if n_open is None else n_open} (GET /api/bot/work/report)"
-    needs = ("\n".join(ask) + "\n" + tail) if ask else f"🟢 No new decisions for you · {tail}"
+    needs = ("\n".join(ask) + "\n" + tail) if ask else f"{NO_ASK_PREFIX} · {tail}"
     return needs, "\n".join(rops), "\n\n".join(rest)
 
 
@@ -312,6 +325,9 @@ def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
 
     needs, research_ops, watch = route_attention(prep)
     attention_line = (needs.splitlines() or ["—"])[0][:200]
+    # No ask -> the header already says so; a collapsed section repeating it
+    # is the duplicate "No new decisions" line (TELEGRAM-CHANNELS-3 item 4).
+    needs_section = not needs.startswith(NO_ASK_PREFIX)
     if research is None or "error" in (research or {}):
         r_head = "🔬 research: ⛔ section FAILED to build — queue NOT checked"
         r_body = ("⛔ The research-queue section failed to build "
@@ -338,10 +354,11 @@ def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
                         attention_line, f"{r_head} · {w_head}"])
     if research_ops:
         r_body = (r_body + "\n\n🔎 For research-ops (not you):\n" + research_ops).strip()
-    sections = [
-        Section(summary="Needs you — decisions only", body=needs, priority=10),
+    sections = [Section(summary="Needs you — decisions only", body=needs, priority=10)] \
+        if needs_section else []
+    sections += [
         Section(summary="Research queue — new since last update", body=r_body, priority=20),
-        Section(summary="Work — done · verified · blocked · didn't work · next",
+        Section(summary="Work — blocked · didn't work · in flight · next · shipped · verified",
                 body=w_body, priority=30),
     ]
     if watch:

@@ -4,7 +4,7 @@
   "_how_to_raise": "Do not, without an operator decision. Raising it declares a NEW branch that contradicts binding canon. It needs a reason recorded here, an existing backlog row, and the operator's call — it is not a way to get a PR green.",
   "surfaces": {
     "scripts/ml/strategy_review_packet.py": {
-      "known_accrual_gated_branches": 7,
+      "known_accrual_gated_branches": 6,
       "backlog_row": "B4",
       "declared_on": "2026-09-09",
       "declared_by": "MI-215",
@@ -21,7 +21,8 @@
       "not_a_fix": "Lowering MIN_CLOSED_FOR_ACTION or widening the window reduces this count by ZERO -- the branches remain, re-scaled -- because under the model no setting of either makes a live count an edge basis. THE MODEL, which is what to carry rather than a ban on asking: edge is established OFFLINE (purged walk-forward CV, replay_pregate_fleet, the point-in-time backfills); live data establishes MECHANICS only, at 1-2 executed trades rather than calendar time; SLOW LIVE ACCRUAL IS A FEATURE OF THIS SYSTEM, NOT A BARRIER, so `none_gradeable` on a live window is not a defect; and fewer legs does not raise trades-per-leg. The count falls only when a verdict stops being control-dependent on accrual at all. Ask about the window and the floor freely -- the operator retracted the earlier prohibition on 2026-09-09 ('the problem isn't the question, it's the underlying misunderstanding of infra and processes'); what was wrong with the four options put to them was the model underneath, not that they were asked.",
       "narrowed_by": "MI-217 (2026-09-10)",
       "narrowed_note": "MI-217 did NOT lower this count and deliberately did not try. It made the ABSENCE of offline evidence legible: where the gate would have said `hold` for want of live closes AND no offline record exists, it now says `no_offline_evidence`. But the branches still key on n_closed / MIN_CLOSED_FOR_ACTION, so they remain accrual-gated and are still counted here, correctly. Count UNCHANGED at 7; only the line numbers moved. The repair that LOWERS it is the larger Tier-3 change of sourcing the EDGE verdict from the offline record, which is not what was approved.",
-      "backlog_row_note": "Re-pointed 2026-09-21 by the operating reset. Was BL-20260909-STRATEGY-REVIEW-PACKET-GRADES-EDGE-OFF-A-LIVE-WINDOW-WHICH-THE-PROMOTION-EVIDENCE-RULE-FORBIDS, a row in the now-archived health-review backlog. The SAME finding is carried by checklist item B4 ('Re-scope the review packet -- Stage 2 on money, Stage 1 on cost fidelity'), which is the repair. The row was re-pointed, not dropped: an entry naming a row that does not exist is how a real finding gets silenced, and that is what this ledger's own _doc warns about."
+      "backlog_row_note": "Re-pointed 2026-09-21 by the operating reset. Was BL-20260909-STRATEGY-REVIEW-PACKET-GRADES-EDGE-OFF-A-LIVE-WINDOW-WHICH-THE-PROMOTION-EVIDENCE-RULE-FORBIDS, a row in the now-archived health-review backlog. The SAME finding is carried by checklist item B4 ('Re-scope the review packet -- Stage 2 on money, Stage 1 on cost fidelity'), which is the repair. The row was re-pointed, not dropped: an entry naming a row that does not exist is how a real finding gets silenced, and that is what this ledger's own _doc warns about.",
+      "lowered_by": "SOAK-REDEFINE (2026-10-15): Override 4 (`shadow_soak_days < 14` promote hold) REMOVED under the operator's soak decision of that day ('nothing needs to soak for more than one or two trades'). 7 -> 6. The six remaining branches key on n_closed / MIN_CLOSED_FOR_ACTION (edge read off a live window) and stay tracked by B4."
     }
   }
 }

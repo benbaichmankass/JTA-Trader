@@ -1,0 +1,112 @@
+id: RQ-20261014-f516-10
+title: 'Programme 05 Q5 pool admission (PROP-BOOK-SEARCH-1095D): the admitted 4h Donchian pair (ETH 4h + SOL 4h, 1095 d) as a velotrade_classic_1step
+  book'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+question: 'Does the 2-leg book trend_donchian_eth_4h + trend_donchian_sol_4h (both admitted at 1095 d by RQ-20261007-030: n=116 each,
+  +0.287R / +0.390R, faithful) earn ev_net_usd_per_life > 0 on every seed at every arm under velotrade_classic_1step, net of the full
+  cost stack, with the switch armed -- i.e. does it enter the prop CANDIDATE POOL for velotrade_1?'
+why_this_matters: 'Row PROP-BOOK-SEARCH-1095D: the 1095 d records admitted these legs and the follow-on book unit was owed but had no
+  dispatchable form (prop_book_search.py writes no verdict.json). prop_ev_grid''s book shape (--leg + --trades in --common) does. trend_donchian_xrp_4h
+  (1460 d, n=46) is NOT in this book: its window differs (a pooled sim would read 1 year of XRP-only history) and n=46 < the 88 floor,
+  so it waits for accrual -- stated, not dropped.'
+power:
+  expected_n: 116
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.3 needs ~87-90 observations (the RQ-20260928-011/-012 floor). The --leg leg trend_donchian_eth_4h has 116 committed 1095
+    d trades (wc -l, 2026-10-14); SOL 4h also 116. Below 88 the grid grades UNDERPOWERED, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed 1095 d trade evidence; nothing accrues.
+decision_rule:
+  id: RULE-RQ1014-F516-10-POOL-1095D-VELOTRADE_1
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per seed and arm: path-mode ev_net_usd_per_life and p_net_positive over the 2-leg 4h book; arms A050, A100. Velotrade''s
+    own stack (ruleset header, first-party 2026-10-04): 6 bps round-trip commission, 3 bps slippage, 0.05%/night swap (dxtrade model),
+    --no-hedge; lev caps ETH 5x, SOL 5x. The committed trade rows already carry the harness''s fee + slippage + funding via execution_costs.resolve_cost_policy()
+    (D1-cleared trend harness); the sim then charges the venue''s own stack on top.'
+  rule: 'pass_all_seeds with --p-floor 0.0 (pool admission is clause (R) of the operator''s 2026-10-06 go-live gate, as RQ-20261006-070/071
+    and RQ-20261007-215 used): PASS IF ev_net_usd_per_life > 0 on ALL 5 seeds at EVERY arm -> the book is ADMITTED to the velotrade_1
+    candidate pool and the next rung is a head-to-head against f516-01''s baseline on the same seeds (the f516-08 shape); FAIL IF ev
+    <= 0 on any seed at any arm -> not admitted for this firm (re-queues once only if the miss is a single seed). UNDERPOWERED IF n
+    < 88. NULL never arises at p_floor 0. Admission is to the POOL only.'
+  what_it_does_not_do: 'Changes no roster: trend_donchian_sol_4h is execution: shadow in config/strategies.yaml and neither 4h leg is
+    on a prop account. Not a head-to-head (different window from the 730 d incumbent records).'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: '2-leg prop_ev_sim book, 5 seeds x the unit''s arms at the default 4,000 lives, --jobs 4 (2026-10-14 smoke: 400 lives of the
+    velotrade book in well under a minute).'
+compute: cpu_long
+value:
+  bucket: information
+  usd_at_stake_per_month: 120
+  confidence: 0.4
+  basis: 'stand-in: pool admission is information until a head-to-head; closes a queued row. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl
+  - --arm
+  - A050=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+  - --arm
+  - A100=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8
+  - --common
+  - --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml
+    --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh
+    --lev-cap trend_donchian_eth_4h=5 --lev-cap trend_donchian_sol_4h=5
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - pass_all_seeds
+  - --p-floor
+  - '0.0'
+  - --n-floor
+  - '88'
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - 'RQ-20261014-f516-10: Programme 05 Q5 pool admission at 1095 d, velotrade_1'
+  inputs:
+    research_unit: RQ-20261014-f516-10
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/B6.json
+- scripts/research/prop_ev_sim.py
+- scripts/research/prop_ev_grid.py
+- docs/claude/work/checklist/PROP-BOOK-SEARCH-1095D.json
+- research/queue/RQ-20261007-030.yaml
+last_dispatched_at: '2026-10-14T23:00:56+00:00'
+grading:
+  attested: RULE-RQ1014-F516-10-POOL-1095D-VELOTRADE_1
+  auto: true
+  decision_rule_id: RULE-RQ1014-F516-10-POOL-1095D-VELOTRADE_1
+  evidence:
+  - research/results/RQ-20261014-f516-10/38651474732.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

@@ -18,7 +18,7 @@ so we can't grow it). Its memory-heavy jobs each need a big slice of that 6 GB:
 |---|---|---|---|
 | Training cycle (`python -m ml train` per manifest) | `ict-trainer.timer` (daily ~00:44) + catch-up | **~5 GB** per manifest | `MemoryMax=5G` cgroup cap → cgroup-OOM if it exceeds |
 | Promotion-readiness sweep | `ict-promotion-readiness.timer` (**04:00**, moved off the cycle window 2026-07-17) | **~3.2 GB** / ~99 min | |
-| Drift-retrain scan | `ict-drift-retrain.timer` (hourly) | light when plan-only; **~5 GB** if it dispatches `ml train` | |
+| Drift-retrain scan | no timer (retired 2026-10-25; started weekly by `/ml-review`) | light when plan-only; **~5 GB** if it dispatches `ml train` | |
 | **Manual session training** | a human/session runs `python -m ml train …` | **~5 GB** | the uncoordinated one that caused the thrash |
 
 **Any two heavy jobs at once > 6 GB → cgroup-OOM or swap-death.** The

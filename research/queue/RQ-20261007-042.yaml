@@ -4,7 +4,7 @@ title: >-
   bybit_2 legs and the two prop legs, does a Chandelier trail that TIGHTENS when Wilder ADX
   fades (and stays at the leg's wide base while momentum confirms) beat the config-exact
   price-path trail through the exit-refinement P2 gate?
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -126,3 +126,17 @@ related:
 - RQ-20261007-040
 - RQ-20261007-041
 last_dispatched_at: '2026-10-08T13:05:53+00:00'
+grading:
+  decision_rule_id: RULE-RQ1007-042-ADX-CONDITIONED-TRAIL
+  graded_at: '2026-10-16'
+  graded_by: P1-ATM-BACKLOG-1016 (lane session, manager dispatch 2026-10-16)
+  read_state: measured
+  needs_review: false
+  verdict: indeterminate
+  reason: 'The PASS clause needs walk-forward wins >= 4 of 6 and trail-exit attribution, which no row
+    carries. Under the rule''s own gate-only honest_negative clause (base_trades_OOS >= 25, no cell clears),
+    MEASURED research/results/RQ-20261007-042/37781041140.jsonl: honest_negative on xrp_pullback_2h (0/4,
+    OOS 49), ada_pullback_2h (0/4, 49), trend_donchian_sol_prop (0/4, 48). Gate passes awaiting folds:
+    trend_donchian_eth_4h adx20_k0_t2.5 (OOS 49), trend_donchian_xrp_4h adx20/adx25_k0_t2.5 (31), trend_donchian_eth_prop
+    adx25_k0/k3_t1.8 (49). Hypothesis read not establishable (3 legs ungraded). Follow-up: P1-Q4-eth4h-momentum-confirm,
+    P1-Q4-xrp4h-exit-confirm, P1-Q4-ethprop-exit-confirm.'

@@ -3,9 +3,19 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 import src.prop.prop_journal as pj
 import src.prop.prop_reconcile as pr
 from src.prop import prop_overview as po
+
+
+@pytest.fixture(autouse=True)
+def _no_mark_feed(monkeypatch):
+    """No network: the PROP-TRACKING mark estimate reads the bot's Bybit feed. Default = feed unavailable
+    (no estimate), so these tests keep measuring the venue/journal states; tests/test_prop_tracking.py
+    covers the estimate."""
+    monkeypatch.setattr("src.runtime.local_pnl.last_mark_price", lambda *a, **k: None)
 
 NOW = datetime(2026, 10, 10, 16, 0, tzinfo=timezone.utc)
 ACCTS = {

@@ -350,7 +350,7 @@ signs in, types a credential, or needs an account.
 | **OPERATOR GATE: "purchase account now"** | Reached only when 1a and 1b pass. The manager asks the operator to purchase a Breakout terminal account, **after the operator has read the terms (§ 7.4)**. | **purchase** | — | Operator buys; the manager records it. |
 | **2. Capture with login** | The operator logs in **by hand** in the WebView. Redacted DOM capture of the real terminal; read-only: positions, orders, account snapshot. Measures § 5.4 (do SL/TP survive the client being closed) with one tiny hand-placed position. Session-expiry and any email-code or 2FA behaviour recorded. | **yes** | 2–3 | Captured, redacted fixtures committed; the questions in § 7.3 answered. |
 | **3. Armed click, dry then one watched live** | Held Tier-2: the submit and its confirmation built from the phase 2 capture; dry round trip (D1–D7 analogue), then **one** minimum-size live round trip under criteria registered before the run. The operator present. | yes | 3–4 | D and L criteria pass; auto-revert armed. |
-| **4. Soak** | Probation (first 5 trades or 72 h), trade-by-trade reports, then steady state; auto-revert to `read_only` on the VM executor's triggers. | yes | 2 + observation | Gate 1-style review. |
+| **4. Soak** | Mechanical soak: the first 1–2 clean trades (OPERATING-PLAN § 2 "The soak is MECHANICAL"), trade-by-trade reports, then steady state; auto-revert to `read_only` on the VM executor's triggers. | yes | 2 + observation | Gate 1-style review. |
 
 **Effort (estimate):** before the gate ≈ **8–10 lane-days** (0.5 + 2–3 + 5–6); after it ≈ **7–10** (2–3 + 3–4 + 2). Total
 **≈ 15–20 lane-days**, with independent review rounds likely the long pole. Everything before the gate costs **no account
@@ -671,7 +671,7 @@ Every one of these is a **refusal with the form dump**, never a guess, so the fi
    - In your **main** Gmail: Settings → Forwarding → add the new address. Confirm with the code Google sends to the new inbox.
    - Still in the main Gmail, add a filter `from:(breakoutprop.com)` → "Forward it to" the new address.
 2. **Install:**
-   - Open the latest `phone-executor-apk` run in GitHub Actions and download the `phone-executor-1b-apk` artifact.
+   - Open the latest `phone-executor-apk` run **on `main`** (or a manual dispatch) in GitHub Actions and download the `phone-executor-1b-apk` artifact. Since 2026-10-15 a branch push runs only the compile/test job and publishes no APK (PI-20261015-QC5PFG9A-0001).
    - Unzip it and install `app-release.apk`, allowing "install unknown apps" for your browser once.
 3. **Open "Metis Executor" → Setup:**
    - your Breakout login email;
@@ -771,9 +771,85 @@ ticket's trail (the trail never fights a human's stop) until the human's `{kind:
 record, then resumes from them. A `locked`/`ended` state left by the old code is ignored on load with a log line (an old
 human-moved lock is kept as the hold). The trail only ever tightens.
 
-**UNMEASURED:** no capture has shown Breakout's Positions row edit control or its dialog. The headless fixtures
-(`test/exec_check.js`, "amend") prove the helpers' mechanics on synthetic DOM only. The first real amend, dry or live,
-either passes or refuses with the dump (row headers and controls, dialog inputs and buttons) that names the label to fix.
+**An UNREAD stop is never a human move (operator, 2026-10-18).** breakout_2 `prop-manual-c1dba3c376b3#a7` on app
+1b.265: `sheetOrders()` returned `trigger: null` for the Stop row (its ancestor held 0 or 2+ price-shaped cells, so
+no single value was read), `close(null, fromSl)` was false, the app reported `human_moved` with *"terminal stop null !=
+expected 2452.65"*, and the server held a trail nobody had touched — the operator had not moved the stop. *"We did not
+read it"* and *"we read it and it differs"* are distinct states (the collapsed-states rule) and are now kept apart at
+every layer: exec.js returns `why: no_price | many_prices` and the cells' digit-masked `px_shapes` beside the null
+(exec.js 2026-10-18.3, signed); the app refuses the attempt as *"stop trigger UNREAD"* (and *"modal trigger UNREAD"*)
+instead of calling it a human move; the server (`phone_trail._unread_stop`) records a `human_moved` report that carries
+no read value and whose evidence is a null/absent reading as status `unread` — failed like any other attempt, backoff,
+retried, one Telegram per live attempt naming the stop the plan wants and the step captures — and never a hold. A
+`human_hold` already written from such a report is released by the next plan (`_release_unread_hold`, a `hold_released`
+history row), so the trail resumes on its own with no journal edit by hand. A report naming two numbers (*"terminal
+stop 2470 != expected 2450"*) or carrying a read-back value stays a human move and still holds.
+
+**Why the stop read null, MEASURED (2026-10-18 14:32Z, app 1b.300, amend #a8, capture step `003-stop_row`).** The
+[1 TP / 1 SL] Stop row is `Long | Stop loss | 2,452.65 USD | 0.52 ETH` with the number and the unit in separate
+spans, so `sheetOrderRows` found TWO bare price-shaped leaves — the trigger and the QUANTITY — and returned null; the
+terminal's stop equalled the server's. exec.js 2026-10-18.4 picks the trigger by the **quote unit**
+(`unitOf(leaf)`: the unit in the leaf's own text, else the first word after it in the nearest ancestor whose text
+starts with it; USD/USDT/USDC = price, the coin = quantity), reports `n_usd` / `why` (`no_price`,
+`many_prices_no_unit`, `many_quote_prices`) and the units in `px_shapes`, and the real-page fixture
+`tools/phone-executor/test/fixtures/breakout-sheet-tpsl-stop-row` (built from that capture with
+`fixture_from_capture.py`) proves the read in CI. Same day, the planner: a running backoff is waived ONCE when a
+NEWER signed exec.js is served than the one the last attempt ran (`backoff.exec_js`, `_served_exec_js`), so a reader
+fix is tried on the next plan instead of after the 8-bar cap (#a8 sat at `fails: 7`). And the planner emits **no
+amend while the `sheet_edit` gate is closed** (drill passes < 3 and no pin): the app would refuse the pencil by
+design and every such refusal counted as a failure; instead the plan is logged, ONE alert per ticket names what arms
+the gate, nothing backs off, and the first plan after the gate opens emits at once (a gated plan never consumes the
+exec.js waiver).
+
+**The edit control is MEASURED; its dialog is not yet** (2026-10-18, drill 1 on breakout_2, run
+`drill-drill-20261018-163942-9541d8-20261018T163959Z`, 1b.300 + exec.js 2026-10-18.4). The first drill after #18996
+passed every step up to `pencil` — `stop_row` read `trigger 2452.65`, `stop_matches_server` read the same as the
+server — and FAILED at `modal_open` (`n=0`). The captures `009-pencil` / `010-modal_open` show why: the Stop row's
+edit control is `span[tabindex] > button[aria-label="Edit order"] > svg`; `rowIcons` keeps the OUTERMOST interactive
+element (the wrapper span), `sheetEditStop` called `.click()` on it, and a click on an ancestor never reaches the
+button's handler (events bubble up, not down) — the DOM after the click holds only the Position details dialog. exec.js
+2026-10-18.5 resolves an icon to its control (`ctlOf`: the ONE button / role=button / link inside the wrapper) before
+clicking, and adds `sheetEditStopTarget(scroll)` — the pencil's touch point under `sheetTarget`'s rules — so the app
+(`pencilTap`, from the next APK) touches the pencil with the same trusted finger the Positions row needed; a 1b.300
+phone picks up `.5` over the signed remote script and clicks the button. Both are proven on the real-page fixture
+`breakout-sheet-tpsl-stop-row` (the control resolves to `button "Edit order"`, the point lies inside its rect) and
+on a synthetic wrapped-pencil page (the click opens the modal).
+
+**The "Edit Stop loss" modal is MEASURED, and Cancel closes the whole sheet** (2026-10-18 19:00Z, drill 2 on
+breakout_2, run `drill-drill-20261018-185905-39549f-20261018T190001Z`, 1b.300 + exec.js 2026-10-18.5; fixture
+`breakout-modal-edit-stop-loss` from its `010-modal_open` capture). The pencil's button click opened the modal; it
+holds Quantity (`name=protectionStopLossSize`), **Trigger (`name=protectionStopLossPrice`, unit USD)**, Entry
+distance (`protectionStopLossDistance`, %), and under them the "Stop loss Entry distance" **slider** (`input
+type=range` inside `div.ds-slider`), R:R, Cancel and Confirm. The drill typed 2452.63 into the Trigger input, read it
+back, left the quantity at 0.52, and the slider's thumb did not move between the before and after captures while the
+terminal recomputed its "Est. maximum loss" from the typed price — the operator's rule (via the manager, same day:
+*click the field with the price level for the SL and type a new value; never the slider*) is what the code does, and
+exec.js 2026-10-18.6 makes it explicit: `modalSetTrigger` refuses anything but a text input outside any slider, reports
+the resolved input's `name`/`type`, and `modalInfo` counts the modal's `sliders` so a capture shows the slider seen and
+left alone. The drill then FAILED at `stop_unchanged` (`before 2452.65 after null`): the modal's **Cancel closed the
+whole position sheet**, not just the modal (captures `014-modal_cancel` / `015-stop_unchanged` show the Positions
+grid, no sheet root — and the modal capture itself holds no sheet root), so the re-read found no sheet. The live
+amend's read-back after Confirm reads the sheet the same way, which would have reported `mismatch` with a null read on a
+stop that had in fact moved, and the next attempt would have called the new level a human move. So (app, next APK):
+every Stop-row re-read after a modal goes through `sheetEnsureOpen` (re-opens the sheet with the same native touch,
+recorded as `sheet_after_cancel` / in the `stop_reread` note), and an amend that finds the terminal already at the
+ASKED level reports `amended` with that read instead of `human_moved`.
+
+**The system moved a live stop on its own — OBSERVED 2026-10-18 20:54Z** (breakout_2, ticket
+`prop-manual-c1dba3c376b3`, 1b.311 + exec.js 2026-10-18.6). After #19029 merged and the operator installed 1b.311
+(20:25Z), rehearsal drills 3/4/5 (issues #19035 / #19036 / #19038) passed every step on the real position — the sheet
+re-opened after Cancel each time — and armed `sheet_edit` at 20:53:59Z. The planner's next pass (20:54:38Z) waived the
+backoff for the newer script and emitted #a9 (tighten 2452.65 → 2391.18); the phone applied it by 20:55:11Z: capture
+`amend-prop-manual-c1dba3c376b3-a9-20261018T205440Z` (11 steps, none failed) — pencil touched, modal opened, 2391.18
+typed into the price input and read back, Confirm clicked live, **the sheet re-opened after Confirm** (so Confirm
+closes it exactly as Cancel does — now MEASURED), `stop_reread 2391.18 asked 2391.18`. The stop sits below the
+2405.89 entry: profit locked, no human in the path. **The server then mis-recorded the success:**
+`record_amend_result` demanded the TP read back too (*"phone said amended but read back sl=2391.18 tp=None (asked
+sl=2391.18 tp=2167.19)"*) and wrote `mismatch` (fails 8), while an sl-only amend never touches the TP — the app
+edits the Stop row's modal and reads the stop back; it has no TP to read — and every test had passed `tp_read`. Fixed
+the same day: an sl-only amend (`kind: sl`) verifies the stop only; a TP amend still verifies the TP; a wrong stop
+with no TP read is still a mismatch. Residual on that ticket until its next tighten: the trail's `resting_sl` is
+2391.18 (the terminal's truth) while the fill's `open_risk.sl` still reads 2452.65.
 
 ### 7.15 The device-local ARMED switch is removed: live vs dry is decided only by the server (2026-10-06, lane ARMED-GATE)
 
@@ -990,3 +1066,65 @@ the new build (or the next attempt posts its `inbox` line) and it reads `ok`, th
 - **Not read:** the Funded Trader Agreement, the Terms of Service, the private Android repo (this session).
 - **Inherited without re-checking:** the Android app facts in § 1.1 (a 2026-09-30 reading of a commit dated 2026-08-13).
 - **Not claimed:** that any part of this works. It is a plan with a stop at Phase 1.
+
+### 7.20 Observable and testable, built once (PHONE-EXEC-OBSERVABLE-1018, operator decision 2026-10-18)
+
+**Why.** Between 2026-10-17 and 2026-10-18 four APKs (#18709, #18775, #18811, #18901) each guessed why one
+native tap on Breakout's Positions row opened no sheet, waited for the next live trail amend, and read a
+40-character diag line. The operator ended that loop (popups, ~08:00Z): *the app must know what it is doing,
+record its own actions without anything popping up on screen, and show what it did right and wrong.* DECIDED
+(all five pieces; reversal = a new operator decision on the same row): captures stored on the server only,
+auto-deleted after 7 days, never committed to this public repo; live `breakout_2` trail amends keep trying
+meanwhile and every refusal alerts the operator with the stop to set by hand.
+
+| piece | what it is | where |
+|---|---|---|
+| 1 RECORDING | at each step of every flow (positions read, row find, tap, sheet open, field set, confirm/abort) the app draws its own WebView to an off-screen bitmap (no MediaProjection, nothing on screen), paints redaction boxes over account ids / balances / equity / P&L, takes a sanitized DOM snapshot (`__ex.snapshot`), and posts both to `POST /api/bot/prop/phone/capture`. The server scrubs a second time, bounds every write, stores under `<trade_journal.db dir>/phone_captures/<acct>/<run>/` and purges after 7 days (`ict-phone-capture-purge.timer` + an at-most-hourly purge on the POST). Read on the diag tier: `GET /api/diag/phone_captures`, `phone_capture`, `phone_capture_file`. | `src/prop/phone_captures.py`, PR 1 |
+| 2 REHEARSAL | a server-issued **drill**: the full stop-amend flow on a real open position up to the final Confirm, then Cancel and close the sheet. Pass/fail per step with captures. Triggered on demand by a system-action. Never an order change. | PR 3 |
+| 3 REAL-PAGE TESTS | tooling that turns a captured DOM snapshot into an `exec_check.js` fixture with the numbers replaced, so CI proves a fix against the real Breakout page. | PR 5 |
+| 4 SIGNED REMOTE LOGIC | `exec.js` fetched from our own API at startup and on a version bump, pinned by version, verified with an embedded ed25519 public key, bundled copy as the fallback. Signed in CI with a key in Actions secrets. Native/Kotlin changes still need an APK. | PR 2 (app) + PR 4 (CI + route) |
+| 5 ALERT | when a live amend is refused: ONE Telegram message with the stop to set by hand and a link to the step captures. | PR 5 |
+
+**Done when** the drill passes 3 times in a row on the operator's phone (`breakout_2`), with captures showing
+each step; then the live amend runs on the same logic. Row: `PHONE-EXEC-OBSERVABLE-1018`.
+
+**The drill may open and close a real test trade (operator grant `MD-EXEC-DEV-TEST-TRADES`, 2026-10-18; PR 6).**
+Waiting for a live trail amend to exercise the sheet meant one attempt every 8 bars; the operator ended that too,
+verbatim in `config/mandates.yaml`: *"we can open and close trades when needed in order to verify or understand how
+to do the operations. That is a standing mandate."* `src/prop/exec_test_trades.py` reads the granted entry (absent =
+refuse) and writes ONE minimum-size long with a protective stop and a 30-minute `close_by`, under the bounds the
+manager set and the operator can change in the entry: the three phone-executed prop accounts only, the account's
+declared instruments, 6 per account per UTC day, never when the day loss is past half the daily-DD switch limit or
+cannot be read, never while a strategy ticket or position is open on the same symbol. `claim_next` re-checks every
+bound when the phone claims the ticket and refuses it otherwise. Such a trade is execution plumbing, not a strategy
+(`strategy: exec_test`, `meta.origin: exec_test`, ids `exec-test-*`): the trades snapshot, the prop overview's
+closed set, soak grading and the trade-quality review drop it; an OPEN test position stays visible in the overview
+because it is real money. A test trade the drill fails to close by `close_by` raises one alert naming it; nothing
+halts. The drill extension that writes the ticket, confirms the amend and closes the position is PR 3's `symbol:`
+option (server) and the app PR that follows.
+
+**Piece 3 and piece 5 as built (PR 5).** `tools/phone-executor/test/fixture_from_capture.py` turns one
+`NNN-<step>.dom.json` (read from `GET /api/diag/phone_capture_file`) into `fixtures/<name>.html` + `.meta.json`:
+every element laid out absolutely at the rect it had on the phone, same tags / roles / attributes / nesting, the
+React handler names restored, **every digit run replaced** (same length and leading digit, seeded by the value so one
+value maps to one replacement across the page); ids and money were already masked on the device.
+`exec_fixtures_check.js` serves each fixture on the trade host and runs its `<name>.spec.json` (partial deep match)
+against the bundled `exec.js`; it is a step of the APK workflow's `check` job. A fixture proves READS and TARGETS; a
+tap that must open something is the drill's job. The raw capture never enters the repo. The first fixture
+(`sample-positions-sheet-synthetic`) is built from `exec_check.js`'s synthetic page to prove the tooling; a real
+capture replaces it. Building it found two on-device redaction bugs fixed in PR 2: the sheet's "1 TP / 1 SL" tab
+and the Positions count were masked (blinding `sheetInfo`), and the Value column was masked although it is the
+kept quantity times the kept mark price and `positionsRead`'s only quantity source on the grid.
+The alert (`src/prop/phone_trail.py::_hand_set_alert`): a **live** amend the phone refused before any click sends
+ONE Telegram line **on every refusal** (not only the first of a streak, which stays the dry-mode behaviour) naming
+the symbol, direction, the stop to set by hand and the stop it moves from, plus the diag link to that attempt's
+step captures (`capture_run` in the phone's `amend_result`, stored on the amend record). The trail's backoff, the
+red flag after five failures and the recovery ping are unchanged.
+
+**Capture contract (PR 1).** One POST per step: `run_id` (`[A-Za-z0-9][A-Za-z0-9._-]{2,79}`, e.g.
+`amend-<ticket>-a<seq>-<UTC stamp>`), `flow` (`entry|amend|drill|positions|login|probe`), `step`
+(`[a-z][a-z0-9_]{1,39}`), `seq`, `ok` (true/false/null), `note` (≤300 chars, scrubbed), optional `ticket_id`,
+`app_version`, `page` (`fg|bg`), `png_b64` + `png_type` (JPEG/PNG/WebP ≤ 900 KB, magic bytes checked), `dom`
+(JSON tree ≤ 600 KB). Stored as `NNN-<step>.json` (meta) + `.jpg|.png|.webp` + `.dom.json`. Caps: 80 steps per
+run, 400 runs per account (oldest dropped), 400 MB per account (refused with `ok: false`, the flow carries on).
+The write's `ok` and the step's `ok` are two fields (`{"ok": true, "stored": true, "capture": {... "ok": false}}`).

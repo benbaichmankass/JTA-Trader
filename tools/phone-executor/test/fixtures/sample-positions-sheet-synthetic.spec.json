@@ -1,0 +1,21 @@
+{
+  "note": "SAMPLE: a fixture built from exec_check.js's SYNTHETIC sheet page (not a phone capture) to prove fixture_from_capture.py + exec_fixtures_check.js end to end. Every number is replaced; what it asserts is that the READERS still parse the shape. A real capture (GET /api/diag/phone_capture_file) replaces it.",
+  "checks": [
+    {"call": "__ex.positionsRead()", "expect": {"state": "read", "n_rows": 1, "count": 1, "layout": "div_grid", "rows": [{"symbol": "ETH", "side": "short", "row_kind": "child", "qty_src": "value/mark", "upnl": null, "netpnl": null}]},
+     "note": "positions grid: the ONE child row parses (symbol, side, kind; qty from Value/mark); P&L columns were masked on the device and read as null"},
+    {"call": "__ex.positionsRead().rows[0].qty > 0 && __ex.positionsRead().rows[0].entry > 0 && __ex.positionsRead().rows[0].mark > 0", "expect": true,
+     "note": "positions grid: qty, entry and mark are numbers (replaced, never the phone's)"},
+    {"call": "__ex.sheetInfo('ETHUSD')", "expect": {"open": true, "n": 1, "title_ok": true, "subtitle": "Position – ID", "tabs": {"details": 1, "trades": 1, "tpsl": 1}},
+     "note": "sheet: open, titled with the symbol, the position id redacted on the device, three tabs"},
+    {"call": "__ex.childShape()", "expect": {"ok": true, "hdr": 9, "groups": 1, "child_rows": 1, "sides": [{"side": "short", "cells": 9, "depth": 1, "row_depth": 2, "role": "", "picked": true, "tpsl": 1}]},
+     "note": "child shape: one Short child row under one group, picked"},
+    {"call": "__ex.sheetOrders()", "expect": {"ok": true, "n_stop": 1, "n_take": 1, "rows": [{"type": "stop", "n_px": 1, "close_side": "long", "pencils": 1, "icon_lines": ["button P ✎", "button D ⓧ"]}, {"type": "take", "n_px": 1, "close_side": "long", "pencils": 1}]},
+     "note": "sheet orders (1 TP / 1 SL tab): the stop row and the take row, one pencil each, the cancel glyph denied"},
+    {"call": "__ex.sheetOrders().rows[0].trigger > 0", "expect": true, "note": "sheet orders: the stop trigger is a (replaced) number"},
+    {"call": "__ex.sheetDetails().ok", "expect": false, "note": "sheet details: NOT readable while the orders tab is shown (the drill reads details first, then switches tabs)"},
+    {"call": "__ex.sheetTarget('ETHUSD','child_entry',false)", "expect": {"ok": false, "why": "sheet_open"}, "note": "targets: with the sheet open no row tap is offered"},
+    {"call": "__ex.modalInfo()", "expect": {"n": 0}, "note": "no edit modal open"},
+    {"call": "__ex.modalsOpen()", "expect": {"n": 0}, "note": "no stray modal"},
+    {"call": "__ex.terminal()", "expect": {"ready": true, "panels": true}, "note": "terminal classifier: panels seen"}
+  ]
+}

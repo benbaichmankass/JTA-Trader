@@ -219,6 +219,9 @@ def unit_not_running(u: dict, now: datetime) -> str | None:
         return None
     if _cadence_not_elapsed(u, now):
         return None
+    nb = _parse_ts(u.get("not_before"))
+    if nb is not None and nb > now:  # the dispatcher's own accrual gate (README § not_before): waiting by design
+        return None
     ld = u.get("last_dispatched_at")
     t = _parse_ts(ld)
     if t is None:
@@ -306,6 +309,9 @@ def _finding(kind: str, ident: str, edge: str, evidence: str, **extra) -> dict:
             **extra}
 
 
+COMPUTE_CLASSES = frozenset({"cpu_light", "cpu_long", "needs_vm_data", "gpu", "gpu_preferred", "auto"})
+
+
 # ── the scan (pure) ──────────────────────────────────────────────────────────
 def scan(rows: list[dict], pipe_items: dict[str, dict], units: dict[str, dict],
          now: datetime, workflows_dir: Path = WORKFLOWS_DIR) -> dict:
@@ -323,7 +329,11 @@ def scan(rows: list[dict], pipe_items: dict[str, dict], units: dict[str, dict],
             continue
         not_running[uid] = ev
         wf = (units[uid].get("run") or {}).get("workflow")
-        needs_lane = not _dispatchable(wf, workflows_dir)
+        # A unit that declares a compute class has no run.workflow ON PURPOSE (PLANNING.md § 1b): the token-free
+        # dispatcher resolves class -> backend. 33 such units read NEEDS_LANE on 2026-10-21 while
+        # dispatch_queue.py reported every one would_dispatch (PIPELINE-HEALTH-1021).
+        routed_by_class = str(units[uid].get("compute") or "") in COMPUTE_CLASSES
+        needs_lane = not (routed_by_class or _dispatchable(wf, workflows_dir))
         findings.append(_finding(NOT_RUNNING, uid, "run.workflow",
                                  ev + (f"; run.workflow {_short(wf, 50)!r} cannot be auto-dispatched -> NEEDS_LANE"
                                        if needs_lane else ""),
@@ -498,6 +508,8 @@ def _self_test() -> int:
         pipe = {"PI-1": {"id": "PI-1", "state": "killed"}, "PI-2": {"id": "PI-2", "state": "queued"}}
         units = {
             "RQ-Q": {"id": "RQ-Q", "status": "queued", "last_dispatched_at": None, "run": {"workflow": "real.yml"}},
+            "RQ-NB": {"id": "RQ-NB", "status": "queued", "last_dispatched_at": None, "not_before": "2999-01-01T00:00:00Z", "run": {"workflow": "real.yml"}},
+            "RQ-CLASS": {"id": "RQ-CLASS", "status": "queued", "last_dispatched_at": None, "compute": "cpu_light", "run": {}},
             "RQ-OLD": {"id": "RQ-OLD", "status": "queued", "last_dispatched_at": "2026-10-01T00:00:00+00:00",
                        "run": {"workflow": "trainer-vm-diag (issue label x)"}},
             "RQ-FRESH": {"id": "RQ-FRESH", "status": "queued", "last_dispatched_at": "2026-10-10T06:00:00+00:00",
@@ -543,6 +555,8 @@ def _self_test() -> int:
         nl = {f["id"]: f.get("needs_lane") for f in rep["findings"] if f["kind"] == NOT_RUNNING and not f.get("blocked_row")}
         check("manual workflow -> NEEDS_LANE", nl.get("RQ-OLD"), True)
         check("real workflow -> not NEEDS_LANE", nl.get("RQ-Q"), False)
+        check("unit before its not_before is NOT 'not running'", "NOT_RUNNING:RQ-NB" in keys, False)
+        check("compute-class unit (no run.workflow) -> not NEEDS_LANE", nl.get("RQ-CLASS"), False)
         check("overdue observation", "UNPROVEN_OVERDUE:LU_OVER" in keys, True)
         check("future observation not overdue", "UNPROVEN_OVERDUE:LU_FUT" in keys, False)
         check("no-observation row counted, not a finding",

@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Implements the operator's decision, AskUserQuestion popup 2026-10-21 ~18:45Z in manager session session_01CSwhZWiw15rVCkjsJ8Cpuh, answer 'Apply 0.35% (Recommended)': breakout_2 risk_pct 0.005 -> 0.0035 (config/accounts.yaml). Gate checked before the edit: in RQ-20261016-029 (run 39030716646, rule RULE-P5-Q2-SIZING-BRK) C0035 p_breach_max_dd is lower than arm A on all 5 seeds in all 4 modes (0 of 40 comparisons worse). Also a comment-only fix on ada_pullback_2h vol_skip_above_pctl in config/strategies.yaml (merged in #18994, da294c41); value unchanged. Held for the manager, who merges under the operator's decision. Revert: restore risk_pct 0.005.",
+  "why": "Tier-3 by content: prop risk sizing on a live prop account (config/accounts.yaml::breakout_2.risk.risk_pct). The decision is the operator's popup answer; the hold routes the merge to the manager."
+}

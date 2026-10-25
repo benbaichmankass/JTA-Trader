@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: scripts/ci/run_guards.py::lane-reconcile-guard (--self-test).
 """Reconcile MANAGER-CHECKLIST rows against the lanes that are actually alive.
 
 THE FAILURE THIS EXISTS TO STOP RECURRING
@@ -201,6 +202,59 @@ def _sessions_from(payload: Any) -> Dict[str, dict]:
     return {s["id"]: s for s in data if isinstance(s, dict) and s.get("id")}
 
 
+# ── ARCHIVE SCOPE: only THIS project's sessions are ever archived ─────────────
+# Operator, 2026-10-18 ~12:00Z, verbatim: "going forward, the manager session should only archive
+# sessions attached to this project (according to environment, repos, or being listed in one of the
+# manager's logs). Other sessions should be left alone." The same day a bulk cleanup archived 9 of
+# the operator's sustainable-finance-venture sessions (since restored): `list_sessions(mine=true)`
+# lists the ACCOUNT's sessions, not the project's.
+PROJECT_REPOS = frozenset({"metis-insights", "ict-trading-bot", "ict-trader-dashboard",
+                           "ict-trader-android"})
+PROJECT_ENV = "env_01A9rfUVrcEo1i5pKP1kWnp3"
+
+
+def _repos(sess: dict) -> List[str]:
+    """Repo names (lower-case, no owner, no .git) from the session's sources."""
+    out = []
+    for src in (sess.get("session_context") or {}).get("sources") or []:
+        url = ((src or {}).get("git_repository") or {}).get("url") or ""
+        name = url.rstrip("/").rsplit("/", 1)[-1].lower().removesuffix(".git")
+        if name:
+            out.append(name)
+    return out
+
+
+def logged_lanes(rows: List[dict]) -> set:
+    """Every session a checklist row names, in `lane` or `lane_history` (the manager's log)."""
+    out = set()
+    for r in rows:
+        if r.get("lane"):
+            out.add(r["lane"])
+        for h in r.get("lane_history") or []:
+            if isinstance(h, dict) and h.get("lane"):
+                out.add(h["lane"])
+    return out
+
+
+def archive_eligible(sid: str, sess: dict, logged: set) -> Tuple[bool, str]:
+    """May the manager archive this session? A foreign repo is NEVER eligible, whatever else
+    holds; otherwise eligible on (a) a project repo, (b) the project environment, or (c) being
+    named in a manager log (a checklist row's lane / lane_history, or a `manager:` tag)."""
+    repos = _repos(sess)
+    foreign = [r for r in repos if r not in PROJECT_REPOS]
+    if foreign:
+        return False, f"foreign repo {', '.join(foreign)}"
+    if repos:
+        return True, f"project repo {', '.join(repos)}"
+    if sess.get("environment_id") == PROJECT_ENV:
+        return True, "project environment, no foreign repo"
+    if sid in logged:
+        return True, "named on a checklist row"
+    if any(str(t).startswith("manager:") for t in sess.get("tags") or []):
+        return True, "carries a manager: tag"
+    return False, "no project repo, environment or manager log names it"
+
+
 def _summary(sess: dict) -> str:
     pts = sess.get("post_turn_summary") or {}
     bits = [pts.get("status_detail"), pts.get("needs_action")]
@@ -278,16 +332,24 @@ def reconcile(rows: List[dict], sessions: Dict[str, dict]) -> Dict[str, Any]:
     # ⚠️ THIS SCANS THE SESSIONS, NOT THE ROWS, and that is deliberate: the 22
     # far outnumber the checklist's live rows, because a lane whose row has been
     # closed is exactly the one nobody looks at again.
-    idle_tail = sorted(
-        ({"lane": sid, "cost": lane_cost(sess)[0],
-          "cost_state": lane_cost(sess)[1],
-          "bucket": sess.get("status_bucket", ""),
-          "updated_at": sess.get("updated_at", ""),
-          "title": (sess.get("title") or "")[:78]}
-         for sid, sess in sessions.items()
-         if sess.get("status_bucket") in FINISHED
-         and sess.get("session_status") != ARCHIVED),
-        key=lambda d: -(d["cost"] or 0.0))
+    #
+    # Only sessions that pass `archive_eligible` are listed; the rest are counted in
+    # `not_ours` and must be left alone (operator, 2026-10-18).
+    logged = logged_lanes(rows)
+    idle_tail, not_ours = [], []
+    for sid, sess in sessions.items():
+        if (sess.get("status_bucket") not in FINISHED
+                or sess.get("session_status") == ARCHIVED):
+            continue
+        ok, why = archive_eligible(sid, sess, logged)
+        entry = {"lane": sid, "cost": lane_cost(sess)[0],
+                 "cost_state": lane_cost(sess)[1],
+                 "bucket": sess.get("status_bucket", ""),
+                 "updated_at": sess.get("updated_at", ""),
+                 "eligible_why": why,
+                 "title": (sess.get("title") or "")[:78]}
+        (idle_tail if ok else not_ours).append(entry)
+    idle_tail.sort(key=lambda d: -(d["cost"] or 0.0))
 
     # ── E20 cause (3): AN UNATTENDED LANE HITS A SILENT WALL ────────────────
     # ⚠️ E20 HYPOTHESISED A COMMAND SHAPE (a compound piped git command awaiting
@@ -309,7 +371,7 @@ def reconcile(rows: List[dict], sessions: Dict[str, dict]) -> Dict[str, Any]:
 
     return {"stale": stale, "alive": alive, "unknown": unknown,
             "dispatchable": dispatchable, "over_ceiling": over_ceiling,
-            "idle_tail": idle_tail, "walled": walled}
+            "idle_tail": idle_tail, "not_ours": not_ours, "walled": walled}
 
 
 def _money(cost: Optional[float], state: str, fin: str, read_at: str) -> str:
@@ -385,9 +447,16 @@ def render(res: Dict[str, Any], read_at: str = "(read time not stated)"
             out.append(f"  {_money(t['cost'], t['cost_state'], 'running', read_at)}"
                        f"  {t['bucket'].replace('SESSION_STATUS_BUCKET_', '')}"
                        f"  {t['lane']}")
-            out.append(f"       {t['title']}")
+            out.append(f"       {t['title']}  [eligible: {t['eligible_why']}]")
         if len(tail) > 12:
             out.append(f"  … and {len(tail) - 12} more")
+    not_ours = res.get("not_ours") or []
+    if not_ours:
+        out.append("")
+        out.append(f"LEFT ALONE — {len(not_ours)} finished session(s) NOT this project's "
+                   f"(foreign repo, or nothing ties them to it). NEVER archive these:")
+        for n in not_ours[:5]:
+            out.append(f"  {n['lane']}  {n['eligible_why']}  {n['title']}")
     if walled:
         total = sum(w["cost"] or 0.0 for w in walled)
         out.append("")
@@ -513,10 +582,14 @@ def _self_test() -> int:
 
     # ── the three E20 cost causes, every branch planted ────────────────────
     def rich(sid: str, bucket: str, cost=None, archived=False,
-             title: str = "t") -> dict:
+             title: str = "t", repo: Optional[str] = "Metis-Insights",
+             env: Optional[str] = None, tags: Optional[list] = None) -> dict:
         d = {"id": sid, "status_bucket": bucket, "title": title,
              "session_status": "SESSION_STATUS_ARCHIVED" if archived
-                               else "SESSION_STATUS_IDLE"}
+                               else "SESSION_STATUS_IDLE",
+             "session_context": {"sources": [] if repo is None else [
+                 {"git_repository": {"url": f"https://github.com/o/{repo}"}}]},
+             "environment_id": env, "tags": tags or []}
         if cost is not None:
             d["external_metadata"] = {"usage": {"cost_usd": cost}}
         return d
@@ -557,6 +630,27 @@ def _self_test() -> int:
           [t["lane"] for t in r["idle_tail"]] == ["a", "b"], str(r["idle_tail"]))
     check("C2b ...and they are ordered most-expensive first",
           r["idle_tail"][0]["cost"] == 50.78)
+
+    # C2c — ARCHIVE SCOPE (operator, 2026-10-18): only this project's sessions are archivable.
+    fin = "SESSION_STATUS_BUCKET_COMPLETED"
+    r = reconcile([{"id": "R", "state": "done", "lane": None,
+                    "lane_history": [{"lane": "logged"}]}], {
+        "proj": rich("proj", fin, 1.0),
+        "envonly": rich("envonly", fin, 1.0, repo=None, env=PROJECT_ENV),
+        "logged": rich("logged", fin, 1.0, repo=None),
+        "tagged": rich("tagged", fin, 1.0, repo=None, tags=["manager:session_x"]),
+        "foreign": rich("foreign", fin, 1.0, repo="sustainable-finance-venture",
+                        env=PROJECT_ENV, tags=["manager:session_x"]),
+        "stranger": rich("stranger", fin, 1.0, repo=None, env="env_other")})
+    tail_ids = {t["lane"] for t in r["idle_tail"]}
+    check("C2c a project repo, the project env, a checklist lane_history entry and a "
+          "manager: tag each make a session archivable",
+          tail_ids == {"proj", "envonly", "logged", "tagged"}, str(tail_ids))
+    check("C2d a FOREIGN repo is never archivable, even in our env with a manager tag",
+          {n["lane"] for n in r["not_ours"]} == {"foreign", "stranger"}, str(r["not_ours"]))
+    text, _ = render(r, "2026-10-18T12:00:00+00:00")
+    check("C2e ...and the render tells the manager to leave them alone",
+          "LEFT ALONE" in text and "sustainable-finance-venture" in text)
 
     # C3 — cause (3): a BLOCKED lane is surfaced with its spend.
     r = reconcile([], {"w": rich("w", "SESSION_STATUS_BUCKET_BLOCKED", 1343.06,

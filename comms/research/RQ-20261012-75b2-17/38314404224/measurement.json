@@ -1,0 +1,148 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "macro_f1",
+  "higher_is_better": true,
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "prior",
+  "controls": [],
+  "candidates": [
+    "lgbm"
+  ],
+  "arm_status": {
+    "prior": "ok",
+    "lgbm": "ok"
+  },
+  "groups": {
+    "ALL": {
+      "n_rows": 60000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.47086058646285,
+                0.4720633523977123,
+                0.4852730912210466,
+                0.48483113909559244,
+                0.49320757373125923
+              ],
+              "n_test_rows": 36000
+            },
+            "holdout": {
+              "fold_metric": [
+                0.4929732868757259
+              ],
+              "n_test_rows": 8731
+            }
+          }
+        },
+        "lgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5396294526729309,
+                0.5856967979605738,
+                0.5393963388285506,
+                0.5491484423523258,
+                0.515886444820455
+              ],
+              "n_test_rows": 36000
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5146072099427295
+              ],
+              "n_test_rows": 8731
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "ALL": {
+      "cv": {
+        "lgbm": {
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.06470434674527513,
+            "ci95": [
+              0.024053112797121134,
+              0.10535558069342912
+            ],
+            "sign_consistent": true
+          }
+        }
+      },
+      "holdout": {
+        "lgbm": {
+          "prior": {
+            "n_folds": 1,
+            "mean": 0.02163392306700357,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "fail",
+    "why": "no candidate reaches the registered floor on any clause",
+    "candidates": {
+      "lgbm": {
+        "evaluated": true,
+        "passes_all": false,
+        "clauses": [
+          {
+            "holds": false,
+            "what": "['ALL'] >= 0.1 vs prior/cv"
+          },
+          {
+            "holds": false,
+            "what": "['ALL'] >= 0.1 vs prior/holdout"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 22.8
+}

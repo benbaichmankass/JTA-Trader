@@ -12,9 +12,9 @@ never written into the repo. The mandate's soak-complete clause therefore reads
 this snapshot, and refuses one older than `bar.soak_snapshot_max_age_days`.
 
 SOURCE. `GET /api/bot/work/brief` (Tier-1, read-only, served through Caddy), § 4
-"🌱 SOAKS". The brief lists every NON-accruing soak as one line and folds the
-accruing ones into a count, so a soak absent here is NOT complete -- the
-resolver reads absence as NEEDS-DATA, never as ready.
+"🌱 SOAKS". The brief lists every passed / mechanical_fail / unknown soak as one
+line and folds awaiting_first_trade / in_progress into a count, so a soak absent
+here has NOT passed -- the resolver reads absence as NEEDS-DATA, never as passed.
 """
 from __future__ import annotations
 
@@ -30,11 +30,13 @@ from typing import Any, Dict, List
 REPO = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO / "comms/mandate_evidence/soak_state"
 BRIEF_URL = "https://ict-bot.duckdns.org/api/bot/work/brief"
-#: `- **SOAK-stage1-bybit_1-eth_pullback_2h** eth_pullback_2h @bybit_1 · ready · started
-#: 2026-06-11 · day 115 · 38/10 closes · ends 2026-08-09 · <reason>`
+#: `- **SOAK-stage1-bybit_1-ada_pullback_2h** ada_pullback_2h @bybit_1 · passed · started
+#: 2026-06-18 · day 119 · 2/2 clean · <reason>` (the MECHANICAL soak, 2026-10-15). The
+#: retired accrual line carried `· ends <date>` before the reason; it is still parsed
+#: so an old saved brief reads, but the end date is not carried into the snapshot.
 LINE = re.compile(r"^- \*\*(?P<id>SOAK-[^*]+)\*\* (?P<leg>\S+) @(?P<accounts>\S+) · "
                   r"(?P<state>[a-z_]+) · started (?P<started>\S+) · day (?P<day>\d+) · "
-                  r"(?P<progress>[^·]+?) · ends (?P<end>\S+) · (?P<reason>.*)$")
+                  r"(?P<progress>[^·]+?) · (?:ends (?P<end>\S+) · )?(?P<reason>.*)$")
 
 
 def parse(brief: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -52,7 +54,7 @@ def parse(brief: Dict[str, Any]) -> List[Dict[str, Any]]:
         kind = "stage1" if g["id"].startswith("SOAK-stage1-") else g["id"].split("-")[1]
         rows.append({"id": g["id"], "leg": g["leg"], "accounts": g["accounts"].split(","),
                      "kind": kind, "state": g["state"], "started": g["started"],
-                     "progress": g["progress"].strip(), "end_date": g["end"]})
+                     "progress": g["progress"].strip()})
     return rows
 
 
@@ -77,8 +79,8 @@ def main(argv=None) -> int:
         "captured_at": brief["generatedAt"],
         "source": "GET /api/bot/work/brief § 4 SOAKS (soak_state.soak_states(), computed live "
                   "on the VM)",
-        "note": "Accruing soaks are folded into a count by the brief and are NOT listed; a "
-                "soak absent here is not complete.",
+        "note": "awaiting_first_trade / in_progress soaks are folded into a count by the brief "
+                "and are NOT listed; a soak absent here has not passed.",
         "captured_by": "scripts/ops/snapshot_soak_state_for_mandate.py",
         "soaks": rows,
     }

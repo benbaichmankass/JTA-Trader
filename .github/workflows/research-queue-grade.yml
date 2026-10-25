@@ -6,8 +6,11 @@ name: research-queue-grade
 # `grading: {auto: true}`), reads its committed E5 rows / corpus rows, applies
 # the unit's own pre-registered rule mechanically (unanimity over the rows),
 # and lands the disposition as line-level edits: done on pass /
-# no_action_warranted; a first FAIL re-queues for a confirmatory run (never a
-# kill on one pass); anything ambiguous gets `grading.needs_review: true` for a
+# no_action_warranted; a template-cell PASS also ADDS one fresh-window
+# confirmation unit (RESEARCH-CONFIRM-FRESH-WINDOW); a deterministic template
+# FAIL closes with no same-window replay, a non-deterministic first FAIL
+# re-queues for a confirmatory run (a FAIL never retires a family); anything
+# ambiguous gets `grading.needs_review: true` for a
 # session. Recurring units are never closed, only their `grading.latest` is
 # refreshed.
 #

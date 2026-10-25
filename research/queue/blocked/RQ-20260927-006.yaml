@@ -2,6 +2,8 @@ id: RQ-20260927-006
 title: Does weighting by the advisory regime head's predict_proba beat a raw-ADX soft weight on the same cells?
 status: blocked
 cadence: once
+theme: regime
+priority: 2
 kind: experiment
 
 question: >-
@@ -87,6 +89,14 @@ routing:
     runs, hence the higher est_minutes.
 
 blocked_on:
+  - kind: work_item
+    ref: REGIME-WEIGHT-VARIANTS
+    what: >-
+      Owner named 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016, deliverable 2 of the regime backlog): this unit waits on
+      the soft-weight build (advisory-head predict_proba variant) owned by row REGIME-WEIGHT-VARIANTS, child of REGIME-PROGRAM. The prose entries below are the original diagnosis and stay as written.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/, status queued,
+      run.command set (no run.workflow: declare compute).
   - what: >-
       No backtest-harness code path replays a trained advisory regime head's
       `predict_proba` per bar into `backtest_trend.py`/`backtest_pullback.py`.
@@ -116,6 +126,8 @@ lands:
   assert_field: label
   min_rows: 1
 
+roadmap:
+- L-REGIME
 related:
   - 'RQ-20260927-004 / RQ-20260927-009 (the raw-indicator soft-weight siblings)'
   - 'comms/reviews/performance-review-20260927-072944.json D3 (SOL advisory head, zero real-money order effect)'

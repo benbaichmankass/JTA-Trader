@@ -1,0 +1,42 @@
+{
+  "unit": "RQ-20261024-0142-22",
+  "run_id": "40178528024",
+  "commit_sha": "5d0bd8c6a4afb6f3dd040a68b38215f3ed74264a",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40178528024",
+  "timeout_minutes": 60,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "initial_jobless_claims",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ZN=F",
+        "--anchor-shift-td",
+        "-11",
+        "--horizons",
+        "1",
+        "--primary-horizons",
+        "1",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.0",
+        "--expected-sign",
+        "positive",
+        "--population",
+        "initial_jobless_claims releases with a defined survey surprise; PLACEBO window ends ten trading days BEFORE the print on ZN=F daily closes",
+        "--out",
+        "comms/research/RQ-20261024-0142-22/40178528024"
+      ],
+      "log": "comms/research/RQ-20261024-0142-22/40178528024/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.8
+    }
+  ],
+  "all_ok": true
+}

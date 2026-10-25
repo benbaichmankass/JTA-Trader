@@ -105,6 +105,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_eth_4h_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
+    trend_donchian_xrp_adx25_signal_builder,
     trend_donchian_ada_4h_signal_builder,
     trend_donchian_avax_4h_signal_builder,
     trend_donchian_signal_builder,
@@ -310,6 +311,7 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         "trend_donchian_eth_4h": trend_donchian_eth_4h_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
+        "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,
         "trend_donchian_ada_4h": trend_donchian_ada_4h_signal_builder,
         "trend_donchian_avax_4h": trend_donchian_avax_4h_signal_builder,
         # mes_trend_long_1d: MES daily long-only equity-index diversifier on
@@ -1252,13 +1254,32 @@ def _attach_account_election(
         desired_r = desired_by_strategy.get(r["strategy"])
         if desired_r is None:
             continue
-        rounds.append({
+        _rsig = _desired_to_pipeline_signal(desired_r, symbol=symbol, settings={})
+        _round = {
             "strategy": r["strategy"],
             "accounts": list(r["accounts"]),
-            "signal": _desired_to_pipeline_signal(
-                desired_r, symbol=symbol, settings={}
-            ),
-        })
+            "signal": _rsig,
+        }
+        if r.get("allocation"):
+            # NETTED-SLICES: the per-account share of this strategy's slice.
+            # Rides the round's OWN meta (copied into its OrderPackage) so the
+            # coordinator sizes the slice; a package never sees another
+            # strategy's share.
+            _round["allocation"] = dict(r["allocation"])
+            _pa = plan.get("per_account") or {}
+            _rmeta = _rsig.setdefault("meta", {})
+            if isinstance(_rmeta, dict):
+                from src.runtime.positions import ALLOCATION_META_KEY
+                _rmeta[ALLOCATION_META_KEY] = {
+                    a: {
+                        "weight": w,
+                        "contenders": sorted((_pa.get(a) or {}).get("allocation") or {}),
+                        "basis": (_pa.get(a) or {}).get("allocation_basis"),
+                        "score": ((_pa.get(a) or {}).get("scores") or {}).get(r["strategy"]),
+                    }
+                    for a, w in r["allocation"].items()
+                }
+        rounds.append(_round)
     dup = accounts_in_more_than_one_round(rounds)
     if dup:
         # Unreachable by construction. If it is ever reached, refuse the tick's
@@ -1279,7 +1300,8 @@ def _attach_account_election(
                 for a, c in (plan.get("per_account") or {}).items()
             },
             "rounds": [
-                {"strategy": r["strategy"], "accounts": r["accounts"]}
+                {"strategy": r["strategy"], "accounts": r["accounts"],
+                 **({"allocation": r["allocation"]} if r.get("allocation") else {})}
                 for r in rounds
             ],
             "accounts_planned": plan.get("accounts_planned"),

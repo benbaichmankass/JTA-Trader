@@ -2,7 +2,7 @@
   "id": "UI-UPGRADE-1-AUTH-CONFIG",
   "title": "Sign-in config: system actions to generate WEB_SESSION_PEPPER on the VM and to issue the passkey enrolment code; set GOOGLE_OAUTH_CLIENT_ID + ALLOWED_EMAIL",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "lane (session_01SUYpcUiTvgVD1NC8A8RxkZ)",
   "lane": "session_01SUYpcUiTvgVD1NC8A8RxkZ",
   "model": "claude-sonnet-5-5",
@@ -13,8 +13,8 @@
     17709
   ],
   "blocked_on": [],
-  "note": "[2026-10-12T07:58Z manager session_01G16FfyYSmDPQuuW55BuTmK] Operator is creating the Google OAuth Web client now (FinTrack AI project rejected as wrong account; re-doing). Gaps found: no system action generates WEB_SESSION_PEPPER (web_sessions.py refuses to issue sessions without it) and no 'passkey-enrol-code' action exists (design \u00a73). Build both as allowlisted system actions: pepper generated ON the VM (never transits issue/log/runner), written to /etc/ict-trader/web-api.env only if absent, restart ict-web-api; enrol code issued on the VM via web_sessions.issue_enrol_code and delivered only by the private SYSTEM Telegram ping. Manager sets GOOGLE_OAUTH_CLIENT_ID (non-secret) and ALLOWED_EMAIL via set-env env_file=web-api. [manager 10:40Z] #17709 merged+deployed (VM e3316ce1). init-web-session-pepper ran via #17725: PEPPER=set, ALLOWED_EMAIL=present, web-api active. /api/auth/config serves google_client_id, site_auth_enforced=false. Remaining observation: operator enrols a passkey (passkey-enrol-code) and signs in.",
-  "updated_at": "2026-10-12T10:42:12Z",
+  "note": "[2026-10-12T07:58Z manager session_01G16FfyYSmDPQuuW55BuTmK] Operator is creating the Google OAuth Web client now (FinTrack AI project rejected as wrong account; re-doing). Gaps found: no system action generates WEB_SESSION_PEPPER (web_sessions.py refuses to issue sessions without it) and no 'passkey-enrol-code' action exists (design \u00a73). Build both as allowlisted system actions: pepper generated ON the VM (never transits issue/log/runner), written to /etc/ict-trader/web-api.env only if absent, restart ict-web-api; enrol code issued on the VM via web_sessions.issue_enrol_code and delivered only by the private SYSTEM Telegram ping. Manager sets GOOGLE_OAUTH_CLIENT_ID (non-secret) and ALLOWED_EMAIL via set-env env_file=web-api. [manager 10:40Z] #17709 merged+deployed (VM e3316ce1). init-web-session-pepper ran via #17725: PEPPER=set, ALLOWED_EMAIL=present, web-api active. /api/auth/config serves google_client_id, site_auth_enforced=false. Remaining observation: operator enrols a passkey (passkey-enrol-code) and signs in. [manager 17:55Z] OBSERVED end to end: pepper set (#17725), webauthn installed into web-api venv (#17746 + install-web-api-deps #17752), enrol code (#17756) used, passkey registered 13:40:35Z (finish 200). DONE.",
+  "updated_at": "2026-10-12T17:53:46Z",
   "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
   "roadmap": [
     "M6"

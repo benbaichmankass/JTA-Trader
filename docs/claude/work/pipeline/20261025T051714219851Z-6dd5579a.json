@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-TSROUND2-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "checklist EXITS-ROUND2-1026",
+    "rerun": "python3 -c \"import json;d=json.load(open('comms/research/grading/RESULTS-GRADE-1025.json'));print([u['id'] for u in d['units'] if u['disposition']=='underpowered'])\""
+  },
+  "state": "queued",
+  "what": "[exits-round2] 7 entry/sizing units demoted to underpowered by RESULTS-GRADE-1025 need a basket re-ask, not a lower bar: 4b82-01 (n_B 8892 vs 9189 per arm), 4b82-05 (4520 vs 8385), 4b82-06 (2298 vs 7741), 4b82-02 (4951 vs 17668), 7c2b-02/-03 (256 / 243 vs 4740 / 6422: no pooled design reaches 18-26x), 7c2b-12 (517 vs 785). The exit ones (4b82-03, -07) are authored as d7e6-08/-09. Author the entry-side baskets as disjoint-cell units sized from each unit's MEASURED sd (see docs/research/exits-round2-1026.md section 3); never edit the run units."
+}

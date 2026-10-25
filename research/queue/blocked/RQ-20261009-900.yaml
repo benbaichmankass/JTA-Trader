@@ -131,31 +131,21 @@ routing:
 
 blocked_on:
 - what: >-
-    No driver produces the per-trade rows this needs for the live legs.
-    m20_fleet_exit_sweep.py runs the harness config-exact but keeps no emit file
-    (it reads the summary), mi307_offline_mfe.py --run runs it config-exact and
-    uncapped but `rec.pop("rows")` discards the rows, and ml2_bracket_corpus.py
-    consumes an emit but its closed FEATURE_NAMES drops adx_at_entry and
-    regime_weight (both ARE in the trend and pullback emits) and
-    ml2_bracket_train_eval.py can only grade outcome mfe_frac / exit_frac against
-    the pooled and risk-scaled baselines -- it has no R-basis outcome, no B1/B2
-    constant-forecast baselines, no B4 per-leg train-quantile baseline and no
-    per-stratum / per-leg run. LEVER NAME: `ml2-live-leg-corpus` -- (1) a
-    runner that builds the six legs' config-exact args via
-    m20_fleet_exit_sweep.base_args, runs the harness uncapped with
-    --emit-trades and KEEPS the emit under a stable path; (2) ml2_bracket_corpus
-    FEATURE_NAMES extended by exactly adx_at_entry and regime_weight with
-    test_no_outcome_column_is_a_feature still passing; (3) ml2_bracket_train_eval
-    gains --outcome mfe_r and baselines B1/B2/B4 beside the existing B3, graded
-    per stratum.
-  ref: TP-PREDICT-HEAD (docs/claude/work/checklist/); build row to be added by the manager
+    BUILD DONE 2026-10-14 (row ML-LEG-CORPUS): PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum). REMAINING: the corpus has not been PRODUCED by a registered
+    run yet. Queue unit RQ-20261014-736c-01 (research-script-run.yml, hand-authored, merged with this edit) builds it; its
+    result lands comms/research/RQ-20261014-736c-01/<run_id>/ml2_live_leg_corpus.jsonl. MEASURED in the authoring sandbox
+    (a smoke run, NOT the registered run): 6/6 legs ok, 1,831 rows, all usable; usable rows per stratum S1 211, S2 438, S3 1182.
+    ⚠️ S1's eval size at split 0.65 is ~74, below this unit's 88 floor, because trend_donchian_xrp_4h yields 59 trades
+    config-exact (side_filter short) against the 135 the power basis took from e35. Under this unit's own rule S1 will grade
+    INDETERMINATE unless the window is lengthened or S1 is pooled with another stratum (which the rule forbids). Decide
+    that before promoting; the rule is not edited here.
+  ref: ML-LEG-CORPUS (docs/claude/work/checklist/); RQ-20261014-736c-01
   clears_when: >-
-    The runner emits docs/research or comms/research per-trade rows for all six
-    legs and `ml2_bracket_train_eval.py --corpus <rows> --outcome mfe_r --per-leg`
-    prints the four baselines per quantile; then `git mv` this file to
-    research/queue/ and fill run.workflow (research-script-run.yml, like
-    RQ-20261007-080) and lands.store.
-
+    RQ-20261014-736c-01 lands a `read_state: measured`, `verdict: pass` record under research/results/RQ-20261014-736c-01/
+    and the corpus file it names exists on main; then `git mv` this file to research/queue/, set run.workflow
+    (research-script-run.yml, like RQ-20261007-080) with commands: ml2_bracket_train_eval.py --corpus <that path>
+    --outcome mfe_r --per-leg --per-stratum --out {out_dir} (plus a small grader that writes verdict.json per the rule)
+    and lands.store.
 run:
   workflow: null
   note: >-

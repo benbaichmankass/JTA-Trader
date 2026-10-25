@@ -918,6 +918,53 @@ class AlpacaClient:
             out["capacity"] = capacity
         return out
 
+    def clock(self) -> Optional[Dict[str, Any]]:
+        """The venue's market clock: ``{is_open, timestamp, next_open, next_close}``.
+
+        Reads ``GET /v2/clock``. ``None`` on any failure — **we could not
+        look**, which a caller must not read as "market closed" (or as open).
+        The venue's own clock, not ``src/runtime/market_hours.py``, because
+        that module models no US holiday calendar or half-day (its own
+        docstring). Read-only; never places an order.
+        """
+        try:
+            self._require_creds("clock")
+        except MissingCredentialsError as exc:
+            logger.warning("%s", exc)
+            return None
+        env = self._request("GET", "/v2/clock")
+        if env.get("retCode") != 0:
+            logger.warning("alpaca clock: %s", env.get("retMsg"))
+            return None
+        res = env.get("result") or {}
+        if "is_open" not in res:
+            return None
+        return {k: res.get(k) for k in ("is_open", "timestamp", "next_open", "next_close")}
+
+    def asset_short_status(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Can *symbol* be sold short here: ``{tradable, shortable, easy_to_borrow,
+        fractionable}`` from ``GET /v2/assets/{symbol}``.
+
+        ``None`` on any failure (we could not look). Alpaca short sales must be
+        whole-share and need ``shortable`` (and, for a plain short with no
+        locate, ``easy_to_borrow``); this is the read that lets a caller refuse
+        a short leg BEFORE sending it rather than learning from a rejection.
+        Read-only; never places an order.
+        """
+        try:
+            self._require_creds("asset_short_status")
+        except MissingCredentialsError as exc:
+            logger.warning("%s", exc)
+            return None
+        env = self._request("GET", f"/v2/assets/{str(symbol).upper()}")
+        if env.get("retCode") != 0:
+            logger.warning("alpaca asset_short_status(%s): %s", symbol, env.get("retMsg"))
+            return None
+        res = env.get("result") or {}
+        keys = ("tradable", "shortable", "easy_to_borrow", "fractionable")
+        out = {k: res.get(k) for k in keys if k in res}
+        return out or None
+
     def positions(self) -> Optional[list]:
         """Open positions as ``[{symbol, side, qty, avg_price, unrealized_pnl}]``.
 

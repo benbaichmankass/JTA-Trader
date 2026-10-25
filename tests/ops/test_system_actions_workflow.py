@@ -50,6 +50,8 @@ DOC = REPO_ROOT / "docs" / "claude" / "system-actions.md"
 EXPECTED_ACTIONS = {
     # Tier 1 — read-only / analysis
     "status-check": "status_check.sh",
+    # Read-only du breakdown of the live VM disk (PI-20261017-VSMHZYHF-0001).
+    "disk-usage-report": "disk_usage_report.sh",
     # Read-only listening-port + host-firewall inventory (security audit 2026-06-28).
     "list-listening-ports": "list_listening_ports.sh",
     "pull-latest-logs": "pull_logs.sh",
@@ -171,6 +173,10 @@ EXPECTED_ACTIONS = {
     # the same writer as the in-app Dry test button. Tier 1: one prop_tickets
     # row, no exchange socket, no non-test path; account + symbol allowlisted.
     "phone-dry-test": "phone_dry_test_action.sh",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018) — ONE phone rehearsal-drill request
+    # file beside the journal (src.prop.phone_drill). Tier 1: a file write, the
+    # account allowlisted against phone_accounts; no exchange socket.
+    "phone-drill": "phone_drill_action.sh",
     # M7 — autonomous strategy-review-packet generator (Tier 1: read-only
     # SQL + write to runtime_logs/strategy_reviews/).
     "generate-strategy-review-packets": "generate_strategy_review_packets_action.sh",
@@ -273,6 +279,8 @@ EXPECTED_ACTIONS = {
     # leg, never the parent close.
     "supersede-intent-reduce-phantom-pnl": "supersede_intent_reduce_phantom_pnl_action.sh",
     "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
+    "backfill-own-fill-exits": "backfill_own_fill_exits_action.sh",
+    "prune-db-backups": "prune_db_backups.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
     # (BL-20260706-PROP-CLOSE-MISLINK; root cause fixed in #5744): relink the
     # close fill to the real position ticket, close it, restore the phantom.
@@ -288,6 +296,7 @@ EXPECTED_ACTIONS = {
     # executor's intake (band, expiry, guards) decides placement. DRY-RUN by
     # default; apply gated + DB backup; every other case refused.
     "prop-ticket-reissue": "prop_ticket_reissue_action.sh",
+    "prop-report-close": "prop_report_close_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -366,6 +375,9 @@ EXPECTED_ACTIONS = {
     # a flat position, ambiguous (>1) live legs of one type, or more than
     # one open untracked trade row.
     "backfill-tpsl-leg-ids": "backfill_tpsl_leg_ids_action.sh",
+    # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
+    # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
+    "amend-position-sl": "amend_position_sl_action.sh",
     # Audit F-39 / MI-241. Re-attaches the three order_packages rows that were
     # flipped to `closed` while their legs were still OPEN, so order_monitor's
     # `status="open"` selector can never pick them up and those legs are managed
@@ -442,9 +454,12 @@ TIER_2_ACTIONS = {
     "supersede-reset-orphan-artifacts",
     "supersede-intent-reduce-phantom-pnl",
     "backfill-intent-reduce-pnl",
+    "backfill-own-fill-exits",
+    "prune-db-backups",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
     "prop-ticket-reissue",
+    "prop-report-close",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",
@@ -463,6 +478,7 @@ TIER_2_ACTIONS = {
     "cancel-stale-tpsl-legs",
     "backfill-tpsl-leg-ids",
     "reattach-stranded-package-legs",
+    "amend-position-sl",
 }
 
 
@@ -1095,3 +1111,21 @@ def test_notify_run_loads_runtime_env_before_send_ping() -> None:
     text = (OPS_DIR / "notify_run.sh").read_text()
     assert "load_runtime_env" in text
     assert text.index("load_runtime_env") < text.index('"${SEND_PING}"')
+
+
+def test_no_long_run_script_holds_an_expression() -> None:
+    """GitHub evaluates a `run:` script that contains any `${{ }}` expression
+    as ONE template, capped at 21000 chars after escaping. The Resolve step
+    crossed it on 2026-10-17 (a6f9a1707): GitHub rejected the whole workflow
+    and no system-action ran. Long scripts read context through env vars
+    (e.g. $GITHUB_EVENT_NAME) instead."""
+    if yaml is None:
+        pytest.skip("pyyaml not installed")
+    wf = yaml.safe_load(WORKFLOW.read_text())
+    offenders = [
+        (job, step.get("name"), len(step["run"]))
+        for job, spec in wf["jobs"].items()
+        for step in spec.get("steps", [])
+        if "run" in step and len(step["run"]) > 15000 and "${{" in step["run"]
+    ]
+    assert not offenders, offenders

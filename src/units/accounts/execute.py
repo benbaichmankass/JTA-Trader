@@ -2556,6 +2556,11 @@ def _log_trade_to_journal(
                     audit_notes["legs_left_resting_on_closed_rows"] = \
                         reduce_result["legs_left_resting_on_closed_rows"]
                 audit_notes["pnl_source"] = "deferred_intent_reduce"
+                # ORDER-AUDIT-4 (PI-20261015-PD85QJEZ-0003): the reason on this
+                # row is the intent layer's own decision, so say so. A literal,
+                # pinned to src/runtime/provenance.py by a test (the order path
+                # keeps its imports minimal).
+                audit_notes.setdefault("exit_reason_source", "intent_reduce_order")
                 now_iso = datetime.now(timezone.utc).isoformat()
                 db.insert_trade({
                     "timestamp": now_iso,
@@ -2579,6 +2584,13 @@ def _log_trade_to_journal(
                     "account_id": resolved_account_id,
                     "notes": dump_capped(audit_notes, 2000),
                     "order_package_id": pkg_id,
+                    # XRP-REDUCE-OTHER-CLOSES: the reduce order's venue orderId,
+                    # same join key the legacy insert below stamps. Without it
+                    # every reduce leg read broker_order_id NULL although
+                    # notes.trade_id held the filled order (bybit_2 6533/6539,
+                    # both Filled at the venue), so the broker-truth cost sweep
+                    # could never reach a reduce leg. Observability-only.
+                    "broker_order_id": trade_id,
                 })
                 # Reduce handled as a partial close — done. The package
                 # linked_trade_id slot is owned by the primary entry, not a
@@ -3400,6 +3412,84 @@ def _ib_sibling_open_qty(
         return 0.0
 
 
+def _bybit_close_headroom(
+    exchange_client: Any, category: str, account_cfg: dict, symbol: str,
+    direction: str, trade_id: Optional[Any],
+) -> tuple:
+    """How much of the live Bybit position this trade's close may take.
+
+    SOAK-MECH-FAULTS class C (bybit_1 trade 6171, 2026-09-26): under one-way
+    netting two same-direction journal trades share ONE venue position. When
+    trade A's own Partial SL leg fills at the venue and the monitor then sends
+    its own ``sl_cross`` reduce-only close for A's full qty, Bybit clamps the
+    reduce-only qty to what is left -- which is trade B's share -- and B is
+    flattened with no journal close (it later lands as ``reconciler_filled`` at
+    a candle price). Measured: venue PartialStopLoss 87674.6 filled 09:11:18;
+    monitor reduce-only Market Sell clamped to 1221.9 (B's exact size) at
+    09:11:56. This is the Bybit twin of the IB sibling clamp
+    (``_ib_sibling_open_qty``), and it reuses that journal read.
+
+    Returns ``(headroom, state)``:
+
+    * ``(None, "not_applicable")`` -- spot, or the caller gave no ``trade_id``
+      (byte-for-byte the pre-fix path).
+    * ``(None, "position_unread")`` -- the position read failed; the caller
+      sends the pre-fix qty rather than blocking a close.
+    * ``(float, "read")`` -- live same-direction size minus the same-direction
+      sibling journal qty. ``<= 0`` means this trade's own share is gone.
+    """
+    if category == "spot" or trade_id is None:
+        return None, "not_applicable"
+    want_side = "buy" if direction == "long" else "sell"
+    try:
+        pos_resp = exchange_client.get_positions(category=category, symbol=symbol)
+        if not isinstance(pos_resp, dict) or pos_resp.get("retCode") not in (0, "0"):
+            return None, "position_unread"
+        prows = (pos_resp.get("result") or {}).get("list")
+        if not isinstance(prows, list):
+            return None, "position_unread"
+        live = 0.0
+        for row in prows:
+            try:
+                size = abs(float(row.get("size") or 0.0))
+            except (TypeError, ValueError):
+                return None, "position_unread"
+            if size > 0 and str(row.get("side") or "").lower() == want_side:
+                live += size
+    except Exception as exc:  # noqa: BLE001
+        logger.info("_bybit_close_headroom: get_positions failed %s: %s",
+                    symbol, exc)
+        return None, "position_unread"
+    sibling = _ib_sibling_open_qty(
+        account_cfg.get("account_id"), symbol, trade_id, direction=direction,
+    )
+    return live - sibling, "read"
+
+
+def _bybit_own_legs_resting(
+    exchange_client: Any, category: str, symbol: str,
+    sl_order_id: Optional[str], tp_order_id: Optional[str],
+) -> Optional[bool]:
+    """True if either of this trade's tracked Partial-tpsl legs is still
+    resting at the venue; False if neither is; None if unknown (no tracked
+    id, or the read failed)."""
+    own = {str(x) for x in (sl_order_id, tp_order_id) if x}
+    if not own:
+        return None
+    try:
+        oo = exchange_client.get_open_orders(
+            category=category, symbol=symbol, orderFilter="StopOrder",
+        )
+        if not isinstance(oo, dict) or oo.get("retCode") not in (0, "0"):
+            return None
+        rows = (oo.get("result") or {}).get("list")
+        if not isinstance(rows, list):
+            return None
+    except Exception:  # noqa: BLE001
+        return None
+    return any(str(o.get("orderId") or "") in own for o in rows)
+
+
 def close_open_position(
     exchange_client: Any,
     account_cfg: dict,
@@ -3474,6 +3564,53 @@ def close_open_position(
             from src.units.accounts.qty_legalize import snap_artifact_qty
 
             category = _bybit_category(account_cfg)
+            # SOAK-MECH-FAULTS class C: never let a reduce-only close eat a
+            # same-direction sibling trade's share of a netted position.
+            headroom, headroom_state = _bybit_close_headroom(
+                exchange_client, category, account_cfg, symbol, direction,
+                trade_id,
+            )
+            if headroom is not None and headroom < qty:
+                # The venue holds less on our side than our qty plus the
+                # same-side siblings' recorded qty. Act on that ONLY when our
+                # own tracked legs are gone (they fired, so our share really
+                # shrank). If they still rest -- or we cannot tell -- a sibling
+                # row is the likelier stale party, so send the pre-fix qty
+                # rather than under-close (the IB clamp's 2026-09-28 lesson).
+                own_resting = _bybit_own_legs_resting(
+                    exchange_client, category, symbol, sl_order_id, tp_order_id,
+                )
+                if own_resting is False and headroom <= 1e-12:
+                    logger.warning(
+                        "close_open_position: account=%s symbol=%s trade=%s "
+                        "own share already flat at venue (own legs gone; the "
+                        "live same-side size is reserved by sibling journal "
+                        "rows) -- NOT sending a reduce-only close that would "
+                        "take a sibling's share",
+                        account_cfg.get("account_id"), symbol, trade_id,
+                    )
+                    return {"ok": False,
+                            "exchange_response": {"own_share_already_flat": True,
+                                                  "headroom": headroom},
+                            "exchange_order_id": None,
+                            "error": "own share already flat; remainder "
+                                     "belongs to sibling trade(s)"}
+                if own_resting is False:
+                    logger.warning(
+                        "close_open_position: account=%s symbol=%s trade=%s qty "
+                        "%s clamped to %s so a sibling's share is not closed",
+                        account_cfg.get("account_id"), symbol, trade_id, qty,
+                        headroom,
+                    )
+                    qty = headroom
+                else:
+                    logger.warning(
+                        "close_open_position: account=%s symbol=%s trade=%s "
+                        "journal/venue divergence (headroom %s < qty %s, own "
+                        "legs resting=%s) -- sending the unclamped qty",
+                        account_cfg.get("account_id"), symbol, trade_id,
+                        headroom, qty, own_resting,
+                    )
             # Repair a float ARTIFACT before it reaches the wire (MI-139,
             # WO-20260906-A-BYBIT-REDUCE-ONLY-CLOSE-IS-REJECTED). `str(qty)` on a
             # raw journal residual sends e.g. "33.299999999999955", which Bybit

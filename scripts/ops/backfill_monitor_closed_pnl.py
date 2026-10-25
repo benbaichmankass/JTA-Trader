@@ -160,6 +160,20 @@ def _compute_pnl_percent(
     return round((closed_pnl / notional) * 100.0, 4)
 
 
+def _venue_entry_fill(cfg: Dict[str, Any], row: sqlite3.Row) -> Optional[float]:
+    """The entry order's venue avg fill, or ``None`` (never raises)."""
+    try:
+        tid = _decode_notes(row["notes"]).get("trade_id")
+        if not tid:
+            return None
+        from src.units.accounts.clients import account_order_status
+        status = account_order_status(cfg, str(tid)) or {}
+        avg = float(status.get("avg_price") or 0)
+        return avg if avg > 0 else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _plan_row(
     row: sqlite3.Row, cfg: Optional[Dict[str, Any]],
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -199,6 +213,21 @@ def _plan_row(
         qty=qty,
         entry_price=entry_price,
     )
+    if rec is None:
+        # CLOSE-PNL-NULL (2026-10-12): same retry as the live sweep — the
+        # journal entry is the INTENDED price, the venue's record carries the
+        # FILL, and >10 bps of entry slippage made the record unmatchable
+        # (bybit_2 trade 6565: 0.2492 vs 0.2489).
+        venue_entry = _venue_entry_fill(cfg, row)
+        if venue_entry and venue_entry != entry_price:
+            rec = account_closed_pnl_for_trade(
+                cfg,
+                symbol=str(row["symbol"] or ""),
+                direction=str(row["direction"] or ""),
+                opened_at_ms=opened_at_ms,
+                qty=qty,
+                entry_price=venue_entry,
+            )
     if rec is None:
         return None, "account_closed_pnl_for_trade returned None"
 

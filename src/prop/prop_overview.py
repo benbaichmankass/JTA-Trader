@@ -39,9 +39,26 @@ Contract (never collapse "unread" into 0):
     The book total is a sum only when EVERY account is in one of the first two
     states; otherwise it is null and ``accounts_unknown`` says how many are
     missing. Until then the overview served ``unrealized_pnl: null`` always.
+
+  * PROP-TRACKING (operator 2026-10-12, verbatim: "we need to be able to track
+    the prop trades - no upnl isn't a solution to the issue"). Two additions:
+      - **per-trade MEASURED from the venue's Positions list.** The phone
+        executor now posts the terminal's open positions (symbol, side, size,
+        entry, mark, uPnL) in its snapshot (``raw.positions``, clean reads
+        only); an open trade that is the only journal row for its symbol+side
+        takes that position's uPnL, provenance ``measured``.
+      - **a labelled ESTIMATE when no venue figure exists** (until the new APK
+        is installed, or when a read is not clean): ``(mark - entry) x qty``,
+        signed by side, with the mark from the bot's own candle feed for the
+        symbol (``src.runtime.local_pnl.last_mark_price``; source labelled from
+        the instrument profile's exchange). Provenance ``estimated``,
+        trade/account state ``mark_estimate``. An estimate is NEVER summed into
+        ``total_usd``: it is in ``total_incl_estimates_usd`` beside
+        ``accounts_estimated``, so the measured total stays honest.
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -115,54 +132,140 @@ def _is_phone_account(account_id: str) -> bool:
         return True
 
 
-def _account_unrealized(row: Dict[str, Any], open_rows: List[Dict[str, Any]]) -> tuple:
+def _account_unrealized(row: Dict[str, Any], open_rows: List[Dict[str, Any]],
+                        trade_u: Optional[Dict[Any, Dict[str, Any]]] = None) -> tuple:
     """-> (value, state, provenance) for one account row. See the module doc."""
     if row.get("status_freshness") != "ok":
         return None, "stale", "unverified"
     if row.get("_unrealized_raw") is not None:
         return row["_unrealized_raw"], "venue_snapshot", "measured"
-    if (not row.get("_phone_executed")
-            and not any(f.get("account_id") == row["account_id"] for f in open_rows)):
+    mine = [f for f in open_rows if f.get("account_id") == row["account_id"]]
+    if not row.get("_phone_executed") and not mine:
         return 0.0, "no_open_trades", "journal"
+    # PROP-TRACKING fallback: every open trade carries a figure (measured per position or a mark estimate) ->
+    # their sum, labelled as an estimate whenever any term is one. A phone account with NO journal-open trade
+    # stays not_reported: the journal cannot vouch for flat, and there is nothing to estimate.
+    us = [(trade_u or {}).get(f.get("id")) for f in mine]
+    if mine and all(u and u.get("unrealized_pnl") is not None for u in us):
+        val = sum(u["unrealized_pnl"] for u in us)
+        if all(u["unrealized_provenance"] == "measured" for u in us):
+            return val, "venue_positions", "measured"
+        return val, "mark_estimate", "estimated"
     return None, "not_reported", "unverified"
 
 
 def _unrealized_block(acct_rows: List[Dict[str, Any]],
-                      open_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    known, unknown, total = 0, 0, 0.0
+                      open_rows: List[Dict[str, Any]],
+                      trade_u: Optional[Dict[Any, Dict[str, Any]]] = None) -> Dict[str, Any]:
+    known, unknown, estimated, total, est_total = 0, 0, 0, 0.0, 0.0
     for row in acct_rows:
-        val, state, prov = _account_unrealized(row, open_rows)
+        val, state, prov = _account_unrealized(row, open_rows, trade_u)
         row["unrealized"] = round(val, 2) if val is not None else None
         row["unrealized_state"] = state
         row["unrealized_provenance"] = prov
         if val is None:
             unknown += 1
+        elif prov == "estimated":
+            estimated += 1
+            est_total += val
         else:
             known += 1
             total += val
     for row in acct_rows:
         row.pop("_unrealized_raw", None)
         row.pop("_phone_executed", None)
+        row.pop("_venue_positions", None)
     return {
-        "total_usd": round(total, 2) if acct_rows and unknown == 0 else None,
+        # MEASURED/journal only: an estimate never enters this figure
+        "total_usd": round(total, 2) if acct_rows and unknown == 0 and estimated == 0 else None,
+        # the same plus the labelled mark estimates; null while any account is still unknown
+        "total_incl_estimates_usd": round(total + est_total, 2) if acct_rows and unknown == 0 else None,
         "accounts_known": known,
+        "accounts_estimated": estimated,
         "accounts_unknown": unknown,
-        "source": "prop_account_status.unrealized (venue-reported by the prop executors)",
+        "source": "prop_account_status.unrealized (venue-reported by the prop executors); per-position venue "
+                  "uPnL from the phone's Positions read; mark_estimate = (Bybit mark - entry) x qty, ESTIMATED",
     }
+
+
+def _venue_positions(snap: Optional[Dict[str, Any]], fresh: Any) -> Optional[List[Dict[str, Any]]]:
+    """The venue's open positions from a FRESH snapshot's clean Positions read, else None (not read)."""
+    if fresh != "ok" or not snap:
+        return None
+    raw = snap.get("raw")
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            return None
+    if not isinstance(raw, dict) or raw.get("positions_state") != "read" or not isinstance(raw.get("positions"), list):
+        return None
+    return raw["positions"]
+
+
+def _mark_source(symbol: str) -> str:
+    """Where the estimate's mark came from: the instrument profile's exchange (the same routing
+    ``market_data.connector_for_symbol`` uses for ``local_pnl.last_mark_price``), never a hard-coded venue."""
+    try:
+        from src.core.profile_loader import load_instrument_profiles
+        ex = getattr((load_instrument_profiles() or {}).get(str(symbol).upper()), "exchange", None)
+    except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
+        logger.warning("prop_overview: instrument profile read failed for %s", symbol, exc_info=True)
+        ex = None
+    return f"{str(ex).lower() if ex else 'bot_feed'}_last_close_5m"
+
+
+def _mark_estimate(f: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """(mark - entry) x qty, signed by side, mark from the bot's own Bybit feed. ESTIMATED: a different venue's
+    price, no fees, no funding. None when any term is missing (never 0)."""
+    entry, qty = f.get("entry_price"), f.get("qty")
+    side = str(f.get("direction") or "").lower()
+    sign = 1 if side in ("long", "buy") else -1 if side in ("short", "sell") else 0
+    if not isinstance(entry, (int, float)) or not isinstance(qty, (int, float)) or not sign or not f.get("symbol"):
+        return None
+    try:
+        from src.runtime.local_pnl import last_mark_price
+        mark = last_mark_price(f["symbol"])
+    except Exception:  # noqa: BLE001  # allow-silent: no estimate is the honest outcome; logged
+        logger.warning("prop_overview: mark read failed for %s", f.get("symbol"), exc_info=True)
+        mark = None
+    if not isinstance(mark, (int, float)) or mark <= 0:
+        return None
+    return {"unrealized_pnl": round((float(mark) - float(entry)) * float(qty) * sign, 2),
+            "unrealized_provenance": "estimated", "unrealized_state": "mark_estimate",
+            "unrealized_mark": float(mark), "unrealized_mark_source": _mark_source(f["symbol"]),
+            "unrealized_as_of": datetime.now(timezone.utc).isoformat()}
 
 
 def _trade_unrealized(f: Dict[str, Any], acct_rows: List[Dict[str, Any]],
                       open_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """A trade's uPnL is the account's venue number only when it is the
-    account's ONLY open trade; with two or more the venue number cannot be
-    split honestly, so it is null."""
+    """One open trade's uPnL, best source first:
+      1. the account's venue number when it is the account's ONLY open trade (``venue_snapshot``);
+      2. the venue's own Positions row for this symbol+side when this is the only journal row on it
+         (``venue_position``, MEASURED);
+      3. a mark estimate (``mark_estimate``, ESTIMATED);
+      4. null (``not_reported``)."""
     acct = next((r for r in acct_rows if r["account_id"] == f.get("account_id")), None)
     siblings = sum(1 for o in open_rows if o.get("account_id") == f.get("account_id"))
-    if acct and acct.get("unrealized_state") == "venue_snapshot" and siblings == 1:
-        return {"unrealized_pnl": acct["unrealized"], "unrealized_provenance": "measured",
+    if acct and acct.get("_unrealized_raw") is not None and acct.get("status_freshness") == "ok" and siblings == 1:
+        return {"unrealized_pnl": round(acct["_unrealized_raw"], 2), "unrealized_provenance": "measured",
+                "unrealized_state": "venue_snapshot", "unrealized_as_of": acct.get("reported_at")}
+    side = "long" if str(f.get("direction") or "").lower() in ("long", "buy") else "short"
+    sym = str(f.get("symbol") or "").upper()
+    same = [o for o in open_rows if o.get("account_id") == f.get("account_id")
+            and str(o.get("symbol") or "").upper() == sym
+            and ("long" if str(o.get("direction") or "").lower() in ("long", "buy") else "short") == side]
+    vp = [p for p in ((acct or {}).get("_venue_positions") or [])
+          if str(p.get("symbol") or "").upper() == sym and p.get("direction") == side]
+    if len(same) == 1 and len(vp) == 1 and isinstance(vp[0].get("upnl"), (int, float)):
+        return {"unrealized_pnl": round(float(vp[0]["upnl"]), 2), "unrealized_provenance": "measured",
+                "unrealized_state": "venue_position", "unrealized_mark": vp[0].get("mark"),
                 "unrealized_as_of": acct.get("reported_at")}
+    est = _mark_estimate(f)
+    if est is not None:
+        return est
     return {"unrealized_pnl": None, "unrealized_provenance": "unverified",
-            "unrealized_as_of": None}
+            "unrealized_state": "not_reported", "unrealized_as_of": None}
 
 
 def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = None,
@@ -196,12 +299,20 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
             "counted_in_total": counted,
             "_unrealized_raw": float(ur) if isinstance(ur, (int, float)) else None,
             "_phone_executed": _is_phone_account(aid),
+            "_venue_positions": _venue_positions(snap, fresh),
             "reported_at": (snap or {}).get("reported_at"),
         })
         all_fills.extend(prop_journal.list_fills(account_id=aid, limit=_FILL_LIMIT))
 
     open_rows, closed = split_fills(all_fills)
-    unrealized = _unrealized_block(acct_rows, open_rows)
+    # MD-EXEC-DEV-TEST-TRADES: an OPEN test position is real money and stays visible; a CLOSED one is not performance
+    from src.prop.exec_test_trades import exclude_exec_test
+    closed = exclude_exec_test(closed, fills=True)
+    trade_u ={f.get("id"): _trade_unrealized(f, acct_rows, open_rows) for f in open_rows}
+    for row in acct_rows:   # the venue's own position count: a check on the journal, visible beside it
+        vps = row.get("_venue_positions")
+        row["venue_open_positions"] = len(vps) if vps is not None else None
+    unrealized = _unrealized_block(acct_rows, open_rows, trade_u)
     cutoff = None if WINDOWS[window] is None else now - WINDOWS[window]
     in_win = []
     for f in closed:
@@ -226,7 +337,7 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
         "sl": f.get("sl"), "tp": f.get("tp"), "ticket_id": f.get("ticket_id"),
         "opened_at": f.get("opened_at") or f.get("reported_at"),
         "status": f.get("status"),
-        **_trade_unrealized(f, acct_rows, open_rows),
+        **trade_u[f.get("id")],
     } for f in open_rows]
     return {
         "generated_at": now.isoformat(),
@@ -238,6 +349,7 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
         "open_trades": open_trades,
         "realized": realized,
         "unrealized_pnl": unrealized["total_usd"],
+        "unrealized_pnl_incl_estimates": unrealized["total_incl_estimates_usd"],
         "unrealized": unrealized,
         "population": (f"{len(ids)} prop accounts; equity summed over {fresh_n} with a fresh "
                        f"operator-reported snapshot; realized over {len(in_win)} closed fills "

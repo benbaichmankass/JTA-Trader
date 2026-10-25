@@ -1,0 +1,104 @@
+id: RQ-20261014-4a4c-01
+title: 'P4-Q2 confirm: is the PPI m/m surprise -> ES=F drift present in the LATER sub-period alone (releases 2021-01-01..)? (n~68; underpowered by design)'
+status: done
+cadence: once
+theme: macro
+priority: 1
+kind: experiment
+question: On ppi_mom releases dated on/after 2021-01-01 only, is the overlap-corrected Spearman IC of (survey surprise, ES=F forward return from the release-day close) negative with
+  |t_eff| >= 2.0 at h=3 or h=5 trading days?
+why_this_matters: 'Parent: RQ-20261014-de02-04 PASSED 2026-10-14 (run 38605585550): ppi_mom survey surprise vs ES=F forward return, n=139 releases 2015-01-15..2026-09-10, IC h1 -0.183
+  (t -2.17), h3 -0.281 (t -3.43), h5 -0.247 (t -2.98), expected negative sign. It was 1 PASS of 13 kinds x 3 horizons = 39 tests landed 2026-10-13/14; normal-approx two-sided p at t=-3.43
+  is ~0.0006, under the BH rank-1 threshold 0.05/39 = 0.0013, so it survives the family read, but a single-sample IC on daily closes is a lead: stability, a placebo, a second instrument
+  and a net-of-cost book are owed before it can feed a conviction axis (programme 04-MACRO-SLEEVE.md, Q2). A finding concentrated in one regime (2015-2020 low-inflation vs the 2021+
+  inflation regime) is not a stable axis.'
+power:
+  expected_n: 68
+  min_detectable_effect: 0.35
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one release with a defined surprise; 68 on/after 2021-01-01 before the price join. At alpha 0.05/power 0.8 a one-sample test needs (1.96+0.84)^2/0.35^2 = 64 for d=0.35;
+    the parent''s h3 IC -0.28 is ~d 0.29, so at the observed effect this half is UNDERPOWERED BY DESIGN (needs ~93): a FAIL here is weak evidence, a PASS is strong.'
+  feasibility:
+    source: none
+    accrual_basis: 'n is bounded by the resolved ppi_mom releases with a defined survey surprise on file (a fixed historical backfill, MEASURED 2026-10-14 with econ_event_study.load_resolved_events_multi
+      over the two committed files: 139 total, 71 before 2021-01-01, 68 on/after; 118 with a non-zero surprise). Not an accrual: ~12 releases/yr add slowly; the run prints the joined
+      count and a short join lands INDETERMINATE, never padded.'
+decision_rule:
+  id: RULE-RQ-20261014-4a4c-01
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: ic_t_eff at horizons 3 and 5 (scripts/research/macro_event_study_run.py grade(), --release-start 2021-01-01).
+  rule: 'PASS IF at h=3 or h=5 with n >= 50, |ic_t_eff| >= 2.0 AND the IC is negative. FAIL IF both horizons have n >= 50 and neither does. INDETERMINATE IF a horizon has n < 50. no_data/producer_failed:
+    a route fault, not a verdict. Read together with RQ-20261014-4a4c-02: both PASS = stable; one PASS = regime-concentrated (the axis carries a regime condition or is retired); neither
+    = the parent was a pooled artifact.'
+  what_it_does_not_do: Does not re-test h=1, adds no new kind, changes no config. Daily closes only. A FAIL does not retire the parent alone; the 04 programme reads 01..06 together.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: confirms or retires the one event-surprise lead that could seed an event-scored conviction axis for the M28 sleeve (alpaca_options_paper); information value, not
+    a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-de02-04 (one daily-close fetch, ~300 snapshot rows, rank correlations); measured run time of that parent was minutes on research-script-run.yml.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - 3,5
+  - --primary-horizons
+  - 3,5
+  - --min-n
+  - '50'
+  - --t-bar
+  - '2.0'
+  - --expected-sign
+  - negative
+  - --release-start
+  - '2021-01-01'
+  - --population
+  - ppi_mom releases dated >= 2021-01-01 (live + survey backfill) joined to ES=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-4a4c-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- RQ-20261014-de02-04
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+last_dispatched_at: '2026-10-15T19:14:30+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ-20261014-4a4c-01
+  evidence:
+  - research/results/RQ-20261014-4a4c-01/38792322804.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

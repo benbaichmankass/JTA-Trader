@@ -68,6 +68,12 @@ restrictions:
 
 funded_soak_days: 30
 
+# Firm-declared costs (read by src/research/run_costs.prop_declared_costs; strictest reading:
+# commission "per trade" taken as per fill/side). From the cost comment above.
+costs:
+  commission_bps_per_side: 4.0
+  swap_bps_per_night: 3.3
+
 economics:
   account_fee_usd: 120            # 1-Step $10k
   rebuy_fee_usd: 120              # no reset discount stated; no reset product found

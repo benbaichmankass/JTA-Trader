@@ -1,0 +1,1255 @@
+# Programme P5 -- prop accounts as an expected-value question: the machine-readable question tree
+# for docs/research/programmes/05-PROP.md (§ 3 questions, § 4 ladders, § 5 backlog). Lane
+# P5-PROP-BACKLOG-1016 (manager dispatch 2026-10-16: "we keep failing to turn plans into a running
+# backlog of tests").
+# Read by scripts/research/queue_replenish.py (programme source, RESEARCH-LOOP-AUDIT RC2/RC3):
+#   * a `unit:` node is materialised as a queue unit once its `after` verdicts are CLOSED
+#     (no `after` = ready now: the replenisher emits it on its next run and mints the id);
+#   * a `needs_authoring:` node is listed in the authoring queue
+#     (`queue_replenish.py --authoring-queue`), which research-ops drafts from first.
+# Landing machinery (check_pr_landing.py): every edit holds for a human merge.
+# `value` figures are INFERRED planning weights (stated basis on each unit), never measurements.
+#
+# STATE OF 05's QUESTIONS ON 2026-10-16 (MEASURED from research/queue grading + research/results):
+#   Q1 baselines   f516-01/02/03 CLOSED indeterminate (EV > 0 every seed, P(net>0) < 0.70) -- answered;
+#                  velotrade_1 re-sized 0.01 -> 0.005 (VELOTRADE-RISK-050), its as-configured number is
+#                  f516-05 arm C050; every unit below re-measures its account's A arm window-matched.
+#   Q2 sizing      velotrade_1 PASS (f516-05) -> rung 2 below; tradeify_1 FAIL (f516-06, closed);
+#                  breakout_2 NEVER RUN -> P5-Q2-SIZING-BRK.
+#   Q3 per-leg     f516-04 NULL -> the breakout_2 $25/$50 proposal is killed by its own rule;
+#                  tradeify_1's SOL-down direction never priced -> P5-Q3-PERLEG-TRAD.
+#   Q4 switch      CLOSED. velotrade_1 FAIL (f516-07, 0.8 confirmed). tradeify_1 / breakout_2: their Q1
+#                  sims record dd_switch_trips = dd_switch_blocked = 0 (counter absent = never incremented,
+#                  prop_ev_sim.py:837 / :877; 0.5% risk with <= 2 positions cannot reach 80% of a 3% daily
+#                  limit intraday), so 05's "< 0.5 blocked per life" exit holds on their own numbers.
+#   Q5 breadth     pool admission PASS (f516-09/-10); 730 d-vs-1095 d head-to-heads mixed (6504, 1bf3-02,
+#                  ee68-01, 8bbc-03..05). The window-matched matched-risk head-to-heads at 0.005 are lane
+#                  RESEARCH-FOLLOWUP-1016's RQ-20261016-e2db-05/-06/-07 (branch research/followup-1016): the
+#                  tree BRANCHES on them (P5-Q5-4H-*), adds eth_4h ALONE on velotrade_1 (the only
+#                  gate-eligible 4h leg: sol_4h is shadow, audit 2026-10-16) and ADA on breakout_2.
+#   Q6 live-sim    blocked/RQ-20261014-f516-11 on PROP-EXIT-READ -> branch nodes P5-Q6-fail / P5-Q7-tp-amend.
+#   Noise          prop_ev_grid's per-seed survival >= has no MC-SE tolerance (audit 2026-10-16 § 4.1):
+#                  every dominance rule below carries a registered STRICT-SEED CAVEAT; build row
+#                  PROP-GRID-SURVIVAL-TOL.
+#   Gate           comms/prop_survival/ is empty; no unit produces the per-leg record -> P5-GATE-*.
+#   Exits          OWNED BY PROGRAMME 01 (research/programmes/01-active-trade-management.yaml), not duplicated:
+#                  P1-Q2-ethprop-derive / -solprop-derive (predictive TP), P1-Q4-ethprop-exit-confirm,
+#                  P1-Q4-ethprop-ev, P1-Q4-solprop-propcost, P1-Q7-sol-tp3-prop. eth_4h's fixed predictive TP
+#                  already FAILED (RQ-20261015-cab7-04), so its doctrine route is the stop (P1-Q6-eth4h-stop-declare).
+# NOT ENCODED HERE (owned elsewhere, do not duplicate): Tradeify non-crypto search (e2db-01..04) and
+# per-account matched-risk head-to-heads (e2db-05..07), lane RESEARCH-FOLLOWUP-1016; RQ-20261015-24ca-05 / ca42-01
+# (Tradeify non-crypto, queued); trend_donchian_xrp_4h (n 46 < 88 at 1460 d: no unit can answer it
+# until it accrues); PROP-MISSION-MODEL (a build, label undefined).
+programme: P5
+plan: docs/research/programmes/05-PROP.md
+# questions: map added by the programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021) to discharge plan
+# questions that had no node (programme_coverage.py); each names its record and why.
+questions:
+  Q1:
+    state: closed
+    by: RQ-20261014-f516-01, RQ-20261014-f516-02, RQ-20261014-f516-03
+    why: >-
+      Baselines answered: EV > 0 on every seed, P(net > 0) < 0.70 on all three accounts (indeterminate by the B6 bar). Every later unit re-measures its account A arm window-matched.
+  Q4:
+    state: closed
+    by: RQ-20261014-f516-07
+    why: >-
+      velotrade_1 FAIL confirmed the 0.8 switch; tradeify_1 / breakout_2 sims record zero switch trips at 0.5% risk, so the "< 0.5 blocked per life" exit holds on their own numbers.
+nodes:
+- id: P5-Q5-4H-VELO-pass
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-e2db-07
+    verdict: pass
+  needs_authoring: 'RQ-20261016-e2db-07 PASSED: the 4h ETH+SOL pair adds on velotrade_1 at matched risk 0.005, window-matched.
+    Before the manager''s Tier-3 roster proposal register the per-half robustness question (does the dominance hold
+    on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev_grid reads whole files) and
+    read Programme 01''s eth_4h exit nodes (P1-Q4-eth4h-*, P1-Q6-eth4h-stop-declare) for the TP-doctrine route.
+    The add also needs P5-GATE-VELO''s per-leg 4h records. Write the outcome to PROP-BOOK-SEARCH-1095D.'
+- id: P5-Q5-4H-TRAD-pass
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-e2db-06
+    verdict: pass
+  needs_authoring: 'RQ-20261016-e2db-06 PASSED: the 4h ETH+SOL pair adds on tradeify_1 at matched risk 0.005, window-matched.
+    Before the manager''s Tier-3 roster proposal register the per-half robustness question (does the dominance hold
+    on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev_grid reads whole files) and
+    read Programme 01''s eth_4h exit nodes (P1-Q4-eth4h-*, P1-Q6-eth4h-stop-declare) for the TP-doctrine route.
+    The add also needs P5-GATE-TRAD''s per-leg 4h records. Write the outcome to PROP-BOOK-SEARCH-1095D.'
+- id: P5-Q5-4H-BRK-pass
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-e2db-05
+    verdict: pass
+  needs_authoring: 'RQ-20261016-e2db-05 PASSED: the 4h ETH+SOL pair adds on breakout_2 at matched risk 0.005, window-matched.
+    Before the manager''s Tier-3 roster proposal register the per-half robustness question (does the dominance hold
+    on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev_grid reads whole files) and
+    read Programme 01''s eth_4h exit nodes (P1-Q4-eth4h-*, P1-Q6-eth4h-stop-declare) for the TP-doctrine route.
+    The add also needs P5-GATE-BRK''s per-leg 4h records. Write the outcome to PROP-BOOK-SEARCH-1095D.'
+- id: P5-Q5-E4H-VELO-005
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'velotrade_1: does adding trend_donchian_eth_4h ALONE (the only gate-eligible 4h leg) to the 1h ETH+SOL
+      book beat it at the SAME risk 0.005 on EV per life with no worse survival on every seed? (window-matched 1095
+      d)'
+    question: On the same 5 seeds x 4,000 lives under velotrade_classic_1step (balance sizing, switch 0.8, f516-01's
+      stack), does CE4H (A + trend_donchian_eth_4h, both at risk 0.005) beat A (the incumbent 2-leg book at risk
+      0.005) on ev_net_usd_per_life AND p_alive_at_horizon on EVERY seed? All four ledgers are the window-matched
+      1095 d prop-venue-stack (fee 8 bps rt, slip 3, swap 5 bps/24h) Stage-0 arms of RQ-20261015-1bf3-03..06 (eth_prop
+      517, sol_prop 203, eth_4h 116, sol_4h 116 trades, 2023-10-13..2026-10-11); the sim re-prices gross_r under
+      --costs breakout, so the harness stack is not double-charged. This removes the 730 d-vs-1095 d window mismatch
+      every earlier head-to-head disclosed.
+    why_this_matters: 'Manager programme audit 2026-10-16 § 5.1: ''velotrade_1 1h book + eth_4h only, at matched
+      risk 0.0035 and 0.005 -- the only gate-eligible version of the C4H gain''. trend_donchian_sol_4h is execution=shadow
+      in config/strategies.yaml and on no account''s roster, so a prop add of it faces the full Stage-1 path first;
+      eth_4h is live on bybit_1/bybit_2. Every C4H result so far (ee68-01, 8bbc-03..05, 1bf3-02, and lane RESEARCH-FOLLOWUP-1016''s
+      e2db-07 at 0.005) prices BOTH 4h legs. DISCLOSED BEFORE REGISTRATION (730 d incumbents vs 1095 d 4h rows,
+      MEASURED from research/results): 8bbc-05 at 0.0035 1h-book EV ~$72 vs +pair ~$550 (PASS), 8bbc-03 at 0.0045
+      FAIL; no eth_4h-only arm has run.'
+    power:
+      expected_n: 116
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Binding leg n = 116 (eth_4h, 1095 d); incumbents 517 + 203. 2 arms x 5 seeds.
+      feasibility: &id001
+        source: none
+        accrual_basis: Re-pricing of committed trade ledgers under the firm's rules; nothing accrues.
+    decision_rule:
+      id: RULE-P5-Q5-E4H-VELO-005
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per seed and arm: path-mode ev_net_usd_per_life and p_alive_at_horizon (and its MC SE), velotrade_classic_1step,
+        switch 0.8.'
+      rule: 'prop_ev_grid --grade any_c_dominates, mechanically. PASS IF CE4H beats A on ev AND p_alive >= A on
+        ALL 5 seeds -> the gate-eligible leg adds at matched risk window-matched: with P5-GATE-VELO''s eth_4h record
+        this is the operator decision ''add eth_4h to velotrade_1'' (manager, Tier-3 roster; a prop_variant leg
+        + Stage-1 soak per the prop superset ladder). FAIL IF no C arm dominates on every seed -> eth_4h alone is
+        not shown to add at this risk; recorded on PROP-BOOK-SEARCH-1095D. NULL if an arm is missing. STRICT-SEED
+        CAVEAT, registered here: prop_ev_grid compares p_alive per seed with a strict >= (no MC-SE tolerance; manager
+        audit 2026-10-16 § 4.1, build row PROP-GRID-SURVIVAL-TOL), so a FAIL decided only by a survival gap inside
+        about 2 MC SE on a seed is reported as ''FAIL (within-noise survival)'' beside the mechanical verdict, and
+        is re-graded only by a separately registered rule once that row lands. The mechanical verdict here is not
+        changed after the run.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 75
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 300
+      confidence: 0.4
+      basis: 'INFERRED stand-in: 8bbc-04/-05 matched-risk +pair gains of ~$320-480/life on velotrade_1 (730 d vs
+        1095 d); this asks how much survives with the one leg that can actually be added.'
+    run:
+      timeout_minutes: 240
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --arm
+      - A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+      - --arm
+      - CE4H=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/research/RQ-20261015-1bf3-03/38713755448/arms/P__trades.jsonl
+        --lev-cap trend_donchian_eth_4h=5
+      - --common
+      - --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset
+        config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt
+        3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5
+        --lev-cap trend_donchian_sol_prop=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - any_c_dominates
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 Q5 eth_4h-only matched risk 0.005, velotrade_1
+    lands: &id002
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - research/queue/RQ-20261015-8bbc-04.yaml
+    - research/queue/RQ-20261015-8bbc-05.yaml
+    - docs/claude/work/checklist/PROP-BOOK-SEARCH-1095D.json
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not re-grade 8bbc-03..05 or e2db-07;
+      does not price sol_4h alone.
+- id: P5-Q5-E4H-VELO-0035
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'velotrade_1: does adding trend_donchian_eth_4h ALONE (the only gate-eligible 4h leg) to the 1h ETH+SOL
+      book beat it at the SAME risk 0.0035 on EV per life with no worse survival on every seed? (window-matched
+      1095 d)'
+    question: On the same 5 seeds x 4,000 lives under velotrade_classic_1step (balance sizing, switch 0.8, f516-01's
+      stack), does CE4H (A + trend_donchian_eth_4h, both at risk 0.0035) or C4H (A + both 4h legs at 0.0035, the
+      8bbc-05 shape window-matched) beat A (the incumbent 2-leg book at risk 0.0035) on ev_net_usd_per_life AND
+      p_alive_at_horizon on EVERY seed? All four ledgers are the window-matched 1095 d prop-venue-stack (fee 8 bps
+      rt, slip 3, swap 5 bps/24h) Stage-0 arms of RQ-20261015-1bf3-03..06 (eth_prop 517, sol_prop 203, eth_4h 116,
+      sol_4h 116 trades, 2023-10-13..2026-10-11); the sim re-prices gross_r under --costs breakout, so the harness
+      stack is not double-charged. This removes the 730 d-vs-1095 d window mismatch every earlier head-to-head disclosed.
+    why_this_matters: 'Manager programme audit 2026-10-16 § 5.1: ''velotrade_1 1h book + eth_4h only, at matched
+      risk 0.0035 and 0.005 -- the only gate-eligible version of the C4H gain''. trend_donchian_sol_4h is execution=shadow
+      in config/strategies.yaml and on no account''s roster, so a prop add of it faces the full Stage-1 path first;
+      eth_4h is live on bybit_1/bybit_2. Every C4H result so far (ee68-01, 8bbc-03..05, 1bf3-02, and lane RESEARCH-FOLLOWUP-1016''s
+      e2db-07 at 0.005) prices BOTH 4h legs. DISCLOSED BEFORE REGISTRATION (730 d incumbents vs 1095 d 4h rows,
+      MEASURED from research/results): 8bbc-05 at 0.0035 1h-book EV ~$72 vs +pair ~$550 (PASS), 8bbc-03 at 0.0045
+      FAIL; no eth_4h-only arm has run.'
+    power:
+      expected_n: 116
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Binding leg n = 116 (eth_4h, 1095 d); incumbents 517 + 203. 3 arms x 5 seeds.
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-Q5-E4H-VELO-0035
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per seed and arm: path-mode ev_net_usd_per_life and p_alive_at_horizon (and its MC SE), velotrade_classic_1step,
+        switch 0.8.'
+      rule: 'prop_ev_grid --grade any_c_dominates, mechanically. PASS IF CE4H beats A on ev AND p_alive >= A on
+        ALL 5 seeds -> the gate-eligible leg adds at matched risk window-matched: with P5-GATE-VELO''s eth_4h record
+        this is the operator decision ''add eth_4h to velotrade_1'' (manager, Tier-3 roster; a prop_variant leg
+        + Stage-1 soak per the prop superset ladder). If only C4H dominates, the gain needs sol_4h, which is not
+        gate-eligible today: recorded, nothing proposed. FAIL IF no C arm dominates on every seed -> eth_4h alone
+        is not shown to add at this risk; recorded on PROP-BOOK-SEARCH-1095D. NULL if an arm is missing. STRICT-SEED
+        CAVEAT, registered here: prop_ev_grid compares p_alive per seed with a strict >= (no MC-SE tolerance; manager
+        audit 2026-10-16 § 4.1, build row PROP-GRID-SURVIVAL-TOL), so a FAIL decided only by a survival gap inside
+        about 2 MC SE on a seed is reported as ''FAIL (within-noise survival)'' beside the mechanical verdict, and
+        is re-graded only by a separately registered rule once that row lands. The mechanical verdict here is not
+        changed after the run.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 110
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 300
+      confidence: 0.4
+      basis: 'INFERRED stand-in: 8bbc-04/-05 matched-risk +pair gains of ~$320-480/life on velotrade_1 (730 d vs
+        1095 d); this asks how much survives with the one leg that can actually be added.'
+    run:
+      timeout_minutes: 330
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --arm
+      - A=--sizing balance --risk-pct 0.0035 --dd-switch-frac 0.8
+      - --arm
+      - CE4H=--sizing balance --risk-pct 0.0035 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/research/RQ-20261015-1bf3-03/38713755448/arms/P__trades.jsonl
+        --lev-cap trend_donchian_eth_4h=5
+      - --arm
+      - C4H=--sizing balance --risk-pct 0.0035 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/research/RQ-20261015-1bf3-03/38713755448/arms/P__trades.jsonl
+        --trades trend_donchian_sol_4h=comms/research/RQ-20261015-1bf3-04/38713758293/arms/P__trades.jsonl --lev-cap
+        trend_donchian_eth_4h=5 --lev-cap trend_donchian_sol_4h=5
+      - --common
+      - --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset
+        config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt
+        3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5
+        --lev-cap trend_donchian_sol_prop=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - any_c_dominates
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 Q5 eth_4h-only matched risk 0.0035, velotrade_1
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - research/queue/RQ-20261015-8bbc-04.yaml
+    - research/queue/RQ-20261015-8bbc-05.yaml
+    - docs/claude/work/checklist/PROP-BOOK-SEARCH-1095D.json
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not re-grade 8bbc-03..05 or e2db-07;
+      does not price sol_4h alone.
+- id: P5-Q5-ADA-BRK
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 120
+    confidence: 0.25
+  unit:
+    theme: new_strategy_prop
+    priority: 2
+    kind: experiment
+    title: 'breakout_2 (Turbo) breadth: does adding pullback_ada_1h (ADAUSD, a routed Breakout symbol) to the incumbent
+      ETH+SOL book beat it at the same risk on EV per life with no worse survival on every seed?'
+    question: 'On the same 5 seeds x 4,000 lives under breakout_turbo_1step (start sizing 0.005, switch 0.8, breakout_2''s
+      stack as RQ-20261014-f516-03 priced it), does CADA (A + pullback_ada_1h) beat A (the incumbent 2-leg book
+      on the window-matched 1095 d prop-stack ledgers of RQ-20261015-1bf3-05/-06) on ev_net_usd_per_life AND p_alive_at_horizon
+      on EVERY seed? pullback_ada_1h: the committed prop-stack Stage-0 ledger (375 trades, 2023-10-09..2026-10-05);
+      the sim re-prices gross_r under --costs breakout.'
+    why_this_matters: 'breakout_2 has had no breadth test in Programme 05 (f516-08..10 priced velotrade_1 / tradeify_1);
+      the 4h pair on Turbo is RQ-20261016-e2db-05''s question. breakout_2 is the weakest book (f516-03: EV $32-36/life,
+      survival 0.003, p_breach_max_dd 0.997), so a leg that diversifies the static-drawdown path matters most here.
+      Breakout''s routing YAML offers BTC/ETH/SOL/ADA/XRP; ADA is the one routed non-incumbent symbol with a committed
+      prop-stack ledger. DISCLOSED: ADA''s single-leg Turbo fit RQ-20261007-010 read NULL; no book with ADA has
+      been priced.'
+    power:
+      expected_n: 203
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Binding leg n = 203 (sol_prop, 1095 d); ADA 375; eth_prop 517. 2 arms x 5 seeds.
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-Q5-ADA-BRK-TURBO
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per seed and arm: path-mode ev_net_usd_per_life and p_alive_at_horizon, breakout_turbo_1step,
+        switch 0.8.'
+      rule: 'prop_ev_grid --grade any_c_dominates, mechanically. PASS IF CADA beats A on ev AND p_alive >= A on
+        ALL 5 seeds -> Tier-3 roster PROPOSAL INPUT for breakout_2 (manager), which also needs an ADA strategies.yaml
+        leg, its prop survival-gate record and a Stage-1 soak (prop superset ladder) before any roster PR. FAIL
+        IF not on every seed -> ADA does not help Turbo at matched risk; recorded on PROP-BOOK-SEARCH-1095D. NULL
+        if an arm is missing. STRICT-SEED CAVEAT, registered here: prop_ev_grid compares p_alive per seed with a
+        strict >= (no MC-SE tolerance; manager audit 2026-10-16 § 4.1, build row PROP-GRID-SURVIVAL-TOL), so a FAIL
+        decided only by a survival gap inside about 2 MC SE on a seed is reported as ''FAIL (within-noise survival)''
+        beside the mechanical verdict, and is re-graded only by a separately registered rule once that row lands.
+        The mechanical verdict here is not changed after the run.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 75
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 120
+      confidence: 0.25
+      basis: 'INFERRED stand-in: breakout_2 baseline EV ~$34/life with 99.7% static-DD deaths; a diversifying leg
+        is one of two levers (sizing is the other).'
+    run:
+      timeout_minutes: 200
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --arm
+      - A=--sizing start --risk-pct 0.005 --dd-switch-frac 0.8
+      - --arm
+      - CADA=--sizing start --risk-pct 0.005 --dd-switch-frac 0.8 --trades pullback_ada_1h=comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_ada_1h__trades.jsonl
+        --lev-cap pullback_ada_1h=5
+      - --common
+      - --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset
+        config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start fresh
+        --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - any_c_dominates
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 Q5 ADA breadth, breakout_2 Turbo
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - research/queue/RQ-20261007-010.yaml
+    - research/queue/RQ-20261014-f516-03.yaml
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not test the 4h pair (e2db-05), BTC
+      or XRP (no committed prop-stack ledger for a Breakout-routed BTC/XRP leg that passed Stage 0); does not create
+      the ADA leg.
+- id: P5-Q5-BRK-product
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 80
+    confidence: 0.3
+  after:
+  - node: P5-Q5-ADA-BRK
+    verdict: fail
+  - node: P5-Q2-SIZING-BRK
+    verdict: fail
+  - unit: RQ-20261016-e2db-05
+    verdict: fail
+  needs_authoring: 'Neither breadth (ADA, the 4h pair) nor sizing helped breakout_2 on Turbo. Register the product
+    question as data: does the same incumbent book on Breakout CLASSIC (config/prop_rulesets/breakout.yaml) beat
+    Turbo on EV per life net of each product''s fee (a fresh account is an operator purchase decision; the unit
+    only prices it).'
+- id: P5-Q2-SIZING-BRK
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.4
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'breakout_2 sizing challengers on Turbo: does a smaller flat risk or cushion-fit room sizing beat the
+      configured 0.5% (start sizing) on EV per life with no worse survival on every seed?'
+    question: On the same 5 seeds x 4,000 lives under breakout_turbo_1step (switch 0.8, f516-03's stack, window-matched
+      1095 d prop-stack ledgers of RQ-20261015-1bf3-05/-06), does any of C0035 / C0025 / C0015 (start sizing at
+      risk 0.0035 / 0.0025 / 0.0015) or CROOM (room sizing, risk 0.005, room-frac 0.45) beat A (start sizing 0.005,
+      as configured) on ev_net_usd_per_life AND p_alive_at_horizon on EVERY seed?
+    why_this_matters: 'Programme 05 Q2 was run on velotrade_1 (f516-05 PASS -> VELOTRADE-RISK-050, 0.01 -> 0.005)
+      and tradeify_1 (f516-06 FAIL, sizing stands) but NEVER on breakout_2. B6: sizing is the lever that moves money.
+      breakout_2 dies in 99.7% of lives on Turbo''s 3% static drawdown (f516-03 p_breach_max_dd 0.997, survival
+      0.003, EV $32-36/life), the weakest of the three books, so it is where a sizing change has the most room.
+      f516-04''s per-leg MIX arm (SOL $50) was WORSE (EV $19-22), consistent with risk being too high, not too low.
+      DISCLOSED: those numbers are known; no smaller-risk Turbo arm has been run.'
+    power:
+      expected_n: 203
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Binding leg n = 203 (sol_prop, 1095 d); eth_prop 517. 5 arms x 5 seeds.
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-Q2-SIZING-BRK
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per seed and arm: path-mode ev_net_usd_per_life, p_alive_at_horizon, p_breach_max_dd; breakout_turbo_1step,
+        switch 0.8.'
+      rule: 'prop_ev_grid --grade any_c_dominates, mechanically. PASS IF some C arm beats A on ev AND p_alive >=
+        A on ALL 5 seeds -> a data-backed sizing change for breakout_2 under the 2026-09-27 standing authorization
+        ONLY IF that arm''s p_breach_max_dd is also <= A''s on every seed (read from grid.json); otherwise the manager
+        takes the record to the operator. The dominating arm with the highest mean ev is the proposal. FAIL IF no
+        C dominates on every seed -> configured sizing stands for this book. NULL if an arm is missing. STRICT-SEED
+        CAVEAT, registered here: prop_ev_grid compares p_alive per seed with a strict >= (no MC-SE tolerance; manager
+        audit 2026-10-16 § 4.1, build row PROP-GRID-SURVIVAL-TOL), so a FAIL decided only by a survival gap inside
+        about 2 MC SE on a seed is reported as ''FAIL (within-noise survival)'' beside the mechanical verdict, and
+        is re-graded only by a separately registered rule once that row lands. The mechanical verdict here is not
+        changed after the run.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 180
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 200
+      confidence: 0.4
+      basis: 'INFERRED stand-in: breakout_2''s book dies in ~99.7% of simulated lives at the configured size; f516-05''s
+        analogous velotrade_1 cut lifted EV ~25% and survival 0.00 -> 0.27.'
+    run:
+      timeout_minutes: 330
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --arm
+      - A=--sizing start --risk-pct 0.005 --dd-switch-frac 0.8
+      - --arm
+      - C0035=--sizing start --risk-pct 0.0035 --dd-switch-frac 0.8
+      - --arm
+      - C0025=--sizing start --risk-pct 0.0025 --dd-switch-frac 0.8
+      - --arm
+      - C0015=--sizing start --risk-pct 0.0015 --dd-switch-frac 0.8
+      - --arm
+      - CROOM=--sizing room --risk-pct 0.005 --room-frac 0.45 --dd-switch-frac 0.8
+      - --common
+      - --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset
+        config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start fresh
+        --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - any_c_dominates
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 Q2 sizing challengers, breakout_2 Turbo
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - research/queue/RQ-20261014-f516-03.yaml
+    - research/queue/RQ-20261014-f516-04.yaml
+    - research/queue/RQ-20261014-f516-05.yaml
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not change the roster or test per-leg
+      $ risk (f516-04 closed that).
+- id: P5-Q2-SIZING-BRK-pass
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+    verdict: pass
+  after:
+  - {unit: RQ-20261021-7c2b-12, verdict: any}
+  needs_authoring: >-
+    Programme review 2026-10-21 authored rung 2 as RQ-20261021-7c2b-12 (A = flat 0.35%, the rung-1 winner; C0030, C0040,
+    CROOM35; same ledgers, 5 seeds). On its verdict: the dominating arm, or 0.35% if none, is the breakout_2 sizing
+    PROPOSAL (0.5% today); apply it only through the standing data-backed Tier-3 authorization with p_breach_max_dd <=
+    the reference on every seed, else the manager takes the record to the operator.
+- id: P5-Q2R2-SIZING-VELO
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 120
+    confidence: 0.3
+  unit:
+    theme: new_strategy_prop
+    priority: 2
+    kind: experiment
+    title: 'velotrade_1 sizing rung 2: around the adopted 0.5%, does a nearby flat level or room sizing dominate
+      on the window-matched 1095 d ledgers?'
+    question: On the same 5 seeds x 4,000 lives under velotrade_classic_1step (switch 0.8, f516-01's stack, 1095
+      d prop-stack ledgers of RQ-20261015-1bf3-05/-06), does any of C0030 / C0040 / C0060 (balance sizing) or CROOM
+      (room sizing, risk 0.0075, room-frac 0.45) beat A (balance 0.005, as configured since VELOTRADE-RISK-050)
+      on ev_net_usd_per_life AND p_alive_at_horizon on EVERY seed?
+    why_this_matters: '05 § 4 Q2 rung 2 is authorised only when rung 1 passed on an account: f516-05 PASSED on velotrade_1
+      (C075 beat 0.01) and the operator chose 0.005 (popup 2026-10-15, ''0.5% (Recommended)''). Rung 1 tested 0.005
+      / 0.0075 / room against 0.01 on 730 d rows; nothing has tested levels around the adopted 0.005. DISCLOSED:
+      f516-05''s C050 numbers (EV $159-175, survival ~0.27) are known.'
+    power:
+      expected_n: 203
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Binding leg n = 203 (sol_prop, 1095 d); eth_prop 517. 5 arms x 5 seeds.
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-Q2R2-SIZING-VELO
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per seed and arm: path-mode ev_net_usd_per_life, p_alive_at_horizon, p_breach_max_dd; velotrade_classic_1step,
+        switch 0.8.'
+      rule: 'prop_ev_grid --grade any_c_dominates, mechanically. PASS IF some C arm beats A on ev AND p_alive >=
+        A on ALL 5 seeds -> the manager takes the record to the operator (0.005 is the operator''s own popup choice
+        of 2026-10-15, so this is a decision with the record, never a silent change). FAIL IF none dominates ->
+        0.005 is confirmed on the window-matched ledgers; Q2 closes for velotrade_1 until the roster changes. NULL
+        if an arm is missing. STRICT-SEED CAVEAT, registered here: prop_ev_grid compares p_alive per seed with a
+        strict >= (no MC-SE tolerance; manager audit 2026-10-16 § 4.1, build row PROP-GRID-SURVIVAL-TOL), so a FAIL
+        decided only by a survival gap inside about 2 MC SE on a seed is reported as ''FAIL (within-noise survival)''
+        beside the mechanical verdict, and is re-graded only by a separately registered rule once that row lands.
+        The mechanical verdict here is not changed after the run.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 180
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+      basis: 'INFERRED stand-in: refinement of an adopted change; f516-05 arms spanned ~$50/life of EV around this
+        level.'
+    run:
+      timeout_minutes: 330
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --arm
+      - A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+      - --arm
+      - C0030=--sizing balance --risk-pct 0.003 --dd-switch-frac 0.8
+      - --arm
+      - C0040=--sizing balance --risk-pct 0.004 --dd-switch-frac 0.8
+      - --arm
+      - C0060=--sizing balance --risk-pct 0.006 --dd-switch-frac 0.8
+      - --arm
+      - CROOM=--sizing room --risk-pct 0.0075 --room-frac 0.45 --dd-switch-frac 0.8
+      - --common
+      - --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset
+        config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt
+        3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5
+        --lev-cap trend_donchian_sol_prop=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - any_c_dominates
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 Q2 rung 2 sizing grid, velotrade_1
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - research/queue/RQ-20261014-f516-05.yaml
+    - docs/claude/work/checklist/VELOTRADE-RISK-050.json
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not change the roster; does not re-grade
+      f516-05.
+- id: P5-Q3-PERLEG-TRAD
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 120
+    confidence: 0.25
+  unit:
+    theme: new_strategy_prop
+    priority: 2
+    kind: experiment
+    title: 'tradeify_1 per-leg $ risk: does cutting trend_donchian_sol_prop''s ticket below ETH''s (SOL $25 or $35
+      vs the configured $50 on both) beat the configured book on EV per life with no worse survival on every seed?'
+    question: On the same 5 seeds x 4,000 lives under tradeify_247_1step (balance sizing 0.005 = $50 on $10k, switch
+      0.8, f516-02's stack, 1095 d prop-stack ledgers), does CSOL25 (--leg-risk-usd trend_donchian_sol_prop=25)
+      or CSOL35 (=35) beat A (both legs at 0.005) on ev_net_usd_per_life AND p_alive_at_horizon on EVERY seed?
+    why_this_matters: 'The single-leg record says SOL is the weaker leg on Tradeify (RQ-20261005-807: trend_donchian_sol_prop
+      alone EV -$72..-$75/life at 0.5%), yet the book-level result kept it (PROP-ROSTER-EXPAND, ETH+SOL beat ETH
+      alone, #16624). Per-leg sizing (sizing.flat.per_leg_risk_usd, merged #16958) is the in-between the record
+      has never priced on Tradeify; f516-04 tested only the opposite direction (SOL UP to $50) on breakout_2 and
+      read NULL. DISCLOSED: 807 and f516-02/-06 are known.'
+    power:
+      expected_n: 203
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Binding leg n = 203 (sol_prop, 1095 d); eth_prop 517. 3 arms x 5 seeds.
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-Q3-PERLEG-TRAD
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per seed and arm: path-mode ev_net_usd_per_life, p_alive_at_horizon, p_breach_max_dd; tradeify_247_1step,
+        switch 0.8.'
+      rule: 'prop_ev_grid --grade any_c_dominates, mechanically. PASS IF CSOL25 or CSOL35 beats A on ev AND p_alive
+        >= A on ALL 5 seeds -> a data-backed per_leg_risk_usd change on tradeify_1 (standing authorization) ONLY
+        IF its p_breach_max_dd <= A''s on every seed, else the manager decides with the record. FAIL IF neither
+        dominates -> uniform sizing stands on tradeify_1; Q3 closes for this account. NULL if an arm is missing.
+        STRICT-SEED CAVEAT, registered here: prop_ev_grid compares p_alive per seed with a strict >= (no MC-SE tolerance;
+        manager audit 2026-10-16 § 4.1, build row PROP-GRID-SURVIVAL-TOL), so a FAIL decided only by a survival
+        gap inside about 2 MC SE on a seed is reported as ''FAIL (within-noise survival)'' beside the mechanical
+        verdict, and is re-graded only by a separately registered rule once that row lands. The mechanical verdict
+        here is not changed after the run.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 110
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 120
+      confidence: 0.25
+      basis: 'INFERRED stand-in: SOL''s single-leg EV on Tradeify is negative (807); trimming its share is a cheap
+        lever on a $178/life book.'
+    run:
+      timeout_minutes: 240
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --arm
+      - A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+      - --arm
+      - CSOL25=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8 --leg-risk-usd trend_donchian_sol_prop=25
+      - --arm
+      - CSOL35=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8 --leg-risk-usd trend_donchian_sol_prop=35
+      - --common
+      - --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset
+        config/prop_rulesets/tradeify_247_1step.yaml --costs breakout --swap-model prorated --no-hedge --funded-start
+        fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=2
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - any_c_dominates
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 Q3 per-leg risk, tradeify_1
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - research/queue/RQ-20261014-f516-02.yaml
+    - research/queue/RQ-20261014-f516-04.yaml
+    - docs/claude/work/checklist/PROP-PER-LEG-EV-GRID.json
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not remove SOL from the roster (that
+      is the gate node's question); does not test ETH up-sizing.
+- id: P5-GATE-VELO
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.4
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'Prop EV/survival gate on velotrade_1 (velotrade_classic_1step): per leg, alone, at velotrade_1''s configured
+      sizing, is EV per life > 0 on every seed? (the grandfathered incumbents and the pool-admitted 4h pair)'
+    question: 'For each of trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_eth_4h and trend_donchian_sol_4h
+      priced ALONE as a 1-leg book on velotrade_1 (velotrade_classic_1step, balance sizing 0.005, switch 0.8, the
+      f516-0x venue stack) over 5 seeds x 4,000 lives on the window-matched 1095 d prop-stack ledgers: is path-mode
+      ev_net_usd_per_life > 0 on every seed (n >= 88)? p_breach_max_dd is reported beside it for the record''s p_breach
+      field.'
+    why_this_matters: 'PROP-GATE-PARITY (operator 2026-10-15): a prop leg clears everything a real-money leg clears
+      PLUS the prop EV/survival gate, a committed comms/prop_survival/<leg>.json (prop-roster-gate-guard). The directory
+      is EMPTY: trend_donchian_eth_prop / _sol_prop are grandfathered BY NAME until 2026-11-07 / 2026-12-11, and
+      the 4h pair (pool-admitted by f516-09/-10, Stage-0 PASS at the prop stack by 1bf3-03/-04) cannot be added
+      without one. No unit has produced the per-leg record. The bar is the one already registered for prop pool
+      admission (clause R of the 2026-10-06 go-live gate, as f516-09/-10 applied it: EV > 0 every seed, p_floor
+      0.0), applied per leg. DISCLOSED: SOL alone on Tradeify read EV -$72..-$75 at 0.5% over 730 d (RQ-20261005-807),
+      so a FAIL there is plausible and is exactly what the gate exists to surface before the exemption lapses. sol_4h
+      is execution=shadow and on no roster (audit 2026-10-16 § 4.2): its record is still produced, but it is gate
+      input only once that leg is live somewhere.'
+    power:
+      expected_n: 116
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Per leg n: eth_prop 517, sol_prop 203, eth_4h 116, sol_4h 116 (all >= the n_floor 88). 4 one-leg books
+        x 5 seeds.'
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-GATE-VELO-PER-LEG
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per leg and seed: path-mode ev_net_usd_per_life and p_breach_max_dd of a ONE-LEG book on velotrade_1''s
+        ruleset and venue stack, configured sizing, switch armed 0.8.'
+      rule: 'prop_ev_grid --grade pass_all_seeds --p-floor 0.0 --n-floor 88, PER LEG (measurement.leg_verdicts),
+        --overall all for the unit verdict. Per leg: PASS IF ev > 0 on ALL 5 seeds -> research-ops writes comms/prop_survival/<leg>.json
+        for velotrade_1 from this record (harness ''prop_ev_grid -> prop_ev_sim'', ruleset velotrade_classic_1step,
+        ev_net_usd = the seed-median path EV, p_breach = the seed-max p_breach_max_dd, n_trades = the ledger rows,
+        decision_rule {this id, registered_at, verdict pass}). FAIL IF ev <= 0 on any seed -> no record; for a GRANDFATHERED
+        leg on its own account that is a Tier-3 ''pull or resize'' proposal input to the manager before the exemption
+        lapses (2026-11-07 ETH / 2026-12-11 SOL, row PROP-GATE-PARITY); for a 4h leg it blocks the roster add on
+        this account. INDETERMINATE (n < 88, or ev > 0 everywhere with p below the floor -- impossible at p_floor
+        0.0) -> no record.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 120
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.4
+      basis: 'INFERRED stand-in: the gate decides whether two live legs stay on velotrade_1 past their exemption
+        and whether the 4h pair can be added at all.'
+    run:
+      timeout_minutes: 300
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_eth_4h=comms/research/RQ-20261015-1bf3-03/38713755448/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_sol_4h=comms/research/RQ-20261015-1bf3-04/38713758293/arms/P__trades.jsonl
+      - --arm
+      - CFG=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+      - --common
+      - --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt
+        3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5
+        --lev-cap trend_donchian_sol_prop=5 --lev-cap trend_donchian_eth_4h=5 --lev-cap trend_donchian_sol_4h=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - pass_all_seeds
+      - --p-floor
+      - '0.0'
+      - --n-floor
+      - '88'
+      - --overall
+      - all
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 prop survival gate per leg, velotrade_1
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - comms/prop_survival/README.md
+    - scripts/ci/check_prop_roster_gate.py
+    - docs/claude/work/checklist/PROP-GATE-PARITY.json
+    - research/queue/RQ-20261014-f516-09.yaml
+    - research/queue/RQ-20261014-f516-10.yaml
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not write the comms/prop_survival
+      record itself (research-ops does, from this record, on PASS); does not test sizing; a one-leg book is the
+      gate's population, not the account's book.
+- id: P5-GATE-VELO-read
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.4
+  after:
+  - node: P5-GATE-VELO
+    verdict: any
+  needs_authoring: Read P5-GATE-VELO's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival
+    record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question
+    (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize proposal has a dated number
+    before the exemption lapses; for a 4h leg that FAILED, record that the add is blocked here.
+- id: P5-GATE-TRAD
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.4
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'Prop EV/survival gate on tradeify_1 (tradeify_247_1step): per leg, alone, at tradeify_1''s configured
+      sizing, is EV per life > 0 on every seed? (the grandfathered incumbents and the pool-admitted 4h pair)'
+    question: 'For each of trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_eth_4h and trend_donchian_sol_4h
+      priced ALONE as a 1-leg book on tradeify_1 (tradeify_247_1step, balance sizing 0.005, switch 0.8, the f516-0x
+      venue stack) over 5 seeds x 4,000 lives on the window-matched 1095 d prop-stack ledgers: is path-mode ev_net_usd_per_life
+      > 0 on every seed (n >= 88)? p_breach_max_dd is reported beside it for the record''s p_breach field.'
+    why_this_matters: 'PROP-GATE-PARITY (operator 2026-10-15): a prop leg clears everything a real-money leg clears
+      PLUS the prop EV/survival gate, a committed comms/prop_survival/<leg>.json (prop-roster-gate-guard). The directory
+      is EMPTY: trend_donchian_eth_prop / _sol_prop are grandfathered BY NAME until 2026-11-07 / 2026-12-11, and
+      the 4h pair (pool-admitted by f516-09/-10, Stage-0 PASS at the prop stack by 1bf3-03/-04) cannot be added
+      without one. No unit has produced the per-leg record. The bar is the one already registered for prop pool
+      admission (clause R of the 2026-10-06 go-live gate, as f516-09/-10 applied it: EV > 0 every seed, p_floor
+      0.0), applied per leg. DISCLOSED: SOL alone on Tradeify read EV -$72..-$75 at 0.5% over 730 d (RQ-20261005-807),
+      so a FAIL there is plausible and is exactly what the gate exists to surface before the exemption lapses. sol_4h
+      is execution=shadow and on no roster (audit 2026-10-16 § 4.2): its record is still produced, but it is gate
+      input only once that leg is live somewhere.'
+    power:
+      expected_n: 116
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Per leg n: eth_prop 517, sol_prop 203, eth_4h 116, sol_4h 116 (all >= the n_floor 88). 4 one-leg books
+        x 5 seeds.'
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-GATE-TRAD-PER-LEG
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per leg and seed: path-mode ev_net_usd_per_life and p_breach_max_dd of a ONE-LEG book on tradeify_1''s
+        ruleset and venue stack, configured sizing, switch armed 0.8.'
+      rule: 'prop_ev_grid --grade pass_all_seeds --p-floor 0.0 --n-floor 88, PER LEG (measurement.leg_verdicts),
+        --overall all for the unit verdict. Per leg: PASS IF ev > 0 on ALL 5 seeds -> research-ops writes comms/prop_survival/<leg>.json
+        for tradeify_1 from this record (harness ''prop_ev_grid -> prop_ev_sim'', ruleset tradeify_247_1step, ev_net_usd
+        = the seed-median path EV, p_breach = the seed-max p_breach_max_dd, n_trades = the ledger rows, decision_rule
+        {this id, registered_at, verdict pass}). FAIL IF ev <= 0 on any seed -> no record; for a GRANDFATHERED leg
+        on its own account that is a Tier-3 ''pull or resize'' proposal input to the manager before the exemption
+        lapses (2026-11-07 ETH / 2026-12-11 SOL, row PROP-GATE-PARITY); for a 4h leg it blocks the roster add on
+        this account. INDETERMINATE (n < 88, or ev > 0 everywhere with p below the floor -- impossible at p_floor
+        0.0) -> no record.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 120
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.4
+      basis: 'INFERRED stand-in: the gate decides whether two live legs stay on tradeify_1 past their exemption
+        and whether the 4h pair can be added at all.'
+    run:
+      timeout_minutes: 300
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_eth_4h=comms/research/RQ-20261015-1bf3-03/38713755448/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_sol_4h=comms/research/RQ-20261015-1bf3-04/38713758293/arms/P__trades.jsonl
+      - --arm
+      - CFG=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+      - --common
+      - --ruleset config/prop_rulesets/tradeify_247_1step.yaml --costs breakout --swap-model prorated --no-hedge
+        --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=2 --lev-cap trend_donchian_eth_4h=5
+        --lev-cap trend_donchian_sol_4h=2
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - pass_all_seeds
+      - --p-floor
+      - '0.0'
+      - --n-floor
+      - '88'
+      - --overall
+      - all
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 prop survival gate per leg, tradeify_1
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - comms/prop_survival/README.md
+    - scripts/ci/check_prop_roster_gate.py
+    - docs/claude/work/checklist/PROP-GATE-PARITY.json
+    - research/queue/RQ-20261014-f516-09.yaml
+    - research/queue/RQ-20261014-f516-10.yaml
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not write the comms/prop_survival
+      record itself (research-ops does, from this record, on PASS); does not test sizing; a one-leg book is the
+      gate's population, not the account's book.
+- id: P5-GATE-TRAD-read
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.4
+  after:
+  - node: P5-GATE-TRAD
+    verdict: any
+  needs_authoring: Read P5-GATE-TRAD's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival
+    record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question
+    (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize proposal has a dated number
+    before the exemption lapses; for a 4h leg that FAILED, record that the add is blocked here.
+- id: P5-GATE-BRK
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.4
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    title: 'Prop EV/survival gate on breakout_2 (breakout_turbo_1step): per leg, alone, at breakout_2''s configured
+      sizing, is EV per life > 0 on every seed? (the grandfathered incumbents and the pool-admitted 4h pair)'
+    question: 'For each of trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_eth_4h and trend_donchian_sol_4h
+      priced ALONE as a 1-leg book on breakout_2 (breakout_turbo_1step, start sizing 0.005, switch 0.8, the f516-0x
+      venue stack) over 5 seeds x 4,000 lives on the window-matched 1095 d prop-stack ledgers: is path-mode ev_net_usd_per_life
+      > 0 on every seed (n >= 88)? p_breach_max_dd is reported beside it for the record''s p_breach field.'
+    why_this_matters: 'PROP-GATE-PARITY (operator 2026-10-15): a prop leg clears everything a real-money leg clears
+      PLUS the prop EV/survival gate, a committed comms/prop_survival/<leg>.json (prop-roster-gate-guard). The directory
+      is EMPTY: trend_donchian_eth_prop / _sol_prop are grandfathered BY NAME until 2026-11-07 / 2026-12-11, and
+      the 4h pair (pool-admitted by f516-09/-10, Stage-0 PASS at the prop stack by 1bf3-03/-04) cannot be added
+      without one. No unit has produced the per-leg record. The bar is the one already registered for prop pool
+      admission (clause R of the 2026-10-06 go-live gate, as f516-09/-10 applied it: EV > 0 every seed, p_floor
+      0.0), applied per leg. DISCLOSED: SOL alone on Tradeify read EV -$72..-$75 at 0.5% over 730 d (RQ-20261005-807),
+      so a FAIL there is plausible and is exactly what the gate exists to surface before the exemption lapses. sol_4h
+      is execution=shadow and on no roster (audit 2026-10-16 § 4.2): its record is still produced, but it is gate
+      input only once that leg is live somewhere.'
+    power:
+      expected_n: 116
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Per leg n: eth_prop 517, sol_prop 203, eth_4h 116, sol_4h 116 (all >= the n_floor 88). 4 one-leg books
+        x 5 seeds.'
+      feasibility: *id001
+    decision_rule:
+      id: RULE-P5-GATE-BRK-PER-LEG
+      registered_at: '2026-10-16'
+      registered_before_run: true
+      statistic: 'Per leg and seed: path-mode ev_net_usd_per_life and p_breach_max_dd of a ONE-LEG book on breakout_2''s
+        ruleset and venue stack, configured sizing, switch armed 0.8.'
+      rule: 'prop_ev_grid --grade pass_all_seeds --p-floor 0.0 --n-floor 88, PER LEG (measurement.leg_verdicts),
+        --overall all for the unit verdict. Per leg: PASS IF ev > 0 on ALL 5 seeds -> research-ops writes comms/prop_survival/<leg>.json
+        for breakout_2 from this record (harness ''prop_ev_grid -> prop_ev_sim'', ruleset breakout_turbo_1step,
+        ev_net_usd = the seed-median path EV, p_breach = the seed-max p_breach_max_dd, n_trades = the ledger rows,
+        decision_rule {this id, registered_at, verdict pass}). FAIL IF ev <= 0 on any seed -> no record; for a GRANDFATHERED
+        leg on its own account that is a Tier-3 ''pull or resize'' proposal input to the manager before the exemption
+        lapses (2026-11-07 ETH / 2026-12-11 SOL, row PROP-GATE-PARITY); for a 4h leg it blocks the roster add on
+        this account. INDETERMINATE (n < 88, or ev > 0 everywhere with p below the floor -- impossible at p_floor
+        0.0) -> no record.'
+      min_n: '88'
+    compute: cpu_long
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 120
+      basis: RQ-20261015-1bf3-02 ran 2 arms x 5 seeds x 4,000 lives in 61 min (--jobs 4); scaled by arm count.
+      why_runner: 'Repo data only (committed trade JSONL + ruleset YAML), no GPU: the inputs are not in metis-market-data
+        (so not kaggle_cpu) and are not trainer-resident (so not needs_vm_data).'
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.4
+      basis: 'INFERRED stand-in: the gate decides whether two live legs stay on breakout_2 past their exemption
+        and whether the 4h pair can be added at all.'
+    run:
+      timeout_minutes: 300
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_eth_4h=comms/research/RQ-20261015-1bf3-03/38713755448/arms/P__trades.jsonl
+      - --leg
+      - trend_donchian_sol_4h=comms/research/RQ-20261015-1bf3-04/38713758293/arms/P__trades.jsonl
+      - --arm
+      - CFG=--sizing start --risk-pct 0.005 --dd-switch-frac 0.8
+      - --common
+      - --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start
+        fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5 --lev-cap trend_donchian_eth_4h=5
+        --lev-cap trend_donchian_sol_4h=5
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - pass_all_seeds
+      - --p-floor
+      - '0.0'
+      - --n-floor
+      - '88'
+      - --overall
+      - all
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - P5 prop survival gate per leg, breakout_2
+    lands: *id002
+    related:
+    - docs/research/programmes/05-PROP.md
+    - research/queue/RQ-20261015-1bf3-03.yaml
+    - research/queue/RQ-20261015-1bf3-04.yaml
+    - research/queue/RQ-20261015-1bf3-05.yaml
+    - research/queue/RQ-20261015-1bf3-06.yaml
+    - comms/prop_survival/README.md
+    - scripts/ci/check_prop_roster_gate.py
+    - docs/claude/work/checklist/PROP-GATE-PARITY.json
+    - research/queue/RQ-20261014-f516-09.yaml
+    - research/queue/RQ-20261014-f516-10.yaml
+    what_it_does_not_do: Changes no roster, risk, sizing or switch setting (Tier-3 with this record as input, never
+      applied by the unit). A live or paper prop book's P&L is not read. Does not write the comms/prop_survival
+      record itself (research-ops does, from this record, on PASS); does not test sizing; a one-leg book is the
+      gate's population, not the account's book.
+- id: P5-GATE-BRK-read
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.4
+  after:
+  - node: P5-GATE-BRK
+    verdict: any
+  needs_authoring: Read P5-GATE-BRK's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival
+    record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question
+    (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize proposal has a dated number
+    before the exemption lapses; for a 4h leg that FAILED, record that the add is blocked here.
+- id: P5-Q6-fail
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.3
+  after:
+  - unit: RQ-20261014-f516-11
+    verdict: fail
+  needs_authoring: 'Live prop closes do NOT match the sim''s venue stack (f516-11 FAIL, |mean delta R| CI outside
+    +/-0.10 R). Per 05 § 4 Q6: recalibrate that firm''s --commission/--slippage/--swap in the sim from the measured
+    closes, re-run its Q1 baseline (f516-0x shape) and every open Q2..Q5 proposal on that account before acting
+    on any.'
+- id: P5-Q7-tp-amend
+  goal: G2
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.25
+  after:
+  - unit: RQ-20261014-f516-11
+    verdict: pass
+  needs_authoring: 'Gradable prop closes exist and match the sim. Per 05 Q7: re-run RQ-20261007-002 (P1-Q7 TP extension
+    on the prop routings) against the measured closes, now that a TP revision on dxtrade/phone can be graded; coordinate
+    with Programme 01''s Q7 node rather than duplicating it.'
+# ── RESULTS-GRADE-1025 (2026-10-25): variants of the first-test FAILs / underpowered reads of 2026-10-21..23 ──
+- id: P5-RG1025-trend-pooled
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.25
+  after:
+  - unit: RQ-20261022-4b82-05
+    verdict: any
+  needs_authoring: 'Trend-Donchian prop-pace candidates read UNDERPOWERED, not dead: 4b82-01/-02/-05/-06/-07 and 7c2b-02/-03 failed or passed
+    a 0.05 R/trade (0.10 for the daily cells) materiality bar at a pooled n_B below the floor computed from the MEASURED per-trade sd
+    (1.25-2.3 R: 4.7k-17.7k per arm; realised 0.3k-8.9k). 4b82-05 D55 (+0.0698 vs B +0.0269 R/trade at 2h, 3 of 6 cells) is the nearest lead.
+    Author ONE unit: D55 vs B on the SAME six perps pooled across the 1h+2h+4h bars as one test (n_B >= 18k), the bar and sd floor registered
+    before the run, cells-pass breadth unchanged. Do not widen the arm set; no Tier-3 change from a read this thin.'
+- id: P5-RG1025-squeeze-wide-confirm
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261022-4b82-09
+    verdict: any
+  needs_authoring: 'RQ-20261022-4b82-03 arm WIDE (squeeze 1h, break-even floor + stale exit + wider compression) PASSED the pooled rule (net_r 43.5R)
+    but at n_B 6.9k < the 9.5k floor for its 0.05 R bar, so it is a LEAD, not a result (squeeze 1h defaults and 4h defaults both FAILED: 326f-10/-12).
+    Author the ONE confirmation the PASS rule requires: arm WIDE vs B on a disjoint window (the most recent 24 months not scored as a tuning window)
+    plus the 2h cell 4b82-09 queues, same statistic and bar, n_B >= 9.5k pooled. Number of cells/arms the lead was chosen from: 4 arms x 6 symbols (multiple-testing denominator).'
+- id: P5-RG1025-fade-pullback-1h
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 50
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-4b82-08
+    verdict: any
+  needs_authoring: 'Fade (326f-09, 4b82-04: B -0.163 R/trade at n 13k, a well-powered negative) and pullback-1h (4b82-02/-08: B ~0)
+    show NO baseline edge at 1h on these six perps; the lever variants cannot lift a baseline that is not positive. Diagnosis: entry edge absent at the
+    1h bar, not a management problem. Author ONE unit that asks the entry question only: the fade harness range-only gate (ADX <= 20) on the 4h bar,
+    where the squeeze and pullback harnesses were the only ones to show a positive 4h baseline (326f-11 PASS, net 89R). Close the 1h management variants of both without further units.'

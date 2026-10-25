@@ -1,0 +1,101 @@
+id: RQ-20261016-7769-21
+title: 'P4-Q7 alpaca_options_paper: do the account''s three technical legs (slv_pullback_1d, gdx_pullback_1d, slv_trend_1h) stay net-positive when each
+  OOS evidence trade is RE-PRICED as the 1-wide debit vertical the account actually buys? (blocked: vertical re-pricer)'
+status: blocked
+cadence: once
+theme: macro
+priority: 2
+kind: experiment
+question: Re-price every OOS trade in comms/strategy_evidence/runs/2026-09-24-e55/{slv_pullback_1d,gdx_pullback_1d,slv_trend_1h}__trades.jsonl as the debit
+  vertical options_selector.select_debit_vertical would choose at entry (bull call / bear put, ~ATM long leg, next strike short, expiry nearest target_dte
+  35 within 21..60), marked at the trade's exit time with Black-Scholes at a LABELLED IV proxy (trailing 20-day realised vol of the underlying, r = 0),
+  charged a labelled cost proxy (4 half-spreads of $0.03 per leg per round trip, $0 commission UNVERIFIED). Is the pooled mean net return per trade, in
+  units of the debit paid (max loss), > 0 with t >= 2.0 over n >= 60?
+why_this_matters: 'What the 3 legs need to be graded: (1) Stage 0 at the payoff the account actually trades -- the committed evidence (e55: slv_pullback_1d
+  n_oos 11, net +2.48R; gdx_pullback_1d n_oos 10, +3.78R; slv_trend_1h n_oos 68, +53.1R; MEASURED from comms/strategy_evidence/*.json 2026-10-16) prices
+  LINEAR underlying exposure, while config/accounts.yaml::alpaca_options_paper declares express_as: debit_vertical (capped payoff, theta, two-leg spread
+  cost), so no record grades the expressed trade; (2) a Stage-1 mechanical soak of 1-2 clean trades per leg (slv_trend_1h is execution: shadow, so it can
+  never produce one); (3) TP doctrine: all three carry tp_r 50.0 (sentinel) and two declare tp_intent none, but a vertical''s payoff is capped at the short
+  strike, so the predictive target exists structurally -- a TP-DOCTRINE question, not this unit''s. This unit is (1).'
+power:
+  expected_n: 89
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one OOS evidence trade; 11 + 10 + 68 = 89 pooled (MEASURED n_trades_oos). Floor ((2.0+0.84)/0.3)^2 = 90 at d=0.3: at the floor (pooled);
+    the two 1d legs alone (10-11) are underpowered by design and are reported per leg, never graded alone.'
+  feasibility:
+    source: corpus
+    accrual_basis: fixed committed e55 trade files; the re-pricer reads them, nothing accrues
+decision_rule:
+  id: RULE-RQ-20261016-7769-21
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: the re-pricer's pooled {n, mean, t} of net per-trade return / debit, plus per-leg rows and the proxies used.
+  rule: PASS IF pooled n >= 60 AND mean net return per trade (in units of the debit) > 0 with t >= 2.0. FAIL IF n >= 60 and not PASS. INDETERMINATE IF n
+    < 60. Per-leg means are reported beside it and do not decide. The verdict is CONDITIONAL on the labelled IV and spread proxies and says so.
+  what_it_does_not_do: Not a Stage-1 soak (mechanics are read from the journal by /performance-review, 1-2 clean trades per leg); no config, roster or mode
+    change; does not decide TP-doctrine compliance; a PASS is evidence, never a promotion.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: the account trades these 3 legs as verticals today with no evidence record at that payoff; information value, not a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 15
+  basis: Same shape as RQ-20261014-4a4c-0x (one daily-close fetch, a few hundred snapshot rows, rank correlations); those ran in minutes on research-script-run.yml.
+  why_runner: 'cpu_light on the GitHub runner: the harness fetches daily closes off-VM (yfinance/Stooq) and reads two committed snapshot files; nothing
+    is trainer-resident and no published Kaggle dataset carries these instruments, so no idle backend can take it.'
+run:
+  command:
+  - python3
+  - scripts/research/options_vertical_reprice.py
+  - --trades
+  - comms/strategy_evidence/runs/2026-09-24-e55/slv_pullback_1d__trades.jsonl,comms/strategy_evidence/runs/2026-09-24-e55/gdx_pullback_1d__trades.jsonl,comms/strategy_evidence/runs/2026-09-24-e55/slv_trend_1h__trades.jsonl
+  - --target-dte
+  - '35'
+  - --min-dte
+  - '21'
+  - --max-dte
+  - '60'
+  - --iv-proxy
+  - rv20
+  - --half-spread-usd
+  - '0.03'
+  - --min-n
+  - '60'
+  - --t-bar
+  - '2.0'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261016-7769-21
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-BACKLOG-1016
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- research/programmes/04-macro-sleeve.yaml
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+- config/accounts.yaml::alpaca_options_paper
+- src/units/accounts/options_selector.py
+last_dispatched_at: null
+blocked_on:
+- what: 'No debit-vertical re-pricer exists (MEASURED: grep -rln vertical scripts/ finds only scripts/macro/* thesis tools, none reads an evidence trades.jsonl).'
+  ref: checklist OPTIONS-VERTICAL-REPRICE (Tier-1 research tooling)
+  clears_when: scripts/research/options_vertical_reprice.py lands with tests (selector parity with options_selector.select_debit_vertical on a fixture chain;
+    BS mark), then git mv this file back to research/queue/ with status queued

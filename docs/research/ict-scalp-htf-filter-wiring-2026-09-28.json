@@ -1,0 +1,300 @@
+{
+ "research_unit": "RQ-20260928-001",
+ "decision_rule": {
+  "id": "RULE-RQ0928-001-ICTSCALP-HTF-FILTER-WIRE",
+  "registered_at": "2026-09-28"
+ },
+ "verdict": "pass",
+ "verdict_scope": "6 of 7 legs PASS per the registered rule; ict_scalp_mgc_15m no_data (ungraded). Legs are graded independently per the rule; each PASS is a Tier-3 PROPOSAL only.",
+ "population": {
+  "legs_graded": 6,
+  "legs_total": 7,
+  "trades_off_arm": 2098,
+  "trades_on_arm": 770
+ },
+ "pooled_6_legs": {
+  "net_r_off": -318.3,
+  "net_r_on": -97.88
+ },
+ "cost_policy": {
+  "fee_bps_roundtrip": 7.5,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "policy": "fee from regime_debt_matrix.roundtrip_fee_bps(symbol); slippage+funding resolved by execution_costs.resolve_cost_policy(symbol) and passed EXPLICITLY (non-zero) to scripts/backtest_ict_scalp.py; harness_faithful=True, omitted_cfg_keys=[] on all 6 legs",
+  "note": "harness main() resolves the same venue defaults via execution_costs.slippage_bps_roundtrip_for/funding_bps_per_window_for (same function pair resolve_cost_policy wraps); values recorded from the run"
+ },
+ "harness": "scripts/backtest_ict_scalp.py via scripts/research/rq_20260928_001_htf_wire.py (commit c98f0704)",
+ "tier3_proposal": "Leave htf_trend_filter_enabled ON for the 6 crypto variants (the state ICT-SCALP-HTF shipped); no config change by this lane. Proposal is NOT to expect edge from it: confirm on a disjoint window before any claim (programme node P3-M27-htf-pass).",
+ "notes": [
+  "Rule graded to the letter: n_off+n_on>=175 AND ON total net-R > OFF total net-R AND ON mean R not worse than OFF by more than 0.3 (min_detectable_effect read as 0.3 R/trade; the unit states it in sd units, so the reading is stated, not assumed). No leg is within 0.3 of the mean clause (largest deficit avax_5m 0.073), so the reading does not change any verdict.",
+  "PASS here is loss-cutting, not edge: ON removes ~61-67% of trades and is still net-negative on 5 of 6 legs (only xrp_15m is >0, +0.42 R over 73 trades, ~0 per trade). avax_5m and sol_15m PASS on total R while mean R per trade is WORSE with the filter on (-0.2075 vs -0.1344; -0.1175 vs -0.0728): fewer trades, each no better. Reported, not gating.",
+  "Outlier check (the programme node's clause): dropping each arm's single worst trade leaves ON > OFF on all 6 legs (net_r_*_ex_worst_trade).",
+  "Deviations, stated: (1) window is the trailing 365 d ending 2026-10-24 on ONE shared feed per leg, not the M27 fold windows the unit names (those feeds are not in this container); the 4 time-slices are consistency slices of one window, no parameter is fitted. (2) Candles are Binance spot (data.binance.vision), not Bybit perps (Bybit returns 403 here). (3) OFF = htf_trend_filter_enabled forced False; the unit's arm (a) wording ('left at config value') is internally inconsistent, since the 6 variant YAML blocks no longer carry the flag after ICT-SCALP-HTF and the unit default is True; forced-off is the production-inert behaviour the question names and what the 2026-10-01 lane used. (4) ON uses completed HTF bars (causal, PR #15341), one bar staler than live's forming bar. (5) OFF arms do not reproduce the 2026-10-01 lane's counts exactly (e.g. sol_5m 486 vs 543) because the window moved ~3 weeks; same sign on all 6 legs.",
+  "mgc_15m: NO DATA, not graded. Same gap the 2026-10-01 lane recorded. Its YAML block is explicit htf_trend_filter_enabled: false and stays so; it needs a 15m MGC feed (or the Kaggle/Databento store) before it can be asked."
+ ],
+ "rows": [
+  {
+   "leg": "ict_scalp_sol_5m",
+   "verdict": "pass",
+   "n_off": 486,
+   "n_on": 183,
+   "n_both_arms": 669,
+   "net_r_off": -115.93,
+   "net_r_on": -24.52,
+   "net_r_delta_on_minus_off": 91.41,
+   "mean_r_off": -0.2385,
+   "mean_r_on": -0.134,
+   "net_r_off_ex_worst_trade": -87.65,
+   "net_r_on_ex_worst_trade": -23.04,
+   "worst_trade_r_off": -28.28,
+   "worst_trade_r_on": -1.47,
+   "folds_on_beats_off": 4,
+   "time_slices_net_r": [
+    {
+     "off": -31.96,
+     "on": -8.04
+    },
+    {
+     "off": -14.76,
+     "on": -5.4
+    },
+    {
+     "off": -16.66,
+     "on": -2.32
+    },
+    {
+     "off": -52.55,
+     "on": -8.76
+    }
+   ],
+   "window": [
+    "2025-10-25",
+    "2026-10-24"
+   ],
+   "fee_bps_roundtrip": 7.5,
+   "slippage_bps_roundtrip": 3.0,
+   "funding_bps_per_window": 1.0,
+   "harness_faithful": true
+  },
+  {
+   "leg": "ict_scalp_xrp_5m",
+   "verdict": "pass",
+   "n_off": 479,
+   "n_on": 165,
+   "n_both_arms": 644,
+   "net_r_off": -75.12,
+   "net_r_on": -24.21,
+   "net_r_delta_on_minus_off": 50.91,
+   "mean_r_off": -0.1568,
+   "mean_r_on": -0.1467,
+   "net_r_off_ex_worst_trade": -72.34,
+   "net_r_on_ex_worst_trade": -21.43,
+   "worst_trade_r_off": -2.78,
+   "worst_trade_r_on": -2.78,
+   "folds_on_beats_off": 4,
+   "time_slices_net_r": [
+    {
+     "off": -28.63,
+     "on": -7.17
+    },
+    {
+     "off": -20.23,
+     "on": -16.91
+    },
+    {
+     "off": -18.55,
+     "on": -2.97
+    },
+    {
+     "off": -7.71,
+     "on": 2.83
+    }
+   ],
+   "window": [
+    "2025-10-25",
+    "2026-10-24"
+   ],
+   "fee_bps_roundtrip": 7.5,
+   "slippage_bps_roundtrip": 3.0,
+   "funding_bps_per_window": 1.0,
+   "harness_faithful": false
+  },
+  {
+   "leg": "ict_scalp_avax_5m",
+   "verdict": "pass",
+   "n_off": 562,
+   "n_on": 185,
+   "n_both_arms": 747,
+   "net_r_off": -75.53,
+   "net_r_on": -38.39,
+   "net_r_delta_on_minus_off": 37.14,
+   "mean_r_off": -0.1344,
+   "mean_r_on": -0.2075,
+   "net_r_off_ex_worst_trade": -68.23,
+   "net_r_on_ex_worst_trade": -36.69,
+   "worst_trade_r_off": -7.3,
+   "worst_trade_r_on": -1.7,
+   "folds_on_beats_off": 3,
+   "time_slices_net_r": [
+    {
+     "off": -1.94,
+     "on": -4.95
+    },
+    {
+     "off": -39.71,
+     "on": -15.54
+    },
+    {
+     "off": -17.28,
+     "on": -6.34
+    },
+    {
+     "off": -16.6,
+     "on": -11.56
+    }
+   ],
+   "window": [
+    "2025-10-25",
+    "2026-10-24"
+   ],
+   "fee_bps_roundtrip": 7.5,
+   "slippage_bps_roundtrip": 3.0,
+   "funding_bps_per_window": 1.0,
+   "harness_faithful": true
+  },
+  {
+   "leg": "ict_scalp_xrp_15m",
+   "verdict": "pass",
+   "n_off": 190,
+   "n_on": 73,
+   "n_both_arms": 263,
+   "net_r_off": -27.31,
+   "net_r_on": 0.42,
+   "net_r_delta_on_minus_off": 27.73,
+   "mean_r_off": -0.1437,
+   "mean_r_on": 0.0058,
+   "net_r_off_ex_worst_trade": -21.13,
+   "net_r_on_ex_worst_trade": 1.71,
+   "worst_trade_r_off": -6.18,
+   "worst_trade_r_on": -1.29,
+   "folds_on_beats_off": 4,
+   "time_slices_net_r": [
+    {
+     "off": 1.3,
+     "on": 3.12
+    },
+    {
+     "off": -7.72,
+     "on": -0.25
+    },
+    {
+     "off": -13.54,
+     "on": -0.42
+    },
+    {
+     "off": -7.36,
+     "on": -2.02
+    }
+   ],
+   "window": [
+    "2025-10-25",
+    "2026-10-24"
+   ],
+   "fee_bps_roundtrip": 7.5,
+   "slippage_bps_roundtrip": 3.0,
+   "funding_bps_per_window": 1.0,
+   "harness_faithful": true
+  },
+  {
+   "leg": "ict_scalp_eth_15m",
+   "verdict": "pass",
+   "n_off": 185,
+   "n_on": 77,
+   "n_both_arms": 262,
+   "net_r_off": -10.14,
+   "net_r_on": -0.96,
+   "net_r_delta_on_minus_off": 9.18,
+   "mean_r_off": -0.0548,
+   "mean_r_on": -0.0125,
+   "net_r_off_ex_worst_trade": -8.73,
+   "net_r_on_ex_worst_trade": 0.26,
+   "worst_trade_r_off": -1.41,
+   "worst_trade_r_on": -1.23,
+   "folds_on_beats_off": 3,
+   "time_slices_net_r": [
+    {
+     "off": 3.43,
+     "on": 4.47
+    },
+    {
+     "off": -6.84,
+     "on": 2.49
+    },
+    {
+     "off": -4.21,
+     "on": -7.75
+    },
+    {
+     "off": -2.52,
+     "on": -0.18
+    }
+   ],
+   "window": [
+    "2025-10-25",
+    "2026-10-24"
+   ],
+   "fee_bps_roundtrip": 7.5,
+   "slippage_bps_roundtrip": 3.0,
+   "funding_bps_per_window": 1.0,
+   "harness_faithful": true
+  },
+  {
+   "leg": "ict_scalp_sol_15m",
+   "verdict": "pass",
+   "n_off": 196,
+   "n_on": 87,
+   "n_both_arms": 283,
+   "net_r_off": -14.27,
+   "net_r_on": -10.22,
+   "net_r_delta_on_minus_off": 4.05,
+   "mean_r_off": -0.0728,
+   "mean_r_on": -0.1175,
+   "net_r_off_ex_worst_trade": -12.62,
+   "net_r_on_ex_worst_trade": -8.98,
+   "worst_trade_r_off": -1.65,
+   "worst_trade_r_on": -1.24,
+   "folds_on_beats_off": 3,
+   "time_slices_net_r": [
+    {
+     "off": 12.67,
+     "on": -0.72
+    },
+    {
+     "off": -2.26,
+     "on": 6.07
+    },
+    {
+     "off": -6.52,
+     "on": -5.77
+    },
+    {
+     "off": -18.17,
+     "on": -9.8
+    }
+   ],
+   "window": [
+    "2025-10-25",
+    "2026-10-24"
+   ],
+   "fee_bps_roundtrip": 7.5,
+   "slippage_bps_roundtrip": 3.0,
+   "funding_bps_per_window": 1.0,
+   "harness_faithful": true
+  },
+  {
+   "leg": "ict_scalp_mgc_15m",
+   "verdict": "no_data",
+   "reason": "no 15m MGC candle source reachable from this container: dukascopy fetch needs module dukascopy_python (not installed; and its XAU spot series is a proxy, not the MGC future); yfinance has no ticker mapped for MGC=F and its 15m lane serves ~60d against a 365d window. Not fabricated, not proxied. Same gap the 2026-10-01 lane recorded."
+  }
+ ]
+}

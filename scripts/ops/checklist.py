@@ -29,6 +29,8 @@ cutover; the monolith was deleted 2026-10-08). `--check` (while a monolith exist
 the monolith differs from `render()` -- the rows become the truth.
 
 Usage: checklist.py --self-test | --seed | --render | --check | --write-row FILE
+       checklist.py add|set|note|archive-lane|header ...  (the write CLI)
+       checklist.py queue [--limit N]   the ranked runnable queue, by `priority_rank`
 """
 from __future__ import annotations
 
@@ -79,6 +81,8 @@ def _vocab_problems(row: dict, header: dict) -> list[str]:
                    f"({', '.join(sorted(header.get('states') or {}))})")
     if eff.value is None:
         out.append("a row needs a `state`")
+    if (why := _store.rank_problem(row.get(_store.RANK))):
+        out.append(why)
     return out
 
 
@@ -143,13 +147,28 @@ def op_archive_lane(repo: Path, row_id: str, by: str | None) -> Path:
     return op_set(repo, row_id, {"lane": None, "lane_history": hist}, by)
 
 
+def op_queue(repo: Path, limit: int | None) -> list[str]:
+    """The ranked, runnable queue -- what the manager dispatches next (§ "The operating loop")."""
+    rows = _store.queue(load(repo))
+    out = [f"{'rank':>4}  {'id':<34} {'tier':<4} {'model':<18} {'ceiling':>7}  title"]
+    for r in rows[:limit] if limit else rows:
+        rank = r.get(_store.RANK)
+        out.append(f"{'—' if rank is None else rank:>4}  {r['id']:<34} {str(r.get('tier') or '—'):<4} "
+                   f"{str(r.get('model') or '—'):<18} {str(r.get('ceiling_usd') or '—'):>7}  {r.get('title') or ''}")
+    ranked = sum(1 for r in rows if r.get(_store.RANK) is not None)
+    out.append(f"{len(rows)} runnable (queued, nothing in blocked_on); {ranked} ranked, {len(rows) - ranked} unranked")
+    return out
+
+
 def _cli_write(a, repo: Path) -> int:
-    by = a.by or None
+    by = getattr(a, "by", None) or None
     try:
         if a.cmd == "add":
             fields = {k: v for k, v in (("title", a.title), ("phase", a.phase), ("state", a.state),
                                         ("owner", a.owner), ("tier", None if a.tier is None else _parse_value(a.tier)), ("note", a.note),
                                         ("lane", a.lane)) if v is not None}
+            if a.rank is not None:
+                fields[_store.RANK] = _parse_value(a.rank)
             if a.prs:
                 fields["prs"] = [int(x) for x in a.prs.split(",") if x.strip()]
             path = op_add(repo, a.id, fields, by)
@@ -163,6 +182,9 @@ def _cli_write(a, repo: Path) -> int:
             path = op_set(repo, a.id, fields, by)
         elif a.cmd == "note":
             path = op_note(repo, a.id, a.text, a.append, by)
+        elif a.cmd == "queue":
+            print("\n".join(op_queue(repo, a.limit)))
+            return 0
         elif a.cmd == "archive-lane":
             path = op_archive_lane(repo, a.id, by)
         else:  # header
@@ -238,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd")
     pa = sub.add_parser("add", help="add a new row")
     pa.add_argument("id")
-    for flag in ("title", "phase", "state", "owner", "note", "lane", "tier", "prs"):
+    for flag in ("title", "phase", "state", "owner", "note", "lane", "tier", "prs", "rank"):
         pa.add_argument(f"--{flag}")
     ps = sub.add_parser("set", help="set fields on a row: key=value ... (JSON values parsed)")
     ps.add_argument("id")
@@ -249,6 +271,8 @@ def main(argv: list[str] | None = None) -> int:
     pn.add_argument("--append", action="store_true")
     pl = sub.add_parser("archive-lane", help="move a row's lane into lane_history and null it")
     pl.add_argument("id")
+    pq = sub.add_parser("queue", help="print the ranked runnable queue (priority_rank order)")
+    pq.add_argument("--limit", type=int, default=None)
     ph = sub.add_parser("header", help="set one top-level key (rare; the header is shared)")
     ph.add_argument("key")
     ph.add_argument("value")

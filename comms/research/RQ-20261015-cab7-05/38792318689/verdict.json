@@ -1,0 +1,77 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 654,
+ "population": "ada_pullback_2h+xrp_pullback_2h+trend_donchian_xrp_4h+trend_donchian_eth_4h 2021-10-10..2026-10-14 (1830 d), config-exact UNCAPPED no-TP harness replay, 654 trades, rule=conditioned: {'pooled:ada_pullback_2h+xrp_pullback_2h+trend_donchian_xrp_4h+trend_donchian_eth_4h': 'INDETERMINATE'}",
+ "note": "tp-prediction-derive: counterfactual TP net of the row's own cost stack; a PASS is a screen -- its follow-on is the harness-native e35 tp_r confirmation of K* before any Tier-3 proposal",
+ "measurement": {
+  "window": "2021-10-10..2026-10-14 (1830 d)",
+  "rule": "conditioned",
+  "pooled": true,
+  "per_leg": {
+   "pooled:ada_pullback_2h+xrp_pullback_2h+trend_donchian_xrp_4h+trend_donchian_eth_4h": {
+    "n": 654,
+    "n_is": 392,
+    "n_oos": 262,
+    "k_star": 2.5,
+    "conditioning": "entry-vol tercile (no adx_at_entry)",
+    "vol_cuts_is": [
+     0.029466020599140944,
+     0.04541117400846142
+    ],
+    "adx_cuts_is": null,
+    "cell_k": {
+     "v0ax": 4.0,
+     "v1ax": 2.5,
+     "v2ax": 1.25
+    },
+    "cells_with_own_k": 3,
+    "cell_n_is": {
+     "v0ax": 131,
+     "v1ax": 130,
+     "v2ax": 131
+    },
+    "oos_delta_vs_unconditioned": 0.028903066841155508,
+    "oos_delta_ci95": [
+     -0.053900774439090235,
+     0.10467294119795753
+    ],
+    "weighted_calibration_gap": 0.02647214390411172,
+    "outcome": "INDETERMINATE",
+    "verdict": "indeterminate",
+    "why": "CI [-0.054, 0.105], calibration gap 0.02647214390411172"
+   }
+  },
+  "unreadable_rows": {
+   "ada_pullback_2h": 0,
+   "xrp_pullback_2h": 0,
+   "trend_donchian_xrp_4h": 0,
+   "trend_donchian_eth_4h": 0
+  },
+  "constants": {
+   "grid": [
+    1.0,
+    1.25,
+    1.5,
+    1.75,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    5.0,
+    6.0,
+    8.0
+   ],
+   "reach_floor": 0.1,
+   "is_frac": 0.6,
+   "min_oos": 39,
+   "noninf_margin_r": 0.05,
+   "cal_tol": 0.1,
+   "min_cell_is": 30,
+   "boot": 2000,
+   "seed": 20261015,
+   "venue_cap_pct": 0.099
+  }
+ }
+}

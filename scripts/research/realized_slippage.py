@@ -232,9 +232,13 @@ def measure(in_dir: Path) -> dict:
             "symbol": t.get("symbol"), "strategy": t.get("strategy_name"),
             "direction": direction, "created_at": t.get("created_at"),
         }
-        # ENTRY
-        ef = [f for f in by_oid.get(str(t.get("broker_order_id") or ""), [])
-              if (f["side"].lower() == "buy") == (direction == "long")]
+        # ENTRY. An intent_reduce leg's broker_order_id is its REDUCE order (a
+        # close of the parent, journalled in the reduce side's direction), not
+        # an entry, so its fill is never an entry sample.
+        is_reduce = t.get("setup_type") == "intent_reduce"
+        ef = [] if is_reduce else [
+            f for f in by_oid.get(str(t.get("broker_order_id") or ""), [])
+            if (f["side"].lower() == "buy") == (direction == "long")]
         ref = _f(pkg.get("entry")) if pkg else None
         if ef and ref:
             qty = sum(float(f["qty"]) for f in ef)

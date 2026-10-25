@@ -1,0 +1,109 @@
+id: RQ-20261012-904
+title: >-
+  WEPE gate G3 on HISTORY: a question-contract + resolution ledger over past CPI / core CPI / FOMC releases, scored
+  Brier and log-loss against the base rate AND the Kalshi market at matched as-of times (instrument validity, research only)
+status: done
+cadence: once
+kind: experiment
+theme: macro
+priority: 3
+question: >-
+  Checklist row WEPE-G3-BACKFILL (operator 2026-10-12: "We need to be able to build that sleeve on backtesting not
+  just live testing"; popup "Start G3 backfill now"). WEPE-BUILDOUT gate G3 asks for a question-contract and
+  resolution ledger on ONE domain (FOMC + scheduled macro releases), >= 25 questions, scored Brier / log-loss vs
+  base rate and vs the market at matched timestamps. Can that ledger be built on PAST releases with a fixed as-of
+  before each release, point-in-time inputs only, a declared simple forecaster (consensus-centred Normal for the CPI
+  family with sigma from strictly-earlier surprises; Laplace-smoothed state frequency for FOMC) and a resolution
+  from realized values, with no leakage? And what do the three arms score?
+why_this_matters: >-
+  G3 was only reachable by waiting for 25 live questions. Building it on history makes the ledger, the leakage
+  tests and the scoring harness exist now, so the macro sleeve can be built on backtesting (operator 2026-10-12).
+  It feeds NOTHING: no config, no sleeve, no order path, until G2 passes and the operator confirms G4.
+power:
+  expected_n: 87
+  min_detectable_effect: 0.4
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Floor n >= (1.96+0.8416)^2 / 0.4^2 = 49.06 RELEASES (one-sample on the per-release paired score difference) (the bootstrap resamples whole releases because the
+    k=1 and k=2 CPI questions of one release are not independent). expected_n = 87 is the Kalshi-overlap count
+    MEASURED 2026-10-09 by PM-BACKFILL-BUILD on the trainer for unit RQ-20261009-903 (CPI 60 + FOMC 27 releases with a
+    resolved consensus; NFP 41 not usable here because headline NFP has no consensus in comms/macro). That is the
+    upstream figure, not re-measured by this unit before the run; the run's own matched count is reported and the
+    rule below is applied to THAT count. Without the market arm the ledger alone has 450+ releases.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      No accrual: history already exists. Consensus rows are in comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+      (CPI MoM 137, CPI YoY 136, core CPI MoM 136, FOMC 87 release dates, 2015-2026) and the Kalshi backfill is
+      resident on the trainer (pm_backfill/kalshi, off-repo).
+decision_rule:
+  id: RULE-RQ1012-904-WEPE-G3-LEDGER
+  registered_at: '2026-10-12'
+  registered_before_run: true
+  statistic: >-
+    From scripts/research/wepe_g3_ledger.py: per binary question (CPI family: first print >= consensus + 1 or + 2
+    steps of 0.1; FOMC: target rate changes), p_model (forecaster v0, history = strictly-earlier releases of the same
+    kind, >= 12), p_base (Laplace-smoothed earlier frequency of the same template), p_market (Kalshi: the yes mid of
+    the market at the matching strike, or 1 - P(hold) for FOMC, last two-sided quote with candle_end_utc <= as-of,
+    at most 6 h old; CPI MoM and FOMC only). As-of = scheduled release minus 3 h. Brier and log-loss (probabilities
+    clipped to [0.01, 0.99] for every arm); difference = reference minus arm, 95% interval by a bootstrap that
+    resamples whole releases (2000 draws, seed 20261012).
+  rule: >-
+    The verdict is about the INSTRUMENT, not the forecaster. PASS IF leakage check clean (every as-of strictly before
+    its release, every market quote at or before its as-of) AND >= 25 resolved questions AND >= 25 market-matched
+    questions, with Brier and log-loss computed with intervals for model-vs-base and model-vs-market. INDETERMINATE
+    IF < 25 market-matched questions (market arm unscored) or < 25 questions. FAIL IF the leakage check finds any
+    violation. SEPARATELY, and never folded into the verdict, each claim is labelled by its Brier interval:
+    model_better (interval above 0), model_worse (below 0) or not_distinguishable, for cpi_family_model_vs_base,
+    fomc_model_vs_base, model_vs_market_pooled and market_vs_base_pooled. No claim is promoted to a sleeve input here;
+    G4 needs its own pre-registered walk-forward unit.
+  what_it_does_not_do: >-
+    Feeds nothing: no config, no sleeve, no order path. Commits no third-party market data (the public ledger omits
+    every market field; only aggregate scorecards land). Does NOT test headline NFP (no consensus source in
+    comms/macro). The consensus history is pit_basis fxstreet_current_state (a current-state read of a pre-release
+    survey, not a vintage snapshot), so leakage of the realized value into the consensus cannot be ruled out from
+    here; the verdict is conditional on it. DISCLOSURE: before this rule was written the author ran the
+    consensus-only leg locally during development (no market data) and saw the FOMC model beat the base rate widely
+    and the CPI-family difference sit near zero; the thresholds above (n >= 25, the claim labels) were fixed by the
+    gate wording (WEPE-BUILDOUT G3), not by those numbers.
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: >-
+    Pure-python scoring over ~900 questions and a 2000-draw clustered bootstrap per metric; the Kalshi backfill files
+    are read once. Trainer route because the market leg reads pm_backfill/kalshi (research-script-run-trainer.yml).
+run:
+  workflow: research-script-run-trainer.yml
+  command: [python3, scripts/research/wepe_g3_ledger.py, --unit, '{unit}', --out-dir, '{out_dir}', --kalshi-dir, auto]
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261012-904
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap: [M28]
+related:
+- WEPE-G3-BACKFILL
+- WEPE-BUILDOUT
+- PM-SURPRISE-JOIN
+- RQ-20261009-903
+- scripts/research/wepe_g3_ledger.py
+- docs/claude/work/designs/world-event-prediction-engine-v0.1.md
+last_dispatched_at: '2026-10-12T17:54:15+00:00'
+grading:
+  attested: RULE-RQ1012-904-WEPE-G3-LEDGER
+  auto: true
+  decision_rule_id: RULE-RQ1012-904-WEPE-G3-LEDGER
+  evidence:
+  - research/results/RQ-20261012-904/38287331253.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

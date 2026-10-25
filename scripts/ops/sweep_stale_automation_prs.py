@@ -459,6 +459,48 @@ def newest_by_path(prs: List[Dict[str, Any]], main: str,
     return {path: num for path, (_stamp, num) in best.items()}
 
 
+#: Machine-regenerated, data-only paths whose merge conflict has a deterministic resolution (the
+#: stamp/receipt PRs #18004 and #18014 sat conflicted and unmergeable until fixed by hand, 2026-10-14).
+RECEIPT_PATHS = ("docs/claude/work/research-queue-dispatch-receipt.json",)
+RECEIPT_PREFIXES = ("comms/research/utilization/",)
+
+
+def _set_stamp(main_blob: str, value: str) -> str:
+    line = f"last_dispatched_at: '{value}'\n"
+    if _STAMP_LINE.search(main_blob):
+        return _STAMP_LINE.sub(lambda _m: line, main_blob, count=1)
+    return main_blob + ("" if main_blob.endswith("\n") else "\n") + line
+
+
+def resolve_data_conflicts(conflicted: str, cwd: Optional[Path] = None) -> bool:
+    """Resolve an in-progress `merge main` whose conflicts are ALL regenerable stamp/receipt data.
+
+    queue unit YAML -> main's version, plus the branch's `last_dispatched_at` when it is newer (the stamp is
+    the only thing the PR adds); a receipt (one file every run rewrites) -> the branch's, newest wins. ANY other
+    conflicted path -> False and nothing is staged, so the caller aborts and the PR is left for a human.
+    """
+    paths = [p for p in conflicted.split() if p]
+    if not paths:
+        return False
+    for p in paths:
+        if not (QUEUE_UNIT.match(p) or p in RECEIPT_PATHS or p.startswith(RECEIPT_PREFIXES)):
+            return False
+    for p in paths:
+        if QUEUE_UNIT.match(p):
+            _, theirs = git("show", f":3:{p}", cwd=cwd)   # main
+            _, ours = git("show", f":2:{p}", cwd=cwd)     # the stamp branch
+            merged = theirs
+            if stamp_of(ours) > stamp_of(theirs):
+                merged = _set_stamp(theirs, stamp_of(ours))
+            (Path(cwd or REPO) / p).write_text(merged, encoding="utf-8")
+        elif git("checkout", "--ours", "--", p, cwd=cwd)[0] != 0:
+            return False
+        if git("add", "--", p, cwd=cwd)[0] != 0:
+            return False
+    return git("commit", "-q", "-m",
+               "Merge main; resolve regenerable stamp/receipt data conflict", cwd=cwd)[0] == 0
+
+
 def _branch_slot_rel(branch: str) -> str:
     """The per-branch R13 claim path — the script's own slug rule, not a copy."""
     sys.path.insert(0, str(REPO / "scripts/ops"))
@@ -490,8 +532,9 @@ def refresh(entry: Dict[str, Any], main: str, held_by: str,
                   cwd=cwd)
     if code != 0:
         _, conflicted = git("diff", "--name-only", "--diff-filter=U", cwd=cwd)
-        git("merge", "--abort", cwd=cwd)
-        return False, f"{CONFLICT_NOTE} ({conflicted!r}) — left alone for a human"
+        if not resolve_data_conflicts(conflicted, cwd=cwd):
+            git("merge", "--abort", cwd=cwd)
+            return False, f"{CONFLICT_NOTE} ({conflicted!r}) — left alone for a human"
 
     slot = _branch_slot_rel(ref)
     code, merge_base = git("merge-base", main, "HEAD", cwd=cwd)

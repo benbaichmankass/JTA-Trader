@@ -1,0 +1,31 @@
+{
+  "id": "MANAGER-HANDOVER-SLIM",
+  "title": "Manager rotation: plan handover at ~650k (was ~300k) and slim the handover (targeted canonical read, short V1 diff, no full dumps); add 'lanes never merge an unmerged manager branch' to the dispatch block",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01SX3Cx8hA6D6V8kJV3iiPB2",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-24T15:05Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR, verbatim in chat: \"if we're always switching and the switch itself is using all that capacity, then we haven't really accomplished much here\". OPERATOR popup answer, verbatim: \"~650k + slimmer handover (Recommended)\". MEASURED on session_01UETC6m at 15:01Z (get_session): 664k context and $26.76 for the whole day of managing. The handover share (about 130-150k) is the manager's own estimate (INFERRED): full reads of 3 canonical docs (~100k, CLAUDE-RULES alone is 144 KB), the handoff doc, full trigger and session dumps, and the V1-V4 exchange. Repeated PR-wake boilerplate came to about 100k more. [lane session_01SX3Cx8]  [2026-10-24 lane session_01SX3Cx8hA6D6V8kJV3iiPB2] Landed: threshold ~300k->~650k, slimmer incoming read (targeted CANONICAL sections), short V1 diff, dispatch-block line (incident #19876), No CI guard enforced a full read (grep scripts/ci); only the SessionStart hook text in .claude/settings.json does, and that file is outside the Tier-1 self-land surface, so its carve-out is NOT in this PR (operator/manager to decide). [2026-10-24T17:00Z manager session_01UETC6m] OPERATOR popup, verbatim: \"Carve out manager rotation (Recommended)\". The lane was blocked by auto mode on the settings.json edit; the operator took the manager out of auto mode, and the manager made exactly that one-sentence hook edit.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-24T15:04:29Z",
+  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 628,
+  "writeback": {
+    "roadmap": "none: operating-process change under L-OPS, no milestone line moves",
+    "arch": "none: manager skill text only; no architecture section describes the rotation"
+  },
+  "observation": {
+    "what": "the next manager rotation's handover costs under ~80k tokens of the incoming manager's context",
+    "how_to_check": "get_session on the incoming manager at V1; read external_metadata.context_usage.used_tokens",
+    "due_by": "2026-11-07"
+  }
+}

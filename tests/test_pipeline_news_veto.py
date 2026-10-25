@@ -88,7 +88,7 @@ def _veto_result():
 def test_news_veto_short_circuits_order():
     with (
         patch("src.runtime.pipeline.get_news_score", return_value=_veto_result()) as mock_news,
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator"),
@@ -114,7 +114,7 @@ def test_news_non_veto_proceeds_to_order_block():
     non-veto path was taken."""
     with (
         patch("src.runtime.pipeline.get_news_score", return_value=_neutral_result()),
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator"),
@@ -156,7 +156,7 @@ def test_symbol_tags_derived_from_signal():
 
     with (
         patch("src.runtime.pipeline.get_news_score", side_effect=_capture),
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator"),
@@ -180,7 +180,7 @@ def test_symbol_tags_slash_format():
 
     with (
         patch("src.runtime.pipeline.get_news_score", side_effect=_capture),
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator"),
@@ -199,7 +199,7 @@ def test_veto_result_contains_signal():
 
     with (
         patch("src.runtime.pipeline.get_news_score", return_value=_veto_result()),
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator"),
@@ -218,7 +218,7 @@ def test_news_veto_sends_operator_notification():
 
     with (
         patch("src.runtime.pipeline.get_news_score", return_value=_veto_result()),
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator") as mock_notify,
@@ -250,7 +250,7 @@ def test_veto_notify_failure_does_not_change_status():
     # pipeline-end notify) succeed normally.
     with (
         patch("src.runtime.pipeline.get_news_score", return_value=_veto_result()),
-        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s, _: dict(s)),
+        patch("src.runtime.pipeline.inject_runtime_counters", side_effect=lambda s: dict(s)),
         patch("src.runtime.pipeline.write_signal"),
         patch("src.runtime.pipeline.log_signal"),
         patch("src.runtime.pipeline.send_to_operator",

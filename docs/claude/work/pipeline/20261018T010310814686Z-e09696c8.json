@@ -1,0 +1,24 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "research-slo theme_share_min_ratio >= 0.5 (worst theme: infra, then regime)",
+    "kind": "observation",
+    "last_checked": "2026-10-18"
+  },
+  "id": "PI-20261018-RADE1017-0006",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-21",
+    "how_to_check": "python3 -c \"import json;print([s['evidence']['per_theme'] for s in json.load(open('comms/research/health/2026-10-21.json'))['latest'] if s['slo']=='theme_share_min_ratio'])\"",
+    "what": "theme_share_min_ratio >= 0.5: infra >= 19 fires and regime >= 48 fires in the trailing 7 days of utilization `dispatched` ids"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-GRADE-1017, comms/research/health/2026-10-18.json as_of 00:25:42Z",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py 2>&1 | grep -E 'theme supply|H1-THEME'; ls -t comms/research/health | head -1"
+  },
+  "routed_to": "RESEARCH-AUTHOR-GRADE-1017",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[research-slo] theme_share_min_ratio 0.17 at 00:25Z (was 0.10). It counts FIRES, not authored units or landed results: 7 d of utilization `dispatched` ids joined to the unit's theme, share vs THEMES.yaml weight share (basis in the SLO evidence). Worst theme is infra: 5 fires of 315 (share 0.016 vs weight 0.095, ratio 0.17); then regime 27 (0.086 vs 0.238, 0.36). Of the 34 units from #18823 only 3 had fired by 00:25Z (ae17-01, -40, -41, all in the 23:30Z cycle, the first after the merge); each cycle fires ~3 units. Supply is NOT the limit now: runnable regime 10 and infra 5 (the 17 ETF regime units wait on RQ-20261016-c56e-16 landing a measured row), so authoring more would not move it. Arithmetic: infra needs >= 19 fires/7 d at ~400 weekly fires, the 6 daily infra units give <= 6/day, so ~3 days after all six have fired (about 2026-10-21); regime needs ~48, i.e. +21 at its ~13/day weighted share once supply is firing. Expect to clear ~10-21, then regime slides back as the once-units drain: the standing fix is PI-20261017-RADE1017-0001 (per-theme replenishment, due 10-24). If the 2026-10-21 reading is still < 0.5 with the ae17 units fired, the limit is dispatcher throughput (last dispatch 23:30Z at the 01:00Z check): read dispatcher_age_h and the per-cycle fire cap before authoring anything."
+}

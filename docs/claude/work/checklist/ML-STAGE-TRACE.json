@@ -1,0 +1,25 @@
+{
+  "id": "ML-STAGE-TRACE",
+  "title": "Trace of the 4 unexplained shadow->candidate registry moves (REGISTRY-STAGES-CHANGED): explained, intended",
+  "phase": "W42",
+  "state": "done",
+  "owner": "lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-15 lane ML-TABPFN-AND-STAGE-TRACE] OBSERVED on the live trainer registry via trainer-vm-diag issue #18155 (run 38689709849), read-only: total 96 models; stages candidate 72 / shadow 21 / advisory 3 (the plan/API view splits candidate 71 + research_only 1 = 72; arithmetic 3+21+72=96 and 3+21+71+1=96 agree). stage_history events since 2026-10-01 across ALL 96 models: exactly 4, all shadow->candidate, all at 2026-10-11T21:28:42-43Z, all by=claude-ml-review-20261011, reason 'operator decision ML-STAGE-DECISIONS (2026-10-08 popup)': mes-setup-quality-baseline-v0, mes-regime-15m-lgbm-v2, mes-trade-outcome-winrate-baseline-v0, setup-quality-audit-baseline-v0. MECHANISM: the manual promote-stage CLI x4 run by the ML-STAGE-FLIPS lane through trainer relay #17633 after PR #17580 (42dbf4962) merged; not a drift demotion, not a registry rebuild, no other stage event in the window. They are the operator's 2026-10-08 'Retire baselines, keep 5m only' decision. ROOT CAUSE OF THE FLAG: plumbing.expected_registry_stages (shadow 25 / candidate 67) was MEASURED 2026-10-11 BEFORE the 21:28Z flips and was never advanced - the ML-STAGE-DECISIONS closing step was left open. FIXED in this lane: docs/plans/ml-plan-items.yaml expected_registry_stages -> shadow 21 / candidate 71. Nothing restored (report-only per operator). NOT looked at: whether the 4 flips matter for any shadow log consumer (mes-regime-15m-lgbm-v2 is the SILENT(UNTRACKED) head in the 2026-10-15 walkthrough - its silence from 2026-10-11T20:46Z is consistent with this demotion at 21:28Z; the other silent head mes-regime-1d-lgbm-v2 is NOT among the 4, still unexplained). merged != deployed != observed: flips = observed on trainer; plan edit = merged on this PR only.",
+  "updated_at": "2026-10-15T06:03:26Z",
+  "updated_by": "lane-ML-TABPFN-AND-STAGE-TRACE",
+  "roadmap": [
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "none: M25 belongs to the ML-ROADMAP-LOOP lane; this row only explains a plan baseline (expected_registry_stages) and moves no M25 status line",
+    "arch": "none: ARCHITECTURE-CANONICAL carries no registry stage counts; the baseline lives in docs/plans/ml-plan-items.yaml, updated here"
+  },
+  "_seq": 505
+}

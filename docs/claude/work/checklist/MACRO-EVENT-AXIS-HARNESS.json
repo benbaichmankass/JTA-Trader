@@ -1,0 +1,26 @@
+{
+  "id": "MACRO-EVENT-AXIS-HARNESS",
+  "title": "Lever (Tier-1): offline event-axis replay for M28 -- theses per (release, symbol) on GLD/IEF/SLV/SPY/TLT from a registered surprise-sign mapping, through thesis_backtest.net_return at the sleeve cost proxy, beside the valuation-only axis; the offline half of RQ-20260928-009 / PI-CAA05-0002",
+  "phase": null,
+  "state": "blocked",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "MACRO-EVENT-RANKTILT-ARM"
+    }
+  ],
+  "note": "[2026-10-14 lane P4-MACRO-PROGRAMME] Build ONLY if the PPI confirmation clause holds (RQ-20261014-4a4c-06 PASS, -03 FAIL, one of -01/-02 PASS); otherwise kill this row with that reason. Consumer: blocked/RQ-20261014-4a4c-09. Does not touch thesis_tick.py (the production half stays PI-CAA05-0002). Programme: docs/research/programmes/04-MACRO-SLEEVE.md Q3. [2026-10-16 lane P4-MACRO-BACKLOG-1016] The build condition FAILED: RQ-20261014-4a4c-06 FAIL (sign book +0.00221/trade t 1.53, below all-long +0.00341). Consumer blocked/RQ-20261014-4a4c-09 RETIRED on its own clause. Per this row's note it would be killed; it is kept queued-but-conditional ONLY because programme node P4-Q3-event-axis re-opens the axis replay (rank-tilt mapping) if RQ-20261016-7769-20 PASSES. Do not build before that verdict. [2026-10-25 BLOCKERS-1025] Edge rewritten. The old edge named unit RQ-20261016-7769-20, which sits in research/queue/blocked/ so blocker_watch cannot resolve it. It cannot run until lever row MACRO-EVENT-RANKTILT-ARM (queued) lands; this row still builds only if -7769-20 then PASSES.",
+  "updated_at": "2026-10-25T06:48:40Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 495
+}

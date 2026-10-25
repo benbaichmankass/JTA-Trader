@@ -1,0 +1,26 @@
+{
+  "id": "AUTO-EXCEPTION-FEED",
+  "title": "Actions cron (30 min) writes repo-state exceptions (green unmerged PR, red lane PR, in_flight row idle, over c",
+  "phase": "automation",
+  "state": "queued",
+  "owner": "build lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Est. saving $60/wk (API-equivalent, ESTIMATE); build size M. Actions cron (30 min) writes repo-state exceptions (green unmerged PR, red lane PR, in_flight row idle, over ceiling) to a committed feed + Telegram; check-in routine ends silently when empty. Needs a self-check injecting a known exception. Source: docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md section C.",
+  "updated_at": "2026-10-13T07:56:46Z",
+  "updated_by": "session_OPS-AUTOMATION-INVENTORY",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "AUTO-EXCEPTION-FEED built and measured against its estimate",
+    "how_to_check": "an injected stale PR appears in the feed next run; check-in cost per fire falls",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 451
+}

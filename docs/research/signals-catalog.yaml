@@ -1,0 +1,582 @@
+# docs/research/signals-catalog.yaml -- the RESEARCH view of the signal inventory, as data.
+#
+# Human twin: docs/research/SIGNALS-CATALOG.md (same facts, with the reasoning). Per-INPUT register (CI-guarded,
+# 334 inputs): docs/reference/signal-catalog.yaml -- `inputs_ref` below names the `family`/`kind` (and ids where
+# useful) of the entries there; this file does NOT repeat them. What this file adds, per FAMILY: the definition's
+# code path, producer, store, consumers, `feeds` (which AI-trader line / label in
+# docs/research/programmes/02-AI-TRADER.md it should reach), `status` (live | research_only | unused | unmeasured |
+# dead_default | not_implemented), and the row/unit that turns a gap into work.
+#
+# MEASURED from code and config on main at d577b215e, 2026-10-14 (lane AI-TRADER-PROGRAMME). No live VM value read.
+# Maintenance: hand-edit when a family's producer, store or consumer changes; re-verify `measured` dates in the weekly
+# roadmap pass. A `status: unmeasured` is a could-not-look, never a healthy.
+schema: 1
+generated: '2026-10-14'
+measured_at: d577b215e
+population:
+  strategy_legs: 55          # config/strategies.yaml top-level keys
+  strategy_families: 8       # unit modules rostered (trend_donchian 23, pullback 19, ict_scalp 8, squeeze 1, fade 1, fvg_range 1, turtle_soup 1, vwap 1)
+  ml_manifests: 73           # ml/configs/*.yaml (retired/ excluded)
+  reference_inputs: 334      # docs/reference/signal-catalog.yaml population.inputs
+  harness_ledgers: {files: 157, rows: 13070, newest_per_leg_legs: 54, newest_per_leg_trades: 5063}
+feeds_vocabulary:
+  Q0: measurement (headline measure, label census, peak-to-exit census)
+  Q1: regime / volatility heads -- when to apply each strategy
+  Q2: meta-labeling over all strategy signals (M23 revived)
+  Q3: exit models from active-management labels (peak-to-exit)
+  Q4: model-family diversity
+  Q5: new information classes
+  Q6: serve parity / producers (build)
+  G6: macro / value sleeve (outside this programme)
+
+families:
+# ---------------------------------------------------------------- strategy signals
+- id: strat.trend_donchian
+  group: strategy_signal
+  legs: 23
+  definition: close above Donchian(N) high (shift 1) -> long, below low -> short; optional confirm_bars, skip_hours, ATR-percentile vol gate
+  code: src/units/strategies/trend_donchian.py:order_package
+  confidence: min(breakout depth / ATR, 1)
+  producer: src/runtime/strategy_signal_builders.py (36 call sites stamp regime meta)
+  store: trade_journal.db::order_packages.meta (donchian_hi/lo, confirm_bars, skip_hours, vol_at_entry_pctl, regime stamp, head_p_win*)
+  consumers: [src/research/component_vector.py, src/runtime/allocator_soak.py, strategy monitor]
+  feeds: [Q2, Q1]
+  status: live
+  notes: donchian_hi/lo and vol_at_entry_pctl are stored and read by nothing outside the producer (UNUSED fields)
+  inputs_ref: {family: strategy, module: trend_donchian}
+- id: strat.pullback
+  group: strategy_signal
+  legs: 19
+  definition: uptrend (close above the Donchian-trend midline) AND position in the pullback range <= pull_frac AND close > prev close -> long; mirror short; optional ADX band, vol gate
+  code: src/units/strategies/htf_pullback_trend_2h.py:order_package
+  confidence: 0.5*min(depth / 2 ATR, 1) + 0.5*pullback_quality
+  store: order_packages.meta (trend_midline, ADX band audit, regime stamp, head_p_win*)
+  consumers: [src/runtime/thesis_decay.py, src/research/component_vector.py]
+  feeds: [Q2, Q3]
+  status: live
+  notes: there is no pullback-to-EMA signal; EMA appears only in HTF bias filters
+  inputs_ref: {family: strategy, module: htf_pullback_trend_2h}
+- id: strat.ict_scalp
+  group: strategy_signal
+  legs: 8
+  definition: liquidity sweep -> displacement bar (body >= k*ATR) -> FVG in the leg -> optional HTF EMA20 bias -> mitigation (wick_rejection | body_inside_fvg); session filter off on every leg
+  code: src/units/strategies/ict_scalp.py:order_package (_detect_sweep, _detect_displacement, _detect_fvg_in_leg, _passes_session_filter)
+  confidence: 0.4*displacement body/range + 0.3*min(sweep depth/ATR, 1) + 0.3*min(FVG size/ATR, 1)
+  store: order_packages.meta (sweep_level, sweep_extreme, sweep_idx_from_end, displacement_body_to_range, fvg_low/high/size, mitigation_mode, htf_filter_active); runtime_logs/signal_audit.jsonl ict_scalp_eval rows
+  consumers: [dashboard, src/research/component_vector.py, ml/datasets/families/setup_labels_audit.py]
+  feeds: [Q2]
+  status: live
+  notes: HTF bias raw value UNMEASURED (boolean only); 7 variants never fetch HTF candles (ICT-SCALP-HTF); all 8 legs set shadow_model_ids [] so no model_scores/conviction
+  inputs_ref: {family: strategy, module: ict_scalp}
+- id: strat.squeeze_breakout_4h
+  group: strategy_signal
+  legs: 1
+  definition: Bollinger inside Keltner on the prior bar and outside on this bar; side = close vs BB basis
+  code: src/units/strategies/squeeze_breakout_4h.py:order_package
+  confidence: min(|close - basis| / ATR, 1)
+  store: order_packages.meta + regime stamp
+  consumers: [src/research/component_vector.py]
+  feeds: [Q2]
+  status: live
+- id: strat.fade_breakout_4h
+  group: strategy_signal
+  legs: 1
+  definition: prior-bar ADX < adx_max AND the bar pierces the Donchian band by >= pierce_min*ATR then closes back inside; upside failure -> short
+  code: src/units/strategies/fade_breakout_4h.py:order_package
+  confidence: min(pierce depth / ATR, 1)
+  store: order_packages.meta
+  consumers: []
+  feeds: [Q2]
+  status: live
+  notes: execution shadow; its harness ledgers carry no mfe_r (163 rows, 0 positive-peak) -> outside the exit census
+- id: strat.fvg_range_15m
+  group: strategy_signal
+  legs: 1
+  definition: ADX < adx_max, range width in bounds, >= min touches both edges, price in lower/upper third, intact FVG there, wick rejection; TP = opposite edge
+  code: src/units/strategies/fvg_range_15m.py:order_package (_find_range_fvg)
+  confidence: 0.6*location-in-third + 0.4*min(FVG size/ATR, 1)
+  store: order_packages.meta (range_touches_hi/lo UNUSED)
+  consumers: []
+  feeds: []
+  status: live
+  notes: execution shadow; emits lack a cost breakdown
+- id: strat.turtle_soup
+  group: strategy_signal
+  legs: 1
+  definition: 15m bar sweeps the prior N-bar low/high by a buffer, closes back inside, body/range >= min; scans the last K bars
+  code: src/units/strategies/turtle_soup.py:_detect_setup, order_package
+  confidence: 0.5*body/range + 0.5*min(sweep depth/ATR, 1)
+  store: order_packages.meta (level, sweep_extreme, stage_rejections); the only strategy emitting partial-close verdicts
+  consumers: [ml/datasets/families/setup_labels_audit.py]
+  feeds: [Q2]
+  status: live
+- id: strat.vwap
+  group: strategy_signal
+  legs: 1
+  definition: session-anchored VWAP deviation in sigma >= policy threshold -> fade toward VWAP; optional 4h EMA200 band
+  code: src/units/strategies/vwap.py:build_vwap_signal, order_package
+  store: order_packages.meta (htf_close, htf_ema, htf_blocked, recent_context, policy_regime)
+  consumers: []
+  feeds: []
+  status: unused
+  notes: enabled false; recent_context / policy_regime read by nothing
+- id: strat.pairs
+  group: strategy_signal
+  definition: log-spread z-score; enter |z| >= entry_z, exit |z| <= exit_z, stop at stop_z (isolated 2-leg order path)
+  code: src/units/strategies/pairs_engine.py; src/units/strategies/pairs_executor.py:run_pairs_tick
+  config: config/pairs.yaml
+  store: its own log
+  consumers: [research/queue/RQ-20261007-005..008 (Stage-0, all pass 2026-10-14)]
+  feeds: []
+  status: live
+  notes: legs aligned by tail position not timestamp; misalignment rate UNMEASURED (reference review Q14)
+- id: strat.regime_stamp
+  group: strategy_signal
+  definition: on every actionable signal -- regime, adx_14, regime_source, vol_regime, rolling_log_return_vol, vol_regime_source (+ head_p_win* on donchian/pullback)
+  code: src/runtime/strategy_signal_builders.py:_stamp_regime_on_meta
+  store: order_packages.meta; signal_audit rows
+  consumers: [ml/datasets/families/conviction_meta.py, src/research/component_vector.py]
+  feeds: [Q2]
+  status: live
+  notes: the one decision-time regime context persisted for every leg; the meta-label corpus must inherit it (METALABEL-EMIT-FEATURES)
+# ---------------------------------------------------------------- ICT concepts
+- id: ict.liquidity_sweep
+  group: ict
+  code: src/units/strategies/ict_scalp.py:_detect_sweep; turtle_soup.py:_detect_setup
+  store: order_packages.meta; signal_audit
+  consumers: [src/research/component_vector.py, dashboard]
+  feeds: [Q2]
+  status: live
+- id: ict.liquidity_library
+  group: ict
+  code: src/ict_detection/liquidity.py:LiquidityDetector via src/runtime/liquidity_state.py:build_state
+  store: runtime_logs/liquidity_state.json (overwritten, no history)
+  consumers: [src/web/api/routers/liquidity.py]
+  feeds: []
+  status: unused
+  notes: no strategy or model reads it
+- id: ict.fvg
+  group: ict
+  code: src/units/strategies/ict_scalp.py:_detect_fvg_in_leg; fvg_range_15m.py:_find_range_fvg
+  store: order_packages.meta fvg_low/high/size
+  consumers: [dashboard, src/research/component_vector.py]
+  feeds: [Q2]
+  status: live
+  notes: the library detector src/ict_detection/fvg_detector.py and the signal_writer fvg_* path have no producer (dead path)
+- id: ict.displacement
+  group: ict
+  code: src/units/strategies/ict_scalp.py:_detect_displacement
+  store: order_packages.meta displacement_body_to_range
+  consumers: [src/research/component_vector.py]
+  feeds: [Q2]
+  status: live
+- id: ict.order_blocks
+  group: ict
+  code: src/ict_detection/order_blocks.py
+  store: null
+  consumers: []
+  feeds: []
+  status: unused
+- id: ict.market_structure
+  group: ict
+  definition: MSS / BOS / CHoCH
+  code: src/ict_detection/swing_points.py:mark_market_structure
+  store: null
+  consumers: []
+  feeds: []
+  status: unused
+- id: ict.htf_bias
+  group: ict
+  definition: 1h EMA20 close-vs-EMA (ict_scalp); 4h EMA200 band (vwap)
+  code: src/runtime/strategy_signal_builders.py:_fetch_htf_bias
+  store: order_packages.meta htf_filter_active (boolean) for ict; htf_close/htf_ema/htf_blocked for vwap
+  consumers: []
+  feeds: [Q2]
+  status: unmeasured
+  notes: raw bias value not stored for ict_scalp
+- id: ict.killzone_session
+  group: ict
+  code: src/units/strategies/ict_scalp.py:_passes_session_filter (off on every leg)
+  store: trades.killzone / meta.killzone exist but no live strategy sets them (always NULL)
+  consumers: [src/runtime/strategy_signal_builders.py:_emit_shadow_preds (empty feature), src/runtime/advisory_sizing.py, ml/datasets/families/execution_quality.py]
+  feeds: [Q2]
+  status: unmeasured
+  notes: reference review Q19 (session structure beyond hour_of_day) is the research question
+- id: ict.bias_column
+  group: ict
+  store: trades.bias (always NULL, no producer)
+  status: unused
+- id: ict.premium_discount_ote
+  group: ict
+  status: not_implemented
+- id: ict.key_levels
+  group: ict
+  code: src/ict_detection/key_levels.py
+  status: unused
+# ---------------------------------------------------------------- regime / volatility
+- id: regime.adx14_trend
+  group: regime
+  definition: Wilder ADX-14 on the strategy timeframe; chop < 20, transitional 20-25, trending >= 25; min 30 bars
+  code: src/runtime/regime/detector.py:wilder_adx, regime_label, detect_regime
+  store: order_packages.meta regime/adx_14; signal_audit; harness adx_at_entry (null on ~96% of ledger rows)
+  consumers: [src/runtime/regime/policy.py:would_gate -> src/runtime/intents.py:_hard_regime_gate (always enforced), scripts/research/regime_impact_scoping.py]
+  feeds: [Q1, Q2]
+  status: live
+  work: [REGIME-PROGRAM, RQ-20261012-75b2-01..15]
+- id: regime.vol_axis
+  group: regime
+  definition: 20-bar close-to-close rolling_log_return_vol vs the deployed head's frozen vol_bucket_edges[0]; calm | volatile | unknown
+  code: src/runtime/regime/vol_detector.py:detect_vol_regime; src/runtime/regime_shadow.py
+  store: order_packages.meta vol_regime, rolling_log_return_vol
+  consumers: [router vol axis (enforced only when REGIME_ML_VERDICT_MODE=use -- VM value UNMEASURED), config/regime_policy.yaml trend_vol cells (6)]
+  feeds: [Q1]
+  status: live
+  notes: parity gap -- yz heads freeze yang_zhang_vol, serving uses close-to-close
+- id: regime.ml_vol_verdict
+  group: regime
+  code: src/runtime/regime_bar_scoring.py:emit_regime_bar_predictions -> src/runtime/regime/ml_vol_verdict.py
+  store: runtime_logs/shadow_predictions.jsonl
+  consumers: [router when mode use]
+  feeds: [Q1]
+  status: live
+- id: regime.soft_weight
+  group: regime
+  code: src/runtime/regime/policy.py (numeric cells -> weight_pending_phase4)
+  consumers: []
+  feeds: [Q1]
+  status: not_implemented
+  work: [REGIME-WEIGHT-VARIANTS, RQ-20260927-006..009]
+- id: regime.flip_exit
+  group: regime
+  code: src/runtime/regime_flip_exit.py
+  consumers: []
+  status: unused
+- id: regime.label_regime
+  group: regime_label
+  definition: forward_log_return_vol over t+1..t+5 > vol_threshold -> volatile else range; threshold 0.005 Bybit crypto, 0.001 or median for MES
+  code: ml/datasets/families/market_features.py:_label_regime
+  store: datasets-out/market_features (published for BTC/ETH/SOL 15m+1h as metis-market-data)
+  consumers: [53 regime manifests]
+  feeds: [Q1, Q4]
+  status: live
+- id: regime.label_trend
+  group: regime_label
+  definition: Kaufman efficiency ratio of the forward window; <= 0.30 chop, >= 0.55 trending
+  code: ml/datasets/labeling/trend_regime.py:trend_regime_label
+  consumers: [btc-regime-1h-trend-lgbm-v1 (research_only)]
+  feeds: [Q1]
+  status: research_only
+- id: regime.label_direction
+  group: regime_label
+  definition: sign of forward_log_return over t+1..t+5, dead-band 0
+  code: ml/datasets/families/market_features.py
+  consumers: [direction heads (candidate / research_only)]
+  feeds: [Q5]
+  status: research_only
+  notes: closed line on price-derived inputs; reopen only with a new information class
+- id: vol.rolling_log_return_vol
+  group: volatility
+  code: ml/datasets/families/market_features.py; live twin src/runtime/regime_shadow.py:build_parity_feature_row
+  consumers: [all regime heads, vol detector]
+  feeds: [Q1]
+  status: live
+- id: vol.vol_bucket
+  group: volatility
+  definition: 3 quantile buckets; edges frozen into model_state
+  code: ml/datasets/families/market_features.py; src/runtime/regime_shadow.py:bucket_for_vol
+  feeds: [Q1]
+  status: live
+- id: vol.range_estimators
+  group: volatility
+  definition: parkinson, garman_klass, rogers_satchell, yang_zhang
+  code: ml/datasets/volatility_estimators.py; src/runtime/regime_shadow.py:range_vol_estimators
+  consumers: ['*-yz-v1 heads', HMM heads, exit-policy-v1, setup-candidates-metalabel-xsym-yz-v1]
+  feeds: [Q1]
+  status: live
+  notes: incremental information over close-to-close vol UNMEASURED (reference review Q6)
+- id: vol.atr_percentile
+  group: volatility
+  definition: rolling(200).rank(pct) of ATR
+  code: src/units/strategies/trend_donchian.py:_trailing_atr_pctl (duplicate in htf_pullback_trend_2h.py)
+  store: null (only atr_pctl_* in the trail-vol soak)
+  consumers: [vol_skip_below_pctl gates (3 legs), vol_skip_above_pctl (1 leg), src/runtime/trail_vol.py]
+  feeds: [Q1, Q2]
+  status: unmeasured
+  notes: not persisted at decision time; the harness ledgers do not carry it
+  work: [METALABEL-EMIT-FEATURES]
+- id: vol.har_rv
+  group: volatility
+  code: scripts/research/ml_bakeoff.py:block_har_rv
+  consumers: [research control arms]
+  feeds: [Q1, Q4]
+  status: research_only
+- id: regime.hmm
+  group: regime
+  code: ml/trainers/causal_hmm_regime.py
+  consumers: []
+  feeds: [Q4]
+  status: research_only
+  notes: 5 registered (candidate / research_only), none served
+# ---------------------------------------------------------------- ML feature side-streams
+- id: feat.funding_oi
+  group: side_stream
+  definition: funding_rate, funding_rate_zscore, funding_rate_abs_z, open_interest_change, open_interest_change_zscore (window 168); 0.0 default when the side-stream is absent
+  code: scripts/ml/fetch_funding_oi.py -> ml/datasets/adapters/bybit_funding_oi.py; ml/datasets/funding_oi_features.py
+  store: datasets-out/funding_oi/BTCUSDT/v001; joined into BTC 1h shards
+  real_for: [BTCUSDT 1h]
+  consumers: [btc-regime-1h-lgbm-funding-v1, btc-regime-1h-lgbm-funding-svble-v1]
+  feeds: [Q5]
+  status: dead_default
+  notes: no live serving; ETH/SOL columns carry no information
+  work: [FUNDING-OI-DATASETS-ETH-SOL, ML-PRODUCER-FUNDING, RQ-20260929-109, RQ-20260929-110, RQ-20261013-1414-09]
+- id: feat.funding_cost
+  group: side_stream
+  code: src/runtime/exchange_funding_puller.py -> exchange_funding.funding_usd
+  consumers: [cost attribution]
+  feeds: [Q0]
+  status: unmeasured
+  notes: pull is dispatch-only (pull-exchange-funding), no scheduled caller found
+- id: feat.order_flow
+  group: side_stream
+  definition: ofi, ofi_zscore, vpin, order_imbalance, rel_spread_mean, microprice_dev (window 50)
+  code: scripts/ml/orderflow_capture.py (ict-orderflow-capture, BTCUSDT 300 s bars); ml/datasets/orderflow_features.py
+  store: datasets-out/market_microstructure/BTCUSDT/5m/v001
+  real_for: [BTCUSDT 5m]
+  consumers: [btc-regime-5m-lgbm-flow-v1 (research_only)]
+  feeds: [Q5]
+  status: dead_default
+  work: [ML-PRODUCERS]
+- id: feat.cross_asset
+  group: side_stream
+  definition: per peer ret, ret_lag1, vol, rel_strength, beta, beta_residual; xa_breadth_up, xa_breadth_present
+  code: ml/datasets/cross_asset_features.py; live src/runtime/cross_asset_live.py (config/cross_asset.yaml)
+  store: datasets-out/cross_asset/ETHUSDT/1h
+  real_for: [ETHUSDT 1h]
+  consumers: [eth-regime-15m-lgbm-xasset-v1 (shadow; 15m side-stream NOT built -> train-zero risk), eth 1h heads research_only]
+  feeds: [Q5]
+  status: live
+  work: [RQ-20261011-17f4-03, RQ-20261011-9da8-07]
+- id: feat.forecasts_fc
+  group: side_stream
+  definition: Chronos-Bolt-Tiny quantile forecasts h=1, q10/50/90, context 64 -> fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel
+  code: ml/datasets/forecast_features.py; offline scripts/ml/build_forecasts.py; live scripts/ml/publish_live_forecasts.py -> src/runtime/forecast_live.py
+  store: shards (BTC, SOL 15m); runtime_logs/trainer_mirror/forecasts/<SYM>.json
+  real_for: [BTCUSDT 15m, SOLUSDT 15m, live ETHUSDT 15m]
+  consumers: [btc-regime-15m-lgbm-fc-pcv-v2 (advisory), sol-regime-15m-lgbm-fc-pcv-v2 (advisory), src/runtime/fc_geometry_soak.py]
+  feeds: [Q1, Q4]
+  status: live
+  notes: the one durable ML feature win; its HAR-RV control is open (RQ-20261013-1414-04); ETH 15m fc served live but not in the canonical build
+  work: [RQ-20261013-1414-04, RQ-20261011-9da8-01]
+- id: feat.tsfm_embeddings
+  group: side_stream
+  code: ml/datasets/embedding_features.py
+  consumers: [retired manifests only]
+  status: unused
+- id: feat.corpus_embeddings
+  group: side_stream
+  code: ml/datasets/corpus_embedding_features.py
+  consumers: [retired manifests only]
+  status: unused
+# ---------------------------------------------------------------- macro / news / prediction markets
+- id: macro.ml_columns
+  group: macro
+  definition: vix_level, vix_zscore, vix_term_slope, dxy_zscore, dxy_return, ust10y_level, ust_slope_3m10y (daily, lagged 1 d)
+  code: scripts/ml/fetch_macro.py -> ml/datasets/macro_features.py
+  store: datasets-out/macro/MES/<ver>, joined into every MES shard
+  real_for: [MES]
+  consumers: [mes-regime-5m-lgbm-macro-v1 (research_only)]
+  feeds: [Q5]
+  status: dead_default
+- id: macro.valuation_snapshots
+  group: macro
+  code: scripts/macro/valuation_snapshot_produce.py; src/units/strategies/macro_thesis/valuation_feed.py, valuation.py:value_read
+  store: comms/macro/valuation_snapshots.jsonl
+  consumers: [src/units/strategies/macro_thesis/thesis_tick.py (hourly, shadow) -> runtime_logs/macro_thesis_soak.jsonl]
+  feeds: [G6]
+  status: live
+- id: macro.events_calendar
+  group: macro
+  code: src/units/strategies/macro_thesis/event_calendar.py, event_store.py; scripts/macro/econ_calendar_produce.py
+  store: comms/macro/econ_calendar_snapshots.jsonl
+  consumers: []
+  feeds: [Q5]
+  status: unused
+  notes: no live consumer outside macro_thesis/ (reference review Q4)
+- id: news.live_score
+  group: news
+  definition: per item sentiment x relevance x freshness x impact; max age 120 min; veto when sentiment < -0.6 and impact > 0.7
+  code: src/news/news_score.py:score_news via src/news/news_pipeline.py:get_news_score
+  store: signal.meta.news; runtime_logs/news_decisions.jsonl
+  consumers: [the live veto (status news_veto), src/runtime/news_sizing.py (NEWS_INFLUENCE_MODE default off), src/runtime/conviction.py news_multiplier]
+  feeds: [Q5]
+  status: live
+  work: [RQ-20261009-902]
+- id: news.event_risk
+  group: news
+  code: src/news/news_events.py:event_risk_for_symbol (config/economic_calendar.yaml)
+  store: meta.news.event_risk
+  status: unmeasured
+  notes: calendar ran dry -- last event 2026-07-30 (reference review Q12)
+- id: news.gdelt_history
+  group: news
+  code: scripts/research/news_hist_fetch.py, news_hist_replay.py
+  store: off-repo (research/news_hist/MANIFEST.json)
+  consumers: [RQ-20261012-5bd1-01..14 (blocked)]
+  feeds: [Q5]
+  status: unmeasured
+  notes: the declared harness scripts/research/news_alpha_ic.py does not exist
+- id: pm.snapshots
+  group: prediction_markets
+  definition: Kalshi KXFEDDECISION/KXFED/KXCPI/KXPAYROLLS/KXRECSSNBER + Polymarket fed/recession bid-ask-last-implied p
+  code: scripts/macro/pm_snapshot_collect.py (trainer timer 4x/day; config/pm_markets.yaml)
+  store: <data_dir>/pm_snapshots/YYYY-MM.jsonl on the trainer (not committed)
+  consumers: [scripts/research/pm_surprise_eval.py, scripts/research/wepe_g3_ledger.py]
+  feeds: [Q5]
+  status: research_only
+  work: [RQ-20261009-903, RQ-20261012-904]
+# ---------------------------------------------------------------- trade outcomes, telemetry, labels, costs
+- id: outcome.journal_trade
+  group: outcome
+  definition: pnl, pnl_percent, exit_price, exit_reason, closed_at, fee_taker_usd, fee_maker_usd, funding_paid_usd, cost_source; provenance keys in notes
+  code: src/units/accounts/execute.py; src/runtime/provenance.py (MEASURED/ESTIMATED/FABRICATED/UNVERIFIED)
+  store: trade_journal.db::trades (no r_multiple column; R computed at read time)
+  consumers: [ml/datasets/families/trade_outcomes.py, conviction_meta.py, setup_labels.py, execution_quality.py, account_context.py]
+  feeds: [Q0, Q2]
+  status: live
+  notes: stop_loss can be overwritten by trailing (r_provenance grades it); exit_reason frozen at reconciler_filled on late-priced closes
+- id: outcome.decision_record
+  group: outcome
+  code: src/core/coordinator.py:_log_new_order_package -> src/units/db/database.py:insert_order_package
+  store: order_packages (confidence, signal_logic, meta, model_scores, exit_plan, close_reason); account_context_snapshots
+  consumers: [ml/datasets/families/conviction_meta.py, src/research/component_vector.py, ~30 scripts/research]
+  feeds: [Q2]
+  status: live
+  notes: model_scores and conviction exist only for the 24 legs with shadow predictors
+- id: telemetry.position
+  group: telemetry
+  definition: open_r, peak_r (running MFE), peak_state, giveback_r = peak_r - open_r, bars_held, bars_since_peak, cap_r, pct_of_cap, r_to_stop, r_to_target; terminal_state at close
+  code: src/runtime/position_telemetry.py; MFE via src/runtime/trail_decay.py:since_entry_peak
+  store: trade_journal.db::position_telemetry -- ONE upserted row per order package (snapshot, not a per-bar history)
+  consumers: [/api/diag/position_telemetry, dashboard, scripts/research/m31_mfe_parity.py]
+  feeds: [Q3]
+  status: unmeasured
+  notes: no per-bar trajectory; MAE recorded nowhere live; no ML family consumes it
+  work: ['ATM plan lever (02-AI-TRADER W3 item 15)']
+- id: telemetry.exit_lever_soak
+  group: telemetry
+  code: src/runtime/exit_lever_soak.py
+  store: runtime_logs/exit_lever_soak.jsonl
+  consumers: []
+  status: unused
+- id: outcome.close_reason_vocab
+  group: outcome
+  code: order_monitor (live); scripts/backtest_*.py (harness); scripts/research/exit_census.py:classify_exit_reason
+  status: unmeasured
+  notes: two vocabularies, no canonical enum; live sl_cross/tp_cross/time_decay/reconciler_*/regime_flip_* fall to unclassified
+- id: outcome.harness_emits
+  group: test_results
+  definition: entry_time, exit_time, direction, entry, sl, exit_reason, gross_r, net_r (fee+slippage+funding), net_r_fee_only, cost_*_r, funding_windows, mfe_r, confidence (+ adx_at_entry, regime_weight, bars_held on some)
+  code: scripts/backtest_{trend,squeeze,fade,ict_scalp}.py --emit-trades via scripts/ops/build_strategy_evidence.py
+  store: comms/strategy_evidence/runs/<run>/<leg>__trades.jsonl (157 files, 13,070 rows; newest per leg 54 legs / 5,063 trades)
+  consumers: [scripts/ops/build_strategy_evidence.py, scripts/ml/build_exit_head_dataset.py, scripts/research/regime_impact_scoping.py, scripts/research/exit_census.py, scripts/research/ledger_metalabel.py]
+  feeds: [Q2, Q3]
+  status: live
+  notes: mae_r emitted by no harness; mfe_r is a lagged lower bound (gross_r > mfe_r on 825 of 12,141 rows); decision-time context thin
+  work: [METALABEL-EMIT-FEATURES, RQ-20261014-9d20-01, RQ-20261014-9d20-02]
+- id: label.peak_to_exit
+  group: label
+  definition: giveback_r = mfe_r - net_r; giveback_frac = giveback_r / mfe_r on positive-peak trades; oracle headroom = mean max(mfe_r, net_r) - mean net_r
+  code: scripts/research/ledger_metalabel.py --mode census; src/research/excursions.py (panels)
+  store: research/results/RQ-20261014-9d20-01 (pending)
+  feeds: [Q3]
+  status: live
+  work: [RQ-20261014-9d20-01, RQ-20261014-9d20-03]
+- id: label.triple_barrier
+  group: label
+  code: ml/datasets/labeling/triple_barrier.py; ml/datasets/families/setup_candidates.py
+  store: setup_candidates (trainer; MARKET-derived, not published)
+  consumers: [10 setup-candidates-metalabel-* manifests]
+  feeds: [Q2]
+  status: live
+  work: [RQ-20261011-9da8-02]
+- id: label.won_pnl
+  group: label
+  definition: won = pnl > 0; r_multiple = clip(pnl_percent / 1.0, +-3) (a percent proxy, not true R)
+  code: ml/datasets/families/trade_outcomes.py, conviction_meta.py, setup_labels.py
+  consumers: [trade-outcome-lgbm-v1, conviction-meta-* (candidate, unserved), baseline-setup-quality*]
+  feeds: [Q0]
+  status: live
+  work: [RQ-20261011-17f4-02]
+- id: label.exit_candidates
+  group: label
+  definition: should_hold per in-trade bar (barrier +beta*risk before stop within hold_horizon); features mfe_r_so_far, mae_r_so_far, unrealized_r, bars_held
+  code: ml/datasets/families/exit_candidates.py
+  consumers: [exit-policy-v1 (candidate)]
+  feeds: [Q3]
+  status: research_only
+  notes: may contain OURS rows; not in the canonical build
+- id: label.exit_head
+  group: label
+  definition: future_r_delta, holding_pays (>= 0.25), peak_is_in, future_mfe_delta, first-touch +-1R, reaches_2r
+  code: scripts/ml/build_exit_head_dataset.py; live src/runtime/exit_head_shadow.py
+  store: VM artifact JSON (feature lists not in git)
+  consumers: [exit-head-* heads; 3 legs declare exit_head_model exit-head-donchian-1h-v1]
+  feeds: [Q3]
+  status: live
+  notes: live final_r from pnl with no provenance filter, exit_reason None
+- id: label.net_r
+  group: label
+  definition: (pnl - fees - funding) / (|entry - stop_loss| * qty * contract_value)
+  code: src/runtime/net_r_label.py:net_r_for_trade
+  consumers: [scripts/research/net_r_regrade.py]
+  feeds: [Q0]
+  status: unused
+  notes: no ML manifest; no provenance filter; stop_loss may be trailed (r_provenance.initial_risk_usd exists, no label builder calls it)
+  work: [HEADLINE-MEASURE-CAPITAL-DAY, ML-HYGIENE]
+- id: cost.stack
+  group: cost
+  definition: fee 7.5 bps rt; slippage 3.0 bps perps (D3) / 5.0 otherwise (provisional E62); funding 1.0 bps per 8h window (directionless)
+  code: src/runtime/execution_costs.py:resolve_cost_policy, roundtrip_cost_r
+  store: comms/strategy_evidence/<leg>.json cost_stack (56 records)
+  consumers: [every Stage-0 harness on the promotion corpus]
+  feeds: [Q0]
+  status: live
+  notes: signed funding UNMEASURED; non-perp slippage UNMEASURED
+- id: cost.realized_slippage
+  group: cost
+  code: scripts/research/realized_slippage.py (D3); scripts/research/e62_slippage_accrual.py
+  store: comms/research/d3_realized_slippage/, comms/research/e62_equity_futures_slippage/
+  feeds: [Q0]
+  status: live
+- id: ml.shadow_scores
+  group: ml_output
+  code: ml/predictors/shadow.py; src/runtime/strategy_signal_builders.py; src/runtime/regime_bar_scoring.py
+  store: runtime_logs/shadow_predictions.jsonl; order_packages.model_scores
+  consumers: [ml/shadow/inspector.py, drift tooling, src/runtime/conviction_inputs.py, src/runtime/advisory_sizing.py (advisory stage, reductive)]
+  feeds: [Q1, Q6]
+  status: live
+- id: ml.conviction
+  group: ml_output
+  definition: news_mult x weighted blend c_strat 0.45, c_setup 0.20, c_wr 0.20, c_reg 0.15
+  code: src/runtime/conviction.py:compute_conviction; src/runtime/conviction_inputs.py
+  store: order_packages.meta.conviction; runtime_logs/conviction_sizing.jsonl
+  consumers: [ml/datasets/families/conviction_meta.py]
+  feeds: [Q2]
+  status: live
+  notes: observe-only; M16 within-leg ranking FAILED (rho 0.019, n 2,328)
+- id: ml.entry_head_pwin
+  group: ml_output
+  code: src/runtime/entry_head_pwin.py:maybe_score_entry_pwin
+  store: order_packages.meta.head_p_win*; shadow log event_source entry_head
+  consumers: [src/runtime/allocator_soak.py]
+  feeds: [Q2]
+  status: live
+- id: measure.net_pnl_per_capital_day
+  group: measure
+  definition: provenance-trustworthy net R (and USD) over a window / capital-days deployed, per book and per leg
+  code: src/runtime/hold_vs_cash.py (reasoning only); config/mandates.yaml net_r_per_capital_day clause
+  store: null
+  consumers: []
+  feeds: [Q0]
+  status: unmeasured
+  work: [HEADLINE-MEASURE-CAPITAL-DAY]

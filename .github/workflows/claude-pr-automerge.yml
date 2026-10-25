@@ -599,11 +599,43 @@ jobs:
             // which is the one entitled to decide, so a stale run does NOTHING.
             try {
               const cur = (await github.rest.pulls.get({ owner, repo, pull_number: pr.number })).data;
+              // Always log the queued-vs-current pair (AUTOMERGE-STALE-HEAD, #16984).
+              core.notice(`head check: queued=${context.sha.slice(0,8)} current=${cur.head.sha.slice(0,8)} ` +
+                          `state=${cur.state}`);
               if (cur.state !== 'open' || cur.head.sha !== context.sha) {
                 core.notice(`NOT ARMING #${pr.number} — STALE RUN: this run decided on ` +
                             `${context.sha.slice(0,8)} but the PR is now ${cur.state} at ` +
                             `${cur.head.sha.slice(0,8)}. The newer push's own run decides; ` +
                             `nothing armed, nothing merged.`);
+                return;
+              }
+              // Re-read the request file and the landing declaration AT THE CURRENT head, with
+              // the same pure function the poll-then-merge path uses: a request or `self`
+              // declaration that is gone from the head refuses, whatever the arm-time reads said.
+              const pa = { pr_open: true, head_unchanged: true, request_present: false,
+                           found: true, parse_ok: false, landing: null };
+              const atCur = async (path) => {
+                try { return await github.rest.repos.getContent({ owner, repo, path, ref: cur.head.sha }); }
+                catch (e) { if (e.status === 404) return null; throw e; }
+              };
+              try {
+                pa.request_present = (await atCur(reqPath)) !== null;
+                const dd = await atCur(landingPath);
+                if (dd === null) { pa.found = false; }
+                else {
+                  const parsed = JSON.parse(Buffer.from(dd.data.content, dd.data.encoding || 'base64').toString('utf-8'));
+                  pa.parse_ok = true;
+                  pa.landing = (parsed && typeof parsed === 'object') ? (parsed.landing ?? null) : null;
+                }
+              } catch (e) { core.warning(`current-head re-read failed: ${e.message}`); }
+              const paFile = process.env.LANDING_GATE_INPUT + '.armtime';
+              require('fs').writeFileSync(paFile, JSON.stringify(pa));
+              const paRun = require('child_process').spawnSync('python3',
+                ['scripts/ci/automerge_landing_gate.py', '--premerge', '--input', paFile], { encoding: 'utf-8' });
+              if (paRun.status !== 0) {
+                core.notice(`NOT ARMING #${pr.number}: current-head re-read refused ` +
+                            `(queued=${context.sha.slice(0,8)} current=${cur.head.sha.slice(0,8)}): ` +
+                            `${(paRun.stdout || paRun.stderr || '').replace(/\s+/g, ' ').slice(0, 300)}`);
                 return;
               }
             } catch (e) {
@@ -613,33 +645,48 @@ jobs:
             }
 
             const armHead = pr.head?.sha || context.sha;
-            let checkRuns = null, checksReadOk = false;
-            try {
-              const r = await github.rest.checks.listForRef({
-                owner, repo, ref: armHead, per_page: 100 });
-              checkRuns = r.data?.check_runs ?? null;
-              checksReadOk = Array.isArray(checkRuns);
-            } catch (e) {
-              core.warning(`could not read check runs for ${armHead.slice(0,8)}: ${e.message}`);
-            }
-            require('fs').writeFileSync(process.env.ARMING_INPUT,
-              JSON.stringify({ check_runs: checkRuns, checks_read_ok: checksReadOk }));
-
-            const gate = require('child_process').spawnSync(
-              'python3', ['scripts/ci/automerge_arming.py', '--input', process.env.ARMING_INPUT],
-              { encoding: 'utf-8' });
+            // AUTOMERGE-ARMING-RACE: after a PAT open the required checks attach
+            // ~1 min AFTER this job reads the head, so a first `none_attached`
+            // means "not yet", not "GITHUB_TOKEN open". The WAIT decision is
+            // the gate's (`verdict.wait`: only none_attached + opener pat +
+            // budget left); this loop just re-reads. It never arms on its own
+            // and a GITHUB_TOKEN/adopted open gets wait=false on the first pass.
+            const waitStart = Date.now();
             let verdict;
-            try { verdict = JSON.parse(gate.stdout); }
-            catch (e) {
-              // The gate could not be RUN or could not be PARSED. That is not a
-              // licence to arm: the one thing a broken gate must never do is
-              // degrade to the behaviour it was added to prevent.
-              core.setFailed(
-                `the arming gate could not be evaluated (exit ${gate.status}: ` +
-                `${(gate.stderr || e.message || '').slice(0, 400)}). NOT arming ` +
-                `auto-merge. PR #${pr.number} is open and untouched; push one ` +
-                `ordinary commit and let CI decide, or merge it by hand.`);
-              return;
+            for (;;) {
+              let checkRuns = null, checksReadOk = false;
+              try {
+                const r = await github.rest.checks.listForRef({
+                  owner, repo, ref: armHead, per_page: 100 });
+                checkRuns = r.data?.check_runs ?? null;
+                checksReadOk = Array.isArray(checkRuns);
+              } catch (e) {
+                core.warning(`could not read check runs for ${armHead.slice(0,8)}: ${e.message}`);
+              }
+              require('fs').writeFileSync(process.env.ARMING_INPUT,
+                JSON.stringify({ check_runs: checkRuns, checks_read_ok: checksReadOk,
+                                 opener: openerKind,
+                                 waited_s: (Date.now() - waitStart) / 1000 }));
+
+              const gate = require('child_process').spawnSync(
+                'python3', ['scripts/ci/automerge_arming.py', '--input', process.env.ARMING_INPUT],
+                { encoding: 'utf-8' });
+              try { verdict = JSON.parse(gate.stdout); }
+              catch (e) {
+                // The gate could not be RUN or could not be PARSED. That is not a
+                // licence to arm: the one thing a broken gate must never do is
+                // degrade to the behaviour it was added to prevent.
+                core.setFailed(
+                  `the arming gate could not be evaluated (exit ${gate.status}: ` +
+                  `${(gate.stderr || e.message || '').slice(0, 400)}). NOT arming ` +
+                  `auto-merge. PR #${pr.number} is open and untouched; push one ` +
+                  `ordinary commit and let CI decide, or merge it by hand.`);
+                return;
+              }
+              if (!verdict.wait) { break; }
+              core.notice(`arming gate: ${verdict.state}, opener=${openerKind} -- waiting for ` +
+                          `the required checks to attach (${Math.round((Date.now() - waitStart) / 1000)}s in)`);
+              await new Promise(r => setTimeout(r, 15000));
             }
             core.notice(`arming gate: ${verdict.state} — ${verdict.why}`);
             if (!verdict.arm) {

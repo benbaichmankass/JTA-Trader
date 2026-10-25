@@ -303,6 +303,39 @@ STATUSES = {
 # Bulk-adding entries here to drain the `unknown` column would reproduce the
 # defect. One row per document actually read, or leave it `unknown`.
 STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
+    # Written 2026-10-14 by lane AI-TRADER-PROGRAMME, the same session that took
+    # every measurement in them (ml_plan_status --diversity, the research queue
+    # and results stores, the committed per-trade ledgers via
+    # scripts/research/ledger_metalabel.py, three read-only code sweeps of the
+    # strategy / regime / outcome producers), each figure MEASURED or marked
+    # INFERRED with its locator, so the status is ESTABLISHED rather than
+    # inferred. The programme is the plan of record for goal G4's research half
+    # (operator weekly planning 2026-10-14, relayed by the manager); the
+    # catalog pair is the research view over docs/reference/signal-catalog.yaml.
+    # ⚠️ The programme goes `superseded` when a later weekly pass rewrites it
+    # under a new file; the catalog pair goes `historical` only if the reference
+    # register is retired.
+    "docs/research/programmes/02-AI-TRADER.md": (
+        "live",
+        "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research programme of record for G4; re-measured by the weekly roadmap pass",
+    ),
+    # Written 2026-10-14 by lane P4-MACRO-PROGRAMME, the same session that read
+    # every figure in it (the 13 landed event-study results, the PM-surprise and
+    # WEPE G3 results, thesis_p4_scorecard via the MACRO-RESHAPE note, the
+    # survey-backfill release counts, config/accounts.yaml), each MEASURED or
+    # marked UNVERIFIED. Plan of record for M28/M29 (programme P4); goes
+    # `superseded` when a later weekly pass rewrites it under a new file.
+    "docs/research/programmes/04-MACRO-SLEEVE.md": (
+        "live",
+        "read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass",
+    ),
+    "docs/research/SIGNALS-CATALOG.md": (
+        "live",
+        "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research view over docs/reference/signal-catalog.yaml (M23 x signals catalog merge)",
+    ),
     # Written 2026-09-07 and read in full by MI-162 the same day. It is the
     # CURRENT task ranking: it anchors to `CYCLE-PRIORITY.json`'s
     # `CY-20260906-TRADING-TRUTH` (operator-set 09-06, re-affirmed 09-07), names

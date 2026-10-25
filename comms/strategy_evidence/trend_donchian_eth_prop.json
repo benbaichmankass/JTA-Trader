@@ -3,7 +3,7 @@
   "strategy": "trend_donchian_eth_prop",
   "symbol": "ETHUSDT",
   "timeframe": "1h",
-  "config_fingerprint": "sha256:a83b6639bbfce1099e7a87b99bce8b51",
+  "config_fingerprint": "sha256:9ee278e90c2ff10f3c89fbdc890d4e61",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
@@ -105,5 +105,7 @@
     ],
     "provenance": "MEASURED (offline harness, venue-aware cost stack); window and candle source in 'window'",
     "source": "comms/strategy_evidence/venue_bracket/trend_donchian_eth_prop.json"
-  }
+  },
+  "decision_bar": "closed",
+  "decision_bar_note": "The Stage-0 harness scores the CLOSED bar, and since 2026-10-22 the leg trades it (config decision_bar: closed, operator \"Split: 3 to closed, 2 stay\", checklist DECISION-BAR-MATCH; evidence docs/research/evidence/decision-bar-match-2026-10-22.json). Measured fields unchanged; config_fingerprint re-stamped (inert, tests/test_decision_bar_closed_fingerprint_inert.py)."
 }

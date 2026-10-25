@@ -1,0 +1,117 @@
+id: RQ-20261023-9ffb-01
+title: 'Retention at the traded population, real money: does slv_pullback_1d LONG-ONLY at its current declared exits (tp_r 3.5, trail decay) clear Stage 0 over 2006-10-02..2025-04-09,
+  net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On 2006-10-02..2025-04-09, is slv_pullback_1d with side_filter=long (the book alpaca_live and alpaca_portfolio actually trade), at the config declared 2026-10-22
+  (tp_r 3.5), net-positive with >= 5 of 8 calendar folds net > 0 at n >= 39?
+why_this_matters: 'RQ-20261016-c56e-17 (FAIL, 2026-10-21) graded slv_pullback_1d BOTH sides at a 50 R sentinel TP: 160 trades, net +5.03 R, 4/8 folds positive (needs
+  5), max DD 13.09 R. Diagnosis from its committed trades file (arms/B__trades.jsonl): (1) alpaca_live/alpaca_portfolio are side_filter=long, so 86 of the 160 trades
+  (shorts, +3.27 R) are NOT what the real-money book takes; the traded long subset is 74 trades, +1.76 R (0.024 R/trade), 5/8 folds positive, with losing folds 3-5
+  (2011-05..2018-04, -2.53/-5.82/-6.82 R); (2) the run predates the 2026-10-22 TP declaration (tp_r 3.5, not the 50 R sentinel), so the live exits are not what was
+  graded; (3) it is a regime story, not noise: shorts lose in silver uptrends (fold 8, -6.26 R) and longs lose in the 2011-2018 downtrend. The long-only subset was
+  read AFTER the fail, so it is a diagnosis, not a result. Live: 1 closed trade (INSUFFICIENT_N), so live evidence cannot decide this leg (~4 long entries/yr in the
+  backtest). This unit grades the population and exits live actually has, which c56e-17 did not.'
+power:
+  expected_n: 74
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (E35 floor). expected_n ~74 long-only entries over 18.5 yr (MEASURED on c56e-17''s trades file, long subset).
+    The harness omits trail_decay_stall_bars/trail_decay_tight_mult (omitted_levers_per_builder in c56e-17''s manifest), so fidelity is ''approximate'' for the trail.
+    Cost stack: Alpaca equity fee 0 + the provisional 5 bps slippage (E62) + no funding. Folds 8.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610239ffb01
+  registered_at: '2026-10-23'
+  registered_before_run: true
+  statistic: 'ONE arm, LONG = the leg as declared in config/strategies.yaml with side_filter=long (argv built by regime_debt_matrix.build_harness_cmd; fee + resolved
+    slippage + funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r, net_r per fold over
+    8 equal calendar spans. Reported, not graded: net_r_per_capital_day, and the both-sides arm is NOT re-run (c56e-17 already graded it).'
+  rule: 'indeterminate IF n(LONG) < 39. PASS IF net_r(LONG) > 0 AND >= 5 of 8 calendar folds net > 0: long-only slv_pullback_1d holds Stage-0 evidence at power for
+    what live trades (a retention input; the c56e-17 FAIL stands for the both-sides arm). FAIL IF n >= 39 and not: no fold-consistent edge in the traded population
+    either; retention then goes to the operator as a Tier-3 demotion proposal with both fails cited. The 0 R bar, the 5-of-8 majority and the 39 floor are not changed
+    after any result. CAVEAT stated now: the long-only subset was read post hoc from c56e-17''s trades (5/8 folds, +1.76 R at the 50 R sentinel); this unit re-measures
+    it at the current exits and is NOT an independent confirmation of the subset choice -- units -02/-03 carry the held-out test.'
+  what_it_does_not_do: Does not edit config or any roster. A PASS is a Tier-3 proposal input through the manager, never a flip. Windows are not pooled with the committed
+    record's.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.35
+  bucket: own_losses
+  basis: 'stand-in: alpaca_live is a small real-money book; the leg''s share of it. Estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: One keyless candle fetch of ~7414 days and ONE harness pass over the pinned window.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in metis-market-data
+    and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_pullback_1d
+  - --arm
+  - LONG=side_filter=long
+  - --days
+  - '7414'
+  - --start
+  - '2006-10-02'
+  - --end
+  - '2025-04-09'
+  - --grade
+  - stage0
+  - --baseline
+  - LONG
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261023-9ffb-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261023-9ffb-01/<run_id>.jsonl via the batch collector; verdict.json under comms/research/RQ-20261023-9ffb-01/.
+roadmap:
+- L-LADDER
+related:
+- RQ-20261016-c56e-17
+- SLV-PB1D-RETENTION-T3
+- config/mandates.yaml#MD-DEMOTE-S2-S1
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-24T07:24:41+00:00'
+grading:
+  attested: RULE-RQ202610239ffb01
+  auto: true
+  decision_rule_id: RULE-RQ202610239ffb01
+  evidence:
+  - research/results/RQ-20261023-9ffb-01/40074059168.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

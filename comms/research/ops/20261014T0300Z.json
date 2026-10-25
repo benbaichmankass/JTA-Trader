@@ -1,0 +1,50 @@
+{
+  "run": "RESEARCH-OPS-20261014-0247", "finished_at": "2026-10-14T03:00:00Z", "by": "research-ops-lane-20261014-0247",
+  "baseline": "comms/research/ops/20261014T0040Z.json",
+  "floor": 25,
+  "throughput": {"runnable_before": 25, "runnable_after": 36, "queued": 252, "units": 628, "fired_24h": 50, "fired_7d": 282,
+                 "results_landed_24h": 74, "hours_since_last_dispatch": 0.6, "idle_alarm": false, "as_of": "2026-10-14T02:47Z",
+                 "note": "MEASURED: check_research_queue_throughput.py on origin/main 3abab8d4 (runnable 25) and again on this branch with the 10 new units + the RQ-20261007-009 unblock + the 1414-06 re-queue (runnable 36). 'after' is this branch, not yet observed on main. The 3 Kaggle units show 'deferred: kaggle quota unreadable' in a local dry run only (no --kaggle-quota-file); on the dispatcher they are gated by the real weekly quota."},
+  "mechanism": {
+    "dispatch_receipt": "STRANDED then unblocked: the receipt on main was 2026-10-12T07:12Z (43.5h old; liveness trips at 48h). Cause (read in research-queue-dispatch.yml l.543-550): any open automation/research-queue-receipt* PR suppresses every later receipt landing; #17702 was open+dirty since 2026-10-12T07:52Z. Closed #17702 this pass. The workflow has no staleness/mergeability test, so it recurs: filed PI-20261014-20261014-0001.",
+    "collector": "ok: 11 research/results files landed since the 00:40Z record (4 pairs, 6 entry-ablation, 1 producer_failed)",
+    "stranded_stamp_prs": "none among automation/research-queue-stamp-*; #17702 (receipt) was the stranded one and is closed. #17811/#17346 are other automation PRs (econ-calendar, trainer capture-watch), not research-queue.",
+    "watchdog": "not read this pass (budget); newest incident row is the 2026-10-13T19:16Z backend:trainer self_heal",
+    "incident": "receipt landing wedged by #17702 (above)"},
+  "results_read": {"pass": 5, "fail": 5, "indeterminate": 0, "producer_failed": 1,
+    "units": [
+      {"unit": "RQ-20261007-005", "verdict": "pass", "detail": "pairs_sol_eth net +53.40 R n=304 (floor 39); rule: Stage-0 evidence only"},
+      {"unit": "RQ-20261007-006", "verdict": "pass", "detail": "pairs_bnb_btc net +102.42 R n=274"},
+      {"unit": "RQ-20261007-007", "verdict": "pass", "detail": "pairs_sol_btc net +92.64 R n=286"},
+      {"unit": "RQ-20261007-008", "verdict": "pass", "detail": "pairs_eth_btc net +51.76 R n=273"},
+      {"unit": "RQ-20261013-407c-01", "verdict": "fail", "detail": "xrp_pullback_2h pullback_frac: no reachable lever beats removed; declared value stands"},
+      {"unit": "RQ-20261013-407c-04", "verdict": "fail", "detail": "xrp_pullback_2h adx_min: same"},
+      {"unit": "RQ-20261013-407c-17", "verdict": "fail", "detail": "ada_pullback_2h cooldown: same"},
+      {"unit": "RQ-20261013-407c-18", "verdict": "fail", "detail": "ict_scalp_xrp_15m time-stop: same"},
+      {"unit": "RQ-20261013-407c-20", "verdict": "fail", "detail": "trend_donchian_eth hot-vol skip: same"},
+      {"unit": "RQ-20261013-407c-21", "verdict": "pass", "detail": "trend_donchian_sol hot-vol skip: VH90 +11.36 R vs baseline +18.18 R on n=120, folds 4/4, dDD -1.01 R; Tier-3 PROPOSAL note on QUEUE-FILL-1013 (not applied)"},
+      {"unit": "RQ-20261013-1414-06", "verdict": "producer_failed", "detail": "exit 75 after 3601.6s = trainer heavy-lock wait timeout (scripts/ops/_trainer_heavy_lock.sh); never measured. Route fault: re-queued (last_dispatched_at null); an off-trainer Kaggle twin is RQ-20261014-65cc-06"}],
+    "note": "The 4 pairs results were re-emitted by #17963 (originals ran 2026-10-08 and sat under comms/research/ only). Old unread e35/m20 corpus rows from research_disposition --unread-only (27) are accruing/not_queue_dispatched grading-ledger rows, not read this pass (not_run)."},
+  "unlocked": [{"unit": "RQ-20261007-009", "how": "moved blocked/ -> queue/; the four <ledger> placeholders replaced by the committed trades.jsonl paths of 005..008 (its registered clears_when); rule untouched"}],
+  "retired": [],
+  "levers_filed": [{"lever": "receipt landing must not be wedged by a dirty/stale in-flight receipt PR", "ref": "PI-20261014-20261014-0001"}],
+  "units_authored": ["RQ-20261014-65cc-01..10"],
+  "units_authored_detail": {
+    "by_bucket": {"information": 5, "ai_trader": 3, "frontier": 2, "own_losses": 0, "structural": 0},
+    "by_backend": {"github_runner (cpu_light)": 5, "github_runner_data (auto, published data)": 2, "kaggle_gpu": 3, "trainer": 0},
+    "kaggle_units": ["RQ-20261014-65cc-06", "RQ-20261014-65cc-07", "RQ-20261014-65cc-08"],
+    "note": "All ML units use only the published metis-market-data allowlist (BTC/ETH 1h v002) so none needs the saturated trainer. Shard columns/freshness for BTC 1h and the regime_label/direction_label columns on the 1h shards are UNVERIFIED from the sandbox; a miss lands producer_failed/no_data = route fault, not a verdict. TabICL/TabPFN weights come from the Hugging Face Hub and Kaggle has internet off: an arm that cannot fetch weights errors -> INDETERMINATE (stated in the units); the follow-up is staging weights in the bundle."},
+  "template_proposals": {
+    "added": [
+      "research/proposals/e35-bracket-recent.yaml.proposed (PARKED, not loaded; first pushed as a template and CI test_weights_follow_the_operators_priorities failed because it pins family weights to the operator's priorities, so adopting it needs an operator weight decision + a test update): NEW family (trailing 730d window vs 1830d). A new family name has its own key namespace; queue_replenish dry run mints 22 points. A plain list axis is NOT in point_key(), and a {key,label} axis added to e35-bracket would re-key every minted unit -- hence a sibling file. Caveats for the reviewer are in the file header (shared corpus store; 1d legs mostly unresolvable at 730d).",
+      "research/templates/prop-fit-breakout.yaml: two new sizing arms (bal005, room050) on the existing {key,label} axis; adds 4 new keys, leaves existing keys untouched (dry run)."],
+    "not_proposed": "m20-exit-lever and roster-walkforward have only `legs` grids; a new axis needs a harness input I did not verify (m20 levers are fixed by the sweep; walk-forward would need a window input on research-harness-dispatch.yml). macro-valuation's only axes (start_date, cadence_days) are in point_key but a backfill cadence is not a research question."},
+  "not_run": ["watchdog_incidents full read", "research_disposition --unread-only items (27 old e35/m20 grading-ledger rows)", "blocked/ audit beyond RQ-20261007-009 (blocker_watch.py not run)", "needs_review triage", "pytest (not installed in this container; decision-rule guard, replenish self-test and dispatch dry-run run instead)"],
+  "handoff": [
+    "Manager: review the template hold (e35-bracket-recent new family; prop-fit 2 new arms) and the hand-authored units (hold per E57).",
+    "Manager: Tier-3 proposal on QUEUE-FILL-1013 -- vol_skip_above_pctl 0.90 on trend_donchian_sol (walk-forward confirm suggested; sibling ETH unit FAILED the same axis).",
+    "Manager: PAIRS-STOCKTAKE rule mapping (a) is open: Stage-0 evidence records for the four pairs (E37).",
+    "Manager/lane: PI-20261014-20261014-0001 (receipt-landing wedge self-heal in research-queue-dispatch.yml).",
+    "Next pass: confirm the receipt on main is fresh again after #17702 closed; read 65cc results as they land and check published-data.json beside each; watch whether Kaggle takes the 3 gpu units (quota file) and whether TabICL/TabPFN weights fetch with internet off.",
+    "Next pass: blocker_watch.py and the blocked/ audit were not run this pass."]
+}

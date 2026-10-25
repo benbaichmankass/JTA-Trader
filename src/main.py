@@ -986,22 +986,17 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("dup-key check skipped: %s", exc)
 
-    # S-021: log open packages per strategy on every startup so the operator
-    # can see at a glance that monitoring will resume (BUG-048 observability gap).
+    # TELEGRAM-RESTART-MSG (2026-10-15): ONE restart ping — status headline,
+    # cause line, and a per-account journal <-> broker reconcile (positions,
+    # tracked, measured SL/TP) — replacing the S-021 per-strategy package list
+    # and the Sprint A-3 Bybit-only ghost alert. Runs on a daemon thread; boot waits
+    # at most boot_audit.REPORT_WAIT_S for it, so a slow broker read cannot hold
+    # the first tick back longer than that. Never raises.
     try:
-        from src.runtime.boot_audit import report_open_packages_on_boot
-        report_open_packages_on_boot()
+        from src.runtime.boot_audit import start_restart_report_thread
+        start_restart_report_thread()
     except Exception as exc:  # noqa: BLE001
-        logger.warning("boot_audit skipped: %s", exc)
-
-    # Sprint A-3: compare journal open rows against live Bybit positions.
-    # Ghost rows (journal open, Bybit flat) get a Telegram alert immediately
-    # on startup — before the first tick — so the operator can investigate.
-    try:
-        from src.runtime.boot_audit import reconcile_journal_vs_exchange_on_boot
-        reconcile_journal_vs_exchange_on_boot()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("boot_reconcile skipped: %s", exc)
+        logger.warning("boot restart report skipped: %s", exc)
 
     # S-PERSIST-CANON: snapshot the active strategies.yaml into the
     # (previously dead) trade_journal.db::strategy_versions table so the
@@ -1226,6 +1221,15 @@ def main() -> None:
                 run_prop_monitor_pulse()
             except Exception:  # noqa: BLE001
                 logger.exception("prop_monitor_pulse tick failed")
+
+            # A resting prop limit the system itself placed becomes a known (ESTIMATED) open position when the candles
+            # trade through it, without waiting for the phone's Positions read (operator 2026-10-13: "the system
+            # opened that position, it should be aware of it"). Rate-limited inside; best-effort.
+            try:
+                from src.prop.fill_inference import run_inference_tick
+                run_inference_tick()
+            except Exception:  # noqa: BLE001
+                logger.exception("prop fill_inference tick failed")
 
             # A prop ticket that passed its validity window with no report-back
             # is silent drift — the bot can't tell whether it was

@@ -57,6 +57,11 @@
 #                        body text, alert/status/banner/toast elements, lines
 #                        naming a breach / liquidation / disabled state, and the
 #                        Buy/Sell controls' enabled state. One page.evaluate.
+#     quote-spread     — READ-ONLY (TRADEIFY-INSTR-SPECS, manager go 2026-10-15
+#                        20:21Z; needs `symbols:`): each watchlist symbol's quoted
+#                        spread in bps of mid (median of 3 reads) via the same
+#                        read_quote the executor uses. Clicks nothing, reads no
+#                        account figure.
 #     link-state-dump  — READ-ONLY (PROP-ETH-DOM 2026-10-01): watchlist rows with
 #                        the element hit at each Symbol cell's centre, every
 #                        symbol_input, and the sidebar ticket's buttons. Clicks,
@@ -240,7 +245,7 @@ case ",${APPLY}," in *",emit-status,"*) WANT_EMIT=1 ;; *) WANT_EMIT=0 ;; esac
 case ",${APPLY}," in *",reset-feed,"*) WANT_RESET=1 ;; *) WANT_RESET=0 ;; esac
 case ",${APPLY}," in *",dump-tables,"*) WANT_TABLES=1 ;; *) WANT_TABLES=0 ;; esac
 EXEC_MODE=""
-for m in probe-ticket instrument-probe instrument-search-dump instrument-info-dry instrument-info-probe symbol-switch-dry link-state-dump page-status edit-dialog-dry edit-dialog-probe edit-surface-probe widget-menu-probe add-watchlist-widget watchlist-submenu-probe instrument-page-dump order-surface-dump probe-ticket-ask add-watchlist-symbol-dry add-watchlist-symbol executor-dry-run watched-click round-trip-dry round-trip-live \
+for m in probe-ticket instrument-probe instrument-search-dump instrument-info-dry instrument-info-probe symbol-switch-dry quote-spread link-state-dump page-status edit-dialog-dry edit-dialog-probe edit-surface-probe widget-menu-probe add-watchlist-widget watchlist-submenu-probe instrument-page-dump order-surface-dump probe-ticket-ask add-watchlist-symbol-dry add-watchlist-symbol executor-dry-run watched-click round-trip-dry round-trip-live \
          close-position close-position-live \
          executor-enable-timer executor-disable-timer executor-clear-halt executor-clear-rollout \
          feed-enable-timer feed-disable-timer; do
@@ -567,7 +572,8 @@ if [ "${ACCOUNT}" != "breakout_1" ]; then
 fi
 
 if { [ "${EXEC_MODE}" = "instrument-probe" ] || [ "${EXEC_MODE}" = "instrument-info-dry" ] \
-     || [ "${EXEC_MODE}" = "instrument-info-probe" ] || [ "${EXEC_MODE}" = "symbol-switch-dry" ]; } \
+     || [ "${EXEC_MODE}" = "instrument-info-probe" ] || [ "${EXEC_MODE}" = "symbol-switch-dry" ] \
+     || [ "${EXEC_MODE}" = "quote-spread" ]; } \
      && [ -z "${ACTION_SYMBOLS// }" ]; then
     log "${EXEC_MODE}: refused — 'symbols:' is required (comma-separated venue symbols)"
     exit 1
@@ -590,6 +596,7 @@ if [ -n "${EXEC_MODE}" ]; then
         symbol-switch-dry)
             case "${ACTION_SYMBOLS}" in *,*) log "symbol-switch-dry: refused — exactly one symbol"; exit 1 ;; esac
             EARGS+=(--symbol-switch-dry "${ACTION_SYMBOLS// /}") ;;
+        quote-spread)           EARGS+=(--quote-spread "${ACTION_SYMBOLS// /}") ;;
         link-state-dump)     EARGS+=(--link-state-dump) ;;
         page-status)         EARGS+=(--page-status) ;;
         edit-dialog-dry|edit-dialog-probe|edit-surface-probe)

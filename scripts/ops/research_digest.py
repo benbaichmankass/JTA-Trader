@@ -351,8 +351,8 @@ def headline(d: dict) -> str:
     # beside 24 listed results).
     return (f"🔬 research: {n} result(s) — {len(b[PASSED])} pass · {len(b[FAILED])} fail · "
             f"{len(b[FURTHER])} further · {len(b[OTHER])} other · "
-            f"{len(t['run'])} unit(s) fired · {len(t['newly_queued'])} queued · "
-            f"{len(t['newly_blocked'])} blocked")
+            f"{len(t['run'])} unit(s) fired · {len(t['newly_queued'])} newly queued · "
+            f"{len(t['newly_blocked'])} newly blocked")
 
 
 def render_body(d: dict) -> str:

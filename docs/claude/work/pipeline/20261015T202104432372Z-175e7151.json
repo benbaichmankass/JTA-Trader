@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "checklist row NETTED-SLICES is done (per-strategy slices + per-slice brackets live on bybit_2) and trend_donchian_eth_prop is on bybit_2 + bybit_portfolio rosters",
+    "kind": "event"
+  },
+  "id": "PI-20261015-FOYBZ9CV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PROMOTE-PROP-LEGS session_01TyFwUG9LYJXwJsFoyBZ9CV (manager session_01VduHYzdaXe27wTDBLSu8ao)",
+    "rerun": "grep -n 'strategies:' config/accounts.yaml | grep 'trend_donchian_eth_4h' ; ls docs/claude/work/checklist/ | grep -i netted  # eth_prop absent from bybit_2/bybit_portfolio and NETTED-SLICES not done = still open"
+  },
+  "routed_to": "manager session_01VduHYzdaXe27wTDBLSu8ao",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 3,
+  "what": "Promote trend_donchian_eth_prop to bybit_2 + bybit_portfolio (identically, alongside trend_donchian_eth_4h) once lane NETTED-SLICES ships per-strategy position slices with per-slice brackets live on bybit_2. Operator 2026-10-15 ~20:25Z (relayed by manager): 'We can have different strategies working with netted positions as long as we know how much of that position belongs to each strategy, and each piece of that position has its own brackets... We don't need to collapse it.' Until then positions.py suppresses a second strategy's same-direction entry on the same symbol, so adding the leg now would starve or mis-attribute it. Readiness already MEASURED 2026-10-15: Stage 0 comms/strategy_evidence/trend_donchian_eth_prop.json +9.32R n=163 faithful pass; clean live-prop trade tradeify_1 prop-manual-2165978c1c04 (fills #112/#114/#117, SL+TP rested, exit=sl). Supporting data for slice allocation: comms/strategy_evidence/eth_same_symbol_h2h.json (single-slot replay: eth_4h +6.05R n=43, eth_prop +9.32R n=163, both +19.36R n=131 over 365.8d)."
+}

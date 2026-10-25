@@ -134,4 +134,35 @@ if [ "${n_alerts:-0}" -gt 0 ]; then
         >/dev/null 2>&1 || log "ping enqueue failed (audit record still written)"
 fi
 log "executor tick exit ${rc} (alerts=${n_alerts:-0})"
+
+# SESSION WAIT (exit 6) is the designed hand-off to the feed, not a failure
+# (2026-10-17: Tradeify's "Platform maintenance" page expired the session at
+# 05:13Z; every tick then exited 6, systemd marked the unit FAILED and
+# OnFailure pinged "unit FAILED" while the feed was already retrying and owns
+# that red flag, at its 3rd consecutive failure). So exit 6 exits 0 here and
+# is counted in ${STATE_DIR}/session_wait. It escalates (exit 6 -> unit
+# FAILED -> one OnFailure ping) only when it PERSISTS for
+# PROP_EXECUTOR_SESSION_WAIT_MAX consecutive ticks (default 6, ~30 min) while
+# the feed is NOT backing off: then the feed reads fine but the executor
+# still cannot use its session, which no other alert covers. Any other exit
+# resets the count. NO-HALT: either way the timer fires the next tick.
+WAIT_FILE="${STATE_DIR}/session_wait"
+WAIT_MAX="${PROP_EXECUTOR_SESSION_WAIT_MAX:-6}"
+if [ "${rc}" = "6" ]; then
+    n_wait="$(cat "${WAIT_FILE}" 2>/dev/null || echo 0)"
+    case "${n_wait}" in ''|*[!0-9]*) n_wait=0 ;; esac
+    n_wait=$((n_wait + 1))
+    echo "${n_wait}" > "${WAIT_FILE}"
+    if [ -f "${FEED_DIR}/backoff" ]; then
+        log "session wait ${n_wait}: the feed is backing off and owns the red flag; the next tick re-checks"
+        exit 0
+    fi
+    if [ "${n_wait}" -lt "${WAIT_MAX}" ]; then
+        log "session wait ${n_wait}/${WAIT_MAX}: saved session not accepted; the feed's next tick logs in again"
+        exit 0
+    fi
+    log "session wait ${n_wait}/${WAIT_MAX}: the feed is NOT backing off but the executor's session is still not accepted; failing this tick so it is flagged (the timer keeps firing)"
+    exit 6
+fi
+rm -f "${WAIT_FILE}" 2>/dev/null || true
 exit "${rc}"

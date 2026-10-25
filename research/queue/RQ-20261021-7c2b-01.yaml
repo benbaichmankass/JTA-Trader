@@ -1,0 +1,142 @@
+id: RQ-20261021-7c2b-01
+title: >-
+  Programme 07 TIMEFRAMES B2 RE-ASK (instrument error in ef5d-07): COST-GATED Donchian-20 breakout on 30m bars, six perps, ATR-percentile
+  gate at 0.50 / 0.75 / 0.90 on the harness's 0-1 scale vs ungated
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  Same question as RQ-20261018-ef5d-07, measured correctly: on Binance USD-M 30m candles for the six perps over 2021-01-01..2026-10-17,
+  do the gated arms G50 / G75 / G90 (--vol-skip-below-pctl 0.50 / 0.75 / 0.90) pass the pooled Stage-0 rule AND beat the ungated baseline
+  B by >= 0.05 R per trade?
+why_this_matters: >-
+  ef5d-07 passed --vol-skip-below-pctl 50 / 75 / 90, but backtest_trend.py compares the flag to a rolling rank(pct=True) on a 0-1 scale
+  (scripts/backtest_trend.py, atr_pctl). Any value > 1 skips EVERY bar once the 200-bar percentile window fills, so V50/V75/V90 measured
+  only the warm-up entries: all three arms read the IDENTICAL n=33, +5.70 R (research/results/RQ-20261018-ef5d-07/39157783308.jsonl),
+  against B n=16,372, -507 R. Its INDETERMINATE is an instrument artefact, not an answer. Live config uses the 0-1 scale (vol_skip_below_pctl:
+  0.1 in config/strategies.yaml), so no live leg is affected. backtest_trend.py now refuses a percentile outside [0, 1] (same PR).
+power:
+  expected_n: 400
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    ef5d-07 B measured n=16,372 over the same cells; G90 keeps ~10% of entries (~1,600) -- far above the 88 pooled floor at d=0.3.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P7-B2-COST-GATED-30M-REASK
+  registered_at: '2026-10-21'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family trend --timeframe 30m, arms B, G50, G75, G90; per cell n, net_r, max_drawdown_r, 6 calendar folds (majority
+    4), net_r_per_capital_day, hold; pooled across the six cells; delta_r_per_trade_vs_baseline per candidate.
+  rule: >-
+    Arms fixed now: B (baseline), G50, G75, G90 (candidates). PASS iff any candidate passes the pooled Stage-0 rule AND beats B by >=
+    0.05 R/trade -> node P7-B2-confirm (the passing gate alone at 15m and 1h: a transfer, no re-selection). FAIL iff every candidate
+    fails -> the vol gate does not lift a 30m breakout over its cost on these symbols. INDETERMINATE otherwise. ef5d-07's grading stays
+    as recorded (indeterminate); this unit is the answer to its question. Verdicts are the script's own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail
+    iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled
+    folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline's pooled net R/trade
+    by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness
+    fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds
+    are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does not pool
+    windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: frontier
+  basis: 'stand-in (ef5d-07 value): a candidate sub-hour crypto leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  basis: >-
+    Estimate from the ef5d-0x harness_stage0 runs (2026-10-18/20) scaled by cells x arms x bars; the first run replaces it.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; CPU-only; not trainer-resident.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 30m
+  - --days
+  - '2200'
+  - --start
+  - '2021-01-01'
+  - --end
+  - '2026-10-17'
+  - --arm
+  - B=
+  - --arm
+  - G50=--vol-skip-below-pctl=0.5
+  - --arm
+  - G75=--vol-skip-below-pctl=0.75
+  - --arm
+  - G90=--vol-skip-below-pctl=0.9
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P7-B2-COST-GATED-30M-REASK
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261021-7c2b-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- RQ-20261018-ef5d-07
+- scripts/backtest_trend.py
+- scripts/research/harness_stage0.py
+- docs/research/programmes/07-TIMEFRAMES.md
+last_dispatched_at: '2026-10-22T15:37:06+00:00'
+grading:
+  attested: RULE-P7-B2-COST-GATED-30M-REASK
+  auto: true
+  decision_rule_id: RULE-P7-B2-COST-GATED-30M-REASK
+  evidence:
+  - research/results/RQ-20261021-7c2b-01/39803796642.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

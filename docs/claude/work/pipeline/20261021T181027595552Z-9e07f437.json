@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "journal shows 0 'requires apiKey' lines over 24h and CURRENT_OPEN_POSITIONS is injected on a live tick, or the counter is removed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-0261021B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "risk-counters-apikey-blind-guard-2026-10-19",
+    "rerun": "grep -n 'exchange positions error' src/runtime/risk_counters.py; journalctl trader unit for 'requires \"apiKey\"' count over 24h via the journal relay"
+  },
+  "state": "queued",
+  "what": "Trader log repeats 'inject_runtime_counters: exchange positions error - bybit requires \"apiKey\" credential' (src/runtime/risk_counters.py:46). READ FROM CODE (not the VM env): the client is the process-level legacy adapter src/main.py::_build_exchange_adapter, built from settings BYBIT_API_KEY/BYBIT_API_SECRET; config/accounts.yaml names only BYBIT_API_KEY_1/_2/_3 as api_key_env, so the unsuffixed key is likely unset and that client is keyless. Effect: CURRENT_OPEN_POSITIONS is never set, so the global MAX_OPEN_POSITIONS guard in src/runtime/orders.py:~126 is silently skipped (only if MAX_OPEN_POSITIONS is configured; per-account RiskManager caps are separate). The failure is reported (outcomes risk_counters/positions_fetch_failed WARN) but nothing reads it as 'a guard is blind'. To do: confirm unsuffixed key unset on the VM via diag, confirm whether MAX_OPEN_POSITIONS is set, then either build the adapter from a named account's key or drop the dead counter; add a health-review check that a WARN-level risk_counters outcome is flagged."
+}

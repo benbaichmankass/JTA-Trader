@@ -63,15 +63,22 @@ generated:
     leg: xrp_pullback_2h
     symbol: XRPUSDT
     timeframe: 2h
-last_dispatched_at: '2026-10-09T08:01:38+00:00'
+last_dispatched_at: '2026-10-23T14:13:19+00:00'
 grading:
   auto: true
   decision_rule_id: RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST
   evidence:
-  - research/results/RQ-20261006-004/37902277997.jsonl
-  graded_at: '2026-10-12'
+  - research/results/RQ-20261006-004/39967824722.jsonl
+  graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-TOOLING-GAPS
+  owner_reason: 'Rule not applicable as registered: RULE-TPL-ROSTER-WALKFORWARD-NET-OF-COST grades ''net-of-cost
+    OOS R'', but research-harness-dispatch''s payload carries only the WHOLE-WINDOW net_total_r (no OOS
+    split), so the mapper lands wiring_only every week. Newest row: whole-window net_total_r -14.43 R
+    over 38 trades (2026-04-12..2026-10-08) -- NOT the registered statistic, not a verdict. Fix owned
+    by PI-20261006-1VPYTX8E-0001 (re-register the template on the mapper''s shape, or add an OOS figure
+    to the payload), due 2026-10-29.'
   reason: 'verdicts not unanimous-mechanical: [''wiring_only'']'
   rows: 1
   verdict: null

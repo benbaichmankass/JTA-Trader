@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane DATA-STORE-PARQUET-GC follow-up, HELD for the manager to merge (Tier-2 by path only: ml/datasets/builder.py). Log-label fix: the builder printed {status: parquet_sidecar, dir, **result}, and result carries its own status (written/refused/failed), which overwrote the label, so no stderr line ever read parquet_sidecar. The outcome now sits under a sidecar key. No change to what is written or read; no live-VM, order-path or config change. Test added; it fails on the old code. Revert: git revert.",
+  "why": "Lets a nightly build log say which market_features versions got a sidecar and which were refused, by name, instead of relying on a file count."
+}

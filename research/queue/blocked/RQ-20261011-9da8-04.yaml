@@ -44,6 +44,13 @@ blocked_on:
   what: The per-trade corpus with realised closes and the baseline exit arms does not exist yet (ML-X1).
   clears_when: ml2_bracket_train_eval --per-leg prints the four baselines per quantile and the corpus carries one row per
     (trade, arm) with the arm's realised or replayed net R and a logged arm-selection propensity.
+- kind: work_item
+  ref: EXIT-PATH-EMIT-OFFLINE
+  what: 'Added 2026-10-14 (lane IN-TRADE-EXIT-MODEL): a contextual bandit needs the CONTEXT at each decision bar, and no harness
+    emits per-bar in-trade state (harness rows are per-trade; live position_telemetry is one upserted row). This unit consumes
+    the OFFLINE harness path emit, not live telemetry (EXIT-PATH-TELEMETRY-LIVE is a parity read only).'
+  clears_when: EXIT-PATH-EMIT-OFFLINE lands --emit-paths on the trend + pullback harnesses with its parity test (per trade
+    max(peak_r over the path rows) == mfe_r).
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false

@@ -231,7 +231,7 @@ def test_one_message_carries_the_attention_block_first_and_commits_after_send(mo
     assert body.splitlines()[1] == "🟢 No new actionable items"
     order = [body.index(h) for h in ("Needs you — decisions only",
                                      "Research queue — new since last update",
-                                     "Work — done · verified")]
+                                     "Work — blocked · didn't work")]
     assert order == sorted(order) and len(body) <= 4096
     assert kw.get("target") == "manager" and kw.get("parse_mode") == "HTML"
     assert mod._attention_calls == ["sent"]

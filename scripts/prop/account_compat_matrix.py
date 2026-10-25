@@ -39,6 +39,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import scripts.backtest_system as bt  # noqa: E402
+from src.research.run_costs import resolve_run_costs  # noqa: E402
 from src.prop.account_rulesets import all_account_units  # noqa: E402
 from src.prop.montecarlo import run_ev_montecarlo, run_montecarlo  # noqa: E402
 
@@ -271,6 +272,7 @@ def run(args: argparse.Namespace) -> int:
     # every standard row by _evaluate_account).
     args.asset_class = _asset_class_for(args.symbol)
 
+    engine_costs = None  # ledger path: costs were applied upstream by the emitting harness
     if args.ledger:
         # --- harness-emit path (aliased ETF / alt cells, outside bt.ROSTER) ---
         # SKIP both the ROSTER check AND the engine run; synthesize the ledger
@@ -304,6 +306,12 @@ def run(args: argparse.Namespace) -> int:
         args.data = _src.path
         print(_src.provenance_line(), file=sys.stderr)
         base5m = bt._load_candles(args.data)
+        # Full cost stack for the engine path (fee + slippage + funding, venue-aware).
+        # An explicit --fee-bps-roundtrip overrides the fee term only.
+        engine_costs = resolve_run_costs(
+            args.symbol or "BTCUSDT", fee_bps_roundtrip=args.fee_bps_roundtrip,
+            slippage_bps_roundtrip=getattr(args, "slippage_bps_roundtrip", None),
+            funding_bps_per_window=getattr(args, "funding_bps_per_window", None))
         print(f"[compat] engine run: {args.strategy} (base risk {args.base_risk_pct})", file=sys.stderr)
         summary = bt.run_system_backtest(
             base5m, roster=[args.strategy], start=args.start, end=args.end,
@@ -311,6 +319,7 @@ def run(args: argparse.Namespace) -> int:
             daily_loss_pct=3.0, signal_ttl_bars=1, overrides=overrides,
             refresh=args.refresh_signals, clock_tf=args.clock_tf,
             flip_policy="hold", reentry_policy="suppress", attach_full=True,
+            symbol=args.symbol or "BTCUSDT", costs=engine_costs, require_full_costs=True,
         )
         ledger = summary.get("closed_trades", []) or []
         data_src = args.data
@@ -330,6 +339,7 @@ def run(args: argparse.Namespace) -> int:
         "generated_at": generated_at, "strategy": label, "data": data_src,
         "symbol": args.symbol, "asset_class": args.asset_class,
         "fee_bps_roundtrip": args.fee_bps_roundtrip,
+        "cost_policy": engine_costs,
         "min_survival": args.min_survival, "max_p_breach": args.max_p_breach,
         "n_ledger_trades": len(ledger), "horizon_months": horizon,
         # PROVENANCE: a verdict computed under an override must SAY so, or it is
@@ -410,6 +420,10 @@ def main(argv: List[str]) -> int:
                    help="Instrument symbol for this ledger (e.g. IWM, GLD). Resolves "
                         "the asset_class via src.web.api._asset_class and is stamped onto "
                         "the output + every standard row. Optional (defaults to 'unknown').")
+    p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
+                   help="Engine-path slippage override; unset = venue-aware (never 0).")
+    p.add_argument("--funding-bps-per-window", type=float, default=None,
+                   help="Engine-path funding override; unset = venue-aware.")
     p.add_argument("--fee-bps-roundtrip", type=float, default=None,
                    help="Round-trip fee (bps) the emit ledger was generated at — recorded "
                         "onto the output + standard rows for provenance (the net_r already "

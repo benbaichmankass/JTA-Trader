@@ -892,6 +892,7 @@ def _checklist_item(
         "lane": item.get("lane"),
         "tier": item.get("tier"),
         "priority": item.get("priority"),
+        "priorityRank": item.get("priority_rank"),
         "status": {
             # `value` is what a renderer groups and labels by. `basis` says how
             # it was arrived at and is NOT inferable from `value`: an
@@ -1203,8 +1204,10 @@ def get_work_checklist() -> dict[str, Any]:
 #   closedRecent    last 5 rows in a terminal state (done | dropped), newest
 #                   `updated_at` first.
 #   openNow         every in_flight row (a lane is on it now).
-#   next            the first 5 queued rows in checklist order (`_seq`), which
-#                   is the order the manager assigns from.
+#   next            the first 5 rows of the RANKED RUNNABLE QUEUE
+#                   (`checklist_store.queue`: queued, nothing in blocked_on, by
+#                   `priority_rank`, unranked last in `_seq` order) -- the order
+#                   the manager dispatches from (manager SKILL § "The operating loop").
 #   waitingOnOperator  every open row (not done/dropped) with a typed
 #                   blocked_on edge of kind `operator_decision` or `operator`.
 #                   Rows whose OWNER merely names the operator are NOT counted:
@@ -1227,6 +1230,7 @@ def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
         "owner": row.get("owner"),
         "lane": row.get("lane"),
         "tier": row.get("tier"),
+        "priorityRank": row.get("priority_rank"),
         "updatedAt": row.get("updated_at"),
     }
 
@@ -1266,7 +1270,7 @@ def _work_snapshot_payload() -> dict[str, Any]:
         "counts": counts,
         "closedRecent": [_snapshot_row(r) for r in closed[:5]],
         "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
-        "next": [_snapshot_row(r) for r in rows if r.get("state") == "queued"][:5],
+        "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
         "waitingOnOperator": waiting,
     }
 

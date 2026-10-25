@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -47,6 +48,13 @@ PLATFORMS_YAML = Path(__file__).resolve().parents[2] / "config" / "prop_platform
 BASE = "https://dx.velotrade.com/dxsca-web"  # set by main() from the resolved account
 SYMBOLS = ["ETHUSD", "SOLUSD", "XRPUSD", "BTCUSD", "ETH/USD", "SOL/USD", "XRP/USD"]
 WANTED = ("ETH", "SOL", "XRP")
+# TRADEIFY-INSTR-SPECS (2026-10-15, manager go 20:21Z): the symbols tradeify_1 lists that the
+# non-crypto research units price (SILVER/USD, XYZ100/USD, SP500/USD, USOIL/USD) + ETH/USD as
+# the positive control. Used ONLY for account tradeify_1; velotrade_1 keeps SYMBOLS above.
+# Both spellings, because the REST symbol may be slashed (as the terminal shows) or not.
+TRADEIFY_SYMBOLS = ["ETH/USD", "ETHUSD", "SILVER/USD", "SILVERUSD", "XYZ100/USD", "XYZ100USD",
+                    "SP500/USD", "SP500USD", "USOIL/USD", "USOILUSD"]
+TRADEIFY_WANTED = ("ETH", "SIL", "XYZ", "SP5", "USO")
 # Account fields that describe the account's TYPE, not its identity. Printed by
 # value; anything not listed here (account code, owner, ids) is never printed.
 # `isPositionBased` is the spec's name (rest/types/account-details.md: "shows if the
@@ -60,8 +68,16 @@ SPEC_FIELDS = (
     # names the web terminal's own endpoint uses (seen in the login-check output)
     "minVolume", "maxVolume", "volumeStep", "pricePrecision", "quantityPrecision",
     "financingMode", "swapRateLong", "swapRateShort", "spreadType",
+    # TRADEIFY-INSTR-SPECS: candidate names for the cost / hours fields; whichever the server
+    # returns is printed. The row's full KEY NAMES are printed too (row_keys), so a field
+    # missing from this list is still discoverable on the next run.
+    "leverage", "maxLeverage", "contractSize", "commission", "tradingHours", "tradingSchedule",
+    "schedule", "sessions", "swapType", "swapLong", "swapShort", "tripleSwapDay", "spread",
+    "description", "name",
 )
 UA = "metis-insights-velotrade-api-probe/1 (read-only; contact: repo owner)"
+RETRY_429_S = (1.0, 2.0, 4.0)
+GET_GAP_S = 0.3
 _SECRETS: list[str] = []
 
 
@@ -130,13 +146,24 @@ def _call(method: str, path: str, token: str | None = None, body: dict | None = 
     if token:
         hdrs["Authorization"] = f"DXAPI {token}"
     req = urllib.request.Request(BASE + path, data=data, headers=hdrs, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=25) as r:
-            status, text = r.status, r.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        status, text = e.code, e.read().decode("utf-8", "replace")
-    except Exception as e:  # network / TLS
-        return 0, None, f"{type(e).__name__}: {e}"
+    # TRADEIFY-INSTR-SPECS (run 38808598907): 40 back-to-back GETs drew HTTP 429 on 15 of them, which left
+    # the two indices without their account-scoped margin rate / minimum order size. GETs only (never the
+    # login/logout POSTs) are retried on 429 with the same 1/2/4 s schedule dxtrade_api.py uses, and each
+    # GET is followed by a short pause.
+    for attempt in range(len(RETRY_429_S) + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=25) as r:
+                status, text = r.status, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            status, text = e.code, e.read().decode("utf-8", "replace")
+        except Exception as e:  # network / TLS
+            return 0, None, f"{type(e).__name__}: {e}"
+        if status == 429 and method == "GET" and attempt < len(RETRY_429_S):
+            time.sleep(RETRY_429_S[attempt])
+            continue
+        break
+    if method == "GET":
+        time.sleep(GET_GAP_S)
     try:
         return status, json.loads(text), text
     except ValueError:
@@ -288,7 +315,9 @@ def main(argv: list[str] | None = None) -> int:
                 _out(f"account#{n} metrics: {_err(st, js, tx)}")
 
         # Reference data: global instruments, then the account-scoped view.
-        for sym in SYMBOLS:
+        symbols = TRADEIFY_SYMBOLS if account == "tradeify_1" else SYMBOLS
+        wanted = TRADEIFY_WANTED if account == "tradeify_1" else WANTED
+        for sym in symbols:
             qs = urllib.parse.quote(sym, safe="")
             for label, path in [("instruments", f"/instruments/query?symbols={qs}"), ("instrument-by-symbol", f"/instruments/{qs}")] + [
                 (f"acct#{n}-instruments", f"/accounts/{urllib.parse.quote(c, safe='')}/instruments/query?symbols={qs}")
@@ -302,6 +331,8 @@ def main(argv: list[str] | None = None) -> int:
                 if rows:
                     present[sym.replace("/", "")[:3]] = True
                     _out(f"spec[{label}]: " + json.dumps({k: rows[0][k] for k in SPEC_FIELDS if k in rows[0]}, sort_keys=True))
+                    if account == "tradeify_1":
+                        _out(f"row_keys[{label}] {sym}: {sorted(rows[0].keys())}")
                 else:
                     _out(f"spec[{label}] {sym}: no exact row ({_err(st, js, tx)}) shape={json.dumps(_shape(js), sort_keys=True)[:300]}")
     finally:
@@ -311,7 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     _out("summary: " + json.dumps({
         "account": account, "read_state": "login_ok", "reachable": reachable, "login_ok": login_ok,
         "account_model": account_model or "unknown",
-        "symbols_present": {b: bool(present.get(b)) for b in WANTED}}, sort_keys=True))
+        "symbols_present": {b: bool(present.get(b)) for b in wanted}}, sort_keys=True))
     return 0
 
 

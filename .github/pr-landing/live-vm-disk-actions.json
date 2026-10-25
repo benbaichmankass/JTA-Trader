@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds a Tier-1 read-only action (disk-usage-report) and a Tier-2 deleting action (prune-db-backups, dry-run default) to the system-actions allowlist. Lane policy: landing: hold; the manager merges.",
+  "why": "Live VM root disk at 96% (2.4 G free) with a 2.09 GB journal: one more full-journal backup could fill the disk under the live trader. No allowlisted action could explain usage or prune the unretained <db>.bak-* copies."
+}

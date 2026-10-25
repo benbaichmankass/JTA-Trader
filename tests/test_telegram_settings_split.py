@@ -347,7 +347,7 @@ def test_manager_update_no_longer_carries_the_wedge_block():
                    snap={"rows": {}, "items": {}, "checklist_state": "read", "pipeline_state": "read"})
     msg = mod.compose_update("2026-10-11T08", {"block": "🟢 none", "priority": "normal"},
                              "Standing close wedges: LEGACY", {}, {"error": "x"}, work)
-    assert "LEGACY" not in msg and "Work — done · verified" in msg
+    assert "LEGACY" not in msg and "Work — blocked · didn't work" in msg
 
 
 def test_every_periodic_update_fits_4096(tmp_path):
