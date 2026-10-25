@@ -1,0 +1,19 @@
+{
+  "based_on": "20261024T123130612089Z-72c7632f.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "a pullback-family parity run reports PARITY (or each listed defect is fixed or killed with a reason)",
+    "kind": "observation"
+  },
+  "id": "PI-20261024-ZUPNKHZR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "MOMENTUM-LEVERS-PARITY (session_01AYVhF79YumXBY7ZuPNkhZr)",
+    "rerun": "grep -n 'since_entry(candles_df' src/runtime/exit_levers.py src/units/strategies/htf_pullback_trend_2h.py  # any hit not routed through closed_frame is the open defect"
+  },
+  "routed_2026_10_25": "Checked on main 2026-10-25: exit_levers.py:275 and htf_pullback_trend_2h.py:752 use raw since_entry.",
+  "routed_to": "checklist:MOMENTUM-PARITY-FOLLOWUPS",
+  "state": "routed",
+  "what": "[exit-path] MOMENTUM-LEVERS-PARITY measured only the trend_donchian family. Same defect classes still open elsewhere: (1) exit_levers.giveback_verdict still evaluates on the forming bar + intrabar price (harness: bar close); (2) htf_pullback_trend_2h's trail window not checked for the forming-bar / entry-bar-range issues fixed in trend_donchian; (3) the pullback-family momentum_stale cell (slv_pullback_1d ms8/a20, RQ-20261016-016) has no parity run -- no SLV bars were reachable from the lane. Extend scripts/research/momentum_levers_parity.py to the pullback harness + monitor."
+}

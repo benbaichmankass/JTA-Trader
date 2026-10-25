@@ -1,0 +1,20 @@
+{
+  "based_on": "20261018T050644202936Z-22020118.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "6533 and 6539 are explained (the writer path named) and either fixed or marked excluded from the realMoney rollup, and no new zero-duration 'other' close appears for the leg",
+    "kind": "observation",
+    "last_checked": "2026-10-18"
+  },
+  "id": "PI-20261018-SALS1018-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane HOLDOUT-PROPOSALS-1018 live<->backtest join, comms/research/live_bt_join/2026-10-18/xrp_pullback_2h.json (execution_unattributable ids)",
+    "rerun": "python3 scripts/research/live_bt_trade_join.py --leg xrp_pullback_2h --bt-trades comms/research/RQ-20261016-077e-01/38936617653/arms/A__trades.jsonl --out /tmp/lbj && python3 -c \"import json;print(json.load(open('/tmp/lbj/xrp_pullback_2h.json'))['summary']['execution_unattributable'])\""
+  },
+  "routed_2026_10_25": "Measured 2026-10-25: 6533/6539 are intent_reduce_executed legs of bybit_2 parent 6528 (broker_order_id NULL, no reduce_fill_state); whether a venue reduce order was accepted is the open root-cause question (rank-1 row).",
+  "routed_to": "checklist:XRP-REDUCE-OTHER-CLOSES",
+  "state": "routed",
+  "what": "[execution][real-money] Two bybit_2 xrp_pullback_2h closes are zero-duration 'other' closes with no matching order package: trade 6533 (buy, opened=closed 2026-10-09T02:00Z, qty 3.3, entry 1.3898 -> exit 1.3893) and 6539 (buy, opened=closed 2026-10-09T04:41Z, qty 1.4, entry 1.3945 -> exit 1.3933). MEASURED 2026-10-18 from GET /api/bot/trades/closed?account_id=bybit_2 (closeReason 'other', pnlProvenance measured, journalTrust known_divergent) joined to /api/bot/order-packages?strategy=xrp_pullback_2h: the only xrp packages near those times are SHORT (pkg 10-09T02:00 linked 6534, 04:41 linked 6538), while both journal rows are BUYS, so they look like close/reduce fills of the short being journalled as separate long trades. A close that is not TP/SL/strategy-close is a bug per the session contract. They also enter live_vs_backtest.py's realMoney rollup for this leg. Root-cause in the journal writer / reconciler (which path wrote a buy-side 'other' row at the same instant as a short entry), then fix or exclude."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "XRP-REDUCE-OTHER-CLOSES",
+  "title": "ROOT-CAUSE: bybit_2 xrp_pullback_2h reduce legs 6533/6539 (zero-duration, closeReason 'other', broker_order_id NULL) -- was a venue reduce order sent and filled, or did the journal shrink parent 6528 with no venue action? (PI-20261018-SALS1018-0002)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (opus)",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20261018-SALS1018-0002. MEASURED 2026-10-25 via scripts/ops/diag_fetch.sh journal?table=trades (all 6,736 rows; paged offset 0..6000): trades 6533 and 6539 (bybit_2, xrp_pullback_2h, direction long, qty 3.3 and 1.4, status closed, closed_at == timestamp) are NOT unexplained 'other' closes in the journal: exit_reason='intent_reduce_executed', notes.intent_reduce=true, each with intent_reduce_allocations parent_id 6528 (the bybit_2 SHORT; consumed 3.3 -> new_size 58.3 and 1.4 -> 56.9), exit_reason_source='intent_reduce_order', and reduce_leg_settlement stamped both 'settled' on 2026-10-11 (pnl -0.1395 / -0.0648 net of close fees, entry_fill 1.3478 vs exit 1.3893 / 1.3933). The 'other' is trades_closed.py::_normalise_close_reason falling through for an exit_reason it does not map. Order packages pkg-800b6535825b48b2 / pkg-249a260aaf094ea5; both rows have broker_order_id NULL, order_package_id set, cost_source NULL, and NEITHER carries notes.reduce_fill_state or reduce_fill_avg_price (execute.py writes those when a reduce fill is read). Parent 6528 later closed sl at 56.9. WHAT IS NOT YET KNOWN (the root-cause question, stated precisely): (1) did a venue reduce-only BUY of 3.3 and of 1.4 XRP actually go out and fill? Their notionals (~4.6 and ~1.95 USDT) are BELOW Bybit's 5 USDT min order value, which refused the 0.5 XRP top-up delta on the same account the same day (ErrCode 110094, MIRROR-QTY-DIVERGE). If no order was accepted, the journal shrank parent 6528 (61.6 -> 58.3 -> 56.9) and resized its SL/TP legs while the venue still held the larger short, and these two rows book realized P&L for fills that never happened -- a money-path divergence, not a labelling gap. (2) If the orders did fill, why is broker_order_id NULL and why does the row say exit_price_source=exchange_fill at 1.3893/1.3933, a price within a tick of the reduce package's own entry (cf. PI-20261011-YJAYF7GD-0002: exit priced from pkg.entry)? (3) Should intent_reduce_executed bookkeeping legs enter live_vs_backtest.py's realMoney rollup at all (real_money_close_attribution.py already classes them 'bookkeeping')? METHOD: read-only first -- exchange_fills / venue order history for bybit_2 XRPUSDT 2026-10-09T02:00Z and 04:41Z via the diag relays, journal-vs-venue position at those instants. DO NOT FIX the order path in this row's first lane: report the answer; a fix is a Tier-3 HOLD PR. DONE WHEN: (1)-(3) answered from venue data, and either a fix PR is up or the rows are documented as excluded from the realMoney rollup with the closeReason mapping corrected. Related: REDUCE-FILL-QTY (landed_unproven), REDUCE-READERS-INCLUDE, MIRROR-QTY-DIVERGE.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-25T06:05:07Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 640
+}

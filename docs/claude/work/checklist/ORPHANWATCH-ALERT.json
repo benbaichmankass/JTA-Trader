@@ -1,0 +1,22 @@
+{
+  "id": "ORPHANWATCH-ALERT",
+  "title": "mirror-orphan-watch.yml has no alert step: scheduled failures ping nobody (PI-20261018-ORPHANWATCH-0001)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (sonnet)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20261018-ORPHANWATCH-0001. RE-CHECKED on main 2026-10-25: grep -c 'send-ping\\|outcomes' .github/workflows/mirror-orphan-watch.yml = 0; the workflow still has only the 'Read positions' and 'Compare mirror to live' steps and its last commit is unrelated (batch-land). BUILD (Tier 1 CI/observability): a failure()-conditioned step that sends ONE ping via the send-ping system-action (or the outcomes report path) naming the orphan rows, distinguishing ORPHAN from stale_ack so a decided hold cannot mask a new divergence; an unreadable positions read pings as 'could not look', not as clean. Also fold in: drop the two stale_ack entries from config/mirror_window_exclusions.yaml once PI-20261018-XRPORPHAN-0001 is decided (config edit: a lane may do it only if that decision is recorded). Related: MIRROR-QTY-DIVERGE.",
+  "priority_rank": 24,
+  "updated_at": "2026-10-25T06:05:43Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 643
+}
