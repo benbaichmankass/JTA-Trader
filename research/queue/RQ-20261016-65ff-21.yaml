@@ -1,6 +1,6 @@
 id: RQ-20261016-65ff-21
 title: 'Training parity, OFF-VM side, class HMM: does btc-regime-1h-hmm-v1 trained in a Kaggle CPU kernel match the trainer-VM run on the same rows?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -95,14 +95,16 @@ last_dispatched_at: '2026-10-25T03:54:30+00:00'
 grading:
   attested: RULE-RQ2026101665ff21-TRAIN-PARITY
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-RQ2026101665ff21-TRAIN-PARITY
   evidence:
   - research/results/RQ-20261016-65ff-21/38901146612.jsonl
+  - research/results/RQ-20261016-65ff-21/40159960597.jsonl
   graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: KAGGLE-CPU-ROUTE
-  owner_reason: 'research-ops 2026-10-25 02:47Z: the 2026-10-16 off-VM run read no_data because the reference artifacts of RQ-20261016-65ff-20 had not reached main when it ran (`no successful train_parity.json under comms/research/RQ-20261016-65ff-20/ in this checkout`); they are on main now (comms/research/RQ-20261016-65ff-20/*/train_parity.json, measured pass), and cadence is once, so the old text ''the unit re-asks itself'' was false. last_dispatched_at reset to null to re-ask on the dispatcher''s next cycle. Clears when research/results/RQ-20261016-65ff-21/ holds a row dated after 2026-10-25 with read_state measured. Not a verdict.'
-  reason: 'read_state not unanimously measured: [''no_data'']'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate (1 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: indeterminate
