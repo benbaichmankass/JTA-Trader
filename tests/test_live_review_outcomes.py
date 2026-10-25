@@ -133,16 +133,29 @@ def test_committed_ada_corpus_stage0_trades_are_found_and_replay():
 
 
 PARITY = REPO / "tests/fixtures/ada_pullback_2h_eba2_03_trades.jsonl"
+PARITY_CANDLES = REPO / "tests/fixtures/ADAUSDT_2h_2020-06-03_2026-10-15.csv"
 
 
-@pytest.mark.skipif(not PARITY.exists(), reason=(
-    "ADA-case parity needs the n=402 per-trade list of RQ-20261022-eba2-03 arm A; only its aggregates "
-    "are committed (research/results/RQ-20261022-eba2-03). Drop the list at this path to enable."))
-def test_ada_case_parity_n32_hold_319_tighten_296():
+def _parity_table():
     import json
     trades = [json.loads(ln) for ln in PARITY.read_text().splitlines() if ln.strip()]
-    res = lro.build_table(trades, lro.load_candles(lro.find_candles("ADAUSDT", "2h")), side=None,
-                          open_r=3.44, peak_r=3.4, bars_held=17, atr_stop_mult=1.5, tighten=["atr:1.5"])
-    hold, tight = res["options"]
+    return lro.build_table(trades, lro.load_candles(str(PARITY_CANDLES)), side=None,
+                           open_r=3.44, peak_r=3.4, bars_held=17, atr_stop_mult=1.5, tighten=["atr:1.5"])
+
+
+def test_ada_case_parity_hold_n32_319():
+    """eba2-03 arm A (402 trades, committed) on full-window Binance-vision 2h candles: HOLD reproduces."""
+    res = _parity_table()
+    assert res["population"]["corpus_trades"] == 402 and res["population"]["no_candles"] == 0
+    hold = res["options"][0]
     assert hold["n"] == 32 and round(hold["mean_r"], 2) == 3.19
-    assert round(tight["mean_r"], 2) == 2.96
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "LTR-0 finding: the TIGHTEN half of the ADA hand calc (+2.96, PR #19891) does NOT reproduce. The design's "
+    "level 0.2053 is 1.51 ATR behind the 0.2009 low (not ~1.0) and +2.50 R: the tool gives atr:1.5 = 2.87 "
+    "and the fixed level r:2.5 = 2.94 (worst 1.31, sd 0.81; design says worst 2.32, sd 0.56). 2.958 appears "
+    "only at atr:1.0, which is not the level the operator set. The assertion is NOT loosened; strict xfail "
+    "flips red if the tool ever produces 2.96 here."))
+def test_ada_case_parity_tighten_296():
+    assert round(_parity_table()["options"][1]["mean_r"], 2) == 2.96
