@@ -146,10 +146,22 @@ def _is_phone(account_id: str) -> bool:
         return False
 
 
-def _candles(symbol: str, timeframe: str):
-    from src.prop.prop_trail import default_candles_fn
+#: IB clientId for THIS process's read-only candle fetch. Unset, the connector
+#: falls back to exec_client_id + 1, i.e. 498 -- the live trader's own
+#: market-data socket -- and IB answers Error 326 "client id already in use"
+#: (system-action #20165, 2026-10-25). 601 is disjoint from the accounts'
+#: ib_client_id (496/497) and their +1 (497/498), from the web-api's 600 and
+#: from the reconnect-rotation bands (base + 100k). Pinned by a test.
+LIVE_REVIEW_IB_MD_CLIENT_ID = "601"
 
-    return default_candles_fn(limit=100)(symbol, timeframe)
+
+def _candles(symbol: str, timeframe: str):
+    from src.runtime.market_data import connector_for_symbol, fetch_candles
+
+    return fetch_candles(
+        symbol, timeframe, limit=100, bypass_cache=True,
+        exchange_client=connector_for_symbol(
+            symbol, {"IB_MD_CLIENT_ID": LIVE_REVIEW_IB_MD_CLIENT_ID}))
 
 
 def _prop_tickets(pkg_id: str) -> List[Dict[str, Any]]:
