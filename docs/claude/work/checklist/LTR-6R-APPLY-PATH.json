@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    20139
+  ],
   "blocked_on": [],
   "note": "Dispatched by Manager Session 2026-10-25 (session_01UKBXozpiJicMHHyMp47MnN). SUPERSEDES LTR-6-APPLY-PATH's apply mechanics: the review no longer moves the shared package stop through amend_position_sl.py; it decides per account through each account's own RiskManager.approve_amend and hands off to that account's existing executor (operator structural directive 2026-10-25, relayed by the manager: the review acts at the strategy ticket / order package level and never does per-account risk management; each account decides within its own bounds and drawdown limits). Tier 3 (live order path: order_monitor, prop trail, phone trail): landing hold, manager handles approval. apply_mode committed as recommend; apply additionally needs MD-LIVE-TIGHTEN-SL in config/mandates.yaml (operator grant; drafted in the PR body, not written). Closing observation: after merge+deploy, the read-only dry-run CLI run on the live VM (scripts/ops/live_review_apply.py --dry-run, via a system-action) prints one verdict per account per open package.",
-  "updated_at": "2026-10-25T17:52:58Z",
+  "updated_at": "2026-10-25T17:56:42Z",
   "updated_by": "session_01354wy5zWA5J3AcLp2NbdKo",
   "roadmap": [
     "L-ATM"
