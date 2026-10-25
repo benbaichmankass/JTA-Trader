@@ -125,6 +125,24 @@ def _price_step(account_id: str, symbol: str) -> Optional[float]:
     return _f(inst.get("price_step"))
 
 
+def _venue_qty(account_id: str, symbol: str, qty: Any) -> Any:
+    """The quantity the phone TYPED at entry: the ticket qty floored to the venue ``qty_step``, exactly as the app
+    floors it (``MainActivity.executeTicket``: ``floor(qty / qStep + 1e-9) * qStep``). The app's pre-click check
+    compares the position sheet's volume to the amend's qty within 2%, so the raw ticket qty refuses every amend
+    whose floor dropped more than that (MEASURED 2026-10-25, breakout_2 prop-manual-2e786ef17c05 #a1/#a5/#a6:
+    "sheet volume 0.4 != ticket qty 0.40899796", a 2.2% floor, while the strategy had already exited). No step
+    declared, or an unreadable qty: the ticket's own value, unchanged."""
+    q = _f(qty)
+    if q is None:
+        return qty
+    from src.prop.phone_executor import phone_config
+    inst = (phone_config(account_id).get("instruments") or {}).get(str(symbol or "").upper()) or {}
+    step = _f(inst.get("qty_step"))
+    if not step or step <= 0:
+        return qty
+    return round(math.floor(q / step + 1e-9) * step, 10)
+
+
 def _send(msg: str, send: Optional[Callable[..., Any]] = None) -> None:
     try:
         if send is None:
@@ -579,7 +597,7 @@ def claim_amend(device: Any, now: Optional[datetime] = None) -> Optional[Dict[st
                 continue  # lost the race: never act on it
             return {"kind": "amend", "ticket_id": r["ticket_id"], "amend_id": am["id"], "amend_kind": am.get("kind"),
                     "symbol": r["symbol"], "venue_symbol": pe.venue_symbol(acct, r["symbol"]),
-                    "direction": r["direction"], "qty": r["qty"], "from_sl": am.get("from_sl"), "sl": am.get("sl"),
+                    "direction": r["direction"], "qty": _venue_qty(acct, r["symbol"], r["qty"]), "from_sl": am.get("from_sl"), "sl": am.get("sl"),
                     "from_tp": am.get("from_tp"), "tp": am.get("tp"), "reason": am.get("reason"),
                     "submit": pe.submit_mode(acct, test=False), "claimed_at": now.isoformat()}
         return None

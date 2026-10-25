@@ -51,12 +51,12 @@ def _dev() -> pe.PhoneDevice:
     return pe.authenticate("Bearer " + TOKEN)
 
 
-def _parent(tid: str = "T1", *, status: str = "placed", meta=None, direction: str = "long") -> None:
+def _parent(tid: str = "T1", *, status: str = "placed", meta=None, direction: str = "long", qty: float = 0.5) -> None:
     long_ = direction == "long"
     prop_journal.record_ticket({
         "ticket_id": tid, "account_id": "breakout_2", "strategy": "trend_donchian_eth_prop", "symbol": "ETHUSDT",
         "direction": direction, "entry": 2500.0, "sl": 2450.0 if long_ else 2550.0, "tp": 2800.0 if long_ else 2200.0,
-        "qty": 0.5, "signal_time": SIG.isoformat(), "valid_until": (SIG + timedelta(minutes=10)).isoformat(),
+        "qty": qty, "signal_time": SIG.isoformat(), "valid_until": (SIG + timedelta(minutes=10)).isoformat(),
         "status": status, "meta": meta})
 
 
@@ -140,6 +140,31 @@ def test_claim_serves_amend_only_to_an_app_that_accepts_it():
     assert got["kind"] == "amend" and got["amend_id"] == "T1#a1" and got["venue_symbol"] == "ETHUSD"
     assert got["from_sl"] == 2450.0 and got["sl"] == pytest.approx(2530.0) and got["submit"] == "live"
     assert ptr.claim_amend(_dev(), now=NOW) is None           # one claim per amend
+
+
+def test_claim_serves_the_qty_the_phone_typed_not_the_raw_ticket_qty():
+    """PHONE-AMEND-REFUSED-1025: breakout_2's ETH short sized 0.40899796 was typed as 0.40 (the app floors to the
+    venue qty_step 0.01); the amend carried 0.40899796, the app's 2% sheet-volume check refused it (|0.4-0.409| =
+    0.009 > 0.0082) on every attempt while the strategy had exited. The claim now carries the floored qty."""
+    _parent(qty=0.40899796)
+    ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    got = ptr.claim_amend(_dev(), now=NOW)
+    assert got["qty"] == pytest.approx(0.40)
+    # the app's own check (MainActivity: abs(sq - tq) > max(1e-9, QTY_TOL_FRAC * tq), QTY_TOL_FRAC 0.02) now passes
+    sheet_volume = 0.4
+    assert abs(sheet_volume - got["qty"]) <= max(1e-9, 0.02 * got["qty"])
+    assert abs(sheet_volume - 0.40899796) > 0.02 * 0.40899796      # ... and the raw qty is what it refused
+
+
+@pytest.mark.parametrize("raw,want", [(0.5, 0.5), (0.519999999, 0.51), (1.0, 1.0), (0.07, 0.07)])
+def test_venue_qty_floors_like_the_app(raw, want):
+    assert ptr._venue_qty("breakout_2", "ETHUSDT", raw) == pytest.approx(want)
+
+
+def test_venue_qty_without_a_declared_step_is_the_ticket_qty():
+    assert ptr._venue_qty("breakout_2", "NOPEUSDT", 0.40899796) == 0.40899796
+    assert ptr._venue_qty("no_such_account", "ETHUSDT", 0.40899796) == 0.40899796
+    assert ptr._venue_qty("breakout_2", "ETHUSDT", None) is None
 
 
 def test_entry_tickets_are_claimed_before_amends(monkeypatch):
