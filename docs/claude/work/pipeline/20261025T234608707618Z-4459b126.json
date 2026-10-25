@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a breakout_2 position that closed on the venue is followed by a Closed-orders read that returns its exit row (fills row gets exit_price, reason not closed_unpriced), or the empty-state is proven positively so closed_empty_unconfirmed stops repeating",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-DIMFEBJ6-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PHONE-AMEND-CLOSE-CHECK (row PHONE-AMEND-REFUSED-1025)",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/prop/fills?account_id=breakout_2&limit=8' | python3 -c \"import json,sys;[print(f['id'],f['ticket_id'],f['status'],f['reason'],f['exit_price']) for f in json.load(sys.stdin)['fills']]\""
+  },
+  "state": "queued",
+  "what": "HYPOTHESIS (not proven): the phone's Closed-orders read never returns rows on breakout_2. closed_empty_unconfirmed is emitted by MainActivity.kt (readView '^(closed orders|trades)' -> __ex.closedRead() -> exec.js finishRead: no rows AND count!=0 AND no positive empty text). It is emitted only AFTER a clean Positions read (pos state 'read'), so at 18:21Z with the ETH short open it said nothing about the position; it is the Closed-orders tab. It repeats every ~30 min (POS_MISS_MS throttle): seen 20:41Z, 22:39Z, 23:10Z, 23:41Z on 2026-10-25, the last AFTER the position left. Consequence measured: ETH short prop-manual-2e786ef17c05 vanished from Positions at 22:01Z; fills row 192 closed 22:20Z reason closed_unpriced, exit_price null, exit_candidates 0, closing_order null, so whether the trailed stop (resting 2351.92; last amend #a12 to 2339.47 read back 'mismatch') filled is UNMEASURED and the realised P&L is unknown. Not reproduced: the 18:21Z event itself had aged out of the 40-event status feed, so its masked headers/cells were not read. Next: read the phone_captures for the 22:39Z/23:10Z closed_ misses (headers, controls, cells) and fix closedRead's layout or empty-state evidence in tools/phone-executor."
+}

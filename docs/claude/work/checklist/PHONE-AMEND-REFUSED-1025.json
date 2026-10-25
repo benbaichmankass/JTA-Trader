@@ -2,7 +2,7 @@
   "id": "PHONE-AMEND-REFUSED-1025",
   "title": "breakout_2 ETH short left open after the strategy exited: every phone exit amend refused on qty (amend carries raw ticket qty 0.40899796; phone typed the floored 0.40; app 2% check)",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "lane PHONE-AMEND-REFUSED-1025",
   "lane": "session_01E6AQpa6i4TYdGD11corkkG",
   "model": null,
@@ -13,9 +13,9 @@
     20122
   ],
   "blocked_on": [],
-  "note": "MERGED #20122 (5cb2b0b48) 17:42Z; DEPLOYED: /api/diag/version 18:33Z ict-web-api.service at 4d0b01957 (contains the fix). OBSERVED 18:33Z (/api/bot/prop/tickets): breakout_2 prop-manual-2e786ef17c05 exit amends #a7 and #a8 both 'amended' and read back on the terminal; resting stop 2409.58 (-1R) -> 2362.79 -> 2361.92 (inside the 2367.4 entry: the stop now locks a small profit), fails 0. Venue 18:28Z: short still open, mark 2354.43. The ticket remains open-vs-closed-package BY DESIGN until that stop fills (no close control on the phone path). CLOSES WHEN: python3 scripts/ops/check_ticket_package_divergence.py exits 0 (the stop filled and the ticket reconciled). Follow-up PI-20261025-11CORKKG-0001 (sheet_not_open) open; PI-...-0002 done.",
-  "updated_at": "2026-10-25T18:48:44Z",
-  "updated_by": "session_01E6AQpa6i4TYdGD11corkkG",
+  "note": "MERGED #20122 (5cb2b0b48) 17:42Z; DEPLOYED: /api/diag/version 18:33Z ict-web-api.service at 4d0b01957 (contains the fix). OBSERVED 18:33Z (/api/bot/prop/tickets): breakout_2 prop-manual-2e786ef17c05 exit amends #a7 and #a8 both 'amended' and read back on the terminal; resting stop 2409.58 (-1R) -> 2362.79 -> 2361.92 (inside the 2367.4 entry: the stop now locks a small profit), fails 0. Venue 18:28Z: short still open, mark 2354.43. The ticket remains open-vs-closed-package BY DESIGN until that stop fills (no close control on the phone path). CLOSES WHEN: python3 scripts/ops/check_ticket_package_divergence.py exits 0 (the stop filled and the ticket reconciled). Follow-up PI-20261025-11CORKKG-0001 (sheet_not_open) open; PI-...-0002 done. [2026-10-25 23:45Z lane PHONE-AMEND-CLOSE-CHECK] OBSERVED via /api/bot/prop/{tickets,status,fills}: check_ticket_package_divergence.py exit 0 (tickets read per account breakout_1 117, breakout_2 115, tradeify_1 110, velotrade_1 107; none open against a closed package); breakout_2 status positions_state=read, positions [] (no ETHUSDT); ticket prop-manual-2e786ef17c05 status closed, close_reason sl_cross. CAVEAT, said plainly: the venue exit is NOT measured. Position left Positions at 22:01Z (after trail amend #a12 to 2339.47 read back 'mismatch', resting stop 2351.92); fills row 192 closed 22:20Z reason closed_unpriced, exit_price null, exit_candidates 0. The Closed-orders read returns closed_empty_unconfirmed (20:41Z, 22:39Z, 23:10Z, 23:41Z), so the stop fill is inferred from absence, not seen. 18:21Z positions_miss: emitted by MainActivity.kt after a CLEAN Positions read from the Closed-orders view (exec.js finishRead empty_unconfirmed), so it did not mean the open position was unseen; the 18:21Z event itself had aged out of the status feed, so this is a code-path explanation, not a read of that dump. Filed PI-20261025-DIMFEBJ6-0001 for the unpriced-exit gap. PI-20261025-11CORKKG-0001 left routed to this row.",
+  "updated_at": "2026-10-25T23:46:15Z",
+  "updated_by": "session_01GtePGR1UrDofMsdimFEBJ6",
   "roadmap": [
     "L-PROP"
   ],
