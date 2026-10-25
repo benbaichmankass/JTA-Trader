@@ -2,7 +2,7 @@
   "id": "THEME-AUTHOR-1025",
   "title": "Same-day authoring lane for research SLO breach 2026-10-25 09:14Z",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01PqbEwwoY1iRUJBvJtRYjxT",
   "model": "claude-sonnet-5-5",
@@ -11,11 +11,20 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "",
-  "updated_at": "2026-10-25T09:19:44Z",
+  "note": "[lane session_01PqbEwwoY1iRUJBvJtRYjxT] 7 units authored as programme nodes (02: P2-Q1.3-drift-split-persistence, P2-Q4-lgbm-capacity-small/big, P2-Q4-lgbm-regularised; 06: P6-Q6-roadmap-ref-valid, -never-dispatched-age, -related-paths-exist) and emitted RQ-20261025-004..010, all would_dispatch in dispatch_queue dry run. 3 new infra_selftest checks + tests. Finding PI-20261025-THEMEAUTHOR1025-0001 (5 units roadmap as string). Edits different nodes than PR 20047. HELD PR (hand-authored programme yaml): manager merge.",
+  "updated_at": "2026-10-25T09:26:37Z",
   "updated_by": "session_01PqbEwwoY1iRUJBvJtRYjxT",
   "roadmap": [
     "L-OPS"
   ],
+  "writeback": {
+    "roadmap": "none: 7 research units authored; no milestone where/next change",
+    "arch": "none: no component change"
+  },
+  "observation": {
+    "what": "RQ-20261025-004..010 (4 ml_health, 3 infra) fire and land measured results; the runnable floor and ml_health/infra theme share recover",
+    "how_to_check": "ls research/results | grep 20261025-00[4-9]; ls research/results | grep 20261025-010; python3 scripts/ci/check_research_queue_health.py | grep -E \"runnable|theme_supply\"",
+    "due_by": "2026-10-28T00:00Z"
+  },
   "_seq": 649
 }
