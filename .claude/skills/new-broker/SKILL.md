@@ -80,6 +80,22 @@ is that EVERY new broker touches each of these.
    the broker's `OrderRequest`; translate broker errors to the
    `retCode`-style envelope the coordinator's diagnostic-ping wrapper
    formats.
+4b. **Modify-open-position path — REQUIRED, not a follow-up** (operator,
+   2026-10-25: *a broker integration is not only placing the trade, it is
+   also being able to update the trade in real time*). Add the broker's
+   branch to `execute.py::modify_open_order` (tighten the SL / move the TP
+   of an OPEN position, scoped to the named trade's own legs, never a
+   sibling's), declare `modify` in
+   `clients.py::EXCHANGE_MANAGEMENT_CAPS`, and READ THE VENUE BACK after
+   the amend — a 2xx is not proof the stop moved (the Alpaca GLD wedge,
+   `PI-20261002-APBY4NTV-0001`). Reference implementation with the
+   four-state result (`applied` / `apply_failed` / `could_not_look` /
+   `refused`) and a read-only dry run: `src/units/accounts/alpaca_amend.py`.
+   A prop platform adapter overrides `modify_bracket` instead. **CI-guarded**
+   by `tests/test_amend_parity_guard.py`: a `mode: live` account without a
+   modify path fails, and an integration without `modify` must sit in its
+   `KNOWN_AMEND_GAPS` naming the row that closes it. Inventory:
+   `docs/audits/amend-parity-2026-10-25.md`.
 5. **Accounts entry** in `config/accounts.yaml` — ships INERT with
    multiple independent gates:
    - `account_class: paper | real_money` — **REQUIRED** on every account
