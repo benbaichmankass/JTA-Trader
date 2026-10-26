@@ -157,6 +157,19 @@ artifact is fresh (read the file's newest timestamp, not the producer's log), an
 re-entry test exists. Each `gap` / `could_not_verify` entry and each shadow leg without its own owner row
 becomes a row. Positive control: `python3 scripts/ci/check_shadowed_features.py --self-test`.
 
+### C11. Consumed-input freshness (operator, 2026-10-26: "Yes, add it to the weekly audit core checks")
+
+Every file or feed the live trader or web-api **reads at runtime** must have a freshness check on the
+**consumed** artifact, not on its producer's output. Enumerate by measuring the code: the readers in `src/`
+and the paths they open (`config/*.yaml` data files such as `economic_calendar.yaml`, `comms/*` stores read
+by `src/`, news / funding / candle sources). State the **population** (readers found, how found) and the
+**denominator** (how many have a consumer-side check). List every one without a consumer-side check and
+file each as a checklist row or pipeline item. Checks live in `scripts/macro/check_producer_liveness.py`
+(being extended with the consumer-side calendar and news checks by the DATA-FEEDS lane) - extend that
+checker, **do not build a parallel mechanism**. Positive control: show the probe flags a known-stale
+consumed file. Worked example: 2026-10-26, that checker watched `comms/macro/econ_calendar_snapshots.jsonl`
+(fresh) while `config/economic_calendar.yaml` (consumed) sat stale from 2026-07-30. Related: C10.
+
 ### C9. RECURRENCE — the anti-treadmill step (never skipped)
 
 For every finding that **closed in the last 7 days** (checklist rows moved to `done`, pipeline `done`):
@@ -296,7 +309,7 @@ And by hand, each answered yes/no in the PR body:
 1. Every finding in the report's table resolves to a row, a PI id, a unit, or a merged/in-PR fix — no
    finding is prose-only.
 2. Every finding has a `detector` or an explicit "no detector possible because …".
-3. C1–C10 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
+3. C1–C11 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
 4. Every "0 violations" has a positive control stated beside it.
 5. The deep pass for this ISO week ran, or the report names why not and the row that carries it.
 6. Every row you touched has a TRUE state (`landed_unproven` ≠ `done`, and names the closing observation).
