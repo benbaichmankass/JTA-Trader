@@ -18,13 +18,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 sys.path.insert(0, str(ROOT))
 
-import check_desk_records as cdr  # noqa: E402
+import check_desk_records as cdr
 
 BRIEF = ROOT / ".claude/skills/trading-desk/DESK-BRIEF.md"
 
 
 def _block(tag: str) -> str:
-    m = re.search(rf"<!-- {tag}:begin -->\s*```json\n(.*?)\n```\s*<!-- {tag}:end -->", BRIEF.read_text(), re.S)
+    m = re.search(rf"<!-- {tag}:begin -->\s*```json\n(.*?)\n```\s*<!-- {tag}:end -->", BRIEF.read_text(), re.DOTALL)
     assert m, f"{tag} block missing from the brief"
     return m.group(1)
 

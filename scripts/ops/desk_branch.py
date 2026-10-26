@@ -27,27 +27,27 @@ import argparse
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 
-import check_desk_records as cdr  # noqa: E402
+import check_desk_records as cdr
 
 DECISIONS = "comms/desk/decisions.jsonl"
 PACKETS = "comms/desk/packets"
 POINTER = "comms/desk/latest_scan.json"
 
 
-def git_show(ref: str, path: str, cwd: Path = ROOT) -> Optional[bytes]:
-    r = subprocess.run(["git", "show", f"{ref}:{path}"], cwd=cwd, capture_output=True)
+def git_show(ref: str, path: str, cwd: Path = ROOT) -> bytes | None:
+    r = subprocess.run(["git", "show", f"{ref}:{path}"], cwd=cwd, capture_output=True, check=False)
     return r.stdout if r.returncode == 0 else None
 
 
 # ----------------------------------------------------------------------------- publish
 
-def publish(packet: dict, stage: Path) -> Dict[str, object]:
+def publish(packet: dict, stage: Path) -> dict[str, object]:
     problems = cdr.packet_problems(packet, json.loads(cdr.PACKET_SCHEMA.read_text()))
     meta = packet.get("meta") or {}
     if problems or meta.get("packet_kind") != "scan" or meta.get("mode") != "live":
@@ -64,7 +64,7 @@ def publish(packet: dict, stage: Path) -> Dict[str, object]:
 
 # ----------------------------------------------------------------------------- mirror
 
-def _ids(text: str) -> List[Tuple[Optional[str], str]]:
+def _ids(text: str) -> list[tuple[str | None, str]]:
     out = []
     for line in text.splitlines():
         if not line.strip():
@@ -77,7 +77,7 @@ def _ids(text: str) -> List[Tuple[Optional[str], str]]:
     return out
 
 
-def mirror(root: Path, read_branch: Callable[[str], Optional[bytes]]) -> Dict[str, object]:
+def mirror(root: Path, read_branch: Callable[[str], bytes | None]) -> dict[str, object]:
     """Apply the mirror to the checkout at ``root``; ``read_branch(path)`` reads desk/decisions."""
     raw = read_branch(DECISIONS)
     if raw is None:
@@ -116,7 +116,7 @@ def mirror(root: Path, read_branch: Callable[[str], Optional[bytes]]) -> Dict[st
             "decision_ids": [json.loads(x)["decision_id"] for x in new_lines], "skipped": skipped}
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     p1 = sub.add_parser("publish")

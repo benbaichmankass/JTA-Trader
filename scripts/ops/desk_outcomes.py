@@ -34,33 +34,34 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 for _p in (ROOT, ROOT / "scripts" / "ci", ROOT / "scripts" / "ops"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import check_desk_records as cdr  # noqa: E402
-import desk_scan_packet as dsp  # noqa: E402
-from src.runtime import execution_costs as xc  # noqa: E402
+import check_desk_records as cdr
+import desk_scan_packet as dsp
+
+from src.runtime import execution_costs as xc
 
 NO_TRADE_REASON = ("no_trade/watch_note label is the best baseline bracket from the same packet (design § 8.1); "
                    "priced by DESK-20 on the DESK-7 harness, not built yet")
-Bar = Dict[str, float]
+Bar = dict[str, float]
 
 
 def _iso(t: datetime) -> str:
     return t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _r4(x: Optional[float]) -> Optional[float]:
+def _r4(x: float | None) -> float | None:
     return None if x is None else round(float(x), 4)
 
 
-def replay(pr: dict, cutoff: datetime, bars: Sequence[Bar], cost: Callable[..., float]) -> Optional[dict]:
+def replay(pr: dict, cutoff: datetime, bars: Sequence[Bar], cost: Callable[..., float]) -> dict | None:
     """Replay one proposal. None = not decidable yet (horizon or good-till window not elapsed)."""
     sec = dsp.TF_SECONDS[pr["timeframe"]]
     fwd = [b for b in bars if b["time"] >= cutoff.timestamp()]
@@ -119,7 +120,7 @@ def _cost_fn(symbol: str) -> Callable[..., float]:
     return f
 
 
-def outcome_row(d: dict, res: dict, now: datetime, policy: Optional[str]) -> dict:
+def outcome_row(d: dict, res: dict, now: datetime, policy: str | None) -> dict:
     oid = "DO-" + d["decision_id"][3:]
     nums = {k: _r4(res.get(k)) for k in ("net_r", "mae_r", "mfe_r", "giveback_r")}
     return {"schema_version": 2, "outcome_id": oid, "decision_id": d["decision_id"], "kind": res["kind"],
@@ -129,8 +130,8 @@ def outcome_row(d: dict, res: dict, now: datetime, policy: Optional[str]) -> dic
             "cost_policy": policy if res["kind"] == "replayed" else None, "reason": res.get("reason")}
 
 
-def run(decisions: Path, outcomes: Path, candles: Callable[[str, str], Optional[List[Bar]]],
-        now: Optional[datetime] = None) -> Dict[str, object]:
+def run(decisions: Path, outcomes: Path, candles: Callable[[str, str], list[Bar] | None],
+        now: datetime | None = None) -> dict[str, object]:
     if not decisions.exists():
         return {"state": "could_not_look", "reason": f"{decisions} missing"}
     now = now or datetime.now(timezone.utc)
@@ -179,7 +180,7 @@ def run(decisions: Path, outcomes: Path, candles: Callable[[str, str], Optional[
     return {"state": "ok", "written": len(new), "outcome_ids": [r["outcome_id"] for r in new], "waiting": waiting}
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--decisions", type=Path, default=cdr.DECISIONS)
     ap.add_argument("--outcomes", type=Path, default=cdr.OUTCOMES)

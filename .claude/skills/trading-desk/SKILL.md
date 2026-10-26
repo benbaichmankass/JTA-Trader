@@ -89,6 +89,20 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 **Desk heartbeat (design § 12).** The desk branch's newest row `judged_at` vs the newest packet `built_at`: more than 2 packets without a row while the routine is installed is one flag to the manager (the routine's own report says so; a probe in `attention_watch` is DESK-6's follow-up, filed in the pipeline).
 
+## 6b. The routine (the manager installs it; lanes do not edit routines)
+
+One scheduled task, **fresh session per fire**, Sonnet, no repository attached (`create_new_session_on_fire: true`). Fire **hourly at :09** (`9 * * * *`): `desk-scan-packet.yml` builds at :03 after the 1h bar close and its run takes ~1–2 min, so :09 judges a packet a few minutes old. The prompt, verbatim:
+
+```
+You are one wake of the Claude trading desk (phase 1: shadow, record-only), a fresh repo-less session started by the Metis-Insights manager's routine. The manager acts with the operator's authority.
+1. Read your whole contract: get_file_contents on repo benbaichmankass/Metis-Insights, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. Keep the blob sha the tool returns: it is your row's skill_sha.
+2. Follow that brief EXACTLY and only it, starting with its Step 0 (add_repo with access push; never clone). Do not search or read anything else in the repo, no diag, no web. All your reads and your one write are on branch desk/decisions as the brief says. Load any tool you need with ToolSearch first.
+3. If you cannot read your session id, write session = "desk-wake".
+4. End with the brief's § 6 report block as your final message. Do not create a PR, an issue or any other file, and do not message anyone.
+```
+
+**Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).** The packet is a **1h** scan: its base rates and ATR are on 1h bars, so 3 of every 4 15-minute wakes would find nothing due and still pay a fresh session's start. Cost per wake is MEASURED on the checklist row `DESK-6-SHADOW-PILOT` (wake sessions `measure-1` / `measure-2`, `get_session().usage`, 2026-10-26). The 15-min stage needs a 15m scan packet and is the `cadence` row of § 6.
+
 ## 7. Changing the desk
 
 - A skill or brief text edit changes `skill_sha`: record it; it does not re-run Stage 0. A model-family change re-runs a D-S0 confirm set (n ≥ 200) before the changed desk trades (design § 8.1).
