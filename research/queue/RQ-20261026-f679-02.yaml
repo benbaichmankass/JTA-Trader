@@ -1,0 +1,121 @@
+id: RQ-20261026-f679-02
+title: 'Prop pace, pooled-bar test leg (1h): Donchian-55 / trail 6.0 vs Donchian-20 on the six 4b82-05 perps'
+status: queued
+cadence: once
+roadmap:
+- L-PROP
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: On Binance USD-M 1h candles for SOL/BNB/ETH/XRP/LINK/AAVE over 2020-06-01..2026-10-25, does Donchian-55 with a 6.0 ATR trail (D55) beat
+  Donchian-20 (B) by >= 0.05 R per trade under the pooled Stage-0 rule?
+why_this_matters: 'Node P5-RG1025-trend-pooled: the trend-Donchian prop-pace candidates read UNDERPOWERED, not dead (per-trade sd 1.25-2.3 R needs
+  n_B 4.7k-17.7k per arm for a 0.05 R bar; realised 0.3k-8.9k). 4b82-05 D55 at 2h is the nearest lead (+0.0698 vs B +0.0269 R/trade, 3 of 6 cells).
+  The node asks for ONE test of D55 vs B on the same six perps pooled across 1h+2h+4h (n_B >= 18k). harness_stage0 grades one bar per run, so
+  the 2h leg is the committed 4b82-05 record and this unit is the 1h leg with IDENTICAL arms, symbols and window; the pooled paired read across
+  the three bars is a follow-up that needs the per-trade emits of all three legs (the arms are kept with --emit-trades). This leg alone is graded
+  under its own rule below and is not the pooled verdict.'
+power:
+  expected_n: 2500
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 4b82-05 at 2h pooled B n up to 8.9k over six perps; the 1h bar scales trade count by ~2x; the per-leg bar is likely UNDER the MDE at
+    this n, which is stated here so INDETERMINATE is read as 'n-bound', not 'no edge'.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-F679-02-TREND-D55-1H
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1h, arms fixed now: B=; D55=--donchian=55;--trail-mult=6.0; baseline B; per cell and
+    pooled across SOLUSDT,BNBUSDT,ETHUSDT,XRPUSDT,LINKUSDT,AAVEUSDT.'
+  rule: 'PASS iff D55 passes the pooled Stage-0 rule on this bar (breadth >= half of the powered cells) AND beats B by >= 0.05 R/trade -> the
+    1h leg of the pooled test supports D55; combine with 4b82-05 and the sibling leg in the pooled paired read before any further step, never
+    a roster edit. FAIL iff D55 fails with pooled n >= floor -> D55 is closed at 1h on this window. INDETERMINATE iff pooled n < 88 or fewer than
+    half the cells measured; an n-bound outcome is recorded with the realised n_B and the n the bar needs from the measured sd, never read as
+    FAIL. Verdicts are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND
+    net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff
+    pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with
+    --baseline, beats the baseline''s pooled net R/trade by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half
+    the declared cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values
+    are REPORTED, not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does
+    not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: a leg of the prop-pace trend pooled test; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..22 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - SOLUSDT,BNBUSDT,ETHUSDT,XRPUSDT,LINKUSDT,AAVEUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-25'
+  - --arm
+  - B=
+  - --arm
+  - D55=--donchian=55;--trail-mult=6.0
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-F679-02-TREND-D55-1H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261026-f679-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- RQ-20261022-4b82-05
+- RQ-20261022-4b82-01
+- RQ-20261022-4b82-06
+- RQ-20261022-7c2b-02
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P5
+  node: P5-RG1025-trend-pooled
+  goal: G2
+  after: []

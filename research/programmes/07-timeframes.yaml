@@ -60,7 +60,10 @@ nodes:
   value: {usd_at_stake_per_month: 150, confidence: 0.3}
   after:
   - {unit: RQ-20261021-7c2b-05, verdict: any}
+  - {unit: RQ-20261026-f679-04, verdict: any}
   needs_authoring: >-
+    AUTHORED 2026-10-26 (7c2b-05 closed FAIL): the maker-cost upper bound as RQ-20261026-f679-04 (15m, ADA/AVAX/SOL; perfect-fill
+    maker arms, so a FAIL is decisive for maker entry and a PASS needs the fill-rate-haircut unit next). Original ask:
     Programme review 2026-10-21 authored the 15m cost-gated breakout on the 15m-viable perps (ADA/AVAX/SOL) as
     RQ-20261021-7c2b-05 and the 30m re-ask on all six as 7c2b-01 (ef5d-07 passed percentiles on a 0-100 scale to a 0-1
     flag). Compression (ef5d-08) and sweep (ef5d-09) FAILED at 1h net of cost and are NOT transferred down. On 7c2b-05's
@@ -134,7 +137,11 @@ nodes:
   value: {usd_at_stake_per_month: 150, confidence: 0.3}
   after:
   - {unit: RQ-20261021-7c2b-03, verdict: any}
+  - {unit: RQ-20261026-f679-05, verdict: any}
   needs_authoring: >-
+    AUTHORED 2026-10-26 (7c2b-03 transfer: LONG pooled 0.369 R/trade n=209, p 0.017, but 3 of 6 folds and 2 of 6 cells): the twelve-perp
+    pooled LONG read as RQ-20261026-f679-05 (pools symbols with two committed records on purpose; a PASS is a lead for a disjoint-symbol
+    check). Original ask:
     Programme review 2026-10-21 authored the transfer as RQ-20261021-7c2b-03 (LONG vs B on BNB/DOGE/LINK/LTC/BCH/DOT
     daily, delta 0.10 R). On its verdict: PASS -> the overlap read in P7-Q6-daily-donchian uses the LONG arm; FAIL ->
     the ef5d-06 win was symbol-selected, record it here and on 07 s1; INDETERMINATE -> say which cells were under the

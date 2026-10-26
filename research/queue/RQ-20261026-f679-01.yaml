@@ -1,0 +1,123 @@
+id: RQ-20261026-f679-01
+title: 'Prop entry question at the 4h bar: does the range-only (ADX <= 20) fade gate have a positive baseline on six alt perps, where the 1h fade
+  was a well-powered negative?'
+status: queued
+cadence: once
+roadmap:
+- L-PROP
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: On Binance USD-M 4h candles for ADA/XRP/LINK/DOGE/BNB/AVAX over 2020-06-01..2026-10-25, does the fade harness with the range-only gate
+  (--adx-max 20) pass the pooled Stage-0 rule AND beat the ungated fade B by >= 0.05 R per trade?
+why_this_matters: 'Node P5-RG1025-fade-pullback-1h: fade at 1h read B -0.163 R/trade at n 13k (326f-09, 4b82-04), a well-powered negative, and
+  pullback-1h read B ~0 (4b82-02/-08): the entry edge is absent at 1h, not a management problem, so lever variants cannot lift it. Squeeze and
+  pullback were the only harnesses with a positive 4h baseline (326f-11 PASS, net 89R). This asks the ENTRY question only, once, at 4h; the 1h
+  management variants of both are closed as configurations (not as families) by those records.'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 4b82-04 fade at 1h ~13k trades over 6 y; 4h has ~1/4 the bars and ADX<=20 keeps roughly a third -> ~600 pooled across six cells; floor
+    88.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-F679-01-FADE-4H-RANGE
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family fade --timeframe 4h, arms fixed now: B=; R20=--adx-max=20; R20MID=--exit-style=mid;--adx-max=20; R20TRL=--exit-style=trail;--adx-max=20;
+    baseline B; per cell and pooled across ADAUSDT,XRPUSDT,LINKUSDT,DOGEUSDT,BNBUSDT,AVAXUSDT.'
+  rule: 'PASS iff a gated arm passes the pooled Stage-0 rule (breadth >= half of the powered cells) AND beats the ungated B by >= 0.05 R/trade
+    -> author ONE confirmation on a disjoint symbol set with the same statistic (a pass on one window is a lead), then the prop SUPERSET ladder;
+    never a roster edit. FAIL iff every gated arm fails with n >= floor -> the configuration (fade, ADX<=20, 4h, these exits) is closed on this
+    window and the record names the nearest arm; it does not retire the fade family. INDETERMINATE otherwise (pooled n below floor), never graded
+    FAIL. Verdicts are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND
+    net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff
+    pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with
+    --baseline, beats the baseline''s pooled net R/trade by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half
+    the declared cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values
+    are REPORTED, not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does
+    not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: one entry-edge question for the prop pace book at the bar where harnesses showed a positive baseline; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..22 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - fade
+  - --symbols
+  - ADAUSDT,XRPUSDT,LINKUSDT,DOGEUSDT,BNBUSDT,AVAXUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-25'
+  - --arm
+  - B=
+  - --arm
+  - R20=--adx-max=20
+  - --arm
+  - R20MID=--exit-style=mid;--adx-max=20
+  - --arm
+  - R20TRL=--exit-style=trail;--adx-max=20
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-F679-01-FADE-4H-RANGE
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261026-f679-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- RQ-20261022-4b82-04
+- RQ-20261022-4b82-02
+- RQ-20261022-4b82-08
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P5
+  node: P5-RG1025-fade-pullback-1h
+  goal: G2
+  after: []

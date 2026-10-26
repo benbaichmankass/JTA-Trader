@@ -3723,6 +3723,40 @@ def get_position_path_history(
                         strategy=strategy, since=since, limit=limit)
 
 
+@router.get("/venue_protection_snapshot")
+def get_venue_protection_snapshot(
+    request: Request,
+    order_package_id: str | None = None,
+    account_id: str | None = None,
+    limit: int = 2000,
+) -> dict[str, Any]:
+    """LTR-MECHANICS-VENUE-SNAPSHOT -- what the venue was resting per open package.
+
+    The exit loop's broker sweeps (Bybit / IB / Alpaca) read each open position's
+    resting stop and target to decide whether it is naked; this keeps the prices
+    they read, one row per (``order_package_id``, ``account_id``), latest read
+    wins. ``read_state`` is never collapsed: ``measured`` (a stop price was read;
+    ``venue_sl`` is the resting stop nearest the package's own), ``none_resting``
+    (the venue answered: flat or no stop leg) and ``could_not_look`` (the read
+    failed or was refused; ``read_reason`` says why, prices are NULL, never 0).
+    ``present: false`` = the table does not exist yet, which is not ``count: 0``.
+    ``live_review_due`` reads it to fire mechanics ``venue_sl_diverges``.
+
+    Observe-only: one read-only SQLite connection, no socket, no order path.
+    Tier 1, token-gated.
+    """
+    _require_diag_token(request)
+    try:
+        from src.runtime.venue_protection_snapshot import read_snapshots
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503
+        logger.warning("get_venue_protection_snapshot: import failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "venue_snapshot_unavailable", "detail": str(exc)},
+        ) from exc
+    return read_snapshots(order_package_id=order_package_id, account_id=account_id, limit=limit)
+
+
 @router.get("/live_review_due")
 def get_live_review_due(request: Request) -> dict[str, Any]:
     """LTR-1 -- which OPEN order packages are due for a live trade review now.
@@ -3744,7 +3778,8 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     telemetry rows whose trade is absent. Each due package lists the events it
     could not evaluate in ``events_could_not_look`` with the reason;
     ``events_not_evaluated`` names the design clauses not read at all
-    (``mechanics_venue``, ``vol_regime_cell``). ``reviews_state`` (absent /
+    (``mechanics_venue_tp``, ``vol_regime_cell``). The mechanics VENUE half
+    (``venue_sl_diverges``) reads ``venue_protection_snapshot``. ``reviews_state`` (absent /
     read / unreadable) states whether the dedupe log was there.
 
     Pure read: read-only SQLite connections (journal + funding store) and three

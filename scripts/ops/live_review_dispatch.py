@@ -53,8 +53,20 @@ whether a row may be handed over at all.
    trade-update ping per review_id. The apply script pings every applied leg
    and every account refusal itself.
 
-Never: a halt, a ``mode:`` or ``execution:`` write, a wider stop, a TP move, a
-size change, a close.
+Never for a tighten: a halt, a ``mode:`` or ``execution:`` write, a wider stop, a TP move,
+a size change, a close.
+
+**Trade actions (LTR-ALL-ACTIONS, operator 2026-10-26, ``MD-TRADE-DESK``).** A row whose
+``recommendation.action`` is close / partial_close / move_tp / widen_sl / change_size / add_entry is
+checked against that mandate's package-level clauses instead (:func:`check_trade_row`: mechanics
+``match``, a dispatchable route, a ``reason``, a judgement confidence or a table EV, and the action's
+own target) and handed to ``live_review_apply.py --action <a> --mandate MD-TRADE-DESK``. Each
+account still decides through its own ``RiskManager.approve_action``; never a halt or a mode write.
+
+**Evidence at a pinned ref.** The apply refuses an ``--evidence`` path that is not a file in the VM
+checkout, and a table committed only on ``live-review/rows`` is not in ``main``'s checkout. So when the
+evidence is absent from the checkout, its COMMITTED text at the ref is written to
+``runtime_logs/live_review/evidence/<ref12>/<path>`` and that path is passed instead.
 
 Exit codes (the same as the apply's): 0 ok · 1 an apply did not verify · 2 refused · 3 could not look.
 
@@ -90,6 +102,9 @@ if _REPO_ROOT not in sys.path:
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 MANDATE_ID = "MD-LIVE-TIGHTEN-SL"
+TRADE_MANDATE_ID = "MD-TRADE-DESK"   # the one trade-desk mandate; MANDATE_ID is its tighten alias
+TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
+EVIDENCE_DIR = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "evidence"
 REVIEWS_PATH = "comms/live_review/reviews.jsonl"
 APPLY_SCRIPT = "scripts/ops/live_review_apply.py"
 DISPATCH_STATE = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "dispatch_state.json"
@@ -236,6 +251,8 @@ def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Option
     first mandate clause the row fails. Pure: ``evidence_text`` is the committed
     outcome table (None = not committed at HEAD)."""
     rec = row.get("recommendation") or {}
+    if rec.get("action") in TRADE_ACTIONS:
+        return check_trade_row(row, evidence_text)
     if rec.get("action") != "tighten_sl":
         return None, f"not_tighten_sl:{rec.get('action')}"
     level = _num(rec.get("level"))
@@ -284,8 +301,80 @@ def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Option
     return plan, None
 
 
+def check_trade_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """``MD-TRADE-DESK``' package-level clauses on a trade-action row. Pure. A judgement row may
+    cite its decision packet as evidence when it has no outcome table; a table row needs the table."""
+    rec = row.get("recommendation") or {}
+    act = rec.get("action")
+    pkg = row.get("order_package_id")
+    if not pkg:
+        return None, "order_package_id_missing"
+    mech = (row.get("mechanics") or {}).get("verdict")
+    if mech != "match":
+        return None, f"mechanics_{mech or 'unstated'}"
+    route = (row.get("disposition") or {}).get("route")
+    if route not in DISPATCHABLE_ROUTES:
+        return None, f"route_{route or 'unstated'}"
+    reason = str(rec.get("reason") or "").strip()
+    if not reason:
+        return None, "reason_missing"
+    plan: Dict[str, Any] = {"package": pkg, "review_id": row.get("review_id"), "action": act,
+                            "evidence": row.get("outcome_table_source"), "packet_sha": row.get("packet_sha"),
+                            "reason": reason}
+    level, sf, sm = _num(rec.get("level")), _num(rec.get("size_fraction")), _num(rec.get("size_multiplier"))
+    if act in ("move_tp", "widen_sl"):
+        if level is None or level <= 0:
+            return None, "level_missing"
+        plan["new_tp" if act == "move_tp" else "new_sl"] = level
+    elif act == "partial_close":
+        if sf is None or not 0 < sf < 1:
+            return None, "size_fraction_missing"
+        plan["size_fraction"] = sf
+    elif act == "add_entry":
+        if sf is None or sf <= 0:
+            return None, "size_fraction_missing"
+        plan["size_fraction"] = sf
+    elif act == "change_size":
+        if sm is None or sm <= 0 or sm == 1:
+            return None, "size_multiplier_missing"
+        plan["size_multiplier"] = sm
+    src = rec.get("evidence_source")
+    if src == "judgement" or rec.get("basis") == "judgement":
+        c = _num(rec.get("judgement_confidence"))
+        if c is None or not 0.0 <= c <= 1.0:
+            return None, "judgement_confidence_missing"
+        if not plan["evidence"] and row.get("packet_sha"):
+            plan["evidence"] = f"comms/live_review/packets/{row.get('review_id')}.json"
+        plan.update(basis="judgement", confidence=c)
+    elif src == "table":
+        ev = _num(rec.get("ev_delta_r"))
+        if ev is None:
+            return None, "table_ev_missing"
+        plan.update(basis="table", expected_cost_r=ev)
+    else:
+        return None, f"evidence_source_{src or 'unstated'}"
+    if not plan["evidence"]:
+        return None, "evidence_not_committed"
+    if plan["basis"] == "table" and evidence_text is None:
+        return None, "evidence_not_committed"
+    return plan, None
+
+
 def apply_argv(plan: Dict[str, Any], *, apply: bool) -> List[str]:
     """PR #20259's ``live_review_apply.py`` interface, built from a checked plan."""
+    if plan.get("action") in TRADE_ACTIONS:
+        argv = ["--action", plan["action"], "--package", plan["package"], "--review-id", plan["review_id"],
+                "--evidence", plan["evidence"], "--mandate", TRADE_MANDATE_ID, "--mechanics", "match",
+                "--basis", plan["basis"], "--reason", plan["reason"]]
+        for k, flag in (("new_sl", "--new-sl"), ("new_tp", "--new-tp"), ("size_fraction", "--size-fraction"),
+                        ("size_multiplier", "--size-multiplier"), ("confidence", "--confidence"),
+                        ("expected_cost_r", "--expected-cost-r")):
+            if plan.get(k) is not None:
+                argv += [flag, repr(plan[k])]
+        if plan.get("packet_sha"):
+            argv += ["--packet-sha", plan["packet_sha"]]
+        argv.append("--apply" if apply else "--dry-run")
+        return argv
     argv = ["--package", plan["package"], "--new-sl", repr(plan["new_sl"]),
             "--review-id", plan["review_id"], "--evidence", plan["evidence"],
             "--mandate", MANDATE_ID, "--mechanics", "match", "--basis", plan["basis"]]
@@ -323,6 +412,22 @@ def summarize(entry: Optional[Dict[str, Any]]) -> List[str]:
     return out
 
 
+def materialize_evidence(rel: str, text: str, ref: str) -> str:
+    """``rel`` when it is a file in this checkout; else its committed text at ``ref``, written under
+    ``runtime_logs/live_review/evidence/<ref12>/`` and that repo-relative path (the apply checks the
+    checkout, and a rows-branch table is not in main's)."""
+    if Path(_REPO_ROOT, rel).is_file():
+        return rel
+    dest = EVIDENCE_DIR / (ref[:12] if ref and ref != "HEAD" else "HEAD") / rel
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(text)
+    except OSError as exc:
+        print(f">>> live-review-apply: could not materialize evidence {rel}: {exc}")
+        return rel
+    return str(dest.relative_to(_REPO_ROOT))
+
+
 # --------------------------------------------------------------------------
 # Core
 # --------------------------------------------------------------------------
@@ -355,7 +460,10 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
                    exit=EXIT_REFUSED)
         return out
     evidence = row.get("outcome_table_source")
-    plan, refusal = check_row(row, _committed_text(evidence, at) if evidence else None)
+    if not evidence and (row.get("recommendation") or {}).get("action") in TRADE_ACTIONS and row.get("packet_sha"):
+        evidence = f"comms/live_review/packets/{review_id}.json"
+    ev_text = _committed_text(evidence, at) if evidence else None
+    plan, refusal = check_row(row, ev_text)
     if refusal:
         out.update(verdict="refused", detail=f"mandate_precondition:{refusal}", exit=EXIT_REFUSED)
         alerted = st.setdefault("alerted", {})
@@ -365,6 +473,8 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
         if persist and apply:
             _save_state(st)
         return out
+    if ref and plan.get("evidence") and ev_text is not None:     # HEAD = the checkout: nothing to materialize
+        plan["evidence"] = materialize_evidence(plan["evidence"], ev_text, at)
     argv = apply_argv(plan, apply=apply)
     out["apply_argv"] = argv
     print(f">>> live-review-apply: {review_id} -> {APPLY_SCRIPT} {' '.join(argv)}")
@@ -375,7 +485,8 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
                writeback=entry)
     if apply:
         st.setdefault("dispatched", {})[review_id] = {"at": started, "exit": rc, "sent": sent,
-                                                      "package": plan["package"], "level": plan["new_sl"]}
+                                                      "package": plan["package"], "level": plan.get("new_sl"),
+                                                      "action": plan.get("action", "tighten_sl")}
         if persist:
             _save_state(st)
     return out

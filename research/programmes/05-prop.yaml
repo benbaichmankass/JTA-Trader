@@ -1222,7 +1222,11 @@ nodes:
   after:
   - unit: RQ-20261022-4b82-05
     verdict: any
-  needs_authoring: 'Trend-Donchian prop-pace candidates read UNDERPOWERED, not dead: 4b82-01/-02/-05/-06/-07 and 7c2b-02/-03 failed or passed
+  - unit: RQ-20261026-f679-02
+    verdict: any
+  - unit: RQ-20261026-f679-03
+    verdict: any
+  needs_authoring: 'AUTHORED 2026-10-26 as the 1h and 4h legs RQ-20261026-f679-02 and -03 (the 2h leg is 4b82-05, identical arms and symbols; harness_stage0 grades one bar per run). NEXT on their verdicts: the pooled paired read across the three legs (n_B >= 18k is the node target; report the realised n_B and the n the measured sd needs), then the original ask below. Trend-Donchian prop-pace candidates read UNDERPOWERED, not dead: 4b82-01/-02/-05/-06/-07 and 7c2b-02/-03 failed or passed
     a 0.05 R/trade (0.10 for the daily cells) materiality bar at a pooled n_B below the floor computed from the MEASURED per-trade sd
     (1.25-2.3 R: 4.7k-17.7k per arm; realised 0.3k-8.9k). 4b82-05 D55 (+0.0698 vs B +0.0269 R/trade at 2h, 3 of 6 cells) is the nearest lead.
     Author ONE unit: D55 vs B on the SAME six perps pooled across the 1h+2h+4h bars as one test (n_B >= 18k), the bar and sd floor registered
@@ -1260,7 +1264,9 @@ nodes:
   after:
   - unit: RQ-20261022-4b82-08
     verdict: any
-  needs_authoring: 'Fade (326f-09, 4b82-04: B -0.163 R/trade at n 13k, a well-powered negative) and pullback-1h (4b82-02/-08: B ~0)
+  - unit: RQ-20261026-f679-01
+    verdict: any
+  needs_authoring: 'AUTHORED 2026-10-26 as RQ-20261026-f679-01 (fade range gate at 4h, six perps). NEXT on its verdict: PASS -> one disjoint-symbol confirmation; FAIL -> close the fade 4h range-gate configuration (not the family). Original ask: Fade (326f-09, 4b82-04: B -0.163 R/trade at n 13k, a well-powered negative) and pullback-1h (4b82-02/-08: B ~0)
     show NO baseline edge at 1h on these six perps; the lever variants cannot lift a baseline that is not positive. Diagnosis: entry edge absent at the
     1h bar, not a management problem. Author ONE unit that asks the entry question only: the fade harness range-only gate (ADX <= 20) on the 4h bar,
     where the squeeze and pullback harnesses were the only ones to show a positive 4h baseline (326f-11 PASS, net 89R). Close the 1h management variants of both without further units.'

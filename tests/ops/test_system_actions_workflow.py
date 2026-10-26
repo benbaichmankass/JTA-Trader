@@ -234,6 +234,7 @@ EXPECTED_ACTIONS = {
     # flat book. Cancels nothing; refuses on a stray order, 2+ stop groups,
     # or a qty mismatch (BL-20260816-COVERAGE-IS-ONE-SIDED).
     "attach-ib-target": "attach_ib_target_action.sh",
+    "rearm-ib-protective": "rearm_ib_protective_action.sh",
     # 2026-06-29 — Bybit sibling of flatten-ib-position: one-shot guarded
     # reduce-only flatten of a single Bybit exchange position (close an
     # account before a different-account key rotation).
@@ -452,6 +453,7 @@ TIER_2_ACTIONS = {
     "flatten-ib-position",
     "cancel-ib-order",
     "attach-ib-target",
+    "rearm-ib-protective",
     "flatten-bybit-position",
     "switch-bybit-position-mode",
     "flatten-alpaca-position",

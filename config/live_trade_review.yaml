@@ -68,14 +68,31 @@ due:
       # names is absent from `trades`. The venue half has no stored read on
       # the VM (see not_evaluated).
       journal_trade_absent: true
+      # Venue half (LTR-MECHANICS-VENUE-SNAPSHOT, 2026-10-26). Registered here
+      # BEFORE the first run. Fires level `venue_sl_diverges` when the resting
+      # stop the sweeps last read at the venue (venue_protection_snapshot,
+      # read_state measured) differs from order_packages.sl by MORE than
+      # `venue_sl_tolerance_atr` x ATR. ATR source, in order: the newest
+      # position_path_history bar, else the package's own entry ATR
+      # (order_packages.meta.atr); neither -> could_not_look, never "no
+      # divergence". Basis for 0.25: the row's proposed value (manager ack
+      # 2026-10-26); it is wide enough to ignore tick-grid rounding (the two
+      # matching IB reviews on 2026-10-25/26 differed by 0.0286 on a 4270 stop)
+      # and narrow enough that a leg's whole bracket replaced by another's
+      # (hundreds of points) cannot hide. A snapshot older than
+      # `venue_snapshot_max_age_minutes` is could_not_look (a venue read that
+      # stopped refreshing is not evidence about the venue now).
+      venue_sl_tolerance_atr: 0.25
+      venue_snapshot_max_age_minutes: 60
   # Design clauses whose inputs the due computation does not read yet.
   # Surfaced as `events_not_evaluated` so "not checked" is never read as
   # "did not fire".
-  #   mechanics_venue  -- live SL/TP at the venue vs the package: no stored
-  #                       venue read exists on the VM (a live venue call or a
-  #                       trader-side snapshot would be needed; Tier 2).
+  #   mechanics_venue_tp -- live TP at the venue vs the package: the snapshot
+  #                       stores venue_tp but NO tolerance is registered for it,
+  #                       so it is stored and not evaluated. (The SL half is
+  #                       evaluated since LTR-MECHANICS-VENUE-SNAPSHOT.)
   #   vol_regime_cell  -- the (trend, vol) cell change since entry.
-  not_evaluated: [mechanics_venue, vol_regime_cell]
+  not_evaluated: [mechanics_venue_tp, vol_regime_cell]
   # Per-package cooldown: at most one review per closed bar of the leg's
   # timeframe, except for these events.
   cooldown_exempt: [giveback, mechanics]
