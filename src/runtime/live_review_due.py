@@ -410,6 +410,10 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
         state = sn.get("read_state")
         if state == "none_resting":
             continue  # looked, nothing resting: the naked sweeps own it
+        # collapsed-state: measured -- this is `venue_protection_snapshot.read_state`, not
+        # `position_telemetry.peak_state`; the guard matches the bare word. The three
+        # read states are branched on separately: none_resting above, measured here,
+        # and every other value (could_not_look, unknown) is listed as a miss below.
         if state != "measured":
             miss(f"{acct}: {sn.get('read_reason') or state or 'unknown_state'}")
             continue

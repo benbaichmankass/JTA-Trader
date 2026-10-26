@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a one-off dry read a manager or reviewer runs by hand before the snapshot writer is deployed (see the docstring); nothing schedules it
 """DRY READ for LTR-MECHANICS-VENUE-SNAPSHOT: what the snapshot would hold NOW.
 
 Before the writer is deployed there is no ``venue_protection_snapshot`` table on
