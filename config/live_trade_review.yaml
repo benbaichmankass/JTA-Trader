@@ -29,9 +29,13 @@ due:
       max_r_to_target: 0.5
     daily_floor:
       hours: 24
-      # Real-money and prop accounts only (design section 2 "Floor"). Each id
-      # must exist in config/accounts.yaml (tests/test_live_review_due.py).
-      accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, breakout_2, tradeify_1, velotrade_1]
+      # Real-money and prop accounts (design section 2 "Floor"), plus the paper
+      # and soak books since 2026-10-26: operator popup "All accounts now"
+      # (option text "Real-money, prop and paper at once") put paper in scope
+      # for trade actions under MD-TRADE-DESK, so paper packages are floored
+      # too, not surfaced by event triggers alone. Each id must exist in
+      # config/accounts.yaml (tests/test_live_review_due.py).
+      accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, breakout_2, tradeify_1, velotrade_1, bybit_1, ib_paper, alpaca_paper, alpaca_portfolio, alpaca_options_paper]
     # -- market triggers (LTR-1B-MARKET-TRIGGERS, 2026-10-26) -----------------
     # Registered here BEFORE first use. Basis for every number: the design § 2
     # events table (docs/plans/live-trade-review-DESIGN.md, operator-approved

@@ -48,8 +48,14 @@ def test_never_reviewed_real_money_is_due_daily_floor():
     assert events(lrd.compute_due([row()], [], CFG, NOW)) == [["daily_floor"]]
 
 
-def test_floor_not_applied_to_soak_account():
-    assert lrd.compute_due([row(account_id="bybit_1")], [], CFG, NOW)["due_count"] == 0
+def test_floor_applies_to_paper_and_soak_accounts():
+    # Operator 2026-10-26 "All accounts now" (MD-TRADE-DESK): paper and soak books are
+    # floored too. Before that this test pinned bybit_1 as NOT floored.
+    assert events(lrd.compute_due([row(account_id="bybit_1")], [], CFG, NOW)) == [["daily_floor"]]
+
+
+def test_floor_not_applied_to_an_account_off_the_list():
+    assert lrd.compute_due([row(account_id="oanda_practice")], [], CFG, NOW)["due_count"] == 0
 
 
 def test_r_milestone_fires_once_per_level():
