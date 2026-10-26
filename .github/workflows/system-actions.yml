@@ -150,6 +150,7 @@ on:
           - rearm-alpaca-protective
           - cancel-ib-order
           - attach-ib-target
+          - rearm-ib-protective
           - close-stranded-journal-row
           - reconcile-orphan-history
           - supersede-options-adoption-artifacts
@@ -637,6 +638,12 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*force_client_id[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Ff]orce_client_id[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # rearm-ib-protective: waive the mark-straddle read when the mark is
+            # unreadable. Absent => off (the script refuses on an unreadable mark).
+            allow_unverified_mark=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*allow_unverified_mark[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Aa]llow_unverified_mark[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # switch-bybit-position-mode: target venue position mode + the
             # account echo that gates apply. NOT reusing ACTION_MODE (taken by
             # the backtest mode) or MODE (taken by set-account-mode) — a third
@@ -794,6 +801,7 @@ jobs:
           echo "ACTION_PERM_ID=${perm_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_FORCE_PROTECTIVE=${force_protective:-}" >>"$GITHUB_ENV"
           echo "ACTION_FORCE_CLIENT_ID=${force_client_id:-}" >>"$GITHUB_ENV"
+          echo "ACTION_ALLOW_UNVERIFIED_MARK=${allow_unverified_mark:-}" >>"$GITHUB_ENV"
           echo "ACTION_ALLOW_MIRROR=${allow_mirror:-}" >>"$GITHUB_ENV"
           echo "ACTION_IDS=${ids:-}" >>"$GITHUB_ENV"
           echo "ACTION_KEEP=${keep:-}" >>"$GITHUB_ENV"
@@ -817,7 +825,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -979,6 +987,36 @@ jobs:
                 exit 1
                 ;;
             esac
+          fi
+          # rearm-ib-protective: account_id + symbol + row (journal trade id)
+          # required; apply / allow_unverified_mark must be true|false. SL/TP
+          # are read from the journal by the script and are NEVER an input.
+          if [ "${ACTION}" = "rearm-ib-protective" ]; then
+            if [ -z "${ACCOUNT_ID// }" ] || [ -z "${ACTION_SYMBOL// }" ]; then
+              echo "::error::rearm-ib-protective requires 'account: <id>' and 'symbol: <SYM>' (issue body)."
+              exit 1
+            fi
+            if ! printf '%s' "${ACCOUNT_ID}" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+              echo "::error::rearm-ib-protective account_id '${ACCOUNT_ID}' invalid (allowed: A-Z a-z 0-9 _ -)."
+              exit 1
+            fi
+            if ! printf '%s' "${ACTION_SYMBOL}" | grep -Eq '^[A-Za-z0-9_]+$'; then
+              echo "::error::rearm-ib-protective symbol '${ACTION_SYMBOL}' invalid (allowed: A-Z a-z 0-9 _)."
+              exit 1
+            fi
+            if ! printf '%s' "${ACTION_ROW:-}" | grep -Eq '^[0-9]+$'; then
+              echo "::error::rearm-ib-protective requires 'row: <journal trade id>' (digits only)."
+              exit 1
+            fi
+            for _v in "${ACTION_APPLY:-}" "${ACTION_ALLOW_UNVERIFIED_MARK:-}"; do
+              case "${_v}" in
+                ""|true|false|True|False) ;;
+                *)
+                  echo "::error::rearm-ib-protective apply / allow_unverified_mark must be true or false (got '${_v}')."
+                  exit 1
+                  ;;
+              esac
+            done
           fi
           # cancel-ib-order requires account_id + exactly ONE of order/perm.
           # Both ids are numeric-only: they are interpolated into a python
@@ -1794,6 +1832,7 @@ jobs:
             flatten-ib-position)                SCRIPT="flatten_ib_position_action.sh" ;;
             cancel-ib-order)                    SCRIPT="cancel_ib_order_action.sh" ;;
             attach-ib-target)                   SCRIPT="attach_ib_target_action.sh" ;;
+            rearm-ib-protective)                SCRIPT="rearm_ib_protective_action.sh" ;;
             flatten-bybit-position)             SCRIPT="flatten_bybit_position_action.sh" ;;
             switch-bybit-position-mode)         SCRIPT="bybit_switch_position_mode_action.sh" ;;
             flatten-alpaca-position)            SCRIPT="flatten_alpaca_position_action.sh" ;;
@@ -2056,6 +2095,9 @@ jobs:
           fi
           if [ "${ACTION}" = "attach-ib-target" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "rearm-ib-protective" ]; then
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_ROW=$(printf '%q' "${ACTION_ROW:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_ALLOW_UNVERIFIED_MARK=$(printf '%q' "${ACTION_ALLOW_UNVERIFIED_MARK:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "cancel-ib-order" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_ORDER_ID=$(printf '%q' "${ACTION_ORDER_ID:-}") ACTION_PERM_ID=$(printf '%q' "${ACTION_PERM_ID:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_FORCE_PROTECTIVE=$(printf '%q' "${ACTION_FORCE_PROTECTIVE:-}") ACTION_FORCE_CLIENT_ID=$(printf '%q' "${ACTION_FORCE_CLIENT_ID:-}") ${REMOTE_CMD}"
