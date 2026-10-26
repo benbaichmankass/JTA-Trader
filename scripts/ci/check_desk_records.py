@@ -809,7 +809,7 @@ def _self_test() -> int:
         dp = lambda r: decision_problems(r, ds, pk)  # noqa: E731
         E = GOOD_ENTRY_DECISION
         PR = lambda fn: _mut(E, lambda r: fn(r["proposal"]))  # noqa: E731
-        O = lambda r: outcome_problems(r, ds, {E["decision_id"]: E})  # noqa: E731
+        OP = lambda r: outcome_problems(r, ds, {E["decision_id"]: E})  # noqa: E731
         P = lambda r: packet_problems(r, ps)  # noqa: E731
         T = lambda r: touch_problems(r, ds, {GOOD_DECISION["decision_id"]: GOOD_DECISION})  # noqa: E731
 
@@ -959,11 +959,11 @@ def _self_test() -> int:
         expect("a tp_revise applied on the desk's own trade passes",
                dp(_mut(DL, lambda r: (r.update(action="tp_revise"), r["alternatives"][1].update(action="tp_revise")))), False)
         # outcomes + consumed
-        expect("a replayed outcome passes", O(GOOD_OUTCOME), False)
-        expect("an outcome before the cutoff (T0 leak) is refused", O(_mut(GOOD_OUTCOME, lambda r: r.update(computed_at="2026-10-26T08:00:00Z"))), True)
-        expect("a net_r not net of cost is refused", O(_mut(GOOD_OUTCOME, lambda r: r.update(net_of_full_cost_stack=False))), True)
-        expect("a realised outcome without trade_id is refused", O(_mut(GOOD_OUTCOME, lambda r: r.update(kind="realised", provenance="measured", account_id="bybit_1", order_package_id="desk-1"))), True)
-        expect("not_computable with a zero is refused", O(_mut(GOOD_OUTCOME, lambda r: r.update(kind="not_computable", net_r=0.0, reason="no candles"))), True)
+        expect("a replayed outcome passes", OP(GOOD_OUTCOME), False)
+        expect("an outcome before the cutoff (T0 leak) is refused", OP(_mut(GOOD_OUTCOME, lambda r: r.update(computed_at="2026-10-26T08:00:00Z"))), True)
+        expect("a net_r not net of cost is refused", OP(_mut(GOOD_OUTCOME, lambda r: r.update(net_of_full_cost_stack=False))), True)
+        expect("a realised outcome without trade_id is refused", OP(_mut(GOOD_OUTCOME, lambda r: r.update(kind="realised", provenance="measured", account_id="bybit_1", order_package_id="desk-1"))), True)
+        expect("not_computable with a zero is refused", OP(_mut(GOOD_OUTCOME, lambda r: r.update(kind="not_computable", net_r=0.0, reason="no candles"))), True)
         expect("an orphan outcome is refused", outcome_problems(GOOD_OUTCOME, ds, {}), True)
         expect("consuming a train-eligible decision passes", consumed_problems(GOOD_CONSUMED, ds, {E["decision_id"]: E}), False)
         expect("consuming an external_context row (a leak) is refused",
