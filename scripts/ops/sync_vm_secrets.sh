@@ -82,24 +82,39 @@ echo ">>> Backup written to ${BACKUP}"
 # Same shape as rotate_account_keys.sh::_patch_env_var. Returns 0 on any
 # write or no-op; never echoes the value.
 
+# Rewrites every "NAME=..." line with the value taken LITERALLY. awk reads
+# name and value from ENVIRON (no -v, so no escape processing) and the match is
+# a plain prefix test, so '|', '&', '\\', '/' and quotes need no escaping —
+# the old sed "s|...|...|" path broke on '|' (SECRETS-SED-ESCAPE). Output goes
+# to a temp file and is copied back with cat so .env keeps its mode and owner.
+_write_env_var() {
+  local tmp
+  tmp=$(mktemp "${3}.XXXXXX")
+  PATCH_NAME="$1" PATCH_VALUE="$2" awk '
+    BEGIN { p = ENVIRON["PATCH_NAME"] "=" }
+    index($0, p) == 1 { print p ENVIRON["PATCH_VALUE"]; next }
+    { print }
+  ' "$3" > "${tmp}" && cat "${tmp}" > "$3"
+  local rc=$?
+  rm -f "${tmp}"
+  return "${rc}"
+}
+
 _patch_env_var() {
   local var_name="$1"
   local var_value="$2"
   local env_file="$3"
-  # Escape for use in sed replacement (handles /, &, \).
-  local escaped_value
-  escaped_value=$(printf '%s' "${var_value}" | sed 's/[\/&]/\\&/g')
   if grep -q "^${var_name}=" "${env_file}"; then
     # Read the current line and compare its right-hand side to the
     # incoming value WITHOUT echoing either side. If identical, skip
-    # the sed write — keeps the run idempotent.
+    # the write — keeps the run idempotent.
     local current
     current=$(grep -m1 "^${var_name}=" "${env_file}" | cut -d= -f2-)
     if [ "${current}" = "${var_value}" ]; then
       echo ">>> ${var_name}: unchanged (skip write)"
       return 0
     fi
-    sed -i "s|^${var_name}=.*|${var_name}=${escaped_value}|" "${env_file}"
+    _write_env_var "${var_name}" "${var_value}" "${env_file}"
     echo ">>> ${var_name}: updated"
   else
     printf '%s=%s\n' "${var_name}" "${var_value}" >> "${env_file}"
