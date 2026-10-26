@@ -1,0 +1,22 @@
+{
+  "id": "LTR-JUDGEMENT-APPLY",
+  "title": "Live trade review: Claude's judgement applies when the LTR-0 cell is insufficient_n (drop the n>=20 apply clause; guardrails unchanged)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane LTR-JUDGEMENT-APPLY",
+  "lane": "session_019k3PxKWzD3FwBmquxHboDN",
+  "model": "opus",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator decision 2026-10-26 ~06:30Z (manager session_01HAysMLfF9dYpi92YMqYxEq), chat verbatim: \"20 trades to verify the live trade review. Seems like far too many. ... we just need to get the recommendation flow going, and then the models will decide what weight to give that ... there is no reason to leave it on dry run or whatever for 20 trades\". Popup answer verbatim: \"Claude's judgement applies (Recommended)\" -- \"Drop the n>=20 clause. When the table is thin, Claude's call applies, logged as 'judgement' with a confidence; the table is used when it's there. Every call is graded against the actual outcome so models can learn how much weight to give Claude.\" Guardrails stay: tighten-only, min_buffer_atr noise floor, one amend/package/bar, mechanics match, per-account approve_amend, could_not_look never applies.",
+  "updated_at": "2026-10-26T06:34:50Z",
+  "updated_by": "session_019k3PxKWzD3FwBmquxHboDN",
+  "roadmap": [
+    "L-ATM",
+    "L-DESK"
+  ],
+  "_seq": 699
+}
