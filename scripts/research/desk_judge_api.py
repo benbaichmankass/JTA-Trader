@@ -35,7 +35,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
 MAX_OUTPUT_TOKENS = 700            # two proposal rows with a one-line thesis fit well inside this
@@ -45,7 +45,7 @@ CACHE_WRITE_MULT = 1.25
 USER_TMPL = "PACKET:\n{packet}\n\nReply with the JSON line(s) only. Do not use any tools."
 
 
-def call_cost(usage: Dict[str, int], prices: Dict[str, float]) -> float:
+def call_cost(usage: dict[str, int], prices: dict[str, float]) -> float:
     """Dollars from an API `usage` dict: uncached input, cache writes (1.25x input), cache reads, output."""
     return (usage.get("input_tokens", 0) * prices["input"]
             + usage.get("cache_creation_input_tokens", 0) * prices["input"] * CACHE_WRITE_MULT
@@ -53,18 +53,18 @@ def call_cost(usage: Dict[str, int], prices: Dict[str, float]) -> float:
             + usage.get("output_tokens", 0) * prices["output"]) / 1e6
 
 
-def worst_case_cost(chars_in: int, prices: Dict[str, float], max_out: int = MAX_OUTPUT_TOKENS) -> float:
+def worst_case_cost(chars_in: int, prices: dict[str, float], max_out: int = MAX_OUTPUT_TOKENS) -> float:
     """Upper bound for ONE call: every input token billed as a cache write, the full output allowance used."""
     tok = chars_in / CHARS_PER_TOKEN
     return (tok * prices["input"] * CACHE_WRITE_MULT + max_out * prices["output"]) / 1e6
 
 
-def parse_rows(text: str, packet_id: str) -> Tuple[Optional[List[dict]], str]:
+def parse_rows(text: str, packet_id: str) -> tuple[list[dict] | None, str]:
     """The judge's JSON line(s) -> rows, or (None, reason). Tolerates a ```json fence; nothing else."""
     body = text.strip()
     if body.startswith("```"):
         body = "\n".join(ln for ln in body.splitlines() if not ln.strip().startswith("```"))
-    rows: List[dict] = []
+    rows: list[dict] = []
     for ln in body.splitlines():
         if not ln.strip():
             continue
@@ -85,7 +85,7 @@ def make_client() -> Any:
     return anthropic.Anthropic()
 
 
-def judge_one(client: Any, model: str, protocol: str, packet: dict, packet_id: str) -> Tuple[str, Dict[str, int]]:
+def judge_one(client: Any, model: str, protocol: str, packet: dict) -> tuple[str, dict[str, int]]:
     resp = client.messages.create(
         model=model, max_tokens=MAX_OUTPUT_TOKENS,
         system=[{"type": "text", "text": protocol, "cache_control": {"type": "ephemeral"}}],
@@ -97,7 +97,7 @@ def judge_one(client: Any, model: str, protocol: str, packet: dict, packet_id: s
     return text, usage
 
 
-def load_packets(path: Path) -> List[Tuple[str, dict]]:
+def load_packets(path: Path) -> list[tuple[str, dict]]:
     out = []
     for line in path.read_text().splitlines():
         if line.strip():
@@ -106,7 +106,7 @@ def load_packets(path: Path) -> List[Tuple[str, dict]]:
     return out
 
 
-def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> Dict[str, Any]:
+def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> dict[str, Any]:
     prices = {"input": a.price_input, "cache_read": a.price_cache_read, "output": a.price_output}
     protocol = Path(a.protocol).read_text()
     packets = load_packets(Path(a.packets))[a.offset:a.offset + a.n]
@@ -131,9 +131,9 @@ def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> Dict[str
             break
         for attempt in range(3):               # a transient API failure is retried; it never halts the run
             try:
-                text, usage = judge_one(client, a.model, protocol, pkt, pid)
+                text, usage = judge_one(client, a.model, protocol, pkt)
                 break
-            except Exception as e:             # noqa: BLE001 - recorded, then retried
+            except Exception as e:             # noqa: BLE001  # allow-silent: logged to the usage ledger as a problem, retried 3x, the packet then stays visibly missing
                 text, usage = "", {}
                 err = f"{type(e).__name__}: {str(e)[:120]}"
                 sleep(2 ** (attempt + 1))
@@ -152,7 +152,7 @@ def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> Dict[str
             "usd_per_packet": round(spent / done, 6) if done else None, "stopped": stopped or None, "prices": prices}
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--packets", required=True, help="packets.jsonl from `desk_gen_replay_driver.py packets`")
     p.add_argument("--protocol", required=True)

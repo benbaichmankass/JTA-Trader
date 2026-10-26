@@ -74,7 +74,7 @@ def test_resume_skips_done_and_retries_transient(tmp_path):
 
 
 def test_wrong_packet_id_is_unparsed():
-    rows, why = dja.parse_rows('{"packet_id":"OTHER","action":"no_trade"}', "DP-0")
+    rows, _ = dja.parse_rows('{"packet_id":"OTHER","action":"no_trade"}', "DP-0")
     assert rows is None
 
 
