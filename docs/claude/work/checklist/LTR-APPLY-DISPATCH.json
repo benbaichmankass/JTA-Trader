@@ -16,11 +16,20 @@
   "blocked_on": [],
   "note": "OPERATOR 2026-10-26 ~07:12Z popup (manager session_01HAysMLfF9dYpi92YMqYxEq), verbatim: \"Yes, top of the queue (Recommended)\" -- option text: \"A Tier-2 lane wires the reviewed tighten_sl decisions into an apply run (an apply system-action or the review routine itself), with a VM check. It needs your OK to merge.\" Finding (LTR-JUDGEMENT-APPLY 07:01Z, re-verified this lane): nothing ran live_review_apply.py --apply; only system-action was live-review-dry-run. Build: live-review-apply system-action -> scripts/ops/live_review_dispatch.py (re-reads committed row, re-checks MD-LIVE-TIGHTEN-SL package clauses, idempotent per review_id) -> live_review_apply.py (PR #20259 interface). Merge order: #20259 first.  | PR #20267 (draft, landing hold tier 2). Merge after #20259. Follow-up PI-20261026-QCTLR4JP-0001 (brief s1 line for applies). Closes on observation: first live-review-apply apply:true run posts executor=applied + venue read-back.  | OPERATOR 2026-10-26 ~08:00Z (popup in this lane, verbatim): \"Merge both when green (Recommended)\" -- merge #20259 then #20267 once CI is green, then the VM dry-run check.  | Also relayed by the manager (trigger 07:11Z, received 07:55Z): OPERATOR popup ~07:15Z verbatim \"Approve on green (Recommended)\" -- option text: \"I merge it when CI is green and its tests pass, then run one apply on the VM and report the per-account result.\" The later direct answer (~08:00Z, this lane merges) supersedes who merges; manager told 07:58Z.  | MERGED 2026-10-26: #20259 (21d94fa1) then #20267 (fc15f2d1), CI green, by this lane per the operator OK. DEPLOYED: via ict-git-sync (no restart needed). VM dry-run check filed as issue #20286. OBSERVED: not yet -- closes when the first live-review-apply apply:true run on a real tighten_sl row posts executor=applied + venue read-back.",
   "priority_rank": 1,
-  "updated_at": "2026-10-26T09:26:09Z",
+  "updated_at": "2026-10-26T09:44:57Z",
   "updated_by": "session_01DFj6wpTSVvQXoMQCTLR4Jp",
   "roadmap": [
     "L-ATM",
     "L-DESK"
   ],
+  "observation": {
+    "what": "the first live-review-apply system-action with apply: true on a committed tighten_sl review row posts an applied per-account verdict with a venue read-back (executor=applied venue_after=<level>)",
+    "how_to_check": "search issues labelled system-action for action: live-review-apply with apply: true; read the result comment, or runtime_logs/live_review/applied.jsonl on the VM via the diag relay",
+    "due_by": "2026-11-09"
+  },
+  "writeback": {
+    "roadmap": "none: landed_unproven only; the L-ATM milestone is written back at done, when the first real apply is observed",
+    "arch": "none: no trade/stop-path change (each account still applies through approve_amend + its executor); the new system-action is recorded in docs/claude/system-actions.md"
+  },
   "_seq": 700
 }
