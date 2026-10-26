@@ -2,7 +2,7 @@
   "id": "DESK-6B-VM-WAKE",
   "title": "Desk wake triggered by the VM: gate + desk-wake marker on ops-flags PR (replaces the hourly spawner routine)",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "session_015CN5DWiRyr8w2y1TSR5ALz",
   "lane": "session_015CN5DWiRyr8w2y1TSR5ALz",
   "model": null,
@@ -10,12 +10,13 @@
   "spend_usd": null,
   "tier": 2,
   "prs": [
-    20377
+    20377,
+    20410
   ],
   "blocked_on": [],
-  "note": "[2026-10-26 lane DESK-WAKE-VM] VM is the PRIMARY packet producer (manager: GitHub cron never fired desk-scan-packet.yml). src/runtime/desk_packet_wake.py (tick-loop kick, ~2 min): when the UTC hour has no packet it runs scripts/ops/desk_scan_packet.py (desk book from the branch decisions), desk_branch.py publish, lands packet+pointer on desk/decisions as ONE fast-forward git-data-API commit, and in the same pass posts ONE desk-wake marker on ops-flags #17895 (packet_id/sha/commit). Failed build/commit -> no wake, receipt could_not_build/could_not_commit. desk-scan-packet.yml is the FALLBACK: schedule-keeper target, gate step skips a bar that has a packet, marker deduped on packet id AND bar so the two never both wake. Every hour wakes (crypto 24/7), no gate. Receipt desk_wake_post_receipt; attention_watch probe desk_wake_post. UNVERIFIED: VM credential write access to desk/decisions and diag token on the trader env. Tier 2 by path: landing hold; manager merges. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first marker-spawned wake writes its row.",
-  "updated_at": "2026-10-26T17:56:00Z",
-  "updated_by": "session_015CN5DWiRyr8w2y1TSR5ALz",
+  "note": "[2026-10-26 lane DESK-WAKE-VM] VM is the PRIMARY packet producer (manager: GitHub cron never fired desk-scan-packet.yml). src/runtime/desk_packet_wake.py (tick-loop kick, ~2 min): when the UTC hour has no packet it runs scripts/ops/desk_scan_packet.py (desk book from the branch decisions), desk_branch.py publish, lands packet+pointer on desk/decisions as ONE fast-forward git-data-API commit, and in the same pass posts ONE desk-wake marker on ops-flags #17895 (packet_id/sha/commit). Failed build/commit -> no wake, receipt could_not_build/could_not_commit. desk-scan-packet.yml is the FALLBACK: schedule-keeper target, gate step skips a bar that has a packet, marker deduped on packet id AND bar so the two never both wake. Every hour wakes (crypto 24/7), no gate. Receipt desk_wake_post_receipt; attention_watch probe desk_wake_post. UNVERIFIED: VM credential write access to desk/decisions and diag token on the trader env. Tier 2 by path: landing hold; manager merges. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first marker-spawned wake writes its row. [2026-10-26 ~20:12Z session_01C1ooo4kqBbng7vytdG1UVs] OBSERVED, closing: the 19:00Z bar's VM write was refused HTTP 403 (read-only VM_GIT_DEPLOY_TOKEN); operator chose 'Reuse BRANCH_PROTECTION_TOKEN' (popup ~19:15Z); #20410 added opt-in credential: write to vm-git-credential-bootstrap; run 40388678960 (issue #20418) logged credential=write. Bar 20:00Z: marker on #17895 poster=vm, packet DP-20261026T2002Z-scan-1h commit 5fc3079d5 landed 20:03:39Z by the VM; desk wake session_012ReVAveTvbgcymYisbqhNR wrote DD-20261026T2002Z-scan-1h-1 (no_trade, shadow) at f0db6a14f 20:05:21Z. Operator pinged (issue #20426). Bridge trig_01BaDoBY and disabled spawner trig_01NMCJ5L deleted; DESK-WAKE-VM lane archived.",
+  "updated_at": "2026-10-26T20:11:54Z",
+  "updated_by": "session_01C1ooo4kqBbng7vytdG1UVs",
   "roadmap": [
     "L-DESK"
   ],
