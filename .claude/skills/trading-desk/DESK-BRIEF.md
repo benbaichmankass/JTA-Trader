@@ -10,6 +10,8 @@ You are one **wake of the Claude trading desk**, a fresh, **repo-less** session.
 
 All reads and writes use the GitHub tools on repo `benbaichmankass/Metis-Insights`, branch **`desk/decisions`** (`ref: refs/heads/desk/decisions`), unless a step says `main`.
 
+**Step 0 — write access, no clone.** A repo-less session starts with READ-only GitHub access: the write in § 5 is refused with 403 until the repo is attached with push credentials (MEASURED 2026-10-26, wake `measure-1`). So first call `add_repo` (the `claude-code-remote` tool; load it with ToolSearch if needed) with `owner: benbaichmankass`, `repo: Metis-Insights`, `access: push`. **Do not run the clone command it returns** — the GitHub tools are all you need. If it is refused, decide anyway and report `could_not_write: no_push_access` with your full row in the report, so the decision is not lost.
+
 ## 1. Input, and whether anything is due
 
 1. Read `comms/desk/latest_scan.json` on `desk/decisions`. It is `{"packet_id", "packet_sha", "path", "built_at", "info_cutoff_at"}`. Unreadable → report `could_not_look: latest_scan` and stop.
