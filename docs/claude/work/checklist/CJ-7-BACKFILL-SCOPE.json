@@ -2,23 +2,32 @@
   "id": "CJ-7-BACKFILL-SCOPE",
   "title": "Claude->ML: SCOPE backfilling Claude analyses for ALL past trades (1,823 historical closed trades first; optional backtest-ledger sample): blind-grade + reconstructed real-time-style analysis at decision points, point-in-time inputs, cost from the CJ-3 pilot, ordering by value, total pp and weeks at the agreed cap, what to backfill first",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 4,
-  "spend_usd": null,
+  "spend_usd": 12.37,
   "tier": 1,
   "prs": [],
   "blocked_on": [
     "CJ-3-BLIND-GRADE-PILOT"
   ],
-  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN. Operator, verbatim: \"plus scoping on backfilling Claude analyses for all past trades\". Scope doc + numbers only; the backfill itself is a follow-up row sized by this scope and the operator's cap. [2026-10-26 07:08Z manager] Operator restated the backfill ask and widened it to a standing offline training-session flow (verbatim on DESK-15-ENTRY-GENERATION); DESK-15 design v1 reconciles this row with that flow. [2026-10-26 manager] Per design v1 \u00a7 4C.2: scope covers in-trade, exit and post-trade on the 1,823 historical trades, not post-trade grades alone. Caveat: most predate the judge model's knowledge cutoff (pre_cutoff: true) -> may TRAIN a student, never VALIDATE one; gates run on post-cutoff history and forward shadow rows.",
+  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN. Operator, verbatim: \"plus scoping on backfilling Claude analyses for all past trades\". Scope doc + numbers only; the backfill itself is a follow-up row sized by this scope and the operator's cap. [2026-10-26 07:08Z manager] Operator restated the backfill ask and widened it to a standing offline training-session flow (verbatim on DESK-15-ENTRY-GENERATION); DESK-15 design v1 reconciles this row with that flow. [2026-10-26 manager] Per design v1 \u00a7 4C.2: scope covers in-trade, exit and post-trade on the 1,823 historical trades, not post-trade grades alone. Caveat: most predate the judge model's knowledge cutoff (pre_cutoff: true) -> may TRAIN a student, never VALIDATE one; gates run on post-cutoff history and forward shadow rows. [2026-10-26 lane CJ-7-BACKFILL session_01NH39kinEyygRPN4ALst35n] TIER A BACKFILL RUN under the operator cap ('$15 once + $3/week'): 567 new packages (decided >= 2026-07-01; the pilot's 695 counted any date, 78 older NOT graded) blind-graded, 496 revealed; stores now 617 blind / 546 revealed, validate 0 problems. spend_usd 12.37 = grader sessions only (MEASURED usage.cost_usd: blind 6.43, reveal kept 4.68, 8 reveal sessions stopped by an API safeguard 1.25); 0 passes rejected. 71 packets lack reveal (safeguard error on b07 and b06a) -> pipeline row. Report + run records: comms/claude_judgments/backfill/tier-a/. Weekly $3 routine text PROPOSED in REPORT.md \u00a7 5, NOT created. n>=150 diagnostic: all-617 Spearman of blind p_win vs net R = -0.39 [-0.46,-0.32] is an ARTIFACT of 148 packages with risk_atr<1 whose net R is on a tiny basis (pipeline row filed); on the 469 clean packages expected_r +0.117 [+0.026,+0.205], p_win -0.028, strategy confidence +0.025 (exploratory threshold, NOT CJ-4). Closes when the weekly routine has run once under the $3 cap and CJ-4 label rule is registered. Landing PR self-land Tier 1.",
   "priority_rank": 6,
-  "updated_at": "2026-10-26T07:17:18Z",
-  "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
+  "updated_at": "2026-10-26T21:19:27Z",
+  "updated_by": "session_01NH39kinEyygRPN4ALst35n",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "the weekly CJ-7 forward-grade routine has run once under the $3 cap and the CJ-4 net-R label rule is registered",
+    "how_to_check": "ls comms/claude_judgments/backfill/ and python3 scripts/ops/blind_grade.py validate; pipeline row on the CJ-4 label hazard closed",
+    "due_by": "2026-11-09"
+  },
+  "writeback": {
+    "roadmap": "docs/roadmap/milestones.yaml M25 where: CJ-7 tier A line (2026-10-26)",
+    "arch": "ARCHITECTURE-CANONICAL.md \u00a7 AI-traders training workflow step 1: backfill rows and the net-R label caveat"
+  },
   "_seq": 669
 }
