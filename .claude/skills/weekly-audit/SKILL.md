@@ -147,6 +147,16 @@ lane was dispatched the same day it went red (manager § "Research SLO escalatio
 finding (the monitor is a pipeline too). Positive control: `python3 scripts/research/research_slo.py --self-test`
 (a planted starved queue must alert) — paste its line beside a "no breaches" verdict.
 
+### C10. Off the trade path is not off the data path (operator, 2026-10-26)
+
+`python3 scripts/ci/check_shadowed_features.py` - **re-run, never quote**; report entries scanned and the
+`execution: shadow` leg count it prints. Then, beyond what CI can see: for every feature, model or signal
+turned off or annotate-only since the last audit (`git log -p config/strategies.yaml config/accounts.yaml`,
+`*_MODE`/`*_ENABLED` defaults, advisory heads demoted), confirm it has a registry entry, its **consumed**
+artifact is fresh (read the file's newest timestamp, not the producer's log), and an owner row with a
+re-entry test exists. Each `gap` / `could_not_verify` entry and each shadow leg without its own owner row
+becomes a row. Positive control: `python3 scripts/ci/check_shadowed_features.py --self-test`.
+
 ### C9. RECURRENCE — the anti-treadmill step (never skipped)
 
 For every finding that **closed in the last 7 days** (checklist rows moved to `done`, pipeline `done`):
@@ -286,7 +296,7 @@ And by hand, each answered yes/no in the PR body:
 1. Every finding in the report's table resolves to a row, a PI id, a unit, or a merged/in-PR fix — no
    finding is prose-only.
 2. Every finding has a `detector` or an explicit "no detector possible because …".
-3. C1–C9 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
+3. C1–C10 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
 4. Every "0 violations" has a positive control stated beside it.
 5. The deep pass for this ISO week ran, or the report names why not and the row that carries it.
 6. Every row you touched has a TRUE state (`landed_unproven` ≠ `done`, and names the closing observation).

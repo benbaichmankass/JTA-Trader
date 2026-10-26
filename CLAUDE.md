@@ -121,6 +121,8 @@ per merge (the lane), every daily review (`python3 scripts/ops/roadmap_map.py --
 weekly roadmap pass. Contract: [`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md)
 § "The roadmap loop"; guard `roadmap-map-guard`.
 
+⚠️ **Off the trade path is not off the data path** (operator, 2026-10-26, binding): a feature removed from or neutralised on the trade path keeps its data collection running with a freshness check on the consumed artifact, gets an owning row/unit with a re-entry test, and is recorded `shadowed`/`annotate`, never dropped — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Off the trade path is not off the data path"; registry `config/shadowed_features.yaml`, guard `shadowed-features-guard`.
+
 ### The follow-through pipeline — what exists, and what does not
 
 **`docs/claude/work/PIPELINE.jsonl` is the intake for anything that will need
