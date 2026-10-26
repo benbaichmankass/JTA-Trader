@@ -11,10 +11,10 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-24T14:45Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup answer, verbatim: \"Investigate (Recommended)\". The operator did not recognise the logins. Security watch item, rank 1. [lane session_01BTEZ5DrYrbkRSqV25SSwkH] ATTRIBUTED: both logins = Health Snapshot run 40060466668 (ssh steps 03:59:02/03:59:05Z; accepts 03:59:04/06Z, key last4 Xoek, same key as trainer's); recurs 10:37Z (run 40086578106). Not an intrusion; no rotation. Cap fixed client-side: scripts/ops/ssh_auth_sweep.py (+test). WRITEBACK: health-review SKILL ssh sweep uses it. OBSERVATION to close: next /health-review runs the sweep over its whole window with unreadable=[] (due 2026-10-31).",
+  "note": "[2026-10-24T14:45Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup answer, verbatim: \"Investigate (Recommended)\". The operator did not recognise the logins. Security watch item, rank 1. [lane session_01BTEZ5DrYrbkRSqV25SSwkH] ATTRIBUTED: both logins = Health Snapshot run 40060466668 (ssh steps 03:59:02/03:59:05Z; accepts 03:59:04/06Z, key last4 Xoek, same key as trainer's); recurs 10:37Z (run 40086578106). Not an intrusion; no rotation. Cap fixed client-side: scripts/ops/ssh_auth_sweep.py (+test). WRITEBACK: health-review SKILL ssh sweep uses it. OBSERVATION to close: next /health-review runs the sweep over its whole window with unreadable=[] (due 2026-10-31). [2026-10-26 proof sweep session_01PJfTCUpRrd8Lj4c1pVmNFj] STAYS landed_unproven. Ran the sweep tool live 2026-10-26 over 2026-10-25T18:00Z..10-26T13:30Z: 59 windows, split 0, unreadable=[] (coverage full), 7742 accepts total, 63 non-trainer accepts (exit 1 = listed, as designed), ALL user ubuntu, publickey, key last4 Xoek (the same deploy key the earlier attribution found for Health Snapshot), from 20 distinct source classes (GitHub-runner-like churn). Not an unknown key. What is NOT done: matching the 63 to workflow runs. Health Snapshot (~every 6h) explains ~2 accepts per run, i.e. ~6 in 19.5h, so ~57 are other workflows (diag relays / system-actions / wake) or unexplained; not verified. The row's observation is the health-review's run, so it stays open; the question for that review is the 63-vs-expected volume. No evidence of a different key or a login by a non-runner source, but source classes cannot be compared to GitHub's runner ranges from here.",
   "priority_rank": 1,
-  "updated_at": "2026-10-24T18:14:51Z",
-  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
+  "updated_at": "2026-10-26T13:40:53Z",
+  "updated_by": "session_01PJfTCUpRrd8Lj4c1pVmNFj",
   "roadmap": [
     "L-OPS"
   ],
@@ -23,8 +23,8 @@
     "arch": "none: no architecture change; health-review skill updated"
   },
   "observation": {
-    "what": "next /health-review runs scripts/ops/ssh_auth_sweep.py over its whole window with unreadable=[]",
-    "how_to_check": "python3 scripts/ops/ssh_auth_sweep.py --since <window start> --until <now> --trainer-ip <trainer>; exit 0/1 with unreadable empty",
+    "what": "a /health-review (Saturday 2026-10-31) runs scripts/ops/ssh_auth_sweep.py over its whole window with unreadable=[] AND matches each non-trainer accept to a workflow run; the 2026-10-26 volume (63 accepts / 19.5h) explained",
+    "how_to_check": "python3 scripts/ops/ssh_auth_sweep.py --since <window start> --until <now> --trainer-ip <trainer>: unreadable empty; then list Actions runs in the window (diag-relay, system-action, health-snapshot) and compare counts to the accepts",
     "due_by": "2026-10-31T00:00Z"
   },
   "lane_history": [
