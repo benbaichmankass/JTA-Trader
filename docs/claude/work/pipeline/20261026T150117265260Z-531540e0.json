@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-RESEARCH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops 2026-10-26 14:47Z (RESEARCH-OPS-20261026-1447), node P5-RG1025-trend-pooled",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep -c P5-RG1025-trend-pooled; grep -n 'timeframe' scripts/research/harness_stage0.py | head"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": "1",
+  "what": "[lever] Node P5-RG1025-trend-pooled (programme 05) asks for D55 vs B pooled across the 1h+2h+4h bars on the same six perps as ONE test (n_B >= 18k). scripts/research/harness_stage0.py takes a single --timeframe per invocation, so the pooled test cannot be one registered harness run: three runs would produce three pooled verdicts, not one. Either add a multi-timeframe pooling mode (cells = symbol x timeframe, one set of calendar edges) to harness_stage0.py, or re-register the node as three per-timeframe units plus a stated combination rule written before any number. Not authored this pass because choosing between them changes the pre-registered statistic."
+}
