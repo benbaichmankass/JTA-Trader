@@ -308,6 +308,21 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # tests/test_trading_desk_brief.py (schema equality, desk-records-guard findings()), and a real
     # wake ran it to a guard-clean row on desk/decisions (DD-20261026T1339Z-scan-1h-1). Goes
     # `superseded` if the repo-less desk wake is replaced by a standing desk session.
+    # Written 2026-10-26 by lane CJ-3 (session_01FPWQvqvHnMBxAaa7w7Zyw1), which wrote them: the two
+    # grader contracts of the blind-then-reveal post-trade grade (skill companions, not SKILL.md).
+    # Their output rows are validated by scripts/ops/blind_grade.py (tests/test_blind_grade.py) and
+    # the CJ-3 pilot ran them to 50 + 50 store rows. A text edit changes prompt_sha, which is the
+    # label version (design § 3.4). Go `superseded` if the grade moves to a different producer.
+    ".claude/skills/performance-review/BLIND-GRADE-BRIEF.md": (
+        "live",
+        "read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade",
+        "blind pass grader contract; its git blob sha is the blind grade's prompt_sha",
+    ),
+    ".claude/skills/performance-review/REVEAL-GRADE-BRIEF.md": (
+        "live",
+        "read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade",
+        "reveal pass grader contract; its git blob sha is the revealed grade's prompt_sha",
+    ),
     ".claude/skills/trading-desk/DESK-BRIEF.md": (
         "live",
         "read:DESK-5-lane-authored-it-2026-10-26-schema-and-example-test-pinned",

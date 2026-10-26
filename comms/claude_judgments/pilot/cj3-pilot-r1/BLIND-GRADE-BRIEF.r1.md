@@ -1,0 +1,54 @@
+# Blind grade brief (CJ-3, pass 1 of 2)
+
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md) · companion to [`SKILL.md`](SKILL.md) § "Blind-then-reveal grade"
+
+You are grading trading DECISIONS for the Metis-Insights trading system. Each line of
+`blind_packets.jsonl` is one decision a strategy made, MASKED: you see only what was knowable
+when the decision was made. You do not see the market, the date, any absolute price, or the
+outcome, and you must not try to work them out. Grade the decision on its own evidence.
+
+Your grades become training labels for a model that will imitate your judgement. A grade
+that is informed by guessing the market or the date is worthless as a label, so do not guess.
+
+## What a packet contains
+
+| field | meaning |
+|---|---|
+| `packet_id` | opaque id. Copy it to your row exactly |
+| `strategy_family` | `ict_scalp` (liquidity sweep + displacement + fair-value-gap entry), `trend_donchian` (channel breakout, trend-following), `pullback` (buy a pullback inside an established trend) |
+| `timeframe`, `direction` | bar size and long/short |
+| `bracket` | in ATR units from the entry (entry = 0): `stop_atr_from_entry`, `target_atr_from_entry`, `risk_atr` (entry-to-stop distance), `target_r` (target distance / stop distance). Some legs also trail (see `signal.trail_mult`) |
+| `signal` | the strategy's own decision-time numbers. Price levels are `*_atr_from_entry`; distances are `*_atr`; `confidence` is the strategy's own score (0-1); `regime` / `vol_regime` are the system's regime cells; `adx*` trend strength; `news_*` the news layer's read; `conviction` an ML conviction score |
+| `open_exposure_at_decision` | other positions the system already held: same market same/opposite direction, other crypto same/opposite direction |
+| `bars` | the last 64 bars that CLOSED before the decision, oldest first. Each row is `[index, open, high, low, close, rel_volume]`, prices in ATR from the last bar's close (so the last close is 0.0), `rel_volume` = volume / mean volume of the 64 |
+
+Position size is not shown and is not part of the grade.
+
+## What you write
+
+One JSON object per packet, one per line, in packet order, to `blind_grades.jsonl`:
+
+```json
+{"packet_id": "BP-...", "decision_grade": "B", "grade_score": 3, "entry_quality": "acceptable",
+ "risk_management": "correct", "p_win": 0.42, "expected_r": 0.15,
+ "thesis": "one line, at most 240 characters: why this grade"}
+```
+
+- `decision_grade`: `A` textbook · `B` good, one minor flaw · `C` acceptable, marginal edge ·
+  `D` poor (weak or contradicted setup) · `F` should not have fired. `grade_score` is A=4 B=3 C=2 D=1 F=0
+  and must match.
+- `entry_quality`: `optimal` | `acceptable` | `late` | `early` | `should_skip` | `unknown`
+- `risk_management` (the bracket's placement, not size): `correct` | `sl_too_tight` | `sl_too_wide` |
+  `tp_too_close` | `tp_too_far` | `unknown`
+- `p_win`: your probability, 0 to 1, that this trade closes with net R above 0 after costs.
+- `expected_r`: your expected net R for the trade (can be negative).
+- `thesis`: plain text, no market names, no dates.
+
+Use `unknown` honestly. Calibrate: across many trades, a `p_win` of 0.4 should win about 40% of the time.
+Most systematic trades lose more often than they win; do not grade everything B.
+
+## Then
+
+Validate that the file has exactly one row per packet, every enum is legal and `grade_score` matches
+`decision_grade`. Then `git add blind_grades.jsonl && git commit -m "cj3 blind grades" && git push`
+to the branch you are on. Do nothing else: do not open a pull request, do not read other files.

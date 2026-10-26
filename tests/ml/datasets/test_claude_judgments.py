@@ -231,3 +231,66 @@ def test_build_writes_dataset(env, tmp_path):
                                            comms_root=comms, db_path=db)
     meta = json.loads(paths.metadata.read_text())
     assert meta["row_count"] == 1 and meta["family"] == "claude_judgments"
+
+
+def _grade(kind, tid, *, cutoff="2026-10-25T10:00:00Z", judged="2026-10-26T18:00:00Z"):
+    base = {"schema_version": 1, "kind": kind, "order_package_id": f"pkg-{tid}", "trade_id": tid,
+            "leg": "ada_pullback_2h", "judged_at": judged, "info_cutoff_at": cutoff,
+            "decision_ts": "2026-10-25T10:00:00Z", "author_kind": "llm", "model_id": "claude-sonnet-5-5",
+            "prompt_sha": "e951412992e1", "mask_version": "mask-v1", "packet_sha": "0" * 64,
+            "run_id": "cj3-pilot-r1", "session_id": "s", "pre_cutoff": False}
+    if kind == "blind_grade":
+        return dict(base, judgment_id=f"BG-pkg-{tid}-e9514129", decision_grade="B", grade_score=3,
+                    entry_quality="acceptable", risk_management="correct", p_win=0.4, expected_r=0, thesis="t")
+    return dict(base, judgment_id=f"RG-pkg-{tid}-aaaaaaaa", blind_judgment_id=f"BG-pkg-{tid}-e9514129",
+                revised_decision_grade="C", revised_grade_score=2, exit_quality="sl_appropriate",
+                alternative_action="none", hindsight_note="h")
+
+
+def test_blind_and_revealed_grades_join_the_journal(env):
+    comms, db = env
+    (comms / "claude_judgments").mkdir()
+    _write(comms / "claude_judgments" / "blind_grades.jsonl", [_grade("blind_grade", 1)])
+    _write(comms / "claude_judgments" / "revealed_grades.jsonl",
+           [_grade("revealed_grade", 1, cutoff="2026-10-26T02:00:00Z")])
+    _journal(db, [_trade(1)])
+    rows, rep = _run(comms, db)
+    # the blind row is T0 by construction; the revealed row saw the close (T1) and is label-only
+    assert [r["kind"] for r in rows] == ["blind_grade"]
+    assert rep["excluded_by_reason"] == {"t1_outcome_visible": 1} and rep["partition_ok"]
+    r = rows[0]
+    assert r["timing"] == "T0" and r["label_provenance"] == "judgment"
+    assert r["grade_score"] == 3 and r["expected_r"] == 0.0 and isinstance(r["expected_r"], float)
+    assert r["label_net_r"] == pytest.approx(1.9) and r["split_group"] == "pkg-1"
+    rows_t1, _ = _run(comms, db, include_t1=True)
+    rv = [x for x in rows_t1 if x["kind"] == "revealed_grade"][0]
+    assert rv["timing"] == "T1" and rv["grade_score"] == 2 and rv["exit_quality"] == "sl_appropriate"
+    # the builder's schema accepts the rows (the real build path validates every row)
+    b = ClaudeJudgmentsBuilder()
+    for x in rows_t1:
+        b._validate_row(x, b.schema.keys())
+
+
+def test_a_blind_row_that_saw_the_outcome_is_refused(env):
+    comms, db = env
+    (comms / "claude_judgments").mkdir()
+    # cutoff after the trade closed (2026-10-26T02:00Z): this "blind" grade was not blind
+    _write(comms / "claude_judgments" / "blind_grades.jsonl",
+           [_grade("blind_grade", 1, cutoff="2026-10-26T03:00:00Z")])
+    _journal(db, [_trade(1)])
+    rows, rep = _run(comms, db, include_t1=True)
+    assert rows == [] and rep["excluded_by_reason"] == {"blind_grade_not_t0": 1}
+
+
+def test_revealed_grade_is_t1_by_kind_even_when_cutoff_truncation_reads_t0(env):
+    comms, db = env
+    (comms / "claude_judgments").mkdir()
+    _write(comms / "claude_judgments" / "blind_grades.jsonl", [_grade("blind_grade", 1)])
+    # cutoff = the close truncated to the second; journal closed_at has microseconds after it
+    _write(comms / "claude_judgments" / "revealed_grades.jsonl",
+           [_grade("revealed_grade", 1, cutoff="2026-10-26T02:00:00Z")])
+    t = _trade(1, closed_at="2026-10-26T02:00:00.734000+00:00")
+    _journal(db, [t])
+    rows, rep = _run(comms, db)
+    assert [r["kind"] for r in rows] == ["blind_grade"]
+    assert rep["excluded_by_reason"] == {"t1_outcome_visible": 1}

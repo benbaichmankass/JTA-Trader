@@ -221,6 +221,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/new-broker/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/new-strategy/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/perf-followup/SKILL.md` | instruction | live | — | 2026-10-10 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/performance-review/BLIND-GRADE-BRIEF.md` | instruction | live | — | 2026-10-26 | `dir:skills-are-binding-workflows / read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade` | blind pass grader contract; its git blob sha is the blind grade's prompt_sha |
+| `.claude/skills/performance-review/REVEAL-GRADE-BRIEF.md` | instruction | live | — | 2026-10-26 | `dir:skills-are-binding-workflows / read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade` | reveal pass grader contract; its git blob sha is the revealed grade's prompt_sha |
 | `.claude/skills/performance-review/SKILL.md` | instruction | live | — | 2026-09-24 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/regime-selectivity/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/research-ops/SKILL.md` | instruction | live | — | 2026-10-10 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |

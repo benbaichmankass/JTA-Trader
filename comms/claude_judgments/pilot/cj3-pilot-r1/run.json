@@ -1,0 +1,21 @@
+{
+  "run_id": "cj3-pilot-r1",
+  "row": "CJ-3-BLIND-GRADE-PILOT",
+  "lane_session": "session_01FPWQvqvHnMBxAaa7w7Zyw1",
+  "grading_branch": "cj3-pilot/r1 (orphan: briefs + packets + grader output only)",
+  "pre_cutoff": null,
+  "pre_cutoff_note": "decisions span 2026-07-04..2026-10-21; the grader model's knowledge cutoff is not known to this lane, so pre_cutoff is null (unknown), never guessed",
+  "blind": {"model_id": "claude-sonnet-5-5", "session_id": "session_013mvbtKmwcbcCMSRJur5Hzo",
+            "prompt_sha": "e951412992e1760db26215f1d2a1061ef0fb058a", "brief_copy": "BLIND-GRADE-BRIEF.r1.md",
+            "judged_at": "2026-10-26T17:40:03Z", "judged_at_source": "commit time of 112dc9f8 on cj3-pilot/r1",
+            "n_rows": 50, "cost_usd": 0.35815648, "output_tokens": 8328, "cache_read_tokens": 510743, "cache_write_tokens": 55800},
+  "reveal": {"model_id": "claude-sonnet-5-5", "session_id": "session_01WbXgVkFZwvSGBqtmGkoE2Q",
+             "prompt_sha": "5229d3b17456b53e1c29bcfc197bdd014560d24c", "brief_copy": "REVEAL-GRADE-BRIEF.r1b.md",
+             "judged_at": "2026-10-26T17:45:11Z", "judged_at_source": "commit time of cdd7b4aa on cj3-pilot/r1",
+             "n_rows": 50, "cost_usd": 0.43124348, "output_tokens": 12779, "cache_read_tokens": 666253, "cache_write_tokens": 59066},
+  "rejected": [{"pass": "reveal r1", "session_id": "session_013oeqBGxvsY2Gv3ykzHzJQT",
+                "prompt_sha": "5d4ed63c01f90cdd441bf7076bb0fb28f30d4482", "brief_copy": "REVEAL-GRADE-BRIEF.r1.md",
+                "rows": "revealed_grades.r1.REJECTED.jsonl", "cost_usd": 0.18483864, "output_tokens": 2794,
+                "why": "templated by a program, not judged: 0 of 50 grades changed, 41 distinct notes from a handful of templates, 37 s wall time. Brief v2 forbids generating rows with code."}],
+  "cost_source": "get_session usage.cost_usd (API-equivalent pricing) on each grader session once idle, read 2026-10-26 ~17:46Z"
+}
