@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 by path (risk logic: src/units/accounts/prop_risk.py, new src/prop/prop_amend_gate.py; the live-review apply path scripts/ops/live_review_apply.py). Hold for operator approval; the manager merges and deploys.",
+  "why": "DESK-2-RISK-GATE remainder: PropRiskManager.approve_amend / approve_action add the firm's layer over the base gate -- an action that ADDS risk must fit the remaining DD/daily-loss cushion (refuse on exceeds, could_not_look on a stale/unread cushion) and the firm's leverage cap; a human's stop on the phone account is refused at the gate. Risk-reducing actions (tighten, close, reduce, TP move) are never refused for the cushion or the daily-DD switch."
+}

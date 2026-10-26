@@ -321,6 +321,17 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
     return out
 
 
+def leg_extra(leg: Dict[str, Any], pkg: Dict[str, Any]) -> Dict[str, Any]:
+    """Account-owned facts the prop layer of the gate reads (``src.prop.prop_amend_gate``): the
+    package symbol (the firm's per-symbol leverage cap) and, on a prop ticket, the phone trail's
+    ``human_hold`` (a human's stop is never fought). The executor re-checks the hold under CAS."""
+    out: Dict[str, Any] = {"symbol": pkg.get("symbol")}
+    if leg.get("kind") == "ticket":
+        trail = _notes(leg["row"].get("meta")).get("phone_trail")
+        out["human_hold"] = (trail or {}).get("human_hold") if isinstance(trail, dict) else None
+    return out
+
+
 def market_state(pkg: Dict[str, Any], strategies: Dict[str, Any]) -> Dict[str, Any]:
     """Mark (last price), ATR(14) of the leg's timeframe and the last CLOSED bar ts."""
     leg = strategies.get(pkg.get("strategy_name")) or {}
@@ -582,7 +593,7 @@ def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg:
     view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
                                 leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"), entry=entry,
                                 leg_tp=tp, position_size=size, fresh_ok=fresh[0], fresh_reason=fresh[1],
-                                max_qty=fresh[2])
+                                max_qty=fresh[2], extra=leg_extra(leg, pkg))
     return _risk_manager(aid, cfg).approve_action(intent, view)
 
 
@@ -864,7 +875,8 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             v = _decide_trade_action(intent, leg, pkg, cfg, cls, execution)
         else:
             view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
-                                        leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"))
+                                        leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"),
+                                        extra=leg_extra(leg, pkg))
             v = _risk_manager(aid, cfg).approve_amend(intent, view)
             if v.ok and (cls == "other" or (cls == "alpaca" and leg["kind"] != "trade")):
                 v = lri.AmendVerdict(aid, lri.V_REFUSE, None, lri.R_NO_PATH)
