@@ -315,6 +315,17 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # ⚠️ The programme goes `superseded` when a later weekly pass rewrites it
     # under a new file; the catalog pair goes `historical` only if the reference
     # register is retired.
+    # Written 2026-10-26 by lane LTR C3 (session_01BLuPk9fxkARe5ZjLVV8Uxd), which
+    # wrote it: a skill companion, not a SKILL.md, so rule 3 does not reach it.
+    # Its embedded schema and worked example are pinned by
+    # tests/test_live_review_reviewer_brief.py (schema equality, the main
+    # validator, the dispatcher's clauses). Goes `superseded` if the repo-less
+    # reviewer path is retired.
+    ".claude/skills/live-trade-review/REVIEWER-BRIEF.md": (
+        "live",
+        "read:LTR-C3-lane-authored-it-2026-10-26-schema-and-example-test-pinned",
+        "repo-less live-review reviewer contract; the manager pastes it into each fresh reviewer",
+    ),
     "docs/research/programmes/02-AI-TRADER.md": (
         "live",
         "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
