@@ -15860,7 +15860,9 @@ nodes:
     confidence: 0.25
   after:
   - unit: RQ-20261022-eba2-03
-    verdict: any
+    verdict: pass
+  # research-ops 2026-10-25 20:47Z: eba2-03 closed FAIL / incumbent_stands (ada_pullback_2h, arms 1.5/2.0/3.0 R -> 2.5 x ATR, net of fee+slippage+funding).
+  # The node's own FAIL branch authors nothing, so it is moot; configuration closed: R-armed tight trail 1.5/2.0/3.0 R on ada_pullback_2h; family R-armed trail stays open; next test = eth_4h only if its declared stall decay is removed.
   needs_authoring: 'Read RQ-20261022-eba2-03 (hand unit; R-armed tight trail on ada_pullback_2h, arms 1.5 / 2.0 / 3.0 R -> 2.5 x ATR).
     PASS -> ONE confirmation unit on a disjoint partition (same statistic and bar), then Q6 parity; the live producer already exists
     (src/runtime/trail_decay.py), so the declare is a Tier-3 strategies.yaml change for bybit_2 + bybit_portfolio together. FAIL ->

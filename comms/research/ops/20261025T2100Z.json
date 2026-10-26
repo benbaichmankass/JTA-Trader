@@ -1,0 +1,91 @@
+{
+  "run": "RESEARCH-OPS-20261025-2047",
+  "finished_at": "2026-10-25T21:05:00Z",
+  "by": "session_0181bMMnkm5RpJ5iGYmwRmSb",
+  "floor": 66,
+  "floor_basis": "computed_floor(fired_24h 83)",
+  "authoring_queue_depth": 36,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "needs_review_note": "result_disposition_check --list at 20:49Z: needs_review owned 25 / UNOWNED 0 / UNGRADED 0 (28 in queue_grade --health, same bucket the previous pass recorded). Every one carries grading.owner + owner_reason; no unit lacked a disposition, so no new triage write. Oldest-8 not re-read: the owner text names the gap (6 roster-walkforward rows wait on PI-20261006-1VPYTX8E-0001, due 2026-10-29).",
+  "throughput": {
+    "runnable_before": 51,
+    "runnable_after": 52,
+    "queued": 144,
+    "fired_24h": 83,
+    "results_landed_24h": 82,
+    "hours_since_last_dispatch": 1.1,
+    "idle_alarm": false,
+    "after_basis": "dispatch_queue dry run lists RQ-20261025-916f-01 as would_dispatch (kaggle_cpu, score 2.25) on the pre-merge tree; counted +1 on that basis, not re-run through check_research_queue_throughput. Still 14 under the floor (H1-AUTHOR)."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 4.3 h old at 20:49Z; manager row RQ-RECEIPT-SKIP-STARVES, PR #20167, already owns the cause: a conflicted receipt PR starved three dispatcher runs 16:57Z-20:14Z)",
+    "collector": "ok (0 unreadable result files; PR #20169, batch of 4, opened 20:50Z, is fresh)",
+    "stranded_stamp_prs": [],
+    "watchdog_open_incidents": 0,
+    "grade_workflow": "research-queue-grade: 20 latest runs read, last success 19:30Z 2026-10-25, 3 cancelled on 10-22 only",
+    "incident": null,
+    "note": "Open PR list (7) read via GitHub MCP: no automation/research-queue-* head older than minutes. This closes the previous pass's not_run item for the stranded-PR list and the grade workflow. The dispatch and replenish workflows' run lists were not read (receipt freshness and the 20:06Z batch-land commit are the evidence)."
+  },
+  "results_read": {
+    "pass": 3,
+    "fail": 17,
+    "indeterminate": 1,
+    "units": [
+      "22 result files in 7 landing commits since 15:00Z (#20107, #20110, #20123, #20124, #20133, #20146, #20156). 4 are infra self-tests (3a84-12 FAIL, 0142-18 FAIL, 0142-20 FAIL, 3a84-13/0142-19/0142-21 PASS, 20261003-011 wiring_only) and say nothing about any strategy.",
+      "FAIL, incumbent exit stands: 9a7e-01 ada_pullback_2h, 9a7e-02 xrp_pullback_2h, 9a7e-03 eth_pullback_2h, 9a7e-04 trend_donchian_ada_4h (giveback-predictor-gated trail), 3947-03 xrp_pullback_2h (path-state trail E25/E35; unit still status queued, the 6-hourly grader closes it)",
+      "FAIL, prop-pace alt-basket pullback/trend/fade (1d5c-08..12): the arm variants miss the 0.05 R/trade materiality bar. Baseline B alone is pooled-positive with breadth on 1d5c-08 (+92.4 R, 3 of 6 cells), -09 (+89.1 R, 3 of 6) and -10 (+122.8 R, 4 of 6, 5 folds); -11 and -12 read baseline B pooled net_r <= 0",
+      "FAIL macro: 4b82-20 Michigan sentiment surprise -> TLT (no horizon at the t-bar; 3 d ic -0.109, t_eff -1.82, not the expected sign test pass), 4b82-21 ISM services -> ES (strongest ic 0.074 at 5 d, t_eff 0.87)",
+      "FAIL ML: 001 (VAR price-vector feature lift, closed fail by 2 consecutive passes), 008 (LightGBM big capacity, no candidate reaches the floor)",
+      "INDETERMINATE: 3947-19 sklearn HistGradientBoosting vs lgbm_base logloss: +0.0016 BTC, +0.0011 ETH, +0.00003 SOL, every CV 95% CI straddles 0, sign_consistent false on all three, bar 0.005"
+    ]
+  },
+  "dispositions": [
+    {"unit": "RQ-20261024-9a7e-01..04", "verdict": "FAIL x4", "follow_up": "configuration closed: giveback-predictor-gated trail tightening on ada/xrp/eth pullback_2h and trend_donchian_ada_4h; family exit-giveback prediction stays open; next test = P1-Q13 path-state units (b7e1-01..03, runnable) and the P1-Q14 stale-exit transfer"},
+    {"unit": "RQ-20261025-3947-03", "verdict": "FAIL", "follow_up": "configuration closed: path-state trail (tighten to 2.5 x ATR at peak_r >= 1.5 with E25/E35 gate) on xrp_pullback_2h; family path-state trail stays open; next test = P1-Q13-pathstate-transfer / -w12 / -prop"},
+    {"unit": "RQ-20261023-1d5c-08/-09/-10", "verdict": "FAIL (arm variants) with baseline B pooled-positive on all three", "follow_up": "configuration closed: DIA/DIAB (pullback 2h basket 2), DI/ST (pullback 4h), LONG/ADX/D55 (trend 4h) variants vs baseline B; families stay open. Baseline B pooled +92.4/+89.1/+122.8 R is a discovery chosen from 3 baselines x the arm grids, not a confirmation: no disjoint window exists for most alts (listings 2020+), so the confirmation is forward accrual on P5-RG1025-trend-pooled; no Tier-3 proposal"},
+    {"unit": "RQ-20261023-1d5c-11/-12", "verdict": "FAIL (baseline B pooled net_r <= 0 on TR4H slow / FADE4H)", "follow_up": "configuration closed: slow trend 4h and fade 4h arm sets on the alt basket; families stay open; next test = none queued for fade (P5-RG1025-fade-pullback-1h owns the well-powered negative)"},
+    {"unit": "RQ-20261022-4b82-20/-21", "verdict": "FAIL", "follow_up": "configuration closed: Michigan sentiment -> TLT and ISM services -> ES at 1-5 d; family macro survey surprise stays open; next test = the PPI/RTY node P4-Q2-ppi-rty-econ"},
+    {"unit": "RQ-20261025-001 and -008", "verdict": "FAIL (already closed by the grader on 2 consecutive passes)", "follow_up": "family gbdt / linear_logit stays open; configuration closed: VAR price-vector 1h feature lift and LightGBM big capacity on the regime head"},
+    {"unit": "RQ-20261025-3947-19", "verdict": "INDETERMINATE (HGB ~ LGBM, CIs straddle 0)", "follow_up": "redesign, not extension: n is not the limit (24k+ OOS rows/symbol); a second boosted-tree implementation is indistinguishable, so the lever is the learner FAMILY. Unit RQ-20261025-916f-01 (sklearn_logit_calibrated vs lgbm_base, same rows and folds, same bar) authored"},
+    {"unit": "RQ-20261022-eba2-03", "verdict": "FAIL (read from the landed result; already graded)", "follow_up": "node P1-Q12-ada-r-armed-read set to wait for verdict pass, so it is moot: configuration closed: R-armed tight trail 1.5/2.0/3.0 R -> 2.5 x ATR on ada_pullback_2h; family R-armed trail stays open; next test = eth_4h only if its declared stall decay is removed"},
+    {"unit": "RQ-20261016-026 (P5-GATE-BRK)", "verdict": "PASS on all 5 seeds, 4 of 4 legs (earlier pass)", "follow_up": "comms/prop_survival/<leg>.json exists for eth_prop, sol_prop, eth_4h, sol_4h; sol_4h seed-median ev 195.0 re-checked against the result row. Node P5-GATE-BRK-read set to wait for verdict fail, so it is moot (no resize question without a FAIL)"},
+    {"unit": "RQ-20261024-003 (trend_donchian_xrp_adx25, e35, accruing)", "verdict": "unread by research_disposition, power_state accruing", "follow_up": "no action, because an accruing read cannot answer; the recurring unit re-reads on its cadence"}
+  ],
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": {
+    "blocked_dir": "60 blocked + 8 retired files in research/queue/blocked",
+    "not_running": "51 queued units with last_dispatched_at null, all freshly authored (3947 series, d7e6-08/09); dispatch_queue dry run lists 49 would_dispatch, so this is supply waiting for a slot, not a block",
+    "corrected": [{"unit": "RQ-20261011-9da8-03", "was": "blocked_on.ref FRONTIER-LEVER-CONFORMAL (checklist state done)", "now": "ML-HEAD-AGREEMENT-JOIN (queued, owner manager, due with the next ml-review). The text already named the joiner as the one remaining blocker; the ref pointed at a closed row"}],
+    "checked_refs": "every blocked unit's work_item ref was resolved to a checklist file; refs with state queued/landed_unproven keep their unit blocked, refs written as prose paths were not resolved"
+  },
+  "levers_filed": [],
+  "units_authored": [
+    {"unit": "RQ-20261025-916f-01", "theme": "ml_health", "rule": "RULE-RQ2026102591601-LOGIT-CALIBRATED-VS-LGBM", "compute": "auto (dry run: kaggle_cpu)"}
+  ],
+  "followups_filed": [
+    {"what": "pipeline: unrouted 4 (all non-research); oldest PI-20260930-BHYHMK2C-0001 25 d, breaches the 7 d alarm; not touched this pass", "ref": "python3 scripts/ops/pipeline.py --stats"}
+  ],
+  "authoring": {
+    "queue_depth": 36,
+    "nodes_drafted": 0,
+    "nodes": ["P1-Q12-ada-r-armed-read (closed moot)", "P5-GATE-BRK-read (closed moot)", "3947-19 follow-up authored as hand unit RQ-20261025-916f-01"],
+    "queue_depth_after": 34,
+    "theme_shortfall": {"regime": 3, "live_strategy": 4, "ml_health": 3, "new_strategy_prop": 4, "infra": 3},
+    "why_short": "no new programme node drafted (nodes_drafted 0 is the true count; OPS-AUTHOR-SKIPPED will warn). The two nodes are closed by their own FAIL/PASS branch, not authored into units; one unit authored. 34 ready nodes remain; the highest-money ones (P3-Q1-live-bt-stage-b 240, P1-Q6-eth4h-measured-move-w05-declare 175) need a dispatchable live-journal driver and a Tier-3 declare respectively."
+  },
+  "not_run": [
+    "research-queue-dispatch and research-queue-replenish workflow-run lists (grade runs and receipt freshness read instead)",
+    "needs_review re-triage writes (no unit lacked an owner)",
+    "P3-Q1-live-bt-stage-b authoring: scripts/research/live_bt_trade_join.py exists but is manual-only (reads the public /api routes); no dispatchable queue driver yet"
+  ],
+  "handoff": [
+    "next research-ops: read RQ-20261025-916f-01 once it lands and apply RULE-RQ2026102591601-LOGIT-CALIBRATED-VS-LGBM verbatim (trial count 2 with the HGB sibling)",
+    "next research-ops: read the P1-Q14 transfer unit once emitted; author P2-Q4-cross-asset-features after the metis-market-data ES/DXY/gold check",
+    "manager: LIVE-BT-STAGE-B is still state queued but scripts/research/live_bt_trade_join.py is on main (manual-only); the P3-Q1 node cannot become a unit until a needs_vm_data driver wraps it",
+    "manager: PI-20260930-BHYHMK2C-0001 is the oldest unrouted item (25 d) and is not research",
+    "ML-N5: /ml-review to read the sol and btc heads from RQ-20261011-6e85-01 and record the run id"
+  ]
+}

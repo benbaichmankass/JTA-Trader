@@ -1174,7 +1174,9 @@ nodes:
     confidence: 0.4
   after:
   - node: P5-GATE-BRK
-    verdict: any
+    verdict: fail
+  # research-ops 2026-10-25 20:47Z: P5-GATE-BRK (RQ-20261016-026) closed PASS on all 5 seeds for all four legs; comms/prop_survival/<leg>.json exists for
+  # eth_prop, sol_prop, eth_4h, sol_4h (sol_4h seed-median ev 195.0 re-checked against the result). The resize question below only applies on a FAIL, so this node is moot.
   needs_authoring: Read P5-GATE-BRK's measurement.leg_verdicts. For every leg that PASSED write its comms/prop_survival
     record per the unit's rule. For a grandfathered leg that FAILED on this account, register the resize question
     (that leg at 0.0025 / 0.0035 alone, same ledgers) so the manager's pull-or-resize proposal has a dated number
