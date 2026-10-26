@@ -1,0 +1,78 @@
+id: RQ-20261026-4795-01
+title: 'Calendar event types, study (ppi): does the ppi_mom surprise vs the PIT survey consensus predict SPY forward returns at 1-5 trading days?'
+status: queued
+cadence: once
+theme: macro
+priority: 3
+kind: experiment
+question: 'Using survey-consensus point-in-time rows (live feed plus survey backfill: 140 DISTINCT ppi_mom releases with a defined surprise, MEASURED 2026-10-26 as distinct scheduled_for dates over comms/macro/econ_calendar_snapshots.jsonl + comms/macro/econ_calendar_snapshots_survey_backfill.jsonl, status=resolved, surprise not null), is Spearman(surprise = actual - consensus, forward SPY return) significant at 1, 3 or 5 trading days after the release at |t_eff| >= 3.0 (Bonferroni over 3 horizons x 11 sibling calendar-class studies), with the expected NEGATIVE sign (hotter producer prices are bad for risk assets)?'
+why_this_matters: 'CALENDAR-EVENT-TYPES (operator 2026-10-26: expand the calendar''s event types): the `ppi` class ships collected and logged at weight 0 on the trade path (shadow class; scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS). This is the measurement that must precede any non-zero weight. Sibling of RQ-20261026-901 (jobless_claims). n counts DISTINCT releases (RQ-20261026-901 found 599 distinct vs a claimed 1,170, so every count here is distinct scheduled_for dates, not rows). Co-timed prints (several kinds in one release slot) are not separable at daily-close resolution; the class is judged as a slot.'
+power:
+  expected_n: 140
+  min_detectable_effect: 0.32
+  effect_units: sd
+  design: one_sample
+  alpha: 0.0027
+  power: 0.8
+  basis: 'Unit = one distinct release with a defined survey surprise (140, MEASURED 2026-10-26 over live + survey snapshots). Fisher-z: detecting rho at the registered |t| bar 3.0 (two-sided alpha 0.0027, Bonferroni over 3 horizons x 11 sibling studies) with power 0.8 needs atanh(rho) >= (3.0+0.8416)/sqrt(n-3), i.e. rho >= 0.32 at n=140. A FAIL therefore means ''no effect >= ~0.32 sd at daily-close resolution'', not ''no effect''. Releases are monthly or longer apart so horizon-5 windows do not overlap; ic_t_eff is graded anyway.'
+  feasibility:
+    source: none
+    accrual_basis: n is a fixed historical backfill, not an accrual; the run prints releases, releases_with_value and price_bars so the bound is MEASURED and a short join lands INDETERMINATE, never padded.
+decision_rule:
+  id: RULE-RQ-20261026-4795-01-PPI-EVENT-STUDY
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: Overlap-corrected Spearman t (ic_t_eff) of surprise vs forward SPY return at horizons 1, 3, 5 trading days (scripts/macro/econ_event_study.py event_study, merged live+survey snapshots), graded by scripts/research/macro_event_study_run.py grade() with the CLI flags below.
+  rule: 'PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 3.0 AND the IC sign is negative. FAIL IF every horizon has n >= 100 and none reaches the bar in the registered direction (a significant wrong-sign horizon is reported, not a pass). INDETERMINATE IF any horizon has n < 100. no_data/producer_failed IF the price panel is empty or no release has a defined surprise: a route fault, not a verdict.'
+  min_n: 100 joined releases per horizon.
+  what_it_does_not_do: A PASS is evidence for a weight-setting proposal (Tier 3, operator-gated; costs, a placebo, a sub-period split and the naive-floor check still owed), not a weight. Sets no weight, touches no config or order path. Daily closes cannot see the intraday reaction.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 50
+  confidence: 0.2
+  basis: 'stand-in: a measured event-class effect decides whether the `ppi` calendar class earns a non-zero news-layer weight; information value, not a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 'Estimate, NOT measured: one daily-close fetch and a rank correlation per horizon, comparable to RQ-20261013-1414-10.'
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - SPY
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '3.0'
+  - --expected-sign
+  - negative
+  - --population
+  - ppi_mom releases (live feed + survey-consensus backfill) joined to SPY daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261026-4795-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+related:
+- scripts/macro/econ_event_study.py
+- .claude/skills/macro-research/SKILL.md
+- research/queue/RQ-20261026-901.yaml
+- docs/claude/work/checklist/CALENDAR-EVENT-TYPES.json
