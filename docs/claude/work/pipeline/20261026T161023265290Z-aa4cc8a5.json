@@ -1,0 +1,24 @@
+{
+  "based_on": "20261026T154843507765Z-8ae2c50f.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "RQ-20261025-3947-23 shows status done and still exactly 2 result files two grader cycles after the held PR merges",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-NCPNYMBS-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-30",
+    "how_to_check": "ls research/results/RQ-20261025-3947-23/ | wc -l; python3 -c \"import yaml;print(yaml.safe_load(open('research/queue/RQ-20261025-3947-23.yaml'))['status'])\"",
+    "what": "RQ-20261025-3947-23 status done and exactly 2 result files"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "research-SLO authoring lane cse_017ew3v5tfqjsM1AnCPNYmbs 2026-10-26",
+    "rerun": "ls research/results/RQ-20261025-3947-23/ | wc -l; python3 -c \"import yaml;print(yaml.safe_load(open('research/queue/RQ-20261025-3947-23.yaml'))['status'])\""
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "RQ-20261025-3947-23 (cadence once) has TWO result rows: measured fail 2026-10-25T23:39Z (run 40241202214) then producer_failed 2026-10-26T09:20Z (run 40277112416, 'no run-manifest.json'). A once unit fired twice, probably because its status stayed queued while the grader held it at needs_review (read_state not unanimously measured). Verify queue_grade now closes it and the dispatcher does not fire it a third time; if the mixed-rows -> needs_review path re-queues once-units, that is a dispatcher/grader bug to fix."
+}
