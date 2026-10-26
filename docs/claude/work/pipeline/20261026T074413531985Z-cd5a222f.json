@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-QCTLR4JP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane LTR-APPLY-DISPATCH (PR #20267)",
+    "rerun": "grep -n 'applied.jsonl\\|live_review' scripts/ops/render_daily_brief.py -- no hit means an applied live-review tighten still never reaches brief section 1"
+  },
+  "state": "queued",
+  "what": "MD-LIVE-TIGHTEN-SL notify clause 'brief section 1 line with the review row and table path' has no producer: live_review_apply.py writes runtime_logs/live_review/applied.jsonl on the VM only and render_daily_brief.py does not read it (checked on main d34e6b47). Until wired, the live-review lane reports applies to the manager by hand (skill Step 7.5). Fix: expose applied.jsonl via a diag route or commit-back, and render one section-1 line per applied review."
+}
