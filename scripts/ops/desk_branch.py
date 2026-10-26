@@ -33,7 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 
-import check_desk_records as cdr
+import check_desk_records as cdr  # noqa: E402
 
 DECISIONS = "comms/desk/decisions.jsonl"
 PACKETS = "comms/desk/packets"

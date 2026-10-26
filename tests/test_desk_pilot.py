@@ -15,17 +15,17 @@ ROOT = Path(__file__).resolve().parents[1]
 for p in (ROOT, ROOT / "scripts" / "ci", ROOT / "scripts" / "ops", ROOT / "tests"):
     sys.path.insert(0, str(p))
 
-import check_desk_records as cdr
-import desk_branch
-import desk_outcomes
-from test_trading_desk_brief import _example, _scan_packet
+import check_desk_records as cdr  # noqa: E402
+import desk_branch  # noqa: E402
+import desk_outcomes  # noqa: E402
+from test_trading_desk_brief import _example, _scan_packet  # noqa: E402
 
 CUT = datetime(2026, 10, 26, 13, 0, tzinfo=timezone.utc)
 H = 3600
 
 
-def _bar(i, o, h, l, c):
-    return {"time": CUT.timestamp() + i * H, "open": o, "high": h, "low": l, "close": c}
+def _bar(i, o, h, lo, c):
+    return {"time": CUT.timestamp() + i * H, "open": o, "high": h, "low": lo, "close": c}
 
 
 def _prop(**kw):

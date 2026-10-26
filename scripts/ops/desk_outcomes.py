@@ -43,10 +43,10 @@ for _p in (ROOT, ROOT / "scripts" / "ci", ROOT / "scripts" / "ops"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import check_desk_records as cdr
-import desk_scan_packet as dsp
+import check_desk_records as cdr  # noqa: E402
+import desk_scan_packet as dsp  # noqa: E402
 
-from src.runtime import execution_costs as xc
+from src.runtime import execution_costs as xc  # noqa: E402
 
 NO_TRADE_REASON = ("no_trade/watch_note label is the best baseline bracket from the same packet (design § 8.1); "
                    "priced by DESK-20 on the DESK-7 harness, not built yet")

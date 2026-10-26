@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "ci"))
 sys.path.insert(0, str(ROOT))
 
-import check_desk_records as cdr
+import check_desk_records as cdr  # noqa: E402
 
 BRIEF = ROOT / ".claude/skills/trading-desk/DESK-BRIEF.md"
 
