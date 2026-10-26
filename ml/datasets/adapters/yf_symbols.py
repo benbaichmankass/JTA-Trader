@@ -53,6 +53,9 @@ _DEFAULT_TICKER_MAP: Mapping[str, str] = {
     **{t: t for t in (
         "GDX", "GLD", "IAUM", "IEF", "IWM", "QLD", "QQQ",
         "SCHA", "SLV", "SPLG", "SPY", "TLT", "TQQQ", "USO",
+        # Sector ETFs named by RQ-20261025-bda2-01 (alpaca_live roster screen):
+        # unmapped, so XLF/XLP/XLU read fetch_failed in the 2026-10-26 run.
+        "XLF", "XLP", "XLU",
     )},
     # --- INVERSE ETFs: fetchable for RESEARCH, deliberately NOT tradeable ----
     # SH (-1x S&P 500) and PSQ (-1x QQQ) are the M15 alpaca short-PROXY
