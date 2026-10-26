@@ -1,6 +1,6 @@
 id: RQ-20261026-90d3-02
 title: 'Regime head: does CatBoost beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -147,3 +147,17 @@ related:
 - scripts/research/ml_bakeoff.py
 - RESEARCH-AUTHOR-20261026-0030
 last_dispatched_at: '2026-10-26T11:07:50+00:00'
+grading:
+  attested: RULE-RQ2026102690d302-CATBOOST
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ2026102690d302-CATBOOST
+  evidence:
+  - research/results/RQ-20261026-90d3-02/40312811562.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
