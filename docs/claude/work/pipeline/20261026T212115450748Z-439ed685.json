@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "comms/live_review/outcomes.jsonl holds >= 30 graded reviews with a realised-vs-hold delta, AND $/R per real-money/prop package is measured",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-01764UCV-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "wc -l comms/live_review/outcomes.jsonl; research/results/RQ-20261026-f50f-01/local-20261026.jsonl note",
+    "what": "graded live-review count and measured $/R"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-TRIGGER-TUNE lane, research/results/RQ-20261026-f50f-01/local-20261026.jsonl",
+    "rerun": "python3 scripts/research/live_review_trigger_tune.py --out /tmp/ltr-tune"
+  },
+  "state": "queued",
+  "what": "LTR trigger thresholds (RQ-20261026-f50f-01) KEPT at their defaults. The registered rule needed a win at both c_R=0.02 and c_R=0.10. The 'fire less' values win 4/4 folds at c_R=0.10 and 0/4 at 0.02: the modelled value of looking is ~0 (+0.028 R over 571 OOS trades, 60% thin LTR-0 cells, 20 of 1,393 reviews acted). Two things would re-open it. (1) Measure $/R per package (sum of risk_pct x equity over the accounts carrying it, via a diag pull) to fix c_R. (2) Use graded live reviews (comms/live_review/outcomes.jsonl) to price judgement on thin cells. Then re-run the harness with the measured c_R and judgement value as a NEW registered unit."
+}
