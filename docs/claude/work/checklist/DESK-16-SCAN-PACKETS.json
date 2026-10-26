@@ -2,21 +2,32 @@
   "id": "DESK-16-SCAN-PACKETS",
   "title": "Desk scan-packet builder: universe, system_book near-signals, net-of-cost forward-R base rates, historical (masked) mode",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01WjV8syWhW3awUxZ7FTavhZ",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20295
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 ~09:15Z manager] Operator popup: follows DESK-0B in the same serial lane (1-lane capacity posture to Wed 18:00Z).",
+  "note": "[2026-10-26 ~09:15Z manager] Operator popup: follows DESK-0B in the same serial lane (1-lane capacity posture to Wed 18:00Z). [2026-10-26 lane session_01WjV8syWhW3awUxZ7FTavhZ] Built in PR #20295 (stacked on #20292): scripts/ops/desk_scan_packet.py, tests/test_desk_scan_packet.py. Verified on live data (23 symbols = UNION fetch set; XRP package matches /api/bot/positions) and a masked historical build on real candles. Gaps named in every packet: near-signals (row DESK-16B-NEAR-SIGNALS), regime_cell, spread/funding, light tier (no reachable venue listing), ml heads.",
   "priority_rank": 4,
-  "updated_at": "2026-10-26T10:13:12Z",
+  "updated_at": "2026-10-26T10:16:46Z",
   "updated_by": "session_01WjV8syWhW3awUxZ7FTavhZ",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "a builder-made scan packet is consumed",
+    "how_to_check": "a comms/desk/packets/DP-*-scan-*.json written by scripts/ops/desk_scan_packet.py is cited by an entry_generation row in comms/desk/decisions.jsonl (DESK-6) or by a DESK-18 D-S0 run record, and python3 scripts/ci/check_desk_records.py exits 0",
+    "due_by": "2026-11-09T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: scan-packet builder landed (DESK-16) -- universe from the UNION pull lists, system_book from the open-package union (near-signals could_not_look until DESK-16B), per-symbol net-of-cost forward-R base rates point in time, historical masked mode with a separate unmask key",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md change-log row 2026-10-26 DESK-16-SCAN-PACKETS"
+  },
   "_seq": 701
 }
