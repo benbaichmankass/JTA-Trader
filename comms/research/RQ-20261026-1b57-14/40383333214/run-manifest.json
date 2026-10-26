@@ -1,0 +1,52 @@
+{
+  "unit": "RQ-20261026-1b57-14",
+  "run_id": "40383333214",
+  "commit_sha": "f4bf59b06808f9449df33f9e435cb0e962f36e1f",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40383333214",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "trend",
+        "--symbols",
+        "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT",
+        "--timeframe",
+        "1w",
+        "--days",
+        "2600",
+        "--start",
+        "2020-01-01",
+        "--end",
+        "2026-10-17",
+        "--arm",
+        "W10=--donchian=10",
+        "--arm",
+        "W20=--donchian=20",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "10",
+        "--pooled-n-floor",
+        "39",
+        "--breadth-frac",
+        "0.5",
+        "--rule-id",
+        "RULE-RQ20261026-1B57-14-WEEKLY-CRYPTO-TREND",
+        "--data-dir",
+        "comms/research/RQ-20261026-1b57-14/40383333214/data",
+        "--out",
+        "comms/research/RQ-20261026-1b57-14/40383333214"
+      ],
+      "log": "comms/research/RQ-20261026-1b57-14/40383333214/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 534.9
+    }
+  ],
+  "all_ok": true
+}

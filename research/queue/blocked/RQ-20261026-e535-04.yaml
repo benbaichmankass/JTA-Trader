@@ -1,0 +1,112 @@
+id: RQ-20261026-e535-04
+title: 'Desk D-S0 entry generation (novelty = new subset): restricted to proposals that do NOT duplicate a strategy''s open package or near-signal, do Claude''s entries still earn a positive net R per capital-day and beat a random entry with the same bracket, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  Take the filled proposals of RQ-20261026-e535-03's judged file whose scorer-assigned novelty is `new` (every enabled rostered leg on the symbol was looked at for that cutoff and none has an open same-side trade or an entry within one bar of its timeframe)
+  or `new_no_leg` (no enabled rostered leg trades the symbol). On that subset alone, is the mean net R per filled proposal positive with its CI excluding 0, is the net R per capital-day positive, does it beat the random-entry baseline with the same bracket geometry, and does it hold in >= 3 of 4 folds,
+  net of the full cost stack?
+why_this_matters: >-
+  DESK-18-GEN-REPLAY-S0 / design section 8.1: the entry-generation desk must be "not a re-labelling of the strategies". The strategies already trade the legs they trade; a desk whose edge is the strategies' own entries re-found adds nothing the system does not have. The subset
+  with novelty = new must pass on its own. The judge cannot see the strategies' book in a historical packet (it is not reconstructed point in time), so a replayed desk will duplicate strategy entries more often than a live one that sees the book; the subset test is therefore the
+  stricter, not the looser, reading.
+power:
+  expected_n: 320
+  min_detectable_effect: 0.22
+  effect_units: R
+  sd: 1.4
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    sd 1.4 as RQ-20261026-e535-03 (INFERRED from the MEASURED null sd 1.378, local preview of the `baselines` mode 2026-10-26). expected_n 320 = 375 (unit -03's declared n, itself an UNMEASURED proposals-per-packet assumption) x 0.85, the share of (cutoff, symbol, side) cells
+    that the scorer classifies new or new_no_leg if proposals were independent of the strategies' signals: MEASURED 2026-10-26 by classify_novelty over the 1,500 scheduled cutoffs x 6 symbols x 2 sides = 18,000 cells with the enabled rostered legs' committed lists: new 51.4%, new_no_leg (BTC, AVAX) 33.3%,
+    duplicates_system_package 14.7%, duplicates_near_signal 0.6%, unclassifiable 0.0%, so new + new_no_leg = 84.7% (the first scoring run records the desk's own novelty mix). A desk that proposes WITH the strategies will duplicate more, so 0.85 is a ceiling on the subset's share. MDE at n 320 and sd 1.4 = 2.8 x 1.4 / sqrt(320) = 0.219 R, declared 0.22.
+    The floor to issue any verdict is n >= 100 (the MDE there is 0.39 R), below which the unit is INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      As RQ-20261026-e535-03: the n is bought with judging calls, and the proposals-per-packet rate and the novelty mix of the desk's proposals are UNMEASURED until the pilot of row DESK-18B-JUDGE-RUN runs; this block is re-declared from the measured rate and mix then (a power edit; the decision_rule is not touched). The same `accrual_override_reason` applies at disposition: the n was acquired by the judging run, not awaited.
+decision_rule:
+  id: RULE-RQ20261026-E535-04-DESK-GEN-NEWSUBSET
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    The same engine, cost stack, random-entry baseline (200 draws, same symbol, same fold, the proposal's own geometry), weekly-cluster bootstrap (10,000 draws, seed 20261026), folds (four equal calendar folds, a fold counts with n >= 20) and post-cutoff stratum (cutoff >= 2026-06-01) as RQ-20261026-e535-03, computed
+    over the filled proposals whose scorer-assigned novelty is `new` or `new_no_leg`. Novelty is assigned by the scorer, never by the judge: duplicates_system_package if an enabled rostered leg on the symbol had a same-side trade open at the cutoff; duplicates_near_signal if one entered within one bar of its own timeframe after the cutoff;
+    new_no_leg if no enabled rostered leg trades the symbol; `new` only if every enabled rostered leg on the symbol has a committed Stage-0 list whose evidence window covers the cutoff and none matches; otherwise `unclassifiable` (excluded and counted). The stopping rule of unit -03 (judged packets are a schedule prefix, whole batches of 200, stop once 800 valid proposals exist in ALL novelty classes, counted before any replay) is checked here too.
+  rule: >-
+    PASS IF the landed verdict of RQ-20261026-e535-01 is pass AND the stopping rule was respected AND n_filled(new) >= 100 AND the mean net R CI lower bound > 0 AND net R per capital-day > 0 with its CI lower bound > 0 AND the paired difference against the random-entry baseline > 0 with its CI lower bound > 0
+    AND mean net R > 0 in >= 3 of 4 folds AND the post-cutoff stratum's mean net R > 0 (a stratum with n < 20 is reported and the PASS is labelled 'masked-replay only, forward-shadow confirmation required').
+    FAIL IF n_filled(new) >= 100 AND (mean net R <= 0 OR its CI upper bound < 0 OR the paired-difference CI upper bound < 0).
+    INDETERMINATE otherwise; the record states the observed sd, the novelty mix and the n that sd needs for +0.10 R. The registered numbers (100, 3 of 4, 20, 0.85 as a ceiling, the 200 draws) are not changed after any result.
+    D-S0 for entry generation is passed only when RQ-20261026-e535-03 AND this unit both PASS and the forward-shadow set (DESK-6), once n >= 100, has a point estimate > 0. A FAIL here with a PASS on unit -03 is the finding the design asks for ("a re-labelling of the strategies"): it closes this configuration, not the family, and the follow-up is a
+    pre-registered variant that forbids proposals on symbols and sides a strategy already holds.
+  what_it_does_not_do: >-
+    A subset of unit -03's proposals, scored on the same judged file: it spends no extra judging. Stage 0 for entry generation only; it places and changes nothing, and a PASS on one window is a discovery, not a confirmation.
+requires_result:
+  unit: RQ-20261026-e535-01
+  verdict: pass
+blocked_on:
+- kind: work_item
+  ref: DESK-18B-JUDGE-RUN
+  what: >-
+    Same blocker as RQ-20261026-e535-03: the judged file (mask-key.json and proposals.jsonl under comms/research/desk_gen_replay/judged-1/) does not exist. This unit scores the SAME file with --subset new and costs no extra judging.
+  clears_when: >-
+    comms/research/desk_gen_replay/judged-1/{mask-key.json,proposals.jsonl} are on main, the pilot has re-declared this power block from the measured proposal rate and novelty mix, and RQ-20261026-e535-01 has landed with verdict pass. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+masked_replay:
+  population: >-
+    As RQ-20261026-e535-03. The subset is defined by the scorer from the enabled rostered legs' committed Stage-0 lists (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, MEASURED 2026-10-26 by rostered_legs(); re-parse before running).
+  construction: As RQ-20261026-e535-03 (same judged file, re-derived packets verified by sha).
+  unmask_key: comms/research/desk_gen_replay/judged-1/mask-key.json (see RQ-20261026-e535-03 for the public-repo caveat).
+  leak_controls: As RQ-20261026-e535-03.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: the other half of the entry-generation D-S0 bar; its value is that a pass on the subset is evidence the desk adds something the strategies do not already do.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: 'estimate: the same scoring step as unit -03, CPU only.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_gen_replay_driver.py
+  - score
+  - --out
+  - '{out_dir}'
+  - --fetch
+  - --mask-key
+  - comms/research/desk_gen_replay/judged-1/mask-key.json
+  - --proposals
+  - comms/research/desk_gen_replay/judged-1/proposals.jsonl
+  - --subset
+  - new
+  - --selfcheck-unit
+  - RQ-20261026-e535-01
+  - --model-cutoff
+  - '2026-06-01'
+  inputs:
+    research_unit: RQ-20261026-e535-04
+  timeout_minutes: 60
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-e535-01
+- RQ-20261026-e535-02
+- RQ-20261026-e535-03
+- scripts/research/desk_gen_replay_driver.py
+- scripts/ops/desk_scan_packet.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null

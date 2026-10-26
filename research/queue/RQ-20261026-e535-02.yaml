@@ -1,0 +1,79 @@
+id: RQ-20261026-e535-02
+title: 'Desk D-S0 entry generation, baselines and power: what does a random entry with a given bracket earn net of the full cost stack, what do the rostered legs'' own entries earn in the same window, and what n does the MEASURED sd imply for +0.10 R and +0.20 R?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: deterministic
+question: >-
+  On the six crypto USDT perps and the registered window (2025-11-01 .. 2026-09-15), net of the full cost stack (venue fee, resolve_cost_policy slippage and funding): (1) the RANDOM-ENTRY null -- for each of six reference
+  brackets (SL in ATR, TP in R, time stop in 1h bars, market entry) the mean net R, sd and mean cost of an entry at a uniformly random hour, both sides, on each symbol; (2) the STRATEGY-OWN comparator -- net R per trade and per
+  capital-day of the enabled rostered legs' committed Stage-0 trades that entered in the window; (3) the n that the measured pooled sd implies for detecting +0.10 R and +0.20 R, which sets the honest power of units -03 and -04.
+why_this_matters: >-
+  The design's n (about 780 proposals for +0.10 R, 200 for +0.20 R, design section 8.1) assumed a per-trade net-R sd of 1.0. That sd was never measured. This unit measures the sd of the null on the exact engine units -03/-04 use,
+  so the power block of the arm-1 unit rests on a measurement and not a wish, and the random-entry baseline of the arm-1 rule is shown to cost what the cost stack says it costs (a random entry is not free: it pays fee, slippage
+  and funding). It also pins the strategy-own comparator the desk is read against. No Claude token is spent.
+why_not_inferential: >-
+  A calibration over fixed, seeded populations (36,000 random entries; the committed trade lists). It estimates no effect of the desk and tests no hypothesis; its output is a set of descriptive statistics with their own
+  intervals, and its rule is a completeness check on the measurement (every reference bracket measured at or above a floor n, the strategy lists read, no trade priced at zero cost), not an effect threshold.
+requires_result:
+  unit: RQ-20261026-e535-01
+  verdict: pass
+decision_rule:
+  id: RULE-RQ20261026-E535-02-GEN-REPLAY-BASELINES
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    Seed 20261026. For each of six market-entry reference brackets (SL 1.0 ATR / TP 1.5 R / 12 bars; 1.5 / 2.0 / 24; 2.0 / 2.0 / 48; 1.0 / 3.0 / 48; 1.5 / 1.0 / 12; 2.0 / 3.0 / 96), 500 uniformly random eligible hourly cutoffs per
+    symbol x side (6 symbols x 2 sides), each replayed by the driver's engine (next-bar-open fill, SL before TP inside a bar, gap fills at the open, time stop at the horizon bar's close, a fill with the stop within 0.1 ATR or the target
+    already passed refused and counted): n filled, mean net R, sd, mean total cost in R, exit mix, weekly-cluster 95% CI of the mean. Pooled over all six: sd, and n_required = ceil((2.8 * sd / effect)^2) for effect 0.10 and 0.20 R (iid arithmetic;
+    the cluster CI the verdicts use is wider). Strategy-own: the enabled rostered legs on these symbols (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h,
+    trend_donchian_xrp_adx25, xrp_pullback_2h -- re-parsed at run time) committed trades with entry in the window: n, mean net_r, net R per capital-day (sum net_r / sum days held), weekly-cluster CI; rostered legs with no readable list are named.
+  rule: >-
+    PASS (calibrated) IF every reference bracket has >= 2,000 filled random entries AND at least one rostered leg list was read AND no filled trade was priced at zero cost (the engine raises on one).
+    INDETERMINATE otherwise (candles missing for a symbol, or a bracket below the floor), naming which. There is no FAIL: the measurement either completes or it does not.
+    The FOLLOW-UP that a PASS triggers is mechanical and registered here: the record states n_required at the pooled sd. If n_required(+0.10 R) exceeds 3,000 (the schedule's maximum, 1,500 packets x 2 proposals), +0.10 R is NOT reachable by this replay
+    and the arm-1 and subset units' labels must say so; if it is at or below 3,000 the arm-1 unit's expected_n is re-declared from the proposal rate its pilot measures. Neither the 2,000, the 3,000 nor the brackets are changed after any result.
+  what_it_does_not_do: >-
+    Not a test of the desk, of any leg, or of the random-entry baseline's profitability. The strategy-own figure is a comparator over committed Stage-0 trades (the legs' own trails and exits), not a live result and not evidence a leg should be promoted or cut.
+masked_replay:
+  population: >-
+    As RQ-20261026-e535-01 (six crypto USDT perps; enabled rostered legs re-parsed). Binance Vision spot klines; the window is fixed by date, so a re-run on later data reproduces the same cutoffs and bars.
+  construction: >-
+    No packets are built here. The random entries use the same engine, cost function and ATR as units -03/-04, so the null they are read against is the null measured here.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: it decides whether the +0.10 R bar of the entry-generation desk is reachable at all, before any judging spend.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 8
+  basis: 'MEASURED 2026-10-26 in a local run of the same command: ~4 s of compute after the candles are read; the Binance Vision fetch of six symbols adds ~3 min.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_gen_replay_driver.py
+  - baselines
+  - --out
+  - '{out_dir}'
+  - --fetch
+  inputs:
+    research_unit: RQ-20261026-e535-02
+  timeout_minutes: 30
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-e535-01
+- RQ-20261026-e535-03
+- RQ-20261026-e535-04
+- scripts/research/desk_gen_replay_driver.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null
