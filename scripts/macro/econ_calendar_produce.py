@@ -33,9 +33,11 @@ byte; a new capture adds its rows. ``surprise`` keys on the pre-release consensu
 (never revised) — see ``econ_calendar_data``.
 
 **config/economic_calendar.yaml is a LIVE-PATH config** (read by the news-influence
-layer, ``src/news/news_events.py``). Its population is **opt-in** (``--emit-config``)
-and NOT done by the scheduled workflow — a cadence must not silently mutate a
-live-path config. This session emits it once for operator review (Tier-3 gate).
+layer, ``src/news/news_events.py``). Since 2026-10-26 the scheduled workflow passes
+``--emit-config`` (operator: *"Those should be routinely maintained and updated data
+feeds, not one off uploads"* — reversing the earlier operator-gated rule). Safeguards:
+only the ``events:`` list is rewritten; a run with no forward events keeps the last good
+set instead of blanking it; unchanged output is byte-identical (idempotent, no PR).
 
 No order path, no DB write, no live-VM touch.
 """
@@ -212,20 +214,40 @@ def build_news_config_events(
     return out
 
 
-def _emit_config_yaml(events: list[dict], *, out_path: Path, base_path: Path) -> int:
+_GENERATED_MARK = "# Auto-populated from the Bigdata.com economic-calendar producer"
+
+
+def _existing_future_events(base: str, as_of: str) -> list[str]:
+    """Event lines already in the config dated on/after ``as_of`` (the last-good set)."""
+    return [ln for ln in base.splitlines()
+            if re.match(r"^\s*-\s*\{class:", ln) and (re.search(r'time:\s*"(\d{4}-\d{2}-\d{2})', ln) or [None, ""])[1] >= as_of[:10]]
+
+
+def _emit_config_yaml(events: list[dict], *, out_path: Path, base_path: Path, as_of: str = "") -> int:
     """Rewrite ``config/economic_calendar.yaml`` preserving everything above the
     ``events:`` key (the header docs + ``defaults`` + ``symbol_event_classes``)
-    and replacing only the ``events:`` list. Returns the event count written."""
+    and replacing only the ``events:`` list. Returns the event count written.
+
+    A run that produces NO forward events never blanks the file: when the config
+    still carries future events they are kept (the last good set), and a run that
+    would change nothing rewrites byte-identical content (idempotent → no PR)."""
     base = base_path.read_text(encoding="utf-8") if base_path.exists() else ""
-    # Keep every line up to (but excluding) the top-level `events:` declaration.
+    if not events and as_of and _existing_future_events(base, as_of):
+        return len(_existing_future_events(base, as_of))
+    # Keep every line up to (but excluding) the top-level `events:` declaration,
+    # minus any generated-block comment lines immediately above it (they are re-emitted).
     head_lines: list[str] = []
     for ln in base.splitlines():
-        if re.match(r"^events:\s*(\[\s*\]|)\s*$", ln) or re.match(r"^events:\s*$", ln):
+        if re.match(r"^events:\s*(\[\s*\]|)\s*$", ln):
             break
         head_lines.append(ln)
+    while head_lines and (head_lines[-1].strip() == "" or head_lines[-1].startswith(
+            (_GENERATED_MARK, "# (scripts/macro/econ_calendar_produce.py --emit-config)",
+             "# high/medium-impact events mapped"))):
+        head_lines.pop()
     head = "\n".join(head_lines).rstrip() + "\n\n"
     if events:
-        lines = ["# Auto-populated from the Bigdata.com economic-calendar producer",
+        lines = [_GENERATED_MARK,
                  "# (scripts/macro/econ_calendar_produce.py --emit-config). Forward",
                  "# high/medium-impact events mapped to the news-layer classes above.",
                  "events:"]
@@ -282,8 +304,9 @@ def produce(
                  "countries": countries, "count": len(upcoming), "events": upcoming},
                 indent=2, default=str), encoding="utf-8")
         if emit_config is not None:
-            ev = build_news_config_events(upcoming, as_of=as_of or (obs[-1] if obs else "1970-01-01"))
-            config_events = _emit_config_yaml(ev, out_path=Path(emit_config), base_path=DEFAULT_CONFIG)
+            ref = as_of or _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+            ev = build_news_config_events(upcoming, as_of=ref)
+            config_events = _emit_config_yaml(ev, out_path=Path(emit_config), base_path=DEFAULT_CONFIG, as_of=ref)
 
     return {
         "captures": len([p for p in captures_dir.glob("*")
@@ -309,8 +332,8 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--snapshots", default=str(DEFAULT_SNAPSHOTS))
     ap.add_argument("--upcoming", default=str(DEFAULT_UPCOMING))
     ap.add_argument("--emit-config", default=None,
-                    help="ALSO rewrite this economic_calendar.yaml (GATED live-path; omit in scheduled runs)")
-    ap.add_argument("--as-of", default=None, help="reference date for the config forward window (default: newest capture)")
+                    help="ALSO rewrite this economic_calendar.yaml (live-path; the scheduled workflow passes it since 2026-10-26)")
+    ap.add_argument("--as-of", default=None, help="reference date for the config forward window (default: today, UTC)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--json", default=None)
     args = ap.parse_args(argv)
