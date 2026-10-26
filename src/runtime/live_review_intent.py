@@ -31,6 +31,15 @@ from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 ACTIONS = ("tighten_sl", "flag", "no_action")
+#: LTR-ALL-ACTIONS (operator 2026-10-26, mandate ``MD-LIVE-TRADE-ACTIONS``, verbatim "we also need to
+#: expand the desks mandate so include all trade actions, as long as they have reasoning and confidence
+#: attached"): the trade actions beyond a tighten. Each is decided per account by :func:`decide_action`.
+TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
+#: The trade actions that ADD risk: they pass the same check a fresh entry would.
+ADDS_RISK = ("widen_sl", "add_entry")
+TRADE_MANDATE_ID = "MD-LIVE-TRADE-ACTIONS"
+#: A TP this many R from entry is the doctrine's sentinel, not a real take-profit (TP doctrine).
+TP_SENTINEL_R = 50.0
 #: The verdict set (registered with collapsed-state-guard). ``could_not_look``
 #: is NEITHER approve nor refuse: a venue stop, mark, ATR, leg stop or position
 #: read failed, so nothing is applied, the next cycle retries, and ONE flag is
@@ -68,6 +77,12 @@ R_SHADOW = "strategy_execution_shadow"
 R_NO_PATH = "no_amend_path"
 R_APPLY_OFF = "apply_mode_off"
 R_MANDATE = "mandate_precondition"
+R_NO_ACTION_PATH = "no_action_path"          # + ":<action>" -- the account has no executor for it
+R_NOT_TRADE_ACTION = "intent_not_a_trade_action"
+R_TP_DOCTRINE = "tp_doctrine"                # + ":<why>" -- a leg would be left without a REAL TP
+R_NOT_WIDER = "widen_sl_not_wider"
+R_FRESH_ENTRY = "fresh_entry_check"          # + ":<the account's own reason>"
+R_SIZE_CAP = "exceeds_fresh_entry_size"
 
 #: What a tighten rests on (LTR-JUDGEMENT-APPLY, operator 2026-10-26, popup
 #: verbatim "Claude's judgement applies (Recommended)": "Drop the n>=20 clause.
@@ -106,6 +121,10 @@ class LiveReviewIntent:
     reason: Optional[str] = None              # judgement basis: why, in one line
     mechanics_verdict: Optional[str] = None   # the review row's mechanics.verdict
     worst_case_delta_r: Optional[float] = None  # table basis: tighten worst - hold worst
+    # -- LTR-ALL-ACTIONS: the trade action's own target (package-level; never an account's size) --
+    new_tp: Optional[float] = None            # move_tp: the new take-profit price
+    size_fraction: Optional[float] = None     # partial_close: fraction to close; add_entry: fraction to add
+    size_multiplier: Optional[float] = None   # change_size: new size / open size
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -123,6 +142,16 @@ class AmendAccountView:
     venue_sl: Optional[float] = None      # the resting stop at the venue, when read
     last_amend_bar: Optional[str] = None  # bar_ts of this account's last review amend on the package
     extra: Dict[str, Any] = field(default_factory=dict)
+    # -- LTR-ALL-ACTIONS: account-owned facts for decide_action. None = could not look, never 0. --
+    entry: Optional[float] = None         # the leg's entry price
+    leg_tp: Optional[float] = None        # the leg's current take-profit
+    position_size: Optional[float] = None  # the leg's open size
+    #: The account's OWN fresh-entry check at the stop the action would leave in force (RiskManager
+    #: .fresh_entry_check): True = it would open, False = it refuses (``fresh_reason``), None = we
+    #: could not look. ``max_qty`` = the size a fresh entry there would be given (None = could not look).
+    fresh_ok: Optional[bool] = None
+    fresh_reason: Optional[str] = None
+    max_qty: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -131,6 +160,7 @@ class AmendVerdict:
     verdict: str                 # approve | clip | refuse | could_not_look
     level: Optional[float]       # the level this account may apply (None unless approve/clip)
     reason: str
+    qty: Optional[float] = None  # LTR-ALL-ACTIONS: size to close (close/reduce) or to add (add) on THIS leg
 
     @property
     def ok(self) -> bool:
@@ -231,6 +261,156 @@ def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
         return AmendVerdict(aid, V_CLIP, floor,
                             f"clipped_to_noise_floor:{buf:g}xATR")
     return refuse(R_NOISE_FLOOR)
+
+
+def size_delta(intent: LiveReviewIntent) -> Optional[float]:
+    """The package-level size change as a fraction of the open size: < 0 reduces, > 0 adds. Pure.
+    None = the intent carries no valid size target."""
+    a = intent.action
+    if a == "close":
+        return -1.0
+    if a == "partial_close":
+        f = _f(intent.size_fraction)
+        return -f if f is not None and f < 1.0 else None
+    if a == "add_entry":
+        f = _f(intent.size_fraction)
+        return f
+    if a == "change_size":
+        m = _f(intent.size_multiplier)
+        return (m - 1.0) if m is not None and abs(m - 1.0) > 1e-12 else None
+    return 0.0
+
+
+def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: bool) -> AmendVerdict:
+    """The per-account decision for a TRADE ACTION (LTR-ALL-ACTIONS). Pure.
+
+    Common: the strategy's ``execution: shadow`` and the account mode refuse; one action per package per
+    closed bar. Per action:
+
+    * ``close`` / a reduce (``partial_close``, ``change_size`` < 1): reduces risk, so the daily-DD
+      switch never refuses it (``evaluate(..., opening=False)`` semantics). ``qty`` = the size to close;
+      a reduce needs the leg's open size (else could_not_look).
+    * ``move_tp``: a REAL take-profit stays (TP doctrine): beyond the mark, on the profit side of the
+      entry, and not the sentinel (``TP_SENTINEL_R`` R from entry). Either direction.
+    * ``widen_sl`` / an add (``add_entry``, ``change_size`` > 1): ADDS risk, so it passes the SAME check a
+      fresh entry would -- the account's own ``fresh_entry_check`` (account live, daily-DD switch, gross
+      exposure cap) at the stop that will be in force, and the total size may not exceed the size that
+      fresh entry would be given (``max_qty``). The leg must also already carry a real TP.
+
+    Never writes anything; a refusal is for this action on this account only."""
+    aid = view.account_id
+
+    def refuse(reason: str) -> AmendVerdict:
+        return AmendVerdict(aid, V_REFUSE, None, reason)
+
+    def cnl(*names: str) -> AmendVerdict:
+        return AmendVerdict(aid, V_COULD_NOT_LOOK, None, f"{R_COULD_NOT_LOOK}:{','.join(names)}")
+
+    a = intent.action
+    if a not in TRADE_ACTIONS:
+        return refuse(R_NOT_TRADE_ACTION)
+    direction = str(intent.direction or "").lower()
+    if direction not in ("long", "short"):
+        return refuse(R_BAD_INPUT)
+    if str(view.strategy_execution or "live").lower() == "shadow":
+        return refuse(R_SHADOW)
+    if dry_run:
+        return refuse(R_DRY)
+    if intent.bar_ts and view.last_amend_bar and str(view.last_amend_bar) == str(intent.bar_ts):
+        return refuse(R_RATE)
+    long_ = direction == "long"
+    mark, entry, leg_sl, leg_tp = _f(intent.mark), _f(view.entry), _f(view.leg_sl), _f(view.leg_tp)
+    pos = _f(view.position_size)
+
+    if a == "move_tp":
+        tp = _f(intent.new_tp)
+        if tp is None:
+            return refuse(R_BAD_INPUT)
+        missing = [n for n, v in (("mark", mark), ("entry", entry), ("leg_sl", leg_sl)) if v is None]
+        if missing:
+            return cnl(*missing)
+        if (tp <= mark) if long_ else (tp >= mark):
+            return refuse(f"{R_TP_DOCTRINE}:tp_through_mark")
+        if (tp <= entry) if long_ else (tp >= entry):
+            return refuse(f"{R_TP_DOCTRINE}:tp_not_beyond_entry")
+        risk = abs(entry - leg_sl)
+        if risk > 0 and abs(tp - entry) / risk >= TP_SENTINEL_R:
+            return refuse(f"{R_TP_DOCTRINE}:sentinel")
+        if leg_tp is not None and abs(tp - leg_tp) <= max(abs(tp) * 1e-9, 1e-12):
+            return refuse(R_ALREADY)
+        return AmendVerdict(aid, V_APPROVE, tp, "within_bounds")
+
+    delta = size_delta(intent)
+    if a == "widen_sl":
+        new_sl = _f(intent.new_sl)
+        if new_sl is None:
+            return refuse(R_BAD_INPUT)
+        if mark is None or leg_sl is None:
+            return cnl(*[n for n, v in (("mark", mark), ("leg_sl", leg_sl)) if v is None])
+        if (new_sl >= mark) if long_ else (new_sl <= mark):
+            return refuse(R_WRONG_SIDE)
+        if not is_looser(direction, new_sl, leg_sl):
+            return refuse(R_NOT_WIDER)
+    elif delta is None:
+        return refuse(R_BAD_INPUT)
+    elif delta < 0:                                   # close / reduce: never refused for risk
+        if a == "close":
+            return AmendVerdict(aid, V_APPROVE, None, "within_bounds", qty=pos)
+        if pos is None:
+            return cnl("position_size")
+        return AmendVerdict(aid, V_APPROVE, None, "within_bounds", qty=pos * -delta)
+
+    # -- adds risk: widen_sl, add_entry, change_size > 1 -----------------------------------------
+    if leg_tp is None:
+        return refuse(f"{R_TP_DOCTRINE}:leg_has_no_real_tp")
+    if view.fresh_ok is None:
+        return cnl(f"fresh_entry_check:{view.fresh_reason or 'unread'}")
+    if view.fresh_ok is False:
+        return refuse(f"{R_FRESH_ENTRY}:{view.fresh_reason or 'refused'}")
+    cap = _f(view.max_qty)
+    if pos is None or cap is None:
+        return cnl(*[n for n, v in (("position_size", pos), ("max_qty", cap)) if v is None])
+    add = 0.0 if a == "widen_sl" else pos * delta
+    if pos + add > cap * (1 + 1e-9):
+        return refuse(f"{R_SIZE_CAP}:{pos + add:g}>{cap:g}")
+    if a == "widen_sl":
+        return AmendVerdict(aid, V_APPROVE, _f(intent.new_sl), "within_bounds")
+    return AmendVerdict(aid, V_APPROVE, None, "within_bounds", qty=add)
+
+
+def trade_action_precondition(intent: LiveReviewIntent) -> Optional[str]:
+    """``MD-LIVE-TRADE-ACTIONS``' package-level clauses. Pure. None when they hold.
+
+    mechanics ``match``; a stated reason; ``basis: judgement`` with a confidence in [0, 1] or ``basis:
+    table`` with an EV (``expected_cost_r``); and the action's own target."""
+    def bad(clause: str) -> str:
+        return f"{R_MANDATE}:{clause}"
+
+    a = intent.action
+    if a not in TRADE_ACTIONS:
+        return bad("action_not_a_trade_action")
+    if str(intent.mechanics_verdict or "").lower() != "match":
+        return bad(f"mechanics_{intent.mechanics_verdict or 'unstated'}")
+    if not str(intent.reason or "").strip():
+        return bad("reason_missing")
+    basis = str(intent.basis or "").lower()
+    if basis == BASIS_JUDGEMENT:
+        c = intent.confidence
+        if not isinstance(c, (int, float)) or isinstance(c, bool) or not math.isfinite(c) or not 0.0 <= c <= 1.0:
+            return bad("judgement_confidence_missing")
+    elif basis == BASIS_TABLE:
+        ev = intent.expected_cost_r
+        if not isinstance(ev, (int, float)) or isinstance(ev, bool) or not math.isfinite(ev):
+            return bad("table_ev_missing")
+    else:
+        return bad("basis_unstated")
+    if a == "move_tp" and _f(intent.new_tp) is None:
+        return bad("target_missing:new_tp")
+    if a == "widen_sl" and _f(intent.new_sl) is None:
+        return bad("target_missing:new_sl")
+    if a in ("partial_close", "change_size", "add_entry") and size_delta(intent) is None:
+        return bad("target_missing:size")
+    return None
 
 
 def mandate_precondition(intent: LiveReviewIntent) -> Optional[str]:
@@ -338,6 +518,7 @@ def account_read(verdict: AmendVerdict, *, applied: Optional[bool] = None) -> st
         return "would_apply"
     if verdict.verdict == V_COULD_NOT_LOOK:
         return "unknown"
-    if verdict.reason in (R_SHADOW, R_ALREADY, R_NOT_TIGHTEN, R_NO_PATH, R_APPLY_OFF):
+    if verdict.reason in (R_SHADOW, R_ALREADY, R_NOT_TIGHTEN, R_NO_PATH, R_APPLY_OFF, R_NOT_TRADE_ACTION) \
+            or str(verdict.reason).startswith(R_NO_ACTION_PATH):
         return "no_action"
     return "refused_by_account_risk"

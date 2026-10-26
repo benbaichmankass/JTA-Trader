@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 by path (live order path: scripts/ops/live_review_apply.py executors, src/units/accounts/risk.py). Operator-granted change (MD-LIVE-TRADE-ACTIONS, PR #20412); the MANAGER merges and deploys, after or with #20412 (this branch is stacked on it).",
+  "why": "LTR-ALL-ACTIONS part 2: RiskManager.approve_action + fresh_entry_check (an added risk passes the same check a fresh entry would), pure decide_action per action, per-account executors with venue read-back (Bybit close/reduce/move_tp/widen_sl, Alpaca sole-leg close, phone move_tp), honest no_action_path refusals elsewhere (prop VM, IB, add_size everywhere), dispatcher support for trade-action rows, and evidence materialized at a pinned rows-branch ref."
+}
