@@ -257,7 +257,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "alpaca_options_paper/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_options_paper/slv_trend_1h": ER,
     "alpaca_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
-    "alpaca_paper/gld_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/ief_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/iwm_trend_long_1d": R,
@@ -282,6 +281,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
     "bybit_1/trend_donchian_xrp_adx25": R,
     "bybit_1/xrp_pullback_2h": R,
+    "ib_paper/gld_pullback_1d": R,  # moved from alpaca_paper 2026-10-25 (GLD-SOAK-REPLACE); same debt, not new: tp_r 3.5 declared (OPERATOR-DECISIONS-1022), tp_revision still undeclared
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,
     "ib_paper/mes_trend_long_1d": ER,
