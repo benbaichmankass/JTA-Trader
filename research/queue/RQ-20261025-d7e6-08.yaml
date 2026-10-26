@@ -1,6 +1,6 @@
 id: RQ-20261025-d7e6-08
 title: 'Squeeze-1h EXIT arms (break-even floor, stale exit) re-asked on 16 cells DISJOINT from 4b82-03, sized from the MEASURED sd: do BE1 or ST12 beat B by >= 0.05 R/trade pooled?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -119,3 +119,16 @@ related:
 - RQ-20261011-8753-07
 - RQ-20261018-ef5d-08
 last_dispatched_at: '2026-10-26T05:57:30+00:00'
+grading:
+  attested: RULE-RQ20261025-D7E6-08-SQUEEZE-1H-EXITS-TRANSFER
+  auto: true
+  decision_rule_id: RULE-RQ20261025-D7E6-08-SQUEEZE-1H-EXITS-TRANSFER
+  evidence:
+  - research/results/RQ-20261025-d7e6-08/40277110329.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
