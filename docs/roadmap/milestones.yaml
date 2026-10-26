@@ -447,14 +447,24 @@ milestones:
       merged): a thin LTR-0 cell is decided as basis judgement with a confidence + reason (apply-path
       precondition, schema, validator, skill); the MD-LIVE-TIGHTEN-SL amendment awaits the manager's commit; 0 of
       15 review rows to 05:14Z were tighten_sl (re-run from comms/live_review/reviews.jsonl). Nothing dispatches
-      live_review_apply.py --apply yet (only the dry-run system-action).
+      live_review_apply.py --apply yet (only the dry-run system-action). Design v1 (2026-10-26, #20258): the desk
+      DRIVES the trading (finds, enters, manages, exits trades the system is not taking); every decision is a
+      teacher label. DESK-0B-SCHEMA-V2 landed (#20292, landed_unproven): desk schema v2 -- scan packet kind,
+      entry_generation role (no_trade / propose_entry / watch_note) replacing the v0 veto enum, priced
+      alternatives, stable-id chain via comms/desk/outcomes.jsonl + consumed.jsonl, derived never-trained-on
+      marker, TP-doctrine + no-size refusals in desk-records-guard. DESK-16-SCAN-PACKETS landed (#20295,
+      landed_unproven): scan-packet builder scripts/ops/desk_scan_packet.py -- universe from the UNION pull
+      lists, open-package system book (near-signals could_not_look until DESK-16B-NEAR-SIGNALS), point-in-time
+      net-of-cost forward-R base rates, masked historical mode with a separate unmask key. Nothing writes desk
+      rows yet.
     next: >-
-      Critical path (design § 10): DESK-12 sandbox touch splits -> DESK-5 desk skill -> DESK-6 shadow pilot (first
-      measured latency/$/rotation numbers) -> DESK-14 live web/news context + DESK-9 grading + DESK-11 ML feed
-      (models learn how much weight to give Claude); in parallel DESK-7 blind replay (D-S0) -> DESK-8 short-hold
-      and DESK-13 mandates; DESK-2 -> DESK-3 -> DESK-4 Tier-3 apply path for intents beyond tighten. Entry review
-      and market watch are desk roles (phase 2). Done-condition: D-S0 PASS on at least one role and a desk intent
-      applied on real money under a granted mandate with per-account verdicts and readback recorded.
+      Critical path (design v1 § 10.1): DESK-5 desk skill (entry generation first) -> DESK-6 shadow pilot (shadow
+      proposals on builder scan packets, every one replayed for its label; first measured latency/$/proposals-per-day)
+      and DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17
+      claude_desk leg (shadow) -> 1-2-trade paper soak -> MD-PROMOTE-S1-S2; DESK-11 -> CJ-2 -> CJ-4 -> DESK-19
+      students. DESK-16B near-signal producer fills the scan's system_book gap. Done-condition: D-S0 PASS on at
+      least one role and a desk intent applied on real money under a granted mandate with per-account verdicts
+      and readback recorded.
     owner: manager
     reviewed: 2026-10-26
   # ── G5 ──────────────────────────────────────────────────────────────────
