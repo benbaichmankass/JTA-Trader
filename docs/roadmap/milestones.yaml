@@ -437,24 +437,23 @@ milestones:
     name: Claude trading desk -- desk-manager session over specialist lanes, package intents through per-account risk
     status: active
     where: >-
-      Opened 2026-10-25 (operator chat ~16:12-16:30Z; row DESK-DESIGN, priority over other builds from ~17:35Z). Design
-      docs/plans/claude-trading-desk-DESIGN.md (design only, awaiting operator review): one standing Sonnet desk session
-      (roles market watch / entry review / in-trade = LTR / exit), Opus escalations + a blind teacher sample (dial rho),
-      one packet schema shared by Claude and ML (= the claude_judgments dataset schema), and the path package intent ->
-      each account's RiskManager.approve_amend -> each account's executor (re-scopes LTR-6/8/9). Sits inside the
-      promotion ladder: D-S0 blind replay with paired counterfactuals, D-S1 mechanical shadow + sandbox, D-S2
-      mandate-bounded derisk-only live. Short-hold (10 min - 1 h) lane NOT piloted: no <=1h leg clears Stage 0 today
-      (comms/strategy_evidence, 5m ict_scalp 0/4 folds positive). Complements L-ATM (exits) on the live-management side.
+      Opened 2026-10-25 (operator chat ~16:12-16:30Z; row DESK-DESIGN). Design docs/plans/claude-trading-desk-DESIGN.md;
+      operator 2026-10-26 ~06:40Z: live trade review "is only the first step of the trading desk project" -- keep pushing
+      it forward and log it correctly. MEASURED 2026-10-26: LTR-6R per-account apply path merged and LIVE
+      (MD-LIVE-TIGHTEN-SL granted, apply_mode=apply on every account, #20199, VM dry run #20241 06:11Z); DESK-0-SCHEMA
+      landed (#20163); rows DESK-0..DESK-14 filed. In flight: LTR-JUDGEMENT-APPLY (operator 06:30Z: drop the n>=20
+      outcome-table floor, Claude judgement applies when the table is thin, every call graded) and
+      AMEND-PARITY-ALPACA-TRAIL-READBACK. Short-hold (10 min - 1 h) not piloted: no <=1h leg clears Stage 0
+      (DESK-8 waits on DESK-7).
     next: >-
-      MONDAY 2026-10-26 (operator deadline): live-capable in-trade desk in apply_mode recommend; LTR-6R per-account
-      apply path; MD-LIVE-TIGHTEN-SL written; bybit_1 sandbox (DECIDED) first, then bybit_2+portfolio after 1-2 clean
-      applies. Operator decided feeds (repo + logged exception) and sandbox (shadow bybit_1) 2026-10-25 ~17:58Z; two
-      preference questions remain. The manager files DESK-0..DESK-13 (design section 10). First measured numbers come from DESK-6 (15 min shadow pilot: latency per stage, $ per wake,
-      context growth, rotation). Done-condition: D-S0 PASS on at least one role and a desk intent applied on real money
+      Critical path (design § 10): DESK-12 sandbox touch splits -> DESK-5 desk skill -> DESK-6 shadow pilot (first
+      measured latency/$/rotation numbers) -> DESK-14 live web/news context + DESK-9 grading + DESK-11 ML feed (models
+      learn how much weight to give Claude); in parallel DESK-7 blind replay (D-S0) -> DESK-8 short-hold and DESK-13
+      mandates; DESK-2 -> DESK-3 -> DESK-4 Tier-3 apply path for intents beyond tighten. Entry review and market watch
+      are desk roles (phase 2). Done-condition: D-S0 PASS on at least one role and a desk intent applied on real money
       under a granted mandate with per-account verdicts and readback recorded.
-    no_rows_reason: design only -- build rows DESK-0..DESK-13 are listed in the design doc and filed by the manager after operator review
     owner: manager
-    reviewed: 2026-10-25
+    reviewed: 2026-10-26
   # ── G5 ──────────────────────────────────────────────────────────────────
   - id: L-PROGRAMMES
     goal: G5
