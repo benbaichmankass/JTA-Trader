@@ -132,7 +132,11 @@ jobs:
           FEEDS="--news-log-json /tmp/news_tail.json --open-packages-json /tmp/open_pkgs.json"
           python3 scripts/macro/check_producer_liveness.py $FEEDS | tee /tmp/liveness.txt
           rc=$?
-          python3 scripts/macro/check_producer_liveness.py $FEEDS --json > /tmp/liveness.json || true
+          python3 scripts/macro/check_producer_liveness.py $FEEDS --json > /tmp/liveness.json
+          jrc=$?
+          # rc 0 = ok, 1 = stale/vacuous verdict (the JSON is valid); anything else is a CRASH, so the
+          # JSON is not trustworthy and the run is marked stale rather than passing on an empty file.
+          if [ "${jrc}" -gt 1 ]; then echo "::error::liveness checker crashed (rc=${jrc})"; rc=${jrc}; echo '{}' > /tmp/liveness.json; fi
           echo "rc=${rc}" >> "$GITHUB_OUTPUT"
           # Surface a one-line summary for the alert body.
           summary=$(python3 - <<'PY'
