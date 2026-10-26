@@ -101,6 +101,15 @@ comment as an incident to act on: **fix it, dispatch a lane for it, or tell the 
 unanswered. The incident ledger is `comms/research/ops/watchdog_incidents.jsonl`. The same alert also reaches the
 operator on the system Telegram channel. If the PR is ever replaced, change `pr_number` in the config and nothing else.
 
+**Live-review wake (LTR-1B, operator 2026-10-26).** `.github/workflows/live-review-wake.yml` (every ~5 min,
+token-free, `scripts/ops/live_review_wake.py`) reads `/api/diag/live_review_due` and posts ONE comment on the same
+ops-flags PR (hidden marker `ltr-wake`) when an event becomes newly due on a **real-money or prop** package (paper
+never wakes; `daily_floor` never wakes). On such a comment: **dispatch ONE Sonnet LIVE-REVIEW lane per package named
+in the marker, immediately** (`.claude/skills/live-trade-review/SKILL.md`; the marker carries package id, leg,
+accounts, event, level, due_at). The hourly live-review routine stays the backstop. A `could_not_look` wake comment is
+an incident like a watchdog one: fix, dispatch, or tell the operator. Record the latency event (due_at) -> comment ->
+review row on `LTR-1B-MARKET-TRIGGERS` the first time it happens.
+
 ## Start of session
 
 0. **Run § "The operating loop"** after the steps below, and at every check-in after that.

@@ -1,0 +1,53 @@
+name: live-review-wake
+
+# LTR-1B part B (operator 2026-10-26): when a live-trade-review trigger trips on a
+# real-money or prop package, the system itself gets a message to the manager.
+# Every ~5 min: read /api/diag/live_review_due (diag_fetch.sh, the DIAG_READ_TOKEN
+# path mirror-orphan-watch.yml uses), and for each NEWLY due event post ONE comment
+# on the standing ops-flags PR (#17895). The manager subscribes to that PR, so the
+# comment wakes it and it dispatches the LIVE-REVIEW lane. The hourly routine stays
+# the backstop. Dedupe + cooldown state = this script's hidden `ltr-wake` markers
+# on that PR. Logic and rules: scripts/ops/live_review_wake.py.
+#
+# Token-free (no model is called). No new secret. NO HALTING: a failed read posts
+# one could-not-look flag per 6 h and the poller keeps running.
+# Tier 1: one read-only diag GET, one PR comment.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Post the ops-flags comment (false = print only)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: live-review-wake
+  cancel-in-progress: false
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet pyyaml
+      - name: Wake
+        # pipefail is load-bearing: without it `tee` decides the step's exit.
+        run: |
+          set -o pipefail
+          LIVE=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then LIVE="--live"; fi
+          python3 scripts/ops/live_review_wake.py ${LIVE} | tee -a "$GITHUB_STEP_SUMMARY"
