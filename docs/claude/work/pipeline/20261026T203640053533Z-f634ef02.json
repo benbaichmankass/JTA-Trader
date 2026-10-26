@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-4ALST35N-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "CJ-7-BACKFILL lane, comms/claude_judgments/backfill/tier-a/run.json reveal_missing",
+    "rerun": "python3 -c \"import json;b={json.loads(l)['order_package_id'] for l in open('comms/claude_judgments/blind_grades.jsonl')};r={json.loads(l)['order_package_id'] for l in open('comms/claude_judgments/revealed_grades.jsonl')};print(len(b-r))\""
+  },
+  "state": "queued",
+  "what": "CJ-7 tier A: 71 packages have a blind grade but no reveal grade (batch b07 whole, first 24 of b06). Every grader session on them stopped with an API safeguard error (reasoning_extraction) before writing a row; 5 sessions, 1 bisection. Try again in a fresh session, possibly smaller pieces or a different grader model, reading usage.cost_usd; ingest with blind_grade.py ingest using the existing run.b06/b07.json metadata pattern. Costs ~$0.7 if it works; counts against the weekly $3, not the one-time $15 (12.37 of 15 spent)."
+}
