@@ -23,9 +23,9 @@ Each package block in the comment is:
 
 1. **Mechanics first.** `packet.mechanics.verdict` != `match` → action `flag_mechanics`, basis `mechanics`, route `operator_ask` (real money / prop). No exit judgement on a broken trade.
 2. **Price from the table, never by hand.** Copy `options` from `packet.priced_options.options` / `table` exactly: the tool's `n`, `mean_r`, `sd_r`, `worst_r`. A number not in the packet does not go in the row.
-3. **Thin cells are decided by judgement** (operator 2026-10-26). If the HOLD cell or the candidate cell has n below `n_floor`, make the call yourself: `basis: judgement`, `evidence_source: judgement`, `judgement_confidence` (your calibrated probability that the call beats holding), a one-line `reason`, and `ev_delta_r` / `worst_case_delta_r` / both `tighten_r` set to `null`. Quote the thin cells in `context_flags`, never as measured. If you have no call: `no_recommendation` + `basis: insufficient_n` + `evidence_source: none`. **Never `hold` on a thin cell.**
+3. **Thin cells are decided by judgement** (operator 2026-10-26). If the HOLD cell or the candidate cell has n below `n_floor`, make the call yourself: `basis: judgement`, `evidence_source: judgement`, `judgement_confidence` (your calibrated probability that the call beats holding), a one-line `reason`, and `ev_delta_r` / `worst_case_delta_r` / both `tighten_r` set to `null`. Quote the thin cells in `context_flags`, never as measured. **On a real-money or prop package you MUST make a call**: `hold` or `tighten_sl`, each `basis: judgement` with the confidence and reason. `hold` + `judgement` is a real, graded call; a hold with no confidence and reason is the banned silent collapse. `no_recommendation` is allowed there ONLY as `basis: could_not_look` with a `reason` (the packet is unreadable or a required input is null). `insufficient_n` / `default_hold` are refused by the validator on real-money/prop rows.
 4. **Overlay** (each item needs packet evidence, as `"<kind>: <evidence>"` in `context_flags`): a regime/vol change since entry, an ATR ratio >= 1.5 or <= 0.67, funding, a calendar event, correlated exposure, `missing_inputs`. An overlay may downgrade or turn a tighten into an operator ask. It never manufactures a tighten.
-5. **Classify at the PACKAGE level** (never per-account risk): `hold` (a measured HOLD cell, `basis: ev_positive`) · `tighten_sl(level)` · `no_recommendation` · `flag_mechanics` · `tp_revise` / `close` / `partial_close` (always `route: operator_ask`).
+5. **Classify at the PACKAGE level** (never per-account risk): `hold` (a measured HOLD cell, `basis: ev_positive`; or a thin cell, `basis: judgement`) · `tighten_sl(level)` · `no_recommendation` · `flag_mechanics` · `tp_revise` / `close` / `partial_close` (always `route: operator_ask`).
    - **Guardrails:** tighten only; `level` at least 1x ATR from price (`min_buffer_atr`); never widen, move a TP, resize, close or add.
    - **Table-backed tighten:** `basis: preference_within_bound` or `ev_positive`, `evidence_source: table`, `ev_delta_r` = tighten mean − hold mean, `worst_case_delta_r` = tighten worst − hold worst, `tighten_r` on BOTH policy arms.
 6. **Route.**
@@ -44,7 +44,7 @@ Each package block in the comment is:
   - `applied` <=> `route == auto_applied` (you write `recommended`, so `applied: false`);
   - `basis: judgement` <=> `evidence_source: judgement`, with a numeric `judgement_confidence` in [0, 1] and a non-empty `reason`;
   - a non-judgement `tighten_sl` records `tighten_r` on both arms;
-  - `insufficient_n` <=> `no_recommendation`;
+  - `insufficient_n` <=> `no_recommendation`, and on a real-money/prop row neither `insufficient_n` nor `default_hold` is accepted; `no_recommendation` there needs `basis: could_not_look` + `reason`;
   - an option with `n == 0` has null numbers;
   - `account_reads` covers exactly `accounts`, once each.
 
@@ -53,8 +53,8 @@ Each package block in the comment is:
 ```json
 {
  "schema_version": 1,
- "review_id": "LR-20261026T1200Z-pkg-EXAMPLE",
- "reviewed_at": "2026-10-26T12:03:00Z",
+ "review_id": "LR-20261026T1300Z-pkg-EXAMPLE",
+ "reviewed_at": "2026-10-26T13:03:00Z",
  "order_package_id": "pkg-EXAMPLE",
  "trade_id": null,
  "leg": "ada_pullback_2h",
@@ -65,9 +65,9 @@ Each package block in the comment is:
  "trigger": {
   "event": "r_milestone",
   "level": 1.0,
-  "l0_snapshot_at": "2026-10-26T12:00:10Z"
+  "l0_snapshot_at": "2026-10-26T13:00:10Z"
  },
- "info_cutoff_at": "2026-10-26T12:00:40Z",
+ "info_cutoff_at": "2026-10-26T13:00:40Z",
  "state": {
   "open_r": 1.6,
   "peak_r": 1.9,
@@ -100,7 +100,7 @@ Each package block in the comment is:
    "net": true
   }
  ],
- "outcome_table_source": "comms/live_review/tables/LR-20261026T1200Z-pkg-EXAMPLE.json",
+ "outcome_table_source": "comms/live_review/tables/LR-20261026T1300Z-pkg-EXAMPLE.json",
  "recommendation": {
   "action": "tighten_sl",
   "level": 0.2051,
@@ -169,7 +169,7 @@ Each package block in the comment is:
     "action": ["hold", "tighten_sl", "tp_revise", "partial_close", "close", "flag_mechanics", "file_hypothesis", "no_recommendation"],
     "route": ["auto_applied", "recommended", "operator_ask", "none"],
     "confidence": ["measured", "suggestive", "anecdote"],
-    "basis": ["preference_within_bound", "ev_positive", "operator_ask", "insufficient_n", "mechanics", "default_hold", "record_only", "judgement"],
+    "basis": ["preference_within_bound", "ev_positive", "operator_ask", "insufficient_n", "mechanics", "default_hold", "record_only", "judgement", "could_not_look"],
     "evidence_source": ["table", "judgement", "none"],
     "peak_provenance": ["measured", "estimated", "fabricated", "unverified"],
     "mechanics_verdict": ["match", "mismatch", "could_not_look"],
