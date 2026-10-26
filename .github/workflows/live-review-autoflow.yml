@@ -1,0 +1,92 @@
+name: live-review-autoflow
+
+# LTR-APPLY-AUTOFLOW option (a) (operator 2026-10-26 09:35Z, verbatim: "1 for now
+# but I want us to figure out how to create an automated flow with minimum
+# latency"). On every push to main that touches comms/live_review/reviews.jsonl:
+# find the NEW rows that pass live_review_dispatch.check_row (tighten_sl, mechanics
+# match, route recommended/auto_applied, basis clauses), wait until the live VM's
+# checkout contains the commit (the dispatcher reads the row at the VM's HEAD;
+# git-sync lags ~5 min), then file ONE `live-review-apply` system-action issue
+# (apply: true) per row. No LLM hop, no manager wake.
+#
+# EVERY GATE STAYS WHERE IT IS: the VM re-runs live_review_dispatch.py (mandate
+# clauses, idempotency per review_id), live_review_apply.py owns apply_mode and the
+# granted-mandate check, and each account's RiskManager.approve_amend decides.
+# This only removes the wait for a session to file the issue.
+#
+# Tier 2 (it starts the live apply path). The issue is opened with
+# BRANCH_PROTECTION_TOKEN because an issue opened with GITHUB_TOKEN does not
+# trigger system-actions.yml (same pattern as exit-cell-mandate.yml).
+
+on:
+  push:
+    branches: [main]
+    paths: [comms/live_review/reviews.jsonl]
+  workflow_dispatch:
+    inputs:
+      before:
+        description: "Base sha (rows present here are not new)"
+        required: true
+      after:
+        description: "Head sha"
+        required: true
+      file:
+        description: "File the system-action issues (false = list only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-review-autoflow
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BEFORE: ${{ github.event_name == 'push' && github.event.before || inputs.before }}
+      AFTER: ${{ github.event_name == 'push' && github.sha || inputs.after }}
+      FILE: ${{ github.event_name == 'push' && 'true' || inputs.file }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 200
+      - run: pip install --quiet pyyaml
+      - name: New qualifying rows
+        id: rows
+        run: |
+          set -euo pipefail
+          python3 scripts/ops/live_review_autoflow.py --before "$BEFORE" --after "$AFTER" > /tmp/ids.txt
+          echo "n=$(grep -c . /tmp/ids.txt || true)" >> "$GITHUB_OUTPUT"
+          { echo '### live-review-autoflow'; echo '```'; cat /tmp/ids.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Wait for the VM checkout to contain the row
+        if: steps.rows.outputs.n != '0'
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -uo pipefail
+          for i in $(seq 1 40); do
+            sha=$(bash scripts/ops/diag_fetch.sh version 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("git_sha_on_disk") or "")' 2>/dev/null || true)
+            if [ -n "$sha" ]; then
+              git fetch -q origin main || true
+              if git merge-base --is-ancestor "$AFTER" "$sha" 2>/dev/null; then echo "VM at $sha contains $AFTER"; exit 0; fi
+            fi
+            echo "VM checkout '${sha:-unreadable}' does not contain $AFTER yet (try $i/40)"; sleep 30
+          done
+          # Not a halt: file anyway; the dispatcher answers exit 3 (could not look) and the row can be re-dispatched.
+          echo "::warning::VM checkout did not reach $AFTER in 20 min; filing anyway"
+      - name: File one live-review-apply per row
+        if: steps.rows.outputs.n != '0' && env.FILE == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r rid; do
+            [ -n "$rid" ] || continue
+            gh issue create --label system-action \
+              --title "live-review-apply: ${rid} (autoflow)" \
+              --body "$(printf 'action: live-review-apply\nreview_id: %s\napply: true\nreason: LTR-APPLY-AUTOFLOW: row landed on main at %s (run %s); every gate re-runs on the VM' "$rid" "$AFTER" "${{ github.run_id }}")"
+          done < /tmp/ids.txt

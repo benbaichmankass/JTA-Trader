@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Starts the live apply path automatically: on a push to main touching comms/live_review/reviews.jsonl it files one live-review-apply (apply: true) system-action per NEW row that passes live_review_dispatch.check_row. Every gate stays on the VM (dispatcher clauses + idempotency, apply_mode, granted mandate, approve_amend). Needs ONE operator OK before merge (LTR-APPLY-AUTOFLOW row: Tier 2).",
+  "why": "new workflow + script + tests; no src/, config, order-path or VM file changed; it removes the manager hop between a landed tighten_sl row and the existing system-action"
+}
