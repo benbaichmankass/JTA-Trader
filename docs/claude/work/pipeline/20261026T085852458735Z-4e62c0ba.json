@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261026-HOPS0847-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops 2026-10-26 08:47Z, step D (RQ-20261026-90d3-13 read)",
+    "rerun": "python3 - <<'X'\nimport yaml,glob\nfor p in glob.glob('research/queue/RQ-*.yaml'):\n    d=yaml.safe_load(open(p)); g=d.get('grading') or {}\n    ev=g.get('evidence') or []\n    if any(e.startswith('research/results/') and '/'+d['id']+'/' not in e for e in ev): print(d['id'], g.get('decision_rule_id'), ev[0])\nX"
+  },
+  "state": "queued",
+  "what": "MEASURED 2026-10-26 over research/queue/RQ-*.yaml: 9 of the 18 units in the daily authoring routine's RQ-20261026-90d3-* batch (04,06,07,08,13,15,16,17,18) were committed in #20220 with a copied `grading:` block belonging to RQ-20261024-0142-16 (verdict pass, rule RULE-RQ20261024014216-ETHPBSTALEEXIT, evidence research/results/RQ-20261024-0142-16/...), graded_at 2026-10-25, i.e. before the units existed. 90d3-13 ran and its own row is FAIL (DI/SL arms, incumbent_stands) while its unit read `verdict: pass`, which would have fed chain_verdict / programme nodes and a PASS follow-up. This pass removed the 9 foreign blocks (queue_grade then grades 90d3-13 fail from its own rows). OPEN: root-cause the writer (the authoring routine copies a graded unit as a template and keeps its grading key) and add a detector: a queue unit whose grading.evidence names research/results/<other-unit>/ must fail a guard, and authoring must strip `grading:` on copy. 5 more units in the same scan (RQ-20261008-900/-902/-903, RQ-20260929-401, RQ-20260930-402) have evidence value 't' (a string iterated per char), a separate malformed-grading symptom to look at in the same fix."
+}

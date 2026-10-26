@@ -1233,9 +1233,16 @@ nodes:
   value:
     usd_at_stake_per_month: 150
     confidence: 0.3
+  # research-ops 2026-10-26 08:47Z: the confirmation this node asked for ALREADY RAN as RQ-20261024-71e8-01
+  # (WIDE vs B on the symbol-disjoint basket AVAX/NEAR/ATOM/FIL/TRX/ETC, same statistic and bar) and graded FAIL:
+  # the 4b82-03 lead did not generalise off-basket. Configuration closed: squeeze 1h WIDE (bb 2.5 / kc 1.0) on
+  # two baskets; family squeeze stays open. The pass-branch of this node is therefore not taken (moot); a
+  # next squeeze variant, if any, is a NEW node aimed by the 71e8-01 record (which fold/cell broke it).
   after:
   - unit: RQ-20261022-4b82-09
     verdict: any
+  - unit: RQ-20261024-71e8-01
+    verdict: pass
   needs_authoring: 'RQ-20261022-4b82-03 arm WIDE (squeeze 1h, break-even floor + stale exit + wider compression) PASSED the pooled rule (net_r 43.5R)
     but at n_B 6.9k < the 9.5k floor for its 0.05 R bar, so it is a LEAD, not a result (squeeze 1h defaults and 4h defaults both FAILED: 326f-10/-12).
     Author the ONE confirmation the PASS rule requires: arm WIDE vs B on a disjoint window (the most recent 24 months not scored as a tuning window)
