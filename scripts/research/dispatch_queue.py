@@ -752,6 +752,9 @@ def _stamp(path: Path, when: datetime) -> Optional[str]:
 
 
 
+_DECLARED_INPUTS_CACHE: Dict[tuple, Optional[List[str]]] = {}
+
+
 def declared_inputs(workflow: str, *, repo: Path = _REPO) -> Optional[List[str]]:
     """The ``workflow_dispatch.inputs`` keys ``<repo>/.github/workflows/<workflow>``
     declares, or ``None`` when the file cannot be read (not "no inputs" — the
@@ -760,6 +763,24 @@ def declared_inputs(workflow: str, *, repo: Path = _REPO) -> Optional[List[str]]
     # onto the workflows dir gave a path that never exists, so this returned None, the undeclared-inputs
     # preflight in `_fire` was skipped, and gh answered HTTP 422 on every cycle (run 36798175014).
     path = repo / ".github" / "workflows" / workflow.split("/")[-1]
+    # Memoised on (path, mtime_ns, size) (CI-SPEED-1026): a queue pass calls this once per unit and a
+    # handful of workflows serve ~1,000 units, so the same multi-hundred-line workflow was re-parsed
+    # ~1,700 times (~80 s). An edited workflow changes the key, so it is still re-read.
+    try:
+        st = path.stat()
+        cache_key = (str(path), st.st_mtime_ns, st.st_size)
+    except OSError:
+        cache_key = None
+    if cache_key is not None and cache_key in _DECLARED_INPUTS_CACHE:
+        cached = _DECLARED_INPUTS_CACHE[cache_key]
+        return None if cached is None else list(cached)
+    result = _read_declared_inputs(path)
+    if cache_key is not None:
+        _DECLARED_INPUTS_CACHE[cache_key] = result
+    return None if result is None else list(result)
+
+
+def _read_declared_inputs(path: Path) -> Optional[List[str]]:
     try:
         import yaml  # noqa: PLC0415 — optional at import time, required here
         doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
