@@ -1109,7 +1109,7 @@ mandates:
       VM meta.sl_floor, phone request_sl_tighten. IB refuses no_amend_path until
       an IB executor is wired.
     fires_when:
-      - a committed live-review row (comms/live_review/reviews.jsonl) with recommendation.action == tighten_sl, its decision packet / LTR-0 outcome table (evidence path on main) and recommendation.evidence_source recorded
+      - a committed live-review row (comms/live_review/reviews.jsonl) with recommendation.action == tighten_sl, its decision packet / LTR-0 outcome table and recommendation.evidence_source recorded, read at a PINNED commit that is EITHER on main OR on the protected append-only branch live-review/rows (no force-push, no delete; every rows-branch row is later mirrored to main)
       - "EITHER basis: table -- the LTR-0 cell is `measured`, ev_delta_r >= -0.25 (Q1 bound) and worst_case_delta_r > 0"
       - "OR basis: judgement -- the LTR-0 cell is `insufficient_n`; the reviewer's call applies, with a recorded confidence in [0, 1] and a one-line reason, logged as judgement and graded against the realised outcome (LTR-5)"
       - mechanics.verdict == match
@@ -1117,7 +1117,7 @@ mandates:
       - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, <= 1 amend per package per closed bar, account live, leg not shadow); could_not_look never applies
     never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act on a mechanics mismatch, act on a judgement without a recorded confidence and reason, write mode or execution]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no-op / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the review row and table path
-    revert: a tightened stop that is hit cannot be undone; disarm by committing apply_mode recommend in config/live_trade_review.yaml; undo the 2026-10-26 amendment by restoring the n >= 20 clause (fires_when) and the never-entry 'act with n below the floor'
+    revert: a tightened stop that is hit cannot be undone; disarm by committing apply_mode recommend in config/live_trade_review.yaml; undo the 2026-10-26 amendment by restoring the n >= 20 clause (fires_when) and the never-entry 'act with n below the floor'; undo the 2026-10-26 rows-branch amendment by restoring 'evidence path on main' in fires_when (the dispatcher then reads only main)
     amended_at: '2026-10-26'
     amendment_source: >-
       Operator in manager session session_01HAysMLfF9dYpi92YMqYxEq, chat ~06:28Z
@@ -1136,6 +1136,15 @@ mandates:
       one amend per package per bar, mechanics match, per-account
       approve_amend, could_not_look never applies). Committed by the manager
       with auto mode switched off by the operator for this edit (~07:40Z).
+      SECOND AMENDMENT 2026-10-26 ~10:45Z (rows branch + pinned commit), same manager
+      session. Operator in chat, verbatim: "We also need: A - to make sure the push is
+      direct, not waiting for the vm to find it 2 - either go around main or find another
+      way to get around the huge pr wait". Popup answer, verbatim: "Approve: rows branch
+      + pinned commit (Recommended)". Option text: the row is still an immutable,
+      auditable commit (no force-push or delete on that branch), and every apply gate is
+      unchanged; removes the 15-30 min PR wait and the ~5 min VM refresh wait. Row
+      LTR-APPLY-AUTOFLOW. Effective once the dispatcher reads a pinned rows-branch
+      commit; until then it still reads main.
 
 # MD-PROMOTE-S1-S2-SOAK-AMEND (proposed 2026-10-15 by lane SOAK-REDEFINE) was
 # GRANTED by the operator the same day and folded into MD-PROMOTE-S1-S2 above
