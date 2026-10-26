@@ -13,5 +13,5 @@
 <!-- one line per amendment, newest last:
 - YYYY-MM-DD · new_skill_sha: `<8+ hex>` · prior: `<8 hex>` · basis: <grader + window>, n=<k> <stratum> · change: <one line> · PR #<n>
 -->
-- 2026-10-26 · new_skill_sha: `3b775fe8` · prior: `3db7a2fc` · basis: operator grant, not a graded lesson (MD-LIVE-TRADE-ACTIONS, popup 2026-10-26 ~18:56-19:00Z), n=0 graded calls of the new classes · change: SKILL.md § 3b, the trade actions close / partial_close / move_tp / widen_sl / change_size / add_entry with reason + confidence + target · PR LTR-ALL-ACTIONS part 1
-- 2026-10-26 · new_skill_sha: `91bd97bf` · prior: `4e928c3d` · basis: operator grant, not a graded lesson (MD-LIVE-TRADE-ACTIONS), n=0 graded calls of the new classes · change: REVIEWER-BRIEF.md steps 5-6 + re-embedded schema for the trade actions · PR LTR-ALL-ACTIONS part 1
+- 2026-10-26 · new_skill_sha: `08e79a50` · prior: `3db7a2fc` · basis: operator grant, not a graded lesson (MD-TRADE-DESK, popup 2026-10-26 ~18:56-19:00Z), n=0 graded calls of the new classes · change: SKILL.md § 3b, the trade actions close / partial_close / move_tp / widen_sl / change_size / add_entry with reason + confidence + target · PR #20412
+- 2026-10-26 · new_skill_sha: `d409b0b5` · prior: `4e928c3d` · basis: operator grant, not a graded lesson (MD-TRADE-DESK), n=0 graded calls of the new classes · change: REVIEWER-BRIEF.md steps 5-6 + re-embedded schema for the trade actions · PR #20412

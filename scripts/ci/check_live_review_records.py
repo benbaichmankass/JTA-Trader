@@ -22,7 +22,7 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
   to bound); a `tighten_sl` row names its `evidence_source`; an `auto_applied` row needs
   `mechanics.verdict == match`. `insufficient_n` + `no_recommendation` stays valid (the
   reviewer may decline to make a call), and is still never hold.
-* LTR-ALL-ACTIONS (operator 2026-10-26, MD-LIVE-TRADE-ACTIONS, verbatim "as long as they have
+* LTR-ALL-ACTIONS (operator 2026-10-26, MD-TRADE-DESK, verbatim "as long as they have
   reasoning and confidence attached"): a trade action (close / partial_close / move_tp /
   widen_sl / change_size / add_entry) carries a non-empty `reason`, an `evidence_source` of
   `table` (with `ev_delta_r`) or `judgement` (with `judgement_confidence`), and its own target --
@@ -129,7 +129,7 @@ def money_call_problems(row: dict) -> list[str]:
     return out
 
 
-#: LTR-ALL-ACTIONS (MD-LIVE-TRADE-ACTIONS, operator 2026-10-26): the trade actions beyond a tighten.
+#: LTR-ALL-ACTIONS (MD-TRADE-DESK, operator 2026-10-26): the trade actions beyond a tighten.
 #: ``tp_revise`` stays the legacy (operator-ask) spelling and is not graded here as a trade action.
 TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 _TARGETS = {"close": (), "partial_close": ("size_fraction",), "move_tp": ("level",), "widen_sl": ("level",),

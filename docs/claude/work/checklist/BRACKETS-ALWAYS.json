@@ -1,0 +1,26 @@
+{
+  "id": "BRACKETS-ALWAYS",
+  "title": "System invariant: every open position always has BOTH brackets (SL and TP); nothing removes a bracket, only moves it - enforce on every order path, with a runtime guard",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-26 ~19:02Z (manager relay), verbatim: \"in general, every trade always must have BOTH brackets, not related to this skill. Claude can move the brackets, but nothing is supposed to remove brackets\". Audit by lane LTR-ALL-ACTIONS (read-only sweep at main 577ed9c1; lines from a delegated read, two spot-checked by the lane: execute.py:505-521 and order_monitor.py:12244-12277 MEASURED, the rest INFERRED from that read and to be re-read before fixing). EXISTING GUARDS: entry gate src/units/accounts/execute.py:505-521 (refuses a non-reduce live order without SL>0 AND TP>0); prop ticket gate src/prop/prop_executor.py:364 (both); prop naked check prop_executor.py:3343 + _repair_or_flatten ~2939 (both, but TP only when the journal has one; fallback flattens); order_monitor.py:13654 naked flag (SL or TP null) but _attempt_naked_autoprotect ~9827 re-arms only when both known, IB-only; broker sweeps (order_monitor ~10541 Alpaca, ~11327 IB, ~12875 Bybit) re-arm SL only, IB TP alert-only; protection_reassert.py needs_both_legs; CI check_tp_doctrine.py is config-only (TP reality, ratchet), nothing checks runtime presence of both. PATHS THAT CAN LEAVE A POSITION WITHOUT A BRACKET: (1) order_monitor.py:12244-12278 _bybit_top_up_partial_sl places an SL-only leg (tp=None, docstring: 'a missing take-profit is not a risk'); (2) execute.py ~3245-3302 IB modify_open_order with unknown cur_tp re-arms stop-only OCA after cancelling the old group (and symbol-wide cancel without trade_id); (3) ib_client.py ~1649-1690 place_protective places only the legs given, cancel-before-place; (4) the monitor sweeps never re-arm a missing TP on IB/Alpaca/Bybit; (5) Bybit spot execute.py ~1590/3120: no exchange-side SL/TP at all (monitor market-close exits); (6) cancel-after-flat order_monitor.py ~2144/2324 (callers ~4135,7287,7365,8027,8330,15206; symbol-wide ~4503/4800): a wrong flat read leaves a live position naked (unverified); (7) config/strategies.yaml tp_r: 50.0 sentinels (TP doctrine, tp-doctrine-guard ratchet). The desk/live-review path is fixed in PRs #20412/#20414 (both_brackets_required refusal + read-back). Re-entry test: a runtime guard (CI + monitor probe) asserting every open leg carries a resting SL and TP at the venue, with each path above fixed or explicitly sanctioned by the operator. Rerun: grep -n 'tp=None' src/runtime/order_monitor.py; python3 scripts/ci/check_tp_doctrine.py.",
+  "priority_rank": 5,
+  "updated_at": "2026-10-26T19:27:58Z",
+  "updated_by": "session_01Ek4ZF8rHKPrYehmQkcjSrW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: both-brackets invariant enforced on every order path",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md protection / TP doctrine: both brackets always"
+  },
+  "_seq": 723
+}

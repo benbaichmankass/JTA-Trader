@@ -227,7 +227,7 @@ def test_alarm_needs_twenty_priced_applies():
     assert g["applied_alarm"]["proposes_recommend_mode"] is True
 
 
-# ---- LTR-ALL-ACTIONS: every action class is graded hold-vs-action (MD-LIVE-TRADE-ACTIONS) -----------------
+# ---- LTR-ALL-ACTIONS: every action class is graded hold-vs-action (MD-TRADE-DESK) -----------------
 
 _RUN = ((99.0, 99.7, 98.5, 99.0), (98.5, 98.6, 96.0, 96.0))   # opens 99.0 (+1R), runs to the 96 target (+4R)
 
