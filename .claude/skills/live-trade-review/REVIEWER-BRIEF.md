@@ -35,7 +35,7 @@ Each package block in the comment is:
    - A `tighten_sl` with mechanics `match` that is table-backed within 0.25 R with the worst case improved, or judgement-backed with a confidence and a reason → `route: recommended`, `disposition.mandate: MD-LIVE-TIGHTEN-SL`, `applied: false`. The VM applies it.
    - A trade action with mechanics `match`, a `reason`, its target and a confidence (or table basis) → `route: recommended`, `disposition.mandate: MD-TRADE-DESK`, `applied: false`. The VM applies it through each account's own risk manager; an account with no executor for it refuses it, named.
    - An out-of-bound table tighten, `tp_revise`, `flag_mechanics` → `operator_ask`.
-   - `hold`, `no_recommendation`, paper-only → `none`.
+   - `hold`, `no_recommendation` → `none`. A paper-only package routes like any other (operator 2026-10-26: "All accounts now", "Real-money, prop and paper at once").
    - **No table at all (`table: null`) → no tighten** (the VM refuses a tighten whose table is not committed). Use `no_recommendation`.
 7. **`account_reads`:** one entry per account in `accounts`, copied from `packet.account_bounds` (`would_apply` / `refused_by_account_risk` / `unknown` / `no_action`; `no_action` for hold / no_recommendation). Never fabricate `would_apply`.
 
