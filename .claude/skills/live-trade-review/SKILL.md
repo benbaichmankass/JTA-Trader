@@ -24,7 +24,7 @@ Design of record: [`docs/plans/live-trade-review-DESIGN.md`](../../../docs/plans
 - **never** moves a stop;
 - **never** places, amends or cancels an order;
 - **never** writes `config/` (no `mode:`, no `execution:`, no roster);
-- **never** opens a `system-action` issue.
+- **never** opens a `system-action` issue, with ONE exception: `live-review-apply` for its own landed `tighten_sl` row (§ 3 Step 7). That is the only way a reviewed tighten reaches a venue.
 
 It reads, prices, records and reports. That holds even when the recommendation is obviously right and the data is unambiguous. When apply arrives, it comes only through the mandate's own clauses (design § 4), never through this skill's prose.
 
@@ -185,6 +185,42 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
    - the per-account read.
 
    Wake the manager **at once** for any operator ask or mechanics flag on real money or prop. Do not batch it.
+
+### Step 7. Dispatch the apply (LTR-APPLY-DISPATCH, operator 2026-10-26)
+
+> **Operator, 2026-10-26 ~07:12Z, popup (verbatim):** *"Yes, top of the queue (Recommended)"*. The option text was: *"A Tier-2 lane wires the reviewed tighten_sl decisions into an apply run (an apply system-action or the review routine itself), with a VM check."* Row `LTR-APPLY-DISPATCH`.
+
+`apply_mode: apply` and a granted `MD-LIVE-TIGHTEN-SL` do nothing on their own. A reviewed tighten reaches a venue only when the reviewer **files the `live-review-apply` system-action** for it.
+
+1. **Which rows qualify.** Every row you landed in Step 6 where all of these hold:
+   - `recommendation.action == tighten_sl`;
+   - `mechanics.verdict == match`;
+   - `disposition.route` is `recommended` or `auto_applied`;
+   - the basis is either `table` (a measured cell, within the 0.25 R bound, worst case improved) or `judgement` (a confidence and a reason).
+
+   Never file it for `hold`, `no_recommendation`, `flag_mechanics`, an `operator_ask`, or a paper-only `record_only` row.
+2. **When.** Only after the row's PR has **merged to `main`**. The VM re-reads the row from its committed `main`. A row that is not there yet comes back exit 3 (could not look; git-sync lags by up to about 5 min). Re-file once after a few minutes.
+3. **How.** One issue per row, labelled `system-action`, with this body:
+   ```
+   action: live-review-apply
+   review_id: LR-…
+   apply: true
+   reason: live-review <review_id> tighten_sl under MD-LIVE-TIGHTEN-SL (<leg>, <basis>)
+   ```
+   Then write the issue number into the next row you append for the package (`disposition.action_issue`). Rows are append-only, so never edit the landed row.
+4. **What you do not do.** You never pass a level, an account or a flag by hand. The VM side does all of that:
+   - `scripts/ops/live_review_dispatch.py` re-checks the mandate's package-level clauses on the committed row;
+   - `scripts/ops/live_review_apply.py` decides EACH account through its own `RiskManager.approve_amend` and executor, then reads the venue back;
+   - the apply pings every applied leg, and sends ONE ping per refusal on a real-money or prop account.
+
+   The dispatch is idempotent per `review_id`: a review_id whose apply sent anything is refused as a duplicate. A new decision needs a new review row.
+5. **Report.** Read the issue's result comment and pass the per-account verdicts and the venue read-back to the manager:
+   - exit 0: applied, or a dry run;
+   - exit 1: `apply_failed` (the venue did not read back). Wake the manager at once;
+   - exit 2: refused, with the clause named;
+   - exit 3: could not look. Re-file once.
+
+   An applied tighten belongs in the next brief's section 1, with the review row and the table path.
 
 ---
 

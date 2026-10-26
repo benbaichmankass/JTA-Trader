@@ -423,6 +423,19 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="high" ;;
         esac
         ;;
+    live-review-apply)
+        # 2026-10-26 (LTR-APPLY-DISPATCH): dispatch ONE committed tighten_sl
+        # review row to scripts/ops/live_review_apply.py (each account's own
+        # RiskManager + executor, venue read-back); dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dispatched: per-account verdicts + venue read-back in the run; or a dry-run preview)"; priority="normal" ;;
+            1) result="an apply did NOT verify at the venue (apply_failed) — see the per-account lines"; priority="urgent" ;;
+            2) result="refused (a mandate clause, a duplicate review_id, or an account's risk manager) — nothing sent for the refused part"; priority="high" ;;
+            3) result="COULD NOT LOOK (row not on the VM's main yet, or a venue/account read failed) — nothing sent; re-dispatch"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     amend-position-sl)
         # 2026-10-24 (AMEND-SL-ACTION): tighten one live Bybit stop, venue +
         # journal together; dry-run unless apply:true.

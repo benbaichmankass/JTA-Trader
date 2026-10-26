@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-APPLY-DISPATCH (checklist row, tier 2, live stop path). Adds the live-review-apply system-action: it dispatches ONE committed tighten_sl review row to scripts/ops/live_review_apply.py --apply under MD-LIVE-TIGHTEN-SL. Operator popup ~07:12Z 2026-10-26, verbatim \"Yes, top of the queue (Recommended)\"; the option text says \"It needs your OK to merge.\" Dispatched by Manager Session 2026-10-26 (session_01HAysMLfF9dYpi92YMqYxEq) with the instruction 'Do NOT merge'; the manager merges. Merge order: PR #20259 (LTR-JUDGEMENT-APPLY) FIRST. Without it the apply's argparse rejects --basis/--mechanics and the dispatch fails closed (exit 2, nothing sent).",
+  "why": "Opens a dispatch path that tightens live stops on real-money and prop accounts (through each account's own approve_amend + executor): Tier 2 (order path / system-action) by CLAUDE.md's table."
+}
