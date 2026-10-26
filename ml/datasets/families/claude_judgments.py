@@ -552,35 +552,6 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
               file=sys.stderr)
 
 
-# --------------------------------------------------------------------------- teacher-row weighting
-# CLAUDE-GRADE-LOOP use rule (c), docs/plans/ml-claude-distillation-DESIGN.md § 3.7. Registered before any
-# run reads it. A Claude-labelled row is weighted by its CALL CLASS's measured skill (the grader's stratum:
-# scripts/ops/live_review_grade.py ``use_rules`` / scripts/ops/desk_grade.py ``absolute``), never by the
-# row's own stated confidence. Three weights, so the rule is arguable in a test rather than in a fit:
-#   0.0  n < CALL_WEIGHT_MIN_N, no interval, or the interval straddles / sits below 0 (no demonstrated
-#        skill: train on the outcome label, never imitate the call);
-#   0.5  interval entirely > 0 but the class's calibration is OVERCONFIDENT;
-#   1.0  interval entirely > 0 and calibration is not OVERCONFIDENT.
-CALL_WEIGHT_MIN_N = 20
-
-
-def call_class_weight(stratum: Mapping[str, Any] | None, calibration_verdict: str | None = None) -> tuple[float, str]:
-    """(weight, reason) for every row of one Claude call class, from that class's graded stratum."""
-    if not stratum:
-        return 0.0, "ungraded: no stratum for this call class"
-    n, ci = int(stratum.get("n") or 0), stratum.get("ci95")
-    if n < CALL_WEIGHT_MIN_N or not ci:
-        return 0.0, f"insufficient_n: n={n} < {CALL_WEIGHT_MIN_N}"
-    lo, hi = float(ci[0]), float(ci[1])
-    if hi < 0:
-        return 0.0, "negative_skill: the call class loses R vs its alternative"
-    if lo <= 0:
-        return 0.0, "no_demonstrated_skill: the 95% interval includes 0"
-    if (calibration_verdict or "").startswith("OVERCONFIDENT"):
-        return 0.5, "positive_skill_overconfident"
-    return 1.0, "positive_skill"
-
-
 def population_report(report: Mapping[str, Any]) -> dict[str, Any]:
     """n read / n emitted (joined) / n excluded by reason -- the partition sums by construction."""
     n_in = sum(report.get("sources", {}).values())

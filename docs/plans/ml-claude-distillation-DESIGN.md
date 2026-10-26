@@ -216,7 +216,7 @@ The DESK-13 mandate proposal for desk-generated entries should carry this as its
 
 **(c) ML: Claude-labelled rows are weighted by measured skill, and Claude is a feature only after OOS edge.**
 - **Weight.** A row whose label is a Claude call (a teacher label) is weighted by its CALL CLASS's graded
-  skill, never by the row's own stated confidence: `ml.datasets.families.claude_judgments.call_class_weight`
+  skill, never by the row's own stated confidence: `scripts/ops/claude_calibration.py::call_class_weight`
   maps the grader's stratum to **0.0** (n < 20, no interval, or an interval that includes or sits below 0: no
   demonstrated skill, train on the outcome label instead), **0.5** (interval > 0 but `OVERCONFIDENT`) or
   **1.0** (interval > 0, not over-confident). Weight rises as Claude is measured right, as the operator asked,

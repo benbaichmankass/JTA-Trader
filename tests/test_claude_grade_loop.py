@@ -189,7 +189,7 @@ def test_use_rules_narrow_widen_and_hold_scope():
 # --------------------------------------------------------------------------- ML use rule (c)
 
 def test_call_class_weight_three_states():
-    from ml.datasets.families.claude_judgments import CALL_WEIGHT_MIN_N, call_class_weight
+    CALL_WEIGHT_MIN_N, call_class_weight = cal.CALL_WEIGHT_MIN_N, cal.call_class_weight
     assert call_class_weight(None)[0] == 0.0
     assert call_class_weight({"n": CALL_WEIGHT_MIN_N - 1, "ci95": [0.1, 0.2]})[0] == 0.0
     assert call_class_weight({"n": 40, "ci95": [-0.1, 0.2]}) == (0.0, "no_demonstrated_skill: the 95% interval includes 0")

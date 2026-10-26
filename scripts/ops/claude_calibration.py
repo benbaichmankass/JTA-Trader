@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: library — imported by scripts/ops/live_review_grade.py and scripts/ops/desk_grade.py (CLAUDE-GRADE-LOOP); no CLI, no timer.
+# wiring: library — imported by scripts/ops/live_review_grade.py and scripts/ops/desk_grade.py (CLAUDE-GRADE-LOOP); call_class_weight is the ML use rule (c) a trainer wiring will import (row CLAUDE-GRADE-LOOP follow-up 1); no CLI, no timer.
 """Calibration of Claude's stated confidence against priced outcomes (CLAUDE-GRADE-LOOP).
 
 One question for both graders: **does the confidence Claude states predict what the call earned?**
@@ -102,3 +102,31 @@ def ordinal(points: Iterable[Tuple[Optional[str], Optional[float]]],
         means = [r["mean"] for r in ranked]
         out["verdict"] = "MONOTONE" if all(a <= b for a, b in zip(means, means[1:])) else "NOT_MONOTONE"
     return out
+
+
+# --------------------------------------------------------------------------- ML use rule (c): teacher-row weight
+# docs/plans/ml-claude-distillation-DESIGN.md § 3.7. A Claude-labelled row is weighted by its CALL CLASS's
+# measured skill (the grader's stratum: live_review_grade.py ``use_rules`` / desk_grade.py ``absolute``),
+# never by the row's own stated confidence. Three weights, so the rule is arguable in a test, not in a fit:
+#   0.0  n < CALL_WEIGHT_MIN_N, no interval, or the interval includes / sits below 0 (no demonstrated
+#        skill: train on the outcome label, never imitate the call);
+#   0.5  interval entirely > 0 but the class's calibration is OVERCONFIDENT;
+#   1.0  interval entirely > 0 and calibration is not OVERCONFIDENT.
+CALL_WEIGHT_MIN_N = 20
+
+
+def call_class_weight(stratum: Optional[Dict[str, Any]], calibration_verdict: Optional[str] = None) -> Tuple[float, str]:
+    """(weight, reason) for every row of one Claude call class, from that class's graded stratum."""
+    if not stratum:
+        return 0.0, "ungraded: no stratum for this call class"
+    n, ci = int(stratum.get("n") or 0), stratum.get("ci95")
+    if n < CALL_WEIGHT_MIN_N or not ci:
+        return 0.0, f"insufficient_n: n={n} < {CALL_WEIGHT_MIN_N}"
+    lo, hi = float(ci[0]), float(ci[1])
+    if hi < 0:
+        return 0.0, "negative_skill: the call class loses R vs its alternative"
+    if lo <= 0:
+        return 0.0, "no_demonstrated_skill: the 95% interval includes 0"
+    if (calibration_verdict or "").startswith("OVERCONFIDENT"):
+        return 0.5, "positive_skill_overconfident"
+    return 1.0, "positive_skill"

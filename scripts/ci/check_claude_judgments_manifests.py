@@ -11,7 +11,7 @@ CLAUDE-GRADE-LOOP use rule (c) (design § 3.7), on EVERY family:
 
 * W1 a Claude judgment column (e.g. `judgement_confidence`) named anywhere in a
   `sample_weight` block or as `sample_weight_column` is refused: Claude rows are
-  weighted by their call class's GRADED skill (`claude_judgments.call_class_weight`),
+  weighted by their call class's GRADED skill (`claude_calibration.call_class_weight`),
   never by the row's own stated confidence.
 * W2 a `claude_judgments` manifest whose TARGET is a judgment column (a teacher
   label) is refused until the trainer applies `call_class_weight`
@@ -79,7 +79,7 @@ def use_rule_problems(m: dict, root: Path = ROOT) -> list[str]:
         for s in _strings(cfg.get("sample_weight")) + _as_list(cfg.get("sample_weight_column")):
             if s in JUDGMENT_COLUMNS:
                 out.append(f"W1: {s!r} used as a sample weight: weight Claude rows by graded call-class skill "
-                           "(claude_judgments.call_class_weight), never by stated confidence")
+                           "(claude_calibration.call_class_weight), never by stated confidence")
         feats = [f for k in _FEATURE_KEYS for f in _as_list(cfg.get(k))]
         claude_feats = [f for f in feats if f.startswith(_CLAUDE_FEATURE_PREFIXES)]
         if claude_feats:
@@ -100,7 +100,7 @@ def use_rule_problems(m: dict, root: Path = ROOT) -> list[str]:
         for t in tgts:
             if t in JUDGMENT_COLUMNS:
                 out.append(f"W2: target {t!r} is a teacher label; refused until ml/trainers/sample_weights.py applies "
-                           "claude_judgments.call_class_weight (train on delta_r / label_net_r meanwhile)")
+                           "claude_calibration.call_class_weight (train on delta_r / label_net_r meanwhile)")
     return out
 
 
