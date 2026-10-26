@@ -1,0 +1,112 @@
+id: RQ-20261026-90d3-09
+title: 'Prop pace fade at 4h on the second alt basket (AVAX, NEAR, ATOM, FIL, TRX, ETC): how tight must the range gate be (ADX <= 15 / 25) with a mid-target exit'
+status: queued
+cadence: once
+roadmap:
+- L-PROP
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: Over 2020-06-01..2026-10-22 on 6 cells at 4h, does any arm (M15, M25, TRL) pass the pooled Stage-0 rule with breadth AND beat B by >= 0.05 R/trade pooled?
+why_this_matters: 'Fade 4h is queued on the major six (4b82-18) and the first alt basket (1d5c-12); the second alt basket is the open cell. NEAR/ATOM/FIL cells are shorter
+  than the window. A grep of the harness_stage0 units in research/queue (2026-10-26) shows this (family, timeframe, basket) cell is not queued; the neighbouring cells are (1d5c-07..13/-15,
+  4b82-18). Prop-pace candidate; the superset ladder applies. Lane RESEARCH-AUTHOR-20261026-0030 (research SLO breach 23:15Z 2026-10-25, ops-flags #17895: runnable 42 < floor
+  71; the 23:16Z routine fire produced no PR). Operator 2026-10-22: an idea that failed one test is not dead; it failed the first test.'
+power:
+  expected_n: 300
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Pooled floor 88 trades (d = 0.3 at alpha 0.05 / power 0.8, the repo's standing floor for this family of units); expected_n=300 is an ESTIMATE, not a measurement for
+    these arms; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026102690d309-FD4H-ALT2
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'scripts/research/harness_stage0.py --family trend --timeframe 2h, arms fixed now: B=; D40=--donchian=40; D40A=--donchian=40;--adx-min=20; LONG=--side-filter=long;
+    baseline B; per cell and pooled across 6 cells; flags --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor 88 --breadth-frac 0.5 --baseline B --delta-r-per-trade 0.05;
+    cost = the harness venue-aware fee + slippage + funding stack (execution_costs.resolve_cost_policy), recorded per cell.'
+  rule: 'Arms and thresholds are fixed now and are not changed after any result. A candidate PASSES iff it passes the pooled Stage-0 rule (pooled n >= 88, pooled net_r > 0,
+    >= 4 of 6 calendar folds net positive, >= half of the powered cells pass) AND beats B''s pooled net R/trade by >= 0.05 R. PASS IF one or more candidates pass: the best
+    by pooled net R is named and the follow-up is ONE confirmation unit on a disjoint window with the same statistic and bar (a pass on one window is a lead), then the prop/real-money
+    SUPERSET ladder; never a roster edit. FAIL IF every candidate fails (n >= floor) -> this variant is closed on this window and the record names which arm moved closest,
+    so the next variant is aimed; the family is NOT retired on one config. INDETERMINATE IF pooled n < 88 or fewer than half the cells measured (a fetch/harness fault is recorded
+    per cell, never dropped).'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case. A best-of-k arm is a LEAD (programme 03 rung S0-C), never a finding. Candles
+    are Binance USD-M (a PROXY for Bybit linear); the funding term is a directionless magnitude (execution_costs P1); both are stated in the record. Does not pool with any
+    committed record. NEAR/ATOM/FIL cells are shorter than the window.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: structural
+  basis: 'stand-in: a Stage-0 read for the prop/real-money book; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; the dispatcher's idle backends cannot hold it (no published-data shard for these
+    symbols); CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - fade
+  - --symbols
+  - AVAXUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-22'
+  - --arm
+  - B=
+  - --arm
+  - M15=--exit-style=mid;--adx-max=15
+  - --arm
+  - M25=--exit-style=mid;--adx-max=25
+  - --arm
+  - TRL=--exit-style=trail;--adx-max=20
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ2026102690d309-FD4H-ALT2
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261026-90d3-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- scripts/research/harness_stage0.py
+- research/queue/RQ-20261023-1d5c-15.yaml
+- RESEARCH-AUTHOR-20261026-0030
