@@ -1,0 +1,22 @@
+{
+  "id": "LTR-MECHANICS-VENUE-SNAPSHOT",
+  "title": "Live review: trader-side per-package venue SL/TP snapshot so the due computation can evaluate the mechanics VENUE half (package vs venue mismatch)",
+  "phase": null,
+  "state": "queued",
+  "owner": "build lane (manager dispatch)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 session_01YbW2EEGjULBzDP2U1Hucxc] Split from LTR-1B-MARKET-TRIGGERS (manager ack 10:48Z: 'agreed it is Tier 2. File it as its own checklist row ... Do not build it in this lane'). FINDING: no stored venue read of resting SL/TP per package exists on the VM; /api/diag/live_review_due can only see the journal half (telemetry written, trade row absent). PROPOSED CHANGE: the exit loop already reads the venue position per symbol for protection (order_monitor._bybit_position_protection via bybit_position_book.select_position_row). Add an observe-only writer, beside position_path_history, that stores per order_package_id the venue stop/target it read on that pass (venue_sl, venue_tp, read_at, read_state measured|could_not_look) in a new column set or small table. The due computation then fires mechanics level 'venue_sl_diverges' when |venue_sl - package sl| > a registered tolerance (proposed 0.25 x ATR, register in config/live_trade_review.yaml first). Constraints: never raises into the exit loop, timed via tick_cost like position_telemetry, no new order path, could_not_look kept distinct. Tier 2 (src/runtime exit-loop writer): one operator OK before merge. Needs the new-table-wiring declaration if a table is added.",
+  "updated_at": "2026-10-26T10:58:41Z",
+  "updated_by": "session_01YbW2EEGjULBzDP2U1Hucxc",
+  "priority_rank": 6,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 715
+}

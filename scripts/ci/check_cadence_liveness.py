@@ -194,6 +194,12 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
                "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
     },
+    "live-review-wake.yml": {
+        "receipt": None,
+        "why": "posts an ops-flags comment only when a live-review event is newly due (or a could-not-look flag "
+               "per 6 h), so a quiet wake leaves no receipt by design; a stopped or crashing wake is observed by "
+               "claude-run-failure-alert and by the hourly live-review routine, which still runs as the backstop",
+    },
     "live-review-rows-mirror.yml": {
         "receipt": None,
         "why": "writes main only when live-review/rows carries a review_id main lacks, so a quiet mirror leaves no receipt by design; "
