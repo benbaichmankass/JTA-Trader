@@ -194,6 +194,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
                "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
     },
+    "live-review-rows-mirror.yml": {
+        "receipt": None,
+        "why": "writes main only when live-review/rows carries a review_id main lacks, so a quiet mirror leaves no receipt by design; "
+               "a stopped mirror is observed by claude-run-failure-alert (crashed runs) and by a rows-branch review_id missing from main",
+    },
     "research-slo.yml": {
         "receipt": "comms/research/health",
         "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "
