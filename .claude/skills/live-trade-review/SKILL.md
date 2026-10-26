@@ -190,6 +190,8 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 
 > **Operator, 2026-10-26 ~07:12Z, popup (verbatim):** *"Yes, top of the queue (Recommended)"*. The option text was: *"A Tier-2 lane wires the reviewed tighten_sl decisions into an apply run (an apply system-action or the review routine itself), with a VM check."* Row `LTR-APPLY-DISPATCH`.
 
+> **Since LTR C1 (operator 2026-10-26 ~11:40Z, "VM applies from rows branch"):** a row pushed to `live-review/rows` is applied by the live trader's watcher (`src/runtime/live_review_rows_watch.py`, ~45 s) with `--ref <tip>`. The steps below are the **manual fallback**: file them only when the watcher's receipt (`log_file?name=live_review_rows_watch`) shows the row was not taken, or the row landed on `main` instead. A repo-less reviewer follows [`REVIEWER-BRIEF.md`](REVIEWER-BRIEF.md) instead of this skill.
+
 `apply_mode: apply` and a granted `MD-LIVE-TIGHTEN-SL` do nothing on their own. A reviewed tighten reaches a venue only when the reviewer **files the `live-review-apply` system-action** for it.
 
 1. **Which rows qualify.** Every row you landed in Step 6 where all of these hold:
