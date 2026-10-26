@@ -44,19 +44,19 @@
   {
    "lever": "multi-timeframe pooling in harness_stage0 for P5-RG1025-trend-pooled",
    "ref": "PI-20261026-RESEARCH-0001"
+  },
+  {
+   "lever": "map XLF/XLP/XLU in ml/datasets/adapters/yf_symbols (Tier-2 path)",
+   "ref": "PI-20261026-RESEARCH-0002"
   }
  ],
  "units_authored": [
-  "RQ-20261026-47a9-01 (T30 recent-window confirmation of bda2-01 with SPLG/XLF/XLP/XLU recovered; T55 not re-asked)"
+  "RQ-20261026-47a9-01 (T30 recent-window confirmation of bda2-01 on the 9 mapped cells; T55 not re-asked; XLF/XLP/XLU excluded by declaration)"
  ],
  "followups_filed": [
   {
-   "what": "ticker map: XLF/XLP/XLU were unmapped in yf_symbols so bda2-01 lost 3 of 12 cells; mapped in this PR",
-   "ref": "ml/datasets/adapters/yf_symbols.py"
-  },
-  {
-   "what": "SPLG Yahoo 404 in the bda2-01 run: unverified whether transient; 47a9-01 will show",
-   "ref": "RQ-20261026-47a9-01"
+   "what": "XLF/XLP/XLU unmapped, bda2-01 lost 3 of 12 cells; SPLG Yahoo 404 unverified",
+   "ref": "PI-20261026-RESEARCH-0002"
   }
  ],
  "authoring": {
@@ -79,7 +79,7 @@
  "handoff": [
   "MERGE the held PR: unit 47a9-01 only dispatches after it merges (E57).",
   "next research-ops: author PI-20261025-4CGB8QKR-0001 (OI-optional sibling of 09a6-02), then a programme node toward new_strategy_prop (short by 13).",
-  "next research-ops: read 47a9-01; if T30 passes with a Holm survivor, author the sizing/overlap unit; if SPLG still 404s, file the Yahoo ticker lever.",
+  "next research-ops: read 47a9-01; if T30 passes with a Holm survivor, author the sizing/overlap unit; if SPLG still 404s, add it to PI-20261026-RESEARCH-0002; once the map lands, author the XLF/XLP/XLU symbol-disjoint unit.",
   "2 rows landed for RQ-20261025-3947-23 although cadence is once (second is a producer_failed re-fire); watch whether once-units re-fire on a non-verdict row.",
   "P2-R3.c03/c04 regime-gate Tier-3 packet note still owed on REGIME-PROGRAM."
  ]
