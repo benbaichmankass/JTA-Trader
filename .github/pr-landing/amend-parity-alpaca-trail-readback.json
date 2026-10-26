@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "why": "HOLD for the manager: live order path (Tier 3). Routes the Alpaca branch of execute.modify_open_order (the monitor-trail SL modify) through alpaca_amend.tighten(apply=True) from #20150: legs scoped by the trade's qty, tighten-only, partially filled brackets refused, ok only on a venue read-back. A looser/equal stop is an ok no-op; refused / apply_failed / could_not_look return ok=False so the monitor leaves the package level unchanged and retries next tick (no halt, no mode flip); refused and apply_failed also send a per-trade Telegram ping, throttled to one per trade per outcome per hour. TP-only and no-qty calls keep the existing modify_protective path. Operator approval: row note, popup answer 'Build after Monday (Recommended)'. Evidence: tests/test_alpaca_trail_readback.py (13). Revert: revert this PR.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Manager approval sought: Alpaca monitor-trail SL modify now verified at the venue via alpaca_amend.tighten (tighten-only, partial-fill refused, read-back mismatch -> ok=False + per-trade ping). Live on deploy for alpaca_paper / alpaca_live / alpaca_portfolio trail modifies."
+}
