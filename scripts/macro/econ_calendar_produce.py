@@ -58,7 +58,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from econ_calendar_data import (  # noqa: E402
     KIND_TO_NEWS_CLASS,
+    SHADOW_CLASS_MIN_IMPACT,
     parse_tearsheet,
+    shadow_class_for_kind,
     to_event_rows,
 )
 from econ_calendar_fmp import normalize_fmp  # noqa: E402
@@ -178,7 +180,8 @@ def build_news_config_events(
     """Forward events for ``config/economic_calendar.yaml`` — the ``{class, time,
     impact}`` rows the news-influence layer reads (``src/news/news_events.py``).
 
-    Only events that (a) map to a known news class (:data:`KIND_TO_NEWS_CLASS`),
+    Only events that (a) map to a known news class (:data:`KIND_TO_NEWS_CLASS`, or an
+    observe-only shadow class - :func:`shadow_class_for_kind`),
     (b) are within ``horizon_days`` ahead of ``as_of``, and (c) clear
     ``min_impact`` are emitted — kept pruned to the upcoming window per the config's
     own guidance. Deterministic, sorted by time. This is the GATED live-path output
@@ -190,12 +193,19 @@ def build_news_config_events(
         return []
     seen: set[tuple] = set()
     out: list[dict] = []
+    shadow_at: dict[tuple, dict] = {}
     for r in upcoming:
         cls = KIND_TO_NEWS_CLASS.get(str(r.get("kind")))
+        shadow = False
+        if not cls:
+            # Observe-only class (weight 0 on the trade path - see econ_calendar_data).
+            cls = shadow_class_for_kind(r.get("kind"))
+            shadow = cls is not None
         if not cls:
             continue
         score = r.get("impact_score")
-        if score is None or score < min_impact:
+        floor_ = SHADOW_CLASS_MIN_IMPACT.get(cls, min_impact) if shadow else min_impact
+        if score is None or score < floor_:
             continue
         ts = r.get("scheduled_at")
         day = str(r.get("scheduled_for", ""))[:10]
@@ -207,9 +217,16 @@ def build_news_config_events(
             continue
         key = (cls, ts)
         if key in seen:
+            # Weighted classes keep first-seen (byte-identical to before); a shadow class keeps
+            # the highest impact among kinds released together (ppi_mom + ppi_yoy).
+            if shadow and round(float(score), 2) > shadow_at[key]["impact"]:
+                shadow_at[key]["impact"] = round(float(score), 2)
             continue
         seen.add(key)
-        out.append({"class": cls, "time": ts, "impact": round(float(score), 2)})
+        ev = {"class": cls, "time": ts, "impact": round(float(score), 2)}
+        if shadow:
+            shadow_at[key] = ev
+        out.append(ev)
     out.sort(key=lambda e: str(e["time"]))
     return out
 

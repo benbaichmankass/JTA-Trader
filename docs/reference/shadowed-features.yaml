@@ -73,3 +73,124 @@ entries:
     owner: RULE-SHADOW-NOT-DROP
     owner_note: "UMBRELLA owner. Per-leg owner/re-entry rows are not verified to exist; the weekly-audit CORE check C10 files the gap per leg."
     re_entry_test: "per leg: Gate 1 - Stage-0 record clearing a pre-registered rule net of the full cost stack, then the mechanical 1-2 trade soak (operating plan section 2)"
+  # ---- CALENDAR-EVENT-TYPES (2026-10-26): economic_calendar event classes emitted at weight 0 ----
+  # Each class below is written to config/economic_calendar.yaml `events:` but listed under NO symbol in
+  # `symbol_event_classes`, so news_events.event_risk_for_symbol cannot read it (tests/test_calendar_shadow_classes.py).
+  # The weight change is a separate Tier-3 act citing the class's event-study verdict.
+  economic_calendar_class_jobless_claims:
+    what: "Calendar event class `jobless_claims` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-901 (primary kind initial_jobless_claims, 599 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-901 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `jobless_claims` to a symbol_event_classes list"
+  economic_calendar_class_ppi:
+    what: "Calendar event class `ppi` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-01 (primary kind ppi_mom, 140 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-01 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `ppi` to a symbol_event_classes list"
+  economic_calendar_class_retail_sales:
+    what: "Calendar event class `retail_sales` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-02 (primary kind retail_sales_mom, 143 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-02 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `retail_sales` to a symbol_event_classes list"
+  economic_calendar_class_ism:
+    what: "Calendar event class `ism` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-03 (primary kind ism_manufacturing, 141 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-03 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `ism` to a symbol_event_classes list"
+  economic_calendar_class_jolts:
+    what: "Calendar event class `jolts` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-04 (primary kind jolts_job_openings, 136 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-04 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `jolts` to a symbol_event_classes list"
+  economic_calendar_class_umich:
+    what: "Calendar event class `umich` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-05 (primary kind michigan_sentiment, 279 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-05 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `umich` to a symbol_event_classes list"
+  economic_calendar_class_durable_goods:
+    what: "Calendar event class `durable_goods` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-06 (primary kind durable_goods_orders, 139 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-06 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `durable_goods` to a symbol_event_classes list"
+  economic_calendar_class_adp:
+    what: "Calendar event class `adp` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-07 (primary kind adp_employment_change, 139 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-07 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `adp` to a symbol_event_classes list"
+  economic_calendar_class_housing:
+    what: "Calendar event class `housing` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-08 (primary kind housing_starts_mom, 138 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-08 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `housing` to a symbol_event_classes list"
+  economic_calendar_class_regional_fed_mfg:
+    what: "Calendar event class `regional_fed_mfg` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-09 (primary kind philadelphia_fed_manufacturing_survey, 140 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-09 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `regional_fed_mfg` to a symbol_event_classes list"
+  economic_calendar_class_industrial_activity:
+    what: "Calendar event class `industrial_activity` (kinds mapped in scripts/macro/econ_calendar_data.py::SHADOW_KIND_TO_NEWS_CLASS): emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-TYPES
+    owner_note: "event-study unit RQ-20261026-4795-10 (primary kind industrial_production_mom, 138 distinct live+survey releases with a defined surprise, MEASURED 2026-10-26); filed in the held research-queue PR for CALENDAR-EVENT-TYPES"
+    re_entry_test: "RQ-20261026-4795-10 PASSes its registered rule (|t_eff| >= bar at n >= 100 distinct releases), then placebo + net-of-cost + naive-floor confirmation, then a Tier-3 proposal adds `industrial_activity` to a symbol_event_classes list"
+  economic_calendar_class_fed_speak:
+    what: "Calendar event class `fed_speak`: Fed speaker / testimony / Beige Book events (no consensus, so no surprise); emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-REACTION-STUDY
+    owner_note: "no consensus column, so the surprise event study cannot grade it; CALENDAR-EVENT-REACTION-STUDY builds the event-window reaction harness (abs return / range vs matched non-event windows)"
+    re_entry_test: "the reaction study shows an event-window effect for `fed_speak` net of the matched-window baseline at a pre-registered n, then a Tier-3 proposal adds it to a symbol_event_classes list"
+  economic_calendar_class_treasury_auction:
+    what: "Calendar event class `treasury_auction`: US Treasury note/bond auctions 2y-30y (no consensus); emitted and logged, weight 0 on the trade path"
+    decision: shadowed
+    trade_path_state: "weight 0 by construction: class absent from every symbol_event_classes list in config/economic_calendar.yaml (test-enforced)"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: CALENDAR-EVENT-REACTION-STUDY
+    owner_note: "no consensus column, so the surprise event study cannot grade it; CALENDAR-EVENT-REACTION-STUDY builds the event-window reaction harness (abs return / range vs matched non-event windows)"
+    re_entry_test: "the reaction study shows an event-window effect for `treasury_auction` net of the matched-window baseline at a pre-registered n, then a Tier-3 proposal adds it to a symbol_event_classes list"

@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Weight-0 economic-calendar event classes. The diff touches scripts/macro/econ_calendar_{data,produce}.py, which pr-landing-guard cannot vouch for, so a human reads it. Nothing on the trade path changes: src/news/news_events.py and config/economic_calendar.yaml are untouched and no shadow class is listed in any symbol_event_classes (tests/test_calendar_shadow_classes.py proves event_risk byte-identical).",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "scripts/macro/econ_calendar_data.py and econ_calendar_produce.py are outside the guard Tier-1 surface; nothing on the trade path changes (weight 0 test-proven)."
+}

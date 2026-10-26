@@ -1,0 +1,22 @@
+{
+  "id": "CALENDAR-EVENT-REACTION-STUDY",
+  "title": "Event-window reaction study for calendar classes with no consensus (fed_speak, treasury_auction): build the harness, pre-register, run",
+  "phase": "F",
+  "state": "queued",
+  "owner": "feeds lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Child of CALENDAR-EVENT-TYPES (roadmap M28). fed_speak and treasury_auction are emitted at weight 0 but have no consensus column, so scripts/research/macro_event_study_run.py (surprise vs forward return) cannot grade them. BUILD: an event-window reaction harness: abs forward return / range over [t0, t0+h] for event windows vs matched non-event windows (same weekday and hour), SPY and BTC/ETH, net of the full cost stack if a trade rule is proposed; pre-register the rule and n BEFORE the run (distinct events, not rows). DONE WHEN: a queue unit per class exists with a graded result. Weight stays 0 until a Tier-3 proposal cites the verdict. Check scripts/research/ (RESEARCH-CAPABILITY-INDEX.md) for an existing reaction harness before building.",
+  "priority_rank": 61,
+  "updated_at": "2026-10-26T14:46:44Z",
+  "updated_by": "session_01XKtTSjzhktzh6g6BKJpoYi",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 718
+}
