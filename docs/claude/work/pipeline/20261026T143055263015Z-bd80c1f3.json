@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-UNSVQMPZ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "live-review pass LR-20261026T1428Z (session_01E3LNGsWnZY9MrRuNsvQmPz)",
+    "rerun": "python3 scripts/ops/live_review_packet.py pkg-011a7bf85ee54a6f | grep -A3 '\"mechanics\"'"
+  },
+  "state": "queued",
+  "what": "ib_paper MGC: mgc_pullback_1d pkg-011a7bf85ee54a6f (short) read mechanics match at 13:28Z; at 14:28Z venue SL 4040.8 / TP 3946.8 equals the new ict_scalp_mgc_15m pkg-4b247589d8ec4e1e bracket, not the pullback's 4270.03 / 3766.99. Two same-direction packages on one paper position: the later bracket seems to replace the earlier at the venue. Paper only. Establish whether the pullback's SL/TP was replaced (OCA overwrite) or the position merged, and whether the same happens on a real-money account (bybit) when two legs trade one symbol; then fix or kill with a reason."
+}
