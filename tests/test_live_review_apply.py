@@ -25,7 +25,8 @@ from src.units.accounts.risk import RiskManager
 def _intent(**kw) -> lri.LiveReviewIntent:
     base = dict(order_package_id="P", action="tighten_sl", direction="short", review_id="LR-20261025T2000Z-P",
                 new_sl=0.2100, mark=0.2000, atr=0.0040, bar_ts="2026-10-25T18:00:00Z", min_buffer_atr=1.0,
-                mandate=lri.MANDATE_ID, evidence_path="comms/live_review/tables/x.json")
+                mandate=lri.MANDATE_ID, evidence_path="comms/live_review/tables/x.json",
+                basis=lri.BASIS_TABLE, mechanics_verdict="match", expected_cost_r=-0.1, worst_case_delta_r=0.4)
     base.update(kw)
     return lri.LiveReviewIntent(**base)
 
@@ -548,6 +549,9 @@ def test_dry_run_cli_prints_every_account_and_writes_nothing(wired, monkeypatch,
 
 def test_apply_cli_refuses_without_the_full_evidence_set(capsys):
     assert lra.main(["--apply", "--package", "P", "--new-sl", "0.21"]) == lra.EXIT_REFUSED
+    # every other field present but no --basis / --mechanics: still refused
+    assert lra.main(["--apply", "--package", "P", "--new-sl", "0.21", "--review-id", "LR-x",
+                     "--evidence", "config/mandates.yaml", "--mandate", lri.MANDATE_ID]) == lra.EXIT_REFUSED
     assert lra.main(["--apply", "--dry-run"]) == lra.EXIT_REFUSED
 
 
@@ -660,3 +664,113 @@ def test_exec_bybit_venue_read_failure_is_could_not_look_and_sends_nothing(monke
         monkeypatch.setattr(aps_mod, name, getattr(fake, name))
     res = lra._exec_bybit(_MonDB([]), {"row": _trade(1, "bybit_2")}, PKG, 0.2100, _intent())
     assert res["result"] == lra.X_COULD_NOT_LOOK and fake.sent == 0
+
+
+# --------------------------- LTR-JUDGEMENT-APPLY: Claude's judgement applies
+# Operator 2026-10-26 ~06:30Z, popup verbatim "Claude's judgement applies
+# (Recommended)": the n >= 20 clause is dropped; an insufficient_n cell's call
+# applies as basis `judgement` with a confidence. The guardrails do not move.
+
+JUDGE = dict(basis=lri.BASIS_JUDGEMENT, confidence=0.6, reason="momentum stalled at prior swing",
+             expected_cost_r=None, worst_case_delta_r=None)
+
+
+def test_judgement_precondition_passes_with_confidence_and_reason():
+    assert lri.mandate_precondition(_intent(**JUDGE)) is None
+
+
+@pytest.mark.parametrize("kw,clause", [
+    ({"confidence": None}, "judgement_confidence_missing"),
+    ({"confidence": 1.5}, "judgement_confidence_missing"),
+    ({"confidence": True}, "judgement_confidence_missing"),
+    ({"reason": "  "}, "judgement_reason_missing"),
+    ({"basis": None}, "basis_unstated"),
+    ({"basis": "insufficient_n"}, "basis_unstated"),
+    ({"mechanics_verdict": "mismatch"}, "mechanics_mismatch"),
+    ({"mechanics_verdict": "could_not_look"}, "mechanics_could_not_look"),
+    ({"mechanics_verdict": None}, "mechanics_unstated"),
+])
+def test_judgement_precondition_refusals(kw, clause):
+    assert lri.mandate_precondition(_intent(**{**JUDGE, **kw})) == f"{lri.R_MANDATE}:{clause}"
+
+
+def test_table_precondition_keeps_the_q1_bounds():
+    assert lri.mandate_precondition(_intent()) is None                       # the fixture: table, in bound
+    assert lri.mandate_precondition(_intent(expected_cost_r=-0.25)) is None  # the bound is inclusive
+    assert lri.mandate_precondition(_intent(expected_cost_r=-0.26)).endswith("table_ev_outside_bound")
+    assert lri.mandate_precondition(_intent(expected_cost_r=None)).endswith("table_ev_outside_bound")
+    assert lri.mandate_precondition(_intent(worst_case_delta_r=0.0)).endswith("table_worst_case_not_improved")
+
+
+def test_a_judgement_basis_tighten_inside_the_guardrails_is_applied(wired):
+    db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
+    res = _run(db, wired, **JUDGE)
+    assert res["mandate_precondition"] is None
+    assert wired["exec"] == [("bybit", "bybit_2", 0.2100), ("bybit", "bybit_portfolio", 0.2100)]
+    wb = res["writeback"]
+    assert wb["applied"] is True and wb["disposition"]["route"] == "auto_applied"
+    assert (wb["basis"], wb["confidence"], wb["reason"]) == ("judgement", 0.6, JUDGE["reason"])
+
+
+def test_a_judgement_basis_tighten_is_still_clipped_to_the_noise_floor(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    res = _run(db, wired, new_sl=0.2010, **JUDGE)
+    assert res["accounts"][0]["verdict"] == "clip"
+    assert wired["exec"][0][2] == pytest.approx(0.2040)
+
+
+def test_a_judgement_basis_loosen_is_refused_on_every_account(wired):
+    db = _ApplyDB([_trade(1, "bybit_2"), _trade(2, "bybit_portfolio")], PKG)
+    res = _run(db, wired, new_sl=0.2300, **JUDGE)
+    assert {a["reason"] for a in res["accounts"]} == {lri.R_LOOSENS}
+    assert wired["exec"] == [] and db.package_writes == [] and res["writeback"]["applied"] is False
+
+
+def test_a_judgement_basis_could_not_look_never_applies(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    res = _run(db, wired, atr=None, **JUDGE)
+    assert res["accounts"][0]["verdict"] == lri.V_COULD_NOT_LOOK
+    assert wired["exec"] == [] and res["exit"] == lra.EXIT_UNREADABLE
+
+
+def test_a_mechanics_mismatch_is_refused_before_any_executor(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    res = _run(db, wired, mechanics_verdict="mismatch", **{k: v for k, v in JUDGE.items()})
+    assert wired["exec"] == [] and db.trade_writes == [] and res["exit"] == lra.EXIT_REFUSED
+    assert res["accounts"][0]["executor"]["detail"] == f"{lri.R_MANDATE}:mechanics_mismatch"
+    assert res["writeback"]["applied"] is False
+
+
+def test_negative_control_judgement_without_confidence_applies_nothing(wired):
+    """The same intent that applies above, minus its confidence: nothing is sent.
+    Proves the judgement test is not passing because the gate is absent."""
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    res = _run(db, wired, **{**JUDGE, "confidence": None})
+    assert wired["exec"] == [] and res["exit"] == lra.EXIT_REFUSED
+    assert res["accounts"][0]["executor"]["detail"].endswith("judgement_confidence_missing")
+
+
+def test_table_basis_out_of_bound_is_refused_and_in_bound_unchanged(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    assert _run(db, wired, expected_cost_r=-0.4)["exit"] == lra.EXIT_REFUSED and wired["exec"] == []
+    res = _run(db, wired)
+    assert res["accounts"][0]["executed"] is True and res["writeback"]["basis"] == "table"
+
+
+def test_recommend_mode_never_checks_or_executes_a_judgement(wired):
+    db = _ApplyDB([_trade(1, "bybit_2")], PKG)
+    res = _run(db, wired, mode="recommend", **JUDGE)
+    assert wired["exec"] == [] and res["writeback"]["disposition"]["route"] == "recommended"
+
+
+def test_committed_mandate_carries_the_judgement_amendment():
+    import yaml
+    from pathlib import Path
+
+    doc = yaml.safe_load((Path(lri.CONFIG_PATH).parent / "mandates.yaml").read_text())
+    m = next(x for x in doc["mandates"] if x["id"] == lri.MANDATE_ID)
+    text = " ".join(m["fires_when"])
+    assert "n >= 20" not in text and "basis: judgement" in text and "basis: table" in text
+    assert "Claude's judgement applies (Recommended)" in m["amendment_source"]
+    assert m["amended_at"] == "2026-10-26"
+    assert "widen a stop" in m["never"] and "act on a read that could not look" in m["never"]

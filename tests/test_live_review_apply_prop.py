@@ -58,7 +58,8 @@ def _ticket(tid, account, *, status="filled", sl=2550.0, meta=None):
 
 def _intent(**kw):
     base = dict(order_package_id="pkg-P", action="tighten_sl", direction="short", review_id="LR-20261025T1900Z-P",
-                new_sl=2530.0, mark=2490.0, atr=20.0, bar_ts="2026-10-25T18:00:00Z", mandate=lri.MANDATE_ID)
+                new_sl=2530.0, mark=2490.0, atr=20.0, bar_ts="2026-10-25T18:00:00Z", mandate=lri.MANDATE_ID,
+                basis=lri.BASIS_TABLE, mechanics_verdict="match", expected_cost_r=-0.1, worst_case_delta_r=0.4)
     base.update(kw)
     return lri.LiveReviewIntent(**base)
 

@@ -67,7 +67,15 @@ Usage:
     # apply (only with apply_mode: apply AND a granted mandate)
     python3 scripts/ops/live_review_apply.py --package pkg-… --new-sl 0.2053 \
         --review-id LR-… --evidence comms/live_review/tables/LR-….json \
-        --mandate MD-LIVE-TIGHTEN-SL --apply
+        --mandate MD-LIVE-TIGHTEN-SL --mechanics match --basis judgement \
+        --confidence 0.6 --reason "…" --apply
+    # table basis instead: --basis table --expected-cost-r -0.1 --worst-case-delta-r 0.4
+
+The mandate's package-level clauses (``lri.mandate_precondition``) are checked
+before any execute: ``mechanics == match``, and either ``basis: table`` (EV cost
+<= 0.25 R, worst case improved) or ``basis: judgement`` (a confidence in [0, 1]
+and a reason; LTR-JUDGEMENT-APPLY, operator 2026-10-26 dropped the n >= 20
+clause). A failed clause is ``refused`` on every account, nothing is sent.
 """
 from __future__ import annotations
 
@@ -501,6 +509,10 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         out.update(exit=EXIT_REFUSED, detail=f"package {intent.order_package_id} not open")
         return out
     mandate_ok = bool(intent.mandate) and intent.mandate in (granted if granted is not None else _granted_mandates())
+    # The mandate's package-level clauses (mechanics match; table EV bounds OR a
+    # judgement confidence + reason -- LTR-JUDGEMENT-APPLY). None = they hold.
+    precondition = lri.mandate_precondition(intent)
+    out["mandate_precondition"] = precondition
     execution = str((strategies.get(pkg.get("strategy_name")) or {}).get("execution") or "live")
     streaks = st.setdefault("could_not_look", {})
     alerted = st.setdefault("alerted", {})
@@ -549,6 +561,8 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         if v.ok and mode == "apply" and apply:
             if not mandate_ok:
                 res = {"result": X_REFUSED, "detail": f"mandate {intent.mandate!r} not granted"}
+            elif precondition:
+                res = {"result": X_REFUSED, "detail": precondition}
             elif cls == "bybit":
                 res = _exec_bybit(db, leg, pkg, v.level, intent)
             elif cls == "alpaca":
@@ -613,6 +627,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     out["writeback"] = {
         "review_id": intent.review_id, "order_package_id": intent.order_package_id,
         "packet_sha": intent.packet_sha, "evidence": intent.evidence_path,
+        "basis": intent.basis, "confidence": intent.confidence, "reason": intent.reason,
         "applied": applied_any,
         "account_reads": [{"account_id": a["account_id"], "account_class": a.get("account_class"),
                            "read": a["read"] if a["read"] != "applied" else "would_apply",
@@ -642,7 +657,10 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
 def build_intent(pkg: Dict[str, Any], *, new_sl: Optional[float], review_id: str,
                  market: Dict[str, Any], min_buffer_atr: float, mandate: Optional[str] = None,
                  evidence: Optional[str] = None, packet_sha: Optional[str] = None,
-                 expected_cost_r: Optional[float] = None) -> lri.LiveReviewIntent:
+                 expected_cost_r: Optional[float] = None, basis: Optional[str] = None,
+                 confidence: Optional[float] = None, reason: Optional[str] = None,
+                 mechanics_verdict: Optional[str] = None,
+                 worst_case_delta_r: Optional[float] = None) -> lri.LiveReviewIntent:
     """An intent for ``pkg``. With no ``new_sl`` it is a PROBE at the noise
     floor (the tightest stop the floor allows), used only by ``--dry-run`` to
     show what each account's own bounds would do."""
@@ -653,7 +671,9 @@ def build_intent(pkg: Dict[str, Any], *, new_sl: Optional[float], review_id: str
         order_package_id=pkg["order_package_id"], action="tighten_sl", direction=direction,
         review_id=review_id, new_sl=new_sl, packet_sha=packet_sha, evidence_path=evidence,
         expected_cost_r=expected_cost_r, mark=market.get("mark"), atr=market.get("atr"),
-        bar_ts=market.get("bar_ts"), min_buffer_atr=min_buffer_atr, mandate=mandate)
+        bar_ts=market.get("bar_ts"), min_buffer_atr=min_buffer_atr, mandate=mandate,
+        basis=basis, confidence=confidence, reason=reason, mechanics_verdict=mechanics_verdict,
+        worst_case_delta_r=worst_case_delta_r)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -665,14 +685,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--packet-sha", default=None)
     ap.add_argument("--expected-cost-r", type=float, default=None)
     ap.add_argument("--mandate", default=None)
+    ap.add_argument("--basis", choices=lri.BASES, default=None,
+                    help="table (measured LTR-0 cell) | judgement (insufficient_n cell: the reviewer's call)")
+    ap.add_argument("--confidence", type=float, default=None, help="judgement basis: confidence in [0, 1]")
+    ap.add_argument("--reason", default=None, help="judgement basis: the one-line reason")
+    ap.add_argument("--mechanics", default=None, help="the review row's mechanics.verdict (must be match to apply)")
+    ap.add_argument("--worst-case-delta-r", type=float, default=None, help="table basis: tighten worst - hold worst")
     ap.add_argument("--dry-run", action="store_true", help="read-only: print what each account WOULD do")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args(argv)
     if a.apply and a.dry_run:
         print("--apply and --dry-run are exclusive")
         return EXIT_REFUSED
-    if a.apply and not (a.package and a.new_sl and a.review_id and a.evidence and a.mandate):
-        print("--apply needs --package --new-sl --review-id --evidence --mandate")
+    if a.apply and not (a.package and a.new_sl and a.review_id and a.evidence and a.mandate
+                        and a.basis and a.mechanics):
+        print("--apply needs --package --new-sl --review-id --evidence --mandate --basis --mechanics")
         return EXIT_REFUSED
     if a.apply and not Path(_REPO_ROOT, a.evidence).is_file():
         print(f"evidence {a.evidence!r} is not a file in the checkout (it must be on main)")
@@ -692,7 +719,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         intent = build_intent(pkg, new_sl=a.new_sl, review_id=a.review_id or f"LR-{stamp}-dryrun",
                               market=market, min_buffer_atr=buf, mandate=a.mandate,
                               evidence=a.evidence, packet_sha=a.packet_sha,
-                              expected_cost_r=a.expected_cost_r)
+                              expected_cost_r=a.expected_cost_r, basis=a.basis,
+                              confidence=a.confidence, reason=a.reason, mechanics_verdict=a.mechanics,
+                              worst_case_delta_r=a.worst_case_delta_r)
         res = run(intent, apply=bool(a.apply), db=db, accounts=accounts, strategies=strategies,
                   review_cfg=cfg)
         res["probe"] = a.new_sl is None

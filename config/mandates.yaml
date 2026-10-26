@@ -1109,14 +1109,33 @@ mandates:
       VM meta.sl_floor, phone request_sl_tighten. IB refuses no_amend_path until
       an IB executor is wired.
     fires_when:
-      - a committed live-review row (comms/live_review/reviews.jsonl) whose LTR-0 outcome table (evidence path on main) has n >= 20 from this state
-      - recommendation.action == tighten_sl, ev_delta_r >= -0.25 (Q1 bound), worst_case_delta_r > 0
+      - a committed live-review row (comms/live_review/reviews.jsonl) with recommendation.action == tighten_sl, its decision packet / LTR-0 outcome table (evidence path on main) and recommendation.evidence_source recorded
+      - "EITHER basis: table -- the LTR-0 cell is `measured`, ev_delta_r >= -0.25 (Q1 bound) and worst_case_delta_r > 0"
+      - "OR basis: judgement -- the LTR-0 cell is `insufficient_n`; the reviewer's call applies, with a recorded confidence in [0, 1] and a one-line reason, logged as judgement and graded against the realised outcome (LTR-5)"
       - mechanics.verdict == match
       - config/live_trade_review.yaml apply_mode == apply for the account (global apply covers all accounts)
       - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, <= 1 amend per package per closed bar, account live, leg not shadow); could_not_look never applies
-    never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act with n below the floor, write mode or execution]
+    never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act on a mechanics mismatch, act on a judgement without a recorded confidence and reason, write mode or execution]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no-op / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the review row and table path
-    revert: a tightened stop that is hit cannot be undone; disarm by committing apply_mode recommend in config/live_trade_review.yaml
+    revert: a tightened stop that is hit cannot be undone; disarm by committing apply_mode recommend in config/live_trade_review.yaml; undo the 2026-10-26 amendment by restoring the n >= 20 clause (fires_when) and the never-entry 'act with n below the floor'
+    amended_at: '2026-10-26'
+    amendment_source: >-
+      Operator in manager session session_01HAysMLfF9dYpi92YMqYxEq, chat ~06:28Z
+      2026-10-26, verbatim: "20 trades to verify the live trade review. Seems
+      like far too many. In the end of the day, this is like, we just need to
+      get the recommendation flow going, and then the models will decide what
+      weight to give that, and obviously they should be giving more weight to
+      the Claude answers as Claude gives more and more correct answers, but,
+      like, there's no reason to leave it on dry run or whatever for 20 trades.
+      It's gonna take forever." Popup answer ~06:30Z, verbatim: "Claude's
+      judgement applies (Recommended)" -- option text: "Drop the n>=20 clause.
+      When the table is thin, Claude's call applies, logged as 'judgement' with
+      a confidence; the table is used when it's there. Every call is graded
+      against the actual outcome so models can learn how much weight to give
+      Claude." Guardrails unchanged (tighten-only, min_buffer_atr noise floor,
+      one amend per package per bar, mechanics match, per-account
+      approve_amend, could_not_look never applies). Committed by the manager
+      with auto mode switched off by the operator for this edit (~07:40Z).
 
 # MD-PROMOTE-S1-S2-SOAK-AMEND (proposed 2026-10-15 by lane SOAK-REDEFINE) was
 # GRANTED by the operator the same day and folded into MD-PROMOTE-S1-S2 above
