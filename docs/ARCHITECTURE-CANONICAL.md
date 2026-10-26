@@ -1148,8 +1148,13 @@ training sessions follow the established workflow:
    source"). MEASURED: `grep -rn "claude_strategy_scores\|claude_trade_scores" ml/`
    returns nothing, and `trade_outcomes` / `setup_labels` read the journal's
    realized outcomes. 4,127 of 4,347 rows are a deterministic rubric script,
-   not Claude judgment. The planned path is the `claude_judgments` family:
-   [`docs/plans/ml-claude-distillation-DESIGN.md`](plans/ml-claude-distillation-DESIGN.md).
+   not Claude judgment. The path is the `claude_judgments` family
+   (`ml/datasets/families/claude_judgments.py`, BUILT 2026-10-26 by CJ-2-DATASET,
+   built daily by `build_trainer_datasets.sh`): live-review and desk decisions,
+   point-in-time, joined to realised net R (package initial stop as the risk
+   basis), exclusions counted by reason; the legacy rubric file is not ingested.
+   No manifest trains on it yet; `claude-judgments-guard` lints any that does.
+   Design: [`docs/plans/ml-claude-distillation-DESIGN.md`](plans/ml-claude-distillation-DESIGN.md).
 2. **Build datasets.** `python -m ml.datasets build <family>` writes
    versioned artifacts under `<output>/<family>/<scope>/<tf>/<version>/`
    with mandatory metadata + leakage discipline. Buildable families:

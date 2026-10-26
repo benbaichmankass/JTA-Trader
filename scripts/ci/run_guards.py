@@ -385,6 +385,16 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_desk_records.py"]],
     },
     {
+        # CJ-2-DATASET: docs/plans/ml-claude-distillation-DESIGN.md § 3.5 test 2. A manifest on the
+        # claude_judgments family may train only on its decision-time FEATURE_COLUMNS; a judgment
+        # (teacher output) or outcome column as a feature is leakage.
+        "name": "claude-judgments-guard",
+        "when": {"globs": ["ml/configs/**", "ml/datasets/families/claude_judgments.py",
+                           "scripts/ci/check_claude_judgments_manifests.py"]},
+        "steps": [["python3", "scripts/ci/check_claude_judgments_manifests.py", "--self-test"],
+                  ["python3", "scripts/ci/check_claude_judgments_manifests.py"]],
+    },
+    {
         # ROADMAP-LOOP (operator, 2026-10-11): milestone <-> checklist row <-> queue unit is a FIELD
         # (`roadmap`), closing rows carry `writeback`, and the ROADMAP.md live block is generated.
         # Whole-store checks always; enforcement on rows/units the DIFF touches only.

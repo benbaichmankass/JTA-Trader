@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Substance is Tier-1: a new read-only ML dataset family (ml/datasets/families/claude_judgments.py: reads comms/ JSONL and opens trade_journal.db mode=ro), one line registering it in ml/datasets/registry.py, a build line in scripts/ops/build_trainer_datasets.sh, a manifest-lint CI guard, tests, an ARCHITECTURE-CANONICAL sentence, and the regenerated config/trader_import_closure.txt (2 added lines; the trader imports ml.datasets, so the registry now pulls the family into the closure; it is never called on the trader). No order path, strategy, risk cap, manifest or training run. Held only because pr-landing-guard names ml/** as Tier-2 by path and cannot vouch for ml/datasets/families/claude_judgments.py, ml/datasets/registry.py or config/trader_import_closure.txt. The manager or a human should read and merge.",
+  "why": "CJ-2-DATASET: the claude_judgments point-in-time dataset family, so Claude's live-review and desk decisions reach the trainer joined to their outcomes. Tier 1, no live change."
+}
