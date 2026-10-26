@@ -1,0 +1,19 @@
+{
+  "id": "CI-SPEED-1026",
+  "title": "CI speed: remove the O(files x stems) hot loop in check_unwired_artifacts.scan, then the live-queue test recomputation",
+  "phase": "ci",
+  "state": "in_flight",
+  "owner": "lane",
+  "lane": "lane/ci-speed-1026",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 lane] MEASURED by manager: pytest-run 14.4 min (10-13) -> 28-39; slowest test test_phase_g_sunset_and_pull sunset_pass self-test 259.5 s, 257 of it in check_unwired_artifacts.scan. FIX 1 (this PR): scan() compiles the same pattern per file over only stems present as tokens. MEASURED: full tree 1333 targets old 96.3 s -> new 12.4 s with byte-identical findings (191); sunset_pass --self-test now 23.8 s. FIX 2 (next PR): live-queue tests re-running dispatcher/parser; no skips/weakened asserts. Closes when pytest-run p50 is observed back under ~15 min.",
+  "updated_at": "2026-10-26T16:14:04Z",
+  "updated_by": "session_01TW1b6oGvF9G4dqjmQ93WKA",
+  "roadmap": "L-OPS",
+  "_seq": 718
+}
