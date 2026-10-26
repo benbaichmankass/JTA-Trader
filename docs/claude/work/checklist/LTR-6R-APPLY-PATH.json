@@ -2,7 +2,7 @@
   "id": "LTR-6R-APPLY-PATH",
   "title": "Live trade review: per-account apply path (package LiveReviewIntent -> RiskManager.approve_amend per account -> account executor), apply_mode off|recommend|apply default recommend; supersedes LTR-6 apply mechanics",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01354wy5zWA5J3AcLp2NbdKo",
   "model": "claude-opus-5-5",
@@ -10,15 +10,26 @@
   "spend_usd": null,
   "tier": 3,
   "prs": [
-    20139
+    20139,
+    20185,
+    20199
   ],
   "blocked_on": [],
-  "note": "Lane session_01354wy5zWA5J3AcLp2NbdKo: PR #20139 (Tier 3, landing: hold). Built: LiveReviewIntent; RiskManager.approve_amend -> approve/clip/refuse/could_not_look (collapsed-state contract; 3-cycle flag); per-account executors (Bybit leg modify + venue readback, prop VM meta.sl_floor, phone request_sl_tighten, Alpaca no_amend_path); per-leg sl_floor held by order monitor + prop trail; apply_mode=recommend in config/live_trade_review.yaml (apply also needs granted MD-LIVE-TIGHTEN-SL; flip diff in PR body); live-review-dry-run Tier-1 system-action. Manager design-review changes 1-4 and operator scope 'All accounts' folded in. Closing observation: after merge+deploy, action live-review-dry-run on the VM prints one verdict per account per open package. TIER-3 APPROVAL RECORD (operator popup on #20139, ~19:57Z 2026-10-25, relayed by manager session_01MdQiC8UqKBLj287KWFWN71): (Q1) \"Merge + deploy now (Recommended)\" -- merge, one pull-and-deploy, then live-review-dry-run on the VM; nothing applies yet. (Q2) \"After VM dry-run passes (Recommended)\" -- the manager grants MD-LIVE-TIGHTEN-SL and flips apply_mode to apply only after the VM dry-run shows a correct verdict for every account, before Monday open. 2026-10-25 20:37Z (manager 01MdQiC8): merged 81a0b836, deployed by #20161 at 20:33Z, observed in VM dry-run #20165. Real-money and prop verdicts are correct (Bybit 6 of 6 approve; no open prop package). ib_paper is mislabelled refuse/bad_input on a failed IB read; see LTR-6R-COULDNOTLOOK-FIX. The apply flip is held until a clean re-run. [2026-10-25 ~22:55Z manager session_01AZiErvK92E59gCqBV5GoQX] #20185 (manager-authored flip) refused by manager-scope-guard R2 (config/ writes) and pytest (test_committed_config_is_recommend_not_apply pins recommend). Re-land dispatched to lane session_01R87MC4VcvYAxZLhELeAvLC as branch lane/ltr-apply-flip, replacing the pin with test_committed_apply_requires_granted_mandate. Merge needs the operator to take the manager out of auto mode (classifier: Merge Without Review / Self-Modification); operator asleep from ~22:55Z, so the merge waits for the morning. Until then apply_mode stays recommend (MEASURED on main). [2026-10-25 lane LTR-APPLY-FLIP-LAND] GATE MET: VM dry-run #20183 (22:16Z, after deploy #20182): Bybit 6/6 approve; alpaca_paper 3 approve + 1 refuse would_loosen (correct); ib_paper 2 refuse no_amend_path. Operator chat ~22:25Z verbatim 'go ahead with the flip'. Re-landed from #20185 as lane/ltr-apply-flip: grants MD-LIVE-TIGHTEN-SL + apply_mode: apply; test_committed_config_is_recommend_not_apply replaced by test_committed_apply_requires_granted_mandate. Held for manager merge. Revert: apply_mode: recommend.",
+  "note": "Lane session_01354wy5zWA5J3AcLp2NbdKo: PR #20139 (Tier 3, landing: hold). Built: LiveReviewIntent; RiskManager.approve_amend -> approve/clip/refuse/could_not_look (collapsed-state contract; 3-cycle flag); per-account executors (Bybit leg modify + venue readback, prop VM meta.sl_floor, phone request_sl_tighten, Alpaca no_amend_path); per-leg sl_floor held by order monitor + prop trail; apply_mode=recommend in config/live_trade_review.yaml (apply also needs granted MD-LIVE-TIGHTEN-SL; flip diff in PR body); live-review-dry-run Tier-1 system-action. Manager design-review changes 1-4 and operator scope 'All accounts' folded in. Closing observation: after merge+deploy, action live-review-dry-run on the VM prints one verdict per account per open package. TIER-3 APPROVAL RECORD (operator popup on #20139, ~19:57Z 2026-10-25, relayed by manager session_01MdQiC8UqKBLj287KWFWN71): (Q1) \"Merge + deploy now (Recommended)\" -- merge, one pull-and-deploy, then live-review-dry-run on the VM; nothing applies yet. (Q2) \"After VM dry-run passes (Recommended)\" -- the manager grants MD-LIVE-TIGHTEN-SL and flips apply_mode to apply only after the VM dry-run shows a correct verdict for every account, before Monday open. 2026-10-25 20:37Z (manager 01MdQiC8): merged 81a0b836, deployed by #20161 at 20:33Z, observed in VM dry-run #20165. Real-money and prop verdicts are correct (Bybit 6 of 6 approve; no open prop package). ib_paper is mislabelled refuse/bad_input on a failed IB read; see LTR-6R-COULDNOTLOOK-FIX. The apply flip is held until a clean re-run. [2026-10-25 ~22:55Z manager session_01AZiErvK92E59gCqBV5GoQX] #20185 (manager-authored flip) refused by manager-scope-guard R2 (config/ writes) and pytest (test_committed_config_is_recommend_not_apply pins recommend). Re-land dispatched to lane session_01R87MC4VcvYAxZLhELeAvLC as branch lane/ltr-apply-flip, replacing the pin with test_committed_apply_requires_granted_mandate. Merge needs the operator to take the manager out of auto mode (classifier: Merge Without Review / Self-Modification); operator asleep from ~22:55Z, so the merge waits for the morning. Until then apply_mode stays recommend (MEASURED on main). [2026-10-25 lane LTR-APPLY-FLIP-LAND] GATE MET: VM dry-run #20183 (22:16Z, after deploy #20182): Bybit 6/6 approve; alpaca_paper 3 approve + 1 refuse would_loosen (correct); ib_paper 2 refuse no_amend_path. Operator chat ~22:25Z verbatim 'go ahead with the flip'. Re-landed from #20185 as lane/ltr-apply-flip: grants MD-LIVE-TIGHTEN-SL + apply_mode: apply; test_committed_config_is_recommend_not_apply replaced by test_committed_apply_requires_granted_mandate. Held for manager merge. Revert: apply_mode: recommend. [2026-10-26 lane LTR-APPLY-FLIP-LAND] #20199 MERGED 4299cd33 (~06:00Z; supersedes #20185). Observed by dry-run #20241 (06:11Z): every account apply_mode=apply; Bybit 6/6 approve, alpaca_paper 3 approve + 1 refuse would_loosen, ib_paper refuse no_amend_path. State landed_unproven: closes when a real apply appears in reviews.jsonl. Revert: apply_mode: recommend.",
   "priority_rank": 2,
-  "updated_at": "2026-10-25T23:48:41Z",
+  "updated_at": "2026-10-26T06:18:08Z",
   "updated_by": "session_01YHmksMP9AERHYWtK1bCfST",
   "roadmap": [
     "L-ATM"
   ],
+  "observation": {
+    "what": "first live-review APPLY recorded in comms/live_review/reviews.jsonl with accounts_applied non-empty",
+    "how_to_check": "grep accounts_applied in comms/live_review/reviews.jsonl on main for a non-empty list; VM dry-run #20241 (06:11Z 2026-10-26) already shows apply_mode=apply on every account",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "L-ATM: apply_mode=apply with granted MD-LIVE-TIGHTEN-SL live from 2026-10-26 (PR #20199, 4299cd33); milestone updates when the first apply is observed",
+    "arch": "none: no architecture change; the apply path was documented by #20139"
+  },
   "_seq": 679
 }
