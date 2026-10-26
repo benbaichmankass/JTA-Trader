@@ -467,6 +467,10 @@ milestones:
       (no_trade, shadow) written by a routine-shape wake on desk/decisions (655a9c6), desk-records-guard 0
       findings; wake cost $0.34-0.47 (n=4, get_session().usage). A wake writes only when started ON desk/decisions
       (repo-less and add_repo push were refused), so the routine is a spawner; it is not installed yet (manager).
+      DESK-6B-VM-WAKE (done 2026-10-26, #20377 + #20410): the live trader builds and lands each 1h packet on
+      desk/decisions and posts the desk-wake marker itself; desk-scan-packet.yml is the fallback. MEASURED: bar
+      20:00Z packet DP-20261026T2002Z-scan-1h landed by the VM (5fc3079d5, poster vm), wake wrote
+      DD-20261026T2002Z-scan-1h-1 (f0db6a14f); the 19:00Z write was refused 403 until the VM got a write credential.
     next: >-
       Critical path (design v1 § 10.1): manager installs the DESK-6 spawner routine (hourly; SKILL.md § 6b) and
       proposals start accruing labels (proposals/day still UNMEASURED) -> DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17
