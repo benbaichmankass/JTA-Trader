@@ -145,6 +145,20 @@ jobs:
           python3 scripts/ops/soak_report.py --write --sync-pipeline \
             --grade-file "${{ steps.run.outputs.out_path }}"
 
+      - id: touchsplit
+        name: Split the bybit_1 soak book touched / untouched (DESK-12-SANDBOX)
+        # Same continue-on-error contract as the report step: a split bug never costs the GRADE its landing.
+        # Projects over trades.notes.sl_amends (scripts/ops/touch_record.py); no store.
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          D="$(mktemp -d)"
+          python3 scripts/research/realized_slippage.py pull --out-dir "$D"
+          python3 scripts/ops/touch_split.py --trades "$D/trades.json" --packages "$D/order_packages.json" \
+            --cost "${{ steps.run.outputs.out_path }}" --out docs/claude/work/SOAK-TOUCH-SPLIT.md
+
       - id: derive
         name: Derive the research-result fields from the report
         run: |
@@ -210,10 +224,11 @@ jobs:
             docs/claude/work/SOAK-REPORT.md
             docs/claude/work/SOAK-REPORT-observations.md
             docs/claude/work/soak-state.json
+            docs/claude/work/SOAK-TOUCH-SPLIT.md
             docs/claude/work/pipeline
 
       - name: Fail on a report error (after the grade has landed)
-        if: steps.report.outcome == 'failure'
+        if: steps.report.outcome == 'failure' || steps.touchsplit.outcome == 'failure'
         run: |
           echo "::error::soak_report.py failed — the grade landed, the soak report/pipeline sync did not. See the 'Regenerate the soak report' step."
           exit 1
