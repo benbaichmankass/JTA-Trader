@@ -15640,6 +15640,13 @@ nodes:
       difference MT 421 vs A 402 in eba2-07 means tightening re-opens extra entries, so the arm is not a pure exit change; the
       rule reads full-position net R, which includes that effect, and the result row must report it (n per arm).
     power:
+      expected_n: 402
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      floor_basis: 'MEASURED n(A) 402: ada_pullback_2h n(A)=402 in RQ-20261022-eba2-07 (same leg, same cost stack; arm counts 402-457). min_detectable_effect 0.45 sd is the repo standing E35 floor (d=0.45 at alpha 0.05 / power 0.8 needs 39 trades, the rule own n(A) >= 39 gate); at the measured n the unit is far above that floor, so the floor, not the data, is the declared detectable effect.'
       why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
       basis: One exit_lever_ablation.py invocation, five arms on one leg (eba2-07 ran five arms the same way in one cycle).
     decision_rule:
@@ -15761,6 +15768,13 @@ nodes:
       sibling is the disjoint test available now (a pre-2020-07 ETH window is below the n floor). A PASS here plus the eth PASS
       is two independent instruments; a FAIL says the eth effect is leg-specific and the declared exits stand.'
     power:
+      expected_n: 147
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      floor_basis: 'MEASURED n(A) 147: sol_pullback_2h n(A)=147 on 2020-07-01..2026-10 in RQ-20261024-0142-26 / -0142-12 / d7e6-05 (same leg, window start and bar; arm counts 147-211). min_detectable_effect 0.45 sd is the repo standing E35 floor (d=0.45 at alpha 0.05 / power 0.8 needs 39 trades, the rule own n(A) >= 39 gate); at the measured n the unit is far above that floor, so the floor, not the data, is the declared detectable effect.'
       why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
       basis: One exit_lever_ablation.py invocation, two arms on one leg (0142-16 ran four arms in one cycle).
     decision_rule:
