@@ -1,0 +1,23 @@
+{
+  "id": "LTR-APPLY-AUTOFLOW",
+  "title": "Live review: automated minimum-latency apply flow. A landed tighten_sl row reaches live-review-apply with no LLM hop, no manager wake and no routine edit",
+  "phase": "W6",
+  "state": "queued",
+  "owner": "build lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 09:35Z manager session_01HAysMLfF9dYpi92YMqYxEq]\n\nOperator, verbatim popup answer: '1 for now but I want us to figure out how to create an automated flow with minimum latency'.\n\nINTERIM (in force now): the manager files live-review-apply when a LIVE-REVIEW lane wakes it with a tighten_sl. Why: the assistant's auto-mode classifier denied editing routine trig_01Bchsugftspk4uZhHR1ncK8 to file applies ('[Account & Standing-Rule Changes]').\n\nLATENCY TODAY: bar close, then the hourly lane at :07, then row PR CI + merge (~15-30 min), then a manager wake, then the system-action. Expect ~30-75 min from bar close to stop moved.\n\nCANDIDATE DESIGNS to evaluate (pick by measured latency; keep every mandate gate in live_review_dispatch.py / approve_amend):\n(a) A workflow on push to main touching comms/live_review/reviews.jsonl. It diffs the new rows and runs the live-review-apply action for each qualifying tighten_sl (mechanics match, route recommended/auto_applied). This removes the LLM hop after merge.\n(b) A VM-side watcher. After each ict-git-sync pull, it runs live_review_dispatch.py for new qualifying rows, with idempotency per review_id via dispatch_state.json. This removes Actions queueing too.\n(c) Cut the row-PR CI time: a fast-path guard subset for reviews.jsonl-only PRs.\n(d) Move the review trigger from the hourly cron to bar-close events.\n\nDONE WHEN: the first real tighten_sl goes from row merge to venue read-back with no human or manager step, and the latency is measured and stated on the row.\n\nTier 2: it touches the deploy/runtime apply path, so it needs one operator OK before merge.\n\nRoadmap L-ATM / LTR. Parent LTR-APPLY-DISPATCH.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-26T09:51:23Z",
+  "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
+  "roadmap": [
+    "L-ATM",
+    "L-DESK"
+  ],
+  "_seq": 712
+}
