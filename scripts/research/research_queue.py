@@ -691,19 +691,35 @@ def new_unit_stamp_errors(entry: Dict[str, Any]) -> List[str]:
     return []
 
 
+_COMPUTE_DOC_CACHE: Dict[Tuple[int, int], Dict[str, Any]] = {}
+
+
 def _compute_doc() -> Dict[str, Any]:
     """scripts/research/research_compute.yaml as a bare mapping ({} if unreadable).
 
     Read directly instead of importing compute_router: the web-api's daily brief loads this module in-process,
     and the deploy restarts the API only for the scripts/research files on its allowlist
     (scripts/deploy_pull_restart.sh IN_PROCESS_CHANGES, Tier-2). Keeping the router out of that closure
-    means this validation needs no deploy-script change."""
+    means this validation needs no deploy-script change.
+
+    Parsed once per file version, not once per unit (CI-SPEED-1026): `validate` calls this for every queue
+    entry, so a 1,000-unit load re-parsed the same static file ~1,000 times (~42 s of a 66 s load). The cache
+    key is the file's (mtime_ns, size), so an edit is still picked up; callers only read the mapping."""
     import yaml  # noqa: PLC0415
+    cpath = Path(__file__).resolve().parent / "research_compute.yaml"
     try:
-        doc = yaml.safe_load((Path(__file__).resolve().parent / "research_compute.yaml").read_text(encoding="utf-8"))
+        st = cpath.stat()
+        key = (st.st_mtime_ns, st.st_size)
+        cached = _COMPUTE_DOC_CACHE.get(key)
+        if cached is not None:
+            return cached
+        doc = yaml.safe_load(cpath.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
         return {}
-    return doc if isinstance(doc, dict) else {}
+    out = doc if isinstance(doc, dict) else {}
+    _COMPUTE_DOC_CACHE.clear()
+    _COMPUTE_DOC_CACHE[key] = out
+    return out
 
 
 def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
@@ -803,6 +819,22 @@ def _as_float(value: Any) -> Optional[float]:
     return None if math.isnan(out) or math.isinf(out) else out
 
 
+def _fast_safe_load(yaml: Any, text: str) -> Any:
+    """`yaml.safe_load`, through libyaml when the build has it (CI-SPEED-1026).
+
+    The pure-Python loader costs ~8 s over the live queue's ~1,075 files, the C loader ~0.8 s, and the two
+    returned EQUAL documents for every committed unit when measured. A document the C loader rejects is
+    re-parsed with the pure loader, so the error a caller sees (and files as `unreadable: ...`) is
+    byte-for-byte the one `safe_load` always produced."""
+    c_loader = getattr(yaml, "CSafeLoader", None)
+    if c_loader is not None:
+        try:
+            return yaml.load(text, c_loader)  # noqa: S506 — CSafeLoader is the safe loader
+        except yaml.YAMLError:
+            pass
+    return yaml.safe_load(text)
+
+
 def load_queue(queue_dir: Path) -> Tuple[List[QueueJob], Optional[str]]:
     """Load every ``*.yaml`` under *queue_dir*.
 
@@ -834,7 +866,7 @@ def load_queue(queue_dir: Path) -> Tuple[List[QueueJob], Optional[str]]:
     jobs: List[QueueJob] = []
     for path in paths:
         try:
-            raw = yaml.safe_load(path.read_text()) or {}
+            raw = _fast_safe_load(yaml, path.read_text()) or {}
         except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
             # The three things reading a job file can actually fail on: the file
             # (OSError), its bytes (UnicodeDecodeError), its syntax (YAMLError).
