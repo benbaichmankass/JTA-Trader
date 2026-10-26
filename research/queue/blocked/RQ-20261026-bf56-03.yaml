@@ -48,7 +48,7 @@ decision_rule:
   rule: >-
     PASS IF n_obs >= 126 AND mean dR (Claude vs hold) has a 95% CI lower bound > 0 AND mean dR > mean dR(B2) with the paired CI of the difference excluding 0 AND mean dR >= mean dR(B3) AND dR > 0 in >= 3 of 4 pooled folds AND the
     post-cutoff stratum has point estimate > 0 (a post-cutoff n < 20 is reported and a PASS is labelled 'masked-replay only, forward-shadow confirmation required'). FAIL IF n_obs >= 126 AND (mean dR <= 0 OR the CI upper bound < 0 OR
-    the scrambled-label arm of RQ-20261026-bf56-01 was nonzero). INDETERMINATE otherwise: because MDE is 0.497 R, an observed |mean dR| < 0.50 R with a CI straddling 0 is the EXPECTED landing for a real but small effect and means
+    clause (c1) or (c2) (the planted-oracle scrambled-label arm, as re-registered 2026-10-26) of RQ-20261026-bf56-01 was violated). INDETERMINATE otherwise: because MDE is 0.497 R, an observed |mean dR| < 0.50 R with a CI straddling 0 is the EXPECTED landing for a real but small effect and means
     'cannot answer yet'; the record states the observed sd and the n that would resolve +0.20 R. Per-leg dR is reported with its CI and n, no per-leg verdict; n < 20 is 'insufficient_n', never zero. The registered numbers (126, 3 of 4,
     the action vocabulary, the B3 grid) are not changed after any result.
   what_it_does_not_do: >-
@@ -74,13 +74,13 @@ masked_replay:
     but in a separate judging session so one role's answer cannot condition the other.
   unmask_key: Written only to a separate file the judging session never reads.
   leak_controls: >-
-    Scrambled-label arm (RQ-20261026-bf56-01 clause c); pre_cutoff flag with the post-cutoff stratum reported separately; no tools and no repo access in the judging session.
+    Planted-oracle scrambled-label arm (RQ-20261026-bf56-01 clauses c1, c2); pre_cutoff flag with the post-cutoff stratum reported separately; no tools and no repo access in the judging session.
   action_vocabulary: 'hold | close | partial_close (50%). Closed enum.'
 compute: cpu_light
 value:
   usd_at_stake_per_month: 200
   confidence: 0.1
-  bucket: real_money
+  bucket: own_losses
   basis: 'stand-in: bounds what a desk exit role could add on legs carrying real bybit_2 risk; an estimate, not a measurement.'
 routing:
   needs_trainer_resident_data: false

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-PPB85CWR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-7B-REPLAY-DRIVER (session_014nTDeLp5G15DaGPpb85cwr), PR #20349",
+    "rerun": "python3 scripts/research/desk_replay_driver.py selfcheck --out /tmp/be --fetch; read measurement.breakeven_at_1r_finding"
+  },
+  "state": "queued",
+  "what": "Exit-refinement finding: tightening to breakeven at the first +1R bar COSTS on the four real-money 2h/4h legs. MEASURED 2026-10-26 (desk_replay_driver.py selfcheck --fetch dev run; population 176 decision points over 370 committed Stage-0 trades, legs xrp_pullback_2h 27, ada_pullback_2h 31, trend_donchian_eth_4h 103, trend_donchian_xrp_4h 15; first closed bar with running high >= +1.0 R; full cost stack + 0.05 R stop-fill slip): mean paired dR -0.1195 R, 95% bootstrap CI [-0.304, +0.053]. It is a single fixed policy on one window, not a verdict on any leg's exit. Route to the exit-refinement queue as a pre-registered unit (per-leg dR, other fixed rules from live_review_outcomes.py grid) so the cost is confirmed or refuted per leg; do not drop it."
+}
