@@ -93,6 +93,35 @@ def _check(v, spec: dict, enums: dict, path: str, out: list) -> None:
             _check(x, spec["items"], enums, f"{path}[{i}]", out)
 
 
+#: Manager 2026-10-26 ~12:37Z (finding #20322): every real-money review that day
+#: ended no_recommendation + insufficient_n, so the operator's 06:30Z "Claude's
+#: judgement applies" produced no graded calls. From this instant a real-money or
+#: prop row must carry a call (hold / tighten_sl, judgement-backed on a thin cell);
+#: earlier rows are history and are not re-graded.
+MONEY_CLASSES = ("real_money", "prop")
+MONEY_CALL_RULE_FROM = "2026-10-26T12:40:00Z"
+
+
+def money_call_problems(row: dict) -> list[str]:
+    """The no-silent-escape rule for real-money / prop rows (empty for paper or older rows)."""
+    money = any(str((a or {}).get("account_class") or "").lower() in MONEY_CLASSES
+                for a in row.get("account_reads") or [])
+    if not money or str(row.get("reviewed_at") or "") < MONEY_CALL_RULE_FROM:
+        return []
+    rec = row.get("recommendation") or {}
+    basis, action = rec.get("basis"), rec.get("action")
+    reason = str(rec.get("reason") or "").strip()
+    out = []
+    if basis in ("insufficient_n", "default_hold"):
+        out.append(f"real-money/prop row: basis {basis} is refused; make a call (hold / tighten_sl with "
+                   "basis judgement + judgement_confidence + reason) or record could_not_look")
+    if action == "no_recommendation" and not (basis == "could_not_look" and reason):
+        out.append("real-money/prop row: no_recommendation requires basis could_not_look and a reason")
+    if action == "hold" and basis not in ("ev_positive", "judgement"):
+        out.append("real-money/prop row: hold requires basis ev_positive (measured cell) or judgement")
+    return out
+
+
 def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     out: list[str] = []
     _check(row, schema[kind], schema["enums"], kind, out)
@@ -137,6 +166,9 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
         out.append("evidence_source judgement requires basis judgement")
     if src == "table" and rec["basis"] == "insufficient_n":
         out.append("evidence_source table contradicts basis insufficient_n")
+    if rec["basis"] == "could_not_look" and not str(rec.get("reason") or "").strip():
+        out.append("basis could_not_look requires a reason")
+    out += money_call_problems(row)
     accts = [a["account_id"] for a in row["account_reads"]]
     if len(accts) != len(set(accts)):
         out.append("account_reads names an account more than once")

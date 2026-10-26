@@ -127,6 +127,21 @@ accounts, event, level, due_at). The hourly live-review routine stays the backst
 an incident like a watchdog one: fix, dispatch, or tell the operator. Record the latency event (due_at) -> comment ->
 review row on `LTR-1B-MARKET-TRIGGERS` the first time it happens.
 
+**Repo-less reviewer (LTR C3, operator 2026-10-26 ~11:40Z: "VM applies from rows branch" + "VM pre-builds the packet";
+manager call: a FRESH reviewer per trigger, not a warm session).** An ltr-wake comment now carries, per package, a
+`<!-- ltr-packet <pkg> -->` JSON block (packet + priced table, built on the VM) and `packet_state` / `review_id` /
+`packet_sha` in the marker. For each package with `packet_state: built`: `create_session` **ON the rows branch**
+(`source_url` = this repo, `source_revision` = `live-review/rows`, `outcome_branch` = `live-review/rows`,
+`clone_depth` 1, `sparse_checkout_paths` [`comms/live_review`]), never without a source: a session started with no
+repo gets **403** on every GitHub write, even after `add_repo` access=push (MEASURED by lane DESK-6, 2026-10-26, on
+`desk/decisions`; PI-20261026-R5NY8N6S-0001). The checkout only makes the write authorized; the reviewer still reads
+nothing from it. Model **Sonnet**, prompt = the full text of `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` + that package's
+marker entry + its packet block, verbatim. The reviewer writes ONE commit on `live-review/rows`; the live trader's
+watcher (`src/runtime/live_review_rows_watch.py`) applies a qualifying `tighten_sl` by itself, so **do not file
+`live-review-apply`** for it (that system-action is the manual fallback only). Check the outcome on
+`/api/diag/log_file?name=live_review_rows_watch`. A package whose `packet_state` is not `built` falls back to the
+repo lane above (Sonnet LIVE-REVIEW lane with the skill).
+
 ## Start of session
 
 0. **Run § "The operating loop"** after the steps below, and at every check-in after that.
