@@ -1,9 +1,9 @@
 ---
 name: live-trade-review
-description: The binding procedure for reviewing OPEN order packages against the market in real time. Mechanics first, then price every option from the leg's own Stage-0 history with scripts/research/live_review_outcomes.py, then overlay what the backtest could not see, then record ONE package-level recommendation per package in comms/live_review/reviews.jsonl. Each account carrying the package gets its own would-apply / refused / unknown read. The review works at the ORDER-PACKAGE level and never does per-account risk management. Scope (operator Q2): real-money and prop packages get review + recommend; paper books are record-only. Pings (Q3): applies and asks only. Use when the manager dispatches a live-review lane, when the LTR-4 routine spawns a reviewer, or the operator says "review the open trades", "/live-trade-review", "should we tighten X". NOT for closed-trade grading (/performance-review), NOT for designing exit rules (exit-refinement), and NOT an apply path (apply_mode is recommend until LTR-6/LTR-7 land).
+description: The binding procedure for reviewing OPEN order packages against the market in real time. Mechanics first, then price every option from the leg's own Stage-0 history with scripts/research/live_review_outcomes.py, then overlay what the backtest could not see, then record ONE package-level recommendation per package in comms/live_review/reviews.jsonl. Each account carrying the package gets its own would-apply / refused / unknown read. The review works at the ORDER-PACKAGE level and never does per-account risk management. Scope (operator Q2): real-money and prop packages get review + recommend; paper books are record-only. Pings (Q3): applies and asks only. Use when the manager dispatches a live-review lane, when the LTR-4 routine spawns a reviewer, or the operator says "review the open trades", "/live-trade-review", "should we tighten X". NOT for closed-trade grading (/performance-review), NOT for designing exit rules (exit-refinement), and NOT itself an apply path (applies go through scripts/ops/live_review_apply.py under MD-LIVE-TIGHTEN-SL; a thin LTR-0 cell is decided by the reviewer's judgement, basis judgement, since 2026-10-26).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-25` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /live-trade-review — review open packages against the market
 
@@ -17,9 +17,9 @@ Design of record: [`docs/plans/live-trade-review-DESIGN.md`](../../../docs/plans
 
 ## 0. Binding limits of this skill (read first)
 
-### 0.1 apply_mode is RECOMMEND
+### 0.1 The reviewer never acts by hand
 
-Until `LTR-6-APPLY-PATH` and `LTR-7-MANDATE` land and `config/live_trade_review.yaml::apply_mode` says `apply`, a reviewer:
+`config/live_trade_review.yaml::apply_mode` reads `apply` since 2026-10-25 (row `LTR-6R-APPLY-PATH`), and `MD-LIVE-TIGHTEN-SL` is granted. A tighten is applied ONLY by `scripts/ops/live_review_apply.py --apply` under that mandate, through each account's own `RiskManager.approve_amend`. The reviewer itself:
 
 - **never** moves a stop;
 - **never** places, amends or cancels an order;
@@ -136,7 +136,7 @@ If any of these fails, the recommendation is `flag_mechanics` (basis `mechanics`
 Run `live_review_outcomes.py` for the leg at the live state, and copy its numbers into `options` as they are, with the tool's own `n`, `mean_r`, `sd_r` and `worst_r`.
 
 - **Quote the pricing tool, never the design's or a precedent's hand calculations.** This was settled on 2026-10-25 (row `LTR-0-CONDITIONAL-OUTCOMES`, PR #20114). The tool reproduces the ADA HOLD case (n=32, mean +3.19 R), but the design's original "tighten +2.96 R, worst +2.32 R" was an unreproducible hand calculation. At that level the tool gives `atr:1.5` = +2.87 and `r:2.5` = +2.94, worst +1.31. A number you did not get from the tool this session does not go in a row.
-- **`insufficient_n` means NO recommendation, never "hold".** If the HOLD cell or the candidate cell is below the n floor (default 20), the recommendation is `action: no_recommendation`, `basis: insufficient_n`. Then **file the data question** (design § 3 step 2; CLAUDE.md, 2026-09-29: *"either we have enough data to decide, or we don't and then getting that data becomes a task"*). A null cell is "could not look"; never write it as 0.
+- **A thin cell is decided by judgement, never by a default "hold"** (operator, 2026-10-26, popup verbatim *"Claude's judgement applies (Recommended)"* — *"Drop the n>=20 clause. When the table is thin, Claude's call applies, logged as 'judgement' with a confidence; the table is used when it's there. Every call is graded against the actual outcome so models can learn how much weight to give Claude."*; row `LTR-JUDGEMENT-APPLY`). If the HOLD cell or the candidate cell is below the n floor (default 20), make the call from the packet and the overlay: `basis: judgement`, `evidence_source: judgement`, `judgement_confidence` in [0, 1] (your calibrated probability the call beats holding) and a one-line `reason`. Quote whatever the thin cells show (n, mean) in `context_flags`; never present them as measured. If you genuinely have no call, `no_recommendation` + `basis: insufficient_n` (`evidence_source: none`) is still valid, and **never `hold`**. A null cell is "could not look"; never write it as 0. The n floor is no longer an apply gate: it decides only whether the basis is `table` or `judgement`.
 - Read `population` (comparable / never_reached_peak / no_candles) and the tool's `biases` list. A tighten is flattered: stops fill at the stop price. Say so in `context_flags` when a tighten is in play.
 
 ### Step 3. Overlay what the backtest could not see
@@ -157,14 +157,15 @@ Each one goes in `context_flags` as `"<kind>: <evidence>"`. An overlay may **dow
 The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the TP-doctrine path) · `partial_close` / `close` (always the operator's call) · `flag_mechanics` · `file_hypothesis` · `no_recommendation`.
 
 - `hold` requires a **measured** HOLD cell (n ≥ floor) whose EV is at least that of every measured alternative. Then `basis: ev_positive`.
-- `tighten_sl` requires a measured cell, and states:
-  - `ev_delta_r` = tighten mean − hold mean (negative is a cost);
-  - `worst_case_delta_r` = tighten worst − hold worst;
-  - `level` as a price and as `level_atr`.
+- `tighten_sl` states `evidence_source` and `level` as a price and as `level_atr`, and then either:
+  - **table** (measured cell): `ev_delta_r` = tighten mean − hold mean (negative is a cost) and `worst_case_delta_r` = tighten worst − hold worst; or
+  - **judgement** (thin cell): `basis: judgement`, `judgement_confidence`, `reason`; `ev_delta_r` / `worst_case_delta_r` and both policies' `tighten_r` are `null` (there is no table EV to bound).
+- The guardrails do not move with the basis: tighten-only, the `min_buffer_atr` (1× ATR) noise floor, one amend per package per bar, `mechanics.verdict == match`, each account's own `approve_amend`, and `could_not_look` never applies. Never widen, move a TP, resize, close or add an entry.
 
 ### Step 5. Separate EV from preference, and set the route
 
 - **Apply bound (operator Q1):** a tighten whose EV cost is ≤ **0.25 R**, with the worst case improving, is `within_bound` on `apply_policy`. Record the **shadow 0.5 R arm** on `shadow_policy` on **every** review, so the two policies can be compared.
+- **Under apply_mode apply:** a `tighten_sl` with mechanics `match` that is table-backed within the bound, or judgement-backed with a confidence and reason, is applied by `live_review_apply.py --apply --mandate MD-LIVE-TIGHTEN-SL --mechanics match --basis table|judgement` (`--expected-cost-r` / `--worst-case-delta-r` for table; `--confidence` / `--reason` for judgement); its row is `route: auto_applied`, `applied: true`, with the per-account reads from the apply output. Anything else follows the recommend routes below.
 - **While apply_mode is recommend:**
   - a within-bound tighten is `route: recommended`;
   - an out-of-bound tighten, a `tp_revise`, a `close` and a `flag_mechanics` are `route: operator_ask`;
@@ -228,6 +229,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 These are on top of the LTR-2 schema:
 
 - `recommendation.action: no_recommendation` + `basis: insufficient_n`. The validator refuses `insufficient_n` with any other action, so the "insufficient → hold" collapse cannot be written.
+- `recommendation.evidence_source`: `table` | `judgement` | `none` — required on every `tighten_sl`, written on every new row. `basis: judgement` requires `evidence_source: judgement`, a numeric `judgement_confidence` in [0, 1] and a non-empty `reason` (validator-enforced). These are the fields LTR-5 grades against the realised outcome (joined on `review_id` in `outcomes.jsonl`), so the models can learn how much weight Claude's calls deserve.
 - `basis: record_only` for paper rows.
 - `account_reads`: `[{"account_id", "account_class", "read": would_apply|refused_by_account_risk|unknown|no_action, "evidence"}]`. There is one entry per account carrying the package, and it is required on every review.
 - `trigger.event`: an L0 event name (design § 2). When run by hand, use `manual`. For the first live run of a skill version, use `first_live_run`. For a closed package priced as practice, use `dry_rehearsal`.
