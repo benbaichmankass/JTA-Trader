@@ -236,9 +236,15 @@ paper counterpart and deliberately allowed the mirror to run extra, so **Gate
 2's demotion signal could not be read off the Alpaca mirror's aggregate.**
 DECIDED 2026-09-21 (operator, plan item **B2**): strict equality, like Bybit,
 with the surplus-leg cost accepted — and the roster was cut the same day, so
-the test and the config now agree. MEASURED by parsing `config/accounts.yaml`:
-`alpaca_live` **3** legs (2 after the proxy carve-out), `alpaca_portfolio` cut
-**14 → 2**, so **12 legs removed**. What ends for those 12 is narrower than
+the test and the config now agree. MEASURED **at the 2026-09-21 cut** by parsing
+`config/accounts.yaml`: `alpaca_live` **3** legs (2 after the proxy carve-out),
+`alpaca_portfolio` cut **14 → 2**, so **12 legs removed**. ⚠️ **Those counts are
+history, not current.** MEASURED 2026-10-26 by parsing `config/accounts.yaml` at
+`main` `75535c87b` (population: the `strategies:` roster of each Alpaca account):
+`alpaca_live` **1** leg (`iaum_pullback_1d`, itself a declared affordability
+proxy, so **0** after the carve-out) and `alpaca_portfolio` **0** legs. The mirror is
+therefore EMPTY, the case decided below, and **the Alpaca Gate-2 demotion signal does
+not exist right now**. Re-run the parse; never quote these counts. What ends for those 12 is narrower than
 "they stop trading" — all 12 also sit on `alpaca_paper`, so each keeps a paper
 record; what ends is their record at the *portfolio* risk basis and their
 presence in `/api/bot/performance`'s `paperPortfolio` block.
