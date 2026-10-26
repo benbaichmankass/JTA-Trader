@@ -88,7 +88,6 @@ REGISTERED_LEGS = ("ada_pullback_2h", "trend_donchian_eth_4h", "trend_donchian_x
 REGISTERED_N_TRADES = 370             # 55 + 61 + 208 + 46, MEASURED from comms/strategy_evidence/*.json
 PEAK_R = 1.0                          # the decision state: first closed bar whose running high >= +1.0 R
 SELFCHECK_TOL_R = 1e-6                # clause (a)
-SCRAMBLE_MEAN_TOL_R = 0.05            # clause (c)
 N_MIN = 126                           # pass floor for -02/-03
 FOLDS_NEEDED = 3                      # of 4
 STOP_FILL_SLIP_R = 0.05               # registered; 0.0 and 0.10 are reported sensitivities
@@ -719,8 +718,26 @@ def planted_known_answer(points: List[Point]) -> Dict[str, Any]:
     return out
 
 
+def oracle_arms(pts_by_leg: Dict[str, List[Point]], rng: np.random.Generator
+                ) -> Tuple[List[float], List[float], List[float]]:
+    """(oracle aligned dR, the same oracle decisions against outcome ids permuted WITHIN LEG, plain breakeven dR).
+    The oracle takes the breakeven tighten at +1R iff hindsight says it beats holding."""
+    be = ("tighten", "r", 0.0)
+    aligned_o: List[float] = []
+    scrambled_o: List[float] = []
+    breakeven: List[float] = []
+    for pts in pts_by_leg.values():
+        plain = [dR(p, be) or 0.0 for p in pts]
+        act = [v > 0.0 for v in plain]
+        perm = rng.permutation(len(pts))
+        aligned_o += [v if a_ else 0.0 for v, a_ in zip(plain, act)]
+        scrambled_o += [plain[int(perm[i])] if act[i] else 0.0 for i in range(len(pts))]
+        breakeven += plain
+    return aligned_o, scrambled_o, breakeven
+
+
 def selfcheck(legs: Dict[str, Leg], population: List[str], seed: int) -> Dict[str, Any]:
-    """Unit bf56-01, with the three registered clauses decided exactly as registered."""
+    """Unit bf56-01, with the registered clauses (c as re-registered 2026-10-26) decided exactly as registered."""
     rng = np.random.default_rng(seed)
     per_leg, pts_by_leg, all_pts = {}, {}, []
     replayed = recorded = 0
@@ -767,22 +784,20 @@ def selfcheck(legs: Dict[str, Leg], population: List[str], seed: int) -> Dict[st
                 probe_ok = len(leak_scan(json.dumps(bad), key)) >= 3
                 if not probe_ok:
                     raise AssertionError("leak scanner failed its positive control: it cannot see a planted leak")
-    # clause (c): scrambled-label arm. Outcome ids are permuted within leg, the fixed policy is
-    # tighten-to-breakeven at +1R, so it prices the policy on a DIFFERENT trade's real path.
-    be = ("tighten", "r", 0.0)
-    scr = []
-    for pts in pts_by_leg.values():
-        perm = rng.permutation(len(pts))
-        for i, p in enumerate(pts):
-            q = pts[int(perm[i])]
-            v = dR(q, be)
-            scr.append(0.0 if v is None else v)
-    s_mean, s_lo, s_hi = boot_ci(scr, rng)
-    aligned = [dR(p, be) or 0.0 for p in all_pts]
+    # clause (c), re-registered 2026-10-26 (manager decision, see RQ-20261026-bf56-01): STRUCTURAL, no tuned band.
+    #   (c1) the hindsight oracle's aligned mean dR > 0 with its 95% CI lower bound > 0 (the harness can see information);
+    #   (c2) the SAME oracle decisions replayed against outcome ids permuted within leg: the 95% CI contains 0
+    #        (scrambling destroys the information).
+    aligned_o, scrambled_o, breakeven = oracle_arms(pts_by_leg, rng)
+    a_mean, a_lo, a_hi = boot_ci(aligned_o, rng)
+    s_mean, s_lo, s_hi = boot_ci(scrambled_o, rng)
+    b_mean, b_lo, b_hi = boot_ci(breakeven, rng)
     planted = planted_known_answer(all_pts)
     a_ok = replayed == REGISTERED_N_TRADES and max_dev <= SELFCHECK_TOL_R
     b_ok = n_packets > 0 and not leaks
-    c_ok = bool(scr) and abs(s_mean) <= SCRAMBLE_MEAN_TOL_R and s_lo <= 0.0 <= s_hi
+    c1_ok = bool(aligned_o) and a_mean > 0.0 and a_lo > 0.0
+    c2_ok = bool(scrambled_o) and s_lo <= 0.0 <= s_hi
+    c_ok = c1_ok and c2_ok
     complete = replayed == REGISTERED_N_TRADES
     if not complete:
         verdict = "indeterminate"
@@ -791,23 +806,23 @@ def selfcheck(legs: Dict[str, Leg], population: List[str], seed: int) -> Dict[st
     elif a_ok and b_ok and c_ok:
         verdict, note = "pass", "all three registered clauses hold"
     else:
-        bad = [n for n, ok in (("(a)", a_ok), ("(b)", b_ok), ("(c)", c_ok)) if not ok]
+        bad = [n for n, ok in (("(a)", a_ok), ("(b)", b_ok), ("(c1)", c1_ok), ("(c2)", c2_ok)) if not ok]
         verdict = "fail"
-        note = ("violated clause(s) " + ", ".join(bad) + "; DESK-7B-REPLAY-DRIVER reopens (registered wording). "
-                + ("DIAGNOSIS of (c): the registered policy ignores the packet, so permuting outcome ids cannot null it; "
-                   "the scrambled mean equals the policy's own aligned mean dR (see aligned_mean_dR). The planted oracle "
-                   "case shows the harness DOES lose information under scrambling (planted_known_answer). The clause "
-                   "needs a re-registration, not a harness fix. " if not c_ok else ""))
+        note = "violated clause(s) " + ", ".join(bad) + "; DESK-7B-REPLAY-DRIVER reopens (registered wording)."
     return {
         "verdict": verdict, "read_state": "measured" if all_pts or complete else "no_data", "note": note,
         "clauses": {"a_hold_replay": {"ok": a_ok, "max_abs_dR": max_dev, "tol": SELFCHECK_TOL_R,
                                       "replayed": replayed, "of": REGISTERED_N_TRADES, "trades_in_lists": recorded},
                     "b_mask": {"ok": b_ok, "packets_scanned": n_packets, "leaks": leaks[:20], "n_leaking": len(leaks),
                                "probe_positive_control_found_planted_leak": probe_ok},
-                    "c_scrambled_label": {"ok": c_ok, "mean_dR": _r(s_mean), "ci95": [_r(s_lo), _r(s_hi)],
-                                          "tol": SCRAMBLE_MEAN_TOL_R, "n": len(scr),
-                                          "aligned_mean_dR": _r(float(np.mean(aligned))) if aligned else None,
-                                          "policy": "tighten to breakeven (r:0.0) at the +1R decision state"}},
+                    "c_scrambled_label": {"ok": c_ok, "n": len(aligned_o),
+                                          "c1_oracle_aligned": {"ok": c1_ok, "mean_dR": _r(a_mean), "ci95": [_r(a_lo), _r(a_hi)]},
+                                          "c2_oracle_scrambled": {"ok": c2_ok, "mean_dR": _r(s_mean), "ci95": [_r(s_lo), _r(s_hi)]},
+                                          "oracle": "breakeven (r:0.0) at the +1R decision state iff hindsight says it beats hold"}},
+        # A SEPARATE finding, not a clause: the packet-blind breakeven-at-+1R policy's own mean dR. Kept for the
+        # exit-refinement queue (pipeline item), where it was first measured as -0.1195 R over 176 points.
+        "breakeven_at_1r_finding": {"mean_dR": _r(b_mean), "ci95": [_r(b_lo), _r(b_hi)], "n": len(breakeven),
+                                    "population": f"{len(breakeven)} decision points over {recorded} committed trades, {len(population)} legs"},
         "fidelity_diagnostics": fidelity_diagnostics(pts_by_leg, {n: legs[n] for n in population}),
         "planted_known_answer": planted, "per_leg": per_leg,
         "scrambled_nonzero": not c_ok,

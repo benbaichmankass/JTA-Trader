@@ -1,5 +1,5 @@
 id: RQ-20261026-bf56-01
-title: 'Desk D-S0 harness self-check on the real-money 2h/4h legs: does the masked replay reproduce each leg''s recorded net R on HOLD, and does a scrambled-label arm score zero?'
+title: 'Desk D-S0 harness self-check on the real-money 2h/4h legs: does the masked replay reproduce each leg''s recorded net R on HOLD, and does a planted hindsight oracle show the harness can see information that scrambling then destroys?'
 status: queued
 cadence: once
 theme: live_strategy
@@ -12,7 +12,7 @@ question: >-
   Before any Claude judgement is scored: on the four real-money 2h/4h legs (xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h),
   (a) does the DESK-7B masked-replay driver's HOLD action reproduce every trade's recorded net_r in the leg's committed Stage-0 evidence trade list
   (comms/strategy_evidence/<leg>.json -> source_run) to within 1e-6 R, with the full cost stack resolved through execution_costs.resolve_cost_policy;
-  (b) does a packet contain no symbol, date or absolute price (the mask holds); and (c) does a scrambled-label arm score ~0?
+  (b) does a packet contain no symbol, date or absolute price (the mask holds); and (c) (re-registered 2026-10-26, see decision_rule.reregistration) does a planted hindsight oracle score above 0 with its 95% CI lower bound above 0, and do the same oracle decisions replayed against outcome ids permuted within leg have a 95% CI that contains 0?
 why_this_matters: >-
   A blind replay that cannot reproduce the leg's own recorded outcome on HOLD is measuring its own pricing error, not Claude. This unit is the
   instrument-before-finding gate (CLAUDE-RULES-CANONICAL.md "Always state the population": a new instrument produces no decision-grade number until it
@@ -21,8 +21,8 @@ why_this_matters: >-
   docs/plans/claude-trading-desk-DESIGN.md section 8.1, checklist rows DESK-7-BLIND-REPLAY-S0 and DESK-7B-REPLAY-DRIVER.
 why_not_inferential: >-
   A reproduction check: the HOLD arm either equals the committed evidence net_r on every row or it does not, and the mask either leaks a
-  symbol/date/price or it does not. There is no sample whose size sets a detectable effect. The scrambled-label arm (c) is the only statistical
-  clause, and it is graded against a fixed tolerance (|mean paired dR| <= 0.05 R and its 95% CI includes 0), not against an effect size.
+  symbol/date/price or it does not. There is no sample whose size sets a detectable effect. Clause (c) is the only statistical
+  clause, and it is graded structurally (a sign and a CI lower bound for the oracle, CI-contains-0 for the scrambled oracle), with no numeric band and not against an effect size.
 decision_rule:
   id: RULE-RQ20261026-BF56-01-HARNESS-SELFCHECK
   registered_at: '2026-10-26'
@@ -30,13 +30,27 @@ decision_rule:
   statistic: >-
     Over the four legs' committed trade lists (MEASURED 2026-10-26 from comms/strategy_evidence/*.json: n_trades_oos 55, 61, 208, 46 = 370 recorded trades):
     (a) max over trades of |replay_hold_net_r - recorded net_r|, and the count of trades not replayed; (b) a regex/field scan of every built packet for the real symbol
-    string, any 4-digit-year timestamp, and any price within 0.5% of the real entry; (c) the scrambled-label arm: mean and 95% bootstrap CI of paired dR (action vs HOLD)
-    after outcome ids are permuted within leg, using a fixed deterministic action policy (tighten-to-breakeven at +1R) so no LLM cost is incurred.
+    string, any 4-digit-year timestamp, and any price within 0.5% of the real entry; (c1) the hindsight ORACLE (takes tighten-to-breakeven at +1R at a decision point iff hindsight says it beats HOLD): mean and 95% bootstrap CI of paired dR (action vs HOLD) over the decision points;
+    (c2) the SAME oracle decisions replayed against outcome ids permuted within leg: mean and 95% bootstrap CI of paired dR. No LLM cost is incurred.
   rule: >-
-    PASS IF (a) max |dR| <= 1e-6 AND replayed = 370 of 370 AND (b) zero leaks in every packet AND (c) |mean scrambled dR| <= 0.05 R with the CI including 0.
-    FAIL IF any of (a), (b), (c) is violated with every trade replayed; the record names the violated clause and the leg, and DESK-7B-REPLAY-DRIVER reopens.
+    PASS IF (a) max |dR| <= 1e-6 AND replayed = 370 of 370 AND (b) zero leaks in every packet AND (c1) the oracle's aligned mean dR > 0 with its 95% CI lower bound > 0 AND (c2) the scrambled oracle's 95% CI contains 0.
+    FAIL IF any of (a), (b), (c1), (c2) is violated with every trade replayed; the record names the violated clause and the leg, and DESK-7B-REPLAY-DRIVER reopens.
     INDETERMINATE (not a verdict) IF fewer than 370 trades are replayable because candles for a leg's window could not be fetched: the missing leg and window are
-    named, and RQ-20261026-bf56-02/-03 stay blocked. The 1e-6, 0.05 and 370 are not changed after any result.
+    named, and RQ-20261026-bf56-02/-03 stay blocked. The 1e-6 and 370 are not changed after any result.
+  reregistration:
+    date: '2026-10-26'
+    decided_by: "manager, relaying the operator's authority (routine 'Manager - DESK-7B: clause (c) decision', 2026-10-26 17:25Z)"
+    why_changed: >-
+      Clause (c) as first registered (a fixed packet-blind policy, tighten-to-breakeven at +1R, scored on outcome ids permuted within leg, |mean| <= 0.05 R) is mis-specified:
+      a policy that ignores the packet gets the same paired dR whether or not outcomes are permuted, so the arm measured the policy's own cost instead of the harness.
+      This unit is a harness self-check, not an edge claim, so changing the clause is correct.
+    seen_before_reregistration: >-
+      The dev-run numbers WERE seen before this re-registration (scripts/research/desk_replay_driver.py selfcheck --fetch, 2026-10-26: 370 of 370 trades replayed, 176 decision points;
+      the fixed breakeven policy scored mean dR -0.1195 R, 95% CI [-0.304, +0.053]; a hindsight oracle scored +0.2628 aligned and +0.0068 scrambled). The thresholds below were NOT taken from them.
+    structural_not_tuned: >-
+      (c1) and (c2) are structural: a sign and a CI lower bound for (c1), CI-contains-0 for (c2). The numeric band |mean| <= 0.05 R was dropped because a band chosen after seeing +0.0068 would be tuned to the data.
+    separate_finding: >-
+      The -0.1195 R cost of breakeven-tightening at +1R (176 decision points over 370 trades, 4 legs) is kept as a finding for the exit-refinement queue, filed as a pipeline item; it is not a clause of this unit.
   what_it_does_not_do: >-
     Says nothing about Claude's judgement, the legs' edge, or any roster/config. A PASS only unlocks bf56-02 and bf56-03 and certifies the construction for DESK-18.
 masked_replay:

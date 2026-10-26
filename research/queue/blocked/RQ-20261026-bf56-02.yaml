@@ -52,7 +52,7 @@ decision_rule:
   rule: >-
     PASS IF n_obs >= 126 AND mean dR (Claude vs HOLD) has a 95% CI lower bound > 0 AND mean dR > mean dR(B2) with the paired CI of the difference excluding 0 AND mean dR >= mean dR(B3)
     AND dR > 0 in >= 3 of 4 pooled folds AND the post-cutoff stratum (pre_cutoff = false) has point estimate > 0 (not contradicting the pre_cutoff set; if its n < 20 the stratum is reported and a PASS is
-    labelled 'masked-replay only, forward-shadow confirmation required'). FAIL IF n_obs >= 126 AND (mean dR <= 0 OR the CI upper bound < 0 OR the scrambled-label arm of RQ-20261026-bf56-01 was nonzero).
+    labelled 'masked-replay only, forward-shadow confirmation required'). FAIL IF n_obs >= 126 AND (mean dR <= 0 OR the CI upper bound < 0 OR clause (c1) or (c2) (the planted-oracle scrambled-label arm, as re-registered 2026-10-26) of RQ-20261026-bf56-01 was violated).
     INDETERMINATE otherwise (the CI straddles 0): the record states the OBSERVED paired sd and the n at which the observed sd would resolve +0.10 R, and the follow-up is more decision points
     (a longer window per leg or DESK-24 offline sessions), never a lowered bar. Per-leg dR is REPORTED with its own CI and n but no per-leg verdict is made: a leg with n < 20 is 'insufficient_n', never zero.
     The registered numbers (126, 0.05, 3 of 4, the action vocabulary, the B3 grid) are not changed after any result.
@@ -79,7 +79,7 @@ masked_replay:
     decision bar dropped). The packet adds the open trade's side, entry/stop/TP in entry-ATR units, bars held and open R. The judging session sees ONLY the packet.
   unmask_key: Written only to a separate file the judging session never reads; the scorer joins by opaque packet id.
   leak_controls: >-
-    Scrambled-label arm (RQ-20261026-bf56-01 clause c); pre_cutoff flag on every row with the post-cutoff stratum reported separately; no tools and no repo access in the judging session.
+    Planted-oracle scrambled-label arm (RQ-20261026-bf56-01 clauses c1, c2); pre_cutoff flag on every row with the post-cutoff stratum reported separately; no tools and no repo access in the judging session.
   action_vocabulary: 'hold | tighten_sl (to a stated level in ATR or R, never loosening). Closed enum; prose is bookkeeping, never a label (design 2.4).'
 compute: cpu_light
 value:

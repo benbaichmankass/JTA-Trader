@@ -354,3 +354,40 @@ def test_planted_known_answer_detects_information_and_loses_it_when_scrambled():
 def test_planted_known_answer_says_so_when_it_has_nothing_to_detect():
     k = drv.planted_known_answer(_many_points(12, deep_loss_every=0))
     assert k["passed"] is False and k["state"].startswith("vacuous")
+
+
+# --------------------------------------------------------------------------- clause (c), re-registered 2026-10-26
+
+def test_clause_c_is_structural_the_oracle_sees_information_and_scrambling_destroys_it():
+    # 60 points in ONE leg so a within-leg permutation can move outcomes; every 10th is stopped at -1 R
+    # (breakeven helps on 6, costs 0.05 R on the rest). The synthetic outcomes have almost no variance, so the
+    # (c2) CI-contains-0 test itself is exercised on real data by the self-check; here the structure is asserted:
+    # the oracle's aligned CI lower bound is above 0 and scrambling removes most of its mean, for every seed.
+    pts = _many_points(60, deep_loss_every=10)
+    for seed in range(5):
+        rng = np.random.default_rng(seed)
+        aligned, scrambled, breakeven = drv.oracle_arms({"leg": pts}, rng)
+        a_mean, a_lo, _ = drv.boot_ci(aligned, rng)
+        assert a_mean > 0 and a_lo > 0                    # (c1): sign and CI lower bound, no tuned band
+        assert abs(float(np.mean(scrambled))) < a_mean / 2    # scrambling destroys most of the information
+        assert len(aligned) == len(scrambled) == len(breakeven) == 60
+
+
+def test_clause_c2_catches_a_harness_that_fails_to_scramble():
+    pts = _many_points(30, deep_loss_every=3)
+
+    class Identity:
+        def permutation(self, n):
+            return np.arange(n)
+    aligned, scrambled, _ = drv.oracle_arms({"leg": pts}, Identity())
+    assert aligned == scrambled                            # no scrambling => the information survives => (c2) must fail
+    rng = np.random.default_rng(2)
+    _, s_lo, _ = drv.boot_ci(scrambled, rng)
+    assert s_lo > 0.0
+
+
+def test_the_breakeven_policy_is_reported_as_a_separate_finding_not_a_clause(monkeypatch):
+    monkeypatch.setattr(drv, "REGISTERED_N_TRADES", 1)
+    res = drv.selfcheck({"xrp_pullback_2h": _leg()}, ["xrp_pullback_2h"], 5)
+    assert "breakeven_at_1r_finding" in res and res["breakeven_at_1r_finding"]["n"] == 1
+    assert set(res["clauses"]["c_scrambled_label"]) >= {"c1_oracle_aligned", "c2_oracle_scrambled"}
