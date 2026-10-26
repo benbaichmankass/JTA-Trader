@@ -1,0 +1,31 @@
+{
+  "id": "CLAUDE-GRADE-LOOP",
+  "title": "Grade Claude's decisions vs the system and feed the grades back: Desk section in /performance-review, LTR+desk calibration, lessons->versioned brief amendments, measured-skill use rules (LTR scope, desk gate, ML weighting), weekly-audit C13",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "build lane (manager dispatch)",
+  "lane": "session_01Nbc9c8aLjvDKHhc3ShDThA",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator ask 2026-10-26 ~17:35Z (manager relay, verbatim in docs/plans/ml-claude-distillation-DESIGN.md \u00a7 3.7). Built (one PR): scripts/ops/desk_grade.py (desk vs random-entry baseline from its own packet, vs the system legs on the same universe+window via --live, per confidence + skill_sha, promotion_gate); scripts/ops/claude_calibration.py (Brier vs base-rate ref, skill, over-confidence gap; rules registered); live_review_grade.py gains hold_vs_close (ESTIMATED, conservative vs reviewer), calibration by action class, by_skill_sha, use_rules (generalised alarm); perf-review SKILL Desk section + items 6-9; perf-followup Track 2 lessons->briefs with AMENDMENTS.md; weekly-audit C13 + scripts/ops/check_claude_grade_loop.py; ML rule (c): claude_judgments.call_class_weight + claude-judgments-guard W1-W3. FIRST REAL NUMBERS (MEASURED 2026-10-26 ~17:40Z, live_review_grade.py --live and desk_grade.py --live over all rows on main): LTR 50 reviews on 10 packages, 0 altering calls, 0 priced, mean delta_r n/a (n=0 is not 0 R); 6 hold/judgement calls carry a confidence, 0 graded yet (none has a closed, joined trade in the journal read). Desk 2 decisions, both entry_generation/no_trade, 0 priced (not_computable until DESK-20). System legs in the desk window: 0 closed trades; positive control 2026-10-19..27 on the desk universe = 21 closed, mean -0.593 R net, CI95 [-0.988,-0.199]. FOUND+FIXED: one LTR review on a closed trade (LR-20261025T1616Z-pkg-2c3f338d9477499b, trade 6730) had no outcomes row: --write-outcomes had never been run; written. FOUND: LTR skill_sha is the live-trade-review SKILL.md blob (76866a39 = SKILL.md@b21f6fb9), not REVIEWER-BRIEF.md; now defined in SKILL.md \u00a7 4 fields; repo-less reviewers still record null because the manager pastes the brief text with no sha (follow-up 2). PROPOSALS FOR THE OPERATOR (not self-granted; config/mandates.yaml untouched): (a) MD-LIVE-TIGHTEN-SL review_rule (exact YAML in design \u00a7 3.7): per action class n>=20 + CI95 of delta_r < 0 => propose recommend-only for that class; > 0 and not OVERCONFIDENT => propose next scope step; tighten_sl/judgement OVERCONFIDENT at n>=10 => propose a judgement_confidence floor. (b) desk live influence only on out-of-sample edge vs random AND vs system, net of cost: D-S0 (DESK-7/18) primary, or desk_grade promotion_gate ELIGIBLE_TO_PROPOSE (each EDGE at n>=30); never a wait; NEGATIVE once live = demotion signal; carry into DESK-13 fires_when. (c) Tier-1, enforced: teacher-label rows weighted 0/0.5/1 by call-class graded skill, never raw confidence; Claude-as-feature only with a committed OOS EDGE record (operator Q2). FOLLOW-UPS (owned here): 1. wire call_class_weight into ml/trainers/sample_weights.py (lifts lint W2); 2. manager dispatch passes REVIEWER-BRIEF blob sha so repo-less reviews record skill_sha; 3. DESK-20 baseline bracket for no_trade (owned by DESK-20).",
+  "updated_at": "2026-10-26T17:47:13Z",
+  "updated_by": "session_01Nbc9c8aLjvDKHhc3ShDThA",
+  "roadmap": [
+    "L-DESK",
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "L-DESK/M25: Claude decisions graded in /performance-review (Live review + Desk) with calibration and per-brief-version splits; measured-skill use rules proposed; n priced = 0 LTR / 0 desk at landing",
+    "arch": "none: read-only graders over comms/live_review, comms/desk and the journal; ML lint rules W1-W3 in claude-judgments-guard"
+  },
+  "observation": {
+    "what": "the first /performance-review after landing carries a desk{} block and the live_review{} calibration/by_skill_sha/use_rules keys, and check_claude_grade_loop.py --live exits 0",
+    "how_to_check": "python3 scripts/ops/check_claude_grade_loop.py --live; python3 scripts/ops/desk_grade.py --live --json | head -5; grep -l desk comms/reviews/performance/*.json | tail -1",
+    "due_by": "2026-11-05"
+  },
+  "_seq": 719
+}

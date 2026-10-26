@@ -1,5 +1,7 @@
 # Contract amendment log — live-trade-review SKILL.md + REVIEWER-BRIEF.md
 
+> **Doc status:** `unknown` · category `instruction` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+
 > CLAUDE-GRADE-LOOP (operator 2026-10-26). Every change to SKILL.md or REVIEWER-BRIEF.md after 2026-10-27 is a versioned
 > amendment made by a PR from `/perf-followup` Track 2 (or a lane fixing a mechanical defect), never a
 > silent edit. One line per new version. `new_skill_sha` is the changed file's git blob sha AFTER the change
