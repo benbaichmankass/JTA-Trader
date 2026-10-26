@@ -9777,7 +9777,8 @@ def _open_sibling_qtys(db, row, account_id: str, symbol: str) -> Optional[List[f
 
 def _attempt_naked_autoprotect(row, sl, tp, *, db=None,
                                bybit_position_idx: Optional[int] = None,
-                               trace: Optional[Dict[str, Any]] = None) -> bool:
+                               trace: Optional[Dict[str, Any]] = None,
+                               qty_cap: Optional[float] = None) -> bool:
     """Re-arm a broker-side GTC protective bracket on a naked position.
 
     Returns True on a placed protective bracket. Never raises.
@@ -9816,6 +9817,11 @@ def _attempt_naked_autoprotect(row, sl, tp, *, db=None,
     same way an orphaned trade is a condition the reconciler always heals; it is
     not an opt-in feature to be toggled (Prime Directive: no default-off gate in
     front of a required capability).
+
+    *qty_cap*, when given, LOWERS the armed qty to at most that figure (never
+    raises it). The IB sweep passes the broker's uncovered size: a journal row
+    that over-states the position (ib_paper MGC 2026-10-26: row 6673 = 14, the
+    broker 12) must not arm legs that could fill past flat.
     """
     account_id = str(row["account_id"] or "")
     symbol = str(row["symbol"] or "")
@@ -9824,6 +9830,12 @@ def _attempt_naked_autoprotect(row, sl, tp, *, db=None,
         qty = float(row["position_size"])
     except (KeyError, TypeError, ValueError, IndexError):
         return False
+    if qty_cap is not None:
+        try:
+            if 0 < float(qty_cap) < qty:
+                qty = float(qty_cap)
+        except (TypeError, ValueError):
+            pass
     if qty <= 0 or sl in (None, 0) or tp in (None, 0):
         return False
     try:
@@ -11693,7 +11705,17 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
             declared_tp = row["take_profit_1"]
             tp_declared = declared_tp not in (None, 0) and declared_tp > 0
             target_q = cov.get("target_qty")
-            if tp_declared and target_q is not None and float(target_q) < size - _IB_COVERAGE_EPSILON:
+            # A book with NOTHING resting (stop 0, target 0) is NAKED, not
+            # target-naked: grading it here put a fully naked MGC short under
+            # "target_naked=1 naked=0" every sweep (ib_paper, 2026-10-26). It is
+            # classified and re-armed by the stop-side path below.
+            _fully_naked = (
+                covered <= _IB_COVERAGE_EPSILON
+                and target_q is not None
+                and float(target_q) <= _IB_COVERAGE_EPSILON
+            )
+            if (tp_declared and not _fully_naked and target_q is not None
+                    and float(target_q) < size - _IB_COVERAGE_EPSILON):
                 summary["target_naked"] = summary.get("target_naked", 0) + 1
                 _emit_target_naked_alert(
                     account_id=account_id,
@@ -11754,6 +11776,24 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
             # own bracket (target == its share) still leaves room, so the
             # partial-netted repair is unaffected. Unreadable side-aware fields
             # are "could not look" and block. The CRITICAL page above has fired.
+            # CLASSIFY before deciding whether the re-arm may run: a position
+            # whose stop side is short is naked (or partially naked) whether or
+            # not a guard below blocks the repair. Counting it only after the
+            # guard reported a fully naked MGC short as naked=0 (2026-10-26).
+            if covered > 0:
+                summary["partially_naked"] += 1
+            summary["broker_naked"] += 1
+            # SIZE the re-arm to the room the broker leaves, never the journal
+            # row alone. Row 6673 said 14 while the broker held 12; sizing the
+            # target check on 14 read 0 + 14 > 12 as "a foreign target would
+            # over-fill" and refused to protect a book with NOTHING resting.
+            try:
+                _rearm_qty = min(
+                    float(row["position_size"] or 0.0), max(0.0, size - covered))
+            except (TypeError, ValueError):
+                _rearm_qty = 0.0
+            if _rearm_qty <= _IB_COVERAGE_EPSILON:
+                continue
             _tq = cov.get("target_qty")
             _tg = cov.get("target_groups")
             try:
@@ -11767,8 +11807,7 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                         _tg.get(f"oca-protect-t{row['id']}") or 0.0)
                 _outside += float(cov.get("_rearm_credit") or 0.0)
                 _target_overfill = (
-                    _outside + float(row["position_size"] or 0.0)
-                    > size + _IB_COVERAGE_EPSILON
+                    _outside + _rearm_qty > size + _IB_COVERAGE_EPSILON
                 )
             except (TypeError, ValueError, AttributeError):
                 _target_overfill = True
@@ -11788,15 +11827,13 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
             # surviving sibling leg made the whole netted position read
             # PROTECTED while this trade's own protection was gone.
             if covered > 0:
-                summary["partially_naked"] += 1
                 logger.warning(
                     "_check_broker_naked_ib_positions: %s/%s PARTIALLY NAKED — "
                     "position %s vs %s covered by %d resting leg(s); "
-                    "re-arming trade_id=%s for its own qty",
+                    "re-arming trade_id=%s for qty %s",
                     account_id, protect_symbol, size, covered,
-                    cov.get("legs", 0), row["id"],
+                    cov.get("legs", 0), row["id"], _rearm_qty,
                 )
-            summary["broker_naked"] += 1
             sl = row["stop_loss"]
             tp = row["take_profit_1"]
             a_sl = sl if (sl not in (None, 0) and sl > 0) else None
@@ -11814,7 +11851,8 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                     row["id"], symbol,
                 )
                 continue
-            if _attempt_naked_autoprotect(row, a_sl, a_tp, db=db):
+            if _attempt_naked_autoprotect(row, a_sl, a_tp, db=db,
+                                          qty_cap=_rearm_qty):
                 summary["rearmed"] += 1
                 # Credit ONLY this trade's qty against the netted position's
                 # coverage — not the whole position. The old code set the cached
@@ -11822,17 +11860,30 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                 # protected when the re-arm had covered just one trade's share;
                 # that is the boolean defect in miniature. Crediting the qty
                 # keeps a still-uncovered sibling visible on this same sweep.
-                try:
-                    cov["_rearm_credit"] = float(cov.get("_rearm_credit") or 0.0) + float(
-                        row["position_size"] or 0.0
-                    )
-                except (TypeError, ValueError):
-                    pass
+                cov["_rearm_credit"] = float(cov.get("_rearm_credit") or 0.0) + _rearm_qty
                 logger.info(
                     "_check_broker_naked_ib_positions: re-armed GTC OCA "
                     "(sl=%s tp=%s) on broker-naked trade_id=%s account=%s "
                     "symbol=%s", a_sl, a_tp, row["id"], account_id, symbol,
                 )
+            else:
+                # The re-arm did not take. A FULLY naked book (no leg at all)
+                # never reached the partial-cover page above, which is gated on
+                # a resting leg, so page it here; the emitter's cooldown keeps a
+                # persisting failure to one red flag while every sweep retries.
+                logger.error(
+                    "_check_broker_naked_ib_positions: re-arm FAILED for "
+                    "broker-naked trade_id=%s %s/%s (qty %s, sl=%s tp=%s) — "
+                    "retrying next sweep",
+                    row["id"], account_id, protect_symbol, _rearm_qty, a_sl, a_tp,
+                )
+                if not cov.get("_partial_paged"):
+                    cov["_partial_paged"] = True
+                    _emit_partial_stop_coverage_alert(
+                        account_id=account_id, symbol=protect_symbol, size=size,
+                        stop_qty=covered, target_qty=cov.get("target_qty"),
+                        trade_ids=[row["id"]], venue="ib",
+                    )
         except Exception as exc:  # noqa: BLE001
             summary["errors"] += 1
             logger.warning(

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane IB-MGC-NAKED-REARM (dispatched by manager session_01C1ooo4kqBbng7vytdG1UVs), step 3. Changes src/runtime/order_monitor.py, which is the live order monitor and the IB naked re-arm sweep, so it is Tier 2 on the order path. Three changes: (1) a position with NOTHING resting is classified naked and no longer target-naked; (2) the naked and partially-naked counters are taken before the foreign-target guard; (3) the re-arm qty and the over-fill check use min(journal row qty, broker size - stop coverage), passed to _attempt_naked_autoprotect as a qty_cap that can only lower qty. A failed re-arm of a fully naked book now pages through the existing partial-stop-coverage emitter, which has a cooldown, and retries on every sweep. Nothing new is cancelled, no new order type is added, and MHG's legs are untouched. Needs pull-and-deploy plus a trader restart to take effect. Revert: git revert of the merge commit.",
+  "why": "ib_paper/MGC short 12 sat fully naked while the sweep reported target_naked=1 naked=0 and refused to re-arm: journal row 6673 says 14 while the broker holds 12, so its check computed 0 + 14 > 12."
+}
