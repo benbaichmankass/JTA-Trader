@@ -22,6 +22,8 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
   to bound); a `tighten_sl` row names its `evidence_source`; an `auto_applied` row needs
   `mechanics.verdict == match`. `insufficient_n` + `no_recommendation` stays valid (the
   reviewer may decline to make a call), and is still never hold.
+* trigger (operator 2026-10-26, GLD re-reviewed ten times): from 2026-10-27 a row whose trigger names a due
+  event carries that event's level (a string for mechanics/swing/...), and `manual` carries none.
 * LTR-ALL-ACTIONS (operator 2026-10-26, MD-TRADE-DESK, verbatim "as long as they have
   reasoning and confidence attached"): a trade action (close / partial_close / move_tp /
   widen_sl / change_size / add_entry) carries a non-empty `reason`, an `evidence_source` of
@@ -172,6 +174,28 @@ def trade_action_problems(rec: dict) -> list[str]:
     return out
 
 
+#: Operator 2026-10-26 (a wedged GLD package was re-reviewed ten times): the due dedupe keys on
+#: the trigger's (event, level), so a row that answers a due event must carry the level the due
+#: packet gave. Earlier rows are history (they carry a null level and the due side infers it).
+DUE_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target", "daily_floor",
+              "swing", "vol_regime", "funding", "calendar", "mechanics")
+TRIGGER_LEVEL_RULE_FROM = "2026-10-27T00:00:00Z"
+
+
+def trigger_problems(row: dict) -> list[str]:
+    if str(row.get("reviewed_at") or "") < TRIGGER_LEVEL_RULE_FROM:
+        return []
+    trig = row.get("trigger") or {}
+    event, level = trig.get("event"), trig.get("level")
+    if event in DUE_EVENTS and level is None:
+        return [f"trigger.event {event} names a due event but no level (copy event AND level from the wake entry)"]
+    if event == "mechanics" and not isinstance(level, str):
+        return ["trigger.event mechanics needs its string level (venue_sl_diverges / journal_trade_absent)"]
+    if event == "manual" and level is not None:
+        return ["trigger.event manual takes no level (a level means this answers a due event: name that event)"]
+    return []
+
+
 def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     out: list[str] = []
     _check(row, schema[kind], schema["enums"], kind, out)
@@ -220,6 +244,7 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
         out.append("basis could_not_look requires a reason")
     out += trade_action_problems(rec)
     out += money_call_problems(row)
+    out += trigger_problems(row)
     accts = [a["account_id"] for a in row["account_reads"]]
     if len(accts) != len(set(accts)):
         out.append("account_reads names an account more than once")
@@ -400,6 +425,16 @@ def _self_test() -> int:
     expect("a table-basis close with ev_delta_r passes",
            mut(GOOD_REVIEW, lambda r: r["recommendation"].update(action="close", level=None, reason="x",
                                                                  evidence_source="table", ev_delta_r=0.3)), "reviews", False)
+    def trig(event, level, at="2026-10-27T01:00:00Z"):
+        return lambda r: (r["trigger"].update(event=event, level=level), r.update(reviewed_at=at))
+    expect("a due event with no level is refused", mut(GOOD_REVIEW, trig("mechanics", None)), "reviews", True)
+    expect("a mechanics event with its string level passes",
+           mut(GOOD_REVIEW, trig("mechanics", "venue_sl_diverges")), "reviews", False)
+    expect("a swing event with no level is refused", mut(GOOD_REVIEW, trig("swing", None)), "reviews", True)
+    expect("a manual row naming a level is refused", mut(GOOD_REVIEW, trig("manual", 1)), "reviews", True)
+    expect("a manual row with no level passes", mut(GOOD_REVIEW, trig("manual", None)), "reviews", False)
+    expect("a pre-rule due event with a null level is history, not refused",
+           mut(GOOD_REVIEW, trig("mechanics", None, "2026-10-26T22:16:00Z")), "reviews", False)
     expect("missing account_reads is refused", mut(GOOD_REVIEW, lambda r: r.pop("account_reads")), "reviews", True)
     expect("an account read outside the enum is refused",
            mut(GOOD_REVIEW, lambda r: r["account_reads"][0].update(read="approved")), "reviews", True)
