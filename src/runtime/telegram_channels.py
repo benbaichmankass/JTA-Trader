@@ -145,6 +145,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/trainer_reachability_alert.py": ("alert",),
     "src/runtime/decision_channel_alert.py": ("alert",),
     "src/runtime/exit_loop_health.py": ("alert",),
+    "src/runtime/ltr_first_proof.py": ("alert",),   # LTR first-proof pings, one per stage, once ever (operator 2026-10-26)
     "src/runtime/losing_streak_alert.py": ("alert",),
     "src/runtime/silent_refusal_alert.py": ("alert",),
     "src/runtime/starved_account_alert.py": ("alert",),

@@ -50,7 +50,7 @@ You are a trader looking for **one** trade worth taking now that the system is n
    - the strategies hold an open package on the same symbol AND side → `duplicates_system_package`;
    - else a near-signal on the same symbol and side (only when `near_signals_read_state: read`) → `duplicates_near_signal`;
    - else, if `near_signals_read_state` is `read` → `new`;
-   - else (near-signals not read) → `unverifiable`. **Today near-signals are not read, so a proposal not duplicating an open package is `unverifiable`.**
+   - else (near-signals not read) → `unverifiable`. **Read `near_signals_read_state` on every packet**: the producer (DESK-16B) marks it `read` only when every rostered leg was looked at, so the same symbol/side can be `new` one hour and `unverifiable` the next.
    Duplicating the system is allowed and graded as a duplicate; the point of the desk is `new`.
 5. **`watch_note`** is for "nothing now, but a named level/symbol to watch": no proposal, recorded like `no_trade`.
 

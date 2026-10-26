@@ -1,0 +1,23 @@
+{
+  "run": "RESEARCH-FLOOR-20261026", "finished_at": "2026-10-26T14:00:00Z", "by": "session_017mUmkE1C7PvyA37o3nWGHQ",
+  "floor": 61, "floor_basis": "computed_floor(fired_24h 76)", "authoring_queue_depth": 31,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"], "needs_review_triaged": 0, "needs_review_left": 28,
+  "throughput": {"runnable_before": 32, "runnable_after": 65, "queued": 134, "fired_24h": 76, "results_landed_24h": 85, "hours_since_last_dispatch": 2.4, "idle_alarm": false,
+                 "after_basis": "dispatch_queue.py dry run + check_research_queue_health on the working tree: 34 new units all would_dispatch; they count runnable once this HELD PR merges (E57)"},
+  "mechanism": {"dispatch_receipt": "not_run (floor-gap lane, not a full ops pass)", "collector": "ok (85 results landed 24h, 0 unreadable)", "stranded_stamp_prs": [], "incident": null},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": []},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": ["RQ-20261026-ed1c-01..34: 19 exit-lever (direction filter x7, ER/CHOP path-state trail x3, ADX trail x4, stale exit x2, break-even floor x3), 9 calendar event studies (retail_sales_mom, ppi_mom, cpi_mom, michigan_sentiment, continuing_jobless_claims, durable_goods_orders, adp_employment_change, eia_crude_stocks, eia_natgas_storage), 6 regime-head learner families at 1h (hgb, extratrees, mlp, catboost, numpy_logit, calibrated logit)"],
+  "followups_filed": [{"what": "RQ-20261026-901 power basis cites 1,170 releases; distinct releases are 599", "ref": "PI-20261026-7O3NWGHQ-0001"}],
+  "authoring": {"queue_depth": 31, "nodes_drafted": 0, "nodes": [],
+                "theme_shortfall": {"new_strategy_prop": 13, "ml_health": 1, "regime": 0, "live_strategy": 0},
+                "note": "34 hand units authored from the H1-THEME gaps and the manager's brief (exit/ATM, zero-weight event studies, frontier learners); no programme node drafted this lane, the authoring queue (31) is untouched and is the next pass's step E"},
+  "not_run": ["A: mechanism checks beyond the throughput/health counts", "C: needs_review triage", "D: results read", "programme node authoring (step E.0)"],
+  "handoff": [
+    "MERGE the held PR: hand-authored research/queue units hold for a human under E57; the floor gap closes only when it merges.",
+    "DESK-7 D-S0 units not authored: no open PR, row DESK-7-BLIND-REPLAY-S0 is queued with no lane, and the shared replay harness does not exist, so a unit would have no runnable harness. Author them the day DESK-7 lands.",
+    "new_strategy_prop still short (4 of 17 after this lane): the P1-Q7 prop nodes (sol TP3, GTD time-close) need E65's window read from docs/research/prop-exit-evidence-2026-09-24.json before a disjoint window can be registered.",
+    "Event-study units grade ONE pre-registered hold per class; nine same-day classes = multiple-testing denominator 9 for any PASS. cpi_mom has only 86 non-zero surprises (min_n 80): expect INDETERMINATE-leaning.",
+    "PI-20261026-7O3NWGHQ-0001: correct 901's power basis (599 not 1,170)."
+  ]
+}

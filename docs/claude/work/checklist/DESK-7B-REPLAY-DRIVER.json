@@ -1,0 +1,23 @@
+{
+  "id": "DESK-7B-REPLAY-DRIVER",
+  "title": "Desk D-S0 replay driver: masked packets from committed leg trade lists, judging-action collection, real-path replay (hold/tighten/close/partial_close) with the full cost stack, bootstrap + baselines, verdict.json",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 lane DESK-7-BLIND-REPLAY-S0, session_01Bp1CwBC4STi9SZC5vKgJWM] Filed as the single lever blocking research/queue/blocked/RQ-20261026-bf56-01/-02/-03 (blocked_on.ref). Compose, do not rewrite: scripts/ops/desk_scan_packet.py (--as-of masking + mask key), scripts/research/live_review_outcomes.py (tighten pricing from committed trade lists), scripts/ci/check_desk_records.py (pre_cutoff), src/runtime/execution_costs.py. NEW: close/partial_close replay (next-bar-open fill), judging-action jsonl intake, trade-resampling bootstrap, B2 random-timing and B3 leave-one-fold-out best-static baselines, scrambled-label arm, verdict.json writer, research-script-run.yml route. Also the shared harness DESK-18-GEN-REPLAY-S0 uses. Done when bf56-01 runs and lands a verdict. Ceiling est $12, Sonnet. Blocked units: PR #20339.",
+  "priority_rank": 8,
+  "updated_at": "2026-10-26T13:42:16Z",
+  "updated_by": "session_01Bp1CwBC4STi9SZC5vKgJWM",
+  "roadmap": [
+    "L-DESK",
+    "L-ATM"
+  ],
+  "_seq": 717
+}

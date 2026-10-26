@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261024-006
 title: 'Breakout prop fit: tqqq_trend_long_1d at sizing flat 1.0% of balance under RULE-B6 V2 (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -99,3 +99,15 @@ generated:
     timeframe: 1d
     trades_file: comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl
 last_dispatched_at: '2026-10-26T09:55:12+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-TPL-PROP-FIT-B6V2-tqqq_trend_long_1d-bal010
+  evidence:
+  - research/results/RQ-20261024-006/40303384636.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

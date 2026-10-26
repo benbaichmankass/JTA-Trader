@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-1B B2b: the live trader (ict-trader-live) posts the ltr-wake comment on the ops-flags PR itself, off-thread, kicked from record_position_telemetry. Runtime change in the trader process: the operator OK'd shipping it (manager dispatch 2026-10-26); the manager merges, restarts/deploys the trader and verifies the receipt. Stacked on #20300 (it loads plan/render from scripts/ops/live_review_wake.py): merge #20300 first.",
+  "why": "new src/runtime module + one kick line in position_telemetry + one diag log_file allowlist entry + tests; no order path, config, accounts.yaml or strategies.yaml change"
+}

@@ -1,0 +1,111 @@
+id: RQ-20261026-bf56-02
+title: 'Desk D-S0 in-trade: on a masked blind replay of the four real-money 2h/4h legs, does Claude''s in-trade action beat HOLD, a frequency-matched random-timing baseline and the best static tighten, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: experiment
+question: >-
+  At the first closed bar where an open trade of xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h or trend_donchian_xrp_4h has reached +1.0 R of favourable
+  excursion (the in-trade decision state, the same state live_review_outcomes.py prices), given only a MASKED point-in-time packet (no symbol, date or absolute price),
+  does Claude's chosen action (hold / tighten_sl to a stated ATR or R level) produce a positive paired dR versus the leg's own untouched exit, net of the full cost stack
+  and a stop-fill charge, and does it also beat a random-timing baseline and the best fixed tighten rule chosen without seeing the test folds?
+why_this_matters: >-
+  DESK-7-BLIND-REPLAY-S0 / design section 8.1 "in-trade": Stage 0 for Claude-on-the-leg. In-trade applies on strategy trades are tighten-only and ship only after this
+  unit passes (design 0.4). The leg set is what carries real money on bybit_2 and its mirror bybit_portfolio. Operator 2026-10-26 ~13:25Z: get the trading desk running this week.
+power:
+  expected_n: 176
+  min_detectable_effect: 0.25
+  effect_units: R
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    expected_n MEASURED 2026-10-26 from the four committed Stage-0 trade lists (comms/strategy_evidence/<leg>.json -> source_run, field mfe_r >= 1.0): xrp_pullback_2h 27 of 55,
+    ada_pullback_2h 31 of 61, trend_donchian_eth_4h 103 of 208, trend_donchian_xrp_4h 15 of 46; 27 + 31 + 103 + 15 = 176 decision points (population: Stage-0 OOS trades whose mfe_r
+    reached 1.0; mfe_r is the trade-path MFE in R). sd 1.0 is INFERRED: the design's v0 assumption was a paired sd of 0.4 R, the MEASURED sd of the hold outcome itself among these 176
+    decision points is 2.353 R (the ceiling, since dR = action outcome - hold outcome), and 1.0 is a midpoint chosen BEFORE any paired dR exists. At sd 1.0, n = (2.8 * 1.0 / 0.25)^2 = 126 <= 176,
+    so MDE is 2.8 * 1.0 / sqrt(176) = 0.211 R. The v0 sd of 0.4 would give +0.10 R at n = 126, the design's stated target; this unit does NOT claim that. The first run records the OBSERVED
+    paired sd and the rule below grades on the observed CI, not on this assumption.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      No observed paired-dR data exists for any desk action on any leg (the quantity this unit establishes), so the sd is declared, not corroborated. expected_n is a count of
+      committed historical decision points, so nothing accrues; forward-shadow desk proposals (DESK-6) are the second OOS set and accrue separately.
+decision_rule:
+  id: RULE-RQ20261026-BF56-02-DESK-INTRADE-S0
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    Over the pooled decision points of the four legs (n_obs reported per leg): per decision point, dR = net_r(action replayed on the real path) - net_r(hold = the leg's recorded exit),
+    both net of the full cost stack (fee 7.5 bps round trip, slippage and funding from execution_costs.resolve_cost_policy(symbol), MEASURED 2026-10-26 to return (3.0 bps round trip,
+    1.0 bps per funding window) for XRPUSDT, ADAUSDT and ETHUSDT), a tightened stop filling at the stop price (a gap at the open) AND charged an extra 0.05 R per stop-out of the tightened stop
+    (live_review_outcomes.py --stop-fill-slip-r; registered here, sensitivities at 0 and 0.10 are reported but do not decide). Statistic = mean dR, 95% CI by a trade-resampling bootstrap
+    (10,000 draws, seed registered in the run's inputs). Baselines on the same decision points and the same cost stack: (B1) STRATEGY'S OWN = HOLD, i.e. dR = 0; (B2) RANDOM-TIMING =
+    the same action vocabulary applied with Claude's per-run action frequencies but to random bars of the same trade (not the decision state), 1,000 draws, same cost stack; (B3) BEST STATIC =
+    the single fixed tighten rule from live_review_outcomes.py's table (atr:k, k in {1.0, 1.5, 2.0}, or r:x, x in {0.0, 0.5}) with the best mean dR on the other folds, scored on the held-out fold (leave-one-fold-out).
+    Folds = the evidence record's own 4 folds per leg (fold_detail), pooled by fold index.
+  rule: >-
+    PASS IF n_obs >= 126 AND mean dR (Claude vs HOLD) has a 95% CI lower bound > 0 AND mean dR > mean dR(B2) with the paired CI of the difference excluding 0 AND mean dR >= mean dR(B3)
+    AND dR > 0 in >= 3 of 4 pooled folds AND the post-cutoff stratum (pre_cutoff = false) has point estimate > 0 (not contradicting the pre_cutoff set; if its n < 20 the stratum is reported and a PASS is
+    labelled 'masked-replay only, forward-shadow confirmation required'). FAIL IF n_obs >= 126 AND (mean dR <= 0 OR the CI upper bound < 0 OR the scrambled-label arm of RQ-20261026-bf56-01 was nonzero).
+    INDETERMINATE otherwise (the CI straddles 0): the record states the OBSERVED paired sd and the n at which the observed sd would resolve +0.10 R, and the follow-up is more decision points
+    (a longer window per leg or DESK-24 offline sessions), never a lowered bar. Per-leg dR is REPORTED with its own CI and n but no per-leg verdict is made: a leg with n < 20 is 'insufficient_n', never zero.
+    The registered numbers (126, 0.05, 3 of 4, the action vocabulary, the B3 grid) are not changed after any result.
+  what_it_does_not_do: >-
+    A PASS is Stage-0 for the in-trade role only. It applies nothing, edits no config or roster, and is not a Tier-3 case: an in-trade apply path on strategy trades still needs the operator mandate
+    (DESK-13) and the forward-shadow set must not contradict it. It is not evidence of edge for any leg's entries, and it does not cover entry generation (DESK-18) or exit (RQ-20261026-bf56-03).
+requires_result:
+  unit: RQ-20261026-bf56-01
+  verdict: pass
+blocked_on:
+- kind: work_item
+  ref: DESK-7B-REPLAY-DRIVER
+  what: >-
+    No driver exists that builds masked decision packets, collects Claude's actions from judging sessions into a jsonl, replays them on the real path with the full cost stack, and emits the
+    statistic above. Also needs a bounded judging-session protocol (n = 176 packets, no repo access, packet only), run by a lane, not by the token-free dispatcher.
+  clears_when: >-
+    DESK-7B-REPLAY-DRIVER is done AND RQ-20261026-bf56-01 has landed with verdict pass. Then: git mv this file to research/queue/, fill run.workflow and run.command for the scoring step, remove blocked_on, status: queued.
+masked_replay:
+  population: >-
+    The four real-money 2h/4h legs (MEASURED 2026-10-26 by parsing config/accounts.yaml at main 38f8bcf8: bybit_2 and its exact mirror bybit_portfolio carry xrp_pullback_2h, trend_donchian_eth_4h,
+    trend_donchian_xrp_4h, ada_pullback_2h; the 1h prop legs and iaum_pullback_1d are out of scope). Re-parse before running.
+  construction: >-
+    As in RQ-20261026-bf56-01: desk_scan_packet.py --as-of masking (aliases, rebase to 100 at the decision bar, ATR units, timestamps anchored 2000-01-01, volume and calendar withheld, bars at or after the
+    decision bar dropped). The packet adds the open trade's side, entry/stop/TP in entry-ATR units, bars held and open R. The judging session sees ONLY the packet.
+  unmask_key: Written only to a separate file the judging session never reads; the scorer joins by opaque packet id.
+  leak_controls: >-
+    Scrambled-label arm (RQ-20261026-bf56-01 clause c); pre_cutoff flag on every row with the post-cutoff stratum reported separately; no tools and no repo access in the judging session.
+  action_vocabulary: 'hold | tighten_sl (to a stated level in ATR or R, never loosening). Closed enum; prose is bookkeeping, never a label (design 2.4).'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  bucket: real_money
+  basis: 'stand-in: bounds what an in-trade desk could add on legs carrying real bybit_2 risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: null
+  basis: 'est_minutes null rather than guessed: the driver does not exist; the judging step is LLM sessions, the scoring step is CPU only.'
+run:
+  workflow: null
+  inputs:
+    research_unit: RQ-20261026-bf56-02
+  note: Deliberately null until DESK-7B-REPLAY-DRIVER lands.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-bf56-01
+- RQ-20261026-bf56-03
+- scripts/research/live_review_outcomes.py
+- scripts/ops/desk_scan_packet.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null

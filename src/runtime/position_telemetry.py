@@ -409,7 +409,17 @@ def record_position_telemetry(**kwargs) -> Optional[Dict[str, Any]]:
                     db_path=db_path)
             except Exception:  # noqa: BLE001 — observe-only, never raises
                 logger.debug("position_telemetry: history hook failed", exc_info=True)
-        return rec
+    # LTR-1B B2b / C1: the due computation reads what was just written. kick() is a
+    # monotonic compare + non-blocking lock try; the work runs off-thread.
+    try:
+        from src.runtime import live_review_wake_post
+        live_review_wake_post.kick()
+        # LTR C1: the rows-branch watcher (one daemon thread, started once).
+        from src.runtime import live_review_rows_watch
+        live_review_rows_watch.ensure_started()
+    except Exception:  # noqa: BLE001 — observe-only, never raises
+        logger.debug("position_telemetry: ltr wake kick failed", exc_info=True)
+    return rec
 
 
 # ---------------------------------------------------------------------------

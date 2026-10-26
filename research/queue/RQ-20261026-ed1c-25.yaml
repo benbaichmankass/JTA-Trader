@@ -1,0 +1,94 @@
+id: RQ-20261026-ed1c-25
+title: 'Calendar event types (CALENDAR-EVENT-TYPES / NEWS-ALPHA zero-weight study): does the durable_goods_orders surprise vs the PIT consensus pay a net-of-cost SPY sign book at a 3-day hold?'
+status: queued
+cadence: once
+theme: macro
+priority: 3
+kind: experiment
+question: 'Over the 136 durable_goods_orders releases with a non-zero survey surprise (2015-01-27..2026-09-25, distinct release dates after the live + survey-backfill merge, MEASURED 2026-10-26 with load_resolved_events_multi),
+  does a sign book (long when surprise > 0, short otherwise; entered at the release-day close, held 3 trading days), charged the full SPY round-trip cost stack, earn a mean net return > 0 with t >= 2.0
+  AND beat the all-long floor on the same windows? Expected sign positive: a capex/orders beat is growth news.'
+why_this_matters: 'Operator 2026-10-26: expand the calendar''s event types; a new class ships DATA-ON / IMPACT-NEUTRAL (weight 0 on the trade path) and a weight needs this kind of study first. This is the
+  economic-edge (net-of-cost, naive-floor) read, reported beside the IC. CORRECTION to RQ-20261026-901''s power basis: its 1,170 counts snapshot rows, the merged one-row-per-release population for initial_jobless_claims
+  is 599 (this unit''s durable_goods_orders population is 139 releases, 136 with a non-zero surprise). Lane RESEARCH-FLOOR-20261026 (runnable 32 < computed floor 61, MEASURED 13:30Z by check_research_queue_throughput/health).'
+power:
+  expected_n: 136
+  min_detectable_effect: 0.24
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one release with a non-zero surprise (MEASURED 136 of 139 distinct release dates, 2015-01-27..2026-09-25). One pre-registered hold horizon, so no multiplicity split. Per-trade mean net
+    return / sd: d = (1.96+0.8416)/sqrt(136) = 0.24. A true effect smaller than 0.24 sd is not detectable at this n; a miss is then INDETERMINATE-leaning evidence, not a refutation.'
+  feasibility:
+    source: none
+    accrual_basis: n is a fixed historical merge of committed snapshots, not an accrual; the run prints releases and the joined sign-book n so a short join lands INDETERMINATE.
+decision_rule:
+  id: RULE-RQ20261026ed1c25
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'scripts/research/macro_event_study_run.py grade_trade(): per release with a non-zero surprise, position = sign(surprise), entered at the release-day close, held 3 trading days on SPY daily
+    closes, net of the SPY full round-trip cost stack (fee profile_loader.roundtrip_fee_bps_for or the estimator default, plus execution_costs.resolve_cost_policy slippage; perp funding not applicable to
+    a daily ETF hold and recorded as such). Floor = the all-long book on the same windows at the same cost. IC (Spearman, overlap-corrected) at 3 is reported, not graded.'
+  rule: 'PASS IF sign-book n >= 100 AND mean net per trade > 0 AND its t >= 2.0 AND mean net > the all-long floor mean. FAIL IF n >= 100 and not PASS: THIS event class / instrument / hold is closed as a
+    trade signal on this window; the class stays collected (data-on) and a different horizon or instrument is a new unit. INDETERMINATE IF n < 100. no_data/producer_failed IF the price panel is empty: a
+    route fault, not a verdict. Horizon, sign, instrument and bars are not changed after the result.'
+  min_n: 100 joined releases.
+  what_it_does_not_do: Sets no weight and touches no config, order path or roster; a PASS is a lead for a weight-setting Tier-3 proposal that still owes a disjoint-window confirmation, a placebo (--anchor-shift-td)
+    and the naive floor at a second horizon. Daily closes cannot see the intraday reaction. One of nine same-day sibling classes (multiple-testing denominator 9 for this batch).
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 40
+  confidence: 0.1
+  basis: 'stand-in: whether a calendar class earns a non-zero news-layer weight; information value, not a P&L claim.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  why_runner: Fetches public daily closes off-VM; reads committed snapshots only; CPU only.
+  basis: 'Estimate, NOT measured: comparable to RQ-20261026-901 (one price fetch + one rank correlation + one sign book).'
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - durable_goods_orders
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - SPY
+  - --horizons
+  - '3'
+  - --primary-horizons
+  - '3'
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - positive
+  - --trade-horizon
+  - '3'
+  - --cost-symbol
+  - SPY
+  - --trade-t-bar
+  - '2.0'
+  - --population
+  - durable_goods_orders releases (live feed + survey-consensus backfill, one row per release date) joined to SPY daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261026-ed1c-25
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+related:
+- research/queue/RQ-20261026-901.yaml
+- scripts/research/macro_event_study_run.py
+- CALENDAR-EVENT-TYPES

@@ -19,6 +19,7 @@
 #   setup_labels        — trade_journal.db
 #   setup_labels_audit  — trade_journal.db + signal_audit.jsonl (skipped if absent)
 #   review_journal      — comms/ directory in the repo
+#   claude_judgments    — comms/live_review + comms/desk records + trade_journal.db (CJ-2)
 #   market_raw          — Bybit V5 public klines (ICT_OFFVM_BUILD_HOST=1)
 #   market_features     — derived from market_raw
 #
@@ -471,6 +472,16 @@ build_family review_journal \
   --output-dir "$DATASETS_ROOT" --version "$DATASET_VERSION" \
   --source "comms-artifacts" --overwrite \
   "comms_root=${COMMS_ROOT}" "include_archive=true"
+
+# ---- claude_judgments (CJ-2-DATASET) -------------------------------------
+# Claude's live-review + desk decisions, point-in-time, joined to the realised
+# outcome (journal net R, package initial stop as the risk basis). Small by
+# design while the desk accrues rows; the build's stderr carries the
+# population line (n read / joined / excluded by reason).
+build_family claude_judgments \
+  --output-dir "$DATASETS_ROOT" --version "$DATASET_VERSION" \
+  --source "comms-live-review+desk+trade_journal.db" --overwrite \
+  "comms_root=${COMMS_ROOT}" "db_path=${DB_PATH}"
 
 # ---- market_raw + market_features (Bybit public klines) -----------------
 # The bybit_offvm adapter requires ICT_OFFVM_BUILD_HOST=1 to guard against
