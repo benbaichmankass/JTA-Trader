@@ -1,0 +1,105 @@
+{
+  "run": "RESEARCH-OPS-20261026-0847",
+  "finished_at": "2026-10-26T09:20:00Z",
+  "by": "research-ops-0847",
+  "floor": 69,
+  "floor_basis": "computed_floor(fired_24h 86)",
+  "authoring_queue_depth": 32,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "trainer"
+  ],
+  "needs_review_triaged": 8,
+  "needs_review_left": 28,
+  "needs_review_note": "Closes the 02:47Z not_run item: the oldest 8 (RQ-20260927-003, -20260928-030, -031, -20260929-009, -016, -017, -018, -20261003-011) were READ, grading blocks and owner_reason text included. Every one carries grading.owner + a specific named gap (RESEARCH-TOOLING-GAPS: prose run.workflow / template wiring_only, due PI-20261006-1VPYTX8E-0001 2026-10-29; ICT-SCALP-EVIDENCE: no MGC futures feed). No rule or owner was wrong, so no unit edit was needed; result_disposition_check: owned 25 / UNOWNED 0 / UNGRADED 0.",
+  "throughput": {
+    "runnable_before": 39,
+    "runnable_after": 39,
+    "queued": 133,
+    "fired_24h": 86,
+    "results_landed_24h": 90,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "not re-run: the one unit authored (programme:P2-RG1025-yz-longtail-eth) is emitted by queue_replenish.py on its next run (plan lists it as RQ-20261026-002 at --target 75), so runnable_after = runnable_before until then. Still 30 under the floor (H1-AUTHOR)."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (last dispatch 07:53Z, 0.9 h before the check)",
+    "collector": "ok (0 unreadable result files)",
+    "stranded_stamp_prs": [],
+    "incident": null,
+    "note": "No dispatcher/collector/grader fault read. Workflow run lists and the open-PR list were not re-read this pass (GitHub Actions MCP not used); receipt freshness and the 18 results landing since 03:10Z are the evidence."
+  },
+  "results_read": {
+    "pass": 4,
+    "fail": 14,
+    "indeterminate": 0,
+    "units": [
+      "18 result files since 03:10Z (row generated_at > 03:10Z): 4 pass (3 infra self-tests ae17-43/-44/-45 + bda2-01), 14 fail by row verdict; all read_state measured, all power_state accruing except the self-tests.",
+      "FAIL, configuration closed: RQ-20261024-71e8-01 squeeze-1h WIDE (bb 2.5 / kc 1.0) vs B on the symbol-disjoint basket AVAX/NEAR/ATOM/FIL/TRX/ETC: the 4b82-03 lead did not generalise off-basket; family squeeze stays open; next test = a new squeeze variant aimed by the 71e8-01 fold/cell record, none queued. Programme node P5-RG1025-squeeze-wide-confirm is moot (its pass-branch is not taken).",
+      "FAIL, configuration closed (grader already closed them, read for follow-up): 0142-07/-08 and 90d3-05 path-state trail gate, 3947-01 path-state prop, 3947-13 R-armed tight trail on trend_donchian_eth_prop, d7e6-08 squeeze-1h exit arms, 90d3-13 DI/SL on avax_pullback_2h (incumbent_stands, DI -0.87 R, SL -33 R), 90d3-14 DI on eth_pullback_prop_2h; families path-state trail, R-armed trail, direction-filter, squeeze exits stay open.",
+      "FAIL regime head: 3947-20 ExtraTrees, 3947-21 MLP, 916f-01 calibrated logit vs lgbm_base; the non-GBDT arms do not beat the shipped LightGBM on logloss; family tree-ensemble/neural/linear stay open (3947-22/-24 INDETERMINATE earlier).",
+      "PASS: RQ-20261025-bda2-01 alpaca_live long-only daily Donchian roster screen (a LEAD per its own rule, never a roster act; its follow-up unit naming nominees is not authored this pass, see handoff). 3 infra self-tests ae17-43/-44/-45 PASS say nothing about any strategy.",
+      "NOT GRADED YET (grader runs 6-hourly): 3a84-05 (gld DI direction filter, row fail), d7e6-09 (same-UTC-day-flat Donchian, row fail): read their rows, apply the rule when the grader closes them.",
+      "DEFECT found: RQ-20261026-90d3-13 read unit-verdict pass because its grading block was copied from RQ-20261024-0142-16 while its own row is FAIL; 9 units carried such a block, all removed (PI-20261026-HOPS0847-0001)."
+    ]
+  },
+  "dispositions": [
+    {
+      "unit": "RQ-20261024-003 (e35 trend_donchian_xrp_adx25)",
+      "verdict": "underpowered",
+      "follow_up": "recorded in docs/research/research-disposition-ledger.jsonl via research_disposition.py --record (e35, stamp 2026-10-24T12:49:36Z): base_oos_trades 29 < 39, no verdict, shipped geometry stands, monthly re-ask carries it. It was the ONLY unread finding in the three ledger corpora."
+    }
+  ],
+  "disposition_record_note": "Closes the 02:47Z not_run item with a limit: research_disposition.py --record only accepts the corpora e35, gld_compat and m20; the 02:47Z pass's five dispositions (2230-01, 3947-14, 326f-06, 3947-25, c56e-16/-17) are queue units outside those corpora (--record refused 2230-01: no such unit in e35) and are graded by queue_grade / carried in comms/research/ops/20261026T0310Z.json. Nothing was force-written.",
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "driver for cross-asset / cross-symbol correlation regime features (P2-Q4-cross-asset-features)",
+      "ref": "CROSS-ASSET-FEATURES-DRIVER"
+    },
+    {
+      "lever": "detector + authoring fix for copied grading blocks on queue units",
+      "ref": "PI-20261026-HOPS0847-0001"
+    }
+  ],
+  "units_authored": [
+    {
+      "unit": "programme:P2-RG1025-yz-longtail-eth (emitter id RQ-20261026-002 at plan time)",
+      "theme": "ml_health",
+      "rule": "RULE-P2-RG1025-YZ-LONGTAIL-ETH",
+      "compute": "auto"
+    }
+  ],
+  "followups_filed": [
+    "P2-RG1025-yz-longtail-btc (needs_authoring node, after 3a84-09 any; lower prior, author after the ETH read)"
+  ],
+  "authoring": {
+    "queue_depth": 32,
+    "nodes_drafted": 1,
+    "nodes": [
+      "P2-RG1025-yz-longtail-eth"
+    ],
+    "queue_depth_after": 32,
+    "theme_shortfall": {
+      "regime": 12,
+      "live_strategy": 2,
+      "ml_health": 5,
+      "new_strategy_prop": 11,
+      "infra": 5
+    },
+    "why_short": "One node drafted (regime-adjacent ml_health). new_strategy_prop (11 short): P5-RG1025-squeeze-wide-confirm was drafted and then DROPPED because RQ-20261024-71e8-01 had already run that exact confirmation (disjoint basket) and FAILED; the node is now moot. The other new_strategy_prop nodes need a unit not an existing driver (P5-RG1025-trend-pooled, P5-Q2-SIZING-BRK-pass read-only) or are waiting on their prerequisite. regime (12 short): P2-R3.c03/c04-pass are Tier-3 packets (a checklist note on REGIME-PROGRAM, not a unit); P2-R5-voltarget-sizing waits on existing row IR-VOL-TARGET-SIZING-STAGE0 (queued); P3-Q1-live-bt-stage-b waits on existing row LIVE-BT-STAGE-B; P2-Q4-cross-asset-features now has its driver row CROSS-ASSET-FEATURES-DRIVER. Build rows for missing drivers already existed except the cross-asset one, which is new."
+  },
+  "not_run": [
+    "authoring of new_strategy_prop beyond the dropped squeeze node (budget spent on the three carried steps, the duplicate catch and the grading defect; spend not measured by this session)",
+    "P5-RG1025-trend-pooled and the P2-R3.c03/c04 Tier-3 packet notes",
+    "unrouted due items: 14 unrouted; two research-shaped ones named in handoff, none routed"
+  ],
+  "handoff": [
+    "next research-ops: author P5-RG1025-trend-pooled (D55 vs B pooled across 1h+2h+4h on the six perps, n_B >= 18k) on harness_stage0, and the P2-R3.c03/c04 regime-gate Tier-3 packet as a note on REGIME-PROGRAM; BEFORE authoring any confirmation unit, grep research/queue for an existing one on the same lead (the squeeze-WIDE duplicate was caught only because 71e8-01 landed in the results list)",
+    "next research-ops: read RQ-20261025-bda2-01 PASS (alpaca_live long-only daily Donchian screen): author its nominee/Holm follow-up unit per its own rule; read 3a84-05 and d7e6-09 when graded; read the new P2-RG1025-yz-longtail-eth unit",
+    "manager: PI-20261026-HOPS0847-0001 (copied grading blocks, due 2026-10-29) needs a lane for the writer fix + guard; PI-20261025-4CGB8QKR-0001 and PI-20261012-UFJZ63WF-0002 are research-shaped due items left unrouted",
+    "manager: AUTHOR-FLOOR-1023 still false: runnable 39 vs floor 69; H1-THEME short on regime 12, new_strategy_prop 11, ml_health 5, infra 5"
+  ]
+}

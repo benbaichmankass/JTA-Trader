@@ -1,0 +1,30 @@
+{
+  "id": "CROSS-ASSET-FEATURES-DRIVER",
+  "title": "Driver for P2-Q4 cross-asset / cross-symbol correlation regime features (ES/DXY/gold via metis-market-data)",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[research-ops 2026-10-26 08:47Z] Missing driver for programme node P2-Q4-cross-asset-features (operator idea IDEAS.md 2026-10-21): ml_bakeoff has no cross-asset feature source, and the node's prerequisite is checking that metis-market-data publishes ES/DXY/gold (and BTC<->alt rolling correlation columns) at 1h. Build = (1) verify which of those series the published shards carry (read-only), (2) add the feature columns to the market_features dataset builder or a df_columns block so ml_bakeoff can use them, (3) then author the node's pre-registered unit. FRONTIER-LEVER-LEADLAG covers only BTC->alt 5m lead-lag. Research-ops authors the unit the pass after this lands.",
+  "updated_at": "2026-10-26T08:55:41Z",
+  "updated_by": "research-ops-0847",
+  "roadmap": [
+    "L-REGIME"
+  ],
+  "writeback": {
+    "roadmap": "milestone note on the regime goal when the driver lands",
+    "arch": "none"
+  },
+  "observation": {
+    "what": "ml_bakeoff can read a cross-asset correlation column and P2-Q4 has an emitted unit",
+    "how_to_check": "python3 scripts/research/queue_replenish.py --authoring-queue | grep -c P2-Q4-cross-asset",
+    "due_by": "2026-11-09T00:00Z"
+  },
+  "_seq": 713
+}
