@@ -1,0 +1,18 @@
+{
+  "based_on": "20261025T064913800536Z-883b9779.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "close 6470 is root-caused to a named close path and either fixed or shown intended, and a new ib_paper close carries a TP/SL/strategy closeReason",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-KERS1025-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane BLOCKERS-1025 reading GET /api/bot/trades/closed?account_id=ib_paper&include_paper=true&limit=20",
+    "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/bot/trades/closed?account_id=ib_paper&include_paper=true&limit=20' and list rows whose closeReason is not tp/sl/strategy"
+  },
+  "routed_to": "checklist:IB-PAPER-CLOSE-6470",
+  "state": "routed",
+  "what": "ib_paper close 6470 (MES mes_trend_long_1d, 17 contracts, opened 2026-10-06, closed 2026-10-23T13:34Z, realizedPnl -16256.25 measured) carries closeReason 'other' and journalTrust 'no_record'. A close that is not TP/SL/strategy-close is a bug to root-cause: find which path closed it (reconciler? flatten?) and why no journal record exists. Paper account, no live money."
+}

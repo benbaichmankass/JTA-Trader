@@ -1,0 +1,19 @@
+{
+  "based_on": "20261012T112426154502Z-b9ed0b33.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "Producers give the NSA level its own kind (or readers filter event_name), and every reader keyed on (kind, scheduled_for) is shown to ignore NSA rows; econ_event_study cpi_mom scorecard re-run if it was affected.",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-WEPEG3A-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "WEPE-G3-BACKFILL 2026-10-12 (PR #17742)",
+    "rerun": "python3 -c \"import json,collections;g=collections.defaultdict(set)\nfor l in open('comms/macro/econ_calendar_snapshots_survey_backfill.jsonl'):\n d=json.loads(l)\n if d['kind']=='cpi_mom': g[d['scheduled_for']].add(d['event_name'])\nprint(sum(len(v)>1 for v in g.values()))\" -- finding holds while the count is above 0"
+  },
+  "routed_to": "checklist:CALENDAR-EVENT-TYPES",
+  "state": "routed",
+  "what": "MEASURED 2026-10-12: in comms/macro/econ_calendar_snapshots*.jsonl, kind cpi_mom holds BOTH the SA MoM % print ('Consumer Price Index (MoM)', e.g. consensus -0.4 actual -0.4) and the NSA index LEVEL ('Consumer Price Index n.s.a (MoM)', e.g. 334.7 / 333.95) on the same scheduled_for date; survey backfill: 129 of 137 dates carry conflicting pairs. Any reader keyed on (kind, date) silently picks one. The WEPE G3 ledger excludes event_name containing 'n.s.a'; other readers (econ_event_study.py, pm_surprise join) not checked."
+}

@@ -1,0 +1,81 @@
+{
+ "run": "RESEARCH-SLO-AUTHORING-20261026",
+ "finished_at": "2026-10-26T15:50:00Z",
+ "by": "cse_017ew3v5tfqjsM1AnCPNYmbs",
+ "floor": 60,
+ "floor_basis": "computed_floor(fired_24h 75), check_research_queue_health.py at lane start",
+ "authoring_queue_depth": 31,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle",
+  "trainer"
+ ],
+ "needs_review_triaged": 1,
+ "needs_review_left": 28,
+ "throughput": {
+  "runnable_before": 65,
+  "runnable_after": 82,
+  "queued": 168,
+  "fired_24h": 71,
+  "results_landed_24h": 80,
+  "hours_since_last_dispatch": 2.7,
+  "idle_alarm": false,
+  "after_basis": "check_research_queue_throughput.py on the working tree after committing the 17 units: they count runnable once this HELD PR merges (E57)"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (fresh, 1.26 h)",
+  "collector": "ok (80 results landed 24h, 0 unreadable)",
+  "stranded_stamp_prs": [],
+  "incident": null
+ },
+ "results_read": {
+  "pass": 0,
+  "fail": 1,
+  "indeterminate": 0,
+  "units": [
+   "RQ-20261025-3947-23 FAIL (configuration closed: numpy multinomial logit at the shipped feature shape on the 1h BTC/ETH/SOL shards, worse than LightGBM on CV logloss on every symbol, CIs exclude 0; family linear_logit stays open for other configurations; next test = a different linear configuration only if the ML plan loop asks)"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "path_flow_join.py --oi-optional (the A2 flow question is INDETERMINATE by construction without it)",
+   "ref": "PATH-FLOW-OI-OPTIONAL"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261026-1b57-01..17: new_strategy_prop 01-12 (as-declared breadth transfers of eth_prop / eth_4h / xrp_4h / sol_4h to baskets B and C, xrp_4h 8-fold re-cut, D55-vs-B pooled 12 perps at 1h and 2h, xrp_4h side-filter on 12 perps); timeframes 13-17 (daily exit geometry, weekly crypto Donchian, daily LONG transfer to basket B, Donchian-100 long-only, daily pullback long-only on basket A)"
+ ],
+ "followups_filed": [
+  {
+   "what": "15 unrouted due pipeline items routed to open checklist owners (4 new rows: PHONE-READS-HARDENING-1026, IB-PAPER-CLOSE-6470, LTR-REVIEWED-AT-SECONDS, PATH-FLOW-OI-OPTIONAL)",
+   "ref": "pipeline.py unrouted 15 -> 0"
+  },
+  {
+   "what": "Tier-3 packet notes P2-R3.c03 / c04 (recommendation: no flip on either) and P5-RG1025-trend-pooled",
+   "ref": "REGIME-PROGRAM, RESULTS-GRADE-1025"
+  }
+ ],
+ "authoring": {
+  "queue_depth": 31,
+  "nodes_drafted": 0,
+  "nodes": [],
+  "theme_shortfall": {
+   "new_strategy_prop": "4 runnable before; 12 authored here",
+   "timeframes": "4 runnable before; 5 authored here"
+  },
+  "note": "17 hand units, each against a programme node or a measured gap; no programme node REPLACED (a node takes exactly one of unit:/needs_authoring:, and replacing it would make queue_replenish emit a duplicate of the hand unit). Nodes addressed by hand units and still listed in the authoring queue until the manager converts them: P3-RG1025-q8-breadth-diagnosis (unit 09), P5-RG1025-trend-pooled (units 10, 11), P7-Q3-donchian-fail (unit 13). P1-Q7-sol-tp3-prop and P1-Q7-gtd-timeclose-prop NOT authored: no action, because the same levers already read FAIL on a 2020-10..2026-10 window that contains E65's (RQ-20261018-024/-034 fixed 3R/4R TP on sol_prop/eth_prop; -023/-033 bar-count time-close), so a disjoint-window re-ask of a failed lever adds only a trial to the denominator; E65's exploratory SOL +11.14 R / 59 on one year does not survive the 6.0-year read."
+ },
+ "not_run": [
+  "D: results read beyond the one needs_review unit closed in C"
+ ],
+ "handoff": [
+  "MERGE the held PR: the 17 hand-authored units hold under E57; the theme gap closes only on merge. Dry run: 17 of 17 would_dispatch (this sandbox could not read backend capacity, so the capacity gate was not exercised).",
+  "Money-first ranking will place the prop units (bucket structural, score 4-23) behind the timeframes units (score 37-56, bucket frontier boost 2.0); theme_share_min_ratio recovers as these fire, not on merge.",
+  "Convert nodes P3-RG1025-q8-breadth-diagnosis, P5-RG1025-trend-pooled, P7-Q3-donchian-fail to answered-by-unit state in the programme tree (a feature queue_replenish lacks: a node needs exactly one of unit:/needs_authoring:).",
+  "Still owed to the next full pass: needs_review triage (29), results read, and the P3-Q1 / P1-Q6 / P1-Q13 authoring-queue nodes (31 in queue).",
+  "Packet notes say: do NOT flip eth_pullback_2h skip_hours (on no roster) or trend_donchian_sol_prop vol_skip_above_pctl (2 of 3 disjoint windows, pooled +1.04 R). Optional next unit: sol_prop VH80/VH90 on 2024-10-05..2026-10-04, the one window never measured for the prop twin.",
+  "RQ-20261025-3947-23 is status queued/cadence once but has TWO result rows (measured fail 2026-10-25T23:39Z, then producer_failed 2026-10-26T09:20Z): a once unit fired twice. Closed with a session grading block; check queue_grade marks it done and does not fire it a third time."
+ ]
+}

@@ -1,0 +1,112 @@
+id: RQ-20261026-1b57-11
+title: 'Prop pace POOLED trend 2h: does Donchian-55 / trail 6 beat the Donchian-20 baseline by >= 0.05 R/trade over 12 perps at the sample size that bar needs?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: 'RQ-20261022-4b82-01/-05/-06/-07 and 7c2b-02/-03 failed or passed a 0.05 R/trade materiality bar at a pooled n_B below the floor implied by the MEASURED per-trade sd (1.25-2.3
+  R: 4.7k-17.7k per arm); 4b82-05 D55 (+0.0698 vs B +0.0269 R/trade at 2h, 3 of 6 cells) is the nearest lead. Over BNB/DOGE/LINK/LTC/BCH/DOT/AVAX/NEAR/ATOM/FIL/TRX/ETC at 2h, 2020-06-01..2026-10-26,
+  does D55 (--donchian=55 --trail-mult=6.0) pass the pooled Stage-0 rule AND beat B (declared Donchian-20 / trail 3.0 harness defaults) by >= 0.05 R/trade pooled, with pooled n_B >=
+  5500?'
+why_this_matters: 'Programme 05 node P5-RG1025-trend-pooled: the earlier variants were UNDERPOWERED, not dead. Twelve cells (the two baskets the series already used) raise n without
+  widening the arm set. The pooled-n floor 5500 is registered from sd ~1.5 R: n per arm = 2 x ((1.645+0.84) x sd / 0.05)^2 / 2 ~ 5.5k at sd 1.5 (one-sided alpha 0.05, power 0.8), so
+  below it the unit grades indeterminate by construction and says how far short it fell. The pooled-across-bars read the node asked for is a node over this unit and its sibling (1h /
+  2h); the harness grades one bar per run and no cross-bar pool is claimed. PROP SUPERSET BAR (CLAUDE.md promotion ladder): this unit supplies Stage 0 only. A PASS is a Stage-0 input
+  for a prop or real-money roster add; the prop EV/survival gate against each firm''s DD limits (prop_ev_grid.py / comms/prop_survival/<leg>.json), a PASSED mechanical Stage-1 soak and
+  Gate 2 are ALL still required, and no roster is edited here.'
+power:
+  expected_n: 4800
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: materiality 0.05 R/trade at sd ~1.5 R needs ~5.5k per arm; pooled-n floor registered at 5500. expected_n=4800 is an ESTIMATE (the 4b82-05 / 7c2b-02 per-cell counts scaled by
+    12 cells), not a measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-1B57-11-TREND-D55-POOLED-2H
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 2h; arms fixed now: B=; D55=--donchian=55;--trail-mult=6.0; baseline B; --delta-r-per-trade 0.05 --folds 6 --fold-majority
+    4 --n-floor 39 --pooled-n-floor 5500 --breadth-frac 0.5; per cell and pooled across 12 cells; cost = the harness''s own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy()
+    (never a zero default), recorded per cell in the result.'
+  rule: PASS iff D55 passes the pooled Stage-0 rule (pooled n >= 5500, pooled net_r > 0, >= 4 of 6 calendar folds, >= half the powered cells pass) AND beats B's pooled net R/trade by
+    >= 0.05 R. PASS -> ONE confirmation unit on a symbol-disjoint basket (same arm, same bar; a pass on one window is a lead), then the prop superset ladder; never a roster edit. FAIL
+    (every candidate fails with pooled n >= floor) -> D55 is closed as a lever on these 12 cells at this bar with the best-moving arm named (family stays open). INDETERMINATE if pooled
+    n < floor or under half the cells measured -- the shortfall is recorded, the floor is not lowered. Arm set and bar are fixed now and are not widened after the run.
+  what_it_does_not_do: 'Edits no config and no roster; does not widen the arm set; is not a promotion case; a best-of-k arm is a LEAD, never a finding. Candles are Binance USD-M (a PROXY
+    for Bybit linear). PROP SUPERSET BAR (CLAUDE.md promotion ladder): this unit supplies Stage 0 only. A PASS is a Stage-0 input for a prop or real-money roster add; the prop EV/survival
+    gate against each firm''s DD limits (prop_ev_grid.py / comms/prop_survival/<leg>.json), a PASSED mechanical Stage-1 soak and Gate 2 are ALL still required, and no roster is edited
+    here.'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: structural
+  basis: 'stand-in: a slower-entry lever on the prop trend family; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision / Yahoo) and runs the repo harnesses; none of these symbols sit in metis-market-data, nothing is trainer-resident;
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT,AVAXUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT
+  - --timeframe
+  - 2h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-26'
+  - --arm
+  - B=
+  - --arm
+  - D55=--donchian=55;--trail-mult=6.0
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '5500'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-1B57-11-TREND-D55-POOLED-2H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261026-1b57-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+roadmap:
+- L-PROP
+related:
+- RQ-20261022-4b82-05
+- RQ-20261022-4b82-01
+- scripts/research/harness_stage0.py

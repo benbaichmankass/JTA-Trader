@@ -1,0 +1,116 @@
+id: RQ-20261026-1b57-09
+title: 'xrp_4h six-perp pool re-read at 8 calendar folds: is the 7c2b-07 fold-majority miss (3 of 6, need 4) a test-design miss or an absent edge?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: 'RQ-20261021-7c2b-07 ran trend_donchian_xrp_4h AS DECLARED on BNB/DOGE/LINK/LTC/BCH/DOT (4h, 2020-06-01..2026-10-20) and read UNIT FAIL on the fold-majority clause only: all
+  six cells net-positive, +73 R pooled, n 434, but 3 of 6 calendar folds positive (need 4). On the same six cells and the same declared arm, over the same window extended to 2026-10-26,
+  does the pooled edge show >= 5 of 8 equal calendar folds net positive (the finer cut registered BEFORE this run), with the pooled-sign and breadth clauses unchanged?'
+why_this_matters: 'Programme 03 node P3-RG1025-q8-breadth-diagnosis asked for exactly this. The leg is POSITIVE on all six new symbols; the miss is whether the gain is spread across
+  time or sits in two or three quarters. Eight folds over ~6.4 years are ~10-month spans: a regime-concentrated gain fails >= 5 of 8 as it failed 4 of 6, while a broadly spread one passes.
+  This is the same data re-cut, so a PASS is NOT independent evidence beyond 7c2b-07 -- it says the earlier FAIL was a granularity artifact, and the follow-up for a roster add is the
+  disjoint basket-B/C units (this lane: -05, -06). PROP SUPERSET BAR (CLAUDE.md promotion ladder): this unit supplies Stage 0 only. A PASS is a Stage-0 input for a prop or real-money
+  roster add; the prop EV/survival gate against each firm''s DD limits (prop_ev_grid.py / comms/prop_survival/<leg>.json), a PASSED mechanical Stage-1 soak and Gate 2 are ALL still required,
+  and no roster is edited here.'
+power:
+  expected_n: 434
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.3 at alpha 0.05 / power 0.8 needs ~88 pooled trades (the repo's standing floor for this unit family). expected_n=434 is an ESTIMATE (7c2b-07's measured pooled n on these
+    six cells; the window extension adds ~1 week), not a measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-1B57-09-XRP4H-A-8FOLD
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: harness_stage0.py --family trend --timeframe 4h, one arm B = trend_donchian_xrp_4h as declared, --folds 8 --fold-majority 5 --n-floor 39 --pooled-n-floor 88 --breadth-frac
+    0.5; per cell n, net_r, 8 fold nets; pooled; cost = the harness's own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy() (never a zero default),
+    recorded per cell in the result.
+  rule: 'PASS iff B passes the pooled rule with 8 folds: pooled n >= 88, pooled net_r > 0, >= 5 of 8 calendar folds net positive, >= half of the powered cells pass. PASS -> the 7c2b-07
+    FAIL is recorded as a fold-granularity miss and the xrp_4h roster-add case rests on the disjoint-basket units -05/-06. FAIL (>= 5 of 8 not met with n >= 88) -> the gain is time-concentrated:
+    configuration closed on this window (family stays open; next test = a regime-conditioned variant). INDETERMINATE otherwise. The fold count and majority are fixed now and not changed
+    after any result; this is a re-cut of the same trades, and the record says so.'
+  what_it_does_not_do: 'Edits no config and no roster; is not independent of 7c2b-07 (same cells, same arm); is not a promotion case. PROP SUPERSET BAR (CLAUDE.md promotion ladder):
+    this unit supplies Stage 0 only. A PASS is a Stage-0 input for a prop or real-money roster add; the prop EV/survival gate against each firm''s DD limits (prop_ev_grid.py / comms/prop_survival/<leg>.json),
+    a PASSED mechanical Stage-1 soak and Gate 2 are ALL still required, and no roster is edited here.'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  bucket: structural
+  basis: 'stand-in: whether a positive-on-6/6 leg is carried or killed by one fold-count choice; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision / Yahoo) and runs the repo harnesses; none of these symbols sit in metis-market-data, nothing is trainer-resident;
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-26'
+  - --param
+  - donchian=20
+  - --param
+  - atr_period=14
+  - --param
+  - atr_stop_mult=2
+  - --param
+  - trail_mult=5.0
+  - --param
+  - min_confidence=0.8
+  - --param
+  - decision_bar=closed
+  - --arm
+  - B=--side-filter=short;--stale-exit-bars=8;--stale-exit-below-r=0.0;--tp-r=3;--skip-hours=0;--vol-skip-above-pctl=0.9;--trail-decay-arm-r=2.0;--trail-decay-tight-mult=2.5
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-1B57-09-XRP4H-A-8FOLD
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261026-1b57-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+- M18
+related:
+- RQ-20261021-7c2b-07
+- scripts/research/harness_stage0.py

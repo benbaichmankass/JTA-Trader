@@ -1,0 +1,18 @@
+{
+  "based_on": "20261026T104654093426Z-99fc1454.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "research_watchdog.py reads every page of the ops-flags PR comments (or the PR is under 100 comments and a test pins pagination)",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-2U1HUCXC-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-1B-MARKET-TRIGGERS session_01YbW2EEGjULBzDP2U1Hucxc 2026-10-26",
+    "rerun": "grep -n 'per_page=100' scripts/research/research_watchdog.py; and the ops-flags PR comment count via pull_request_read get (comments field)"
+  },
+  "routed_to": "checklist:RESEARCH-WATCHDOG",
+  "state": "routed",
+  "what": "research_watchdog GhProbe.pr_comments reads repos/.../issues/<ops-flags PR>/comments?per_page=100 with NO pagination. The issues-comments API returns OLDEST first and the ops-flags PR #17895 carried 142 comments on 2026-10-26, so the watchdog's comment-side dedupe/open-incident read misses the newest 42+ comments (its own latest markers). The committed ledger (comms/research/ops/watchdog_incidents.jsonl) is merged in, which may mask it; NOT verified whether any re-escalation or missed 'resolved' has happened. Fix: gh api --paginate (as scripts/ops/live_review_wake.py read_posted does) or ?since=."
+}
