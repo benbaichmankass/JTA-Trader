@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-HOPS2047-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops 2026-10-26 20:47Z (RESEARCH-OPS-20261026-2047), RQ-20261026-90d3-01 two runs",
+    "rerun": "python3 - <<'X'\nimport json\nfor f in ['40303391338','40364918868']:\n    d=json.loads(open(f'research/results/RQ-20261026-90d3-01/{f}.jsonl').readline())['measurement']['deltas']\n    print(f,{s:d[s]['cv']['cand']['lgbm_base']['mean'] for s in d})\nX"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": "1",
+  "what": "[data-premise] The ml_bakeoff 'fixed published shard' premise (accrual_basis: nothing accrues) did not hold between two runs of RQ-20261026-90d3-01: ETH 15m CV delta is identical to 15 digits across run 40303391338 and 40364918868, BTC moved (-0.0415 -> +0.0031), so the BTC 15m shard changed between runs (nightly rebuild of metis-market-data?). A once unit read FAIL then INDETERMINATE for that reason alone. Lever: pin the shard by content hash (record data_fingerprint in verdict.json data_inputs, which reads state not_established today) or have ml_bakeoff record each group's last ts + row hash so a second run of the same unit is comparable. Until then ml_bakeoff verdicts on nightly-rebuilt shards carry a drift caveat."
+}

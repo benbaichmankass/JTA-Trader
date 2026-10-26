@@ -1,0 +1,104 @@
+id: RQ-20261026-a142-02
+title: 'Daily Donchian-20 TR8 (8-ATR trail) CONFIRMATION on a symbol-disjoint basket: does the looser trail that passed on the six core perps (1b57-13) pass on BNB/DOGE/LINK/LTC/BCH/DOT?'
+status: queued
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: 'RQ-20261026-1b57-13 read arm TR8 (trail 8 ATR) PASS on BTC/ETH/SOL/XRP/ADA/AVAX daily (pooled net R 86.6) out of 3 arms (D20, TR8, TS60: multiple-testing denominator 2 non-baseline arms). A PASS
+  on one window is a discovery. Same harness, cost stack, folds and bars on the symbol-disjoint basket BNB/DOGE/LINK/LTC/BCH/DOT, arms D20 (baseline) and TR8 only: does TR8 pass the pooled Stage-0 rule
+  and beat D20 by >= 0.10 R/trade?'
+why_this_matters: 'Rule of 1b57-13 and research-ops step D: a PASS feeds the P7-Q6 overlap read only after ONE confirmation on a symbol-disjoint set the PASS did not see. No config or roster act follows
+  from this unit. Data is public Binance Vision candles (PROXY for Bybit linear), same as 1b57-13.'
+power:
+  expected_n: 110
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.45 at alpha 0.05 / power 0.8 needs 39 pooled trades (the standing floor at this horizon). expected_n=110 is an ESTIMATE (ef5d-03 pooled counts for D20 at six perps over 6.8 years), not a
+    measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026A14202-TR8-CONFIRM
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1d; arms fixed now: D20= (trail 5.0); TR8=--trail-mult=8.0; baseline D20; --delta-r-per-trade 0.10 --folds 6 --fold-majority 4 --n-floor 20 --pooled-n-floor
+    39 --breadth-frac 0.5; cost = the harness''s own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy() (never a zero default), recorded per cell in the result.'
+  rule: 'PASS iff TR8 passes the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 folds, >= half the powered cells) AND beats D20 pooled net R/trade by >= 0.10 -> the TR8 trail has a symbol-disjoint
+    confirmation and node P7-Q6 overlap read vs the live bybit_2 4h legs may use it (never a roster act). FAIL iff TR8 fails with pooled n >= 39: the 1b57-13 PASS did not transfer; configuration closed
+    on this basket, daily Donchian-20 horizon stays open (next test = a regime-filtered exit arm). INDETERMINATE otherwise (cells under the floor named, never lowered). Arm set and bar fixed now, identical
+    to 1b57-13.'
+  what_it_does_not_do: Promotes nothing, edits no config or roster; Binance candles are a proxy for Bybit linear; a PASS is not edge on any live book.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: frontier
+  basis: 'stand-in: a candidate crypto position-trading leg at alpaca/bybit per-leg risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision / Yahoo) and runs the repo harnesses; none of these symbols sit in metis-market-data, nothing is trainer-resident; CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2600'
+  - --start
+  - '2020-01-01'
+  - --end
+  - '2026-10-17'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - D20=--trail-mult=5.0
+  - --arm
+  - TR8=--trail-mult=8.0
+  - --baseline
+  - D20
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-A142-02-TR8-CONFIRM
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261026-a142-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P7
+roadmap:
+- L-TIMEFRAMES
+- L-LADDER
+related:
+- research/queue/RQ-20261026-1b57-13.yaml
+- scripts/research/harness_stage0.py

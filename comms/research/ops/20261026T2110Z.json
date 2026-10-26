@@ -1,0 +1,91 @@
+{
+ "run": "RESEARCH-OPS-20261026-2047",
+ "finished_at": "2026-10-26T21:10:00Z",
+ "by": "session_012VKiWAZHtrXZWmz2KTsKBH",
+ "floor": 52,
+ "floor_basis": "computed_floor(fired_24h 65), check_research_queue_health.py at pass start",
+ "authoring_queue_depth": 31,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle",
+  "trainer"
+ ],
+ "needs_review_triaged": 1,
+ "needs_review_left": 28,
+ "throughput": {
+  "runnable_before": 91,
+  "runnable_after": 94,
+  "queued": 184,
+  "fired_24h": 65,
+  "results_landed_24h": 74,
+  "hours_since_last_dispatch": 1.4,
+  "idle_alarm": false,
+  "after_basis": "dry-run would_dispatch of the two hand units; the programme-node unit emits on the next replenish; all count runnable only after this HELD PR merges (E57)"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (fresh, 1.82 h)",
+  "collector": "ok (74 results landed 24h, 0 unreadable)",
+  "stranded_stamp_prs": [],
+  "incident": null,
+  "watchdog": "newest watchdog_incidents.jsonl row is 2026-10-24, resolved; no open escalation",
+  "detector_defects_fixed": [
+   "infra_selftest duplicate_commands: ml_bakeoff units parameterised by the ml_bakeoff block were flagged as duplicates (7 pairs, 3947-19..26); the key now includes ml_bakeoff. Re-run: 117 queued authored units, 0 pairs.",
+   "infra_selftest blocked_over_age: 8 retired files in research/queue/blocked/ were counted as stale blocks (14 over age); retired units are excluded and named (retired_excluded). Re-run: 10 over age, pass at the <= 10 bar; the 10 are all owned (REGIME-WEIGHT-VARIANTS, REGIME-WF-VERDICT-WRAPPER, FUNDING-OI-DATASETS-ETH-SOL, ...)"
+  ]
+ },
+ "results_read": {
+  "pass": 2,
+  "fail": 0,
+  "indeterminate": 2,
+  "units": [
+   "RQ-20261026-90d3-01 INDETERMINATE (hand-graded; configuration closed: default-shape sklearn MLP (32,16) alpha 1e-3 on 15m BTC/ETH/SOL regime logloss; family mlp stays open; next test = RQ-20261026-a142-01 regularised variant). The two runs differ on BTC only (-0.0415 then +0.0031), ETH identical to 15 digits: the BTC shard moved between runs -> PI-20261026-HOPS2047-0001",
+   "RQ-20261026-1b57-13 PASS (arm TR8, trail 8 ATR, pooled net R 86.6 on the six core perps, 1 of 3 arms): a discovery on one window, denominator 2 non-baseline arms -> confirmation RQ-20261026-a142-02 on the symbol-disjoint BNB/DOGE/LINK/LTC/BCH/DOT basket with the same bar; no roster act",
+   "RQ-20261026-1b57-15 PASS (long-only daily Donchian-20 second symbol-disjoint transfer, pooled net R 116.5): rule's follow-up is the P7-Q6 overlap read using the LONG arm; recorded here, no new unit (the overlap read is a node already in programme 07)",
+   "RQ-20261026-1b57-14 INDETERMINATE (weekly Donchian: W10 pooled net R <= 0, W20 only 1 powered cell): rule says the next unit pools more symbols; not authored this pass (handoff)",
+   "RQ-20261024-0142-21 PASS x2 (power declared, 0 violations); RQ-20261024-0142-20 first run PASS, second FAIL = the detector defect fixed above, not a queue fault",
+   "RQ-20261022-3a84-13 / 005 / 006 infra PASS; RQ-20261022-3a84-12 FAIL (blocked backlog 14 > 10) = counted retired files, fixed above; 3947-26 FAIL, 4795-02 FAIL, 901 FAIL, 90d3-03 FAIL were already graded by the grader (read: no new action beyond the plan family history the grader wrote)"
+  ],
+  "counting": "research (non-infra) units read and dispositioned this pass: pass 1b57-13, 1b57-15; indeterminate 90d3-01, 1b57-14. Infra self-test and already-graded FAIL units are listed in `units` but not counted."
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "pin or hash the nightly-rebuilt published shard in ml_bakeoff verdicts (data_fingerprint not_established)",
+   "ref": "PI-20261026-HOPS2047-0001"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261026-a142-01 (ml_health: regularised MLP variant on the 15m regime head)",
+  "RQ-20261026-a142-02 (timeframes: TR8 confirmation on a symbol-disjoint basket)",
+  "programme node P2-RG1025-yz-longtail-btc: needs_authoring REPLACED by a full pre-registered unit (BTC 1h range-vol tail_rows 60000, rule thresholds identical to its ETH twin); emitted by the next replenish"
+ ],
+ "followups_filed": [
+  {
+   "what": "5 unrouted due pipeline items: 4 routed to open checklist owners (LTR-2-RECORDS, LTR-11-PACKET, LTR-MECHANICS-VENUE-SNAPSHOT x2), 1 closed done with a reason (PI-20261026-NCPNYMBS-0001: 3947-23 reads not_due, will not fire a third time)",
+   "ref": "pipeline.py unrouted 5 -> 0"
+  }
+ ],
+ "authoring": {
+  "queue_depth": 31,
+  "nodes_drafted": 1,
+  "nodes": [
+   "P2-RG1025-yz-longtail-btc"
+  ],
+  "theme_shortfall": {
+   "ml_health": "6 runnable authored before vs share 8; +2 authored here (a142-01 and the BTC node)"
+  },
+  "note": "Programme-node authoring (step E.0), carried not_run by the 14:47Z pass, is done for ONE node; the other 30 stay in the authoring queue."
+ },
+ "not_run": [
+  "C: needs_review triage beyond the one unowned unit (90d3-01): 25 owned units with named gaps untouched (28 left incl. non-verdict cases)",
+  "E.0 beyond one node: P3-Q1-live-bt-stage-b waits on build row LIVE-BT-STAGE-B; P1-Q6 declares wait on MOMENTUM-LEVERS-LIVE; the P2-Q4-cross-asset-features node needs a data check first and was not started",
+  "weekly-bar follow-up after 1b57-14 (pool more symbols)"
+ ],
+ "handoff": [
+  "MERGE the held PR: it carries two hand units and a programme-node conversion (E57 holds queue edits).",
+  "The two infra_selftest edits change a checker's own population: reviewers should confirm retired files excluded from blocked_over_age is intended; the SLO bar (<= 10) is unchanged and 10 non-retired units are still over age.",
+  "After the first a142-02 result: PASS -> P7-Q6 overlap read vs the live 4h legs; FAIL -> configuration closed, next = regime-filtered exit arm.",
+  "UNPROVEN_OVERDUE rows seen by blocker_watch (AUTHOR-FLOOR-1023, LIVE-EVAL-GAP-1024, NEWS-ALPHA-HARNESS, RESEARCH-ENGINE-1016, TP-DOCTRINE-W43) were not re-examined this pass."
+ ]
+}
