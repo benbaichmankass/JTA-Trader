@@ -368,6 +368,53 @@ grade_closed_trades_from_diag.py` (feed it a `/api/diag/journal?table=trades`
 pull) remains as a documented fallback for when the system-action path itself
 is unavailable.
 
+### Blind-then-reveal grade (CJ-3, operator-approved design 2026-10-25)
+
+The rubric rows above are a deterministic Python function, not Claude's judgement
+(`docs/plans/ml-claude-distillation-DESIGN.md` § 1.2), so they cannot teach a model. The
+**blind-then-reveal grade** is the producer that can: Claude grades a closed trade from a
+MASKED packet first (no outcome, nothing after the decision, no symbol, no date, no absolute
+price), and only then sees the outcome and grades again. Both grades are recorded. The blind
+half is the teacher target for the CJ-2 `claude_judgments` family; the reveal half is a T1
+label only; the gap between them is the hindsight-bias diagnostic. The rubric stays as the
+cheap fallback for every package.
+
+⚠️ **The reviewing session never writes a blind grade itself.** It has already pulled the
+outcomes, so nothing it writes is blind. The grades are written by fresh grader sessions that
+are shown only the packet file.
+
+**The run** (tool: `scripts/ops/blind_grade.py`; first run and its numbers:
+`comms/claude_judgments/pilot/cj3-pilot-r1/`):
+
+1. Pull `journal?table=trades` and `journal?table=order_packages` with
+   `scripts/ops/diag_fetch.sh` (pages of 1000, saved as `trades_<off>.json` / `pk_<off>.json`).
+2. `blind_grade.py select --journal DIR --since <date> --n <N> --seed <seed> --out sel.json`:
+   one trade per closed package (fan-out siblings counted, not graded), every exclusion
+   counted by reason. Report its population line verbatim.
+3. `blind_grade.py packets ... --salt <random> --private-out <scratch>`: builds the masked
+   packets and **refuses** any packet `find_leaks` flags (symbol, date or epoch, the trade's own
+   prices, a raw bar row, an outcome key, a bar at or after the decision). Keep the
+   `--private-out` file (the packet-id map and the outcomes) out of the grader's reach until the
+   blind pass is pushed.
+4. Push an **orphan** branch holding only `BLIND-GRADE-BRIEF.md` and `blind_packets.jsonl`, then
+   `create_session` with `source_url` = this repo, `source_revision` = `outcome_branch` = that
+   branch, `clone_depth: 1`, model Sonnet. The orphan branch is the blinding: the grader's
+   checkout holds no journal, no scores file and no outcome.
+5. When `blind_grades.jsonl` lands, add `REVEAL-GRADE-BRIEF.md` + `reveal_packets.jsonl` (the
+   blind grade and the outcome per packet) and start a second session the same way.
+6. `blind_grade.py ingest --run-dir ... --private ... --run-meta run.json` appends to
+   `comms/claude_judgments/blind_grades.jsonl` / `revealed_grades.jsonl` (append-only,
+   idempotent by `judgment_id`; schema `comms/schema/claude_judgments.schema.json`). The stores
+   hold the judgement and its journal keys only; the family joins the outcome from the journal.
+7. Read each grader session's `usage.cost_usd` with `get_session` once it is idle and record
+   it in `run.json`: **cost per grade is MEASURED this way, never estimated.**
+
+**Report** (in `anomalies[]`/the PR body until CJ-6 adds a field): n blind and n revealed this
+run, cost per grade with its n, the blind-vs-revealed grade shift, and the blind
+`expected_r` / `p_win` rank correlation with net R next to the strategy `confidence`'s on the
+same trades. At pilot n these are diagnostics only; the pre-registered validation is CJ-4
+(n ≥ 150, design § 3.3).
+
 ## Verification
 
 The whole point of this skill is that scores match reality:
@@ -945,6 +992,9 @@ not run it in this session. Anything in this review you leave open for research
 **Write:**
 - Append per-decision scores to `comms/claude_strategy_scores.jsonl`
   (keyed by `order_package_id`, dedup-on-append).
+- Append blind-then-reveal grades to `comms/claude_judgments/blind_grades.jsonl` /
+  `revealed_grades.jsonl`, only through `scripts/ops/blind_grade.py ingest`
+  (§ "Blind-then-reveal grade").
 - File/update performance + research follow-ups in
   `docs/claude/work/PIPELINE.jsonl` via `scripts.ops.pipeline.append`
   (never by hand — see § "Draining the backlog", corrected 2026-09-24).

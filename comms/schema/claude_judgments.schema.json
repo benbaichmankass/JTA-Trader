@@ -1,0 +1,108 @@
+{
+  "_comment": "Schema for comms/claude_judgments/blind_grades.jsonl and comms/claude_judgments/revealed_grades.jsonl (CJ-3-BLIND-GRADE-PILOT; design docs/plans/ml-claude-distillation-DESIGN.md sections 3.1, 3.5.5, 4.3). APPEND-ONLY JSONL, one JSON object per line. CANONICAL SOURCE: trade_journal.db order_packages / trades, joined on `order_package_id` and `trade_id` (= trades.id). These files are a PROJECTION of Claude's judgement keyed to that source, never a copy of trade state: no price, P&L or outcome is stored here; the CJ-2 family (ml/datasets/families/claude_judgments.py) joins the outcome from the journal. What the grader was shown is reproducible from `packet_sha` + the run's committed packet file. A blind row's info_cutoff_at is the decision time (T0); a revealed row's is the trade's close (T1, label-only). Producer and validator: scripts/ops/blind_grade.py (`validate` runs in CI through tests/test_blind_grade.py::test_committed_stores_validate). Briefs: .claude/skills/performance-review/BLIND-GRADE-BRIEF.md and REVEAL-GRADE-BRIEF.md; prompt_sha is the git blob sha of the brief the grader read.",
+  "schema_version": 1,
+  "mask_version": "mask-v1",
+  "enums": {
+    "kind": [
+      "blind_grade",
+      "revealed_grade"
+    ],
+    "decision_grade": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "F"
+    ],
+    "grade_score": {
+      "A": 4,
+      "B": 3,
+      "C": 2,
+      "D": 1,
+      "F": 0
+    },
+    "entry_quality": [
+      "optimal",
+      "acceptable",
+      "late",
+      "early",
+      "should_skip",
+      "unknown"
+    ],
+    "risk_management": [
+      "correct",
+      "sl_too_tight",
+      "sl_too_wide",
+      "tp_too_close",
+      "tp_too_far",
+      "unknown"
+    ],
+    "exit_quality": [
+      "optimal",
+      "tp_appropriate",
+      "sl_appropriate",
+      "premature_exit",
+      "held_too_long",
+      "unknown"
+    ],
+    "alternative_action": [
+      "none",
+      "skip",
+      "tighter_sl",
+      "wider_sl",
+      "closer_tp",
+      "further_tp",
+      "earlier_exit",
+      "later_exit",
+      "unknown"
+    ],
+    "reveal_exit_kind": [
+      "tp",
+      "sl",
+      "trail",
+      "time",
+      "strategy_close",
+      "reconciled_or_other"
+    ],
+    "author_kind": [
+      "llm"
+    ]
+  },
+  "common_fields": {
+    "schema_version": "int",
+    "judgment_id": "str: BG-<order_package_id>-<prompt_sha8> | RG-<order_package_id>-<prompt_sha8>",
+    "kind": "enum kind",
+    "order_package_id": "str (join key)",
+    "trade_id": "int, trades.id of the graded trade (join key)",
+    "leg": "str, the strategy name",
+    "judged_at": "ISO UTC, when the grader wrote the row",
+    "info_cutoff_at": "ISO UTC, the latest time of anything the grader was shown",
+    "decision_ts": "ISO UTC, order_packages.created_at",
+    "author_kind": "llm",
+    "model_id": "str, the grader model",
+    "prompt_sha": "str, git blob sha of the brief",
+    "mask_version": "str",
+    "packet_sha": "str, sha256 of the masked packet",
+    "packet_id": "str, the opaque BP- id the grader saw",
+    "run_id": "str",
+    "session_id": "str, the grading session",
+    "pre_cutoff": "bool|null, decision time before the grader model's knowledge cutoff (null = unknown)"
+  },
+  "blind_fields": {
+    "decision_grade": "A-F",
+    "grade_score": "int 0-4, matches decision_grade",
+    "entry_quality": "enum",
+    "risk_management": "enum (bracket placement; size is never shown)",
+    "p_win": "float 0-1, P(net R > 0)",
+    "expected_r": "float, expected net R",
+    "thesis": "str <= 240 chars"
+  },
+  "revealed_fields": {
+    "blind_judgment_id": "str, the BG- row this revises",
+    "revised_decision_grade": "A-F",
+    "revised_grade_score": "int 0-4",
+    "exit_quality": "enum",
+    "alternative_action": "enum",
+    "hindsight_note": "str <= 240 chars"
+  }
+}

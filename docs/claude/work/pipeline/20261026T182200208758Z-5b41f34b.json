@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-A7W7ZYW1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CJ-3-BLIND-GRADE-PILOT session_01FPWQvqvHnMBxAaa7w7Zyw1, PR #20390",
+    "rerun": "python3 scripts/ops/document_index.py --write  # refuses with 'REFUSING to write: N row(s) carry a basis' while the drift stands"
+  },
+  "state": "queued",
+  "what": "scripts/ops/document_index.py --write REFUSES on main: 18 committed rows in docs/DOCUMENT-INDEX.md carry a `basis` the generator would replace (e.g. DESK-BRIEF.md and REVIEWER-BRIEF.md: STATUS_EXPLICIT says read:<lane>... but the table row still says harness:skill-is-loaded-and-invocable). MEASURED 2026-10-26 by lane CJ-3 on main 07a185c8. Consequence: every session adding a doc must hand-insert the guard's suggested row instead of running --write (CJ-3 did, PR #20390). Fix: re-run --write after deciding each of the 18 (move into STATUS_EXPLICIT or --reset-unowned-bases deliberately)."
+}

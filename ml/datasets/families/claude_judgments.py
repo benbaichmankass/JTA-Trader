@@ -16,6 +16,14 @@ Sources (all append-only JSONL on ``main``; the trainer git-pulls them):
   in-trade, exit). Outcome: ``comms/desk/outcomes.jsonl`` (DESK-20) by
   ``decision_id``. Both stores are empty until the desk writes rows; the
   family reads them so the pipe exists the day they do.
+* ``comms/claude_judgments/blind_grades.jsonl`` -> ``kind: blind_grade`` and
+  ``comms/claude_judgments/revealed_grades.jsonl`` -> ``kind: revealed_grade``
+  (CJ-3, the blind-then-reveal post-trade grade, design § 4.3; producer
+  ``scripts/ops/blind_grade.py``). Outcome: the journal's closed trade by
+  ``trade_id``. A blind row's ``info_cutoff_at`` is the decision time, so it is
+  T0 by construction; a revealed row saw the outcome and is T1 (label-only,
+  excluded unless ``include_t1``). A blind row that computes T1 is refused
+  (``blind_grade_not_t0``), never relabelled.
 
 One row per (judgment). Columns fall in three disjoint groups, exported as
 constants so the manifest lint (``scripts/ci/check_claude_judgments_manifests.py``,
@@ -113,6 +121,14 @@ FEATURE_COLUMNS: tuple[str, ...] = (
     "account_class",
 )
 JUDGMENT_COLUMNS: tuple[str, ...] = (
+    "grade_score",
+    "decision_grade",
+    "entry_quality",
+    "risk_management",
+    "exit_quality",
+    "alternative_action",
+    "p_win",
+    "expected_r",
     "action",
     "level_atr",
     "ev_delta_r",
@@ -262,6 +278,7 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
         "skill_sha": str,
         "train_eligible": bool,
         "gate_eligible": bool,
+        "pre_cutoff": bool,
         # features (decision-time)
         "f_open_r": float,
         "f_peak_r": float,
@@ -276,6 +293,14 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
         "direction": str,
         "account_class": str,
         # judgment
+        "grade_score": int,
+        "decision_grade": str,
+        "entry_quality": str,
+        "risk_management": str,
+        "exit_quality": str,
+        "alternative_action": str,
+        "p_win": float,
+        "expected_r": float,
         "action": str,
         "level_atr": float,
         "ev_delta_r": float,
@@ -516,6 +541,106 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
                 "cf_source": "pending_desk_20",
             }
 
+    # --------------------------------------------------------- blind / reveal grades (CJ-3)
+    def _grade_rows(self, comms_root: Path, journal: dict[int, dict] | None,
+                    excluded: Counter, as_of: datetime, holdout: timedelta,
+                    include_t1: bool) -> Iterator[dict]:
+        d = comms_root / "claude_judgments"
+        blind = _read_jsonl(d / "blind_grades.jsonl")
+        revealed = _read_jsonl(d / "revealed_grades.jsonl")
+        self.last_report["sources"]["blind_grade"] = len(blind)
+        self.last_report["sources"]["revealed_grade"] = len(revealed)
+        for r in blind + revealed:
+            kind = r.get("kind")
+            jid = r.get("judgment_id")
+            judged = _parse_ts(r.get("judged_at"))
+            cutoff = _parse_ts(r.get("info_cutoff_at"))
+            if not jid or kind not in ("blind_grade", "revealed_grade") or judged is None or cutoff is None:
+                excluded["malformed"] += 1
+                continue
+            if (cutoff - judged).total_seconds() > _JUDGED_ROUNDING_S:
+                excluded["cutoff_after_judged"] += 1
+                continue
+            if holdout and as_of - judged < holdout:
+                excluded["holdout_window"] += 1
+                continue
+            tid = r.get("trade_id")
+            jr = journal.get(int(tid)) if (journal is not None and isinstance(tid, int)) else None
+            if not isinstance(tid, int):
+                excluded["no_trade_id"] += 1
+                continue
+            if journal is None:
+                excluded["outcome_unjoined_no_journal"] += 1
+                continue
+            if jr is None:
+                excluded["outcome_unjoined_trade_not_in_journal"] += 1
+                continue
+            if not jr["closed"]:
+                excluded["outcome_pending"] += 1
+                continue
+            if jr["net_r"] is None:
+                excluded["outcome_no_net_r"] += 1
+                continue
+            closed_at = _parse_ts(jr["closed_at"])
+            timing = "T0" if (closed_at is None or cutoff < closed_at) else "T1"
+            if kind == "revealed_grade":
+                # T1 BY KIND: the grader was shown the outcome. Never by timestamp arithmetic --
+                # the stored cutoff is second-truncated while journal closed_at carries
+                # microseconds, so `cutoff < closed_at` read every pilot reveal row as T0
+                # (MEASURED 2026-10-26: 50 of 50 on the journal mirror before this line).
+                timing = "T1"
+            if kind == "blind_grade" and timing != "T0":
+                excluded["blind_grade_not_t0"] += 1
+                continue
+            if timing == "T1" and not include_t1:
+                excluded["t1_outcome_visible"] += 1
+                continue
+            gs = r.get("revised_grade_score") if kind == "revealed_grade" else r.get("grade_score")
+            dg = r.get("revised_decision_grade") if kind == "revealed_grade" else r.get("decision_grade")
+            yield {
+                "judgment_id": jid,
+                "kind": kind,
+                "source_file": f"comms/claude_judgments/{'blind' if kind == 'blind_grade' else 'revealed'}_grades.jsonl",
+                "order_package_id": r.get("order_package_id"),
+                "trade_id": tid,
+                "split_group": r.get("order_package_id"),
+                "packet_sha": r.get("packet_sha"),
+                "judged_at": _iso(judged),
+                "info_cutoff_at": _iso(cutoff),
+                "timing": timing,
+                "judged_at_rounded": (cutoff - judged).total_seconds() > 0,
+                "author_kind": r.get("author_kind") or "llm",
+                "label_provenance": "judgment",
+                "row_label_version": f"llm:{r.get('model_id') or 'unknown'}:"
+                                     f"{(r.get('prompt_sha') or 'unknown')[:8]}:{kind}@{r.get('mask_version')}",
+                "prompt_sha": r.get("prompt_sha"),
+                "skill_sha": None,
+                "train_eligible": True,
+                "gate_eligible": True,
+                "pre_cutoff": r.get("pre_cutoff") if isinstance(r.get("pre_cutoff"), bool) else None,
+                "leg": r.get("leg"),
+                "symbol": jr["symbol"],
+                "direction": jr["direction"],
+                "account_class": jr["account_class"],
+                "grade_score": gs if isinstance(gs, int) and not isinstance(gs, bool) else None,
+                "decision_grade": dg,
+                "entry_quality": r.get("entry_quality"),
+                "risk_management": r.get("risk_management"),
+                "exit_quality": r.get("exit_quality"),
+                "alternative_action": r.get("alternative_action"),
+                "p_win": _num(r.get("p_win")),
+                "expected_r": _num(r.get("expected_r")),
+                "model_tier": r.get("model_id"),
+                "label_net_r": jr["net_r"],
+                "label_gross_r": jr["gross_r"],
+                "closed_at": _iso(closed_at),
+                "exit_reason": jr["exit_reason"],
+                "pnl_provenance": jr["pnl_provenance"],
+                "cost_source": jr["cost_source"],
+                "outcome_source": "journal",
+                "cf_source": None,
+            }
+
     # ----------------------------------------------------------------- main
     def iter_rows(
         self,
@@ -536,12 +661,15 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
                             "journal": "absent" if db_path is None or not Path(db_path).is_file() else "read"}
 
         reviews = _read_jsonl(comms_root / "live_review" / "reviews.jsonl")
-        tids = {r["trade_id"] for r in reviews if isinstance(r.get("trade_id"), int)}
+        grades = (_read_jsonl(comms_root / "claude_judgments" / "blind_grades.jsonl")
+                  + _read_jsonl(comms_root / "claude_judgments" / "revealed_grades.jsonl"))
+        tids = {r["trade_id"] for r in reviews + grades if isinstance(r.get("trade_id"), int)}
         journal = _journal_outcomes(Path(db_path) if db_path else None, tids)
 
         emitted: Counter = Counter()
         for gen in (self._ltr_rows(comms_root, journal, excluded, as_of, holdout, include_t1),
-                    self._desk_rows(comms_root, excluded, as_of, holdout)):
+                    self._desk_rows(comms_root, excluded, as_of, holdout),
+                    self._grade_rows(comms_root, journal, excluded, as_of, holdout, include_t1)):
             for row in gen:
                 emitted[row["kind"]] += 1
                 yield row
