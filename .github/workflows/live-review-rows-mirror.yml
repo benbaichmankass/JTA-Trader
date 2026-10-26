@@ -1,0 +1,82 @@
+name: live-review-rows-mirror
+
+# LTR-APPLY-AUTOFLOW (iv), operator 2026-10-26 ("Approve: rows branch + pinned
+# commit (Recommended)"). Reviewers push rows straight to the protected
+# append-only `live-review/rows` branch so the apply runs on a pinned commit with
+# no main PR in its path. main must still carry the full record: this workflow
+# opens ONE self-landing PR (commit-to-main, verify-merged) copying the rows
+# main lacks onto main's comms/live_review/reviews.jsonl, plus the packets and
+# outcome tables they cite. Merged BY review_id, never text concat; a re-run is
+# a no-op. Logic: scripts/ops/live_review_rows_mirror.py.
+#
+# One PR at a time: the concurrency group serialises runs and each run waits for
+# its PR to merge, so the next run checks out a main that already has those rows.
+# The hourly schedule is the backstop for a push whose run was superseded.
+# Tier 1: data copy between two branches of this repo; no runtime effect.
+
+on:
+  push:
+    branches: ["live-review/rows"]
+    paths: ["comms/live_review/**"]
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: live-review-rows-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          # commit-to-main pushes with the checkout's credential; the PAT makes
+          # the PR it opens receive its required checks.
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Mirror new rows by review_id
+        id: mirror
+        run: |
+          set -o pipefail
+          pip install --quiet pyyaml
+          git fetch --no-tags origin live-review/rows
+          rc=0
+          python3 scripts/ops/live_review_rows_mirror.py --rows-ref origin/live-review/rows \
+            | tee mirror.json | tee -a "$GITHUB_STEP_SUMMARY" || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          echo "mirrored=$(python3 -c 'import json;print(json.load(open("mirror.json")).get("mirrored",0))')" >> "$GITHUB_OUTPUT"
+          rm -f mirror.json
+          [ "$rc" -ne 2 ] || { echo "::error::could not read the rows branch"; exit 1; }
+          python3 scripts/ci/check_live_review_records.py
+
+      - name: Land on main (one self-landing PR)
+        if: steps.mirror.outputs.mirrored != '0'
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/live_review
+          message: "live-review: mirror ${{ steps.mirror.outputs.mirrored }} row(s) from live-review/rows"
+          pr-title: "live-review: mirror rows from live-review/rows"
+          pr-body: "Automated mirror (auto-merge): rows on live-review/rows that main's comms/live_review/reviews.jsonl lacks, merged by review_id, plus the packets and outcome tables they cite. scripts/ops/live_review_rows_mirror.py."
+          verify-merged: "true"
+
+      - name: Fail the run if a row was skipped
+        # A skipped row (a cited file missing, or differing on main) is a
+        # finding, not a pass. Runs last so the other rows still land.
+        if: steps.mirror.outputs.rc == '1'
+        run: |
+          echo "::error::a rows-branch row was skipped; see the mirror summary"
+          exit 1
