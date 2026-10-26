@@ -1,4 +1,4 @@
-"""DESK-0-SCHEMA: the desk packet v3 / decision / touch validator."""
+"""DESK-0-SCHEMA + DESK-0B-SCHEMA-V2: the desk packet v3 (schema v2) / decision / touch / outcome / consumed validator."""
 import copy
 import importlib.util
 import json
@@ -69,3 +69,46 @@ def test_short_touch_must_fall():
     t = copy.deepcopy(m.GOOD_TOUCH)
     t.update(side="short", level_before=95.0, level_after=98.0)
     assert any("tighten-only" in x for x in m.touch_problems(t, DS, {m.GOOD_DECISION["decision_id"]: m.GOOD_DECISION}))
+
+
+def test_v2_entry_generation_replaces_the_veto_role():
+    assert DS["schema_version"] == 2 and PS["schema_version"] == 2
+    assert DS["role_actions"]["entry_generation"] == ["no_trade", "propose_entry", "watch_note"]
+    assert "market_watch" not in DS["role_actions"]
+    every = {a for acts in DS["role_actions"].values() for a in acts}
+    assert not {"veto_candidate", "delay_candidate"} & every
+    assert DS["role_packet_kinds"]["entry_generation"] == ["scan"]
+
+
+def test_scan_kind_has_no_package_and_carries_the_books():
+    assert {"universe", "system_book", "desk_book", "history"} <= m.BLOCKS_BY_KIND["scan"]
+    assert not {"package", "market", "state", "outcome"} & m.BLOCKS_BY_KIND["scan"]
+    assert m.packet_problems(m.GOOD_SCAN, PS) == []
+
+
+def test_proposal_has_no_size_field_and_a_predictive_tp():
+    props = DS["decisions"]["properties"]["proposal"]["properties"]
+    assert not m.SIZE_KEYS & set(props)
+    assert set(DS["decisions"]["properties"]["proposal"]["required"]) == set(props)
+    assert {"level", "basis", "p_hit"} == set(props["tp"]["required"])
+    assert "trail" not in DS["enums"]["tp_basis"]
+
+
+def test_stable_id_chain_fields_exist():
+    d = DS["decisions"]["properties"]
+    assert {"decision_id", "packet_id", "intent_id", "order_package_id"} <= set(d)
+    assert "trade_id" in d["disposition"]["properties"]["per_account"]["items"]["properties"]
+    assert {"outcome_id", "decision_id", "order_package_id", "trade_id"} <= set(DS["outcomes"]["properties"])
+
+
+def test_training_marker_derivation():
+    r = copy.deepcopy(m.GOOD_ENTRY_DECISION)
+    assert m.expected_training(r) == (True, True, set())
+    r["label_source"] = "synthetic"
+    assert m.expected_training(r) == (False, False, {"synthetic"})
+    r["label_source"], r["pre_cutoff"] = "historical_masked", True
+    assert m.expected_training(r) == (True, False, {"historical_masked", "pre_cutoff"})
+
+
+def test_committed_desk_files_include_outcomes_and_consumed():
+    assert (REPO / "comms/desk/outcomes.jsonl").exists() and (REPO / "comms/desk/consumed.jsonl").exists()

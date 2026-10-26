@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Extends the read-only diag route /api/diag/live_review_due (src/runtime/live_review_due.py) with the swing / vol_regime / funding / calendar / mechanics-journal triggers. A Tier-1 read path by nature (read-only SQLite + file reads, no socket, no order path), but it changes code the web-api service runs and needs a web-api deploy, so the manager merges and verifies post-deploy (same landing as LTR-1 #20115 and LTR-11 #20128).",
+  "why": "read-path extension + declared thresholds in config/live_trade_review.yaml + tests + tier-policy doc row; no order path, accounts.yaml, strategies.yaml or exit-loop change"
+}

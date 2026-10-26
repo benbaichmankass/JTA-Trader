@@ -2,21 +2,32 @@
   "id": "DESK-0B-SCHEMA-V2",
   "title": "Desk schema v2: scan packet, entry_generation role (no_trade/propose_entry/watch_note), priced alternatives[], stable-id chain, TP-doctrine + no-size guard checks",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01WjV8syWhW3awUxZ7FTavhZ",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20292
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 ~09:15Z manager session_01HAysMLfF9dYpi92YMqYxEq] Operator popup: 'Desk: schema v2 then scan packets (Recommended)' is the next build lane once #20267 lands, then DESK-16. Capacity: 'Follow the meter: 1 lane (Recommended)' until the reset Wed 2026-10-28 18:00Z (meter: 11.9 pp/day net with n_open=7).",
+  "note": "[2026-10-26 ~09:15Z manager session_01HAysMLfF9dYpi92YMqYxEq] Operator popup: 'Desk: schema v2 then scan packets (Recommended)' is the next build lane once #20267 lands, then DESK-16. Capacity: 'Follow the meter: 1 lane (Recommended)' until the reset Wed 2026-10-28 18:00Z (meter: 11.9 pp/day net with n_open=7). [2026-10-26 lane session_01WjV8syWhW3awUxZ7FTavhZ] Built in PR #20292 (self-land): packet+decision schema v2, desk-records-guard (113-case self-test), outcomes.jsonl + consumed.jsonl (empty), never_trained_on(). Writeback to L-DESK milestone text and ARCHITECTURE change-log reported to the manager (lane may not edit milestones.yaml/ROADMAP.md). Not done: nothing writes desk rows yet (DESK-6); near-signal producer does not exist (system_book.near_signals_read_state carries that honestly).",
   "priority_rank": 3,
-  "updated_at": "2026-10-26T09:11:10Z",
-  "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
+  "updated_at": "2026-10-26T09:59:59Z",
+  "updated_by": "session_01WjV8syWhW3awUxZ7FTavhZ",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "a real desk row validates under schema v2",
+    "how_to_check": "python3 scripts/ci/check_desk_records.py exits 0 with comms/desk/decisions.jsonl non-empty and at least one entry_generation row on a scan packet (DESK-6 shadow pilot writes it)",
+    "due_by": "2026-11-09T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: desk schema v2 landed (DESK-0B) -- scan packet kind, entry_generation role (no_trade/propose_entry/watch_note) replacing the v0 veto enum, priced alternatives, stable-id chain via outcomes.jsonl/consumed.jsonl, derived never-trained-on marker, TP-doctrine + no-size refusals in desk-records-guard",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md change-log row 2026-10-26 DESK-0B-SCHEMA-V2"
+  },
   "_seq": 700
 }
