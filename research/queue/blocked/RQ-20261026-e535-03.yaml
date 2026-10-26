@@ -1,0 +1,128 @@
+id: RQ-20261026-e535-03
+title: 'Desk D-S0 entry generation (arm 1): on masked point-in-time scan packets, do Claude''s proposed entries earn a positive net R per capital-day, beat a random entry with the same bracket geometry at random times on the same symbols, and hold in >= 3 of 4 folds, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  Given only a MASKED scan packet (aliases re-drawn per packet, prices rebased to 100, time anchored in year 2000, no volume, no calendar, no strategy book) at a sampled 1h bar close inside 2025-11-01 .. 2026-09-15 on the six crypto USDT perps,
+  do the entries Claude proposes (at most two per packet; entry type, level, stop, target, time stop, all required by the design 2.4 schema and the TP doctrine) earn, replayed on the real candles after the cutoff with the full cost stack,
+  (S1) a positive mean net R per filled proposal, (S2) a positive net R per capital-day, and (S3) more than a random entry that uses the SAME bracket geometry at random times on the same symbol in the same fold, in at least 3 of 4 calendar folds
+  and not contradicted on the post-model-cutoff stratum?
+why_this_matters: >-
+  DESK-18-GEN-REPLAY-S0 / design section 8.1, entry generation: the desk's first role and the one that decides whether a Claude-driven desk is worth running. A live or paper book never establishes edge; this is Stage 0 for the role. It
+  isolates timing (the baseline keeps the desk's own bracket) from bracket choice, and the subset unit -04 isolates novelty (not a re-labelling of the strategies). Operator 2026-10-26 ~13:25Z: get the trading desk running this week.
+power:
+  expected_n: 375
+  min_detectable_effect: 0.21
+  effect_units: R
+  sd: 1.4
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    sd 1.4 is INFERRED from a MEASURED null: a local preview run of this driver's `baselines` mode on 2026-10-26 (the unit RQ-20261026-e535-02 reproduces it) gave a pooled sd of 1.378 R over 36,000 random market entries, six brackets, six symbols, both
+    sides, net of the cost stack (per-bracket sd 0.93 .. 1.72; mean net R -0.06 .. -0.16, i.e. a random entry pays about its cost). It is a stand-in for the desk's unknown bracket mix, not the desk's sd; the first run records the OBSERVED sd.
+    The design's n of about 780 (section 8.1) assumed sd 1.0: at the measured 1.378 the +0.10 R requirement is 1,490 and the +0.20 R requirement 373 (iid arithmetic (2.8 sd / effect)^2). expected_n 375 is
+    1,500 scheduled packets x 0.25 filled proposals per packet, and the 0.25 is an ASSUMPTION, UNMEASURED: scenarios 0.10 -> 150, 0.25 -> 375, 0.50 -> 750; the schedule caps at 3,000 proposals (1,500 packets x 2), so +0.10 R is reachable only if the desk
+    proposes on at least half of all packets. MDE at n 375 and sd 1.4 = 2.8 x 1.4 / sqrt(375) = 0.202 R, declared 0.21. The cluster CI the rule uses (weeks are the resampling unit) is wider than the iid arithmetic, so these are floors.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      The proposals-per-packet rate is UNMEASURED and the n is bought with judging calls, not with calendar time. The pilot of row DESK-18B-JUDGE-RUN (50 packets) measures the rate and the cost per packet; this block is then re-declared from the measured
+      rate (a power edit; the decision_rule below is not touched) before the full run. The forward-shadow set (DESK-6 live packets) is the second out-of-sample set and accrues separately at the desk's own proposal rate. While the unit is admitted `accruing` (the queue's only non-corpus option), research_disposition refuses a terminal disposition without an `accrual_override_reason` of >= 20 characters; the reason at promotion is that the n was ACQUIRED by the judging run (the stated n_filled), not awaited.
+decision_rule:
+  id: RULE-RQ20261026-E535-03-DESK-GEN-ARM1
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    Population: the judged packets of the registered schedule (1,500 cutoffs, seed 20261026, min gap 4 h; judged in schedule order in whole batches of 200 packets; the run stops at a batch boundary once 800 VALID proposals exist or the schedule is exhausted -- a stopping rule on a count taken before any replay, never on a result; the driver's `intake` mode prints that count without replaying anything, and the scorer refuses to issue a verdict if the judged packets are not a schedule prefix or judging continued past the stop).
+    Each propose_entry row passes check_desk_records.proposal_problems against its own masked packet and the schema's closed enums (a refused row is scored as no_trade and COUNTED with its reason); novelty must be `unverifiable`.
+    Engine (identical for the desk and the baseline): a market entry fills at the next bar's open; a limit or stop entry fills only when price trades through the level within good_till_bars (a gap fills at the open) and credits no target on its fill bar; the stop is checked before the target inside a bar;
+    a gap fills at the open; the time stop exits at the close of the horizon bar; net R = side x (exit - fill) / (side x (fill - stop)) minus execution_costs.roundtrip_cost_r (venue fee, resolve_cost_policy slippage and funding); a fill with the stop on the wrong side or within 0.1 ATR14, or a target already passed, is refused and counted.
+    For each FILLED proposal i: net_i; days_i = fill to exit; d_i = net_i - mean net R of 200 random-entry draws that use proposal i's geometry (side, entry offset, stop and target distances in ATR14 at the cutoff, good_till, horizon) at random eligible hourly cutoffs of the SAME symbol in the SAME fold.
+    S1 = mean net_i; S2 = sum net_i / sum days_i (net R per capital-day); S3 = mean d_i. All with 95% intervals from a weekly-CLUSTER bootstrap (ISO week is the resampling unit), 10,000 draws, seed 20261026. Folds: four equal calendar folds of the window; a fold counts only with n >= 20.
+    Post-cutoff stratum: cutoff >= 2026-06-01 (the judge model's stated knowledge cutoff; re-register if the judge's differs). Reported, not decisive: fill rate, exit mix, per-symbol and per-side means, the strategy-own comparator of RQ-20261026-e535-02, the novelty mix assigned by the scorer, the observed sd and the n that sd needs for +0.10 and +0.20 R.
+  rule: >-
+    PASS IF the landed verdict of RQ-20261026-e535-01 is pass AND n_filled >= 200 AND S1 CI lower bound > 0 AND S2 > 0 with its CI lower bound > 0 AND S3 > 0 with its CI lower bound > 0 AND mean net R > 0 in >= 3 of 4 folds AND the post-cutoff stratum's mean net R > 0
+    (a stratum with n < 20 is reported and the PASS is labelled 'masked-replay only, forward-shadow confirmation required'). Every PASS is also labelled with its n against 785 ('powered for the observed-sd MDE, not for +0.10 R' below it).
+    FAIL IF n_filled >= 200 AND (S1 <= 0 OR the S1 CI upper bound < 0 OR the S3 CI upper bound < 0, i.e. no better than, or worse than, a random entry with the desk's own bracket).
+    INDETERMINATE otherwise (n_filled < 200, or a PASS clause unmet with the interval straddling): the record states the OBSERVED sd and the n that sd needs for +0.10 R, and the follow-up is more packets or a longer window (the history behind the window is available), never a lowered bar.
+    Combined with the subset unit: D-S0 for entry generation is passed only when this unit AND RQ-20261026-e535-04 both PASS and the forward-shadow set (DESK-6), once n >= 100, has a point estimate > 0. A FAIL closes this CONFIGURATION (these packets, this skill text, this bracket vocabulary, this judge); the family stays open: the next
+    tests are pre-registered variants (bracket-geometry-constrained proposals, fewer and more selective proposals, added context), each with its own rule. The registered numbers (200, 785, 0.1 ATR, 3 of 4, 20, 800 valid proposals, the batch of 200, the 200 draws) are not changed after any result.
+  what_it_does_not_do: >-
+    Stage 0 for entry generation only. It places, sizes and moves nothing, edits no config or roster, and is not a Tier-3 case: the claude_desk leg stays execution: shadow until D-S0 passes and Gate 1 and 2 follow. It does not cover in-trade or exit roles (RQ-20261026-bf56-02/-03), not the
+    strategies' own entries, and a PASS on one window is a discovery, not a confirmation: the confirm set (n >= 200, same rule) on a disjoint window is the follow-up before any Tier-3 step.
+requires_result:
+  unit: RQ-20261026-e535-01
+  verdict: pass
+blocked_on:
+- kind: work_item
+  ref: DESK-18B-JUDGE-RUN
+  what: >-
+    There are no Claude proposals to score. Nothing in the repo runs the judging step: the `packets` mode of the driver builds the masked packets and the judge protocol (JUDGE-PROTOCOL.md), but a bounded set of repo-less judging sessions must each read one packet and write one JSON row, and a lane must
+    run them, collect proposals.jsonl and commit it with mask-key.json. That is the only thing standing between this unit and a run, and it spends Claude tokens, so it is a manager dispatch with a stated ceiling and a pilot first.
+  clears_when: >-
+    comms/research/desk_gen_replay/judged-1/{mask-key.json,proposals.jsonl} are on main, the pilot has measured the proposals-per-packet rate and re-declared the power block from it, and RQ-20261026-e535-01 has landed with verdict pass. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+masked_replay:
+  population: >-
+    As RQ-20261026-e535-01 (MEASURED 2026-10-26: six crypto USDT perps ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT; enabled rostered legs ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, trend_donchian_xrp_adx25, xrp_pullback_2h). Re-parse before running.
+  construction: >-
+    `desk_gen_replay_driver.py packets --n N --offset K` over the registered schedule: desk_scan_packet.build_scan_packet + mask_packet, aliases re-drawn per packet, the historical system_book not reconstructed (the judge cannot see the strategies), one mask key per packet with the packet's sha. The scoring step re-derives every judged packet from
+    the candles and refuses on a sha mismatch (candle drift or a changed builder).
+  unmask_key: >-
+    comms/research/desk_gen_replay/judged-1/mask-key.json, written by the packets step. The judging sessions never read it; they receive one packet's text and JUDGE-PROTOCOL.md. The repository is public: the key is public once committed, so a judge model that can read this repo is not a valid judge.
+  leak_controls: >-
+    Per-packet alias permutation; the leak scan (symbol, date, epoch, price) with a positive control in unit -01; the random-entry baseline (the same geometry at other times, which is also the permuted-packet control); the pre/post model-cutoff stratum; no tools and no repo access in the judging session.
+  novelty: >-
+    Assigned by the SCORER from the enabled rostered legs' committed Stage-0 trades (open at the cutoff -> duplicates_system_package; entering within one bar of the leg's timeframe -> duplicates_near_signal; no enabled rostered leg on the symbol -> new_no_leg; every rostered leg on the symbol looked at and none matches -> new;
+    a rostered leg without a list or evidence window for that cutoff -> unclassifiable). The judge cannot see the book, so its own novelty field is `unverifiable` by the guard.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: bounds what an entry-generating desk could add; the confidence is low because the proposal rate and the desk sd are unmeasured.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: 'estimate: scoring is CPU-only; a 800-proposal run costs 800 x 200 random-entry draws of at most 96 bars; the packet re-derivation measured ~0.3 s per packet locally. The judging step is Claude sessions and is not this unit.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_gen_replay_driver.py
+  - score
+  - --out
+  - '{out_dir}'
+  - --fetch
+  - --mask-key
+  - comms/research/desk_gen_replay/judged-1/mask-key.json
+  - --proposals
+  - comms/research/desk_gen_replay/judged-1/proposals.jsonl
+  - --subset
+  - all
+  - --selfcheck-unit
+  - RQ-20261026-e535-01
+  - --model-cutoff
+  - '2026-06-01'
+  inputs:
+    research_unit: RQ-20261026-e535-03
+  timeout_minutes: 60
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-e535-01
+- RQ-20261026-e535-02
+- RQ-20261026-e535-04
+- scripts/research/desk_gen_replay_driver.py
+- scripts/ops/desk_scan_packet.py
+- scripts/ci/check_desk_records.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null

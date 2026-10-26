@@ -1,0 +1,92 @@
+id: RQ-20261026-e535-01
+title: 'Desk D-S0 entry generation, harness self-check: does the masked scan replay keep the future out of every packet and the past out of every outcome, does its cost function reproduce the committed cost stack, and can it tell a planted oracle from a planted null?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: deterministic
+question: >-
+  Before any Claude proposal is scored: on the six crypto USDT perps of the pull-list union, (a) does a masked scan packet built at a sampled 1h bar
+  close stay byte-identical when every bar AFTER the cutoff is replaced, and does a replayed bracket's outcome stay identical when every bar BEFORE the
+  cutoff is replaced; (b) does a packet contain no symbol, no real date, no epoch and no real price (with a positive control proving the scanner can see a
+  planted leak); (c) does the replay engine's cost function reproduce, trade by trade, the cost columns of the committed Stage-0 trade lists of the rostered
+  legs; (d) does the engine rank a planted hindsight oracle above random-timing entries, a planted anti-oracle below them, and a planted null policy at
+  zero, at a bounded false-positive rate?
+why_this_matters: >-
+  DESK-18-GEN-REPLAY-S0 / design section 8.1 "entry generation". A blind replay that leaks the future, or prices a trade differently from the repo's cost
+  stack, or cannot tell edge from no edge, measures its own error and not Claude. This is the instrument-before-finding gate (CLAUDE-RULES-CANONICAL.md
+  "Always state the population": a new instrument produces no decision-grade number until it emits its own honesty metric). It is the prerequisite
+  (requires_result) of RQ-20261026-e535-02 (baselines and power), -03 (arm 1) and -04 (the novelty = new subset). Driver: scripts/research/desk_gen_replay_driver.py
+  (tests/test_desk_gen_replay_driver.py).
+why_not_inferential: >-
+  A reproduction and invariance check over fixed, complete populations: the sha either matches or not on each of 25 packets, the replayed outcome either matches
+  or not on each of 150 (cutoff, symbol) pairs, the leak scan finds a leak or does not, and the cost deviation is a maximum over every comparable committed trade.
+  The one statistical clause (d) is graded against registered tolerances on a PLANTED known answer, not against an effect size to be estimated.
+decision_rule:
+  id: RULE-RQ20261026-E535-01-GEN-REPLAY-SELFCHECK
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    Over the registered schedule (1,500 cutoffs, seed 20261026, min gap 4 h, window 2025-11-01 .. 2026-09-15) and the six symbols' public 1h candles:
+    (a) of 25 sampled cutoffs, the count whose masked-packet sha is unchanged when every bar after the cutoff is multiplied by 3, and of 150 (cutoff, symbol) pairs the
+    count whose replayed bracket outcome is unchanged when every bar before the cutoff is multiplied by 2; (b) the count of 25 masked packets with any finding from the leak scan
+    (symbol token, real cutoff date, date string outside year 2000, epoch-seconds number, a last_close equal to the real price), and whether the scan found all three planted leaks in a
+    positive-control packet; (c) the maximum over every committed trade of the rostered legs on these symbols whose record carries the three cost columns and whose recorded cost
+    stack equals the current policy, of |execution_costs.roundtrip_cost_r total (venue fee, resolve_cost_policy slippage and funding) minus cost_fee_r + cost_slippage_r + cost_funding_r|, in R, and the
+    count compared; (d) on 300 sampled (cutoff, symbol) pairs with the bracket SL 1.5 ATR / TP 2 R / 24 bars, market entry: the planted ORACLE (the better of long and short with hindsight) and ANTI-ORACLE
+    (the worse): mean net R and the weekly-cluster 95% bootstrap CI of the paired difference against 100 random-timing entries of the same side, bracket and fold; and a NULL policy (random side) replicated 20 times: the number of
+    replications whose paired-difference CI excludes 0.
+  rule: >-
+    PASS IF (a) 25 of 25 and 150 of 150 AND (b) 0 packets with a finding AND the positive control found all three planted leaks AND (c) at least one trade compared AND max deviation <= 1e-3 R AND (d) oracle mean net R > 0
+    with the paired-difference CI lower bound > 0, anti-oracle mean net R < 0 with the CI upper bound < 0, and null false positives <= 3 of 20.
+    FAIL IF any clause is violated with every symbol's candles read; the record names the violated clause and DESK-18-GEN-REPLAY-S0 reopens.
+    INDETERMINATE (not a verdict) IF candles for any symbol could not be fetched: the missing symbols are named and units -02/-03/-04 stay unrun.
+    The 25, 150, 1e-3, 3-of-20 and every tolerance above are not changed after any result. DEVELOPMENT NOTE (stated, not hidden): the clauses were exercised on these same public candles in a local dry run on 2026-10-26 while the driver was
+    built; no Claude judgement exists that such a run could contaminate, and the registered numbers were fixed before this unit was authored.
+  what_it_does_not_do: >-
+    Says nothing about Claude's judgement, any leg's edge, or any roster / config. A PASS only certifies the instrument and unlocks the scoring units.
+masked_replay:
+  population: >-
+    MEASURED 2026-10-26 by running parse_universe() and rostered_legs() of scripts/research/desk_gen_replay_driver.py on main: the crypto USDT perps of the pull-list UNION (src.config.symbol_sets, 23 symbols) are ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT,
+    XRPUSDT. The 17 ETF / futures symbols have no public candle route on a CPU runner and are out of scope. Enabled rostered legs on them: ada_pullback_2h (ADA); trend_donchian_eth_4h, trend_donchian_eth_prop (ETH); trend_donchian_sol_prop (SOL);
+    trend_donchian_xrp_4h, trend_donchian_xrp_adx25, xrp_pullback_2h (XRP). BTC and AVAX have no enabled rostered leg (trend_donchian_1h on BTC is enabled: false). The driver prints any difference from the registered six. Candles are Binance Vision SPOT klines.
+  construction: >-
+    desk_scan_packet.build_scan_packet + mask_packet (the one builder the live desk uses): aliases re-drawn per packet, last close rebased to 100, timestamps anchored 2000-01-01, volume and calendar withheld, the historical system_book NOT reconstructed
+    (named in missing_inputs). The unmask key is a separate file written only by the packets step.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: gates the only offline evidence the entry-generation desk can get before it trades; operator priority 2026-10-26 ~13:25Z: get the trading desk running this week.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: 'MEASURED 2026-10-26 in a local run of the same command: ~50 s of compute after the candles are read; the Binance Vision fetch of six symbols x 17 months adds ~3 min (28 s per symbol measured). CPU only; no trainer data.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_gen_replay_driver.py
+  - selfcheck
+  - --out
+  - '{out_dir}'
+  - --fetch
+  inputs:
+    research_unit: RQ-20261026-e535-01
+  timeout_minutes: 30
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-e535-02
+- RQ-20261026-e535-03
+- RQ-20261026-e535-04
+- scripts/research/desk_gen_replay_driver.py
+- scripts/ops/desk_scan_packet.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null
