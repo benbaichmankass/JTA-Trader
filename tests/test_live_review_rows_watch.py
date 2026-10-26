@@ -103,3 +103,14 @@ def test_fetch_uses_the_dispatchers_private_ref_and_no_fetch_head(tmp_path):
 
 def test_ensure_started_is_live_trader_only():
     assert w.ensure_started() is False
+
+
+import pytest as _pytest  # noqa: E402
+
+
+@_pytest.fixture(autouse=True)
+def _isolated_first_proof(tmp_path, monkeypatch):
+    from src.runtime import ltr_first_proof as _fp
+    monkeypatch.setattr(_fp, "state_path", lambda: tmp_path / "ltr_first_proof.json")
+    monkeypatch.setattr(_fp, "_committed_reviews", lambda: [])
+    monkeypatch.setattr(_fp, "_send", lambda text: True)
