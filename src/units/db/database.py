@@ -885,6 +885,45 @@ class Database:
             "CREATE INDEX IF NOT EXISTS idx_position_path_history_trade "
             "ON position_path_history(trade_id, bar_ts)")
 
+        # LTR-MECHANICS-VENUE-SNAPSHOT (2026-10-26) — the venue's resting stop /
+        # target per (order package, account), as the exit loop's broker sweeps
+        # last read them. OBSERVE-ONLY: no order, exit or stop path reads it; the
+        # sole consumer is live_review_due.venue_events (a read).
+        # data-wiring: venue_protection_snapshot is an ENRICHMENT sidecar keyed to
+        # order_packages.order_package_id (+ account_id; a package can sit on
+        # several accounts, each with its own venue). The canonical package levels
+        # stay order_packages.sl/tp; this stores only what the VENUE said, which
+        # exists nowhere upstream (the sweeps graded quantity and discarded the
+        # prices), so history begins at first write and there is nothing to
+        # backfill. Latest read wins; read_state keeps measured / none_resting /
+        # could_not_look distinct. Bounded: RETENTION_DAYS, pruned on the write
+        # path. Sole writer: src/runtime/venue_protection_snapshot.py.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS venue_protection_snapshot (
+                order_package_id TEXT NOT NULL,
+                account_id TEXT NOT NULL,
+                trade_id TEXT,
+                symbol TEXT,
+                direction TEXT,
+                venue TEXT,
+                venue_sl REAL,
+                venue_tp REAL,
+                n_stop_legs INTEGER,
+                n_target_legs INTEGER,
+                ref_sl REAL,
+                ref_tp REAL,
+                read_state TEXT NOT NULL,
+                read_reason TEXT,
+                read_at TEXT NOT NULL,
+                first_read_at TEXT,
+                reads INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY (order_package_id, account_id)
+            )
+        ''')
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_venue_protection_snapshot_read "
+            "ON venue_protection_snapshot(read_at)")
+
         # AI Analyst — per-run history (M13 S1).
         # Every generator cycle appends one row per refreshed endpoint
         # so the dashboard can render "what did the analyst say

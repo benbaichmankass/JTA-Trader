@@ -2,21 +2,32 @@
   "id": "LTR-MECHANICS-VENUE-SNAPSHOT",
   "title": "Live review: trader-side per-package venue SL/TP snapshot so the due computation can evaluate the mechanics VENUE half (package vs venue mismatch)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    20405
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 session_01YbW2EEGjULBzDP2U1Hucxc] Split from LTR-1B-MARKET-TRIGGERS (manager ack 10:48Z: 'agreed it is Tier 2. File it as its own checklist row ... Do not build it in this lane'). FINDING: no stored venue read of resting SL/TP per package exists on the VM; /api/diag/live_review_due can only see the journal half (telemetry written, trade row absent). PROPOSED CHANGE: the exit loop already reads the venue position per symbol for protection (order_monitor._bybit_position_protection via bybit_position_book.select_position_row). Add an observe-only writer, beside position_path_history, that stores per order_package_id the venue stop/target it read on that pass (venue_sl, venue_tp, read_at, read_state measured|could_not_look) in a new column set or small table. The due computation then fires mechanics level 'venue_sl_diverges' when |venue_sl - package sl| > a registered tolerance (proposed 0.25 x ATR, register in config/live_trade_review.yaml first). Constraints: never raises into the exit loop, timed via tick_cost like position_telemetry, no new order path, could_not_look kept distinct. Tier 2 (src/runtime exit-loop writer): one operator OK before merge. Needs the new-table-wiring declaration if a table is added.",
-  "updated_at": "2026-10-26T10:58:41Z",
-  "updated_by": "session_01YbW2EEGjULBzDP2U1Hucxc",
+  "note": "[2026-10-26 session_01YbW2EEGjULBzDP2U1Hucxc] Split from LTR-1B-MARKET-TRIGGERS (manager ack 10:48Z: 'agreed it is Tier 2. File it as its own checklist row ... Do not build it in this lane'). FINDING: no stored venue read of resting SL/TP per package exists on the VM; /api/diag/live_review_due can only see the journal half (telemetry written, trade row absent). PROPOSED CHANGE: the exit loop already reads the venue position per symbol for protection (order_monitor._bybit_position_protection via bybit_position_book.select_position_row). Add an observe-only writer, beside position_path_history, that stores per order_package_id the venue stop/target it read on that pass (venue_sl, venue_tp, read_at, read_state measured|could_not_look) in a new column set or small table. The due computation then fires mechanics level 'venue_sl_diverges' when |venue_sl - package sl| > a registered tolerance (proposed 0.25 x ATR, register in config/live_trade_review.yaml first). Constraints: never raises into the exit loop, timed via tick_cost like position_telemetry, no new order path, could_not_look kept distinct. Tier 2 (src/runtime exit-loop writer): one operator OK before merge. Needs the new-table-wiring declaration if a table is added. [2026-10-26 lane session_01JA1tezUEqwFYzMVXkmouTK] BUILT, Tier-2 landing HOLD (manager merges). Tolerance 0.25 x ATR registered in config/live_trade_review.yaml FIRST (own commit). New table venue_protection_snapshot (PK order_package_id x account_id, latest read wins; DEVIATION from the row's per-package wording: a package on several accounts has several venue reads, one key would let one overwrite another). Writer src/runtime/venue_protection_snapshot.py is called by order_monitor._snapshot_venue_read from the three EXISTING broker sweeps with the prices they already read (no new venue call, no new order path); timed as tick_cost hook monitor.venue_snapshot; never raises. read_state is THREE-valued, not two: measured | none_resting (venue answered: flat/no stop leg; naked sweeps own it) | could_not_look (NULL prices, reason kept). Bybit/Alpaca coverage dicts gained additive target_prices/stop_prices. live_review_due.venue_events fires mechanics level venue_sl_diverges (once per package, deduped; cooldown-exempt like journal_trade_absent) when |venue_sl - order_packages.sl| > 0.25 x ATR (ATR = newest path-history bar else package entry ATR else could_not_look); stale (>60 min) or package-moved-since-read snapshots are could_not_look. not_evaluated now names mechanics_venue_tp (venue_tp stored, no TP tolerance registered). PROVEN on fixtures in tests/test_venue_protection_snapshot.py (GLD: pkg sl 414.54 vs venue 416.09; MGC: pkg sl 4270.03 vs venue 4040.8, ATRs ASSUMED) and on LIVE prices by scripts/ops/venue_snapshot_dry_read.py at 2026-10-26T18:45Z: 12 snapshot rows for the 8 open packages / 12 open trades, 11 measured + 1 none_resting, venue_sl_diverges fires for exactly one package (the real GLD wedge: venue 416.09 vs package 414.539, gap 1.551 > 0.25 x entry ATR 2.0925). OPEN: ib_paper MGC showed no resting legs on the diag view at 18:43Z (stale-view caveat) -> PI-20261026-VXKMOUTK-0002. CLOSING OBSERVATION (merged+deployed is not observed): after the manager merges and the trader restarts, the first VM sweep pass writes a snapshot row per open (package, account): scripts/ops/diag_fetch.sh 'venue_protection_snapshot' shows present=true and a row for every open trade, and scripts/ops/diag_fetch.sh 'live_review_due' shows venue_snapshot.packages_without_row == 0; alarm PI-20261026-VXKMOUTK-0001 (due_by 2026-10-30).",
+  "updated_at": "2026-10-26T19:28:02Z",
+  "updated_by": "session_01JA1tezUEqwFYzMVXkmouTK",
   "priority_rank": 6,
   "roadmap": [
     "L-ATM"
   ],
+  "observation": {
+    "what": "first VM sweep pass writes a venue_protection_snapshot row per open (package, account)",
+    "how_to_check": "scripts/ops/diag_fetch.sh venue_protection_snapshot shows present=true and a row for every open trade; scripts/ops/diag_fetch.sh live_review_due shows venue_snapshot.packages_without_row == 0",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: observe-only plumbing under L-ATM; no milestone state changes until the first VM pass is observed",
+    "arch": "ARCHITECTURE-CANONICAL.md change-log row 2026-10-26 LTR-MECHANICS-VENUE-SNAPSHOT"
+  },
   "_seq": 715
 }

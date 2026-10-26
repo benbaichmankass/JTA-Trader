@@ -20,8 +20,12 @@ of the leg's timeframe, except the events in ``cooldown_exempt``.
 Market triggers (LTR-1B-MARKET-TRIGGERS): ``swing`` and ``vol_regime`` read the
 per-bar ``position_path_history`` the exit loop writes; ``funding`` reads the
 ``exchange_funding`` store; ``calendar`` reads ``config/economic_calendar.yaml``;
-``mechanics`` (journal half) reads telemetry rows whose trade is absent. Each
-package says per event whether it looked: an event it could not evaluate is
+``mechanics`` (journal half) reads telemetry rows whose trade is absent;
+``mechanics`` (venue half, LTR-MECHANICS-VENUE-SNAPSHOT) fires level
+``venue_sl_diverges`` when the resting stop the exit loop's broker sweeps last
+read at the venue (``venue_protection_snapshot``) differs from
+``order_packages.sl`` by more than the registered ``venue_sl_tolerance_atr`` x
+ATR. Each package says per event whether it looked: an event it could not evaluate is
 listed in ``events_could_not_look`` with the reason, never silently dropped.
 
 Telemetry-less packages (LTR-DUE-TELEMETRY-LESS): ``position_telemetry`` covers
@@ -344,6 +348,95 @@ def market_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]],
     return out, cnl
 
 
+def _venue_atr(ctx: Dict[str, Any], venue: Dict[str, Any]) -> Tuple[Optional[float], Optional[str]]:
+    """``(atr, source)`` for the venue tolerance: newest path-history bar, else
+    the package's own entry ATR. Never a guess: neither -> ``(None, None)``."""
+    for h in reversed(ctx.get("history") or []):
+        a = _f(h.get("atr"))
+        if a and a > 0:
+            return a, "position_path_history"
+    a = _f(venue.get("meta_atr"))
+    if a and a > 0:
+        return a, "package_entry_atr"
+    return None, None
+
+
+def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[str, Any],
+                 now: datetime) -> Tuple[List[Tuple[str, Any, str]], List[Dict[str, str]]]:
+    """``(events, could_not_look)`` for the mechanics VENUE half.
+
+    Compares each account's last venue read of the package's resting stop to
+    ``order_packages.sl``. Three snapshot states stay distinct: ``measured`` is
+    graded; ``none_resting`` (flat / no stop leg) is NOT graded here -- the
+    naked sweeps own it, and it is not reported as a miss because the venue WAS
+    read; ``could_not_look`` (and a stale or package-moved snapshot) is listed
+    in ``events_could_not_look``, never folded into "no divergence".
+    Only evaluated when the tolerance is registered in the config.
+    """
+    mc = (cfg["events"].get("mechanics") or {})
+    tol_atr = _f(mc.get("venue_sl_tolerance_atr"))
+    out: List[Tuple[str, Any, str]] = []
+    cnl: List[Dict[str, str]] = []
+    if tol_atr is None:
+        return out, cnl
+
+    def miss(reason: str) -> None:
+        cnl.append({"event": "mechanics", "reason": f"venue_sl: {reason}"})
+
+    venue = (ctx or {}).get("venue")
+    if venue is None:
+        miss("venue snapshot not read")
+        return out, cnl
+    if venue.get("state") != "read":
+        miss(str(venue.get("reason") or "venue snapshot unreadable"))
+        return out, cnl
+    snaps = venue.get("snapshots") or []
+    if not snaps:
+        miss("no venue snapshot row for this package (no broker sweep has read it yet)")
+        return out, cnl
+    pkg_sl = _f(venue.get("pkg_sl"))
+    if pkg_sl is None:
+        miss("package sl unreadable")
+        return out, cnl
+    atr, atr_src = _venue_atr(ctx or {}, venue)
+    if atr is None:
+        miss("no ATR (neither position_path_history nor the package's entry ATR)")
+        return out, cnl
+    tol = tol_atr * atr
+    max_age = timedelta(minutes=float(mc.get("venue_snapshot_max_age_minutes", 60)))
+    bad: List[str] = []
+    for sn in snaps:
+        acct = str(sn.get("account_id"))
+        state = sn.get("read_state")
+        if state == "none_resting":
+            continue  # looked, nothing resting: the naked sweeps own it
+        # collapsed-state: measured -- this is `venue_protection_snapshot.read_state`, not
+        # `position_telemetry.peak_state`; the guard matches the bare word. The three
+        # read states are branched on separately: none_resting above, measured here,
+        # and every other value (could_not_look, unknown) is listed as a miss below.
+        if state != "measured":
+            miss(f"{acct}: {sn.get('read_reason') or state or 'unknown_state'}")
+            continue
+        read_at = _parse_ts(sn.get("read_at"))
+        if read_at is None or now - read_at > max_age:
+            miss(f"{acct}: snapshot older than {max_age.total_seconds() / 60:g} min")
+            continue
+        v_sl, ref = _f(sn.get("venue_sl")), _f(sn.get("ref_sl"))
+        if v_sl is None:
+            miss(f"{acct}: measured row carries no venue_sl")
+            continue
+        if ref is not None and abs(pkg_sl - ref) > tol:
+            miss(f"{acct}: package sl moved since the venue read ({ref:g} -> {pkg_sl:g})")
+            continue
+        gap = abs(v_sl - pkg_sl)
+        if gap > tol:
+            bad.append(f"{acct} venue stop {v_sl:g} vs package sl {pkg_sl:g} "
+                       f"(gap {gap:.6g} > {tol_atr:g} x ATR {atr:.6g} [{atr_src}])")
+    if bad:
+        out.append(("mechanics", "venue_sl_diverges", "; ".join(bad)))
+    return out, cnl
+
+
 def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
                 cfg: Dict[str, Any], now: Optional[datetime] = None,
                 market: Optional[Dict[str, Dict[str, Any]]] = None,
@@ -372,6 +465,8 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         in_cooldown = prior["last"] is not None and prior["last"] >= bar_start(now, tf)
         events = []
         mk, cnl = market_events(row, (market or {}).get(pkg), cfg, now, tf)
+        vk, vcnl = venue_events(row, (market or {}).get(pkg), cfg, now)
+        mk, cnl = mk + vk, cnl + vcnl
         if row.get("telemetry_absent"):
             cnl = [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS] + cnl
         if cnl:
@@ -568,6 +663,58 @@ def _ccxt_symbol(symbol: Any) -> str:
     return f"{s[:-4]}/USDT:USDT" if s.endswith("USDT") and "/" not in s else s
 
 
+def read_venue_context(pkgs: List[str], db_path: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    """Per package: its ``venue_protection_snapshot`` rows plus the package's own
+    ``sl`` / ``tp`` / entry ATR. Never raises; every package gets an entry, and a
+    read that failed is ``could_not_look`` with the reason, never an empty set.
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+
+    def fail(reason: str) -> Dict[str, Dict[str, Any]]:
+        return {p: {"state": "could_not_look", "reason": reason} for p in pkgs}
+
+    if not pkgs:
+        return out
+    try:
+        if db_path is None:
+            from src.utils.paths import trade_journal_db_path
+            db_path = str(trade_journal_db_path())
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        return fail(f"venue_snapshot_unreadable: {type(exc).__name__}: {exc}")
+    try:
+        conn.row_factory = sqlite3.Row
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='venue_protection_snapshot'").fetchone():
+            return fail("venue_snapshot_table_absent")
+        marks = ",".join("?" * len(pkgs))
+        snaps: Dict[str, List[Dict[str, Any]]] = {}
+        for r in conn.execute(f"SELECT * FROM venue_protection_snapshot WHERE order_package_id IN ({marks})", pkgs):
+            snaps.setdefault(str(r["order_package_id"]), []).append(dict(r))
+        try:
+            levels = {str(r["order_package_id"]): r for r in conn.execute(
+                f"SELECT order_package_id, sl, tp, meta FROM order_packages WHERE order_package_id IN ({marks})", pkgs)}
+        except sqlite3.Error as exc:
+            return fail(f"package_levels_unreadable: {exc}")
+    except sqlite3.Error as exc:
+        return fail(f"venue_snapshot_error: {exc}")
+    finally:
+        conn.close()
+    for p in pkgs:
+        lv = levels.get(p)
+        if lv is None:
+            out[p] = {"state": "could_not_look", "reason": "package_not_in_order_packages"}
+            continue
+        meta_atr = None
+        try:
+            m = json.loads(lv["meta"]) if lv["meta"] else {}
+            meta_atr = _f(m.get("atr")) if isinstance(m, dict) else None
+        except (ValueError, TypeError):
+            meta_atr = None  # allow-silent: an unreadable meta is "no entry ATR", reported as such downstream
+        out[p] = {"state": "read", "snapshots": snaps.get(p, []), "pkg_sl": _f(lv["sl"]),
+                  "pkg_tp": _f(lv["tp"]), "meta_atr": meta_atr}
+    return out
+
+
 def read_market_context(open_rows: List[Dict[str, Any]], cfg: Dict[str, Any], now: datetime,
                         db_path: Optional[str] = None, funding_db_path: Optional[str] = None,
                         calendar_path: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
@@ -575,9 +722,15 @@ def read_market_context(open_rows: List[Dict[str, Any]], cfg: Dict[str, Any], no
     cal = read_calendar(calendar_path, now)
     win = float((cfg["events"].get("funding") or {}).get("window_hours", 9))
     out: Dict[str, Dict[str, Any]] = {}
+    try:
+        venue = read_venue_context([str(r.get("order_package_id")) for r in open_rows], db_path)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look per package
+        venue = {str(r.get("order_package_id")): {"state": "could_not_look",
+                 "reason": f"venue_context: {type(exc).__name__}: {exc}"} for r in open_rows}
     for row in open_rows:
         pkg = str(row.get("order_package_id"))
-        ctx: Dict[str, Any] = {"calendar": cal, "history": None, "history_reason": None}
+        ctx: Dict[str, Any] = {"calendar": cal, "history": None, "history_reason": None,
+                               "venue": venue.get(pkg)}
         try:
             from src.runtime.position_path_history import read_history
             h = read_history(db_path=db_path, order_package_id=pkg, limit=2000)
@@ -659,6 +812,17 @@ def live_review_due(db_path: Optional[str] = None,
         "events_could_not_look": [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS],
     } for r in less]
     cal = next(iter(market.values()), {}).get("calendar") if market else None
+    vsn = [sn for c in market.values() for sn in ((c.get("venue") or {}).get("snapshots") or [])]
+    env["venue_snapshot"] = {
+        "rows": len(vsn),
+        **{st: sum(1 for sn in vsn if sn.get("read_state") == st)
+           for st in ("measured", "none_resting", "could_not_look")},
+        "packages_without_row": sum(
+            1 for c in market.values()
+            if (c.get("venue") or {}).get("state") == "read" and not (c["venue"].get("snapshots"))),
+        "packages_unreadable": sum(
+            1 for c in market.values() if (c.get("venue") or {}).get("state") != "read"),
+    }
     env["calendar_state"] = (cal or {}).get("state")
     env["calendar_newest_event"] = (cal or {}).get("newest_event")
     env["read_state"] = "looked"

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-MECHANICS-VENUE-SNAPSHOT: a new observe-only writer on the live exit loop (src/runtime/venue_protection_snapshot.py, called from the three broker sweeps in src/runtime/order_monitor.py) plus one new journal table (venue_protection_snapshot) and additive price keys on the Bybit and Alpaca coverage reads. Tier-2 runtime writer by path. The manager dispatched the build under operator authority (checklist row LTR-MECHANICS-VENUE-SNAPSHOT; manager ack 2026-10-26 10:48Z 'agreed it is Tier 2'); the lane's landing is hold -- the manager merges after review, then deploys (trader restart) and verifies the first VM pass writes a snapshot row for every open package. Nothing here should auto-merge.",
+  "why": "Lets the live-review due computation evaluate the mechanics VENUE half (venue stop vs package stop), which today only a reviewer pulling the venue by hand could see. No order, exit or stop path reads the table; the writer makes no venue call."
+}
