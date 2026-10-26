@@ -349,3 +349,32 @@ jobs:
           got=$(jq -c '[.allow_force_pushes.enabled, .allow_deletions.enabled, .enforce_admins.enabled, (.required_pull_request_reviews // null), (.required_status_checks // null)]' "$out")
           [ "$got" = '[false,false,true,null,null]' ] || { echo "::error::live-review/rows protection drift: ${got}"; exit 1; }
           echo "::notice::live-review/rows protected append-only (no force-push, no deletion, no PR/check gate)."
+
+      # Desk decisions branch (DESK-6-SHADOW-PILOT; .claude/skills/trading-desk/DESK-BRIEF.md § 5):
+      # the same append-only shape as live-review/rows. Repo-less desk wakes append ONE row by
+      # compare-and-swap and desk-scan-packet.yml appends packets; desk-decisions-mirror.yml copies
+      # rows onto main by decision_id. No force-push, no deletion, admins included, no PR/check gate.
+      - name: PUT branch protection on desk/decisions
+        if: steps.token_check.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/${{ github.repository }}/branches/desk%2Fdecisions/protection"
+          body='{"required_status_checks":null,"enforce_admins":true,"required_pull_request_reviews":null,"restrictions":null,"allow_force_pushes":false,"allow_deletions":false}'
+          out=$(mktemp)
+          code=$(curl -sS -o "$out" -w '%{http_code}' -X PUT \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$API" -d "$body")
+          if [ "$code" = "404" ]; then
+            echo "::warning::desk/decisions does not exist yet; create it from main, then re-run."
+            exit 0
+          fi
+          if [ "$code" != "200" ]; then
+            echo "::error::PUT desk/decisions protection returned HTTP ${code}:"; cat "$out"; exit 1
+          fi
+          got=$(jq -c '[.allow_force_pushes.enabled, .allow_deletions.enabled, .enforce_admins.enabled, (.required_pull_request_reviews // null), (.required_status_checks // null)]' "$out")
+          [ "$got" = '[false,false,true,null,null]' ] || { echo "::error::desk/decisions protection drift: ${got}"; exit 1; }
+          echo "::notice::desk/decisions protected append-only (no force-push, no deletion, no PR/check gate)."
