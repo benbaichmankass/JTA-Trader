@@ -72,8 +72,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -263,6 +264,94 @@ def check_ledger(
     return result
 
 
+# ---------------------------------------------------------------------------
+# CONSUMER-SIDE feed checks (DATA-FEEDS-NEWS-CALENDAR, 2026-10-26).
+# This monitor used to watch only what producers WRITE: econ_calendar_snapshots.jsonl stayed
+# fresh while config/economic_calendar.yaml - the file the live news layer READS - sat at its
+# 2026-07-30 newest event. These watch the CONSUMED artifacts. Statuses: fresh | stale (looked,
+# bad) | could_not_look (no verdict; printed, never folded into fresh).
+# news N=12h: over the 999 inter-row gaps of the 1000-row news_decisions tail (2026-10-07..26)
+# the median is 7 min and only 1 gap > 12h (9 > 6h). Population: that one VM log tail.
+# ---------------------------------------------------------------------------
+CALENDAR_REL = "config/economic_calendar.yaml"
+CAPTURES_REL = "comms/macro/econ_calendar_captures"
+MIN_HORIZON = timedelta(days=7)
+MAX_REFRESH_AGE = timedelta(hours=36)
+NEWS_MAX_GAP_H = 12.0
+_EVENT_TIME = re.compile(r'time:\s*"([0-9T:\-]+Z?)"')
+_CAPTURE_TS = re.compile(r"^[A-Za-z]{2,4}-(\d{8}T\d{6}Z)\.")
+
+
+def _verdict(feed: str, status: str, detail: str) -> dict:
+    return {"ledger": feed, "status": status, "detail": detail}
+
+
+def check_calendar_horizon(path: Path, now: datetime) -> dict:
+    feed = CALENDAR_REL + " [horizon]"
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError as exc:
+        return _verdict(feed, "could_not_look", f"calendar unreadable: {type(exc).__name__}")
+    times = [t for t in (_parse_iso_utc(m) for m in _EVENT_TIME.findall(text)) if t]
+    if not times:
+        return _verdict(feed, "stale", "calendar carries no events")
+    newest = max(times)
+    ahead = (newest - now).total_seconds() / 86400
+    if ahead * 86400 < MIN_HORIZON.total_seconds():
+        return _verdict(feed, "stale", f"newest event {newest.isoformat()} is {ahead:.1f}d ahead (< 7d)")
+    return _verdict(feed, "fresh", f"newest event {newest.isoformat()} is {ahead:.1f}d ahead")
+
+
+def check_calendar_refresh(captures_dir: Path, now: datetime) -> dict:
+    feed = CAPTURES_REL + " [last successful refresh]"
+    d = Path(captures_dir)
+    if not d.is_dir():
+        return _verdict(feed, "could_not_look", "captures dir absent")
+    stamps = [datetime.strptime(m.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+              for m in (_CAPTURE_TS.match(p.name) for p in d.iterdir()) if m]
+    if not stamps:
+        return _verdict(feed, "stale", "no captures")
+    last = max(stamps)
+    age = now - last
+    hrs = age.total_seconds() / 3600
+    if age > MAX_REFRESH_AGE:
+        return _verdict(feed, "stale", f"last successful capture {last.isoformat()} is {hrs:.1f}h old (> 36h)")
+    return _verdict(feed, "fresh", f"last successful capture {last.isoformat()} ({hrs:.1f}h old)")
+
+
+def check_news(log_tail: Any, open_packages: Any, now: datetime, max_gap_h: float = NEWS_MAX_GAP_H) -> dict:
+    feed = "runtime_logs/news_decisions.jsonl [diag log_file]"
+    if not isinstance(log_tail, dict) or not log_tail.get("present"):
+        return _verdict(feed, "could_not_look", "news_decisions log not readable (diag absent or log not present)")
+    if not isinstance(open_packages, dict) or open_packages.get("db_state") != "read":
+        return _verdict(feed, "could_not_look", "open packages not readable")
+    crypto = sorted({str(p.get("symbol")) for p in open_packages.get("packages", [])
+                     if str(p.get("symbol", "")).upper().endswith("USDT")})
+    last = None
+    for ln in log_tail.get("lines", []):
+        try:
+            t = _parse_iso_utc(json.loads(ln).get("ts"))
+        except (ValueError, AttributeError):
+            continue
+        if t and (last is None or t > last):
+            last = t
+    if not crypto:
+        return _verdict(feed, "fresh", "no crypto package open - nothing to be stale for")
+    if last is None:
+        return _verdict(feed, "could_not_look", "no parseable row in the log tail")
+    gap_h = (now - last).total_seconds() / 3600
+    if gap_h > max_gap_h:
+        return _verdict(feed, "stale", f"no news_decisions row for {gap_h:.1f}h (> {max_gap_h:g}h) with crypto open: {','.join(crypto)}")
+    return _verdict(feed, "fresh", f"last row {gap_h:.1f}h ago; crypto open: {','.join(crypto)}")
+
+
+def _load_json(path: str | None) -> Any:
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8")) if path else None
+    except (OSError, ValueError):
+        return None
+
+
 def _is_bad(status: str) -> bool:
     """A status that should drive a non-zero exit + an alert."""
     return status in {"stale", "vacuous", "missing", "unreadable", "no_timestamp"}
@@ -303,6 +392,8 @@ def main(argv: list[str] | None = None) -> int:
             "check every registered scheduled producer."
         ),
     )
+    parser.add_argument("--news-log-json", help="diag log_file?name=news_decisions JSON (consumer-side news check)")
+    parser.add_argument("--open-packages-json", help="diag open_packages JSON (consumer-side news check)")
     parser.add_argument(
         "--repo-root",
         default=".",
@@ -349,6 +440,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             for prod in PRODUCERS
         ]
+        results += [
+            check_calendar_horizon(root / CALENDAR_REL, now),
+            check_calendar_refresh(root / CAPTURES_REL, now),
+            check_news(_load_json(args.news_log_json), _load_json(args.open_packages_json), now),
+        ]
     bad = [r for r in results if _is_bad(r["status"])]
 
     if args.json:
@@ -364,7 +460,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     else:
         for r in results:
-            marker = "🚨" if _is_bad(r["status"]) else "✅"
+            marker = "🚨" if _is_bad(r["status"]) else "⚠️" if r["status"] == "could_not_look" else "✅"
             print(f"{marker} {r['ledger']} [{r['status']}] — {r['detail']}")
         if bad:
             names = ", ".join(Path(r["ledger"]).name for r in bad)
