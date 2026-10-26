@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261024-71e8-01/40256552927/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261024-71e8-01/40256552927",
+  "data_fingerprint": "{\"state\": \"not_established\", \"why\": \"the run named no existing input file or directory in its argv or in verdict.json data_inputs\"}",
+  "decision_rule_id": "RULE-RQ20261024-71E8-01-SQUEEZE-1H-WIDE-CONFIRM",
+  "decision_rule_registered_at": "2026-10-24",
+  "measurement_file": "comms/research/RQ-20261024-71e8-01/40256552927/measurement.json",
+  "min_rows": "1",
+  "n": "7299",
+  "note": "FAIL: B: pooled net_r <= 0 or folds short; WIDE: net_r/trade 0.014 beats the baseline's 0.0222 by -0.0082 < the 0.05 materiality bar. Thresholds: n_floor 39, pooled_n_floor 88, folds 6 majority 4, breadth 0.5 over >= 2 powered cells, holm alpha 0.05, baseline B with materiality 0.05 R/trade. Crypto candles are Binance USD-M (PROXY for Bybit linear); the cost stack is the harness's venue-aware fee + slippage + funding. A pass is an input to a re-entry case, never a roster act.",
+  "population": "family=squeeze timeframe=1h symbols=AVAXUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT arms=['B', 'WIDE'] window=2020-06-01..2026-10-22 days=2400; 12 of 12 cells measured; trades net of fee+slippage+funding",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261024-71e8-01",
+  "tool": "python3 scripts/research/harness_stage0.py",
+  "verdict": "fail"
+}
