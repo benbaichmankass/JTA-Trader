@@ -13,10 +13,10 @@
   "blocked_on": [
     "LTR-2-RECORDS"
   ],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 5 + operator Q1 comparison.",
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 5 + operator Q1 comparison. [2026-10-26 lane LTR-JUDGEMENT-APPLY] Operator dropped the n>=20 apply clause: a thin LTR-0 cell is now decided as recommendation.basis 'judgement' with recommendation.evidence_source ('table'|'judgement'|'none'), judgement_confidence in [0,1] and reason (schema + live-review-records-guard enforce them; apply output writeback carries basis/confidence/reason). WHAT REMAINS for this row (not built): grade every review against outcomes.jsonl (joined on review_id) STRATIFIED by evidence_source, and a calibration read of judgement_confidence vs realised cf_r - net_r (Brier / reliability by confidence bucket), so the models can learn how much weight Claude's calls deserve. Nothing grades judgement rows today; outcomes.jsonl carries no judgement-specific field and needs none (the join supplies it).",
   "priority_rank": 8,
-  "updated_at": "2026-10-25T13:57:29Z",
-  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "updated_at": "2026-10-26T06:39:32Z",
+  "updated_by": "session_019k3PxKWzD3FwBmquxHboDN",
   "roadmap": [
     "L-ATM"
   ],
