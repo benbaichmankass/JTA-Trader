@@ -78,6 +78,8 @@ Union **telemetry-open ∪ journal-open ∪ venue-open ∪ prop-reported-open**.
 - open in the journal, but no telemetry row → coverage gap. Telemetry covers the donchian/pullback family (design § 9). Record it with `mechanics.verdict: could_not_look` and say "not covered". **Never treat it as "nothing to review".**
 - a prop account whose status carries no `positions` field → its positions are `unknown`, **not** flat.
 
+> **STOPGAP (manager, 2026-10-26; drop this note once the gate surfaces telemetry-less open packages as their own state, pipeline item `PI-20261026-2U1HUCXC-0002`):** the due gate (`live_review_due.py`) skips open packages that have no telemetry. For any open package the gate skipped, build its packet anyway and judge it per this skill (paper packages are record-only). Found 2026-10-26 11:18Z: the gate said 7 open, the packet listing had 8; the missing one was the paper package `gld_pullback_1h`.
+
 If the union is empty, write that with the reads' timestamps and row counts ("we looked: telemetry 300 rows, 0 open; …"). Then run the procedure on the most recent closed package as a **dry rehearsal**, labelled `trigger.event: dry_rehearsal`.
 
 ---

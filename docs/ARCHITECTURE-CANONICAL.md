@@ -1153,6 +1153,12 @@ training sessions follow the established workflow:
    built daily by `build_trainer_datasets.sh`): live-review and desk decisions,
    point-in-time, joined to realised net R (package initial stop as the risk
    basis), exclusions counted by reason; the legacy rubric file is not ingested.
+   Since 2026-10-26 (CJ-3, #20390) it also reads the **blind-then-reveal post-trade
+   grade**: `comms/claude_judgments/blind_grades.jsonl` (T0: graded from a masked
+   packet by `scripts/ops/blind_grade.py`, no outcome, symbol, date or absolute
+   price) and `revealed_grades.jsonl` (T1 by kind, label-only). Protocol:
+   `/performance-review` § "Blind-then-reveal grade". Pilot: 50 + 50 rows, Sonnet,
+   MEASURED $0.0158 per trade (`comms/claude_judgments/pilot/cj3-pilot-r1/`).
    No manifest trains on it yet; `claude-judgments-guard` lints any that does.
    Design: [`docs/plans/ml-claude-distillation-DESIGN.md`](plans/ml-claude-distillation-DESIGN.md).
 2. **Build datasets.** `python -m ml.datasets build <family>` writes

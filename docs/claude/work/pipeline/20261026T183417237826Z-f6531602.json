@@ -1,0 +1,17 @@
+{
+  "based_on": "20261026T134449313762Z-bf662956.json",
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261026-C1PVMNFJ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "proof-sweep lane session_01PJfTCUpRrd8Lj4c1pVmNFj, manager request 2026-10-26T13:43Z; row OPERATOR-DECISIONS-1022 (observation (c))",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=300' ; read meta.conviction_apply_decision and meta.sized_qty_by_account for the package of trade 6731 (trend_donchian_eth_4h, bybit_1, 2026-10-24T15:09Z); compare to trades.position_size"
+  },
+  "state": "done",
+  "terminal_reason": "ROOT-CAUSED 2026-10-26, both clamps INTENDED, no sizing bug. pkg-5b35bd5b1fad4212 meta (journal?table=order_packages&limit=300): (1) 53.65->11.95 on bybit_1 = RiskManager margin pre-flight cap, src/units/accounts/risk.py:87 _MARGIN_SAFETY_BUFFER=0.9 applied at ~L1346: conviction_apply_decision.margin_cap 13.288 (unbuffered, = available*3x/entry) x0.9 = 11.959 -> floor 11.95. 53.65 is the HYPOTHETICAL 2%-budget conviction desired (mode=annotate, resized=false); throttle 0.0828 = available/total, also annotate-only, never applied. bybit_1 risk_pct=0.0075 (config/accounts.yaml) would have given ~20.1, so margin, not risk_pct, bound; free margin was ~8% of equity because trade 6730 (21.56 ETH, eth_prop) and other legs were open. (2) 11.95->4.41 = netted-slices symbol risk budget, src/runtime/positions.py slice_qty/admit_slice (bybit_1 only: accounts.yaml position_model: slices), symbol_budget_trades=1.0 (config/slice_allocation.yaml:55): budget 552.64 = 11.95*46.246 risk/unit, held_risk 348.56 (6730's stop still on loss side at 15:09Z), remaining 204.08, 204.08/46.246=4.4129 -> 4.41 = trades.position_size. Arithmetic reproduces to 4dp. bybit_2 (real money) is NOT position_model slices so the slice clamp cannot touch it; it got 0.06 from the plain risk_pct=0.015 sizer on the same risk distance; no unintended clamp found in the meta. NOT verified: the exchange order qty (no read path for venue fills from a lane; journal position_size only) and bybit_2's venue balance. Observability gap (sized_qty_by_account records 11.95, the pre-slice qty, not the 4.41 submitted) filed as PI-20261026-9AY71UWH-0001.",
+  "what": "ROOT-CAUSE bybit_1 trade 6731 (trend_donchian_eth_4h ETHUSDT, 2026-10-24T15:09Z): filled 4.41 ETH, risk ~0.22x its peers' while 0.75% risk was just observed on 4 trades (the other bybit_1 entries the proof sweep read). MEASURED from the package meta: sized_qty_by_account bybit_1 = 11.95 (risk_based_qty 11.95, margin_cap 13.29, throttle 0.0828, desired 53.65 at risk_budget 0.02), yet position_size 4.41 -> two reductions: 53.65 -> 11.95 (a throttle/risk clamp) and 11.95 -> 4.41 (a later clamp or partial fill, not explained). Concurrent: bybit_1 trade 6730 (eth_prop, 21.56 ETH) was still open until 10-24T20:02Z, so a same-symbol exposure/correlation throttle is the first hypothesis; not verified. bybit_2 got 0.06 and bybit_portfolio 19.74 on the same signal. QUESTION: which clamp fired for the 11.95->4.41 step and is it intended. bybit_1 is paper but the same sizer runs on real money (bybit_2). Read the sizing path (conviction_apply_decision, throttle, margin cap) and the exchange fill for the order. Any change is Tier-3 -> proposal."
+}
