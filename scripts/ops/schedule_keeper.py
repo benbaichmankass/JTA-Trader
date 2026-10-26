@@ -117,6 +117,13 @@ TARGETS: dict[str, dict] = {
     # 2-hourly cron => stale_hours 3 (one missed slot + grace pages). It needs no `dedupe` job: the
     # alert is change-keyed (a run only messages on a CHANGE of the not-ok set, or a realert_hours
     # reminder), so a late scheduled run after a keeper dispatch re-measures and sends nothing new.
+    # DESK-6B (manager 2026-10-26): the `3 * * * *` cron NEVER fired (only workflow_dispatch runs), so the
+    # live trader (src/runtime/desk_packet_wake.py) is the PRIMARY packet producer and this workflow the
+    # FALLBACK. The keeper dispatches it for a missed hour; its first step skips when the bar already has
+    # a packet (desk_wake_marker.py gate) and the marker dedupes one wake per bar, so a late scheduled run
+    # after the VM or a keeper dispatch builds and posts nothing.
+    "desk-scan-packet.yml": {"stale_hours": 3,
+                             "self_dedupes": "its gate step skips a bar that already has a packet and desk_wake_marker.py posts at most one desk-wake per bar"},
     "research-slo.yml": {"stale_hours": 3,
                          "self_dedupes": "alerts are change-keyed (research_slo.py): a second run of one slot re-measures and re-sends nothing"},
 }

@@ -15,7 +15,8 @@ name: desk-scan-packet
 # The packet is validated by desk-records-guard INSIDE the builder before it is written;
 # a refused packet fails this run and nothing is pushed. NO HALTING: a failed run is retried
 # by the next hour, and the desk's own report names a stale pointer.
-# DESK-6B: the LAST step posts the desk-wake marker (scripts/ops/desk_wake_marker.py) right after the
+# DESK-6B: the live trader (src/runtime/desk_packet_wake.py) is the PRIMARY producer; this job is the
+# FALLBACK that schedule-keeper dispatches for a missed hour (the cron never fired). The LAST step posts the desk-wake marker (scripts/ops/desk_wake_marker.py) right after the
 # packet commit, in the same job: landing the packet is what wakes the desk; there is no timed or polled
 # trigger. A failed build posts no wake, only a could_not_build incident marker.
 # Tier 1 (the comment step is a PR comment): read-only diag/public reads, one commit to a data branch.
@@ -47,11 +48,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install --quiet pyyaml pandas
+      - name: Gate (the live trader is the primary producer; this job is the fallback)
+        # DESK-6B: GitHub's cron never fired this workflow on schedule, so the VM builds, commits and
+        # posts the packet itself. schedule-keeper dispatches this job for a missed hour; if the bar
+        # already has a packet it does nothing, so the two never both wake for one bar.
+        id: gate
+        run: |
+          git fetch --no-tags origin desk/decisions || true
+          python3 scripts/ops/desk_wake_marker.py gate --github-output "$GITHUB_OUTPUT"
       - name: Read the desk book from desk/decisions
+        if: steps.gate.outputs.skip != 'true'
         # desk_book = the desk's own pending proposals; they live on the branch, not on main.
         run: |
           set -euo pipefail
@@ -64,12 +75,14 @@ jobs:
             echo "::warning::desk/decisions has no decisions.jsonl; main's copy is used for the desk book"
           fi
       - name: Build the scan packet
+        if: steps.gate.outputs.skip != 'true'
         id: build
         run: |
           set -euo pipefail
           python3 scripts/ops/desk_scan_packet.py --timeframe 1h --out /tmp/scan.json | tee -a "$GITHUB_STEP_SUMMARY"
           python3 scripts/ops/desk_branch.py publish --packet /tmp/scan.json --stage /tmp/stage | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Commit to desk/decisions (append, never force)
+        if: steps.gate.outputs.skip != 'true'
         id: commit
         run: |
           set -euo pipefail
@@ -89,6 +102,7 @@ jobs:
           done
           echo "::error::could not push the packet to desk/decisions after 4 tries"; exit 1
       - name: Wake the desk (the packet has landed; this step IS the trigger)
+        if: steps.gate.outputs.skip != 'true'
         # DESK-6B (operator 2026-10-26 ~16:50Z): the session must not start before its packet exists,
         # so the wake is posted here, right after the packet commit, and nowhere else. One
         # `desk-wake` marker on the ops-flags PR (token-free, deduped on the packet id); the manager,
@@ -99,7 +113,7 @@ jobs:
           python3 scripts/ops/desk_wake_marker.py post --stage /tmp/stage --commit "$(git -C /tmp/desk rev-parse HEAD)" \
             --run-url "$RUN_URL" --live | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Report a failed build (no wake is posted for it)
-        if: failure() && steps.wake.outcome != 'failure'
+        if: failure() && steps.wake.outcome != 'failure' && steps.gate.outputs.skip != 'true'
         run: |
           STEP="Read the desk book"
           if [ "${{ steps.build.outcome }}" = "failure" ]; then STEP="Build the scan packet"; fi

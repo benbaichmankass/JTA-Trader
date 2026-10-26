@@ -41,7 +41,20 @@ def test_dedupe_is_on_the_packet_id_not_the_bar(tmp_path):
     e = dwm.build_entry(stage(tmp_path), "c" * 40, NOW)
     assert dwm.plan_post(e, []) == "post"
     assert dwm.plan_post(e, [{"packet_id": e["packet_id"]}]) == "already_posted"
-    assert dwm.plan_post(e, [{"packet_id": "DP-other", "bar": e["bar"]}]) == "post"
+    # two producers (VM primary, workflow fallback): one wake per bar, whichever lands first
+    assert dwm.plan_post(e, [{"kind": "desk-wake", "packet_id": "DP-other", "bar": e["bar"]}]) == "already_posted"
+    assert dwm.plan_post(e, [{"kind": "desk-wake", "packet_id": "DP-other", "bar": "2026-10-26T15:00:00Z"}]) == "post"
+
+
+def test_gate_skips_when_the_vm_already_built_this_hours_packet(monkeypatch, tmp_path):
+    import subprocess
+    now_bar = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    for cutoff, skip in ((now_bar.strftime("%Y-%m-%dT%H:05:00Z"), "true"), ("2020-01-01T00:05:00Z", "false")):
+        monkeypatch.setattr(subprocess, "run", lambda *a, _c=cutoff, **k: subprocess.CompletedProcess(
+            a, 0, stdout=json.dumps({"info_cutoff_at": _c}), stderr=""))
+        out = tmp_path / f"o{skip}"
+        assert dwm._gate("origin/desk/decisions", out) == 0
+        assert out.read_text() == f"skip={skip}\n"
 
 
 def test_every_packet_wakes_whatever_the_context(tmp_path):
@@ -67,5 +80,7 @@ def test_workflow_posts_the_wake_after_the_commit_and_reports_failures():
     assert "desk_wake_marker.py post" in steps[ids.index("wake")]["run"]
     last = steps[-1]
     assert "desk_wake_marker.py fail" in last["run"] and "failure()" in last["if"]
+    assert "desk_wake_marker.py gate" in steps[ids.index("gate")]["run"]
+    assert all(st.get("if") == "steps.gate.outputs.skip != 'true'" for st in steps[ids.index("gate") + 1:-1])
     assert wf["permissions"]["pull-requests"] == "write" and wf["permissions"]["issues"] == "write"
     assert (wf.get("on") or wf.get(True))["schedule"], "the schedule stays: the packet job is the only trigger"

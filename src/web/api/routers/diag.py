@@ -577,10 +577,10 @@ _LTR_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "ltr_wake_post_receipt.json"
 )
 
-# DESK-6B (2026-10-26). The live trader's desk-wake WATCH receipt (the packet job posts the
-# wake; this reads whether it fired): posted / already_recorded / awaiting_wake /
-# wake_missing / could_not_build / could_not_look (+ reason). Holds no credential. Same
-# anchor as the writer (src.runtime.desk_wake_watch.receipt_path).
+# DESK-6B (2026-10-26). The live trader's desk packet+wake producer's receipt (builds the packet,
+# lands it, posts the wake): posted / already_recorded / awaiting_wake / wake_missing /
+# could_not_build / could_not_commit / could_not_post / could_not_look (+ reason). Holds no credential. Same
+# anchor as the writer (src.runtime.desk_packet_wake.receipt_path).
 _DESK_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "desk_wake_post_receipt.json"
 )

@@ -514,6 +514,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--candles-dir", type=Path)
     ap.add_argument("--as-of", help="historical mode (always masked): ISO cutoff")
     ap.add_argument("--symbols", help="comma list: restrict the pulled universe (testing / a sampled offline run)")
+    ap.add_argument("--decisions", type=Path, default=None,
+                    help="decisions.jsonl to read the desk book from (default: comms/desk/decisions.jsonl); the VM passes the "
+                         "desk/decisions branch copy so unresolved shadow proposals are seen")
     ap.add_argument("--no-system-book", action="store_true", help="skip the open-package read (could_not_look)")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--write", action="store_true", help="live mode: write comms/desk/packets/<packet_id>.json")
@@ -553,7 +556,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             sb = system_book_from_snapshot(collect(max_pages=1))
         except Exception as exc:  # allow-silent: could_not_look, named in missing_inputs
             print(f"desk_scan_packet: system book read failed: {exc}", file=sys.stderr)
-    db = None if historical else desk_book_from_records(cdr.DECISIONS, cdr.OUTCOMES, cutoff)
+    db = None if historical else desk_book_from_records(a.decisions or cdr.DECISIONS, cdr.OUTCOMES, cutoff)
     unread = ({"system_book": "not reconstructed point in time (historical mode)",
                "desk_book": "not reconstructed point in time (historical mode)"} if historical
               else {"system_book": "skipped (--no-system-book)"} if a.no_system_book else None)

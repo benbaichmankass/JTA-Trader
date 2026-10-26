@@ -9,18 +9,19 @@ runs ``post`` here, which posts ONE ``desk-wake`` marker on the ops-flags PR car
 sha and commit sha. The manager is subscribed to the PR; on the marker it ``create_session``s the wake
 exactly as ``.claude/skills/trading-desk/SKILL.md`` § 6b specifies. Nothing else posts a desk-wake.
 
-Why the runner and not the VM (the preferred option, rejected for this PR): the scan-packet builder
-reads the public candle route, the diag-token system-book snapshot and the live near-signal probe, and
-the packet must reach the protected ``desk/decisions`` branch as one two-file commit; moving all of that
-into the live trader's loop is runtime risk this change does not need. The VM keeps the receipt and the
-liveness (``src/runtime/desk_wake_watch.py``).
+Why this is the FALLBACK: GitHub's cron never fired this workflow on schedule (MEASURED by the manager
+2026-10-26: only workflow_dispatch runs), so the live trader builds the packet itself and is the primary
+producer; this job runs when ``schedule-keeper`` dispatches it for a missed hour and does nothing when the
+bar already has a packet (``gate``).
 
 Every hour wakes (crypto is 24/7): no market or activity gate. The packet's context rides the marker as
-information only. Dedupe is on the packet id (a packet whose id already has a marker is not re-posted).
+information only. Dedupe is on the packet id AND the bar: the VM (``src/runtime/desk_packet_wake.py``) is the
+PRIMARY producer and this workflow the fallback, so at most one wake is posted per bar whichever lands first.
 A failed build posts no wake: the job's failure step runs ``fail``, which posts one ``could_not_build``
 incident marker (named step, run url) per bar.
 
 Usage:
+  desk_wake_marker.py gate [--ref origin/desk/decisions] [--github-output FILE]
   desk_wake_marker.py post --stage DIR --commit SHA [--run-url URL] [--live]
   desk_wake_marker.py fail --step NAME [--run-url URL] [--live]
   desk_wake_marker.py --self-test
@@ -141,8 +142,10 @@ def render_fail(step: str, bar: str, now: datetime, run_url: str = "") -> str:
 
 
 def plan_post(entry: Dict[str, Any], markers: List[dict]) -> str:
-    """'post' or 'already_posted'. Dedupe on the packet id."""
-    return "already_posted" if any(m.get("packet_id") == entry["packet_id"] for m in markers) else "post"
+    """'post' or 'already_posted'. Dedupe on the packet id and on the bar (two producers, one wake per bar)."""
+    return "already_posted" if any(m.get("packet_id") == entry["packet_id"]
+                                   or (m.get("kind") == "desk-wake" and m.get("bar") == entry["bar"])
+                                   for m in markers) else "post"
 
 
 def plan_fail(bar: str, markers: List[dict]) -> str:
@@ -171,10 +174,31 @@ def _comment(repo: str, pr: int, body: str) -> bool:
     return _gh(["pr", "comment", str(pr), "--repo", repo, "--body", body]) is not None
 
 
+def _gate(ref: str, out: Optional[Path]) -> int:
+    """skip=true when the newest packet on the branch already belongs to the CURRENT hour (the VM built it)."""
+    import subprocess
+    r = subprocess.run(["git", "show", f"{ref}:comms/desk/latest_scan.json"], capture_output=True, text=True, cwd=ROOT)
+    skip = False
+    if r.returncode == 0:
+        try:
+            skip = bar_of(json.loads(r.stdout)["info_cutoff_at"]) == _iso(
+                datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0))
+        except (ValueError, KeyError):
+            skip = False
+    print(f"desk-wake-marker gate: skip={'true' if skip else 'false'}")
+    if out:
+        with out.open("a") as f:
+            f.write(f"skip={'true' if skip else 'false'}\n")
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--self-test", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
+    g = sub.add_parser("gate")
+    g.add_argument("--ref", default="origin/desk/decisions")
+    g.add_argument("--github-output", type=Path, default=None)
     for name in ("post", "fail"):
         s = sub.add_parser(name)
         s.add_argument("--run-url", default="")
@@ -192,6 +216,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         ap.error("a command (post|fail) is required")
     import os
 
+    if a.cmd == "gate":
+        return _gate(a.ref, a.github_output)
     from live_review_wake import ops_flags_pr
     pr = a.pr or ops_flags_pr()
     repo = os.environ.get("GITHUB_REPOSITORY", REPO)
@@ -228,7 +254,9 @@ def _self_test() -> int:
     e = {"bar": "2026-10-26T16:00:00Z", "packet_id": "DP-x", "packet_sha": "a" * 64, "commit": "b" * 40, "context": c}
     body = render_wake(e, now)
     m = parse_markers([{"body": body}])
+    other = dict(e, packet_id="DP-y")  # a second packet in the same bar must not wake again
     ok = ok and m and m[0]["packet_id"] == "DP-x" and plan_post(e, m) == "already_posted" and plan_post(e, []) == "post"
+    ok = ok and plan_post(other, m) == "already_posted" and plan_post(dict(other, bar="2026-10-26T17:00:00Z"), m) == "post"
     f = parse_markers([{"body": render_fail("Build the scan packet", "2026-10-26T16:00:00Z", now)}])
     ok = ok and plan_fail("2026-10-26T16:00:00Z", f) == "already_posted" and plan_fail("2026-10-26T17:00:00Z", f) == "post"
     print("desk-wake-marker self-test:", "PASS" if ok else "FAIL")

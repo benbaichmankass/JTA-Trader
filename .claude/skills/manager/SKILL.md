@@ -143,20 +143,22 @@ watcher (`src/runtime/live_review_rows_watch.py`) applies a qualifying `tighten_
 repo lane above (Sonnet LIVE-REVIEW lane with the skill).
 
 **Desk wake (DESK-6B, operator 2026-10-26: "the system landing the packet [is] what triggers the session").**
-The last steps of `.github/workflows/desk-scan-packet.yml`'s job post ONE comment on the same ops-flags PR (hidden
-marker `desk-wake`: `packet_id`, `packet_sha`, `commit`, `bar`, informational `context`) right after the packet commit
-lands on `desk/decisions`; nothing else posts one, and there is no timed or polled trigger. **On a `desk-wake`
-marker, `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b specifies** (`source_url` = this
-repo, `source_revision` and `outcome_branch` `desk/decisions`, `clone_depth` 1, `sparse_checkout_paths`
-[`.claude/skills/trading-desk`], Sonnet, `permission_mode` auto, tags `desk-wake` + `DESK-6-SHADOW-PILOT`, the WAKE
-PROMPT verbatim; the marker's `packet_id` is the packet it was posted for and it is already on the branch). One
-marker, one wake, no judgement: do not read the packet, do not spawn twice for a packet id. A comment of kind
-`could_not_build` is an incident, NOT a wake: the packet job failed at the named step and no session should start;
-fix the job or tell the operator. The VM's `desk_wake_watch` writes the receipt
-(`/api/diag/log_file?name=desk_wake_post_receipt`: `posted` / `already_recorded` / `awaiting_wake` / `wake_missing` /
-`could_not_build` / `could_not_look`) and a stopped or missed trigger is the `desk_wake_post` probe in
-`attention_watch` (one flag). The hourly spawner routine is retired; delete it once the first marker-spawned wake
-has written its row.
+The live trader (`src/runtime/desk_packet_wake.py`) builds the hourly 1h scan packet, lands it on `desk/decisions`
+and, in the same pass, posts ONE comment on the same ops-flags PR (hidden marker `desk-wake`: `packet_id`,
+`packet_sha`, `commit`, `bar`, informational `context`). `desk-scan-packet.yml` is only the fallback (GitHub's
+cron never fired it; `schedule-keeper` dispatches it for a missed hour and its gate step does nothing when the bar
+already has a packet). At most one marker per bar; nothing else posts one and there is no timed or polled trigger.
+**On a `desk-wake` marker, `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b specifies**
+(`source_url` = this repo, `source_revision` and `outcome_branch` `desk/decisions`, `clone_depth` 1,
+`sparse_checkout_paths` [`.claude/skills/trading-desk`], Sonnet, `permission_mode` auto, tags `desk-wake` +
+`DESK-6-SHADOW-PILOT`, the WAKE PROMPT verbatim; the marker's `packet_id` is the packet it was posted for and it is
+already on the branch). One marker, one wake, no judgement: do not read the packet, do not spawn twice for a packet
+id or a bar. A comment of kind `could_not_build` is an incident, NOT a wake. The receipt is
+`/api/diag/log_file?name=desk_wake_post_receipt` (`posted` / `already_recorded` / `awaiting_wake` / `wake_missing` /
+`could_not_build` / `could_not_commit` / `could_not_post` / `could_not_look`); a stopped or failing trigger is the
+`desk_wake_post` probe in `attention_watch` (one flag). `could_not_commit` with http 403 means the VM credential
+cannot write `desk/decisions`: tell the operator (the fallback workflow covers the hour meanwhile). The hourly
+spawner routine is retired; delete it once the first marker-spawned wake has written its row.
 
 ## Start of session
 
