@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "macro"))
-import check_news_calendar_feeds as C  # noqa: E402
+import check_producer_liveness as C  # noqa: E402
 import econ_calendar_produce as P  # noqa: E402
 
 NOW = datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc)
@@ -18,28 +18,28 @@ def _cal(tmp_path, *times):
 
 
 def test_horizon_ok_stale_and_could_not_look(tmp_path):
-    assert C.check_calendar_horizon(_cal(tmp_path, "2026-11-06T13:30:00Z"), NOW)["state"] == "ok"
-    assert C.check_calendar_horizon(_cal(tmp_path, "2026-10-30T13:30:00Z"), NOW)["state"] == "stale"
-    assert C.check_calendar_horizon(tmp_path / "missing.yaml", NOW)["state"] == "could_not_look"
+    assert C.check_calendar_horizon(_cal(tmp_path, "2026-11-06T13:30:00Z"), NOW)["status"] == "fresh"
+    assert C.check_calendar_horizon(_cal(tmp_path, "2026-10-30T13:30:00Z"), NOW)["status"] == "stale"
+    assert C.check_calendar_horizon(tmp_path / "missing.yaml", NOW)["status"] == "could_not_look"
 
 
 def test_refresh_age(tmp_path):
     (tmp_path / "US-20261026T003922Z.fxstreet.json").write_text("{}")
-    assert C.check_calendar_refresh(tmp_path, NOW)["state"] == "ok"
+    assert C.check_calendar_refresh(tmp_path, NOW)["status"] == "fresh"
     old = datetime(2026, 10, 28, 12, tzinfo=timezone.utc)
-    assert C.check_calendar_refresh(tmp_path, old)["state"] == "stale"
-    assert C.check_calendar_refresh(tmp_path / "nope", NOW)["state"] == "could_not_look"
+    assert C.check_calendar_refresh(tmp_path, old)["status"] == "stale"
+    assert C.check_calendar_refresh(tmp_path / "nope", NOW)["status"] == "could_not_look"
 
 
 def test_news_states():
     row = lambda ts: {"present": True, "lines": [json.dumps({"ts": ts})]}  # noqa: E731
     crypto = {"db_state": "read", "packages": [{"symbol": "ETHUSDT"}]}
     flat = {"db_state": "read", "packages": [{"symbol": "SPY"}]}
-    assert C.check_news(row("2026-10-26T11:00:00+00:00"), crypto, NOW)["state"] == "ok"
-    assert C.check_news(row("2026-10-25T20:00:00+00:00"), crypto, NOW)["state"] == "stale"
-    assert C.check_news(row("2026-10-25T20:00:00+00:00"), flat, NOW)["state"] == "ok"
-    assert C.check_news({}, crypto, NOW)["state"] == "could_not_look"
-    assert C.check_news(row("2026-10-26T11:00:00+00:00"), {}, NOW)["state"] == "could_not_look"
+    assert C.check_news(row("2026-10-26T11:00:00+00:00"), crypto, NOW)["status"] == "fresh"
+    assert C.check_news(row("2026-10-25T20:00:00+00:00"), crypto, NOW)["status"] == "stale"
+    assert C.check_news(row("2026-10-25T20:00:00+00:00"), flat, NOW)["status"] == "fresh"
+    assert C.check_news({}, crypto, NOW)["status"] == "could_not_look"
+    assert C.check_news(row("2026-10-26T11:00:00+00:00"), {}, NOW)["status"] == "could_not_look"
 
 
 def test_emit_keeps_last_good_and_is_idempotent(tmp_path):

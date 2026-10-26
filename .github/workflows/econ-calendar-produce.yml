@@ -27,7 +27,7 @@ name: econ-calendar-produce
 # routinely maintained and updated data feeds, not one off uploads". Safeguards (scripts/macro/
 # econ_calendar_produce.py): only the `events:` list is rewritten; a run with no forward events keeps the
 # last good set (a failed fetch never blanks the file); unchanged output is byte-identical (no PR).
-# Liveness: macro-producer-liveness.yml runs scripts/macro/check_news_calendar_feeds.py daily.
+# Liveness: macro-producer-liveness.yml runs scripts/macro/check_producer_liveness.py daily, which now also watches the CONSUMED artifacts (calendar file, news log).
 # Checklist row DATA-FEEDS-NEWS-CALENDAR.
 #
 # Safe to merge BEFORE FMP_API_KEY is provisioned: the FMP fetch step is gated on the
