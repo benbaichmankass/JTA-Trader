@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-FLOOR-20261026",
+  "title": "Research runnable-floor top-up 2026-10-26: 34 pre-registered units (exit levers, calendar event studies, 1h regime-head learners)",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane RESEARCH-FLOOR-20261026] MEASURED 2026-10-26 13:30Z: runnable 32 vs computed floor 61 (fired_24h 76); H1-THEME short: regime 3/14, new_strategy_prop 0/17, ml_health 2/9, live_strategy 11/12. Authored RQ-20261026-ed1c-01..34: 19 exit-lever units (exit_lever_ablation; direction filter, ER/CHOP path-state trail, ADX trail, stale exit, break-even floor on legs with no such arm), 9 calendar event studies at zero trade weight (macro_event_study_run sign book, full cost stack, distinct-release n), 6 regime-head learner families at 1h. After the add the dispatch dry run lists runnable 65 vs floor 61 and every unit would_dispatch. DESK-7 D-S0 units NOT authored: no PR open and no shared replay harness exists (row DESK-7 is queued, no lane); a unit with no runnable harness is not dispatchable. Prop theme remains short (4 of 17): the P1-Q7 prop nodes need E65's window read first. Hand-authored queue units hold for a human under E57: PR is HELD, merging it is the manager's act. landed_unproven until the dispatcher fires them and results land: observation = ls research/results | grep ed1c; python3 scripts/ci/check_research_queue_health.py.",
+  "updated_at": "2026-10-26T13:46:21Z",
+  "updated_by": "session_017mUmkE1C7PvyA37o3nWGHQ",
+  "observation": {
+    "what": "the ed1c units are dispatched and their results land on main",
+    "how_to_check": "ls research/results | grep ed1c | wc -l",
+    "due_by": "2026-10-29T00:00Z"
+  },
+  "roadmap": [
+    "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "none: operations top-up",
+    "arch": "none: no component changed"
+  },
+  "_seq": 717
+}

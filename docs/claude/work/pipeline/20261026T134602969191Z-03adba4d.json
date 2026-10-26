@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-7O3NWGHQ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-FLOOR-20261026 (session_017mUmkE1C7PvyA37o3nWGHQ)",
+    "rerun": "python3 -c \"import sys;sys.path.insert(0,'.');from scripts.macro import econ_event_study as m;print(len(m.load_resolved_events_multi(['comms/macro/econ_calendar_snapshots.jsonl','comms/macro/econ_calendar_snapshots_survey_backfill.jsonl'],'initial_jobless_claims')))\""
+  },
+  "state": "queued",
+  "what": "RQ-20261026-901 power basis and the CALENDAR-EVENT-TYPES row note cite 1,170 initial_jobless_claims releases; MEASURED 2026-10-26 the merged one-row-per-release-date population macro_event_study_run.py grades is 599 (1,170 counts snapshot rows). Distinct releases: retail_sales_mom 143, ppi_mom 140, cpi_mom 140, durable_goods_orders 139, jolts 136 (note said 547/542/534/271/269); cpi_mom has only 86 non-zero surprises. 599 still clears 901's min_n 100 and its rho 0.20 / alpha 0.01 floor of ~292, so the verdict is not at risk, but the power block overstates n ~2x. Fix: correct expected_n to 599 in RQ-20261026-901 (basis text only, no rule change) and the row note. RQ-20261026-ed1c-20..28 already use distinct-release counts."
+}
