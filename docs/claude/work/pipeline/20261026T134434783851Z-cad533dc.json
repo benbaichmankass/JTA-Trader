@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261026-C1PVMNFJ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "proof-sweep lane session_01PJfTCUpRrd8Lj4c1pVmNFj, manager request 2026-10-26T13:43Z; row SSH-LOGIN-ATTRIB-1024",
+    "rerun": "python3 scripts/ops/ssh_auth_sweep.py --since 2026-10-25T18:00:00Z --until 2026-10-26T13:30:00Z --trainer-ip <trainer>  (expect 63 non-trainer accepts, all key last4 Xoek), then list Actions runs in the window"
+  },
+  "state": "queued",
+  "what": "SSH: ~57 of the 63 non-trainer deploy-key logins on the live VM (2026-10-25T18:00Z..10-26T13:30Z; sweep full coverage, unreadable=[]; all ubuntu/publickey, key last4 Xoek, 20 source classes) are NOT matched to a GitHub Actions run. Health Snapshot (~every 6h, 2 accepts per run) explains ~6. NEXT: match each accept to a workflow run by timestamp (diag-relay, system-action, health-snapshot, any cron SSH step); build a detector (extend scripts/ops/ssh_auth_sweep.py) that flags an accept with no run within +/-60s, and run it in the Saturday 2026-10-31 /health-review. Done when every accept in a >=24h window is matched or the unmatched ones are named. Not a real-money finding; security watch item, same key as the already-attributed logins."
+}
