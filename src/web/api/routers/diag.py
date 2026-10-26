@@ -3701,14 +3701,18 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
 
     ``read_state`` is ``looked`` or ``could_not_look``, never collapsed:
     ``due_count`` is ``null`` -- not ``0`` -- when we could not look, and a
-    caller must not treat that as "nothing due". ``events_not_evaluated`` names
-    the design events whose inputs this does not read yet (swing, vol_regime,
-    funding, calendar, mechanics), so "not checked" never reads as "did not
-    fire". ``reviews_state`` (absent / read / unreadable) states whether the
-    dedupe log was there.
+    caller must not treat that as "nothing due". Market triggers
+    (LTR-1B): ``swing`` / ``vol_regime`` from ``position_path_history``,
+    ``funding`` from ``exchange_funding``, ``calendar`` from
+    ``config/economic_calendar.yaml``, ``mechanics`` (journal half) from
+    telemetry rows whose trade is absent. Each due package lists the events it
+    could not evaluate in ``events_could_not_look`` with the reason;
+    ``events_not_evaluated`` names the design clauses not read at all
+    (``mechanics_venue``, ``vol_regime_cell``). ``reviews_state`` (absent /
+    read / unreadable) states whether the dedupe log was there.
 
-    Pure read: one read-only SQLite connection plus two file reads; no socket,
-    no order path, writes nothing. Tier 1, token-gated.
+    Pure read: read-only SQLite connections (journal + funding store) and three
+    file reads; no socket, no order path, writes nothing. Tier 1, token-gated.
     """
     _require_diag_token(request)
     from src.runtime.live_review_due import live_review_due

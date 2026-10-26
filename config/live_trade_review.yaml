@@ -32,10 +32,50 @@ due:
       # Real-money and prop accounts only (design section 2 "Floor"). Each id
       # must exist in config/accounts.yaml (tests/test_live_review_due.py).
       accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, breakout_2, tradeify_1, velotrade_1]
-  # Events the design names whose inputs the due computation does not read yet
-  # (candles, funding, calendar, venue). Surfaced as `events_not_evaluated`
-  # so "not checked" is never read as "did not fire".
-  not_evaluated: [swing, vol_regime, funding, calendar, mechanics]
+    # -- market triggers (LTR-1B-MARKET-TRIGGERS, 2026-10-26) -----------------
+    # Registered here BEFORE first use. Basis for every number: the design § 2
+    # events table (docs/plans/live-trade-review-DESIGN.md, operator-approved
+    # 2026-10-25), copied unchanged. Inputs are what the VM already writes:
+    # position_path_history (per-bar close + the Wilder-14 ATR the exit loop
+    # stores), exchange_funding (the funding puller) and
+    # config/economic_calendar.yaml (the news layer's calendar). Each event says
+    # per package whether it LOOKED or COULD NOT LOOK (`events_could_not_look`).
+    swing:
+      # |close(bar t) - close(bar t-1)| >= atr_multiple x ATR(bar t-1), the
+      # close being the last exit-loop pass of that bar (to within one pass).
+      atr_multiple: 2.0
+    vol_regime:
+      # ATR(now) / ATR(entry bar). Entry ATR is the first history bar, used
+      # only when that bar is within one bar of entry (bars_held), else
+      # could_not_look. The design's "(trend, vol) cell changed" clause is NOT
+      # evaluated: the vol bucket edges live in the trainer registry only.
+      expand_ratio: 1.5
+      contract_ratio: 0.67
+    funding:
+      # Crypto perps only. The latest settlement the account PAID on this symbol
+      # within `window_hours`, with |rate| >= assumption_multiple x the
+      # backtest's assumption (execution_costs.funding_bps_per_window_for).
+      assumption_multiple: 3.0
+      window_hours: 9
+    calendar:
+      # A scheduled event of a class declared for the symbol's base, with
+      # impact >= min_impact, inside the next bar of the leg. A calendar whose
+      # newest event is in the past is STALE: could_not_look, never "no event".
+      min_impact: 0.8
+    mechanics:
+      # Journal half only: the exit loop is still writing telemetry for the
+      # package (fresh within telemetry_max_age_minutes) but the trade row it
+      # names is absent from `trades`. The venue half has no stored read on
+      # the VM (see not_evaluated).
+      journal_trade_absent: true
+  # Design clauses whose inputs the due computation does not read yet.
+  # Surfaced as `events_not_evaluated` so "not checked" is never read as
+  # "did not fire".
+  #   mechanics_venue  -- live SL/TP at the venue vs the package: no stored
+  #                       venue read exists on the VM (a live venue call or a
+  #                       trader-side snapshot would be needed; Tier 2).
+  #   vol_regime_cell  -- the (trend, vol) cell change since entry.
+  not_evaluated: [mechanics_venue, vol_regime_cell]
   # Per-package cooldown: at most one review per closed bar of the leg's
   # timeframe, except for these events.
   cooldown_exempt: [giveback, mechanics]

@@ -130,7 +130,7 @@ def test_payload_looked_zero_vs_could_not_look(tmp_path):
     rv.write_text(json.dumps(review(at=NOW - timedelta(hours=1))) + "\n")
     out = lrd.live_review_due(db_path=db, reviews_path=str(rv), now=NOW)
     assert out["read_state"] == "looked" and out["due_count"] == 0 and out["open_count"] == 1
-    assert out["reviews_state"] == "read" and "mechanics" in out["events_not_evaluated"]
+    assert out["reviews_state"] == "read" and "mechanics_venue" in out["events_not_evaluated"]
     bad = lrd.live_review_due(db_path=str(tmp_path / "missing.db"), reviews_path=str(rv), now=NOW)
     assert bad["read_state"] == "could_not_look"
     assert bad["due_count"] is None and bad["open_count"] is None and bad["reason"]
