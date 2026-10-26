@@ -23,7 +23,7 @@ def due(*pkgs):
 def pkg(pid="pkg-1", acct="bybit_2", events=(("r_milestone", 1),)):
     return {"order_package_id": pid, "leg": "ada_pullback_2h", "symbol": "ADAUSDT", "account_id": acct,
             "telemetry_updated_at": NOW.isoformat(),
-            "events": [{"event": e, "level": l, "why": "x"} for e, l in events]}
+            "events": [{"event": e, "level": lvl, "why": "x"} for e, lvl in events]}
 
 
 def posted_from(plan, at):
