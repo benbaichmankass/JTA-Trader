@@ -568,6 +568,15 @@ _ATTENTION_WATCH_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "attention_watch_receipt.json"
 )
 
+# LTR-1B B2b (2026-10-26). The live trader's in-process ltr-wake poster's
+# receipt: posted / could_not_post (+ http_code) / already_posted / nothing_due
+# / due_could_not_look, so "did not post" and "could not post" are readable
+# apart. Holds no credential. Same anchor as the writer
+# (src.runtime.live_review_wake_post.receipt_path).
+_LTR_WAKE_POST_RECEIPT = (
+    Path(repo_root()) / "runtime_logs" / "ltr_wake_post_receipt.json"
+)
+
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
 # present only if old code wrote it -- the next trail pass moves it aside), its
@@ -597,6 +606,8 @@ _LOG_FILES: dict[str, Path] = {
     "telegram_settings": _TELEGRAM_SETTINGS,
     # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
+    # LTR-1B B2b: did the VM post the ltr-wake comment, and if not, why.
+    "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
     "bot_log": _BOT_LOG,
