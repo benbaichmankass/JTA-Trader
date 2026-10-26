@@ -64,6 +64,12 @@
       "cf_r_shadow_0_5": {"type": ["number", "null"]},
       "cf_method": {"type": ["string", "null"]},
       "cf_provenance": {"type": "string", "enum": ["computed"]},
+      "action": {"type": ["string", "null"], "_comment": "LTR-5: the review's recommendation.action this outcome grades (denormalised for the join; reviews.jsonl is the source)."},
+      "applied": {"type": ["boolean", "null"], "_comment": "LTR-5: whether the call was applied (reviews.applied at review time)."},
+      "rec_r": {"type": ["number", "null"], "_comment": "LTR-5: net R had the recommendation been followed (applied: the realised net_r; unapplied: the replayed path). null = not priceable."},
+      "delta_r": {"type": ["number", "null"], "_comment": "LTR-5: rec_r - cf_r = the value of following the call over holding, net of the full cost stack. 0.0 for a call that changes no path (hold / no_recommendation / flag_mechanics). null = could not price. CJ-2 should read this field, not net_r - cf_r, for an unapplied tighten."},
+      "cf_cost_stack": {"type": ["string", "null"], "_comment": "LTR-5: where the replayed exit's costs came from (recorded trade legs + execution_costs.resolve_cost_policy slippage)."},
+      "replay_fidelity": {"type": ["string", "null"], "_comment": "LTR-5: replay_matches_realised | replay_mismatch | unvalidated (an applied call has no untouched realised path to check against)."},
       "exit_reason": {"type": ["string", "null"]}
     }
   }

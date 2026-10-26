@@ -243,7 +243,7 @@ These are on top of the LTR-2 schema:
 
 - Not the protection. Venue SL/TP and the VM trail protect every position every ~30 s, whatever the reviewer does.
 - Not an exit-rule designer. A pattern that repeats 3 or more times (same leg, same state bucket, same action) becomes an `exit-refinement` unit (design § 5). The reviewer's success measure is making itself unnecessary for each pattern it finds.
-- Not a grader of closed trades. That is `/performance-review` (LTR-5 adds its "Live review" section).
+- Not a grader of closed trades. That is `/performance-review`, whose "Live review" section (LTR-5) prices every review against holding with `scripts/research/live_review_counterfactual.py` and grades the reviewer's calibration by `evidence_source` via `scripts/ops/live_review_grade.py`.
 
 ## 6. Composes with
 

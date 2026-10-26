@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-09",
+    "kind": "date"
+  },
+  "id": "PI-20261026-XBFNSPWE-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane LTR-5-GRADING (session_016B1jT68ACGP6rixBFNSPWe)",
+    "rerun": "python3 scripts/ops/live_review_grade.py --live --json | python3 -c \"import sys,json;d=json.load(sys.stdin);print(d['q1_policy_comparison']['population'])\""
+  },
+  "state": "queued",
+  "what": "Q1 (live 0.25R vs shadow 0.5R) cannot be read off judgement-basis tightens: a judgement tighten records apply_policy.within_bound and shadow_policy.within_bound as null (no table EV), so it falls out of the paired comparison as policy_undefined. MEASURED 2026-10-26: 0 tighten_sl rows in 32 reviews on main, so n=0 and the verdict is INDETERMINATE by population, not by effect. Decide how Q1 is answered once tightens are judgement-backed: either record an ex-ante cost estimate on judgement rows, or compare the policies ex-post on replay-priced delta_r (cost = hold_r - rec_r). Operator preference, no data settles it."
+}
