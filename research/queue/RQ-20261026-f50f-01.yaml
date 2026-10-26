@@ -1,0 +1,90 @@
+id: RQ-20261026-f50f-01
+title: 'Live-trade-review due-event thresholds: which config/live_trade_review.yaml trigger values maximise the out-of-sample value of looking minus review cost on the real-money + prop legs?'
+status: queued
+cadence: once
+roadmap:
+- L-DESK
+- L-ATM
+theme: live_strategy
+priority: 2
+kind: experiment
+question: >-
+  Operator ask 2026-10-26 ~21:06Z ("can we try optimizing their thresholds?"), lane LTR-TRIGGER-TUNE. Every due-event threshold in
+  config/live_trade_review.yaml (r_milestone, new_peak, giveback, near_target, swing, vol_regime) is an UNFITTED design default
+  (docs/plans/live-trade-review-DESIGN.md section 2). On bar-by-bar replays of the six rostered real-money + prop crypto legs' Stage-0
+  evidence trades (ada_pullback_2h, xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop,
+  trend_donchian_sol_prop; 711 of 1,110 trades have committed candles), with the reviewer modelled as the LTR-0 pricing step, does any
+  single threshold value beat its default on (value of reviewing at the firing bar - c_R per review) per package, out of sample, in >= 3
+  of 4 chronological walk-forward folds by >= 0.01 R at BOTH c_R = 0.02 and c_R = 0.10?
+why_this_matters: >-
+  The triggers decide when a Sonnet review session (~$0.82 each, MEASURED below) looks at a live package, and a look is only worth paying
+  for if what the reviewer can do at that moment beats holding. No threshold has ever been fitted. Prior work searched: no research/queue
+  unit tunes these values (grep live_review / LTR over research/queue: RQ-20261007-024/-040/-041 and RQ-20261026-bf56-01 are exit-lever
+  and candle-source units, not trigger tuning). LTR-0 (scripts/research/live_review_outcomes.py) is the pricing tool reused here.
+power:
+  expected_n: 711
+  min_detectable_effect: 0.01
+  effect_units: r_per_package
+  design: walk_forward_paired
+  alpha: 0.05
+  power: 0.5
+  basis: >-
+    711 replayed trades (population-only dry run of the harness, pre-registration, 2026-10-26: ada 61/61, xrp_pb 55/55, eth_4h 198/208,
+    xrp_4h 46/46, eth_prop 163/163, sol_prop 188/577; the rest have no committed candles). Fold blocks are ~1/5 of each leg; a fold rule
+    over 4 folds, not a t-test, is the decision statistic, so power is stated as a rough INFERRED figure only.
+  feasibility:
+    source: committed
+    accrual_basis: Re-measurement of committed evidence trade lists and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-F50F-01-LTR-TRIGGERS
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/live_review_trigger_tune.py (defaults: --folds 4 --act-margin-r 0.05 --usd-per-review 0.815). Per leg, trades sorted
+    by entry and cut into 5 chronological blocks; fold k = 1..4 tests block k with the LTR-0 table built from blocks 0..k-1 only. Due events
+    are replayed at each bar close with the src/runtime/live_review_due.py rules (dedupe on (event, level), new_peak vs last reviewed peak,
+    one review per bar, daily_floor 24 h always on). At a review the modelled reviewer applies the best LTR-0 action among atr:1.0, atr:1.5,
+    atr:2.0, r:1.0, r:2.0 when its train-table mean beats HOLD by >= 0.05 R on a cell with n >= 20 and its level sits >= 1.0 entry-ATR below
+    the mark (min_buffer_atr); a thin cell is no_recommendation (hold). Actions stack (tightest stop wins). value_R = realised net R of the
+    stacked path - recorded net R (full cost stack). Objective per fold = (sum value_R - c_R x reviews) / trades, pooled over the six legs.
+    Grids, one threshold at a time with the rest at default: r_milestone.first_r {0.5,1,1.5,2,3,off}; r_milestone.step_r {0.5,1,1.5,2};
+    new_peak.step_r {0.25,0.5,1,1.5,2,off}; giveback.min_peak_r {0.5,1,1.5,2,3,off}; giveback.min_giveback_r {0.25,0.5,0.75,1,1.5};
+    giveback.giveback_frac_of_peak {0.2,0.3,0.4,0.5}; near_target.max_r_to_target {0.25,0.5,1,off}; swing.atr_multiple {1.5,2,2.5,3,off};
+    vol_regime.expand_ratio {1.25,1.5,2,2.5,off}; vol_regime.contract_ratio {0.5,0.67,0.8,off}.
+  rule: >-
+    For each threshold, the candidate is the grid value with the highest pooled objective summed over folds and both c_R levels. CHANGE
+    the default to the candidate iff the candidate beats the default's objective by >= 0.01 R per package in >= 3 of 4 folds at c_R = 0.02
+    AND at c_R = 0.10 (the two levels span $/R of ~$8 to ~$40 at $0.815 per review; $/R is not measured by this unit). Otherwise KEEP the
+    default. A KEEP is a valid, expected outcome and closes only this configuration (modelled reviewer = LTR-0 table, these grids, this
+    corpus), never the question: graded live reviews (comms/live_review/outcomes.jsonl) are the refinement. funding, calendar and mechanics
+    get NO tuning (no per-settlement funding history, a calendar stale since 2026-07-30, and mechanics is a bug detector whose value is not
+    an EV); daily_floor is a policy floor (design section 2) and is not tuned; cooldown is a no-op at bar granularity and is not tuned.
+    Fire rate per open-package-day and event co-firing at the defaults are REPORTED, not graded. Thresholds and grids are not changed after
+    any result.
+  what_it_does_not_do: >-
+    Does not edit config/live_trade_review.yaml in this PR (a change that clears the rule ships as a SEPARATE held PR the manager merges);
+    does not touch apply_mode, mandates or min_buffer_atr; does not model Claude judgement on thin cells (counted per firing instead); does
+    not price partial_close (a linear mix of hold and close, so never the EV-maximising choice) or close (operator's call; LTR-0 does not
+    price it); does not use live closed trades (position_path_history needs a VM pull; the live corpus is days old). Bar-close evaluation
+    understates live intra-bar firing. Not a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.3
+  bucket: structural
+  basis: 'review spend: ~4-12 Sonnet reviews/day x $0.815 (MEASURED mean of 6 LIVE-REVIEW lanes 2026-10-26) ~ $100-300/month; a fitted threshold could move a share of that, plus the EV of better-timed looks.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 20
+  basis: Estimate; pure-python replay over 711 trades x 47 grid configs.
+  why_runner: committed corpus and candles only; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/live_review_trigger_tune.py
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261026-f50f-01
