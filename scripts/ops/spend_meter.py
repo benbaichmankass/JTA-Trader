@@ -317,6 +317,35 @@ def _rate_line(records: list[dict], window: str) -> str | None:
 #: models; re-measure with --pp-per-lane-hour when a better reading exists.
 PP_PER_LANE_HOUR = 1.0
 LANES_MIN, LANES_MAX = 1, 5
+#: readings older than this (relative to the newest) are outside the calibration window
+CALIBRATION_WINDOW_H = 24.0
+
+
+def calibrate_pp_per_lane_hour(records: Iterable[dict], lane_hours: float | None, *,
+                               window_h: float = CALIBRATION_WINDOW_H) -> dict:
+    """pp per lane-hour from consecutive weekly readings: (last% - first%) / ``lane_hours``, over the
+    readings within ``window_h`` of the newest. ``lane_hours`` is the lane-hours run between the first
+    and last of those readings (session create/archive times, or the manager's --lane-hours); the
+    basis is returned. < 2 readings, no lane-hours, or a non-increasing pair -> the module constant,
+    flagged ``inferred`` (a reset between readings makes the pair non-increasing)."""
+    fallback = {"value": PP_PER_LANE_HOUR, "basis": "inferred",
+                "why": "constant: no usable calibration"}
+    wk = sorted((r for r in records if r.get("window") == "weekly"),
+                key=lambda r: _parse_ts(r["read_at"], "read_at"))
+    if not wk:
+        return {**fallback, "why": "constant: no weekly readings"}
+    newest = _parse_ts(wk[-1]["read_at"], "read_at")
+    win = [r for r in wk if (newest - _parse_ts(r["read_at"], "read_at")).total_seconds() <= window_h * 3600]
+    if len(win) < 2:
+        return {**fallback, "why": f"constant: {len(win)} reading(s) in the {window_h:.0f}h window"}
+    if not lane_hours or lane_hours <= 0:
+        return {**fallback, "why": "constant: --lane-hours not given for the window"}
+    dpp = float(win[-1]["percent"]) - float(win[0]["percent"])
+    if dpp <= 0:
+        return {**fallback, "why": "constant: usage did not rise across the window (reset or no change)"}
+    return {"value": round(dpp / lane_hours, 3), "basis": "measured",
+            "why": f"{win[0]['percent']:.0f}% -> {win[-1]['percent']:.0f}% over {lane_hours:g} lane-hours "
+                   f"({len(win)} readings, {win[0]['read_at']} .. {win[-1]['read_at']})"}
 #: A reading older than this is the first thing to fix, not a basis for dispatch.
 READING_STALE_H = 12.0
 _RESET_IN_NOTE = re.compile(r"reset\s+(?:[A-Za-z]{3}\s+)?(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})Z?")
@@ -810,6 +839,18 @@ def _selftest() -> int:
                    now=cap_now)["state"] == "reading_from_past_week")
     check("render names the formula", "(100 - 73)" in "\n".join(render_capacity(c)))
 
+    print("— calibration: pp per lane-hour from readings —")
+    rd = [dict(wk, percent=44.0, read_at="2026-10-26T06:14:00Z"), dict(wk, percent=50.0, read_at="2026-10-26T13:27:00Z")]
+    k = calibrate_pp_per_lane_hour(rd, 30.0)
+    check("measured: 6 pp / 30 lane-hours = 0.2", k["basis"] == "measured" and abs(k["value"] - 0.2) < 1e-9)
+    check("one reading -> inferred constant", calibrate_pp_per_lane_hour(rd[:1], 30.0)["basis"] == "inferred"
+          and calibrate_pp_per_lane_hour(rd[:1], 30.0)["value"] == PP_PER_LANE_HOUR)
+    check("no lane-hours -> inferred", calibrate_pp_per_lane_hour(rd, None)["basis"] == "inferred")
+    check("reset between readings (drop) -> inferred",
+          calibrate_pp_per_lane_hour([rd[1], dict(rd[0], read_at="2026-10-26T14:00:00Z")], 10.0)["basis"] == "inferred")
+    check("old reading outside the window is ignored",
+          calibrate_pp_per_lane_hour([dict(rd[0], read_at="2026-10-24T06:00:00Z"), rd[1]], 30.0)["basis"] == "inferred")
+    check("no readings -> inferred", calibrate_pp_per_lane_hour([], 5.0)["basis"] == "inferred")
     print("— measured reserve: runs/day x pp per run, capped by the § 6.4 bound —")
     check("measured reserve formula", abs(measured_reserve_pp(3.0, 12.0, 0.1) - (2 + 3 * 1.7)) < 1e-9)
     cmr = capacity(LoadResult(records=[wk]), now=cap_now, live_open=7, review_runs_day=12.0)
@@ -898,7 +939,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--capacity", action="store_true",
                     help="sustainable rate and suggested lane count (manager operating loop, step 2)")
     ap.add_argument("--reset-at", default=None, help="weekly reset time (ISO); else read from the reading's note")
-    ap.add_argument("--pp-per-lane-hour", type=float, default=PP_PER_LANE_HOUR)
+    ap.add_argument("--pp-per-lane-hour", type=float, default=None,
+                    help="override; default = calibrated from readings + --lane-hours, else the constant (inferred)")
+    ap.add_argument("--lane-hours", type=float, default=None,
+                    help="lane-hours run between the first and last weekly reading in the last 24h")
     ap.add_argument("--live-open", type=int, default=None,
                     help="with --capacity: open live/prop packages (from live_review_due); "
                          "absent = exposure_unknown (reserve sized at the roster bound)")
@@ -941,11 +985,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.live_open is not None and args.live_open < 0:
             print("spend_meter: --live-open must be >= 0", file=sys.stderr)
             return 2
-        c = capacity(read_readings(store), reset_at=args.reset_at,
-                     pp_per_lane_hour=args.pp_per_lane_hour, live_open=args.live_open,
+        log = read_readings(store)
+        cal = ({"value": args.pp_per_lane_hour, "basis": "operator override", "why": "--pp-per-lane-hour"}
+               if args.pp_per_lane_hour is not None
+               else calibrate_pp_per_lane_hour(log.records, args.lane_hours))
+        c = capacity(log, reset_at=args.reset_at,
+                     pp_per_lane_hour=cal["value"], live_open=args.live_open,
                      review_runs_day=review_runs_per_day(Path(args.review_log)),
                      review_pp_per_run=args.review_pp_per_run)
-        print(json.dumps(c, indent=2) if args.json else "\n".join(render_capacity(c)))
+        c["pp_per_lane_hour_basis"] = cal["basis"]
+        c["pp_per_lane_hour_why"] = cal["why"]
+        if args.json:
+            print(json.dumps(c, indent=2))
+        else:
+            print("\n".join(render_capacity(c)))
+            print(f"  pp/lane-hour basis: {cal['basis']} -- {cal['why']}")
         return 0
 
     if args.section_5:
