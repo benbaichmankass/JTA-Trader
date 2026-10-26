@@ -577,10 +577,10 @@ _LTR_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "ltr_wake_post_receipt.json"
 )
 
-# DESK-6 (2026-10-26). The live trader's in-process desk-wake poster's receipt:
-# posted (+ packet context) / already_posted / could_not_look
-# (+ reason) / could_not_post. Holds no credential. Same anchor as the writer
-# (src.runtime.desk_wake_post.receipt_path).
+# DESK-6B (2026-10-26). The live trader's desk-wake WATCH receipt (the packet job posts the
+# wake; this reads whether it fired): posted / already_recorded / awaiting_wake /
+# wake_missing / could_not_build / could_not_look (+ reason). Holds no credential. Same
+# anchor as the writer (src.runtime.desk_wake_watch.receipt_path).
 _DESK_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "desk_wake_post_receipt.json"
 )
@@ -627,7 +627,7 @@ _LOG_FILES: dict[str, Path] = {
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     # LTR-1B B2b: did the VM post the ltr-wake comment, and if not, why.
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
-    # DESK-6: did the VM gate the hour and post the desk-wake, and if not, why.
+    # DESK-6B: did the packet landing post the desk-wake, and if not, why.
     "desk_wake_post_receipt": _DESK_WAKE_POST_RECEIPT,
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,

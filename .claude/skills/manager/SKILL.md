@@ -142,19 +142,21 @@ watcher (`src/runtime/live_review_rows_watch.py`) applies a qualifying `tighten_
 `/api/diag/log_file?name=live_review_rows_watch`. A package whose `packet_state` is not `built` falls back to the
 repo lane above (Sonnet LIVE-REVIEW lane with the skill).
 
-**Desk wake (DESK-6B, operator 2026-10-26 ~16:30Z: "the VM is in charge of having the timer").** The live trader
-(`src/runtime/desk_wake_post.py`, kicked from the tick loop) reads the hourly scan packet's pointer on
-`desk/decisions` and, every 1h bar (no activity gate; crypto is 24/7), posts ONE comment on the same ops-flags
-PR (hidden marker `desk-wake`: `bar`, `packet_id`, `packet_sha`, informational `context`; deduped per bar). **On a `desk-wake`
-marker, `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b specifies** (`source_url` = this repo,
-`source_revision` and `outcome_branch` `desk/decisions`, `clone_depth` 1, `sparse_checkout_paths`
+**Desk wake (DESK-6B, operator 2026-10-26: "the system landing the packet [is] what triggers the session").**
+The last steps of `.github/workflows/desk-scan-packet.yml`'s job post ONE comment on the same ops-flags PR (hidden
+marker `desk-wake`: `packet_id`, `packet_sha`, `commit`, `bar`, informational `context`) right after the packet commit
+lands on `desk/decisions`; nothing else posts one, and there is no timed or polled trigger. **On a `desk-wake`
+marker, `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b specifies** (`source_url` = this
+repo, `source_revision` and `outcome_branch` `desk/decisions`, `clone_depth` 1, `sparse_checkout_paths`
 [`.claude/skills/trading-desk`], Sonnet, `permission_mode` auto, tags `desk-wake` + `DESK-6-SHADOW-PILOT`, the WAKE
-PROMPT verbatim; the marker's `packet_id` is the packet it was posted for). One marker, one wake, no judgement: do not read the packet, do not wake for a packet id you already
-spawned for (the VM posts only when the packet exists and has no `DD-*` row). A bar whose packet is missing posts nothing: receipt
-`/api/diag/log_file?name=desk_wake_post_receipt` reads `could_not_look` (named reason); `could_not_look` /
-`could_not_post` there are incidents (fix, or tell the operator), and a poster that stops running is the
-`desk_wake_post` probe in `attention_watch` (one flag). The hourly spawner routine is retired; delete it once the
-first VM-posted wake has written its row.
+PROMPT verbatim; the marker's `packet_id` is the packet it was posted for and it is already on the branch). One
+marker, one wake, no judgement: do not read the packet, do not spawn twice for a packet id. A comment of kind
+`could_not_build` is an incident, NOT a wake: the packet job failed at the named step and no session should start;
+fix the job or tell the operator. The VM's `desk_wake_watch` writes the receipt
+(`/api/diag/log_file?name=desk_wake_post_receipt`: `posted` / `already_recorded` / `awaiting_wake` / `wake_missing` /
+`could_not_build` / `could_not_look`) and a stopped or missed trigger is the `desk_wake_post` probe in
+`attention_watch` (one flag). The hourly spawner routine is retired; delete it once the first marker-spawned wake
+has written its row.
 
 ## Start of session
 

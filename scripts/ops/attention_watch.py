@@ -96,7 +96,7 @@ SOAK_GRADE_MAX_DAYS = 8      # weekly (Sun 03:00Z) + one day of grace
 RESEARCH_MAX_HOURS = 36      # dispatcher lands results several times a day when healthy
 INFLIGHT_STALE_DAYS = 3      # an in_flight row nobody has touched in 3 days is not in flight
 MANAGER_SILENT_HOURS = 30    # one daily review + 6h grace
-DESK_WAKE_POST_MAX_HOURS = 3  # the VM poster writes its receipt every pass (~2 min); 3 h silent = it stopped
+DESK_WAKE_POST_MAX_HOURS = 3  # the VM watch writes its receipt every look (~5 min); 3 h silent = it stopped
 REALERT_HOURS = 24
 TOP_N = 8
 #: The mechanical soak (operator 2026-10-15): ``passed`` is a promotion candidate,
@@ -324,21 +324,26 @@ def probe_manager(now: datetime) -> dict:
 
 
 def probe_desk_wake_post(now: datetime) -> dict:
-    """The VM desk-wake poster (src/runtime/desk_wake_post.py) rewrites its receipt on EVERY pass,
-    whatever the gate said, so an old ``computed_at`` means the poster stopped (trader down or the
-    thread dead), not that nothing was due. A missing receipt is ``unknown``, never ``ok``."""
+    """The VM desk-wake watch (src/runtime/desk_wake_watch.py) rewrites its receipt on EVERY look.
+    Breached when the watch stopped (old ``computed_at``) or when it reports the trigger did not fire
+    (``wake_missing`` / ``could_not_build``). A missing receipt is ``unknown``, never ``ok``."""
     p = REPO_ROOT / "runtime_logs" / "desk_wake_post_receipt.json"
     if not p.exists():
-        return {"status": UNKNOWN, "detail": "desk_wake_post_receipt.json not found (poster never ran on this host)"}
+        return {"status": UNKNOWN, "detail": "desk_wake_post_receipt.json not found (the watch never ran on this host)"}
     try:
-        t = datetime.fromisoformat(str(json.loads(p.read_text()).get("computed_at")).replace("Z", "+00:00"))
+        doc = json.loads(p.read_text())
+        t = datetime.fromisoformat(str(doc.get("computed_at")).replace("Z", "+00:00"))
         if t.tzinfo is None:
             t = t.replace(tzinfo=timezone.utc)
     except (OSError, ValueError, AttributeError):
         return {"status": UNKNOWN, "detail": "desk_wake_post_receipt.json unreadable or has no computed_at"}
     hours = (now - t).total_seconds() / 3600
-    return {"status": BREACHED if hours > DESK_WAKE_POST_MAX_HOURS else OK,
-            "detail": f"desk-wake poster last ran {hours:.1f}h ago (bound {DESK_WAKE_POST_MAX_HOURS}h)"}
+    state = doc.get("state")
+    if hours > DESK_WAKE_POST_MAX_HOURS:
+        return {"status": BREACHED, "detail": f"desk-wake watch last ran {hours:.1f}h ago (bound {DESK_WAKE_POST_MAX_HOURS}h)"}
+    if state in ("wake_missing", "could_not_build"):
+        return {"status": BREACHED, "detail": f"desk wake trigger: {state} — {doc.get('reason') or doc.get('step') or ''}"}
+    return {"status": OK, "detail": f"desk-wake watch ran {hours:.1f}h ago; state {state}"}
 
 
 def _retired_accounts() -> set:
@@ -597,7 +602,7 @@ PROBE_LABEL = {
     "inflight": "in_flight rows gone quiet",
     "manager": "manager's register not written",
     "report": "scheduled work report missing or broken",
-    "desk_wake_post": "the VM desk-wake poster stopped running (no desk wakes will be posted)",
+    "desk_wake_post": "the desk-wake trigger stopped (watch silent, wake missing, or packet build failing)",
     **prop_trail_watch.LABELS,
     **prop_silence.LABELS,
     "prop_feed": "a prop account feed keeps failing (red-flagged; retrying on a capped backoff)",

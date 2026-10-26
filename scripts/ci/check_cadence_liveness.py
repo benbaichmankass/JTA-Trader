@@ -209,7 +209,8 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "receipt": None,
         "why": "commits its packet to the append-only desk/decisions branch, not to main, so main's history carries no receipt; "
                "the receipt is comms/desk/latest_scan.json built_at on that branch, which every desk wake reads and reports as "
-               "stale_packet when old, and a crashing run is observed by claude-run-failure-alert",
+               "stale_packet when old; since DESK-6B the same job posts the desk-wake marker, the VM desk_wake_watch writes desk_wake_post_receipt "
+               "(wake_missing / could_not_build / stale_packet raise the attention_watch desk_wake_post flag), and a crashing run is observed by claude-run-failure-alert",
     },
     "desk-decisions-mirror.yml": {
         "receipt": None,

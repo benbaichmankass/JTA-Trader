@@ -13,8 +13,8 @@
     20377
   ],
   "blocked_on": [],
-  "note": "[2026-10-26 lane DESK-WAKE-VM] src/runtime/desk_wake_post.py (kicked from the tick loop) posts ONE desk-wake marker on ops-flags #17895 every 1h bar, deduped per bar; NO activity/market gate (operator: crypto is 24/7; value is centralization). Only could_not_look (packet missing/stale/sha-mismatch) suppresses. Packet context rides the marker as information. Manager handler in manager SKILL 'Desk wake'; trading-desk SKILL 6b rewritten; receipt desk_wake_post_receipt; attention_watch probe desk_wake_post. Tier 2 by path: landing hold, manager merges. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first VM-posted desk-wake writes its row.",
-  "updated_at": "2026-10-26T16:46:30Z",
+  "note": "[2026-10-26 lane DESK-WAKE-VM] Packet landing IS the trigger (operator ~16:50Z): desk-scan-packet.yml's last steps run scripts/ops/desk_wake_marker.py post, ONE desk-wake marker on ops-flags #17895 carrying packet_id/sha/commit, deduped on packet id; failed build -> no wake, one could_not_build incident marker. Fallback chosen over the VM build (builder needs candle route + diag-token system book + two-file commit to the protected branch; too much runtime risk for this PR). VM src/runtime/desk_wake_watch.py (kicked from the tick loop) posts nothing; it writes desk_wake_post_receipt (posted/already_recorded/awaiting_wake/wake_missing/could_not_build/could_not_look) and attention_watch probe desk_wake_post flags a silent watch or wake_missing. Every hour wakes (crypto 24/7), no activity gate. Tier 2 by path: landing hold, manager merges. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first marker-spawned wake writes its row.",
+  "updated_at": "2026-10-26T16:53:39Z",
   "updated_by": "session_015CN5DWiRyr8w2y1TSR5ALz",
   "roadmap": [
     "L-DESK"
