@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-R5NY8N6S-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-6 (session_0158TMJbRQdBS9Wcr5nY8N6S), PR #20347",
+    "rerun": "create_session with no source_url and a prompt to create_or_update_file one line on live-review/rows; read get_session().post_turn_summary for 403 / landed"
+  },
+  "state": "queued",
+  "what": "Repo-less Claude sessions cannot write to a repo branch: MEASURED 2026-10-26 (lane DESK-6, 4 wakes): a session created with no source got 403 on create_or_update_file even after add_repo(access: push); one started on lane/desk-5-6 did not land a write to desk/decisions; one started with source_revision + outcome_branch = desk/decisions wrote (655a9c6). PR #20319's repo-less live-review REVIEWER-BRIEF assumes a no-source session can CAS-write live-review/rows, so it likely cannot land rows as designed: start the reviewer ON live-review/rows (spawner pattern, .claude/skills/trading-desk/SKILL.md 6b) and re-test before relying on it."
+}

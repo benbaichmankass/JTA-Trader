@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-R5NY8N6S-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-6 (session_0158TMJbRQdBS9Wcr5nY8N6S), PR #20347",
+    "rerun": "grep -n desk scripts/ops/attention_watch.py (expect no desk probe) and git show origin/desk/decisions:comms/desk/latest_scan.json"
+  },
+  "state": "queued",
+  "what": "Desk heartbeat probe (design 12, trading-desk SKILL.md 6): nothing alarms when the desk routine stops writing rows. Add an attention_watch probe: newest comms/desk/latest_scan.json built_at on desk/decisions vs the newest decisions.jsonl judged_at there; more than 2 packets without a row while the routine is installed = one flag (silence is an alarm)."
+}

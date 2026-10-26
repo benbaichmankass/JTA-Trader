@@ -2,22 +2,33 @@
   "id": "DESK-12-SANDBOX",
   "title": "Desk: bybit_1 sandbox per DECIDED answer: touch record + touched/untouched splits in soak_report.py, live-vs-backtest, cost fidelity, desk grading (Monday-critical)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01REDreBoJY5kB8gMKZ9wrbC",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20348
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 06:40Z manager] Unblocked: the LTR-6R apply path is merged and live (#20139 + #20199 apply_mode=apply, observed by dry run #20241 06:11Z); its records exist. Row LTR-6R-APPLY-PATH closes to landed_unproven in #20245.",
+  "note": "[2026-10-26 lane session_01REDreBoJY5kB8gMKZ9wrbC] PR #20348 (self-land): scripts/ops/touch_record.py (projection over trades.notes.sl_amends), soak_state untouched-only count, r3 cells untouched-only with touched_split beside, scripts/ops/touch_split.py + weekly step -> docs/claude/work/SOAK-TOUCH-SPLIT.md, desk grading hook (grading.applied/control). MEASURED 2026-10-26 via diag pull (realized_slippage.py pull): bybit_1 1583 closed non-backtest trades, 33 legs, 0 touched, 1535 join a package. CLOSES WHEN: a weekly soak-book-grade run lands SOAK-TOUCH-SPLIT.md on main AND a first applied amend (sl_amends entry) shows as touched>0 in it (until then the live probe is quiet; proven only by planted-touch tests). Open: sl_amends carries no approve/clip verdict (apply path is Tier 2); intent_id/decision_id null until DESK-4 writes them.",
   "priority_rank": 3,
-  "updated_at": "2026-10-26T06:33:15Z",
+  "updated_at": "2026-10-26T14:48:06Z",
   "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "observation": {
+    "what": "first weekly soak-book-grade run after merge lands docs/claude/work/SOAK-TOUCH-SPLIT.md on main; and a first applied sl_amends entry shows touched>0 in it",
+    "how_to_check": "read SOAK-TOUCH-SPLIT.md population line on main; python3 scripts/ops/touch_split.py over a diag pull (realized_slippage.py pull)",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "none: tooling for the DECIDED bybit_1 sandbox split; no milestone line changed",
+    "arch": "none: projection over trades.notes.sl_amends, no architecture change"
+  },
   "_seq": 679
 }
