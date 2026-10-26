@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 by path: src/runtime/live_review_rows_watch.py runs inside ict-trader-live and src/web/api/routers/diag.py ships to ict-web-api. Dispatched by the manager (session_01C1ooo4kqBbng7vytdG1UVs) as lane DESK-4-INTAKE, which requires ONE held PR the manager merges and verifies deployed. Adds no order path and no gate: an in-trade desk row is handed to scripts/ops/live_review_apply.run() under MD-TRADE-DESK, where every account still decides through its own RiskManager/PropRiskManager, apply_mode and executor. propose_entry is refused while MD-TRADE-DESK.functions.entry_generation.blocked_until is in force. Revert: git revert of the merge commit (the watcher then stops fetching desk/decisions; runtime_logs/desk/ is inert).",
+  "why": "DESK-4-INTAKE: the live trader's rows watcher now fetches desk/decisions and runs scripts/ops/desk_intake.py, which validates each new desk decision row (schema v2, desk-records-guard's decision_problems at the pinned tip) and dispatches an in-trade tighten_sl (or a claude_desk leg's own tp_revise/close/partial_close) to the per-account apply; propose_entry refused while gated, both brackets required, every row recorded once in runtime_logs/desk/intake.jsonl."
+}
