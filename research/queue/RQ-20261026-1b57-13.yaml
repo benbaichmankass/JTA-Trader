@@ -1,0 +1,110 @@
+id: RQ-20261026-1b57-13
+title: 'Daily Donchian-20 exit geometry: does a looser 8-ATR trail or a 60-bar time stop turn the failed daily crypto trend (ef5d-03) into a fold-consistent position trade?'
+status: queued
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: 'ef5d-03 FAILED: daily Donchian 20/55 with a 5-ATR trail has no fold-consistent pooled edge on BTC/ETH/SOL/XRP/ADA/AVAX 2020-2026. On the SAME six perps and window (2020-01-01..2026-10-17),
+  baseline D20 (donchian 20, trail 5.0), does either exit-geometry arm -- TR8 (--trail-mult=8.0, let winners run) or TS60 (--timeout-bars=60, a 60-day time stop) -- pass the pooled Stage-0
+  rule AND beat D20 by >= 0.10 R/trade?'
+why_this_matters: 'Programme 07 TIMEFRAMES (operator 2026-10-18: lowest-priority theme but get tests into the queue). Prior work this builds on and does NOT repeat: RQ-20261018-ef5d-01
+  (cost-viable bar x hold cells), ef5d-03/-04/-06 (daily Donchian / pullback, regime-filtered arms), 7c2b-03 (LONG transfer to basket A), RQ-20260930-504/505 and RQ-20261016-1fa6-07
+  (sub-1h FAIL at taker cost). Programme 07 node P7-Q3-donchian-fail named exactly this follow-on and said why this lever and not another: the daily bar''s holds are weeks long, so the
+  exit geometry (how long a winner is allowed to run, and when a dead trade is cut) is the dominant degree of freedom, not the entry.'
+power:
+  expected_n: 110
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.45 at alpha 0.05 / power 0.8 needs 39 pooled trades (the standing floor at this horizon). expected_n=110 is an ESTIMATE (ef5d-03 pooled counts for D20 at six perps over
+    6.8 years), not a measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-1B57-13-DAILY-EXIT-GEOMETRY
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1d; arms fixed now: D20= (trail 5.0); TR8=--trail-mult=8.0; TS60=--timeout-bars=60; baseline D20; --delta-r-per-trade 0.10
+    --folds 6 --fold-majority 4 --n-floor 20 --pooled-n-floor 39 --breadth-frac 0.5; cost = the harness''s own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy()
+    (never a zero default), recorded per cell in the result.'
+  rule: 'PASS iff TR8 or TS60 passes the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 folds, >= half the powered cells) AND beats D20''s pooled net R/trade by >=
+    0.10 -> node P7-Q6 overlap read vs the live bybit_2 4h legs, then ONE confirmation on basket A (symbol-disjoint), never a roster act. FAIL iff both arms fail with pooled n >= 39:
+    daily Donchian-20 at these exit geometries is closed on this window (horizon stays open; next test = a regime-filtered exit arm). INDETERMINATE otherwise. Arm set and bar fixed now.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case; a best-of-k arm is a LEAD (programme 03 rung S0-C), never a finding; a FAIL closes the
+    CONFIGURATION on this window, never the horizon. Candles are Binance USD-M daily/weekly (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1).
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: frontier
+  basis: 'stand-in: a candidate crypto position-trading leg at alpaca/bybit per-leg risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision / Yahoo) and runs the repo harnesses; none of these symbols sit in metis-market-data, nothing is trainer-resident;
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2600'
+  - --start
+  - '2020-01-01'
+  - --end
+  - '2026-10-17'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - D20=--trail-mult=5.0
+  - --arm
+  - TR8=--trail-mult=8.0
+  - --arm
+  - TS60=--timeout-bars=60
+  - --baseline
+  - D20
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-1B57-13-DAILY-EXIT-GEOMETRY
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261026-1b57-13
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P7
+roadmap:
+- L-TIMEFRAMES
+- L-LADDER
+related:
+- RQ-20261018-ef5d-03
+- scripts/research/harness_stage0.py

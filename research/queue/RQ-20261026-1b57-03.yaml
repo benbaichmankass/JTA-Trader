@@ -1,0 +1,118 @@
+id: RQ-20261026-1b57-03
+title: 'As-declared breadth transfer: does eth_4h (trend_donchian_eth_4h) clear Stage 0 on basket B (AVAX/NEAR/ATOM/FIL/TRX/ETC) it was never measured on?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: On Binance USD-M 4h candles for AVAX/NEAR/ATOM/FIL/TRX/ETC over 2020-06-01..2026-10-26, with every lever fixed at trend_donchian_eth_4h (real money, bybit_2) as declared in
+  config/strategies.yaml (read 2026-10-26), does the declared configuration pass the pooled Stage-0 rule net of the full cost stack, with breadth (half the powered cells) and a calendar-fold
+  majority? Basket B is disjoint from basket A (BNB/DOGE/LINK/LTC/BCH/DOT, RQ-20261021-7c2b-06 / RQ-20261022-38be-02) and from every roster symbol.
+why_this_matters: 'Stage 0 on the leg AS DECLARED is the cheapest honest test of whether an edge is a symbol fit. The same configuration was measured on basket A (RQ-20261021-7c2b-06
+  / RQ-20261022-38be-02); basket B was used only by variant units (prop-pace series 1d5c / 71e8 / d7e6 / 90d3), never as an as-declared transfer (MEASURED 2026-10-26 by grepping research/queue/*.yaml
+  for the basket''s symbols against ''AS DECLARED'' and the leg key). A PASS gives per-symbol candidates for the prop/real-money roster search at zero tuning; a FAIL records that the
+  declared leg is a symbol fit beyond basket A. PROP SUPERSET BAR (CLAUDE.md promotion ladder): this unit supplies Stage 0 only. A PASS is a Stage-0 input for a prop or real-money roster
+  add; the prop EV/survival gate against each firm''s DD limits (prop_ev_grid.py / comms/prop_survival/<leg>.json), a PASSED mechanical Stage-1 soak and Gate 2 are ALL still required,
+  and no roster is edited here.'
+power:
+  expected_n: 700
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.3 at alpha 0.05 / power 0.8 needs ~88 pooled trades (the repo's standing floor for this unit family). expected_n=700 is an ESTIMATE (~700 pooled from the basket-A cell
+    counts of RQ-20261021-7c2b-06 / RQ-20261022-38be-02 scaled by symbol-years in the window), not a measurement; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-20261026-1B57-03-TRANSFER-ETH-4H-B
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: harness_stage0.py --family trend --timeframe 4h, one arm B = trend_donchian_eth_4h as declared (params + raw flags listed in run.command); per cell n, net_r, max_drawdown_r,
+    6 calendar folds (majority 4), net_r_per_capital_day; pooled across the basket's cells; cost = the harness's own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy()
+    (never a zero default), recorded per cell in the result.
+  rule: 'PASS iff B passes the pooled Stage-0 rule: pooled n >= 88, pooled net_r > 0, >= 4 of 6 calendar folds net positive, and >= half of the powered cells (n >= 39) pass. A PASS names
+    the passing CELLS (not the pool) as candidates: next is a same-book correlation/overlap read against the live legs, then the prop EV/survival gate and a re-entry case under MD-PROMOTE-S0-S1
+    as a new evidence record -- never a roster act. FAIL iff B fails with pooled n >= 88: the declared configuration is a symbol fit beyond basket A on this window (CONFIGURATION closed,
+    family stays open; next test = a symbol-cell-specific variant). INDETERMINATE otherwise (pooled n < 88, fewer than 2 powered cells, or under half the cells measured; a fetch/harness
+    fault is recorded per cell, never dropped; the floors are never lowered). Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case, does not tune beyond the single declared arm, and does not pool with any committed record.
+    Candles are Binance USD-M (a PROXY for Bybit linear); the funding term is a directionless magnitude (execution_costs P1); a symbol listed after the window start contributes only
+    its own history. Both are stated in the record. PROP SUPERSET BAR (CLAUDE.md promotion ladder): this unit supplies Stage 0 only. A PASS is a Stage-0 input for a prop or real-money
+    roster add; the prop EV/survival gate against each firm''s DD limits (prop_ev_grid.py / comms/prop_survival/<leg>.json), a PASSED mechanical Stage-1 soak and Gate 2 are ALL still
+    required, and no roster is edited here.'
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 220
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: new symbols for eth_4h on the prop/real-money book (programme 03 node P3-Q8 weight 40 x the real-money multiplier); an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 100
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision / Yahoo) and runs the repo harnesses; none of these symbols sit in metis-market-data, nothing is trainer-resident;
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - AVAXUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-26'
+  - --param
+  - donchian=20
+  - --param
+  - atr_period=14
+  - --param
+  - atr_stop_mult=1.5
+  - --param
+  - trail_mult=6.0
+  - --param
+  - min_confidence=0.6
+  - --arm
+  - B=--tp-r=50.0;--trail-decay-stall-bars=10;--trail-decay-tight-mult=1.8
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-20261026-1B57-03-TRANSFER-ETH-4H-B
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261026-1b57-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+- M18
+related:
+- RQ-20261021-7c2b-06
+- scripts/research/harness_stage0.py
+- research/programmes/03-strategy-improvement.yaml

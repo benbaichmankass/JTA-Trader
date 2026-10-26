@@ -1,0 +1,104 @@
+id: RQ-20261026-1b57-17
+title: 'Daily crypto pullback, long-only: does the pullback family at 1d with the long side only clear Stage 0 on the six alts (BNB/DOGE/LINK/LTC/BCH/DOT) ef5d-04 never covered?'
+status: queued
+cadence: once
+theme: timeframes
+priority: 3
+kind: experiment
+question: ef5d-04 (daily pullback, core six perps) FAILED. Over BNB/DOGE/LINK/LTC/BCH/DOT, 2020-06-01..2026-10-26, does the pullback harness at 1d with --side-filter=long pass the pooled
+  Stage-0 rule AND beat the both-sides baseline by >= 0.10 R/trade?
+why_this_matters: 'Programme 07 TIMEFRAMES (operator 2026-10-18: lowest-priority theme but get tests into the queue). Prior work this builds on and does NOT repeat: RQ-20261018-ef5d-01
+  (cost-viable bar x hold cells), ef5d-03/-04/-06 (daily Donchian / pullback, regime-filtered arms), 7c2b-03 (LONG transfer to basket A), RQ-20260930-504/505 and RQ-20261016-1fa6-07
+  (sub-1h FAIL at taker cost). Crypto''s dominant daily regime in this window was up-trending, so a pullback BUYER is the natural single-sided version; the both-sides baseline pays for
+  shorts into a rising market. A transfer to different symbols and a single declared side filter is one arm of inference, not a search.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d = 0.45 at alpha 0.05 / power 0.8 needs 39 pooled trades. expected_n=120 is an ESTIMATE (ef5d-04's measured counts scaled to six alts), not a measurement; below the floor the
+    unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-1B57-17-DAILY-PULLBACK-LONG
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family pullback --timeframe 1d; arms fixed now: B=; LONG=--side-filter=long; baseline B; --delta-r-per-trade 0.10 --folds 6 --fold-majority 4 --n-floor
+    20 --pooled-n-floor 39 --breadth-frac 0.5; cost = the harness''s own venue-aware fee + slippage + funding stack resolved by execution_costs.resolve_cost_policy() (never a zero default),
+    recorded per cell in the result.'
+  rule: PASS iff LONG passes the pooled rule AND beats B by >= 0.10 R/trade -> overlap read against the live legs then a confirmation on basket B. FAIL iff LONG fails with pooled n >=
+    39 (configuration closed on this window, family open). INDETERMINATE otherwise.
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case; a best-of-k arm is a LEAD (programme 03 rung S0-C), never a finding; a FAIL closes the
+    CONFIGURATION on this window, never the horizon. Candles are Binance USD-M daily/weekly (a PROXY for Bybit linear); funding is a directionless magnitude (execution_costs P1).
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.25
+  bucket: frontier
+  basis: 'stand-in: a candidate crypto position-trading leg at alpaca/bybit per-leg risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  why_runner: harness_stage0.py fetches keyless public candles (Binance Vision / Yahoo) and runs the repo harnesses; none of these symbols sit in metis-market-data, nothing is trainer-resident;
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - pullback
+  - --symbols
+  - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-26'
+  - --arm
+  - B=
+  - --arm
+  - LONG=--side-filter=long
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-1B57-17-DAILY-PULLBACK-LONG
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261026-1b57-17
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P7
+roadmap:
+- L-TIMEFRAMES
+- L-LADDER
+related:
+- RQ-20261018-ef5d-04
+- scripts/research/harness_stage0.py
