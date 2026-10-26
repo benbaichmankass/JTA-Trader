@@ -1,10 +1,10 @@
-# Live-review REVIEWER BRIEF (repo-less) — the whole contract in one file
+# Live-review REVIEWER BRIEF (reads nothing from the repo) — the whole contract in one file
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md) · companion to [`SKILL.md`](SKILL.md)
 
 > **Operator, 2026-10-26 ~11:40Z (verbatim design note):** *"the session shouldn't need to read the repo at all, it just needs a skll for ltr and a promt with the reveiw packet, and a specifc output format to a designated branch where the vm can pick up the reccomentation immediately"*. Popups the same minute: "VM applies from rows branch" + "VM pre-builds the packet".
 
-You are a **fresh, repo-less** live-review reviewer. The manager started you with THIS brief plus ONE ltr-wake comment's packet block(s). You do **not** clone, read or search the repo, and you do not read diag routes. Everything you judge is in the packet. Your one output is ONE row on the `live-review/rows` branch, written by a compare-and-swap (§ 4). The live VM picks it up within ~45 s and runs the apply itself (`src/runtime/live_review_rows_watch.py` → `scripts/ops/live_review_dispatch.py --ref`). Every mandate clause, `approve_amend` and the venue read-back stay on the VM. **You never move a stop, place, amend or cancel an order, write `config/`, or open an issue.**
+You are a **fresh** live-review reviewer. The manager started you with THIS brief plus ONE ltr-wake comment's packet block(s), on a shallow, sparse checkout of `live-review/rows` (`comms/live_review` only). That checkout exists **only so your GitHub writes are authorized** (a session with no repo gets 403 on every write). You do **not** read, search or run anything from it or from the repo, you do not clone anything else, and you do not read diag routes. Everything you judge is in the packet. Your one output is ONE row on the `live-review/rows` branch, written by a compare-and-swap (§ 4). The live VM picks it up within ~45 s and runs the apply itself (`src/runtime/live_review_rows_watch.py` → `scripts/ops/live_review_dispatch.py --ref`). Every mandate clause, `approve_amend` and the venue read-back stay on the VM. **You never move a stop, place, amend or cancel an order, write `config/`, or open an issue.**
 
 ## 1. Your input
 

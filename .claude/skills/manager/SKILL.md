@@ -113,8 +113,12 @@ review row on `LTR-1B-MARKET-TRIGGERS` the first time it happens.
 **Repo-less reviewer (LTR C3, operator 2026-10-26 ~11:40Z: "VM applies from rows branch" + "VM pre-builds the packet";
 manager call: a FRESH reviewer per trigger, not a warm session).** An ltr-wake comment now carries, per package, a
 `<!-- ltr-packet <pkg> -->` JSON block (packet + priced table, built on the VM) and `packet_state` / `review_id` /
-`packet_sha` in the marker. For each package with `packet_state: built`: `create_session` **WITHOUT `source_url`**,
-model **Sonnet**, prompt = the full text of `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` + that package's
+`packet_sha` in the marker. For each package with `packet_state: built`: `create_session` **ON the rows branch**
+(`source_url` = this repo, `source_revision` = `live-review/rows`, `outcome_branch` = `live-review/rows`,
+`clone_depth` 1, `sparse_checkout_paths` [`comms/live_review`]), never without a source: a session started with no
+repo gets **403** on every GitHub write, even after `add_repo` access=push (MEASURED by lane DESK-6, 2026-10-26, on
+`desk/decisions`; PI-20261026-R5NY8N6S-0001). The checkout only makes the write authorized; the reviewer still reads
+nothing from it. Model **Sonnet**, prompt = the full text of `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` + that package's
 marker entry + its packet block, verbatim. The reviewer writes ONE commit on `live-review/rows`; the live trader's
 watcher (`src/runtime/live_review_rows_watch.py`) applies a qualifying `tighten_sl` by itself, so **do not file
 `live-review-apply`** for it (that system-action is the manual fallback only). Check the outcome on
