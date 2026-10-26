@@ -119,7 +119,7 @@ REQUIRED_PACKET_KEYS = ("packet_id", "kind", "mask", "trade", "bars", "missing_i
 def parse_population(repo: Path = REPO) -> List[str]:
     """Real-money, non-prop legs on a 2h/4h timeframe that have a committed Stage-0 trade list."""
     from src.config.accounts_loader import load_accounts_dict
-    acc = load_accounts_dict(repo / "config" / "accounts.yaml")
+    acc = load_accounts_dict()
     strat = yaml.safe_load((repo / "config" / "strategies.yaml").read_text())
     strat = strat.get("strategies", strat)
     out: List[str] = []
