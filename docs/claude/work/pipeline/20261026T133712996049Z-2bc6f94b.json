@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the rerun prints 0 for rows written after the fix, and check_live_review_records.py refuses info_cutoff_at > reviewed_at",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-DTRPDXRH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "CJ-2-DATASET lane session_017V1wkDRE6KDqbkdtRpDXrh",
+    "rerun": "python3 -c \"import json;rows=[json.loads(l) for l in open('comms/live_review/reviews.jsonl') if l.strip()];print(sum(r['info_cutoff_at']>r['reviewed_at'] for r in rows),len(rows))\""
+  },
+  "state": "queued",
+  "what": "LTR writer stamps reviewed_at minute-truncated while info_cutoff_at carries seconds: MEASURED on main 2026-10-26, 8 of 24 comms/live_review/reviews.jsonl rows (the 12:26Z batch) have info_cutoff_at 8 s AFTER reviewed_at, which reads as a judgment made before its own inputs (distillation § 3.5 test 1). The claude_judgments builder (CJ-2) tolerates <=60 s and flags the row (judged_at_rounded) instead of excluding it. Fix: the live-review writer (skill live-trade-review / scripts/ops live-review record path) stamps reviewed_at to the second, and check_live_review_records.py refuses info_cutoff_at > reviewed_at. Then the builder tolerance can drop to 0."
+}
