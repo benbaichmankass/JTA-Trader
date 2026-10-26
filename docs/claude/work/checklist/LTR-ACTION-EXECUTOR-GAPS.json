@@ -1,0 +1,22 @@
+{
+  "id": "LTR-ACTION-EXECUTOR-GAPS",
+  "title": "Live review trade actions: build the executors that refuse no_action_path today (add_size everywhere; prop VM all; Alpaca reduce/move_tp/widen; IB all) + widen-vs-trail + close exit_price from fill",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane LTR-ALL-ACTIONS (PR #20414). MEASURED from the executor matrix in scripts/ops/live_review_apply.py::ACTION_PATHS at 7968bc40: (1) no add-to-open-position executor exists anywhere, so add_entry / change_size>1 refuse no_action_path:add_size on every account (the account decision is still computed); (2) prop VM accounts refuse every trade action (executor reads only meta.sl_floor); (3) Alpaca supports only a sole-leg close (no partial: caps omit partial_close; no leg-scoped TP/SL widen); (4) IB has no live-review executor; (5) a widen_sl on a trailing leg can be re-tightened by the trail next pass; (6) a live_review_close writes exit_price = venue mark at apply (ESTIMATED) until broker recovery. Re-entry test per gap: a test-backed executor with venue read-back, then 1-2 clean applies per venue (mechanical soak). Rerun: grep ACTION_PATHS scripts/ops/live_review_apply.py.",
+  "priority_rank": 30,
+  "updated_at": "2026-10-26T19:24:35Z",
+  "updated_by": "session_01Ek4ZF8rHKPrYehmQkcjSrW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 723
+}

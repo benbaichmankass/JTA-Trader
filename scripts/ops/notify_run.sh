@@ -396,6 +396,18 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    rearm-ib-protective)
+        # 2026-10-26: arm journal SL+TP (one OCA) on a FULLY naked IB position.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview, or both legs placed and verified resting)"; priority="normal" ;;
+            1) result="place FAILED — position still NAKED, act now"; priority="urgent" ;;
+            2) result="COULD NOT LOOK — NOT evidence either way; nothing was placed"; priority="high" ;;
+            3) result="placed but NOT verified by re-read — inspect before any retry"; priority="urgent" ;;
+            4) result="refused by a safety guard — nothing was placed"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     cancel-ib-order)
         # 2026-08-16: cancel ONE resting IB order by id (dry-run unless
         # apply:true). BL-20260816-NO-PER-ORDER-IB-CANCEL. The exit codes are

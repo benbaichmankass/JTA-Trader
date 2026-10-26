@@ -1,0 +1,194 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "4 real-money non-prop 2h/4h legs (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h); 370 committed Stage-0 trades (comms/strategy_evidence/<leg>.json -> source_run); registered population 370",
+  "n": 370,
+  "measurement": {
+    "verdict": "pass",
+    "read_state": "measured",
+    "note": "all three registered clauses hold",
+    "clauses": {
+      "a_hold_replay": {
+        "ok": true,
+        "max_abs_dR": 0.0,
+        "tol": 1e-06,
+        "replayed": 370,
+        "of": 370,
+        "trades_in_lists": 370
+      },
+      "b_mask": {
+        "ok": true,
+        "packets_scanned": 176,
+        "leaks": [],
+        "n_leaking": 0,
+        "probe_positive_control_found_planted_leak": true
+      },
+      "c_scrambled_label": {
+        "ok": true,
+        "n": 176,
+        "c1_oracle_aligned": {
+          "ok": true,
+          "mean_dR": 0.2628,
+          "ci95": [
+            0.2028,
+            0.3238
+          ]
+        },
+        "c2_oracle_scrambled": {
+          "ok": true,
+          "mean_dR": -0.0705,
+          "ci95": [
+            -0.1919,
+            0.0273
+          ]
+        },
+        "oracle": "breakeven (r:0.0) at the +1R decision state iff hindsight says it beats hold"
+      }
+    },
+    "breakeven_at_1r_finding": {
+      "mean_dR": -0.1195,
+      "ci95": [
+        -0.3078,
+        0.0515
+      ],
+      "n": 176,
+      "population": "176 decision points over 370 committed trades, 4 legs"
+    },
+    "fidelity_diagnostics": {
+      "cost_stack_recompute_max_abs_dev_R": 1.27e-05,
+      "cost_stack_note": "recorded costs are rounded to 5 dp; ~1e-5 R is rounding, 1e-3 R or more would be a policy mismatch",
+      "exit_gross_r_inside_exit_bar_range": 335,
+      "exit_gross_r_outside_exit_bar_range": 25,
+      "median_implied_atr_stop_mult_by_leg": {
+        "ada_pullback_2h": 1.5,
+        "trend_donchian_eth_4h": 1.465,
+        "trend_donchian_xrp_4h": 2.0,
+        "xrp_pullback_2h": 2.5
+      },
+      "mfe_replay_mismatch_by_leg": {
+        "ada_pullback_2h": 16,
+        "trend_donchian_eth_4h": 12,
+        "trend_donchian_xrp_4h": 7,
+        "xrp_pullback_2h": 13
+      }
+    },
+    "planted_known_answer": {
+      "n": 176,
+      "breakeven_tighten_mean_dR": -0.1195,
+      "oracle_mean_dR": 0.2628,
+      "oracle_scrambled_mean_dR": 0.0068,
+      "passed": true,
+      "state": "passed"
+    },
+    "per_leg": {
+      "ada_pullback_2h": {
+        "trades": 61,
+        "replayed": 61,
+        "n_trades_oos_in_record": 61,
+        "population": {
+          "trades": 61,
+          "no_candles": 0,
+          "never_reached_peak_on_candles": 30,
+          "closed_on_decision_bar": 0,
+          "zero_bar_trades": 0,
+          "no_atr": 0,
+          "decision_points": 31,
+          "recorded_mfe_ge_peak": 31,
+          "mfe_replay_mismatch": 16
+        }
+      },
+      "trend_donchian_eth_4h": {
+        "trades": 208,
+        "replayed": 208,
+        "n_trades_oos_in_record": 208,
+        "population": {
+          "trades": 208,
+          "no_candles": 0,
+          "never_reached_peak_on_candles": 90,
+          "closed_on_decision_bar": 5,
+          "zero_bar_trades": 10,
+          "no_atr": 0,
+          "decision_points": 103,
+          "recorded_mfe_ge_peak": 103,
+          "mfe_replay_mismatch": 12
+        }
+      },
+      "trend_donchian_xrp_4h": {
+        "trades": 46,
+        "replayed": 46,
+        "n_trades_oos_in_record": 46,
+        "population": {
+          "trades": 46,
+          "no_candles": 0,
+          "never_reached_peak_on_candles": 27,
+          "closed_on_decision_bar": 4,
+          "zero_bar_trades": 0,
+          "no_atr": 0,
+          "decision_points": 15,
+          "recorded_mfe_ge_peak": 15,
+          "mfe_replay_mismatch": 7
+        }
+      },
+      "xrp_pullback_2h": {
+        "trades": 55,
+        "replayed": 55,
+        "n_trades_oos_in_record": 55,
+        "population": {
+          "trades": 55,
+          "no_candles": 0,
+          "never_reached_peak_on_candles": 26,
+          "closed_on_decision_bar": 2,
+          "zero_bar_trades": 0,
+          "no_atr": 0,
+          "decision_points": 27,
+          "recorded_mfe_ge_peak": 27,
+          "mfe_replay_mismatch": 13
+        }
+      }
+    },
+    "scrambled_nonzero": false,
+    "candle_sources": [
+      "comms/research/RQ-20261026-bf56-01/40387359527/candles/ADAUSDT_2h_394d.csv",
+      "comms/research/RQ-20261026-bf56-01/40387359527/candles/ETHUSDT_4h_1132d.csv",
+      "comms/research/RQ-20261026-bf56-01/40387359527/candles/XRPUSDT_4h_1478d.csv",
+      "comms/research/RQ-20261026-bf56-01/40387359527/candles/XRPUSDT_2h_407d.csv"
+    ]
+  },
+  "note": "all three registered clauses hold | population re-parsed from config/accounts.yaml + strategies.yaml: ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h",
+  "data_inputs": [
+    "comms/research/RQ-20261026-bf56-01/40387359527/candles/ADAUSDT_2h_394d.csv",
+    "comms/research/RQ-20261026-bf56-01/40387359527/candles/ETHUSDT_4h_1132d.csv",
+    "comms/research/RQ-20261026-bf56-01/40387359527/candles/XRPUSDT_2h_407d.csv",
+    "comms/research/RQ-20261026-bf56-01/40387359527/candles/XRPUSDT_4h_1478d.csv"
+  ],
+  "records": [
+    {
+      "leg": "ada_pullback_2h",
+      "population": "ada_pullback_2h: 61 trades, 61 replayed",
+      "n": 61,
+      "verdict": "pass",
+      "read_state": "measured"
+    },
+    {
+      "leg": "trend_donchian_eth_4h",
+      "population": "trend_donchian_eth_4h: 208 trades, 208 replayed",
+      "n": 208,
+      "verdict": "pass",
+      "read_state": "measured"
+    },
+    {
+      "leg": "trend_donchian_xrp_4h",
+      "population": "trend_donchian_xrp_4h: 46 trades, 46 replayed",
+      "n": 46,
+      "verdict": "pass",
+      "read_state": "measured"
+    },
+    {
+      "leg": "xrp_pullback_2h",
+      "population": "xrp_pullback_2h: 55 trades, 55 replayed",
+      "n": 55,
+      "verdict": "pass",
+      "read_state": "measured"
+    }
+  ]
+}

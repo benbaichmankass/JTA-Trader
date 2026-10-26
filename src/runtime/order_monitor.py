@@ -10743,6 +10743,8 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                 # persists, paged.
                 summary["protection_read_failed"] += 1
                 _note_protection_unreadable(account_id, symbol, row["id"])
+                _snapshot_venue_read(row, account_id, "alpaca",
+                                     unreadable="alpaca_protection_state_unreadable")
                 continue
             _clear_protection_unreadable(account_id, symbol)
 
@@ -10793,6 +10795,9 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                             since=_oldest_open_created_at(rows, account_id, symbol))
                     )
             _cov = coverage_memo[_cov_key]
+            _snapshot_venue_read(
+                row, account_id, "alpaca", cov=_cov,
+                unreadable=None if _cov is not None else "alpaca_coverage_unavailable")
             if _cov_key not in graded_keys:
                 graded_keys.add(_cov_key)
                 if _cov is None:
@@ -11488,6 +11493,8 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                 # the post-restart breaker was open, every read returned None,
                 # and the logs were silent either way.
                 summary["read_failed"] += 1
+                _snapshot_venue_read(row, account_id, "ib",
+                                     unreadable="ib_coverage_unavailable")
                 logger.info(
                     "_check_broker_naked_ib_positions: %s/%s coverage read "
                     "unavailable (breaker open / gateway unreachable) — "
@@ -11495,6 +11502,7 @@ def _check_broker_naked_ib_positions(db) -> Dict[str, int]:
                     account_id, protect_symbol,
                 )
                 continue
+            _snapshot_venue_read(row, account_id, "ib", cov=cov)
             size = float(cov.get("size") or 0.0)
             # ⚠️ GRADED ON THE STOP SIDE (CA-A01-048,
             # PI-20260927-KFWRL9R1-0011). `covered_qty` is stop OR target per
@@ -11896,6 +11904,40 @@ def _bybit_sl_leg_trigger(leg: dict):
     return None
 
 
+def _snapshot_venue_read(row, account_id: str, venue: str, *,
+                         cov: Optional[Dict[str, Any]] = None,
+                         unreadable: Optional[str] = None) -> None:
+    """LTR-MECHANICS-VENUE-SNAPSHOT: keep the resting stop/target a broker sweep
+    just read for the package behind journal row *row*.
+
+    OBSERVE-ONLY and never raises: the sweep already made the venue read, this
+    only stores its prices (``venue_protection_snapshot``); it makes no venue
+    call, places and amends nothing, and a failure is contained in the writer.
+    ``cov`` is the sweep's coverage dict (``size`` / ``stop_prices`` /
+    ``target_prices``); ``unreadable`` is the reason the sweep could not read.
+    """
+    try:
+        from src.runtime import venue_protection_snapshot as _vps
+        _vps.record_read(
+            account_id=account_id, trade_id=row["id"], symbol=row["symbol"],
+            direction=row["direction"], venue=venue,
+            stop_prices=(cov or {}).get("stop_prices"),
+            target_prices=(cov or {}).get("target_prices"),
+            position_size=(cov or {}).get("size"), unreadable=unreadable)
+    except Exception:  # noqa: BLE001 — observe-only, never raises into the sweep
+        logger.debug("venue snapshot hook failed", exc_info=True)
+
+
+def _bybit_full_mode_target(pos: dict) -> List[float]:
+    """The position-level ``takeProfit`` as a one-element list, or ``[]``.
+
+    Sibling of the Full-mode ``stopLoss`` read. ``[]`` means none resting or an
+    unparseable value (we did not read a price) — never ``[0.0]``.
+    """
+    _px = _bybit_sl_leg_trigger({"price": str(pos.get("takeProfit") or "").strip()})
+    return [_px] if _px is not None else []
+
+
 def _norm_position_side(raw) -> str:
     """Normalise a direction to ``"long"`` / ``"short"`` (``""`` if unknown).
 
@@ -12021,7 +12063,7 @@ def _bybit_position_protection(client, category: str, symbol: str,
         return None
     _flat = {
         "size": 0.0, "side": "", "covered_qty": 0.0, "source": "flat",
-        "stop_prices": [],
+        "stop_prices": [], "target_prices": [],
         "sl_leg_ids": set(), "unknown_qty_sl_legs": 0,
         # No book was selected, so there is no index to report. `None` is *we
         # named no book*, and must never be read as one-way's `0`.
@@ -12113,6 +12155,10 @@ def _bybit_position_protection(client, category: str, symbol: str,
             "source": "full_position_stop",
             "sl_leg_ids": set(), "unknown_qty_sl_legs": 0,
             "stop_prices": [_px] if (_px is not None and _px > 0) else [],
+            # LTR-MECHANICS-VENUE-SNAPSHOT: the position-level takeProfit, read
+            # from the same row. Additive and OBSERVE-ONLY (no decision here
+            # reads it); empty = none resting or unparseable, never a 0.0.
+            "target_prices": _bybit_full_mode_target(pos),
             # ⚠️ None, NOT an empty split. This branch returns BEFORE
             # `get_open_orders` is called, so we did not read the resting legs
             # at all — an empty split would assert "no leg acts on the other
@@ -12160,10 +12206,17 @@ def _bybit_position_protection(client, category: str, symbol: str,
     # returns PartialTakeProfit rows alongside PartialStopLoss, and they were
     # being discarded by the SL filter below before anything counted them.
     protective_legs = 0
+    # LTR-MECHANICS-VENUE-SNAPSHOT: resting TP trigger levels, read from the
+    # same StopOrder list (no extra venue call). OBSERVE-ONLY.
+    tp_leg_prices: List[float] = []
     for o in legs:
         _kind = str(o.get("stopOrderType") or "").lower()
         if _kind in _SL_LEG_TYPES_MON or _kind in _TP_LEG_TYPES_MON:
             protective_legs += 1
+        if _kind in _TP_LEG_TYPES_MON:
+            _tpx = _bybit_sl_leg_trigger(o)
+            if _tpx is not None:
+                tp_leg_prices.append(_tpx)
         if _kind not in _SL_LEG_TYPES_MON:
             continue
         sl_legs_seen.append(o)
@@ -12210,6 +12263,7 @@ def _bybit_position_protection(client, category: str, symbol: str,
         # forces. Sorted for a stable read; empty means no leg carried a
         # readable trigger, which is not "the prices are fine".
         "stop_prices": sorted(leg_prices),
+        "target_prices": sorted(tp_leg_prices),
     }
 
 
@@ -13177,6 +13231,8 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                 # in this loop ("don't re-grade this tick") carries no refusal
                 # kind and is counted by its own guard instead.
                 _rs = refusal_state.get(cache_key)
+                _snapshot_venue_read(row, account_id, "bybit",
+                                     unreadable=f"bybit_read_refused:{_rs or 'unknown'}")
                 if _rs and cache_key not in refused_counted:
                     refused_counted.add(cache_key)
                     summary["protection_refused"] += 1
@@ -13189,6 +13245,7 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                     refused_syms.setdefault(sym_key, _rs)
                 continue
             readable_syms.add(sym_key)
+            _snapshot_venue_read(row, account_id, "bybit", cov=state)
             size = float(state["size"])
             covered = float(state["covered_qty"])
             exch_side = str(state.get("side") or "")

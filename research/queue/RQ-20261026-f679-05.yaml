@@ -1,0 +1,121 @@
+id: RQ-20261026-f679-05
+title: 'Daily long-only Donchian-20, pooled over all twelve perps (ef5d-06 six + 7c2b-03 six): is the LONG filter''s pooled edge fold-consistent?'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- L-REGIME
+theme: timeframes
+priority: 2
+kind: experiment
+question: On Binance USD-M daily candles for BTC/ETH/SOL/XRP/ADA/AVAX/BNB/DOGE/LINK/LTC/BCH/DOT over 2020-06-01..2026-10-25 (donchian 20, trail_mult
+  5.0), does LONG (--long-only) pass the pooled Stage-0 rule AND beat unfiltered B by >= 0.10 R per trade?
+why_this_matters: 'Node P7-Q5-confirm: LONG won ef5d-06 (pooled 0.508 R/trade, n=216, six core perps) and on the six transfer perps (7c2b-03)
+  showed pooled 0.369 R/trade, n=209, one-sided p 0.017 and +0.256 R/trade over B, but FAILED the fold rule (3 of 6 folds positive; BNB and DOGE
+  carry the cells) and 2 of 6 cells passed. Neither read alone resolves it; the transfer was the honest confirmation and it did not clear the
+  registered bar. This unit is NOT a re-selection and NOT a way around that fail: it asks the single question both records point at, on ONE pooled
+  population of all twelve perps under the same bar, so the fold consistency is read at n~425 with breadth over 12 cells. It pools symbols with
+  two committed records on purpose (stated), so a PASS here is a lead for a disjoint-symbol check, never a confirmation.'
+power:
+  expected_n: 425
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ef5d-06 LONG n=216 plus 7c2b-03 LONG n=209 on the same window and params; folds 6; floor 20 per cell, 39 pooled.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-F679-05-LONG-DAILY-12
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1d, arms fixed now: B=; LONG=--long-only; baseline B; per cell and pooled across BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT.'
+  rule: 'PASS iff LONG passes the pooled Stage-0 rule (pooled folds >= 4 of 6, breadth >= half of the powered cells) AND beats B by >= 0.10 R/trade
+    -> the long-only daily filter is fold-consistent on twelve perps: next unit is a disjoint-symbol check (symbols outside the twelve), and the
+    node P7-Q6 overlap read uses the LONG arm; no roster edit. FAIL iff LONG fails with pooled n >= 39 -> the ef5d-06 win is not fold-consistent
+    when pooled: record on 07 s1 and proceed unfiltered. INDETERMINATE otherwise; the cells under the floor are named, the floor is never lowered.
+    Verdicts are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r
+    > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled
+    n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline,
+    beats the baseline''s pooled net R/trade by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared
+    cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED,
+    not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does
+    not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  bucket: frontier
+  basis: 'stand-in (07 node P7-Q5 weight): the daily arm''s one live lead on position trading; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..22 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1d
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-25'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - B=
+  - --arm
+  - LONG=--long-only
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261026-F679-05-LONG-DAILY-12
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261026-f679-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P7
+related:
+- RQ-20261018-ef5d-06
+- RQ-20261021-7c2b-03
+- RQ-20261018-ef5d-03
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P7
+  node: P7-Q5-confirm
+  goal: G1
+  after: []

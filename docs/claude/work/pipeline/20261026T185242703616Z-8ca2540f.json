@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "venue_protection_snapshot has a row for every open (package, account) and live_review_due.venue_snapshot.packages_without_row == 0",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-VXKMOUTK-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-30",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'venue_protection_snapshot' and scripts/ops/diag_fetch.sh 'live_review_due' (venue_snapshot block)",
+    "what": "first VM sweep pass writes snapshot rows for every open package"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-MECHANICS-VENUE-SNAPSHOT lane session_01JA1tezUEqwFYzMVXkmouTK",
+    "rerun": "scripts/ops/diag_fetch.sh 'venue_protection_snapshot' | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d['present'], d['count'], sorted({(r['account_id'],r['read_state']) for r in d['rows']}))\""
+  },
+  "state": "queued",
+  "what": "LTR-MECHANICS-VENUE-SNAPSHOT deployed? The first VM sweep pass after deploy must leave one venue_protection_snapshot row per (open package, account) with a venue read: expected 8 open packages / 12 open trades on 2026-10-26 (11 reads measured + ib_paper MGC none_resting on the dry read). A package with no row, or a row stuck could_not_look, is a wiring gap in one of the three broker sweeps."
+}
