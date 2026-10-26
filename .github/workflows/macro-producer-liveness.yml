@@ -151,6 +151,28 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           if [ "${rc}" -ne 0 ]; then echo "stale=true" >> "$GITHUB_OUTPUT"; else echo "stale=false" >> "$GITHUB_OUTPUT"; fi
 
+      - name: News + calendar feed liveness
+        # DATA-FEEDS-NEWS-CALENDAR (operator 2026-10-26). Calendar horizon (< 7d ahead) / refresh (> 36h),
+        # and news_decisions silence (> 12h with a crypto package open). "stale" (looked) and
+        # "could not look" are reported separately; both fold into the ONE alert below.
+        id: feeds
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -uo pipefail
+          bash scripts/ops/diag_fetch.sh 'log_file?name=news_decisions&lines=20' > /tmp/news_tail.json 2>/dev/null || echo '{}' > /tmp/news_tail.json
+          bash scripts/ops/diag_fetch.sh 'open_packages' > /tmp/open_pkgs.json 2>/dev/null || echo '{}' > /tmp/open_pkgs.json
+          python3 scripts/macro/check_news_calendar_feeds.py --news-log-json /tmp/news_tail.json \
+            --open-packages-json /tmp/open_pkgs.json | tee /tmp/feeds.txt
+          rc=${PIPESTATUS[0]}
+          if [ "${rc}" -eq 1 ]; then echo "bad=true" >> "$GITHUB_OUTPUT"; else echo "bad=false" >> "$GITHUB_OUTPUT"; fi
+          {
+            echo "summary<<__F__"
+            grep -v '^\[ok\]' /tmp/feeds.txt || echo "feeds ok"
+            echo "__F__"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Telegram alert (only when vacuous)
         # P2.2: the vacuity half now has its own loud channel, mirroring the
         # stale alert below. Distinct message — a FRESH-but-empty artifact is
@@ -169,11 +191,11 @@ jobs:
             || echo "::warning::telegram notify failed (non-fatal)"
 
       - name: Telegram alert (only when stale)
-        if: steps.check.outputs.stale == 'true'
+        if: steps.check.outputs.stale == 'true' || steps.feeds.outputs.bad == 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.CLAUDE_TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          STALE_SUMMARY: ${{ steps.check.outputs.summary }}
+          STALE_SUMMARY: ${{ steps.check.outputs.summary }} ${{ steps.feeds.outputs.summary }}
         run: |
           set +e
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -183,10 +205,10 @@ jobs:
             || echo "::warning::telegram notify failed (non-fatal)"
 
       - name: Open / update stale issue (only when stale)
-        if: steps.check.outputs.stale == 'true'
+        if: steps.check.outputs.stale == 'true' || steps.feeds.outputs.bad == 'true'
         uses: actions/github-script@v7
         env:
-          STALE_SUMMARY: ${{ steps.check.outputs.summary }}
+          STALE_SUMMARY: ${{ steps.check.outputs.summary }} ${{ steps.feeds.outputs.summary }}
         with:
           script: |
             const label = 'macro-producer-stale';
@@ -233,7 +255,7 @@ jobs:
             }
 
       - name: Auto-resolve stale issue (only when fresh)
-        if: steps.check.outputs.stale == 'false'
+        if: steps.check.outputs.stale == 'false' && steps.feeds.outputs.bad != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -291,7 +313,7 @@ jobs:
         # the very normalization the directive warns against, which is why the
         # loud channels above carry the real signal. Vacuity added 2026-07-31
         # (P2.2): before this, a vacuity finding was computed and read by nothing.
-        if: steps.check.outputs.stale == 'true' || steps.validity.outputs.vacuous == 'true'
+        if: steps.check.outputs.stale == 'true' || steps.feeds.outputs.bad == 'true' || steps.validity.outputs.vacuous == 'true'
         run: |
           if [ "${{ steps.check.outputs.stale }}" = "true" ]; then
             echo "::error::A scheduled macro producer ledger is stale — see the alert above."

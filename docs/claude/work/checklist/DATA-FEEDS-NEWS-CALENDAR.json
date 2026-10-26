@@ -1,0 +1,25 @@
+{
+  "id": "DATA-FEEDS-NEWS-CALENDAR",
+  "title": "News + economic-calendar feeds are routinely maintained and watched (not one-off uploads)",
+  "phase": "F",
+  "state": "landed_unproven",
+  "owner": "feeds lane",
+  "lane": "session_01YGQEZjAnnVwXXkU66iJbs2",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-26 ~11:25Z (chat, verbatim): \"do we also have a work task for making sure the news feed is working and the calnder is updating regularly? Those should be routinely maintained and updated data feeds, not one off uploads\". REVERSES the rule in econ-calendar-produce.yml (\"a cadence must never silently mutate [config/economic_calendar.yaml] - its population stays an operator-gated, session-emitted change (Tier-3)\"). Built: (1) econ-calendar-produce now passes --emit-config and lands config/economic_calendar.yaml via commit-to-main; only the events list is rewritten, a run with no forward events keeps the last good set, unchanged output is byte-identical; fetch window 14d -> 45d. (2) scripts/macro/check_news_calendar_feeds.py runs daily inside macro-producer-liveness.yml (no new cron; already in CADENCE_REGISTRY + claude-run-failure-alert): calendar newest event < 7d ahead or newest successful capture > 36h old; news_decisions silent > 12h with a crypto package open (N=12h: 1 of 999 inter-row gaps in the 1000-row tail 2026-10-07..10-26 exceeds it; median gap 7 min). stale and could_not_look are reported separately. Measured before the build: newest calendar event 2026-07-30; live news layer fresh (rows 11:03Z/11:13Z). Closes PI-20261025-8BRWED6K-0001. Tier-2 (changes what the live news layer reads): manager merges.",
+  "priority_rank": 50,
+  "updated_at": "2026-10-26T11:30:04Z",
+  "updated_by": "session_01YGQEZjAnnVwXXkU66iJbs2",
+  "observation": {
+    "what": "VM diag live_review_due shows calendar_state=looked (not could_not_look/stale) and the next scheduled econ-calendar-produce run lands a config refresh",
+    "how_to_check": "bash scripts/ops/diag_fetch.sh live_review_due | grep calendar_state; git log -1 --format=%cd -- config/economic_calendar.yaml",
+    "due_by": "2026-10-29T00:00Z"
+  },
+  "roadmap": null,
+  "_seq": 715
+}
