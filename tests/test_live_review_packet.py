@@ -218,10 +218,20 @@ def test_atr_is_the_sma_of_true_range_and_forming_bar_is_dropped():
     assert L._closed_bars([{**last, "time": int(NOW.timestamp()) - 7200}], "2h", NOW)
 
 
-def test_calendar_distinguishes_no_events_from_stale_and_no_classes():
+def test_calendar_distinguishes_no_events_from_stale_and_no_classes(tmp_path, monkeypatch):
     assert L._calendar("XRPUSDT", NOW)["state"] == "no_event_classes_for_symbol"
-    c = L._calendar("ETHUSDT", NOW)  # the committed file's newest event is long past: 'no events' is NOT known
+    # the stale case runs on a fixture calendar whose newest event is in the past: 'no events' is NOT known
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "economic_calendar.yaml").write_text(
+        'symbol_event_classes:\n  ETH: [fomc]\nevents:\n  - {class: fomc, time: "2026-07-29T18:30:00Z", impact: 1.0}\n')
+    monkeypatch.setattr(L, "REPO", tmp_path)
+    c = L._calendar("ETHUSDT", NOW)
     assert c["state"] == "stale" and c["events_next_24h"] == []
+
+
+def test_committed_calendar_is_no_longer_stale_at_the_packet_cutoff():
+    # DATA-FEEDS-NEWS-CALENDAR: the scheduled refresh keeps the committed file ahead of the cutoff.
+    assert L._calendar("ETHUSDT", NOW)["state"] == "read"
 
 
 @needs_gold
