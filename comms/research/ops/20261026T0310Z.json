@@ -1,0 +1,83 @@
+{
+  "run": "RESEARCH-OPS-20261026-0247",
+  "finished_at": "2026-10-26T03:10:00Z",
+  "by": "research-ops-0247",
+  "floor": 71,
+  "floor_basis": "computed_floor(fired_24h 89)",
+  "authoring_queue_depth": 34,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "needs_review_note": "result_disposition_check at 02:49Z (health line): needs_review owned 25 / UNOWNED 0 / UNGRADED 0. Every unit carries grading.owner + owner_reason, so no unit lacked a disposition and no triage write was needed; the oldest-8 were not re-read.",
+  "throughput": {
+    "runnable_before": 53,
+    "runnable_after": 55,
+    "queued": 148,
+    "fired_24h": 89,
+    "results_landed_24h": 94,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "queue_replenish --target 75 plan on this branch lists 4 programme units (P3-Q3-ief-fail, P3-Q3-slv-fail now emit; P1-Q11-transfer-read and P1-Q14-eth-pb-stale-transfer were already ready); counted +2 for the two this pass authored, not re-run through check_research_queue_throughput. Still 16 under the floor (H1-AUTHOR)."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (dispatch run 554 success 02:40Z; last dispatch 01:54Z)",
+    "dispatch_workflow_runs": "closes the 20:47Z not_run item: 20 latest research-queue-dispatch runs read, all success except run 528 (2026-10-25 02:38Z) and run 529 (04:07Z), both failure on 10-25 and followed by 25 consecutive successes (runs 530-554); not re-diagnosed, no later recurrence",
+    "replenish_workflow_runs": "closes the 20:47Z not_run item: 20 latest research-queue-replenish runs read, all success; newest schedule run 100 at 2026-10-25 10:11Z, the next daily run (05:50Z) is not yet due at 02:50Z",
+    "collector": "ok (0 unreadable result files)",
+    "stranded_stamp_prs": [],
+    "watchdog_open_incidents": 0,
+    "incident": null,
+    "note": "Open PR list (4): lane/ltr-apply-flip, lane/secrets-sed-escape, lane/gld-soak-replace, standing ops/flags; no automation/research-queue-* head. The 20:47Z pass's PR #20171 merged."
+  },
+  "results_read": {
+    "pass": 3,
+    "fail": 15,
+    "indeterminate": 6,
+    "units": [
+      "24 result files landed since 21:05Z (all read_state measured, all power_state accruing in the row); 3 are infra self-tests (ae17-40/-41/-42 PASS) and say nothing about any strategy.",
+      "FAIL, configuration closed: RQ-20261023-2230-01 DI direction filter on eth_pullback_2h (396 trades; no candidate clears dR >= 1.0 R / 3 of 4 folds); the 3a84-01 xrp lead therefore stands as 1 of 3 symbols (xrp pass, ada fail, eth fail); family direction-filter stays open; next test = none queued (a Tier-3 note is not warranted on 1 of 3)",
+      "FAIL: RQ-20261025-3947-14 R-armed tight trail 1.5/2.0/3.0 R on trend_donchian_sol_prop (403 trades, 'incumbent_stands'); family R-armed trail stays open; next test = the P1-Q13 path-state prop unit b7e1-03",
+      "FAIL (already graded by the grader, read for the follow-up): 0142-09/-12/-17/-26 (ER-gated trail on one leg, sol_pullback_2h break-even far arm, eth_pullback_2h hot-vol trail, sol_pullback_2h stale-exit), 3947-04/-06/-08 (path-state trail gate on ada_pullback_2h, eth_4h, xrp_4h), 1d5c-13/-15/-16 (prop-pace fade 2h range gate, trend 2h on the second alt basket, squeeze 2h on the first alt basket), 3947-20/-21/-23 (ExtraTrees, MLP, multinomial logit vs lgbm_base on the regime head)",
+      "INDETERMINATE: RQ-20261022-326f-06 DI/SL on iaum_pullback_1d (baseline n 35 < floor 39, 'underpowered'; IAUM listed 2021-07 so no earlier window exists, not extendable); 3947-25 sklearn ExtraTrees duplicate arm (BTC +0.0060 CI [0.0004, 0.0116], ETH -0.0067, between pass bar and fail floor); 1d5c-14 squeeze 4h second alt basket; 3947-22 CatBoost, 3947-24 HGB (graded indeterminate); 3947-27 momentum-trail attribution re-run (graded indeterminate)"
+    ]
+  },
+  "dispositions": [
+    {"unit": "RQ-20261023-2230-01", "verdict": "FAIL", "follow_up": "configuration closed: +DI/-DI direction filter (di) on eth_pullback_2h vs the declared leg, 2020-2026; family direction-filter stays open; next test = none queued; the xrp 3a84-01 lead stands on 1 of 3 symbols, so no Tier-3 note. The 6-hourly grader closes the unit (rows carry the unit's own rule id)."},
+    {"unit": "RQ-20261025-3947-14", "verdict": "FAIL", "follow_up": "configuration closed: R-armed tight trail (arm 1.5/2.0/3.0 R, tight 3.5 x ATR) on trend_donchian_sol_prop long-only 1h; family R-armed trail stays open; next test = b7e1-03 path-state prop unit. The grader closes the unit."},
+    {"unit": "RQ-20261022-326f-06", "verdict": "INDETERMINATE (underpowered: n 35 < 39)", "follow_up": "no extension possible (IAUM history starts 2021-07, 5 y at 1d gives 35 trades); direction-filter question for the iaum leg stays open and is carried by the accruing paper record; no unit authored, because a longer window does not exist"},
+    {"unit": "RQ-20261025-3947-25", "verdict": "INDETERMINATE", "follow_up": "duplicate of the 3947-20 ExtraTrees arm (which graded FAIL): the pair disagrees on the same learner, BTC CI excludes 0 in favour of ExtraTrees (+0.006) while ETH reverses (-0.0067); family tree-ensemble stays open; next test = RQ-20261025-916f-01 (calibrated logit, still queued/running) and the non-tree-family units; no new unit"},
+    {"unit": "RQ-20261016-c56e-16 / -17 (P3-Q3-ief-fail, -slv-fail nodes)", "verdict": "FAIL (earlier pass; built with the tp_r 50 sentinel per the recorded argv)", "follow_up": "configuration closed: ief/slv_pullback_1d with the sentinel bracket on 2006-10-02..2025-04-09; both legs were demoted off alpaca_live by operator decision (accounts.yaml notes 2026-10-21 and 2026-10-24), so the roster-retention ask in the nodes is moot; the untested configuration is the leg as now declared (tp_r 3.5, 2026-10-22). Both nodes converted to full unit bodies (see units_authored)."}
+  ],
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": {
+    "blocker_watch": "scanned 876 rows, 1275 research units; 41 NOT_RUNNING (all freshly authored: 18 RQ-20261026-90d3-* from the daily authoring routine plus the 3947 series), 0 STALE_BLOCK, 0 NEEDS_LANE; dispatch_queue dry run is the arbiter and lists them would_dispatch, so this is supply waiting for a slot",
+    "blocked_dir": "21 blocked rows named by blocker_watch; every blocked unit already carries a named lever from the 20:47Z audit; no change this pass",
+    "overdue_manager_rows": "AUTHOR-FLOOR-1023 due_by 2026-10-26T00:00Z: its observation 'runnable floor holds' is false at 02:49Z (53 < 71); the row is the manager's, flagged in handoff"
+  },
+  "levers_filed": [],
+  "units_authored": [
+    {"unit": "programme:P3-Q3-ief-fail (id minted by the emitter, queue_replenish plan lists RQ-20261026-002)", "theme": "live_strategy", "rule": "RULE-P3-Q3-IEF-FINITE-TP-STAGE0", "compute": "cpu_light"},
+    {"unit": "programme:P3-Q3-slv-fail (RQ-20261026-003)", "theme": "live_strategy", "rule": "RULE-P3-Q3-SLV-FINITE-TP-STAGE0", "compute": "cpu_light"}
+  ],
+  "followups_filed": [],
+  "authoring": {
+    "queue_depth": 34,
+    "nodes_drafted": 2,
+    "nodes": ["P3-Q3-ief-fail", "P3-Q3-slv-fail"],
+    "queue_depth_after": 32,
+    "theme_shortfall": {"regime": 5, "live_strategy": 2, "ml_health": 3, "new_strategy_prop": 8, "infra": 4},
+    "why_short": "two nodes drafted, both for the same cheap reason (existing driver, no data build). new_strategy_prop (8 short) and regime (5 short) were not served: the remaining high-value nodes need a Tier-3 declare (P1-Q6-*-declare), a live-journal driver (P3-Q1-live-bt-stage-b) or the metis-market-data cross-asset check (P2-Q4-cross-asset-features). 32 ready nodes remain."
+  },
+  "not_run": [
+    "oldest-8 needs_review re-read (every unit already carries an owner and a named gap)",
+    "authoring of the new_strategy_prop and regime shortfall (no node there is authorable on an existing driver this pass)",
+    "research_disposition --record of the dispositions above (the ledger append is the grader's path for rows that attest their own rule; recorded here instead)"
+  ],
+  "handoff": [
+    "next research-ops: read RQ-20261025-916f-01 and the two new ief/slv finite-TP units once they land and apply their rules verbatim",
+    "manager: AUTHOR-FLOOR-1023 observation (runnable floor holds) is false at 02:49Z, runnable 53 vs floor 71; H1-THEME short on new_strategy_prop (8), regime (5), infra (4); the daily authoring routine's RQ-20261026-90d3-* batch (18 units, all NOT_RUNNING until dispatch) is the supply that closes it",
+    "manager: P3-Q1-live-bt-stage-b (value 240) is still blocked on a needs_vm_data driver wrapping scripts/research/live_bt_trade_join.py (row LIVE-BT-STAGE-B)",
+    "next research-ops: author P2-Q4-cross-asset-features after the metis-market-data ES/DXY/gold check; author toward new_strategy_prop from the P5 nodes"
+  ]
+}
