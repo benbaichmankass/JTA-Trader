@@ -1159,6 +1159,10 @@ training sessions follow the established workflow:
    price) and `revealed_grades.jsonl` (T1 by kind, label-only). Protocol:
    `/performance-review` § "Blind-then-reveal grade". Pilot: 50 + 50 rows, Sonnet,
    MEASURED $0.0158 per trade (`comms/claude_judgments/pilot/cj3-pilot-r1/`).
+   Since 2026-10-26 (CJ-7, #20434) the stores also hold the tier-A backfill: 617 blind and
+   546 revealed rows in all (`comms/claude_judgments/backfill/tier-a/`). ⚠️ Journal net R is not a
+   reliable label for packages whose stop is under 1 ATR (148 of 617); CJ-4 registers its
+   exclusion rule before it reads any result.
    No manifest trains on it yet; `claude-judgments-guard` lints any that does.
    Design: [`docs/plans/ml-claude-distillation-DESIGN.md`](plans/ml-claude-distillation-DESIGN.md).
 2. **Build datasets.** `python -m ml.datasets build <family>` writes
