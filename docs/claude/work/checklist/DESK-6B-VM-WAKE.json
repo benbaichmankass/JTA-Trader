@@ -1,0 +1,25 @@
+{
+  "id": "DESK-6B-VM-WAKE",
+  "title": "Desk wake triggered by the VM: gate + desk-wake marker on ops-flags PR (replaces the hourly spawner routine)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "session_015CN5DWiRyr8w2y1TSR5ALz",
+  "lane": "session_015CN5DWiRyr8w2y1TSR5ALz",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 lane DESK-WAKE-VM] src/runtime/desk_wake_post.py (kicked from the tick loop) gates each 1h packet and posts ONE desk-wake marker on ops-flags #17895; manager handler in manager SKILL 'Desk wake'; trading-desk SKILL 6b rewritten; receipt desk_wake_post_receipt; attention_watch probe desk_wake_post. Tier 2 by path: landing hold, manager merges. Finding: CRYPTO_COUNTS_AS_OPEN=True means the gate never closes while a bybit perp is in the universe. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first VM-posted desk-wake writes its row.",
+  "updated_at": "2026-10-26T16:35:41Z",
+  "updated_by": "session_015CN5DWiRyr8w2y1TSR5ALz",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "observation": {
+    "what": "first VM-posted desk-wake marker on #17895 spawns a wake that writes its desk row",
+    "how_to_check": "/api/diag/log_file?name=desk_wake_post_receipt state posted with comment_url; comms/desk/decisions.jsonl row from a desk-wake session for that bar"
+  },
+  "_seq": 719
+}

@@ -577,6 +577,14 @@ _LTR_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "ltr_wake_post_receipt.json"
 )
 
+# DESK-6 (2026-10-26). The live trader's in-process desk-wake poster's receipt:
+# posted / not_due (+ reasons_checked, unlooked) / already_posted / could_not_look
+# (+ reason) / could_not_post. Holds no credential. Same anchor as the writer
+# (src.runtime.desk_wake_post.receipt_path).
+_DESK_WAKE_POST_RECEIPT = (
+    Path(repo_root()) / "runtime_logs" / "desk_wake_post_receipt.json"
+)
+
 # LTR C1 (2026-10-26). The live trader's rows-branch watcher: one line per new
 # live-review/rows row (verdict, per-account venue_after, latencies) and the
 # last pass's status (fetched / could_not_fetch / could_not_read). Same anchor
@@ -619,6 +627,8 @@ _LOG_FILES: dict[str, Path] = {
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     # LTR-1B B2b: did the VM post the ltr-wake comment, and if not, why.
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
+    # DESK-6: did the VM gate the hour and post the desk-wake, and if not, why.
+    "desk_wake_post_receipt": _DESK_WAKE_POST_RECEIPT,
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
