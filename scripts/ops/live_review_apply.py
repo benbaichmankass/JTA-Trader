@@ -559,7 +559,7 @@ def _fresh_entry(aid: str, cfg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
     return _risk_manager(aid, cfg).fresh_entry_check(order, bal, market_type=str(cfg.get("market_type") or "linear"))
 
 
-def _decide_trade_action(db, intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg: Dict[str, Any],
+def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg: Dict[str, Any],
                          cfg: Dict[str, Any], cls: str, execution: str) -> lri.AmendVerdict:
     """No executor for this action on this account -> refuse ``no_action_path:<action>`` before any
     read (so an account that can never act raises no could-not-look streak). Else this account's
@@ -861,7 +861,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             v = lri.AmendVerdict(aid, lri.V_COULD_NOT_LOOK, None,
                                  f"{lri.R_COULD_NOT_LOOK}:account_not_in_accounts_yaml")
         elif trade_action:
-            v = _decide_trade_action(db, intent, leg, pkg, cfg, cls, execution)
+            v = _decide_trade_action(intent, leg, pkg, cfg, cls, execution)
         else:
             view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
                                         leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"))
