@@ -130,6 +130,15 @@ done, or killed **with a stated reason**. Then the checklist: rows `in_flight` w
 `ceiling_usd` / `spend_usd`. Name lanes over ceiling and ceilings with no spend recorded. Spend is
 reported; **session length is never a metric.**
 
+### C12. Lane utilisation vs target (operator, 2026-10-26)
+The manager's REFILL step (manager SKILL.md § The operating loop) says running build lanes should
+track the meter's *"KEEP N LANES RUNNING"* target while the queue is non-empty. Measure it over the
+week: from `list_sessions(mine=true)` (lane start/end) and `spend_meter.py --capacity` readings, state
+the population (lanes dispatched, queued rows at each reading) and the **hours below target while
+`checklist.py queue` was non-empty**. Under-target hours with a non-empty queue and no recorded
+operator preference is a finding (checklist row against the manager loop). If lane timing cannot be
+read, say `not_observed` — never report full utilisation by default.
+
 ### C8. Health review #2
 
 The Saturday `/health-review` is review #1. This is the Monday second look at the same plumbing after the
