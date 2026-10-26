@@ -62,6 +62,23 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
    finished lane it lists — only this project's, after checking it owns no open PR — then
    `checklist.py archive-lane <ROW>`.
+**REFILL (operator, 2026-10-26, binding) — runs at every check-in AND every lane close, after step 5.**
+> Operator, verbatim: *"I shouldn't need to push you like this either - this is what we have a weekly
+> workplan for, to make sure that the manager always knows what to do next. If there's not enough tasks
+> left, then we need to plan together what to do, but that's not even a little bit the case this week -
+> we have a robust backlog and as long as we hvae headroom, lanes should be running"*
+>
+> (a) **Compute the target** from a fresh meter: `spend_meter.py --capacity --live-open N` prints
+> *"KEEP N LANES RUNNING"* — a target, not a cap. (b) **If running build lanes < target, dispatch the next
+> rows now**, in `checklist.py queue` order (`priority_rank`, then the roadmap), without waiting for the
+> operator. (c) **Ask the operator only when the plan has run out or the call is a genuine preference** —
+> never to ask permission to use headroom. A capacity call made earlier in the day (including by the
+> operator) is **re-evaluated against a fresh reading at each check-in, not carried forward**: on
+> 2026-10-26 a morning "1 lane" call stood for hours while weekly usage ran 47% → 50% (~0.5 pp/h).
+> The live-review reserve is MEASURED (runs/day × pp per run, from `comms/live_review/reviews.jsonl`) and
+> capped by the § 6.4 bound; it is not a reason to sit at one lane. The weekly audit's C12 measures
+> lane utilisation against the target.
+
 6. **REPORT.** Three lines to the operator: **capacity** (reading, rate, lanes chosen) · **running**
    (lanes and their rows) · **next** (the top of the queue). Say nothing when nothing changed.
 

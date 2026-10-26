@@ -1,0 +1,106 @@
+id: RQ-20261026-bf56-03
+title: 'Desk D-S0 exit: on a masked blind replay of the four real-money 2h/4h legs, does Claude''s close / partial_close beat holding to the bracket, a frequency-matched random-timing baseline and the best static exit, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: experiment
+question: >-
+  At the same +1.0 R in-trade decision state as RQ-20261026-bf56-02, given only a MASKED point-in-time packet, does Claude's chosen exit action (hold / close / partial_close at 50%)
+  produce a positive paired dR versus holding to the leg's own recorded exit, net of the full cost stack, and does it also beat a frequency-matched random-timing baseline and the best fixed exit rule
+  chosen without seeing the held-out fold?
+why_this_matters: >-
+  DESK-7-BLIND-REPLAY-S0 / design section 8.1 "exit". A strategy-trade exit mandate (DESK-13) is proposed only after this unit passes (design 0.4, 10.2 row 17). Exits are the higher-variance action:
+  closing at +1 R forgoes the trade's tail, so this unit is registered separately from in-trade, with its own (much larger) detectable effect stated honestly below.
+power:
+  expected_n: 176
+  min_detectable_effect: 0.5
+  effect_units: R
+  sd: 2.353
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    expected_n MEASURED 2026-10-26 as in RQ-20261026-bf56-02 (176 Stage-0 OOS decision points with mfe_r >= 1.0: 27 + 31 + 103 + 15 across the four legs, from comms/strategy_evidence/<leg>.json -> source_run).
+    sd MEASURED 2026-10-26 from the same 176 trades: the standard deviation of the hold outcome (net_r) is 2.353 R (per leg 1.544, 1.986, 2.708, 1.229). A close at about +1 R is nearly deterministic, so dR = close - hold
+    has sd close to the hold sd. At that sd, n = (2.8 * 2.353 / 0.5)^2 = 174 <= 176, so this unit clears its floor ONLY for |true dR| >= 0.50 R; MDE at n = 176 is 2.8 * 2.353 / sqrt(176) = 0.497 R. This is the
+    honest limit: a true effect of 0.10 R would need about 4,300 decision points and 0.20 R about 1,090 (MEASURED arithmetic on the same sd). A smaller true effect lands INDETERMINATE by design, and the
+    follow-up is more decision points (DESK-24 offline sessions; the 2h legs have only 365 d of Stage-0 history), never a lowered bar.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      expected_n is a count of committed historical decision points, so nothing accrues. The unit is expected to be underpowered for small effects; that is declared, and the grader treats an underpowered read
+      as 'cannot answer yet', never a verdict (research/queue/README.md power states).
+decision_rule:
+  id: RULE-RQ20261026-BF56-03-DESK-EXIT-S0
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: >-
+    Over the same pooled decision points: dR = net_r(action replayed on the real path) - net_r(hold to the recorded exit), both net of the full cost stack (fee 7.5 bps round trip; slippage 3.0 bps round trip and funding
+    1.0 bps per window from execution_costs.resolve_cost_policy(symbol), MEASURED 2026-10-26 for XRPUSDT, ADAUSDT, ETHUSDT). A close fills at the NEXT bar's open with the symbol's round-trip slippage on the closing leg
+    (no lookahead fill at the decision bar's close); a partial_close realises 50% at that fill and holds the remaining 50% to the recorded exit. Statistic = mean dR, 95% trade-resampling bootstrap CI (10,000 draws, seed registered
+    in the run's inputs). Baselines, same points and cost stack: (B1) STRATEGY'S OWN = hold to the recorded exit, dR = 0; (B2) RANDOM-TIMING = the same action applied with Claude's per-run action frequencies at random bars of the same
+    trade, 1,000 draws; (B3) BEST STATIC = the single fixed rule from {close at the decision state, partial_close 50% at the decision state, close at +2R if reached else hold} with the best mean dR on the other folds
+    (leave-one-fold-out). Folds = the evidence record's 4 folds per leg, pooled by fold index.
+  rule: >-
+    PASS IF n_obs >= 126 AND mean dR (Claude vs hold) has a 95% CI lower bound > 0 AND mean dR > mean dR(B2) with the paired CI of the difference excluding 0 AND mean dR >= mean dR(B3) AND dR > 0 in >= 3 of 4 pooled folds AND the
+    post-cutoff stratum has point estimate > 0 (a post-cutoff n < 20 is reported and a PASS is labelled 'masked-replay only, forward-shadow confirmation required'). FAIL IF n_obs >= 126 AND (mean dR <= 0 OR the CI upper bound < 0 OR
+    the scrambled-label arm of RQ-20261026-bf56-01 was nonzero). INDETERMINATE otherwise: because MDE is 0.497 R, an observed |mean dR| < 0.50 R with a CI straddling 0 is the EXPECTED landing for a real but small effect and means
+    'cannot answer yet'; the record states the observed sd and the n that would resolve +0.20 R. Per-leg dR is reported with its CI and n, no per-leg verdict; n < 20 is 'insufficient_n', never zero. The registered numbers (126, 3 of 4,
+    the action vocabulary, the B3 grid) are not changed after any result.
+  what_it_does_not_do: >-
+    A PASS is Stage-0 for the exit role only and applies nothing. It does not grant an exit mandate (that is DESK-13, Tier-3 grant by the operator after this PASS and a non-contradicting forward-shadow set). It does not exempt a leg from
+    the TP doctrine, and it says nothing about entries (DESK-18) or tighten-only in-trade applies (RQ-20261026-bf56-02).
+requires_result:
+  unit: RQ-20261026-bf56-01
+  verdict: pass
+blocked_on:
+- kind: work_item
+  ref: DESK-7B-REPLAY-DRIVER
+  what: >-
+    Same driver as RQ-20261026-bf56-02 (masked packets, judging-session action collection, real-path replay of close / partial_close with the full cost stack, bootstrap and baselines). The close / partial_close replay is not in
+    live_review_outcomes.py, which prices tighten only.
+  clears_when: >-
+    DESK-7B-REPLAY-DRIVER is done AND RQ-20261026-bf56-01 has landed with verdict pass. Then: git mv this file to research/queue/, fill run.workflow and run.command for the scoring step, remove blocked_on, status: queued.
+masked_replay:
+  population: >-
+    The four real-money 2h/4h legs: xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h (MEASURED 2026-10-26 by parsing config/accounts.yaml at main 38f8bcf8; bybit_2 and its exact mirror bybit_portfolio
+    carry the same legs). Re-parse before running.
+  construction: >-
+    Identical to RQ-20261026-bf56-02 (same packets, same masking, same mask-key discipline): the exit judging reads the SAME packet as the in-trade judging so the two roles are scored on identical decision points,
+    but in a separate judging session so one role's answer cannot condition the other.
+  unmask_key: Written only to a separate file the judging session never reads.
+  leak_controls: >-
+    Scrambled-label arm (RQ-20261026-bf56-01 clause c); pre_cutoff flag with the post-cutoff stratum reported separately; no tools and no repo access in the judging session.
+  action_vocabulary: 'hold | close | partial_close (50%). Closed enum.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  bucket: real_money
+  basis: 'stand-in: bounds what a desk exit role could add on legs carrying real bybit_2 risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: null
+  basis: 'est_minutes null rather than guessed: the driver does not exist; the judging step is LLM sessions, the scoring step is CPU only.'
+run:
+  workflow: null
+  inputs:
+    research_unit: RQ-20261026-bf56-03
+  note: Deliberately null until DESK-7B-REPLAY-DRIVER lands.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-bf56-01
+- RQ-20261026-bf56-02
+- scripts/research/live_review_outcomes.py
+- scripts/ops/desk_scan_packet.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null

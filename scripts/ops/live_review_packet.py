@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only - run by a live-review reviewer session (skill live-trade-review § 1b) and, once LTR-4 lands, by the routine that spawns it; no scheduled caller exists yet.
+# wiring: manual-only - run by hand by a live-review reviewer (skill live-trade-review § 1b); `--bundle` is also invoked by path from scripts/ops/live_review_wake.py::build_bundle (the ltr-wake poller and the VM poster, LTR C2).
 """Decision-packet generator for the live trade review (LTR-11-PACKET).
 
     python3 scripts/ops/live_review_packet.py pkg-b1e4fdf9b9d049a3          # one package
@@ -436,7 +436,8 @@ def _calendar(symbol: str, cutoff: datetime) -> dict:
     return {"state": "read", "events_next_24h": evs}
 
 
-def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id: str, write: bool) -> Tuple[Optional[dict], Optional[str]]:
+def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id: str, write: bool,
+           tables_out: Optional[Dict[str, dict]] = None) -> Tuple[Optional[dict], Optional[str]]:
     if tel.get("open_r") is None or tel.get("peak_r") is None or atr_mult is None:
         return None, "open_r/peak_r/atr_stop_mult not available for this package"
     cmd = [sys.executable, str(REPO / "scripts/research/live_review_outcomes.py"), "--leg", leg, "--side", side,
@@ -451,12 +452,15 @@ def _price(leg: str, side: str, tel: dict, atr_mult: Optional[float], review_id:
     if write:
         TABLES_DIR.mkdir(parents=True, exist_ok=True)
         (REPO / rel).write_text(json.dumps(table, indent=2) + "\n")
+    if tables_out is not None:
+        tables_out[rel] = table
     return {"biases": table["biases"], "corpus": table["corpus"], "n_floor": table["n_floor"], "options": table["options"],
             "population": table["population"], "read_state": table["read_state"], "source": rel}, None
 
 
 def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = False,
-                 cfg: Optional[Dict[str, dict]] = None, price: bool = True) -> dict:
+                 cfg: Optional[Dict[str, dict]] = None, price: bool = True,
+                 tables_out: Optional[Dict[str, dict]] = None) -> dict:
     cfg = cfg if cfg is not None else _accounts_cfg()
     view = _package_view(s, pkg)
     p, tel = view["package"], (view["telemetry"] or [{}])[0]
@@ -534,7 +538,7 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
     priced = None
     if price and direction:
         priced, why = _price(leg, direction, {"open_r": open_r, "peak_r": peak_r, "bars_held": bars_held},
-                             _f(meta.get("atr_stop_mult")), review_id, write_tables)
+                             _f(meta.get("atr_stop_mult")), review_id, write_tables, tables_out)
         if why:
             miss("priced_options", why)
     cost = {"basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"} if priced else {"basis": None}
@@ -601,17 +605,27 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("package", nargs="?", help="order_package_id")
     ap.add_argument("--all-open", action="store_true", help="every package open in ANY source (telemetry, journal, prop tickets)")
     ap.add_argument("--write", action="store_true", help="write comms/live_review/packets/<review_id>.json (+ the priced table)")
+    ap.add_argument("--bundle", action="store_true",
+                    help="print {packet, packet_sha, table_path, table} per package and write NOTHING "
+                         "(the VM wake poster attaches this to the ltr-wake comment, LTR C2)")
     ap.add_argument("--max-pages", type=int, default=3, help="journal pages to walk, stopping once every wanted package is found")
     a = ap.parse_args(argv)
     if bool(a.package) == bool(a.all_open):
         ap.error("give exactly one of <order_package_id> or --all-open")
+    if a.bundle and a.write:
+        ap.error("--bundle writes nothing; drop --write")
     snap = collect([a.package] if a.package else None, max_pages=a.max_pages)
     ids = [a.package] if a.package else open_package_ids(snap)
     now = datetime.now(timezone.utc)
     out = []
     for pkg in ids:
-        pk = build_packet(pkg, snap, now, write_tables=a.write)
+        tables: Dict[str, dict] = {}
+        pk = build_packet(pkg, snap, now, write_tables=a.write, tables_out=tables)
         sha = packet_sha(pk)
+        if a.bundle:
+            src = (pk.get("priced_options") or {}).get("source")
+            out.append({"packet": pk, "packet_sha": sha, "table_path": src, "table": tables.get(src)})
+            continue
         if a.write:
             PACKETS_DIR.mkdir(parents=True, exist_ok=True)
             (PACKETS_DIR / f"{pk['review_id']}.json").write_text(json.dumps(pk, indent=1, sort_keys=True) + "\n")

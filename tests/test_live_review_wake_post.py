@@ -45,9 +45,18 @@ def _reset(monkeypatch):
     monkeypatch.setattr(post, "_last_kick", float("-inf"))
 
 
-def run(tmp_path, doc, http, auth=AUTH, now=NOW):
+PACKET = {"review_id": "LR-20261026T1200Z-pkg-1", "order_package_id": "pkg-1", "state": {"open_r": 1.2}}
+TABLE = {"read_state": "measured", "options": []}
+
+
+def built(pkg):
+    return {"state": "built", "packet": dict(PACKET, order_package_id=pkg), "packet_sha": "f" * 64,
+            "table_path": f"comms/live_review/tables/{PACKET['review_id']}.json", "table": TABLE}
+
+
+def run(tmp_path, doc, http, auth=AUTH, now=NOW, build=built):
     rec = post.run_once(due_fn=lambda: doc, auth_fn=lambda: auth, http=http,
-                        now_fn=lambda: now, receipt=tmp_path / "r.json")
+                        now_fn=lambda: now, receipt=tmp_path / "r.json", build_bundle=build)
     on_disk = json.loads((tmp_path / "r.json").read_text())
     assert on_disk["state"] == rec["state"]
     assert SECRET not in json.dumps(on_disk) and "Basic" not in json.dumps(on_disk)
@@ -158,3 +167,45 @@ def test_telemetry_write_kicks_and_survives_a_broken_kick(monkeypatch):
     assert pt.record_position_telemetry() is None and calls == [1]
     monkeypatch.setattr(post, "kick", lambda: 1 / 0)
     assert pt.record_position_telemetry() is None
+
+
+def test_the_packet_and_table_ride_the_comment(tmp_path):
+    http = FakeHttp()
+    rec = run(tmp_path, due(), http)
+    assert rec["packet_states"] == {"pkg-1": "built"}
+    body = json.loads(http.posts[0][2])["body"]
+    m = post.wake_module().parse_markers([{"body": body}])[0]["entries"][0]
+    assert m["review_id"] == PACKET["review_id"] and m["packet_sha"] == "f" * 64
+    blob = body.split("<!-- ltr-packet pkg-1 -->\n```json\n", 1)[1].split("\n```", 1)[0]
+    doc = json.loads(blob)
+    assert doc["packet"]["review_id"] == PACKET["review_id"] and doc["table"] == TABLE
+    assert len(body) < post.wake_module().MAX_BODY_CHARS
+
+
+def test_a_packet_that_cannot_be_built_still_wakes(tmp_path):
+    http = FakeHttp()
+    rec = run(tmp_path, due(), http, build=lambda pkg: {"state": "could_not_build", "reason": "diag exit 3"})
+    assert rec["state"] == "posted" and rec["packet_states"] == {"pkg-1": "could_not_build"}
+    m = post.wake_module().parse_markers([{"body": json.loads(http.posts[0][2])["body"]}])[0]["entries"][0]
+    assert m["packet_reason"] == "diag exit 3" and "packet_sha" not in m
+
+
+def test_an_oversized_packet_is_omitted_not_truncated(tmp_path):
+    big = lambda pkg: dict(built(pkg), table={"blob": "x" * 70000})  # noqa: E731
+    http = FakeHttp()
+    rec = run(tmp_path, due(), http, build=big)
+    body = json.loads(http.posts[0][2])["body"]
+    assert rec["state"] == "posted" and "ltr-packet" not in body and len(body) < 65536
+    m = post.wake_module().parse_markers([{"body": body}])[0]["entries"][0]
+    assert m["packet_state"] == "omitted_too_large"
+
+
+import pytest as _pytest  # noqa: E402
+
+
+@_pytest.fixture(autouse=True)
+def _isolated_first_proof(tmp_path, monkeypatch):
+    from src.runtime import ltr_first_proof as _fp
+    monkeypatch.setattr(_fp, "state_path", lambda: tmp_path / "ltr_first_proof.json")
+    monkeypatch.setattr(_fp, "_committed_reviews", lambda: [])
+    monkeypatch.setattr(_fp, "_send", lambda text: True)

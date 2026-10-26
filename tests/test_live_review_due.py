@@ -163,3 +163,69 @@ def test_route_requires_diag_token():
     from src.web.api.main import app
     r = TestClient(app).get("/api/diag/live_review_due")
     assert r.status_code in (401, 503)
+
+
+# ---- LTR-DUE-TELEMETRY-LESS: open packages with no telemetry row are listed, never dropped ----
+def _journal(path, packages, trades=()):
+    c = sqlite3.connect(path)
+    c.execute("CREATE TABLE order_packages (order_package_id, strategy_name, symbol, direction, status)")
+    c.execute("DROP TABLE IF EXISTS trades")
+    c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status, order_package_id, strategy_name, "
+              "symbol, direction, account_id)")
+    for p in packages:
+        c.execute("INSERT INTO order_packages VALUES (?,?,?,?,?)", p)
+    for t in trades:
+        c.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?)", t)
+    c.commit()
+    c.close()
+
+
+def _telemetry_less_db(tmp_path):
+    db = str(tmp_path / "j.db")
+    _db(db, [("pkg-1", "7", "ada_pullback_2h", "ADAUSDT", "bybit_2", "short",
+              0.2, 0.3, "measured", 0.1, 3.0, NOW.isoformat())])
+    _journal(db,
+             [("pkg-1", "ada_pullback_2h", "ADAUSDT", "short", "open"),
+              ("pkg-2", "xrp_squeeze_1h", "XRPUSDT", "long", "open"),
+              ("pkg-3", "old_leg_1h", "BTCUSDT", "long", "closed")],
+             [(7, "open", "pkg-1", "ada_pullback_2h", "ADAUSDT", "short", "bybit_2"),
+              (9, "open", "pkg-4", "eth_fade_1h", "ETHUSDT", "short", "bybit_2")])
+    return db
+
+
+def test_open_count_includes_telemetry_less_packages(tmp_path):
+    db = _telemetry_less_db(tmp_path)
+    rv = tmp_path / "r.jsonl"
+    rv.write_text(json.dumps(review(at=NOW - timedelta(hours=1))) + "\n")
+    out = lrd.live_review_due(db_path=db, reviews_path=str(rv), now=NOW)
+    assert out["read_state"] == "looked"
+    # telemetry-open pkg-1 + journal-open pkg-2 (order_packages) + pkg-4 (trades only); pkg-3 closed
+    assert out["open_count"] == 3 and out["open_count_complete"] is True
+    less = {p["order_package_id"]: p for p in out["telemetry_less"]}
+    assert set(less) == {"pkg-2", "pkg-4"}
+    for p in less.values():
+        assert p["telemetry_state"] == "telemetry_absent"
+        assert {e["event"] for e in p["events_could_not_look"]} == set(lrd.TELEMETRY_EVENTS)
+        assert all(e["reason"] == "telemetry_absent" for e in p["events_could_not_look"])
+
+
+def test_telemetry_less_real_money_package_can_be_due_on_daily_floor(tmp_path):
+    db = _telemetry_less_db(tmp_path)
+    out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW)
+    due = {d["order_package_id"]: d for d in out["due"]}
+    assert "pkg-4" in due  # bybit_2 trade row, never reviewed -> daily_floor needs no telemetry
+    assert [e["event"] for e in due["pkg-4"]["events"]] == ["daily_floor"]
+    assert due["pkg-4"]["telemetry_state"] == "telemetry_absent"
+    assert due["pkg-4"]["telemetry_stale"] is None
+    assert "pkg-2" not in due  # no account known -> no floor; still listed, not dropped
+    assert "pkg-2" in {p["order_package_id"] for p in out["telemetry_less"]}
+
+
+def test_journal_unreadable_is_not_an_empty_open_set(tmp_path):
+    db = str(tmp_path / "j.db")  # telemetry table only: no order_packages / trades
+    _db(db, [("pkg-1", "7", "ada_pullback_2h", "ADAUSDT", "bybit_2", "short",
+              0.2, 0.3, "measured", 0.1, 3.0, NOW.isoformat())])
+    out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW)
+    assert out["open_count"] == 1 and out["open_count_complete"] is False
+    assert out["journal_open_state"] == "could_not_look" and out["journal_open_reason"]
+    assert out["telemetry_less"] == []
