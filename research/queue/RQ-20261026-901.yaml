@@ -1,0 +1,76 @@
+id: RQ-20261026-901
+title: 'Calendar event types, study 1 (CALENDAR-EVENT-TYPES): does the initial-jobless-claims surprise vs the PIT survey consensus predict SPY forward returns at 1-5 trading days?'
+status: queued
+cadence: once
+theme: macro
+priority: 3
+kind: experiment
+question: 'Using survey-consensus point-in-time rows (live feed plus survey backfill: 1,170 initial_jobless_claims releases with a defined surprise, MEASURED 2026-10-26 over comms/macro/econ_calendar_snapshots.jsonl + the survey backfill, status=resolved), is Spearman(surprise = actual - consensus, forward SPY return) significant at 1, 3 or 5 trading days after the release at |t_eff| >= 2.4 (Bonferroni over 3 horizons), with the expected NEGATIVE sign (more claims than expected is bad for risk)?'
+why_this_matters: 'The operator (2026-10-26 ~11:38Z) wants the calendar''s event types expanded. Per the data-on / impact-neutral rule a new class ships collecting and logged at weight 0; this is the measurement that must precede any weight. Claims is the first study because it has the largest resolved n of the candidate classes (MEASURED same population: retail_sales_mom 547, ppi_mom 542, durable_goods_orders 271, jolts_job_openings 269, consumer_confidence 26 - the last is underpowered). Sibling units for each class that ships are filed from checklist row CALENDAR-EVENT-TYPES.'
+power:
+  expected_n: 1170
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.01
+  power: 0.8
+  basis: 'Unit = one release with a defined survey surprise. rho 0.20 needs ~(2.576+0.8416)^2/0.2^2 = 292 pairs at alpha 0.01; 1,170 releases clear that before the price join. Weekly releases at horizon 5 overlap, so ic_t_eff (the overlap-corrected t) is graded.'
+  feasibility:
+    source: none
+    accrual_basis: n is a fixed historical backfill, not an accrual; the run prints releases, releases_with_value and price_bars so the bound is MEASURED and a short join lands INDETERMINATE, never padded.
+decision_rule:
+  id: RULE-RQ20261026-901-INITIAL-JOBLESS-CLAIMS-EVENT-STUDY
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: Overlap-corrected Spearman t (ic_t_eff) of surprise vs forward SPY return at horizons 1, 3, 5 trading days (scripts/macro/econ_event_study.py event_study, merged live+survey snapshots), graded by scripts/research/macro_event_study_run.py grade() with the CLI flags below.
+  rule: 'PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 2.4 AND the IC sign is negative. FAIL IF every horizon has n >= 100 and none reaches |t_eff| >= 2.4 in the negative direction (a significant wrong-sign horizon is reported, not a pass). INDETERMINATE IF any horizon has n < 100. no_data/producer_failed IF the price panel is empty or no release has a defined surprise: a route fault, not a verdict.'
+  min_n: 100 joined releases per horizon.
+  what_it_does_not_do: A PASS is evidence for a weight-setting proposal (Tier 3, operator-gated; costs, a placebo and the naive-floor check still owed), not a weight. Sets no weight, touches no config or order path. Daily closes cannot see the intraday reaction.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 50
+  confidence: 0.2
+  basis: 'stand-in: a measured event-class effect decides whether a new calendar class earns a non-zero news-layer weight; information value, not a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: 'Estimate, NOT measured: one daily-close fetch and a rank correlation per horizon, comparable to RQ-20261013-1414-10.'
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - initial_jobless_claims
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - SPY
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - negative
+  - --population
+  - initial_jobless_claims releases (live feed + survey-consensus backfill) joined to SPY daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261026-901
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+related:
+- scripts/macro/econ_event_study.py
+- .claude/skills/macro-research/SKILL.md
