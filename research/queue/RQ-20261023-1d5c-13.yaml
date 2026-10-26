@@ -1,6 +1,6 @@
 id: RQ-20261023-1d5c-13
 title: 'Prop pace fade at 2h on six perps: how tight must the range gate be (ADX <= 15 / 25) with a mid-target exit'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -114,3 +114,16 @@ related:
 - RQ-20261006-019
 - RQ-20261022-4b82-04
 last_dispatched_at: '2026-10-25T20:44:17+00:00'
+grading:
+  attested: RULE-RQ202610231D5C13-FADE2H
+  auto: true
+  decision_rule_id: RULE-RQ202610231D5C13-FADE2H
+  evidence:
+  - research/results/RQ-20261023-1d5c-13/40232215019.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

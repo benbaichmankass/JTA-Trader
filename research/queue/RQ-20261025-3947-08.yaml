@@ -1,7 +1,7 @@
 id: RQ-20261025-3947-08
 title: 'Path-state trail gate (trend_donchian_xrp_4h (bybit_2 + bybit_portfolio)): does a trail that tightens to 2.5 x ATR once peak_r >= 1.5 AND the path-state gate
   holds beat the declared trend_donchian_xrp_4h exit?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -121,3 +121,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - RESEARCH-AUTHOR-1025PM
 last_dispatched_at: '2026-10-25T22:38:44+00:00'
+grading:
+  attested: RULE-RQ20261025394708-PATHSTATE
+  auto: true
+  decision_rule_id: RULE-RQ20261025394708-PATHSTATE
+  evidence:
+  - research/results/RQ-20261025-3947-08/40241199227.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

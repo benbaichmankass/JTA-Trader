@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-26
 title: 'Stale-exit bars on sol_pullback_2h: does exiting a trade that has not reached +0.5 R within 8 / 12 / 20 bars beat the declared exit?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -106,3 +106,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T21:56:43+00:00'
+grading:
+  attested: RULE-RQ20261024014226-SOLPBSTALEEXIT
+  auto: true
+  decision_rule_id: RULE-RQ20261024014226-SOLPBSTALEEXIT
+  evidence:
+  - research/results/RQ-20261024-0142-26/40237892391.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
