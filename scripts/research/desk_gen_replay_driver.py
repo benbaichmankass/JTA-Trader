@@ -708,7 +708,7 @@ def grade_arm(st: Dict[str, Any], *, n_min: int, selfcheck: Optional[bool], labe
     return "pass", why
 
 
-def score(mkt: Dict[str, Series], packets: Dict[str, dict], keys: Dict[str, dict], by: Dict[str, List[dict]],
+def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict]],
           legs: List[LegList], rostered: Dict[str, set], *, subset: str, cutoff: Optional[datetime],
           selfcheck: Optional[bool], seed: int = SEED, draws: int = B_R_DRAWS) -> Dict[str, Any]:
     rng = np.random.default_rng(seed + 7)
@@ -1031,7 +1031,12 @@ def latest_verdict_path(unit: Optional[str], root: Path = REPO / "comms" / "rese
     if not unit:
         return None
     runs = [p for p in (root / unit).glob("*/verdict.json") if p.parent.name.isdigit()]
-    return max(runs, key=lambda p: int(p.parent.name)) if runs else None
+    if not runs:
+        print(f"desk_gen_replay_driver: no landed run of {unit} under {root / unit}: the self-check reads as could-not-look", file=sys.stderr)
+        return None
+    chosen = max(runs, key=lambda p: int(p.parent.name))
+    print(f"desk_gen_replay_driver: self-check verdict = {chosen} (newest of {len(runs)} landed run(s) of {unit})", file=sys.stderr)
+    return chosen
 
 
 def candle_manifest(mkt: Dict[str, Series]) -> List[str]:
@@ -1218,7 +1223,7 @@ def cmd_score(a: argparse.Namespace) -> int:
     if sc_src:
         sc = json.loads(Path(sc_src).read_text()).get("verdict") == "pass"
     cutoff = datetime.fromisoformat(a.model_cutoff).replace(tzinfo=timezone.utc) if a.model_cutoff else None
-    res = score(mkt, packets, keys, by, legs, rost, subset=a.subset, cutoff=cutoff, selfcheck=sc, seed=a.seed)
+    res = score(mkt, keys, by, legs, rost, subset=a.subset, cutoff=cutoff, selfcheck=sc, seed=a.seed)
     res["selfcheck_verdict_path"] = str(sc_src) if sc_src else None
     res["intake"] = intake
     res["n_packets"] = len(packets) if a.packets else len(keys)
