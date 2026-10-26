@@ -3,18 +3,20 @@
   "title": "Live review: drop the n>=20 table floor; Claude judgement applies when the outcome table is thin (guardrails kept), every call graded",
   "phase": null,
   "state": "in_flight",
-  "owner": null,
+  "owner": "lane LTR-JUDGEMENT-APPLY",
   "lane": "session_019k3PxKWzD3FwBmquxHboDN",
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    20259
+  ],
   "blocked_on": [],
-  "note": "OPERATOR 2026-10-26 ~06:30Z popup, verbatim: \"Claude's judgement applies (Recommended)\" (drop the n>=20 clause; thin table -> Claude's call applies, logged as judgement with confidence; every call graded). Chat: \"there's no reason to leave it on dry run or whatever for 20 trades\". Fresh Opus lane (order-adjacent live stop path).",
+  "note": "OPERATOR 2026-10-26 ~06:30Z popup, verbatim: \"Claude's judgement applies (Recommended)\" (drop the n>=20 clause; thin table -> Claude's call applies, logged as judgement with confidence; every call graded). Chat: \"there's no reason to leave it on dry run or whatever for 20 trades\". Fresh Opus lane (order-adjacent live stop path). [2026-10-26 lane] Popup option text verbatim: \"Drop the n>=20 clause. When the table is thin, Claude's call applies, logged as 'judgement' with a confidence; the table is used when it's there. Every call is graded against the actual outcome so models can learn how much weight to give Claude.\" PR #20259 (hold): code + schema + validator + skill + docs. BLOCKED: this lane's config/mandates.yaml edit was refused by the harness classifier (Self-Modification); the manager commits the amendment (patch sent in the manager wake); the pin test stays red until then. Closing observation: the next live-review row with basis=judgement and an applied account read. Gap: nothing dispatches live_review_apply.py --apply (only the dry-run system-action exists).",
   "priority_rank": 1,
-  "updated_at": "2026-10-26T06:31:58Z",
-  "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
+  "updated_at": "2026-10-26T07:02:08Z",
+  "updated_by": "session_019k3PxKWzD3FwBmquxHboDN",
   "roadmap": [
     "L-ATM",
     "L-DESK"

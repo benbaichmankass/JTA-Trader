@@ -67,6 +67,20 @@ R_DRY = "account_mode_dry_run"
 R_SHADOW = "strategy_execution_shadow"
 R_NO_PATH = "no_amend_path"
 R_APPLY_OFF = "apply_mode_off"
+R_MANDATE = "mandate_precondition"
+
+#: What a tighten rests on (LTR-JUDGEMENT-APPLY, operator 2026-10-26, popup
+#: verbatim "Claude's judgement applies (Recommended)": "Drop the n>=20 clause.
+#: When the table is thin, Claude's call applies, logged as 'judgement' with a
+#: confidence; the table is used when it's there."). ``table``: the LTR-0 cell
+#: is ``measured`` and its EV bounds hold. ``judgement``: the cell is
+#: ``insufficient_n`` and the reviewer's call applies, with a confidence in
+#: [0, 1] and a reason, graded later against the realised outcome (LTR-5).
+BASIS_TABLE = "table"
+BASIS_JUDGEMENT = "judgement"
+BASES = (BASIS_TABLE, BASIS_JUDGEMENT)
+#: Operator Q1 apply bound: a table-backed tighten may cost at most 0.25 R of EV.
+TABLE_EV_BOUND_R = -0.25
 
 
 @dataclass(frozen=True)
@@ -87,6 +101,11 @@ class LiveReviewIntent:
     bar_ts: Optional[str] = None              # the closed bar this intent was made on
     min_buffer_atr: float = DEFAULT_MIN_BUFFER_ATR
     mandate: Optional[str] = None
+    basis: Optional[str] = None               # table | judgement (BASES); None = not stated
+    confidence: Optional[float] = None        # judgement basis: the reviewer's confidence in [0, 1]
+    reason: Optional[str] = None              # judgement basis: why, in one line
+    mechanics_verdict: Optional[str] = None   # the review row's mechanics.verdict
+    worst_case_delta_r: Optional[float] = None  # table basis: tighten worst - hold worst
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -212,6 +231,42 @@ def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
         return AmendVerdict(aid, V_CLIP, floor,
                             f"clipped_to_noise_floor:{buf:g}xATR")
     return refuse(R_NOISE_FLOOR)
+
+
+def mandate_precondition(intent: LiveReviewIntent) -> Optional[str]:
+    """The package-level clauses of ``MD-LIVE-TIGHTEN-SL`` that no account's
+    risk manager can see. Pure. Returns None when they hold, else a refusal
+    reason ``mandate_precondition:<clause>``. Checked only before an EXECUTE;
+    the per-account guardrails (tighten-only, noise floor, one amend per bar,
+    could_not_look) stay in :func:`decide_amend`, unchanged.
+
+    * ``mechanics_verdict`` must be ``match`` -- no exit judgment on a broken trade;
+    * ``basis: table`` -- ``expected_cost_r`` >= -0.25 R and ``worst_case_delta_r`` > 0;
+    * ``basis: judgement`` -- a confidence in [0, 1] and a stated reason
+      (the n >= 20 clause was dropped by the operator on 2026-10-26)."""
+    def bad(clause: str) -> str:
+        return f"{R_MANDATE}:{clause}"
+
+    if intent.action != "tighten_sl":
+        return bad("action_not_tighten_sl")
+    if str(intent.mechanics_verdict or "").lower() != "match":
+        return bad(f"mechanics_{intent.mechanics_verdict or 'unstated'}")
+    basis = str(intent.basis or "").lower()
+    if basis == BASIS_TABLE:
+        ev, worst = intent.expected_cost_r, intent.worst_case_delta_r
+        if not isinstance(ev, (int, float)) or not math.isfinite(ev) or ev < TABLE_EV_BOUND_R:
+            return bad("table_ev_outside_bound")
+        if not isinstance(worst, (int, float)) or not math.isfinite(worst) or worst <= 0:
+            return bad("table_worst_case_not_improved")
+        return None
+    if basis == BASIS_JUDGEMENT:
+        c = intent.confidence
+        if not isinstance(c, (int, float)) or isinstance(c, bool) or not math.isfinite(c) or not 0.0 <= c <= 1.0:
+            return bad("judgement_confidence_missing")
+        if not str(intent.reason or "").strip():
+            return bad("judgement_reason_missing")
+        return None
+    return bad("basis_unstated")
 
 
 # -- config -------------------------------------------------------------------

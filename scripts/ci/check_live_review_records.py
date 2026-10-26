@@ -15,6 +15,13 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
   `insufficient_n` requires action `no_recommendation`; `no_recommendation` never routes to an
   apply; and `account_reads` (one read per account carrying the package -- the review is
   package-level, each account applies through its own risk layer) names each account once.
+* LTR-JUDGEMENT-APPLY (operator 2026-10-26, popup verbatim "Claude's judgement applies
+  (Recommended)"): when the LTR-0 cell is thin the reviewer's call stands as basis `judgement`.
+  A `judgement` row carries `evidence_source: judgement`, a `judgement_confidence` in [0, 1] and
+  a `reason`, and is exempt from the table-only 0.25R / tighten_r clauses (there is no table EV
+  to bound); a `tighten_sl` row names its `evidence_source`; an `auto_applied` row needs
+  `mechanics.verdict == match`. `insufficient_n` + `no_recommendation` stays valid (the
+  reviewer may decline to make a call), and is still never hold.
 
 Canonical source: trade_journal.db order_packages / trades, joined on `order_package_id`.
 Files are append-only and start empty; a leading {"_meta": ...} line is skipped.
@@ -99,20 +106,37 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
             out.append(f"options[{i}]: n == 0 but numbers present (must be null)")
     if (disp["route"] == "auto_applied") != row["applied"]:
         out.append("applied disagrees with disposition.route (auto_applied <=> applied)")
-    if disp["route"] == "auto_applied" and ap["within_bound"] is not True:
+    judged = rec["basis"] == "judgement"
+    if disp["route"] == "auto_applied" and ap["within_bound"] is not True and not judged:
         out.append("auto_applied outside the 0.25R apply bound")
+    if disp["route"] == "auto_applied" and row["mechanics"].get("verdict") != "match":
+        out.append("auto_applied requires mechanics.verdict == match")
     if (ap["tighten_r"] is not None and ap["within_bound"] is not None
             and ap["within_bound"] != (ap["tighten_r"] <= ap["bound_r"])):
         out.append("apply_policy.within_bound contradicts tighten_r vs 0.25R")
     if (sh["tighten_r"] is not None and sh["within_bound"] is not None
             and sh["within_bound"] != (sh["tighten_r"] <= sh["bound_r"])):
         out.append("shadow_policy.within_bound contradicts tighten_r vs 0.5R")
-    if rec["action"] == "tighten_sl" and (ap["tighten_r"] is None or sh["tighten_r"] is None):
+    if rec["action"] == "tighten_sl" and not judged and (ap["tighten_r"] is None or sh["tighten_r"] is None):
         out.append("tighten_sl recommendation must record tighten_r on both the apply and shadow arms")
     if rec["basis"] == "insufficient_n" and rec["action"] != "no_recommendation":
         out.append("basis insufficient_n requires action no_recommendation (insufficient_n is never hold)")
     if rec["action"] == "no_recommendation" and (row["applied"] or disp["route"] == "auto_applied"):
         out.append("no_recommendation cannot be applied")
+    src = rec.get("evidence_source")
+    if rec["action"] == "tighten_sl" and src is None:
+        out.append("tighten_sl must name recommendation.evidence_source (table | judgement)")
+    if judged:
+        if src != "judgement":
+            out.append("basis judgement requires evidence_source judgement")
+        if not _is_num(rec.get("judgement_confidence")):
+            out.append("basis judgement requires a judgement_confidence in [0, 1]")
+        if not str(rec.get("reason") or "").strip():
+            out.append("basis judgement requires a reason")
+    elif src == "judgement":
+        out.append("evidence_source judgement requires basis judgement")
+    if src == "table" and rec["basis"] == "insufficient_n":
+        out.append("evidence_source table contradicts basis insufficient_n")
     accts = [a["account_id"] for a in row["account_reads"]]
     if len(accts) != len(set(accts)):
         out.append("account_reads names an account more than once")
@@ -186,7 +210,8 @@ GOOD_REVIEW = {
     "options": [{"action": "hold", "level": None, "n": 32, "mean_r": 3.1, "sd_r": 1.3, "worst_r": 0.2, "net": True}],
     "outcome_table_source": None,
     "recommendation": {"action": "tighten_sl", "level": 1.1, "level_atr": 1.5, "ev_delta_r": -0.2,
-                       "worst_case_delta_r": 2.0, "basis": "preference_within_bound", "confidence": "measured"},
+                       "worst_case_delta_r": 2.0, "basis": "preference_within_bound", "confidence": "measured",
+                       "evidence_source": "table"},
     "judge_prior": 0.6, "applied": False,
     "apply_policy": {"bound_r": 0.25, "within_bound": False, "tighten_r": 0.4},
     "shadow_policy": {"bound_r": 0.5, "within_bound": True, "would_apply": True, "tighten_r": 0.4},
@@ -235,9 +260,31 @@ def _self_test() -> int:
     expect("insufficient_n written as hold is refused",
            mut(GOOD_REVIEW, lambda r: r["recommendation"].update(action="hold", basis="insufficient_n")), "reviews", True)
     expect("insufficient_n as no_recommendation passes",
-           mut(GOOD_REVIEW, lambda r: (r["recommendation"].update(action="no_recommendation", basis="insufficient_n"),
+           mut(GOOD_REVIEW, lambda r: (r["recommendation"].update(action="no_recommendation", basis="insufficient_n",
+                                                                  evidence_source="none"),
                                        r["apply_policy"].update(within_bound=None, tighten_r=None),
                                        r["shadow_policy"].update(within_bound=None, would_apply=None, tighten_r=None))), "reviews", False)
+    def judged(r):
+        r["recommendation"].update(basis="judgement", evidence_source="judgement", confidence="anecdote",
+                                   judgement_confidence=0.6, reason="stalled at swing high",
+                                   ev_delta_r=None, worst_case_delta_r=None)
+        r["apply_policy"].update(within_bound=None, tighten_r=None)
+        r["shadow_policy"].update(within_bound=None, would_apply=None, tighten_r=None)
+        r["disposition"].update(route="auto_applied", mandate="MD-LIVE-TIGHTEN-SL")
+        r.update(applied=True)
+    expect("a judgement-basis applied tighten passes", mut(GOOD_REVIEW, judged), "reviews", False)
+    expect("judgement without a confidence is refused",
+           mut(GOOD_REVIEW, lambda r: (judged(r), r["recommendation"].pop("judgement_confidence"))), "reviews", True)
+    expect("judgement confidence above 1 is refused",
+           mut(GOOD_REVIEW, lambda r: (judged(r), r["recommendation"].update(judgement_confidence=1.4))), "reviews", True)
+    expect("judgement without a reason is refused",
+           mut(GOOD_REVIEW, lambda r: (judged(r), r["recommendation"].update(reason=""))), "reviews", True)
+    expect("judgement applied on a mechanics mismatch is refused",
+           mut(GOOD_REVIEW, lambda r: (judged(r), r["mechanics"].update(verdict="mismatch"))), "reviews", True)
+    expect("tighten_sl without evidence_source is refused",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].pop("evidence_source")), "reviews", True)
+    expect("table basis applied outside 0.25R is still refused (table path unchanged)",
+           mut(GOOD_REVIEW, lambda r: (r["disposition"].update(route="auto_applied"), r.update(applied=True))), "reviews", True)
     expect("missing account_reads is refused", mut(GOOD_REVIEW, lambda r: r.pop("account_reads")), "reviews", True)
     expect("an account read outside the enum is refused",
            mut(GOOD_REVIEW, lambda r: r["account_reads"][0].update(read="approved")), "reviews", True)

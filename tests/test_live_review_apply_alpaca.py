@@ -50,7 +50,9 @@ def _intent():
     return lri.LiveReviewIntent(order_package_id="PA", action="tighten_sl", direction="long",
                                 review_id="LR-20261025T2000Z-PA", new_sl=102.0, mark=105.0, atr=1.0,
                                 bar_ts="2026-10-24T00:00:00Z", min_buffer_atr=1.0, mandate=lri.MANDATE_ID,
-                                evidence_path="comms/live_review/tables/pa.json")
+                                evidence_path="comms/live_review/tables/pa.json",
+                                basis=lri.BASIS_TABLE, mechanics_verdict="match",
+                                expected_cost_r=-0.1, worst_case_delta_r=0.4)
 
 
 @pytest.fixture
