@@ -12,9 +12,9 @@ power:
   min_detectable_effect: 0.32
   effect_units: sd
   design: one_sample
-  alpha: 0.0027
+  alpha: 0.01
   power: 0.8
-  basis: 'Unit = one distinct release with a defined survey surprise (138, MEASURED 2026-10-26 over live + survey snapshots). Fisher-z: detecting rho at the registered |t| bar 3.0 (two-sided alpha 0.0027, Bonferroni over 3 horizons x 11 sibling studies) with power 0.8 needs atanh(rho) >= (3.0+0.8416)/sqrt(n-3), i.e. rho >= 0.32 at n=138. A FAIL therefore means ''no effect >= ~0.32 sd at daily-close resolution'', not ''no effect''. Releases are monthly or longer apart so horizon-5 windows do not overlap; ic_t_eff is graded anyway.'
+  basis: 'Unit = one distinct release with a defined survey surprise (138, MEASURED 2026-10-26 over live + survey snapshots). Fisher-z: detecting rho at the registered |t| bar 3.0 (two-sided alpha 0.0027, Bonferroni over 3 horizons x 11 sibling studies) with power 0.8 needs atanh(rho) >= (3.0+0.8416)/sqrt(n-3), i.e. rho >= 0.32 at n=138. A FAIL therefore means ''no effect >= ~0.32 sd at daily-close resolution'', not ''no effect''. Releases are monthly or longer apart so horizon-5 windows do not overlap; ic_t_eff is graded anyway. The queue power gate only tabulates alpha 0.01, so `power.alpha` is declared 0.01 (looser than the registered bar); `min_detectable_effect` is computed at the STRICTER |t| bar 3.0, so the gate''s floor is conservative against the real rule.'
   feasibility:
     source: none
     accrual_basis: n is a fixed historical backfill, not an accrual; the run prints releases, releases_with_value and price_bars so the bound is MEASURED and a short join lands INDETERMINATE, never padded.
