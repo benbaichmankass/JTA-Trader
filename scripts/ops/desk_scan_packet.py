@@ -150,8 +150,23 @@ def atr_series(bars: Sequence[Bar], period: int = ATR_PERIOD) -> List[Optional[f
     return out
 
 
+def _repo_first() -> None:
+    """Put the repo root FIRST on sys.path. scripts/candle_io.py inserts `scripts/` at sys.path[0] when it is imported, and
+    scripts/ml/__init__.py then shadows the top-level `ml` package: the first `src.runtime.regime` import raised inside
+    live_review_packet.trend_now (which swallows it), so the first trend read in a process came back None and the next did
+    not (found 2026-10-26 by the DESK-18 replay self-check: the same packet had two shas)."""
+    root = str(REPO)
+    if not sys.path or sys.path[0] != root:
+        sys.path[:] = [root] + [p for p in sys.path if p != root]
+    shadow = sys.modules.get("ml")
+    if shadow is not None and not str(getattr(shadow, "__file__", None) or next(iter(getattr(shadow, "__path__", [])), "")).startswith(str(REPO / "ml")):
+        for k in [k for k in sys.modules if k == "ml" or k.startswith("ml.")]:
+            del sys.modules[k]
+
+
 def htf_trend(bars: Sequence[Bar]) -> Optional[str]:
     """The live regime detector's trend label (src.runtime.regime.detector via live_review_packet)."""
+    _repo_first()
     try:
         from live_review_packet import trend_now
     except Exception:  # allow-silent: the caller names the missing input
