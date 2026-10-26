@@ -714,6 +714,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*review_id[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Rr]eview_id[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # live-review-apply: optional pinned commit (40-hex) on main or live-review/rows.
+            review_ref=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*ref[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Rr]ef[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             if [ -z "${action}" ]; then
               echo "::error::Issue body must contain a line of the form 'action: <name>'. Title was: ${ISSUE_TITLE}"
               exit 1
@@ -802,6 +807,7 @@ jobs:
           echo "ACTION_SIDE=${side:-}" >>"$GITHUB_ENV"
           echo "ACTION_ALLOW_IMMEDIATE=${allow_immediate:-}" >>"$GITHUB_ENV"
           echo "ACTION_REVIEW_ID=${review_id:-}" >>"$GITHUB_ENV"
+          echo "ACTION_REVIEW_REF=${review_ref:-}" >>"$GITHUB_ENV"
           echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${GITHUB_EVENT_NAME})"
 
       - name: Validate action and tier policy
@@ -1247,6 +1253,10 @@ jobs:
               ""|true|false|True|False) ;;
               *) echo "::error::live-review-apply apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
             esac
+            if [ -n "${ACTION_REVIEW_REF:-}" ] && ! printf '%s' "${ACTION_REVIEW_REF}" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "::error::live-review-apply ref must be a full 40-hex commit sha (got '${ACTION_REVIEW_REF}')."
+              exit 1
+            fi
           fi
           # phone-dry-test: ONE always-dry phone test ticket (meta.test, submit
           # forced dry). `account` is REQUIRED and `symbol` optional; both are
@@ -2190,7 +2200,7 @@ jobs:
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") TRADE_ID=$(printf '%q' "${TRADE_ID:-}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_SIDE=$(printf '%q' "${ACTION_SIDE:-}") ACTION_NEW_SL=$(printf '%q' "${ACTION_NEW_SL:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_ALLOW_IMMEDIATE=$(printf '%q' "${ACTION_ALLOW_IMMEDIATE:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "live-review-apply" ]; then
-            REMOTE_CMD="ACTION_REVIEW_ID=$(printf '%q' "${ACTION_REVIEW_ID:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_REVIEW_ID=$(printf '%q' "${ACTION_REVIEW_ID:-}") ACTION_REVIEW_REF=$(printf '%q' "${ACTION_REVIEW_REF:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-tpsl-leg-ids" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
