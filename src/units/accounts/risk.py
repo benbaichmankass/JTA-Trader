@@ -905,6 +905,37 @@ class RiskManager:
         return _lri.decide_amend(intent, account, dry_run=self.dry_run,
                                  account_min_buffer_atr=own)
 
+    def fresh_entry_check(self, order: OrderPackage, balance_usd: Optional[float],
+                          **size_kw: Any) -> tuple:
+        """The check a FRESH entry of ``order`` would pass on this account, for a live-review action that
+        ADDS risk (LTR-ALL-ACTIONS: a widened stop or added size "must pass the same risk check a fresh
+        entry would"). Returns ``(ok, reason, max_qty)``: ``ok`` True / False / None (could not look) from
+        this account's own :meth:`evaluate` (``opening=True``: mode, the daily-DD switch's block on new
+        risk, the gross-exposure cap), and ``max_qty`` = :meth:`position_size` for that order, the size a
+        fresh entry there would be given (None = could not look: no balance). Never writes, never halts."""
+        try:
+            ok, why = self.evaluate(order, opening=True)
+        except Exception as exc:  # noqa: BLE001 -- a failed check is could-not-look, never an approve
+            return None, f"evaluate_failed:{type(exc).__name__}", None
+        if not ok:
+            return False, str(why or "refused"), None
+        if balance_usd is None:
+            return None, "balance_unread", None
+        try:
+            q = float(self.position_size(order, float(balance_usd), **size_kw))
+        except Exception as exc:  # noqa: BLE001
+            return None, f"position_size_failed:{type(exc).__name__}", None
+        return True, "ok", q
+
+    def approve_action(self, intent: Any, account: Any) -> Any:
+        """Per-account gate for a live-review TRADE ACTION (close / partial_close / move_tp / widen_sl /
+        change_size / add_entry; LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``). ``account`` is this
+        account's ``AmendAccountView``, carrying this account's own :meth:`fresh_entry_check` result for
+        an action that adds risk. Returns an ``AmendVerdict``. Never a halt; never writes ``mode``."""
+        from src.runtime import live_review_intent as _lri
+
+        return _lri.decide_action(intent, account, dry_run=self.dry_run)
+
     def note_live_equity(self, equity_usd: Optional[float]) -> None:
         """Feed this dispatch's live TOTAL equity to the daily-DD switch."""
         try:

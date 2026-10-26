@@ -13,9 +13,13 @@ clause on the row at the pinned commit, refuses a duplicate review_id through
 ``live_review_apply.py``, where each account decides through its own
 ``RiskManager.approve_amend`` and the venue is read back. This file only
 decides WHEN to call it: once per new ``review_id`` whose recommendation is a
-``tighten_sl`` on a dispatchable route (``hold``, ``operator_ask``,
-``flag_mechanics`` and paper rows are logged ``not_dispatchable`` and never
-sent, so they cannot trip the dispatcher's refusal ping).
+``tighten_sl`` or (LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``, 2026-10-26) one of
+the trade actions -- close, partial_close, move_tp, widen_sl, change_size,
+add_entry -- on a dispatchable route, on ANY account class, paper included
+(operator 2026-10-26: "All accounts now", "Real-money, prop and paper at once").
+``hold``, ``operator_ask`` / ``none`` routes and ``flag_mechanics`` are logged
+``not_dispatchable`` and never sent, so they cannot trip the dispatcher's
+refusal ping.
 
 Cadence: ``ensure_started()`` (called from ``record_position_telemetry``,
 which only runs while packages are open) starts ONE daemon thread, once, in
@@ -121,10 +125,14 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
             "lines": lines[-20:]}
 
 
+#: tighten_sl plus the trade-desk actions (LTR-ALL-ACTIONS); every one is re-checked by the dispatcher.
+DISPATCHABLE_ACTIONS = ("tighten_sl", "close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
+
+
 def dispatchable(row: Dict[str, Any]) -> Optional[str]:
     """None when the row is an apply candidate; else why it is not (logged, never sent)."""
     rec = row.get("recommendation") or {}
-    if rec.get("action") != "tighten_sl":
+    if rec.get("action") not in DISPATCHABLE_ACTIONS:
         return f"action_{rec.get('action')}"
     route = (row.get("disposition") or {}).get("route")
     if route not in DISPATCHABLE_ROUTES:
