@@ -1,0 +1,86 @@
+{
+ "run": "RESEARCH-OPS-2026-10-26-1447",
+ "finished_at": "2026-10-26T15:40:00Z",
+ "by": "session_01TLGN4zjTckFCB8VK4D3GyF",
+ "floor": 60,
+ "floor_basis": "computed_floor(fired_24h 75)",
+ "authoring_queue_depth": 31,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle",
+  "trainer"
+ ],
+ "needs_review_triaged": 1,
+ "needs_review_left": 28,
+ "throughput": {
+  "runnable_before": 65,
+  "runnable_after": 66,
+  "queued": 151,
+  "fired_24h": 75,
+  "results_landed_24h": 80,
+  "hours_since_last_dispatch": 1.8,
+  "idle_alarm": false,
+  "after_basis": "47a9-01 dry run would_dispatch; counts runnable once this HELD PR merges (E57)"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (fresh, 1.85h)",
+  "collector": "ok (80 results landed 24h, 0 unreadable)",
+  "stranded_stamp_prs": [],
+  "incident": null
+ },
+ "results_read": {
+  "pass": 1,
+  "fail": "see units",
+  "indeterminate": "see units",
+  "units": [
+   "RQ-20261025-bda2-01 PASS (T30 pooled; 4 of 12 cells fetch_failed; Holm set empty; zero nominees) -> follow-up RQ-20261026-47a9-01",
+   "RQ-20261025-3947-23 FAIL hand-graded (numpy logit worse than lgbm_base on all 3 symbols, CV and holdout); configuration closed: numpy multinomial logit on the six shared features, 1h tail 40000; family logit stays open; next test = remaining 3947-* learner units",
+   "76 results since run id 40200000000 were read by the census: every other unit carries its own mechanical grade (fail: 90d3-*, 0142-*, d7e6-08/09, 71e8-01, 916f-01, 3947-01/13/20/21, 3a84-05/06/07, tqqq prop-fit 005-009; indeterminate 90d3-02; ae17-43/44/45 infra self-tests pass); no rule re-read by hand except bda2-01 and 3947-23"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "multi-timeframe pooling in harness_stage0 for P5-RG1025-trend-pooled",
+   "ref": "PI-20261026-RESEARCH-0001"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261026-47a9-01 (T30 recent-window confirmation of bda2-01 with SPLG/XLF/XLP/XLU recovered; T55 not re-asked)"
+ ],
+ "followups_filed": [
+  {
+   "what": "ticker map: XLF/XLP/XLU were unmapped in yf_symbols so bda2-01 lost 3 of 12 cells; mapped in this PR",
+   "ref": "ml/datasets/adapters/yf_symbols.py"
+  },
+  {
+   "what": "SPLG Yahoo 404 in the bda2-01 run: unverified whether transient; 47a9-01 will show",
+   "ref": "RQ-20261026-47a9-01"
+  }
+ ],
+ "authoring": {
+  "queue_depth": 31,
+  "nodes_drafted": 0,
+  "nodes": [],
+  "theme_shortfall": {
+   "new_strategy_prop": 13,
+   "ml_health": 1
+  },
+  "note": "P5-RG1025-trend-pooled examined and NOT authored: harness_stage0 takes one --timeframe per run, so the pooled 1h+2h+4h test is not one registered run (PI-20261026-RESEARCH-0001). One hand unit authored from a result follow-up instead; the other 30 authoring-queue nodes are untouched."
+ },
+ "not_run": [
+  "programme node authoring (E.0): zero nodes drafted, reason above",
+  "P2-R3.c03/c04 Tier-3 packet note on REGIME-PROGRAM",
+  "routing of due pipeline items (15 unrouted); PI-20261025-4CGB8QKR-0001 (OI-optional sibling of 09a6-02) still needs authoring",
+  "blocked/ audit beyond the dispatch dry run",
+  "needs_review: only the oldest 8 re-read (all owned with named gaps) and the one UNOWNED unit graded; RESULTS-UNDISPOSITIONED now 0 unowned"
+ ],
+ "handoff": [
+  "MERGE the held PR: unit 47a9-01 only dispatches after it merges (E57).",
+  "next research-ops: author PI-20261025-4CGB8QKR-0001 (OI-optional sibling of 09a6-02), then a programme node toward new_strategy_prop (short by 13).",
+  "next research-ops: read 47a9-01; if T30 passes with a Holm survivor, author the sizing/overlap unit; if SPLG still 404s, file the Yahoo ticker lever.",
+  "2 rows landed for RQ-20261025-3947-23 although cadence is once (second is a producer_failed re-fire); watch whether once-units re-fire on a non-verdict row.",
+  "P2-R3.c03/c04 regime-gate Tier-3 packet note still owed on REGIME-PROGRAM."
+ ]
+}

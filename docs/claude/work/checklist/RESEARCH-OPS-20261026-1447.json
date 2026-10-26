@@ -11,8 +11,8 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[lane research-ops-1447] 14:47Z pass; first finishes 08:47/14:00 not_run items (needs_review triage, results read D, unowned 3947-23, programme authoring E.0). PR pending.",
-  "updated_at": "2026-10-26T14:53:46Z",
+  "note": "[lane research-ops-1447] 14:47Z pass; first finishes 08:47/14:00 not_run items (needs_review triage, results read D, unowned 3947-23, programme authoring E.0). PR pending.  DONE: graded 3947-23 FAIL (was the only UNOWNED needs_review); read bda2-01 PASS -> authored RQ-20261026-47a9-01 (T30 recent-window confirm; XLF/XLP/XLU mapped in yf_symbols); filed PI-20261026-RESEARCH-0001 (multi-timeframe pooling lever); record comms/research/ops/20261026T1540Z.json. NOT RUN: programme node authoring, due-item routing, P2-R3 packet note. HELD PR (unvouchable_paths); merge-slot claim committed.",
+  "updated_at": "2026-10-26T15:01:44Z",
   "updated_by": "research-ops-1447",
   "roadmap": [
     "L-LADDER"
@@ -20,6 +20,11 @@
   "writeback": {
     "roadmap": "none: operations pass",
     "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261026-47a9-01 is emitted, dispatched, and its result lands on main with XLF/XLP/XLU cells measured",
+    "how_to_check": "ls research/results/RQ-20261026-47a9-01; python3 scripts/research/dispatch_queue.py | grep 47a9",
+    "due_by": "2026-11-02T00:00Z"
   },
   "_seq": 718
 }
