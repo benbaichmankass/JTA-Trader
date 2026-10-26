@@ -1117,6 +1117,29 @@ mandates:
       - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, <= 1 amend per package per closed bar, account live, leg not shadow); could_not_look never applies
     never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act on a mechanics mismatch, act on a judgement without a recorded confidence and reason, write mode or execution]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no-op / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the review row and table path
+    review_rule: >-
+      Operator 2026-10-26 ~18:56-19:00Z, popup answer to the manager (session
+      session_01C1ooo4kqBbng7vytdG1UVs) on the CLAUDE-GRADE-LOOP review rule
+      (docs/plans/ml-claude-distillation-DESIGN.md § 3.7, PR #20386), verbatim
+      "1" = ADOPT as proposed. Every /performance-review reads
+      scripts/ops/live_review_grade.py use_rules and calibration. Per altering
+      action class (tighten_sl here; each MD-TRADE-DESK class the same way), once n >= 20 priced calls are graded (applied + recommended-only):
+      the 95% CI of mean delta_r entirely < 0 => propose that class goes
+      recommend-only; entirely > 0 and its calibration not OVERCONFIDENT =>
+      propose the next scope step for that class; a calibration stratum
+      <class>/judgement reading OVERCONFIDENT at n >= 10 => propose a
+      confidence floor (the judgement basis applies only at
+      judgement_confidence >= the lowest bucket whose realised hit rate >=
+      0.5). PROPOSALS ONLY, nothing automatic: each is a proposed_tweaks[]
+      entry and an ask_operator pipeline item; never a flip.
+    superseded_by: MD-TRADE-DESK
+    superseded_note: >-
+      SUPERSEDED 2026-10-26 by MD-TRADE-DESK (operator verbatim: "the desk is
+      just a more advanced version of the ltr, they should both rely on the same
+      mandate - ltr is just one funciton of the trade desk"). Kept granted as a
+      resolvable alias so existing rows, the dispatcher and the apply path still
+      read it; a tighten under this id is the MD-TRADE-DESK tighten grant. Its
+      `never` list binds a tighten; every other action is MD-TRADE-DESK's.
     revert: a tightened stop that is hit cannot be undone; disarm by committing apply_mode recommend in config/live_trade_review.yaml; undo the 2026-10-26 amendment by restoring the n >= 20 clause (fires_when) and the never-entry 'act with n below the floor'; undo the 2026-10-26 rows-branch amendment by restoring 'evidence path on main' in fires_when (the dispatcher then reads only main)
     amended_at: '2026-10-26'
     amendment_source: >-
@@ -1145,6 +1168,105 @@ mandates:
       unchanged; removes the 15-30 min PR wait and the ~5 min VM refresh wait. Row
       LTR-APPLY-AUTOFLOW. Effective once the dispatcher reads a pinned rows-branch
       commit; until then it still reads main.
+
+  # ── THE TRADE DESK (operator 2026-10-26) ─────────────────────────────────
+  #
+  # ONE mandate for the whole desk. The operator, 2026-10-26 ~19:00Z, verbatim:
+  # "also, the desk is just a more advanced version of the ltr, they should both
+  # rely on the same mandate - ltr is just one funciton of the trade desk". The
+  # live trade review is the desk's IN-TRADE function (managing open packages);
+  # GENERATING new entries from the desk's scan is its other function, under the
+  # same mandate but behind the operator's own gate for generated entries.
+  #
+  # MD-LIVE-TIGHTEN-SL above is SUPERSEDED by this entry and kept, granted, as a
+  # resolvable alias: existing review rows, the VM dispatcher and the apply path
+  # name it for a tighten, and a tighten under either id is the same grant. It
+  # stays `direction: derisk_only` because a tighten is; this entry is not.
+  - id: MD-TRADE-DESK
+    supersedes: [MD-LIVE-TIGHTEN-SL]
+    aliases: [MD-LIVE-TIGHTEN-SL]
+    grants: every trade action of the Claude trading desk (tighten_sl, close, partial_close, move_tp, widen_sl, change_size, add_entry) on every account carrying the package, and -- behind its own gate -- desk-generated entries
+    direction: mixed
+    direction_note: >-
+      NOT derisk_only. tighten_sl / close / partial_close / change_size-down
+      reduce risk; widen_sl / change_size-up / add_entry ADD risk; move_tp
+      changes the exit. scripts/ops/mandate_resolver.py refuses `mixed` (it reads
+      only add_risk | derisk_only) -- correct, this is not a ladder mandate and
+      the resolver has nothing to measure for it; do not change the word to
+      quiet that refusal.
+    proposed_by: manager session_01C1ooo4kqBbng7vytdG1UVs (dispatch of lane LTR-ALL-ACTIONS)
+    proposed_at: '2026-10-26'
+    granted_by: operator (Ben)
+    granted_at: '2026-10-26'
+    source: >-
+      Operator popup answers to manager session_01C1ooo4kqBbng7vytdG1UVs,
+      2026-10-26 ~18:56-19:00Z, relayed in the lane LTR-ALL-ACTIONS dispatch.
+      Verbatim: "we also need to expand the desks mandate so include all trade
+      actions, as long as they have reasoning and confidence attached". Which
+      book: "Both". Which actions: "Close / partial-close", "Move take-profit",
+      "Widen a stop", "Change size / add entry" (all four). Accounts: "All
+      accounts now" (real-money, prop and paper). Review rule: "1" (adopt the
+      CLAUDE-GRADE-LOOP rule as proposed). The desk's live-influence gate, same
+      session earlier, verbatim: "Beat random entries only" (row
+      DESK-13-MANDATE, PR #20406). Committed by lane LTR-ALL-ACTIONS
+      (session_01Ek4ZF8rHKPrYehmQkcjSrW) in a `landing: hold` PR the manager
+      merges; the lane holds no authorization of its own, it transcribes the
+      operator's answers.
+    amended_at: '2026-10-26'
+    amendment_source: >-
+      ONE MANDATE (manager relay ~19:00Z), operator verbatim: "also, the desk is
+      just a more advanced version of the ltr, they should both rely on the same
+      mandate - ltr is just one funciton of the trade desk". BOTH BRACKETS
+      (manager relay ~19:02Z), operator verbatim: "in general, every trade always
+      must have BOTH brackets, not related to this skill. Claude can move the
+      brackets, but nothing is supposed to remove brackets". Rows LTR-ALL-ACTIONS,
+      DESK-13-MANDATE; the system-wide half is row BRACKETS-ALWAYS.
+    functions:
+      in_trade:
+        what: the live trade review -- managing OPEN order packages (live-trade-review SKILL; REVIEWER-BRIEF for a repo-less reviewer)
+        actions: [tighten_sl, close, partial_close, move_tp, widen_sl, change_size, add_entry]
+        state: armed (apply_mode in config/live_trade_review.yaml decides per account)
+      entry_generation:
+        what: desk-generated NEW entries from the desk's scan packet (trading-desk SKILL)
+        actions: [propose_entry]
+        state: shadow
+        blocked_until: >-
+          The DESK-13 gate, operator verbatim "Beat random entries only": the
+          desk's entries show OOS edge vs the random-entry baseline, net of the
+          full cost stack, at n >= 30 graded decisions
+          (scripts/ops/desk_grade.py promotion_gate), recorded as a committed
+          evidence record on row DESK-13-MANDATE. Until then generated entries
+          stay shadow (record-only, every one replayed and graded). Clearing it
+          is a committed record plus the manager's PR, never a session's own act.
+    scope: >-
+      Every account carrying the package (real-money, prop and paper), each
+      through its own RiskManager (approve_amend for a tighten, approve_action
+      for every other action) and its own existing executor
+      (scripts/ops/live_review_apply.py --apply). An account with no executor for
+      an action refuses it as no_action_path:<action>, named, pinged once on a
+      real-money or prop account; it never falls back to another account's path.
+    fires_when:
+      - a committed decision row (comms/live_review/reviews.jsonl for the in-trade function) whose action is one of that function's `actions`, its decision packet recorded, read at a PINNED commit on main or on the protected append-only branch live-review/rows
+      - the row carries a non-empty reason AND either evidence_source table (a measured LTR-0 cell; for a tighten the Q1 bound ev_delta_r >= -0.25 and worst_case_delta_r > 0; for any other action its ev_delta_r) or evidence_source judgement with judgement_confidence in [0, 1] -- the operator's "as long as they have reasoning and confidence attached"
+      - the row carries the action's own target (tighten_sl / widen_sl / move_tp a price level; partial_close a size_fraction in (0, 1); change_size a size_multiplier > 0 and != 1; add_entry a size_fraction > 0)
+      - mechanics.verdict == match
+      - config/live_trade_review.yaml apply_mode == apply for the account
+      - the account's own approve_amend / approve_action returns approve or clip. Its checks are the account's OWN and are never bypassed - a tighten is tighten-only beyond the min_buffer_atr noise floor; a widened stop and any added size pass the same risk check a fresh entry would (account live, leg not shadow, the daily-DD switch's block on new risk, the gross-exposure cap, total size <= the size a fresh entry at the stop in force would get); every result keeps BOTH brackets; one action per package per closed bar; could_not_look never applies
+      - entry_generation additionally needs its blocked_until cleared
+    never: [act on a read that could not look, act on a mechanics mismatch, act without a recorded reason and either a confidence or a table basis, write mode or execution, remove or null a stop-loss or a take-profit on any action (move_tp / tighten_sl / widen_sl MOVE a bracket and never delete one; a partial_close or change_size leaves the remaining position with BOTH brackets; an add_entry is placed with both brackets; a close removes the position, not just its brackets), leave a leg without a REAL take-profit (TP doctrine -- no sentinel, no TP through the mark), bypass an account's per-trade risk limit / sizing cap / exposure cap / daily-DD switch, route one account's action through another account's executor, place a desk-generated entry before entry_generation's blocked_until clears]
+    notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no_action_path / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the decision row
+    review_rule: >-
+      The MD-LIVE-TIGHTEN-SL review_rule (operator "1", 2026-10-26), applied to
+      the whole mandate, graded per action class AND per function (in_trade vs
+      entry_generation): scripts/ops/live_review_grade.py use_rules (hold-vs-
+      action counterfactual, scripts/research/live_review_counterfactual.py) and
+      scripts/ops/desk_grade.py. Proposals only, nothing automatic.
+    soak: >-
+      Mechanical (OPERATING-PLAN § 2): the first apply of each action type on
+      each venue is checked against the venue read-back (including both
+      brackets present after it) and recorded on checklist row LTR-ALL-ACTIONS;
+      1-2 clean applies per action type, never a sample size or a calendar.
+    revert: a close, partial close or filled size change cannot be undone; disarm per account with config/live_trade_review.yaml accounts.<id>.apply_mode recommend, or all with apply_mode recommend; restore the pre-2026-10-26 state by deleting this entry (MD-LIVE-TIGHTEN-SL still grants the tighten alone)
 
 # MD-PROMOTE-S1-S2-SOAK-AMEND (proposed 2026-10-15 by lane SOAK-REDEFINE) was
 # GRANTED by the operator the same day and folded into MD-PROMOTE-S1-S2 above

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane IB-MGC-NAKED-REARM (dispatched by manager session_01C1ooo4kqBbng7vytdG1UVs), step 2. Adds the system-action rearm-ib-protective: an ops script that PLACES a protective STP+LMT OCA pair on a fully naked IB position, so it is Tier-2 (allowlist extension that can place orders). It does not touch the trader's code path: nothing in src/ changes, and the action only runs when dispatched with apply: true. The manager merges; the lane then dispatches it (dry-run, then apply) for ib_paper/MGC row 6673. Revert: git revert of the merge commit.",
+  "why": "Operator rule 2026-10-26: every trade must have BOTH brackets. ib_paper/MGC short 12 has no stop and no TP and no sanctioned action could arm a stop on a fully naked IB position."
+}
