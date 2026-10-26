@@ -764,7 +764,9 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
     # gld_pullback_1h, spy_pullback_1h, qqq_pullback_1h, tlt_pullback_1h and
     # uso_trend_1h: complete Stage-1 soaks whose Stage-0 record fails.
     assert acct["strategies"] == [
-        "spy_trend_long_1d", "qqq_trend_long_1d", "gld_pullback_1d",
+        "spy_trend_long_1d", "qqq_trend_long_1d",
+        # gld_pullback_1d moved to ib_paper 2026-10-25 (GLD-SOAK-REPLACE): the GLD
+        # slot here is held by a kept zombie OCO.
         "iwm_trend_long_1d", "tlt_pullback_1d", "ief_pullback_1d",
         "slv_trend_1h",
         "slv_pullback_1d", "gdx_pullback_1d",

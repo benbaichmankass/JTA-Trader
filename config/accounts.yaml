@@ -980,7 +980,8 @@ accounts:
     ib_client_id: 497                  # unique per concurrent socket
     strategies: [mes_trend_long_1d, mgc_pullback_1d, mhg_pullback_1d, mgc_trend_1h,
       ict_scalp_mgc_15m,
-      spy_trend_long_1d, qqq_trend_long_1d, iwm_trend_long_1d, tlt_pullback_1d]
+      spy_trend_long_1d, qqq_trend_long_1d, iwm_trend_long_1d, tlt_pullback_1d,
+      gld_pullback_1d]
                                        # ict_scalp_mgc_15m added 2026-07-28 (Tier-3,
                                        # M27 gold re-target, PB-20260728-ICTSCALP-GOLD-
                                        # GATE-CONFIG): the venue-blocked XAUUSD 15m
@@ -1041,7 +1042,16 @@ accounts:
                                        # validation, per the operator's 2026-07-07 decision) — no new
                                        # strategy logic, just a second execution venue for four
                                        # already-approved cells.
-    symbols: [MES, MGC, MHG, SPY, QQQ, IWM, TLT]
+                                       # gld_pullback_1d RE-PLACED here from alpaca_paper 2026-10-25 (Tier-3,
+                                       # OPERATOR-APPROVED: popup "Re-place the soak (Recommended)" + chat "go ahead
+                                       # with the GLD soak re-place", checklist GLD-SOAK-REPLACE). alpaca_paper's GLD
+                                       # slot is held by a kept zombie OCO, so the leg was refused on every signal and
+                                       # its Stage-1 soak could never close. Params unchanged. NOTE the 2026-07-07
+                                       # paragraph above: gld was SKIPPED at ib_paper's 1.5% risk_pct; the 2026-10-25
+                                       # re-run of etf_account_compat on this account returned UNGRADED (no
+                                       # balance_snapshots row for ib_paper), i.e. neither ROUTE nor SKIP. PAPER money,
+                                       # mechanics-only soak (1-2 clean trades). ROLLBACK: remove the leg + GLD here.
+    symbols: [MES, MGC, MHG, SPY, QQQ, IWM, TLT, GLD]
                                        # the instruments; the multi-symbol tick
                                        # loop unions these so MES/MGC/MHG signals
                                        # are GENERATED. BTCUSDT signals never
@@ -1200,7 +1210,7 @@ accounts:
     strategies:                        # M15 Phase 4 buildout (Tier-3,
       - spy_trend_long_1d              # operator-approved 2026-06-11 "go live
       - qqq_trend_long_1d              # on practice"): the daily ETF
-      - gld_pullback_1d                # futures-replacement legs.
+      # gld_pullback_1d MOVED to ib_paper 2026-10-25 (GLD-SOAK-REPLACE, Tier-3 operator-approved)
       - iwm_trend_long_1d              # ETF-breadth daily sweep (2026-06-20,
       - tlt_pullback_1d                # Tier-3): IWM small-cap trend +
       - ief_pullback_1d                # TLT/IEF bond pullback (paper money).
