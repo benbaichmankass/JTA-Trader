@@ -3087,7 +3087,11 @@ def modify_open_order(
         bracket leg's ``stop_price`` / ``limit_price`` for whichever of
         ``sl`` / ``tp`` changed — leg-independent, so no ``cur_*`` merge).
         ``qty`` scopes the PATCH to the named trade's own legs; without it the
-        call reaches every protective leg on the symbol.
+        call reaches every protective leg on the symbol. A STOP move that
+        carries ``qty`` and the trade's ``side`` goes through
+        :func:`_alpaca_modify_with_readback` instead (``alpaca_amend.tighten``:
+        tighten-only, partial-fill refused, ``ok`` only when the venue reads
+        the new stop back — AMEND-PARITY-ALPACA-TRAIL-READBACK).
 
     The S2 (BL-20260616-LTMGMT-MODIFY) ``side`` / ``qty`` / ``cur_sl`` /
     ``cur_tp`` kwargs are only consumed by the IB/Alpaca branches; the Bybit
@@ -3324,6 +3328,25 @@ def modify_open_order(
                 return {"ok": False, "exchange_response": None,
                         "error": (f"alpaca modify: expected AlpacaClient, got "
                                   f"{type(exchange_client).__name__}")}
+            # AMEND-PARITY-ALPACA-TRAIL-READBACK: a STOP move with the trade's
+            # own size and direction goes through `alpaca_amend.tighten` — the
+            # executor the live-review apply path uses (#20150) — so the trail
+            # is only `ok` when the venue reads the new stop back. A bare
+            # `modify_protective` 2xx is not that: Alpaca has 2xx-accepted ops
+            # that never took effect (PI-20261002-APBY4NTV-0001, the GLD OCO
+            # wedge). Without qty or a direction the legs cannot be scoped, so
+            # that call keeps the legacy path below, unchanged.
+            direction = _alpaca_direction(side)
+            try:
+                trade_qty = abs(float(qty)) if qty is not None else 0.0
+            except (TypeError, ValueError):
+                trade_qty = 0.0
+            if sl is not None and trade_qty > 0 and direction:
+                return _alpaca_modify_with_readback(
+                    exchange_client, account_cfg, symbol=symbol,
+                    direction=direction, qty=trade_qty, sl=sl, tp=tp,
+                    trade_id=trade_id,
+                )
             # `qty` (the named trade's own size) scopes the PATCH to that
             # trade's legs. Unscoped, this call rewrites every stop and every
             # limit resting on the symbol — the same symbol-vs-trade defect the
@@ -3353,6 +3376,137 @@ def modify_open_order(
     return {"ok": False, "exchange_response": None,
             "error": (f"unsupported exchange {exchange!r} "
                       "(wired: bybit, interactive_brokers, alpaca)")}
+
+
+def _alpaca_direction(side: Optional[str]) -> Optional[str]:
+    """The POSITION's direction as ``alpaca_amend`` wants it. Callers pass the
+    trade's own ``direction`` (``long``/``short``); the pipeline's
+    ``buy``/``sell`` spelling is accepted too. Anything else is ``None`` —
+    the legs cannot be scoped to a side, so the read-back path is not taken."""
+    s = str(side or "").strip().lower()
+    if s in ("long", "buy"):
+        return "long"
+    if s in ("short", "sell"):
+        return "short"
+    return None
+
+
+#: Per-trade throttle for the Alpaca trail read-back ping:
+#: ``(account, symbol, qty, trade_id, result)`` -> ``time.monotonic()`` of the
+#: last page. The monitor retries a failed modify every tick, so an unthrottled
+#: ping is the desensitised-alarm failure; a throttled one never goes silent
+#: (it re-pages each interval while the failure persists). In-process; a
+#: restart re-pages once.
+_ALPACA_READBACK_ALERT_AT: dict = {}
+_ALPACA_READBACK_ALERT_INTERVAL_S = 3600.0
+
+
+def _alert_alpaca_readback(account_cfg: dict, *, symbol: str, direction: str,
+                           qty: float, sl: float, result: str, detail: str,
+                           trade_id: Any = None) -> bool:
+    """One Telegram ping for ONE trade whose trail stop did not land at the
+    venue. Best-effort: never raises into the modify path. Returns whether a
+    page was attempted (False when throttled)."""
+    import time
+
+    acct = account_cfg.get("account_id")
+    key = (acct, str(symbol).upper(), round(float(qty), 9),
+           str(trade_id) if trade_id is not None else None, result)
+    now = time.monotonic()
+    last = _ALPACA_READBACK_ALERT_AT.get(key)
+    if last is not None and now - last < _ALPACA_READBACK_ALERT_INTERVAL_S:
+        return False
+    _ALPACA_READBACK_ALERT_AT[key] = now
+    msg = (f"⚠️ Alpaca trail stop NOT confirmed at the venue — {acct} "
+           f"{str(symbol).upper()} {direction} qty={qty} trade={trade_id}: "
+           f"wanted stop {sl}, result={result} ({detail}). The account stays "
+           f"live; the monitor retries next tick.")
+    try:
+        from src.runtime.notify import send_telegram_direct
+        send_telegram_direct(msg, parse_mode=None, mirror_to_fcm=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("alpaca read-back alert: telegram send failed: %s", exc)
+    return True
+
+
+def _alpaca_modify_with_readback(
+    exchange_client: Any,
+    account_cfg: dict,
+    *,
+    symbol: str,
+    direction: str,
+    qty: float,
+    sl: float,
+    tp: Optional[float] = None,
+    trade_id: Any = None,
+) -> dict:
+    """The monitor-trail SL modify on Alpaca, verified at the venue
+    (AMEND-PARITY-ALPACA-TRAIL-READBACK).
+
+    The stop goes through ``alpaca_amend.tighten(apply=True)``: legs scoped by
+    the trade's share count, tighten-only, a partially filled bracket refused,
+    and ``applied`` only when the venue reads the new stop back. Mapping:
+
+    * ``applied`` → ok.
+    * ``refused`` ``already_at_or_tighter`` → ok, a no-op: the resting stop is
+      already where the trail wants it (or tighter — nothing is ever loosened).
+    * any other ``refused`` / ``apply_failed`` / ``could_not_look`` → NOT ok.
+      The monitor leaves the package level unchanged and retries next tick
+      (no halt, no mode flip). ``refused`` and ``apply_failed`` also page the
+      operator for this one trade (throttled); ``could_not_look`` sent nothing
+      and is a transient read, so it logs only.
+
+    A TP on the same verdict keeps the existing ``modify_protective`` PATCH
+    (tp only), after the stop has landed.
+    """
+    from src.units.accounts import alpaca_amend
+
+    acct = account_cfg.get("account_id")
+    r = alpaca_amend.tighten(exchange_client, symbol=symbol, direction=direction,
+                             qty=qty, new_sl=sl, apply=True)
+    result = r.get("result")
+    detail = str(r.get("detail") or "")
+    venue_sl = (r.get("before") or {}).get("venue_sl")
+    if result == alpaca_amend.X_APPLIED:
+        readback = "applied"
+        logger.info(
+            "modify_open_order: account=%s symbol=%s qty=%s sl=%s → alpaca stop "
+            "applied, venue reads %s (legs %s -> %s)",
+            acct, symbol, qty, sl, r.get("venue_after"),
+            r.get("oco_leg_ids"), r.get("oco_leg_ids_after"),
+        )
+    elif result == alpaca_amend.X_REFUSED and detail.startswith("already_at_or_tighter"):
+        readback = "noop_already_at_or_tighter"
+        logger.info(
+            "modify_open_order: account=%s symbol=%s qty=%s sl=%s → alpaca stop "
+            "unchanged: %s", acct, symbol, qty, sl, detail,
+        )
+    else:
+        err = f"alpaca stop read-back {result}: {detail}"
+        logger.error(
+            "modify_open_order: account=%s symbol=%s qty=%s sl=%s trade=%s → %s",
+            acct, symbol, qty, sl, trade_id, err,
+        )
+        if result in (alpaca_amend.X_REFUSED, alpaca_amend.X_APPLY_FAILED):
+            _alert_alpaca_readback(account_cfg, symbol=symbol, direction=direction,
+                                   qty=qty, sl=sl, result=str(result),
+                                   detail=detail, trade_id=trade_id)
+        return {"ok": False, "readback": result, "venue_sl": venue_sl,
+                "exchange_response": {"sl": r}, "error": err}
+
+    response: dict = {"sl": r}
+    if tp is not None:
+        tp_resp = exchange_client.modify_protective(
+            symbol, sl=None, tp=tp, qty=qty) or {}
+        response["tp"] = tp_resp
+        ret_code = tp_resp.get("retCode")
+        if ret_code not in (0, "0", None):
+            err = str(tp_resp.get("retMsg") or f"retCode={ret_code}")
+            return {"ok": False, "readback": readback, "venue_sl": venue_sl,
+                    "exchange_response": response,
+                    "error": f"alpaca stop {readback}; target PATCH failed: {err}"}
+    return {"ok": True, "readback": readback, "venue_sl": venue_sl,
+            "exchange_response": response, "error": None}
 
 
 def _ib_sibling_open_qty(
