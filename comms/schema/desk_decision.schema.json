@@ -1,47 +1,59 @@
 {
-  "_comment": "DESK-0-SCHEMA: desk decision records (docs/plans/claude-trading-desk-DESIGN.md sections 2.3, 3.4, 3.6). comms/desk/decisions.jsonl and comms/desk/touches.jsonl are APPEND-ONLY JSONL, one object per line, both start EMPTY; a leading {\"_meta\": ...} line is skipped. The envelope extends comms/schema/live_review.schema.json; live_review rows are NOT desk rows and are NOT re-validated here. CLOSED ENUMS: prose is bookkeeping, never a label. `action` is closed PER ROLE (role_actions); no enum contains a size change, a new entry, a widened stop, a mode/execution change or a halt (Prime Directive rules 2 and 7) -- the closed enum IS that rule. `model` is a TIER, never a model identifier (public repo). COLLAPSED-STATE RULE: unmeasured is null, never 0. EXTERNAL CONTEXT (DECIDED 2026-10-25, 'Repo feeds + logged exception'): the packet is the default and only feed; a pull is allowed only on a calendar / swing due event or an escalation, is logged with sources and fetch time, never folds into the packet, and marks the row reproducible=false so replays and training sets can exclude it. SANDBOX TOUCH (DESIGN 3.6, DESK-12): every applied desk effect on an account writes a touch row; a package-account pair is desk-touched from its first applied intent, and graders split touched from untouched. Cross-file and conditional rules live in scripts/ci/check_desk_records.py (guard `desk-records-guard`).",
-  "schema_version": 1,
+  "_comment": "DESK-0-SCHEMA + DESK-0B-SCHEMA-V2: desk decision records (docs/plans/claude-trading-desk-DESIGN.md sections 2.1, 2.4, 3.7, 3.8, 4A). v2 (schema_version 2): the desk is a TRADER, not a reviewer -- role entry_generation (no_trade / propose_entry / watch_note) judges a SCAN packet and proposes the desk's own trades; market_watch and its veto-shaped enum are deleted. Every row carries priced alternatives[] and a training marker; the stable-id chain is packet_id <- decision_id -> intent_id -> order_package_id -> trade_id (per account) -> outcome_id, with outcomes.jsonl (DESK-20 writes it) and consumed.jsonl (dataset builds record what they trained on; a decision in no build is never-trained-on). schema_version 1 rows were never written (0 rows when v2 landed) and are not accepted. comms/desk/{decisions,touches,outcomes,consumed}.jsonl are APPEND-ONLY JSONL, one object per line, both start EMPTY; a leading {\"_meta\": ...} line is skipped. The envelope extends comms/schema/live_review.schema.json; live_review rows are NOT desk rows and are NOT re-validated here. CLOSED ENUMS: prose is bookkeeping, never a label. `action` is closed PER ROLE (role_actions); no enum contains a size change, a widened stop, a mode/execution change or a halt (Prime Directive rules 2 and 7) -- the closed enum IS that rule. A desk ENTRY is propose_entry with a full `proposal` (no size field: each account's RiskManager sizes it; a real predictive TP: the TP doctrine binds at proposal time). `model` is a TIER, never a model identifier (public repo). COLLAPSED-STATE RULE: unmeasured is null, never 0. EXTERNAL CONTEXT (DECIDED 2026-10-25, 'Repo feeds + logged exception'): the packet is the default and only feed; a pull is allowed only on a calendar / swing due event or an escalation, is logged with sources and fetch time, never folds into the packet, and marks the row reproducible=false so replays and training sets can exclude it. SANDBOX TOUCH (DESIGN 3.6, DESK-12): every applied desk effect on an account writes a touch row; a package-account pair is desk-touched from its first applied intent, and graders split touched from untouched. Cross-file and conditional rules live in scripts/ci/check_desk_records.py (guard `desk-records-guard`).",
+  "schema_version": 2,
   "sandbox_account": "bybit_1",
+  "desk_leg": "claude_desk",
   "enums": {
-    "role": ["market_watch", "entry_review", "in_trade", "exit", "post_trade"],
-    "packet_kind": ["entry", "in_trade", "exit"],
+    "role": ["entry_generation", "entry_review", "in_trade", "exit", "post_trade"],
+    "packet_kind": ["scan", "entry", "in_trade", "exit"],
     "model_tier": ["haiku-tier", "sonnet-tier", "opus-tier"],
     "confidence": ["measured", "suggestive", "anecdote"],
     "basis": ["ev_positive", "preference_within_bound", "insufficient_n", "mechanics", "operator_ask", "default_hold", "record_only"],
-    "route": ["auto_applied", "recommended", "operator_ask", "none"],
+    "route": ["auto_applied", "submitted", "recommended", "operator_ask", "none"],
     "label_provenance": ["judgment", "computed", "measured"],
     "ext_trigger": ["calendar", "swing", "escalation"],
     "gate_verdict": ["approve", "clip", "refuse", "could_not_look", "error", "not_available"],
     "readback": ["match", "mismatch", "could_not_look", "not_applicable"],
     "account_class": ["real_money", "prop", "paper", "soak"],
-    "side": ["long", "short"]
+    "side": ["long", "short"],
+    "label_source": ["live", "shadow", "historical_masked", "synthetic"],
+    "exclusion_reason": ["external_context", "historical_masked", "pre_cutoff", "synthetic"],
+    "entry_type": ["market", "limit", "stop"],
+    "stop_basis": ["swing_level", "structure_invalidation", "atr_multiple", "range_boundary", "liquidity_level"],
+    "tp_basis": ["swing_level", "measured_move", "base_rate_quantile", "liquidity_level", "range_boundary", "ml_head"],
+    "novelty": ["new", "duplicates_system_package", "duplicates_near_signal", "unverifiable"],
+    "onboarding": ["onboarded", "pending"],
+    "alt_source": ["packet_history", "ltr0_table", "base_rate", "replay", "not_priced"],
+    "outcome_kind": ["replayed", "realised", "expired_unfilled", "not_computable"],
+    "outcome_provenance": ["computed", "measured"]
   },
   "role_actions": {
-    "market_watch": ["no_action", "watch_note", "delay_candidate", "veto_candidate"],
+    "entry_generation": ["no_trade", "propose_entry", "watch_note"],
     "entry_review": ["take", "skip", "delay", "no_recommendation"],
     "in_trade": ["hold", "tighten_sl", "tp_revise", "flag_mechanics", "no_recommendation", "file_hypothesis"],
     "exit": ["hold", "partial_close", "close"],
     "post_trade": ["blind_grade", "revealed_grade"]
   },
   "role_packet_kinds": {
-    "market_watch": ["entry"],
+    "entry_generation": ["scan"],
     "entry_review": ["entry"],
     "in_trade": ["in_trade"],
     "exit": ["in_trade"],
     "post_trade": ["exit"]
   },
+  "role_defaults": {"entry_generation": "no_trade", "entry_review": "take", "in_trade": "hold", "exit": "hold"},
   "decisions": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["schema_version", "decision_id", "packet_id", "packet_sha", "packet_kind", "role", "order_package_id", "judged_at", "info_cutoff_at", "trigger_event", "model", "session", "prompt_sha", "skill_sha", "label_version", "label_provenance", "action", "params", "judge_prior", "confidence", "basis", "rationale", "escalated_to", "intent_id", "disposition", "external_context"],
+    "required": ["schema_version", "decision_id", "packet_id", "packet_sha", "packet_kind", "role", "order_package_id", "judged_at", "info_cutoff_at", "trigger_event", "model", "session", "prompt_sha", "skill_sha", "label_version", "label_provenance", "label_source", "pre_cutoff", "action", "params", "proposal", "alternatives", "judge_prior", "confidence", "basis", "rationale", "escalated_to", "intent_id", "disposition", "external_context", "training"],
     "properties": {
-      "schema_version": {"type": "integer", "enum": [1]},
+      "schema_version": {"type": "integer", "enum": [2]},
       "decision_id": {"type": "string", "pattern": "^DD-[0-9]{8}T[0-9]{4}Z-.+$"},
       "packet_id": {"type": "string", "pattern": "^DP-[0-9]{8}T[0-9]{4}Z-.+$"},
       "packet_sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
       "packet_kind": {"type": "string", "enum_ref": "packet_kind"},
       "role": {"type": "string", "enum_ref": "role"},
-      "order_package_id": {"type": "string", "minLength": 1},
+      "order_package_id": {"_comment": "null on entry_generation rows: the claude_desk leg creates the package later and carries decision_id; outcomes.jsonl closes the join", "type": ["string", "null"], "minLength": 1},
       "judged_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
       "info_cutoff_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
       "trigger_event": {"type": "string", "minLength": 1},
@@ -51,10 +63,51 @@
       "skill_sha": {"type": ["string", "null"]},
       "label_version": {"type": "integer", "minimum": 1},
       "label_provenance": {"type": "string", "enum_ref": "label_provenance"},
+      "label_source": {"_comment": "live = decided on a live packet and eligible to apply; shadow = live packet, recorded only; historical_masked / synthetic = offline sessions (design 4C), never applied", "type": "string", "enum_ref": "label_source"},
+      "pre_cutoff": {"_comment": "true when the packet's info_cutoff_at predates the judge model's knowledge cutoff (the memory trap, design 4C.2): may train a student, never gates one", "type": "boolean"},
       "action": {"type": "string", "minLength": 1},
       "params": {"type": "object", "additionalProperties": false, "required": ["level", "level_atr", "frac", "bars"],
         "properties": {"level": {"type": ["number", "null"]}, "level_atr": {"type": ["number", "null"]},
                        "frac": {"type": ["number", "null"], "minimum": 0, "maximum": 1}, "bars": {"type": ["integer", "null"], "minimum": 1}}},
+      "proposal": {
+        "_comment": "propose_entry only (null otherwise). Design 2.4: every field required, none defaulted. NO SIZE FIELD -- each account's RiskManager sizes a claude_desk package. tp is a REAL predictive target (TP doctrine): a level with a basis and p_hit, never a sentinel distance, a venue-cap level or 'trail decides'.",
+        "type": ["object", "null"], "additionalProperties": false,
+        "required": ["symbol", "venue_class", "side", "timeframe", "horizon_bars", "entry", "stop", "tp", "expected_r_net", "thesis", "novelty", "onboarding"],
+        "properties": {
+          "symbol": {"type": "string", "minLength": 1},
+          "venue_class": {"type": "string", "minLength": 1},
+          "side": {"type": "string", "enum_ref": "side"},
+          "timeframe": {"type": "string", "minLength": 1},
+          "horizon_bars": {"type": "integer", "minimum": 1},
+          "entry": {"type": "object", "additionalProperties": false, "required": ["type", "level", "good_till_bars"],
+            "properties": {"type": {"type": "string", "enum_ref": "entry_type"}, "level": {"type": "number"}, "good_till_bars": {"type": "integer", "minimum": 1}}},
+          "stop": {"type": "object", "additionalProperties": false, "required": ["level", "basis"],
+            "properties": {"level": {"type": "number"}, "basis": {"type": "string", "enum_ref": "stop_basis"}}},
+          "tp": {"type": "object", "additionalProperties": false, "required": ["level", "basis", "p_hit"],
+            "properties": {"level": {"type": "number"}, "basis": {"type": "string", "enum_ref": "tp_basis"}, "p_hit": {"type": "number", "minimum": 0, "maximum": 1}}},
+          "expected_r_net": {"type": "number"},
+          "thesis": {"_comment": "bookkeeping, never a feature", "type": "string", "minLength": 1},
+          "novelty": {"type": "string", "enum_ref": "novelty"},
+          "onboarding": {"type": "string", "enum_ref": "onboarding"}
+        }
+      },
+      "alternatives": {
+        "_comment": "design 4A: the actions the role could have taken, each with its counterfactual from the packet (entry: forward-R base rate; in_trade: the LTR-0 table) or a later replay. Exactly one is `chosen` and it is the row's action; the role default is always listed. not_priced => every number null (DESK-7 prices them).",
+        "type": "array",
+        "items": {"type": "object", "additionalProperties": false,
+          "required": ["action", "chosen", "symbol", "side", "level", "source", "n", "mean_r", "sd_r"],
+          "properties": {
+            "action": {"type": "string", "minLength": 1},
+            "chosen": {"type": "boolean"},
+            "symbol": {"type": ["string", "null"]},
+            "side": {"type": ["string", "null"], "enum_ref": "side"},
+            "level": {"type": ["number", "null"]},
+            "source": {"type": "string", "enum_ref": "alt_source"},
+            "n": {"type": ["integer", "null"], "minimum": 0},
+            "mean_r": {"type": ["number", "null"]},
+            "sd_r": {"type": ["number", "null"], "minimum": 0}
+          }}
+      },
       "judge_prior": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
       "confidence": {"type": "string", "enum_ref": "confidence"},
       "basis": {"type": "string", "enum_ref": "basis"},
@@ -66,7 +119,7 @@
         "properties": {
           "route": {"type": "string", "enum_ref": "route"},
           "per_account": {"type": "array", "items": {"type": "object", "additionalProperties": false,
-            "required": ["account_id", "account_class", "verdict", "reason", "applied", "level_before", "level_after", "readback", "desk_touched"],
+            "required": ["account_id", "account_class", "verdict", "reason", "applied", "level_before", "level_after", "readback", "desk_touched", "trade_id"],
             "properties": {
               "account_id": {"type": "string", "minLength": 1},
               "account_class": {"type": "string", "enum_ref": "account_class"},
@@ -76,7 +129,8 @@
               "level_before": {"type": ["number", "null"]},
               "level_after": {"type": ["number", "null"]},
               "readback": {"type": "string", "enum_ref": "readback"},
-              "desk_touched": {"type": "boolean"}
+              "desk_touched": {"type": "boolean"},
+              "trade_id": {"_comment": "the per-account trade the action landed on (stable-id chain); null when not applied or not yet known", "type": ["string", "null"], "minLength": 1}
             }}}
         }
       },
@@ -91,7 +145,52 @@
           "summary": {"type": ["string", "null"]},
           "reproducible": {"type": "boolean"}
         }
+      },
+      "training": {
+        "_comment": "the training marker, written once, derived (the guard recomputes it): external_context or synthetic => not train-eligible; historical_masked or pre_cutoff => trains, never gates. Whether the row WAS trained on is never mutated here: it is the row's presence in consumed.jsonl, and a train-eligible row in no build is never-trained-on (DESK-21's detector reads never_trained_on()).",
+        "type": "object", "additionalProperties": false, "required": ["train_eligible", "gate_eligible", "exclusion_reasons"],
+        "properties": {
+          "train_eligible": {"type": "boolean"},
+          "gate_eligible": {"type": "boolean"},
+          "exclusion_reasons": {"type": "array", "items": {"type": "string", "enum_ref": "exclusion_reason"}}
+        }
       }
+    }
+  },
+  "outcomes": {
+    "_comment": "comms/desk/outcomes.jsonl (DESK-20 writes it; empty until then). One row per decision x account x outcome kind, T1 only: computed_at is after the decision's info_cutoff_at. replayed = the decision's bracket (or chosen action) on the real path, computed; realised = an account's fill and close, measured, keyed by trade_id. Any net_r is net of the full cost stack and names its cost policy. not_computable carries a reason and null numbers (could-not-look is never zero).",
+    "type": "object", "additionalProperties": false,
+    "required": ["schema_version", "outcome_id", "decision_id", "kind", "account_id", "order_package_id", "trade_id", "computed_at", "net_r", "mae_r", "mfe_r", "giveback_r", "bars_held", "close_reason", "provenance", "net_of_full_cost_stack", "cost_policy", "reason"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [2]},
+      "outcome_id": {"type": "string", "pattern": "^DO-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "decision_id": {"type": "string", "pattern": "^DD-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "kind": {"type": "string", "enum_ref": "outcome_kind"},
+      "account_id": {"type": ["string", "null"], "minLength": 1},
+      "order_package_id": {"type": ["string", "null"], "minLength": 1},
+      "trade_id": {"type": ["string", "null"], "minLength": 1},
+      "computed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "net_r": {"type": ["number", "null"]},
+      "mae_r": {"type": ["number", "null"]},
+      "mfe_r": {"type": ["number", "null"]},
+      "giveback_r": {"type": ["number", "null"]},
+      "bars_held": {"type": ["integer", "null"], "minimum": 0},
+      "close_reason": {"type": ["string", "null"]},
+      "provenance": {"type": "string", "enum_ref": "outcome_provenance"},
+      "net_of_full_cost_stack": {"type": ["boolean", "null"]},
+      "cost_policy": {"type": ["string", "null"]},
+      "reason": {"type": ["string", "null"]}
+    }
+  },
+  "consumed": {
+    "_comment": "comms/desk/consumed.jsonl: a dataset build records each decision_id it trained on. Only a train-eligible decision may appear (a consumed external_context or synthetic row is a leak).",
+    "type": "object", "additionalProperties": false,
+    "required": ["schema_version", "decision_id", "dataset_build_id", "consumed_at"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [2]},
+      "decision_id": {"type": "string", "pattern": "^DD-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "dataset_build_id": {"type": "string", "minLength": 1},
+      "consumed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"}
     }
   },
   "touches": {
@@ -100,7 +199,7 @@
     "additionalProperties": false,
     "required": ["schema_version", "touch_id", "order_package_id", "account", "account_class", "side", "intent_id", "decision_id", "applied_at", "level_before", "level_after", "verdict", "sandbox"],
     "properties": {
-      "schema_version": {"type": "integer", "enum": [1]},
+      "schema_version": {"type": "integer", "enum": [2]},
       "touch_id": {"type": "string", "pattern": "^DT-[0-9]{8}T[0-9]{4}Z-.+$"},
       "order_package_id": {"type": "string", "minLength": 1},
       "account": {"type": "string", "minLength": 1},
