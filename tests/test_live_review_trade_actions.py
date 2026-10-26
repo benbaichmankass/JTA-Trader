@@ -1,6 +1,6 @@
 """LTR-ALL-ACTIONS: every trade action x every account class, including the refusals.
 
-Operator 2026-10-26 (mandate MD-LIVE-TRADE-ACTIONS, verbatim): "we also need to expand the desks
+Operator 2026-10-26 (mandate MD-TRADE-DESK, verbatim): "we also need to expand the desks
 mandate so include all trade actions, as long as they have reasoning and confidence attached";
 accounts "All accounts now". Each account decides through its OWN RiskManager.approve_action; an
 action that adds risk passes the same check a fresh entry would; an account with no executor for
@@ -60,12 +60,23 @@ def test_move_tp_keeps_a_real_take_profit():
     assert _d(_ti("move_tp", new_tp=0.18, mark=None)).verdict == "could_not_look"
 
 
+def test_no_action_may_leave_a_leg_without_both_brackets():
+    """Operator 2026-10-26: "every trade always must have BOTH brackets ... nothing is supposed to remove brackets"."""
+    for act, kw in (("partial_close", {"size_fraction": 0.5}), ("change_size", {"size_multiplier": 0.5}),
+                    ("change_size", {"size_multiplier": 2.0}), ("add_entry", {"size_fraction": 0.5}),
+                    ("widen_sl", {"new_sl": 0.23}), ("move_tp", {"new_tp": 0.18})):
+        assert _d(_ti(act, **kw), _view(leg_tp=None if act != "move_tp" else 0.19, leg_sl=None if act == "move_tp" else 0.22)
+                  ).reason.startswith(lri.R_BRACKETS), act
+    assert _d(_ti("partial_close", size_fraction=0.5), _view(leg_sl=None)).reason == "both_brackets_required:sl"
+    assert _d(_ti("close"), _view(leg_tp=None, leg_sl=None)).verdict == "approve"   # a close removes the position
+
+
 def test_widen_sl_passes_the_fresh_entry_check_or_is_refused():
     ok = _d(_ti("widen_sl", new_sl=0.2300))
     assert ok.verdict == "approve" and ok.level == 0.2300
     assert _d(_ti("widen_sl", new_sl=0.2150)).reason == lri.R_NOT_WIDER
     assert _d(_ti("widen_sl", new_sl=0.1990)).reason == lri.R_WRONG_SIDE
-    assert _d(_ti("widen_sl", new_sl=0.23), _view(leg_tp=None)).reason == "tp_doctrine:leg_has_no_real_tp"
+    assert _d(_ti("widen_sl", new_sl=0.23), _view(leg_tp=None)).reason == "both_brackets_required:tp"
     assert _d(_ti("widen_sl", new_sl=0.23), _view(fresh_ok=False, fresh_reason="daily_dd_switch")).reason \
         == "fresh_entry_check:daily_dd_switch"
     assert _d(_ti("widen_sl", new_sl=0.23), _view(fresh_ok=None, fresh_reason="balance_unread")).verdict \
@@ -217,7 +228,8 @@ class _Ex:
         states = [{"read_state": "resolved", "position": {"size": before_size}, "mark": 0.2000, "venue_sl": 0.22},
                   {"read_state": "resolved", "position": ({"size": after_size} if after_size else None),
                    "mark": 0.2, "venue_sl": venue_sl}]
-        monkeypatch.setattr(aps, "_venue_state", lambda *a, **k: states.pop(0) if states else states[-1])
+        last = dict(states[-1])
+        monkeypatch.setattr(aps, "_venue_state", lambda *a, **k: states.pop(0) if states else last)
         monkeypatch.setattr(aps, "_tick_size", lambda *a: 0.0001)
         monkeypatch.setattr(aps, "_send_modify", lambda t, **kw: self.sent.append(("modify", kw)) or {"ok": True})
         monkeypatch.setattr(lra, "_venue_tp", lambda *a: {"read_state": "resolved", "venue_tp": venue_tp})
@@ -250,14 +262,28 @@ def test_bybit_partial_that_the_venue_does_not_show_is_apply_failed(monkeypatch)
 
 
 def test_bybit_move_tp_and_widen_read_back(monkeypatch):
-    _Ex(monkeypatch, venue_tp=0.1850, after_size=10.0)
+    _Ex(monkeypatch, venue_tp=0.1850, after_size=10.0, venue_sl=0.22)
     db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
     v = lri.AmendVerdict("bybit_2", "approve", 0.1850, "within_bounds")
     assert lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("move_tp", new_tp=0.1850))["result"] == lra.X_APPLIED
     assert db.trade_writes[0][1]["take_profit_1"] == 0.1850
-    _Ex(monkeypatch, venue_sl=0.2290, after_size=10.0)                 # venue did not take the level
+    _Ex(monkeypatch, venue_sl=0.2290, venue_tp=0.19, after_size=10.0)  # venue did not take the level
     v = lri.AmendVerdict("bybit_2", "approve", 0.2300, "within_bounds")
     assert lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("widen_sl", new_sl=0.23))["result"] == lra.X_APPLY_FAILED
+
+
+def test_bybit_reduce_that_loses_a_bracket_is_apply_failed(monkeypatch):
+    _Ex(monkeypatch, after_size=6.0, venue_sl=0.22, venue_tp=None)       # size right, TP gone
+    db = tla._ApplyDB([tla._trade(1, "bybit_2")], tla.PKG)
+    v = lri.AmendVerdict("bybit_2", "approve", None, "within_bounds", qty=4.0)
+    r = lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.4))
+    assert r["result"] == lra.X_APPLY_FAILED and r["detail"].startswith("both_brackets_required:tp") and db.trade_writes == []
+    _Ex(monkeypatch, after_size=6.0, venue_sl=0.22, venue_tp=0.19)
+    assert lra._exec_bybit_action(db, _leg(), tla.PKG, v, _ti("partial_close", size_fraction=0.4))["result"] == lra.X_APPLIED
+
+
+def test_a_tighten_may_still_name_the_superseded_alias():
+    assert lri.MANDATE_ID in lri.TIGHTEN_MANDATE_IDS and lri.TRADE_MANDATE_ID == "MD-TRADE-DESK"
 
 
 def test_bybit_venue_refusal_is_refused_not_applied(monkeypatch):

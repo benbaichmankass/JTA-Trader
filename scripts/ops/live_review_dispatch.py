@@ -56,11 +56,11 @@ whether a row may be handed over at all.
 Never for a tighten: a halt, a ``mode:`` or ``execution:`` write, a wider stop, a TP move,
 a size change, a close.
 
-**Trade actions (LTR-ALL-ACTIONS, operator 2026-10-26, ``MD-LIVE-TRADE-ACTIONS``).** A row whose
+**Trade actions (LTR-ALL-ACTIONS, operator 2026-10-26, ``MD-TRADE-DESK``).** A row whose
 ``recommendation.action`` is close / partial_close / move_tp / widen_sl / change_size / add_entry is
 checked against that mandate's package-level clauses instead (:func:`check_trade_row`: mechanics
 ``match``, a dispatchable route, a ``reason``, a judgement confidence or a table EV, and the action's
-own target) and handed to ``live_review_apply.py --action <a> --mandate MD-LIVE-TRADE-ACTIONS``. Each
+own target) and handed to ``live_review_apply.py --action <a> --mandate MD-TRADE-DESK``. Each
 account still decides through its own ``RiskManager.approve_action``; never a halt or a mode write.
 
 **Evidence at a pinned ref.** The apply refuses an ``--evidence`` path that is not a file in the VM
@@ -102,7 +102,7 @@ if _REPO_ROOT not in sys.path:
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 MANDATE_ID = "MD-LIVE-TIGHTEN-SL"
-TRADE_MANDATE_ID = "MD-LIVE-TRADE-ACTIONS"
+TRADE_MANDATE_ID = "MD-TRADE-DESK"   # the one trade-desk mandate; MANDATE_ID is its tighten alias
 TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 EVIDENCE_DIR = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "evidence"
 REVIEWS_PATH = "comms/live_review/reviews.jsonl"
@@ -302,7 +302,7 @@ def check_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Option
 
 
 def check_trade_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """``MD-LIVE-TRADE-ACTIONS``' package-level clauses on a trade-action row. Pure. A judgement row may
+    """``MD-TRADE-DESK``' package-level clauses on a trade-action row. Pure. A judgement row may
     cite its decision packet as evidence when it has no outcome table; a table row needs the table."""
     rec = row.get("recommendation") or {}
     act = rec.get("action")

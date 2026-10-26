@@ -58,7 +58,7 @@ script is the review's path instead:
 Never (for a tighten): a halt, a ``mode:`` write, an ``execution:`` write, a size change, a
 close, a TP move, or a wider stop.
 
-TRADE ACTIONS (LTR-ALL-ACTIONS, operator 2026-10-26, mandate ``MD-LIVE-TRADE-ACTIONS``)
+TRADE ACTIONS (LTR-ALL-ACTIONS, operator 2026-10-26, mandate ``MD-TRADE-DESK``)
 --------------------------------------------------------------------------------------
 ``--action close|partial_close|move_tp|widen_sl|change_size|add_entry`` with its target
 (``--new-tp`` / ``--new-sl`` / ``--size-fraction`` / ``--size-multiplier``). Each account decides
@@ -513,7 +513,7 @@ def _save_state(st: Dict[str, Any]) -> None:
 
 
 # --------------------------------------------------------------------------
-# Trade actions (LTR-ALL-ACTIONS, MD-LIVE-TRADE-ACTIONS)
+# Trade actions (LTR-ALL-ACTIONS, MD-TRADE-DESK)
 # --------------------------------------------------------------------------
 
 #: The executor matrix: which account class has an EXISTING executor for which
@@ -667,6 +667,12 @@ def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.Amen
             return {"result": X_APPLY_FAILED, "detail": "sent, but the venue read-back failed", "send": sent}
         if not aps.same_level(got, v.level, tol):
             return {"result": X_APPLY_FAILED, "detail": f"venue reads {got!r} after the {a}", "send": sent}
+        # both brackets must still rest at the venue after the move (operator 2026-10-26)
+        other = (aps._venue_state(client, cfg, sym, direction, t.get("sl_order_id")).get("venue_sl") if a == "move_tp"
+                 else _venue_tp(client, cfg, sym, direction, t.get("tp_order_id")).get("venue_tp"))
+        if other is None:
+            return {"result": X_APPLY_FAILED, "detail": f"{lri.R_BRACKETS}:{'sl' if a == 'move_tp' else 'tp'} "
+                                                        f"not read at the venue after the {a}", "send": sent}
         if a == "move_tp":
             _journal_action(db, t, intent, {"take_profit_1": v.level},
                             {"from": _f(t.get("take_profit_1")) or _f(pkg.get("tp")), "to": v.level, "venue_after": got})
@@ -697,6 +703,14 @@ def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.Amen
     now = datetime.now(timezone.utc).isoformat()
     mark = before.get("mark") or intent.mark
     remaining = (_f(t.get("position_size")) or 0.0) - qty
+    if a != "close" and size1 > 0:
+        # the remaining position keeps BOTH brackets (operator 2026-10-26); a reduce that leaves either
+        # unread at the venue is a failure, never a success. (Leg qty vs the new size is not read here.)
+        tp_after = _venue_tp(client, cfg, sym, direction, t.get("tp_order_id")).get("venue_tp")
+        if after.get("venue_sl") is None or tp_after is None:
+            missing = "sl" if after.get("venue_sl") is None else "tp"
+            return {"result": X_APPLY_FAILED, "send": sent,
+                    "detail": f"{lri.R_BRACKETS}:{missing} not read at the venue after the reduce"}
     if a == "close" or remaining <= 0:
         _journal_action(db, t, intent, {"status": "closed", "exit_reason": LIVE_REVIEW_CLOSE, "closed_at": now,
                                         "exit_price": mark},
@@ -797,7 +811,10 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         return out
     mandate_ok = bool(intent.mandate) and intent.mandate in (granted if granted is not None else _granted_mandates())
     trade_action = intent.action in lri.TRADE_ACTIONS
+    # ONE trade-desk mandate (MD-TRADE-DESK); a tighten may still name its superseded alias.
     if trade_action and intent.mandate != lri.TRADE_MANDATE_ID:
+        mandate_ok = False
+    if not trade_action and intent.mandate not in lri.TIGHTEN_MANDATE_IDS:
         mandate_ok = False
     # The mandate's package-level clauses (mechanics match; table EV bounds OR a
     # judgement confidence + reason -- LTR-JUDGEMENT-APPLY; for a trade action
@@ -994,7 +1011,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--mechanics", default=None, help="the review row's mechanics.verdict (must be match to apply)")
     ap.add_argument("--worst-case-delta-r", type=float, default=None, help="table basis: tighten worst - hold worst")
     ap.add_argument("--action", default="tighten_sl", choices=("tighten_sl",) + lri.TRADE_ACTIONS,
-                    help="tighten_sl (MD-LIVE-TIGHTEN-SL) or a trade action (MD-LIVE-TRADE-ACTIONS)")
+                    help="tighten_sl (MD-LIVE-TIGHTEN-SL) or a trade action (MD-TRADE-DESK)")
     ap.add_argument("--new-tp", type=float, default=None, help="move_tp: the new take-profit")
     ap.add_argument("--size-fraction", type=float, default=None, help="partial_close / add_entry")
     ap.add_argument("--size-multiplier", type=float, default=None, help="change_size")

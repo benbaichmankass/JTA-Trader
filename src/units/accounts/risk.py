@@ -929,7 +929,7 @@ class RiskManager:
 
     def approve_action(self, intent: Any, account: Any) -> Any:
         """Per-account gate for a live-review TRADE ACTION (close / partial_close / move_tp / widen_sl /
-        change_size / add_entry; LTR-ALL-ACTIONS, mandate ``MD-LIVE-TRADE-ACTIONS``). ``account`` is this
+        change_size / add_entry; LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``). ``account`` is this
         account's ``AmendAccountView``, carrying this account's own :meth:`fresh_entry_check` result for
         an action that adds risk. Returns an ``AmendVerdict``. Never a halt; never writes ``mode``."""
         from src.runtime import live_review_intent as _lri

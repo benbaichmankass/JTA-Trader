@@ -31,13 +31,17 @@ from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 ACTIONS = ("tighten_sl", "flag", "no_action")
-#: LTR-ALL-ACTIONS (operator 2026-10-26, mandate ``MD-LIVE-TRADE-ACTIONS``, verbatim "we also need to
+#: LTR-ALL-ACTIONS (operator 2026-10-26, mandate ``MD-TRADE-DESK``, verbatim "we also need to
 #: expand the desks mandate so include all trade actions, as long as they have reasoning and confidence
 #: attached"): the trade actions beyond a tighten. Each is decided per account by :func:`decide_action`.
 TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 #: The trade actions that ADD risk: they pass the same check a fresh entry would.
 ADDS_RISK = ("widen_sl", "add_entry")
-TRADE_MANDATE_ID = "MD-LIVE-TRADE-ACTIONS"
+#: ONE mandate for the whole trade desk (operator 2026-10-26, verbatim: "the desk is just a more advanced
+#: version of the ltr, they should both rely on the same mandate - ltr is just one funciton of the trade
+#: desk"). ``MANDATE_ID`` (MD-LIVE-TIGHTEN-SL) is its superseded alias, still accepted for a tighten.
+TRADE_MANDATE_ID = "MD-TRADE-DESK"
+TIGHTEN_MANDATE_IDS = ("MD-LIVE-TIGHTEN-SL", TRADE_MANDATE_ID)
 #: A TP this many R from entry is the doctrine's sentinel, not a real take-profit (TP doctrine).
 TP_SENTINEL_R = 50.0
 #: The verdict set (registered with collapsed-state-guard). ``could_not_look``
@@ -83,6 +87,10 @@ R_TP_DOCTRINE = "tp_doctrine"                # + ":<why>" -- a leg would be left
 R_NOT_WIDER = "widen_sl_not_wider"
 R_FRESH_ENTRY = "fresh_entry_check"          # + ":<the account's own reason>"
 R_SIZE_CAP = "exceeds_fresh_entry_size"
+#: Operator 2026-10-26, verbatim: "every trade always must have BOTH brackets ... Claude can move the
+#: brackets, but nothing is supposed to remove brackets". + ":sl" | ":tp" -- the result would leave the
+#: leg without that bracket. A close removes the POSITION, not its brackets, so it is exempt.
+R_BRACKETS = "both_brackets_required"
 
 #: What a tighten rests on (LTR-JUDGEMENT-APPLY, operator 2026-10-26, popup
 #: verbatim "Claude's judgement applies (Recommended)": "Drop the n>=20 clause.
@@ -326,7 +334,9 @@ def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: 
         tp = _f(intent.new_tp)
         if tp is None:
             return refuse(R_BAD_INPUT)
-        missing = [n for n, v in (("mark", mark), ("entry", entry), ("leg_sl", leg_sl)) if v is None]
+        if leg_sl is None:
+            return refuse(f"{R_BRACKETS}:sl")
+        missing = [n for n, v in (("mark", mark), ("entry", entry)) if v is None]
         if missing:
             return cnl(*missing)
         if (tp <= mark) if long_ else (tp >= mark):
@@ -341,6 +351,13 @@ def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: 
         return AmendVerdict(aid, V_APPROVE, tp, "within_bounds")
 
     delta = size_delta(intent)
+    if a != "close":
+        # both brackets must survive the action (operator 2026-10-26): the stop and the TP in force after it
+        after_sl = _f(intent.new_sl) if a == "widen_sl" else leg_sl
+        if after_sl is None and a != "widen_sl":
+            return refuse(f"{R_BRACKETS}:sl")
+        if leg_tp is None:
+            return refuse(f"{R_BRACKETS}:tp")
     if a == "widen_sl":
         new_sl = _f(intent.new_sl)
         if new_sl is None:
@@ -361,8 +378,6 @@ def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: 
         return AmendVerdict(aid, V_APPROVE, None, "within_bounds", qty=pos * -delta)
 
     # -- adds risk: widen_sl, add_entry, change_size > 1 -----------------------------------------
-    if leg_tp is None:
-        return refuse(f"{R_TP_DOCTRINE}:leg_has_no_real_tp")
     if view.fresh_ok is None:
         return cnl(f"fresh_entry_check:{view.fresh_reason or 'unread'}")
     if view.fresh_ok is False:
@@ -379,7 +394,7 @@ def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: 
 
 
 def trade_action_precondition(intent: LiveReviewIntent) -> Optional[str]:
-    """``MD-LIVE-TRADE-ACTIONS``' package-level clauses. Pure. None when they hold.
+    """``MD-TRADE-DESK``' package-level clauses. Pure. None when they hold.
 
     mechanics ``match``; a stated reason; ``basis: judgement`` with a confidence in [0, 1] or ``basis:
     table`` with an EV (``expected_cost_r``); and the action's own target."""
