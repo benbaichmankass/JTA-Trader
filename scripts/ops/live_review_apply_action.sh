@@ -32,6 +32,11 @@ PY="${REPO_DIR}/.venv/bin/python3"
 [ -x "${PY}" ] || PY="python3"
 
 ARGS=(--review-id "${ACTION_REVIEW_ID}")
+# Optional pinned commit (LTR rows branch): the dispatcher fetches it itself, so
+# the apply never waits for ict-git-sync.
+if [ -n "${ACTION_REVIEW_REF:-}" ]; then
+  ARGS+=(--ref "${ACTION_REVIEW_REF}")
+fi
 case "${ACTION_APPLY}" in
   true|True)
     echo ">>> live-review-apply: APPLY — ${ACTION_REVIEW_ID} through each account's own risk manager"

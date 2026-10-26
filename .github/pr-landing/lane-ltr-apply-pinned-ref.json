@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Live apply path: live_review_dispatch.py gains --ref <sha> (fetches main + live-review/rows into refs/live-review/*, refuses a sha on neither, reads row + outcome table at the sha), wired through the live-review-apply system-action body (40-hex shape check) and its VM wrapper; branch-protection-sync gains an append-only protection step for live-review/rows; the live-trade-review skill pushes rows to that branch and files live-review-apply with ref. Operator-approved (manager relay 10:40Z, popup verbatim 'Approve: rows branch + pinned commit (Recommended)'); the manager merges after the mandate amendment #20299 and verifies the post-state.",
+  "why": "every mandate clause, the idempotency per review_id, approve_amend and the venue read-back are unchanged; only WHERE the committed row is read from changes"
+}

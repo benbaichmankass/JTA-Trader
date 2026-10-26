@@ -178,7 +178,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 
 1. Write the packet to `comms/live_review/packets/<review_id>.json`, then append one row per package, carrying its `packet_sha`, to `comms/live_review/reviews.jsonl` (schema `comms/schema/live_review.schema.json`).
 2. Run `python3 scripts/ci/check_live_review_records.py`. It must exit 0 **on the real rows**.
-3. Land the rows in a PR (self-landing: automerge file + merge-slot claim, per the manager skill).
+3. **Land the rows on the rows branch, not through a main PR** (operator 2026-10-26, popup verbatim *"Approve: rows branch + pinned commit (Recommended)"*). Commit the new rows **plus every file they cite** (the packet, and the outcome table named in `outcome_table_source`) on top of `origin/live-review/rows` and push straight to it; it is protected append-only (no force-push, no deletion) with no PR or check gate. Record the pushed commit's full 40-hex sha: it is the `ref` for Step 7. A mirror PR later copies the rows onto `main`'s `reviews.jsonl` by review_id, so `main` keeps the full record. **Fallback:** if the push is refused, or the branch does not exist yet, land the rows in a self-landing PR to `main` as before (automerge file + merge-slot claim) and use Step 7 without `ref`.
 4. Report to the manager. For each package give:
    - leg, accounts, state;
    - the recommendation, with its priced options (n, mean, worst);
@@ -199,11 +199,12 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
    - the basis is either `table` (a measured cell, within the 0.25 R bound, worst case improved) or `judgement` (a confidence and a reason).
 
    Never file it for `hold`, `no_recommendation`, `flag_mechanics`, an `operator_ask`, or a paper-only `record_only` row.
-2. **When.** Only after the row's PR has **merged to `main`**. The VM re-reads the row from its committed `main`. A row that is not there yet comes back exit 3 (could not look; git-sync lags by up to about 5 min). Re-file once after a few minutes.
+2. **When.** **Immediately after the rows-branch push** (Step 6.3), with `ref: <that sha>`. The dispatcher fetches `main` and `live-review/rows` itself and reads the row and its outcome table with `git show <sha>:path`, so nothing waits for a main PR or for ict-git-sync. A sha reachable from neither branch is refused (exit 2); a row missing at the sha is exit 3. This path is valid under `MD-LIVE-TIGHTEN-SL` once its `fires_when` admits a pinned rows-branch commit (manager PR #20299); until that merges, use the fallback. **Fallback (row landed on `main` instead):** file only after the PR has merged, without `ref`; the VM reads its committed `main`, and a row not there yet is exit 3 (git-sync lags ~5 min), so re-file once after a few minutes.
 3. **How.** One issue per row, labelled `system-action`, with this body:
    ```
    action: live-review-apply
    review_id: LR-…
+   ref: <40-hex sha of the rows-branch commit>
    apply: true
    reason: live-review <review_id> tighten_sl under MD-LIVE-TIGHTEN-SL (<leg>, <basis>)
    ```

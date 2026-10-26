@@ -200,6 +200,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "per 6 h), so a quiet wake leaves no receipt by design; a stopped or crashing wake is observed by "
                "claude-run-failure-alert and by the hourly live-review routine, which still runs as the backstop",
     },
+    "live-review-rows-mirror.yml": {
+        "receipt": None,
+        "why": "writes main only when live-review/rows carries a review_id main lacks, so a quiet mirror leaves no receipt by design; "
+               "a stopped mirror is observed by claude-run-failure-alert (crashed runs) and by a rows-branch review_id missing from main",
+    },
     "research-slo.yml": {
         "receipt": "comms/research/health",
         "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "
