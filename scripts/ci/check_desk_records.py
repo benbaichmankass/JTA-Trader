@@ -115,8 +115,9 @@ def project_scan_features(packet: dict) -> dict:
     sb, db = packet.get("system_book") or {}, packet.get("desk_book") or {}
     sbi = sb.get("items") if sb.get("read_state") == "read" else None
     dbi = db.get("items") if db.get("read_state") == "read" else None
+    nsr = sbi is not None and sb.get("near_signals_read_state") == "read"
     out["n_system_open"] = None if sbi is None else sum(i["status"] != "near_signal" for i in sbi)
-    out["n_near_signals"] = None if sbi is None else sum(i["status"] == "near_signal" for i in sbi)
+    out["n_near_signals"] = sum(i["status"] == "near_signal" for i in sbi) if nsr else None
     out["n_desk_open"] = None if dbi is None else len(dbi)
     return out
 
@@ -180,7 +181,13 @@ def scan_problems(p: dict, missing: set) -> list[str]:
             out.append(f"{name}: items present with read_state {b['read_state']} (could-not-look is null)")
         if b["read_state"] == "could_not_look" and not _named(missing, name):
             out.append(f"{name} could_not_look but not named in meta.missing_inputs")
-    for i, it in enumerate(p["system_book"]["items"] or []):
+    sb = p["system_book"]
+    if sb["near_signals_read_state"] != "read":
+        if any(i["status"] == "near_signal" for i in sb["items"] or []):
+            out.append(f"system_book: near_signal items with near_signals_read_state {sb['near_signals_read_state']}")
+        if sb["near_signals_read_state"] == "could_not_look" and not _named(missing, "system_book.near_signals"):
+            out.append("system_book.near_signals could_not_look but not named in meta.missing_inputs")
+    for i, it in enumerate(sb["items"] or []):
         if it["status"] == "near_signal":
             if it["order_package_id"] is not None:
                 out.append(f"system_book.items[{i}]: a near-signal has no order package yet")
@@ -334,7 +341,8 @@ def proposal_problems(r: dict, scan: dict | None) -> list[str]:
     else:
         same = [i for i in sb["items"] if i["symbol"] == pr["symbol"] and i["side"] == pr["side"]]
         want = ("duplicates_system_package" if any(i["status"] != "near_signal" for i in same)
-                else "duplicates_near_signal" if same else "new")
+                else "duplicates_near_signal" if same
+                else "new" if sb.get("near_signals_read_state") == "read" else "unverifiable")
         if pr["novelty"] != want:
             out.append(f"novelty {pr['novelty']!r} disagrees with the scan's system_book (it says {want!r})")
     return out
@@ -732,7 +740,7 @@ GOOD_SCAN = {
          "swing": dict(_NA, high=None, low=None, dist_high_atr=None, dist_low_atr=None),
          "session": None, "calendar": dict(_NA, events_next_bar=None),
          "spread": {"read_state": "read", "bps": 9.0}, "volume_24h": 2.0e6}],
-    "system_book": {"read_state": "read", "items": [
+    "system_book": {"read_state": "read", "near_signals_read_state": "read", "items": [
         {"order_package_id": "pkg-9", "leg": "example_leg", "symbol": "ETHUSDT", "side": "short", "timeframe": "4h",
          "status": "open", "bars_to_signal": None, "entry": 104.0, "sl": 108.0, "tp": 96.0},
         {"order_package_id": None, "leg": "example_leg_2", "symbol": "SOLUSDT", "side": "long", "timeframe": "1h",
@@ -873,6 +881,17 @@ def _self_test() -> int:
                P(_mut(GOOD_SCAN, lambda r: (r["system_book"].update(read_state="could_not_look", items=[]), r["meta"]["missing_inputs"].append("system_book: relay down"), r.update(features_at_review=project_scan_features(r))))), True)
         expect("system_book could_not_look, null and named passes",
                P(_mut(GOOD_SCAN, lambda r: (r["system_book"].update(read_state="could_not_look", items=None), r["meta"]["missing_inputs"].append("system_book: relay down"), r.update(features_at_review=project_scan_features(r))))), False)
+        expect("near-signals unread but near_signal items present is refused",
+               P(_mut(GOOD_SCAN, lambda r: (r["system_book"].update(near_signals_read_state="not_applicable"), r.update(features_at_review=project_scan_features(r))))), True)
+        unread = _mut(GOOD_SCAN, lambda r: (r["system_book"].update(near_signals_read_state="could_not_look", items=r["system_book"]["items"][:1]),
+                                            r["meta"]["missing_inputs"].append("system_book.near_signals: no producer"),
+                                            r.update(features_at_review=project_scan_features(r))))
+        expect("a scan with near-signals could_not_look (named) passes", P(unread), False)
+        nov = proposal_problems(_mut(E, lambda r: r["proposal"].update(symbol="SOLUSDT", entry={"type": "market", "level": 50.0, "good_till_bars": 1},
+                                                                        stop={"level": 49.0, "basis": "atr_multiple"},
+                                                                        tp={"level": 52.0, "basis": "swing_level", "p_hit": 0.3})), unread)
+        expect("near-signals unread and no package match: novelty `new` is refused (it is unverifiable)",
+               [x for x in nov if "unverifiable" in x], True)
         expect("a near-signal two bars out is refused",
                P(_mut(GOOD_SCAN, lambda r: r["system_book"]["items"][1].update(bars_to_signal=2))), True)
         expect("base rates not net of the full cost stack are refused",

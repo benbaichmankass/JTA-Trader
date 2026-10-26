@@ -121,9 +121,10 @@
       },
       "system_book": {
         "_comment": "scan only. The strategies' open and pending packages and their NEAR-SIGNALS (a leg within one bar of a signal), so 'a trade the system is not finding' is checkable and a duplicate proposal is visible. read_state could_not_look => items null and named in meta.missing_inputs; read with no items is an empty list -- the two are never collapsed.",
-        "type": "object", "additionalProperties": false, "required": ["read_state", "items"],
+        "type": "object", "additionalProperties": false, "required": ["read_state", "near_signals_read_state", "items"],
         "properties": {
-          "read_state": {"type": "string", "enum_ref": "read_state"},
+          "read_state": {"_comment": "the open/pending packages read", "type": "string", "enum_ref": "read_state"},
+          "near_signals_read_state": {"_comment": "a separate read: no producer of near-signals may exist yet, and 'none found' must never be inferred from 'not computed'. Not read => no near_signal items and named in meta.missing_inputs as system_book.near_signals", "type": "string", "enum_ref": "read_state"},
           "items": {"type": ["array", "null"], "items": {"type": "object", "additionalProperties": false,
             "required": ["order_package_id", "leg", "symbol", "side", "timeframe", "status", "bars_to_signal", "entry", "sl", "tp"],
             "properties": {
