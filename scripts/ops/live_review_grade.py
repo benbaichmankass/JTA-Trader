@@ -30,7 +30,11 @@ CLAUDE-GRADE-LOOP additions (rules registered here, before any run reads them):
   (ESTIMATED, method ``hold_vs_close_at_mark_v1``). Stated bias: the close-now side is the gross mark at
   review and is charged NO cost, while ``net_r`` carries the full stack, so the delta UNDER-states every
   hold by about one round-trip cost -- conservative against the reviewer, never flattering.
-* CALIBRATION BY ACTION CLASS (``calibration``): tighten_sl (success = ``delta_r > 0``) and hold (success =
+* LTR-ALL-ACTIONS (MD-LIVE-TRADE-ACTIONS, operator 2026-10-26): every altering class in
+  ``live_review_counterfactual.ALTERING`` -- tighten_sl, close, partial_close, move_tp / tp_revise, widen_sl,
+  change_size, add_entry -- is priced hold-vs-action (``delta_r``), calibrated and given its own use rule; the
+  operator adopted the use rules as written ("1", 2026-10-26, MD-LIVE-TIGHTEN-SL ``review_rule``).
+* CALIBRATION BY ACTION CLASS (``calibration``): each altering class (success = ``delta_r > 0``) and hold (success =
   ``delta_hold_r > 0``), each stratified by ``evidence_source``, through ``claude_calibration.probability``
   (Brier, reference Brier, skill, over-confidence gap; verdict rules live there).
 * BY BRIEF VERSION (``by_skill_sha``): every figure above split by the review's ``skill_sha`` (the blob sha
@@ -173,7 +177,7 @@ def _cal_points(results: List[dict], reviews_by_id: Dict[str, dict], hold_d: Dic
         conf = cf._num(rec.get("judgement_confidence"))
         if conf is None:
             continue
-        if r["action"] == "tighten_sl" and r["state"] == "priced":
+        if r["action"] in cf.ALTERING and r["state"] == "priced":   # every altering class (LTR-ALL-ACTIONS)
             d = r["outcome"]["delta_r"]
         elif r["action"] == "hold" and r["review_id"] in hold_d:
             d = hold_d[r["review_id"]]

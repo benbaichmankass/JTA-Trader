@@ -35,6 +35,17 @@ METHOD
   no_recommendation, flag_mechanics) has ``delta_r = 0.0`` by construction, not a measurement.
 * ``cf_r_shadow_0_5`` = R under the SHADOW 0.5 R policy (the call if it is within the shadow bound, else hold).
 
+* **Every other action class (LTR-ALL-ACTIONS)** is priced by ``trade_action_delta`` as a PAIR of replays
+  from the review bar, method ``paired_replay_v1``, so ``delta_r`` = action replay - hold replay (both net):
+  - ``close``: the whole position exits at the OPEN of the first bar at/after the review;
+  - ``partial_close`` (``size_fraction`` f): f of the size exits there, 1 - f rides the hold path;
+  - ``move_tp`` / ``tp_revise`` (``level``): the hold bracket with the TP at ``level``;
+  - ``widen_sl`` (``level``): the hold bracket with the stop at ``level`` (the trail still ratchets);
+  - ``change_size`` (``size_multiplier`` m) / ``add_entry`` (``size_fraction`` f, i.e. m = 1 + f): the size
+    difference enters or exits at the review-bar open and rides the hold path; an ADDED slice pays one extra
+    round trip (fee + slippage) on its size. All R figures are in units of the ORIGINAL size's initial risk.
+  When the call was NOT applied the realised trade anchors ``cf_r`` (fidelity-checked as above) and
+  ``rec_r = cf_r + delta``; when it WAS applied, ``cf_r`` is the hold replay and fidelity is ``unvalidated``.
 STATED BIASES: a stop fills AT its price, which flatters every tighten; the entry is the package entry;
 bars are exchange candles; the pre-review path is not replayed (its state is the review's own record).
 ``null`` always means "could not look", never 0.
@@ -60,7 +71,11 @@ from src.runtime.net_r_label import net_r_for_trade  # noqa: E402
 REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
 OUTCOMES = REPO / "comms" / "live_review" / "outcomes.jsonl"
 FIDELITY_TOL_R = 0.15
-ALTERING = ("tighten_sl", "tp_revise", "partial_close", "close")
+ALTERING = ("tighten_sl", "tp_revise", "partial_close", "close", "move_tp", "widen_sl", "change_size", "add_entry")
+#: LTR-ALL-ACTIONS (MD-LIVE-TRADE-ACTIONS, operator 2026-10-26): every class except tighten_sl is priced as a
+#: PAIR of replays from the same review bar (hold vs the action), so its delta is replay-vs-replay; see
+#: ``trade_action_delta``. tighten_sl keeps its original method (``replay_v1:stop_first+trail``) unchanged.
+PAIRED = tuple(a for a in ALTERING if a != "tighten_sl")
 NO_PATH_CHANGE = ("hold", "no_recommendation", "flag_mechanics", "file_hypothesis")
 _TF_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400}
 
@@ -178,11 +193,12 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
         return _result(review, state="not_a_call", reason="no_path_change", outcome=out)
     if action not in ALTERING:
         return _result(review, state="could_not_price", reason=f"unknown_action:{action}")
-    if action != "tighten_sl":
-        return _result(review, state="could_not_price", reason=f"replay_not_built_for:{action}")
     level = _num(rec.get("level"))
-    if level is None:
+    if action == "tighten_sl" and level is None:
         return _result(review, state="could_not_price", reason="tighten_level_missing")
+    target_missing = _paired_target_missing(action, rec)
+    if target_missing:
+        return _result(review, state="could_not_price", reason=target_missing)
     if pkg is None:
         return _result(review, state="could_not_price", reason="no_package_row")
     if trade is None:
@@ -205,6 +221,10 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
         return _result(review, state="could_not_price", reason="review_state_missing")
     hold = replay(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=stop_now, tp=tp,
                   extreme_r0=peak_r, trail_dist=trail_dist)
+    if action in PAIRED:
+        return _price_paired(review, rec, action, pkg, trade, bars, hold, side=side, entry=entry, r_dist=r_dist,
+                             sl0=sl0, t0=t0, stop_now=stop_now, tp=tp, peak_r=peak_r, trail_dist=trail_dist,
+                             meta=meta, computed_at=computed_at)
     recp = replay(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=stop_now, tp=tp,
                   extreme_r0=peak_r, trail_dist=trail_dist, tighten_to=level)
     closed = str(trade.get("status") or "").lower() == "closed"
@@ -248,6 +268,104 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     cf_shadow = rec_r if pol.get("within_bound") is True else cf_r
     out = _outcome_row(review, trade, delta=delta, rec_r=round(rec_r, 8), cf_r=round(cf_r, 8),
                        cf_shadow=round(cf_shadow, 8), method="replay_v1:stop_first+trail", fidelity=fidelity,
+                       stack=stack, computed_at=computed_at, net_r=net_r)
+    return _result(review, state="priced", outcome=out)
+
+
+def _paired_target_missing(action: str, rec: dict) -> Optional[str]:
+    """The reason a paired action cannot be priced for want of its own target, else None."""
+    if action in ("move_tp", "tp_revise", "widen_sl") and _num(rec.get("level")) is None:
+        return f"{action}_level_missing"
+    if action == "partial_close":
+        f = _num(rec.get("size_fraction"))
+        if f is None or not 0 < f < 1:
+            return "partial_close_size_fraction_missing"
+    if action == "add_entry" and _num(rec.get("size_fraction")) is None:
+        return "add_entry_size_fraction_missing"
+    if action == "change_size" and _num(rec.get("size_multiplier")) is None:
+        return "change_size_size_multiplier_missing"
+    return None
+
+
+def exit_at_open(bars: List[dict], *, side: str, entry: float, r_dist: float, start_ts: float) -> Optional[dict]:
+    """A market exit at the OPEN of the first bar opening at/after ``start_ts`` (None = no such bar)."""
+    sign = 1.0 if side == "long" else -1.0
+    for b in bars:
+        if b["time"] >= start_ts:
+            return {"gross_r": sign * (b["open"] - entry) / r_dist, "ts": b["time"], "reason": "close"}
+    return None
+
+
+def trade_action_delta(action: str, rec: dict, *, hold_net: float, act_net: Optional[float],
+                       close_net: Optional[float], fee_r: float, slip_r: float) -> Optional[float]:
+    """Net R the action adds over holding, in units of the ORIGINAL size. Pure. None = not priceable.
+
+    ``hold_net`` / ``act_net`` / ``close_net`` are the hold replay, the action's own bracket replay
+    (move_tp / widen_sl) and the exit-at-review-open, each net of cost."""
+    if action in ("move_tp", "tp_revise", "widen_sl"):
+        return None if act_net is None else act_net - hold_net
+    if close_net is None:
+        return None
+    if action == "close":
+        return close_net - hold_net
+    if action == "partial_close":
+        f = float(rec["size_fraction"])
+        return f * (close_net - hold_net)
+    m = (1.0 + float(rec["size_fraction"])) if action == "add_entry" else float(rec["size_multiplier"])
+    # the size difference rides the hold path from the review-bar open; an ADDED slice pays a round trip
+    extra_cost = (m - 1.0) * (fee_r + slip_r) if m > 1.0 else 0.0
+    return (m - 1.0) * (hold_net - close_net) - extra_cost
+
+
+def _price_paired(review: dict, rec: dict, action: str, pkg: dict, trade: dict, bars: List[dict],
+                  hold: Optional[dict], *, side: str, entry: float, r_dist: float, sl0: float, t0: float,
+                  stop_now: float, tp: Optional[float], peak_r: float, trail_dist: Optional[float], meta: dict,
+                  computed_at: Optional[str]) -> dict:
+    level = _num(rec.get("level"))
+    act = None
+    if action in ("move_tp", "tp_revise"):
+        act = replay(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=stop_now, tp=level,
+                     extreme_r0=peak_r, trail_dist=trail_dist)
+    elif action == "widen_sl":
+        act = replay(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0, stop=level, tp=tp,
+                     extreme_r0=peak_r, trail_dist=trail_dist)
+    shut = exit_at_open(bars, side=side, entry=entry, r_dist=r_dist, start_ts=t0)
+    if str(trade.get("status") or "").lower() != "closed":
+        return _result(review, state="could_not_price", reason="trade_open",
+                       to_date={"hold_exit": hold, "action_exit": act, "close_at_open": shut,
+                                "note": "trade still open: delta needs the realised exit; this is a replay to the last candle"})
+    lab = net_r_for_trade(dict(trade, stop_loss=sl0))
+    if lab is None:
+        return _result(review, state="could_not_price", reason="realised_net_r_uncomputable")
+    net_r = lab["net_R"]
+    t_entry = _ts(pkg.get("created_at")) or _ts(meta.get("entry_time")) or _ts(trade.get("timestamp"))
+    t_close = _ts(trade.get("closed_at"))
+    fee_r, fund_r, slip_r, stack = cost_legs(trade, str(pkg.get("symbol")), entry, r_dist, lab["risk_usd"])
+
+    def net_of(x: Optional[dict]) -> Optional[float]:
+        if x is None:
+            return None
+        span = (t_close - t_entry) if (t_close and t_entry and t_close > t_entry) else None
+        frac = ((x["ts"] - t_entry) / span) if span else 1.0
+        return net_of_costs(x["gross_r"], fee_r, fund_r, slip_r, frac)
+
+    hold_net = net_of(hold)
+    if hold_net is None:
+        return _result(review, state="could_not_price", reason="hold_replay_unresolved_before_close")
+    delta = trade_action_delta(action, rec, hold_net=hold_net, act_net=net_of(act), close_net=net_of(shut),
+                               fee_r=fee_r, slip_r=slip_r)
+    if delta is None:
+        return _result(review, state="could_not_price", reason=f"{action}_replay_unresolved")
+    if review.get("applied"):
+        cf_r, fidelity = hold_net, "unvalidated"
+    else:
+        fidelity = _fidelity(hold_net, net_r)
+        if fidelity == "replay_mismatch":
+            return _result(review, state="could_not_price", reason="replay_mismatch")
+        cf_r = net_r
+    rec_r = cf_r + delta
+    out = _outcome_row(review, trade, delta=round(delta, 8), rec_r=round(rec_r, 8), cf_r=round(cf_r, 8),
+                       cf_shadow=round(cf_r, 8), method=f"paired_replay_v1:{action}", fidelity=fidelity,
                        stack=stack, computed_at=computed_at, net_r=net_r)
     return _result(review, state="priced", outcome=out)
 

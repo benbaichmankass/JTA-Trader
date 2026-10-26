@@ -55,7 +55,9 @@ desk-scan-packet.yml, hourly at :03  ─► packet ─► reads latest_scan.json
 
 **In-trade extends live-trade-review; it is not duplicated here.** The in-trade role on the strategies' trades IS `.claude/skills/live-trade-review/SKILL.md` (and its repo-less `REVIEWER-BRIEF.md` once #20319 lands): its rows go to `live-review/rows` → `comms/live_review/reviews.jsonl`, its tightens apply under `MD-LIVE-TIGHTEN-SL`, and DESK-11 maps those rows into the desk's training feed as `kind: desk_in_trade`. A desk wake does not re-review a package the live review already covers. On the desk's OWN trades (after DESK-17) the in-trade and exit decisions are the leg's own management and are written here, as desk rows on an `in_trade` packet.
 
-What is never in any enum: a size or risk change, a widened stop on a strategy's trade, a `mode:` / `execution:` / roster change, any halt.
+What is never in any enum: a `mode:` / `execution:` / roster change, any halt.
+
+**All trade actions (operator 2026-10-26, verbatim: *"we also need to expand the desks mandate so include all trade actions, as long as they have reasoning and confidence attached"*; which book: *"Both"*).** On the strategies' trades the in-trade role is the live trade review, which now makes `close` · `partial_close` · `move_tp` · `widen_sl` · `change_size` · `add_entry` calls under `MD-LIVE-TRADE-ACTIONS` (live-trade-review SKILL § 3b), each with a reason and a confidence, applied per account through that account's own risk manager. The desk's OWN rows get the same scope under `MD-DESK-TRADE-ACTIONS`, which is `blocked_until` the DESK-13 gate (operator: *"Beat random entries only"*: OOS edge vs the random-entry baseline, net of the full cost stack, n >= 30). Until it clears, the desk is phase-1 shadow: it may record these actions with reason and confidence (schema v2 gains them with DESK-17's in-trade/exit rows), and nothing is sent.
 
 ## 3. Escalation and models (design § 4.4)
 
@@ -79,7 +81,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 | stage | what runs | restriction today | lifts when (evidence) | row |
 |---|---|---|---|---|
-| **1a** (live) | in-trade on the strategies' trades = the live trade review, tighten-only applies | in-trade applies are tighten-only on strategy trades | the D-S0 exit unit passes, then an operator-granted exit mandate | DESK-7, DESK-13 |
+| **1a** (live) | in-trade on the strategies' trades = the live trade review: tighten under `MD-LIVE-TIGHTEN-SL`, every other trade action under `MD-LIVE-TRADE-ACTIONS` (operator 2026-10-26) | each account's own risk manager; an account with no executor for an action refuses it, named | the desk's OWN rows: the DESK-13 gate (beat random entries, OOS, net of cost, n >= 30) clears `MD-DESK-TRADE-ACTIONS` | DESK-7, DESK-13, LTR-ALL-ACTIONS |
 | **1b** (this skill, DESK-6) | entry_generation **shadow**: hourly scan wake (VM posts, manager spawns), one row per packet, every proposal replayed | record-only; Sonnet only; packet is the only feed | the D-S0 entry-generation unit passes (masked replay + the forward-shadow set from THIS stage not contradicting it, n ≥ 100) | DESK-18 |
 | **2** | `claude_desk` leg rostered `execution: shadow` on `bybit_1` + `alpaca_paper`; proposals reach it through intake | no orders | D-S0 passes → the leg goes `execution: live` on paper; the mechanical soak is 1–2 clean desk trades ([`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md)) | DESK-4a, DESK-17 |
 | **3** | the leg on real money + mirror; prop via the prop superset gate | desk entries only on paper; no prop | `MD-PROMOTE-S1-S2` (human-merge PR); prop EV/survival vs the firm's DD limits | DESK-17, manager |

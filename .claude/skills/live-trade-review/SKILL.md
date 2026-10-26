@@ -1,6 +1,6 @@
 ---
 name: live-trade-review
-description: The binding procedure for reviewing OPEN order packages against the market in real time. Mechanics first, then price every option from the leg's own Stage-0 history with scripts/research/live_review_outcomes.py, then overlay what the backtest could not see, then record ONE package-level recommendation per package in comms/live_review/reviews.jsonl. Each account carrying the package gets its own would-apply / refused / unknown read. The review works at the ORDER-PACKAGE level and never does per-account risk management. Scope (operator Q2): real-money and prop packages get review + recommend; paper books are record-only. Pings (Q3): applies and asks only. Use when the manager dispatches a live-review lane, when the LTR-4 routine spawns a reviewer, or the operator says "review the open trades", "/live-trade-review", "should we tighten X". NOT for closed-trade grading (/performance-review), NOT for designing exit rules (exit-refinement), and NOT itself an apply path (applies go through scripts/ops/live_review_apply.py under MD-LIVE-TIGHTEN-SL; a thin LTR-0 cell is decided by the reviewer's judgement, basis judgement, since 2026-10-26).
+description: The binding procedure for reviewing OPEN order packages against the market in real time. Mechanics first, then price every option from the leg's own Stage-0 history with scripts/research/live_review_outcomes.py, then overlay what the backtest could not see, then record ONE package-level recommendation per package in comms/live_review/reviews.jsonl. Each account carrying the package gets its own would-apply / refused / unknown read. The review works at the ORDER-PACKAGE level and never does per-account risk management. Scope (operator Q2): real-money and prop packages get review + recommend; paper books are record-only. Pings (Q3): applies and asks only. Use when the manager dispatches a live-review lane, when the LTR-4 routine spawns a reviewer, or the operator says "review the open trades", "/live-trade-review", "should we tighten X". NOT for closed-trade grading (/performance-review), NOT for designing exit rules (exit-refinement), and NOT itself an apply path (applies go through scripts/ops/live_review_apply.py under MD-LIVE-TIGHTEN-SL for a tighten and MD-LIVE-TRADE-ACTIONS for close / partial_close / move_tp / widen_sl / change_size / add_entry, since 2026-10-26; a thin LTR-0 cell is decided by the reviewer's judgement, basis judgement).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -24,7 +24,7 @@ Design of record: [`docs/plans/live-trade-review-DESIGN.md`](../../../docs/plans
 - **never** moves a stop;
 - **never** places, amends or cancels an order;
 - **never** writes `config/` (no `mode:`, no `execution:`, no roster);
-- **never** opens a `system-action` issue, with ONE exception: `live-review-apply` for its own landed `tighten_sl` row (§ 3 Step 7). That is the only way a reviewed tighten reaches a venue.
+- **never** opens a `system-action` issue, with ONE exception: `live-review-apply` for its own landed `tighten_sl` row, or (since 2026-10-26, § 3b) its own landed trade-action row (§ 3 Step 7). That is the only way a reviewed action reaches a venue.
 
 It reads, prices, records and reports. That holds even when the recommendation is obviously right and the data is unambiguous. When apply arrives, it comes only through the mandate's own clauses (design § 4), never through this skill's prose.
 
@@ -160,7 +160,8 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 - `tighten_sl` states `evidence_source` and `level` as a price and as `level_atr`, and then either:
   - **table** (measured cell): `ev_delta_r` = tighten mean − hold mean (negative is a cost) and `worst_case_delta_r` = tighten worst − hold worst; or
   - **judgement** (thin cell): `basis: judgement`, `judgement_confidence`, `reason`; `ev_delta_r` / `worst_case_delta_r` and both policies' `tighten_r` are `null` (there is no table EV to bound).
-- The guardrails do not move with the basis: tighten-only, the `min_buffer_atr` (1× ATR) noise floor, one amend per package per bar, `mechanics.verdict == match`, each account's own `approve_amend`, and `could_not_look` never applies. Never widen, move a TP, resize, close or add an entry.
+- The guardrails do not move with the basis: tighten-only, the `min_buffer_atr` (1× ATR) noise floor, one amend per package per bar, `mechanics.verdict == match`, each account's own `approve_amend`, and `could_not_look` never applies. A tighten never widens, moves a TP, resizes, closes or adds an entry; those are the separate trade actions of § 3b, each its own call.
+- `close` · `partial_close` · `move_tp` · `widen_sl` · `change_size` · `add_entry`: § 3b.
 
 ### Step 5. Separate EV from preference, and set the route
 
@@ -227,6 +228,28 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 
 ---
 
+## 3b. Trade actions beyond a tighten (MD-LIVE-TRADE-ACTIONS, operator 2026-10-26)
+
+> **Operator, 2026-10-26 ~18:56-19:00Z (popup answers to the manager, verbatim):** *"we also need to expand the desks mandate so include all trade actions, as long as they have reasoning and confidence attached"*. Actions: *"Close / partial-close", "Move take-profit", "Widen a stop", "Change size / add entry"*. Accounts: *"All accounts now"*. Row `LTR-ALL-ACTIONS`; mandate `MD-LIVE-TRADE-ACTIONS` in `config/mandates.yaml` (read it, not this paragraph, for what is granted).
+
+**Each action is ONE package-level call with a reason and a confidence.** Write it only when the packet supports it better than holding; `hold` stays a call in its own right. Every one carries `reason` (one line, what in the packet makes this better than holding), `evidence_source` (`table` with `ev_delta_r` when the LTR-0 table priced this option at n ≥ floor; otherwise `judgement` with `judgement_confidence` = your calibrated probability the action beats holding) and its own target. The validator refuses a trade action missing any of them.
+
+| action | target field | when to make the call | what each account still checks (never you) |
+|---|---|---|---|
+| `close` | none (`level: null`) | the thesis has failed while the stop has not been hit: e.g. regime/vol cell flipped against the leg since entry, a high-impact event inside the next bar on a crowded correlated book, a giveback pattern the leg's own history prices worse than exiting | tradeable now; one action per package per bar |
+| `partial_close` | `size_fraction` in (0, 1) | the expected path is still positive but its worst case is not, e.g. a large open R into a known event; or concentration across correlated open packages | the venue can reduce by that size; else `no_action_path` |
+| `move_tp` | `level` (price) | the prediction moved (TP doctrine: *the prediction moves through the trade*), e.g. ATR expanded ≥ 1.5× so the original target is now inside one bar's noise, or structure broke beyond it. Either direction | a REAL TP stays: beyond the mark and on the profit side of the entry; never removed, never a sentinel |
+| `widen_sl` | `level` (price) | the stop sits inside current noise after a vol expansion (ATR ratio ≥ 1.5) and the leg's own history shows noise stop-outs from this state | the SAME check a fresh entry at that stop would pass: account live, leg not shadow, daily-DD switch not blocking new risk, gross-exposure cap, and open size ≤ the size a fresh entry at the new stop would be given |
+| `change_size` | `size_multiplier` > 0, ≠ 1 | < 1: as `partial_close`. > 1: the table (or a stated judgement) prices adding at this state as positive net of an extra round-trip cost | > 1 passes the fresh-entry check above at the current stop; < 1 is a reduce |
+| `add_entry` | `size_fraction` > 0 (of the open size) | same as `change_size` > 1 | the fresh-entry check above |
+
+- **Overlays may manufacture these calls; they still need evidence.** Unlike a tighten (Step 3), a close, a TP move or a widen is often driven by what the backtest could not see. Name the overlay in `context_flags` and in the `reason`.
+- **Mechanics first still binds.** No trade action on a `mismatch` or `could_not_look` row: that is `flag_mechanics`.
+- **Package-level, never per-account** (§ 0.2). You never pick accounts, never size by one account's balance, never skip an account. Each account's `RiskManager.approve_action` decides inside its own limits; an account with no executor for the action refuses it as `no_action_path:<action>` and says so in `account_reads`.
+- **Route.** Under `apply_mode: apply` and a granted `MD-LIVE-TRADE-ACTIONS`, a trade action with mechanics `match` and its reason + confidence (or table basis) is applied exactly like a tighten (§ 3 Step 7, `live-review-apply` with the row's `review_id`), `route: auto_applied`. A widen or an add is not special-cased by you: the accounts' own checks are what bounds it.
+- **Grading.** LTR-5 prices every class hold-vs-action (`scripts/research/live_review_counterfactual.py`, method `paired_replay_v1:<action>`), and `live_review_grade.py` calibrates and gives each class its own use rule (operator-adopted review rule on `MD-LIVE-TIGHTEN-SL`). Your confidence is graded; state the one you hold.
+- **Paper-only packages stay record-only**, as in § 0.3: you may record what you would have done (`no_recommendation`, `basis: record_only`), never route it.
+
 ## 4. Row fields this skill adds or pins
 
 These are on top of the LTR-2 schema:
@@ -234,6 +257,7 @@ These are on top of the LTR-2 schema:
 - `recommendation.action: no_recommendation` + `basis: insufficient_n` is valid on **paper** packages only (the validator refuses `insufficient_n` with any other action, so the "insufficient → hold" collapse cannot be written). On a real-money/prop package reviewed from 2026-10-26T12:40Z the validator refuses `insufficient_n` and `default_hold` outright, and `no_recommendation` needs `basis: could_not_look` + a `reason`.
 - `recommendation.evidence_source`: `table` | `judgement` | `none` — required on every `tighten_sl`, written on every new row. `basis: judgement` requires `evidence_source: judgement`, a numeric `judgement_confidence` in [0, 1] and a non-empty `reason` (validator-enforced). These are the fields LTR-5 grades against the realised outcome (joined on `review_id` in `outcomes.jsonl`), so the models can learn how much weight Claude's calls deserve.
 - `basis: record_only` for paper rows.
+- `recommendation.size_fraction` / `size_multiplier` (§ 3b): `partial_close` and `add_entry` carry `size_fraction`, `change_size` carries `size_multiplier`; every trade action carries `reason` and either `judgement_confidence` (judgement) or `ev_delta_r` (table).
 - `account_reads`: `[{"account_id", "account_class", "read": would_apply|refused_by_account_risk|unknown|no_action, "evidence"}]`. There is one entry per account carrying the package, and it is required on every review.
 - `trigger.event`: an L0 event name (design § 2). When run by hand, use `manual`. For the first live run of a skill version, use `first_live_run`. For a closed package priced as practice, use `dry_rehearsal`.
 - `packet_sha`: sha256 of the decision packet (§ 1b); the validator checks it against `comms/live_review/packets/<review_id>.json`.
