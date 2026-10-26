@@ -2,21 +2,36 @@
   "id": "DESK-18-GEN-REPLAY-S0",
   "title": "Desk D-S0 for entry generation: pre-registered masked replay units vs random-entry and strategy baselines, net of full cost stack",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "session_014Wuw5ZTBbMDhhYNnn9wGJx",
-  "lane": "session_014Wuw5ZTBbMDhhYNnn9wGJx",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Filed 2026-10-26 by the manager from trading-desk design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10.2, PR #20258, lane DESK-15); design approved as the build plan by the operator ('Approve as the build plan'). Scope/depends exactly as \u00a7 10.2. [2026-10-26 lane DESK-7-BLIND-REPLAY-S0, session_01Bp1CwBC4STi9SZC5vKgJWM] DESK-7-BLIND-REPLAY-S0 blocker cleared. DESK-18 can CONSUME from RQ-20261026-bf56-01..03 (research/queue/blocked/): the masked_replay construction block (desk_scan_packet.py --as-of masking, unmask key kept apart, scrambled-label arm, pre_cutoff stratum), the 4-leg trade/candle set and committed trade lists, the cost basis (fee 7.5 bps rt + resolve_cost_policy slippage 3.0 bps rt + funding 1.0 bps/window, MEASURED 2026-10-26), the fold definition (evidence record's own 4 folds), the trade-resampling bootstrap and leave-one-fold-out best-static baseline, and the driver DESK-7B-REPLAY-DRIVER. It CANNOT consume the in-trade/exit decision rules or power blocks: those are for hold/tighten/close, not proposals. DESK-18 must author its own units: random-entry baseline (the desk's bracket geometry at random times on the same symbols), strategy baseline, novelty=new subset, n~780 for +0.10 R. Remaining dependency: DESK-16 is landed_unproven (builder merged in #20295). [session_01Bp1CwBC4STi9SZC5vKgJWM] The units it consumes live in PR #20339 (held for human merge); DESK-18 can author its own units in parallel.",
+  "note": "Filed 2026-10-26 by the manager from trading-desk design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10.2, PR #20258, lane DESK-15); design approved as the build plan by the operator ('Approve as the build plan'). Scope/depends exactly as \u00a7 10.2. [2026-10-26 lane DESK-7-BLIND-REPLAY-S0, session_01Bp1CwBC4STi9SZC5vKgJWM] DESK-7-BLIND-REPLAY-S0 blocker cleared. DESK-18 can CONSUME from RQ-20261026-bf56-01..03 (research/queue/blocked/): the masked_replay construction block (desk_scan_packet.py --as-of masking, unmask key kept apart, scrambled-label arm, pre_cutoff stratum), the 4-leg trade/candle set and committed trade lists, the cost basis (fee 7.5 bps rt + resolve_cost_policy slippage 3.0 bps rt + funding 1.0 bps/window, MEASURED 2026-10-26), the fold definition (evidence record's own 4 folds), the trade-resampling bootstrap and leave-one-fold-out best-static baseline, and the driver DESK-7B-REPLAY-DRIVER. It CANNOT consume the in-trade/exit decision rules or power blocks: those are for hold/tighten/close, not proposals. DESK-18 must author its own units: random-entry baseline (the desk's bracket geometry at random times on the same symbols), strategy baseline, novelty=new subset, n~780 for +0.10 R. Remaining dependency: DESK-16 is landed_unproven (builder merged in #20295). [session_01Bp1CwBC4STi9SZC5vKgJWM] The units it consumes live in PR #20339 (held for human merge); DESK-18 can author its own units in parallel. 2026-10-26 (DESK-18B pilot lane): lane session_014Wuw5Z archived; units -01..-04 merged in #20402 (landed_unproven, not done). CLOSES WHEN: RQ-20261026-e535-03 and -04 have LANDED RESULTS (verdicts from the judged-1 run, tracked on DESK-18B-JUDGE-RUN). -01 harness self-check: verdict pass (run 40396667351 artifact), not yet on main as of this note.",
   "priority_rank": 8,
-  "updated_at": "2026-10-26T17:26:35Z",
-  "updated_by": "session_014Wuw5ZTBbMDhhYNnn9wGJx",
+  "updated_at": "2026-10-26T23:39:50Z",
+  "updated_by": "session_lane_desk18b_pilot",
   "roadmap": [
     "L-DESK"
   ],
+  "lane_history": [
+    {
+      "lane": "session_014Wuw5ZTBbMDhhYNnn9wGJx",
+      "archived_at": "2026-10-26T23:03:13Z"
+    }
+  ],
+  "observation": {
+    "what": "RQ-20261026-e535-03 and -04 have LANDED RESULTS (verdicts from the judged-1 run) on main",
+    "how_to_check": "ls research/results or comms/research for RQ-20261026-e535-03/-04 result records with a verdict; row DESK-18B-JUDGE-RUN tracks the judging run",
+    "due_by": "2026-11-10"
+  },
+  "writeback": {
+    "roadmap": "none: L-DESK milestone text not edited; units -03/-04 have no result yet, the outcome is written back when they land",
+    "arch": "none: no architecture change; D-S0 entry-generation replay tooling and pre-registered units only"
+  },
   "_seq": 702
 }
