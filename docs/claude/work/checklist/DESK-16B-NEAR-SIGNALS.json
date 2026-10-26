@@ -1,0 +1,21 @@
+{
+  "id": "DESK-16B-NEAR-SIGNALS",
+  "title": "Desk: near-signal producer for the scan packet's system_book (legs within one bar of a signal), so near_signals_read_state can read",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed 2026-10-26 by lane session_01WjV8syWhW3awUxZ7FTavhZ (DESK-16). MEASURED: no producer of near-signals exists in src/ or scripts/ (grep near_signal / bars_to_signal / signal_proximity returns only the desk guard). Until built, every scan packet carries system_book.near_signals_read_state = could_not_look (named), so a proposal that duplicates a near-signal cannot be detected and novelty degrades to 'unverifiable' when no open package matches. Scope: per rostered leg, evaluate its signal function on the last closed bar +/- one bar (read-only, no order path), emit {leg, symbol, side, timeframe, bars_to_signal}; inject via desk_scan_packet.build_scan_packet(near_signals=...). Also unbuilt (named in every packet's missing_inputs, lower priority): regime_cell per symbol, spread/funding reads, light-tier venue listing (Bybit public API is geo-blocked from sessions).",
+  "updated_at": "2026-10-26T10:15:46Z",
+  "updated_by": "session_01WjV8syWhW3awUxZ7FTavhZ",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 712
+}
