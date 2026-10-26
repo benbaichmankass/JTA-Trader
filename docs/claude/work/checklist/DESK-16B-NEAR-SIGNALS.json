@@ -14,10 +14,19 @@
   ],
   "blocked_on": [],
   "note": "Filed 2026-10-26 by lane session_01WjV8syWhW3awUxZ7FTavhZ (DESK-16). MEASURED: no producer of near-signals exists in src/ or scripts/ (grep near_signal / bars_to_signal / signal_proximity returns only the desk guard). Until built, every scan packet carries system_book.near_signals_read_state = could_not_look (named), so a proposal that duplicates a near-signal cannot be detected and novelty degrades to 'unverifiable' when no open package matches. Scope: per rostered leg, evaluate its signal function on the last closed bar +/- one bar (read-only, no order path), emit {leg, symbol, side, timeframe, bars_to_signal}; inject via desk_scan_packet.build_scan_packet(near_signals=...). Also unbuilt (named in every packet's missing_inputs, lower priority): regime_cell per symbol, spread/funding reads, light-tier venue listing (Bybit public API is geo-blocked from sessions).  | 2026-10-26 BUILT by session_017GFXhSVea4htC1vmaymZBc: scripts/ops/desk_near_signals.py (unit-probe, not a re-implementation) wired into desk_scan_packet.py main(); near_signals_read_state read only when every leg x symbol looked, else could_not_look + N-of-M named. MEASURED live (public candle route, 2026-10-26, python3 scripts/ops/desk_near_signals.py): 26 of 26 rostered leg x symbol looked, 4 near-signals (read). First run the same hour read 23 of 26 (MES/MGC/MHG 1d: the route returns no_data at limit 1000; MGC/MHG served at limit 200) so the denominator moves with the route. landed_unproven: closes when a desk session (DESK-6) reads a scan packet's near-signals and a later package confirms or refutes a bars_to_signal=1 item. Open: account-level side_filter, regime router and market-hours gates are not reproduced; MES daily returned no_data in one of two runs.",
-  "updated_at": "2026-10-26T14:05:41Z",
+  "updated_at": "2026-10-26T14:32:15Z",
   "updated_by": "session_017GFXhSVea4htC1vmaymZBc",
   "roadmap": [
     "L-DESK"
   ],
+  "writeback": {
+    "roadmap": "L-DESK where: DESK-16B line added (26 of 26 looked, 4 near-signals) -- done in this PR",
+    "arch": "ARCHITECTURE-CANONICAL 2026-10-26 DESK-16B-NEAR-SIGNALS row -- done in this PR"
+  },
+  "observation": {
+    "what": "a desk scan packet built by scripts/ops/desk_scan_packet.py carries system_book.near_signals_read_state=read with near_signal items, and at least one bars_to_signal=1 item is later confirmed or refuted by an order package for that leg and side",
+    "how_to_check": "python3 scripts/ops/desk_near_signals.py (prints N of M looked + near legs); then compare a near leg against the next 1-2 bars order packages via /api/bot/packages or live_review_packet.collect",
+    "due_by": "2026-11-09T00:00Z"
+  },
   "_seq": 712
 }
