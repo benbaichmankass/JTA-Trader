@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research/queue units RQ-20261026-bf56-01 (selfcheck) and -02/-03 (score) via .github/workflows/research-script-run.yml; `packets` is run by the judging lane (manual).
+# wiring: manual-only - run by the judging lane (`packets`, `score`) and, once PR #20349 lands, by research/queue RQ-20261026-bf56-01 via research-script-run.yml (`selfcheck`); no schedule consumes it.
 """DESK-7B-REPLAY-DRIVER -- the D-S0 blind-replay driver for the desk's in-trade and exit roles.
 
 Design: docs/plans/claude-trading-desk-DESIGN.md section 8.1 (D-S0), section 10. Units:
@@ -118,8 +118,8 @@ REQUIRED_PACKET_KEYS = ("packet_id", "kind", "mask", "trade", "bars", "missing_i
 
 def parse_population(repo: Path = REPO) -> List[str]:
     """Real-money, non-prop legs on a 2h/4h timeframe that have a committed Stage-0 trade list."""
-    acc = yaml.safe_load((repo / "config" / "accounts.yaml").read_text())
-    acc = acc.get("accounts", acc)
+    from src.config.accounts_loader import load_accounts_dict
+    acc = load_accounts_dict(repo / "config" / "accounts.yaml")
     strat = yaml.safe_load((repo / "config" / "strategies.yaml").read_text())
     strat = strat.get("strategies", strat)
     out: List[str] = []
@@ -491,7 +491,7 @@ def _r(x: Optional[float], nd: int = 4) -> Optional[float]:
     return None if x is None or (isinstance(x, float) and not np.isfinite(x)) else round(float(x), nd)
 
 
-def b2_random_timing(points: List[Point], specs: List[Tuple], freq: Dict[Tuple, float], seed: int,
+def b2_random_timing(points: List[Point], freq: Dict[Tuple, float], seed: int,
                      slip: float) -> np.ndarray:
     """Per-point mean dR over B2_DRAWS draws: Claude's action mix, applied at random valid bars of the same trade.
     A drawn non-hold action with no valid bar on that trade scores 0 (it could not be applied) and is not hidden."""
@@ -603,7 +603,7 @@ def score(points: List[Point], actions: Dict[str, Tuple[Tuple, Optional[str]]], 
     mean, lo, hi = boot_ci(d, rng)
     freq = Counter(specs)
     freq_f = {s: c / len(specs) for s, c in freq.items()} if specs else {("hold",): 1.0}
-    b2 = b2_random_timing(judged, list(freq), freq_f, seed, STOP_FILL_SLIP_R) if judged else np.array([])
+    b2 = b2_random_timing(judged, freq_f, seed, STOP_FILL_SLIP_R) if judged else np.array([])
     diff = d - b2
     dmean, dlo, dhi = boot_ci(diff, rng)
     b3, chosen = b3_best_static(judged, role, STOP_FILL_SLIP_R) if judged else (np.array([]), {})
