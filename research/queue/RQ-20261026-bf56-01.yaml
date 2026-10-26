@@ -1,6 +1,6 @@
 id: RQ-20261026-bf56-01
 title: 'Desk D-S0 harness self-check on the real-money 2h/4h legs: does the masked replay reproduce each leg''s recorded net R on HOLD, and does a scrambled-label arm score zero?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -39,18 +39,6 @@ decision_rule:
     named, and RQ-20261026-bf56-02/-03 stay blocked. The 1e-6, 0.05 and 370 are not changed after any result.
   what_it_does_not_do: >-
     Says nothing about Claude's judgement, the legs' edge, or any roster/config. A PASS only unlocks bf56-02 and bf56-03 and certifies the construction for DESK-18.
-blocked_on:
-- kind: work_item
-  ref: DESK-7B-REPLAY-DRIVER
-  what: >-
-    The replay driver does not exist. Nothing in the repo today reads a committed leg trade list, rebuilds a masked point-in-time packet at each trade's decision bar,
-    replays an action on the real path with the full cost stack, and writes verdict.json. Pieces that exist and are to be composed, not rewritten:
-    scripts/ops/desk_scan_packet.py (masking and the unmask key), scripts/research/live_review_outcomes.py (hold-vs-tighten pricing from a committed trade list),
-    scripts/ci/check_desk_records.py (packet projection and pre_cutoff), src/runtime/execution_costs.py.
-  clears_when: >-
-    A script under scripts/research/ takes --leg, --window and --actions-file, writes research/results/<unit>/verdict.json with the statistic named in decision_rule,
-    and is dispatchable through research-script-run.yml (public candles via fetch_binance_vision.py, CPU only). Then: git mv this file to research/queue/,
-    fill run.workflow and run.command, remove blocked_on and set status: queued. The validator then holds it to the full contract.
 masked_replay:
   population: >-
     MEASURED 2026-10-26 by parsing config/accounts.yaml at main 38f8bcf8 (accounts with mode: live, non-prop legs; bybit_2 and its exact mirror bybit_portfolio carry the same
@@ -69,11 +57,17 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 2.0
-  est_minutes: null
-  basis: 'est_minutes null rather than guessed: the driver does not exist and no run of it has ever completed.'
+  est_minutes: 5
+  basis: 'MEASURED 2026-10-26 in the DESK-7B lane: one full selfcheck with --fetch (four Binance Vision candle pulls, 370 trades, 176 packets) took 2 min 22 s wall on a session container; 5 is that rounded up for runner variance.'
 run:
-  workflow: null
-  note: Deliberately null until DESK-7B-REPLAY-DRIVER lands; naming a workflow now would dispatch into a script that does not exist.
+  workflow: research-script-run.yml
+  command: [python3, scripts/research/desk_replay_driver.py, selfcheck, --out, '{out_dir}', --fetch]
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261026-bf56-01
+  note: >-
+    The driver is scripts/research/desk_replay_driver.py (DESK-7B-REPLAY-DRIVER). It writes {out_dir}/verdict.json with the three registered clauses decided exactly as registered.
+    --fetch tops the four candle series up from Binance Vision (the committed copies end 2026-10-15, before the last ADA trade exits).
 lands:
   store: research/results/
   assert_field: read_state
