@@ -12,6 +12,11 @@ name: live-review-rows-mirror
 # One PR at a time: the concurrency group serialises runs and each run waits for
 # its PR to merge, so the next run checks out a main that already has those rows.
 # The hourly schedule is the backstop for a push whose run was superseded.
+# ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH, and
+# live-review/rows was cut from main before this file existed. Until the rows
+# branch carries this file (main merged into it), only the schedule fires:
+# mirror lag <= ~1 h. That lag never touches the apply, which reads the pinned
+# rows-branch commit directly.
 # Tier 1: data copy between two branches of this repo; no runtime effect.
 
 on:
