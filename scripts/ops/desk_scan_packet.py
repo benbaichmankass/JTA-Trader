@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a session-side builder run by the desk session (DESK-6) and the D-S0 replay
+# (DESK-18), neither built yet; the VM read route that would schedule it is DESK-1.
 """DESK-16-SCAN-PACKETS -- build a desk SCAN packet (the entry-generation input).
 
 Design: docs/plans/claude-trading-desk-DESIGN.md § 2.3 (the scan block table), § 3.9 (onboarding),
@@ -489,12 +491,10 @@ def candles_from_api(symbols: Iterable[str], tf: str, limit: int = 1000) -> Dict
 
 
 def _load_cfg() -> Tuple[Dict[str, dict], Dict[str, Any]]:
-    import yaml
-
+    from src.config.accounts_loader import load_accounts_dict
     from src.config.symbol_sets import load_strategies_cfg
 
-    a = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text()) or {}
-    return (a.get("accounts", a) or {}), load_strategies_cfg()
+    return load_accounts_dict(), load_strategies_cfg()
 
 
 def validate(p: dict) -> List[str]:
