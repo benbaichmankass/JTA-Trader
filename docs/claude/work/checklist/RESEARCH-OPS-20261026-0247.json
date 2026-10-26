@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261026-0247",
+  "title": "Research-ops pass 2026-10-26 02:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "claude/research-ops-20261026-0247",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": 2.4,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane research-ops-0247] 02:47Z pass; first finishes the 20:47Z not_run items (dispatch/replenish run lists). Closed the 20:47Z not_run items (dispatch + replenish run lists read: no current failure). Results since 21:05Z read (24 units: 3 pass / 15 fail / 6 indeterminate). Converted nodes P3-Q3-ief-fail and P3-Q3-slv-fail to finite-TP stage0 units (existing sentinel-TP runs were the recorded FAIL). Record comms/research/ops/20261026T0310Z.json. HELD PR (unvouchable_paths); merge-slot claim committed.",
+  "updated_at": "2026-10-26T02:58:11Z",
+  "updated_by": "research-ops-0247",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "the two P3-Q3 finite-TP units are emitted by queue_replenish, dispatched and their results land on main",
+    "how_to_check": "ls research/queue | grep 2026102 | head; python3 scripts/research/queue_replenish.py --authoring-queue | python3 -c \"import json,sys;print(len(json.load(sys.stdin)))\"",
+    "due_by": "2026-11-02T00:00Z"
+  },
+  "_seq": 698
+}
