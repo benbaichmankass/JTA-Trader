@@ -45,3 +45,22 @@ def test_masked_packet_leaks_no_identity():
     assert key["alias"] == {"ASSET_01": "ETHUSDT"} and key["real_info_cutoff_at"].startswith("2026-")
     assert masked["meta"]["mode"] == "historical_masked"
     assert m.cdr.expected_training(dict(m.cdr.GOOD_ENTRY_DECISION, label_source="historical_masked"))[1] is False
+
+
+def test_first_trend_read_in_a_fresh_process_is_not_lost_to_a_shadowed_import(tmp_path):
+    """scripts/ml/__init__.py exists, so with `scripts` FIRST on sys.path the top-level `ml` package is shadowed and the first
+    `src.runtime.regime` import raises inside trend_now(), which swallows it: after the candle reader had been imported, the first packet
+    built in a process lost htf_trend for its first symbol and the second did not (found 2026-10-26 by the DESK-18 replay self-check,
+    whose packet sha flapped between runs)."""
+    import subprocess
+    import sys
+    bars = m._walk(120, 100.0, 1.0, 1767225600, 3600)
+    (tmp_path / "ETHUSDT_1h.csv").write_text("timestamp,open,high,low,close\n" + "".join(
+        f"{datetime.fromtimestamp(b['time'], tz=timezone.utc).isoformat()},{b['open']},{b['high']},{b['low']},{b['close']}\n" for b in bars))
+    code = ("import sys; sys.path.insert(0, 'scripts/ops'); import desk_scan_packet as d; from pathlib import Path; "
+            f"got = d.candles_from_dir(Path({str(tmp_path)!r}), ['ETHUSDT'], '1h')['ETHUSDT']; "
+            "print(d.htf_trend(got), d.htf_trend(got))")
+    out = subprocess.run([sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True, timeout=180)
+    assert out.returncode == 0, out.stderr[-500:]
+    first, second = out.stdout.split()
+    assert first == second and first != "None", out.stdout
