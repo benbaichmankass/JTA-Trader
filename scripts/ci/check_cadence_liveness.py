@@ -205,6 +205,18 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes main only when live-review/rows carries a review_id main lacks, so a quiet mirror leaves no receipt by design; "
                "a stopped mirror is observed by claude-run-failure-alert (crashed runs) and by a rows-branch review_id missing from main",
     },
+    "desk-scan-packet.yml": {
+        "receipt": None,
+        "why": "commits its packet to the append-only desk/decisions branch, not to main, so main's history carries no receipt; "
+               "the receipt is comms/desk/latest_scan.json built_at on that branch, which every desk wake reads and reports as "
+               "stale_packet when old, and a crashing run is observed by claude-run-failure-alert",
+    },
+    "desk-decisions-mirror.yml": {
+        "receipt": None,
+        "why": "writes main only when desk/decisions carries a decision_id main lacks or a proposal's horizon has passed, so a quiet "
+               "mirror leaves no receipt by design; a stopped mirror is observed by claude-run-failure-alert and by a branch "
+               "decision_id missing from main's comms/desk/decisions.jsonl",
+    },
     "research-slo.yml": {
         "receipt": "comms/research/health",
         "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "

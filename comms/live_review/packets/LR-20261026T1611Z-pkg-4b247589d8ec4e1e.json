@@ -1,0 +1,127 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "ib_paper",
+   "evidence": "ib_orders: SL 4040.8 / TP 3946.8, position True; no apply path for this exchange yet (LTR-9 / none)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "unknown"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "read"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "short",
+    "order_package_id": "pkg-011a7bf85ee54a6f",
+    "symbol": "MGC"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-23929c3f526440c3",
+    "symbol": "GDX"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-465a5d7d27644027",
+    "symbol": "ADAUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-64d4fa5ab0c34305",
+    "symbol": "IAUM"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-976b459f5c954df0",
+    "symbol": "MHG"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-b1e4fdf9b9d049a3",
+    "symbol": "XRPUSDT"
+   }
+  ],
+  "direction": "short",
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": {
+   "adjustment": 0.0,
+   "decision": "neutral",
+   "ts": "2026-10-26T14:09:01.871770+00:00",
+   "veto": false
+  },
+  "previous_review": {
+   "action": "no_recommendation",
+   "review_id": "LR-20261026T1428Z-pkg-4b247589d8ec4e1e",
+   "reviewed_at": "2026-10-26T14:30:10Z",
+   "route": null
+  },
+  "symbol": "MGC"
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.3161,
+  "bars_since_peak": 8,
+  "giveback_r": 0.7392,
+  "open_r": -0.7127,
+  "peak_r": 0.0266,
+  "r_to_stop": 0.2873,
+  "r_to_target": 2.2127
+ },
+ "info_cutoff_at": "2026-10-26T16:11:56Z",
+ "leg": "ict_scalp_mgc_15m",
+ "mechanics": {
+  "evidence": "package sl 4040.80571429 / tp 3946.79142857 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime='trending' vol_regime='unknown': not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest verdict not assembled by this generator yet"
+  }
+ ],
+ "order_package_id": "pkg-4b247589d8ec4e1e",
+ "packet_version": 2,
+ "priced_options": null,
+ "regime": {
+  "adx_now": 18.9581,
+  "atr_now_over_entry": 1.3161,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": "chop"
+ },
+ "review_id": "LR-20261026T1611Z-pkg-4b247589d8ec4e1e",
+ "state": {
+  "atr_now_over_entry": 1.3161,
+  "bars_held": 9,
+  "giveback_r": 0.7392,
+  "open_r": -0.7127,
+  "peak_provenance": "estimated",
+  "peak_r": 0.0266,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 4040.80571429,
+  "tp": 3946.79142857
+ }
+}

@@ -1,0 +1,81 @@
+name: desk-decisions-mirror
+
+# DESK-6-SHADOW-PILOT. Desk wakes write rows to the protected append-only `desk/decisions`
+# branch (.claude/skills/trading-desk/DESK-BRIEF.md § 5), the live-review/rows pattern. main
+# must carry the full record and every decision's outcome, so this workflow, on a main
+# checkout:
+#   1. mirrors every branch row main lacks, BY decision_id, plus the packet it cites
+#      (scripts/ops/desk_branch.py mirror; a re-run is a no-op);
+#   2. replays every due shadow proposal on the real candles, net of the full cost stack,
+#      into comms/desk/outcomes.jsonl (scripts/ops/desk_outcomes.py) -- the outcome join that
+#      makes each decision a graded training row;
+#   3. validates the whole desk record with desk-records-guard;
+#   4. lands it in ONE self-landing PR (commit-to-main, verify-merged).
+# One run at a time (concurrency group; each run waits for its PR to merge).
+# ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH; desk/decisions is
+# cut from main after this file lands, so push runs fire from the start. The hourly schedule is
+# the backstop and is what computes outcomes once a horizon passes.
+# Tier 1: data copy + an offline replay; no runtime effect.
+
+on:
+  push:
+    branches: ["desk/decisions"]
+    paths: ["comms/desk/decisions.jsonl"]
+  schedule:
+    - cron: "48 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: desk-decisions-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Mirror rows, replay outcomes, validate
+        id: mirror
+        run: |
+          set -o pipefail
+          pip install --quiet pyyaml pandas
+          git fetch --no-tags origin desk/decisions
+          rc=0
+          python3 scripts/ops/desk_branch.py mirror --ref origin/desk/decisions \
+            | tee -a "$GITHUB_STEP_SUMMARY" || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          [ "$rc" -ne 2 ] || { echo "::error::could not read desk/decisions"; exit 1; }
+          python3 scripts/ops/desk_outcomes.py | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 scripts/ci/check_desk_records.py
+          if [ -n "$(git status --porcelain comms/desk)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Land on main (one self-landing PR)
+        if: steps.mirror.outputs.changed == '1'
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/desk
+          message: "desk: mirror decisions from desk/decisions + replayed outcomes"
+          pr-title: "desk: mirror decisions from desk/decisions + replayed outcomes"
+          pr-body: "Automated mirror (auto-merge): rows on desk/decisions that main's comms/desk/decisions.jsonl lacks, merged by decision_id, plus the packets they cite; and outcomes.jsonl rows for shadow proposals whose horizon has passed (replayed on real candles, net of the full cost stack). scripts/ops/desk_branch.py, scripts/ops/desk_outcomes.py."
+          verify-merged: "true"
+
+      - name: Fail the run if a row was skipped
+        if: steps.mirror.outputs.rc == '1'
+        run: |
+          echo "::error::a desk/decisions row was skipped; see the mirror summary"
+          exit 1

@@ -2,25 +2,33 @@
   "id": "DESK-6-SHADOW-PILOT",
   "title": "Desk: scale-1 record-only 15-min standing Sonnet desk over real money + prop; measures latency/stage, $/wake, rotation; supersedes LTR-4-ROUTINE if approved",
   "phase": null,
-  "state": "blocked",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_0158TMJbRQdBS9Wcr5nY8N6S",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 25,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [
-    "DESK-0-SCHEMA",
-    "DESK-5-SKILL"
+  "prs": [
+    20347
   ],
-  "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: adds shadow entry generation (scan wakes; every proposal replayed on the real path net of full cost stack = teacher label). Measures proposals/day. Depends on DESK-5 + new DESK-16-SCAN-PACKETS.",
+  "blocked_on": [],
+  "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: adds shadow entry generation (scan wakes; every proposal replayed on the real path net of full cost stack = teacher label). Measures proposals/day. Depends on DESK-5 + new DESK-16-SCAN-PACKETS. [2026-10-26 lane session_0158TMJbRQdBS9Wcr5nY8N6S] Built in PR #20347 (Tier 1): branch desk/decisions (append-only, protection in branch-protection-sync); desk-scan-packet.yml hourly :03 builds the 1h scan on a runner (cheapest path; DESK-1 later); desk-decisions-mirror.yml mirrors rows by decision_id + replays shadow proposals net of full cost into outcomes.jsonl. MEASURED wake cost (get_session().usage, Sonnet, fresh session, n=4): $0.45/$0.34/$0.45/$0.47, 119-134k ctx, 65-85 s. INFERRED hourly ~$11/day. Cadence HOURLY (1h packet; 15-min wakes would be 3/4 nothing-due) -- decided on data, design 11 leaves cadence to this row. WRITE PATH MEASURED: repo-less (and add_repo push) = 403; other branch = not landed; session started ON desk/decisions = written. So the routine is a SPAWNER (SKILL.md 6b, exact prompt) -- NOT installed (lanes do not edit routines): manager installs. First row DD-20261026T1339Z-scan-1h-1 no_trade, desk-records-guard 0 findings. Phase 1 record-only: never places/sizes/moves orders. Supersedes LTR-4 only for entry generation; in-trade stays the live-review path.",
   "priority_rank": 6,
-  "updated_at": "2026-10-26T06:54:29Z",
-  "updated_by": "session_012XMr6ve1Lcf35qUU2faEkd",
+  "updated_at": "2026-10-26T14:28:13Z",
+  "updated_by": "session_0158TMJbRQdBS9Wcr5nY8N6S",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "observation": {
+    "what": "first desk decision row from a ROUTINE-fired wake, validated on desk/decisions and mirrored to main with its outcome",
+    "how_to_check": "comms/desk/decisions.jsonl on main carries a row whose session is not desk-wake-measure-*, comms/desk/outcomes.jsonl carries its outcome row, and python3 scripts/ci/check_desk_records.py exits 0",
+    "due_by": "2026-11-02T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: DESK-6 shadow pilot built: hourly scan packet to desk/decisions, spawner routine (manager installs), rows mirrored + replayed into outcomes.jsonl; first row DD-20261026T1339Z-scan-1h-1 guard-clean; wake cost $0.34-0.47 MEASURED n=4",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md change-log row 2026-10-26 DESK-5/DESK-6"
+  },
   "_seq": 681
 }

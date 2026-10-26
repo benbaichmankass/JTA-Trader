@@ -147,18 +147,10 @@ grading:
   decision_rule_id: RULE-RQ20261025394723-MULTINOMIALLOGIT(NUMPY)
   evidence:
   - research/results/RQ-20261025-3947-23/40241202214.jsonl
+  - research/results/RQ-20261025-3947-23/40277112416.jsonl
   graded_at: '2026-10-26'
-  grader: session cse_017ew3v5tfqjsM1AnCPNYmbs (research-SLO authoring lane, research-ops step C)
+  graded_by: 'research-ops-1447 (hand-graded: the grader read a mixed pair of rows, one measured and one producer_failed duplicate)'
   needs_review: false
-  verdict: fail
-  reason: >-
-    Registered FAIL clause met on the measured row (run 40241202214, 2026-10-25T23:39Z, read_state measured, arms cand/lgbm_base/prior all ok,
-    5 CV folds): the numpy multinomial logit is WORSE than the shipped-shape LightGBM on the CV-mean logloss on EVERY symbol, every
-    interval excluding zero: BTC -0.0449 [-0.0571, -0.0328], ETH -0.0398 [-0.0577, -0.0219], SOL -0.0312 [-0.0547, -0.0078]; holdout
-    -0.0245 / -0.0309 / -0.0529. It beats the class-prior control (BTC +0.0513). Configuration closed: numpy multinomial logit at the
-    shipped feature shape on the 1h published shards; family (linear heads) stays open for other configurations -- the exact configuration
-    goes into the plan family history. The later row (run 40277112416, 2026-10-26T09:20Z) is producer_failed ("no run-manifest.json"), a
-    NON-verdict that arrived after the verdict; it does not overturn it. The auto-grader refused a verdict only because it demands
-    unanimity across rows; this closure applies the rule to the measured row. Open question for research-ops: why a cadence-once unit has a
-    second run (filed on the PIPELINE if it recurs).
+  reason: 'Run 40241202214 (read_state measured, 5 folds each, all arms ok) read verbatim against the registered rule: numpy_logit minus lgbm_base logloss, CV mean BTC -0.0449, ETH -0.0398, SOL -0.0312; holdout BTC -0.0245, ETH -0.0309, SOL -0.0529. Candidate worse than lgbm_base on the CV mean on EVERY symbol = FAIL. Run 40277112416 is a producer_failed re-fire (no run-manifest.json), not a verdict. Configuration closed: numpy multinomial logit on the six shared features, 1h tail 40000; family linear/logit stays open for other configurations; next test = the remaining learner-family units RQ-20261025-3947-*.'
   rows: 2
+  verdict: fail

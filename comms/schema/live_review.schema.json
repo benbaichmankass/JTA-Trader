@@ -5,7 +5,7 @@
     "action": ["hold", "tighten_sl", "tp_revise", "partial_close", "close", "flag_mechanics", "file_hypothesis", "no_recommendation"],
     "route": ["auto_applied", "recommended", "operator_ask", "none"],
     "confidence": ["measured", "suggestive", "anecdote"],
-    "basis": ["preference_within_bound", "ev_positive", "operator_ask", "insufficient_n", "mechanics", "default_hold", "record_only", "judgement"],
+    "basis": ["preference_within_bound", "ev_positive", "operator_ask", "insufficient_n", "mechanics", "default_hold", "record_only", "judgement", "could_not_look"],
     "evidence_source": ["table", "judgement", "none"],
     "peak_provenance": ["measured", "estimated", "fabricated", "unverified"],
     "mechanics_verdict": ["match", "mismatch", "could_not_look"],
@@ -64,6 +64,12 @@
       "cf_r_shadow_0_5": {"type": ["number", "null"]},
       "cf_method": {"type": ["string", "null"]},
       "cf_provenance": {"type": "string", "enum": ["computed"]},
+      "action": {"type": ["string", "null"], "_comment": "LTR-5: the review's recommendation.action this outcome grades (denormalised for the join; reviews.jsonl is the source)."},
+      "applied": {"type": ["boolean", "null"], "_comment": "LTR-5: whether the call was applied (reviews.applied at review time)."},
+      "rec_r": {"type": ["number", "null"], "_comment": "LTR-5: net R had the recommendation been followed (applied: the realised net_r; unapplied: the replayed path). null = not priceable."},
+      "delta_r": {"type": ["number", "null"], "_comment": "LTR-5: rec_r - cf_r = the value of following the call over holding, net of the full cost stack. 0.0 for a call that changes no path (hold / no_recommendation / flag_mechanics). null = could not price. CJ-2 should read this field, not net_r - cf_r, for an unapplied tighten."},
+      "cf_cost_stack": {"type": ["string", "null"], "_comment": "LTR-5: where the replayed exit's costs came from (recorded trade legs + execution_costs.resolve_cost_policy slippage)."},
+      "replay_fidelity": {"type": ["string", "null"], "_comment": "LTR-5: replay_matches_realised | replay_mismatch | unvalidated (an applied call has no untouched realised path to check against)."},
       "exit_reason": {"type": ["string", "null"]}
     }
   }

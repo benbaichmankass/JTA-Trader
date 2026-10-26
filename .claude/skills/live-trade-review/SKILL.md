@@ -136,7 +136,7 @@ If any of these fails, the recommendation is `flag_mechanics` (basis `mechanics`
 Run `live_review_outcomes.py` for the leg at the live state, and copy its numbers into `options` as they are, with the tool's own `n`, `mean_r`, `sd_r` and `worst_r`.
 
 - **Quote the pricing tool, never the design's or a precedent's hand calculations.** This was settled on 2026-10-25 (row `LTR-0-CONDITIONAL-OUTCOMES`, PR #20114). The tool reproduces the ADA HOLD case (n=32, mean +3.19 R), but the design's original "tighten +2.96 R, worst +2.32 R" was an unreproducible hand calculation. At that level the tool gives `atr:1.5` = +2.87 and `r:2.5` = +2.94, worst +1.31. A number you did not get from the tool this session does not go in a row.
-- **A thin cell is decided by judgement, never by a default "hold"** (operator, 2026-10-26, popup verbatim *"Claude's judgement applies (Recommended)"* — *"Drop the n>=20 clause. When the table is thin, Claude's call applies, logged as 'judgement' with a confidence; the table is used when it's there. Every call is graded against the actual outcome so models can learn how much weight to give Claude."*; row `LTR-JUDGEMENT-APPLY`). If the HOLD cell or the candidate cell is below the n floor (default 20), make the call from the packet and the overlay: `basis: judgement`, `evidence_source: judgement`, `judgement_confidence` in [0, 1] (your calibrated probability the call beats holding) and a one-line `reason`. Quote whatever the thin cells show (n, mean) in `context_flags`; never present them as measured. If you genuinely have no call, `no_recommendation` + `basis: insufficient_n` (`evidence_source: none`) is still valid, and **never `hold`**. A null cell is "could not look"; never write it as 0. The n floor is no longer an apply gate: it decides only whether the basis is `table` or `judgement`.
+- **A thin cell is decided by judgement, never by a default "hold"** (operator, 2026-10-26, popup verbatim *"Claude's judgement applies (Recommended)"* — *"Drop the n>=20 clause. When the table is thin, Claude's call applies, logged as 'judgement' with a confidence; the table is used when it's there. Every call is graded against the actual outcome so models can learn how much weight to give Claude."*; row `LTR-JUDGEMENT-APPLY`). If the HOLD cell or the candidate cell is below the n floor (default 20), make the call from the packet and the overlay: `basis: judgement`, `evidence_source: judgement`, `judgement_confidence` in [0, 1] (your calibrated probability the call beats holding) and a one-line `reason`. Quote whatever the thin cells show (n, mean) in `context_flags`; never present them as measured. **A real-money or prop package with mechanics `match` ALWAYS gets a call** (manager 2026-10-26 ~12:37Z, closing the escape found in #20322: every real-money review that day ended `no_recommendation` + `insufficient_n`, so the operator's 06:30Z "Claude's judgement applies" produced no graded calls at all). On a thin cell record `hold` **or** `tighten_sl`, each with `basis: judgement`, `evidence_source: judgement`, a `judgement_confidence` in [0, 1] and a one-line `reason`. `hold` + `judgement` is a legitimate graded call; only the SILENT collapse (a hold with no confidence and reason) stays banned. `no_recommendation` on a real-money/prop package is allowed only with `basis: could_not_look` and a `reason` (the packet could not be read, a required input is null); `insufficient_n` and `default_hold` are refused there by the validator for rows reviewed from 2026-10-26T12:40Z. Paper-only packages stay `record_only`. Only a `tighten_sl` ever applies (`MD-LIVE-TIGHTEN-SL`, gates unchanged). A null cell is "could not look"; never write it as 0. The n floor is no longer an apply gate: it decides only whether the basis is `table` or `judgement`.
 - Read `population` (comparable / never_reached_peak / no_candles) and the tool's `biases` list. A tighten is flattered: stops fill at the stop price. Say so in `context_flags` when a tighten is in play.
 
 ### Step 3. Overlay what the backtest could not see
@@ -156,7 +156,7 @@ Each one goes in `context_flags` as `"<kind>: <evidence>"`. An overlay may **dow
 
 The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the TP-doctrine path) · `partial_close` / `close` (always the operator's call) · `flag_mechanics` · `file_hypothesis` · `no_recommendation`.
 
-- `hold` requires a **measured** HOLD cell (n ≥ floor) whose EV is at least that of every measured alternative. Then `basis: ev_positive`.
+- `hold` on a **measured** HOLD cell (n ≥ floor) whose EV is at least that of every measured alternative: `basis: ev_positive`. On a thin cell, `hold` is a judgement call (`basis: judgement` + confidence + reason), never a default.
 - `tighten_sl` states `evidence_source` and `level` as a price and as `level_atr`, and then either:
   - **table** (measured cell): `ev_delta_r` = tighten mean − hold mean (negative is a cost) and `worst_case_delta_r` = tighten worst − hold worst; or
   - **judgement** (thin cell): `basis: judgement`, `judgement_confidence`, `reason`; `ev_delta_r` / `worst_case_delta_r` and both policies' `tighten_r` are `null` (there is no table EV to bound).
@@ -189,6 +189,8 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 ### Step 7. Dispatch the apply (LTR-APPLY-DISPATCH, operator 2026-10-26)
 
 > **Operator, 2026-10-26 ~07:12Z, popup (verbatim):** *"Yes, top of the queue (Recommended)"*. The option text was: *"A Tier-2 lane wires the reviewed tighten_sl decisions into an apply run (an apply system-action or the review routine itself), with a VM check."* Row `LTR-APPLY-DISPATCH`.
+
+> **Since LTR C1 (operator 2026-10-26 ~11:40Z, "VM applies from rows branch"):** a row pushed to `live-review/rows` is applied by the live trader's watcher (`src/runtime/live_review_rows_watch.py`, ~45 s) with `--ref <tip>`. The steps below are the **manual fallback**: file them only when the watcher's receipt (`log_file?name=live_review_rows_watch`) shows the row was not taken, or the row landed on `main` instead. A repo-less reviewer follows [`REVIEWER-BRIEF.md`](REVIEWER-BRIEF.md) instead of this skill.
 
 `apply_mode: apply` and a granted `MD-LIVE-TIGHTEN-SL` do nothing on their own. A reviewed tighten reaches a venue only when the reviewer **files the `live-review-apply` system-action** for it.
 
@@ -229,7 +231,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 
 These are on top of the LTR-2 schema:
 
-- `recommendation.action: no_recommendation` + `basis: insufficient_n`. The validator refuses `insufficient_n` with any other action, so the "insufficient → hold" collapse cannot be written.
+- `recommendation.action: no_recommendation` + `basis: insufficient_n` is valid on **paper** packages only (the validator refuses `insufficient_n` with any other action, so the "insufficient → hold" collapse cannot be written). On a real-money/prop package reviewed from 2026-10-26T12:40Z the validator refuses `insufficient_n` and `default_hold` outright, and `no_recommendation` needs `basis: could_not_look` + a `reason`.
 - `recommendation.evidence_source`: `table` | `judgement` | `none` — required on every `tighten_sl`, written on every new row. `basis: judgement` requires `evidence_source: judgement`, a numeric `judgement_confidence` in [0, 1] and a non-empty `reason` (validator-enforced). These are the fields LTR-5 grades against the realised outcome (joined on `review_id` in `outcomes.jsonl`), so the models can learn how much weight Claude's calls deserve.
 - `basis: record_only` for paper rows.
 - `account_reads`: `[{"account_id", "account_class", "read": would_apply|refused_by_account_risk|unknown|no_action, "evidence"}]`. There is one entry per account carrying the package, and it is required on every review.
@@ -241,7 +243,7 @@ These are on top of the LTR-2 schema:
 
 - Not the protection. Venue SL/TP and the VM trail protect every position every ~30 s, whatever the reviewer does.
 - Not an exit-rule designer. A pattern that repeats 3 or more times (same leg, same state bucket, same action) becomes an `exit-refinement` unit (design § 5). The reviewer's success measure is making itself unnecessary for each pattern it finds.
-- Not a grader of closed trades. That is `/performance-review` (LTR-5 adds its "Live review" section).
+- Not a grader of closed trades. That is `/performance-review`, whose "Live review" section (LTR-5) prices every review against holding with `scripts/research/live_review_counterfactual.py` and grades the reviewer's calibration by `evidence_source` via `scripts/ops/live_review_grade.py`.
 
 ## 6. Composes with
 

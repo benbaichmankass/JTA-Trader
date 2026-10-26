@@ -456,14 +456,19 @@ milestones:
       marker, TP-doctrine + no-size refusals in desk-records-guard. DESK-16-SCAN-PACKETS landed (#20295,
       landed_unproven): scan-packet builder scripts/ops/desk_scan_packet.py -- universe from the UNION pull
       lists, open-package system book (near-signals from DESK-16B-NEAR-SIGNALS), point-in-time
-      net-of-cost forward-R base rates, masked historical mode with a separate unmask key. Nothing writes desk
-      rows yet. DESK-16B-NEAR-SIGNALS (landed_unproven): scripts/ops/desk_near_signals.py runs each rostered
-      leg's own strategy unit for the scan's near-signals; MEASURED 2026-10-26 (public candle route) 26 of 26
-      rostered leg x symbol looked, 4 near-signals.
+      net-of-cost forward-R base rates, masked historical mode with a separate unmask key. DESK-16B-NEAR-SIGNALS
+      (landed_unproven): scripts/ops/desk_near_signals.py runs each rostered leg's own strategy unit for the
+      scan's near-signals; MEASURED 2026-10-26 (public candle route) 26 of 26 rostered leg x symbol looked, 4
+      near-signals. DESK-5 + DESK-6 (lane 2026-10-26): skill .claude/skills/trading-desk/ + repo-less DESK-BRIEF;
+      append-only branch desk/decisions; desk-scan-packet.yml builds a 1h scan packet hourly onto it;
+      desk-decisions-mirror.yml mirrors rows to comms/desk/decisions.jsonl and replays each shadow proposal on real
+      candles net of cost into outcomes.jsonl. MEASURED: first desk decision row DD-20261026T1339Z-scan-1h-1
+      (no_trade, shadow) written by a routine-shape wake on desk/decisions (655a9c6), desk-records-guard 0
+      findings; wake cost $0.34-0.47 (n=4, get_session().usage). A wake writes only when started ON desk/decisions
+      (repo-less and add_repo push were refused), so the routine is a spawner; it is not installed yet (manager).
     next: >-
-      Critical path (design v1 § 10.1): DESK-5 desk skill (entry generation first) -> DESK-6 shadow pilot (shadow
-      proposals on builder scan packets, every one replayed for its label; first measured latency/$/proposals-per-day)
-      and DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17
+      Critical path (design v1 § 10.1): manager installs the DESK-6 spawner routine (hourly; SKILL.md § 6b) and
+      proposals start accruing labels (proposals/day still UNMEASURED) -> DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17
       claude_desk leg (shadow) -> 1-2-trade paper soak -> MD-PROMOTE-S1-S2; DESK-11 -> CJ-2 -> CJ-4 -> DESK-19
       students. Done-condition: D-S0 PASS on at
       least one role and a desk intent applied on real money under a granted mandate with per-account verdicts

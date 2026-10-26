@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-XBFNSPWE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane LTR-5-GRADING (session_016B1jT68ACGP6rixBFNSPWe)",
+    "rerun": "python3 scripts/ops/live_review_grade.py --live --json | python3 -c \"import sys,json;d=json.load(sys.stdin);print(d['replay_fidelity'], d['population']['could_not_price_reasons'])\""
+  },
+  "state": "queued",
+  "what": "live_review_counterfactual.py replays the package bracket + a generic trail (trail_mult x atr behind the running extreme), NOT the leg's own monitor() as design section 5 specifies. MEASURED 2026-10-26 on 90 live closed crypto trades (untouched bracket replayed from entry): of the 22 whose replay reached an exit, 16 matched realised net R within 0.15R and 6 did not; 47 had no replay exit (strategy/pairs exits the replay does not model). Mismatching rows are not priced (could_not_price: replay_mismatch). Fix: replay through each leg's real monitor() so the mismatch/unresolved share falls; done when replay_mismatch + hold_replay_unresolved account for fewer than 1 in 10 of the tighten_sl reviews with a closed trade (denominator: all such reviews in comms/live_review/reviews.jsonl on main, measured once at least 20 exist)."
+}

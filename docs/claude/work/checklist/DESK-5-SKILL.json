@@ -2,22 +2,33 @@
   "id": "DESK-5-SKILL",
   "title": "Desk: .claude/skills/trading-desk/SKILL.md (loop, roles, enums, escalation, rho, rotation); extends live-trade-review",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_0158TMJbRQdBS9Wcr5nY8N6S",
   "model": "claude-opus-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20347
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: entry generation (find trades the strategies are not taking) is the LEAD role; in-trade extends live-trade-review; exit; strategy-entry review optional record-only. Depends on DESK-0B.",
+  "note": "[2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: entry generation (find trades the strategies are not taking) is the LEAD role; in-trade extends live-trade-review; exit; strategy-entry review optional record-only. Depends on DESK-0B. [2026-10-26 lane session_0158TMJbRQdBS9Wcr5nY8N6S] Built in PR #20347 (Tier 1, self-land): .claude/skills/trading-desk/SKILL.md + DESK-BRIEF.md (repo-less wake contract; schema + example pinned by tests/test_trading_desk_brief.py). Entry generation leads; in_trade extends live-trade-review (no duplicate); stage table with lift conditions. A real wake ran it to a guard-clean row (DD-20261026T1339Z-scan-1h-1, 655a9c6 on desk/decisions).",
   "priority_rank": 5,
-  "updated_at": "2026-10-26T07:10:24Z",
-  "updated_by": "session_012XMr6ve1Lcf35qUU2faEkd",
+  "updated_at": "2026-10-26T14:28:13Z",
+  "updated_by": "session_0158TMJbRQdBS9Wcr5nY8N6S",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "observation": {
+    "what": "a routine-fired desk wake runs DESK-BRIEF.md from main",
+    "how_to_check": "a row in comms/desk/decisions.jsonl whose skill_sha equals the main blob sha of .claude/skills/trading-desk/DESK-BRIEF.md, and python3 scripts/ci/check_desk_records.py exits 0",
+    "due_by": "2026-11-02T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: trading-desk skill + repo-less DESK-BRIEF landed (DESK-5); in_trade = live-trade-review; stage table with lift conditions",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md change-log row 2026-10-26 DESK-5/DESK-6"
+  },
   "_seq": 680
 }

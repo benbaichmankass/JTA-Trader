@@ -1,0 +1,33 @@
+{
+  "id": "LTR-DUE-TELEMETRY-LESS",
+  "title": "live_review_due drops open packages that have no position_telemetry row: count them with an explicit telemetry_absent state so open_count matches live_review_packet --all-open (PI-20261026-2U1HUCXC-0002)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane (manager dispatch)",
+  "lane": "session_01PJfTCUpRrd8Lj4c1pVmNFj",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20340
+  ],
+  "blocked_on": [],
+  "note": "Built on branch lane/ltr-due-telemetry-less. src/runtime/live_review_due.py: open set = open position_telemetry rows UNION journal open order_packages/trades (read_journal_open); every package outside telemetry is listed in telemetry_less with telemetry_state=telemetry_absent and the 4 telemetry events (r_milestone,new_peak,giveback,near_target) in events_could_not_look reason telemetry_absent; daily_floor + market events still evaluate for them. A journal that cannot be read sets journal_open_state=could_not_look and open_count_complete=false (not an empty set). BASELINE MEASURED 2026-10-26T13:30Z on the live VM (running 38f8bcf8b, pre-fix): live_review_due open_count 7; packet --all-open open set 8 (7 telemetry + pkg-6a8e3fb3, gld_pullback_1h on alpaca_paper, found via the trades read, no telemetry row). REPLAY of the new code on rows pulled from the VM (telemetry 300, order_packages 300, trades 2000): open_count 8, id set identical to the packet's 8 (set difference empty). Tests: tests/test_live_review_due.py 3 new + existing pass (17), due_market + wake pass; test_route_requires_diag_token fails here only for ModuleNotFoundError fastapi (sandbox), same on baseline. check_trader_import_closure OK (401 files); module is imported only by src/web/api/routers/diag.py + scripts/ops/live_review_due.py, not the trader. NOT COVERED: prop-ticket open source (packet reads /api/bot/prop/tickets over HTTP; a filled ticket with no order_packages/trades row would still differ); one trade row per package (multi-account packages count once, like the packet). NOT DEPLOYED: the diag route runs in ict-web-api; closes only after a web-api deploy + the check above. CODE PR #20340 = landing hold (Tier-2 by path: pr-landing-guard refuses to self-land src/runtime). Row sits landed_unproven only after #20340 merges + the web-api deploys; until then the fix is NOT merged. Manager: merge #20340, deploy web-api, run the closing observation.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-26T13:42:53Z",
+  "updated_by": "session_01PJfTCUpRrd8Lj4c1pVmNFj",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: live_review_due open set = telemetry + journal open packages",
+    "arch": "none: read path"
+  },
+  "observation": {
+    "what": "VM /api/diag/live_review_due open_count == live_review_packet.py --all-open open-set size, with each telemetry-less package listed in telemetry_less with telemetry_state telemetry_absent",
+    "how_to_check": "after the web-api deploy: scripts/ops/diag_fetch.sh live_review_due (open_count, telemetry_less, open_count_complete) vs python3 scripts/ops/live_review_packet.py --all-open (stderr line: open set (N)); equal on the same minute",
+    "due_by": "2026-10-29T00:00Z"
+  },
+  "_seq": 717
+}
