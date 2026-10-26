@@ -212,6 +212,73 @@ KIND_TO_NEWS_CLASS: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# SHADOW (observe-only) news classes - CALENDAR-EVENT-TYPES, operator 2026-10-26.
+# These kinds are EMITTED into config/economic_calendar.yaml `events:` so the data path
+# collects and logs them, but their classes are deliberately absent from every
+# `symbol_event_classes` list: `news_events.event_risk_for_symbol` only considers classes in
+# the symbol's own list, so a shadow class carries weight 0 on the trade path BY CONSTRUCTION.
+# Giving one a weight is a separate Tier-3 act (add it to a symbol list) gated on that class's
+# event-study verdict; tests/test_calendar_shadow_classes.py fails if a shadow class appears in
+# any symbol list, so it cannot happen silently. Off the trade path is not off the data path.
+# NOT mapped on purpose: the NFP-day components (unemployment_rate, avg hourly earnings, participation,
+# U6) print at the same instant as `nfp`, so a separate class could not be told apart from it; and
+# consumer_confidence (26 distinct surveyed releases) is below any honest study floor.
+# Class names must not collide with the symbol-list names that already exist
+# (china_pmi, opec, dxy) or with a weighted class (fomc, cpi, nfp, pce, gdp, eia).
+# ---------------------------------------------------------------------------
+SHADOW_KIND_TO_NEWS_CLASS: dict[str, str] = {
+    "initial_jobless_claims": "jobless_claims", "continuing_jobless_claims": "jobless_claims",
+    "ppi_mom": "ppi", "ppi_yoy": "ppi",
+    "retail_sales_mom": "retail_sales", "retail_sales_control": "retail_sales",
+    "ism_manufacturing": "ism", "ism_services": "ism",
+    "jolts_job_openings": "jolts",
+    "michigan_sentiment": "umich", "michigan_consumer_expectations_index": "umich",
+    "uom_1_year_consumer_inflation_expectations": "umich",
+    "uom_5_year_consumer_inflation_expectation": "umich",
+    "durable_goods_orders": "durable_goods", "durable_goods_orders_ex_transportation": "durable_goods",
+    "durable_goods_orders_ex_defense": "durable_goods",
+    "adp_employment_change": "adp",
+    "housing_starts_mom": "housing", "building_permits_mom": "housing",
+    "existing_home_sales_mom": "housing", "new_home_sales_mom": "housing",
+    "pending_home_sales_mom": "housing",
+    "philadelphia_fed_manufacturing_survey": "regional_fed_mfg",
+    "ny_empire_state_manufacturing_index": "regional_fed_mfg",
+    "richmond_fed_manufacturing_index": "regional_fed_mfg",
+    "kansas_fed_manufacturing_activity": "regional_fed_mfg",
+    "dallas_fed_manufacturing_business_index": "regional_fed_mfg",
+    "chicago_pmi": "regional_fed_mfg",
+    "industrial_production_mom": "industrial_activity", "factory_orders_mom": "industrial_activity",
+    "capacity_utilization": "industrial_activity",
+    "2_year_note_auction": "treasury_auction", "3_year_note_auction": "treasury_auction",
+    "5_year_note_auction": "treasury_auction", "7_year_note_auction": "treasury_auction",
+    "10_year_note_auction": "treasury_auction", "20_year_bond_auction": "treasury_auction",
+    "30_year_bond_auction": "treasury_auction",
+}
+# Kinds that are a family of slugs (one per speaker) rather than a fixed list.
+SHADOW_KIND_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"^fed_s_.*_speech$|^fed_chair_.*_testifies$|^fed_s_beige_book$"), "fed_speak"),
+]
+SHADOW_NEWS_CLASSES: frozenset[str] = frozenset(
+    set(SHADOW_KIND_TO_NEWS_CLASS.values()) | {c for _, c in SHADOW_KIND_PATTERNS}
+)
+# Lowest impact_score emitted per shadow class. Default is the producer's min_impact (0.5);
+# Treasury auctions are labelled LOW (0.2) by the source but are the class under study.
+SHADOW_CLASS_MIN_IMPACT: dict[str, float] = {"treasury_auction": 0.2}
+
+
+def shadow_class_for_kind(kind: Any) -> Optional[str]:
+    """The shadow (weight-0) news class for a canonical kind, else ``None``."""
+    k = str(kind)
+    cls = SHADOW_KIND_TO_NEWS_CLASS.get(k)
+    if cls:
+        return cls
+    for pat, c in SHADOW_KIND_PATTERNS:
+        if pat.search(k):
+            return c
+    return None
+
+
 def classify_kind(event_name: Any) -> str:
     """Canonical event kind for a release name.
 

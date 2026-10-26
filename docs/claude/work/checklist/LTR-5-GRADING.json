@@ -2,21 +2,30 @@
   "id": "LTR-5-GRADING",
   "title": "Live trade review: counterfactual replay + 'Live review' section in /performance-review + /perf-followup Track 2 hooks; compares the 0.25R and shadow 0.5R policies",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
-  "lane": null,
+  "lane": "session_016B1jT68ACGP6rixBFNSPWe",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 5 + operator Q1 comparison. [2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane LTR-JUDGEMENT-APPLY] Operator dropped the n>=20 apply clause: a thin LTR-0 cell is now decided as recommendation.basis 'judgement' with recommendation.evidence_source ('table'|'judgement'|'none'), judgement_confidence in [0,1] and reason (schema + live-review-records-guard enforce them; apply output writeback carries basis/confidence/reason). WHAT REMAINS for this row (not built): grade every review against outcomes.jsonl (joined on review_id) STRATIFIED by evidence_source, and a calibration read of judgement_confidence vs realised cf_r - net_r (Brier / reliability by confidence bucket), so the models can learn how much weight Claude's calls deserve. Nothing grades judgement rows today; outcomes.jsonl carries no judgement-specific field and needs none (the join supplies it).",
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 5 + operator Q1 comparison. [2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane LTR-JUDGEMENT-APPLY] Operator dropped the n>=20 apply clause: a thin LTR-0 cell is now decided as recommendation.basis 'judgement' with recommendation.evidence_source ('table'|'judgement'|'none'), judgement_confidence in [0,1] and reason (schema + live-review-records-guard enforce them; apply output writeback carries basis/confidence/reason). WHAT REMAINS for this row (not built): grade every review against outcomes.jsonl (joined on review_id) STRATIFIED by evidence_source, and a calibration read of judgement_confidence vs realised cf_r - net_r (Brier / reliability by confidence bucket), so the models can learn how much weight Claude's calls deserve. Nothing grades judgement rows today; outcomes.jsonl carries no judgement-specific field and needs none (the join supplies it). [2026-10-26 lane session_016B1jT68ACGP6rixBFNSPWe] BUILT (landed_unproven): scripts/research/live_review_counterfactual.py (replay, net of full cost stack, writes outcomes.jsonl rows incl. delta_r/rec_r), scripts/ops/live_review_grade.py (Live review section: population, per-action class, Q1 0.25R vs 0.5R paired with registered INDETERMINATE rule, calibration of judgement_confidence by evidence_source, touched packages, applied alarm), skills performance-review/perf-followup/live-trade-review, tests/test_live_review_counterfactual.py (19). MEASURED on live data 2026-10-26: 32 reviews / 9 packages on main, 0 tighten_sl rows, 0 altering calls, so priced n=0 and Q1 is INDETERMINATE by population. Engine checked on 90 live closed crypto trades: 22 resolved, 16 match realised within 0.15R, 6 mismatch (not priced). CLOSES when: a tighten_sl review's trade closes and python3 scripts/ops/live_review_grade.py --live --write-outcomes prices it (n_priced >= 1, replay_fidelity named). Follow-ups: PI-20261026-XBFNSPWE-0001 (leg monitor() replay), PI-20261026-XBFNSPWE-0002 (Q1 on judgement rows). CJ-2 must read outcome delta_r (separate held PR).",
   "priority_rank": 8,
-  "updated_at": "2026-10-26T07:03:29Z",
-  "updated_by": "session_019k3PxKWzD3FwBmquxHboDN",
+  "updated_at": "2026-10-26T15:35:47Z",
+  "updated_by": "session_016B1jT68ACGP6rixBFNSPWe",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "L-ATM: LTR-5 counterfactual replay + Live review grader landed (scripts/research/live_review_counterfactual.py, scripts/ops/live_review_grade.py); no tighten_sl reviewed yet, so n priced = 0",
+    "arch": "none: read-only replay and a report generator over comms/live_review and the journal, no runtime component or contract change"
+  },
+  "observation": {
+    "what": "a tighten_sl review whose trade has closed is priced by the replay: live_review_grade.py --live reports n_priced >= 1 for tighten_sl with replay_fidelity named, and --write-outcomes appends a schema-valid outcomes row carrying delta_r",
+    "how_to_check": "python3 scripts/ops/live_review_grade.py --live --json | python3 -c \"import sys,json;d=json.load(sys.stdin);print(d[\\\"population\\\"][\\\"n_priced\\\"], d[\\\"per_action_class\\\"])\" && python3 scripts/ci/check_live_review_records.py",
+    "due_by": "2026-11-09"
+  },
   "_seq": 661
 }

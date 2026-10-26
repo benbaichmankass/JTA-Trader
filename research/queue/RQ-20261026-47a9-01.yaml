@@ -1,0 +1,145 @@
+id: RQ-20261026-47a9-01
+title: 'CONFIRMATION of the alpaca_live Donchian-30 long-only ETF PASS (RQ-20261025-bda2-01 arm T30) on the most recent window 2022-01-01..2026-10-23,
+  on the 9 mapped cells (SPLG retried): does it still read net-positive pooled with fold consistency and breadth?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+roadmap:
+- L-ATM
+- L-LADDER
+question: bda2-01 arm T30 (Donchian 30, long-only, 2.5 x ATR14 stop, 4 x ATR trail) passed POOLED (n 277, net +57.46 R, 4 of 6 folds, 4 of 8 powered
+  cells) on 8 of 12 declared cells; SPLG, XLF, XLP and XLU were fetch_failed (XLF/XLP/XLU have no yfinance ticker mapping (ml/datasets/adapters/yf_symbols.py
+  is a Tier-2 path, lever PI-20261026-RESEARCH-0002, so they are NOT in this unit); SPLG returned a Yahoo 404), the T30 Holm survivor set was
+  EMPTY (so zero nominees), and fold 6 (2025-2026) carried +37.7 of the +57.5 R. On the 9 cells that can be fetched (SPLG, SCHA, IAUM, TLT, IEF,
+  SLV, USO, GDX, XLE; SPLG gets a retry after its Yahoo 404) over 2022-01-01..2026-10-23 (the most recent folds, the confirmation window the bda2-01
+  rule prescribes), does T30 again read net-positive pooled at n >= 39 with >= 4 of 6 folds net > 0 and at least half of the powered cells (n
+  >= 20) passing, net of fee + slippage, and which cells, if any, are NOMINEES (cell pass + Holm survivor within the arm + net-positive at 2x
+  slippage, T30X)?
+why_this_matters: 'Follow-up REQUIRED by the PASS of RQ-20261025-bda2-01 (rule RULE-RQ1025-BDA2-ALPACA-LIVE-ROSTER-SCREEN, graded pass 2026-10-26
+  by queue_grade; research-ops 14:47Z pass 2026-10-26). A PASS on one window is a discovery, not a confirmation (research-ops step D; RESEARCH-OPS-BENCHMARK-1016).
+  HONEST LIMITS, stated before the run: (1) 2022-2026 is the LAST THREE FOLDS of the original window, so it is a replication on the most recent
+  regime, NOT a window the PASS did not see; the only fresh element is the recent-regime restriction and a retry of SPLG (no symbol-disjoint cells:
+  XLF/XLP/XLU stay unmapped until PI-20261026-RESEARCH-0002 lands); a PASS here still needs a forward soak before any roster act. (2) Original
+  multiple-testing denominator: 2 base arms x 12 cells = 24 cell tests (only 16 measured), plus the ef5d-05 weekly-bar configuration. (3) Zero
+  nominees existed in bda2-01 (empty Holm set) so this unit cannot be ''the nominees'' re-run; it asks whether the pooled lead survives at all
+  and whether any of the 9 cells is a Holm-surviving nominee. (4) Cell n over 4.8 years will often sit under the n >= 20 floor (IAUM listed 2021):
+  expect several cells INDETERMINATE and the arm verdict to hinge on the powered cells; the floors are NOT lowered. (5) Controls SPLG, SCHA, IAUM
+  report on whether the screen reproduces earlier Stage-0 records and are never nominees. Operator popup 2026-10-25 (PI-20261025-ALQWWPXT-0003):
+  ''Yes: queue a roster screen''. alpaca_live carries ONE leg (iaum_pullback_1d, affordability proxy); real-money capacity is idle. DOWNSTREAM,
+  only if a nominee exists: price each through the account''s own sizer (scripts/ops/mandate_resolver.py::_affordability logic at the committed
+  alpaca_live snapshot, whole shares, 1.5x round-up cap) at the latest committed close, drop any that size to zero, and read same-day overlap
+  against iaum_pullback_1d. That is a separate unit authored the day a nominee exists. Operator 2026-10-22: an idea that failed one test is not
+  dead; it failed the first test.'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Same floor as bda2-01: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 pooled trades. expected_n ~ 150 is an ESTIMATE (bda2-01 T30 produced
+    55 trades in its last fold of ~1.8 years, ~25-30 per year across 8 cells, plus four recovered cells, x 4.8 years). Per-cell n over 4.8 years
+    is mostly 12-25, so many cells will be under the n >= 20 floor and grade indeterminate; the verdict hinges on pooled n and the powered cells.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public Yahoo daily candles over a pinned window (the runner installs yfinance 1.7.0); nothing
+      accrues. The window is bounded by each ETF's listing date (IAUM 2021), not by any calendar.
+decision_rule:
+  id: RULE-RQ1026-47A9-ALPACA-T30-RECENT-CONFIRM
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'scripts/research/harness_stage0.py --family trend --timeframe 1d over --start 2022-01-01 --end 2026-10-23, symbols SPLG,SCHA,IAUM,TLT,IEF,SLV,USO,GDX,XLE
+    (9 cells; XLU, XLP, XLF are unmapped in yf_symbols and excluded by declaration, not dropped after a result), one cell per symbol. Arms fixed
+    now, long-only, atr_stop_mult 2.5, trail_mult 4.0, nothing else tuned: T30 (donchian 30) and the cost-stress copy T30X (same entries/exits,
+    --slippage-bps-roundtrip 10 = 2x the 5 bps equity/ETF default; fee 0 bps Alpaca ETF, funding 0). T55 is NOT re-asked: it failed breadth in
+    bda2-01 and the rule closed it. Per cell n, net_r, 6 equal calendar folds, max_drawdown_r, net_r_per_capital_day, hold_days, one-sided Student-t
+    p; pooled on one set of calendar edges.'
+  rule: 'Flags: --folds 6 --fold-majority 4 --n-floor 20 --pooled-n-floor 39 --breadth-frac 0.5 --min-powered-cells 2 --holm-alpha 0.05 (identical
+    to bda2-01). Verdicts are the script''s own. Per CELL pass iff n >= 20 AND net_r > 0 AND >= 4 of 6 folds net > 0; fail iff n >= 20 and not;
+    indeterminate iff n < 20. Per ARM T30 pass iff pooled n >= 39 AND pooled net_r > 0 AND pooled folds >= 4 AND at least half the powered cells
+    pass; indeterminate iff pooled n < 39, or fewer than 2 powered cells, or fewer than half the declared cells measured (a fetch fault is recorded
+    per cell, never dropped); fail otherwise. UNIT verdict = the T30 verdict (T30X is reported and used only for nomination). PASS -> the pooled
+    lead SURVIVES the recent window: NOMINEES are listed (cell pass AND Holm survivor within T30 AND T30X net_r > 0 for that cell AND not a control
+    SPLG/SCHA/IAUM); with >= 1 nominee the follow-up is the sizing/overlap unit described in why_this_matters; with zero nominees the lead is
+    recorded as ''pooled-only, no single-cell nominee'' and the next test is a forward soak design, not a roster act. FAIL -> the T30 configuration
+    is closed on these 12 cells for 2022-2026; the family stays open; next test = the sibling pullback screen (htf_pullback_trend with the iaum_pullback_1d
+    parameters, same cells, its own pre-registered rule). INDETERMINATE -> extend the window or add instruments, never lower a floor. Thresholds,
+    arms and the symbol set are not changed after any result. Multiple-testing denominator for any PASS read: 24 cell tests from bda2-01 + 9 here
+    = 33, plus the ef5d-05 weekly configuration.'
+  what_it_does_not_do: Not a roster act, not a promotion case, no config touched; does not re-ask T55; does not size or price any nominee; a pooled
+    PASS with no Holm survivor nominates nothing; 2022-2026 overlaps the bda2-01 window, so it is a recent-regime replication, not independent
+    confirmation.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: a long-only ETF leg sized by the account''s 2% risk budget (B = 0.02 x E) risks B per trade, a few trades a year, so the money
+    at stake is small by construction; the value is filling an idle real-money book and the Gate-2 mirror signal. An estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: 9 keyless Yahoo daily fetches x 2 arms; the fetch dominates. Estimate.
+  why_runner: harness_stage0.py fetches Yahoo daily ETF bars, which are not in metis-market-data (crypto only), and research-script-run.yml installs
+    yfinance; the work is a short CPU job, so it belongs on the GitHub-hosted runner.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - SPLG,SCHA,IAUM,TLT,IEF,SLV,USO,GDX,XLE
+  - --timeframe
+  - 1d
+  - --days
+  - '1900'
+  - --start
+  - '2022-01-01'
+  - --end
+  - '2026-10-23'
+  - --param
+  - atr_stop_mult=2.5
+  - --param
+  - trail_mult=4.0
+  - --arm
+  - T30=donchian=30;--long-only
+  - --arm
+  - T30X=donchian=30;--long-only;--slippage-bps-roundtrip=10
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --holm-alpha
+  - '0.05'
+  - --rule-id
+  - RULE-RQ1026-47A9-ALPACA-T30-RECENT-CONFIRM
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261026-47a9-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261025-bda2-01
+- ALPACA-LIVE-ROSTER-SCREEN
+- PI-20261025-ALQWWPXT-0003
+- PI-20261026-RESEARCH-0002
+- scripts/research/harness_stage0.py
+- RQ-20261018-ef5d-05
+- RESEARCH-OPS-20261026-1447

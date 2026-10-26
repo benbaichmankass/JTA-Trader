@@ -130,6 +130,20 @@ def test_ltr_outcomes_replay_wins(env):
     assert rows[0]["delta_r"] == pytest.approx(-1.0) and rows[0]["cf_source"] == "ltr_replay"
 
 
+def test_ltr_outcome_delta_r_prices_an_unapplied_tighten(env):
+    comms, db = env
+    rid = "LR-20261025T1616Z-pkg-1"
+    _write(comms / "live_review" / "reviews.jsonl", [_review(rid, 1, action="tighten_sl", applied=False)])
+    _write(comms / "live_review" / "outcomes.jsonl", [{
+        "schema_version": 1, "review_id": rid, "order_package_id": "pkg-1", "trade_id": 1,
+        "closed_at": "2026-10-26T02:00:00Z", "computed_at": "2026-10-26T03:00:00Z", "net_r": 2.0,
+        "pnl_provenance": "measured", "cf_r": 2.0, "cf_r_shadow_0_5": None, "cf_method": "replay_v1",
+        "cf_provenance": "computed", "exit_reason": "tp", "rec_r": 0.5, "delta_r": -1.5}])
+    rows, _ = _run(comms, None)
+    # realised == hold (cf_r 2.0), so net_r - cf_r would be 0.0; the priced value of the call is -1.5
+    assert rows[0]["delta_r"] == pytest.approx(-1.5) and rows[0]["cf_source"] == "ltr_replay"
+
+
 def test_exclusions_are_counted_by_reason(env):
     comms, db = env
     _write(comms / "live_review" / "reviews.jsonl", [

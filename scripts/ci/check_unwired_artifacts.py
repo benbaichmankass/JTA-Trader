@@ -156,7 +156,6 @@ def scan(root: Path, targets):
     stems = set(by_stem)
     if not stems:
         return []
-    alt = "|".join(sorted(map(re.escape, stems)))
     # TWO reference shapes, and missing the second one is a FALSE POSITIVE that
     # blocks correct work (found 2026-08-22, the hour after this guard was made
     # blocking — workplan 0.2):
@@ -217,17 +216,38 @@ def scan(root: Path, targets):
     # Negative control, run 2026-09-02 rather than assumed: with a genuinely
     # unwired file planted and committed, the guard still reported it
     # ("1 with no runner"), so this shape does not blind the check it extends.
-    pat = re.compile(
-        r"\b(?:" + alt + r")\.py\b"
-        r"|^[ \t]*import[ \t]+(?:[\w.]+\.)?(?:" + alt + r")\b"
-        r"|^[ \t]*from[ \t]+(?:[\w.]+\.)?(?:" + alt + r")[ \t]+import\b"
-        r"|^[ \t]*from[ \t]+[\w.]+[ \t]+import[ \t]+\(?[^\n]*?\b(?:" + alt + r")\b"
-        r"|-m[ \t]+(?:[\w.]+\.)?(?:" + alt + r")\b",
-        re.MULTILINE,
-    )
-    # `findall` on a pattern with no capturing group returns whole matches, so
-    # recover which stem matched rather than relying on group position.
-    stem_of = re.compile(r"\b(" + alt + r")\b")
+    def build(alt):
+        pat = re.compile(
+            r"\b(?:" + alt + r")\.py\b"
+            r"|^[ \t]*import[ \t]+(?:[\w.]+\.)?(?:" + alt + r")\b"
+            r"|^[ \t]*from[ \t]+(?:[\w.]+\.)?(?:" + alt + r")[ \t]+import\b"
+            r"|^[ \t]*from[ \t]+[\w.]+[ \t]+import[ \t]+\(?[^\n]*?\b(?:" + alt + r")\b"
+            r"|-m[ \t]+(?:[\w.]+\.)?(?:" + alt + r")\b",
+            re.MULTILINE,
+        )
+        # `findall` on a pattern with no capturing group returns whole matches, so
+        # recover which stem matched rather than relying on group position.
+        stem_of = re.compile(r"\b(" + alt + r")\b")
+        return pat, stem_of
+
+    # PERF (CI-SPEED-1026): one alternation over EVERY stem run over every runner
+    # file is O(files x stems) — `re` builds no trie — and grew to 250 s. Every
+    # branch above needs the stem as a whole \w+ token, so a file can only match
+    # stems that appear as tokens in it. Compile the SAME pattern over just that
+    # candidate set (stems with a non-word char fall back to a substring test).
+    word_stems = {s for s in stems if re.fullmatch(r"\w+", s)}
+    odd_stems = stems - word_stems
+    built = {}
+
+    def patterns_for(text):
+        cand = word_stems & set(re.findall(r"\w+", text))
+        cand |= {s for s in odd_stems if s in text}
+        if not cand:
+            return None
+        key = tuple(sorted(cand))
+        if key not in built:
+            built[key] = build("|".join(sorted(map(re.escape, key))))
+        return built[key]
 
     refs = {st: [] for st in stems}
     for text, f in _runner_corpus(root):
@@ -237,6 +257,10 @@ def scan(root: Path, targets):
         if fr.startswith("tests/"):
             continue                       # a test is not a runner
         own_stems = {t.stem for t in by_stem.get(f.stem, []) if t == f}
+        built_pat = patterns_for(text)
+        if built_pat is None:
+            continue
+        pat, stem_of = built_pat
         matched = set()
         for m in pat.findall(text):
             got = stem_of.search(m if isinstance(m, str) else m[0])

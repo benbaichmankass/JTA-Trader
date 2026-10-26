@@ -97,6 +97,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 REPO = Path(__file__).resolve().parents[2]
+for _p in (str(REPO), str(Path(__file__).resolve().parent)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+import touch_record  # noqa: E402  (DESK-12-SANDBOX: the touched/untouched split)
+
 CONTRACTS = REPO / "docs/claude/work/SOAKS.json"
 STAGE1_ACCOUNTS = ("bybit_1", "alpaca_paper")
 MAX_N_NEEDED = 2        # operator, 2026-10-15: "nothing needs to soak for more than one or two trades"
@@ -363,7 +368,11 @@ def grade_trade(t: Dict[str, Any], package: Optional[Dict[str, Any]] = None) -> 
     else:
         items["fill_and_fees"] = "fault: pnl or fee not recorded"
     faults = [f"{k}: {v[7:]}" for k, v in items.items() if v.startswith("fault")]
-    return {"id": t.get("id"), "clean": not faults, "fault": "; ".join(faults) or None, "items": items}
+    # DESK-12-SANDBOX: a leg whose stop a desk / LTR / operator amend moved has an exit that is no
+    # longer the leg's own. It is graded and shown, but evaluate() never counts it as a clean trade.
+    tch = touch_record.touches(t)
+    return {"id": t.get("id"), "clean": not faults, "fault": "; ".join(faults) or None, "items": items,
+            "touched": bool(tch), "touches": tch}
 
 
 def grade_shadow_package(p: Dict[str, Any], rows: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
@@ -454,25 +463,33 @@ def grade_prop_signal(ticket_rows: List[Dict[str, Any]], fills: List[Dict[str, A
 
 
 def evaluate(graded: List[Dict[str, Any]], n_needed: int) -> Dict[str, Any]:
-    """Pure: chronologically ordered grades -> the soak state (module docstring)."""
-    g = [x for x in graded if x.get("clean") is not None]
+    """Pure: chronologically ordered grades -> the soak state (module docstring).
+
+    Only UNTOUCHED trades count (design § 3.6): a desk/LTR-touched trade is reported in ``touched`` but is
+    never one of the leg's clean trades and never its fault, because its exit is not the leg's own."""
+    touched = [x for x in graded if x.get("clean") is not None and x.get("touched")]
+    g = [x for x in graded if x.get("clean") is not None and not x.get("touched")]
+    tid = [x["id"] for x in touched]
+    suffix = f" ({len(touched)} desk/LTR-touched trade(s) excluded: {', '.join(str(i) for i in tid)})" if touched else ""
     if not g:
-        return {"state": "awaiting_first_trade", "clean": [], "fault": None,
-                "progress": f"0/{n_needed} clean", "reason": "no graded trade yet — waiting, not failing"}
+        return {"state": "awaiting_first_trade", "clean": [], "fault": None, "touched": tid,
+                "progress": f"0/{n_needed} clean",
+                "reason": "no graded trade yet — waiting, not failing" + suffix}
     last_fault = max((i for i, x in enumerate(g) if not x["clean"]), default=-1)
     run = g[last_fault + 1:]
     if last_fault == len(g) - 1:
         return {"state": "mechanical_fail", "clean": [], "fault": g[-1]["fault"], "fault_id": g[-1]["id"],
-                "progress": f"0/{n_needed} clean since fault",
-                "reason": f"latest graded trade {g[-1]['id']} faulted: {g[-1]['fault']} — fix, then re-soak"}
+                "touched": tid, "progress": f"0/{n_needed} clean since fault",
+                "reason": f"latest graded trade {g[-1]['id']} faulted: {g[-1]['fault']} — fix, then re-soak" + suffix}
     ids = [x["id"] for x in run[:n_needed]]
     if len(run) >= n_needed:
-        return {"state": "passed", "clean": ids, "fault": None, "progress": f"{n_needed}/{n_needed} clean",
+        return {"state": "passed", "clean": ids, "fault": None, "touched": tid,
+                "progress": f"{n_needed}/{n_needed} clean",
                 "reason": f"clean: {', '.join(str(i) for i in ids)}"
-                          + (f" (after fault {g[last_fault]['id']})" if last_fault >= 0 else "")}
-    return {"state": "in_progress", "clean": ids, "fault": None,
+                          + (f" (after fault {g[last_fault]['id']})" if last_fault >= 0 else "") + suffix}
+    return {"state": "in_progress", "clean": ids, "fault": None, "touched": tid,
             "progress": f"{len(run)}/{n_needed} clean",
-            "reason": f"clean so far: {', '.join(str(i) for i in ids)}"}
+            "reason": f"clean so far: {', '.join(str(i) for i in ids)}" + suffix}
 
 
 # ── live state ──────────────────────────────────────────────────────────────
@@ -605,7 +622,7 @@ def soak_states(today: Optional[date] = None, db_path: Optional[str] = None,
             row["reason"] = f"journal read failed ({exc}) — we could not look"
             rows.append(row)
             continue
-        row.update(state=ev["state"], progress=ev["progress"], reason=ev["reason"])
+        row.update(state=ev["state"], progress=ev["progress"], reason=ev["reason"], touched=ev.get("touched", []))
         rows.append(row)
     if conn is not None:
         conn.close()
@@ -695,6 +712,16 @@ def _self_test() -> int:
     ck("latest graded is a fault -> mechanical_fail", evaluate([C, C, F], 2)["state"] == "mechanical_fail")
     ck("fault then two clean -> passed (fixed and re-soaked)", evaluate([F, C, C], 2)["state"] == "passed")
     ck("fault then one clean -> in_progress", evaluate([F, C], 2)["state"] == "in_progress")
+    T = {"id": "t", "clean": True, "touched": True}
+    TF = {"id": "tf", "clean": False, "fault": "x", "touched": True}
+    ck("a touched trade never counts as clean (design 3.6)", evaluate([C, T, T], 2)["state"] == "in_progress")
+    ck("only touched trades -> awaiting_first_trade, and names them",
+       evaluate([T], 1)["state"] == "awaiting_first_trade" and evaluate([T], 1)["touched"] == ["t"])
+    ck("a touched fault is not the leg's fault", evaluate([C, TF], 1)["state"] == "passed")
+    ck("grade_trade carries the touch record",
+       grade_trade(dict(clean, notes=json.dumps({"sl_amends": [{"source": "live_review_mandate", "at": "t",
+                                                                 "from": 1.0, "to": 2.0, "venue_after": 2.0}]})),
+                   None)["touched"] is True)
     base = make_contract(kind="stage1", leg="l", account="bybit_1", started="2026-10-01")
     ck("a fresh contract is admissible", contract_problems(base) == [])
     ck("n_needed 10 is refused", any("n_needed" in p for p in contract_problems(dict(base, n_needed=10))))

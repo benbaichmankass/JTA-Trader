@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-09",
+    "kind": "date"
+  },
+  "id": "PI-20261026-6BKJPOYI-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CALENDAR-EVENT-TYPES (session_01XKtTSjzhktzh6g6BKJpoYi)",
+    "rerun": "python3 -c \"import json,collections;u=json.load(open('comms/macro/econ_calendar_upcoming.json'));print(sorted({e['country'] for e in u['events']}), sorted({e['kind'] for e in u['events'] if 'opec' in e['kind']}))\""
+  },
+  "state": "queued",
+  "what": "CALENDAR-EVENT-TYPES left these event classes UNMAPPED because the FXStreet US feed this producer fetches does not carry them (or carries them without consensus): other majors' central banks and CPI/PMI (ECB, BoJ, BoE, China PMI: producer passes --countries US only; whether those feeds carry a consensus column is UNVERIFIED), OPEC (no kind containing opec in the 827-event upcoming file, MEASURED 2026-10-26), crypto token unlocks and ETF flows, major earnings, index rebalances and options expiry (opex/rebalance dates are rule-derivable, no source needed), consumer_confidence (26 distinct surveyed releases, below any honest study floor) and the NFP-day components (print at the same instant as nfp). Next step per class: a runner-side probe that captures one real response (macro-research invariant 3) BEFORE any adapter is written; never lower the n floor."
+}

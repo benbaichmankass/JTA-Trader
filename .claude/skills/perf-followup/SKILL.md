@@ -129,6 +129,20 @@ estimated/unmeasured P&L as such (`journalTrust`, `provenance.classify_pnl`):
 | Execution & cost vs assumed | Realized slippage/fee/funding vs the backtest's assumption per venue (feeds Gate-1 cost fidelity); partial fills; bracket anomalies. |
 | Cross-strategy co-movement | Same-bar, same-direction clusters across legs/accounts; do losses arrive together? (Feeds Track 4.) |
 
+**The live-review population is an input to this track** (LTR-5, design § 5). Read the review's `live_review{}`
+block, or re-run `python3 scripts/ops/live_review_grade.py --live --json`, and treat `comms/live_review/reviews.jsonl` +
+`outcomes.jsonl` as one more population: which legs, which state buckets (open R / peak R / giveback) and which actions
+the reviewer keeps landing on, and what `delta_r` they earned. Two hooks:
+
+- **A repeating pattern is no longer a judgment, it is an exit rule.** The same leg, the same state bucket and the
+  same action in **3 or more** reviews becomes a pre-registered `exit-refinement` queue unit (as 4ef5-01 did), so the
+  strategy's own `monitor()` does it free on every trade, in backtest and live alike. The reviewer's success measure
+  is making itself unnecessary for each pattern it finds. Cite the `review_id`s as the lesson's evidence.
+- **Judgement calls are a lesson about the reviewer.** If the `judgement` stratum's calibration reads `measured`
+  (n >= 10 priced) and its Brier is worse than the `table` stratum, that is a weakness row; if it is `INDETERMINATE`
+  say `anecdote` and end in an `accruing` unit, not a verdict. Carry each pattern found on one leg to its siblings
+  in Track 3.
+
 **Output: a strengths/weaknesses list of the SYSTEM**, not of individual trades. Each
 lesson is one row with: `id` (`L1…`), `kind: strength | weakness`, `claim` (one sentence),
 `evidence` (**trade ids / order_package_ids / record paths** — a lesson with no cited id
