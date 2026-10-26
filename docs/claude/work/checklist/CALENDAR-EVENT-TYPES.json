@@ -13,12 +13,15 @@
   "blocked_on": [],
   "note": "OPERATOR 2026-10-26 ~11:38Z, verbatim: \"we may also need to expand the calendar's types of events - there are many more that could be relevant\". MEASURED: the emitted live file carries 4 classes (fomc, pce, gdp, nfp), which is 4 of 13 upcoming HIGH events (manager count); KIND_TO_NEWS_CLASS in scripts/macro/econ_calendar_data.py is the only mapping, and src/news/news_events.py symbol_event_classes lists classes per symbol. TIER 3 because a class with weight changes trade-path event_risk. RULE: new classes ship DATA-ON / IMPACT-NEUTRAL - emitted and logged, weight 0 on the trade path (off the trade path != off the data path); a weight is a separate Tier-3 proposal gated on that class's event study. SOURCES (what the FXStreet US feed already carries, MEASURED in comms/macro/econ_calendar_upcoming.json 2026-10-26: initial/continuing jobless claims, durable goods, consumer confidence, EIA crude/distillate/gasoline/heating-oil/natgas stocks, API crude, Treasury bill/note auctions, MBA mortgage apps, Baker Hughes rigs, CFTC gold/oil/S&P positions; resolved-with-surprise n MEASURED across live+survey backfill: initial_jobless_claims 1170, retail_sales_mom 547, ppi_mom 542, cpi_mom 534, durable_goods 271, jolts 269, consumer_confidence 26). CANDIDATES by class -> source: US CPI/PPI/retail sales/jobless claims/JOLTS/ISM/consumer confidence -> FXStreet (kinds exist; ISM manufacturing/services and Fed-speaker kinds ARE present in the upcoming file, checked 2026-10-26); Treasury auctions -> FXStreet bill/note kinds, 3y and 10y note auctions present; EIA -> FXStreet (present); OPEC -> no kind containing opec in the upcoming file, needs a source; ECB/BoJ/BoE/China PMI+CPI -> FXStreet supports other countries but the producer fetches --countries US only, so needs a country-scope change (UNVERIFIED that those feeds carry consensus); major earnings, index rebalances, opex -> NOT covered by FMP/FXStreet calendar here, need a separate source (opex/rebalance are rule-derivable dates); crypto token unlocks and ETF flows -> NOT covered, need a separate source. PLAN: (1) Tier-1 PR after #20310: map more kinds into classes in KIND_TO_NEWS_CLASS, emit them, with news-layer weight 0 for every new class (verify against src/news/news_events.py that an unlisted class cannot reach event_risk); (2) one event-study queue unit per class - first is RQ-20261026-901 (initial_jobless_claims vs SPY); (3) weights only via a Tier-3 proposal citing that unit's verdict. NOT STARTED: only this row and RQ-20261026-901 exist.",
   "priority_rank": 60,
-  "updated_at": "2026-10-26T11:44:32Z",
+  "updated_at": "2026-10-26T11:56:22Z",
   "updated_by": "session_01YGQEZjAnnVwXXkU66iJbs2",
   "observation": {
     "what": "RQ-20261026-901 has a graded result and the Tier-1 collect-at-weight-0 PR is merged",
     "how_to_check": "ls research/results/RQ-20261026-901; grep -c class: config/economic_calendar.yaml",
     "due_by": "2026-11-09T00:00Z"
   },
+  "roadmap": [
+    "M28"
+  ],
   "_seq": 715
 }
