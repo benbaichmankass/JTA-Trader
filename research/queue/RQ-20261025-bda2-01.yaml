@@ -1,0 +1,194 @@
+id: RQ-20261025-bda2-01
+title: >-
+  alpaca_live roster screen: does a long-only DAILY Donchian trend (30 and 55) on the cheap-share ETFs the repo already declares
+  clear Stage 0 net of the full cost stack, pooled across 12 instruments with fold consistency and breadth, 2016-01-01..2026-10-23?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+roadmap:
+- L-ATM
+- L-LADDER
+question: >-
+  alpaca_live is a small whole-share, long-only, cash book (shorting disabled) that carries ONE leg (iaum_pullback_1d) and has
+  placed no venue order since 2026-09-23. On Yahoo daily bars for 12 cheap-share ETFs, 2016-01-01..2026-10-23, does the repo's
+  ETF long-only trend cell (scripts/backtest_trend.py via scripts/research/harness_stage0.py, long-only, 2.5 x ATR14 stop,
+  4 x ATR trail, harness defaults otherwise) at Donchian 30 (arm T30) or Donchian 55 (arm T55) read net-positive POOLED across
+  the 12 cells with >= 4 of 6 calendar folds net > 0 at pooled n >= 39, AND pass on at least half the powered cells (n >= 20),
+  net of fee + slippage (execution_costs.resolve_cost_policy)? Which cells, if any, are NOMINEES (cell pass + Holm survivor
+  within the arm + still net-positive at 2x slippage), so the next unit can ask whether they size on the account?
+why_this_matters: >-
+  MEASURED 2026-10-25 (comms/health/alpaca-silence-20261025.json): alpaca_live is correct-quiet, not faulty. The roster was
+  narrowed by operator Tier-3 removals to iaum_pullback_1d, no long setup fired on it after 2026-09-28, and alpaca_portfolio is
+  empty by decision B2 (strict mirror equality). Operator popup 2026-10-25 on PI-20261025-ALQWWPXT-0003, verbatim: "Yes: queue a
+  roster screen (Recommended)". Real-money capacity here is almost entirely idle, so the question is which Stage-0 candidates
+  could ever fill it. AFFORDABILITY, read from the field rather than assumed: comms/mandate_evidence/account_snapshot/alpaca_live.json
+  (captured 2026-10-23) reads equity E = buying power = cash with shorting_enabled false (E is read from that file, not restated here); config/accounts.yaml alpaca_live
+  risk_pct 0.02 gives a per-trade risk budget B = risk_pct x E; src/units/accounts/risk.py sizes whole shares only and
+  rounds UP to one share iff that share's stop risk <= _ROUND_UP_BUDGET_MULT (1.5) x B; and the share itself must
+  be buyable from cash, so the one-share price must be <= E. A candidate therefore needs BOTH one-share price <= E (less a small margin) AND
+  2.5 x ATR14 (its stop distance) <= 1.5 x B at the latest close. This is why SPY, QQQ, IWM and GLD (the last measured at ~$393 in
+  config/mandates.yaml R-AFFORD, PI-20260928-E8Y3BGBS-0003) are out and why the leveraged TQQQ/QLD pair is out (3x/2x ATR makes the
+  stop distance the binding constraint, and it already has its own paper soak). Repo-sourced prices (config/accounts.yaml
+  comments, 2026-07-07): SPLG ~$84, IAUM ~$41, SCHA ~$35. Prices for the other nine cells are NOT verified by this lane (Yahoo is
+  firewalled from sessions); the affordability re-check at the latest committed close is therefore a registered step of the
+  follow-up, not an assumption in this rule. CANDIDATE SET, drawn only from the trend family and daily instruments already in the
+  repo's harnesses: the six affordable instruments config/instruments.yaml already declares on alpaca (SPLG, SCHA, IAUM, TLT, IEF,
+  SLV, USO, GDX = eight) plus four broad sector ETFs the same Yahoo daily lane serves (XLE, XLU, XLP, XLF). SPLG and SCHA are
+  CONTROLS (their paper-soak legs splg_trend_long_1d / scha_trend_long_1d carry earlier Stage-0 records: SPLG +33.6R, SCHA +9.8R
+  marginal, per config/strategies.yaml provenance), IAUM is a control for the gold exposure the live leg already holds. WHAT THIS
+  DOES NOT REPEAT: the earlier leg-by-leg ETF cells were screened one instrument at a time and chosen for affordability after the
+  fact; this unit fixes the whole set, both arms and every threshold before any number exists. PRIOR WORK, searched per PLANNING.md s1
+  "look before you re-test" (grep -l harness_stage0 research/queue/*.yaml, then the instrument names): RQ-20261018-ef5d-05 (programme 07,
+  done, graded PASS 2026-10-20, research/results/RQ-20261018-ef5d-05/) ran WEEKLY-bar Donchian-20 trend, long-only and both sides, on 14
+  Alpaca ETFs plus 3 futures proxies, 2006-2026, for the question "does a months-long hold clear Stage 0". This unit differs on four
+  stated points: the decision bar (DAILY, holds of days to weeks, the bar alpaca_live actually trades), the instrument set (the 12
+  ETFs a whole-share cash book of this size could plausibly hold, with the unaffordable majority of ef5d-05's cells removed and four
+  affordable sector ETFs added), the lookbacks (30 and 55 days, not 20 weeks) and the window (2016-2026). It is NOT independent evidence
+  of the same edge: an equity-beta trend that passes weekly will likely pass daily on the same underlying moves, so a PASS here is read
+  for AFFORDABLE NOMINEES, and the follow-up must report the correlation of the nominees' R series with each other and with
+  iaum_pullback_1d, because SPLG, SCHA and the sector ETFs are one equity-beta factor. Counting it, the trend-on-ETF family has now been
+  asked in two configurations (ef5d-05's 2 arms, this unit's 2 base arms); the follow-up states that denominator. Other prior ETF
+  history: docs/research/leveraged-etf-research-2026-06-30.md and the RQ-20261006-061 TP-doctrine unit for the 1d pullback family.
+power:
+  expected_n: 300
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Floor: (1.96 + 0.8416)^2 / 0.45^2 = 7.849 / 0.2025 = 38.76 -> 39 trades (the repo's standing E35 floor), applied to the POOLED
+    trade set of an arm. expected_n = 300 is an ESTIMATE, not a measurement: ~4 long-only Donchian-30 entries per instrument per
+    year (the ETF trend cells in config/strategies.yaml, e.g. qqq_trend_long_1d, trade a few times a year) x 12 instruments x ~10.8
+    years, scaled down for IAUM (listed 2021) and the daily-bar warm-up. At pooled n = 300 the detectable effect is
+    sqrt(7.849 / 300) = 0.16 sd; per-cell n ~ 20-35 detects only d ~ 0.5-0.65 sd, which is why cells are graded at n >= 20 for breadth
+    and nomination only and the verdict is POOLED. A cell under n = 20 grades indeterminate and counts neither for nor against
+    breadth. Below pooled n = 39 the arm is indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched public Yahoo daily candles over a pinned window (the runner installs yfinance 1.7.0);
+      nothing accrues. The window is bounded by each ETF's listing date (IAUM 2021), not by any calendar.
+decision_rule:
+  id: RULE-RQ1025-BDA2-ALPACA-LIVE-ROSTER-SCREEN
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/harness_stage0.py --family trend --timeframe 1d over --start 2016-01-01 --end 2026-10-23 (4300 fetched days),
+    symbols SPLG,SCHA,IAUM,TLT,IEF,SLV,USO,GDX,XLE,XLU,XLP,XLF, one cell per symbol. Arms fixed now, all long-only (--long-only), all with
+    atr_stop_mult 2.5 and trail_mult 4.0 and no other tuning: T30 (donchian 30), T55 (donchian 55), and the two cost-stress copies T30X
+    and T55X (the same entries and exits with --slippage-bps-roundtrip 10, twice the 5 bps non-perp default that resolve_cost_policy
+    charges an equity/ETF; fee is the commission-free 0 bps the venue resolver returns for Alpaca ETFs, funding 0 because an ETF pays
+    none). Per cell n, net_r, 6 equal calendar folds, max_drawdown_r, net_r_per_capital_day, hold_days, the one-sided Student-t p;
+    pooled across the 12 cells on one set of calendar edges.
+  rule: >-
+    Flags: --folds 6 --fold-majority 4 --n-floor 20 --pooled-n-floor 39 --breadth-frac 0.5 --min-powered-cells 2 --holm-alpha 0.05.
+    The verdicts are the script's own, graded by those flags: per CELL pass iff n >= 20 AND net_r > 0 AND >= 4 of 6 folds net > 0, fail
+    iff n >= 20 and not, indeterminate iff n < 20; per ARM pass iff pooled n >= 39 AND pooled net_r > 0 AND pooled folds >= 4 AND at least
+    half the powered cells pass, indeterminate iff pooled n < 39 or fewer than 2 powered cells or fewer than half the declared cells
+    measured (a fetch or harness fault is recorded per cell and never dropped), fail otherwise; the unit verdict is pass iff any arm
+    passes (best = highest pooled net_r, named), indeterminate iff no arm passes and any is indeterminate, fail iff every arm fails.
+    PASS -> a LEAD, never a roster act: the follow-up is ONE unit that (1) names the NOMINEES, a cell being a nominee iff its cell grade
+    is pass in a base arm AND it is a Holm survivor within that arm AND the same donchian's stress arm (T30X or T55X) still reads net_r > 0
+    for that cell AND it is not one of the three CONTROLS SPLG, SCHA, IAUM (controls report on whether the screen reproduces earlier
+    Stage-0 records, they are not new candidates); (2) re-runs the passing arm on a window the PASS did not see, in the way PLANNING.md
+    prescribes for a one-window PASS (the most recent folds, 2022-2026, as a disjoint confirmation with this same statistic and bar),
+    stating the multiple-testing denominator of 2 base arms x 12 cells = 24 cell tests; (3) prices each nominee through the account's own
+    sizer, scripts/ops/mandate_resolver.py::_affordability logic (RiskManager.position_size at the committed alpaca_live equity snapshot,
+    whole shares, the 1.5x round-up cap), at the nominee's latest committed close, and drops any nominee that sizes to zero; (4) reads
+    same-day overlap against iaum_pullback_1d. FAIL (every arm fails) -> the long-only Donchian-30/55 trend configuration at these
+    params is closed for these 12 instruments on this window; it does NOT retire the trend family or the ETF idea, and the follow-up is
+    the sibling pullback screen (htf_pullback_trend with the iaum_pullback_1d parameters, same 12 cells, its own pre-registered rule) plus
+    a read of which arm moved closest. INDETERMINATE -> extend the window or add instruments, never lower a floor. Thresholds, arms and
+    the symbol set are not changed after any result.
+  what_it_does_not_do: >-
+    Edits no config, no roster and no account; places no order; is not a promotion case and does not advance any leg on live-book
+    P&L. It does not establish that any instrument is affordable on alpaca_live (that is step (3) of the follow-up, read from the sizer),
+    does not test the pullback family (named as the FAIL branch's sibling), and does not tune beyond the four fixed arms. Candles are
+    Yahoo daily bars (adjusted-close handling is the fetcher's), a PROXY for the Alpaca fill price; the 5 bps and 10 bps slippage
+    figures are modelled, not measured on alpaca_live (no real-money Alpaca account has n >= 20 on both sides, per
+    src/runtime/execution_costs.py), both stated in the record's cost_stack.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  bucket: structural
+  basis: >-
+    stand-in: a long-only ETF leg sized by the account's 2% risk budget (B = 0.02 x E) risks B per trade, a few trades a year,
+    so the money at stake is small by construction; the value is filling an idle real-money book and the Gate-2 mirror signal. An
+    estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: >-
+    12 keyless Yahoo daily fetches (~2,700 bars each) x 4 arms = 48 harness passes of seconds each; the fetch dominates. Estimate.
+  why_runner: >-
+    harness_stage0.py fetches Yahoo daily ETF bars, which are not in metis-market-data (crypto only), and research-script-run.yml
+    installs yfinance; the work is a short CPU job, so it belongs on the GitHub-hosted runner.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - SPLG,SCHA,IAUM,TLT,IEF,SLV,USO,GDX,XLE,XLU,XLP,XLF
+  - --timeframe
+  - 1d
+  - --days
+  - '4300'
+  - --start
+  - '2016-01-01'
+  - --end
+  - '2026-10-23'
+  - --param
+  - atr_stop_mult=2.5
+  - --param
+  - trail_mult=4.0
+  - --arm
+  - T30=donchian=30;--long-only
+  - --arm
+  - T55=donchian=55;--long-only
+  - --arm
+  - T30X=donchian=30;--long-only;--slippage-bps-roundtrip=10
+  - --arm
+  - T55X=donchian=55;--long-only;--slippage-bps-roundtrip=10
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --holm-alpha
+  - '0.05'
+  - --rule-id
+  - RULE-RQ1025-BDA2-ALPACA-LIVE-ROSTER-SCREEN
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261025-bda2-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ALPACA-LIVE-ROSTER-SCREEN
+- PI-20261025-ALQWWPXT-0003
+- comms/health/alpaca-silence-20261025.json
+- comms/mandate_evidence/account_snapshot/alpaca_live.json
+- scripts/research/harness_stage0.py
+- scripts/backtest_trend.py
+- scripts/ops/mandate_resolver.py
+- RQ-20261018-ef5d-05
+- docs/research/leveraged-etf-research-2026-06-30.md
