@@ -349,3 +349,25 @@ def test_materialized_evidence_is_used_only_when_absent(tmp_path, monkeypatch):
     (tmp_path / "comms/live_review/tables").mkdir(parents=True)
     (tmp_path / "comms/live_review/tables/x.json").write_text("{}")
     assert lrd.materialize_evidence("comms/live_review/tables/x.json", "{}", "a" * 40) == "comms/live_review/tables/x.json"
+
+
+# --------------------------------------------------------------- the VM rows watcher + paper scope
+
+def test_the_rows_watcher_dispatches_every_trade_action_and_a_paper_row():
+    """The watcher used to send only tighten_sl, so no trade action could ever reach the VM."""
+    from src.runtime import live_review_rows_watch as w
+    for a in lri.TRADE_ACTIONS:
+        assert w.dispatchable({"recommendation": {"action": a}, "disposition": {"route": "recommended"}}) is None
+    assert w.dispatchable({"recommendation": {"action": "hold"}, "disposition": {"route": "none"}}) == "action_hold"
+    paper = _row("close")
+    paper["account_reads"] = [{"account_id": "bybit_1", "account_class": "paper", "read": "would_apply", "evidence": "x"}]
+    assert w.dispatchable(paper) is None
+
+
+def test_a_paper_only_trade_action_is_dispatched_and_its_refusal_is_not_pinged():
+    """Operator 2026-10-26 "All accounts now" ("Real-money, prop and paper at once"): paper is in scope."""
+    paper = _row("partial_close", size_fraction=0.5)
+    paper["account_reads"] = [{"account_id": "bybit_1", "account_class": "paper", "read": "would_apply", "evidence": "x"}]
+    plan, refusal = lrd.check_row(paper, None)
+    assert refusal is None and plan["action"] == "partial_close"
+    assert lrd.is_money_row(paper) is False          # a paper refusal goes in the brief, not a ping
