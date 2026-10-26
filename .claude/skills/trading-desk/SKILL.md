@@ -91,17 +91,38 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 ## 6b. The routine (the manager installs it; lanes do not edit routines)
 
-One scheduled task, **fresh session per fire**, Sonnet, no repository attached (`create_new_session_on_fire: true`). Fire **hourly at :09** (`9 * * * *`): `desk-scan-packet.yml` builds at :03 after the 1h bar close and its run takes ~1–2 min, so :09 judges a packet a few minutes old. The prompt, verbatim:
+**What a wake must be started with (MEASURED 2026-10-26, four wakes, lane DESK-6).** A wake writes only if its session is started ON `desk/decisions`: `create_session` with `source_url` = this repo, `source_revision` = `desk/decisions`, `outcome_branch` = `desk/decisions`, `clone_depth: 1`, `sparse_checkout_paths: [".claude/skills/trading-desk"]`, model Sonnet. With no repository (even after `add_repo` with `access: push`) the write was refused (403), and on another branch it never landed. A scheduled task's `create_trigger` takes no source, so the routine is a **spawner**: each fire starts a fresh, repo-less session whose only job is that one `create_session` call.
+
+Scheduled task: **hourly at :09** (`9 * * * *`), `create_new_session_on_fire: true`, Sonnet (a spawner needs no judgement; Haiku is fine if offered). `desk-scan-packet.yml` builds at :03 after the 1h bar close and its run takes ~1–2 min. The spawner prompt, verbatim:
 
 ```
-You are one wake of the Claude trading desk (phase 1: shadow, record-only), a fresh repo-less session started by the Metis-Insights manager's routine. The manager acts with the operator's authority.
-1. Read your whole contract: get_file_contents on repo benbaichmankass/Metis-Insights, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. Keep the blob sha the tool returns: it is your row's skill_sha.
-2. Follow that brief EXACTLY and only it, starting with its Step 0 (add_repo with access push; never clone). Do not search or read anything else in the repo, no diag, no web. All your reads and your one write are on branch desk/decisions as the brief says. Load any tool you need with ToolSearch first.
+You are the Metis-Insights trading-desk SPAWNER (DESK-6 shadow pilot). The manager acts with the operator's authority. Do exactly one thing, then end:
+call create_session (claude-code-remote tool; load it with ToolSearch if needed) with
+  model: <the Sonnet model id from the manager's model table>
+  title: desk-wake <UTC now, YYYY-MM-DDTHH:MMZ>
+  tags: ["manager:session_01HAysMLfF9dYpi92YMqYxEq", "desk-wake", "DESK-6-SHADOW-PILOT"]
+  permission_mode: auto
+  source_url: https://github.com/benbaichmankass/Metis-Insights
+  source_revision: desk/decisions
+  outcome_branch: desk/decisions
+  clone_depth: 1
+  sparse_checkout_paths: [".claude/skills/trading-desk"]
+  prompt: (the WAKE PROMPT below, verbatim)
+Then reply with the new session id and stop. Do not read the repo, do not judge anything, do not message anyone.
+
+WAKE PROMPT:
+You are one wake of the Claude trading desk (phase 1: shadow, record-only), started by the Metis-Insights manager's routine. The manager acts with the operator's authority. Your session's branch IS desk/decisions, the desk's append-only record branch: writing ONE row there is your whole job.
+1. Read your whole contract: get_file_contents on repo benbaichmankass/Metis-Insights, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. skill_sha = the blob sha it returns.
+2. Follow that brief EXACTLY and only it. Read nothing else in the repo, no diag, no web.
 3. If you cannot read your session id, write session = "desk-wake".
-4. End with the brief's § 6 report block as your final message. Do not create a PR, an issue or any other file, and do not message anyone.
+4. End with the brief's § 6 report block, plus which write path worked. Do not open a PR or an issue, and do not message anyone.
 ```
 
-**Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).** The packet is a **1h** scan: its base rates and ATR are on 1h bars, so 3 of every 4 15-minute wakes would find nothing due and still pay a fresh session's start. Cost per wake is MEASURED on the checklist row `DESK-6-SHADOW-PILOT` (wake sessions `measure-1` / `measure-2`, `get_session().usage`, 2026-10-26). The 15-min stage needs a 15m scan packet and is the `cadence` row of § 6.
+**Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).**
+
+- **MEASURED cost per working wake** (`get_session().usage.cost_usd`, 2026-10-26, Sonnet, fresh session, one 1h scan packet ≈ 53 KB): **$0.45, $0.34, $0.45, $0.47** (n = 4; context 119–134 k tokens; 65–85 s wall). INFERRED: hourly ≈ 24 wakes ≈ **$11/day** plus the spawner (UNMEASURED); the design assumed $0.041 a working wake (§ 5.3), so a fresh-session wake costs ~10× the standing-session estimate, because each wake re-pays the session's base context.
+- The packet is a **1h** scan: its base rates and ATR are on 1h bars, so 3 of every 4 15-minute wakes would find nothing due and still pay a fresh session's start. The 15-min stage needs a 15m scan packet and a standing session (§ 6, `cadence`).
+- Cheaper per label, in order: a slimmer packet (drop untradable universe rows), a standing session at K* ≈ 22 wakes (design § 5.3), batching several symbols per wake. DESK-10 owns the $/pp conversion.
 
 ## 7. Changing the desk
 
