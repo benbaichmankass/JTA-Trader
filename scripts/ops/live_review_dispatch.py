@@ -58,9 +58,19 @@ size change, a close.
 
 Exit codes (the same as the apply's): 0 ok · 1 an apply did not verify · 2 refused · 3 could not look.
 
+**Pinned commit (``--ref <sha>``, operator 2026-10-26 "Approve: rows branch +
+pinned commit (Recommended)").** Instead of the VM's ``HEAD``, the row and its
+outcome table are read with ``git show <sha>:path``. The dispatcher fetches
+``main`` and ``live-review/rows`` into a private ref namespace
+(``refs/live-review/*``; the working tree and ``origin/*`` are untouched, so
+ict-git-sync is unaffected) and REFUSES a sha reachable from neither (exit 2).
+A fetch that fails is could_not_look (exit 3). Everything after the read is
+unchanged: the clauses, idempotency per review_id, approve_amend, the read-back.
+
 Usage (on the VM, via the ``live-review-apply`` system-action):
     python3 scripts/ops/live_review_dispatch.py --review-id LR-…            # dry run
     python3 scripts/ops/live_review_dispatch.py --review-id LR-… --apply
+    python3 scripts/ops/live_review_dispatch.py --review-id LR-… --ref <sha> --apply
 """
 from __future__ import annotations
 
@@ -88,6 +98,8 @@ APPLIED_LOG = Path(_REPO_ROOT) / "runtime_logs" / "live_review" / "applied.jsonl
 TABLE_EV_BOUND_R = -0.25
 DISPATCHABLE_ROUTES = ("recommended", "auto_applied")
 MONEY_CLASSES = ("real_money", "prop")
+#: Branches a pinned ref may come from, fetched into refs/live-review/<name>.
+PINNED_BRANCHES = ("main", "live-review/rows")
 
 
 # --------------------------------------------------------------------------
@@ -102,6 +114,35 @@ def _committed_text(path: str, ref: str = "HEAD") -> Optional[str]:
     except (OSError, subprocess.SubprocessError):
         return None
     return r.stdout if r.returncode == 0 else None
+
+
+def _git(*args: str, timeout: int = 60) -> Tuple[int, str]:
+    try:
+        r = subprocess.run(["git", "-C", _REPO_ROOT, *args], capture_output=True, text=True,
+                           timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 1, str(exc)
+    return r.returncode, (r.stdout or r.stderr).strip()
+
+
+def verify_ref(sha: str) -> Tuple[Optional[str], Optional[str]]:
+    """(verdict, detail) for a pinned ref: None = usable; else refused / could_not_look."""
+    if not isinstance(sha, str) or len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
+        return "refused", f"ref_not_a_full_sha:{sha!r}"
+    fetched = []
+    for br in PINNED_BRANCHES:
+        rc, _ = _git("fetch", "--quiet", "origin", f"+refs/heads/{br}:refs/live-review/{br}")
+        if rc == 0:
+            fetched.append(br)
+    if not fetched:
+        return "could_not_look", "fetch of main and live-review/rows both failed"
+    for br in fetched:
+        if _git("merge-base", "--is-ancestor", sha, f"refs/live-review/{br}")[0] == 0:
+            return None, f"reachable_from:{br}"
+    if len(fetched) < len(PINNED_BRANCHES):
+        missing = sorted(set(PINNED_BRANCHES) - set(fetched))
+        return "could_not_look", f"{sha[:12]} not on {fetched}; could not fetch {missing}"
+    return "refused", f"ref_not_on_main_or_rows_branch:{sha[:12]}"
 
 
 def _run_apply(argv: List[str]) -> int:
@@ -286,13 +327,24 @@ def summarize(entry: Optional[Dict[str, Any]]) -> List[str]:
 # Core
 # --------------------------------------------------------------------------
 
-def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = None,
+             ref: Optional[str] = None) -> Dict[str, Any]:
     """One dispatch. Returns the summary printed by :func:`main` (with ``exit``)."""
     started = datetime.now(timezone.utc).isoformat()
     persist = state is None
     st = state if state is not None else _load_state()
     out: Dict[str, Any] = {"review_id": review_id, "apply": apply, "at": started}
-    row, detail = find_row(_committed_text(REVIEWS_PATH), review_id)
+    at = "HEAD"
+    if ref:
+        verdict, rdetail = verify_ref(ref)
+        out["ref"] = ref
+        if verdict:
+            out.update(verdict=verdict, detail=rdetail,
+                       exit=EXIT_REFUSED if verdict == "refused" else EXIT_UNREADABLE)
+            return out
+        out["ref_detail"] = rdetail
+        at = ref
+    row, detail = find_row(_committed_text(REVIEWS_PATH, at), review_id)
     if row is None:
         out.update(verdict="could_not_look", detail=detail, exit=EXIT_UNREADABLE)
         return out
@@ -303,7 +355,7 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
                    exit=EXIT_REFUSED)
         return out
     evidence = row.get("outcome_table_source")
-    plan, refusal = check_row(row, _committed_text(evidence) if evidence else None)
+    plan, refusal = check_row(row, _committed_text(evidence, at) if evidence else None)
     if refusal:
         out.update(verdict="refused", detail=f"mandate_precondition:{refusal}", exit=EXIT_REFUSED)
         alerted = st.setdefault("alerted", {})
@@ -333,8 +385,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--review-id", required=True, help="the committed review row's review_id (LR-…)")
     ap.add_argument("--apply", action="store_true", help="execute; without it the apply runs --dry-run")
+    ap.add_argument("--ref", help="pinned 40-hex commit on main or live-review/rows to read the row at")
     a = ap.parse_args(argv)
-    res = dispatch(a.review_id, apply=a.apply)
+    res = dispatch(a.review_id, apply=a.apply, ref=a.ref)
     for line in res.get("accounts") or []:
         print(line)
     print(json.dumps({k: v for k, v in res.items() if k not in ("accounts", "writeback")}, default=str))
