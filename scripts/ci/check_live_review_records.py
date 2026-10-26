@@ -264,13 +264,14 @@ def _self_test() -> int:
                                                                   evidence_source="none"),
                                        r["apply_policy"].update(within_bound=None, tighten_r=None),
                                        r["shadow_policy"].update(within_bound=None, would_apply=None, tighten_r=None))), "reviews", False)
-    judged = lambda r: (r["recommendation"].update(basis="judgement", evidence_source="judgement", confidence="anecdote",
-                                                   judgement_confidence=0.6, reason="stalled at swing high",
-                                                   ev_delta_r=None, worst_case_delta_r=None),
-                        r["apply_policy"].update(within_bound=None, tighten_r=None),
-                        r["shadow_policy"].update(within_bound=None, would_apply=None, tighten_r=None),
-                        r["disposition"].update(route="auto_applied", mandate="MD-LIVE-TIGHTEN-SL"),
-                        r.update(applied=True))
+    def judged(r):
+        r["recommendation"].update(basis="judgement", evidence_source="judgement", confidence="anecdote",
+                                   judgement_confidence=0.6, reason="stalled at swing high",
+                                   ev_delta_r=None, worst_case_delta_r=None)
+        r["apply_policy"].update(within_bound=None, tighten_r=None)
+        r["shadow_policy"].update(within_bound=None, would_apply=None, tighten_r=None)
+        r["disposition"].update(route="auto_applied", mandate="MD-LIVE-TIGHTEN-SL")
+        r.update(applied=True)
     expect("a judgement-basis applied tighten passes", mut(GOOD_REVIEW, judged), "reviews", False)
     expect("judgement without a confidence is refused",
            mut(GOOD_REVIEW, lambda r: (judged(r), r["recommendation"].pop("judgement_confidence"))), "reviews", True)
