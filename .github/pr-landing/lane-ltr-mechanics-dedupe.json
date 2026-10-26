@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "src/runtime/live_review_due.py is outside TIER1_SURFACE; the manager (session_01C1ooo4kqBbng7vytdG1UVs) reads and merges it.",
   "why": "Tier 1 per the operator's directive: review read path (src/runtime/live_review_due.py is a pure read, no writer, no order path), review-record validation (scripts/ci/check_live_review_records.py), the review-row schema, a reviewer contract doc and tests. No config/, no strategy or risk logic, no deploy/ and no change to any order, stop or account behaviour. It only changes which open packages the due gate lists as due for a review."
 }
