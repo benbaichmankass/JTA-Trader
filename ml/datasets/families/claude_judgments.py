@@ -363,7 +363,12 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
                 cf, cf_source = net_r, "realised_path_was_hold"
             else:
                 cf, cf_source = None, "pending_replay"
-            if action in _HOLD_LIKE or applied or cf_source == "ltr_replay":
+            ltr_delta = _num(oc.get("delta_r")) if oc is not None else None
+            if ltr_delta is not None:
+                # LTR-5 priced the call itself (rec_r - cf_r). net_r - cf_r would read 0 for an
+                # unapplied tighten, whose realised path IS the hold path.
+                delta = round(ltr_delta, 8)
+            elif action in _HOLD_LIKE or applied or cf_source == "ltr_replay":
                 delta = round(net_r - cf, 8) if cf is not None else None
             else:
                 # an unapplied tighten / tp_revise: the realised path is the hold,
