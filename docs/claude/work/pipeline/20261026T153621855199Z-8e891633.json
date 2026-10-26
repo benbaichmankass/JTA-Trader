@@ -1,0 +1,19 @@
+{
+  "based_on": "20261012T112941697210Z-b455c714.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "check_tp_doctrine.py grades pairs.yaml legs (or states why not) AND every live pairs leg is either spread_target or carries an operator decision; header sentence corrected",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-HQ8T7BZU-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PAIRS-ALPACA-BUILD lane, session_01P1PVxyfLMUtw6WhQ8T7BZu (branch claude/pairs-alpaca-build)",
+    "rerun": "grep -n 'pairs.yaml' scripts/ci/check_tp_doctrine.py (empty = gap holds); python3 -c \"import yaml;print([(p['name'],p.get('leg_tp','backstop')) for p in yaml.safe_load(open('config/pairs.yaml'))['pairs']])\" (any 'backstop' with execution live = non-compliant leg); grep -n 'whole sleeve routes to bybit_1' config/pairs.yaml."
+  },
+  "routed_to": "checklist:TP-DOCTRINE-W43",
+  "state": "routed",
+  "what": "TP-doctrine measurement gap for the pairs sleeve (MEASURED 2026-10-12 by reading scripts/ci/check_tp_doctrine.py: it grades config/accounts.yaml routings only and never reads config/pairs.yaml). So the four Bybit pairs legs (bybit_1) carry the backstop TP (pairs_sizing.leg_protective_levels, 3x the spread risk, clamped) -- a catastrophe net, not a prediction -- and no guard reports it. pairs_gld_gdx now uses leg_tp: spread_target with per-bar revision (_revise_leg_tps); the same is available to the Bybit pairs by config but switching them is Tier-3 (operator). Rider: config/pairs.yaml header still says 'The whole sleeve routes to bybit_1' -- stale since pairs_gld_gdx routes to alpaca_paper (the lane's header edit was refused by the session's permission classifier)."
+}

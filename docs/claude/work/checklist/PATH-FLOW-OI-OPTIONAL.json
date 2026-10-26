@@ -1,0 +1,18 @@
+{
+  "id": "PATH-FLOW-OI-OPTIONAL",
+  "title": "path_flow_join.py: OI-optional mode (OI-present indicator + OI change where history exists, never imputed 0) so the A2 flow question is not INDETERMINATE by construction",
+  "phase": null,
+  "state": "queued",
+  "owner": "build lane (manager dispatch)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 research-SLO authoring lane] Owner for PI-20261025-4CGB8QKR-0001. The lever: scripts/research/path_flow_join.py has no way to keep a leg whose OI coverage is < 80% (--min-coverage applies to every flow column), so RQ-20261024-09a6-02 drops 4 of 6 legs (471 trades < min 600) and is INDETERMINATE by construction (MEASURED by lane PATH-FLOW-JOIN over 2,627 trades: taker 100%, funding 99.3-99.8%, OI 74-85%, OI history from 2021-12-01). Build an --oi-optional flag: taker imbalance and settled funding stay required (>= 0.8 coverage), OI enters as an OI-present indicator plus OI change only where history exists, never imputed 0. Then author the sibling unit (blocked/ until this lands) with 09a6-02's thresholds, folds, cost stack and power basis UNCHANGED and the disclosure that an ungraded ex-OI sensitivity was already seen (6 legs, 2,558 OOS trades, gain -0.00087 nats, CI [-0.00204, 0.00035], 2/6 folds positive: unfavourable, CI spans 0). Closes when the flag exists with a self-test and the sibling unit is dispatchable.",
+  "updated_at": "2026-10-26T15:36:09Z",
+  "updated_by": "cse_017ew3v5tfqjsM1AnCPNYmbs",
+  "_seq": 721
+}

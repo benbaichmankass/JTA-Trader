@@ -1,0 +1,17 @@
+{
+  "based_on": "20261012T145743316337Z-ada9d639.json",
+  "due_when": {
+    "due_date": "2026-10-26",
+    "kind": "date"
+  },
+  "id": "PI-20261012-GNRBKIGG-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "review of PR #17745, non-blocking item 7",
+    "rerun": "grep -n 'hostOk\\|TERMINAL_URL' tools/phone-executor/app/src/main/assets/exec.js tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt; grep -n 'account_path\\|terminal_account' config/prop_phone_devices.yaml -- holds while no per-device account-path pin exists."
+  },
+  "routed_to": "checklist:PHONE-READS-HARDENING-1026",
+  "state": "routed",
+  "what": "Phone executor reads (exec.js hostOk) verify only the domain (breakoutprop.com), not WHICH Breakout account the terminal page is on. The device token pins the account server-side, but if the operator's login holds two accounts the positions/closes read could be another account's and be reconciled into breakout_2. Check whether the terminal URL's /account/<id>/ segment (Store.TERMINAL_URL) can be pinned per device in config/prop_phone_devices.yaml and refused on mismatch."
+}

@@ -1,0 +1,18 @@
+{
+  "id": "PHONE-READS-HARDENING-1026",
+  "title": "Phone executor read hardening: pin the Breakout account path per device (exec.js hostOk) and prove the Closed-orders read returns rows (closed_empty_unconfirmed)",
+  "phase": null,
+  "state": "queued",
+  "owner": "build lane (manager dispatch)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 research-SLO authoring lane] Owner for two routed pipeline items: PI-20261012-GNRBKIGG-0006 (hostOk checks only the domain, not WHICH Breakout account the terminal page is on; pin /account/<id>/ per device in config/prop_phone_devices.yaml and refuse on mismatch) and PI-20261025-DIMFEBJ6-0001 (HYPOTHESIS: Closed-orders read never returns rows on breakout_2; closed_empty_unconfirmed repeats every ~30 min; fills row closed_unpriced). Closes when: an account-path mismatch is refused in a test, and a breakout_2 position closed on the venue is followed by a Closed-orders read returning its exit row (or the empty state is proven positively). Tier 2: tools/phone-executor touches the prop order path; one operator OK before merge.",
+  "updated_at": "2026-10-26T15:36:08Z",
+  "updated_by": "cse_017ew3v5tfqjsM1AnCPNYmbs",
+  "_seq": 718
+}
