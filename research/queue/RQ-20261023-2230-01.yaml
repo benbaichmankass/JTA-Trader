@@ -1,6 +1,6 @@
 id: RQ-20261023-2230-01
 title: 'CROSS-SYMBOL CONFIRMATION of the 3a84-01 direction-filter PASS (DI on xrp_pullback_2h): does requiring the +DI/-DI direction filter also beat eth_pullback_2h as declared?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -81,3 +81,16 @@ related:
 - RQ-20261022-3a84-02
 - RESEARCH-OPS-20261023-2047
 last_dispatched_at: '2026-10-26T00:59:44+00:00'
+grading:
+  attested: RULE-RQ20261023-2230-01-ETHPB2H-DIRFILTER
+  auto: true
+  decision_rule_id: RULE-RQ20261023-2230-01-ETHPB2H-DIRFILTER
+  evidence:
+  - research/results/RQ-20261023-2230-01/40252059999.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
