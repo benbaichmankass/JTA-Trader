@@ -61,7 +61,7 @@ def _root(symbol: str) -> str:
     return s
 
 
-def bybit_cov(acct: dict, symbol: str, direction: str):
+def bybit_cov(acct: dict, symbol: str):
     res = acct.get("result") or {}
     pos = [p for p in (res.get("positions") or []) if p.get("symbol") == symbol]
     if not pos:
@@ -124,7 +124,7 @@ def main() -> int:
         if pkg is None:
             continue
         if acct in bybit and bybit[acct].get("read_state") == "orders_read":
-            venue, cov = "bybit", bybit_cov(bybit[acct], sym, dirn)
+            venue, cov = "bybit", bybit_cov(bybit[acct], sym)
         elif acct in ib and ib[acct].get("read_state") == "orders_read":
             venue, cov = "ib", ib_cov(ib[acct], ibpos.get(acct, []), sym)
         elif acct in alp and alp[acct].get("read_state") == "orders_read":
