@@ -1,0 +1,246 @@
+{
+  "tool": "scripts/research/prop_ev_grid.py",
+  "sim": "scripts/research/prop_ev_sim.py",
+  "mode": "path",
+  "common": [
+    "--ruleset",
+    "config/prop_rulesets/breakout_turbo_1step.yaml",
+    "--costs",
+    "breakout",
+    "--funded-start",
+    "fresh",
+    "--swap-model",
+    "prorated"
+  ],
+  "arms": {
+    "A": [
+      "--sizing",
+      "balance",
+      "--risk-pct",
+      "0.015"
+    ]
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "grade": "pass_all_seeds",
+  "overall": "all",
+  "legs": {
+    "tqqq_trend_long_1d": {
+      "trades_file": "comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+      "resolved_by": "evidence record comms/strategy_evidence/tqqq_trend_long_1d.json -> cost_stack.source",
+      "n_trades": 118
+    }
+  },
+  "cells": [
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 1,
+      "exit_code": 0,
+      "seconds": 338.3,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "1",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed1.json"
+      ],
+      "out": "comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed1.json",
+      "stats": {
+        "ev": -9.33,
+        "ev_se": 0.68,
+        "p_net_positive": 0.0823,
+        "p_alive_at_horizon": 0.5825,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0015
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 2,
+      "exit_code": 0,
+      "seconds": 336.5,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "2",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed2.json"
+      ],
+      "out": "comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed2.json",
+      "stats": {
+        "ev": -9.08,
+        "ev_se": 0.69,
+        "p_net_positive": 0.0862,
+        "p_alive_at_horizon": 0.598,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0008
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 3,
+      "exit_code": 0,
+      "seconds": 337.3,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "3",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed3.json"
+      ],
+      "out": "comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed3.json",
+      "stats": {
+        "ev": -9.35,
+        "ev_se": 0.67,
+        "p_net_positive": 0.0848,
+        "p_alive_at_horizon": 0.5817,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0015
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 4,
+      "exit_code": 0,
+      "seconds": 336.2,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "4",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed4.json"
+      ],
+      "out": "comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed4.json",
+      "stats": {
+        "ev": -9.78,
+        "ev_se": 0.65,
+        "p_net_positive": 0.0848,
+        "p_alive_at_horizon": 0.591,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0005
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    },
+    {
+      "leg": "tqqq_trend_long_1d",
+      "arm": "A",
+      "seed": 5,
+      "exit_code": 0,
+      "seconds": 168.5,
+      "argv": [
+        "scripts/research/prop_ev_sim.py",
+        "--trades",
+        "tqqq_trend_long_1d=comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "--ruleset",
+        "config/prop_rulesets/breakout_turbo_1step.yaml",
+        "--costs",
+        "breakout",
+        "--funded-start",
+        "fresh",
+        "--swap-model",
+        "prorated",
+        "--sizing",
+        "balance",
+        "--risk-pct",
+        "0.015",
+        "--seed",
+        "5",
+        "--out",
+        "/home/runner/work/Metis-Insights/Metis-Insights/comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed5.json"
+      ],
+      "out": "comms/research/RQ-20261024-007/40303387663/sims/tqqq_trend_long_1d__A__seed5.json",
+      "stats": {
+        "ev": -9.3,
+        "ev_se": 0.68,
+        "p_net_positive": 0.0815,
+        "p_alive_at_horizon": 0.6025,
+        "p_pass_by_days": {
+          "30": 0.0,
+          "90": 0.0,
+          "180": 0.0015
+        },
+        "rule_v2_verdict": "indeterminate"
+      }
+    }
+  ]
+}
