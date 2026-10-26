@@ -150,11 +150,13 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-RQ2026102690d301-SKLEARNMLP
   evidence:
-  - research/results/RQ-20261026-90d3-01/40303391338.jsonl
+  - research/results/RQ-20261026-90d3-01/40364918868.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-26'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail
+  needs_review: true
+  note: 'confirmatory run read ''indeterminate'' after a first FAIL: {fail, indeterminate} is not unanimous
+    -> needs_review, not closed'
+  reason: 1 row(s), all measured, all indeterminate
   rows: 1
-  verdict: fail
+  verdict: null

@@ -1,6 +1,6 @@
 id: RQ-20261026-901
 title: 'Calendar event types, study 1 (CALENDAR-EVENT-TYPES): does the initial-jobless-claims surprise vs the PIT survey consensus predict SPY forward returns at 1-5 trading days?'
-status: queued
+status: done
 cadence: once
 theme: macro
 priority: 3
@@ -75,3 +75,16 @@ related:
 - scripts/macro/econ_event_study.py
 - .claude/skills/macro-research/SKILL.md
 last_dispatched_at: '2026-10-26T13:01:28+00:00'
+grading:
+  attested: RULE-RQ20261026-901-INITIAL-JOBLESS-CLAIMS-EVENT-STUDY
+  auto: true
+  decision_rule_id: RULE-RQ20261026-901-INITIAL-JOBLESS-CLAIMS-EVENT-STUDY
+  evidence:
+  - research/results/RQ-20261026-901/40327175922.jsonl
+  graded_at: '2026-10-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
