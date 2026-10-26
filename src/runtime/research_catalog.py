@@ -203,6 +203,13 @@ def _metrics(measurement: Any, limit: int = 14) -> dict[str, Any]:
     return out
 
 
+def _produced_by(row: dict | None) -> dict:
+    # A hand-landed row may carry produced_by as a bare command string; one such
+    # row must not take down the whole catalog build.
+    pb = (row or {}).get("produced_by")
+    return pb if isinstance(pb, dict) else {}
+
+
 def _data_used(entry: dict, row: dict | None) -> dict[str, Any]:
     run = entry.get("run") if isinstance(entry.get("run"), dict) else {}
     inputs = run.get("inputs") if isinstance(run.get("inputs"), dict) else {}
@@ -212,7 +219,7 @@ def _data_used(entry: dict, row: dict | None) -> dict[str, Any]:
     lands = entry.get("lands") if isinstance(entry.get("lands"), dict) else {}
     return {
         "workflow": run.get("workflow") if isinstance(run.get("workflow"), str) else None,
-        "harness": _text(((row or {}).get("produced_by") or {}).get("tool"), 200),
+        "harness": _text(_produced_by(row).get("tool"), 200),
         "inputs": {str(k): v for k, v in inputs.items() if isinstance(v, _SCALAR)},
         "dataInputs": hinted,
         "population": _text(pop.get("description"), 400),
@@ -350,7 +357,7 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
             "unit": f"{REPO_BLOB}/{path.relative_to(root).as_posix()}" if path.is_relative_to(root) else None,
             "results": [f"{REPO_BLOB}/{p}" for p in base_files]
             + ([f"{REPO_BLOB}/{corpus[uid]['path']}"] if corpus and uid in corpus else []),
-            "run": ((vr or latest or {}).get("produced_by") or {}).get("run_url"),
+            "run": _produced_by(vr or latest).get("run_url"),
         },
     }
 
