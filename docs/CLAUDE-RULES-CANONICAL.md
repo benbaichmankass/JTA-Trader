@@ -526,6 +526,22 @@ to stop admitting un-workable rows and to give every row an exit.
    invented fix that **already existed** in the repo, and another was verified
    *still broken and worse than filed*.
 
+## Off the trade path is not off the data path (operator directive 2026-10-26, binding)
+
+> *"It's definitely possible that we turned off the veto because it wasn't proving itself as supporting P&L, which should have triggered two things. One is just turning off its impact on the trading packages themselves, not on pulling the data. The data we still should be pulling, and we should be refining that feature. That should also be like a work item if something is taken offline because it isn't, right? Like the newsfeed, that's not like, there's no world in which we're giving up on that lane, right? We just need to figure out how to build the right models to use that data correctly. So that needs to be how we handle this, not just turning off the newsfeed entirely so that it throttles it so that it doesn't impact the trades. That's not, like, on an operational level, that's not how decisions are correctly implemented in the system."*
+
+**When a feature, model or signal is removed from, or neutralised on, the trade path, three things are required, in the same change:**
+
+1. **Its data collection and logging keep running, with a freshness check on the CONSUMED artifact** - the file or log the feature's consumer reads, not the producer's output.
+2. **An owning checklist row or `research/queue/` unit exists, with a stated re-entry test** - the measurement that puts it back on the trade path.
+3. **The decision is recorded as `shadowed` or `annotate`, never as dropped.** Removal from the roster of shadowed features needs a stated reason on its owning row.
+
+Turning a feature off to stop it affecting trades is a *trade-path* decision. Switching the data pull off with it is a different decision that nobody made.
+
+**Worked example (MEASURED 2026-10-26, `config/economic_calendar.yaml` read on `main`):** the live calendar's newest event is `2026-07-30`. A one-time sign-off had been encoded as a permanent gate, and the liveness checker watched the producer's output rather than the file the news-influence code consumes - so the consumed file went stale for ~3 months while every check read green. This is "Green is not evidence" applied to a freshness check. Owning rows: `NEWS-ALPHA-PROGRAM` (the lane is never abandoned) and `NEWS-DATA-FRESHNESS` (the consumed-artifact freshness check, queued after the 2026-10-28 reset).
+
+**Mechanism:** [`docs/reference/shadowed-features.yaml`](reference/shadowed-features.yaml) lists each feature that is off or annotate-only on the trade path, with its data artifact, freshness check and owner. `shadowed-features-guard` ([`scripts/ci/check_shadowed_features.py`](../scripts/ci/check_shadowed_features.py)) fails on an entry with no live owner, no named freshness check (a `gap`/`could_not_verify` needs a live row that closes it), or a decision other than `shadowed`/`annotate`, and fails if `execution: shadow` legs exist with no `shadow_legs` entry. It prints its population each run. The `weekly-audit` CORE pass (C10) re-checks it. The registry was seeded by measurement; what could not be verified is marked `could_not_verify`, not filled in.
+
 ## Honesty
 
 Give only true, verifiable answers.

@@ -1268,6 +1268,15 @@ GUARDS: List[Dict[str, Any]] = [
         "notify": True,
     },
     {
+        "name": "shadowed-features-guard",
+        # Operator 2026-10-26: off the trade path is not off the data path. Registry entries need a
+        # live owner and a named freshness check; self-test runs every time.
+        "when": {"globs": ["docs/reference/shadowed-features.yaml", "config/strategies.yaml",
+                           "docs/claude/work/checklist/**", "scripts/ci/check_shadowed_features.py"]},
+        "steps": [["python3", "scripts/ci/check_shadowed_features.py", "--self-test"],
+                  ["python3", "scripts/ci/check_shadowed_features.py"]],
+    },
+    {
         "name": "env-gate-guard",
         "when": {"regex": r"\.py$|\.sh$"},
         "steps": [["python3", "scripts/check_env_gate_in_diff.py", "{pr_diff}"]],
