@@ -1467,7 +1467,7 @@ nodes:
       Data check first: the equity/DXY daily series must be in metis-market-data point-in-time, else file the data row.
 
   # ── RESULTS-GRADE-1025 (2026-10-25) ──
-  - id: P2-RG1025-yz-longtail-eth-btc
+  - id: P2-RG1025-yz-longtail-eth
     goal: G1
     theme: ml_health
     roadmap:
@@ -1478,10 +1478,150 @@ nodes:
     after:
     - unit: RQ-20261022-3a84-10
       verdict: any
-    needs_authoring: 'Range-vol (yz/parkinson/rs/gk) lift on the regime head: SOL 1h PASSED (3a84-11) and its longer-tail CONFIRMATION also PASSED (c584-01, ~20k earlier bars never seen) -> a candidate-manifest
-      proposal is noted on row RESULTS-GRADE-1025 (Tier 3, nothing applied). BTC 1h FAILED (3a84-09, no clause) and ETH 15m/1h read INDETERMINATE between the pass bar and fail floor (3a84-08/-10).
-      The SOL lift appeared where the longer tail was added: author the c584-shaped longer-tail unit for ETH 1h and for BTC 1h (same arms, same pre-registered pass_if, folds >= 3), so the first test''s thin
-      history is separated from the absence of a lift. Model-family diversity: the lift is a LightGBM feature lift; pair with one non-GBDT arm per frontier-research.'
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: 'LONGER-TAIL CONFIRMATION of the range-vol lift on the ETHUSDT 1h regime head: does lgbm_yz beat lgbm_base on 60000 bars when the first read on 40000 was INDETERMINATE?'
+      question: 'RQ-20261022-3a84-10 read INDETERMINATE for ETHUSDT 1h (between the pass bar and the fail floor) at tail_rows 40000, while SOLUSDT 1h passed at 40000 and again at 60000 (RQ-20261022-c584-01). Same shard, learners, folds and thresholds as c584-01 with tail_rows 60000 on ETHUSDT 1h: does lgbm_yz beat lgbm_base by >= +0.010 macro_f1 (CV mean) with a positive post-2026-07-12 holdout delta?'
+      why_this_matters: 'The SOL lift appeared where the longer tail was added, so ETH 1h thin history is separated from the absence of a lift. Decides whether the challenger-manifest note on row RESULTS-GRADE-1025 covers a second symbol. Denominator: 1 of 5 symbol/timeframe cells read passed (SOL 1h); this is the ETH cell. BTC 1h (3a84-09, FAIL with no clause reached) is a separate longer-tail read, node P2-RG1025-yz-longtail-btc. Overlap disclosure: the newest 40000 bars and the holdout are shared with 3a84-10, so the holdout clause is not independent. Model-family diversity: the non-GBDT comparison of the regime head already exists as RQ-20261025-3947-23 (numpy logit); no extra arm here.'
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Same as c584-01: tail_rows 60000 gives ~36000 OOS rows over 5 folds; rows are not the limit. Estimate carried from the SOL sibling.'
+        feasibility:
+          source: none
+          accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt published shard); n does not grow with waiting.'
+      decision_rule:
+        id: RULE-P2-RG1025-YZ-LONGTAIL-ETH
+        registered_at: '2026-10-26'
+        registered_before_run: true
+        statistic: Paired purged-CV delta macro_f1 (lgbm_yz minus lgbm_base) on identical rows of ETHUSDT 1h (tail_rows 60000), and the same delta on the post-2026-07-12 holdout; f1_class:volatile reported as a headline check.
+        rule: 'PASS IF lgbm_yz beats lgbm_base by >= +0.010 macro_f1 (CV mean) AND > 0 on the holdout. FAIL IF lgbm_yz does not reach > +0.005 vs lgbm_base (CV mean): range-vol features add nothing on ETH 1h; configuration closed, family range-vol stays open on other cells. INDETERMINATE otherwise, or if folds < 3, the holdout has < 20 rows, or an arm is unavailable. Thresholds are those of 3a84-10 and c584-01, not changed after any result.'
+        min_n: 3 usable CV folds per symbol; holdout >= 20 test rows.
+        what_it_does_not_do: 'Promotes nothing, edits no manifest, stage or config. A feature-lift PASS is not edge; a PASS releases a challenger-manifest note for the manager and a net-of-cost regime-cell walk-forward, it does not skip either.'
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 100
+        confidence: 0.25
+        basis: 'stand-in: the vol/regime head gates intents on real-money legs. Not a measured P&L.'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 4.0
+        est_minutes: 40
+        published_data: metis-market-data
+        basis: 'Estimate, NOT measured: RQ-20261022-c584-01 shape (SOL 1h, tail_rows 60000); Kaggle CPU via published data.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        baseline: lgbm_base
+        candidates:
+        - lgbm_yz
+        controls:
+        - prior
+        cv:
+          folds: 5
+          embargo_rows: 96
+          min_train_frac: 0.4
+        dataset:
+          kind: jsonl
+          ts_col: ts
+          target: regime_label
+          tail_rows: 60000
+          holdout_after: '2026-07-12'
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          extra_columns:
+          - parkinson_vol
+          - garman_klass_vol
+          - rogers_satchell_vol
+          - yang_zhang_vol
+          groups:
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+        learners:
+          lgbm_base:
+            kind: lightgbm
+            params:
+              learning_rate: 0.05
+              min_child_samples: 50
+              n_estimators: 200
+              num_leaves: 31
+          lgbm_yz:
+            kind: lightgbm
+            params:
+              learning_rate: 0.05
+              min_child_samples: 50
+              n_estimators: 200
+              num_leaves: 31
+            feature_blocks:
+            - kind: df_columns
+              columns:
+              - parkinson_vol
+              - garman_klass_vol
+              - rogers_satchell_vol
+              - yang_zhang_vol
+          prior:
+            kind: prior
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - ETHUSDT
+            vs: baseline
+            op: '>='
+            value: 0.01
+            window: cv
+          - group:
+            - ETHUSDT
+            vs: baseline
+            op: '>'
+            value: 0.0
+            window: holdout
+          fail_if_no_candidate_reaches:
+          - group:
+            - ETHUSDT
+            vs: baseline
+            op: '>'
+            value: 0.005
+            window: cv
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+  - id: P2-RG1025-yz-longtail-btc
+    goal: G1
+    theme: ml_health
+    roadmap:
+    - L-PROGRAMMES
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.15
+    after:
+    - unit: RQ-20261022-3a84-09
+      verdict: any
+    needs_authoring: 'BTC 1h range-vol (yz) longer-tail read, same shape as P2-RG1025-yz-longtail-eth: 3a84-09 FAILED at tail_rows 40000 with no clause reached, so this is the lower-prior half of the ETH/BTC pair; author the tail_rows 60000 unit on BTCUSDT 1h (path datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl) after the ETH read lands, so a flat ETH result can retire it as moot.'
   # ── AUTHORED 2026-10-25 (lane THEME-AUTHOR-1025, research SLO breach 09:14Z): ml_health had no ready node ──
   - id: P2-Q1.3-drift-split-persistence
     goal: G4
