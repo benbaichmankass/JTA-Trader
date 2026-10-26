@@ -16,11 +16,20 @@
   "blocked_on": [],
   "note": "[2026-10-26 lane DESK-7-BLIND-REPLAY-S0, session_01Bp1CwBC4STi9SZC5vKgJWM] Filed as the single lever blocking research/queue/blocked/RQ-20261026-bf56-01/-02/-03 (blocked_on.ref). Compose, do not rewrite: scripts/ops/desk_scan_packet.py (--as-of masking + mask key), scripts/research/live_review_outcomes.py (tighten pricing from committed trade lists), scripts/ci/check_desk_records.py (pre_cutoff), src/runtime/execution_costs.py. NEW: close/partial_close replay (next-bar-open fill), judging-action jsonl intake, trade-resampling bootstrap, B2 random-timing and B3 leave-one-fold-out best-static baselines, scrambled-label arm, verdict.json writer, research-script-run.yml route. Also the shared harness DESK-18-GEN-REPLAY-S0 uses. Done when bf56-01 runs and lands a verdict. Ceiling est $12, Sonnet. Blocked units: PR #20339. [2026-10-26 lane session_014nTDeLp5G15DaGPpb85cwr] Driver scripts/research/desk_replay_driver.py + tests/test_desk_replay_driver.py in PR #20350 (modes packets/selfcheck/score; 35 tests). Unit bf56-01 made runnable in held PR #20349 (merge after #20350). landed_unproven: closes when the first bf56-01 run on the driver lands a result. DEV RUN (selfcheck --fetch, 2026-10-26): 370/370 replayed, 176 decision points; (a),(b) pass; registered clause (c) FAILS (scrambled mean -0.1195, CI [-0.304,0.053]) because the packet-blind breakeven policy cannot be nulled by scrambling - planted oracle +0.263 aligned / +0.007 scrambled. Needs a re-registration decision before bf56-01 runs. Real judging cost ESTIMATED ~0.01 USD per decision point (Sonnet 4.6 list table). Remaining: judging sessions for -02/-03.",
   "priority_rank": 8,
-  "updated_at": "2026-10-26T14:40:22Z",
+  "updated_at": "2026-10-26T15:02:04Z",
   "updated_by": "session_014nTDeLp5G15DaGPpb85cwr",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "observation": {
+    "what": "the first unit run on scripts/research/desk_replay_driver.py (RQ-20261026-bf56-01 selfcheck) lands a result record",
+    "how_to_check": "ls research/results/RQ-20261026-bf56-01 and read the verdict.json read_state; python3 scripts/research/desk_replay_driver.py selfcheck --out <dir> --fetch reproduces it",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "none: the L-DESK milestone text is owned by the DESK-LDESK-WRITEBACK lane (branch claude/desk-ldesk-writeback); this row adds tooling only and changes no milestone status",
+    "arch": "none: no architecture contract changes; the driver is research tooling and is listed in docs/research/RESEARCH-CAPABILITY-INDEX.md"
+  },
   "_seq": 717
 }
