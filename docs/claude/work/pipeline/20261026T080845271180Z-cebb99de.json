@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-26",
+    "kind": "date"
+  },
+  "id": "PI-20261026-4A80398B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager post-merge check of #20255 (2026-10-26T08:06Z)",
+    "rerun": "diag journalctl unit=ict-trader-live since=<RTH open> grep 'close RE-PROBE of a standing wedge pkg=pkg-6a8e3fb325464be3' and 'REFUSED by the broker: 891ddff0'"
+  },
+  "state": "queued",
+  "what": "alpaca_paper GLD (gld_pullback_1h, pkg-6a8e3fb325464be3, qty 39) is in a standing close wedge. MEASURED 2026-10-26T08:01Z via diag journalctl: the sl_cross close re-probe fails because Alpaca refuses cancel of order 891ddff0 with rc=422 'order pending cancel' (share_hold=broker_cancel_wedged, available qty 0). The wedge was last observed 3409.6 min (~57h) earlier. The system classifies and re-probes it hourly as designed (ALPACA-CLOSE-WEDGE is done), so this is an instance, not the class. Paper book, no real money. It is unrelated to #20255 (trail readback in execute.py). Due at today's RTH open: if the 13:30Z+ re-probe still sees the pending-cancel order, the order is stuck broker-side and needs a lane to decide on a cancel-by-id retry or an Alpaca support ticket. If the close lands, kill this item."
+}
