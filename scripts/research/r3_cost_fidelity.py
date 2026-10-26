@@ -43,10 +43,12 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
+sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
 import realized_slippage as d3  # noqa: E402
 from src.config.accounts_loader import load_accounts_dict  # noqa: E402
 from src.runtime import execution_costs  # noqa: E402
+import touch_record  # noqa: E402
 
 RULE_ID = "RULE-R3-GATE1-COST-FIDELITY-v1"
 RULE_DOC = "docs/research/r3-gate1-cost-fidelity-rule-2026-09-25.md"
@@ -208,11 +210,20 @@ def run(in_dir: Path, as_of: datetime) -> dict:
     # ---- per (leg, account) cells -----------------------------------------
     groups: Dict[tuple, Dict[str, List[float]]] = collections.defaultdict(
         lambda: {"entry": [], "exit": []})
+    # DESK-12-SANDBOX (design § 3.6): a trade whose stop a desk / LTR / operator amend moved has an exit that
+    # is not the leg's own, so the cell's verdict is computed on UNTOUCHED trades and the touched ones are
+    # graded beside it (``touched_split``), never folded in.
+    touched_ids = {t["id"] for t in trades if touch_record.is_touched(t)}
+    touched_groups: Dict[tuple, Dict[str, List[float]]] = collections.defaultdict(
+        lambda: {"entry": [], "exit": []})
     for r in rows:
+        g = touched_groups if r.get("trade_id") in touched_ids else groups
         if r["side"] == "entry":
-            groups[(r["strategy"], r["account_id"])]["entry"].append(r["bps"])
+            g[(r["strategy"], r["account_id"])]["entry"].append(r["bps"])
         elif r.get("ref_source") == "order_packages":
-            groups[(r["strategy"], r["account_id"])]["exit"].append(r["bps"])
+            g[(r["strategy"], r["account_id"])]["exit"].append(r["bps"])
+    for k in touched_groups:
+        groups.setdefault(k, {"entry": [], "exit": []})
 
     rosters = {a: set(c.get("strategies") or []) for a, c in acfg.items()}
     # provenance: EVIDENCE_DIR — the UNION of every committed evidence record and every leg with fills, not a newest pick; its size is published as population.legs_reported
@@ -232,6 +243,12 @@ def run(in_dir: Path, as_of: datetime) -> dict:
                 c["verdict"] = NO_RECORD
             mark_pairs_exit_ungradable(c, leg, m["excluded"])
             klass = (acfg.get(acct) or {}).get("account_class")
+            tg = touched_groups.get((lg, acct))
+            c["touched_split"] = ({"n_touched_trades": len({r.get("trade_id") for r in rows
+                                                            if r.get("trade_id") in touched_ids
+                                                            and (r["strategy"], r["account_id"]) == (lg, acct)}),
+                                  **grade(tg["entry"], tg["exit"], modelled, tol)} if tg else
+                                 {"n_touched_trades": 0})
             c.update({"account_id": acct, "account_class": klass,
                       "basis": "market" if klass == "real_money" else "simulator",
                       "stage": STAGE_OF_ACCOUNT.get(acct, "unstaged"),
@@ -264,6 +281,8 @@ def run(in_dir: Path, as_of: datetime) -> dict:
     # ---- per venue x basis, pooled (D3's floor) -----------------------------
     per_venue: Dict[str, dict] = {}
     for r in rows:
+        if r.get("trade_id") in touched_ids:
+            continue  # same untouched-only rule as the per-cell verdicts above
         klass = (acfg.get(r["account_id"]) or {}).get("account_class")
         key = f"{r['venue']}|{'market' if klass == 'real_money' else 'simulator'}"
         v = per_venue.setdefault(key, {"entry": [], "exit": [], "accounts": set()})

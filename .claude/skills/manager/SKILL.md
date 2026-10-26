@@ -62,6 +62,23 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
    finished lane it lists — only this project's, after checking it owns no open PR — then
    `checklist.py archive-lane <ROW>`.
+**REFILL (operator, 2026-10-26, binding) — runs at every check-in AND every lane close, after step 5.**
+> Operator, verbatim: *"I shouldn't need to push you like this either - this is what we have a weekly
+> workplan for, to make sure that the manager always knows what to do next. If there's not enough tasks
+> left, then we need to plan together what to do, but that's not even a little bit the case this week -
+> we have a robust backlog and as long as we hvae headroom, lanes should be running"*
+>
+> (a) **Compute the target** from a fresh meter: `spend_meter.py --capacity --live-open N` prints
+> *"KEEP N LANES RUNNING"* — a target, not a cap. (b) **If running build lanes < target, dispatch the next
+> rows now**, in `checklist.py queue` order (`priority_rank`, then the roadmap), without waiting for the
+> operator. (c) **Ask the operator only when the plan has run out or the call is a genuine preference** —
+> never to ask permission to use headroom. A capacity call made earlier in the day (including by the
+> operator) is **re-evaluated against a fresh reading at each check-in, not carried forward**: on
+> 2026-10-26 a morning "1 lane" call stood for hours while weekly usage ran 47% → 50% (~0.5 pp/h).
+> The live-review reserve is MEASURED (runs/day × pp per run, from `comms/live_review/reviews.jsonl`) and
+> capped by the § 6.4 bound; it is not a reason to sit at one lane. The weekly audit's C12 measures
+> lane utilisation against the target.
+
 6. **REPORT.** Three lines to the operator: **capacity** (reading, rate, lanes chosen) · **running**
    (lanes and their rows) · **next** (the top of the queue). Say nothing when nothing changed.
 
@@ -109,6 +126,21 @@ in the marker, immediately** (`.claude/skills/live-trade-review/SKILL.md`; the m
 accounts, event, level, due_at). The hourly live-review routine stays the backstop. A `could_not_look` wake comment is
 an incident like a watchdog one: fix, dispatch, or tell the operator. Record the latency event (due_at) -> comment ->
 review row on `LTR-1B-MARKET-TRIGGERS` the first time it happens.
+
+**Repo-less reviewer (LTR C3, operator 2026-10-26 ~11:40Z: "VM applies from rows branch" + "VM pre-builds the packet";
+manager call: a FRESH reviewer per trigger, not a warm session).** An ltr-wake comment now carries, per package, a
+`<!-- ltr-packet <pkg> -->` JSON block (packet + priced table, built on the VM) and `packet_state` / `review_id` /
+`packet_sha` in the marker. For each package with `packet_state: built`: `create_session` **ON the rows branch**
+(`source_url` = this repo, `source_revision` = `live-review/rows`, `outcome_branch` = `live-review/rows`,
+`clone_depth` 1, `sparse_checkout_paths` [`comms/live_review`]), never without a source: a session started with no
+repo gets **403** on every GitHub write, even after `add_repo` access=push (MEASURED by lane DESK-6, 2026-10-26, on
+`desk/decisions`; PI-20261026-R5NY8N6S-0001). The checkout only makes the write authorized; the reviewer still reads
+nothing from it. Model **Sonnet**, prompt = the full text of `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` + that package's
+marker entry + its packet block, verbatim. The reviewer writes ONE commit on `live-review/rows`; the live trader's
+watcher (`src/runtime/live_review_rows_watch.py`) applies a qualifying `tighten_sl` by itself, so **do not file
+`live-review-apply`** for it (that system-action is the manual fallback only). Check the outcome on
+`/api/diag/log_file?name=live_review_rows_watch`. A package whose `packet_state` is not `built` falls back to the
+repo lane above (Sonnet LIVE-REVIEW lane with the skill).
 
 ## Start of session
 

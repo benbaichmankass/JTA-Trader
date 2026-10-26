@@ -1,0 +1,102 @@
+id: RQ-20261026-ed1c-12
+title: 'ADX-conditioned tighter trail on eth_pullback_2h: does ADX-conditioned trail beat the declared exit net of the full cost stack?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: regime
+priority: 2
+kind: experiment
+question: On eth_pullback_2h over the pinned window 2020-07-01..2026-10-15, does M1 (ADX < 20) and M2 (ADX < 25), each tightening the trail to 2.5 x ATR, declared now, beat the declared exit A by >= 0.02
+  R/trade in >= 4 of 6 folds within the drawdown bar?
+why_this_matters: 'Look-before-re-test (PLANNING.md S1): a grep of research/queue on 2026-10-26 shows no ADX-conditioned trail arm on eth_pullback_2h; the lever''s sibling cells are RQ-20261016-005 / RQ-20261020-008
+  (ADX trail on 4h and 1d legs). First-test cell on this leg; a FAIL closes this arm grid only. Lane RESEARCH-FLOOR-20261026 (runnable 32 < computed floor 61, MEASURED 13:30Z by check_research_queue_throughput/health).
+  Operator 2026-10-22: an idea that failed one test is not dead.'
+power:
+  expected_n: 80
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs (1.96+0.8416)^2/0.45^2 = 38.8 -> 39 trades (the repo''s standing E35 floor). expected_n=80 is an ESTIMATE from sibling units on this leg family, NOT a measurement;
+    the harness reports n(A) and below 39 the unit grades INDETERMINATE, never FAIL. Trade sequences autocorrelate: the floor is necessary, the calendar-fold majority carries the rest.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026ed1c12
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg eth_pullback_2h --grade replace, window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds by entry time, net of the full cost stack the harness
+    resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared in config/strategies.yaml; candidates M1, M2. Per arm: n, net_total_r,
+    max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C) >= net
+    R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named and the follow-up is ONE confirmation unit on a disjoint partition (a PASS on one window
+    is a discovery; the denominator is the number of arms in this unit), then a live-producer check and a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit. FAIL IF none passes
+    with n(A) >= 39: THIS arm grid is closed on eth_pullback_2h for this window and the family is NOT retired; the record names the arm that moved closest and the next variant. Thresholds and the arm grid
+    are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever (check the leg monitor) and a Tier-3 declare. The arm grid
+    is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 70
+  confidence: 0.1
+  bucket: own_losses
+  basis: 'stand-in: an exit/regime lever on eth_pullback_2h; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 35
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - M1=--trail-adx-below=20;--trail-adx-tight-mult=2.5
+  - --arm
+  - M2=--trail-adx-below=25;--trail-adx-tight-mult=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261026-ed1c-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- scripts/research/exit_lever_ablation.py
+- research/queue/RQ-20261026-90d3-15.yaml
+- RESEARCH-FLOOR-20261026

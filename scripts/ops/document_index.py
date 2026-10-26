@@ -303,6 +303,16 @@ STATUSES = {
 # Bulk-adding entries here to drain the `unknown` column would reproduce the
 # defect. One row per document actually read, or leave it `unknown`.
 STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
+    # Written 2026-10-26 by lane DESK-5/DESK-6 (session_0158TMJbRQdBS9Wcr5nY8N6S), which wrote it: a
+    # skill companion, not a SKILL.md. Its embedded schema and worked example are pinned by
+    # tests/test_trading_desk_brief.py (schema equality, desk-records-guard findings()), and a real
+    # wake ran it to a guard-clean row on desk/decisions (DD-20261026T1339Z-scan-1h-1). Goes
+    # `superseded` if the repo-less desk wake is replaced by a standing desk session.
+    ".claude/skills/trading-desk/DESK-BRIEF.md": (
+        "live",
+        "read:DESK-5-lane-authored-it-2026-10-26-schema-and-example-test-pinned",
+        "repo-less desk wake contract; each routine-fired desk wake reads it from main",
+    ),
     # Written 2026-10-14 by lane AI-TRADER-PROGRAMME, the same session that took
     # every measurement in them (ml_plan_status --diversity, the research queue
     # and results stores, the committed per-trade ledgers via
@@ -315,6 +325,17 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # ⚠️ The programme goes `superseded` when a later weekly pass rewrites it
     # under a new file; the catalog pair goes `historical` only if the reference
     # register is retired.
+    # Written 2026-10-26 by lane LTR C3 (session_01BLuPk9fxkARe5ZjLVV8Uxd), which
+    # wrote it: a skill companion, not a SKILL.md, so rule 3 does not reach it.
+    # Its embedded schema and worked example are pinned by
+    # tests/test_live_review_reviewer_brief.py (schema equality, the main
+    # validator, the dispatcher's clauses). Goes `superseded` if the repo-less
+    # reviewer path is retired.
+    ".claude/skills/live-trade-review/REVIEWER-BRIEF.md": (
+        "live",
+        "read:LTR-C3-lane-authored-it-2026-10-26-schema-and-example-test-pinned",
+        "repo-less live-review reviewer contract; the manager pastes it into each fresh reviewer",
+    ),
     "docs/research/programmes/02-AI-TRADER.md": (
         "live",
         "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",

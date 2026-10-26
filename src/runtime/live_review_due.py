@@ -23,6 +23,16 @@ per-bar ``position_path_history`` the exit loop writes; ``funding`` reads the
 ``mechanics`` (journal half) reads telemetry rows whose trade is absent. Each
 package says per event whether it looked: an event it could not evaluate is
 listed in ``events_could_not_look`` with the reason, never silently dropped.
+
+Telemetry-less packages (LTR-DUE-TELEMETRY-LESS): ``position_telemetry`` covers
+only the donchian/pullback family, so an open package of another leg has no
+telemetry row. The open set is therefore the UNION of the open telemetry rows
+and the journal's open ``order_packages`` / ``trades`` (the same sources
+``scripts/ops/live_review_packet.py --all-open`` unions, minus the prop-ticket
+HTTP read), and every package outside telemetry is listed in
+``telemetry_less`` with ``telemetry_state: telemetry_absent`` and the four
+telemetry events in ``events_could_not_look``. ``daily_floor`` and the market
+events need no telemetry and still evaluate for them.
 """
 from __future__ import annotations
 
@@ -38,6 +48,9 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 CONFIG_REL = os.path.join("config", "live_trade_review.yaml")
 REVIEWS_REL = os.path.join("comms", "live_review", "reviews.jsonl")
 CALENDAR_REL = os.path.join("config", "economic_calendar.yaml")
+
+#: Events that need a position_telemetry row; unevaluable for a telemetry-less package.
+TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 
 #: Events computed from market inputs (history / funding / calendar).
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
@@ -359,6 +372,8 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         in_cooldown = prior["last"] is not None and prior["last"] >= bar_start(now, tf)
         events = []
         mk, cnl = market_events(row, (market or {}).get(pkg), cfg, now, tf)
+        if row.get("telemetry_absent"):
+            cnl = [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS] + cnl
         if cnl:
             cnl_total += 1
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
@@ -385,8 +400,10 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             "state": {k: row.get(k) for k in (
                 "open_r", "peak_r", "peak_state", "giveback_r", "bars_held",
                 "r_to_stop", "r_to_target", "rr_from_here")},
+            "telemetry_state": "telemetry_absent" if row.get("telemetry_absent") else "present",
             "telemetry_updated_at": row.get("updated_at"),
-            "telemetry_stale": bool(upd is None or now - upd > stale_after),
+            "telemetry_stale": None if row.get("telemetry_absent")
+            else bool(upd is None or now - upd > stale_after),
             "events_could_not_look": cnl,
         })
 
@@ -409,12 +426,52 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
                         "why": f"exit loop writing telemetry for trade {row.get('trade_id')} "
                                "but the trades table has no such row"}],
             "state": {k: row.get(k) for k in ("open_r", "peak_r", "r_to_stop", "r_to_target")},
+            "telemetry_state": "present",
             "telemetry_updated_at": row.get("updated_at"),
             "telemetry_stale": False,
             "events_could_not_look": [],
         })
     return {"due": due, "due_count": len(due), "suppressed_by_cooldown": cooled,
             "packages_with_events_could_not_look": cnl_total}
+
+
+def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:
+    """Open packages per the journal: ``order_packages.status`` and ``trades.status`` open.
+
+    ``state`` read / could_not_look (a missing table or file is NOT an empty
+    set). One row per (package, account) where the trade row names one, else
+    one per package.
+    """
+    try:
+        if db_path is None:
+            from src.utils.paths import trade_journal_db_path
+            db_path = str(trade_journal_db_path())
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        try:
+            conn.row_factory = sqlite3.Row
+            pk = conn.execute("SELECT order_package_id, strategy_name, symbol, direction "
+                              "FROM order_packages WHERE status = 'open'").fetchall()
+            tr = conn.execute("SELECT id, order_package_id, strategy_name, symbol, direction, "
+                              "account_id FROM trades WHERE status = 'open' "
+                              "AND order_package_id IS NOT NULL AND order_package_id != ''").fetchall()
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as could_not_look
+        return {"state": "could_not_look", "reason": f"journal_open_unreadable: {type(exc).__name__}: {exc}"}
+    out: Dict[str, Dict[str, Any]] = {}
+    for r in pk:
+        out[str(r["order_package_id"])] = {
+            "order_package_id": str(r["order_package_id"]), "strategy": r["strategy_name"],
+            "symbol": r["symbol"], "direction": r["direction"], "account_id": None,
+            "trade_id": None, "source": "order_packages"}
+    for r in tr:
+        d = out.setdefault(str(r["order_package_id"]), {
+            "order_package_id": str(r["order_package_id"]), "strategy": r["strategy_name"],
+            "symbol": r["symbol"], "direction": r["direction"], "source": "trades"})
+        d["account_id"] = r["account_id"]
+        d["trade_id"] = r["id"]
+        d["source"] = "order_packages+trades" if d.get("source") == "order_packages" else d["source"]
+    return {"state": "read", "packages": list(out.values())}
 
 
 def read_calendar(path: Optional[str] = None, now: Optional[datetime] = None) -> Dict[str, Any]:
@@ -551,6 +608,7 @@ def live_review_due(db_path: Optional[str] = None,
         "generated_at": now.isoformat(), "read_state": "could_not_look",
         "reason": None, "open_count": None, "due_count": None, "due": [],
         "reviews_state": None, "events_not_evaluated": [],
+        "open_count_complete": False, "telemetry_less": [],
     }
     try:
         cfg = load_config(config_path)
@@ -583,10 +641,23 @@ def live_review_due(db_path: Optional[str] = None,
 
     open_rows = [r for r in tel.get("rows", []) if r.get("lifecycle") == "open"]
     mech_rows = [r for r in tel.get("rows", []) if r.get("lifecycle") == "unknown_trade_absent"]
-    market = read_market_context(open_rows, cfg, now, db_path, funding_db_path, calendar_path)
-    res = compute_due(open_rows, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows)
+    jo = read_journal_open(db_path)
+    env["journal_open_state"] = jo["state"]
+    env["journal_open_reason"] = jo.get("reason")
+    have = {str(r.get("order_package_id")) for r in open_rows}
+    less = [dict(p, telemetry_absent=True, lifecycle="open")
+            for p in jo.get("packages", []) if p["order_package_id"] not in have]
+    market = read_market_context(open_rows + less, cfg, now, db_path, funding_db_path, calendar_path)
+    res = compute_due(open_rows + less, rv["rows"], cfg, now, market=market, mechanics_rows=mech_rows)
     env.update(res)
-    env["open_count"] = len(open_rows)
+    env["open_count"] = len(open_rows) + len(less)
+    env["open_count_complete"] = jo["state"] == "read"
+    env["telemetry_less"] = [{
+        "order_package_id": r["order_package_id"], "trade_id": r.get("trade_id"),
+        "leg": r.get("strategy"), "account_id": r.get("account_id"), "symbol": r.get("symbol"),
+        "direction": r.get("direction"), "telemetry_state": "telemetry_absent",
+        "events_could_not_look": [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS],
+    } for r in less]
     cal = next(iter(market.values()), {}).get("calendar") if market else None
     env["calendar_state"] = (cal or {}).get("state")
     env["calendar_newest_event"] = (cal or {}).get("newest_event")

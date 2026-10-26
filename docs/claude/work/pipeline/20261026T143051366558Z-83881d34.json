@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-R5NY8N6S-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-6 (session_0158TMJbRQdBS9Wcr5nY8N6S), PR #20347",
+    "rerun": "python3 scripts/ops/desk_scan_packet.py --timeframe 1h --out /tmp/s.json and read history.rows with horizon_bars 48: compare n with n/48 and the sd"
+  },
+  "state": "queued",
+  "what": "Desk scan-packet base rates (scripts/ops/desk_scan_packet.py base_rates) are averaged over OVERLAPPING forward windows: n counts every bar, so n overstates independent samples by up to horizon_bars x, and trending windows dominate (MEASURED in packet DP-20261026T1339Z-scan-1h, population n=202 overlapping 1h-bar forward windows on SLV before the 2026-10-26T13:39Z cutoff: short h48 mean +4.6 R, sd 5.3; the first desk wake discounted it for exactly that). A desk that weighs n and confidence: measured off these rows is over-confident. Fix: report n_independent (n / horizon, or block-sampled) beside n, and say so in DESK-BRIEF 2."
+}

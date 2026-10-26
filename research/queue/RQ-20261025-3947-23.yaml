@@ -143,15 +143,14 @@ related:
 last_dispatched_at: '2026-10-26T05:57:30+00:00'
 grading:
   attested: RULE-RQ20261025394723-MULTINOMIALLOGIT(NUMPY)
-  auto: true
-  confirmatory_run: 1
+  auto: false
   decision_rule_id: RULE-RQ20261025394723-MULTINOMIALLOGIT(NUMPY)
   evidence:
   - research/results/RQ-20261025-3947-23/40241202214.jsonl
-  first_fail: 1 row(s), all measured, all fail
+  - research/results/RQ-20261025-3947-23/40277112416.jsonl
   graded_at: '2026-10-26'
-  grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail
-  rows: 1
+  graded_by: 'research-ops-1447 (hand-graded: the grader read a mixed pair of rows, one measured and one producer_failed duplicate)'
+  needs_review: false
+  reason: 'Run 40241202214 (read_state measured, 5 folds each, all arms ok) read verbatim against the registered rule: numpy_logit minus lgbm_base logloss, CV mean BTC -0.0449, ETH -0.0398, SOL -0.0312; holdout BTC -0.0245, ETH -0.0309, SOL -0.0529. Candidate worse than lgbm_base on the CV mean on EVERY symbol = FAIL. Run 40277112416 is a producer_failed re-fire (no run-manifest.json), not a verdict. Configuration closed: numpy multinomial logit on the six shared features, 1h tail 40000; family linear/logit stays open for other configurations; next test = the remaining learner-family units RQ-20261025-3947-*.'
+  rows: 2
   verdict: fail

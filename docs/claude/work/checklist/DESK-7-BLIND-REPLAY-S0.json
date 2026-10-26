@@ -2,22 +2,33 @@
   "id": "DESK-7-BLIND-REPLAY-S0",
   "title": "Desk: D-S0 blind replay for in-trade + entry review on real-money 2h/4h legs; pre-registered research units",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20339
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: entry-review replay DROPPED; this row = the shared replay harness + D-S0 for in-trade and exit. Entry-generation D-S0 is new row DESK-18-GEN-REPLAY-S0 on this harness.",
+  "note": "[2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: entry-review replay DROPPED; this row = the shared replay harness + D-S0 for in-trade and exit. Entry-generation D-S0 is new row DESK-18-GEN-REPLAY-S0 on this harness. [2026-10-26 lane DESK-7-BLIND-REPLAY-S0, session_01Bp1CwBC4STi9SZC5vKgJWM] Authored 3 pre-registered units in research/queue/blocked/: RQ-20261026-bf56-01 (harness self-check: HOLD replay reproduces the 370 recorded trades' net_r, mask-leak scan, scrambled-label arm), -02 (in-trade vs HOLD / random-timing / best-static), -03 (exit: close/partial_close, same baselines). Population: 4 real-money 2h/4h legs (xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h; MEASURED by parsing config/accounts.yaml at main 38f8bcf8). expected_n 176 decision points (mfe_r>=1.0 of the committed Stage-0 trade lists). HONEST POWER: in-trade MDE 0.21 R at the INFERRED paired sd 1.0 (design's v0 0.4 is not assumed); exit MDE 0.50 R at the MEASURED hold sd 2.353, so small exit effects land INDETERMINATE by design. SCOPE DEVIATION from the lane prompt, deliberate: entry-REVIEW replay is not authored because this row's own note and design 10.3 dropped it (entry generation is DESK-18); the lane prompt's 'entry review' is read as that. Units are blocked on the new row DESK-7B-REPLAY-DRIVER (the driver does not exist). State stays queued until the PR lands; then landed_unproven, closing observation = bf56-01 landing a verdict. [session_01Bp1CwBC4STi9SZC5vKgJWM] Units are in PR #20339 (draft, HOLDS for a human merge: new queue units are not self-landable, E57). Flip to landed_unproven once #20339 merges; closing observation = bf56-01 landing a verdict after DESK-7B-REPLAY-DRIVER. [2026-10-26 lane session_014nTDeLp5G15DaGPpb85cwr] landed_unproven per manager: units merged (#20339). Closes when the first unit (bf56-01 harness self-check) runs on the DESK-7B driver and emits a result. Caveat: registered clause (c) of bf56-01 fails by construction (see DESK-7B-REPLAY-DRIVER note, PR #20349 body) - needs a re-registration decision first.",
   "priority_rank": 9,
-  "updated_at": "2026-10-26T07:10:24Z",
-  "updated_by": "session_012XMr6ve1Lcf35qUU2faEkd",
+  "updated_at": "2026-10-26T15:02:04Z",
+  "updated_by": "session_014nTDeLp5G15DaGPpb85cwr",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "observation": {
+    "what": "the first unit run on scripts/research/desk_replay_driver.py (RQ-20261026-bf56-01 selfcheck) lands a result record",
+    "how_to_check": "ls research/results/RQ-20261026-bf56-01 and read the verdict.json read_state; python3 scripts/research/desk_replay_driver.py selfcheck --out <dir> --fetch reproduces it",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "none: the L-DESK milestone text is owned by the DESK-LDESK-WRITEBACK lane (branch claude/desk-ldesk-writeback); this row adds tooling only and changes no milestone status",
+    "arch": "none: no architecture contract changes; the driver is research tooling and is listed in docs/research/RESEARCH-CAPABILITY-INDEX.md"
+  },
   "_seq": 684
 }

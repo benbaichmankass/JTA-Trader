@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-RESEARCH-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops 2026-10-26 14:47Z, bda2-01 result",
+    "rerun": "grep -n 'XLF\\|XLP\\|XLU' ml/datasets/adapters/yf_symbols.py; grep -n 'fetch_failed' research/results/RQ-20261025-bda2-01/*.jsonl | head -1"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": "2",
+  "what": "[lever] RQ-20261025-bda2-01 lost 3 of its 12 declared cells (XLF, XLP, XLU) to 'no yfinance ticker mapped': they are absent from ml/datasets/adapters/yf_symbols._DEFAULT_TICKER_MAP (path is Tier-2 per check_pr_landing, so research-ops did not edit it). Fix: add XLF, XLP, XLU to the explicit US-ETF tuple (identity mapping, like XLE), then re-run the three cells as a symbol-disjoint confirmation. SPLG also returned a Yahoo 404 in the same run although it is mapped: unverified whether transient; RQ-20261026-47a9-01 retries it."
+}

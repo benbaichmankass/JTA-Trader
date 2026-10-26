@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Read-path fix to src/runtime/live_review_due.py (the token-gated diag route /api/diag/live_review_due): read-only SQLite + file reads, no socket, no order path, not in the trader import closure. Tier-2 by path name (the guard cannot certify src/runtime), and it only takes effect on a web-api deploy, so the manager merges and verifies post-deploy (same landing as LTR-1 #20115 and LTR-1B #20298).",
+  "why": "open set = telemetry UNION journal open order_packages/trades; telemetry-less packages listed with telemetry_state telemetry_absent; tests. Closing observation on row LTR-DUE-TELEMETRY-LESS."
+}
