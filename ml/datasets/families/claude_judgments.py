@@ -426,7 +426,7 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
 
     # ----------------------------------------------------------------- desk
     def _desk_rows(self, comms_root: Path, excluded: Counter, as_of: datetime,
-                   holdout: timedelta, include_t1: bool) -> Iterator[dict]:
+                   holdout: timedelta) -> Iterator[dict]:
         decisions = _read_jsonl(comms_root / "desk" / "decisions.jsonl")
         outcomes: dict[str, list[dict]] = {}
         for o in _read_jsonl(comms_root / "desk" / "outcomes.jsonl"):
@@ -536,7 +536,7 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
 
         emitted: Counter = Counter()
         for gen in (self._ltr_rows(comms_root, journal, excluded, as_of, holdout, include_t1),
-                    self._desk_rows(comms_root, excluded, as_of, holdout, include_t1)):
+                    self._desk_rows(comms_root, excluded, as_of, holdout)):
             for row in gen:
                 emitted[row["kind"]] += 1
                 yield row
