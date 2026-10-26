@@ -1,0 +1,81 @@
+name: desk-scan-packet
+
+# DESK-6-SHADOW-PILOT (design docs/plans/claude-trading-desk-DESIGN.md § 2.3, § 10.2 row 4):
+# the L0 half of the desk loop. Hourly, just after the 1h bar close, build ONE scan packet
+# with the existing builder (scripts/ops/desk_scan_packet.py, DESK-16) and commit it to the
+# append-only `desk/decisions` branch together with the pointer comms/desk/latest_scan.json.
+# A fresh repo-less desk wake (.claude/skills/trading-desk/DESK-BRIEF.md) reads the pointer,
+# judges the packet and appends ONE decision row to the same branch by compare-and-swap.
+#
+# Why a runner and not the VM (DESK-1): the builder already runs from anywhere with the
+# DIAG_READ_TOKEN read path (live-review-wake.yml precedent) and a GitHub-hosted runner is
+# $0 on this public repo; no runtime or timer changes. DESK-1 moves it onto the VM for the
+# 5-min stage.
+#
+# The packet is validated by desk-records-guard INSIDE the builder before it is written;
+# a refused packet fails this run and nothing is pushed. NO HALTING: a failed run is retried
+# by the next hour, and the desk's own report names a stale pointer.
+# Tier 1: read-only diag/public reads, one commit to a data branch; no runtime effect.
+
+on:
+  schedule:
+    - cron: "3 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desk-scan-packet
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet pyyaml pandas
+      - name: Read the desk book from desk/decisions
+        # desk_book = the desk's own pending proposals; they live on the branch, not on main.
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin desk/decisions
+          # Rows land on the branch first; outcomes are computed on main (desk-decisions-mirror.yml),
+          # so main's outcomes.jsonl is the resolved set and only decisions.jsonl comes from the branch.
+          if git show "origin/desk/decisions:comms/desk/decisions.jsonl" > /tmp/decisions.jsonl; then
+            mv /tmp/decisions.jsonl comms/desk/decisions.jsonl
+          else
+            echo "::warning::desk/decisions has no decisions.jsonl; main's copy is used for the desk book"
+          fi
+      - name: Build the scan packet
+        id: build
+        run: |
+          set -euo pipefail
+          python3 scripts/ops/desk_scan_packet.py --timeframe 1h --out /tmp/scan.json | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 scripts/ops/desk_branch.py publish --packet /tmp/scan.json --stage /tmp/stage | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit to desk/decisions (append, never force)
+        run: |
+          set -euo pipefail
+          git config user.name "desk-scan-packet[bot]"
+          git config user.email "desk-scan-packet@users.noreply.github.com"
+          git worktree add /tmp/desk origin/desk/decisions
+          cd /tmp/desk
+          git checkout -B desk/decisions
+          cp -r /tmp/stage/comms .
+          git add comms/desk
+          git commit -q -m "desk: scan packet $(python3 -c 'import json;print(json.load(open("/tmp/stage/comms/desk/latest_scan.json"))["packet_id"])')"
+          for i in 1 2 3 4; do
+            if git push origin desk/decisions; then exit 0; fi
+            sleep $((2 ** i))
+            git fetch --no-tags origin desk/decisions
+            git rebase origin/desk/decisions
+          done
+          echo "::error::could not push the packet to desk/decisions after 4 tries"; exit 1
