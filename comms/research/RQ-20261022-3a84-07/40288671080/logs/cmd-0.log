@@ -1,0 +1,23 @@
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/yfinance/utils.py:568: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  quotes.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/yfinance/utils.py:585: Pandas4Warning: The inplace keyword in DataFrame.set_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  dividends.set_index("date", inplace=True)
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/yfinance/utils.py:587: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  dividends.sort_index(inplace=True)
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/yfinance/multi.py:220: Pandas4Warning: The inplace keyword in DataFrame.rename is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.rename(columns=ctx.isins, inplace=True)
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/yfinance/multi.py:224: Pandas4Warning: The inplace keyword in DataFrame.sort_index is deprecated and will be removed in a future version (PDEP-8).
+See https://pandas.pydata.org/docs/dev/whatsnew/v3.1.0.html#deprecation-inplace for more details.
+  data.sort_index(level=0, axis=1, inplace=True)
+[B] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol TLT --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261022-3a84-07/40288671080/arms/B__trades.jsonl --json comms/research/RQ-20261022-3a84-07/40288671080/arms/B__bt.json --tp-cap-pct 0.099 --tp-r 3.5 --end 2026-10-22
+[DI] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol TLT --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261022-3a84-07/40288671080/arms/DI__trades.jsonl --json comms/research/RQ-20261022-3a84-07/40288671080/arms/DI__bt.json --tp-cap-pct 0.099 --tp-r 3.5 --direction-filter di --end 2026-10-22
+[SL] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.618 --data <data> --symbol TLT --resample 1d --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261022-3a84-07/40288671080/arms/SL__trades.jsonl --json comms/research/RQ-20261022-3a84-07/40288671080/arms/SL__bt.json --tp-cap-pct 0.099 --tp-r 3.5 --direction-filter slope --end 2026-10-22
+{
+ "verdict": "fail",
+ "label": "no_reachable_lever_beats_removed",
+ "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+}
