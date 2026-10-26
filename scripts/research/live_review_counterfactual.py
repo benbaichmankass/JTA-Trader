@@ -339,7 +339,8 @@ def fetch_candles_live(symbol: str, interval: str, limit: int = 1000) -> Optiona
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
             d = json.loads(r.read())
-    except Exception:
+    except (OSError, ValueError) as exc:        # URLError/timeout are OSError; bad JSON is ValueError
+        print(f"live_review_counterfactual: candles {symbol}/{interval} unavailable: {exc!r}", file=sys.stderr)
         return None
     bars = d.get("candles") or []
     return [b for b in bars if all(k in b for k in ("time", "open", "high", "low"))] or None
