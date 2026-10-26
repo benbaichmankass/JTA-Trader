@@ -1,0 +1,113 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "6 crypto USDT symbols of the pull-list UNION (ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT); 25 sampled masked scan packets; 1156 committed Stage-0 trades for cost fidelity",
+  "n": 6,
+  "measurement": {
+    "verdict": "pass",
+    "read_state": "measured",
+    "note": "all four registered clauses hold",
+    "clauses": {
+      "a_no_lookahead": {
+        "ok": true,
+        "packets_checked": 25,
+        "packet_sha_equal_when_future_bars_garbled": 25,
+        "replay_outcomes_checked": 150,
+        "replay_equal_when_past_bars_garbled": 150
+      },
+      "b_mask": {
+        "ok": true,
+        "packets_scanned": 25,
+        "n_leaking": 0,
+        "leaks": [],
+        "probe_positive_control_found_planted_leak": true
+      },
+      "c_cost_fidelity": {
+        "max_abs_dev_R": 1.2984999999986202e-05,
+        "n_compared": 1156,
+        "tol_R": 0.001,
+        "per_leg": [
+          {
+            "leg": "ada_pullback_2h",
+            "state": "compared",
+            "n": 61,
+            "max_abs_dev_R": 1.2708333333312505e-05
+          },
+          {
+            "leg": "trend_donchian_eth_4h",
+            "state": "compared",
+            "n": 208,
+            "max_abs_dev_R": 1.1722736630463693e-05
+          },
+          {
+            "leg": "trend_donchian_eth_prop",
+            "state": "compared",
+            "n": 163,
+            "max_abs_dev_R": 1.2280056434596509e-05
+          },
+          {
+            "leg": "trend_donchian_sol_prop",
+            "state": "compared",
+            "n": 577,
+            "max_abs_dev_R": 1.2984999999986202e-05
+          },
+          {
+            "leg": "trend_donchian_xrp_4h",
+            "state": "compared",
+            "n": 46,
+            "max_abs_dev_R": 1.2365299145382369e-05
+          },
+          {
+            "leg": "trend_donchian_xrp_adx25",
+            "state": "compared",
+            "n": 46,
+            "max_abs_dev_R": 1.2365299145382369e-05
+          },
+          {
+            "leg": "xrp_pullback_2h",
+            "state": "compared",
+            "n": 55,
+            "max_abs_dev_R": 1.1452270620923577e-05
+          }
+        ],
+        "legs_compared": 7,
+        "legs_excluded_policy_differs": 0,
+        "ok": true
+      },
+      "d_planted_policies": {
+        "ok": true,
+        "oracle": {
+          "n": 300,
+          "mean_net_r": 0.729622072141643,
+          "paired_diff_vs_random": 0.8121905143131328,
+          "paired_diff_ci95": [
+            0.6677652677839657,
+            0.9606672952347266
+          ]
+        },
+        "anti_oracle": {
+          "n": 300,
+          "mean_net_r": -1.072525335553714,
+          "paired_diff_vs_random": -0.9885437247210357,
+          "paired_diff_ci95": [
+            -1.0214410455569576,
+            -0.9537900184494116
+          ]
+        },
+        "null_false_positives": 2,
+        "null_reps": 20,
+        "null_false_positive_limit": 3
+      }
+    },
+    "strategy_list_gaps": []
+  },
+  "note": "all four registered clauses hold | ",
+  "data_inputs": [
+    "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+    "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+    "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+    "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+    "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+    "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+  ]
+}
