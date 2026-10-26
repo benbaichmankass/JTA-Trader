@@ -13,10 +13,10 @@
     20163
   ],
   "blocked_on": [],
-  "note": "[2026-10-25 session_01KpCVKE91s6Km3dqFV8dShz] Built: comms/schema/desk_packet.schema.json (packet v3: entry/in_trade/exit block matrix, outcome T1 exit-only, explicit ML absence), comms/schema/desk_decision.schema.json (closed action enum per role, role->packet-kind map, external_context rule, bybit_1 touch records), comms/desk/ (decisions.jsonl, touches.jsonl, packets/; empty), scripts/ci/check_desk_records.py = guard desk-records-guard (sibling; live-review-records-guard unchanged and still green on the 9 real rows) with --self-test (57 planted-bad/good cases), tests/test_desk_records.py. features_at_review projection = check_desk_records.project_features. NOT done / deferred: no generator emits v3 packets yet (live_review_packet.py is still v2; DESK-1/DESK-5 build v3 from it); no desk row exists on main yet. Merged != deployed != observed: this is schema+guard only, nothing to deploy.",
+  "note": "[2026-10-25 session_01KpCVKE91s6Km3dqFV8dShz] Built: comms/schema/desk_packet.schema.json (packet v3: entry/in_trade/exit block matrix, outcome T1 exit-only, explicit ML absence), comms/schema/desk_decision.schema.json (closed action enum per role, role->packet-kind map, external_context rule, bybit_1 touch records), comms/desk/ (decisions.jsonl, touches.jsonl, packets/; empty), scripts/ci/check_desk_records.py = guard desk-records-guard (sibling; live-review-records-guard unchanged and still green on the 9 real rows) with --self-test (57 planted-bad/good cases), tests/test_desk_records.py. features_at_review projection = check_desk_records.project_features. NOT done / deferred: no generator emits v3 packets yet (live_review_packet.py is still v2; DESK-1/DESK-5 build v3 from it); no desk row exists on main yet. Merged != deployed != observed: this is schema+guard only, nothing to deploy. [2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): NOW WRONG IN PART: market_watch enum is veto-shaped (delay_candidate/veto_candidate) and check_desk_records refuses every applied non-tighten action; operator 2026-10-26 withdrew the veto framing. Fix filed as new row DESK-0B-SCHEMA-V2 (scan packet kind, entry_generation role with propose_entry incl. real predictive TP, no size field). This row's landed_unproven closes on its own observation unchanged.",
   "priority_rank": 4,
-  "updated_at": "2026-10-25T20:45:50Z",
-  "updated_by": "session_01KpCVKE91s6Km3dqFV8dShz",
+  "updated_at": "2026-10-26T06:54:29Z",
+  "updated_by": "session_012XMr6ve1Lcf35qUU2faEkd",
   "roadmap": [
     "L-DESK",
     "L-ATM"
