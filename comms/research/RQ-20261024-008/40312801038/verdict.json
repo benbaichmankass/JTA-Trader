@@ -1,0 +1,92 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "1 leg(s) [tqqq_trend_long_1d], 118 committed trades in total; grade=pass_all_seeds, overall=all",
+  "n": 118,
+  "measurement": {
+    "leg_verdicts": {
+      "tqqq_trend_long_1d": "fail"
+    },
+    "grade": "pass_all_seeds",
+    "overall": "all",
+    "cells": 5
+  },
+  "note": "tqqq_trend_long_1d: FAIL: ev_net_usd_per_life <= 0 on at least one seed",
+  "records": [
+    {
+      "verdict": "fail",
+      "read_state": "measured",
+      "population": "tqqq_trend_long_1d: 118 committed trades from comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl (evidence record comms/strategy_evidence/tqqq_trend_long_1d.json -> cost_stack.source); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model prorated",
+      "n": 118,
+      "measurement": {
+        "leg": "tqqq_trend_long_1d",
+        "trades_file": "comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
+        "arms": {
+          "A": {
+            "1": {
+              "ev": -19.22,
+              "ev_se": 0.14,
+              "p_net_positive": 0.0103,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0,
+                "180": 0.0
+              },
+              "rule_v2_verdict": "fail"
+            },
+            "2": {
+              "ev": -19.33,
+              "ev_se": 0.13,
+              "p_net_positive": 0.0085,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0,
+                "180": 0.0
+              },
+              "rule_v2_verdict": "fail"
+            },
+            "3": {
+              "ev": -19.49,
+              "ev_se": 0.12,
+              "p_net_positive": 0.0055,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0,
+                "180": 0.0
+              },
+              "rule_v2_verdict": "fail"
+            },
+            "4": {
+              "ev": -19.43,
+              "ev_se": 0.12,
+              "p_net_positive": 0.0075,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0,
+                "180": 0.0
+              },
+              "rule_v2_verdict": "fail"
+            },
+            "5": {
+              "ev": -19.36,
+              "ev_se": 0.11,
+              "p_net_positive": 0.01,
+              "p_alive_at_horizon": 1.0,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0,
+                "180": 0.0
+              },
+              "rule_v2_verdict": "fail"
+            }
+          }
+        }
+      },
+      "note": "FAIL: ev_net_usd_per_life <= 0 on at least one seed"
+    }
+  ]
+}
