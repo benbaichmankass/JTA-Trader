@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-9AY71UWH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane for PI-20261026-C1PVMNFJ-0002 (trade 6731 root cause)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=300' ; for a slice account package compare meta.sized_qty_by_account[acct] with meta.slice_admission.qty and trades.position_size"
+  },
+  "state": "queued",
+  "what": "OBSERVABILITY GAP (Tier-2 file edit, order path: src/core/coordinator.py ~L2282 and ~L2437, src/units/accounts/risk.py ~L1346): pkg.meta.sized_qty_by_account stores the RiskManager qty BEFORE slice admission, so for a position_model: slices account it disagrees with the qty actually submitted (trade 6731: 11.95 recorded, 4.41 filled) and the proof sweep read it as an unexplained reduction. The binding sizer clamp is also not named: margin cap is only inferable as margin_cap*0.9. PROPOSE (annotation only, no behavior change): after admit_slice set pkg.meta['sized_qty_final_by_account'][acct]=admitted qty, and have risk.py margin_basis_out carry qty_before_margin and margin_bound(bool); coordinator stores both in pkg.meta['sizing_by_account'][acct]. Needs operator OK (order-path files) + a test that the key is present and that qty is unchanged."
+}
