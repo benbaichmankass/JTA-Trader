@@ -110,6 +110,21 @@
     "q1_policy_comparison": {"verdict": "INDETERMINATE | B_better | A_better", "population": {}, "note": "live 0.25R vs shadow 0.5R, paired dR; INDETERMINATE when discordant n < 10 or the 95% interval includes 0"},
     "calibration_by_evidence_source": {},
     "applied_alarm": {"proposes_recommend_mode": false},
+    "hold_vs_close": {"n": 0, "provenance": "estimated"},
+    "calibration": {"_comment": "CLAUDE-GRADE-LOOP: per action/evidence_source stratum; verdict CALIBRATED | OVERCONFIDENT | UNDERCONFIDENT | NO_SKILL | INDETERMINATE (scripts/ops/claude_calibration.py)"},
+    "by_skill_sha": {},
+    "use_rules": {"_comment": "per altering action class: PROPOSE_NARROW | PROPOSE_WIDEN | HOLD_SCOPE; a PROPOSE_* goes in proposed_tweaks[] (rule (a))"},
+    "note": "<= 240 chars"
+  },
+  "desk": {
+    "_comment": "CLAUDE-GRADE-LOOP (§ Desk). `python3 scripts/ops/desk_grade.py --live --json`, pasted. Population first (n decisions by role/action, n proposals priced / expired / awaiting, n gradeable, n no_trade). null (+ an anomalies line) only when the grader could not run.",
+    "population": {"n_decisions": 0, "n_proposals": 0, "n_proposals_priced": 0, "n_priced_gradeable": 0, "n_no_trade": 0},
+    "absolute": {"n": 0, "verdict": "INDETERMINATE | EDGE | NEGATIVE"},
+    "vs_random": {"n": 0, "verdict": "INDETERMINATE | EDGE | NEGATIVE"},
+    "system": {"state": "read | could_not_look | not_requested"},
+    "calibration": {},
+    "by_skill_sha": {},
+    "promotion_gate": {"verdict": "NOT_YET | ELIGIBLE_TO_PROPOSE", "failing": []},
     "note": "<= 240 chars"
   },
   "anomalies": [

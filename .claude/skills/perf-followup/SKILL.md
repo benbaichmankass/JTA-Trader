@@ -143,6 +143,25 @@ the reviewer keeps landing on, and what `delta_r` they earned. Two hooks:
   say `anecdote` and end in an `accruing` unit, not a verdict. Carry each pattern found on one leg to its siblings
   in Track 3.
 
+**Lessons → briefs (CLAUDE-GRADE-LOOP, operator 2026-10-26: "making sure those lessons are impacting how
+we use the Claude decisions").** Read the review's `live_review{}` and `desk{}` blocks (or re-run
+`live_review_grade.py --live --json` and `desk_grade.py --live --json`). Each **graded** Claude weakness
+(a stratum whose verdict is `OVERCONFIDENT`, `NO_SKILL`, `NOT_MONOTONE`, `NEGATIVE`, or a use rule reading
+`PROPOSE_NARROW`) becomes ONE versioned amendment of the contract that produced the calls:
+
+- live-trade-review `SKILL.md` / `REVIEWER-BRIEF.md`, or trading-desk `DESK-BRIEF.md`;
+- made in a PR (never a silent edit; one amendment per PR so its effect is separable), whose diff also adds
+  one line to that skill's `AMENDMENTS.md`: `new_skill_sha` (`git hash-object <file>` after the edit),
+  `prior`, `basis: <grader + window>, n=<k> <stratum>`, `change`, `PR #`;
+- the amendment is graded by the NEXT review's `by_skill_sha` split: the new version against the prior one on
+  the same stratum. Do not amend the same stratum again until the new version has ≥ 10 graded calls in it
+  (`claude_calibration.MIN_N`), or the effect of the first amendment is unmeasurable.
+
+`INDETERMINATE` strata do not amend a brief: they end in an `accruing` note naming what n would answer them.
+A `PROPOSE_WIDEN` / `ELIGIBLE_TO_PROPOSE` is not a brief change: it is a mandate-scope proposal for the
+operator (`docs/plans/ml-claude-distillation-DESIGN.md` § 3.7 rules (a) and (b)). The weekly audit (C13)
+fails any contract version that has no `AMENDMENTS.md` line with an `n=`.
+
 **Output: a strengths/weaknesses list of the SYSTEM**, not of individual trades. Each
 lesson is one row with: `id` (`L1…`), `kind: strength | weakness`, `claim` (one sentence),
 `evidence` (**trade ids / order_package_ids / record paths** — a lesson with no cited id

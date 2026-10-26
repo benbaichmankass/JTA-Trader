@@ -237,6 +237,7 @@ These are on top of the LTR-2 schema:
 - `account_reads`: `[{"account_id", "account_class", "read": would_apply|refused_by_account_risk|unknown|no_action, "evidence"}]`. There is one entry per account carrying the package, and it is required on every review.
 - `trigger.event`: an L0 event name (design § 2). When run by hand, use `manual`. For the first live run of a skill version, use `first_live_run`. For a closed package priced as practice, use `dry_rehearsal`.
 - `packet_sha`: sha256 of the decision packet (§ 1b); the validator checks it against `comms/live_review/packets/<review_id>.json`.
+- `skill_sha`: the git blob sha of the contract you followed: this `SKILL.md` for a repo reviewer (`git rev-parse HEAD:.claude/skills/live-trade-review/SKILL.md`), `REVIEWER-BRIEF.md` for a repo-less one. `/performance-review` splits every grade by it so a contract amendment's effect is measurable (CLAUDE-GRADE-LOOP); a change to either file is logged in [`AMENDMENTS.md`](AMENDMENTS.md) with its graded basis.
 - `model`: the model TIER from the manager's model table (e.g. `opus-tier`), never a model identifier: the repo is public and identifiers stay out of pushed artifacts. `session`: your session id.
 
 ## 5. What this skill is not

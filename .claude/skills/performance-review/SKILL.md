@@ -843,6 +843,54 @@ Report, from the generator's output (do not hand-compute):
 A tighten that is `priced` on a `replay_matches_realised` row is solid; one on an `unvalidated` row (an applied
 call has no untouched realised path to check) is flagged as such. Say which you are quoting.
 
+**CLAUDE-GRADE-LOOP additions (operator 2026-10-26: "grading of Claude decisions … should be part of the
+performance review").** The same generator also reports, and you quote each with its n:
+
+6. **Hold vs close-at-review** (`hold_vs_close`): a hold changes no path, so it is graded against what it
+   rejected, closing at the review's mark. ESTIMATED and conservative against the reviewer (the close side
+   carries no cost).
+7. **Calibration by action class** (`calibration`, rules in `scripts/ops/claude_calibration.py`): per
+   `tighten_sl/…` and `hold/…` stratum, Brier vs the base-rate reference, skill, the over-confidence gap,
+   and a verdict `CALIBRATED | OVERCONFIDENT | UNDERCONFIDENT | NO_SKILL | INDETERMINATE`. An
+   `OVERCONFIDENT` stratum is a weakness row for `/perf-followup` Track 2 (it becomes a brief amendment).
+8. **By contract version** (`by_skill_sha`): every figure split by the `skill_sha` the reviewer recorded.
+   Never quote a pooled figure across versions when two versions each have priced calls.
+9. **Use rules** (`use_rules`, the generalised alarm): per altering action class, `PROPOSE_NARROW` /
+   `PROPOSE_WIDEN` / `HOLD_SCOPE`. A `PROPOSE_*` goes in `proposed_tweaks[]` as a mandate-scope proposal for
+   the operator (rule (a) in `docs/plans/ml-claude-distillation-DESIGN.md` § 3.7); never a flip.
+
+## Desk (CLAUDE-GRADE-LOOP — the desk is graded like the reviewer)
+
+Every desk decision (`comms/desk/decisions.jsonl`) is graded against its own priced outcome, against a
+random-entry baseline from its own packet, and against what the **system** traded in the same window.
+**Run it every review:**
+
+```bash
+python3 scripts/ops/desk_grade.py --live --since <window_start>            # the markdown section
+python3 scripts/ops/desk_grade.py --live --since <window_start> --json     # paste into desk{}
+```
+
+It projects over the canonical records (decisions ⨝ `comms/desk/outcomes.jsonl` on `decision_id` ⨝ the
+decision's packet); it keeps no store. `--live` adds the system leg read (the journal via diag); without it
+the system row reads `not_requested`, and a failed read reads `could_not_look`, never 0.
+
+**State the population first:** `n decisions by role/action → n proposals → n priced / expired unfilled /
+awaiting → n out-of-sample and gate-eligible → n no_trade (not computable until DESK-20)`. Then report, from
+the generator's output (do not hand-compute):
+
+1. **The three comparisons**, each with n, mean, CI95 and verdict: desk proposals net of cost; desk minus the
+   packet's random-entry baseline (paired, nearest horizon; state the R-unit limit the generator prints);
+   desk minus the system legs on the same universe and window (unpaired). `EDGE` needs n ≥ 30 and a 95%
+   interval excluding 0, out of sample.
+2. **Calibration**: `p_hit` vs TP hit (Brier, reference, gap, verdict); the `confidence` category vs net R
+   (`MONOTONE` / `NOT_MONOTONE` / `INDETERMINATE`); the optimism gap `expected_r_net − realised`.
+3. **By brief version** (`skill_sha` = the DESK-BRIEF.md blob): never pooled.
+4. **Promotion gate (rule (b))**: `NOT_YET (failing …)` or `ELIGIBLE_TO_PROPOSE`. Eligible is a proposal in
+   `proposed_tweaks[]` for the operator, never a stage change.
+
+n=0 priced is reported as n=0. A `no_trade`-only window grades nothing yet; say that, and say which
+DESK-20 baseline would grade it.
+
 ## Output
 
 Emit a single JSON object conforming to

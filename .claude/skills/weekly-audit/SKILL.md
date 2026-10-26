@@ -179,6 +179,19 @@ checker, **do not build a parallel mechanism**. Positive control: show the probe
 consumed file. Worked example: 2026-10-26, that checker watched `comms/macro/econ_calendar_snapshots.jsonl`
 (fresh) while `config/economic_calendar.yaml` (consumed) sat stale from 2026-07-30. Related: C10.
 
+### C13. The Claude grading loop ran (CLAUDE-GRADE-LOOP, operator 2026-10-26)
+
+`python3 scripts/ops/check_claude_grade_loop.py --live` - **re-run, never quote**; report each check's
+population line. Three checks: every live-trade-review row on a trade closed > 1 day ago has an
+`outcomes.jsonl` row; every desk decision past its grading window has an outcome row (a `not_computable`
+row with its reason counts); every version of live-trade-review `SKILL.md` / `REVIEWER-BRIEF.md` and
+`DESK-BRIEF.md` committed since 2026-10-27 has an `AMENDMENTS.md` line with a graded basis stating `n=`.
+Exit 2 (`could_not_look`: no journal, or a shallow clone younger than the window) is not a pass: deepen
+(`git fetch --deepen=2000 origin`) or fix the relay, and re-run. Each `missing_outcome` id or unlogged
+version becomes a row (the fix for a missing outcome is `live_review_grade.py --live --write-outcomes` /
+`desk_outcomes.py`, then find why the review did not run it). Positive control:
+`python3 scripts/ops/check_claude_grade_loop.py --self-test`.
+
 ### C9. RECURRENCE — the anti-treadmill step (never skipped)
 
 For every finding that **closed in the last 7 days** (checklist rows moved to `done`, pipeline `done`):
@@ -318,7 +331,7 @@ And by hand, each answered yes/no in the PR body:
 1. Every finding in the report's table resolves to a row, a PI id, a unit, or a merged/in-PR fix — no
    finding is prose-only.
 2. Every finding has a `detector` or an explicit "no detector possible because …".
-3. C1–C11 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
+3. C1–C13 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
 4. Every "0 violations" has a positive control stated beside it.
 5. The deep pass for this ISO week ran, or the report names why not and the row that carries it.
 6. Every row you touched has a TRUE state (`landed_unproven` ≠ `done`, and names the closing observation).

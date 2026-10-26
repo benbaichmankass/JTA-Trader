@@ -165,6 +165,75 @@ The rubric script gets a `RUBRIC_VERSION` constant, emitted on every row. Prompt
 
 ---
 
+### 3.7 Use rules: measured skill decides how Claude's calls are used (CLAUDE-GRADE-LOOP, 2026-10-26)
+
+Operator, 2026-10-26 ~17:35Z (manager relay, verbatim): *"there is a way of testing the Claude results
+themselves, right? … grading of Claude decisions as well, which should be part of the performance review. And
+like also making sure that, those lessons are impacting how we use the Claude decisions, how the MLs weight
+those, and how we use that in training."* And 2026-10-26 ~06:28Z (verbatim, MD-LIVE-TIGHTEN-SL amendment
+source): *"the models will decide what weight to give that, and obviously they should be giving more weight
+to the Claude answers as Claude gives more and more correct answers."*
+
+The graders are `scripts/ops/live_review_grade.py` (LTR) and `scripts/ops/desk_grade.py` (desk), with the
+shared calibration rules in `scripts/ops/claude_calibration.py`. Their numbers feed three rules. **(a) and (b)
+are PROPOSALS for the operator** (a session proposes a mandate; only the operator grants one). **(c) is
+Tier-1 ML-pipeline policy**, enforced in code and lint below. Every rule was registered before any run read it.
+
+**(a) LTR apply scope follows graded `delta_r`, per action class.** Proposed amendment to
+`MD-LIVE-TIGHTEN-SL`, to add verbatim (the operator grants; `config/mandates.yaml` is not edited by this design):
+
+```yaml
+    review_rule: >-
+      Every /performance-review reads live_review_grade.py use_rules and calibration. Per altering action
+      class over its priced calls (applied + recommended-only): n >= 20 and the 95% CI of mean delta_r
+      entirely < 0 => propose narrowing that class (and, for the judgement basis, the evidence_source
+      stratum) to apply_mode recommend; entirely > 0 with calibration not OVERCONFIDENT => propose the next
+      scope step for that class (e.g. tp_revise under its own mandate). Otherwise scope holds. A
+      calibration stratum `tighten_sl/judgement` reading OVERCONFIDENT at n >= 10 => propose that the
+      judgement basis apply only at judgement_confidence >= the lowest bucket whose realised hit rate
+      >= 0.5. Each is a proposal in proposed_tweaks[] and an ask_operator pipeline item; never a flip.
+```
+
+This generalises the existing alarm (net `delta_r < 0` over ≥ 20 priced applies → propose `apply_mode:
+recommend`), which stays as is.
+
+**(b) The desk earns live influence only on graded edge vs the system AND a baseline, net of cost, out of
+sample.** Proposed rule for the desk ladder (`docs/plans/claude-trading-desk-DESIGN.md` § 8; row DESK-13).
+Edge is decided OFFLINE, never by waiting (CLAUDE-RULES § "Promotion evidence — offline edge, live
+mechanics"), so this is an evidence rule, not a soak and not a calendar gate:
+- a request to move the desk from shadow to ANY live-influence stage (an entry route, a veto, a sizing
+  input) reaches the operator only when the out-of-sample evidence beats BOTH a random-entry baseline AND the
+  strategy legs, net of the full cost stack. The primary evidence is the D-S0 blind replay (DESK-7 / DESK-18:
+  random-entry and strategy baselines registered there). The graded shadow record counts too, because each
+  shadow proposal is a forward replay on candles the judge never saw: `desk_grade.py` reading
+  `promotion_gate: ELIGIBLE_TO_PROPOSE` (absolute, vs-random paired, vs-system, each `EDGE` at n ≥ 30 with a
+  95% interval excluding 0, `pre_cutoff: false` and `gate_eligible` only) is a sufficient alternative;
+- whichever path reaches its n first decides. Neither is a reason to wait: if neither has the n, the task is
+  to produce it (run the D-S0 unit), per the operator's 2026-09-29 rule ("getting that data becomes a task");
+- once the desk has live influence, `desk_grade.py` reading `NEGATIVE` on `vs_random` or `vs_system` is the
+  demotion signal, brought to the operator as a derisk proposal (Prime Directive: per trade, nothing halts).
+The DESK-13 mandate proposal for desk-generated entries should carry this as its `fires_when` clause.
+
+**(c) ML: Claude-labelled rows are weighted by measured skill, and Claude is a feature only after OOS edge.**
+- **Weight.** A row whose label is a Claude call (a teacher label) is weighted by its CALL CLASS's graded
+  skill, never by the row's own stated confidence: `scripts/ops/claude_calibration.py::call_class_weight`
+  maps the grader's stratum to **0.0** (n < 20, no interval, or an interval that includes or sits below 0: no
+  demonstrated skill, train on the outcome label instead), **0.5** (interval > 0 but `OVERCONFIDENT`) or
+  **1.0** (interval > 0, not over-confident). Weight rises as Claude is measured right, as the operator asked,
+  and falls to 0 the moment it is measured wrong.
+- **Lint (`claude-judgments-guard`, every PR).** W1: a Claude judgment column (e.g. `judgement_confidence`)
+  named in any manifest's `sample_weight` is refused. W2: a `claude_judgments` manifest whose TARGET is a
+  judgment column is refused until `ml/trainers/sample_weights.py` applies `call_class_weight` (not wired yet:
+  a declared weight nothing applies is worse than none; outcome targets `delta_r` / `label_net_r` are
+  unaffected). W3: a `claude_*` / `ltr_*` / `desk_*` FEATURE in any family is refused unless
+  `claude_feature_gate.evidence` names a committed record with `verdict: EDGE` and `out_of_sample: true`.
+- **Claude as a feature** (operator Q2, 2026-10-25, verbatim *"Allow as a feature later"*): only once a model
+  using it proves net-R edge out of sample (purged WF-CV, `ml/promotion/oos_edge.py`) over the same model
+  without it. W3 is that gate in code.
+
+Not built by this section (owned by row CLAUDE-GRADE-LOOP): wiring `call_class_weight` into
+`compute_sample_weights` (which lifts W2), and the DESK-20 baseline bracket for `no_trade` decisions.
+
 ## 4. Pipeline: the exact mechanism
 
 ### 4.1 Overview

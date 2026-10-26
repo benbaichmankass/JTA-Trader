@@ -23,6 +23,26 @@ registered here, BEFORE any run reads it:
 CALIBRATION. For priced tighten_sl calls carrying ``judgement_confidence`` (the probability the call beats
 holding): success = ``delta_r > 0``; Brier score and a reliability table by confidence bucket, stratified by
 ``evidence_source``. Below ``CAL_MIN_N`` priced calls the stratum reads INDETERMINATE.
+
+CLAUDE-GRADE-LOOP additions (rules registered here, before any run reads them):
+* HOLD vs CLOSE-AT-REVIEW. A ``hold`` call changes no path, so it has no delta against holding; what it
+  rejected is closing. For a hold whose trade has CLOSED, ``delta_hold_r = net_r - state.open_r``
+  (ESTIMATED, method ``hold_vs_close_at_mark_v1``). Stated bias: the close-now side is the gross mark at
+  review and is charged NO cost, while ``net_r`` carries the full stack, so the delta UNDER-states every
+  hold by about one round-trip cost -- conservative against the reviewer, never flattering.
+* CALIBRATION BY ACTION CLASS (``calibration``): tighten_sl (success = ``delta_r > 0``) and hold (success =
+  ``delta_hold_r > 0``), each stratified by ``evidence_source``, through ``claude_calibration.probability``
+  (Brier, reference Brier, skill, over-confidence gap; verdict rules live there).
+* BY BRIEF VERSION (``by_skill_sha``): every figure above split by the review's ``skill_sha`` (the blob sha
+  of the contract the reviewer followed: live-trade-review SKILL.md for a repo reviewer -- MEASURED
+  2026-10-26, recorded 76866a39 = SKILL.md at b21f6fb9 -- or REVIEWER-BRIEF.md for a repo-less one), so an
+  amendment's effect is measurable. Versions are never pooled silently; ``unrecorded`` is its own bucket.
+* USE RULES (``use_rules``), the generalised apply alarm, one per altering action class over its priced
+  calls (applied and recommended-only pooled: either way ``delta_r`` measures the call):
+  n < ``USE_MIN_N`` -> ``HOLD_SCOPE`` (INDETERMINATE); 95% CI of mean ``delta_r`` entirely < 0 ->
+  ``PROPOSE_NARROW`` (the class goes recommend-only); entirely > 0 AND that class's calibration is not
+  OVERCONFIDENT -> ``PROPOSE_WIDEN`` (a candidate for the next scope step); else ``HOLD_SCOPE``.
+  Every verdict is a PROPOSAL for the operator (mandates are granted, never self-granted).
 """
 from __future__ import annotations
 
@@ -41,9 +61,13 @@ sys.path.insert(0, str(REPO / "scripts" / "research"))
 
 import live_review_counterfactual as cf  # noqa: E402
 
+sys.path.insert(0, str(REPO / "scripts" / "ops"))
+import claude_calibration as cal  # noqa: E402
+
 Q1_MIN_DISCORDANT = 10
 CAL_MIN_N = 10
 ALARM_MIN_APPLIES = 20
+USE_MIN_N = 20
 BUCKETS = ((0.0, 0.5), (0.5, 0.7), (0.7, 0.9), (0.9, 1.0001))
 _T95 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
         11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131, 16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093,
@@ -127,6 +151,90 @@ def calibration(results: List[dict], reviews_by_id: Dict[str, dict]) -> Dict[str
     return out
 
 
+def hold_vs_close(results: List[dict], reviews_by_id: Dict[str, dict]) -> Dict[str, float]:
+    """review_id -> ``delta_hold_r`` (ESTIMATED) for every hold call whose trade has closed."""
+    out: Dict[str, float] = {}
+    for r in results:
+        if r["action"] != "hold" or not r.get("outcome"):
+            continue
+        open_r = cf._num((reviews_by_id[r["review_id"]].get("state") or {}).get("open_r"))
+        net_r = cf._num(r["outcome"].get("net_r"))
+        if open_r is not None and net_r is not None:
+            out[r["review_id"]] = round(net_r - open_r, 8)
+    return out
+
+
+def _cal_points(results: List[dict], reviews_by_id: Dict[str, dict], hold_d: Dict[str, float]) -> List[tuple]:
+    """(action, evidence_source, skill_sha, confidence, success) for every graded call carrying a confidence."""
+    pts = []
+    for r in results:
+        rv = reviews_by_id[r["review_id"]]
+        rec = rv.get("recommendation") or {}
+        conf = cf._num(rec.get("judgement_confidence"))
+        if conf is None:
+            continue
+        if r["action"] == "tighten_sl" and r["state"] == "priced":
+            d = r["outcome"]["delta_r"]
+        elif r["action"] == "hold" and r["review_id"] in hold_d:
+            d = hold_d[r["review_id"]]
+        else:
+            continue
+        pts.append((r["action"], rec.get("evidence_source") or "unknown", rv.get("skill_sha"), conf,
+                    1.0 if d > 0 else 0.0))
+    return pts
+
+
+def calibration_by_action(points: List[tuple]) -> Dict[str, Any]:
+    strata: Dict[str, List[tuple]] = defaultdict(list)
+    for act, src, _sha, c, y in points:
+        strata[f"{act}/{src}"].append((c, y))
+        strata[f"{act}/all"].append((c, y))
+    return {k: cal.probability(v) for k, v in sorted(strata.items())}
+
+
+def by_skill_sha(reviews: List[dict], results: List[dict], hold_d: Dict[str, float], points: List[tuple]) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    res_by_id = {r["review_id"]: r for r in results}
+    for sha in sorted({rv.get("skill_sha") or "unrecorded" for rv in reviews}):
+        rvs = [rv for rv in reviews if (rv.get("skill_sha") or "unrecorded") == sha]
+        rs = [res_by_id[rv["review_id"]] for rv in rvs if rv["review_id"] in res_by_id]
+        pr = [r["outcome"]["delta_r"] for r in rs if r["state"] == "priced" and r["action"] in cf.ALTERING]
+        hd = [hold_d[r["review_id"]] for r in rs if r["review_id"] in hold_d]
+        first = min(rv["reviewed_at"] for rv in rvs)
+        out[sha] = {"n_reviews": len(rvs), "first_reviewed_at": first,
+                    "altering_priced": _stats(pr), "hold_vs_close_graded": _stats(hd),
+                    "calibration": cal.probability((c, y) for _a, _s, s, c, y in points if (s or "unrecorded") == sha)}
+    return out
+
+
+def _ci95(xs: List[float]) -> Optional[List[float]]:
+    if len(xs) < 2:
+        return None
+    m, sd = statistics.fmean(xs), statistics.stdev(xs)
+    half = _t95(len(xs) - 1) * sd / math.sqrt(len(xs))
+    return [round(m - half, 4), round(m + half, 4)]
+
+
+def use_rules(results: List[dict], cal_by_action: Dict[str, Any]) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    for act in cf.ALTERING:
+        xs = [r["outcome"]["delta_r"] for r in results if r["action"] == act and r["state"] == "priced"]
+        ci = _ci95(xs)
+        row: Dict[str, Any] = {**_stats(xs), "ci95": ci, "n_applied": sum(1 for r in results if r["action"] == act
+                                                                           and r["state"] == "priced" and r["applied"])}
+        verdict_cal = (cal_by_action.get(f"{act}/all") or {}).get("verdict", "")
+        if len(xs) < USE_MIN_N or ci is None:
+            row["verdict"] = f"HOLD_SCOPE (INDETERMINATE: n={len(xs)} < {USE_MIN_N})"
+        elif ci[1] < 0:
+            row["verdict"] = "PROPOSE_NARROW"
+        elif ci[0] > 0 and verdict_cal != "OVERCONFIDENT":
+            row["verdict"] = "PROPOSE_WIDEN"
+        else:
+            row["verdict"] = "HOLD_SCOPE"
+        out[act] = row
+    return out
+
+
 def grade(reviews: List[dict], results: List[dict]) -> Dict[str, Any]:
     by_id = {r["review_id"]: r for r in reviews}
     pop = {"n_reviews": len(reviews), "n_packages": len({r["order_package_id"] for r in reviews}),
@@ -155,8 +263,16 @@ def grade(reviews: List[dict], results: List[dict]) -> Dict[str, Any]:
              "rule": f"net dR < 0 over >= {ALARM_MIN_APPLIES} priced applies => next review proposes apply_mode: recommend (a proposal, never a flip)"}
     fid = Counter(r["outcome"]["replay_fidelity"] for r in priced if r.get("outcome"))
     open_replays = [{"review_id": r["review_id"], "leg": r["leg"], "to_date": r["to_date"]} for r in cnp if r.get("to_date")]
+    hold_d = hold_vs_close(results, by_id)
+    pts = _cal_points(results, by_id, hold_d)
+    cba = calibration_by_action(pts)
     return {
         "population": pop, "per_action_class": per_action, "q1_policy_comparison": q1_comparison(results, by_id),
+        "hold_vs_close": {"method": "hold_vs_close_at_mark_v1", "provenance": "estimated",
+                          "bias": "close-now side charged no cost: understates every hold by ~one round-trip cost",
+                          **_stats(list(hold_d.values()))},
+        "calibration": cba, "by_skill_sha": by_skill_sha(reviews, results, hold_d, pts),
+        "use_rules": use_rules(results, cba),
         "calibration_by_evidence_source": calibration(results, by_id), "applied_alarm": alarm,
         "replay_fidelity": dict(fid),
         "touched_packages": sorted({r["order_package_id"] for r in results if r["applied"]}),
@@ -196,6 +312,26 @@ def render(g: Dict[str, Any], window: str) -> str:
         L.append("")
     else:
         L += ["**Calibration:** no priced tighten call carries a `judgement_confidence` yet (n=0).", ""]
+    h = g["hold_vs_close"]
+    L += [f"**Hold vs close-at-review** ({h['provenance']}, {h['method']}; {h['bias']}): n={h['n']}, mean dR {h['mean_dr']}, "
+          f"hit {h['hit_rate']}.", ""]
+    L.append("**Calibration by action class** (claude_calibration rules; success = the call beat its alternative):")
+    if g["calibration"]:
+        for k, c in g["calibration"].items():
+            L.append(f"- {k}: n={c['n']}, Brier {c['brier']} vs ref {c['brier_ref']}, skill {c['skill']}, "
+                     f"over-confidence gap {c['overconfidence_gap']} -> **{c['verdict']}**")
+    else:
+        L.append("- no graded call carries a `judgement_confidence` yet (n=0).")
+    L += ["", "**By contract version** (`skill_sha`: SKILL.md / REVIEWER-BRIEF.md blob; never pooled):"]
+    for sha, v in g["by_skill_sha"].items():
+        L.append(f"- `{sha[:8]}` (from {v['first_reviewed_at'][:16]}): {v['n_reviews']} reviews, altering priced "
+                 f"n={v['altering_priced']['n']} mean dR {v['altering_priced']['mean_dr']}, hold graded "
+                 f"n={v['hold_vs_close_graded']['n']} mean {v['hold_vs_close_graded']['mean_dr']}, calibration "
+                 f"{v['calibration']['verdict']}")
+    L += ["", "**Use rules** (proposals only; the operator grants scope):"]
+    for act, u in g["use_rules"].items():
+        L.append(f"- {act}: n={u['n']} (applied {u['n_applied']}), mean dR {u['mean_dr']}, CI95 {u['ci95']} -> **{u['verdict']}**")
+    L.append("")
     L += [f"**Applied-action alarm:** {al['applied_priced']} priced apply(ies), net dR {al['net_delta_r']}; "
           f"proposes recommend mode: {al['proposes_recommend_mode']}. Replay fidelity: {g['replay_fidelity'] or 'n/a'}.",
           f"**Touched packages** ({len(g['touched_packages'])}): split these from untouched ones in every live-vs-backtest verdict."]
