@@ -189,7 +189,7 @@ Packet v3 (`comms/schema/desk_packet.schema.json`, DESK-0) has `entry`, `in_trad
 | block | scan (new) |
 |---|---|
 | `meta` | as v3, with `info_cutoff_at` |
-| `universe[]` | per symbol: venue, tradable-by-account-class, last close, ATR, HTF trend, regime cell, funding, distance to recent swing levels, session / calendar window, spread read **with a read state**. The universe is the symbols that some account's data pull already fetches (`_resolve_tick_symbols`'s union), so the desk can only propose what the system can trade and price |
+| `universe[]` | per symbol: venue, tradable-by-account-class, last close, ATR, HTF trend, regime cell, funding, distance to recent swing levels, session / calendar window, spread read **with a read state**. **The universe is anything the venues list** (DECIDED, § 11). It has two tiers. Symbols that some account already pulls (`_resolve_tick_symbols`'s union) get the full block. Every other venue-listed symbol gets a lightweight row (ticker, 24 h volume, spread) so the desk can nominate it. A nominated symbol is onboarded (§ 3.9) before a proposal on it can be priced or traded |
 | `system_book[]` | the strategies' open packages and **near-signals** (legs within one bar of a signal), so "a trade the system isn't finding" is checkable |
 | `desk_book[]` | the desk's own open trades and pending proposals |
 | `history` | per symbol, the base rates the desk needs to price a bracket: the distribution of forward R at the declared horizon, net of the full cost stack, from the same Stage-0 data (`execution_costs.resolve_cost_policy()`) |
@@ -475,6 +475,29 @@ On a `claude_desk` trade, the desk's in-trade and exit decisions **are the leg's
   If the desk session is down, a desk trade runs to its bracket. That is not a halt and it is not
   unmanaged: the bracket is the plan.
 
+### 3.9 Onboarding a venue-listed symbol (Q1 DECIDED: *"Anything the venues list"*)
+
+A desk proposal on a symbol is **priced and traded only once all five hold**. Until then it is recorded
+as `propose_entry` with `onboarding: pending`, and it is graded by replay once candles exist:
+
+1. **Candles are pulled.** The symbol is added to the account's `config/accounts.yaml::symbols` list.
+   That list is a purely additive data-pull list, not a gate (CLAUDE.md § two execution gates), and
+   history is backfilled far enough for the scan packet's forward-R base rates.
+2. **A cost policy resolves.** `execution_costs.resolve_cost_policy()` returns fee, slippage and
+   (perps) funding for the symbol. A venue-aware default is enough to replay; a symbol-specific
+   measured slippage is preferred before real money, and `MD-PROMOTE-S1-S2`'s cost check applies.
+3. **It has a roster home.** An account carrying `claude_desk` can trade the instrument: venue
+   metadata (tick size, minimum size, contract type) reads cleanly, and for prop, the firm's instrument
+   list allows it.
+4. **The TP doctrine can be met.** The packet's `history` block has enough bars for a predictive
+   target with a stated `basis`.
+5. **The scan packet carries the full block for it** from the next build.
+
+Row `DESK-26-SYMBOL-ONBOARD` (later phase) makes this automatic for a nominated symbol: it opens the
+pull-list PR, backfills, resolves and records the cost policy, and checks venue metadata. A failure
+on any step is a per-symbol refusal with a reason, retried, with one flag if it persists. It never
+blocks the desk.
+
 ---
 
 ## 4. Teacher → student: how the system's models replace Claude
@@ -529,13 +552,13 @@ instead of R per trade so a policy cannot look better by holding longer or tradi
 |---|---|---|
 | **candidate → S-shadow** | the manifest trains; § 3.5 leakage tests pass; the source is CJ-4 qualified | reported only |
 | **S-shadow → S-advisory** | over n ≥ 150 out-of-sample decisions (the CJ-4 floor; INFERRED adequate for a sign test, not for a size estimate): student net R per capital-day **> 0**, CI excluding 0, **and** not worse than the role's baseline (entry: no-trade and the strategies' own signals on the same windows; in-trade: always-hold and the leg's best static trail) | reported. A student that agrees with Claude but loses money fails; one that disagrees and wins passes |
-| **S-advisory → S-drives** | over n ≥ 300 out-of-sample decisions (the ML-D2 label wall), with the student's leg having passed its own D-S0 and mechanical soak: student net R per capital-day **≥ Claude's on the same packets minus a non-inferiority margin of 0.02 R per capital-day** (proposed; § 11 Q2), CI on the difference excluding the margin, in ≥ 2/3 folds; and live cost fidelity on the student's soak trades within the armed `cost_tolerance_bps` | reported. If agreement is high and the margin passes, the hand-off costs nothing; if agreement is low and the student still passes, the student has found something Claude does not |
+| **S-advisory → S-drives** | over at least the ML-D2 label wall (n ≥ 300) and in practice the n the precision floor below implies, with the student's leg having passed its own D-S0 and mechanical soak: student net R per capital-day **≥ Claude's on the same packets: margin 0, the student must match or beat Claude** (DECIDED, § 11 Q2). Concretely: the point estimate of the paired difference (student − Claude) is ≥ 0 overall and in ≥ 2/3 folds, **and** the difference is measured precisely enough that "match" means something: a 95% CI half-width ≤ 0.02 R. INFERRED n: at a paired per-decision sd of ~0.4 R (v0's in-trade assumption), half-width 1.96 · 0.4 / √n ≤ 0.02 gives **n ≈ 1,540 paired out-of-sample decisions** per role, about 5× the 300-label wall. That is why § 4C's offline labels matter; and live cost fidelity on the student's soak trades within the armed `cost_tolerance_bps` | reported. If agreement is high and the margin passes, the hand-off costs nothing; if agreement is low and the student still passes, the student has found something Claude does not |
 | **S-drives → (Claude retired from the role)** | none beyond S-drives: Claude stays as the ρ audit until the operator says otherwise | the audit's agreement and outcome gap are the **drift** monitor; a student whose audited outcome gap turns negative over the last 50 audited packets is proposed for demotion back to S-advisory (a proposal, never a self-flip) |
 
-**Why non-inferiority, not superiority, for the last step.** The point of the hand-off is to remove
-the cost and latency of Claude (§ 5: a student can act at 1–5 min where a session cannot). A student
-that matches Claude net of cost is the win. Requiring it to beat Claude would keep Claude in the loop
-for the rest of its life.
+**Why "match or beat" is not a superiority test.** The operator set the margin at zero: the student
+must match or beat Claude. It is not required to *prove* it beats Claude (a CI lower bound > 0), because a
+student that truly matches would then fail forever and Claude would never leave the loop. The precision
+floor (half-width ≤ 0.02 R) stops a noisy student from "matching" by luck.
 
 **Order of hand-off (INFERRED from label volume).** In-trade first: LTR rows accrue on every open
 package and the label is computed, not judged. Entry generation second: it needs n ≥ 300 proposals
@@ -1021,7 +1044,8 @@ DESK-0B → DESK-4a → DESK-17 (claude_desk leg, shadow) ┴→ bybit_1 / alpac
                                                         → MD-PROMOTE-S1-S2 → bybit_2 + mirror
 DESK-11 → CJ-2 → CJ-4 → DESK-19 (students: shadow → advisory → drives)
 later: DESK-20 (outcome join) · DESK-21 (never-trained detector) · DESK-22 (scorecard) ·
-       DESK-23 (coverage) · DESK-24 → DESK-25 (offline sessions, then the ablation that proves them)
+       DESK-23 (coverage) · DESK-24 → DESK-25 (offline sessions, then the ablation that proves them) ·
+       DESK-26 (venue-symbol onboarding)
 ```
 
 ### 10.2 All rows, in order
@@ -1041,7 +1065,7 @@ later: DESK-20 (outcome join) · DESK-21 (never-trained detector) · DESK-22 (sc
 | 11 | `DESK-3-EXECUTORS` | per-account executors behind the gate; **plus** per-account `close` / `partial_close` for desk-leg trades | 3 | Opus | $16 | DESK-2, PHONE-AMEND-REFUSED-1025 | **re-scoped**: desk-leg exits |
 | 12 | `DESK-9-GRADING` | per-role grading (§ 4.7): **entry generation first** (net R per capital-day, novelty split, vs baselines), in-trade, exit, post-trade | 1 | Sonnet | $8 | DESK-6 records | **re-scoped** |
 | 13 | `DESK-11-ML-FEED` | desk decisions as `claude_judgments` sources `kind: desk_entry_generation / desk_in_trade / desk_exit`, with § 4.1's outcome labels | 1 | Opus | $10 | DESK-0B, CJ-2 | **re-scoped**: entry-generation labels first |
-| 14 | `DESK-19-STUDENT-HANDOFF` | **new.** Student manifests per role at `candidate`; the § 4.3 step criteria as pre-registered units; a per-role hand-off status in `ml_plan_status.py`; the `ml_desk_<role>` leg template | 1 | Sonnet | $8 | DESK-11, CJ-4 | — |
+| 14 | `DESK-19-STUDENT-HANDOFF` | **new.** Student manifests per role at `candidate`; the § 4.3 step criteria as pre-registered units (S-drives at margin 0, half-width ≤ 0.02 R, n ≈ 1,540 paired decisions per role); a per-role hand-off status in `ml_plan_status.py`; the `ml_desk_<role>` leg template | 1 | Sonnet | $8 | DESK-11, CJ-4 | — |
 | 15 | `DESK-1-VM-PACKETS` | packet builds and due events (scan included) as VM read routes | 1 (read path) | Sonnet | $10 | DESK-0B | **re-scoped**: scan packets |
 | 16 | `DESK-10-CAPACITY` | `k` ($/pp) and per-tier costs, including the scan wake | 1 | Sonnet | $4 | DESK-6 | unchanged |
 | 17 | `DESK-13-MANDATE` | propose a strategy-trade exit mandate after the D-S0 exit unit passes; `claude_desk` promotes under `MD-PROMOTE-S1-S2` | 3 (grant) | — | — | DESK-7 exit PASS | **re-scoped**: `MD-DESK-SKIP` dropped |
@@ -1052,10 +1076,11 @@ later: DESK-20 (outcome join) · DESK-21 (never-trained detector) · DESK-22 (sc
 | 22 | `DESK-22-SCORECARD` | **new, later phase.** The one scorecard (§ 4B.2): desk per role, students on the same decisions, student-vs-desk gap and improvement curve, hand-off state; homes in `/ml-review` step 9, `/performance-review`, the brief | 1 | Sonnet | $8 | DESK-9, DESK-19 | **extends CJ-6** |
 | 23 | `DESK-23-COVERAGE` | **new, later phase.** Coverage targets per (role × regime cell × symbol class × state) and shadow-only exploration sampling (§ 4A) | 1 | Sonnet | $4 | DESK-6 | — |
 | 24 | `DESK-24-OFFLINE-SESSIONS` | **new, later phase.** The standing offline training-session flow (§ 4C.3): bar-by-bar masked historical walks through the desk skill; a pilot that measures cost per label; the operator's budget dial | 1 | Sonnet (+ Opus sample) | $15 (pilot) | DESK-7 harness, DESK-16 historical mode, DESK-5 | reconciles with **CJ-7** (sizing) |
+| 26 | `DESK-26-SYMBOL-ONBOARD` | **new, later phase.** Automatic onboarding of a venue-listed symbol the desk nominates (§ 3.9): pull-list PR to `accounts.yaml::symbols`, history backfill, `resolve_cost_policy()` recorded, venue metadata and prop instrument-list checks; per-symbol refusal with a reason, never a block | 2 (runtime config: the pull list) | Opus | $8 | DESK-16, DESK-17 | — |
 | 25 | `DESK-25-OFFLINE-ABLATION` | **new, later phase.** Pre-registered ablation: student with vs without offline labels, OOS on post-cutoff + forward-shadow rows (§ 4C.4) | 1 | Sonnet | $6 | DESK-19, DESK-24 | — |
 
 **New ceilings:** first phase DESK-0B $6 + DESK-16 $8 + DESK-18 $30 + DESK-17 $16 + DESK-19 $8 = **$68**;
-later phases DESK-20 $8 + DESK-21 $6 + DESK-22 $8 + DESK-23 $4 + DESK-24 $15 + DESK-25 $6 = **$47**.
+later phases DESK-20 $8 + DESK-21 $6 + DESK-22 $8 + DESK-23 $4 + DESK-24 $15 + DESK-25 $6 + DESK-26 $8 = **$55**.
 The operator asked to pace the budget (~07:02Z), so rows 20–25 queue behind the first phase rather than
 now.
 
@@ -1073,35 +1098,23 @@ now.
 
 ## 11. Open questions (only where no data settles them)
 
-**Settled and removed:** v0 Q1 (VM-side model call): *"Not now"*, 2026-10-26. v0 Q2 (should a skip
+**Settled 2026-10-26 ~07:12Z (operator popups, verbatim, relayed by the manager):**
+
+- **Q1 universe: *"Anything the venues list"*** — DECIDED. This is not the data-pull-only option this
+  design recommended. The onboarding steps are in § 3.9 and the row is DESK-26.
+- **Q2 hand-off margin: *"Zero: must match or beat Claude"*** — DECIDED. § 4.3 is updated: n ≈ 1,540
+  paired decisions per role (INFERRED).
+- **Q3 final real-money hand-off: *"Yes, always my merge (Recommended)"*** — DECIDED. A student's leg
+  reaches a real-money roster only through a human-merge PR.
+
+**Settled earlier:** v0 Q1 (VM-side model call): *"Not now"*, 2026-10-26. v0 Q2 (should a skip
 apply): **withdrawn**, it asked about the wrong design (§ 0.2). Feeds and sandbox: DECIDED 2026-10-25.
 
 Things data will settle are **not** asked here, and their row gets the data instead: the cadence (DESK-6
 measures it), the live model tier (§ 4.6), ρ (§ 4.5's rule), whether the desk has an edge (DESK-18),
 and whether a student is good enough (§ 4.3).
 
-**Q1 — how wide is the universe the desk may trade?**
-
-- **Why no data settles it:** what instruments the operation should trade is a scope preference.
-  Data can say whether the desk has an edge on a symbol, not whether you want it on the book.
-- **Options:** (a) only symbols an account already pulls (today's data-pull union); (b) also any symbol
-  the connected venues list.
-- **Recommended: (a).** Every symbol in it already has candles, cost decisions and a roster home, so a
-  proposal can be priced net of the full cost stack. Widening is a later roster decision.
-
-**Q2 — the non-inferiority margin for "student drives" (§ 4.3).**
-
-- **Why no data settles it:** it is how much net edge you would give up to remove Claude's cost and
-  latency from a role. That is a price, not a fact.
-- **Recommended: 0.02 R per capital-day,** registered per role before its S-advisory → S-drives unit
-  runs. A tighter margin needs more n; DESK-19 states the n each margin implies.
-
-**Q3 — does the final hand-off on real money always need your merge?**
-
-- **Options:** (a) yes: the student's leg reaching a real-money roster is a human-merge PR, as every
-  promotion is today under `MD-PROMOTE-S1-S2`; (b) a new mandate lets it auto-land.
-- **Recommended: (a).** It costs one click per role, three in total, and it is the moment Claude
-  leaves the loop.
+No open questions remain.
 
 ---
 
