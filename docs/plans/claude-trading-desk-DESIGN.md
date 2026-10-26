@@ -1,15 +1,10 @@
-# Claude trading desk — a desk-manager session over specialist lanes (design, 2026-10-25)
+# Claude trading desk — Claude drives the trading; the system's models learn from it (design v1, 2026-10-26)
 
 > **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
-**State: DESIGN v0.** Nothing below is built by this PR. The operator reviews it, and § 10 lists the
-rows the manager files after that.
-
-**Monday comes first** (operator deadline ~17:45Z, relayed by the manager): the desk must be
-live-capable when markets open Monday. **§ 0a is the Monday slice.** Everything marked *phase 2* is
-scoped but is not on the Monday path. The per-account apply path is being built in parallel by lane
-`LTR-6R-APPLY-PATH`, and this design adopts its interface (§ 3.0).
-Checklist row: `DESK-DESIGN` · roadmap `L-DESK` (new, G4) beside `L-ATM` · Tier 1 (a doc).
+**State: DESIGN v1.** It supersedes v0 (#20140, 2026-10-25). Nothing below is built by this PR.
+Checklist rows: `DESK-15-ENTRY-GENERATION` (this rewrite) and `DESK-DESIGN` · roadmap `L-DESK` (G4), beside
+`L-ATM` · Tier 1 (a doc).
 
 **How to read the marks** (`docs/CLAUDE-RULES-CANONICAL.md` § MEASURED / INFERRED / DECIDED):
 every number is **MEASURED** (with where it lives), **INFERRED** (from named inputs; check it), or
@@ -20,81 +15,111 @@ choice already on record.
 
 ## 0. The request, and the short answer
 
-The operator asked for this in chat on 2026-10-25, ~16:12–16:30Z. The full record is on the
-`DESK-DESIGN` row (register PR #20116); the manager quoted it as a close paraphrase, not verbatim:
+### 0.1 What the operator said (verbatim, 2026-10-26, rows `DESK-DESIGN` and `DESK-15-ENTRY-GENERATION`)
 
-1. **The desk.** A desk-manager session runs specialist lanes: market watch / when to enter, entry
-   review, in-trade management (the live trade review, LTR), and adjustments and exits. It runs in a
-   sandbox, and every decision is recorded so that the system and the models can execute on it.
-2. **Structure.** Claude acts at the strategy-ticket / order-package level, on the trade and market
-   conditions. **Every action is routed through EACH account's own risk manager.** Claude never does
-   per-account risk management.
-3. **The repo builds the context.** Decision packets let Claude spend its usage only on judgment. That
-   keeps the pattern consistent and makes the outputs fit the training datasets.
-4. **Usage balance.** No usage wasted on routine decisions, powerful models where we learn. *"maybe
-   it's enough if Opus is doing the review and not the actual live management."*
-5. **Timeframe.** As small as feasible; *"15 minutes is feasible in any case"*. Scope a lane that stays
-   live for 10 min – 1 h holds: its cost, whether it can be profitable, which timeframes work.
-6. **Same feed for Claude and ML.** Claude's inference becomes training data, and Claude's
-   recommendations are an input to the ML live-management pipeline.
+> ~06:50Z: *"the goal isn't for Claude to be reviewing the entries. That's, I mean, we can have that
+> also, that's nice, but when I say the trading desk does entries, I mean that they find trades that
+> the system isn't finding. So, like, I don't even know what that restriction on should Claude be able
+> to deny an entry, like, where that even came from. That's just, like, not the design at all.
+> Completely wrong direction."*
 
-**The short answer:**
+> ~06:55Z: *"the whole idea here with the trading desk is that we're trying to build a system where
+> Claude isn't just weighing in on the system's trades. Claude is, the Claude trading desk is driving
+> the trading, and the MLs, the systems MLs that we're building are learning from that Claude
+> decision-making how to do it themselves so that we can eventually remove Claude from the flow and
+> have only our own AIs doing the trading. But the whole point is to have Claude pushing the whole
+> trading operation so that we can use that as the basis for teaching the MLs."*
 
-- **Build it as one standing Sonnet desk session plus spawned lanes, not as one session per role.** A
-  lane is a *role*: a packet kind, a decision schema and a skill section. Running each role in its own
-  session would pay the session-start context once per role per wake. Separate sessions are spawned for
-  only three things: Opus escalations, the Opus blind-teacher batch, and a short-hold lane that lives
-  exactly as long as its trade. § 2.
-- **The path is fixed: package intent → each account's risk gate → each account's executor.** The gate
-  is new: `RiskManager.approve_amend` / `approve_entry`, plus the prop versions. LTR-6, LTR-8 and LTR-9
-  are re-scoped into it. A refusal or a silent no-op on any one account is a first-class, alarmed
-  outcome. That is the lesson of `PHONE-AMEND-REFUSED-1025`. § 3.
-- **Pilot first at 15 min, in shadow, on the open real-money and prop swing trades.** INFERRED: at that
-  cadence the session-plus-issue latency is 17–33% of the bar, and the cost is about $4–5 a day (§ 5,
-  § 7). **5 min needs two Tier-2 builds first.** Packets must be built on the VM, and intents must reach
-  the VM without a GitHub-Actions hop. **1 min is not feasible** with a model in the loop: the latency
-  exceeds the bar.
-- **No short-hold (10 min – 1 h) leg has a Stage-0 edge today.** MEASURED from
-  `comms/strategy_evidence/`: every 5m `ict_scalp` cell is net-negative in 0 of 4 folds, and the best 15m
-  cells are +0.017 and +0.054 R/trade with 2 of 4 folds positive. So a short-hold desk lane is **not
-  piloted live**. It gets its own Stage 0 first: a confirm run of the two 15m cells, plus a blind replay
-  of Claude managing those trade lists. § 6.
-- **The desk sits inside the promotion ladder.** It cannot be backtested, so its Stage 0 is a **blind
-  replay with paired counterfactuals**. Its Stage 1 is a mechanical soak of 1–2 clean intents per account
-  class. Its Stage 2 is mandate-bounded, derisk-only actions on real money. § 8.
+Also **DECIDED** on 2026-10-26: the design is approved as the build plan (popup *"Approve as the build
+plan"*); there is no VM-side model call for now (*"Not now"*); and the live trade review applies its
+judgement when the outcome table is thin (lane `LTR-JUDGEMENT-APPLY`, in flight). The 2026-10-25
+decisions still stand: feeds are the repo packet plus a logged exception, and the sandbox is the
+`bybit_1` soak book (§ 3.6).
+
+### 0.2 What v0 got wrong, and where it came from
+
+v0 was written by a lane on 2026-10-25. It framed the desk as an **advisor over the strategies'
+trades**:
+
+- its entry role was *entry review* (`take / skip / delay`) over strategy packages;
+- market watch could only raise `delay_candidate` / `veto_candidate`;
+- § 2.3 said *"Never in any enum: … a new entry"*;
+- § 11 Q2 asked whether a skip should ever apply, and DESK-13 proposed an `MD-DESK-SKIP` mandate.
+
+No operator input asked for any of that. The operator's 2026-10-25 request (v0 § 0 point 1) listed
+"market watch / when to enter" as a desk lane. v0 read "entries" as "review the system's entries". That
+reading is withdrawn. **v1 deletes the clause, the veto framing, Q2 and `MD-DESK-SKIP`.**
+
+### 0.3 The short answer
+
+- **The desk is a trader, not a reviewer.** It runs the whole trade lifecycle on its own trades: it
+  **finds** trades the strategies are not taking, **enters** them, **manages** them and **exits** them.
+  It also manages the strategies' open trades (the live trade review, already live in `apply` for
+  stop tightens). Reviewing a strategy's entry is optional and record-only. § 2.
+- **The desk trades as a leg.** Its entries become ordinary order packages on a rostered leg,
+  `claude_desk`. They pass through each account's existing `RiskManager.approve()`, are sized by that
+  account, and carry a real predictive TP (TP doctrine). There is no new order path and no third gate:
+  the two execution gates (`mode:`, `execution:`) and roster membership decide where it trades, exactly
+  as for any leg. § 3.
+- **Every desk decision is a teacher label**: the packet it saw, what it decided, and the outcome
+  realised on the real price path, net of the full cost stack. That includes the trades it chose not to
+  take. These labels feed CJ-2 / DESK-11 and the distillation design. For each role there is a stated
+  hand-off: **student shadow → student advisory → student drives**, each step gated on out-of-sample
+  net R per capital-day, net of the full cost stack. Agreement with Claude is reported but never gates
+  a step. § 4.
+- **Safety is unchanged.** The order of evidence is: D-S0 blind replay net of the full cost stack →
+  a mechanical 1–2-trade paper soak → real money under operator-granted mandates. Each account's
+  RiskManager refuses per trade. Nothing halts (Prime Directive rule 7). § 8, § 9.
+- **The desk is a training-data generator first** (§ 4A): every decision, no-action included, is
+  recorded point in time with its priced alternatives and joined to its outcome. The plan for the second
+  half (pipeline health, one desk-vs-student scorecard) is § 4B, and the plan for label volume beyond
+  what live markets produce (historical backfill, offline training sessions) is § 4C.
+- **The first thing to build is the label stream.** Shadow-recorded entry proposals on live markets
+  cost no risk. Each one is graded on the real path after the fact, so teacher labels start to accrue
+  from the day the shadow pilot runs, long before the desk trades a dollar. § 10.
+
+### 0.4 Where the desk starts, and why every restriction is a stage
+
+The operator, ~06:58Z (verbatim, row `DESK-15-ENTRY-GENERATION`): *"we should start with the live
+review. It just needs to, like, the restrictions and the design doc shouldn't be based around keeping
+it at that level. It should be based around moving towards the full-fledged cloud trading desk, which
+again is the basis for training our MLs, which means that the design doc also needs to ensure that we're
+using the desk in the correct way in order to generate data that trains the models and not just
+executing the trades and then forgetting about them."*
+
+**Phase 1 of the desk is the live trade review**, already live in `apply` for stop tightens (§ 1.1). It
+is the desk's first role, not a standalone tool. Every limit on the desk today is a **stage** with a
+named lift condition. None of them is the design's resting state.
+
+| restriction today | stage it belongs to | what lifts it, on what evidence | row |
+|---|---|---|---|
+| in-trade applies are tighten-only on strategy trades | phase 1 | strategy-trade `close` / `partial_close`: the D-S0 exit unit passes, then an operator-granted exit mandate (§ 8.3) | DESK-7, DESK-13 |
+| no desk entries | phase 1 | phase 2 shadow proposals start once the scan packet and the skill land; real orders start once D-S0 entry generation passes and the leg soaks 1–2 clean trades on paper (§ 8) | DESK-0B, DESK-16, DESK-6, DESK-18, DESK-17 |
+| desk entries only on paper | phase 3 | `MD-PROMOTE-S1-S2` moves `claude_desk` onto `bybit_2` + mirror (a human-merge PR) | DESK-17, manager |
+| no desk on prop accounts | phase 3 | the prop superset gate: the prop EV/survival gate against the firm's DD limits | DESK-17 + prop gate |
+| 15-min floor on cadence | phases 1–3 | 5 min: VM packets + VM intake (DESK-1, DESK-4b). Below 5 min: a student, not Claude (§ 5.1) | DESK-1, DESK-4, DESK-19 |
+| Claude decides every role | phases 1–3 | per role, a student passes S-shadow → S-advisory → S-drives (§ 4.3); Claude drops to a ρ audit | DESK-19 |
+| packet is the only feed | phase 1 | live web context per decision, logged (`external_context`), as the next milestone after the prototype | DESK-14 |
+
+The phases are: **1** in-trade on the strategies' trades (live) · **2** + entry generation in shadow,
+every proposal a graded label · **3** the desk trades its own leg on paper, then real money · **4** the
+system's own students take over role by role.
 
 ---
 
-## 0a. The Monday slice — live-capable by market open (phase 1)
+## 1. What exists today
 
-| piece | Monday state | owner / row |
+### 1.1 Live state (read 2026-10-26 from the checklist; not re-observed on the VM by this lane)
+
+| piece | state | source |
 |---|---|---|
-| **In-trade role, live** | The standing desk session runs the `live-trade-review` skill on in-trade packets for every open real-money, prop and `bybit_1` package. Cadence: **15 min**, or LTR-4's hourly gate as the fallback if the standing session is not up. **Sonnet** decides; an **Opus** escalation confirms any non-`hold` on real money or prop. | DESK-5 (skill delta), DESK-6 (session), LTR-3 skill as is |
-| **Packets** | `scripts/ops/live_review_packet.py --all-open` (PR #20127), run from the session over the relays. It takes 36 s (MEASURED), which is fine at 15 min. A VM endpoint is phase 2. | LTR-11 |
-| **Intent → per-account gate → executor** | The LTR-6R interface (§ 3.0): a package-level `LiveReviewIntent` → `RiskManager.approve_amend(intent, account)` per account → that account's existing executor, **account-scoped**. Tighten-only. | LTR-6R (Opus, in flight) |
-| **The switch** | `config/live_trade_review.yaml::apply_mode: off \| recommend \| apply`. **Default `recommend`**, with a per-account override. Only a commit writes it; no runtime condition does. It is not a halt latch (Prime Directive rule 7), and it never stops reviewing. | LTR-6R |
-| **Evidence to apply** | Each intent cites a committed decision row: `packet_sha`, the LTR-0 option table with n ≥ 20 from this state, `ev_delta_r ≥ −0.25 R`, `worst_case_delta_r > 0`, and mechanics `match`. The account's gate verdict and the venue readback are recorded per account. | LTR-2 records + LTR-6R |
-| **Mandate to apply on real money and prop** | `MD-LIVE-TIGHTEN-SL`, `derisk_only`, bound **0.25 R** with a **0.5 R shadow arm**, rollout *"Auto from day one"*. These terms are **DECIDED** by the operator 2026-10-25 ~13:58Z (row `LTR-7-MANDATE`). It must be **written into `config/mandates.yaml`** before any account flips to `apply`. | LTR-7 (manager writes the operator's recorded grant) |
-| **Flip order** | 1. `bybit_1` → `apply` first, the sandbox (DECIDED, § 3.6). <br>2. After **1–2 clean applies** there (verdict, venue readback and divergence check all clean), `bybit_2` + `bybit_portfolio` → `apply`. This is the mechanical-soak rule; there is no calendar wait. <br>3. Prop accounts follow only when their executor path (LTR-8, plus the PHONE-AMEND fix for `breakout_2`) has had its own 1–2 clean applies. Until then they stay `recommend`. <br>Alpaca stays `recommend` until LTR-9 lands. | manager, on the evidence |
+| In-trade management (live trade review) | **merged + deployed**: `apply_mode: apply` on every account, `MD-LIVE-TIGHTEN-SL` granted (#20199, merged ~06:00Z). A dry-run (#20241, 06:11Z) **observed** Bybit 6/6 `approve`, `alpaca_paper` 3 `approve` + 1 `refuse would_loosen`, and `ib_paper` `refuse no_amend_path`. **No real apply is observed yet**, so the row is `landed_unproven` | row `LTR-6R-APPLY-PATH` |
+| Judgement applies when the outcome table is thin | in flight | lane `LTR-JUDGEMENT-APPLY` |
+| Desk packet v3 + decision schemas + guard | `landed_unproven`. **They encode v0's veto framing**: the `market_watch` enum is `no_action / watch_note / delay_candidate / veto_candidate`, and `check_desk_records.py` refuses any applied action on any role except in-trade `tighten_sl`. Re-scoped by `DESK-0B` (§ 10) | row `DESK-0-SCHEMA`; `comms/schema/desk_decision.schema.json` |
+| Entry generation | **does not exist.** No code path takes an entry from outside a strategy's signal builder (searched `src/` for an external-intent intake; none found) | this lane |
+| Distillation design | merged, operator-approved | `docs/plans/ml-claude-distillation-DESIGN.md` |
 
-**Phase 2: scoped below, not on the Monday path.**
-
-- entry review and market watch, both shadow (§ 2.1, § 2.3);
-- the short-timeframe standing lane and the short-hold work (§ 5, § 6);
-- packets built on the VM, and a VM intent intake (DESK-1, DESK-4b);
-- the blind teacher dial (§ 4.2), which can start Monday at ρ = 0.25 in recommend mode at no risk, but is not required;
-- D-S0 blind replay (DESK-7);
-- grading (DESK-9) and the ML feed (DESK-11).
-
-⚠️ **What "live-capable" does and does not mean on Monday.**
-
-- Real-money applies happen only once three things hold: `MD-LIVE-TIGHTEN-SL` is in `config/mandates.yaml`, LTR-6R has merged (a Tier-3 order-path change), and `bybit_1` has shown 1–2 clean applies.
-- Until then the desk is live in `recommend`: decisions are recorded, and asks go to the operator per the LTR Q3 ping rule ("applies and asks only").
-- The desk's own Stage 0 (D-S0, § 8) is **not** a precondition for tighten-only applies inside the operator-granted bound. That bound is the operator's priced risk preference (LTR Q1), and the LTR-0 table prices each apply against the leg's history. D-S0 gates everything **beyond** tighten-only.
-
----
-
-## 1. What exists today (the inputs), measured
+### 1.2 Inputs carried from v0 § 1 (MEASURED 2026-10-25 unless marked)
 
 | input | state | where |
 |---|---|---|
@@ -127,122 +152,129 @@ These rates price *re-reading a context*. That is the dominant cost of any stand
 
 ---
 
-## 2. Architecture — lanes, the desk manager, packets, decisions
+## 2. Roles — the desk runs the trade lifecycle
 
-### 2.1 Layers
+### 2.1 The four roles, and the optional fifth
+
+| role | what it decides | on whose trades | applied? | model |
+|---|---|---|---|---|
+| **1. Market watch + entry generation** | From a **scan packet** over the tradable universe (§ 2.3): `propose_entry` (a full trade spec, § 2.4) or `no_trade`. It looks for trades **the strategies are not taking**: the scan packet lists the system's open packages and near-signals, so a proposal that duplicates one is visible and graded as a duplicate. | the desk's own | yes, as the `claude_desk` leg, at that leg's ladder stage (§ 8): shadow → paper soak → real money | Sonnet decides; Opus confirms any proposal bound for a real-money or prop account |
+| **2. In-trade management** | `hold / tighten_sl / tp_revise / flag_mechanics / …` on the in-trade packet. This is the live trade review. | **both**: the desk's own trades and the strategies' trades | **yes, today**, for `tighten_sl` within `MD-LIVE-TIGHTEN-SL` on every account (§ 1.1). On desk-leg trades, every in-trade action is the leg's own management (§ 3.8) | Sonnet; Opus on real-money and prop non-`hold` (LTR rule) |
+| **3. Exit** | `hold / partial_close(frac) / close` | the desk's own: applied as the leg's own exit logic. The strategies': recommend only, until a mandate (§ 8.3) | desk leg yes; strategy legs no | Sonnet; Opus on real money |
+| **4. Post-trade grade** | blind grade, then revealed grade (CJ-3) | both | n/a (a label) | per CJ-3 |
+| *(optional)* **Strategy-entry review** | `take / skip / delay / no_recommendation` on a new strategy package | the strategies' | **never.** Record-only and optional; it feeds the `claude-blind-grade-student` line. It is never a veto, and no mandate is proposed for it | Sonnet, only when spare capacity exists |
+
+**Why the desk owns roles 1–3 on its own trades.** A teacher label is worth most when the same mind
+decided the entry, the management and the exit. Then a student can learn a whole policy, not three
+disconnected opinions. On the strategies' trades the desk manages and exits (roles 2–3), but the
+entry belongs to the strategy.
+
+### 2.2 Layers (v0 § 2.1, re-pointed)
 
 | layer | what | where | model |
 |---|---|---|---|
-| **L0 — desk plumbing** | Builds packets, computes due events (LTR-1 events plus entry/exit events, § 2.3), takes intents in, gates them per account, executes them, reads them back, checks divergence. **No judgment.** | live VM | none |
-| **Desk manager** | A standing loop session. Each wake reads L0's `due` list, routes each due packet to its role, writes decisions, spawns escalations and short-hold lanes, rotates itself (§ 5.3). A wake with nothing due ends after one call. | Claude session, `ScheduleWakeup` / `/loop` | **Sonnet** |
-| **Role: market watch** | Over the next-bar candidate set (legs near a signal, calendar, funding, regime): watch notes plus `delay` / `veto_candidate` intents. **Shadow only** until § 8 Stage 2. | inside the desk session | Sonnet |
-| **Role: entry review** | On every new order package before or at entry: `take / skip / delay(bars)`. **Shadow only**: entries execute exactly as today. The counterfactual is free, because every package's outcome is observed whatever Claude said. | inside the desk session | Sonnet |
-| **Role: in-trade (LTR)** | Today's `live-trade-review` skill on the in-trade packet, at the desk's cadence instead of the hourly gate. | inside the desk session | Sonnet |
-| **Role: exit / post-trade** | `close / partial_close` recommendations while open (always the operator's call today, LTR § 4). After the close, the blind-then-reveal grade (CJ-3). | desk session; grade in a daily batch | Sonnet; grade per CJ-3 |
-| **Escalation** | A real-money or prop decision whose candidate is not `hold` / `take`, or any `flag_mechanics`. This is the LTR L2b rule, unchanged. | spawned session | **Opus** |
-| **Blind teacher** | A random fraction **ρ** of the desk's decisions, re-judged by Opus from the **same packet**, without seeing Sonnet's answer. Batched daily. § 4. | spawned session, daily | **Opus** |
-| **Weekly grading** | Counterfactual replay (LTR-5) and calibration of each role. Opus grades a sample. | `/performance-review` section | Sonnet + Opus sample |
-| **Short-hold lane** | Spawned by the desk manager when a short-hold trade opens. It stays live at 1–5 min cadence and ends on the close. **Not piloted until § 6 passes.** | spawned session | Sonnet |
+| **L0 — desk plumbing** | Builds packets (scan, entry, in-trade, exit), computes due events, takes desk intents in, hands entries to the `claude_desk` leg and amends to the per-account gate, reads back, checks divergence, **replays every proposal and every decision on the real path** for its outcome label. No judgment. | live VM (session-side builders first, as LTR-11 did) | none |
+| **Desk manager** | The standing loop session (v0 § 5.2–5.3). Each wake reads L0's `due` list, routes each packet to its role, writes decisions, spawns escalations, rotates itself. A wake with nothing due ends after one call. | Claude session | Sonnet |
+| **Escalation** | Any real-money or prop proposal or non-default action; any `flag_mechanics`. | spawned session | Opus |
+| **Blind teacher sample** | A fraction ρ of decisions re-judged by Opus from the same packet without seeing Sonnet's answer (§ 4.5). Entry generation is sampled first: it is where the label is newest. | daily batch | Opus |
 
-**Why roles are not separate sessions (INFERRED, from § 1's rates):** each session re-reads its own base
-context, the system prompt plus repo instructions plus skill, on every API call. That base, `C0`, is
-INFERRED at ~60–100 k tokens; `CLAUDE.md` alone is 42,712 bytes, MEASURED. Five role sessions each waking
-every 15 min would pay `C0` five times per wake. One desk session pays it once. The specialist lanes
-the operator asked for keep their identity through three things: their packet kind, their closed
-decision enum, and their skill section. Grading is per role (§ 4.4).
+v0's reasoning that roles are **not** separate sessions still holds: one session pays the base context
+once per wake (v0 § 2.1, retained in § 5.3).
 
-### 2.2 One packet schema for Claude and ML (operator point 6)
+### 2.3 Packets — one envelope, four kinds, shared by Claude and ML
 
-**One envelope, three kinds.** It extends the LTR-11 packet v2 (`scripts/ops/live_review_packet.py`,
-`PACKET_VERSION = 2`) to **v3**. The `packet_sha` is the sha256 of the canonical JSON, exactly as today.
+Packet v3 (`comms/schema/desk_packet.schema.json`, DESK-0) has `entry`, `in_trade` and `exit`. v1 adds
+**`scan`** (DESK-0B):
 
-| block | entry | in_trade | exit (post) |
-|---|---|---|---|
-| `meta`: `packet_kind`, `packet_version`, `built_at`, **`info_cutoff_at`**, `generator`, `missing_inputs[]` | ✓ | ✓ | ✓ |
-| `package`: id, leg, symbol, side, timeframe, signal_logic, entry / SL / TP as built, risk per unit, `accounts[]` with account class | ✓ | ✓ | ✓ |
-| `state`: open_r, peak_r (+provenance), giveback_r, bars_held, bars_since_peak, r_to_stop, r_to_target, live SL/TP | — | ✓ | final |
-| `market`: ATR now/entry, HTF trend, regime cell now/entry, funding vs assumption, calendar window, news decision | ✓ | ✓ | at entry/exit |
-| `history`: LTR-0 conditional outcome table, net of the full cost stack; for entry, the leg's Stage-0 expectancy and its selection-lift table | ✓ | ✓ | — |
-| `book`: correlated open packages, same and other accounts | ✓ | ✓ | — |
-| `per_account`: per account, mode, venue SL/TP/size read **with its read state**, and the gate's read-only preview (§ 3.3) | ✓ | ✓ | — |
-| `mechanics`: verdict + evidence | — | ✓ | ✓ |
-| `ml`: served heads' predictions at their ladder stage, **with an explicit `absent` state** | ✓ | ✓ | — |
-| `prior_decisions`: earlier desk decisions on this package and whether they were applied | — | ✓ | ✓ |
-| `outcome` (only after `info_cutoff_at`; T1) | — | — | ✓ |
+| block | scan (new) |
+|---|---|
+| `meta` | as v3, with `info_cutoff_at` |
+| `universe[]` | per symbol: venue, tradable-by-account-class, last close, ATR, HTF trend, regime cell, funding, distance to recent swing levels, session / calendar window, spread read **with a read state**. The universe is the symbols that some account's data pull already fetches (`_resolve_tick_symbols`'s union), so the desk can only propose what the system can trade and price |
+| `system_book[]` | the strategies' open packages and **near-signals** (legs within one bar of a signal), so "a trade the system isn't finding" is checkable |
+| `desk_book[]` | the desk's own open trades and pending proposals |
+| `history` | per symbol, the base rates the desk needs to price a bracket: the distribution of forward R at the declared horizon, net of the full cost stack, from the same Stage-0 data (`execution_costs.resolve_cost_policy()`) |
+| `ml[]` | the served heads' predictions, with an explicit `absent` state |
 
-**Binding rules, carried from the distillation design § 3 into the schema:**
+The binding rules of v0 carry over unchanged: could-not-look is `null` plus `missing_inputs`, never zero;
+`info_cutoff_at` on every packet; **the ML feature view is a projection of the packet**, so the student
+trains on exactly what the teacher saw; the dataset schema **is** the packet schema.
 
-- **Could-not-look ≠ zero.** Every unreadable field is `null` and is named in `missing_inputs`. LTR-11
-  already does this.
-- **`info_cutoff_at` on every packet.** A packet containing `outcome` is T1, and is never a feature.
-- **The ML feature view is a projection of the packet.** It is the flat numeric `features_at_review`
-  block, generated from the same packet, so the `claude_judgments` family (CJ-2) and any desk student
-  train on exactly what the teacher saw.
-- **The dataset schema IS the desk packet schema.** That is why CJ-2 waits on DESK-0 (§ 10).
+### 2.4 Decision schemas (closed enums; prose is bookkeeping, never a label)
 
-### 2.3 Decision schemas (closed enums; prose is bookkeeping, never a label)
+The common envelope is v0's (`decision_id, packet_sha, role, model, prompt_sha, skill_sha,
+label_version, action, params, judge_prior, confidence, basis, rationale, external_context, …`).
 
-The common envelope extends `comms/schema/live_review.schema.json`:
+**`propose_entry` — the entry-generation action.** Every field is required. A proposal missing one is
+refused by the guard, not defaulted.
 
 ```
-decision_id, packet_sha, packet_kind, role, judged_at, info_cutoff_at,
-model, prompt_sha, skill_sha, label_version,
-action ∈ <role enum>, params {level, level_atr, frac, bars},
-judge_prior (P that the default action ends worse), confidence ∈ {measured, suggestive, anecdote},
-basis ∈ {ev_positive, preference_within_bound, insufficient_n, mechanics, operator_ask},
-rationale (text; never a feature), escalated_to (decision_id | null),
-intent_id (null when record-only), disposition {route, per_account[] (§ 3.4)},
-external_context {used: bool, trigger: <event>, sources: [{url_or_id, title, fetched_at}],
-                  summary, reproducible: false}   — DECIDED feeds rule, below
+symbol, venue_class, side ∈ {long, short},
+horizon_bars, timeframe,                       # the bar the thesis lives on
+entry {type ∈ {market, limit, stop}, level, good_till_bars},
+stop  {level, basis},                          # where the thesis is wrong
+tp    {level, basis, p_hit},                   # a REAL predictive target (TP doctrine, below)
+expected_r_net,                                # the desk's own net-of-cost estimate, at entry
+thesis,                                        # text; bookkeeping, never a feature
+confidence ∈ {measured, suggestive, anecdote},
+judge_prior,                                   # P(TP before SL)
+novelty ∈ {new, duplicates_system_package, duplicates_near_signal},
+info_cutoff_at
 ```
 
-**External context (DECIDED 2026-10-25 ~17:58Z, operator popup verbatim: *"Repo feeds + logged exception (Recommended)"*).**
+- **No size field.** Size is the account's: each account's RiskManager sizes a `claude_desk` package
+  the same way it sizes any leg's (§ 3.7). The desk names where the trade is wrong and where it is
+  expected to end; each account decides how much of it to hold.
+- **The TP doctrine binds at proposal time** (`docs/ARCHITECTURE-CANONICAL.md` § "TP doctrine"). `tp`
+  is a level the desk predicts price will reach, with a stated `basis` and `p_hit`. A sentinel
+  distance, a venue-cap level or "trail decides" is refused by the guard. The prediction then moves
+  through the trade by `tp_revise` (role 2), which is the doctrine's second clause.
+- **`no_trade` is a decision, and it is recorded** whenever a scan wake has something due. The label
+  for a `no_trade` is the best bracket a baseline would have taken from the same packet (§ 8.1). That is
+  how a student learns when *not* to trade, which is most of trading.
 
-- **The packet is the default and only feed.** A decision may pull live web/news context only on a
-  big-event exception: a `calendar` or `swing` due event, or an escalation.
-- **Every pull is logged** in `external_context`: the sources, their fetch time and a summary. The
-  pulled text is never folded into the packet, so `packet_sha` stays the reproducible input.
-- **Replays tell exception rows apart** by `external_context.used = true`. The `claude_judgments`
-  builder sets `reproducible: false` on them. D-S0 replays and the student training sets **exclude**
-  those rows by default. They are graded separately, so the value of the exception is measured
-  instead of mixed in.
-- The validator guard refuses a row with `used: true` and an empty `sources`.
+| role | action enum | default |
+|---|---|---|
+| market watch + entry generation | `no_trade`, `propose_entry`, `watch_note` | `no_trade` |
+| in-trade | `hold`, `tighten_sl(level)`, `tp_revise(level)`, `flag_mechanics`, `no_recommendation`, `file_hypothesis` | `hold` |
+| exit | `hold`, `partial_close(frac)`, `close` | `hold` |
+| post-trade | blind grade, then revealed grade (CJ-3) | — |
+| strategy-entry review (optional) | `take`, `skip`, `delay(bars)`, `no_recommendation` | `take`; never applied |
 
-| role | action enum | default | applied today? |
-|---|---|---|---|
-| market watch | `no_action`, `watch_note`, `delay_candidate(bars)`, `veto_candidate` | `no_action` | **never** (shadow) |
-| entry review | `take`, `skip`, `delay(bars)`, `no_recommendation` | `take` (the status quo) | **never** (shadow) |
-| in-trade | `hold`, `tighten_sl(level)`, `tp_revise(level)`, `flag_mechanics`, `no_recommendation`, `file_hypothesis` | `hold` | `tighten_sl` within the LTR-7 bound, after DESK-2/3 (§ 8) |
-| exit | `hold`, `partial_close(frac)`, `close` | `hold` | **never**: the operator's call (LTR § 4) |
-| post-trade | blind grade, then revealed grade (CJ-3's schema) | — | n/a |
+**What is still never in an enum, and why each is excluded:**
 
-**Never in any enum:** a size change, a new entry, a widened stop, a TP moved farther away under a
-mandate, a `mode:` or `execution:` change, or any halt. That is Prime Directive rules 2 and 7.
+- a size or risk change: per-account risk is each account's (operator, 2026-10-25);
+- a widened stop on a strategy's trade: the tighten-only mandate;
+- a `mode:` / `execution:` / roster change: those are the two gates, and only their own paths write them;
+- any halt (Prime Directive rule 7).
 
-### 2.4 Due events (L0) — LTR-1's list plus three
+**v0's *"Never in any enum: … a new entry"* is deleted.**
+
+### 2.5 Due events (L0)
 
 | kind | events |
 |---|---|
-| in_trade | LTR design § 2: `r_milestone`, `new_peak`, `giveback`, `near_target`, `swing`, `vol_regime`, `funding`, `calendar`, `mechanics`, plus `daily_floor` |
-| entry | `package_created` (the trader built an order package), plus `candidate_near` (a leg's signal is within one bar, for market watch) |
-| exit | `trade_closed` (queues the post-trade grade) |
+| scan | `bar_close` on each timeframe the desk trades (§ 5: 15 min floor), plus `calendar`, `vol_regime`, `funding` and `swing` events on any universe symbol |
+| in_trade | LTR's list (`r_milestone`, `new_peak`, `giveback`, `near_target`, `swing`, `vol_regime`, `funding`, `calendar`, `mechanics`, `daily_floor`) on every open package, the desk's own included |
+| exit | `trade_closed` (queues the post-trade grade and the outcome replay) |
+| entry (optional) | `package_created`, for the optional strategy-entry review |
 
-**Dedupe, cooldown and batching** stay exactly as in LTR § 2. The desk adds one rule: **a cadence wake
-with nothing due costs one call and records nothing.** This is how the 15-min cadence avoids paying for
-routine decisions (operator point 4).
+Dedupe, cooldown and batching stay as in LTR § 2. **A cadence wake with nothing due costs one call and
+records nothing** (operator, 2026-10-25 point 4).
 
 ---
 
-## 3. Package-level intent → per-account risk gate → per-account executor
+## 3. Execution — two paths, both through each account's own risk manager
 
-This re-scopes LTR-6, LTR-8 and LTR-9 (operator point 2; the manager's finding on `LTR-6-APPLY-PATH`).
+**This is the amend path** — how a package-level in-trade decision (role 2) reaches each account. It
+is carried from v0 and is now live for `tighten_sl` (§ 1.1). Entries take the path in § 3.7. It
+re-scopes LTR-6, LTR-8 and LTR-9 (operator point 2; the manager's finding on `LTR-6-APPLY-PATH`).
 
 ### 3.0 The adopted interface (lane `LTR-6R-APPLY-PATH`, manager relay 2026-10-25 17:37Z)
 
 The design uses LTR-6R's names and does not define a parallel set:
 
 - **`LiveReviewIntent`**, at package level. `action ∈ {tighten_sl, flag, no_action}`, plus level,
-  evidence and mandate. The desk's in-trade enum (§ 2.3) maps onto it as follows: `tighten_sl` →
+  evidence and mandate. The desk's in-trade enum (§ 2.4) maps onto it as follows: `tighten_sl` →
   `tighten_sl`; `flag_mechanics` → `flag`; everything else → `no_action`, which is a record only.
 - **`RiskManager.approve_amend(intent, account)`** → `approve` / `clip` / `refuse`, each with a reason.
 - **The account's existing executor:** `amend_position_sl` for Bybit, the prop trail `sl_floor` or the
@@ -311,9 +343,9 @@ and `prop_rule_guards.py`:
 - the trailing-drawdown cushion (`prop_risk_gate.py`);
 - for the phone account, `human_moved` and the one-slot amend channel being free.
 
-**`approve_entry(intent)`** exists for `skip` / `delay` only, and is **not called in the pilot** (§ 2.3,
-shadow). A skip or delay reduces risk, so the gate checks only that the package is still pending and the
-intent is unexpired. **No intent may cause an entry**, so there is no "take" intent.
+**v0's `approve_entry(intent)` is dropped.** It existed only for the withdrawn `skip` / `delay` veto.
+Desk entries do not need a new gate: they are order packages on the `claude_desk` leg and pass the
+existing `RiskManager.approve()` (§ 3.7).
 
 **Every verdict is a record.** It carries the account, the verdict, the reason and the inputs read, with
 their read states. The four-state shape (approve / refuse / could_not_look / error) is registered with
@@ -381,20 +413,138 @@ contaminate the other.
      exit is no longer the leg's own.
    - Live-vs-backtest and cost-fidelity verdicts are computed on untouched trades, with touched ones
      shown beside them.
-   - Desk grading (§ 4.4) uses touched trades for the applied effect and untouched ones as the control.
+   - Desk grading (§ 4.7) uses touched trades for the applied effect and untouched ones as the control.
    - The Gate-2 demotion read on `bybit_2` + `bybit_portfolio` is unaffected while they stay in
      `recommend`, and is split the same way once they apply (LTR § 5).
 4. **Untouched trades stay the default.** INFERRED: most `bybit_1` trades are never touched, because
    most reviews are `hold` (1 of 2 real-money LTR rows in the first run). So the soak keeps its
    population.
 5. **The `bybit_1` mechanics evidence** for the desk is the first 1–2 clean applies: verdict, readback
-   and divergence check all clean (§ 0a flip order).
+   and divergence check all clean (the operator later chose *"All accounts"* for tighten applies, 2026-10-25, row `DESK-13-MANDATE`).
+
+### 3.7 Entries — the desk trades as the `claude_desk` leg (new in v1)
+
+```
+desk decision: propose_entry (package level, decision_id, packet_sha)
+   │  validated by L0: schema, TP doctrine, symbol in the universe, not expired, evidence on record
+   ▼
+desk intake (DESK-4: the system-action route first, a VM endpoint later)
+   ▼
+claude_desk strategy adapter (DESK-17)        reads unexpired accepted proposals each tick; emits ONE
+   │                                           order package per proposal, signal_logic = desk, carrying
+   │                                           decision_id; entry / SL / TP exactly as proposed
+   ▼
+Coordinator.multi_account_execute             the existing path: the account's mode: and the leg's
+   │                                           execution: fold into effective_dry as for any leg
+   ├──► account A: RiskManager_A.approve(package) → size → executor_A
+   ├──► mirror B:  RiskManager_B.approve(package) → size → executor_B
+   └──► …                                       (a refusal is a logged, per-trade outcome)
+```
+
+- **One leg, one roster entry per account.** `claude_desk` sits in `config/strategies.yaml` and on
+  account rosters like any leg. Where it trades is decided by the same two gates and roster membership,
+  so CI's existing asymmetry rules apply to it unchanged. Adding it to a real-money roster is a roster
+  edit under `MD-PROMOTE-S1-S2`, which opens a human-merge PR (§ 8).
+- **Each account sizes the trade.** `RiskManager.approve()` applies that account's per-trade risk, its
+  concurrency and exposure limits, and its daily-DD switch (*"keep open, block new"*): a tripped
+  switch refuses the desk's new entries exactly as it refuses any leg's.
+- **The desk's bracket is the package's bracket.** It is not re-derived by a class default, so
+  `check_tp_doctrine.py` measures the desk leg on the proposals' `tp.basis`, not on a `tp_r`.
+- **The mirror carries the leg.** When `claude_desk` is on `bybit_2` it is on `bybit_portfolio`, by
+  the existing strict-equality tests. No exception is proposed.
+- **Expiry.** A proposal that has not filled by `good_till_bars` is cancelled and recorded as
+  `expired_unfilled`. That is an outcome, not an error.
+- **Prop accounts** get the leg only through the prop superset gate (CLAUDE.md § promotion ladder):
+  everything above plus the prop EV/survival gate against the firm's DD limits.
+
+**Why a leg, and not a new desk order path.** A leg inherits every guard the repo already has: risk
+sizing, the two gates, roster CI, the mirror tests, TP-doctrine measurement, the soak contract, Gate-2
+demotion and per-trade refusals. A desk-specific path would have to rebuild each of them, and the ones
+it forgot would be the bugs. This is the "no third gate" rule applied to the desk.
+
+### 3.8 The desk's own trades after entry
+
+On a `claude_desk` trade, the desk's in-trade and exit decisions **are the leg's management logic**:
+
+- `tighten_sl` and `tp_revise` go through the amend path (§ 3.0–3.3). They are per-account and
+  readback-checked. On a desk trade a `tp_revise` may move the target either way, because it is the
+  leg's own prediction; widening the **stop** is still never allowed.
+- `close` / `partial_close` go through the account's existing close path, per account, with the
+  close reason `strategy_close` (desk). That is a first-class close reason, not a reconciler close.
+- **The venue SL/TP and the monitor still protect every position**, whatever the desk does (LTR § 1).
+  If the desk session is down, a desk trade runs to its bracket. That is not a halt and it is not
+  unmanaged: the bracket is the plan.
 
 ---
 
-## 4. Model tiering, and the teacher-sampling dial
+## 4. Teacher → student: how the system's models replace Claude
 
-### 4.1 Tiers (operator point 4; the manager's proposal on the DESK-DESIGN row)
+### 4.1 Every desk decision is a teacher label
+
+A label is the triple **(packet, decision, realised outcome)**, joined on `packet_sha` and
+`decision_id`:
+
+| role | the decision | the outcome label | provenance |
+|---|---|---|---|
+| entry generation | `propose_entry` spec, or `no_trade` | the proposal's bracket **replayed on the real path** from `info_cutoff_at`, net of the full cost stack, whether or not it was executed; for executed trades also the realised fill outcome | `computed` (replay), `measured` (fills) |
+| in-trade | the action and level | paired ΔR: managed − untouched bracket (LTR-5's replay) | `computed` |
+| exit | close / partial / hold | ΔR versus holding to the bracket | `computed` |
+| post-trade | blind grade | realised net R of the next trades (CJ-4's test) | `judgment` vs `measured` |
+
+- **Shadow decisions are labels too.** A shadow `propose_entry` is replayed exactly like an executed
+  one. So the label stream starts with DESK-6, before the leg trades anything.
+- **Claude is a teacher, never ground truth.** Each row keeps the Claude label, the outcome and the
+  counterfactual, with `label_provenance`. A student is trained on outcome-weighted targets, and every
+  source re-qualifies through CJ-4 before any manifest trains on it (distillation § 3.3).
+- **The feed.** Desk rows are a `claude_judgments` source (`kind: desk_<role>`, DESK-11 into CJ-2), so
+  the students see exactly the projected `features_at_review` the teacher saw.
+- **Exception rows** (`external_context.used = true`) are excluded from training sets by default and
+  graded separately (v0 rule, unchanged).
+
+### 4.2 The hand-off path per role
+
+Each role moves through three steps independently. A step is a manifest's `target_deployment_stage` on
+the existing `candidate → shadow → advisory` ladder; "drives" is the new top step for a role.
+
+| step | what the student does | what Claude does |
+|---|---|---|
+| **S-shadow** | decides on every packet the desk sees; recorded, never applied | decides and drives |
+| **S-advisory** | its decision is shown to the desk in the packet (`ml[]`, three-state) and recorded | still decides; its rate of disagreeing with the student is measured |
+| **S-drives** | it is the decider for that role. Its decisions go through the same intake, leg and gates as Claude's did | drops to the ρ blind-teacher audit (§ 4.5) on a sample of the student's packets |
+
+The student that drives entries trades as **its own leg** (`ml_desk_<role>`), not as `claude_desk`.
+So it climbs the promotion ladder itself (§ 8): its D-S0 replay, its 1–2-trade mechanical soak, then
+`MD-PROMOTE-S1-S2`. Claude's leg is demoted by the existing Gate-2 path only when the student's leg is
+live on the same accounts. **Removing Claude from a role is therefore a roster change**, with every
+guard a roster change already has.
+
+### 4.3 The measured criteria for each step (registered before the run)
+
+The deciding metric is **net R per capital-day**: Σ net R ÷ Σ (risk-units × days held). It is net of
+the full cost stack (`execution_costs.resolve_cost_policy()`), measured out of sample on packets the
+student never trained on (purged walk-forward, the distillation § 3.5 leakage tests). It is used
+instead of R per trade so a policy cannot look better by holding longer or trading more.
+
+| step | gate (all must hold) | agreement's role |
+|---|---|---|
+| **candidate → S-shadow** | the manifest trains; § 3.5 leakage tests pass; the source is CJ-4 qualified | reported only |
+| **S-shadow → S-advisory** | over n ≥ 150 out-of-sample decisions (the CJ-4 floor; INFERRED adequate for a sign test, not for a size estimate): student net R per capital-day **> 0**, CI excluding 0, **and** not worse than the role's baseline (entry: no-trade and the strategies' own signals on the same windows; in-trade: always-hold and the leg's best static trail) | reported. A student that agrees with Claude but loses money fails; one that disagrees and wins passes |
+| **S-advisory → S-drives** | over n ≥ 300 out-of-sample decisions (the ML-D2 label wall), with the student's leg having passed its own D-S0 and mechanical soak: student net R per capital-day **≥ Claude's on the same packets minus a non-inferiority margin of 0.02 R per capital-day** (proposed; § 11 Q2), CI on the difference excluding the margin, in ≥ 2/3 folds; and live cost fidelity on the student's soak trades within the armed `cost_tolerance_bps` | reported. If agreement is high and the margin passes, the hand-off costs nothing; if agreement is low and the student still passes, the student has found something Claude does not |
+| **S-drives → (Claude retired from the role)** | none beyond S-drives: Claude stays as the ρ audit until the operator says otherwise | the audit's agreement and outcome gap are the **drift** monitor; a student whose audited outcome gap turns negative over the last 50 audited packets is proposed for demotion back to S-advisory (a proposal, never a self-flip) |
+
+**Why non-inferiority, not superiority, for the last step.** The point of the hand-off is to remove
+the cost and latency of Claude (§ 5: a student can act at 1–5 min where a session cannot). A student
+that matches Claude net of cost is the win. Requiring it to beat Claude would keep Claude in the loop
+for the rest of its life.
+
+**Order of hand-off (INFERRED from label volume).** In-trade first: LTR rows accrue on every open
+package and the label is computed, not judged. Entry generation second: it needs n ≥ 300 proposals
+*with* outcomes, and at the § 7 rates (≈ 4–8 proposals a day, UNMEASURED until DESK-6) that is
+about 6–12 weeks of shadow proposals, or less with the D-S0 replay set (§ 8.1). Exit last: it has the
+fewest decisions.
+
+### 4.4 Model tiering (v0 § 4.1, re-pointed)
+
 
 | tier | what | why this model |
 |---|---|---|
@@ -407,7 +557,7 @@ contaminate the other.
 or prop package is an escalation candidate by definition. Opus confirms it before the intent is issued,
 which is LTR § 6.6's rule carried over. Paper and shadow records never escalate.
 
-### 4.2 The dial: teacher sampling rate ρ
+### 4.5 The dial: teacher sampling rate ρ
 
 ```
 C_day  =  W · c_wake(f)  +  N_e · c_esc  +  ρ · N_d · c_teach  +  c_teach_session  +  c_grade/7
@@ -440,21 +590,21 @@ batched Opus start.
 - If the capacity reserve is breached (LTR § 6.6), set ρ to 0 **before** any live tier degrades. The
   teacher sample is the first thing dropped and never a reason to skip a live review.
 
-### 4.3 Measuring the tiers
+### 4.6 Measuring the tiers
 
 Sonnet–Opus **agreement** per role is a diagnostic, never a promotion metric (distillation § 3.6). The
 outcome metric is **ΔR versus counterfactual, net**, per role and per model, over the same packets. If
 the Opus teacher and the Sonnet decider disagree and outcomes favour Opus on a role, that role's live
 tier moves to Opus. That is a proposal on evidence through the normal path, not a reflex.
 
-### 4.4 Grading (folds in LTR-5)
+### 4.7 Grading (folds in LTR-5)
 
 The weekly grading is LTR-5's counterfactual replay, generalised per role:
 
 - **In-trade:** actual minus untouched-bracket replay, with touched and untouched trades split.
-- **Entry:** take/skip selection lift versus take-all and versus the strategy's own `confidence`. This
-  is the ML-M5 rule shape.
-- **Market watch:** delay/veto lift on the candidates it flagged.
+- **Strategy-entry review (optional, record-only):** take/skip selection lift versus take-all and
+  versus the strategy's own `confidence` (the ML-M5 rule shape).
+- **Entry generation (first):** net R per capital-day of proposals, replayed and realised, against no-trade, the random-entry baseline and the strategies' own signals on the same windows; split by `novelty`; `expected_r_net` and `p_hit` calibration.
 - **Post-trade:** blind-vs-revealed gap (CJ-3).
 
 Calibration of `judge_prior` and `confidence` per role and per model. An A–F grade on a sample of
@@ -462,7 +612,125 @@ decision rows, keyed by `decision_id`.
 
 ---
 
-## 5. Short-timeframe feasibility — latency, cost, rotation
+## 4A. The desk as a training-data generator (a hard requirement)
+
+The desk is only worth its usage if what it does is **learnable**. A desk that trades and forgets is
+the failure the operator named. Each item below is a requirement on the build, with the row that builds
+it.
+
+| requirement | rule | row |
+|---|---|---|
+| **Point-in-time inputs** | the full packet as seen, `packet_sha`, `info_cutoff_at`; no field later than the cutoff (distillation § 3.5 test 1) | DESK-0 (built), DESK-0B, DESK-16 |
+| **Every decision, including no-action** | `hold`, `no_trade` and `no_recommendation` are rows whenever something was due. A wake with nothing due records nothing (§ 2.5); that is cost control, and the due log says what was not looked at | DESK-0B, DESK-6 |
+| **The alternatives, priced** | each row carries `alternatives[]`: the actions the role could have taken, each with its counterfactual from the packet's history block (LTR-0 table for in-trade; the forward-R base rate for entry). The student learns from the choice *and* the options | DESK-0B (field), DESK-7 (pricing) |
+| **Per-account verdicts and fills** | each account's gate verdict, the fill, the readback and the close reason, keyed by `decision_id` | LTR-6R (built for amends), DESK-17 (entries) |
+| **The realised outcome, joined back after close** | net R (full cost stack), MAE, MFE, giveback from peak, bars held, close reason; and the replayed outcome for shadow or untaken actions | DESK-20 (new) |
+| **Stable ids** | `decision_id → intent_id → order_package_id → trade_id(per account) → outcome_id`, one join, no fuzzy match | DESK-0B, DESK-20 |
+| **Schema versioning** | `schema_version` on packets and rows; `label_version` = (model, skill_sha, prompt_sha) on decisions | DESK-0 (built), DESK-0B |
+| **Canonical store** | records project over existing stores: `comms/desk/` and `comms/live_review/` (append-only, guarded), `order_packages` meta, the trade journal for fills and outcomes. A new table only with the operator's OK and a backfill (Generation Discipline Rule 3) | DESK-20 |
+| **Label quality** | no post-hoc relabel (append-only; a correction is a new row that cites the old one); the post-trade grade is blind first (CJ-3); exception rows are separable (`external_context.used`) | DESK-0 guard, CJ-3 |
+| **Coverage, not just volume** | targets per (role × regime cell × symbol class × state bucket). Where a cell is under-covered, the teacher sample ρ and **shadow-only exploration** (a share of scan wakes forced to price a proposal the desk would not make) fill it, so the dataset is not only the states Claude likes. Exploration never reaches an order | DESK-23 (new) |
+| **The consumer path, proven** | desk rows → `claude_judgments` (CJ-2, `kind: desk_<role>`) → manifests (CJ-5, DESK-19) → registry. A **"recorded but never trained on" detector** fails when a decision row older than 14 days is in no dataset build's consumed-id list | DESK-11, CJ-2, DESK-21 (new) |
+
+---
+
+## 4B. The second half: from desk data to models that replace the desk (a PLAN)
+
+The operator, ~07:02Z (verbatim): *"it's not like we end up having this great trading desk that is
+pushing structured data into a void … we can have the trading desk and measure the trading desk, and
+that we can measure the MLs and measure how much they're improving and measure them against the cloud
+trading desk, so that we have, like, a benchmark."* This section is the plan; its rows queue as later
+phases.
+
+### 4B.1 The pipeline, hop by hop — what exists (MEASURED by reading the repo, 2026-10-26)
+
+| hop | today | missing | row |
+|---|---|---|---|
+| desk record | `comms/desk/` schema + guard exist; **0 rows** in `decisions.jsonl`. `comms/live_review/reviews.jsonl` has **15 rows** | the desk session writing rows (DESK-6); LTR rows reaching the desk shape | DESK-6, DESK-11 |
+| dataset | dataset families live in `ml/datasets/families/`. **There is no `claude_judgments` family**; the nearest is `review_journal.py`, and its manifest `baseline-post-trade-review.yaml` is `.disabled` | the family, its leakage tests, the desk sources | CJ-2, DESK-11 |
+| training | `scripts/ops/run_training_cycle.sh` on the trainer VM trains every enabled `ml/configs/` manifest. **No enabled manifest reads Claude or desk labels** | student manifests | CJ-5, DESK-19 |
+| registry | `ml/registry/model_registry.py`, with the `candidate → shadow → advisory` ladder | a per-role hand-off status beside the ladder stage | DESK-19 |
+| liveness | `scripts/ops/ml_plan_status.py --plumbing` checks the ML plan's plumbing | a check per hop for desk data, and the never-trained-on detector | DESK-21 |
+
+### 4B.2 One scorecard (DESK-22)
+
+One generated table, the same population for desk and students:
+
+| block | per role | measured over |
+|---|---|---|
+| **(a) the desk** | net R per capital-day (full cost stack); hit rate; calibration of `judge_prior` / `p_hit` / `confidence`; giveback from peak; latency bar-close → decision; $ per decision | every desk decision with an outcome in the window, live and shadow split |
+| **(b) each student** | agreement with the desk (diagnostic); its own counterfactual net R per capital-day | **the same decisions**, out of sample to the student |
+| **(c) student vs desk** | the gap in net R per capital-day with its CI; the **improvement curve**: the gap at each retrain, plotted against labels seen | rolling, by retrain |
+| **(d) hand-off state** | the step each student is at, the § 4.3 threshold for the next step, the demotion rule back | — |
+
+**Reporting homes:** the `/ml-review` step-9 block (the ML plan loop, which CJ-6 already plans to
+extend), a "Desk" section in `/performance-review` (DESK-9), and one line in the brief's "what moved".
+DESK-22 extends CJ-6 rather than building a second hook.
+
+---
+
+## 4C. Label volume: not waiting on the market (a PLAN)
+
+The operator, ~07:08Z (verbatim): *"what's my fear is that the trading desk will work well, but it'll
+just generate too few trades for the MLs to be able to learn from at, like, a reasonable pace … I want
+to see if we can also set up a flow, doing sort of, like, you know, more historical trading or, like,
+other training sessions so that we can up the pace of the ML learning and not only be dependent on how
+quickly trades are actually developing in the market."*
+
+### 4C.1 The gap at live pace alone (INFERRED)
+
+The floors come from the distillation design: CJ-4 validation n ≥ **150** distinct trades; the label
+wall n ≥ **300** (ML-D2), which § 4.3 uses for S-drives. **Distinct trades** count, not decisions: 23
+in-trade decisions a day on the same few trades are correlated.
+
+| role | live label rate | time to n = 150 | time to n = 300 |
+|---|---|---|---|
+| in-trade, real money only | **0.82** new positions a day (MEASURED, real-money accounts, LTR design § 6.1) | ≈ 6 months | ≈ 12 months |
+| in-trade, all books (paper and prop added) | UNMEASURED; INFERRED ≈ 2–3× real money | ≈ 2–3 months | ≈ 4–6 months |
+| entry generation (shadow proposals) | **assumed** 4–8 a day (DESK-6 measures it) | ≈ 3–5 weeks | ≈ 6–11 weeks |
+| exit | a subset of in-trade | longer than in-trade | longer than in-trade |
+
+So at live pace the in-trade and exit students wait months. Entry generation is quicker because a
+shadow proposal is labelled whether or not it trades. Offline labels close the gap.
+
+### 4C.2 Historical backfill (reconciles with CJ-7)
+
+- **Run the desk roles on masked, point-in-time packets** for the **1,823** historical closed trades
+  (the distillation design's count of distinct `linked_trade_id`) and on the Stage-0 backtest trade
+  lists, using DESK-7's harness and masking. Outcomes are computed on the real candles.
+- ⚠️ **The memory trap.** Most of those trades predate the judge model's knowledge cutoff, so they carry
+  `pre_cutoff: true` and are **excluded from validation and from every gate** by default (distillation
+  § 3.5.5). They may train a student; they may not prove one. The gates run on post-cutoff history and
+  on forward shadow rows.
+- CJ-7 (backfill scope) owns the sizing. This design asks that its scope cover in-trade, exit and
+  post-trade on those trades, not post-trade grades alone.
+
+### 4C.3 A standing offline training-session flow (DESK-24)
+
+- **Desk sessions that walk history bar by bar as if live**: scan → propose → manage → exit, on masked
+  candles and the strategies' backtest ledgers, through the same skill, schemas and enums. Each session
+  is a batch over a declared window, so its labels are reproducible.
+- **Synthetic or perturbed episodes are optional** (block-bootstrapped or regime-spliced paths). They
+  carry `label_provenance: synthetic`, are **never mixed into live-performance numbers or any gate**,
+  and get zero training weight until the ablation (§ 4C.4) shows they help.
+- **Weighting:** live and forward-shadow labels weight 1.0. Masked historical labels weight 1.0 for
+  training and 0 for gates. Synthetic labels start at 0. The source is kept as a stratum, so the
+  ablation can re-weight.
+
+### 4C.4 Cost, budget dial, proof
+
+- **Cost per label** is measured on a pilot through `get_session().usage` deltas and `spend_meter`.
+  INFERRED starting point: ≈ $0.04 a decision for a Sonnet working wake (§ 5.3). 1,000 offline labels
+  ≈ $40. **UNMEASURED** until the DESK-24 pilot runs.
+- **The budget dial** is offline labels per week, set by the operator, scheduled inside the weekly
+  reserve (§ 7). It is the first thing cut in a breach, before ρ.
+- **The proof is an ablation** (DESK-25): the same student trained with and without offline labels,
+  out of sample on post-cutoff and forward-shadow rows, net R per capital-day. If offline labels do not
+  help, the dial goes to zero and that is the answer.
+
+---
+
+## 5. Short-timeframe feasibility — latency, cost, rotation (carried from v0)
 
 ### 5.1 Latency floor per stage
 
@@ -546,7 +814,7 @@ wake. LTR-10B carries the per-session cost records that feed it.
 
 ---
 
-## 6. Can a short-hold (10 min – 1 h) lane be profitable?
+## 6. Can a short-hold (10 min – 1 h) lane be profitable? (carried from v0)
 
 ### 6.1 Edge net of the full cost stack — MEASURED
 
@@ -618,7 +886,7 @@ it: the repo is public, and it is the risk manager's number, not the desk's.
 
 ---
 
-## 7. Capacity plan
+## 7. Capacity plan (carried from v0, with the scan wake added)
 
 ### 7.1 Today's budget — MEASURED inputs, INFERRED arithmetic
 
@@ -650,7 +918,7 @@ DESK-10 measures `k` directly from per-session cost deltas against two operator 
 |---|---|---|---|---|
 | **0 — build** | the DESK rows (§ 10), $155 in total ceilings over ~2 weeks | ≈ $11 | 0.9–2.2 | 6–14% |
 | **1 — shadow pilot, 15 min** | standing Sonnet desk while anything real-money or prop is open (72.9% of hours); in-trade + exit roles; **f = 0.25 → N_d ≈ 23**; ~1 Opus escalation/day at ~$1.0 (INFERRED; LTR-3's whole lane divided by its 9 reviews gives an upper bound of $1.45); ρ = 0.25 teacher ($0.85); weekly grading (~$5/week) | **≈ $4.5** | **0.4–0.9** | 2.5–6% |
-| **2 — + entry review and market watch (shadow) + paper record-only** | + 0.82 real-money entries/day (negligible); hourly market-watch sweep (~$0.7); paper packages roughly double n̄ (+~$2) | ≈ $7.5 | 0.6–1.5 | 4–9% |
+| **2 — + entry generation (shadow scan wakes) + paper record-only** | a scan wake at each 15-min bar close: ASSUMED every bar is due, ≈ 96 working wakes/day × $0.041 (§ 5.3 Sonnet working wake) ≈ **$4**; Opus confirms on real-money-bound proposals; paper packages roughly double n̄ (+~$2). Proposals per day are UNMEASURED (assumed 4–8) | ≈ $10.5 | 0.9–2.1 | 6–13% |
 | **3 — + per-trade short-hold lanes** (only after § 6.3) | ~0.4–1 short trades/day × $0.5 | ≈ $8–8.5 | 0.7–1.7 | 4–11% |
 | **3′ — the same as a STANDING 5 min lane** | instead of per-trade spawns | ≈ $15 | 1.3–3.0 | 8–19% |
 | **4 — 1 min cadence** | standing | ≈ $40+ | 3.3–8 | 21–50% (and infeasible on latency anyway, § 5.1) |
@@ -664,138 +932,181 @@ DESK-10 measures `k` directly from per-session cost deltas against two operator 
   DESK-6 supersedes LTR-4 (§ 10).
 - Scales 2–3 come out of the 15.9 pp/day net.
 - **The breach order of LTR § 6.6 extends:**
-  1. teacher ρ → 0;
-  2. drop market watch and entry review (shadow);
-  3. paper → L0-only;
-  4. the in-trade role keeps running, degraded to recommend-only on Sonnet.
+  1. offline training sessions (§ 4C) → 0;
+  2. teacher ρ → 0;
+  3. drop the optional strategy-entry review, then lengthen the scan cadence to 1 h (entry generation
+     keeps running, at a lower label rate);
+  4. paper → L0-only;
+  5. the in-trade role keeps running, degraded to recommend-only on Sonnet.
 
 ---
 
-## 8. Promotion path for the desk itself (it sits INSIDE the ladder)
+## 8. The promotion ladder for the desk (it sits INSIDE the ladder)
 
-The desk cannot be backtested the way a strategy can: its judgment is the thing being tested. It earns
-each step as follows.
+A live or paper book never establishes edge (CLAUDE.md). The desk's judgment cannot be backtested like
+a strategy, so its Stage 0 is a **blind replay**, registered before the run. Each role climbs on its own.
 
-| step | what | evidence that moves it on (registered BEFORE the run) |
+### 8.1 D-S0 — offline, per role, net of the full cost stack
+
+| role | the replay | the rule (registered in a `research/queue/` unit before the run) |
 |---|---|---|
-| **D-S0 — blind replay (offline)** | Per role, historical packets are rebuilt point in time from the Stage-0 trade lists plus path emits (`--emit-paths`, EXIT-PATH-EMIT-OFFLINE), **masked** (no symbol, no dates, prices ATR-normalised; distillation § 3.5.5). Sonnet decides, an Opus sample re-judges, and each action is replayed on the real path. | **In-trade:** paired ΔR (desk-managed − untouched bracket) > 0, net of the extra amend slippage, with the 95% CI excluding 0. INFERRED n: with a paired sd of the difference ~0.4 R, detecting +0.05 R needs n ≈ (2.8 · 0.4 / 0.05)² ≈ **500 trades**, and +0.10 R needs ≈ **125**. **Entry review:** skip-selection lift > take-all and > `confidence`-only, net R and max DD, in ≥ 2/3 folds (ML-M5 shape). |
-| **D-S1a — live shadow** | The standing desk on live packets, record-only, every role. | **Mechanical, not a sample:** packets build with `info_cutoff_at`; decisions validate against the schema; the due → decision latency is recorded per stage; cost per wake is measured. **24 h of clean operation, or the first 2 clean decisions per role, whichever comes first.** It is not a calendar soak: the soak rule (OPERATING-PLAN § 2) caps it at mechanics. |
-| **D-S1b — sandbox mechanics** | Intents through gate → executor → readback on the sandbox (§ 3.6), per account class: Bybit, prop VM, phone, Alpaca. | **1–2 clean intents per class**, verdict and readback recorded. A refused or silent no-op is a fail to fix, not a sample. |
-| **D-S2 — mandate-bounded live** | `tighten_sl` on real money and prop, within `MD-LIVE-TIGHTEN-SL` (LTR-7: 0.25 R bound, 0.5 R shadow arm, operator-DECIDED). Live entry skips need a **new mandate**: changing what permits trading is Tier 3, and only the operator grants it. | D-S0 PASS for that role, D-S1b PASS for those account classes, and the mandate granted. **Demotion signal:** applied net ΔR < 0 over the last 20 applies proposes `apply_mode: recommend` (LTR § 5), as a proposal, never an automatic flip. |
+| **entry generation** (DESK-18) | Historical **scan packets** rebuilt point in time at sampled bar closes, **masked** (no symbol names, no dates, prices ATR-normalised; distillation § 3.5.5). The desk proposes or passes; each proposal's bracket is replayed on the real path with the full cost stack. | Net R per capital-day **> 0** with the 95% CI excluding 0; **beats a random-entry baseline** that uses the desk's own bracket geometry at random times on the same symbols (so the edge is in the *timing*, not the bracket); **and is not a re-labelling of the strategies**: the subset with `novelty = new` must pass on its own. ≥ 2/3 folds positive. INFERRED n: with a per-trade net-R sd of ~1.0 R, detecting +0.10 R needs n ≈ (2.8 · 1.0 / 0.10)² ≈ **780 proposals**, and +0.20 R needs ≈ **200**. |
+| **in-trade** (DESK-7) | v0's paired-counterfactual replay, unchanged | paired ΔR > 0 net of amend slippage, CI excluding 0 (≈ 125 trades for +0.10 R at a paired sd of 0.4 R) |
+| **exit** (DESK-7) | the same harness, `close` / `partial_close` actions | ΔR versus holding to the bracket > 0, CI excluding 0 |
 
-**Live P&L never promotes the desk.** A live book checks mechanics and cost (CLAUDE.md). The desk's live
-record feeds the **grading** and the **teacher dataset**. Promotion rests on D-S0.
+**Two OOS sets, one rule (proposed).** The masked replay gives n quickly but can leak hindsight through
+model memory despite masking. **Forward shadow proposals** (DESK-6, from live packets) cannot leak: the
+outcome did not exist when Claude decided. The D-S0 entry-generation rule is registered over **both**:
+pass on the replay at the stated n, **and** the forward-shadow set must not contradict it (its point
+estimate > 0 once it reaches n ≥ 100). The forward set is not a paper book establishing edge: it is the
+same blind, pre-registered, cost-stacked replay run on packets that were built before their outcomes.
+
+**Version pinning.** A desk leg is `(model, skill_sha, prompt_sha)` = its `label_version`. A change of
+model family re-runs the entry-generation replay on a confirm set (n ≥ 200, the same rule) before the
+changed desk trades. A skill text edit is recorded and graded; it does not re-run Stage 0.
+
+### 8.2 D-S1 — mechanical soak on paper, 1–2 trades
+
+- **Mechanics, never a sample size, never a date** (OPERATING-PLAN § 2 "The soak is MECHANICAL").
+- `claude_desk` goes on `bybit_1` (the DECIDED sandbox) and `alpaca_paper` once D-S0 entry generation
+  passes. The soak is **1–2 clean desk trades**: proposal → intake → package → each account's `approve()`
+  → fill → bracket on the venue → in-trade decisions applied and read back → close with a correct
+  close reason → graded.
+- Until D-S0 passes the leg is rostered `execution: shadow`: it builds and logs packages everywhere and
+  sends nothing. That is the shadow stage, and it is where the label stream starts.
+- The touched/untouched split of v0 § 3.6 still applies to strategy trades on `bybit_1`. A `claude_desk`
+  trade is the desk's own, so it is not "touched": it is its own leg's record.
+
+### 8.3 D-S2 — real money under operator-granted mandates
+
+| what | mandate | state |
+|---|---|---|
+| `claude_desk` onto `bybit_2` + `bybit_portfolio` (and Alpaca live + mirror) | `MD-PROMOTE-S1-S2`, as for any leg: a fire opens a **human-merge** PR after the portfolio-overlap check, with cost checked against the measured Bybit cost | granted and armed (`config/mandates.yaml`); no new mandate needed |
+| tighten-only stops on any trade | `MD-LIVE-TIGHTEN-SL` | granted; live |
+| desk exits (`close` / `partial_close`) on **strategy** trades | **new**, proposed by DESK-13 after the D-S0 exit unit passes; the operator grants | not proposed yet |
+| desk on prop accounts | the prop superset gate (prop EV/survival vs the firm's DD limits) on top of the above | — |
+| a student driving a role on real money | its own leg through `MD-PROMOTE-S1-S2` (§ 4.2) | — |
+
+**Demotion** is the existing Gate-2 signal: the live + mirror net-of-cost window. `MD-DEMOTE-S2-S1` is
+armed for auto-land and applies to `claude_desk` like any leg.
 
 ---
 
-## 9. How desk decisions reach the ML pipeline (operator point 6)
+## 9. Safety — unchanged, and how each rule binds the desk
 
-1. **Same packet, same features.** Every decision row carries `packet_sha`. The `claude_judgments`
-   family (CJ-2) joins on it and projects `features_at_review` from the packet. So the student trains
-   on exactly what the teacher saw. The CJ-2 dataset schema **is** the v3 packet schema (DESK-0).
-2. **Claude is a teacher, never ground truth.** Each row keeps both the Claude label and the realized
-   outcome, plus the computed counterfactual, with `label_provenance ∈ {judgment, computed, measured}`.
-   Every source re-qualifies through CJ-4 before any manifest trains on it.
-3. **The distilled students are the route to sub-15-min management.** A student such as
-   `ltr-tighten-head-v1` or a desk entry-selection head runs with no Claude in the loop, so it can act
-   at 1–5 min where a session cannot (§ 5.1). It climbs the normal `candidate → shadow → advisory`
-   ladder on net-R evidence.
-4. **Claude as an input to ML live management** is **DECIDED as "allow as a feature later"** (CJ Q2):
-   only after a model proves out-of-sample net-R edge with it.
-   - When it does, the feature carries a three-state value: `claude_present`, `claude_absent`
-     (no decision this bar) and `claude_stale` (older than one bar). **Absent is never imputed as
-     `hold`.** That is the collapsed-states rule.
-   - The model must be trained with the absence pattern it will see live.
+| rule | how it binds the desk |
+|---|---|
+| **Each account's RiskManager** | Entries pass `approve()` (§ 3.7); amends pass `approve_amend()` (§ 3.2). The desk has no size field and never sees an account's bounds |
+| **Per-trade refusals** | A refused desk entry or amend is a logged, per-account outcome, retried while unexpired, one flag if it keeps failing |
+| **The two execution gates, no third** | `mode:` and `execution:` plus roster membership decide where `claude_desk` trades. No `DESK_ENABLED` flag exists or may be added |
+| **The promotion ladder** | § 8: D-S0 blind replay net of the full cost stack → mechanical paper soak (1–2 trades) → real money under `MD-PROMOTE-S1-S2` |
+| **TP doctrine** | Every proposal carries a predictive TP with a basis; `tp_revise` moves the prediction; the guard measures the leg |
+| **No halting (Prime Directive rule 7)** | A dead desk session leaves desk trades on their venue brackets and strategy trades on theirs; nothing turns itself off. A stale heartbeat raises one flag (§ 12). The daily-DD switch is the one sanctioned off switch, and it blocks new desk entries like any leg's |
+| **Live P&L never promotes** | The desk's live record feeds grading and the label set; promotion rests on D-S0 |
 
 ---
 
-## 10. Build plan — rows for the manager to file after operator review (NOT filed by this PR)
+## 10. Build plan — re-sequenced to "Claude drives, the models learn"
 
-Every row carries `roadmap: [L-DESK]` (plus `L-ATM` where marked) and a `writeback` to `L-DESK` and to
-`docs/ARCHITECTURE-CANONICAL.md` (the order-path / risk-manager neighbourhood for DESK-2/3).
+Every row carries `roadmap: [L-DESK]` and a `writeback` to `L-DESK` and to
+`docs/ARCHITECTURE-CANONICAL.md`. The manager files the new rows; this PR re-scopes existing ones only
+by note (§ 13).
 
-| order | id | what | tier | model | ceiling | depends on | supersedes / reshapes |
+### 10.1 The critical path
+
+```
+DESK-0B → DESK-16 → DESK-6 ─────────────► labels accrue (shadow proposals, graded on the real path)
+                 └→ DESK-18 (D-S0 entry generation) ─┐
+DESK-0B → DESK-4a → DESK-17 (claude_desk leg, shadow) ┴→ bybit_1 / alpaca_paper soak (1–2 trades)
+                                                        → MD-PROMOTE-S1-S2 → bybit_2 + mirror
+DESK-11 → CJ-2 → CJ-4 → DESK-19 (students: shadow → advisory → drives)
+later: DESK-20 (outcome join) · DESK-21 (never-trained detector) · DESK-22 (scorecard) ·
+       DESK-23 (coverage) · DESK-24 → DESK-25 (offline sessions, then the ablation that proves them)
+```
+
+### 10.2 All rows, in order
+
+| order | id | what | tier | model | ceiling | depends on | change |
 |---|---|---|---|---|---|---|---|
-| 1 | `DESK-0-SCHEMA` | Packet v3 (entry / in_trade / exit) and the decision schemas of § 2.2–2.3; `comms/schema/desk_*.schema.json`; validator guard (extends `live-review-records-guard`); `features_at_review` projection | 1 | Sonnet | $6 | LTR-11 (#20127) | **reshapes CJ-1/CJ-2**: CJ-2 builds on this schema |
-| 2 | `DESK-1-VM-PACKETS` | The packet build and due events as VM read routes (`/api/diag/desk_due`, `/api/diag/desk_packet`); LTR-1's events plus § 2.4's three; **the 36 s measured as a VM figure** | 1 (read path) | Sonnet | $10 | DESK-0 | **absorbs LTR-1-DUE-WATCH** (in flight: merge, don't duplicate) and the LTR-11 open-packages route |
-| 3 | `DESK-2-RISK-GATE` | `RiskManager.approve_amend` / `approve_entry`, `PropRiskManager.approve_amend`; the four-state verdict record; `collapsed-state-guard` contract; tests. Pure functions, no caller | **3** (risk.py) | Opus | $12 | — | **gate half of LTR-6** |
-| 4 | `DESK-3-EXECUTORS` | Per-account executors behind the gate (§ 3.3); package `intent_sl` vs per-account `applied_sl`, floors in every trail; mandatory readback; the divergence check after every intent | **3** (order path) | Opus | $16 | DESK-2, PHONE-AMEND-REFUSED-1025 | **executor halves of LTR-6, LTR-8, LTR-9** |
-| 5 | `DESK-4-INTAKE` | (a) a `desk-intent` system-action (issue route) with its latency recorded; (b) a VM intake endpoint, auth-designed (Tier 2), needed for 5 min; the intent/verdict store projected over an existing store first | 2 | Opus | $10 | DESK-2 | LTR-6's evidence-on-main check |
-| 6 | `DESK-5-SKILL` | `.claude/skills/trading-desk/SKILL.md`: the loop, roles, enums, escalation, ρ, rotation and handoff state; it **extends** `live-trade-review` rather than replacing it | 1 | Opus | $6 | DESK-0 | reshapes LTR-3's skill into the in-trade role |
-| 7 | `DESK-6-SHADOW-PILOT` | Scale 1, record-only, 15 min standing Sonnet desk over real money + prop. **Measures:** latency per stage, $ per wake, `C0`, `Δ`, calls per wake, `f`, rotation | 1 | Sonnet (+ Opus sample) | $25 | DESK-0, DESK-5 (DESK-1 optional: relay packets work at 15 min) | **supersedes LTR-4-ROUTINE** if approved; until then LTR-4 stands |
-| 8 | `DESK-7-BLIND-REPLAY-S0` | D-S0 for in-trade and entry review on the real-money 2h/4h legs: point-in-time masked packets, paired counterfactual, pre-registered `research/queue/` units | 1 | Sonnet + Opus sample | $30 | DESK-0, LTR-0 tool, EXIT-PATH emits | — |
-| 9 | `DESK-8-SHORT-HOLD-S0` | (a) a confirm run of `ict_scalp_eth_15m` / `xrp_15m` on a fresh window; (b) a blind replay of Claude management on those lists (§ 6.3) | 1 | Sonnet | $10 | DESK-7's harness | links M27 / M22 |
-| 10 | `DESK-9-GRADING` | Per-role grading (§ 4.4) in `/performance-review`, the counterfactual replay, calibration | 1 | Sonnet | $8 | DESK-6 records | **folds in LTR-5-GRADING** |
-| 11 | `DESK-10-CAPACITY` | Measure `k` ($/pp) and the per-tier costs; desk scale lines and the extended breach order in `spend_meter.py --capacity` | 1 | Sonnet | $4 | DESK-6 | **extends LTR-10B** |
-| 12 | `DESK-11-ML-FEED` | Desk decisions as a `claude_judgments` source (`kind: desk_*`); the three-state Claude feature for later (§ 9.4), behind CJ-4 | 1 | Opus | $10 | DESK-0, CJ-2 | **reshapes CJ-2 / CJ-5 / CJ-6**; CJ-3 (blind grade) becomes the post-trade role; CJ-7 (backfill scope) reuses DESK-7's replay harness |
-| 13 | `DESK-12-SANDBOX` | **Monday-critical.** The `bybit_1` sandbox per the DECIDED answer: the touch record and touched/untouched splits in `soak_report.py`, live-vs-backtest, cost fidelity and desk grading (§ 3.6) | 1 (graders) | Sonnet | $6 | LTR-6R records | — |
-| 14 | `DESK-13-MANDATE` | Extend `MD-LIVE-TIGHTEN-SL` (LTR-7) to name the desk intent route; **propose** a separate `MD-DESK-SKIP` for live entry skips. **The operator grants**; the row only proposes | 3 (grant) | — | — | DESK-7 PASS | **reshapes LTR-7** |
+| 1 | `DESK-0B-SCHEMA-V2` | **new.** Schema v2: `scan` packet kind; role `entry_generation` with `no_trade / propose_entry / watch_note` and the § 2.4 fields; `alternatives[]` (priced) and the stable-id chain (§ 4A); TP-doctrine and no-size checks in `desk-records-guard`; desk-leg in-trade/exit actions applicable; the optional `entry_review` stays record-only; `veto_candidate` / `delay_candidate` removed | 1 | Sonnet | $6 | DESK-0 | fixes DESK-0's v0 enums |
+| 2 | `DESK-16-SCAN-PACKETS` | **new.** Scan-packet builder (§ 2.3): universe from the pull lists, `system_book` with near-signals, per-symbol net-of-cost forward-R base rates; a **historical mode** (point in time, masked) for DESK-18; session-side first, VM route in DESK-1 | 1 | Sonnet | $8 | DESK-0B | — |
+| 3 | `DESK-5-SKILL` | `.claude/skills/trading-desk/SKILL.md`: the loop, **entry generation first**, then in-trade (extends `live-trade-review`), exit; enums; escalation; ρ; rotation | 1 | Opus | $6 | DESK-0B | **re-scoped**: entry generation is the lead role |
+| 4 | `DESK-6-SHADOW-PILOT` | standing 15-min Sonnet desk, record-only for entry generation (**shadow proposals, every one replayed for its label**) and live in-trade per LTR; measures latency, $/wake, `C0`, `Δ`, `f`, proposals/day | 1 | Sonnet (+ Opus sample) | $25 | DESK-5, DESK-16 | **re-scoped**: entry generation added; supersedes LTR-4 |
+| 5 | `DESK-18-GEN-REPLAY-S0` | **new.** D-S0 for entry generation (§ 8.1): pre-registered `research/queue/` units, masked historical scan packets, random-entry and strategy baselines, `novelty = new` subset, both OOS sets | 1 | Sonnet + Opus sample | $30 | DESK-16, DESK-7 harness | — |
+| 6 | `DESK-7-BLIND-REPLAY-S0` | the shared replay harness, plus D-S0 for in-trade and exit | 1 | Sonnet + Opus sample | $30 | DESK-0B, LTR-0, EXIT-PATH emits | **re-scoped**: entry review dropped; harness shared with DESK-18 |
+| 7 | `DESK-4-INTAKE` | (a) `desk-intent` system-action carrying proposals and amends, latency recorded; (b) a VM intake endpoint (Tier 2) for 5 min | 2 | Opus | $10 | DESK-0B | **re-scoped**: carries entries |
+| 8 | `DESK-17-DESK-LEG` | **new.** The `claude_desk` strategy adapter (§ 3.7): reads accepted proposals, emits one package each through `Coordinator.multi_account_execute`; `strategies.yaml` entry at `execution: shadow`; `bybit_1` + `alpaca_paper` rosters; expiry; close reason; TP-doctrine ratchet entry; tests | **3** (strategy logic + order path) | Opus | $16 | DESK-0B, DESK-4a | — |
+| 9 | `DESK-12-SANDBOX` | `bybit_1` touch splits for strategy trades (v0 § 3.6) | 1 | Sonnet | $6 | LTR-6R records | unchanged |
+| 10 | `DESK-2-RISK-GATE` | `approve_amend` remainder + `PropRiskManager.approve_amend` | 3 | Opus | $12 | — | **re-scoped**: `approve_entry` dropped |
+| 11 | `DESK-3-EXECUTORS` | per-account executors behind the gate; **plus** per-account `close` / `partial_close` for desk-leg trades | 3 | Opus | $16 | DESK-2, PHONE-AMEND-REFUSED-1025 | **re-scoped**: desk-leg exits |
+| 12 | `DESK-9-GRADING` | per-role grading (§ 4.7): **entry generation first** (net R per capital-day, novelty split, vs baselines), in-trade, exit, post-trade | 1 | Sonnet | $8 | DESK-6 records | **re-scoped** |
+| 13 | `DESK-11-ML-FEED` | desk decisions as `claude_judgments` sources `kind: desk_entry_generation / desk_in_trade / desk_exit`, with § 4.1's outcome labels | 1 | Opus | $10 | DESK-0B, CJ-2 | **re-scoped**: entry-generation labels first |
+| 14 | `DESK-19-STUDENT-HANDOFF` | **new.** Student manifests per role at `candidate`; the § 4.3 step criteria as pre-registered units; a per-role hand-off status in `ml_plan_status.py`; the `ml_desk_<role>` leg template | 1 | Sonnet | $8 | DESK-11, CJ-4 | — |
+| 15 | `DESK-1-VM-PACKETS` | packet builds and due events (scan included) as VM read routes | 1 (read path) | Sonnet | $10 | DESK-0B | **re-scoped**: scan packets |
+| 16 | `DESK-10-CAPACITY` | `k` ($/pp) and per-tier costs, including the scan wake | 1 | Sonnet | $4 | DESK-6 | unchanged |
+| 17 | `DESK-13-MANDATE` | propose a strategy-trade exit mandate after the D-S0 exit unit passes; `claude_desk` promotes under `MD-PROMOTE-S1-S2` | 3 (grant) | — | — | DESK-7 exit PASS | **re-scoped**: `MD-DESK-SKIP` dropped |
+| 18 | `DESK-8-SHORT-HOLD-S0` | unchanged (v0 § 6) | 1 | Sonnet | $10 | DESK-7 harness | unchanged |
+| 19 | `DESK-14-LIVE-WEB-CONTEXT` | unchanged: the next milestone once the prototype is up | 1 | Opus | $10 | DESK-6 | unchanged |
+| 20 | `DESK-20-OUTCOME-JOIN` | **new, later phase.** The outcome joiner (§ 4A): `decision_id → intent_id → order_package_id → trade_id → outcome`, net R (full cost stack), MAE / MFE / giveback / bars held / close reason, and replayed outcomes for shadow and untaken actions; projected over the existing stores | 1 | Sonnet | $8 | DESK-0B, DESK-6 records (DESK-17 for fills) | — |
+| 21 | `DESK-21-NEVER-TRAINED-DETECTOR` | **new, later phase.** Per-hop liveness (record → dataset → training → registry) in `ml_plan_status.py --plumbing`, and the "recorded but never trained on" detector (§ 4A) as a guard or probe | 1 | Sonnet | $6 | DESK-11, CJ-2 | — |
+| 22 | `DESK-22-SCORECARD` | **new, later phase.** The one scorecard (§ 4B.2): desk per role, students on the same decisions, student-vs-desk gap and improvement curve, hand-off state; homes in `/ml-review` step 9, `/performance-review`, the brief | 1 | Sonnet | $8 | DESK-9, DESK-19 | **extends CJ-6** |
+| 23 | `DESK-23-COVERAGE` | **new, later phase.** Coverage targets per (role × regime cell × symbol class × state) and shadow-only exploration sampling (§ 4A) | 1 | Sonnet | $4 | DESK-6 | — |
+| 24 | `DESK-24-OFFLINE-SESSIONS` | **new, later phase.** The standing offline training-session flow (§ 4C.3): bar-by-bar masked historical walks through the desk skill; a pilot that measures cost per label; the operator's budget dial | 1 | Sonnet (+ Opus sample) | $15 (pilot) | DESK-7 harness, DESK-16 historical mode, DESK-5 | reconciles with **CJ-7** (sizing) |
+| 25 | `DESK-25-OFFLINE-ABLATION` | **new, later phase.** Pre-registered ablation: student with vs without offline labels, OOS on post-cutoff + forward-shadow rows (§ 4C.4) | 1 | Sonnet | $6 | DESK-19, DESK-24 | — |
 
-**Totals:** about $155 across 13 build rows; the mandate row carries no ceiling. **Nothing applies on real
-money before rows 3, 4, 5, 13 and 14 have landed and D-S0/D-S1b have passed.**
+**New ceilings:** first phase DESK-0B $6 + DESK-16 $8 + DESK-18 $30 + DESK-17 $16 + DESK-19 $8 = **$68**;
+later phases DESK-20 $8 + DESK-21 $6 + DESK-22 $8 + DESK-23 $4 + DESK-24 $15 + DESK-25 $6 = **$47**.
+The operator asked to pace the budget (~07:02Z), so rows 20–25 queue behind the first phase rather than
+now.
 
-**Phases.**
+### 10.3 Rows that are now wrong
 
-- **Monday (phase 1):**
-  - LTR-6R, the in-flight Opus lane, delivers the Monday halves of DESK-2 and DESK-3 (Bybit), plus the `apply_mode` switch.
-  - LTR-7 writes the mandate.
-  - DESK-12 adds the `bybit_1` touch splits.
-  - DESK-5 and DESK-6 put the standing in-trade session up in `recommend`.
-- **Phase 2:** everything else. That includes:
-  - the prop and Alpaca executors (DESK-3 remainder, plus LTR-8/9);
-  - VM packets and intake (DESK-1, DESK-4b);
-  - entry review and market watch;
-  - D-S0 (DESK-7) and short-hold (DESK-8);
-  - grading (DESK-9) and the ML feed (DESK-11).
-
-**Order on the critical path:**
-
-```
-0 → 6 → 7    shadow pilot, Tier 1: the first measured numbers in days
-0 → 8        Stage 0
-3 → 4 → 5    the Tier-3 apply path, in parallel
-```
-
-**What is NOT superseded:**
-
-- **LTR-0** (the pricing tool): the in-trade role uses it.
-- **LTR-2** (records): the desk records extend it.
-- **LTR-7** (the mandate): the desk applies through it.
-- **LTR-10/10B** (the reserve): the desk sits inside it.
-- **PHONE-AMEND-REFUSED-1025**: DESK-3 depends on its fix.
+| row | what is wrong | fix |
+|---|---|---|
+| `DESK-0-SCHEMA` (`landed_unproven`) | the `market_watch` enum is veto-shaped; the guard refuses every applied non-tighten action | DESK-0B |
+| `DESK-2-RISK-GATE` | `approve_entry` for skip/delay | dropped (§ 3.2) |
+| `DESK-13-MANDATE` | proposes `MD-DESK-SKIP` | dropped |
+| `DESK-7` / `DESK-9` | entry-*review* replay and grading as the entry stage | re-scoped to generation (DESK-18, DESK-9) |
+| `L-DESK` milestone text | describes the v0 desk (roles "entry review"; "Claude never does…" framing; "awaiting operator review") | text proposed in the PR body; lane `LTR-JUDGEMENT-APPLY` owns today's edit |
 
 ---
 
-## 11. Open questions for the operator (preferences only; no data settles these)
+## 11. Open questions (only where no data settles them)
 
-**Decided 2026-10-25 ~17:58Z (removed from the open list):**
+**Settled and removed:** v0 Q1 (VM-side model call): *"Not now"*, 2026-10-26. v0 Q2 (should a skip
+apply): **withdrawn**, it asked about the wrong design (§ 0.2). Feeds and sandbox: DECIDED 2026-10-25.
 
-- **Feeds:** *"Repo feeds + logged exception (Recommended)"* (§ 2.3, `external_context`).
-- **Sandbox:** *"Shadow the bybit_1 soak book"* (§ 3.6).
+Things data will settle are **not** asked here, and their row gets the data instead: the cadence (DESK-6
+measures it), the live model tier (§ 4.6), ρ (§ 4.5's rule), whether the desk has an edge (DESK-18),
+and whether a student is good enough (§ 4.3).
 
-**Q1 — may the sub-15 min path use a VM-side model call** (the M13 insights key in
-`src/runtime/insights/generator.py`) instead of a session?
+**Q1 — how wide is the universe the desk may trade?**
 
-- **Why it matters:** it removes the 60 s wake floor and the session context entirely, at ~1–2 k tokens a
-  call.
-- **What it costs:**
-  - The call is billed to the API key, not the weekly bar.
-  - It has no repo and no tools, though the packet now supplies the context.
-  - It is a paid external call on the VM, upstream of a decision.
-  - The key's validity is UNVERIFIED this session.
-- **Recommended: not now.** Revisit only if DESK-8 passes and a 5 min short-hold leg is wanted. Until
-  then, the distilled student (§ 9.3) is the sub-15 min route.
+- **Why no data settles it:** what instruments the operation should trade is a scope preference.
+  Data can say whether the desk has an edge on a symbol, not whether you want it on the book.
+- **Options:** (a) only symbols an account already pulls (today's data-pull union); (b) also any symbol
+  the connected venues list.
+- **Recommended: (a).** Every symbol in it already has candles, cost decisions and a roster home, so a
+  proposal can be priced net of the full cost stack. Widening is a later roster decision.
 
-**Q2 — live entry review: should `skip` ever apply on real money** (a new `MD-DESK-SKIP` mandate after
-D-S0 passes), or should entry review stay a shadow teacher permanently?
+**Q2 — the non-inferiority margin for "student drives" (§ 4.3).**
 
-- **Recommended: stay shadow until the D-S0 entry-review unit passes,** then decide on its numbers.
+- **Why no data settles it:** it is how much net edge you would give up to remove Claude's cost and
+  latency from a role. That is a price, not a fact.
+- **Recommended: 0.02 R per capital-day,** registered per role before its S-advisory → S-drives unit
+  runs. A tighter margin needs more n; DESK-19 states the n each margin implies.
 
-*(The teacher rate ρ is not asked; § 4.2 sets a default with a rule. Raise it if you want to.)*
+**Q3 — does the final hand-off on real money always need your merge?**
+
+- **Options:** (a) yes: the student's leg reaching a real-money roster is a human-merge PR, as every
+  promotion is today under `MD-PROMOTE-S1-S2`; (b) a new mandate lets it auto-land.
+- **Recommended: (a).** It costs one click per role, three in total, and it is the moment Claude
+  leaves the loop.
 
 ---
 
 ## 12. Risks
+
 
 | risk | mitigation |
 |---|---|
@@ -808,6 +1119,12 @@ D-S0 passes), or should entry review stay a shadow teacher permanently?
 | The teacher is no better than the strategy's own confidence | CJ-4 requires beating `confidence`; a failed source stops distillation for that source, and the desk keeps running as a recorder |
 | LLM memory leaks hindsight into the replay | Masking plus `pre_cutoff` exclusion (distillation § 3.5.5) on every D-S0 packet |
 | Short-hold enthusiasm outruns evidence | § 6: no live short-hold lane before DESK-8 passes; 5m cells are 0/4 folds today |
+| The desk proposes the strategies' own trades back to us | `system_book` + near-signals in the scan packet; `novelty` on every proposal; D-S0 passes on the `novelty = new` subset alone (§ 8.1) |
+| Hindsight from model memory in the entry replay | masking, `pre_cutoff` exclusion, and the forward-shadow set as a leakage-free check (§ 8.1) |
+| The desk sizes by the back door (wide stops, many proposals) | each account's `approve()` sizes on risk per trade and caps concurrency/exposure; net R per capital-day penalises capital tied up |
+| A desk session dies with desk trades open | the venue bracket is the plan (§ 3.8); heartbeat flag; never a halt |
+| Claude's behaviour changes under the leg (model or skill edits) | `label_version` pinning; a model-family change re-runs a D-S0 confirm set (§ 8.1) |
+| Students learn to imitate Claude rather than to make money | every step gates on net R per capital-day; agreement never gates (§ 4.3) |
 
 ---
 
@@ -815,19 +1132,22 @@ D-S0 passes), or should entry review stay a shadow teacher permanently?
 
 **Did:**
 
-- read the rules, the LTR design (#20121 head), the distillation design, the LTR first-run rows and
-  packets, the packet generator (#20127), and the LTR-3/4/5/6/7/8/9/10B/11, CJ-2…7 and PHONE-AMEND rows
-  (register branch `mgr/reg-01ukbxoz-2`);
-- read `src/units/accounts/risk.py` (`RiskManager`, `approve`, `evaluate`) and the `prop_risk_gate`
-  header;
-- read the scalp evidence records and the chop_scalp queue units;
-- read the usage readings and two sessions' `usage` via `get_session`.
+- read this design's v0 in full, the distillation design's guardrails, ladder and build plan, the
+  DESK-*, LTR-6R, LTR-7, LTR-4/5 and CJ-2 rows, the DESK-15 and DESK-DESIGN rows on the register
+  branch `mgr/reg-desk-decisions-1026` (PR #20256, open at the time), and `comms/schema/desk_decision.schema.json`;
+- searched `src/` for an existing external-entry intake (none found) and checked `RiskManager.approve`
+  (`src/units/accounts/risk.py:883`);
+- rewrote §§ 0–4 and 8–13 and added §§ 0.4, 4A, 4B, 4C from the manager's three relays of the
+  operator's 06:58Z, 07:02Z and 07:08Z words; carried §§ 3.0–3.6 and 5–7 from v0 with the veto
+  references removed;
+- counted `comms/desk/decisions.jsonl` (0 rows) and `comms/live_review/reviews.jsonl` (15 rows), and
+  listed `ml/datasets/families/` (no `claude_judgments` family) and `ml/configs/` (no enabled manifest
+  reads Claude or desk labels).
 
 **Did not:**
 
-- measure any latency or per-wake cost. **Every § 5 and § 7 figure not marked MEASURED is INFERRED**,
-  and DESK-6 replaces it;
-- read the VM's `TICK_INTERVAL_SECONDS` or any live diag;
-- read prop concurrency;
-- verify cache pricing against the API reference;
-- file any row, mandate or queue unit.
+- measure anything new. Every figure carried from v0 keeps its v0 mark; § 7's scan-wake line and
+  § 4.3's proposals-per-day are **assumptions** until DESK-6 measures them;
+- read the VM, any live diag, or any trade;
+- file the new rows (the manager files them) or edit `docs/roadmap/milestones.yaml` (lane
+  `LTR-JUDGEMENT-APPLY` owns `L-DESK` today).
