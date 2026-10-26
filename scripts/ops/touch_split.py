@@ -85,7 +85,7 @@ def cost_cells(rec: Optional[Dict[str, Any]]) -> Dict[tuple, Dict[str, Any]]:
     return out
 
 
-def grading_sets(entry: Dict[str, Any], touched: List[Dict[str, Any]], untouched: List[Dict[str, Any]],
+def grading_sets(touched: List[Dict[str, Any]], untouched: List[Dict[str, Any]],
                  pkgs: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """DESK grading hook (design § 4.7 "In-trade ... touched and untouched trades split"): the APPLIED
     effect is each touched trade, keyed by its touch's ``decision_id`` (else ``review_id``); the CONTROL is the
@@ -127,7 +127,7 @@ def build(trades: List[Dict[str, Any]], packages: List[Dict[str, Any]], *,
                 "cost_fidelity": (None if cell is None else
                                   (cell if name == "untouched" else cell.get("touched_split")))}
         entry["touch_records"] = [x for t in touched for x in touch_record.touches(t)]
-        entry["grading"] = grading_sets(entry, touched, untouched, pkgs)
+        entry["grading"] = grading_sets(touched, untouched, pkgs)
         all_touches += entry["touch_records"]
         out.append(entry)
     n_closed = len(closed)
