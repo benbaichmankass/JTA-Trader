@@ -1,0 +1,75 @@
+# Registry of features / models / signals that are OFF or ANNOTATE-ONLY on the trade path.
+#
+# Rule: docs/CLAUDE-RULES-CANONICAL.md § "Off the trade path is not off the data path"
+# (operator, 2026-10-26). Guard: scripts/ci/check_shadowed_features.py (shadowed-features-guard).
+#
+# Neutralising a feature on the trade path is NOT retiring it. Each entry must carry:
+#   data_artifact    the CONSUMED artifact (the file/log the feature's consumer reads), not the producer's output
+#   freshness_check  state: exists        -> `path` names a script/test that exists in the repo
+#                    state: gap            -> no check exists yet; `gap_row` is a live checklist row that builds it
+#                    state: could_not_verify -> not established this pass; `gap_row` is a live row that establishes it
+#   owner            a LIVE (non-done/dropped) checklist row id, or a research/queue unit id
+#   re_entry_test    one sentence: the measurement that returns the feature to the trade path
+#   decision         shadowed | annotate   (never "dropped" - a dropped feature is not in this file)
+#
+# SEEDED 2026-10-26 by measuring the repo (population + denominators in `scan:` below), not from memory.
+# Live VM env values were NOT read (no VM egress in this lane): every entry's live value is could_not_verify
+# unless stated; `code_default` is what the code does with the variable unset.
+scan:
+  date: 2026-10-26
+  sources:
+    - {what: "execution: shadow legs in config/strategies.yaml", measured: "16 of 56 strategies"}
+    - {what: "*_MODE vars in docs/reference/env-vars.md whose default is off/annotate", measured: "8 var rows (REGIME_ML_VERDICT, CONVICTION_SIZING, NETTING_ATTRIBUTION, ALPACA_CASH_SETTLEMENT, BYBIT_GRADED_COVERAGE, NEWS_INFLUENCE, PROTECTION_REASSERT, PROTECTION_STRAY_GROUP)"}
+    - {what: "NEWS_VETO_ENABLED code default", measured: "true (src/news/news_score.py::_get_veto_enabled); live VM value could_not_verify"}
+  not_registered:
+    # Scanned and deliberately left out - each reason is checkable.
+    - {item: NETTING_ATTRIBUTION_MODE, reason: "accounting reconciler mechanics, not a signal/model/feature removed from the trade path"}
+    - {item: PROTECTION_REASSERT_MODE, reason: "protection mechanics, not a signal/model/feature"}
+    - {item: PROTECTION_STRAY_GROUP_MODE, reason: "protection mechanics, not a signal/model/feature"}
+    - {item: ALPACA_CASH_SETTLEMENT_MODE, reason: "settlement-basis mechanics, not a signal/model/feature"}
+    - {item: BYBIT_GRADED_COVERAGE_MODE, reason: "coverage-grading mechanics, not a signal/model/feature"}
+    - {item: CONVICTION_SIZING_MODE, reason: "reductive variant is documented LIVE on bybit_1 (env-vars.md); only the symmetric variant is off. Live env not read, so not registered - could_not_verify which side is shadowed"}
+    - {item: "advisory-only ML heads", reason: "no machine-readable list of heads at advisory stage was found this pass; ML-STAGE-DECISIONS owns the ladder. NOT enumerated - could_not_verify"}
+entries:
+  news_veto:
+    what: "News veto - blocks a signal on sentiment < -0.6 AND impact > 0.7 (NEWS_VETO_ENABLED)"
+    decision: shadowed
+    trade_path_state: "code default ON; operator recalls it was turned off (2026-10-26); live value could_not_verify"
+    data_artifact: runtime_logs/news_decisions.jsonl
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: NEWS-ALPHA-PROGRAM
+    re_entry_test: "NEWS-VETO-EVAL / NEWS-ALPHA units show the veto's counterfactual R beats taken trades net of cost at the pre-registered n"
+  news_influence_sizing:
+    what: "Graduated news-influence downsize (NEWS_INFLUENCE_MODE)"
+    decision: annotate
+    trade_path_state: "code default off (src/runtime/runtime_flags.py); live value could_not_verify"
+    data_artifact: runtime_logs/news_decisions.jsonl
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: NEWS-ALPHA-PROGRAM
+    re_entry_test: "a NEWS-ALPHA unit PASSes its registered rule on a reductive-sizing book, net of cost, then Tier-3 flip to downsize"
+  economic_calendar:
+    what: "Scheduled-event risk feed (event_risk) consumed by news influence"
+    decision: annotate
+    trade_path_state: "feeds news influence only; influence is off"
+    data_artifact: config/economic_calendar.yaml
+    freshness_check: {state: gap, gap_row: NEWS-DATA-FRESHNESS}
+    owner: NEWS-ALPHA-PROGRAM
+    re_entry_test: "calendar refreshed from a live source AND the influence re-entry test above passes"
+    incident: "2026-10-26: last event in the file is 2026-07-30; a one-time sign-off was encoded as a permanent gate and the liveness checker watched the producer's output, not this file"
+  regime_ml_vol_verdict:
+    what: "Regime-router ML vol-verdict (REGIME_ML_VERDICT_MODE off/shadow/use)"
+    decision: shadowed
+    trade_path_state: "code default off (src/runtime/runtime_flags.py); live value could_not_verify"
+    data_artifact: "regime_ml_vol_shadow audit rows (store path not verified this pass)"
+    freshness_check: {state: could_not_verify, gap_row: RULE-SHADOW-NOT-DROP}
+    owner: REGIME-PROGRAM
+    re_entry_test: "frozen-vs-ML agreement audit plus regime_cell_walkforward shows the ML label changes a money-losing cell's decision net of cost"
+  shadow_legs:
+    what: "Strategy legs with execution: shadow (run and log order packages, never send a live order)"
+    decision: shadowed
+    trade_path_state: "16 of 56 strategies in config/strategies.yaml on 2026-10-26 (guard re-measures; never quote)"
+    data_artifact: "per-leg shadow order packages / signals (store path not verified this pass)"
+    freshness_check: {state: could_not_verify, gap_row: RULE-SHADOW-NOT-DROP}
+    owner: RULE-SHADOW-NOT-DROP
+    owner_note: "UMBRELLA owner. Per-leg owner/re-entry rows are not verified to exist; the weekly-audit CORE check C10 files the gap per leg."
+    re_entry_test: "per leg: Gate 1 - Stage-0 record clearing a pre-registered rule net of the full cost stack, then the mechanical 1-2 trade soak (operating plan section 2)"

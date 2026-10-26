@@ -1,0 +1,21 @@
+{
+  "id": "NEWS-DATA-FRESHNESS",
+  "title": "News data path stays live while the veto/influence is off: freshness check on the CONSUMED artifacts (economic_calendar.yaml, news_decisions.jsonl) + calendar refresh",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-26 lane session_01Hdec7vwkm7pNRXhARoPgdE] Worked example of RULE-SHADOW-NOT-DROP: config/economic_calendar.yaml last event is 2026-07-30; liveness watched the producer, not this file. Build: (1) freshness check on the consumed files (fail when newest future event < N days ahead / news_decisions.jsonl newest row older than threshold), (2) live-source calendar refresh. DO NOT BUILD before the Wed 2026-10-28 reset (operator: unblock queued for after it). Gap row for shadowed-features registry entries news_veto, news_influence_sizing, economic_calendar.",
+  "updated_at": "2026-10-26T11:55:28Z",
+  "updated_by": "session_01Hdec7vwkm7pNRXhARoPgdE",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 716
+}
