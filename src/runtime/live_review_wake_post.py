@@ -203,6 +203,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         write_receipt(rec, receipt)
         return rec
     _cached_markers = markers
+    _first_proof_wake(markers)
     p = wake.plan(doc, markers, cfg, computed_at)
     if p["kind"] != "wake":
         rec["state"] = "already_posted"
@@ -222,6 +223,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
                http_code=code)
     if code == 201:
         _cached_markers = markers + wake.parse_markers([{"body": body}])
+        _first_proof_wake(_cached_markers)
         rec.update(state="posted", posted_at=posted_at.isoformat(),
                    latency_s=round((posted_at - computed_at).total_seconds(), 3),
                    comment_url=(data or {}).get("html_url") if isinstance(data, dict) else None)
@@ -231,8 +233,19 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
     return rec
 
 
+def _first_proof_wake(markers: List[dict]) -> None:
+    """LTR first-proof S1 (best-effort; src/runtime/ltr_first_proof.py)."""
+    try:
+        from src.runtime import ltr_first_proof
+        ltr_first_proof.observe_wake_markers(markers)
+    except Exception:  # noqa: BLE001
+        logger.debug("ltr-wake-post: first-proof S1 failed", exc_info=True)
+
+
 def _run_locked() -> None:
     try:
+        from src.runtime import ltr_first_proof
+        ltr_first_proof.ensure_seeded()
         run_once()
     except Exception:  # noqa: BLE001 — contained: never reaches the exit loop
         logger.warning("ltr-wake-post: pass failed", exc_info=True)

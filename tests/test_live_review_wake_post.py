@@ -198,3 +198,14 @@ def test_an_oversized_packet_is_omitted_not_truncated(tmp_path):
     assert rec["state"] == "posted" and "ltr-packet" not in body and len(body) < 65536
     m = post.wake_module().parse_markers([{"body": body}])[0]["entries"][0]
     assert m["packet_state"] == "omitted_too_large"
+
+
+import pytest as _pytest  # noqa: E402
+
+
+@_pytest.fixture(autouse=True)
+def _isolated_first_proof(tmp_path, monkeypatch):
+    from src.runtime import ltr_first_proof as _fp
+    monkeypatch.setattr(_fp, "state_path", lambda: tmp_path / "ltr_first_proof.json")
+    monkeypatch.setattr(_fp, "_committed_reviews", lambda: [])
+    monkeypatch.setattr(_fp, "_send", lambda text: True)

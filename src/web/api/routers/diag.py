@@ -583,6 +583,10 @@ _LTR_WAKE_POST_RECEIPT = (
 # as the writer (src.runtime.live_review_rows_watch.log_dir).
 _LTR_ROWS_WATCH_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch.jsonl"
 _LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch_status.json"
+# LTR first-proof pings (operator 2026-10-26): which stages are proven / seeded,
+# when, the latency from the previous stage. Same anchor as the writer
+# (src.runtime.ltr_first_proof.state_path).
+_LTR_FIRST_PROOF = Path(repo_root()) / "runtime_logs" / "ltr_first_proof.json"
 
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
@@ -618,6 +622,7 @@ _LOG_FILES: dict[str, Path] = {
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
+    "ltr_first_proof": _LTR_FIRST_PROOF,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
     "bot_log": _BOT_LOG,

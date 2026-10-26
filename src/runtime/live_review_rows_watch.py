@@ -202,6 +202,7 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
         rec: Dict[str, Any] = {"review_id": rid, "order_package_id": row.get("order_package_id"),
                                "ref": tip, "reviewed_at": row.get("reviewed_at"),
                                "seen_at": first.isoformat()}
+        _proof(lambda fp: fp.record_row(row, at=first))
         why = dispatchable(row)
         if why:
             rec.update(verdict="not_dispatchable", detail=why)
@@ -214,6 +215,11 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
             rv = _ts(row.get("reviewed_at"))
             if rv:
                 rec["reviewed_to_done_s"] = round((done - rv).total_seconds(), 1)
+            if res.get("exit") in (0, 1, 2) and res.get("verdict") == "dispatched":
+                _proof(lambda fp: fp.record("S4_pickup", at=done, review_id=rid, leg=row.get("leg"),
+                                            accounts=list(row.get("accounts") or [])))
+                entry = _applied_entry(d / "applied.jsonl", rid)
+                _proof(lambda fp: fp.record_writeback(row, entry, at=_ts((entry or {}).get("at")) or done))
             if res.get("exit") == 3:
                 if (done - first).total_seconds() < RETRY_WINDOW_S:
                     att = int((pending.get(rid) or {}).get("attempts") or 0) + 1
@@ -231,7 +237,33 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
     return status
 
 
+def _proof(fn: Callable[[Any], Any]) -> None:
+    """LTR first-proof pings (best-effort; src/runtime/ltr_first_proof.py)."""
+    try:
+        from src.runtime import ltr_first_proof
+        fn(ltr_first_proof)
+    except Exception:  # noqa: BLE001
+        logger.debug("rows-watch: first-proof ping failed", exc_info=True)
+
+
+def _applied_entry(path: Path, review_id: str) -> Optional[Dict[str, Any]]:
+    """The apply's newest applied.jsonl writeback for ``review_id``."""
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return None
+    for ln in reversed(lines[-500:]):
+        try:
+            e = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(e, dict) and e.get("review_id") == review_id:
+            return e
+    return None
+
+
 def _loop() -> None:
+    _proof(lambda fp: fp.ensure_seeded())
     while True:
         try:
             run_pass()
