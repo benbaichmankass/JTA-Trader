@@ -73,14 +73,14 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 ## 5. Rotation and cost
 
 - **Phase 1 runs one fresh repo-less session per wake**, so there is no context growth to rotate: each wake starts from the brief and one packet. The design's standing-session rotation (K* ≈ 22 wakes, never past 50% of the window, state handed forward through the repo) applies when a standing session replaces the per-wake spawn (DESK-1 + DESK-4b, the 5-min stage).
-- **The cost per wake is MEASURED by DESK-6** and stated on its checklist row and in the routine's install note; re-measure it from `get_session(<wake session>).usage` before changing the cadence. The breach order is design § 7.3: offline sessions → rho → optional entry review → lengthen the scan cadence → paper L0-only → in-trade degrades to recommend-only on Sonnet.
+- **The cost per wake is MEASURED by DESK-6** and stated on its checklist row; re-measure it from `get_session(<wake session>).usage` before changing the cadence. The breach order is design § 7.3: offline sessions → rho → optional entry review → lengthen the scan cadence → paper L0-only → in-trade degrades to recommend-only on Sonnet.
 
 ## 6. The stage table (each restriction is a stage; design § 0.4)
 
 | stage | what runs | restriction today | lifts when (evidence) | row |
 |---|---|---|---|---|
 | **1a** (live) | in-trade on the strategies' trades = the live trade review, tighten-only applies | in-trade applies are tighten-only on strategy trades | the D-S0 exit unit passes, then an operator-granted exit mandate | DESK-7, DESK-13 |
-| **1b** (this skill, DESK-6) | entry_generation **shadow**: hourly scan wake, one row per packet, every proposal replayed | record-only; Sonnet only; packet is the only feed | the D-S0 entry-generation unit passes (masked replay + the forward-shadow set from THIS stage not contradicting it, n ≥ 100) | DESK-18 |
+| **1b** (this skill, DESK-6) | entry_generation **shadow**: hourly scan wake (VM posts, manager spawns), one row per packet, every proposal replayed | record-only; Sonnet only; packet is the only feed | the D-S0 entry-generation unit passes (masked replay + the forward-shadow set from THIS stage not contradicting it, n ≥ 100) | DESK-18 |
 | **2** | `claude_desk` leg rostered `execution: shadow` on `bybit_1` + `alpaca_paper`; proposals reach it through intake | no orders | D-S0 passes → the leg goes `execution: live` on paper; the mechanical soak is 1–2 clean desk trades ([`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md)) | DESK-4a, DESK-17 |
 | **3** | the leg on real money + mirror; prop via the prop superset gate | desk entries only on paper; no prop | `MD-PROMOTE-S1-S2` (human-merge PR); prop EV/survival vs the firm's DD limits | DESK-17, manager |
 | **cadence** | hourly scan (phase 1) | 1 h scan; 15-min floor in the design | a 15m/5m scan packet + VM packets and intake (DESK-1, DESK-4b); below 5 min a student, not Claude | DESK-1, DESK-4 |
@@ -89,17 +89,27 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 **Desk heartbeat (design § 12).** The desk branch's newest row `judged_at` vs the newest packet `built_at`: more than 2 packets without a row while the routine is installed is one flag to the manager (the routine's own report says so; a probe in `attention_watch` is DESK-6's follow-up, filed in the pipeline).
 
-## 6b. The routine (the manager installs it; lanes do not edit routines)
+## 6b. The trigger: the VM gate posts, the manager spawns (the hourly routine is retired)
 
-**What a wake must be started with (MEASURED 2026-10-26, four wakes, lane DESK-6).** A wake writes only if its session is started ON `desk/decisions`: `create_session` with `source_url` = this repo, `source_revision` = `desk/decisions`, `outcome_branch` = `desk/decisions`, `clone_depth: 1`, `sparse_checkout_paths: [".claude/skills/trading-desk"]`, model Sonnet. With no repository (even after `add_repo` with `access: push`) the write was refused (403), and on another branch it never landed. A scheduled task's `create_trigger` takes no source, so the routine is a **spawner**: each fire starts a fresh, repo-less session whose only job is that one `create_session` call.
+**The trigger (DESK-6B, operator 2026-10-26: *"the system landing the packet [is] what triggers the session ... the session shouldn't be starting before the packet lands"*).** The step that LANDS the packet posts the wake, and nothing else does. The **live trader is the primary producer** (`src/runtime/desk_packet_wake.py`, kicked from the tick loop about every 2 min): when the current UTC hour has no packet (at least 1 min into it, at most 3 tries per bar) it runs the workflow's own builder (`scripts/ops/desk_scan_packet.py`, desk book read from the branch's decisions, public candle route on the local API), stages it with `desk_branch.py publish`, lands the packet and the pointer on `desk/decisions` as ONE fast-forward commit through the GitHub git-data API (never forced), and in the same pass posts ONE `desk-wake` marker on the ops-flags PR carrying `packet_id`, `packet_sha` and the packet `commit`. The manager is subscribed to that PR and, on the marker, does exactly the `create_session` below (`manager` SKILL § "Desk wake"). The hourly spawner routine (trig_01NMCJ5LHARkp6vWgTmQ8BC9) is **retired**.
 
-Scheduled task: **hourly at :09** (`9 * * * *`), `create_new_session_on_fire: true`, Sonnet (a spawner needs no judgement; Haiku is fine if offered). `desk-scan-packet.yml` builds at :03 after the 1h bar close and its run takes ~1–2 min. The spawner prompt, verbatim:
+**Why the VM is primary (MEASURED by the manager 2026-10-26):** GitHub's cron NEVER fired `desk-scan-packet.yml` on schedule (only `workflow_dispatch` runs), and a packet built by a backed-up runner landed ~30 min late. `desk-scan-packet.yml` is the **fallback**: `schedule-keeper` dispatches it for a missed hour; its first step (`desk_wake_marker.py gate`) does nothing when the bar already has a packet, and its last steps post the same marker, deduped on the packet id **and the bar**, so the two producers can never both wake for one bar. ⚠️ **UNVERIFIED at merge:** whether the VM's git credential may write `desk/decisions`, and whether the VM has the diag token for the system-book read (without it the packet is still valid, with `system_book` honestly `could_not_look`). A refused write reads `could_not_commit` (http code) in the receipt and the fallback covers the hour.
+
+**There is no market-hours or activity gate** (operator: crypto is 24/7, so every hour wakes). The only conditions:
+
+- a failed build or commit -> **no wake** (receipt `could_not_build` / `could_not_commit`, named; the fallback workflow posts a `could_not_build` incident marker for its own failures);
+- a `desk-wake` marker for that packet id or that bar is already on the PR -> not re-posted;
+- otherwise the marker is posted. It also carries the packet's `context` as information only (open positions, open desk proposals, near-signal count, calendar events, unread books; an unread book is `null`, never 0).
+
+**Receipt and liveness.** `/api/diag/log_file?name=desk_wake_post_receipt`, rewritten every pass: `posted` (`producer` `vm` or `packet-job`, `latency_s`) · `already_recorded` · `awaiting_wake` (< 10 min) · `wake_missing` (packet older, no marker, no row) · `could_not_build` · `could_not_commit` · `could_not_post` · `could_not_look` (`reason`, incl. `stale_packet`). The `desk_wake_post` probe in `attention_watch` raises one flag when the receipt is more than 3 h old or reads `wake_missing` / `could_not_*`.
+
+**What a wake must be started with (MEASURED 2026-10-26, four wakes, lane DESK-6).** A wake writes only if its session is started ON `desk/decisions`: `create_session` with `source_url` = this repo, `source_revision` = `desk/decisions`, `outcome_branch` = `desk/decisions`, `clone_depth: 1`, `sparse_checkout_paths: [".claude/skills/trading-desk"]`, model Sonnet. With no repository (even after `add_repo` with `access: push`) the write was refused (403), and on another branch it never landed.
+
+`create_session` arguments for a `desk-wake` marker:
 
 ```
-You are the Metis-Insights trading-desk SPAWNER (DESK-6 shadow pilot). The manager acts with the operator's authority. Do exactly one thing, then end:
-call create_session (claude-code-remote tool; load it with ToolSearch if needed) with
   model: <the Sonnet model id from the manager's model table>
-  title: desk-wake <UTC now, YYYY-MM-DDTHH:MMZ>
+  title: desk-wake <the marker's bar, YYYY-MM-DDTHH:MMZ>
   tags: ["manager:session_01HAysMLfF9dYpi92YMqYxEq", "desk-wake", "DESK-6-SHADOW-PILOT"]
   permission_mode: auto
   source_url: https://github.com/benbaichmankass/Metis-Insights
@@ -108,7 +118,6 @@ call create_session (claude-code-remote tool; load it with ToolSearch if needed)
   clone_depth: 1
   sparse_checkout_paths: [".claude/skills/trading-desk"]
   prompt: (the WAKE PROMPT below, verbatim)
-Then reply with the new session id and stop. Do not read the repo, do not judge anything, do not message anyone.
 
 WAKE PROMPT:
 You are one wake of the Claude trading desk (phase 1: shadow, record-only), started by the Metis-Insights manager's routine. The manager acts with the operator's authority. Your session's branch IS desk/decisions, the desk's append-only record branch: writing ONE row there is your whole job.
@@ -120,7 +129,7 @@ You are one wake of the Claude trading desk (phase 1: shadow, record-only), star
 
 **Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).**
 
-- **MEASURED cost per working wake** (`get_session().usage.cost_usd`, 2026-10-26, Sonnet, fresh session, one 1h scan packet ≈ 53 KB): **$0.45, $0.34, $0.45, $0.47** (n = 4; context 119–134 k tokens; 65–85 s wall). INFERRED: hourly ≈ 24 wakes ≈ **$11/day** plus the spawner (UNMEASURED); the design assumed $0.041 a working wake (§ 5.3), so a fresh-session wake costs ~10× the standing-session estimate, because each wake re-pays the session's base context.
+- **MEASURED cost per working wake** (`get_session().usage.cost_usd`, 2026-10-26, Sonnet, fresh session, one 1h scan packet ≈ 53 KB): **$0.45, $0.34, $0.45, $0.47** (n = 4; context 119–134 k tokens; 65–85 s wall). INFERRED: hourly ≈ 24 wakes ≈ **$11/day** (the spawner routine it assumed is retired; the packet landing wakes every hour); the design assumed $0.041 a working wake (§ 5.3), so a fresh-session wake costs ~10× the standing-session estimate, because each wake re-pays the session's base context.
 - The packet is a **1h** scan: its base rates and ATR are on 1h bars, so 3 of every 4 15-minute wakes would find nothing due and still pay a fresh session's start. The 15-min stage needs a 15m scan packet and a standing session (§ 6, `cadence`).
 - Cheaper per label, in order: a slimmer packet (drop untradable universe rows), a standing session at K* ≈ 22 wakes (design § 5.3), batching several symbols per wake. DESK-10 owns the $/pp conversion.
 
@@ -131,4 +140,4 @@ You are one wake of the Claude trading desk (phase 1: shadow, record-only), star
 
 ## 8. Composes with
 
-`live-trade-review` (the in-trade role) · `manager` (installs the routine, reads the reports) · `backtesting` / `research-ops` (DESK-18's D-S0 units) · `ml-review` (DESK-19 students, step 9) · `performance-review` (DESK-9 "Desk" section) · `close-out`.
+`live-trade-review` (the in-trade role) · `manager` (spawns the wake on the `desk-wake` marker, reads the reports) · `backtesting` / `research-ops` (DESK-18's D-S0 units) · `ml-review` (DESK-19 students, step 9) · `performance-review` (DESK-9 "Desk" section) · `close-out`.

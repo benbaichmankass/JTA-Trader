@@ -1183,6 +1183,15 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("pairs_tick failed")
 
+            # Trading-desk packet + wake (DESK-6B): the VM builds the 1h scan packet, lands it on
+            # desk/decisions and posts the desk-wake marker in one step, and writes the receipt. kick() is a
+            # monotonic compare + a non-blocking lock try; the work is off-thread and contained.
+            try:
+                from src.runtime import desk_packet_wake
+                desk_packet_wake.kick()
+            except Exception:  # noqa: BLE001
+                logger.debug("desk_packet_wake kick failed", exc_info=True)
+
             # Macro/value thesis sleeve (M28 P3): an ISOLATED, slow-cadence,
             # OBSERVE-ONLY scanner that reads the point-in-time valuation
             # snapshots, forms weeks-horizon value theses (the S1 rule-based

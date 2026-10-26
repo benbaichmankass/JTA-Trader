@@ -96,6 +96,7 @@ SOAK_GRADE_MAX_DAYS = 8      # weekly (Sun 03:00Z) + one day of grace
 RESEARCH_MAX_HOURS = 36      # dispatcher lands results several times a day when healthy
 INFLIGHT_STALE_DAYS = 3      # an in_flight row nobody has touched in 3 days is not in flight
 MANAGER_SILENT_HOURS = 30    # one daily review + 6h grace
+DESK_WAKE_POST_MAX_HOURS = 3  # the VM producer writes its receipt every pass (~2 min); 3 h silent = it stopped
 REALERT_HOURS = 24
 TOP_N = 8
 #: The mechanical soak (operator 2026-10-15): ``passed`` is a promotion candidate,
@@ -320,6 +321,29 @@ def probe_manager(now: datetime) -> dict:
     st = BREACHED if hours > MANAGER_SILENT_HOURS else OK
     return {"status": st, "detail": f"checklist last written {hours:.0f}h ago "
                                     f"(bound {MANAGER_SILENT_HOURS}h — no daily review?)"}
+
+
+def probe_desk_wake_post(now: datetime) -> dict:
+    """The VM desk packet+wake producer (src/runtime/desk_packet_wake.py) rewrites its receipt on EVERY pass.
+    Breached when the producer stopped (old ``computed_at``) or when it reports the trigger did not fire
+    (``wake_missing`` / ``could_not_*``). A missing receipt is ``unknown``, never ``ok``."""
+    p = REPO_ROOT / "runtime_logs" / "desk_wake_post_receipt.json"
+    if not p.exists():
+        return {"status": UNKNOWN, "detail": "desk_wake_post_receipt.json not found (the producer never ran on this host)"}
+    try:
+        doc = json.loads(p.read_text())
+        t = datetime.fromisoformat(str(doc.get("computed_at")).replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+    except (OSError, ValueError, AttributeError):
+        return {"status": UNKNOWN, "detail": "desk_wake_post_receipt.json unreadable or has no computed_at"}
+    hours = (now - t).total_seconds() / 3600
+    state = doc.get("state")
+    if hours > DESK_WAKE_POST_MAX_HOURS:
+        return {"status": BREACHED, "detail": f"desk packet+wake producer last ran {hours:.1f}h ago (bound {DESK_WAKE_POST_MAX_HOURS}h)"}
+    if state in ("wake_missing", "could_not_build", "could_not_commit", "could_not_post"):
+        return {"status": BREACHED, "detail": f"desk wake trigger: {state} — {doc.get('reason') or doc.get('step') or ''}"}
+    return {"status": OK, "detail": f"desk packet+wake producer ran {hours:.1f}h ago; state {state}"}
 
 
 def _retired_accounts() -> set:
@@ -557,6 +581,7 @@ def build(now: datetime | None = None) -> dict:
             "inflight": probe_inflight(now, shallow),
             "manager": probe_manager(now),
             "report": probe_report(now),
+            "desk_wake_post": probe_desk_wake_post(now),
             # TRAIL-PAUSE-PULSE: prop_trail_paused_<account>, one per executor
             # account with a state dir on this host; see prop_trail_watch.py.
             # a retired account (breakout_1, operator 2026-10-09: "shouldn't be
@@ -577,6 +602,7 @@ PROBE_LABEL = {
     "inflight": "in_flight rows gone quiet",
     "manager": "manager's register not written",
     "report": "scheduled work report missing or broken",
+    "desk_wake_post": "the desk packet+wake trigger stopped (producer silent, wake missing, or packet build/commit/post failing)",
     **prop_trail_watch.LABELS,
     **prop_silence.LABELS,
     "prop_feed": "a prop account feed keeps failing (red-flagged; retrying on a capped backoff)",
