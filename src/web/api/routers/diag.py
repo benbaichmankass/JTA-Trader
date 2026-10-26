@@ -577,6 +577,13 @@ _LTR_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "ltr_wake_post_receipt.json"
 )
 
+# LTR C1 (2026-10-26). The live trader's rows-branch watcher: one line per new
+# live-review/rows row (verdict, per-account venue_after, latencies) and the
+# last pass's status (fetched / could_not_fetch / could_not_read). Same anchor
+# as the writer (src.runtime.live_review_rows_watch.log_dir).
+_LTR_ROWS_WATCH_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch.jsonl"
+_LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch_status.json"
+
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
 # present only if old code wrote it -- the next trail pass moves it aside), its
@@ -608,6 +615,9 @@ _LOG_FILES: dict[str, Path] = {
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     # LTR-1B B2b: did the VM post the ltr-wake comment, and if not, why.
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
+    # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
+    "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
+    "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
     "bot_log": _BOT_LOG,

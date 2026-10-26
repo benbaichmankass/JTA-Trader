@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR C1 + C2 (operator popup ~11:40Z 2026-10-26: 'VM applies from rows branch' + 'VM pre-builds the packet'). C1: the live trader watches live-review/rows and runs live_review_dispatch.py --ref <tip> --apply for each new tighten_sl row (all mandate clauses, idempotency, approve_amend and venue read-back unchanged). C2: the ltr-wake comment carries the VM-built decision packet + priced table. Runtime change in ict-trader-live: the manager merges, restarts the trader and verifies the receipts. Stacked on #20307 (itself on #20300): merge those first.",
+  "why": "two src/runtime modules' worth of change (new rows watcher, packet attach in the wake poster), a --bundle no-write mode on the packet builder, diag log_file allowlist entries, the regenerated trader import closure and tests; no order-path, config, accounts.yaml or strategies.yaml change"
+}

@@ -165,7 +165,8 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
              auth_fn: Callable[[], Optional[str]] = read_auth_header,
              http: Http = _http,
              now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
-             receipt: Optional[Path] = None) -> Dict[str, Any]:
+             receipt: Optional[Path] = None,
+             build_bundle: Optional[Callable[[str], Dict[str, Any]]] = None) -> Dict[str, Any]:
     """One due computation -> at most one comment. Returns (and writes) the receipt."""
     global _cached_markers
     computed_at = now_fn()
@@ -210,7 +211,10 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
     for e in p["entries"]:
         e["poster"] = "vm"
         e["due_computed_at"] = computed_at.isoformat()
-    body = wake.render(p, computed_at, "VM poster (ict-trader-live, in process)")
+    # LTR C2: the decision packet rides the comment (built on the VM, read-only).
+    bundles = wake.attach_packets(p, build=build_bundle) if build_bundle else wake.attach_packets(p)
+    rec["packet_states"] = {e["order_package_id"]: e.get("packet_state") for e in p["entries"]}
+    body = wake.render(p, computed_at, "VM poster (ict-trader-live, in process)", bundles)
     code, data = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",
                       json.dumps({"body": body}).encode(), auth)
     posted_at = now_fn()
