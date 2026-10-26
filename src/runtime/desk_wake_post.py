@@ -1,49 +1,35 @@
-"""Trading-desk WAKE, VM side (DESK-6 follow-up): a gated hour -> ONE ops-flags comment -> manager.
+"""Trading-desk WAKE, VM side (DESK-6B): every 1h bar -> ONE ops-flags comment -> manager.
 
-Operator, 2026-10-26 ~16:30Z: the hourly desk wake should be triggered from the system itself,
-through the same channel as the other triggers, with the VM holding the timer and knowing when the
-hour holds something tradable. This replaces the hourly spawner routine (a fresh Sonnet session at
-$0.34-0.47 a wake, fired regardless of state). Model: ``live_review_wake_post`` (same credential,
-same ops-flags PR, same single-flight daemon thread, same receipt discipline).
+Operator, 2026-10-26: the hourly desk wake should be triggered from the system itself, through the
+same channel as the other triggers (ltr-wake), with the VM holding the timer, rather than as a Claude
+routine. Crypto trades 24/7, so the desk wakes EVERY 1h bar: there is NO market-hours or activity
+gate. The value is centralization: one VM trigger path, VM receipts, VM liveness. Model:
+``live_review_wake_post`` (same credential, ops-flags PR, single-flight daemon thread, receipt style).
 
-Flow, once per 1h bar:
+Per 1h bar:
 
 1. read ``comms/desk/latest_scan.json`` on ``desk/decisions`` (``desk-scan-packet.yml`` writes it at
-   :03), then the packet it points at; verify the packet's sha against the pointer;
-2. GATE (``evaluate_gate``): wake only when the hour holds something tradable, each reason named;
-3. post ONE ``desk-wake`` marker comment on the ops-flags PR, deduped per bar. The manager is
-   subscribed to that PR; on the marker it ``create_session``s the wake exactly as
-   ``.claude/skills/trading-desk/SKILL.md`` § 6b specifies.
+   :03), then the packet it points at; verify the packet's sha against the pointer. Missing, stale
+   (> ``PACKET_MAX_AGE_MIN``) or sha-mismatched -> receipt ``could_not_look`` with the reason, no post;
+2. dedupe per bar against the ``desk-wake`` markers already on the PR (``already_posted``);
+3. post ONE ``desk-wake`` marker comment. The manager is subscribed to that PR; on the marker it
+   ``create_session``s the wake exactly as ``.claude/skills/trading-desk/SKILL.md`` § 6b specifies.
 
-GATE REASONS (any one wakes; every decision carries the full list that fired) and their sources:
-
-* ``market_open:<class>``   -- a universe market is open now. Crypto (bybit) 24/7; alpaca and IB
-  equities/ETFs through ``market_hours.is_market_open("us_equity")``; IB futures through the 24/5
-  ``fx`` window of the same helper (no futures calendar exists in the repo; the daily CME break is
-  not modelled, so this errs toward waking).
-* ``open_position``         -- packet ``system_book`` item with ``status: open``.
-* ``open_desk_proposal``    -- packet ``desk_book`` item (an unresolved shadow proposal).
-* ``near_signal``           -- packet ``system_book`` item with ``bars_to_signal`` 0 or 1 (DESK-16B).
-* ``calendar_event``        -- ``news_events.event_risk_for_symbol`` > 0 for a universe symbol now,
-  or a packet universe row whose ``calendar`` was ``read`` with events in the next bar.
-* ``book_unread``           -- ``system_book`` or ``desk_book`` could not be looked at. COULD-NOT-LOOK
-  IS NEVER "NOTHING OPEN": the gate wakes and says so.
-
-``near_signals`` that could not be read are listed in ``unlooked`` on a ``not_due`` receipt and never
-read as "no leg is near".
+The marker also carries the packet's context as INFORMATION (``context``: open positions, open desk
+proposals, near-signal count, calendar events, unread books). None of it suppresses a wake.
 
 No halting: a failed read or post is a receipt state and the next pass retries (until the packet
-ages out). Nothing here stops the desk, a leg, an account or a pipeline.
+ages out).
 
 Credential: the ubuntu user's global git extraheader, read in process, never logged or written
 (``live_review_wake_post.read_auth_header``). Live VM only: ``kick()`` is a no-op unless this process
 is ``python -m src.main``.
 
 Receipt: ``runtime_logs/desk_wake_post_receipt.json`` via
-``/api/diag/log_file?name=desk_wake_post_receipt``. ``state``: ``not_due`` (with ``reasons_checked``
-and ``unlooked``) · ``already_posted`` · ``posted`` (``comment_url``, ``reasons``) · ``could_not_look``
-(``reason``) · ``could_not_post`` (``http_code`` / ``reason``). ``last_post`` is carried forward across
-passes so a later pass does not erase the evidence of the last wake.
+``/api/diag/log_file?name=desk_wake_post_receipt``. ``state``: ``posted`` (``comment_url``,
+``context``) · ``already_posted`` · ``could_not_look`` (``reason``) · ``could_not_post``
+(``http_code`` / ``reason``). ``last_post`` is carried forward across passes. Written on every pass, so
+its ``computed_at`` is the poster's liveness (``attention_watch`` probe ``desk_wake_post``).
 """
 from __future__ import annotations
 
@@ -76,10 +62,6 @@ HTTP_TIMEOUT_S = 10
 #: A packet built longer ago than this is not "this hour's": the builder missed a run.
 PACKET_MAX_AGE_MIN = 90
 BAR = timedelta(hours=1)
-#: Operator 2026-10-26: "crypto 24/7" counts as an open market. If the universe holds a crypto
-#: venue the gate therefore never reads not_due; flip this to make crypto count only through the
-#: other reasons (open position, desk proposal, near signal, calendar).
-CRYPTO_COUNTS_AS_OPEN = True
 NEAR_BARS = (0, 1)
 
 _LOCK = threading.Lock()
@@ -133,23 +115,7 @@ def parse_markers(comments: Optional[list]) -> List[dict]:
     return out
 
 
-# ----------------------------------------------------------------------------- the gate
-
-def market_class(symbol: str, venue: str) -> str:
-    """The ``market_hours`` asset class a universe row trades in."""
-    v = str(venue or "").lower()
-    if v == "bybit":
-        return "crypto"
-    if v == "alpaca":
-        return "us_equity"
-    if v == "interactive_brokers":
-        try:
-            from src.units.accounts.ib_instruments import is_ib_equity_symbol
-            return "us_equity" if is_ib_equity_symbol(symbol) else "fx"  # futures: 24/5 proxy
-        except Exception:  # noqa: BLE001
-            return "fx"
-    return "crypto"  # unknown venue: market_hours is fail-permissive too
-
+# ----------------------------------------------------------------------------- context (information only)
 
 def _calendar_events(universe: List[dict], now: datetime) -> List[str]:
     out: List[str] = []
@@ -173,50 +139,24 @@ def _calendar_events(universe: List[dict], now: datetime) -> List[str]:
     return out
 
 
-def evaluate_gate(packet: dict, now: datetime) -> Dict[str, Any]:
-    """Pure. {wake, reasons: [{reason, detail}], unlooked: [...], checked: [...]}."""
-    from src.runtime.market_hours import is_market_open
-
-    reasons: List[Dict[str, str]] = []
-    unlooked: List[str] = []
-    universe = [r for r in packet.get("universe") or [] if isinstance(r, dict)]
-    checked = ["market_open", "open_position", "open_desk_proposal", "near_signal", "calendar_event"]
-
-    by_class: Dict[str, List[str]] = {}
-    for r in universe:
-        cls = market_class(r.get("symbol"), r.get("venue"))
-        by_class.setdefault(cls, []).append(str(r.get("symbol")))
-    for cls, syms in sorted(by_class.items()):
-        if cls == "crypto" and not CRYPTO_COUNTS_AS_OPEN:
-            continue
-        if is_market_open("us_equity" if cls == "us_equity" else "fx" if cls == "fx" else "crypto", now):
-            reasons.append({"reason": f"market_open:{cls}", "detail": f"{len(syms)} symbol(s): {','.join(syms[:6])}"})
-
-    sb = packet.get("system_book") or {}
-    if sb.get("read_state") != "read" or sb.get("items") is None:
-        reasons.append({"reason": "book_unread", "detail": "system_book could not be looked at"})
-    else:
-        items = [i for i in sb["items"] if isinstance(i, dict)]
-        opened = [i for i in items if i.get("status") == "open"]
-        if opened:
-            reasons.append({"reason": "open_position", "detail": f"{len(opened)} open package(s)"})
-        near = [i for i in items if i.get("status") != "open" and i.get("bars_to_signal") in NEAR_BARS]
-        if near:
-            reasons.append({"reason": "near_signal", "detail": "; ".join(
-                f"{i.get('leg')} {i.get('symbol')} bars={i.get('bars_to_signal')}" for i in near[:6])})
-        if sb.get("near_signals_read_state") != "read":
-            unlooked.append("near_signals")
-
-    db = packet.get("desk_book") or {}
-    if db.get("read_state") != "read" or db.get("items") is None:
-        reasons.append({"reason": "book_unread", "detail": "desk_book could not be looked at"})
-    elif db["items"]:
-        reasons.append({"reason": "open_desk_proposal", "detail": f"{len(db['items'])} unresolved proposal(s)"})
-
-    cal = _calendar_events(universe, now)
-    if cal:
-        reasons.append({"reason": "calendar_event", "detail": "; ".join(cal[:4])})
-    return {"wake": bool(reasons), "reasons": reasons, "unlooked": unlooked, "checked": checked}
+def packet_context(packet: dict, now: datetime) -> Dict[str, Any]:
+    """Pure. What the packet holds, recorded on the marker. It never decides whether to wake.
+    An unread book is ``None`` (we could not look), never 0."""
+    sb, db = packet.get("system_book") or {}, packet.get("desk_book") or {}
+    sb_ok = sb.get("read_state") == "read" and sb.get("items") is not None
+    db_ok = db.get("read_state") == "read" and db.get("items") is not None
+    items = [i for i in (sb.get("items") or []) if isinstance(i, dict)] if sb_ok else []
+    unread = [n for n, ok in (("system_book", sb_ok), ("desk_book", db_ok)) if not ok]
+    if sb_ok and sb.get("near_signals_read_state") != "read":
+        unread.append("near_signals")
+    return {
+        "open_positions": sum(1 for i in items if i.get("status") == "open") if sb_ok else None,
+        "open_desk_proposals": len(db["items"]) if db_ok else None,
+        "near_signals": (sum(1 for i in items if i.get("status") != "open" and i.get("bars_to_signal") in NEAR_BARS)
+                         if sb_ok and sb.get("near_signals_read_state") == "read" else None),
+        "calendar_events": _calendar_events([r for r in packet.get("universe") or [] if isinstance(r, dict)], now)[:4],
+        "unread": unread,
+    }
 
 
 # ----------------------------------------------------------------------------- io
@@ -255,13 +195,15 @@ def read_packet(fetch: Fetch, auth: Optional[str]) -> Tuple[Optional[dict], Opti
 
 def render(entry: Dict[str, Any], now: datetime) -> str:
     marker = dict(entry, kind="desk-wake", posted_at=now.isoformat())
-    lines = [f"- **{r['reason']}** — {r['detail']}" for r in entry["reasons"]]
+    c = entry["context"]
+    info = (f"open positions {c['open_positions']}, open desk proposals {c['open_desk_proposals']}, "
+            f"near signals {c['near_signals']}, calendar events {len(c['calendar_events'])}, unread {c['unread'] or 'none'}")
     return "\n".join([
         f"**desk-wake: bar {entry['bar']}** — packet `{entry['packet_id']}` "
         f"(sha `{str(entry['packet_sha'])[:12]}`, built {entry['built_at']}). "
         "Manager: `create_session` the desk wake exactly as `.claude/skills/trading-desk/SKILL.md` § 6b "
         "specifies (outcome_branch/source_revision `desk/decisions`, the WAKE PROMPT).",
-        "", "Gate reasons:", *lines, "",
+        "", f"Packet context (information only; every bar wakes): {info}", "",
         f"<!-- {MARKER} {json.dumps(marker, separators=(',', ':'), default=str)} -->",
         "", "---", "_Generated by [Claude Code](https://claude.ai/code)_"])
 
@@ -279,7 +221,7 @@ def run_once(fetch: Fetch = _get,
              now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
              receipt: Optional[Path] = None,
              pr_fn: Optional[Callable[[], int]] = None) -> Dict[str, Any]:
-    """One bar's gate -> at most one comment. Returns (and writes) the receipt."""
+    """One bar -> at most one comment. Returns (and writes) the receipt."""
     global _cached_markers
     now = now_fn()
     rec: Dict[str, Any] = {"computed_at": now.isoformat(), "poster": "vm"}
@@ -307,14 +249,8 @@ def run_once(fetch: Fetch = _get,
     if bar in _handled:
         return done(_handled[bar], note="bar already handled by this process")
 
-    gate = evaluate_gate(pk, now)
-    rec["reasons_checked"] = gate["checked"]
-    if gate["unlooked"]:
-        rec["unlooked"] = gate["unlooked"]
-    if not gate["wake"]:
-        _handled[bar] = "not_due"
-        return done("not_due", reasons=[])
-    rec["reasons"] = [r["reason"] for r in gate["reasons"]]
+    ctx = packet_context(pk, now)
+    rec["context"] = ctx
 
     if not auth:
         return done("could_not_post", http_code=None, reason="no_credential_in_git_extraheader")
@@ -333,7 +269,7 @@ def run_once(fetch: Fetch = _get,
 
     entry = {"bar": bar, "packet_id": ptr["packet_id"], "packet_sha": ptr.get("packet_sha"),
              "path": ptr.get("path"), "built_at": ptr["built_at"], "poster": "vm",
-             "reasons": gate["reasons"]}
+             "context": ctx}
     body = render(entry, now)
     code, data = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments", json.dumps({"body": body}).encode(), auth)
     rec["http_code"] = code
@@ -344,7 +280,7 @@ def run_once(fetch: Fetch = _get,
     _handled[bar] = "already_posted"
     _cached_markers = markers + parse_markers([{"body": body}])
     rec["last_post"] = {"bar": bar, "packet_id": ptr["packet_id"], "posted_at": posted_at.isoformat(),
-                        "comment_url": url, "reasons": rec["reasons"]}
+                        "comment_url": url, "context": ctx}
     return done("posted", posted_at=posted_at.isoformat(), comment_url=url)
 
 

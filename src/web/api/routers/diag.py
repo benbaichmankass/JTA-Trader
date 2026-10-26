@@ -578,7 +578,7 @@ _LTR_WAKE_POST_RECEIPT = (
 )
 
 # DESK-6 (2026-10-26). The live trader's in-process desk-wake poster's receipt:
-# posted / not_due (+ reasons_checked, unlooked) / already_posted / could_not_look
+# posted (+ packet context) / already_posted / could_not_look
 # (+ reason) / could_not_post. Holds no credential. Same anchor as the writer
 # (src.runtime.desk_wake_post.receipt_path).
 _DESK_WAKE_POST_RECEIPT = (

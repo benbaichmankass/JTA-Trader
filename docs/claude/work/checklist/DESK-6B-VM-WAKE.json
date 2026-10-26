@@ -13,8 +13,8 @@
     20377
   ],
   "blocked_on": [],
-  "note": "[2026-10-26 lane DESK-WAKE-VM] src/runtime/desk_wake_post.py (kicked from the tick loop) gates each 1h packet and posts ONE desk-wake marker on ops-flags #17895; manager handler in manager SKILL 'Desk wake'; trading-desk SKILL 6b rewritten; receipt desk_wake_post_receipt; attention_watch probe desk_wake_post. Tier 2 by path: landing hold, manager merges. Finding: CRYPTO_COUNTS_AS_OPEN=True means the gate never closes while a bybit perp is in the universe. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first VM-posted desk-wake writes its row.",
-  "updated_at": "2026-10-26T16:45:19Z",
+  "note": "[2026-10-26 lane DESK-WAKE-VM] src/runtime/desk_wake_post.py (kicked from the tick loop) posts ONE desk-wake marker on ops-flags #17895 every 1h bar, deduped per bar; NO activity/market gate (operator: crypto is 24/7; value is centralization). Only could_not_look (packet missing/stale/sha-mismatch) suppresses. Packet context rides the marker as information. Manager handler in manager SKILL 'Desk wake'; trading-desk SKILL 6b rewritten; receipt desk_wake_post_receipt; attention_watch probe desk_wake_post. Tier 2 by path: landing hold, manager merges. Manager retires trig_01NMCJ5LHARkp6vWgTmQ8BC9 after the first VM-posted desk-wake writes its row.",
+  "updated_at": "2026-10-26T16:46:30Z",
   "updated_by": "session_015CN5DWiRyr8w2y1TSR5ALz",
   "roadmap": [
     "L-DESK"

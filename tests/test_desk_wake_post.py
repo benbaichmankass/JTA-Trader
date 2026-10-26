@@ -35,7 +35,6 @@ def _reset(monkeypatch):
     monkeypatch.setattr(dw, "_handled", {})
     monkeypatch.setattr(dw, "_cached_markers", [])
     monkeypatch.setattr(dw, "_last_kick", float("-inf"))
-    monkeypatch.setattr(dw, "CRYPTO_COUNTS_AS_OPEN", False)
     monkeypatch.setattr(dw, "_calendar_events", lambda u, n: [])
 
 
@@ -43,69 +42,32 @@ def names(g):
     return [r["reason"] for r in g["reasons"]]
 
 
-# ---- the gate: each reason ---------------------------------------------------
+# ---- context is information, never a gate -------------------------------------
 
-def test_equity_open_wakes_and_closed_does_not():
-    assert names(dw.evaluate_gate(packet(EQ), MON)) == ["market_open:us_equity"]
-    g = dw.evaluate_gate(packet(EQ), SAT)
-    assert g["wake"] is False and g["reasons"] == []
-
-
-def test_futures_follow_the_24_5_window(monkeypatch):
-    monkeypatch.setattr(dw, "market_class", lambda s, v: "fx")
-    fut = (("MES", "interactive_brokers"),)
-    assert dw.evaluate_gate(packet(fut), MON)["wake"] is True
-    assert dw.evaluate_gate(packet(fut), SAT)["wake"] is False
+def test_context_counts_and_never_reads_unread_as_zero():
+    c = dw.packet_context(packet(EQ, items=[OPEN_PKG, NEAR], desk=[{"decision_id": "d"}]), SAT)
+    assert (c["open_positions"], c["near_signals"], c["open_desk_proposals"], c["unread"]) == (1, 1, 1, [])
+    u = dw.packet_context(packet(EQ, sb="could_not_look", db="could_not_look"), SAT)
+    assert u["open_positions"] is None and u["open_desk_proposals"] is None and u["near_signals"] is None
+    assert u["unread"] == ["system_book", "desk_book"]
+    n = dw.packet_context(packet(EQ, near="could_not_look"), SAT)
+    assert n["near_signals"] is None and n["unread"] == ["near_signals"]
 
 
-def test_ib_symbols_map_to_equity_or_futures():
-    assert dw.market_class("SPY", "interactive_brokers") == "us_equity"
-    assert dw.market_class("MES", "interactive_brokers") == "fx"
-    assert dw.market_class("BTCUSDT", "bybit") == "crypto"
+@pytest.mark.parametrize("bars,count", [(0, 1), (1, 1), (2, 0), (None, 0)])
+def test_near_signal_count_is_within_one_bar(bars, count):
+    assert dw.packet_context(packet(EQ, items=[dict(NEAR, bars_to_signal=bars)]), SAT)["near_signals"] == count
 
 
-def test_crypto_counts_as_open_by_default_and_can_be_switched(monkeypatch):
-    monkeypatch.setattr(dw, "CRYPTO_COUNTS_AS_OPEN", True)
-    assert names(dw.evaluate_gate(packet(), SAT)) == ["market_open:crypto"]
-    monkeypatch.setattr(dw, "CRYPTO_COUNTS_AS_OPEN", False)
-    assert dw.evaluate_gate(packet(), SAT)["wake"] is False
-
-
-def test_open_position_wakes_even_when_every_market_is_closed():
-    g = dw.evaluate_gate(packet(EQ, items=[OPEN_PKG]), SAT)
-    assert names(g) == ["open_position"]
-
-
-def test_open_desk_proposal_wakes():
-    g = dw.evaluate_gate(packet(EQ, desk=[{"decision_id": "d1", "status": "pending_proposal"}]), SAT)
-    assert names(g) == ["open_desk_proposal"]
-
-
-@pytest.mark.parametrize("bars,wakes", [(0, True), (1, True), (2, False), (None, False)])
-def test_near_signal_within_one_bar(bars, wakes):
-    g = dw.evaluate_gate(packet(EQ, items=[dict(NEAR, bars_to_signal=bars)]), SAT)
-    assert g["wake"] is wakes and (names(g) == ["near_signal"]) is wakes
-
-
-def test_calendar_event_wakes(monkeypatch):
+def test_calendar_events_are_recorded(monkeypatch):
     monkeypatch.setattr(dw, "_calendar_events", lambda u, n: ["SPY:fomc@x risk=0.80"])
-    assert names(dw.evaluate_gate(packet(EQ), SAT)) == ["calendar_event"]
+    assert dw.packet_context(packet(EQ), SAT)["calendar_events"] == ["SPY:fomc@x risk=0.80"]
 
 
 def test_packet_calendar_events_count():
     cal = {"read_state": "read", "events_next_bar": ["cpi"]}
     reasons = REAL_CALENDAR_EVENTS(packet(EQ, cal=cal)["universe"], SAT)
     assert reasons and "cpi" in reasons[0]
-
-
-def test_unread_books_wake_rather_than_read_as_empty():
-    g = dw.evaluate_gate(packet(EQ, sb="could_not_look", db="could_not_look"), SAT)
-    assert names(g) == ["book_unread", "book_unread"] and g["wake"]
-
-
-def test_unread_near_signals_are_listed_not_assumed_quiet():
-    g = dw.evaluate_gate(packet(EQ, near="could_not_look"), SAT)
-    assert g["wake"] is False and g["unlooked"] == ["near_signals"]
 
 
 # ---- the pass -----------------------------------------------------------------
@@ -147,24 +109,29 @@ def run(tmp_path, net, now=MON, auth=AUTH):
     return rec
 
 
-def test_posts_one_marker_comment_with_bar_packet_and_reasons(tmp_path):
+def test_posts_one_marker_comment_with_bar_packet_and_context(tmp_path):
     net = Net(packet(EQ))
     rec = run(tmp_path, net)
-    assert rec["state"] == "posted" and rec["reasons"] == ["market_open:us_equity"]
+    assert rec["state"] == "posted" and rec["context"]["unread"] == []
     assert len(net.posts) == 1
     body = json.loads(net.posts[0][2])["body"]
     m = dw.parse_markers([{"body": body}])[0]
     assert m["bar"] == "2026-10-26T15:00:00Z" and m["packet_id"] == net.ptr["packet_id"]
-    assert m["packet_sha"] == net.ptr["packet_sha"] and m["reasons"][0]["reason"] == "market_open:us_equity"
+    assert m["packet_sha"] == net.ptr["packet_sha"] and m["context"]["open_positions"] == 0
     assert "Claude Code" in body and "trading-desk/SKILL.md" in body
     assert rec["last_post"]["comment_url"] == "https://example/c/1"
 
 
-def test_not_due_posts_nothing_and_names_what_was_checked(tmp_path):
-    net = Net(packet(EQ, near="could_not_look"), now=SAT)
+def test_wakes_every_bar_even_when_nothing_is_open_or_every_market_is_closed(tmp_path):
+    net = Net(packet(EQ), now=SAT)
     rec = run(tmp_path, net, now=SAT)
-    assert rec["state"] == "not_due" and net.posts == []
-    assert "market_open" in rec["reasons_checked"] and rec["unlooked"] == ["near_signals"]
+    assert rec["state"] == "posted" and len(net.posts) == 1
+
+
+def test_unread_books_still_post_and_say_so(tmp_path):
+    net = Net(packet(EQ, sb="could_not_look", db="could_not_look"))
+    rec = run(tmp_path, net)
+    assert rec["state"] == "posted" and rec["context"]["unread"] == ["system_book", "desk_book"]
 
 
 def test_missing_pointer_or_packet_is_could_not_look_never_a_silent_skip(tmp_path):
@@ -216,13 +183,6 @@ def test_no_credential_is_could_not_post(tmp_path):
     net = Net(packet(EQ))
     rec = run(tmp_path, net, auth=None)
     assert rec["state"] == "could_not_post" and rec["reason"] == "no_credential_in_git_extraheader"
-
-
-def test_not_due_is_remembered_for_the_bar(tmp_path):
-    net = Net(packet(EQ), now=SAT)
-    assert run(tmp_path, net, now=SAT)["state"] == "not_due"
-    assert run(tmp_path, net, now=SAT)["state"] == "not_due"
-    assert net.posts == []
 
 
 def test_kick_is_a_noop_off_the_live_trader():

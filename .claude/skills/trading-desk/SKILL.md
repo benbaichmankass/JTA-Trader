@@ -80,7 +80,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 | stage | what runs | restriction today | lifts when (evidence) | row |
 |---|---|---|---|---|
 | **1a** (live) | in-trade on the strategies' trades = the live trade review, tighten-only applies | in-trade applies are tighten-only on strategy trades | the D-S0 exit unit passes, then an operator-granted exit mandate | DESK-7, DESK-13 |
-| **1b** (this skill, DESK-6) | entry_generation **shadow**: gated hourly scan wake (VM posts, manager spawns), one row per packet, every proposal replayed | record-only; Sonnet only; packet is the only feed | the D-S0 entry-generation unit passes (masked replay + the forward-shadow set from THIS stage not contradicting it, n ≥ 100) | DESK-18 |
+| **1b** (this skill, DESK-6) | entry_generation **shadow**: hourly scan wake (VM posts, manager spawns), one row per packet, every proposal replayed | record-only; Sonnet only; packet is the only feed | the D-S0 entry-generation unit passes (masked replay + the forward-shadow set from THIS stage not contradicting it, n ≥ 100) | DESK-18 |
 | **2** | `claude_desk` leg rostered `execution: shadow` on `bybit_1` + `alpaca_paper`; proposals reach it through intake | no orders | D-S0 passes → the leg goes `execution: live` on paper; the mechanical soak is 1–2 clean desk trades ([`OPERATING-PLAN` § 2 "The soak is MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md)) | DESK-4a, DESK-17 |
 | **3** | the leg on real money + mirror; prop via the prop superset gate | desk entries only on paper; no prop | `MD-PROMOTE-S1-S2` (human-merge PR); prop EV/survival vs the firm's DD limits | DESK-17, manager |
 | **cadence** | hourly scan (phase 1) | 1 h scan; 15-min floor in the design | a 15m/5m scan packet + VM packets and intake (DESK-1, DESK-4b); below 5 min a student, not Claude | DESK-1, DESK-4 |
@@ -91,18 +91,15 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 ## 6b. The trigger: the VM gate posts, the manager spawns (the hourly routine is retired)
 
-**The trigger (DESK-6B, operator 2026-10-26 ~16:30Z).** The live trader's `src/runtime/desk_wake_post.py` is the timer. Once per 1h bar, after `desk-scan-packet.yml` has written that bar's packet (pointer `comms/desk/latest_scan.json` on `desk/decisions`), it runs the **gate** and, if the hour holds something tradable, posts ONE `desk-wake` marker comment on the ops-flags PR (deduped per bar). The manager is subscribed to that PR and, on the marker, does exactly the `create_session` below (`manager` SKILL § "Desk wake"). The scheduled-task spawner (trig_01NMCJ5LHARkp6vWgTmQ8BC9, hourly at :09) is **retired**: it woke a $0.34-0.47 session every hour regardless of state.
+**The trigger (DESK-6B, operator 2026-10-26).** The live trader's `src/runtime/desk_wake_post.py` is the timer. Once per 1h bar, after `desk-scan-packet.yml` has written that bar's packet (pointer `comms/desk/latest_scan.json` on `desk/decisions`), it posts ONE `desk-wake` marker comment on the ops-flags PR (deduped per bar). The manager is subscribed to that PR and, on the marker, does exactly the `create_session` below (`manager` SKILL § "Desk wake"). The scheduled-task spawner (trig_01NMCJ5LHARkp6vWgTmQ8BC9, hourly at :09) is **retired**: the point is one centralized trigger path with VM receipts and liveness, the same channel as `ltr-wake`.
 
-| gate reason (any one wakes; the marker lists every one that fired) | source |
-|---|---|
-| `market_open:<class>`: a universe market is open now | `market_hours.is_market_open` (crypto 24/7 `bybit`; `alpaca` and IB equities/ETFs `us_equity`; IB futures the 24/5 `fx` window, no futures calendar exists) |
-| `open_position` | packet `system_book` item `status: open` |
-| `open_desk_proposal` | packet `desk_book` items (unresolved shadow proposals) |
-| `near_signal` | packet `system_book` item with `bars_to_signal` 0 or 1 (DESK-16B) |
-| `calendar_event` | `news_events.event_risk_for_symbol` > 0, or a packet row whose `calendar` was read with events next bar |
-| `book_unread` | `system_book` / `desk_book` could not be looked at: the gate wakes, never reads "unread" as "empty" |
+**There is no market-hours or activity gate** (operator: *"because we're trading 24-hour cryptos, it needs to run all the time in any case"*): the desk wakes every 1h bar. The only conditions are the packet and the dedupe:
 
-Nothing fired -> receipt `not_due` (`reasons_checked`, `unlooked`), no comment. Missing, stale (> 90 min) or sha-mismatched packet -> `could_not_look` with the reason, never a silent skip. Receipt: `/api/diag/log_file?name=desk_wake_post_receipt`. ⚠️ **While a crypto venue is in the universe `market_open:crypto` always fires** (`CRYPTO_COUNTS_AS_OPEN`, per the operator's "crypto 24/7"), so the gate currently saves nothing; it starts to bite when that constant is switched off (a Tier-3-flavoured cost call left to the operator).
+- bar's packet missing, stale (> 90 min) or sha-mismatched -> receipt `could_not_look` with the reason, no post (never a silent skip);
+- a `desk-wake` marker for that bar already on the PR -> `already_posted`;
+- otherwise the post (`posted`, or `could_not_post` with `http_code`/`reason`, retried next pass).
+
+The marker also carries the packet's `context` as information only (open positions, open desk proposals, near-signal count, calendar events, unread books; an unread book is `null`, never 0). None of it suppresses a wake. Receipt: `/api/diag/log_file?name=desk_wake_post_receipt`, rewritten every pass; the `desk_wake_post` probe in `attention_watch` raises one flag if it is more than 3 h old.
 
 **What a wake must be started with (MEASURED 2026-10-26, four wakes, lane DESK-6).** A wake writes only if its session is started ON `desk/decisions`: `create_session` with `source_url` = this repo, `source_revision` = `desk/decisions`, `outcome_branch` = `desk/decisions`, `clone_depth: 1`, `sparse_checkout_paths: [".claude/skills/trading-desk"]`, model Sonnet. With no repository (even after `add_repo` with `access: push`) the write was refused (403), and on another branch it never landed.
 
@@ -130,7 +127,7 @@ You are one wake of the Claude trading desk (phase 1: shadow, record-only), star
 
 **Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).**
 
-- **MEASURED cost per working wake** (`get_session().usage.cost_usd`, 2026-10-26, Sonnet, fresh session, one 1h scan packet ≈ 53 KB): **$0.45, $0.34, $0.45, $0.47** (n = 4; context 119–134 k tokens; 65–85 s wall). INFERRED: hourly ≈ 24 wakes ≈ **$11/day** (the spawner routine it assumed is retired; the VM gate now decides which hours wake, and until `CRYPTO_COUNTS_AS_OPEN` is switched off that is every hour); the design assumed $0.041 a working wake (§ 5.3), so a fresh-session wake costs ~10× the standing-session estimate, because each wake re-pays the session's base context.
+- **MEASURED cost per working wake** (`get_session().usage.cost_usd`, 2026-10-26, Sonnet, fresh session, one 1h scan packet ≈ 53 KB): **$0.45, $0.34, $0.45, $0.47** (n = 4; context 119–134 k tokens; 65–85 s wall). INFERRED: hourly ≈ 24 wakes ≈ **$11/day** (the spawner routine it assumed is retired; the VM trigger wakes every hour); the design assumed $0.041 a working wake (§ 5.3), so a fresh-session wake costs ~10× the standing-session estimate, because each wake re-pays the session's base context.
 - The packet is a **1h** scan: its base rates and ATR are on 1h bars, so 3 of every 4 15-minute wakes would find nothing due and still pay a fresh session's start. The 15-min stage needs a 15m scan packet and a standing session (§ 6, `cadence`).
 - Cheaper per label, in order: a slimmer packet (drop untradable universe rows), a standing session at K* ≈ 22 wakes (design § 5.3), batching several symbols per wake. DESK-10 owns the $/pp conversion.
 

@@ -144,14 +144,14 @@ repo lane above (Sonnet LIVE-REVIEW lane with the skill).
 
 **Desk wake (DESK-6B, operator 2026-10-26 ~16:30Z: "the VM is in charge of having the timer").** The live trader
 (`src/runtime/desk_wake_post.py`, kicked from the tick loop) reads the hourly scan packet's pointer on
-`desk/decisions`, runs a GATE, and when the hour holds something tradable posts ONE comment on the same ops-flags
-PR (hidden marker `desk-wake`: `bar`, `packet_id`, `packet_sha`, `reasons[]`; deduped per bar). **On a `desk-wake`
+`desk/decisions` and, every 1h bar (no activity gate; crypto is 24/7), posts ONE comment on the same ops-flags
+PR (hidden marker `desk-wake`: `bar`, `packet_id`, `packet_sha`, informational `context`; deduped per bar). **On a `desk-wake`
 marker, `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b specifies** (`source_url` = this repo,
 `source_revision` and `outcome_branch` `desk/decisions`, `clone_depth` 1, `sparse_checkout_paths`
 [`.claude/skills/trading-desk`], Sonnet, `permission_mode` auto, tags `desk-wake` + `DESK-6-SHADOW-PILOT`, the WAKE
 PROMPT verbatim). One marker, one wake, no judgement: do not read the packet, do not wake for a bar you already
-spawned for. A bar with nothing tradable posts nothing and reads `not_due` on
-`/api/diag/log_file?name=desk_wake_post_receipt` (with `reasons_checked`, `unlooked`); `could_not_look` /
+spawned for. A bar whose packet is missing posts nothing: receipt
+`/api/diag/log_file?name=desk_wake_post_receipt` reads `could_not_look` (named reason); `could_not_look` /
 `could_not_post` there are incidents (fix, or tell the operator), and a poster that stops running is the
 `desk_wake_post` probe in `attention_watch` (one flag). The hourly spawner routine is retired; delete it once the
 first VM-posted wake has written its row.
