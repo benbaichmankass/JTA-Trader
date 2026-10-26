@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "live_review_due open_count equals live_review_packet --all-open's package count, or the route lists every telemetry-less open package as could_not_look",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-2U1HUCXC-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-1B-MARKET-TRIGGERS session_01YbW2EEGjULBzDP2U1Hucxc 2026-10-26 (manager relay 11:31Z)",
+    "rerun": "Compare open_count from scripts/ops/diag_fetch.sh live_review_due with the package count of python3 scripts/ops/live_review_packet.py --all-open; any difference names a package the gate cannot see."
+  },
+  "state": "queued",
+  "what": "live_review_due only sees open packages that have a position_telemetry row. LIVE-REVIEW lanes at 10:13Z and 11:18Z on 2026-10-26 (relayed by the manager) found the gate at 7 open while live_review_packet.py --all-open listed 8. The 8th is the gld_pullback_1h paper wedge: package SL 414.54 vs venue stop 416.09, a mechanics mismatch the gate cannot see. The same gap would hide a real-money or prop package whose telemetry stopped being written: no event fires and it is not even counted. Proposed fix: build the due list's open set from the same source as the packet (telemetry + order_packages/trades open rows + prop tickets) and report packages with no telemetry as an explicit could_not_look (or a mechanics 'telemetry_absent' event for real-money/prop), never drop them silently. Natural owner: LTR-MECHANICS-VENUE-SNAPSHOT / the due computation (src/runtime/live_review_due.py)."
+}
