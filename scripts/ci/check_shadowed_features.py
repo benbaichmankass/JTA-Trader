@@ -2,7 +2,7 @@
 """shadowed-features-guard: a feature taken off the trade path must stay on the data path.
 
 Rule: docs/CLAUDE-RULES-CANONICAL.md § "Off the trade path is not off the data path"
-(operator, 2026-10-26). Registry: config/shadowed_features.yaml.
+(operator, 2026-10-26). Registry: docs/reference/shadowed-features.yaml.
 
 Fails when an entry
   * has no live owner (a checklist row that exists and is not done/dropped, or a research/queue unit),
@@ -44,7 +44,7 @@ def _owner_live(repo: Path, owner: str) -> bool:
 
 
 def check(repo: Path) -> tuple[list[str], int, int]:
-    reg = repo / "config/shadowed_features.yaml"
+    reg = repo / "docs/reference/shadowed-features.yaml"
     if not reg.is_file():
         raise FileNotFoundError(reg)
     entries = (yaml.safe_load(reg.read_text()) or {}).get("entries") or {}
@@ -88,7 +88,7 @@ def _self_test() -> int:
     import json
     with tempfile.TemporaryDirectory() as t:
         repo = Path(t)
-        (repo / "config").mkdir()
+        (repo / "docs/reference").mkdir(parents=True)
         (repo / "docs/claude/work/checklist").mkdir(parents=True)
         (repo / "docs/claude/work/checklist/LIVE.json").write_text(json.dumps({"state": "queued"}))
         (repo / "docs/claude/work/checklist/DEAD.json").write_text(json.dumps({"state": "done"}))
@@ -98,7 +98,7 @@ def _self_test() -> int:
                dict(good, freshness_check={"state": "gap", "gap_row": "DEAD"}),
                dict(good, freshness_check={"state": "exists", "path": "no/such"}),
                dict(good, freshness_check={}), {k: v for k, v in good.items() if k != "re_entry_test"}]
-        reg = repo / "config/shadowed_features.yaml"
+        reg = repo / "docs/reference/shadowed-features.yaml"
         reg.write_text(yaml.safe_dump({"entries": {"ok": good}}))
         if check(repo)[0]:
             print("self-test FAIL: clean registry reported problems", check(repo)[0])
