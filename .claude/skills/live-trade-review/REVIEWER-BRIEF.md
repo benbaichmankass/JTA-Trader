@@ -1,6 +1,6 @@
 # Live-review REVIEWER BRIEF (repo-less) — the whole contract in one file
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · companion to [`SKILL.md`](SKILL.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md) · companion to [`SKILL.md`](SKILL.md)
 
 > **Operator, 2026-10-26 ~11:40Z (verbatim design note):** *"the session shouldn't need to read the repo at all, it just needs a skll for ltr and a promt with the reveiw packet, and a specifc output format to a designated branch where the vm can pick up the reccomentation immediately"*. Popups the same minute: "VM applies from rows branch" + "VM pre-builds the packet".
 
