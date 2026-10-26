@@ -84,9 +84,9 @@ def test_a_poller_posted_key_is_not_reposted(tmp_path):
     assert run(tmp_path, due(), http)["state"] == "already_posted" and http.posts == []
 
 
-def test_paper_and_daily_floor_never_post(tmp_path):
+def test_unlisted_account_and_daily_floor_never_post(tmp_path):
     http = FakeHttp()
-    assert run(tmp_path, due(acct="bybit_1"), http)["state"] == "nothing_due"
+    assert run(tmp_path, due(acct="oanda_practice"), http)["state"] == "nothing_due"
     assert run(tmp_path, due(event="daily_floor", level="2026-10-26"), http)["state"] == "nothing_due"
     assert http.calls == []
 
