@@ -2,21 +2,32 @@
   "id": "CJ-2-DATASET",
   "title": "Claude->ML: ml/datasets/families/claude_judgments.py point-in-time dataset family, registry entry, \u00a7 3.5 leakage tests 1-4, claude-judgments-guard manifest lint, legacy ingestion with author_kind",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
-  "lane": null,
+  "lane": "session_017V1wkDRE6KDqbkdtRpDXrh",
   "model": "claude-opus-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20338
+  ],
   "blocked_on": [],
-  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN. Opus: leakage design. [2026-10-25 16:05Z session_01UKBXozpiJicMHHyMp47MnN] CJ-0-FIXES merged #20100 (6052b1d) -> unblocked. Not dispatched yet: operator priority today is the live trade review prototype; next Opus slot. [2026-10-25 17:36Z session_01UKBXozpiJicMHHyMp47MnN] Blocked on DESK-DESIGN by manager: the Claude-judgment dataset must use the desk's shared packet schema (operator: same feed for Claude and ML). [2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner.",
+  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN. Opus: leakage design. [2026-10-25 16:05Z session_01UKBXozpiJicMHHyMp47MnN] CJ-0-FIXES merged #20100 (6052b1d) -> unblocked. Not dispatched yet: operator priority today is the live trade review prototype; next Opus slot. [2026-10-25 17:36Z session_01UKBXozpiJicMHHyMp47MnN] Blocked on DESK-DESIGN by manager: the Claude-judgment dataset must use the desk's shared packet schema (operator: same feed for Claude and ML). [2026-10-26 06:33Z manager] STALE_BLOCK cleared: blocker finished (DESK-0-SCHEMA landed_unproven via #20163 / LTR-2-RECORDS done / DESK-DESIGN landed_unproven). Operator 06:30Z: get the live-review recommendation flow going and build the next desk stages (entries, short-timeframe live session, live news/web) sooner. [2026-10-26 lane session_017V1wkDRE6KDqbkdtRpDXrh] PR #20338: family + registry + trainer build line + claude-judgments-guard (test 2) + 11 tests. Tests 1/4 in builder. Population on main (no journal in session): 24 LTR rows (9 trades), 0 desk, 0 joined; every reviewed package was open at its last review, so trainer expected 0 (outcome_pending) until one closes. 0/24 rows carry judgement_confidence. Not done: test 3 + legacy ingestion, desk packet features (DESK-11/16), consumed.jsonl (DESK-21). Filed PI-20261026-DTRPDXRH-0001 (reviewed_at minute truncation).",
   "priority_rank": 4,
-  "updated_at": "2026-10-26T06:31:57Z",
-  "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
+  "updated_at": "2026-10-26T13:40:28Z",
+  "updated_by": "session_017V1wkDRE6KDqbkdtRpDXrh",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "the trainer daily dataset build logs claude_judgments with row_count > 0 (needs a reviewed trade to close; 0 expected until then, all rows outcome_pending)",
+    "how_to_check": "trainer-vm-diag: tail runtime_logs/trainer/dataset_builds.jsonl | grep claude_judgments (status ok, row_count) and the claude_judgments_population stderr line",
+    "due_by": "2026-11-09T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "M25: claude_judgments family built and in the daily trainer build (CJ-2); population on main 24 LTR rows / 0 desk / 0 joined (trades open)",
+    "arch": "ARCHITECTURE-CANONICAL training step 1: claude_judgments is built"
+  },
   "_seq": 667
 }
