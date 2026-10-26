@@ -503,6 +503,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-10-25-01SrYqLY-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-25-01UKBXoz-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/handoffs/2026-10-25-01MdQiC8-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/handoffs/2026-10-26-01AZiErv-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
