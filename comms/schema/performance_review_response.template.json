@@ -103,6 +103,15 @@
     "proposed_action": "e.g. 'hold shelved' | 'Tier-3 re-arm proposal: mode: live for alpaca_live (evidence: ...)'",
     "note": "<= 240 chars; MUST state the paper-proxy caveat"
   },
+  "live_review": {
+    "_comment": "LTR-5 (§ Live review). The graded read of the live-trade-review calls over the window: `python3 scripts/ops/live_review_grade.py --live --json`, pasted. Population first (n reviews, n packages, n priced, n could_not_price with reasons) - a number without its population is not a finding. null (+ an anomalies line) only when the grader could not run.",
+    "population": {"n_reviews": 0, "n_packages": 0, "n_altering_calls": 0, "n_priced": 0, "n_could_not_price": 0, "could_not_price_reasons": {}},
+    "per_action_class": {},
+    "q1_policy_comparison": {"verdict": "INDETERMINATE | B_better | A_better", "population": {}, "note": "live 0.25R vs shadow 0.5R, paired dR; INDETERMINATE when discordant n < 10 or the 95% interval includes 0"},
+    "calibration_by_evidence_source": {},
+    "applied_alarm": {"proposes_recommend_mode": false},
+    "note": "<= 240 chars"
+  },
   "anomalies": [
     "free-form list of notable items (grade drift, unexpected attribution, etc.)"
   ],

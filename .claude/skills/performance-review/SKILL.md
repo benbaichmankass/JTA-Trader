@@ -90,7 +90,10 @@ window before you duplicate its pulls.
     diversification), or is the capital better left where it is? This is
     the standing bar for (re-)adding a strategy to a live real-money
     account (§ "Real-money allocation benchmark").
-12. **Emit the response JSON** + **post a one-line update to the Claude
+12. **Grade the live-trade-review calls** — the "Live review" section: every
+    review priced against holding on real candles, net of the full cost stack
+    (§ "Live review").
+13. **Emit the response JSON** + **post a one-line update to the Claude
     channel** (§ "Output" + § "Posting to the Claude channel").
 
 ## Out of scope (DO NOT do here)
@@ -793,6 +796,53 @@ message: /performance-review — <window>: <total decisions>, <win_rate>% WR, $<
 Fallback path: append to `docs/claude/pending-pings.jsonl` and commit.
 Full contract: `docs/claude/telegram-pings.md`.
 
+## Live review (LTR-5, operator 2026-10-25 — every review grades the reviewer too)
+
+`/live-trade-review` records one row per open package per review in
+`comms/live_review/reviews.jsonl`. Nothing about those calls is graded until their trade closes, so this
+section does it. **Run it every review:**
+
+```bash
+python3 scripts/ops/live_review_grade.py --live --since <window_start>            # the markdown section
+python3 scripts/ops/live_review_grade.py --live --since <window_start> --json     # paste into live_review{}
+python3 scripts/ops/live_review_grade.py --live --write-outcomes                  # append computed rows for newly CLOSED trades
+```
+
+It projects over the canonical records (reviews joined to the journal on `order_package_id`/`trade_id`) and
+prices each call through `scripts/research/live_review_counterfactual.py`: the package's bracket and trail
+replayed on real exchange candles from the review time, with and without the call, **net of the full cost
+stack** (`execution_costs.resolve_cost_policy` slippage + the trade's recorded fee/funding legs). It keeps no
+store of its own; `--write-outcomes` appends to `comms/live_review/outcomes.jsonl` (idempotent by `review_id`),
+the file the CJ-2 dataset joins on.
+
+**State the population first, in this order:** `n reviews on n packages → n altering calls → n priced →
+n could_not_price (by reason)`. The reasons are named, not collapsed: `trade_open`, `no_candles`,
+`replay_mismatch` (the replay could not reproduce the trade's own exit within 0.15 R, so its counterfactual is
+not trusted), `hold_replay_unresolved`, `no_package_row`. A hold / no_recommendation / flag_mechanics review
+changes no path: its `delta_r` is 0 by construction, never a measurement, and it is graded only as an outcome
+row once its trade closes. **n=0 priced is a finding to report as n=0**, never as "0 R".
+
+Report, from the generator's output (do not hand-compute):
+
+1. **Per action class** — n, applied vs recommended-only, mean and worst `delta_r` (positive = the call beat
+   holding), hit rate.
+2. **The reviewer's grade** — calibration of `judgement_confidence` (Brier + reliability by bucket) **stratified
+   by `evidence_source`** (`table` vs `judgement`), so the models learn how much weight a thin-cell judgement
+   deserves. Below 10 priced calls a stratum reads `INDETERMINATE`; say so, do not narrate a trend. Also apply
+   the A–F rubric to the review row, keyed by `review_id` in `comms/claude_strategy_scores.jsonl`.
+3. **Q1 — live 0.25 R policy vs the shadow 0.5 R policy**, on the same reviews: n, paired `dR`, and a verdict
+   that is `INDETERMINATE` unless at least 10 reviews are discordant and the 95% interval excludes 0 (rule
+   registered in the generator before any run). A judgement-basis tighten carries no ex-ante cost, so neither
+   policy flag is decided for it: it is counted as `policy_undefined`, not forced into the comparison.
+4. **Touched vs untouched** — the generator lists `touched_packages` (a call was applied). Live-vs-backtest
+   verdicts and every Gate-2 demotion read must **split touched from untouched**: a mandate-tightened exit is
+   no longer the exit Stage 0 validated.
+5. **The loop's alarm** — if applied actions net `delta_r < 0` over 20 or more priced applies, propose
+   `apply_mode: recommend` in `proposed_tweaks[]` (a proposal; never a flip).
+
+A tighten that is `priced` on a `replay_matches_realised` row is solid; one on an `unvalidated` row (an applied
+call has no untouched realised path to check) is flagged as such. Say which you are quoting.
+
 ## Output
 
 Emit a single JSON object conforming to
@@ -821,6 +871,9 @@ Emit a single JSON object conforming to
   `note` states the paper-proxy caveat. `null` (with an `anomalies[]`
   line) only when there's no live real-money book AND no queued
   candidate to benchmark.
+- `live_review` — the Live review section above (population, per-action
+  class, Q1 verdict, calibration by evidence source, applied alarm). `null`
+  (with an `anomalies[]` line) only when the grader could not run.
 - `anomalies[]` — free-form notable items (grade drift, unexpected
   attribution, etc.).
 - `recommended_action`, `operator_attention_required`.
