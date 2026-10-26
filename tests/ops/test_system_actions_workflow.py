@@ -381,6 +381,11 @@ EXPECTED_ACTIONS = {
     # 2026-10-25 — LTR-6R-APPLY-PATH: READ-ONLY per-account dry-run of the
     # live-review apply path (scripts/ops/live_review_apply.py --dry-run).
     "live-review-dry-run": "live_review_dry_run_action.sh",
+    # 2026-10-26 — LTR-APPLY-DISPATCH: dispatch ONE committed tighten_sl review
+    # row to the per-account apply (scripts/ops/live_review_dispatch.py ->
+    # live_review_apply.py). DRY-RUN by default; apply gated; idempotent per
+    # review_id; re-checks MD-LIVE-TIGHTEN-SL's package-level clauses on the row.
+    "live-review-apply": "live_review_apply_action.sh",
     # Audit F-39 / MI-241. Re-attaches the three order_packages rows that were
     # flipped to `closed` while their legs were still OPEN, so order_monitor's
     # `status="open"` selector can never pick them up and those legs are managed
@@ -483,6 +488,7 @@ TIER_2_ACTIONS = {
     "reattach-stranded-package-legs",
     "amend-position-sl",
     "live-review-dry-run",
+    "live-review-apply",
 }
 
 

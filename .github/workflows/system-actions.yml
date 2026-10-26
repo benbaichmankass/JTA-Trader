@@ -181,6 +181,7 @@ on:
           - reattach-stranded-package-legs
           - amend-position-sl
           - live-review-dry-run
+          - live-review-apply
       reason:
         description: "Why this action is being run (audit trail; required for Tier-2)"
         required: false
@@ -708,6 +709,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*allow_immediate[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Aa]llow_immediate[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # live-review-apply: the committed review row to dispatch (LR-…).
+            review_id=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*review_id[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Rr]eview_id[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             if [ -z "${action}" ]; then
               echo "::error::Issue body must contain a line of the form 'action: <name>'. Title was: ${ISSUE_TITLE}"
               exit 1
@@ -795,6 +801,7 @@ jobs:
           echo "ACTION_NEW_SL=${new_sl:-}" >>"$GITHUB_ENV"
           echo "ACTION_SIDE=${side:-}" >>"$GITHUB_ENV"
           echo "ACTION_ALLOW_IMMEDIATE=${allow_immediate:-}" >>"$GITHUB_ENV"
+          echo "ACTION_REVIEW_ID=${review_id:-}" >>"$GITHUB_ENV"
           echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${GITHUB_EVENT_NAME})"
 
       - name: Validate action and tier policy
@@ -804,7 +811,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1226,6 +1233,19 @@ jobs:
             case "${ACTION_ALLOW_IMMEDIATE:-}" in
               ""|true|false|True|False) ;;
               *) echo "::error::amend-position-sl allow_immediate must be true or false (got '${ACTION_ALLOW_IMMEDIATE}')."; exit 1 ;;
+            esac
+          fi
+          # live-review-apply: review_id required; apply true|false. The VM-side
+          # dispatcher owns every mandate clause and each account's risk manager
+          # owns every money guard; this only shape-checks the inputs.
+          if [ "${ACTION}" = "live-review-apply" ]; then
+            if ! printf '%s' "${ACTION_REVIEW_ID:-}" | grep -Eq '^LR-[A-Za-z0-9_-]+$'; then
+              echo "::error::live-review-apply requires 'review_id: LR-…' (allowed: A-Z a-z 0-9 _ -; got '${ACTION_REVIEW_ID:-}')."
+              exit 1
+            fi
+            case "${ACTION_APPLY:-}" in
+              ""|true|false|True|False) ;;
+              *) echo "::error::live-review-apply apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
             esac
           fi
           # phone-dry-test: ONE always-dry phone test ticket (meta.test, submit
@@ -1790,6 +1810,7 @@ jobs:
             cancel-stale-tpsl-legs)             SCRIPT="cancel_stale_tpsl_legs_action.sh" ;;
             amend-position-sl)                  SCRIPT="amend_position_sl_action.sh" ;;
             live-review-dry-run)                SCRIPT="live_review_dry_run_action.sh" ;;
+            live-review-apply)                  SCRIPT="live_review_apply_action.sh" ;;
             backfill-tpsl-leg-ids)              SCRIPT="backfill_tpsl_leg_ids_action.sh" ;;
             reattach-stranded-package-legs) SCRIPT="reattach_stranded_package_legs_action.sh" ;;
             repair-prop-fill-direction)         SCRIPT="repair_prop_fill_direction_action.sh" ;;
@@ -2167,6 +2188,9 @@ jobs:
             # The reason is the provenance written onto trades.notes, not a
             # dispatch formality — forwarded like flatten-*'s.
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") TRADE_ID=$(printf '%q' "${TRADE_ID:-}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_SIDE=$(printf '%q' "${ACTION_SIDE:-}") ACTION_NEW_SL=$(printf '%q' "${ACTION_NEW_SL:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_ALLOW_IMMEDIATE=$(printf '%q' "${ACTION_ALLOW_IMMEDIATE:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "live-review-apply" ]; then
+            REMOTE_CMD="ACTION_REVIEW_ID=$(printf '%q' "${ACTION_REVIEW_ID:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-tpsl-leg-ids" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
