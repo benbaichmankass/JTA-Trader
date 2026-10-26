@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the pkg-011a7bf85ee54a6f ib_paper snapshot row reads measured, or none_resting on two consecutive sweeps (then it is a real naked position)",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-VXKMOUTK-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-30",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'venue_protection_snapshot?order_package_id=pkg-011a7bf85ee54a6f'",
+    "what": "ib_paper MGC venue protection state after the snapshot deploys"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-MECHANICS-VENUE-SNAPSHOT dry read 2026-10-26 (scripts/ops/venue_snapshot_dry_read.py)",
+    "rerun": "scripts/ops/diag_fetch.sh 'venue_protection_snapshot?order_package_id=pkg-011a7bf85ee54a6f'"
+  },
+  "state": "queued",
+  "what": "ib_paper MGC (pkg-011a7bf85ee54a6f, short 12) showed NO resting STP/LMT legs on /api/diag/ib_open_orders at 2026-10-26T18:43Z while MHG's two legs were visible. The diag IB order view carries a stale-read caveat (BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW), so this is UNVERIFIED as a naked position. Settle it from the first snapshot row for that package: measured = the view was stale; none_resting for more than one sweep = a naked position the IB naked sweep did not re-arm, so root-cause that sweep. Same package as PI-20261026-UNSVQMPZ-0001."
+}

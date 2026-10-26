@@ -2294,6 +2294,11 @@ class AlpacaClient:
         stop_qty = 0.0
         target_qty = 0.0
         stop_leg_qtys: List[float] = []
+        # LTR-MECHANICS-VENUE-SNAPSHOT: the levels the reducing legs rest AT,
+        # by side. Additive and OBSERVE-ONLY; a leg with no readable price (a
+        # trailing stop) adds nothing here, which is not "the price is fine".
+        stop_prices: List[float] = []
+        target_prices: List[float] = []
         unknown = 0
         for o in legs:
             kind = self._leg_protective_side(
@@ -2320,14 +2325,21 @@ class AlpacaClient:
             if not (q > 0):  # False for 0, negatives and NaN alike
                 unknown += 1
                 continue
+            _lp = self._leg_price(o, kind)
             if kind == "stop":
                 stop_qty += q
                 stop_leg_qtys.append(q)
+                if _lp is not None:
+                    stop_prices.append(_lp)
             else:
                 target_qty += q
+                if _lp is not None:
+                    target_prices.append(_lp)
         return {
             "size": size,
             "side": pos_side,
+            "stop_prices": sorted(stop_prices),
+            "target_prices": sorted(target_prices),
             "stop_qty": stop_qty,
             # Each resting reducing-side stop leg's own size — what lets the
             # sweep attribute a shortfall to the ONE row no leg accounts for
