@@ -4,7 +4,7 @@
 
 > **Operator, 2026-10-26 ~11:40Z (verbatim design note):** *"the session shouldn't need to read the repo at all, it just needs a skll for ltr and a promt with the reveiw packet, and a specifc output format to a designated branch where the vm can pick up the reccomentation immediately"*. Popups the same minute: "VM applies from rows branch" + "VM pre-builds the packet".
 
-You are a **fresh, repo-less** live-review reviewer. The manager started you with THIS brief plus ONE ltr-wake comment's packet block(s). You do **not** clone, read or search the repo, and you do not read diag routes. Everything you judge is in the packet. Your one output is ONE row on the `live-review/rows` branch. The live VM picks it up within ~45 s and runs the apply itself (`src/runtime/live_review_rows_watch.py` → `scripts/ops/live_review_dispatch.py --ref`). Every mandate clause, `approve_amend` and the venue read-back stay on the VM. **You never move a stop, place, amend or cancel an order, write `config/`, or open an issue.**
+You are a **fresh, repo-less** live-review reviewer. The manager started you with THIS brief plus ONE ltr-wake comment's packet block(s). You do **not** clone, read or search the repo, and you do not read diag routes. Everything you judge is in the packet. Your one output is ONE row on the `live-review/rows` branch, written by a compare-and-swap (§ 4). The live VM picks it up within ~45 s and runs the apply itself (`src/runtime/live_review_rows_watch.py` → `scripts/ops/live_review_dispatch.py --ref`). Every mandate clause, `approve_amend` and the venue read-back stay on the VM. **You never move a stop, place, amend or cancel an order, write `config/`, or open an issue.**
 
 ## 1. Your input
 
@@ -234,16 +234,22 @@ Each package block in the comment is:
 }
 ```
 
-## 4. The write: one commit on `live-review/rows`, no clone
+## 4. The write: a compare-and-swap on `live-review/rows`, no clone
 
-Use the GitHub MCP tools only (`get_file_contents`, `push_files`); never `git clone`.
+Never `git clone`, and **never `push_files` for `reviews.jsonl`**: it writes the whole file from whatever you read, with no check that the branch has not moved, so a concurrent reviewer's line could be silently dropped. Every write below is guarded, so a lost line is **impossible**, not merely unlikely.
 
-1. Read `comms/live_review/reviews.jsonl` at `ref: refs/heads/live-review/rows`. If your `review_id` is already in it, stop (it is already written).
-2. Make **ONE `push_files` commit to branch `live-review/rows`** carrying exactly:
-   - `comms/live_review/reviews.jsonl`: the file you just read, byte for byte, plus your row as ONE compact JSON line at the end (newline-terminated);
-   - `comms/live_review/packets/<review_id>.json`: the block's `packet` object (any whitespace; the sha is over canonical JSON);
-   - `table_path`: the block's `table` object (omit when `table` is null).
+1. **Evidence first (new files, cannot clobber).** With `create_or_update_file` on branch `live-review/rows` and **no `sha`** (create-only):
+   - `comms/live_review/packets/<review_id>.json` = the block's `packet` object (any whitespace; `packet_sha` is over canonical JSON);
+   - `table_path` = the block's `table` object (skip when `table` is null).
 
-   Message: `live-review: <review_id> <action> (<leg>, <basis>)`. Nothing else goes in the commit. Why three files and not one: the validator refuses a `packet_sha` without its packet, and the VM refuses a tighten whose table is not committed at that commit.
-3. **Verify.** Re-read `reviews.jsonl` at the new commit. It must hold every `review_id` from step 1 plus yours. If another reviewer's row was lost (you wrote over a concurrent commit), make one more commit that re-appends the missing line(s) from the commit you overwrote. Never delete or edit a landed row: the branch is append-only.
-4. **Report** to the manager in one message: `review_id`, the commit sha, action / basis / route, and the priced options you used (n, mean, worst). That's it: the VM's watcher applies a `recommended` tighten by itself, and its receipt (`/api/diag/log_file?name=live_review_rows_watch`) records the verdict and `venue_after`. The mirror (`live-review-rows-mirror.yml`) copies your row onto `main`.
+   If a create is refused because the file exists, read it. Same content → carry on (an earlier attempt of yours). Different content → stop and report `could_not_write: evidence_conflict`.
+2. **Read.** `get_file_contents` `comms/live_review/reviews.jsonl` at `ref: refs/heads/live-review/rows`. Keep its blob **`sha` S**. If your `review_id` is already in the file, stop: it is written.
+3. **Append.** The content you read, byte for byte, plus your row as ONE compact JSON line, newline-terminated.
+4. **Swap.** `create_or_update_file` `comms/live_review/reviews.jsonl` on `live-review/rows` **with `sha: S`**. Message: `live-review: <review_id> <action> (<leg>, <basis>)`. GitHub applies it only if the file's current blob is still S. If another reviewer wrote in between, it is refused (**409** conflict, or 422), and nothing is written.
+5. **On refusal, restart from step 2.** Re-read at the new tip, so the other reviewer's line is kept, and re-append yours. **Up to 5 tries.** Then stop and report **`could_not_write`** with the last status. Never retry without re-reading, and never drop the `sha`.
+
+**Equivalent with raw Git Data API access** (only if your session has it): GET `refs/heads/live-review/rows` → tip T. Read the file at T and append. Create the blobs, a tree based on T's tree, and a commit with parent T. Then PATCH `refs/heads/live-review/rows` with `sha=<new commit>` and **`force=false`**. A moved ref is refused (422 non-fast-forward) → restart from the GET, up to 5 tries, then `could_not_write`. This puts all three files in one commit.
+
+6. **Report** to the manager in one message: `review_id`, the commit sha of the `reviews.jsonl` write, the number of tries, action / basis / route, and the priced options you used (n, mean, worst). Or `could_not_write` and why.
+
+The VM watcher applies a `recommended` tighten from the branch tip by itself. Its receipt (`/api/diag/log_file?name=live_review_rows_watch`) records the verdict and `venue_after`. The packet and table were committed before the row, so they exist at every tip that carries the row. The mirror (`live-review-rows-mirror.yml`) copies the row onto `main`.

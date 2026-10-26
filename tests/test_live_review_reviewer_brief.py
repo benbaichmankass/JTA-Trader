@@ -50,3 +50,13 @@ def test_the_example_tighten_clears_the_vm_dispatchers_clauses():
     row = _json_block("### Worked example")
     plan, refusal = d.check_row(row, json.dumps({"read_state": "thin"}))
     assert refusal is None and plan["basis"] == "judgement"
+
+
+def test_the_write_is_a_compare_and_swap_with_a_bounded_retry():
+    """Manager 2026-10-26 ~11:59Z: a lost concurrent line must be impossible, not unlikely."""
+    write = BRIEF.split("## 4. The write", 1)[1]
+    assert "never `push_files` for `reviews.jsonl`" in write
+    assert "with `sha: S`" in write and "409" in write          # contents-API CAS
+    assert "`force=false`" in write and "parent T" in write      # Git Data API CAS
+    assert "restart from step 2" in write and "Up to 5 tries" in write
+    assert "`could_not_write`" in write
