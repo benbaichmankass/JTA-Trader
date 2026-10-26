@@ -149,8 +149,8 @@ PR (hidden marker `desk-wake`: `bar`, `packet_id`, `packet_sha`, informational `
 marker, `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b specifies** (`source_url` = this repo,
 `source_revision` and `outcome_branch` `desk/decisions`, `clone_depth` 1, `sparse_checkout_paths`
 [`.claude/skills/trading-desk`], Sonnet, `permission_mode` auto, tags `desk-wake` + `DESK-6-SHADOW-PILOT`, the WAKE
-PROMPT verbatim). One marker, one wake, no judgement: do not read the packet, do not wake for a bar you already
-spawned for. A bar whose packet is missing posts nothing: receipt
+PROMPT verbatim; the marker's `packet_id` is the packet it was posted for). One marker, one wake, no judgement: do not read the packet, do not wake for a packet id you already
+spawned for (the VM posts only when the packet exists and has no `DD-*` row). A bar whose packet is missing posts nothing: receipt
 `/api/diag/log_file?name=desk_wake_post_receipt` reads `could_not_look` (named reason); `could_not_look` /
 `could_not_post` there are incidents (fix, or tell the operator), and a poster that stops running is the
 `desk_wake_post` probe in `attention_watch` (one flag). The hourly spawner routine is retired; delete it once the

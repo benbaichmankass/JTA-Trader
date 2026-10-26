@@ -11,7 +11,10 @@ Per 1h bar:
 1. read ``comms/desk/latest_scan.json`` on ``desk/decisions`` (``desk-scan-packet.yml`` writes it at
    :03), then the packet it points at; verify the packet's sha against the pointer. Missing, stale
    (> ``PACKET_MAX_AGE_MIN``) or sha-mismatched -> receipt ``could_not_look`` with the reason, no post;
-2. dedupe per bar against the ``desk-wake`` markers already on the PR (``already_posted``);
+2. dedupe on the PACKET ID, not the clock: skip when a ``DD-*`` decision row for that packet is already
+   on ``desk/decisions`` (``already_recorded``) or a ``desk-wake`` marker for it is already on the PR
+   (``already_posted``). The scan packet can land late (Actions backlog: a :03 packet landed at :33), so
+   the poster polls every pass and posts as soon as an unrecorded packet exists, never at a fixed minute;
 3. post ONE ``desk-wake`` marker comment. The manager is subscribed to that PR; on the marker it
    ``create_session``s the wake exactly as ``.claude/skills/trading-desk/SKILL.md`` § 6b specifies.
 
@@ -27,7 +30,7 @@ is ``python -m src.main``.
 
 Receipt: ``runtime_logs/desk_wake_post_receipt.json`` via
 ``/api/diag/log_file?name=desk_wake_post_receipt``. ``state``: ``posted`` (``comment_url``,
-``context``) · ``already_posted`` · ``could_not_look`` (``reason``) · ``could_not_post``
+``context``) · ``already_posted`` · ``already_recorded`` · ``could_not_look`` (``reason``) · ``could_not_post``
 (``http_code`` / ``reason``). ``last_post`` is carried forward across passes. Written on every pass, so
 its ``computed_at`` is the poster's liveness (``attention_watch`` probe ``desk_wake_post``).
 """
@@ -56,6 +59,7 @@ REPO = ltr_post.REPO
 API = ltr_post.API
 BRANCH = "desk/decisions"
 POINTER_PATH = "comms/desk/latest_scan.json"
+DECISIONS_PATH = "comms/desk/decisions.jsonl"
 #: One pass per this many seconds (a pass is one pointer GET once the bar is handled).
 MIN_INTERVAL_S = 120
 HTTP_TIMEOUT_S = 10
@@ -169,11 +173,27 @@ def _get(url: str, auth: Optional[str]) -> Tuple[Optional[int], Any]:
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=HTTP_TIMEOUT_S) as resp:
             raw = resp.read()
-            return resp.status, (json.loads(raw) if raw else None)
+            try:
+                return resp.status, (json.loads(raw) if raw else None)
+            except ValueError:
+                return resp.status, raw.decode("utf-8", "replace")  # a .jsonl file
     except urllib.error.HTTPError as exc:
         return exc.code, None
     except Exception:  # noqa: BLE001
         return None, None
+
+
+def recorded_packet_ids(text: str) -> set:
+    """packet_id of every decision row (``DD-*``) already on the branch."""
+    out = set()
+    for line in str(text or "").splitlines():
+        try:
+            pid = json.loads(line).get("packet_id")
+        except (ValueError, AttributeError):
+            continue
+        if pid:
+            out.add(pid)
+    return out
 
 
 def _contents_url(path: str) -> str:
@@ -221,7 +241,7 @@ def run_once(fetch: Fetch = _get,
              now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
              receipt: Optional[Path] = None,
              pr_fn: Optional[Callable[[], int]] = None) -> Dict[str, Any]:
-    """One bar -> at most one comment. Returns (and writes) the receipt."""
+    """One packet -> at most one comment. Returns (and writes) the receipt."""
     global _cached_markers
     now = now_fn()
     rec: Dict[str, Any] = {"computed_at": now.isoformat(), "poster": "vm"}
@@ -246,8 +266,17 @@ def run_once(fetch: Fetch = _get,
     if now - built > timedelta(minutes=PACKET_MAX_AGE_MIN):
         return done("could_not_look", reason=f"stale_packet: newest packet built {ptr['built_at']}, "
                                              f"older than {PACKET_MAX_AGE_MIN} min")
-    if bar in _handled:
-        return done(_handled[bar], note="bar already handled by this process")
+    pid = ptr["packet_id"]
+    if pid in _handled:
+        return done(_handled[pid], note="packet already handled by this process")
+    # A wake that already recorded a row for this packet needs no new wake (operator/manager
+    # 2026-10-26: key on the packet id, not the clock). Unreadable -> could_not_look, retried.
+    code, text = fetch(_contents_url(DECISIONS_PATH), auth)
+    if code != 200 or not isinstance(text, str):
+        return done("could_not_look", reason=f"decisions.jsonl unreadable (http {code})")
+    if pid in recorded_packet_ids(text):
+        _handled[pid] = "already_recorded"
+        return done("already_recorded")
 
     ctx = packet_context(pk, now)
     rec["context"] = ctx
@@ -263,8 +292,8 @@ def run_once(fetch: Fetch = _get,
     if markers is None:
         return done("could_not_post", http_code=code, reason="marker_read_failed: dedupe unknown")
     _cached_markers = markers
-    if any(m.get("bar") == bar for m in markers):
-        _handled[bar] = "already_posted"
+    if any(m.get("packet_id") == pid for m in markers):
+        _handled[pid] = "already_posted"
         return done("already_posted")
 
     entry = {"bar": bar, "packet_id": ptr["packet_id"], "packet_sha": ptr.get("packet_sha"),
@@ -277,7 +306,7 @@ def run_once(fetch: Fetch = _get,
         return done("could_not_post", reason="comment_post_failed")
     posted_at = now_fn()
     url = (data or {}).get("html_url") if isinstance(data, dict) else None
-    _handled[bar] = "already_posted"
+    _handled[pid] = "already_posted"
     _cached_markers = markers + parse_markers([{"body": body}])
     rec["last_post"] = {"bar": bar, "packet_id": ptr["packet_id"], "posted_at": posted_at.isoformat(),
                         "comment_url": url, "context": ctx}

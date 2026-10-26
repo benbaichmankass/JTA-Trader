@@ -96,7 +96,8 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 **There is no market-hours or activity gate** (operator: *"because we're trading 24-hour cryptos, it needs to run all the time in any case"*): the desk wakes every 1h bar. The only conditions are the packet and the dedupe:
 
 - bar's packet missing, stale (> 90 min) or sha-mismatched -> receipt `could_not_look` with the reason, no post (never a silent skip);
-- a `desk-wake` marker for that bar already on the PR -> `already_posted`;
+- the packet already has a `DD-*` decision row on `desk/decisions` (`comms/desk/decisions.jsonl`, matched on `packet_id`) -> `already_recorded`; decisions unreadable -> `could_not_look`;
+- a `desk-wake` marker for that packet id already on the PR -> `already_posted`. **Dedupe is on the packet id, not the clock**: the scan packet can land late (MEASURED 2026-10-26: Actions backlog, a :03 packet landed at :33, and a wake spawned before it found nothing), so the poster checks every ~2 min and posts as soon as an unrecorded packet exists; the marker carries `packet_id` so the wake reads the right one;
 - otherwise the post (`posted`, or `could_not_post` with `http_code`/`reason`, retried next pass).
 
 The marker also carries the packet's `context` as information only (open positions, open desk proposals, near-signal count, calendar events, unread books; an unread book is `null`, never 0). None of it suppresses a wake. Receipt: `/api/diag/log_file?name=desk_wake_post_receipt`, rewritten every pass; the `desk_wake_post` probe in `attention_watch` raises one flag if it is more than 3 h old.

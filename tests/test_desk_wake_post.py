@@ -81,10 +81,13 @@ class Net:
                     "info_cutoff_at": (now - built_ago).strftime("%Y-%m-%dT%H:%M:%SZ"), **(ptr_extra or {})}
         self.pk, self.comments, self.get_code, self.post_code = pk, comments or [], get_code, post_code
         self.ptr_code, self.pk_code = ptr_code, pk_code
+        self.rows, self.rows_code = [], 200
         self.calls = []
 
     def fetch(self, url, auth):
         self.calls.append(("GET", url))
+        if "decisions.jsonl" in url:
+            return self.rows_code, ("\n".join(json.dumps(r) for r in self.rows) if self.rows_code == 200 else None)
         if "latest_scan" in url:
             return self.ptr_code, (self.ptr if self.ptr_code == 200 else None)
         return self.pk_code, (self.pk if self.pk_code == 200 else None)
@@ -148,12 +151,44 @@ def test_stale_packet_is_could_not_look(tmp_path):
     assert rec["state"] == "could_not_look" and rec["reason"].startswith("stale_packet") and net.posts == []
 
 
-def test_dedupes_per_bar_across_markers(tmp_path):
+def test_dedupes_on_packet_id_across_markers(tmp_path):
     net = Net(packet(EQ))
-    prior = {"body": "x\n<!-- desk-wake " + json.dumps({"bar": "2026-10-26T15:00:00Z", "packet_id": "other"}) + " -->"}
+    prior = {"body": "x\n<!-- desk-wake " + json.dumps({"bar": "b", "packet_id": net.ptr["packet_id"]}) + " -->"}
     net.comments = [prior]
     rec = run(tmp_path, net)
     assert rec["state"] == "already_posted" and net.posts == []
+
+
+def test_packet_already_has_a_decision_row_means_no_wake(tmp_path):
+    net = Net(packet(EQ))
+    net.rows = [{"decision_id": "DD-x-1", "packet_id": net.ptr["packet_id"]}]
+    rec = run(tmp_path, net)
+    assert rec["state"] == "already_recorded" and net.posts == []
+
+
+def test_a_different_packet_in_the_same_bar_still_wakes(tmp_path):
+    net = Net(packet(EQ))
+    net.rows = [{"decision_id": "DD-old-1", "packet_id": "DP-older-scan-1h"}]
+    prior = {"body": "x\n<!-- desk-wake " + json.dumps({"bar": "2026-10-26T15:00:00Z", "packet_id": "DP-older-scan-1h"}) + " -->"}
+    net.comments = [prior]
+    assert run(tmp_path, net)["state"] == "posted"
+
+
+def test_decisions_unreadable_is_could_not_look_not_a_blind_post(tmp_path):
+    net = Net(packet(EQ))
+    net.rows_code = 500
+    rec = run(tmp_path, net)
+    assert rec["state"] == "could_not_look" and "decisions.jsonl" in rec["reason"] and net.posts == []
+
+
+def test_late_packet_is_picked_up_on_a_later_pass(tmp_path):
+    """The pointer still names the already-recorded packet; the next one lands later."""
+    net = Net(packet(EQ))
+    old = dict(net.ptr)
+    net.rows = [{"decision_id": "DD-1", "packet_id": old["packet_id"]}]
+    assert run(tmp_path, net)["state"] == "already_recorded"
+    net.ptr = dict(old, packet_id="DP-20261026T1631Z-scan-1h")
+    assert run(tmp_path, net)["state"] == "posted" and len(net.posts) == 1
 
 
 def test_second_pass_in_the_same_bar_does_not_repost_or_reread_comments(tmp_path):
