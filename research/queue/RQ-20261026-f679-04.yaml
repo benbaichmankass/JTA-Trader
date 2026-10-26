@@ -1,0 +1,120 @@
+id: RQ-20261026-f679-04
+title: 'Short arm next lever (15m): does maker-entry cost rescue the cost-gated Donchian-20 breakout on ADA/AVAX/SOL?'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- M22
+theme: timeframes
+priority: 2
+kind: experiment
+question: 'On Binance USD-M 15m candles for ADAUSDT/AVAXUSDT/SOLUSDT over 2022-01-01..2026-10-25, do the maker-cost arms (M, G90M: fee 3.75 bps
+  and slippage 1.5 bps round trip) pass the pooled Stage-0 rule AND beat the taker baseline B by >= 0.05 R per trade?'
+why_this_matters: 'Node P7-Q2-frontier-pass: 7c2b-05 (taker, gates G50/G75/G90) closed FAIL and the node says the short arm''s next lever is maker
+  cost, not a family. The harness has no limit-fill model, so the M arms are an UPPER BOUND on what maker entry can pay (every signal fills, half
+  the fee, half the slippage). A FAIL here is therefore decisive for maker entry on this history; a PASS is only a lead that needs the fill-rate-haircut
+  unit (fill only if a later bar trades through within 3 bars; RQ-20260930-502 / RQ-20261016-1fa6-07 lineage) before any step.'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '7c2b-05: ~600 pooled entries at G90 over 4.8 y on three symbols; the M arm keeps the ungated count (several thousand), G90M ~600; floor
+    88.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261026-F679-04-MAKER-15M
+  registered_at: '2026-10-26'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 15m, arms fixed now: B=; M=--fee-bps-roundtrip=3.75;--slippage-bps-roundtrip=1.5; G90M=--vol-skip-below-pctl=0.9;--fee-bps-roundtrip=3.75;--slippage-bps-roundtrip=1.5;
+    baseline B; per cell and pooled across ADAUSDT,AVAXUSDT,SOLUSDT.'
+  rule: 'PASS iff M or G90M passes the pooled Stage-0 rule (breadth 2 of 3 cells) AND beats B by >= 0.05 R/trade -> author the fill-rate-haircut
+    unit (3-bar through-trade fill) on the same cells; never a promotion case. FAIL iff both maker arms fail with n >= floor -> even a perfect-fill
+    maker entry does not rescue the 15m breakout on the viable perps: the 15m cost-gated breakout configuration is closed on this window (the
+    family and other bars stay open: 7c2b-01 at 30m). INDETERMINATE otherwise. Verdicts are the script''s own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n
+    >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority
+    AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline''s pooled net R/trade by >= delta), indeterminate
+    iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell, never
+    dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does
+    not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  bucket: frontier
+  basis: 'stand-in (07 node P7-Q2 weight): the short arm''s last cost lever before the sub-hour arm closes; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 180
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..22 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - ADAUSDT,AVAXUSDT,SOLUSDT
+  - --timeframe
+  - 15m
+  - --days
+  - '2500'
+  - --start
+  - '2022-01-01'
+  - --end
+  - '2026-10-25'
+  - --arm
+  - B=
+  - --arm
+  - M=--fee-bps-roundtrip=3.75;--slippage-bps-roundtrip=1.5
+  - --arm
+  - G90M=--vol-skip-below-pctl=0.9;--fee-bps-roundtrip=3.75;--slippage-bps-roundtrip=1.5
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.67'
+  - --rule-id
+  - RULE-RQ20261026-F679-04-MAKER-15M
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261026-f679-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P7
+related:
+- RQ-20261021-7c2b-05
+- RQ-20261021-7c2b-01
+- RQ-20261018-ef5d-02
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P7
+  node: P7-Q2-frontier-pass
+  goal: G1
+  after: []
