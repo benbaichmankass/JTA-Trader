@@ -72,7 +72,7 @@ REVIEWS = REPO / "comms" / "live_review" / "reviews.jsonl"
 OUTCOMES = REPO / "comms" / "live_review" / "outcomes.jsonl"
 FIDELITY_TOL_R = 0.15
 ALTERING = ("tighten_sl", "tp_revise", "partial_close", "close", "move_tp", "widen_sl", "change_size", "add_entry")
-#: LTR-ALL-ACTIONS (MD-LIVE-TRADE-ACTIONS, operator 2026-10-26): every class except tighten_sl is priced as a
+#: LTR-ALL-ACTIONS (MD-TRADE-DESK, operator 2026-10-26): every class except tighten_sl is priced as a
 #: PAIR of replays from the same review bar (hold vs the action), so its delta is replay-vs-replay; see
 #: ``trade_action_delta``. tighten_sl keeps its original method (``replay_v1:stop_first+trail``) unchanged.
 PAIRED = tuple(a for a in ALTERING if a != "tighten_sl")
