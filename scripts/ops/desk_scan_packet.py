@@ -23,9 +23,11 @@ WHAT EACH BLOCK IS, AND WHERE IT COMES FROM
                here), so live packets name `universe.light_tier` in missing_inputs instead of
                pretending the venue lists nothing.
 * system_book-- the strategies' open packages (scripts/ops/live_review_packet.collect, the same
-               union of sources the live trade review uses). NEAR-SIGNALS have NO PRODUCER in the
-               repo yet: unless a near-signal list is injected, `near_signals_read_state` is
-               could_not_look and named -- never an empty "none found".
+               union of sources the live trade review uses) plus NEAR-SIGNALS from
+               scripts/ops/desk_near_signals.py (DESK-16B; each rostered leg's own strategy unit run on
+               its latest closed candles). `near_signals_read_state` is `read` only when EVERY rostered
+               leg x symbol was looked at; otherwise it is could_not_look and the unlooked legs are
+               named with the N-of-M denominator -- never an empty "none found".
 * desk_book  -- the desk's own unresolved propose_entry rows (comms/desk/decisions.jsonl without an
                outcomes.jsonl row) inside their good_till window.
 * history    -- per symbol x side x horizon: forward R = side * (close[t+h] - close[t]) / ATR14[t]
@@ -332,10 +334,13 @@ def build_scan_packet(*, cutoff: datetime, tf: str, universe: List[dict], candle
                       system_book: Optional[List[dict]] = None, near_signals: Optional[List[dict]] = None,
                       desk_book: Optional[List[dict]] = None, light: Optional[List[dict]] = None,
                       extras: Optional[Dict[str, dict]] = None, built_at: Optional[datetime] = None,
-                      mode: str = "live", unread_why: Optional[Dict[str, str]] = None) -> dict:
+                      mode: str = "live", unread_why: Optional[Dict[str, str]] = None,
+                      near_signals_why: Optional[str] = None) -> dict:
     """Pure: everything is injected. `candles[symbol]` = bars of `tf` (any extent; bars at or after the
     cutoff are dropped here) or None when the read failed. `system_book` / `near_signals` /
-    `desk_book` / `light` = None means could-not-look, [] means read-and-empty."""
+    `desk_book` / `light` = None means could-not-look, [] means read-and-empty. `near_signals` comes from
+    scripts/ops/desk_near_signals.py and is passed ONLY when every rostered leg x symbol was looked at (else None
+    plus `near_signals_why`, which names the unlooked legs and the N-of-M denominator)."""
     if tf not in TF_SECONDS:
         raise ValueError(f"timeframe {tf!r} not in {sorted(TF_SECONDS)}")
     built_at = built_at or datetime.now(timezone.utc)
@@ -365,7 +370,7 @@ def build_scan_packet(*, cutoff: datetime, tf: str, universe: List[dict], candle
         items = list(system_book)
         if near_signals is None:
             ns = "could_not_look"
-            _missing_block(missing, "system_book.near_signals", "no near-signal producer exists yet (DESK-16 follow-up)")
+            _missing_block(missing, "system_book.near_signals", near_signals_why or "not computed (pass near_signals from scripts/ops/desk_near_signals.py)")
         else:
             ns = "read"
             items += near_signals
@@ -532,8 +537,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         uni = [u for u in uni if u["symbol"] in keep]
     syms = [u["symbol"] for u in uni]
     candles = candles_from_dir(a.candles_dir, syms, tf) if a.candles_dir else candles_from_api(syms, tf)
-    sb = None
+    sb, ns, ns_why = None, None, None
     if not historical and not a.no_system_book:
+        try:
+            import desk_near_signals
+
+            res = desk_near_signals.live_near_signals(cutoff, a.candles_dir)
+            print(f"desk_scan_packet: near-signals: {res['denominator']}; read_state={res['read_state']}", file=sys.stderr)
+            ns, ns_why = (res["items"], None) if res["read_state"] == "read" else (None, res["missing"])
+        except Exception as exc:  # allow-silent: could_not_look, named in missing_inputs
+            print(f"desk_scan_packet: near-signal read failed: {exc}", file=sys.stderr)
+            ns_why = f"near-signal producer failed: {type(exc).__name__}: {str(exc)[:120]}"
         try:
             from live_review_packet import collect
             sb = system_book_from_snapshot(collect(max_pages=1))
@@ -544,7 +558,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                "desk_book": "not reconstructed point in time (historical mode)"} if historical
               else {"system_book": "skipped (--no-system-book)"} if a.no_system_book else None)
     p = build_scan_packet(cutoff=cutoff, tf=tf, universe=uni, candles=candles, horizons=horizons,
-                          lookback=a.lookback, system_book=sb, desk_book=db, unread_why=unread)
+                          lookback=a.lookback, system_book=sb, near_signals=ns, desk_book=db, unread_why=unread,
+                          near_signals_why=ns_why)
     key = None
     if historical:
         p, key = mask_packet(p)
@@ -618,9 +633,21 @@ def _self_test() -> int:
            and any(m.startswith("universe.NODATA.last_close") for m in p["meta"]["missing_inputs"]))
     expect("the light tier carries only ticker, volume and spread",
            next(u for u in p["universe"] if u["symbol"] == "NEWUSDT")["atr"] is None)
-    expect("near-signals with no producer are could_not_look and named, not an empty read",
+    expect("near-signals not passed are could_not_look and named, not an empty read",
            p["system_book"]["near_signals_read_state"] == "could_not_look"
            and any(m.startswith("system_book.near_signals") for m in p["meta"]["missing_inputs"]))
+    ns_item = {"order_package_id": None, "leg": "example_trend_1d", "symbol": "ETHUSDT", "side": "long", "timeframe": "1d",
+               "status": "near_signal", "bars_to_signal": 1, "entry": None, "sl": None, "tp": None}
+    pn = build_scan_packet(cutoff=cutoff, tf="1h", universe=uni[:1], candles={"ETHUSDT": bars}, horizons=(4,), lookback=300,
+                           system_book=sb, near_signals=[ns_item], desk_book=[], built_at=cutoff)
+    expect("injected near-signals read: items on the system book, guard-valid, counted in the features",
+           pn["system_book"]["near_signals_read_state"] == "read" and validate(pn) == []
+           and pn["features_at_review"]["n_near_signals"] == 1)
+    pw = build_scan_packet(cutoff=cutoff, tf="1h", universe=uni[:1], candles={"ETHUSDT": bars}, horizons=(4,), lookback=300,
+                           system_book=sb, near_signals=None, desk_book=[], built_at=cutoff,
+                           near_signals_why="25 of 27 rostered leg x symbol looked; not looked: a/B (no candles)")
+    expect("a partial near-signal look names the denominator and the unlooked legs",
+           validate(pw) == [] and any(m.startswith("system_book.near_signals") and "25 of 27" in m for m in pw["meta"]["missing_inputs"]))
     rows = {(r["symbol"], r["side"], r["horizon_bars"]): r for r in p["history"]["rows"]}
     expect("base rates per symbol x side x horizon", len(rows) == 2 * 2 * 2)
     r = rows[("ETHUSDT", "long", 4)]
