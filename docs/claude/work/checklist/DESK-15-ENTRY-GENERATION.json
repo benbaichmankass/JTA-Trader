@@ -12,12 +12,11 @@
   "prs": [],
   "blocked_on": [],
   "note": "Filed 2026-10-26 ~06:45Z by the manager from the operator's popup answer on DESK-DESIGN Q2 (quoted verbatim on DESK-DESIGN): the desk should generate entries by monitoring live markets, more than vetoing strategy entries. Scope of this row: (a) amend docs/plans/claude-trading-desk-DESIGN.md -- \u00a7 2.3 market-watch enum gains a propose_entry intent (symbol, side, entry/stop/TP with a REAL predictive TP per the TP doctrine, thesis, confidence, info_cutoff), \u00a7 2.3 'never' line reworded, packet/decision schemas, grading per DESK-9; (b) the D-S0 test design: pre-registered blind replay of generated entries vs the strategy baseline, net of the full cost stack, as research/queue units; (c) the ladder: shadow-recorded -> paper (bybit_1/alpaca_paper soak, mechanical 1-2 trades) -> real money only under a new operator-granted mandate after D-S0 passes. Design + test design only; no order path. Depends on DESK-0 schema (landed). [2026-10-26 06:52Z manager] OPERATOR 2026-10-26 ~06:50Z, verbatim: \"just to be clear about the entry stage of the desk project, like, the goal isn't for Claude to be reviewing the entries. That's, I mean, we can have that also, that's nice, but when I say the trading desk does entries, I mean that they find trades that the system isn't finding. So, like, I don't even know what that restriction on should Claude be able to deny an entry, like, where that even came from. That's just, like, not the design at all. Completely wrong direction.\" Scope clarified: this is THE entry stage of the desk, not an add-on to entry review. Rewrite design \u00a7 0/\u00a7 2.1/\u00a7 2.3/\u00a7 8/\u00a7 10/\u00a7 11: market watch + entry role propose new trades (symbol, side, entry/stop/real predictive TP, thesis, confidence, info_cutoff) the system is not taking; remove the 'never a new entry' clause and the veto framing (entry review of strategy packages becomes optional, record-only); drop Q2 and the MD-DESK-SKIP proposal; DESK-7 replay covers generated entries vs a no-trade / strategy baseline net of the full cost stack; ladder: recorded -> paper soak (mechanical 1-2 trades) -> real money under an operator-granted mandate.",
-  "priority_rank": 6,
-  "updated_at": "2026-10-26T06:39:54Z",
+  "priority_rank": 2,
+  "updated_at": "2026-10-26T06:40:22Z",
   "updated_by": "session_01HAysMLfF9dYpi92YMqYxEq",
   "roadmap": [
     "L-DESK"
   ],
-  "rank": 2,
   "_seq": 699
 }
