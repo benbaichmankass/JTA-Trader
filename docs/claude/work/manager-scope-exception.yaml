@@ -6,6 +6,21 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261027-BYBIT1-LEVERAGE
+    status: active
+    expires: "2026-10-29"
+    paths:
+      - "config/accounts.yaml"
+      - "docs/claude/work/manager-scope-exception.yaml"
+    reason: >-
+      OPERATOR DECISION, 2026-10-27 ~22:10Z, popup in manager session
+      session_01AFoLuJi1vLTnYv9LbP6539, verbatim "Raise leverage on bybit_1
+      (Recommended)" (row BYBIT1-MARGIN-STARVED, PR #20747). Live incident:
+      bybit_1 demo available margin -$881 at 22:25Z, so every new demo-floor
+      entry sizes 0. The change is one value (bybit_1 risk.leverage 3 -> 10) plus
+      its comment; bybit_2 and bybit_portfolio untouched. The manager commits the
+      operator's decision because no lane can be created while the operator holds
+      the session out of auto mode for merges.
   - id: MGR-20261026-LTR-ROWS-BRANCH-MANDATE
     status: active
     expires: "2026-10-28"
