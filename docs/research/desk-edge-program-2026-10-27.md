@@ -75,7 +75,33 @@ Three windows, fixed now and never moved (registered in `scripts/research/desk_e
 
 ## 4. The information-ceiling result
 
-*(appended after the run; see § 3 for the rule)*
+### 4.1 DEV window (the § 3 run) — registered verdict: **inconclusive / inconclusive, instrument valid**
+
+Evidence record: `comms/research/desk_edge/ceiling-dev/ceiling.json` (`desk_edge_ceiling.py build` then `run`; candles Binance Vision spot 1h fetched 2026-10-27 through the driver's `fetch_market`, funding Binance Vision USD-M). **Population:** 4,535 packets (3,816 two-hourly + 1,498 judged-1 cutoffs, 779 shared; every judged-1 packet id reproduced), 380,940 filled actions (4,535 x 84: every action filled), 284,508 of them in test folds 2-4 = 35 ISO weeks. All numbers MEASURED there unless marked.
+
+| | ridge | logit | GBDT |
+|---|---|---|---|
+| **P** policy S3 (95% CI) | +0.023 [-0.09, +0.15] | +0.028 [-0.07, +0.14] | -0.041 [-0.36, +0.33] |
+| **P** weekly rank IC (corrected CI) | +0.104 [+0.02, +0.19] | +0.069 [-0.01, +0.15] | +0.052 [-0.06, +0.16] |
+| **P+** policy S3 | -0.016 [-0.11, +0.08] | +0.012 [-0.07, +0.09] | +0.078 [-0.27, +0.53] |
+| **P+** weekly rank IC | +0.094 [+0.01, +0.18] | +0.074 [-0.01, +0.15] | +0.079 [-0.01, +0.17] |
+| policy picks / long share (P+) | 2,304 / 84% | 2,304 / 73% | 2,304 / 90% |
+
+- **Labels check:** every test action, unselected: S3 -0.0005 [-0.030, +0.028] (n 284,508): `y` is centred, as it must be.
+- **Controls:** planted signal `present` (S3 +1.60 ridge, +1.91 GBDT); shuffled labels `inconclusive` (S3 +0.011 / -0.011). **Instrument valid.**
+- **Ablation (P plus ONE group; policy S3 ridge / GBDT):** returns +0.037 / +0.070 · range +0.037 / -0.026 · volatility +0.019 / +0.065 · volume & taker flow +0.034 / +0.024 · BTC cross-asset +0.043 / +0.028 · calendar +0.021 / +0.015 · symbol identity -0.029 / -0.016 · funding +0.025 / +0.042. No group moves S3 past +0.07; every interval spans zero.
+- **The judge on the same packets** (judged-1 fills in folds 2-4, the driver's own score loop): S3 **+0.050 [-0.23, +0.30]**, n 513, 0.2% long. Models on those cutoffs: -0.08 to +0.08, n 762, 71-94% long. **The judge and the models choose opposite directions and neither beats a random entry.**
+- **Why the rank IC is not evidence of a usable edge (post-hoc diagnosis, not a registered test).** Ridge on P has IC +0.10 but its mean `y` by prediction decile is flat (-0.054 to +0.029 across the ten deciles; `diag2` in § 8). The rank correlation comes from the SHAPE of `y` (how often a bracket times out and pays only its cost, which tracks volatility), not from its mean. A screen on rank IC would promote variants that cannot earn S3. **The dev loop therefore screens on a mean statistic (§ 5.2), not on rank IC.**
+- **Registered branch: `inconclusive`.** Neither tier is `present`, and neither is `absent`: no corrected S3 upper bound is below +0.10 R. The reason is resolution, not noise in the method: **35 out-of-sample weeks give a corrected S3 interval about +-0.2 R wide, and the weeks, not the packets, set it** (judged-1: 732 fills in 33 weeks, design effect 2.25, CI +-0.19). Another 1,500-packet judge run on one 10-month window cannot resolve a +0.10 R edge either. This is the single most important methodological finding of the lane: **edge research on this desk has to buy WEEKS (history), and only a token-free instrument can buy them cheaply.**
+
+### 4.2 EXTENDED ERA — registered here BEFORE the run
+
+Same harness, features, learners, policy, controls and verdict definitions as § 3, with these changes only (constants `ERA_*` in `desk_edge_ceiling.py`, `build --era`):
+- **Cutoffs:** a 4-hour grid over **2021-01-15 .. 2023-10-25** (six half-year folds 1-6) plus the 4-hour grid of the DEV window and every judged-1 cutoff (DEV folds = era folds 7-10). Nothing in HOLDOUT (2025-05-01 .. 2025-10-25) or FULL RUN (2023-11-01 .. 2025-04-30) is read as a cutoff: `build --era` calls `desk_edge_devloop.assert_not_locked` on every cutoff. The 2023-10-25 end leaves the 96-bar horizon inside October.
+- **Random-entry pool per fold** = every eligible cutoff of that fold's window (half-year folds; the driver's folds for 7-10).
+- **Walk-forward:** test folds **3-10** (8 folds, about 190 weeks), train on every earlier fold minus the 96-hour embargo; DEV folds are trained on all six era folds and the earlier DEV folds.
+- **Family:** both ceiling runs, 12 configurations: corrected alpha **0.05 / 12**. **`present` needs S3 > 0 in >= 5 of the 8 test folds** (2 of 3, scaled). `absent` and `inconclusive` as in § 3, at +0.10 R.
+- **Population limits, stated before the run:** six symbols only (the driver's registered universe); 2021-2023 includes the 2021 bubble and the 2022 crash, so a regime-specific learner can win one era and lose another; that is what the fold clause is for.
 
 ## 5. The dev loop, the locked holdout and the pre-registered promotion rule
 

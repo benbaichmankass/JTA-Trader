@@ -80,6 +80,7 @@ ERA_GRID_STEP_H = 4
 ERA_DEV_FOLD_OFFSET = 6                              # DEV fold k is era fold k + 6
 ERA_TEST_FOLDS = (3, 4, 5, 6, 7, 8, 9, 10)
 ERA_N_CONFIGS = 12                                   # both ceiling runs' configurations: the family for this run
+ERA_FOLDS_POSITIVE_NEEDED = 5                        # of the 8 test folds (the DEV run's 2 of 3, scaled)
 
 
 def era_fold(cutoff: int) -> int:
@@ -599,14 +600,15 @@ def cmd_run(a: argparse.Namespace) -> int:
     src = Path(a.out)
     cutoffs = pickle.loads((src / "cutoffs.pkl").read_bytes())
     acts = pickle.loads((src / "actions.pkl").read_bytes())
-    global TEST_FOLDS, N_CONFIGS
+    global TEST_FOLDS, N_CONFIGS, FOLDS_POSITIVE_NEEDED
     meta = json.loads((src / "meta.json").read_text()) if (src / "meta.json").exists() else {"mode": "dev"}
     if meta["mode"] == "era":
-        TEST_FOLDS, N_CONFIGS = tuple(meta["test_folds"]), int(meta["n_configs"])
+        TEST_FOLDS, N_CONFIGS, FOLDS_POSITIVE_NEEDED = tuple(meta["test_folds"]), int(meta["n_configs"]), ERA_FOLDS_POSITIVE_NEEDED
     alpha = ALPHA / N_CONFIGS
     res: Dict[str, Any] = {"design": {"geometries": GEOMETRIES, "test_folds": TEST_FOLDS, "embargo_h": EMBARGO_H, "take_frac": TAKE_FRAC,
                                       "max_per_cutoff": MAX_PER_CUTOFF, "useful_s3": USEFUL_S3, "family": N_CONFIGS, "alpha_corrected": alpha,
-                                      "grid_step_h": GRID_STEP_H, "baseline_draws": BASELINE_DRAWS},
+                                      "grid_step_h": GRID_STEP_H, "baseline_draws": BASELINE_DRAWS,
+                                      "folds_positive_needed": FOLDS_POSITIVE_NEEDED, "mode": meta["mode"]},
                            "population": {"cutoffs": len(cutoffs), "judged1_cutoffs": sum(c["judged1"] for c in cutoffs),
                                           "actions_filled": len(acts),
                                           "test_actions": sum(1 for r in acts if r["fold"] in TEST_FOLDS),
