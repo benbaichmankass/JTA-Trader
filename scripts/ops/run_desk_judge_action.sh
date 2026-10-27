@@ -39,4 +39,5 @@ case "${ACTION_APPLY}" in
   *) echo ">>> run-desk-judge: DRY-RUN (set apply: true to spend up to the cap)" ;;
 esac
 
+export PYTHONUNBUFFERED=1
 exec "${PY}" "${REPO_DIR}/scripts/ops/desk_judge_run.py" "${ARGS[@]}"
