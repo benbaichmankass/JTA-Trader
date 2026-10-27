@@ -56,7 +56,8 @@ NAME = "claude_desk"
 SIGNAL_LOGIC = "desk"
 ROOT = Path(__file__).resolve().parents[3]
 
-PROBE_CONFIDENCE = 0.05  # DESK-18E mechanics probe: the package confidence scalar, i.e. the smallest the sizing scalar allows to ask for
+PROBE_CONFIDENCE = 0.05  # DESK-18E mechanics probe: asks for the lowest confidence scalar. NOT a minimum size: RiskManager._confidence_scalar returns 1.0 when
+                         # `confidence_sizing` is off (bybit_1 today) and never goes below `confidence_floor` (0.5) otherwise. Measured 2026-10-27.
 R_BRACKETS = "both_brackets_required"
 R_GEOMETRY = "bracket_geometry"
 R_SIDE = "side_invalid"
@@ -149,7 +150,7 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
     conf = _num((cfg or {}).get("confidence"))
     conf = 0.5 if conf is None else max(0.0, min(1.0, conf))
     probe = bool(row.get("mechanics_probe"))
-    if probe:  # DESK-18E: minimum size via the documented confidence scalar (it only sizes DOWN); the RiskManager still sizes it
+    if probe:  # DESK-18E: lowest confidence; sizing is the RiskManager's alone (see PROBE_CONFIDENCE: this does not reduce size on bybit_1)
         conf = min(conf, PROBE_CONFIDENCE)
     return {
         "symbol": norm_symbol(p["symbol"]),
