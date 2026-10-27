@@ -105,6 +105,8 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 **Receipt and liveness.** `/api/diag/log_file?name=desk_wake_post_receipt`, rewritten every pass: `posted` (`producer` `vm` or `packet-job`, `latency_s`) · `already_recorded` · `awaiting_wake` (< 10 min) · `wake_missing` (packet older, no marker, no row) · `could_not_build` · `could_not_commit` · `could_not_post` · `could_not_look` (`reason`, incl. `stale_packet`). The `desk_wake_post` probe in `attention_watch` raises one flag when the receipt is more than 3 h old or reads `wake_missing` / `could_not_*`.
 
+**How a wake writes (DESK-WAKE-WRITE, MEASURED 2026-10-27 over the 15 rows on `desk/decisions`).** 7 were written by plain `git push` (author `noreply@anthropic.com`; every row since 23:01Z) and 8 through the GitHub tool; none of the 7 ran the brief's validation or CAS, and one (`DD-20261027T0501Z-scan-1h-1`) put the 48-bar BTC short row (n 937, mean −1.237) beside the 12-bar long (the 12-bar short is n 973, mean −0.545). All 15 were schema- and guard-valid: the guard did not compare statistics to the packet. The brief was 23 KB with a 10 KB schema block and three alternative write paths. The fix is a mechanism, `desk_write.py` (stdlib, run from `origin/main`): the wake writes a short draft, the script derives every field and every alternatives[] statistic from the packet, validates with the guard's rules and pushes a non-forced commit (a moved branch is a rejected push). The mirror and `desk-records-guard` also refuse a row whose statistics are not a history row of its own packet (mirror: skip + `::warning::`, never a stop).
+
 **What a wake must be started with (MEASURED 2026-10-26, four wakes, lane DESK-6).** A wake writes only if its session is started ON `desk/decisions`: `create_session` with `source_url` = this repo, `source_revision` = `desk/decisions`, `outcome_branch` = `desk/decisions`, `clone_depth: 1`, `sparse_checkout_paths: [".claude/skills/trading-desk"]`, model Sonnet. With no repository (even after `add_repo` with `access: push`) the write was refused (403), and on another branch it never landed.
 
 `create_session` arguments for a `desk-wake` marker:
@@ -125,8 +127,8 @@ WAKE PROMPT:
 You are one wake of the Claude trading desk (phase 1: shadow, record-only), started by the Metis-Insights manager's routine. The manager acts with the operator's authority. Your session's branch IS desk/decisions, the desk's append-only record branch: writing ONE row there is your whole job.
 1. Read your whole contract: get_file_contents on repo benbaichmankass/Metis-Insights, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. skill_sha = the blob sha it returns.
 2. Follow that brief EXACTLY and only it. Read nothing else in the repo, no diag, no web.
-3. If you cannot read your session id, write session = "desk-wake".
-4. End with the brief's § 6 report block, plus which write path worked. Do not open a PR or an issue, and do not message anyone.
+3. You never write the row by hand: write the brief's § 4 draft and run the brief's § 5 command (`desk_write.py`). It validates and does the compare-and-swap; a refused draft is fixed and re-run, never pushed another way.
+4. End with the brief's § 6 report block. Do not open a PR or an issue, and do not message anyone.
 ```
 
 **Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).**

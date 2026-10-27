@@ -1,0 +1,29 @@
+{
+  "id": "DESK-WAKE-WRITE",
+  "title": "Desk wake writes only through desk_write.py: draft -> derived row -> validate -> CAS; stat-match rule in guard + mirror",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane-desk-wake-write",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-27 lane desk-wake-write] MEASURED over all 15 rows on desk/decisions (tip bfe3f6e): 15/15 schema- and guard-valid. Write path by commit author: 7 plain git push (noreply@anthropic.com: 1631Z, 1743Z and every row from 2301Z on) vs 8 GitHub-tool (user author); none of the 7 ran the brief's validation or CAS. Stat-match against the row's own packet: 14/15 exact, 1/15 rounded to 3 d.p. (2002Z, harmless), and 1/15 (0501Z) mixed horizons: long h12 (n973, -0.036) beside the h48 BTC short row (n937, -1.237; the h12 short is n973, -0.545). Cause (INFERRED, not observable from the branch): the brief was 23 KB with a 10 KB schema block and three write paths; validation was a checklist to run by eye; the guard that validates runs only on main after the mirror and never compared statistics to the packet; the sparse checkout (.claude/skills/trading-desk only) cannot run the guard (imports src/ and scripts/ci). FIX: .claude/skills/trading-desk/desk_write.py (stdlib, run from origin/main): the wake writes a short draft, the script derives ids/shas/cutoff/novelty/onboarding and EVERY alternatives[] statistic from the packet, validates (schema from origin/main + guard rules) and pushes a non-forced commit (CAS). check_desk_records.py and the mirror load its alt_stat_problems (mirror: skip + ::warning::, never a stop). Brief 23.4 KB -> 9.9 KB. Tests: tests/test_desk_wake_write.py (CAS race, stale, 12 refusals, writer==guard drift). NOT FIXED: alternatives[] has no horizon field so a real-row-wrong-horizon is undetectable after the fact (the draft now names the horizon); a wake that ignores the brief and git-pushes by hand still lands (branch has no server-side check).",
+  "updated_at": "2026-10-27T05:39:15Z",
+  "updated_by": "lane-desk-wake-write",
+  "observation": {
+    "what": "next 3 desk wakes after merge write via desk_write.py",
+    "how_to_check": "git log origin/desk/decisions -- comms/desk/decisions.jsonl: new rows carry the new brief skill_sha; a hand-pushed row shows a skill_sha predating the merge; desk-decisions-mirror logs no stat-match warnings"
+  },
+  "roadmap": [
+    "L-DESK"
+  ],
+  "writeback": {
+    "roadmap": "L-DESK where: DESK-6 done line (wake writes through desk_write.py)",
+    "arch": "none: no trading-desk section in ARCHITECTURE-CANONICAL; record path lives in .claude/skills/trading-desk/SKILL.md 6b"
+  },
+  "_seq": 727
+}

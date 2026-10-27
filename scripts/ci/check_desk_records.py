@@ -45,6 +45,14 @@ sys.path.insert(0, str(REPO))
 from src.runtime.target_expectation import SENTINEL_R_FLOOR  # noqa: E402  (the fleet's sentinel idiom)
 from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT  # noqa: E402
 
+# The wake's single writer carries the stat-match rule (it must run in a repo-less sparse checkout, so it is
+# stdlib-only and lives in the skill dir); the guard loads it by path so the rule has one definition.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location("desk_write", REPO / ".claude/skills/trading-desk/desk_write.py")
+desk_write = _ilu.module_from_spec(_spec)
+sys.modules.setdefault("desk_write", desk_write)
+_spec.loader.exec_module(desk_write)
+
 # check_tp_doctrine.py's TP-REACH-FLOOR: a target reached < 10% of the time is the sentinel by another name.
 REACH_FLOOR = 0.10
 PACKET_SCHEMA = REPO / "comms/schema/desk_packet.schema.json"
@@ -483,6 +491,8 @@ def decision_problems(r: dict, schema: dict, packets: Path) -> list[str]:
         want_mode = {"live": "live", "shadow": "live"}.get(r["label_source"], r["label_source"])
         if meta.get("mode") != want_mode:
             out.append(f"label_source {r['label_source']} needs a packet of mode {want_mode} (got {meta.get('mode')!r})")
+        if r["packet_kind"] == "scan" and meta.get("packet_kind") == "scan":
+            out += desk_write.alt_stat_problems(r, pk)
         if action == "propose_entry" and r["proposal"] is not None:
             out += proposal_problems(r, pk if meta.get("packet_kind") == "scan" else None)
         if r["packet_kind"] == "scan":
