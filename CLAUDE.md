@@ -52,8 +52,6 @@ open backlog rows, 404 research memos, and **one** disposition ever marked
 `actioned`. If a thing matters, it becomes a checklist row or a queued research
 question. If it doesn't, say that instead of filing it.
 
-**Nothing spends Anthropic API credits; Claude runs only on the plan (cloud sessions or plan-authenticated Claude Code)** (operator, 2026-10-27, binding) — see [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits".
-
 ## Honesty
 
 Give only true, verifiable answers. If you don't know something, say "I don't
@@ -215,6 +213,8 @@ live-vs-backtest are monitoring, never a soak's exit. This rule has been re-taug
 [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is
 MECHANICAL" — point at it, never restate it. `soak-contract-guard` refuses a contract with `n_needed` > 2
 or a calendar field; `soak-doctrine-guard` refuses a live doc, skill or generator that teaches a longer soak.
+
+⚠️ **STAGE 1 IS THE DEMO FLOOR: every non-retired leg TRADES there** (operator, 2026-10-27, binding, popup *"Yes, that's the rule"*): bybit_1 for crypto, alpaca_paper / ib_paper for equities and futures; shadow is not a holding stage; demotion stops at the floor (popup *"Demote stops at the floor (Recommended)"*); only a retirement record removes a leg. Stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "Stage 1 is the DEMO FLOOR"; point at it.
 
 **A live or paper book never establishes edge.** It checks mechanics and cost.
 If a proposal advances a leg on live-book P&L, that is a category error.
@@ -382,9 +382,8 @@ be **CHANGED without asking**.
    [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Reading
    is never gated" (operator directive 2026-09-27, binding).
 2. Read your lane's checklist row. If you are managing, invoke the **`manager`**
-   skill first, and title yourself `Manager Session YYYY-MM-DD<letter>` (UTC date of
-   `created_at`; letter = next unused for that date via `list_sessions`, first of the day
-   is `a`, e.g. `Manager Session 2026-10-27a`; its § "Start of session", step 1).
+   skill first, and title yourself `Manager Session YYYY-MM-DD` (its § "Start of
+   session", step 1).
 3. Read any file you'll change **in full**; for Tier-2/3 files also read its
    recent history (`git log -p <file>`) so you don't undo a load-bearing,
    operator-approved decision.

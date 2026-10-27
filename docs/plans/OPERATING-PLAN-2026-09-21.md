@@ -105,6 +105,28 @@ one question, and a leg moves only when that question is answered on evidence.
             declared window.
 ```
 
+### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
+
+**The rule.** The operator confirmed it in a popup in manager session `session_01C1ooo4kqBbng7vytdG1UVs`,
+2026-10-27 ~07:10Z; the answer, verbatim, was *"Yes, that's the rule"*:
+
+> Every strategy and ML-driven leg that isn't fully retired TRADES on the demo floor: bybit_1 for crypto,
+> alpaca_paper / ib_paper for equities and futures. Shadow (logging only, no orders) is not used for
+> non-retired legs. The mirror is the portfolio test; real money is promotion only.
+
+The operator's own words, from chat: *"the lowest level of anything, of any strategy or ML, is trading on Bybit 1 ... so that
+it can generate data about all of the things that we're running. The mirror account is where we do ...
+the testing of the portfolio level ... Nothing should be just watching, and especially all of these
+mechanisms that we're in the process of building need to be on Bybit 1 already, so that we can catch
+mechanical bugs while we're still improving the actual function."*
+
+**What follows from it:**
+- **The floor is the default home.** A leg trades on its demo floor from the moment it exists until a retirement record removes it. A missing Stage-0 pass does not keep a leg off the floor. It keeps the leg off **real money and the mirror** (Gate 2), and nothing else.
+- **`execution: shadow` is not a holding stage.** Shadow is no longer used for non-retired legs. A mechanism still being built (the desk leg, the short-hold lane, a new ML head) goes on the floor early, so mechanical bugs show up while the function is still improving.
+- **Demotion stops at the floor.** The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
+- **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) and the prop superset gate are unchanged.
+- **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
+
 ### The soak is MECHANICAL — 1–2 clean trades, no calendar (operator, 2026-10-15, binding)
 
 <!-- SOAK-RULE-CANONICAL: the ONE statement of the soak rule. Every other doc points here
