@@ -129,9 +129,9 @@ def test_marker_roundtrip_and_render_names_the_manager_step():
     assert sh.posted([m], "short-hold-wake", PKG) and not sh.posted([m], "short-hold-closed", PKG)
 
 
-def test_config_on_disk_names_the_two_first_legs():
+def test_config_on_disk_names_claude_desk_first():
     cfg = sh.load_config()
-    assert cfg["legs"] == ["ict_scalp_eth_15m", "ict_scalp_xrp_15m"]
+    assert cfg["legs"] == ["claude_desk", "ict_scalp_eth_15m", "ict_scalp_xrp_15m"]
     assert cfg["branch"] == "live-review/rows" and cfg["hard_cap_minutes"] == 90
 
 

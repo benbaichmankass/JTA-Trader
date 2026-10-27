@@ -1,10 +1,13 @@
 # Short-hold lane (DESK-SHORT-HOLD-LANE): the legs whose packages get ONE Claude session for the life of the trade.
 # Read by src/runtime/short_hold_wake.py (the VM trigger + 5-min packets). Operator goal 2026-10-27 (approved,
 # manager relay): Claude manages a <= 1 h trade from one session; design docs/plans/claude-trading-desk-DESIGN.md
-# § 6.2 "per-trade spawned lane". The legs are rostered by lane DESK-8-SHORT-HOLD (bybit_1, demo money); a leg
-# listed here that is not rostered simply never opens a package. This list gates nothing about trading: it only
-# decides which open packages get a managing session.
+# § 6.2/6.3 "per-trade spawned lane". First the desk's own Claude-originated trades (claude_desk; operator
+# 2026-10-27 ~07:05Z: the lane is leg-agnostic and asks for the best trading decision), then the 15m scalp legs
+# rostered by lane DESK-8-SHORT-HOLD (bybit_1, demo money). A leg listed here that is not rostered, or is
+# execution: shadow, simply never opens a package. This list gates nothing about trading: it only decides which
+# open packages get a managing session.
 legs:
+  - claude_desk
   - ict_scalp_eth_15m
   - ict_scalp_xrp_15m
 # Where the 5-min packet envelopes land and the lane's rows go (the branch the VM rows watcher applies from).
