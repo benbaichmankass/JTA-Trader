@@ -266,6 +266,7 @@ def per_hold(rows: List[dict], preds: Dict[str, np.ndarray], alpha: float) -> Di
             continue
         hr = [rows[j] for j in m]
         ent: Dict[str, Any] = {"actions": len(hr), "mean_cost_r_taker": float(np.mean([r["cost_r"] for r in hr])) if hr else None,
+                               "unselected_gross_R": float(np.mean([r["net_r"] + r["cost_r"] for r in hr])) if hr else None,
                                "unselected_S1_taker": float(np.mean([r["net_r"] for r in hr])) if hr else None,
                                "unselected_S1_maker": float(np.mean([r["net_r_maker"] for r in hr])) if hr else None}
         cands, best_hi = [], -9.0
@@ -276,8 +277,13 @@ def per_hold(rows: List[dict], preds: Dict[str, np.ndarray], alpha: float) -> Di
                 st = d.cluster_stats(sr, draws=3000)
                 lo, hi = ce.cluster_ci(sr, "diff", alpha, draws=3000)
                 key = f"{lr}/{cost}"
+                gross = [hr[j]["net_r"] + hr[j]["cost_r"] for j in picks]
                 ent[key] = {"n": st["n"], "S1": st["mean_net_r"], "S3": st.get("paired_diff_vs_random"), "S3_ci95": st.get("paired_diff_ci95"),
-                            "S3_ci_corrected": [lo, hi], "weekly_S1": _weekly(sr, "net_r")}
+                            "S3_ci_corrected": [lo, hi], "weekly_S1": _weekly(sr, "net_r"),
+                            # the timing check (doc 4.6): GROSS R of the picks (no cost) vs the unselected gross; S3 can also come
+                            # from picking low-cost-in-R moments (high volatility), which is not timing
+                            "gross_R_picks": float(np.mean(gross)) if gross else None,
+                            "taker_cost_R_picks": float(np.mean([hr[j]["cost_r"] for j in picks])) if picks else None}
                 best_hi = max(best_hi, hi)
                 if st.get("paired_diff_vs_random", -9) >= TARGET_S3 and lo > 0 and st["mean_net_r"] > 0:
                     cands.append(key)
