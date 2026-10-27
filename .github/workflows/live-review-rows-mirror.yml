@@ -13,10 +13,12 @@ name: live-review-rows-mirror
 # its PR to merge, so the next run checks out a main that already has those rows.
 # The hourly schedule is the backstop for a push whose run was superseded.
 # ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH, and
-# live-review/rows was cut from main before this file existed. Until the rows
-# branch carries this file (main merged into it), only the schedule fires:
-# mirror lag <= ~1 h. That lag never touches the apply, which reads the pinned
-# rows-branch commit directly.
+# live-review/rows was cut from main before this file existed, so a push run uses a stale copy. The full
+# workflow runs from main: `branch-mirror-heartbeat.yml` dispatches it (`--ref main`) on every main push,
+# because the :41 cron also fires late or not at all (2026-10-27: 43 min late). Mirror lag never touches
+# the apply, which reads the pinned rows-branch commit directly.
+# A rows-branch row the checker's rules refuse is skipped as `schema: ...` (visible in the run summary)
+# and does not fail the run: the branch is append-only, so it would stay red forever.
 # LTR-5 / DESK-9-GRADING: after the mirror, every review whose trade has CLOSED is priced against its
 # counterfactual (scripts/ops/live_review_grade.py --live --write-outcomes -> comms/live_review/outcomes.jsonl,
 # idempotent by review_id) so grading runs on this schedule instead of whenever a session remembers (the

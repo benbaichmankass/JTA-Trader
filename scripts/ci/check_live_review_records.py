@@ -24,6 +24,8 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
   reviewer may decline to make a call), and is still never hold.
 * trigger (operator 2026-10-26, GLD re-reviewed ten times): from 2026-10-27 a row whose trigger names a due
   event carries that event's level (a string for mechanics/swing/...), and `manual` carries none.
+* the `review_id` ends with the row's own `order_package_id` (a row whose id names another package is
+  a corrupted write).
 * LTR-ALL-ACTIONS (operator 2026-10-26, MD-TRADE-DESK, verbatim "as long as they have
   reasoning and confidence attached"): a trade action (close / partial_close / move_tp /
   widen_sl / change_size / add_entry) carries a non-empty `reason`, an `evidence_source` of
@@ -201,6 +203,9 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     _check(row, schema[kind], schema["enums"], kind, out)
     if out or kind != "reviews":
         return out
+    # 2026-10-26: LR-...-pkg-6a8e... was written carrying pkg-465a...'s body; the id must name its own package.
+    if not str(row["review_id"]).endswith("-" + str(row["order_package_id"])):
+        out.append(f"review_id {row['review_id']} does not end with its order_package_id {row['order_package_id']}")
     st, ap, sh, rec, disp = row["state"], row["apply_policy"], row["shadow_policy"], row["recommendation"], row["disposition"]
     if st["peak_provenance"] in ("unverified", "fabricated") and st["peak_r"] == 0:
         out.append("state.peak_r: 0 with unverified/fabricated provenance (unmeasured must be null)")
@@ -262,8 +267,19 @@ def packet_problems(row: dict, packets: Path) -> list[str]:
     f = packets / f"{row.get('review_id')}.json"
     if not f.exists():
         return [f"packet_sha set but {f.name} is missing from comms/live_review/packets/"]
-    got = hashlib.sha256(json.dumps(json.loads(f.read_text()), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return [] if got == sha else [f"packet_sha does not match {f.name}"]
+    return packet_blob_problems(row, f.read_bytes())
+
+
+def packet_blob_problems(row: dict, blob: bytes) -> list[str]:
+    """packet_sha against the packet's bytes (the mirror reads them from the rows branch)."""
+    sha = row.get("packet_sha")
+    if not sha:
+        return []
+    try:
+        got = hashlib.sha256(json.dumps(json.loads(blob), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    except ValueError:
+        return [f"packet for {row.get('review_id')} is not JSON"]
+    return [] if got == sha else [f"packet_sha does not match {row.get('review_id')}.json"]
 
 
 def _rows(path: Path):
@@ -435,6 +451,8 @@ def _self_test() -> int:
     expect("a manual row with no level passes", mut(GOOD_REVIEW, trig("manual", None)), "reviews", False)
     expect("a pre-rule due event with a null level is history, not refused",
            mut(GOOD_REVIEW, trig("mechanics", None, "2026-10-26T22:16:00Z")), "reviews", False)
+    expect("a review_id naming another package than the row's is refused",
+           mut(GOOD_REVIEW, lambda r: r.update(order_package_id="pkg-2")), "reviews", True)
     expect("missing account_reads is refused", mut(GOOD_REVIEW, lambda r: r.pop("account_reads")), "reviews", True)
     expect("an account read outside the enum is refused",
            mut(GOOD_REVIEW, lambda r: r["account_reads"][0].update(read="approved")), "reviews", True)

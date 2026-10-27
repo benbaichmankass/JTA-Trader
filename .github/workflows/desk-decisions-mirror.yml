@@ -17,9 +17,11 @@ name: desk-decisions-mirror
 #      ~20 h old, so it adds at most one landing a day when nothing moved;
 #   4. lands it in ONE self-landing PR (commit-to-main, verify-merged).
 # One run at a time (concurrency group; each run waits for its PR to merge).
-# ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH; desk/decisions is
-# cut from main after this file lands, so push runs fire from the start. The hourly schedule is
-# the backstop and is what computes outcomes once a horizon passes.
+# ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH, and desk/decisions was cut
+# from main before step 3b existed, so a push run NEVER grades (measured 2026-10-27: every run since
+# #20501 was a stale-file push run; the cron also fired late or not at all). The full workflow therefore
+# runs from main: `branch-mirror-heartbeat.yml` dispatches it (`--ref main`) on every main push. Do not
+# rely on the push trigger or the cron for anything beyond mirroring rows.
 # Tier 1: data copy + an offline replay; no runtime effect.
 
 on:

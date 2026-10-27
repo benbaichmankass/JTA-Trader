@@ -50,7 +50,8 @@ Each package block in the comment is:
   - a non-judgement `tighten_sl` records `tighten_r` on both arms;
   - `insufficient_n` <=> `no_recommendation`, and on a real-money/prop row neither `insufficient_n` nor `default_hold` is accepted; `no_recommendation` there needs `basis: could_not_look` + `reason`;
   - an option with `n == 0` has null numbers;
-  - `account_reads` covers exactly `accounts`, once each.
+  - `account_reads` covers exactly `accounts`, once each;
+  - `review_id` ends with `-` + the row's own `order_package_id` (`LR-<ts>-pkg-6a8e…` carries `order_package_id: pkg-6a8e…`). Copy the id, package id, leg, accounts and state from ONE packet block, never mixed across blocks (2026-10-26 a row was written with one package's id and another's body; the append-only branch cannot take it back, and the mirror now refuses and skips it).
 
 ### Worked example (a judgement tighten; replace every value from YOUR packet)
 
@@ -253,6 +254,7 @@ Never `git clone`, and **never `push_files` for `reviews.jsonl`**: it writes the
    - `table_path` = the block's `table` object (skip when `table` is null).
 
    If a create is refused because the file exists, read it. Same content → carry on (an earlier attempt of yours). Different content → stop and report `could_not_write: evidence_conflict`.
+1b. **Check the row before it is written** (you cannot run the validator; do this by reading your row against § 3, once, line by line). Every row you swap in is permanent on an append-only branch and the mirror/apply refuse an invalid one. Confirm: `review_id` and `order_package_id` come from the same packet; `accounts` equals the packet's accounts and `account_reads` covers them once each; on a real-money/prop package the basis is `judgement` / `ev_positive` (never `insufficient_n` / `default_hold`) and `no_recommendation` carries `could_not_look` + `reason`; every `judgement` has a confidence and a reason. If anything fails, fix the row first. If you cannot, report `could_not_write: row_invalid` with the reason. Do not write it.
 2. **Read.** `get_file_contents` `comms/live_review/reviews.jsonl` at `ref: refs/heads/live-review/rows`. Keep its blob **`sha` S**. If your `review_id` is already in the file, stop: it is written.
 3. **Append.** The content you read, byte for byte, plus your row as ONE compact JSON line, newline-terminated.
 4. **Swap.** `create_or_update_file` `comms/live_review/reviews.jsonl` on `live-review/rows` **with `sha: S`**. Message: `live-review: <review_id> <action> (<leg>, <basis>)`. GitHub applies it only if the file's current blob is still S. If another reviewer wrote in between, it is refused (**409** conflict, or 422), and nothing is written.
