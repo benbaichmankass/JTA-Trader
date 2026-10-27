@@ -1,0 +1,94 @@
+id: RQ-20261027-mk01-01
+title: 'Desk maker fills: does a post-only entry at the touch beat a Market entry on the 6 desk Bybit perps, net of fees and adverse selection (strict trade-through fill, fallback-to-taker), on Bybit''s own trade prints?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  On Bybit linear trade prints (public.bybit.com/trading, RPI prints dropped) for ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT
+  over 40 registered days (every 9th day, 2025-11-08..2026-10-25), at every on-the-hour decision time (hours 1..22 UTC) and in both
+  directions, does a post-only limit at the near touch (k = 0) that fills only when a later print trades THROUGH it by >= 1 tick within
+  5 minutes, and otherwise crosses as taker at T+5min, beat an immediate Market entry by >= 2.0 bps per entry, net of the fee schedule
+  (taker 5.5, maker 2.0 bps per side) and of the adverse selection carried by the unfilled entries?
+why_this_matters: >-
+  DESK-EDGE-PROGRAM (PR #20672, docs/research/desk-edge-program-2026-10-27.md) found no entry-timing edge on the desk's packets and named
+  cost as a structural lever. MEASURED: our Bybit fills are all taker, 11.0 bps fee per round trip, zero maker fills ever (row
+  COST-STACK-BYBIT-TAKER-FEE). RQ-20261026-f679-04 priced maker entry only at a perfect-fill upper bound (and FAILED on the 15m breakout
+  even there). This unit measures the real fill rate and the selection a resting order carries, on the venue we trade, so a maker-entry
+  lever is priced net of what it actually costs. Operator popup 2026-10-27 ~22:10Z "Maker fills (Recommended)".
+power:
+  expected_n: 10560
+  min_detectable_effect: 2.0
+  effect_units: bps
+  sd: 25
+  design: one_sample
+  alpha: 0.05
+  power: 0.80
+  basis: >-
+    n = 40 days x 22 hours x 2 directions x 6 symbols. sd of delta_F MEASURED 12.8 bps on the development day (ADAUSDT 2026-10-26, 44 rows,
+    not in the sample); 25 bps assumed for the higher-vol symbols. Independent n for a 2.0 bps effect at sd 25: 967 (one-sided 0.05, power
+    0.8). Rows within a day are correlated (all six perps co-move); the CI resamples whole days, and the registered sample covers a design
+    effect up to ~10. Floors: >= 1,000 rows and >= 30 measured days.
+  feasibility:
+    source: none
+    accrual_basis: Public historical trade prints over a pinned day list; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261027-MK01-01-MAKER-FILLS
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/desk_maker_fills.py run (registered constants in the script: SAMPLE_*, PRIMARY_W=5, PRIMARY_K=0, X_BPS=2.0,
+    N_FLOOR_ROWS=1000, DAYS_FLOOR=30, BREADTH_MIN=4, BOOT_REPS=2000, BOOT_SEED=20261027). delta_F per (symbol, T, direction) = (taker price
+    at T - maker effective price) in bps of mid_T, + (taker fee - maker fee) when the maker filled; maker effective price = the limit when
+    STRICT-filled within 5 min, else the touch at T+5min (fallback taker). Touch inferred from the last print with a 1-tick spread. Pooled
+    mean over all rows, 95% CI by day-block bootstrap.
+  rule: >-
+    PASS iff rows >= 1,000 AND measured days >= 30 AND pooled mean delta_F >= +2.0 bps AND its 95% day-block CI lower bound > 0 AND >= 4 of
+    6 symbols have mean delta_F > 0 -> propose the bybit_1 DEMO live probe (b) and the post-only entry change for the claude_desk leg as
+    Tier-2/3 proposals to the manager (never applied by this unit). FAIL iff powered (both floors met) and not PASS -> maker entry at the
+    touch is not a structural lever worth an order-path change on these perps at this decision cadence; per-symbol and secondary arms are
+    reported for the record and may motivate a NEW registered unit, never a re-grade of this one. INDETERMINATE iff a floor is not met
+    (a fetch failure is recorded per cell, never dropped). Secondary arms (W 1/15 min, k = 1, optimistic fill, trend-aligned split, policy-S
+    markouts at 1/5/15/60 min) are REPORTED, not graded. Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Places nothing; changes no order path, config, roster or risk logic. Not a promotion case. It cannot see queue position, latency, or a
+    post-only reject on a book that moved between T and submission; the 1-tick spread assumption understates the taker's cost on a wider
+    book (conservative for the maker); the maker fee is the PUBLISHED schedule (we have no maker fill to measure it on). Bybit DEMO matching
+    fidelity is NOT established here; that is what probe (b) would test.
+compute: cpu_short
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: a few bps per entry on the desk and strategy Bybit legs; the cost stack is about 12.3 bps per round trip.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  basis: 'MEASURED on the lane container: one ADAUSDT day (89,843 prints) processes in 0.3 s; the run is download-bound (~160 MB of gz per day for six symbols).'
+run:
+  command:
+  - python3
+  - scripts/research/desk_maker_fills.py
+  - run
+  - --cache
+  - '{out_dir}/cache'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261027-mk01-01
+  timeout_minutes: 180
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-f679-04
+- scripts/research/desk_maker_fills.py
+- docs/research/desk-maker-fills-2026-10-27.md
+- docs/research/desk-edge-program-2026-10-27.md
+last_dispatched_at: null
