@@ -1,0 +1,61 @@
+{
+  "run": "RESEARCH-OPS-2026-10-27-2048",
+  "finished_at": "2026-10-27T21:10:00Z",
+  "by": "session_01AFoLuKUTrePGrb5dNPou8Q",
+  "floor": 61,
+  "floor_basis": "computed_floor(fired_24h 77)",
+  "authoring_queue_depth": 30,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "throughput": {"runnable_before": 45, "runnable_after": 45, "queued": 154, "fired_24h": 77, "results_landed_24h": 89, "hours_since_last_dispatch": 0.8, "idle_alarm": false,
+                 "after_basis": "no queue units authored; H1-REFILL says templates hold 66 unclaimed points for a deficit of 16, so research-queue-replenish.yml is the refill (not run by this pass)"},
+  "mechanism": {"dispatch_receipt": "ok (fresh, 2.87 h)", "collector": "ok (0 unreadable result files)", "stranded_stamp_prs": "not listed this pass (GitHub Actions MCP unavailable)", "incident": null,
+                "watchdog": "watchdog_incidents.jsonl newest row 2026-10-24T09:09Z (resolved); no row for 3 days, cannot tell quiet from not-writing"},
+  "results_read": {
+    "pass": 4, "fail": 29, "indeterminate": 0,
+    "units": [
+      "RQ-20261026-ed1c-07 PASS (trend_donchian BTC 1h: arm SL +14.79 R vs bar 9.16, 6/6 folds, maxDD 21.9 vs 24.0; 2 arms) -> node P1-ATM-ed1c07-sl-confirm",
+      "RQ-20261026-ed1c-10 PASS (same leg: arm C75 +12.75 R, 5/6 folds and 5/6 vs the UT control; E25/E35 fail 5/6 folds; 3 arms + control) -> node P1-ATM-ed1c10-c75-confirm",
+      "RQ-20261026-ed1c-17 PASS (trend_donchian_eth: BE075 +26.13, BE10 +15.22, BE15 +17.39 R vs bar 14.84; 3 arms) -> node P1-ATM-ed1c17-be-confirm",
+      "RQ-20261026-1b57-08 PASS (sol_4h on basket B: pooled n 1375, +111.8 R, 4/6 folds, 3/6 powered cells; last fold -24.6 R, one-sided p 0.10) -> node P1-ATM-sol4h-b-overlap",
+      "RQ-20261027-d789-01 FAIL: configuration closed: SOL prop TP 3R vs 6R on 2023-09-24..2025-09-23; family trend_donchian_sol_prop stays open; next test = P1-Q2-solprop-derive",
+      "ed1c-05/-06/-01 (direction filter eth/sol/eth_prop) FAIL: configuration closed: DI/SL arm grid per leg; family stays open; next = the SL arm that PASSED on BTC (ed1c-07) is the lead",
+      "ed1c-08/-09 (path-state gate eth/sol) FAIL: configuration closed: E25/E35/C75 on those legs; family stays open; next = confirmation of C75 on BTC (ed1c-10) decides whether the gate is leg-specific",
+      "ed1c-14/-15/-16 (stale / ADX trail on sol_prop, eth_pullback_prop) and ed1c-18/-19 (break-even sol, BTC) FAIL: configurations closed; families stay open; BE lever is leg-specific (passes on eth, ed1c-17)",
+      "ed1c-20/-21/-22 (cpi/ppi/retail_sales surprise) FAIL: configuration closed: zero-weight study; the news layer and WEPE are NOT retired",
+      "ed1c-31..34 (regime head MLP/CatBoost/logit/logreg vs LightGBM at 1h), a142-01 (regularised MLP), 006 (longer-tail lgbm_yz) FAIL: configurations closed; model families stay open",
+      "f679-01 (4h ADX<=20 fade gate), 1b57-12 (xrp_4h short-only on 12 perps), 8a01-01/-02, 8b01-01 (desk ict_scalp eth/xrp 15m fresh-window) FAIL: configurations closed; families stay open",
+      "0142-18 FAIL (value coverage infra check); RQ-20260928-030/-031, 20261004-660/-661 wiring_only (generated weekly re-runs): not verdicts",
+      "infra PASS (ae17-44/-45, 3a84-12/-13, 20261025-005/-006): plumbing only; 0142-19 is the one UNGRADED unit (recurring daily infra check, grader will close it)"
+    ],
+    "note": "29 FAILs were read at the unit-title level plus the four PASSes in full (arms, folds, bars recomputed from the landed rows). The per-FAIL arm tables were not opened one by one; their dispositions follow each unit's own registered rule."
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [{"lever": "driver for the GLD/GDX pairs holdout unit RQ-20261016-7ea6-01 (session-local, never dispatched, 11 days)", "ref": "PAIRS-HOLDOUT-DRIVER"}],
+  "units_authored": [],
+  "followups_filed": ["4 programme nodes in research/programmes/01-active-trade-management.yaml (P1-ATM-ed1c07-sl-confirm, P1-ATM-ed1c10-c75-confirm, P1-ATM-ed1c17-be-confirm, P1-ATM-sol4h-b-overlap), each following its unit's verdict; PAIRS-HOLDOUT-DRIVER"],
+  "authoring": {
+    "queue_depth": 30,
+    "nodes_drafted": 4,
+    "nodes": ["P1-ATM-ed1c07-sl-confirm", "P1-ATM-ed1c10-c75-confirm", "P1-ATM-ed1c17-be-confirm", "P1-ATM-sol4h-b-overlap"],
+    "theme_shortfall": {"regime": "9 vs share 14", "ml_health": "0 vs share 9", "new_strategy_prop": "4 vs share 17", "infra": "5 vs share 6"},
+    "note": "The nodes are needs_authoring lines carrying the verdict, denominator and next step; each unit is authored once the grader closes its prerequisite. No hand units authored, so theme shortfalls stand."
+  },
+  "not_run": [
+    "A: stranded automation PR list and the dispatch/collector/grader workflow runs (GitHub Actions MCP did not connect; receipt, liveness and throughput were read from the tree instead)",
+    "B: no top-up: runnable 45 < floor 61; refill capacity 66 templates is the health check's own remedy (research-queue-replenish.yml)",
+    "C: needs_review triage not done (28 left, all owned); 4 NOT_RUNNING never-dispatched units are value-ranked below the cut, not blocked",
+    "E: ml_health, new_strategy_prop and regime theme shortfalls not closed by new authoring",
+    "routing of due pipeline items not run",
+    "pytest not run"
+  ],
+  "handoff": [
+    "Next pass: author the confirmation units for the four PASS nodes once the grader closes ed1c-07/-10/-17 and 1b57-08 (they show 'open' until then).",
+    "Build PAIRS-HOLDOUT-DRIVER; RQ-20261016-7ea6-01 gates GLD/GDX at Gate 2.",
+    "ml_health has 0 runnable units against a share of 9, and new_strategy_prop 4 against 17: the largest authoring shortfalls.",
+    "Watchdog file shows no row since 2026-10-24: confirm it is quiet and not silent.",
+    "Tier-3 candidates for the manager, to be raised only after a disjoint-window confirmation: SL arm on trend_donchian (ed1c-07), C75 path-state gate (ed1c-10), break-even floor on trend_donchian_eth (ed1c-17). None is a config change."
+  ]
+}

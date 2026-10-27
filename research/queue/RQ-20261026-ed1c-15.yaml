@@ -1,6 +1,6 @@
 id: RQ-20261026-ed1c-15
 title: 'Dead-money (stale) exit on eth_pullback_prop_2h: does stale exit beat the declared exit net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -103,3 +103,16 @@ related:
 - research/queue/RQ-20261026-90d3-15.yaml
 - RESEARCH-FLOOR-20261026
 last_dispatched_at: '2026-10-27T15:56:13+00:00'
+grading:
+  attested: RULE-RQ20261026ed1c15
+  auto: true
+  decision_rule_id: RULE-RQ20261026ed1c15
+  evidence:
+  - research/results/RQ-20261026-ed1c-15/40535954594.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

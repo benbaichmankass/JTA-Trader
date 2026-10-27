@@ -1,0 +1,26 @@
+{
+  "id": "PAIRS-HOLDOUT-DRIVER",
+  "title": "Driver for RQ-20261016-7ea6-01 (GLD/GDX holdout): dispatchable script that fetches 2006-2016 candles and runs backtest_pairs once",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[RESEARCH-OPS-20261027-2048] RQ-20261016-7ea6-01 queued 11 days, last_dispatched_at null: run.workflow is session-local (research-script-run.yml has no data-fetch step; the unit note has the exact fetch + backtest_pairs command). Gates GLD/GDX at Gate 2 (R-HOLDOUT NEEDS-DATA). Build a scripts/research wrapper that fetches GLD/GDX 2006-05..2016-10 via fetch_backtest_candles.py, runs backtest_pairs.py ONCE at the registered args, writes verdict.json; then retarget the unit to research-script-run.yml (unit edit holds under E57). Read the span ONCE: no exploratory run first.",
+  "updated_at": "2026-10-27T20:55:55Z",
+  "updated_by": "session_01AFoLuKUTrePGrb5dNPou8Q",
+  "roadmap": [
+    "M22",
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: tooling",
+    "arch": "none"
+  },
+  "_seq": 740
+}
