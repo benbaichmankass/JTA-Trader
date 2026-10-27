@@ -1,0 +1,35 @@
+# Desk EVENT TRIGGERS (row DESK-SHORT-HOLD-LANE item 2): which market situations wake a Claude desk session between
+# the hourly scans. Read by src/runtime/desk_event_trigger.py on the live trader (no model watches markets: the VM
+# runs these cheap detectors on closed bars). Operator 2026-10-27 ~07:05Z (manager relay): "the SYSTEM decides which
+# situations wake Claude"; the desk then decides "the next bar is going to be big green or big red, get in and get
+# out quickly". A firing builds a short-timeframe scan packet of THAT symbol, lands it on desk/decisions and posts
+# ONE desk-trigger-wake marker on the ops-flags PR; the manager spawns the wake (manager SKILL § "Desk trigger wake").
+# This file gates nothing about trading: it only decides when a desk session is woken. REVERT: symbols: [].
+
+# Symbols watched. The claude_desk leg trades only its own symbols: (config/strategies.yaml), so a trigger on any
+# other symbol yields a shadow label (still a training row); keep this to the leg's symbols to spend only on
+# tradable wakes.
+symbols: [AVAXUSDT]
+timeframe: 5m              # the detectors' bars AND the triggered packet's timeframe
+horizons: [3, 6, 12]       # the packet's base-rate horizons on that timeframe (12 x 5m = 1 h: the short-hold cap)
+candles: 120               # closed bars read per pass
+
+detectors:
+  atr_burst:               # the last closed bar's range is a multiple of ATR14
+    range_atr: 2.0
+  momentum_burst:          # net move over the last `bars` closed bars, in ATR14 (3 x 5m = 15m)
+    bars: 3
+    move_atr: 2.5
+  level_break:             # close beyond the high/low of the prior `lookback` bars (48 x 5m = 4 h) -> break;
+    lookback: 48           # a wick beyond it that closes back inside -> sweep
+  near_signal: {}          # a strategy near-signal on the symbol in the newest hourly scan packet's system_book
+  calendar:                # an economic-calendar event named in the newest hourly packet for the symbol
+    minutes_before: 15
+
+# Rate limits and dedupe (a firing that is limited is still LOGGED as a label, with why it did not wake).
+cooldown_min: 30           # per symbol, after a wake
+max_per_hour: 2            # all symbols
+max_per_day: 12            # all symbols (UTC day): the daily cost ceiling below
+# Cost line: MEASURED $/wake for a fresh Sonnet desk session, 2026-10-26, n=4 ($0.45, $0.34, $0.45, $0.47;
+# get_session().usage, trading-desk SKILL § 6b). The receipt states fired_today x this and the ceiling.
+cost_per_wake_usd: 0.43

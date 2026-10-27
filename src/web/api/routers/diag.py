@@ -590,6 +590,12 @@ _DESK_WAKE_POST_RECEIPT = (
 # no credential. Same anchor as the writer (src.runtime.short_hold_wake._log_dir).
 _SHORT_HOLD_WAKE_RECEIPT = Path(repo_root()) / "runtime_logs" / "short_hold_wake_receipt.json"
 
+# DESK-SHORT-HOLD-LANE item 2 (2026-10-27). The live trader's desk EVENT TRIGGER receipt (quiet / limited / posted /
+# could_not_build / could_not_commit / could_not_post / could_not_look, + the cost line) and its label log (every
+# firing and its disposition). Hold no credential. Same anchors as the writer (src.runtime.desk_event_trigger).
+_DESK_TRIGGER_RECEIPT = Path(repo_root()) / "runtime_logs" / "desk_trigger_receipt.json"
+_DESK_TRIGGER_LABELS = Path(repo_root()) / "runtime_logs" / "desk" / "trigger_labels.jsonl"
+
 # LTR C1 (2026-10-26). The live trader's rows-branch watcher: one line per new
 # live-review/rows row (verdict, per-account venue_after, latencies) and the
 # last pass's status (fetched / could_not_fetch / could_not_read). Same anchor
@@ -642,6 +648,8 @@ _LOG_FILES: dict[str, Path] = {
     # DESK-6B: did the packet landing post the desk-wake, and if not, why.
     "desk_wake_post_receipt": _DESK_WAKE_POST_RECEIPT,
     "short_hold_wake_receipt": _SHORT_HOLD_WAKE_RECEIPT,
+    "desk_trigger_receipt": _DESK_TRIGGER_RECEIPT,
+    "desk_trigger_labels": _DESK_TRIGGER_LABELS,
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,

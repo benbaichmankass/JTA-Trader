@@ -27,6 +27,8 @@ def entry_row(**kw):
     r = copy.deepcopy(cdr.GOOD_ENTRY_DECISION)
     r.update(label_source="live", intent_id="INT-E1", judged_at="2026-10-26T09:01:00Z")
     r["disposition"] = {"route": "submitted", "per_account": []}
+    r["proposal"]["entry"]["type"] = "market"  # a live proposal is the short-hold kind (desk_write.live_proposal_problems)
+    r["proposal"]["max_hold_min"] = 45
     r.update(kw)
     return r
 
@@ -58,10 +60,12 @@ class FakeApply:
                 "lines": [">>> bybit_1 [bybit/apply]: approve 98.0 executed=True -- ok"]}
 
 
-def run(tmp_path, rows, *, apply_fn=None, mandates=GATED, now=T0, leg=False, flags=None):
+def run(tmp_path, rows, *, apply_fn=None, mandates=GATED, now=T0, leg=False, flags=None, accounts=None,
+        symbols=("ETHUSDT",)):
     return di.run_pass(TIP, git=FakeGit(rows), apply_fn=apply_fn or FakeApply(), now_fn=lambda: now,
                        logs=tmp_path, mandates_fn=lambda: mandates, leg_fn=lambda: leg,
-                       flag_fn=(flags.append if flags is not None else (lambda line: None)))
+                       flag_fn=(flags.append if flags is not None else (lambda line: None)),
+                       accounts_fn=lambda: accounts, symbols_fn=lambda: list(symbols) if symbols is not None else None)
 
 
 def log(tmp_path):
@@ -136,9 +140,13 @@ def test_entry_gate_reads_the_mandate_and_fails_closed():
     assert di.entry_gate({"mandates": []}).endswith("MD-TRADE-DESK_not_granted")
 
 
-def test_the_real_mandate_store_blocks_entries_today():
-    """Field beats comment: read config/mandates.yaml itself (re-run when DESK-13 clears)."""
-    assert di.entry_gate(di._load_yaml("config/mandates.yaml")).startswith(di.R_GATED)
+def test_the_real_mandate_store_admits_the_bybit_1_demo_only():
+    """Field beats comment: config/mandates.yaml + config/accounts.yaml as they stand. The demo floor (operator
+    popup 2026-10-27) opens the gate for the leg rostered on bybit_1 only; without the accounts it stays closed."""
+    mandates, accounts = di._load_yaml("config/mandates.yaml"), di._load_yaml("config/accounts.yaml")
+    assert di.carrying_accounts(accounts) == ["bybit_1"]
+    assert di.entry_gate(mandates, accounts) is None
+    assert di.entry_gate(mandates).startswith(di.R_GATED)
 
 
 def test_cleared_gate_queues_for_the_desk_leg_or_refuses_until_rostered(tmp_path):

@@ -34,7 +34,11 @@ What this module decides (pure; the builder in ``strategy_signal_builders`` does
   ``entry_type_unsupported`` and recorded (the multiplexer path places at the signal price; a
   resting-entry adapter is follow-up work, filed on row DESK-17).
 
-``monitor()`` returns ``None``: the venue bracket is the plan, and the desk's in-trade decisions
+* **Max hold.** A proposal's ``max_hold_min`` (required and <= 60 on a live row: the short-hold kind,
+  operator 2026-10-27 *"get in and get out quickly"*) rides in the package meta; ``monitor()`` closes the
+  trade at market once that many minutes have passed since the package opened (reason ``max_hold``).
+
+Otherwise ``monitor()`` returns ``None``: the venue bracket is the plan, and the desk's in-trade decisions
 (``tp_revise`` / ``tighten_sl`` / ``close`` / ``partial_close``) reach a desk trade through the
 per-account amend path (``scripts/ops/live_review_apply.py``, dispatched by desk intake), not
 through this module.
@@ -167,6 +171,7 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
             "expected_r_net": p.get("expected_r_net"),
             "novelty": p.get("novelty"),
             "venue_class": p.get("venue_class"),
+            "max_hold_min": p.get("max_hold_min"),
         },
     }
 
@@ -262,8 +267,31 @@ def record(outcomes: List[Tuple[Dict[str, Any], str]], *, now: datetime,
         return 0
 
 
+R_MAX_HOLD = "max_hold"
+
+
+def max_hold_verdict(open_pkg: Any, now: datetime) -> Optional[Dict[str, Any]]:
+    """``{"action": "close", "reason": "max_hold"}`` once ``meta.max_hold_min`` minutes have passed since the
+    package opened; None otherwise (no max hold, or an unreadable open time -- the bracket still holds). Pure."""
+    pkg = open_pkg if isinstance(open_pkg, dict) else {}
+    meta = pkg.get("meta")
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except ValueError:
+            meta = None
+    meta = meta if isinstance(meta, dict) else {}
+    mh = meta.get("max_hold_min")
+    if not isinstance(mh, int) or isinstance(mh, bool) or mh < 1:
+        return None
+    opened = _ts(meta.get("entry_time") or pkg.get("created_at"))
+    if opened is None or now - opened < timedelta(minutes=mh):
+        return None
+    return {"action": "close", "reason": R_MAX_HOLD}
+
+
 def monitor(cfg, candles_df, open_pkg):  # noqa: ARG001 -- canonical signature
-    """No strategy-side management: the proposal's venue bracket is the plan, and the desk's own
+    """Only the max-hold time stop: the proposal's venue bracket is the plan, and the desk's own
     in-trade/exit decisions reach the trade through the per-account amend path (desk intake ->
     live_review_apply), never through a monitor verdict."""
-    return None
+    return max_hold_verdict(open_pkg, datetime.now(timezone.utc))

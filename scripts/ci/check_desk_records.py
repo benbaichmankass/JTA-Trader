@@ -55,6 +55,8 @@ _spec.loader.exec_module(desk_write)
 
 # check_tp_doctrine.py's TP-REACH-FLOOR: a target reached < 10% of the time is the sentinel by another name.
 REACH_FLOOR = 0.10
+#: A live desk proposal is the short-hold kind (operator 2026-10-27, "get in and get out quickly"); shared with desk_write.
+SHORT_HOLD_MAX_MIN = desk_write.SHORT_HOLD_MAX_MIN
 PACKET_SCHEMA = REPO / "comms/schema/desk_packet.schema.json"
 DECISION_SCHEMA = REPO / "comms/schema/desk_decision.schema.json"
 DESK = REPO / "comms/desk"
@@ -376,6 +378,7 @@ def proposal_problems(r: dict, scan: dict | None) -> list[str]:
         out.append(f"TP doctrine: tp.p_hit must be in [{REACH_FLOOR}, 1) (below the reach floor the target is not a prediction)")
     if r["judge_prior"] is None:
         out.append("propose_entry requires judge_prior (P(TP before SL))")
+    out += desk_write.live_proposal_problems(r)
     if not pr["expected_r_net"] < tp_r:
         out.append("expected_r_net cannot reach the proposal's own gross best case (tp R)")
     if scan is None:
@@ -987,8 +990,16 @@ def _self_test() -> int:
         expect("entry_generation on an in_trade packet is refused",
                dp(_mut(E, lambda r: r.update(packet_id=GOOD_DECISION["packet_id"], packet_sha=GOOD_DECISION["packet_sha"], packet_kind="in_trade"))), True)
         expect("a shadow proposal routed submitted is refused", dp(_mut(E, lambda r: (r["disposition"].update(route="submitted"), r.update(intent_id="INT-9")))), True)
-        expect("a live proposal submitted with an intent passes",
-               dp(_mut(E, lambda r: (r.update(label_source="live", intent_id="INT-9"), r["disposition"].update(route="submitted")))), False)
+        LIVE = lambda r: (r.update(label_source="live", intent_id="INT-9"), r["disposition"].update(route="submitted"),  # noqa: E731
+                          r["proposal"].update(max_hold_min=45), r["proposal"]["entry"].update(type="market"))
+        expect("a live proposal submitted with an intent passes", dp(_mut(E, LIVE)), False)
+        expect("a live proposal without max_hold_min is refused (the short-hold kind)",
+               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].pop("max_hold_min")))), True)
+        expect("a live proposal holding past 60 min is refused",
+               dp(_mut(E, lambda r: (LIVE(r), r["proposal"].update(max_hold_min=61)))), True)
+        expect("a live proposal with a limit entry is refused (the leg places at market)",
+               dp(_mut(E, lambda r: (LIVE(r), r["proposal"]["entry"].update(type="limit")))), True)
+        expect("a shadow proposal may carry max_hold_min", dp(_mut(E, lambda r: r["proposal"].update(max_hold_min=240))), False)
         expect("a live proposal submitted without an intent is refused",
                dp(_mut(E, lambda r: (r.update(label_source="live"), r["disposition"].update(route="submitted")))), True)
         expect("a proposal auto_applied is refused",
