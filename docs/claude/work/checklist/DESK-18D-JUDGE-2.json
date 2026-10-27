@@ -13,7 +13,10 @@
   "blocked_on": [],
   "note": "Filed 2026-10-27 by lane DESK-18C-EDGE-OPT. WHAT: manager dispatch with a $95 ceiling (1,341 x $0.0688 = $92.3; judged-1 MEASURED $103.14 for 1,498 packets). PROCEDURE: python3 scripts/research/desk_gen_edge_decompose.py packets --out <scratch> --candles <dir> --fetch --n 250 --offset K (K = 0, 250, ...), seed default 20261028; each packet to ONE repo-less judging session with <scratch>/JUDGE-PROTOCOL.md (carries the C1 addendum: stop >= 1.0 ATR14) and nothing else; commit comms/research/desk_gen_replay/judged-2/{mask-key.json,proposals.jsonl} only; stop at a batch boundary once 600 valid proposals exist (count them with the driver's intake mode before any replay). BLOCKED ON: RQ-20261026-e535-01 landing with verdict pass (do not spend judging tokens on an uncertified instrument) and the manager's go. CLOSES WHEN: the judged-2 files are on main; then git mv research/queue/blocked/RQ-20261027-e72b-01.yaml research/queue/. EXPECTATION STATED NOW: P(PASS) below 20% (power 0.33-0.58 at a true S3 of +0.16 R; 0.16-0.27 at +0.10); a FAIL is the useful outcome that ends tuning of the current packet and judge. Report: docs/research/desk-18c-edge-optimization-2026-10-27.md.",
   "priority_rank": 2,
-  "updated_at": "2026-10-27T12:37:12Z",
+  "updated_at": "2026-10-27T12:56:42Z",
   "updated_by": "session_01AFoLuLbwrJEhhtpz8jSSq8",
+  "roadmap": [
+    "L-DESK"
+  ],
   "_seq": 722
 }

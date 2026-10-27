@@ -1,6 +1,7 @@
 """DESK-18C-EDGE-OPT: the exploration/confirm script composes the registered driver and must not drift from it."""
 from __future__ import annotations
 
+import itertools
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -8,8 +9,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.research import desk_gen_edge_decompose as e  # noqa: E402
-from scripts.research import desk_gen_replay_driver as d  # noqa: E402
+from scripts.research import desk_gen_edge_decompose as e
+from scripts.research import desk_gen_replay_driver as d
 
 
 def _series(n: int = 400, drift: float = -0.05, seed: int = 3):
@@ -29,7 +30,7 @@ def test_us_schedule_hours_gap_and_prefix():
     hrs = {datetime.fromtimestamp(c, tz=timezone.utc).hour for c in s}
     assert hrs <= set(e.US_HOURS)
     srt = sorted(s)
-    assert min(y - x for x, y in zip(srt, srt[1:])) >= e.CONFIRM_MIN_GAP_H * 3600
+    assert min(y - x for x, y in itertools.pairwise(srt)) >= e.CONFIRM_MIN_GAP_H * 3600
     assert e.us_schedule(a, b, 40, seed=7) == s[:40]                       # a stopping rule on a count cannot depend on an outcome
 
 

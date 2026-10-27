@@ -22,25 +22,25 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-from scripts.research import desk_gen_replay_driver as d  # noqa: E402
+from scripts.research import desk_gen_replay_driver as d
 
 SUSPECT_LO, SUSPECT_HI = 1332, 1365          # packet indices judged from base-rate rows only (manager's flag)
 
 
-def _vol_pct(s: "d.Series", i: int, look: int = 720) -> Optional[float]:
+def _vol_pct(s: d.Series, i: int, look: int = 720) -> float | None:
     lo = max(0, i - look)
     r = s.atr[lo:i + 1] / s.c[lo:i + 1]
     r = r[np.isfinite(r)]
     return None if len(r) < 100 else float((r < r[-1]).mean())
 
 
-def _pool(s: "d.Series", start: datetime, end: datetime, fold: int) -> np.ndarray:
+def _pool(s: d.Series, start: datetime, end: datetime, fold: int) -> np.ndarray:
     """d.eligible_cutoffs for an explicit window: the driver's fold_of default is bound to ITS window at def time, so a
     different window needs the fold cut explicit. For the driver's window this is identical (asserted in `decompose`)."""
     close = s.t + d.SEC
@@ -49,11 +49,11 @@ def _pool(s: "d.Series", start: datetime, end: datetime, fold: int) -> np.ndarra
 
 
 def records(mkt, classes, keys, by, legs, rost, cutoff, seed=d.SEED, draws=d.B_R_DRAWS, packets=None,
-            start: datetime = d.WINDOW_START, end: datetime = d.WINDOW_END) -> List[dict]:
+            start: datetime = d.WINDOW_START, end: datetime = d.WINDOW_END) -> list[dict]:
     """The driver's score() loop, field for field, plus covariates. Filled proposals only (as score())."""
     rng = np.random.default_rng(seed + 7)
-    pools: Dict[Any, np.ndarray] = {}
-    out: List[dict] = []
+    pools: dict[Any, np.ndarray] = {}
+    out: list[dict] = []
     for pid, rows in by.items():
         key = keys[pid]
         ce = key["cutoff_epoch"]
@@ -111,14 +111,14 @@ def records(mkt, classes, keys, by, legs, rost, cutoff, seed=d.SEED, draws=d.B_R
     return out
 
 
-def _tercile(vals: List[Optional[float]]) -> Optional[tuple]:
+def _tercile(vals: list[float | None]) -> tuple | None:
     v = np.array([x for x in vals if x is not None and np.isfinite(x)])
     return None if len(v) < 30 else (float(np.quantile(v, 1 / 3)), float(np.quantile(v, 2 / 3)))
 
 
-def slice_defs(recs: List[dict]) -> Dict[str, Dict[str, Any]]:
+def slice_defs(recs: list[dict]) -> dict[str, dict[str, Any]]:
     """{dimension: {level: predicate}}. Terciles are cut on THIS file; every (dimension, level) is one examined slice."""
-    defs: Dict[str, Dict[str, Any]] = {}
+    defs: dict[str, dict[str, Any]] = {}
 
     def cat(name, f):
         lv = sorted({f(r) for r in recs if f(r) is not None}, key=str)
@@ -130,7 +130,7 @@ def slice_defs(recs: List[dict]) -> Dict[str, Dict[str, Any]]:
             return
         defs[name] = {
             f"lo(<{q[0]:.3g})": lambda r, f=f, q=q: f(r) is not None and f(r) <= q[0],
-            f"mid": lambda r, f=f, q=q: f(r) is not None and q[0] < f(r) <= q[1],
+            "mid": lambda r, f=f, q=q: f(r) is not None and q[0] < f(r) <= q[1],
             f"hi(>{q[1]:.3g})": lambda r, f=f, q=q: f(r) is not None and f(r) > q[1],
         }
 
@@ -161,7 +161,7 @@ def slice_defs(recs: List[dict]) -> Dict[str, Dict[str, Any]]:
     return defs
 
 
-def stat(rows: List[dict], draws: int = 3000) -> Dict[str, Any]:
+def stat(rows: list[dict], draws: int = 3000) -> dict[str, Any]:
     if not rows:
         return {"n": 0}
     st = d.cluster_stats(rows, draws=draws)
@@ -180,7 +180,7 @@ def cmd_decompose(a: argparse.Namespace) -> int:
     classes = {u["symbol"]: u["classes"] for u in uni}
     keys = {k["packet_id"]: k for k in json.loads(Path(a.mask_key).read_text())["keys"]}
     want = [json.loads(ln)["packet_id"] for ln in Path(a.proposals).read_text().splitlines() if ln.strip()]
-    packets: Dict[str, dict] = {}
+    packets: dict[str, dict] = {}
     cp = Path(a.cache) if a.cache else None
     if cp and cp.exists():
         packets = pickle.loads(cp.read_bytes())
@@ -194,7 +194,7 @@ def cmd_decompose(a: argparse.Namespace) -> int:
         cp.write_bytes(pickle.dumps(packets))
     by, intake = d.read_proposals(Path(a.proposals), packets)
     rost = d.rostered_legs(sorted(mkt))
-    legs, gaps = d.load_strategy_lists(rost)
+    legs, _gaps = d.load_strategy_lists(rost)
     cutoff = datetime.fromisoformat(a.model_cutoff).replace(tzinfo=timezone.utc)
     recs = records(mkt, classes, keys, by, legs, rost, cutoff, packets=packets)
     # the reproduction assertion: the driver's own score() on the same inputs
@@ -209,7 +209,7 @@ def cmd_decompose(a: argparse.Namespace) -> int:
         no_s = [r for r in rows if not (SUSPECT_LO <= r["index"] <= SUSPECT_HI)]
         return {"with_suspect": stat(rows), "without_suspect": stat(no_s)}
 
-    res: Dict[str, Any] = {
+    res: dict[str, Any] = {
         "driver_score_overall": {k: ref["stats"].get(k) for k in ("n", "mean_net_r", "mean_ci95", "net_r_per_capital_day",
                                                                   "per_capital_day_ci95", "paired_diff_vs_random",
                                                                   "paired_diff_ci95", "folds", "folds_positive", "post_cutoff", "sd_net_r")},
@@ -217,7 +217,7 @@ def cmd_decompose(a: argparse.Namespace) -> int:
         "overall": with_without(recs),
         "new_subset_overall": with_without([r for r in recs if r["novelty"] in ("new", "new_no_leg")]),
     }
-    sl: Dict[str, Any] = {}
+    sl: dict[str, Any] = {}
     n_slices = 0
     for dim, lv in slice_defs(recs).items():
         sl[dim] = {}
@@ -256,15 +256,15 @@ C1_ADDENDUM = """
 
 
 def us_schedule(start: datetime, end: datetime, n: int, seed: int, min_gap_h: int = CONFIRM_MIN_GAP_H,
-                hours: tuple = US_HOURS) -> List[int]:
+                hours: tuple = US_HOURS) -> list[int]:
     """d.make_schedule restricted to cutoff hours `hours`: hourly closes shuffled by `seed`, kept when >= min_gap_h from every
     kept one. Greedy in a fixed order, so the first k of a length-n schedule ARE the length-k schedule."""
     import bisect
     s0, e0 = d._epoch(start), d._epoch(end)
     cands = np.array([c for c in range(s0, e0, d.SEC) if datetime.fromtimestamp(c, tz=timezone.utc).hour in hours], dtype=np.int64)
     order = np.random.default_rng(seed).permutation(len(cands))
-    kept: List[int] = []
-    srt: List[int] = []
+    kept: list[int] = []
+    srt: list[int] = []
     gap = min_gap_h * d.SEC
     for ix in order:
         c = int(cands[ix])
@@ -282,7 +282,7 @@ def c1_pass(r: dict) -> bool:
     return r["hour_utc"] in US_HOURS and r["sl_atr"] is not None and r["sl_atr"] >= STOP_FLOOR_ATR
 
 
-def grade_c1(st: Dict[str, Any], weeks_dropped_mean: Optional[float]) -> tuple:
+def grade_c1(st: dict[str, Any], weeks_dropped_mean: float | None) -> tuple:
     """The rule of RQ-20261027-e72b-01, deciding from numbers already computed (verbatim in the unit)."""
     n = st["n"]
     if n < CONFIRM_N_MIN:
@@ -385,8 +385,8 @@ def cmd_confirm(a: argparse.Namespace) -> int:
         st["best_weeks_dropped"] = top
     verdict, why = grade_c1(st, wdm) if recs else ("indeterminate", ["no filled proposals"])
     if not stop_ok:
-        verdict, why = "indeterminate", ["judged packets break the registered stopping rule (not a schedule prefix, or judging continued past "
-                                         f"{CONFIRM_STOP_FILLED} valid proposals before the last batch)"] + why
+        verdict, why = "indeterminate", [("judged packets break the registered stopping rule (not a schedule prefix, or judging continued past "
+                                          f"{CONFIRM_STOP_FILLED} valid proposals before the last batch)")] + why
     res = {"verdict": verdict, "reasons": why, "stats": st,
            "design": {"packets_judged": len(idx), "stopping_rule_respected": stop_ok, "valid_proposals_before_last_batch": before,
                       "filled_all_configs": len(allr), "filled_c1": len(recs),
@@ -398,12 +398,12 @@ def cmd_confirm(a: argparse.Namespace) -> int:
     return 0
 
 
-def forward_records(mkt, rows: List[dict], start: datetime, end: datetime, seed: int = d.SEED, draws: int = d.B_R_DRAWS) -> tuple:
+def forward_records(mkt, rows: list[dict], start: datetime, end: datetime, seed: int = d.SEED, draws: int = d.B_R_DRAWS) -> tuple:
     """Replay the desk's recorded REAL-symbol propose_entry rows (comms/desk/decisions.jsonl) with the driver's engine and
     the same S1/S2/S3 definitions. The random-entry pool is every eligible hourly cutoff of the same symbol in [start, end)."""
     rng = np.random.default_rng(seed + 7)
     out, skipped = [], {"not_a_proposal": 0, "symbol_without_candles": 0, "unresolved_or_unfilled": 0, "refused": 0}
-    pools: Dict[str, np.ndarray] = {}
+    pools: dict[str, np.ndarray] = {}
     for row in rows:
         pr = row.get("proposal")
         if row.get("action") != "propose_entry" or not isinstance(pr, dict):
@@ -442,8 +442,7 @@ def cmd_forward(a: argparse.Namespace) -> int:
     start = datetime.fromtimestamp(min(ts), tz=timezone.utc) if ts else datetime(2026, 10, 26, tzinfo=timezone.utc)
     # random entries need >= 100 bars of forward room, so the pool ends 5 days before the last candle
     end = datetime.fromtimestamp(max(int(s.t[-1]) for s in mkt.values()) - 5 * 86400, tz=timezone.utc)
-    if end <= start:
-        end = start
+    end = max(start, end)
     recs, skipped = forward_records(mkt, rows, start, end)
     c1 = [r for r in recs if c1_pass(r)]
     res = {"verdict": "not_applicable", "read_state": "measured" if recs else "no_data", "rows_read": len(rows), "skipped": skipped,
@@ -457,7 +456,7 @@ def cmd_forward(a: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="mode", required=True)
     for name, fn in (("decompose", cmd_decompose), ("packets", cmd_packets), ("confirm", cmd_confirm), ("forward", cmd_forward)):
