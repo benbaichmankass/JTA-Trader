@@ -1,6 +1,6 @@
 id: RQ-20261026-e535-04
 title: 'Desk D-S0 entry generation (novelty = new subset): restricted to proposals that do NOT duplicate a strategy''s open package or near-signal, do Claude''s entries still earn a positive net R per capital-day and beat a random entry with the same bracket, net of the full cost stack?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -16,15 +16,15 @@ why_this_matters: >-
   with novelty = new must pass on its own. The judge cannot see the strategies' book in a historical packet (it is not reconstructed point in time), so a replayed desk will duplicate strategy entries more often than a live one that sees the book; the subset test is therefore the
   stricter, not the looser, reading.
 power:
-  expected_n: 320
-  min_detectable_effect: 0.22
+  expected_n: 464
+  min_detectable_effect: 0.18
   effect_units: R
   sd: 1.4
   design: one_sample
   alpha: 0.05
   power: 0.8
   basis: >-
-    sd 1.4 as RQ-20261026-e535-03 (INFERRED from the MEASURED null sd 1.378, local preview of the `baselines` mode 2026-10-26). expected_n 320 = 375 (unit -03's declared n, itself an UNMEASURED proposals-per-packet assumption) x 0.85, the share of (cutoff, symbol, side) cells
+    RE-DECLARED 2026-10-27 (research-ops 19:30Z, a power edit; decision_rule untouched) from the MEASURED judged-1 run: 464 filled proposals in subset new (DESK-18C scratch scoring, PR #20594); MDE = 2.8 x 1.4 / sqrt(464) = 0.182 R, declared 0.18. Earlier text follows. sd 1.4 as RQ-20261026-e535-03 (INFERRED from the MEASURED null sd 1.378, local preview of the `baselines` mode 2026-10-26). expected_n 320 = 375 (unit -03's declared n, itself an UNMEASURED proposals-per-packet assumption) x 0.85, the share of (cutoff, symbol, side) cells
     that the scorer classifies new or new_no_leg if proposals were independent of the strategies' signals: MEASURED 2026-10-26 by classify_novelty over the 1,500 scheduled cutoffs x 6 symbols x 2 sides = 18,000 cells with the enabled rostered legs' committed lists: new 51.4%, new_no_leg (BTC, AVAX) 33.3%,
     duplicates_system_package 14.7%, duplicates_near_signal 0.6%, unclassifiable 0.0%, so new + new_no_leg = 84.7% (the first scoring run records the desk's own novelty mix). A desk that proposes WITH the strategies will duplicate more, so 0.85 is a ceiling on the subset's share. MDE at n 320 and sd 1.4 = 2.8 x 1.4 / sqrt(320) = 0.219 R, declared 0.22.
     The floor to issue any verdict is n >= 100 (the MDE there is 0.39 R), below which the unit is INDETERMINATE.
@@ -52,13 +52,6 @@ decision_rule:
 requires_result:
   unit: RQ-20261026-e535-01
   verdict: pass
-blocked_on:
-- kind: work_item
-  ref: DESK-18B-JUDGE-RUN
-  what: >-
-    Same blocker as RQ-20261026-e535-03: the judged file (mask-key.json and proposals.jsonl under comms/research/desk_gen_replay/judged-1/) does not exist. This unit scores the SAME file with --subset new and costs no extra judging.
-  clears_when: >-
-    comms/research/desk_gen_replay/judged-1/{mask-key.json,proposals.jsonl} are on main, the pilot has re-declared this power block from the measured proposal rate and novelty mix, and RQ-20261026-e535-01 has landed with verdict pass. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
 masked_replay:
   population: >-
     As RQ-20261026-e535-03. The subset is defined by the scorer from the enabled rostered legs' committed Stage-0 lists (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, MEASURED 2026-10-26 by rostered_legs(); re-parse before running).

@@ -1,0 +1,92 @@
+id: RQ-20261027-4ceb-02
+title: 'PROP exit rung: trend_donchian_eth_prop at a 120-bar time-close vs the declared exit on 2024-09-24 .. 2026-09-23 (the most recent two years), net of the breakout_1 cost stack'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+question: On 2024-09-24 .. 2026-09-23 (the most recent two years) at the breakout_1 cost stack (fee 7.5 bps, slippage 5.0 bps, funding 1.0 bps per window), does trend_donchian_eth_prop with a 120-bar (5-day)
+  GTD time-close beat the leg as declared by at least 3.0 R net, with no worse max drawdown, in at least 3 of 4 calendar folds?
+why_this_matters: 'Follows P1-Q7-gtd-timeclose-prop (lane research-ops 19:30Z). PROP-EXIT-UNITS asks whether the prop Donchian legs gain from a lever the prop books carry no code for today. A single pre-registered
+  arm vs the incumbent: trial count 1 on this window; a PASS is a discovery, not a confirmation (research-ops SKILL step D).'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ESTIMATE, not measured. A long-only 1h Donchian(20) crypto leg on a 730 d window carries on the order of 100-130 trades; the first run replaces this figure with the measured n. The grade floor
+    is n_floor 39 on the baseline arm.
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of committed public price history at a declared cost stack; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610274CEB02-ETHPROP-T
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'Arm A = trend_donchian_eth_prop as declared in config/strategies.yaml; arm X = the same leg with --timeout-bars=120; both at --fee-bps-roundtrip=7.5 --slippage-bps-roundtrip=5.0 --funding-bps-per-window=1.0,
+    over 2024-09-24 .. 2026-09-23 (the most recent two years). exit_lever_ablation.py --grade sweep: dR = net_r(X) - net_r(A), maxDD of each, fold_wins = of 4 equal calendar folds those where X out-earns
+    A.'
+  rule: 'PASS IF dR >= 3.0 AND maxDD(X) <= maxDD(A) AND fold_wins >= 3 AND n(A) >= 39: the lever replicates a gain on this window; the follow-up is ONE confirmation unit on a disjoint window, then ONE prop_ev_grid
+    unit (tradeify_1 / velotrade_1 / breakout_2, operator B6 bar) and a Tier-3 note for the manager on P5-PROP-PROGRAMME, never a config edit. FAIL IF n(A) >= 39 and the PASS condition does not hold: configuration
+    closed (trend_donchian_eth_prop, timeout_bars=120, this window and stack); the lever family stays open and the next test is a 72-bar time-close registered as a separate variant. INDETERMINATE IF n(A)
+    < 39.'
+  min_n: n(A) >= 39
+  what_it_does_not_do: 'No positive control: no committed record exists for this window; the harness argv is the same builder the committed records use. Changes no roster, params or risk; a backtest lever
+    comparison is not edge and not a P&L claim; not a prop EV-per-life result.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: two harness runs over a ~2 y public 1h candle fetch, comparable to RQ-20261027-d789-01 (30 min).'
+value:
+  bucket: information
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: planning weight from node P1-Q7-gtd-timeclose-prop; no balances stated
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --arm
+  - A=--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0
+  - --arm
+  - X=--timeout-bars=120;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0
+  - --days
+  - '1100'
+  - --start
+  - '2024-09-24'
+  - --end
+  - 2026-09-23 23:00
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '3.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261027-4ceb-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/prop-exit-evidence-2026-09-24.json
+- scripts/research/exit_lever_ablation.py
+- docs/claude/work/checklist/P5-PROP-PROGRAMME.json

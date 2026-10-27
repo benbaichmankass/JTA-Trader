@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-RESEARCH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261027-1930 step A (collector orphans)",
+    "rerun": "python3 scripts/research/collect_runner_results.py --recollect-orphans --repo benbaichmankass/Metis-Insights 2>&1 | grep '::error::'"
+  },
+  "state": "queued",
+  "what": "6 landed run artifacts have no E5 record because research_result.py --emit refuses them (MEASURED 2026-10-27 over --recollect-orphans: 7 orphans, 1 fixed this pass = RQ-20261026-e535-02 run 40407372878, producer rows were measured+not_applicable; fix in scripts/research/desk_gen_replay_driver.py). Still refused: RQ-20261015-1631-01 runs 40148576330/40148577750/40148578991 (--n passed as a dict {'solo:..':n,'together':n}: the derive-record step must pass an int or null); RQ-20261007-080 run 38747768830 (verdict set rejected / n None on a measured row); RQ-20261014-470a-11 runs 38663651638 + 39707652763 (read_state no_data with verdict no_action_warranted). Fix = producer/derive-record emits valid rows, then re-run the command above. Until then those units show no verdict (470a-11 is also NOT_RUNNING 138h). Lever owner: research tooling lane."
+}

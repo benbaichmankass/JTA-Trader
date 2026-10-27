@@ -3198,7 +3198,7 @@ nodes:
   value:
     usd_at_stake_per_month: 300
     confidence: 0.3
-  needs_authoring: 'AUTHORED 2026-10-27 (research-ops 0849) as hand unit RQ-20261027-d789-01 (2023-09-24..2025-09-23, sweep A tp 6 vs T3 tp 3, delta_r 5.0, 3 of 4 folds); this node only follows its verdict. PASS -> ONE prop_ev_grid unit on those trades + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, next = P1-Q2-solprop-derive. Original ask: PROP-EXIT-UNITS (1): SOL at TP 3R on a window NOT used in E65 (E65 exploratory +11.14R/59, 3/4
+  needs_authoring: 'RESULT 2026-10-27 (research-ops 1930): RQ-20261027-d789-01 read FAIL under its own rule (run 40488856601): configuration closed (SOL prop, tp_r 3.0 vs 6.0, 2023-09-24..2025-09-23 at the breakout_1 stack); the TP-geometry family stays open; next test = P1-Q2-solprop-derive, and the same lever on the eth prop leg is RQ-20261027-4ceb-03. AUTHORED 2026-10-27 (research-ops 0849) as hand unit RQ-20261027-d789-01 (2023-09-24..2025-09-23, sweep A tp 6 vs T3 tp 3, delta_r 5.0, 3 of 4 folds); this node only follows its verdict. PASS -> ONE prop_ev_grid unit on those trades + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, next = P1-Q2-solprop-derive. Original ask: PROP-EXIT-UNITS (1): SOL at TP 3R on a window NOT used in E65 (E65 exploratory +11.14R/59, 3/4
     folds), scored with prop_ev_sim on the operator''s B6 bar for tradeify_1 / velotrade_1 / breakout_2. Find E65''s
     window in docs/research/prop-exit-evidence-2026-09-24.json first; the instrument is exit_lever_ablation (tp_r=3.0
     arm, prop cost flags) for the trades + prop_ev_grid for the EV. Superseded if P1-Q2-solprop-derive lands a K*.'
@@ -3209,7 +3209,7 @@ nodes:
   value:
     usd_at_stake_per_month: 250
     confidence: 0.3
-  needs_authoring: 'PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5
+  needs_authoring: 'AUTHORED 2026-10-27 (research-ops 1930) as hand units RQ-20261027-4ceb-01 (sol_prop) and -02 (eth_prop): --timeout-bars 120 vs declared, 2024-09-24..2026-09-23, delta_r 3.0, 3 of 4 folds; this node only follows their verdicts (PASS -> ONE confirmation on a disjoint window, then prop_ev_grid + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, family open). ORIGINAL ASK: PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5
     d, swap 3.3 bps/day) scored with prop_ev_sim on the operator''s B6 bar. The harness lever is --timeout-bars
     on backtest_trend.py (an exit_lever_ablation arm), then prop_ev_grid.'
 - id: P1-Q3-eth4h-measured-move-w05-confirm
