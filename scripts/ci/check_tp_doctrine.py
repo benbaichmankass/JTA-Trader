@@ -320,6 +320,12 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # no_target / no_tp_verdict. A visible, deliberate line until the scan measures proposal TPs
     # (design § 3.7 "check_tp_doctrine.py measures the desk leg on the proposals' tp.basis"; row DESK-17).
     "bybit_1/claude_desk": ER,
+    # 2026-10-27 DESK-PAPER-ACCOUNTS: the same leg rostered on the two other paper books (operator verbatim, chat
+    # ~15:58Z: "I do want to have the desk live on the other paper accounts as well, so Alpaca and IB."). Same reason
+    # as the line above, not new debt: the TP is each proposal's own level (desk-records-guard), revised through
+    # live_review_apply move_tp, and this scan reads neither. Both lines leave together when it does.
+    "alpaca_paper/claude_desk": ER,
+    "ib_paper/claude_desk": ER,
     "ib_paper/gld_pullback_1d": R,  # moved from alpaca_paper 2026-10-25 (GLD-SOAK-REPLACE); same debt, not new: tp_r 3.5 declared (OPERATOR-DECISIONS-1022), tp_revision still undeclared
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,

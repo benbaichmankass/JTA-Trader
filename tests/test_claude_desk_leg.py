@@ -190,12 +190,17 @@ def test_registered_once_and_rostered_only_on_soak_accounts():
     assert strategies["claude_desk"]["execution"] == "live"  # bybit_1 demo only (desk intake's demo floor)
     # Six markets on bybit_1 (DESK-WIDEN): the same-symbol concern is met by bybit_1's slice support plus
     # claude_desk's declared slice (config/slice_allocation.yaml::declared_slices).
-    assert strategies["claude_desk"]["symbols"] == [
-        "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT"]
+    # DESK-PAPER-ACCOUNTS: symbols: is the union of three venues; account_symbols scopes each rostering account.
+    scope = strategies["claude_desk"]["account_symbols"]
+    assert scope == {"bybit_1": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT"],
+                     "alpaca_paper": ["SPY", "QQQ", "IWM", "GLD", "TLT"],
+                     "ib_paper": ["MES", "MGC", "MHG"]}
+    assert strategies["claude_desk"]["symbols"] == [s for a in scope.values() for s in a]
     assert "risk_pct" not in strategies["claude_desk"]
     accounts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
     on = sorted(a for a, v in accounts.items() if "claude_desk" in (v.get("strategies") or []))
-    assert on == ["bybit_1"]  # alpaca_paper deferred: row DESK-17B (cross-venue symbol scope)
+    assert on == sorted(scope) == ["alpaca_paper", "bybit_1", "ib_paper"]  # paper/demo only
+    assert all(accounts[a]["account_class"] == "paper" for a in on)
 
 
 def test_intake_sees_the_leg_rostered():

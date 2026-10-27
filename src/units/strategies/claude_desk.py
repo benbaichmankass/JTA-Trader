@@ -56,6 +56,8 @@ NAME = "claude_desk"
 SIGNAL_LOGIC = "desk"
 ROOT = Path(__file__).resolve().parents[3]
 
+PROBE_CONFIDENCE = 0.05  # DESK-18E mechanics probe: asks for the lowest confidence scalar. NOT a minimum size: RiskManager._confidence_scalar returns 1.0 when
+                         # `confidence_sizing` is off (bybit_1 today) and never goes below `confidence_floor` (0.5) otherwise. Measured 2026-10-27.
 R_BRACKETS = "both_brackets_required"
 R_GEOMETRY = "bracket_geometry"
 R_SIDE = "side_invalid"
@@ -147,6 +149,9 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError(why)
     conf = _num((cfg or {}).get("confidence"))
     conf = 0.5 if conf is None else max(0.0, min(1.0, conf))
+    probe = bool(row.get("mechanics_probe"))
+    if probe:  # DESK-18E: lowest confidence; sizing is the RiskManager's alone (see PROBE_CONFIDENCE: this does not reduce size on bybit_1)
+        conf = min(conf, PROBE_CONFIDENCE)
     return {
         "symbol": norm_symbol(p["symbol"]),
         "direction": p["side"],
@@ -172,6 +177,7 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
             "novelty": p.get("novelty"),
             "venue_class": p.get("venue_class"),
             "max_hold_min": p.get("max_hold_min"),
+            "mechanics_probe": probe,
         },
     }
 
@@ -268,6 +274,30 @@ def record(outcomes: List[Tuple[Dict[str, Any], str]], *, now: datetime,
 
 
 R_MAX_HOLD = "max_hold"
+
+#: On an account WITHOUT slice support (``alpaca_paper``, ``ib_paper``: the venue nets one position per symbol and a
+#: desk max-hold ``close`` flattens the WHOLE symbol), the desk and a strategy leg never share a symbol's position: the
+#: second to arrive is refused, per package, journalled with one of these reasons (DESK-PAPER-ACCOUNTS item 4).
+R_DESK_HELD = "desk_symbol_held"
+R_HELD_BY_DESK = "symbol_held_by_desk_leg"
+
+
+def exclusive_hold_refusal(strategy: Any, current_signed_qty: Any, desk_holds_open: Any) -> Optional[str]:
+    """The refusal reason for a package on a non-slice account rostering this leg, else None. Pure.
+
+    * a ``claude_desk`` package while the account holds ANY position on the symbol (another leg's, a manual one, or
+      the desk's own) -> ``desk_symbol_held``: the desk enters only a flat symbol, so it never nets into a strategy's
+      position and its max-hold close can never flatten one;
+    * another leg's package while the desk holds an open trade on the symbol -> ``symbol_held_by_desk_leg``
+      (the desk's hold is <= 60 min; the strategy's next signal is evaluated fresh);
+    * ``desk_holds_open is None`` (the journal could not be read) -> ``symbol_held_by_desk_leg:unreadable`` (fail
+      closed: "could not look" is never read as flat)."""
+    if str(strategy or "") == NAME:
+        q = _num(current_signed_qty)
+        return f"{R_DESK_HELD}:net_qty={q}" if q is None or q != 0 else None
+    if desk_holds_open is None:
+        return f"{R_HELD_BY_DESK}:unreadable"
+    return R_HELD_BY_DESK if desk_holds_open else None
 
 
 def max_hold_verdict(open_pkg: Any, now: datetime) -> Optional[Dict[str, Any]]:

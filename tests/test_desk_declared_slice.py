@@ -45,9 +45,12 @@ def test_yaml_declares_the_desk_slice_and_the_leg_scope_is_all_six():
     raw = yaml.safe_load((REPO / "config/slice_allocation.yaml").read_text())
     assert raw["declared_slices"] == {"bybit_1": {"claude_desk": 0.5}}
     strat = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["claude_desk"]
-    assert strat["symbols"] == SIX
+    assert strat["symbols"][:6] == SIX and strat["account_symbols"]["bybit_1"] == SIX
     acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
-    assert [a for a, c in acc.items() if "claude_desk" in (c.get("strategies") or [])] == ["bybit_1"]
+    # the declared slice is bybit_1's only: the other two desk books (DESK-PAPER-ACCOUNTS) have no slice support
+    assert sorted(a for a, c in acc.items() if "claude_desk" in (c.get("strategies") or [])) == [
+        "alpaca_paper", "bybit_1", "ib_paper"]
+    assert [a for a, c in acc.items() if c.get("position_model") == "slices"] == ["bybit_1"]
 
 
 def test_loader_reads_the_real_file():

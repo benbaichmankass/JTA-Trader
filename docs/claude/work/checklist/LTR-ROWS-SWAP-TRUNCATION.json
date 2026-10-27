@@ -1,0 +1,21 @@
+{
+  "id": "LTR-ROWS-SWAP-TRUNCATION",
+  "title": "Reviewer CAS on live-review/rows truncated reviews.jsonl (26 -> 4 rows); make the write size-independent",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OBSERVED 2026-10-27 15:26Z (manager): commit 3f1546c2d on live-review/rows (reviewer session_01AFoLuJhJFXH4vXJdqSrsxW, review LR-20261027T1522Z-pkg-8f9030af45e74dbd) swapped in a truncated reviews.jsonl: 26 valid rows -> 4 valid rows + 1 cut-off line; its own row was not written. The CAS (sha guard) passed because the reviewer read the right blob sha and then re-sent a truncated body. ROOT CAUSE (INFERRED): REVIEWER-BRIEF.md section 4 makes a model re-send the whole file through create_or_update_file; the rows-branch file is 71,121 B at 26 rows and grows with every review, so echo fidelity degrades (an earlier reviewer at 14:29Z also re-encoded line 23). REPAIRED: fb2640ef8 restores the file byte-for-byte to 3f1546c2d~1 (26 rows). main is unaffected (mirror appends; main has 83 lines). The AVAX swing row is lost; its due event will re-open. FIX (Tier 2, the watcher reads the branch): make the reviewer write size-independent, e.g. one create-only file per row (comms/live_review/rows/<review_id>.json) read by live_review_rows_watch.py and the mirror, or a VM-side appender; until then the watcher/mirror should refuse a swap whose line count drops. DETECTOR: a commit on live-review/rows that deletes any line of reviews.jsonl. CLOSES WHEN: a reviewer write no longer re-sends the file, and a test covers the shrink-refusal.",
+  "updated_at": "2026-10-27T15:53:44Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 735
+}

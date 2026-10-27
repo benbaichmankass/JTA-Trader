@@ -638,14 +638,14 @@ run of § "The operating loop" and the first turn after every compaction starts 
 | **V4** | Wake round-trips | old → new test trigger answered; assistant → new escalation answered; one live lane told the new id acknowledges. |
 | **V5** | Operator notified in one message | New link, what moved, what did **not** and why. |
 
-5. **STAND DOWN** only after V1–V5: old manager takes no further actions, its last message points to the new session; the **new** manager
+5. **STAND DOWN** only after V1–V5: old manager takes no further actions, its last message points to the new session **with a clickable link**, `https://claude.ai/code/<new session id>`, plus the new title (`Manager Session YYYY-MM-DD<letter>`), so an operator who opens the old session can reach the right one in one tap (operator, 2026-10-27); the **new** manager
 archives the old one after confirming a wake lands in the new session, then deletes the disabled old triggers. **If any check fails the old
 manager stays responsible and never goes quiet with a check open**; a stopped handover is a HANDOFF with gaps named.
 
 **Handover checklist** (copy into the handoff doc, tick with evidence): handoff doc merged (PR #__) · new session created by a shallow session,
 Opus, tags `manager` + `predecessor:<old id>`, depth __/8 · triggers recreated (n = __ of __), old disabled · prompts and checklist refs
 updated · new manager subscribed incl. ops-flags · V1 diff · V2 audit (0 on old id, incl. check-in `17 */3 * * *`) · V3 sweep with positive
-control · V4 round-trips (trigger id, assistant evidence, lane id) · V5 operator told · STAND DOWN done.
+control · V4 round-trips (trigger id, assistant evidence, lane id) · V5 operator told · STAND DOWN done (old manager's last message links the new session, https://claude.ai/code/<new id>).
 
 ## The ladder the manager is moving things along
 
