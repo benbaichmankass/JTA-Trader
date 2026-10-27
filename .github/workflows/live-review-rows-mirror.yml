@@ -17,6 +17,11 @@ name: live-review-rows-mirror
 # branch carries this file (main merged into it), only the schedule fires:
 # mirror lag <= ~1 h. That lag never touches the apply, which reads the pinned
 # rows-branch commit directly.
+# LTR-5 / DESK-9-GRADING: after the mirror, every review whose trade has CLOSED is priced against its
+# counterfactual (scripts/ops/live_review_grade.py --live --write-outcomes -> comms/live_review/outcomes.jsonl,
+# idempotent by review_id) so grading runs on this schedule instead of whenever a session remembers (the
+# first closed-trade review sat unpriced until 2026-10-26 for exactly that reason). A pricing failure is a
+# warning, never a stop (Prime Directive rule 7).
 # Tier 1: data copy between two branches of this repo; no runtime effect.
 
 on:
@@ -67,12 +72,27 @@ jobs:
           [ "$rc" -ne 2 ] || { echo "::error::could not read the rows branch"; exit 1; }
           python3 scripts/ci/check_live_review_records.py
 
+      - name: Price closed reviews (LTR-5)
+        id: price
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -o pipefail
+          pip install --quiet pandas
+          python3 scripts/ops/live_review_grade.py --live --write-outcomes > /dev/null \
+            || { echo "::warning::live_review_grade failed; the mirror still lands"; exit 0; }
+          python3 scripts/ci/check_live_review_records.py
+          if [ -n "$(git status --porcelain comms/live_review)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
       - name: Land on main (one self-landing PR)
-        if: steps.mirror.outputs.mirrored != '0'
+        if: steps.mirror.outputs.mirrored != '0' || steps.price.outputs.changed == '1'
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: comms/live_review
+          paths: comms/live_review comms/live_review/outcomes.jsonl
+          # outcomes are re-priced hourly, idempotent by review_id: on a stale-branch conflict adopt main's copy
+          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/live_review/outcomes.jsonl || true
           message: "live-review: mirror ${{ steps.mirror.outputs.mirrored }} row(s) from live-review/rows"
           pr-title: "live-review: mirror rows from live-review/rows"
           pr-body: "Automated mirror (auto-merge): rows on live-review/rows that main's comms/live_review/reviews.jsonl lacks, merged by review_id, plus the packets and outcome tables they cite. scripts/ops/live_review_rows_mirror.py."
