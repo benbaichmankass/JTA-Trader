@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261027-IVY3AC88-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-PAPER-ACCOUNTS 2026-10-27, reading src/core/coordinator.py _dispatch_exclusion_reason (symbol_exchange_routing) against config/instruments.yaml",
+    "rerun": "python3 -c \"import yaml;from src.core.coordinator import _instrument_exchange_for as x;a=yaml.safe_load(open('config/accounts.yaml'))['accounts']['ib_paper'];s=yaml.safe_load(open('config/strategies.yaml'))['strategies'];print([(l,y,x(y)) for l in a['strategies'] for y in (s.get(l) or {}).get('symbols') or [] if x(y)!='interactive_brokers'])\""
+  },
+  "state": "queued",
+  "what": "ib_paper rosters 5 ETF legs (spy_trend_long_1d, qqq_trend_long_1d, iwm_trend_long_1d, tlt_pullback_1d, gld_pullback_1d -- the last MOVED there 2026-10-25 by GLD-SOAK-REPLACE) whose symbols' instrument profiles say exchange: alpaca. Coordinator._dispatch_exclusion_reason's symbol_exchange_routing rule drops any package where IB is involved and the profile exchange differs, so (INFERRED from code + the profile map, runtime NOT observed) none of these legs can ever dispatch to ib_paper, although accounts.yaml's comment and ib_instruments.ib_order_market_type (equity whole-share sizing on IB) say they are meant to. First step: a diag read of order_packages/trades for account ib_paper x those 5 strategies (expect 0 dispatches; dispatch_drop lines reason=symbol_exchange_routing). If confirmed, fix: let the routing rule accept an IB account for an alpaca-profiled ETF when the account rosters the leg (or per-venue profile overrides), Tier-2; or drop the legs from ib_paper with a reason. Not fixed in DESK-PAPER-ACCOUNTS: outside its scope (the desk's IB slice is MES/MGC/MHG only)."
+}
