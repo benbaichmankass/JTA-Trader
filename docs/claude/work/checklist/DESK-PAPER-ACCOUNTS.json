@@ -2,7 +2,7 @@
   "id": "DESK-PAPER-ACCOUNTS",
   "title": "claude_desk live on alpaca_paper + ib_paper (paper only), each on its own venue's instruments, same desk mechanics",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "session_01AFoLuMF8yqGj5nivY3aC88",
   "lane": "DESK-PAPER-ACCOUNTS",
   "model": null,
@@ -13,8 +13,8 @@
     20668
   ],
   "blocked_on": [],
-  "note": "Dispatched 2026-10-27 by Manager Session 2026-10-27a (session_01AFoLuJi1vLTnYv9LbP6539) under MD-DEMO-FLOOR-BUILD. OPERATOR verbatim (chat 2026-10-27 ~15:58Z): \"I do want to have the desk live on the other paper accounts as well, so Alpaca and IB.\" Scope: alpaca_paper + ib_paper only; real-money accounts, mirrors and prop stay out. Supersedes the blocked DESK-17B-ALPACA-DESK-LEG (its option (a): a venue-aware per-account symbol scope). landing: hold (the manager merges). 2026-10-27 PR #20668 (landing: hold). Built: account_symbols scope (alpaca_paper SPY/QQQ/IWM/GLD/TLT, ib_paper MES/MGC/MHG), coordinator leg_account_scope + desk/strategy exclusivity refusal (journalled), market-hours gate (builder + desk_write + packet market field). Local: 1416 passed/105 skipped over 83 related test files; all 122 guards PASS. FOLLOW-UPS on this row: (1) config/desk_triggers.yaml event triggers for the ETF/CME symbols need market-hours-aware detectors (not built); (2) verify /api/bot/candles serves 5m SPY/MES for the short-hold packet; (3) why soak_state --backfill writes no Stage-1 contract for ib_paper/claude_desk; (4) after merge: observe the first desk trades row on alpaca_paper / ib_paper (receipts in the PR body). ib_paper ETF-leg routing filed as PI-20261027-IVY3AC88-0001.",
-  "updated_at": "2026-10-27T16:32:14Z",
+  "note": "Dispatched 2026-10-27 by Manager Session 2026-10-27a (session_01AFoLuJi1vLTnYv9LbP6539) under MD-DEMO-FLOOR-BUILD. OPERATOR verbatim (chat 2026-10-27 ~15:58Z): \"I do want to have the desk live on the other paper accounts as well, so Alpaca and IB.\" Scope: alpaca_paper + ib_paper only; real-money accounts, mirrors and prop stay out. Supersedes the blocked DESK-17B-ALPACA-DESK-LEG (its option (a): a venue-aware per-account symbol scope). landing: hold (the manager merges). 2026-10-27 PR #20668 (landing: hold). Built: account_symbols scope (alpaca_paper SPY/QQQ/IWM/GLD/TLT, ib_paper MES/MGC/MHG), coordinator leg_account_scope + desk/strategy exclusivity refusal (journalled), market-hours gate (builder + desk_write + packet market field). Local: 1416 passed/105 skipped over 83 related test files; all 122 guards PASS. FOLLOW-UPS on this row: (1) config/desk_triggers.yaml event triggers for the ETF/CME symbols need market-hours-aware detectors (not built); (2) verify /api/bot/candles serves 5m SPY/MES for the short-hold packet; (3) why soak_state --backfill writes no Stage-1 contract for ib_paper/claude_desk; (4) after merge: observe the first desk trades row on alpaca_paper / ib_paper (receipts in the PR body). ib_paper ETF-leg routing filed as PI-20261027-IVY3AC88-0001. 2026-10-27 17:50Z PR #20668 MERGED (head e6ff50a8, CI green). NOT yet deployed/observed by this lane. Closes when observed: per book, a log_file?name=desk_intake row verdict=accepted on an alpaca_paper (SPY/QQQ/IWM/GLD/TLT) or ib_paper (MES/MGC/MHG) symbol AND a journal?table=trades row strategy_name=claude_desk account_id=alpaca_paper|ib_paper with a venue order id (order_packages meta carries the decision_id). Named non-faults: meta.reason market_closed:* / market_closes_before_max_hold:*, trades error desk_symbol_held:*, desk_leg expired_unfilled.",
+  "updated_at": "2026-10-27T17:50:57Z",
   "updated_by": "session_01AFoLuMF8yqGj5nivY3aC88",
   "roadmap": [
     "L-DESK"
