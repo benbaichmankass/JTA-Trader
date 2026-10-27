@@ -700,6 +700,8 @@ def execute_pkg(
     _log_trade_to_journal(
         pkg, account_cfg, order, trade_id=trade_id, is_dry=is_dry,
         intent_reduce=reduce_only,
+        # DESK-MAKER-FILLS probe (b): None on every Market entry (no notes change).
+        extra_notes=order.get("maker_probe_notes"),
         sl_order_id=sl_order_id, tp_order_id=tp_order_id,
         # MI-227 / audit F-36: only the reduce branch consumes this, to resize
         # each shrunk parent's own tracked protective leg. Every other insert
@@ -1621,6 +1623,27 @@ def _submit_order(client: Any, order: dict, account_cfg: dict,
                     kwargs["slSize"] = qty_str
                     kwargs["tpOrderType"] = "Market"
                     kwargs["slOrderType"] = "Market"
+            # DESK-MAKER-FILLS probe (b): a leg declaring `entry_order: post_only_touch` enters as a
+            # post-only limit at the near touch, ONLY on a demo/paper Bybit derivatives account
+            # (maker_entry.resolve_entry_order is the real-money fence). The Market kwargs above are
+            # kept verbatim as the fallback the monitor sends after 5 min (maker_entry.sweep_maker_entries).
+            # Every other order: `market`, and nothing below changes.
+            from src.units.accounts import maker_entry
+            _entry_order, _entry_reason = maker_entry.resolve_entry_order(order, account_cfg, category)
+            if _entry_order == maker_entry.POST_ONLY_TOUCH:
+                _touch = maker_entry.touch_price(client, category, order["symbol"], order["side"])
+                if _touch is not None:
+                    _limit_str = quantize_price(_touch, tick)
+                    _fallback = maker_entry.apply_post_only(kwargs, _limit_str)
+                    order["maker_probe_notes"] = maker_entry.probe_notes(
+                        limit_price=float(_limit_str), touch=_touch,
+                        fallback_kwargs=_fallback, reason=_entry_reason,
+                    )
+                else:
+                    logger.warning(
+                        "_submit_order: %s post_only_touch declared but the touch is "
+                        "unreadable -- sending the Market entry", order["symbol"],
+                    )
             # ErrCode 10001 guard: for Buy (Long) orders Bybit requires
             # SL < last_price at submission time. Fast price drops between
             # signal generation and order arrival can violate this even
