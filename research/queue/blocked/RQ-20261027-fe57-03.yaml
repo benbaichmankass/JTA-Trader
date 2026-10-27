@@ -1,0 +1,95 @@
+id: RQ-20261027-fe57-03
+title: 'Desk edge program, lever 5: is the fitted model''s most confident tail a REVERSAL edge? Fade the top 1% / 0.2% of ridge-on-P+ picks on the era folds 2022-01..2023-10 (never scored for this) and require S3 >= +0.25 R'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  On the extended-era build (desk_edge_ceiling.py build --era: 4-hour cutoffs, six symbols, 10 market geometries incl. 1-bar and 4-bar holds), with ridge on the P+ features trained
+  walk-forward (train on earlier folds, 96 h embargo), does taking the OPPOSITE side of the model's top 1% (and, separately, top 0.2%) of actions in era test folds 3-6
+  (2022-01-01..2023-10-25) earn S3 >= +0.25 R with the family-corrected CI lower bound > 0 and S1 > 0?
+why_this_matters: >-
+  Operator 2026-10-27 ~16:40Z (relayed): "we need a bigger edge ... refining and optimizing to improve it". On the DEV window the model's most confident picks were reliably WRONG:
+  top 1% S3 -0.244 [-0.39, +0.07], top 0.2% S3 -0.400 [-0.59, -0.27], n 570 (comms/research/desk_edge/levers/levers-dev-ridge.json). That was found by looking (one of 24 lever lines),
+  so it is a hypothesis. A reversal of extreme, model-flagged momentum is a priori plausible and, if real, is large enough for the DEV-resolvable bar. The era folds 3-6 have never
+  been scored for this tail; this unit is registered before they are.
+power:
+  expected_n: 2000
+  min_detectable_effect: 0.25
+  effect_units: R
+  sd: 1.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.80
+  basis: >-
+    Era folds 3-6 hold 3,972 four-hour cutoffs (MEASURED: era_cutoffs() gives 1,086 + 1,104 + 1,086 + 696) x 120 actions (6 symbols x 2 sides x 10
+    geometries) = 476,640 test actions; 1% = about 4,770 faded actions, 0.2% = about 950. sd 1.6 R INFERRED from judged-1's paired sd. The faded picks cluster in time, so the effective n is the
+    number of weeks (about 95) with a design effect well above 1: MDE at 0.2% about 0.25 R (INFERRED, design effect ~5). STATED: the top-0.2% arm is near its MDE.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Historical candles only (Binance Vision USD-M perp 1h from 2020-08 and USD-M funding); nothing accrues. The n is set by the registered era grid and the two quantiles.
+decision_rule:
+  id: RULE-RQ20261027-FE57-03-FADE-TAIL
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/desk_edge_levers.py fade (FADE_FOLDS 3-6, FADE_QS 0.01 and 0.002, FADE_BAR 0.25): walk-forward ridge (alpha 100) on the P+ features of desk_edge_ceiling;
+    the top-q of the test actions of folds 3-6 by prediction; each replaced by the opposite-side action at the same cutoff, symbol and geometry; S1, S3 by the driver's cluster_stats;
+    S3 CI by the driver's weekly-cluster resampling at two-sided alpha 0.05 / 2.
+  rule: >-
+    PASS IF, for at least one of the two quantiles, faded S3 >= +0.25 R AND its corrected CI lower bound > 0 AND faded S1 > 0. A PASS registers a DEV-window confirm unit for the same
+    rule on the locked HOLDOUT (2025-05-01..2025-10-25, token-free) before any judge variant is built on it. FAIL otherwise: the DEV tail was selection noise or a DEV-only regime,
+    lever 5 is closed, and the table in docs/research/desk-edge-program-2026-10-27.md section 6.4 is updated. The quantiles, the folds, the learner and the bar are not changed after
+    the result.
+  what_it_does_not_do: >-
+    Token-free research. It places nothing, changes no brief, packet, config or roster; a PASS is a lead for the holdout, not Stage-0 evidence.
+blocked_on:
+- kind: work_item
+  ref: DESK-EDGE-PROGRAM
+  what: The `fade` mode and this unit are on PR claude/desk-edge-program (not merged).
+  clears_when: >-
+    scripts/research/desk_edge_levers.py with the `fade` mode is on main. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: the same bound as RQ-20261026-e535-03.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  basis: 'MEASURED on the lane container (4 cores): the era build took about 25 min for 9,111 packets; the ridge walk-forward on 1.09M actions a few minutes; candle fetch about 15 min.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_edge_levers.py
+  - fade
+  - --ceiling
+  - /tmp/desk_edge_era
+  - --candles
+  - /tmp/desk_edge_era_candles
+  - --funding
+  - /tmp/desk_edge_era_funding
+  - --fetch
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261027-fe57-03
+  timeout_minutes: 180
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-fe57-01
+- RQ-20261027-fe57-02
+- scripts/research/desk_edge_levers.py
+- scripts/research/desk_edge_ceiling.py
+- docs/research/desk-edge-program-2026-10-27.md
+last_dispatched_at: null

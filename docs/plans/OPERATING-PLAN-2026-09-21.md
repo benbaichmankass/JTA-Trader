@@ -167,6 +167,15 @@ needs to soak for more than one or two trades."*
   there is a mechanical fault like any other (fix it, or revert the config). **New strategies and new code
   paths still soak** as above; so does anything that needs code to run. This relaxes the *placement* of the
   mechanical check (live, watched), not the evidence bar, and it does not touch the prop superset below.
+- **The Claude desk (`claude_desk`): one passed paper/demo soak covers later packet, brief and symbol changes
+  (operator, chat 2026-10-27 ~16:00Z, binding).** Verbatim: *"once the demo soak is placed now, that on the paper
+  accounts, that's good enough. That's the same as passing a soak once there's an edge, because the mechanics are
+  the same. ... the format of the packets or the information or the symbols, like all those things don't matter. So
+  once the paper soak passes, that part is ready."* So after `claude_desk` passes its soak on the paper/demo
+  accounts, a later change to the scan packet (its format or the information in it), to the desk brief, or to the
+  symbols it covers does not need a new soak: the order path those trades take is the same. It does not relax Stage 0:
+  every such change still reaches a real-money book only on its own committed, pre-registered evidence record
+  (`docs/research/desk-edge-program-2026-10-27.md`). Other docs point here and do not restate it.
 
 **Stage 2 is one stage, not two.** The mirror and the live account carry the
 same strategies and take the same trades at all times (operator, 2026-09-21).
