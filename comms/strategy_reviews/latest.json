@@ -1,14 +1,14 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-26T05:15:15.038014+00:00",
- "utc_date": "2026-10-26",
+ "generated_at": "2026-10-27T05:21:36.530454+00:00",
+ "utc_date": "2026-10-27",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
- "graded": 27,
- "verdict_reached": 3,
- "actionable": 3,
+ "graded": 26,
+ "verdict_reached": 2,
+ "actionable": 2,
  "by_action": {
   "S1:insufficient-data": 18,
-  "S1:kill": 3,
+  "S1:kill": 2,
   "S2:abstain": 6
  },
  "question": "Per leg, graded with the instrument its STAGE calls for: Stage 2 (bybit_2/alpaca_live + mirrors) on MONEY via R4's demotion verdict; Stage 1 (bybit_1, alpaca_paper) on MECHANICS + COST FIDELITY via R5 -- never expectancy, per root CLAUDE.md's promotion ladder ('a live or paper book never establishes edge').",
@@ -32,27 +32,13 @@
   ],
   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
   "window_hours": 168,
-  "n_legs": 21,
-  "verdict_reached": 3,
-  "actionable": 3,
+  "n_legs": 20,
+  "verdict_reached": 2,
+  "actionable": 2,
   "mechanics_read_state": "measured",
   "cost_fidelity_read_state": "measured"
  },
  "rows": [
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "gld_pullback_1d",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:kill",
-   "verdict_reached": true,
-   "actionable": true,
-   "disposition": "kill",
-   "execution": "live",
-   "n_needed": null,
-   "eta": null,
-   "reason": "starved: 239 actionable intent(s) (9 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
-  },
   {
    "stage": "S1",
    "account": "alpaca_paper",
@@ -65,7 +51,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "starved: 184 actionable intent(s) (3 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+   "reason": "starved: 29 actionable intent(s) (2 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
   },
   {
    "stage": "S1",
@@ -79,7 +65,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "starved: 166 actionable intent(s) (3 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+   "reason": "starved: 11 actionable intent(s) (2 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
   },
   {
    "stage": "S1",
@@ -91,9 +77,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 2 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=21, exit=8); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 2 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=20, exit=8); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=21, exit n=8; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=20, exit n=8; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -107,7 +93,7 @@
    "execution": "live",
    "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (200 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
+   "reason": "starved (44 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -121,7 +107,7 @@
    "execution": "live",
    "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (254 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
+   "reason": "starved (98 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
