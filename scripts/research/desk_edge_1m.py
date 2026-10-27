@@ -22,6 +22,7 @@ bound on the maker lever (no fill-probability or adverse-selection haircut), sta
 
   build  --klines DIR --out DIR [--workers 4]   cutoffs x actions x labels (both cost scenarios), features
   run    --out DIR --evidence DIR               walk-forward learners, controls, per-hold verdicts, hold-rule comparison
+  mechanism --out DIR --evidence DIR            the model-free volatility selector (is S3 earnable from cost alone?)
 """
 from __future__ import annotations
 
@@ -362,6 +363,28 @@ def cmd_run(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mechanism(a: argparse.Namespace) -> int:
+    """Doc section 4.6: a MODEL-FREE selector (highest ATR% first, the same policy) - its S3 and the GROSS R / cost of its
+    picks. If it earns S3 with ~0 gross R, S3 at that hold can be earned from cost selection alone."""
+    import pickle
+    d.SEC = BAR_SEC
+    acts = pickle.loads((Path(a.out) / "actions.pkl").read_bytes())
+    ex = pickle.loads((Path(a.out) / "features.pkl").read_bytes())
+    res = {}
+    for h in sorted({r["hold"] for r in acts}):
+        rows = [r for r in acts if r["hold"] == h and r["fold"] in ce.TEST_FOLDS]
+        picks = ce.policy_picks(rows, np.array([ex[r["cutoff"]][r["symbol"]]["atr_pct"] for r in rows]))
+        st = d.cluster_stats(ce.s_rows(rows, picks), draws=2000)
+        res[str(h)] = {"vol_rule_S3": st["paired_diff_vs_random"], "S3_ci95": st["paired_diff_ci95"], "S1": st["mean_net_r"],
+                       "cost_all": float(np.mean([r["cost_r"] for r in rows])), "cost_picks": float(np.mean([rows[j]["cost_r"] for j in picks])),
+                       "gross_picks": float(np.mean([rows[j]["net_r"] + rows[j]["cost_r"] for j in picks])),
+                       "gross_all": float(np.mean([r["net_r"] + r["cost_r"] for r in rows]))}
+    Path(a.evidence).mkdir(parents=True, exist_ok=True)
+    (Path(a.evidence) / "vol-rule-mechanism.json").write_text(json.dumps(res, indent=1) + "\n")
+    print(json.dumps({h: round(v["vol_rule_S3"], 3) for h, v in res.items()}))
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="mode", required=True)
@@ -377,6 +400,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     r.add_argument("--out", required=True)
     r.add_argument("--evidence", required=True)
     r.set_defaults(fn=cmd_run)
+    mc = sub.add_parser("mechanism", help="doc 4.6: model-free volatility selector, its S3 and the gross R of its picks")
+    mc.add_argument("--out", required=True)
+    mc.add_argument("--evidence", required=True)
+    mc.set_defaults(fn=cmd_mechanism)
     a = ap.parse_args(argv)
     return a.fn(a)
 
