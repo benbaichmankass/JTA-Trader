@@ -1,0 +1,101 @@
+id: RQ-20261027-3e41-09
+title: 'skip-hours lever, trend_donchian_sol_prop: does an arm (SA/SU) beat the declared leg net of the full cost stack (dR >= 1.0 R, >= 4 of 6 calendar folds, no worse drawdown)?'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-REGIME
+programme: P5
+question: On 2020-07-01..2026-10-26 23:59, with the harness's venue-aware fee + slippage + funding stack (the same argv builder as the evidence builder), does any pre-registered arm
+  of a session-hour entry skip (--skip-hours) on trend_donchian_sol_prop (SA = --skip-hours=0,1,2,3,4,5,6,7 / SU = --skip-hours=12,13,14,15) beat the leg as declared (B) by >= 1.0 R
+  net, with no worse max drawdown, in >= 4 of 6 calendar folds? Arm values are fixed here before any run; offline Stage-0 re-measurement, never a book decision.
+why_this_matters: 'Daily authoring lane 2026-10-27 (research-slo runnable_floor 50 < 64, theme_share_min_ratio 0.45 < 0.5; short themes regime / new_strategy_prop). A leg x lever cell
+  with no unit in research/queue (checked: no queued, done or blocked unit pairs trend_donchian_sol_prop with --skip-hours). Prop legs carry a daily-drawdown limit, so a lever that trims
+  the loss tail is worth more there than on a plain book. Trial count for this cell: 1 unit, 2 arms (a PASS is confirmed on a disjoint window before any Tier-3 proposal).'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n is an ESTIMATE, not a measurement: the baseline count for this leg over the window
+    is not re-measured here; below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance
+    test; the calendar-fold majority refuses a one-period artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles (trend_donchian_sol_prop); the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ202610273e4109-SKIP_HOURS
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack, never a zero default): total_trades,
+    net_total_r, max_drawdown_r, plus net_r per fold over 6 equal calendar spans (same boundaries every arm). Arms: B = leg as declared; SA = --skip-hours=0,1,2,3,4,5,6,7 / SU = --skip-hours=12,13,14,15.
+    Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B.'
+  rule: 'INDETERMINATE IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 4 of 6. PASS IF any candidate
+    passes (best = highest dR): a LEAD, followed by ONE confirmation unit on a disjoint window with the same statistic and bar; only a confirmed pass becomes a Tier-3 PROPOSAL note on
+    the owning checklist row for the manager, never a config edit. FAIL IF none passes with n(B) >= 39: this configuration is closed on this window and the record names the arm that
+    moved closest (the lever family stays open; a family retirement needs a review record per family_retirement_policy.yaml). The bar, the drawdown clause, the fold majority, the 39
+    floor and the arm values are not changed after any result.'
+  min_n: '39'
+  what_it_does_not_do: 'Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config, place an order or touch a roster; a single-leg
+    backtest lever is not edge and not a P&L claim, and a PASS is a lead, not a promotion.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 250
+  confidence: 0.15
+  basis: 'stand-in: a lever on a money/prop leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261022-326f-05 and RQ-20261023-a1f3-11 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - B=
+  - --arm
+  - SA=--skip-hours=0,1,2,3,4,5,6,7
+  - --arm
+  - SU=--skip-hours=12,13,14,15
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-26 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --folds
+  - '6'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261027-3e41-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- RQ-20261022-326f-05
+- RQ-20261023-a1f3-11
+last_dispatched_at: null
