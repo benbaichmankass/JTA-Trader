@@ -147,6 +147,9 @@ def run(decisions: Path, outcomes: Path, candles: Callable[[str, str], list[Bar]
         if d["action"] != "propose_entry":
             new.append(outcome_row(d, {"kind": "not_computable", "reason": NO_TRADE_REASON}, now, None))
             continue
+        if d.get("basis") == "mechanics":  # DESK-18E probe: a mechanics test, not an edge sample -- never replayed into a scorer
+            new.append(outcome_row(d, {"kind": "not_computable", "reason": "mechanics probe: excluded from edge replay"}, now, None))
+            continue
         pr = d["proposal"]
         if pr["onboarding"] != "onboarded":
             new.append(outcome_row(d, {"kind": "not_computable", "reason": "onboarding pending: no priced candles"}, now, None))
