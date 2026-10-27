@@ -41,7 +41,8 @@ def test_strategy_yaml_pins_sweep_params():
     # on both the XAUUSD spot proxy (-50.7R) AND real GC=F 1h (-15.5R) — no
     # validated edge to soak, so it logs order packages but sends no paper order
     # (docs/research/recombination-sweep-2026-06-18.md follow-up).
-    assert cfg["execution"] == "shadow"
+    # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): shadow -> live on ib_paper (paper money).
+    assert cfg["execution"] == "live"
     assert cfg["symbols"] == ["MGC"]
     assert cfg["timeframe"] == "1h"
     # exactly the sweep-validated xauusd_trend_1h defaults (same gold underlying);
