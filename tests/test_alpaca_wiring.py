@@ -776,6 +776,8 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): uso_trend_1h returns to its demo floor.
         # (qqq/spy/tlt_pullback_1h stay off: same symbol as a 1d leg, no slice support here.)
         "uso_trend_1h",
+        # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to SPY/QQQ/IWM/GLD/TLT.
+        "claude_desk",
     ]
     # 2026-06-15: the old `demo: true` category stamp was superseded by
     # account_class (non-Bybit, so demo was only the category marker).
