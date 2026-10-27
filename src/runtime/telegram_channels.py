@@ -147,6 +147,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/decision_channel_alert.py": ("alert",),
     "src/runtime/exit_loop_health.py": ("alert",),
     "src/runtime/ltr_first_proof.py": ("alert",),   # LTR first-proof pings, one per stage, once ever (operator 2026-10-26)
+    "src/runtime/live_review_rows_watch.py": ("alert",),   # LTR-ROWS-SWAP-TRUNCATION: ONE flag per incident when the rows branch shrank (tip refused)
     "src/runtime/losing_streak_alert.py": ("alert",),
     "src/runtime/silent_refusal_alert.py": ("alert",),
     "src/runtime/starved_account_alert.py": ("alert",),
