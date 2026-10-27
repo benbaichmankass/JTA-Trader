@@ -631,7 +631,16 @@ def _allocate_slices(
             logger.warning("arbitration_fanout: slice scoring failed for %s on %s",
                            name, account_id, exc_info=False)
             row["dropped"].append(name)
-    weights, basis = _ae.allocation_weights(scores)
+    # A DECLARED slice (config/slice_allocation.yaml::declared_slices) is the leg's own budget:
+    # it takes weight 1.0 of THAT budget and is left out of the pooled split, so it neither
+    # dilutes the other contenders nor is diluted by them.
+    declared = _ae.declared_slices(account_id)
+    pooled = {k: v for k, v in scores.items() if k not in declared}
+    weights, basis = _ae.allocation_weights(pooled)
+    for name in scores:
+        if name in declared:
+            weights[name] = 1.0
+            basis = basis if pooled else "declared_slice"
     if not weights:
         row["state"] = "elected_undispatchable"
         return

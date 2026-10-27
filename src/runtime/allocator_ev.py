@@ -176,6 +176,7 @@ DEFAULT_ALLOCATION_CONFIG: dict = {
                 "c_bt": 0.20, "c_live": 0.15},
     "live_window_trades": 30,
     "symbol_budget_trades": 1.0,
+    "declared_slices": {},
 }
 _TTL_S = 300.0
 _CFG_CACHE: Optional[tuple] = None
@@ -191,7 +192,8 @@ def load_allocation_config(force: bool = False) -> dict:
         return _CFG_CACHE[1]
     cfg = {"weights": dict(DEFAULT_ALLOCATION_CONFIG["weights"]),
            "live_window_trades": DEFAULT_ALLOCATION_CONFIG["live_window_trades"],
-           "symbol_budget_trades": DEFAULT_ALLOCATION_CONFIG["symbol_budget_trades"]}
+           "symbol_budget_trades": DEFAULT_ALLOCATION_CONFIG["symbol_budget_trades"],
+           "declared_slices": {}}
     try:
         import yaml  # type: ignore
 
@@ -204,10 +206,27 @@ def load_allocation_config(force: bool = False) -> dict:
             cfg["live_window_trades"] = max(1, int(raw["live_window_trades"]))
         if raw.get("symbol_budget_trades") is not None:
             cfg["symbol_budget_trades"] = max(0.0, float(raw["symbol_budget_trades"]))
+        if isinstance(raw.get("declared_slices"), dict):
+            cfg["declared_slices"] = {
+                str(a): {str(leg): float(b) for leg, b in (legs or {}).items() if float(b) > 0}
+                for a, legs in raw["declared_slices"].items() if isinstance(legs, dict)
+            }
     except Exception as exc:  # noqa: BLE001
         logger.warning("allocator_ev: allocation config unreadable (%s) — pinned defaults", exc)
     _CFG_CACHE = (now, cfg)
     return cfg
+
+
+def declared_slices(account_id: str, *, config: Optional[dict] = None) -> dict:
+    """``{strategy: budget_trades}`` — legs holding a DECLARED slice on *account_id*.
+
+    A declared slice is the leg's OWN per-(account, symbol) risk budget, in units of the
+    account's one-trade risk, taken beside the shared pool (config/slice_allocation.yaml
+    ``declared_slices``). The leg is not scored against the pooled contenders, never dilutes
+    their share, and its entry is not shrunk by their open slices (and theirs not by it).
+    """
+    cfg = config if config is not None else load_allocation_config()
+    return dict((cfg.get("declared_slices") or {}).get(str(account_id)) or {})
 
 
 def backtest_input(strategy: str, *, evidence_dir: Optional[_Path] = None) -> tuple:

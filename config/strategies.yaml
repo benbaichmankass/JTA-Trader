@@ -3183,13 +3183,14 @@ strategies:
     execution: shadow        # shadow-guard: allow — DESK-17 dispatch (manager, operator authority, 2026-10-26): "... with execution: shadow (shadow first; it logs order packages and sends nothing)". A flip to live is a later Tier-3 / data-backed decision.
     decision_bar: closed     # the builder decides from the proposal queue, not a forming bar: no catch-up
     confidence: 0.5          # the package confidence (RiskManager's scalar only sizes DOWN from the account basis)
-    symbols: [AVAXUSDT]      # LOAD-BEARING scope: the one bybit_1 symbol no other rostered leg trades. Each
-                             # of BTC/ETH/SOL/XRP/ADA already has a bybit_1 leg on the same one-way net position,
-                             # and same-symbol-allocation-guard needs a recorded allocation (or NETTED-SLICES slice
-                             # support) before a second leg shares it -- the desk leg has no allocator history to
-                             # weight it with. A proposal on any other symbol is never evaluated. Widening: row
-                             # DESK-17 remainder. symbols: is also venue-agnostic (it would make every rostering
-                             # account pull it), which is why the leg is single-venue (row DESK-17B).
+    symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]  # 2026-10-27 DESK-WIDEN (Tier-3, bybit_1 DEMO only, manager
+                             # dispatch under MD-DEMO-FLOOR-BUILD; operator vision: the desk scans all markets). Was [AVAXUSDT]:
+                             # the one bybit_1 symbol no other leg trades. The same-symbol-allocation-guard concern is met by
+                             # bybit_1's slice support (SLICE_SUPPORT_ACCOUNTS) PLUS claude_desk's DECLARED slice
+                             # (config/slice_allocation.yaml::declared_slices, 0.5 trade of its own budget): a desk entry is
+                             # never blocked or shrunk by a strategy leg's open slice and never dilutes theirs. symbols: is
+                             # venue-agnostic, which is why the leg stays rostered on bybit_1 ONLY (row DESK-17B).
+                             # ROLLBACK: symbols back to [AVAXUSDT] (and drop the declared_slices block).
     tp_source: desk_proposal # the TP is each proposal's own predictive level (tp.level + tp.basis + tp.p_hit,
                              # schema-required, desk-records-guard-checked) — never a tp_r / class default
     shadow_model_ids: []

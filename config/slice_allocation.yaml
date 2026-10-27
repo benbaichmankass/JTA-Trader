@@ -53,3 +53,18 @@ live_window_trades: 30
 # symbol by default. Open slices of strategies NOT contending this tick count
 # against it at their CURRENT stop (a stop trailed to break-even frees budget).
 symbol_budget_trades: 1.0
+
+# DECLARED SLICES (lane DESK-WIDEN, 2026-10-27; Tier-3 sizing meaning, demo account only).
+# {account: {leg: budget_trades}} -- a leg listed here holds its OWN per-(account, symbol) risk
+# budget, in units of the account's one-trade risk, beside the shared pool above. Effect:
+#   * its entry is sized at weight 1.0 of that budget (qty = min(sized, budget * sized)),
+#   * it is left out of the pooled contender split, so it never dilutes the strategy legs' shares,
+#   * a strategy leg's open slice never shrinks or blocks it (and its slice is not counted against theirs),
+#   * two declared legs on one symbol still share each other's budget.
+# Worst case on one (account, symbol): symbol_budget_trades + the declared budget (1.0 + 0.5 = 1.5
+# trades of risk). It is bybit_1 DEMO money only. A declared leg holding the OPPOSITE side of an open
+# slice is still refused (`opposite_slice_one_way_book`): that is venue physics, not budget.
+# ROLLBACK: delete the block (the leg falls back into the pooled split, as every other leg).
+declared_slices:
+  bybit_1:
+    claude_desk: 0.5

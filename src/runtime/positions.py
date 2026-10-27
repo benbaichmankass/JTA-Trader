@@ -771,13 +771,27 @@ def admit_slice(
     contenders = list(alloc.get("contenders") or [strategy]) if isinstance(alloc, Mapping) else [strategy]
     if strategy not in contenders:
         contenders.append(strategy)
-    held = held_stop_risk(slices, exclude_strategies=contenders)
+    from src.runtime import allocator_ev as _ae
+    declared = _ae.declared_slices(account_id)
+    own_budget = declared.get(strategy)
+    if own_budget is not None:
+        # DECLARED slice: its own budget, weight 1.0, counted only against other declared
+        # slices -- a strategy leg's open slice can neither block nor shrink it.
+        weight = 1.0
+        held = held_stop_risk(slices, exclude_strategies=[
+            str(r.get("strategy_name")) for r in slices
+            if str(r.get("strategy_name")) not in declared] + contenders)
+    else:
+        held = held_stop_risk(slices, exclude_strategies=list(contenders) + list(declared))
     detail.update({"weight": weight, "contenders": sorted(contenders), "held_risk": held,
                    "allocation_basis": (alloc.get("basis") if isinstance(alloc, Mapping) else None)})
     if held is None:
         return {"ok": False, "reason": "slice_risk_unmeasurable", "qty": 0.0,
                 "own_signed": own, "detail": detail}
-    if budget_trades is None:
+    if own_budget is not None:
+        budget_trades = float(own_budget)
+        detail["declared_slice"] = True
+    elif budget_trades is None:
         from src.runtime.allocator_ev import load_allocation_config
         budget_trades = float(load_allocation_config().get("symbol_budget_trades", 1.0))
     try:
