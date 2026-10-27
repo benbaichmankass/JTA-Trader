@@ -104,6 +104,36 @@ Same harness, features, learners, policy, controls and verdict definitions as §
 - **Holding period is an axis (amendment, still before the run; operator popup ~16:10Z relayed by the manager: *"Yes, holding period is a lever (Recommended)"*).** The live `claude_desk` leg is capped at a 60-minute hold (DESK-18E, PR #20662); judged-1 held 48 bars. The era action set adds three short holds on the 1h grid: `H1a` (stop 0.5 ATR, 1.0 R, **1 bar = 60 min**), `H1b` (1.0 ATR, 1.0 R, 1 bar), `H4` (0.75 ATR, 1.5 R, 4 bars), beside the 12/24/48/96-bar geometries. Every action records its cost in R. **Per horizon** the run reports each learner's policy restricted to that horizon, the unselected mean net R and the mean cost in R, and labels the horizon `no_extractable_s3` (every corrected S3 upper bound < +0.10 R: no judge spend on it), `candidate` (best point S3 > 0 and not excluded) or `not_excluded`. A 1-bar hold on 1h bars resolves the stop/target order inside one bar by the driver's stop-first rule; a 5-minute-bar replay is the finer instrument and is not built here.
 - **Population limits, stated before the run:** six symbols only (the driver's registered universe); 2021-2023 includes the 2021 bubble and the 2022 crash, so a regime-specific learner can win one era and lose another; that is what the fold clause is for.
 
+### 4.4 EXTENDED ERA (diagnostic only, per § 6.1) — registered verdict **inconclusive / inconclusive, instrument valid**
+
+`comms/research/desk_edge/ceiling-era/ceiling.json`. Population: 9,111 packets (7,986 four-hourly over 2021-01-15..2023-10-25 and the DEV window, plus 1,498 judged-1 cutoffs), 1,092,687 filled actions over 10 geometries (incl. the 1-bar and 4-bar holds), test folds 3-10, family 0.05/12.
+- Policy S3 (corrected CI): P ridge +0.015 [-0.11, +0.15], logit +0.014 [-0.06, +0.08], GBDT +0.051 [-0.13, +0.25]; **P+ GBDT +0.104 [-0.06, +0.28]** (positive in 8 of 8 test folds, +0.02 to +0.15), ridge -0.013, logit -0.022. Controls: planted present, shuffled not. **No tier is `present`; none is `absent`.**
+- Per horizon (1h bars, best learner): 1 bar S3 +0.041 [+0.01, +0.07], 4 bars +0.035, 12 bars +0.032 (`no_extractable_s3` against the run's +0.10 line); 24 / 48 / 96 bars +0.069 / +0.085 / +0.119, CIs spanning 0. Mean cost in R falls from 0.197 (1 bar) to 0.084 (96 bars); unselected S1 from -0.235 to -0.059.
+- **Read under the operator's bar (+0.25 R): nothing in the 1h-bar packet world comes near it, over 190 weeks or 35.** The P+ GBDT's +0.10 is consistent across eras and is the largest 1h-bar signal measured, at less than half the bar.
+
+### 4.5 The 1-MINUTE short-hold ceiling (`RQ-20261027-fe57-02`) — registered verdict **inconclusive; S3 is real and LARGE at short holds, S1 is negative at every hold**
+
+`comms/research/desk_edge/ceiling-1m/verdict.json` (`scripts/research/desk_edge_1m.py`). Population: Binance USD-M perp 1m bars, DEV window, 7,632 hourly cutoffs x 6 symbols x 2 sides x 7 holds = 641,088 actions; test folds 2-4; 3,892 policy picks per hold per learner; family 0.05/42. Controls: planted signal `candidate` at 15-480 min (at 5 min even a planted signal cannot pay a 0.97 R cost), shuffled labels never `candidate`: **instrument valid**.
+
+| hold | mean cost R (taker) | unselected S1 taker | best: GBDT taker S3 [corrected CI] | its S1 | GBDT maker-entry S3 | its S1 | verdict |
+|---|---|---|---|---|---|---|---|
+| 5 min | 0.97 | -0.97 | **+0.609 [+0.44, +0.94]** | -0.47 | +0.448 | -0.34 | inconclusive (S1 < 0) |
+| 15 min | 0.56 | -0.55 | **+0.366 [+0.27, +0.52]** | -0.26 | +0.261 | -0.19 | inconclusive (S1 < 0) |
+| 30 min | 0.40 | -0.39 | +0.209 [+0.13, +0.34] | -0.21 | +0.149 | -0.15 | inconclusive |
+| 60 min | 0.28 | -0.28 | +0.157 [+0.10, +0.26] | -0.14 | +0.124 | -0.10 | inconclusive |
+| 120 min | 0.20 | -0.20 | +0.124 [+0.07, +0.20] | -0.09 | +0.083 | -0.07 | no_edge (< +0.25) |
+| 240 min | 0.14 | -0.14 | +0.074 [+0.03, +0.13] | -0.09 | +0.046 | -0.07 | no_edge |
+| 480 min | 0.10 | -0.10 | +0.053 [+0.00, +0.11] | -0.05 | +0.046 | -0.04 | no_edge |
+
+Ridge shows the same shape at about half the size (+0.34 at 5 min, +0.19 at 15 min).
+- **This is the first information the program has found.** At 5-15 minutes a fitted model on 1m bars and taker flow picks entries whose excess over a random entry with the same bracket is +0.37 to +0.61 R, with family-corrected intervals far from zero. It is not in the 1h packet (§ 4.1, § 4.4).
+- **Cost removes all of it.** The measured taker round trip costs more than the edge at every hold. With maker entry and taker exit (9 bps) S1 is still negative. With maker on BOTH sides (4 bps; INFERRED: S1_taker + cost_taker x (1 - 4/12.3), assuming every maker order fills at the modelled price) the estimate is about **+0.19 R at 5 min, +0.11 at 15 min, +0.06 at 30 min**. That is an upper bound: an SL is a stop-market order (taker), and maker fills select against you.
+- **Hold rule:** running to 120 / 240 / 480 minutes raises S1 over the hard 60-minute cap by +0.04 / +0.06 / +0.09 R (corrected CIs exclude 0), by paying cost over a longer move. It never reaches the registered +0.10 gain (`wins: false` everywhere), and S1 stays negative at every H. **The hold rule does not win; the live cap stays as is on this evidence.**
+
+### 4.6 Robustness of the short-hold S3 — registered here BEFORE it runs (post-hoc diagnostic, not a new verdict)
+
+An S3 of +0.6 R at 5 minutes on 1m bars could be bar microstructure (the last 1m bar's close and taker flow predicting the next open), which a desk acting seconds to minutes later cannot capture. **Test:** rebuild holds 5/15/30/60 with the entry DELAYED by 1 bar and by 5 bars after the feature bar (`desk_edge_1m.py build --delay 1|5 --holds 5,15,30,60`), and re-run unchanged. **Rule:** if at delay 1 the GBDT taker S3 at 5 and 15 minutes keeps at least half its undelayed value with the corrected CI lower bound > 0, the information is treated as **real at a 1-minute latency**. Otherwise it is **bar microstructure, not tradable** at our latency, and § 6.4 rank 2 says so. Delay 5 prices a 5-minute decision latency (the live desk's realistic one).
+
 ### 4.3 The dev-loop pilot: V1 (the current judge) — registered verdict **SCREEN_FAIL**, and why
 
 Unit `RQ-20261027-fe57-01`, registered (commit ee847dfa) before any packet was judged. Judged by 10 Sonnet plan subagents x 10 packets (no API credits), each limited to reading its own batch file and writing its own output. Evidence: `comms/research/desk_edge/dev-1/V1/` (`ranks.jsonl`, `verdict.json`, `rejected/`). The lane scored it with the unit's own command; the dispatcher's run after merge is the registered landing.

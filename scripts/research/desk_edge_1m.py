@@ -187,9 +187,9 @@ def _build_symbol(sym: str) -> List[dict]:
             continue
         fold = d.fold_of(c)
         for side, sg in ce.SIDES:
-            for h in HOLDS_MIN:
+            for h in _G.get("holds", HOLDS_MIN):
                 g = dict(geometry(h), side=sg)
-                t = d.transplant(s, i, g)
+                t = d.transplant(s, i + _G.get("delay", 0), g)     # features stay at bar i; the entry decision is delayed
                 if t is None or t.state != "filled":
                     continue
                 bk = (fold, side, h)
@@ -217,7 +217,7 @@ def cmd_build(a: argparse.Namespace) -> int:
     cuts = cutoffs()
     if a.limit:
         cuts = cuts[:: max(1, len(cuts) // a.limit)]
-    _G.update(mkt=mkt, flow=flow, cuts=cuts)
+    _G.update(mkt=mkt, flow=flow, cuts=cuts, delay=a.delay, holds=tuple(int(x) for x in a.holds.split(",")) if a.holds else HOLDS_MIN)
     with mp.get_context("fork").Pool(a.workers) as pool:
         parts = pool.map(_build_symbol, syms)
     acts = [r for p in parts for r in p]
@@ -228,6 +228,7 @@ def cmd_build(a: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / "actions.pkl").write_bytes(pickle.dumps(acts))
     (out / "features.pkl").write_bytes(pickle.dumps(ex))
+    (out / "meta.json").write_text(json.dumps({"delay_bars": a.delay, "holds": list(_G["holds"])}) + "\n")
     print(json.dumps({"cutoffs": len(cuts), "actions": len(acts), "by_hold": {h: sum(1 for r in acts if r["hold"] == h) for h in HOLDS_MIN}}))
     return 0
 
@@ -261,6 +262,8 @@ def per_hold(rows: List[dict], preds: Dict[str, np.ndarray], alpha: float) -> Di
     hold = np.array([r["hold"] for r in rows])
     for h in HOLDS_MIN:
         m = np.nonzero(hold == h)[0]
+        if not len(m):
+            continue
         hr = [rows[j] for j in m]
         ent: Dict[str, Any] = {"actions": len(hr), "mean_cost_r_taker": float(np.mean([r["cost_r"] for r in hr])) if hr else None,
                                "unselected_S1_taker": float(np.mean([r["net_r"] for r in hr])) if hr else None,
@@ -324,7 +327,7 @@ def cmd_run(a: argparse.Namespace) -> int:
         preds[lr] = ce.walk_forward(acts, X, lr)[te]
         print(json.dumps({"learner": lr, "done": True}), flush=True)
     ph = per_hold(rows, preds, alpha)
-    hr = hold_rule(ph, alpha)
+    hr = hold_rule(ph, alpha) if str(HARD_CAP_MIN) in ph and all(str(h) in ph for h in (120, 240, 480)) else {}
     # controls on GBDT and ridge (taker): a planted signal must reach `candidate` somewhere; shuffled labels must not
     y = np.array([r["y"] for r in acts])
     planted = y + np.random.default_rng(SEED + 1).normal(0, 2.0 * y.std(), len(y))
@@ -361,6 +364,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     b.add_argument("--out", required=True)
     b.add_argument("--workers", type=int, default=4)
     b.add_argument("--limit", type=int, default=0, help="thin the cutoff grid to about this many (smoke tests)")
+    b.add_argument("--delay", type=int, default=0, help="enter this many 1m bars AFTER the feature bar (robustness, doc section 4.5)")
+    b.add_argument("--holds", default="", help="comma list of holds to build (default: all registered)")
     b.set_defaults(fn=cmd_build)
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
