@@ -27,7 +27,7 @@ TWO FEATURE TIERS
       the six-symbol cross-section), calendar, symbol identity, and point-in-time perp funding (Binance Vision
       USD-M fundingRate). Feature groups are ablated one at a time, so a P+ win names WHICH information.
 
-  build  --out DIR --candles DIR [--funding DIR] [--workers N]   packets -> features + labels (cached)
+  build  --out DIR --candles DIR [--funding DIR] [--workers N] [--era]   packets -> features + labels (cached)
   run    --out DIR --evidence DIR                                 walk-forward learners, controls, verdict
 """
 from __future__ import annotations
@@ -67,6 +67,44 @@ HORIZONS = (4, 12, 48)
 SESSIONS = ("asia", "europe", "us", "late_us")
 TRENDS = ("chop", "transitional", "trending")
 RET_K = (1, 4, 12, 24, 72, 168, 336)
+
+# ----------------------------------------------------------------------------- the EXTENDED-ERA run (doc section 4.2)
+# Registered after the DEV-window run showed its resolution limit (about 33 out-of-sample weeks) and BEFORE this run.
+# Six half-year folds before the program's FULL-RUN window (which starts 2023-11-01; desk_edge_devloop.FULL_RUN) plus
+# the driver's four DEV folds; the HOLDOUT and FULL-RUN windows are never read as cutoffs.
+ERA_BOUNDS = (datetime(2021, 1, 15, tzinfo=timezone.utc), datetime(2021, 7, 1, tzinfo=timezone.utc),
+              datetime(2022, 1, 1, tzinfo=timezone.utc), datetime(2022, 7, 1, tzinfo=timezone.utc),
+              datetime(2023, 1, 1, tzinfo=timezone.utc), datetime(2023, 7, 1, tzinfo=timezone.utc),
+              datetime(2023, 10, 25, tzinfo=timezone.utc))
+ERA_GRID_STEP_H = 4
+ERA_DEV_FOLD_OFFSET = 6                              # DEV fold k is era fold k + 6
+ERA_TEST_FOLDS = (3, 4, 5, 6, 7, 8, 9, 10)
+ERA_N_CONFIGS = 12                                   # both ceiling runs' configurations: the family for this run
+
+
+def era_fold(cutoff: int) -> int:
+    for k in range(len(ERA_BOUNDS) - 1):
+        if d._epoch(ERA_BOUNDS[k]) <= cutoff < d._epoch(ERA_BOUNDS[k + 1]):
+            return k + 1
+    if d._epoch(d.WINDOW_START) <= cutoff < d._epoch(d.WINDOW_END):
+        return d.fold_of(cutoff) + ERA_DEV_FOLD_OFFSET
+    raise ValueError(f"cutoff {cutoff} is outside the era folds (the holdout and full-run windows are never read)")
+
+
+def era_fold_window(fold: int) -> Tuple[datetime, datetime]:
+    """The window a fold's random-entry pool is drawn from (the fold itself)."""
+    if fold <= len(ERA_BOUNDS) - 1:
+        return ERA_BOUNDS[fold - 1], ERA_BOUNDS[fold]
+    s0, e0 = d._epoch(d.WINDOW_START), d._epoch(d.WINDOW_END)
+    k = fold - ERA_DEV_FOLD_OFFSET
+    lo = s0 + (e0 - s0) * (k - 1) / d.N_FOLDS
+    hi = s0 + (e0 - s0) * k / d.N_FOLDS
+    return datetime.fromtimestamp(math.ceil(lo), tz=timezone.utc), datetime.fromtimestamp(math.ceil(hi), tz=timezone.utc)
+
+
+def era_cutoffs() -> List[int]:
+    out = list(range(d._epoch(ERA_BOUNDS[0]), d._epoch(ERA_BOUNDS[-1]), ERA_GRID_STEP_H * d.SEC))
+    return out + list(range(d._epoch(d.WINDOW_START), d._epoch(d.WINDOW_END), ERA_GRID_STEP_H * d.SEC))
 
 
 # ----------------------------------------------------------------------------- cutoffs
@@ -282,11 +320,12 @@ def _one_cutoff(args: Tuple[int, int, int]) -> Optional[dict]:
         return {"cutoff": ce, "error": str(e)[:200]}
     pf = packet_features(m, key)
     ex = {s: _G["extra"].sym(s, mkt[s].last_closed(ce)) for s in mkt}
-    return {"cutoff": ce, "fold": d.fold_of(ce), "packet_id": m["meta"]["packet_id"], "pf": pf, "ex": ex}
+    return {"cutoff": ce, "fold": _G.get("fold_fn", d.fold_of)(ce), "packet_id": m["meta"]["packet_id"], "pf": pf, "ex": ex}
 
 
-def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int = SEED) -> List[dict]:
-    """One row per (cutoff, symbol, side, geometry) that FILLS, with the driver's S3 term as `y`."""
+def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int = SEED, fold_window=None) -> List[dict]:
+    """One row per (cutoff, symbol, side, geometry) that FILLS, with the driver's S3 term as `y`. The random-entry pool
+    is the driver's fold (default) or, with `fold_window`, every eligible cutoff of that fold's window."""
     rng = np.random.default_rng(rng_seed)
     base: Dict[Tuple, Optional[float]] = {}
     rows: List[dict] = []
@@ -302,7 +341,8 @@ def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int =
                         continue
                     bk = (sym, fold, side, gname)
                     if bk not in base:
-                        pool = d.eligible_cutoffs(s, d.WINDOW_START, d.WINDOW_END, fold)
+                        pool = (d.eligible_cutoffs(s, d.WINDOW_START, d.WINDOW_END, fold) if fold_window is None
+                                else d.eligible_cutoffs(s, *fold_window(fold)))
                         br = d.random_baseline(s, g, pool, rng, BASELINE_DRAWS)
                         base[bk] = br["mean"]
                     if base[bk] is None:
@@ -328,7 +368,11 @@ def cmd_build(a: argparse.Namespace) -> int:
               extra=Extra(mkt, load_raw_volume(Path(a.candles), syms), load_funding(fdir, syms)))
     j1 = judged1_cutoffs(Path(a.mask_key))
     j1_keys = {int(k["cutoff_epoch"]): k for k in json.loads(Path(a.mask_key).read_text())["keys"]}
-    grid = set(grid_cutoffs())
+    grid = set(era_cutoffs() if a.era else grid_cutoffs())
+    if a.era:
+        from scripts.research.desk_edge_devloop import assert_not_locked
+        assert_not_locked(sorted(grid))            # the holdout and full-run windows are never read
+        _G["fold_fn"] = era_fold
     # judged-1 cutoffs are rebuilt with THEIR index and seed so the packet is byte-identical (packet_sha asserted)
     jobs = [(ce, int(j1_keys[ce]["index"]), d.SEED) for ce in sorted(j1)]
     jobs += [(ce, 100000 + n, SEED) for n, ce in enumerate(sorted(grid - set(j1)))]
@@ -342,9 +386,12 @@ def cmd_build(a: argparse.Namespace) -> int:
         if r["cutoff"] in j1 and r["packet_id"] != j1[r["cutoff"]]:
             raise SystemExit(f"judged-1 packet drift at {r['cutoff']}: {r['packet_id']} != {j1[r['cutoff']]}")
         r["judged1"] = r["cutoff"] in j1
-    acts = label_actions(mkt, res)
+    acts = label_actions(mkt, res, fold_window=era_fold_window if a.era else None)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    meta = {"mode": "era" if a.era else "dev", "test_folds": list(ERA_TEST_FOLDS if a.era else TEST_FOLDS),
+            "n_configs": ERA_N_CONFIGS if a.era else N_CONFIGS}
+    (out / "meta.json").write_text(json.dumps(meta) + "\n")
     (out / "cutoffs.pkl").write_bytes(pickle.dumps(res))
     (out / "actions.pkl").write_bytes(pickle.dumps(acts))
     print(json.dumps({"cutoffs": len(res), "judged1_cutoffs": sum(r["judged1"] for r in res), "packet_errors": len(errs),
@@ -552,6 +599,10 @@ def cmd_run(a: argparse.Namespace) -> int:
     src = Path(a.out)
     cutoffs = pickle.loads((src / "cutoffs.pkl").read_bytes())
     acts = pickle.loads((src / "actions.pkl").read_bytes())
+    global TEST_FOLDS, N_CONFIGS
+    meta = json.loads((src / "meta.json").read_text()) if (src / "meta.json").exists() else {"mode": "dev"}
+    if meta["mode"] == "era":
+        TEST_FOLDS, N_CONFIGS = tuple(meta["test_folds"]), int(meta["n_configs"])
     alpha = ALPHA / N_CONFIGS
     res: Dict[str, Any] = {"design": {"geometries": GEOMETRIES, "test_folds": TEST_FOLDS, "embargo_h": EMBARGO_H, "take_frac": TAKE_FRAC,
                                       "max_per_cutoff": MAX_PER_CUTOFF, "useful_s3": USEFUL_S3, "family": N_CONFIGS, "alpha_corrected": alpha,
@@ -559,7 +610,9 @@ def cmd_run(a: argparse.Namespace) -> int:
                            "population": {"cutoffs": len(cutoffs), "judged1_cutoffs": sum(c["judged1"] for c in cutoffs),
                                           "actions_filled": len(acts),
                                           "test_actions": sum(1 for r in acts if r["fold"] in TEST_FOLDS),
-                                          "window": [d.WINDOW_START.isoformat(), d.WINDOW_END.isoformat()]}}
+                                          "mode": meta["mode"],
+                                          "window": ([ERA_BOUNDS[0].isoformat(), ERA_BOUNDS[-1].isoformat(), d.WINDOW_START.isoformat(), d.WINDOW_END.isoformat()]
+                                                     if meta["mode"] == "era" else [d.WINDOW_START.isoformat(), d.WINDOW_END.isoformat()])}}
     te = np.array([r["fold"] in TEST_FOLDS for r in acts])
     test_rows = [acts[j] for j in np.nonzero(te)[0]]
     # what NO selection earns: every test action (S3 should be ~0 by construction; a check of the labels)
@@ -617,9 +670,9 @@ def cmd_run(a: argparse.Namespace) -> int:
             e = evaluate(jrows, p, alpha)
             same[f"{tier}/{lr}"] = {k: e[k] for k in ("n", "mean_net_r", "paired_diff_vs_random", "paired_diff_ci95", "long_share")}
     if jrecs:
-        jk = {int(json.loads(Path(a.mask_key).read_text())["keys"][0]["index"]): None}  # noqa: F841 (shape check only)
         keys = {k["packet_id"]: k for k in json.loads(Path(a.mask_key).read_text())["keys"]}
-        jsel = [r for r in jrecs if keys[r["packet_id"]]["fold"] in TEST_FOLDS]
+        ffn = era_fold if meta["mode"] == "era" else d.fold_of
+        jsel = [r for r in jrecs if ffn(int(keys[r["packet_id"]]["cutoff_epoch"])) in TEST_FOLDS]
         st = d.cluster_stats([{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["diff"]} for r in jsel])
         same["judge_judged1"] = {"n": st["n"], "mean_net_r": st["mean_net_r"], "paired_diff_vs_random": st.get("paired_diff_vs_random"),
                                  "paired_diff_ci95": st.get("paired_diff_ci95"),
@@ -630,7 +683,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     try:
         import lightgbm as lgb
         fold = np.array([r["fold"] for r in acts])
-        tr = fold < 4
+        tr = fold < max(TEST_FOLDS)
         mdl = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.03, num_leaves=15, min_child_samples=400, subsample=0.8, subsample_freq=1,
                                 colsample_bytree=0.8, reg_lambda=10.0, random_state=SEED, verbose=-1, importance_type="gain").fit(Xpp[tr], y[tr])
         imp = sorted(zip(names, mdl.feature_importances_), key=lambda x: -x[1])[:20]
@@ -672,6 +725,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     b.add_argument("--fetch-funding", action="store_true")
     b.add_argument("--workers", type=int, default=4)
     b.add_argument("--limit", type=int, default=0)
+    b.add_argument("--era", action="store_true", help="the extended-era run (doc section 4.2)")
     b.set_defaults(fn=cmd_build)
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
