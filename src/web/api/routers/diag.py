@@ -3788,6 +3788,10 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     ``config/economic_calendar.yaml``, ``mechanics`` (journal half) from
     telemetry rows whose trade is absent. Each due package lists the events it
     could not evaluate in ``events_could_not_look`` with the reason;
+    ``event_coverage`` repeats that for EVERY open package, due or not
+    (``events_looked`` = evaluated, quiet means nothing fired;
+    ``events_could_not_look`` = blind, with the reason) and
+    ``could_not_look_summary`` counts packages per event and masked reason;
     ``events_not_evaluated`` names the design clauses not read at all
     (``mechanics_venue_tp``, ``vol_regime_cell``). The mechanics VENUE half
     (``venue_sl_diverges``) reads ``venue_protection_snapshot``. ``reviews_state`` (absent /

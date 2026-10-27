@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-SSIONLTR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-DUE-COVERAGE lane, VM diag 2026-10-27 02:13Z, replay of market_events over the 7 open telemetry packages",
+    "rerun": "bash scripts/ops/diag_fetch.sh 'position_path_history?order_package_id=<open pkg>&limit=2000'  # count distinct atr"
+  },
+  "state": "queued",
+  "what": "live_review_due vol_regime is structurally blind AND would read falsely quiet: position_path_history.atr is the monitor's entry-frozen ATR (atr_source=monitor; exactly 1 distinct ATR across all rows for 7 of 7 open packages on the VM, 2026-10-27), so ATR-now/ATR-entry is always 1.00 and expand/contract can never fire where it is evaluated. Separately history starts 2 bars (ADA, XRP), 16 (MHG) and 47 (SPY) bars after entry, so the late-history guard reports could-not-look for those. Not fixable in the read path: the writer (src/runtime/position_path_history._atr_adx, exit loop, Tier 2) must store a LIVE Wilder ATR (the computed_wilder14 branch exists but only runs when the monitor ATR is absent), e.g. an atr_live column; vol_regime then compares atr_live to the package entry ATR (order_packages.meta.atr, already read for the venue half)."
+}

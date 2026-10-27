@@ -505,6 +505,59 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
     return out, cnl
 
 
+_DIGITS_RE = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _reason_kind(reason: Any) -> str:
+    """The reason with its numbers masked, so 'starts 2.0 bars' and 'starts 47.0 bars'
+    group as one cause and a symbol-specific tail does not split the count."""
+    text = str(reason or "unknown")
+    text = re.sub(r"declared for \S+$", "declared for <symbol>", text)
+    return _DIGITS_RE.sub("N", text)
+
+
+def _coverage_entry(row: Dict[str, Any], tf_seconds: int,
+                    cnl: List[Dict[str, str]]) -> Dict[str, Any]:
+    """One open package's evaluation coverage, due or not.
+
+    ``events_looked`` names the events that WERE evaluated (a quiet one means
+    "looked, nothing fired"); ``events_could_not_look`` the ones that could not
+    be, with the reason. The two never overlap, so a reader can tell a quiet
+    package from a blind one. ``funding`` only counts for perps (n/a otherwise).
+    """
+    missed = {c["event"] for c in cnl}
+    universe = list(MARKET_EVENTS) + ["mechanics"]
+    if not row.get("telemetry_absent"):
+        universe = list(TELEMETRY_EVENTS) + universe
+    if not _is_perp(row.get("symbol")):
+        universe.remove("funding")
+    return {
+        "order_package_id": row.get("order_package_id"), "leg": row.get("strategy"),
+        "account_id": row.get("account_id"), "symbol": row.get("symbol"),
+        "telemetry_state": "telemetry_absent" if row.get("telemetry_absent") else "present",
+        "events_looked": [n for n in universe if n not in missed],
+        "events_could_not_look": cnl,
+    }
+
+
+def summarize_could_not_look(coverage: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Per event: how many open packages could not be evaluated and why (masked
+    reason -> packages). ``packages`` is the denominator."""
+    by_event: Dict[str, Dict[str, Any]] = {}
+    for c in coverage:
+        seen: Set[Tuple[str, str]] = set()
+        for m in c["events_could_not_look"]:
+            kind = _reason_kind(m.get("reason"))
+            if (m["event"], kind) in seen:
+                continue
+            seen.add((m["event"], kind))
+            slot = by_event.setdefault(m["event"], {"packages": 0, "reasons": {}})
+            slot["reasons"][kind] = slot["reasons"].get(kind, 0) + 1
+        for ev in {m["event"] for m in c["events_could_not_look"]}:
+            by_event[ev]["packages"] += 1
+    return {"packages": len(coverage), "by_event": by_event}
+
+
 def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
                 cfg: Dict[str, Any], now: Optional[datetime] = None,
                 market: Optional[Dict[str, Dict[str, Any]]] = None,
@@ -526,6 +579,7 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     due: List[Dict[str, Any]] = []
     cooled = 0
     cnl_total = 0
+    coverage: List[Dict[str, Any]] = []
     for row in rows:
         pkg = str(row.get("order_package_id"))
         prior = idx.get(pkg, {"fired": set(), "last": None, "peak": None, "mech": None})
@@ -540,6 +594,7 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             cnl = [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS] + cnl
         if cnl:
             cnl_total += 1
+        coverage.append(_coverage_entry(row, tf, cnl))
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
             if name == "mechanics" and level == VENUE_LEVEL:
                 # Not the plain fired-set: a repeat of the SAME divergence is quiet, a
@@ -602,7 +657,9 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             "events_could_not_look": [],
         })
     return {"due": due, "due_count": len(due), "suppressed_by_cooldown": cooled,
-            "packages_with_events_could_not_look": cnl_total}
+            "packages_with_events_could_not_look": cnl_total,
+            "event_coverage": coverage,
+            "could_not_look_summary": summarize_could_not_look(coverage)}
 
 
 def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:
