@@ -102,14 +102,45 @@ def _clean(symbols: Optional[Iterable[Any]]) -> list[str]:
     return out
 
 
+#: A leg MAY declare, beside its venue-agnostic ``symbols:``, a per-account scope
+#: ``account_symbols: {account_id: [symbols]}`` (DESK-PAPER-ACCOUNTS, 2026-10-27: the
+#: ``claude_desk`` leg trades Bybit perps on ``bybit_1``, ETFs on ``alpaca_paper`` and
+#: micro futures on ``ib_paper`` under ONE leg name). ``symbols:`` stays the union the
+#: builder evaluates; ``account_symbols`` says which of them each rostering account
+#: trades and pulls. It is not a gate on any other leg: a leg without the key is
+#: unchanged everywhere.
+ACCOUNT_SYMBOLS_KEY = "account_symbols"
+
+
+def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
+                account_id: Optional[str] = None) -> list[str]:
+    """The symbols one leg trades — on ``account_id`` when it is given.
+
+    No ``account_id``, or a leg without ``account_symbols``: the leg's
+    ``symbols:`` (the pre-2026-10-27 answer, unchanged). A scoped leg on an
+    account its map does not name trades nothing there (``[]``); a scoped entry
+    outside the leg's own ``symbols:`` is dropped, so the map can only NARROW
+    the union. ``roster-symbol-reachability`` reports both shapes in CI.
+    """
+    scfg = strategy_cfg if isinstance(strategy_cfg, Mapping) else {}
+    syms = _clean(scfg.get("symbols"))
+    scope = scfg.get(ACCOUNT_SYMBOLS_KEY)
+    if account_id is None or not isinstance(scope, Mapping):
+        return syms
+    return [s for s in _clean(scope.get(str(account_id))) if s in syms]
+
+
 def roster_symbols(roster: Optional[Sequence[Any]],
-                   strategies_cfg: Optional[Mapping[str, Any]]) -> list[str]:
+                   strategies_cfg: Optional[Mapping[str, Any]],
+                   account_id: Optional[str] = None) -> list[str]:
     """Symbols the account's rostered strategies declare, in roster order.
 
     A strategy absent from ``strategies_cfg``, or declaring no ``symbols:``,
     contributes nothing rather than raising — the tick loop must not be able to
     die on a roster typo. ``roster-symbol-reachability`` reports that case as
-    ``strategy_unknown`` in CI, which is where it belongs.
+    ``strategy_unknown`` in CI, which is where it belongs. With ``account_id``,
+    a leg declaring ``account_symbols`` contributes only that account's scope
+    (:func:`leg_symbols`).
     """
     out: list[str] = []
     cfgs = strategies_cfg or {}
@@ -117,7 +148,7 @@ def roster_symbols(roster: Optional[Sequence[Any]],
         scfg = cfgs.get(name) or {}
         if not isinstance(scfg, Mapping):
             continue
-        for sym in _clean(scfg.get("symbols")):
+        for sym in leg_symbols(scfg, account_id):
             if sym not in out:
                 out.append(sym)
     return out
@@ -130,6 +161,7 @@ def resolve_symbols(
     mode: str,
     strategies_cfg: Optional[Mapping[str, Any]] = None,
     exchange: Optional[str] = None,
+    account_id: Optional[str] = None,
 ) -> list[str]:
     """The symbols this account concerns, under an EXPLICIT ``mode``.
 
@@ -142,6 +174,10 @@ def resolve_symbols(
     declares no symbols at all; callers that do not want a default (the data
     sweeps, which would rather see an empty list than invent an instrument)
     simply omit it.
+
+    ``account_id`` scopes a leg that declares ``account_symbols`` to this
+    account (:func:`leg_symbols`); omitted, every leg contributes its whole
+    ``symbols:`` list as before.
     """
     if mode not in MODES:
         raise ValueError(
@@ -156,7 +192,7 @@ def resolve_symbols(
         if default:
             out = [default]
     if mode == UNION:
-        for sym in roster_symbols(roster, strategies_cfg):
+        for sym in roster_symbols(roster, strategies_cfg, account_id):
             if sym not in out:
                 out.append(sym)
     return out
@@ -231,6 +267,7 @@ def symbols_for_account_id(account_id: str, *, mode: str,
         roster=resolved.get("strategies"),
         mode=mode,
         strategies_cfg=load_strategies_cfg(),
+        account_id=account_id,
         # ⚠️ NEVER defaulted from the cfg's `exchange`. A data reader must not
         # INVENT an instrument: for an account that declares nothing, "we have
         # no symbols for this account" and "assume it trades BTCUSDT" are

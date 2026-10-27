@@ -1000,7 +1000,14 @@ accounts:
     strategies: [mes_trend_long_1d, mgc_pullback_1d, mhg_pullback_1d, mgc_trend_1h,
       ict_scalp_mgc_15m,
       spy_trend_long_1d, qqq_trend_long_1d, iwm_trend_long_1d, tlt_pullback_1d,
-      gld_pullback_1d]
+      gld_pullback_1d,
+      claude_desk]
+                                       # claude_desk added 2026-10-27 (DESK-PAPER-ACCOUNTS, Tier-3, PAPER; operator
+                                       # verbatim, chat ~15:58Z: "I do want to have the desk live on the other paper
+                                       # accounts as well, so Alpaca and IB."): scoped to MES / MGC / MHG by
+                                       # strategies.yaml::claude_desk.account_symbols.ib_paper. No slice support here:
+                                       # a desk entry and a strategy leg never share a contract's position (refused,
+                                       # journalled). ROLLBACK: delete claude_desk from this list.
                                        # ict_scalp_mgc_15m added 2026-07-28 (Tier-3,
                                        # M27 gold re-target, PB-20260728-ICTSCALP-GOLD-
                                        # GATE-CONFIG): the venue-blocked XAUUSD 15m
@@ -1254,6 +1261,12 @@ accounts:
                                        # (needs risk_pct→~1.5% + real-venue revalidation).
       # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule"): only uso_trend_1h is added: qqq/spy/tlt_pullback_1h share a symbol with a 1d leg on this non-slice account and stay off until an allocation record or slices exist.
       - uso_trend_1h
+      # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
+      # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
+      # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice
+      # support, so a desk entry and a strategy leg never share a symbol's position (refused, journalled). This roster
+      # is NOT mirrored: alpaca_portfolio mirrors alpaca_live, which does not carry claude_desk. ROLLBACK: delete this line.
+      - claude_desk
     symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPLG, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
                                        # ETF pilot 2026-06-20 § 0e adds SLV +

@@ -193,6 +193,33 @@ def _instrument_exchange_for(symbol: str) -> Optional[str]:
     return _INSTRUMENT_EXCHANGE_CACHE.get(symbol) or None
 
 
+def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]]:
+    """``{account_id: [symbols]}`` for a leg that declares ``account_symbols``
+    (DESK-PAPER-ACCOUNTS: one ``claude_desk`` leg on three venues), else None.
+
+    ``config/strategies.yaml::<leg>.account_symbols`` says which of the leg's
+    ``symbols:`` each rostering account trades, so a SPY desk package never
+    reaches ``bybit_1`` and a BTCUSDT one never reaches ``alpaca_paper``
+    (``symbol_exchange_routing`` below only separates IB). Read once per
+    dispatch. An unreadable config returns None and is logged: the desk leg's
+    own builder emits nothing when that file is unreadable, so no scoped
+    package exists to mis-route.
+    """
+    if not strategy:
+        return None
+    try:
+        from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols
+        from src.units.strategies import load_strategy_config
+        scfg = (load_strategy_config() or {}).get(str(strategy)) or {}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)
+        return None
+    scope = scfg.get(ACCOUNT_SYMBOLS_KEY) if isinstance(scfg, dict) else None
+    if not isinstance(scope, dict):
+        return None
+    return {str(a): leg_symbols(scfg, str(a)) for a in scope}
+
+
 # PI-20260926-KNSTSR8N-0003: ``multi_account_execute`` drops an account from a
 # dispatch round in two places WITHOUT writing a ``trades`` row —
 # ``_dispatch_exclusion_reason``'s pre-loop eligibility filter, and the
@@ -215,7 +242,9 @@ def _instrument_exchange_for(symbol: str) -> Optional[str]:
 # and ``outside_account_scope`` is E35's per-account election losing
 # gracefully to a same-symbol sibling. Every other reason names a leg that DOES
 # belong on this account and is still not reaching it, so it logs at WARNING.
-_DISPATCH_DROP_ROUTINE_REASONS = ("strategy_not_assigned", "outside_account_scope")
+# leg_account_scope (DESK-PAPER-ACCOUNTS): every claude_desk package is dropped on the two accounts whose venue it
+# is not -- by design, so DEBUG like the other two.
+_DISPATCH_DROP_ROUTINE_REASONS = ("strategy_not_assigned", "outside_account_scope", "leg_account_scope")
 
 
 def _log_dispatch_drop(
@@ -1217,6 +1246,8 @@ class Coordinator:
         # each carrying ``{}``, none naming why. It now returns the exclusion
         # REASON (``None`` == eligible) and the caller keeps the map, so the
         # refusal below can name the cause instead of counting to zero.
+        _scope = _leg_account_scope(getattr(pkg, "strategy", None))
+
         def _dispatch_exclusion_reason(account_obj) -> Optional[str]:
             if not getattr(account_obj, "configured", True):
                 return "not_configured"
@@ -1264,6 +1295,17 @@ class Coordinator:
                     f"strategy_not_assigned: {pkg.strategy} not in "
                     f"{sorted(str(a) for a in assigned)}"
                 )
+            # Per-account leg scope (DESK-PAPER-ACCOUNTS): a leg declaring
+            # ``account_symbols`` trades only that account's slice of its
+            # ``symbols:`` there. Named, like every exclusion above.
+            if _scope is not None:
+                _acct_syms = _scope.get(str(getattr(account_obj, "name", "")), [])
+                if str(getattr(pkg, "symbol", "") or "") not in _acct_syms:
+                    return (
+                        f"leg_account_scope: {pkg.strategy} trades "
+                        f"{_acct_syms} on {getattr(account_obj, 'name', '?')}, "
+                        f"not {pkg.symbol}"
+                    )
             return None
 
         # Keep the reasons, not just the survivors — an empty eligible set is
@@ -2499,6 +2541,41 @@ class Coordinator:
                             "error": "net_position_unreadable",
                         })
                         continue
+                    # DESK-PAPER-ACCOUNTS: on a non-slice account that rosters
+                    # the claude_desk leg, the desk and a strategy leg never
+                    # share one symbol's net position (the venue nets it and a
+                    # desk max-hold close flattens the whole symbol). Refused
+                    # per package, journalled -- never a silent drop.
+                    from src.units.strategies import claude_desk as _cd
+                    if not _slice_mode and _cd.NAME in (getattr(account, "strategies", None) or []):
+                        _excl = _cd.exclusive_hold_refusal(
+                            pkg.strategy, current_signed_qty,
+                            None if pkg.strategy == _cd.NAME else has_open_trade_for_strategy(
+                                account.name, pkg.symbol, _cd.NAME,
+                            ),
+                        )
+                        if _excl:
+                            logger.info(
+                                "[coordinator] desk exclusivity refused %s/%s/%s: %s",
+                                account.name, pkg.symbol, pkg.strategy, _excl,
+                            )
+                            from src.units.accounts.execute import log_rejection_to_journal
+                            log_rejection_to_journal(
+                                pkg, account_cfg,
+                                reason=_excl,
+                                status="rejected",
+                                sized_qty=0.0,
+                                margin_basis=margin_basis or None,
+                            )
+                            results.append({
+                                "name": account.name,
+                                "exchange": account.exchange,
+                                "account_type": account.account_type,
+                                "trade_id": None,
+                                "sized_qty": 0.0,
+                                "error": _excl,
+                            })
+                            continue
                     _existing_pos_info = (
                         get_existing_position_info(account.name, pkg.symbol)
                         if current_signed_qty != 0 else None

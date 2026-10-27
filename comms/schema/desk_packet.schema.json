@@ -117,7 +117,8 @@
               "properties": {"read_state": {"type": "string", "enum_ref": "read_state"}, "events_next_bar": {"type": ["array", "null"], "items": {"type": "string"}}}},
             "spread": {"type": "object", "additionalProperties": false, "required": ["read_state", "bps"],
               "properties": {"read_state": {"type": "string", "enum_ref": "read_state"}, "bps": {"type": ["number", "null"], "minimum": 0}}},
-            "volume_24h": {"type": ["number", "null"], "minimum": 0}
+            "volume_24h": {"type": ["number", "null"], "minimum": 0},
+            "market": {"type": "object", "additionalProperties": false, "required": ["asset_class", "open"], "properties": {"asset_class": {"type": "string"}, "open": {"type": ["boolean", "null"]}}}
           }}
       },
       "system_book": {

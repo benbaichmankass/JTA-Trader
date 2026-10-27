@@ -100,6 +100,11 @@ def pulled_universe(accounts_cfg: Dict[str, dict], strategies_cfg: Dict[str, Any
     from src.config.symbol_sets import UNION, resolve_symbols
 
     rows: Dict[str, dict] = {}
+    try:
+        from src.core.profile_loader import load_instrument_profiles
+        profiled = {s: str(getattr(v, "exchange", "") or "").lower() for s, v in (load_instrument_profiles() or {}).items()}
+    except Exception:  # allow-silent: no profile -> the first pulling account's exchange, as before
+        profiled = {}
     for acct, a in accounts_cfg.items():
         if not isinstance(a, dict) or a.get("configured") is False:
             continue
@@ -107,8 +112,11 @@ def pulled_universe(accounts_cfg: Dict[str, dict], strategies_cfg: Dict[str, Any
         if roster is not None and len(roster) == 0:
             continue  # explicit opt-out: the account trades nothing (src/main.py::_resolve_tick_symbols)
         for sym in resolve_symbols(declared=a.get("symbols"), roster=roster, mode=UNION,
-                                   strategies_cfg=strategies_cfg, exchange=a.get("exchange")):
-            r = rows.setdefault(sym, {"symbol": sym, "venue": a.get("exchange") or "unknown", "classes": []})
+                                   strategies_cfg=strategies_cfg, exchange=a.get("exchange"), account_id=acct):
+            # The venue is where the symbol ROUTES (its instrument profile: SPY -> alpaca even though ib_paper pulls
+            # it first in accounts.yaml order); an unprofiled symbol keeps the first pulling account's exchange.
+            r = rows.setdefault(sym, {"symbol": sym, "venue": profiled.get(sym) or a.get("exchange") or "unknown",
+                                      "classes": []})
             cls = a.get("account_class")
             if cls in ("real_money", "prop", "paper", "soak") and cls not in r["classes"]:
                 r["classes"].append(cls)
@@ -328,7 +336,18 @@ def universe_row(sym: str, venue: str, classes: List[str], tf: str, bars: Option
     return {"symbol": sym, "venue": venue, "venue_class": venue_class(sym, venue), "tier": "full",
             "tradable_by": classes, "timeframe": tf, "last_close": last, "atr": _r6(atr), "htf_trend": trend,
             "regime_cell": None, "funding": fund, "swing": swing, "session": session_of(cutoff),
-            "calendar": cal, "spread": spread, "volume_24h": volume_24h}
+            "calendar": cal, "spread": spread, "volume_24h": volume_24h, "market": market_state(sym, cutoff)}
+
+
+def market_state(sym: str, at: datetime) -> dict:
+    """{asset_class, open} at the cutoff (src.runtime.market_hours; DESK-PAPER-ACCOUNTS): an ETF or a CME micro is
+    not proposable while its market is closed (desk_write refuses it; the claude_desk leg would not send it)."""
+    try:
+        from src.runtime.market_hours import asset_class_for_symbol, is_market_open
+        cls = asset_class_for_symbol(sym)
+        return {"asset_class": cls, "open": bool(is_market_open(cls, at))}
+    except Exception:  # allow-silent: `open: null` IS the could-not-look state
+        return {"asset_class": "unknown", "open": None}
 
 
 def light_row(item: dict) -> dict:
@@ -447,6 +466,7 @@ def mask_packet(p: dict) -> Tuple[dict, dict]:
             for k in ("high", "low"):
                 if u["swing"][k] is not None:
                     u["swing"][k] = _r6(u["swing"][k] * f)
+        u.pop("market", None)  # the asset class and open/closed state date and identify the masked asset
         if u["volume_24h"] is not None:
             u["volume_24h"] = None
             miss.append(f"universe.{a}.volume_24h: masked")
