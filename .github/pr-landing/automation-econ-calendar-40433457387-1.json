@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "Machine-generated data commit, opened by the 'econ-calendar-produce' workflow (run 40433457387) through .github/actions/commit-to-main on branch automation/econ-calendar-40433457387-1. Tier-1 by the canonical doc's own list: the diff is generated register/report content on the Tier-1 surface, with no order path, no strategy config, no risk caps, no src/, no deploy/ and no live-VM runtime file. It self-lands because this same action arms auto-merge with `gh pr merge --auto --squash`, so `self` is what actually happens; GitHub still merges only on green, and R5 still grades the diff against the Tier-1 surface rather than taking this declaration on trust. Written by the generator because no session or human is in the loop to write it."
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Machine-generated econ-calendar refresh (econ-calendar-produce run 40433457387). Rewrites only the events: list of config/economic_calendar.yaml, the routinely maintained feed the operator ordered on 2026-10-26 (workflow header, checklist row DATA-FEEDS-NEWS-CALENDAR).",
+  "hold_text": "config/economic_calendar.yaml is Tier-2 by name, so R5 refuses the generator's self-land. Approval sought: the manager, under the operator's 2026-10-26 standing order that this feed be routinely refreshed. The manager reviewed the events-only diff and merges by hand until the guard can vouch for this producer by reproducing it."
 }
