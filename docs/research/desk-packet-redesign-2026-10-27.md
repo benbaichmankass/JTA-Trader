@@ -81,4 +81,80 @@ Changes (the arm's question is unchanged: raw bars, no summaries):
 
 ## 4. Results
 
-*(appended after judging)*
+Evidence: `comms/research/desk_packet_redesign/` (`B/ranks.jsonl`, `C/ranks.jsonl`, the protocols, `build.json` sizes, `scores-100/`, `scores-50/` with `compare.json`, `isolation-audit.txt`, `C/example-packet.txt`). Arm A's ranks are V1's committed `comms/research/desk_edge/dev-1/V1/ranks.jsonl`. Every number below is MEASURED by `scripts/research/desk_packet_arms.py score|compare` on the DEV window. Population: the dev sample, all 100 packets for A vs B, and the first 50 packets of the sample order (33 ISO weeks, all 32 strata) for any comparison involving C.
+
+**Intake and isolation (MEASURED from the subagent transcripts, `scripts/research/desk_packet_isolation_audit.py`).**
+- B: 10 batches × 10 packets, 100/100 packets ranked, 0 refused cells.
+- C: 25 batches × 2 packets, 50/50 ranked.
+- Every batch used only `Read` on its own batch file and `Write` on its own output file: **35 of 35 compliant, 0 rejected for isolation.**
+- One C batch was rejected under Amendment 1 (oversized, unanalysed; § 3.7). It was never scored.
+
+### 4.1 The registered table
+
+| | A (control) | B (no base rates) | C (raw bars) |
+|---|--:|--:|--:|
+| **top-pick S3, n = 50** (95% weekly CI) | −0.072 [−0.44, +0.33] | **−0.343 [−0.65, −0.02]** | **+0.148 [−0.21, +0.53]** |
+| top-pick S3, n = 100 | +0.161 [−0.18, +0.48] | +0.016 [−0.24, +0.28] | — (not judged) |
+| **USEFUL** (S3 ≥ +0.25 and CI lower > 0) | no | no | no |
+| SEL, n = 50 (95% CI) | −0.015 [−0.33, +0.31] | +0.085 [−0.20, +0.36] | +0.154 [−0.17, +0.50] |
+| SEL, n = 100 / program decision | +0.044, `screen_fail` | +0.117 [−0.13, +0.35], `screen_fail` | — (n = 50: only 2 of 4 looks; no decision) |
+| **base-rate R², pooled / median per 10 packets (n = 50)** | **0.87 / 0.95** | **0.07 / 0.09** | **0.17 / 0.26** |
+| base-rate R², n = 100 | 0.79 / 0.99 | 0.015 / 0.08 | — |
+| **breaks linearity** (both < 0.50) | — | **yes** | **yes** |
+| top-cell long share, n = 50 | 0.04 | 0.48 | 0.72 |
+| share of cells scored > 0 (n = 50) | 0.35 | 0.52 | 0.55 |
+| **proposal rate**, n = 50 (packets with ≥ 1 valid proposal) | 0.10 (7 proposals, 0 long / 7 short) | 0.04 (1 long / 1 short) | **0.18 (9 long / 1 short)** |
+| proposal rate, n = 100 | 0.05 (0 / 7) | 0.03 (2 / 1) | — |
+| proposal S3 (driver `score`, descriptive), n = 50 | +0.88 [−0.53, +1.78], 7 fills | +0.62 [−0.95, +2.18], 2 fills | +0.50 [−0.29, +1.17], 10 fills |
+
+**Contrasts vs A (§ 3.2, § 3.4; paired by packet, weeks resampled, two-sided alpha 0.025):**
+
+| | SEL difference | differs? | top-cell long share difference | changes direction balance? |
+|---|--:|:-:|--:|:-:|
+| B − A, n = 100 | +0.007 [−0.35, +0.38] | no | +0.46 [+0.29, +0.61] | **yes** |
+| B − A, n = 50 | +0.21 [−0.19, +0.57] | no | +0.44 [+0.26, +0.62] | **yes** |
+| C − A, n = 50 | +0.28 [−0.30, +0.84] | no | +0.68 [+0.54, +0.81] | **yes** |
+
+### 4.2 What it says
+
+1. **The anchor is real and it is the packet.** Remove the base-rate rows and the judge stops reproducing them: R² goes from 0.87 to 0.07 (B) on the same 50 packets, from the same model, under the same rank protocol. So V1's "linear base-rate rule" was the judge reading the summary back, as the operator suspected. It was not an intrinsic property of the judge.
+2. **Breaking the anchor does not, on this evidence, create edge.**
+   - No arm is USEFUL. The best point estimate is C: top-pick S3 +0.15 and SEL +0.15, on 50 packets. The CI spans 0, and the C − A contrast (+0.28) is not distinguishable from 0 at this n.
+   - B is the only arm whose top-pick S3 CI excludes 0, and it excludes it on the **negative** side (−0.34, n = 50; +0.02 on the full 100). With the summary gone and no bars to read, the judge has only ATR, swing distances, a trend label and the session. It chooses worse than random on that half of the sample.
+3. **Direction flips once the anchor is gone, in both B and C.**
+   - The DEV window's base rates point short (V1 put 96% of its top cells on shorts on these 50 packets, 89% on all 100, and every proposal).
+   - Without them the judge leans long: B 48% of top cells, C 72% of top cells and 9 of 10 proposals.
+   - S3 is side-neutral by construction (each cell is measured against a random entry on the same side), so the tilt is not itself a cost.
+   - It does mean the judge's direction was borrowed from the summary in A, and in C it comes from somewhere else: the bars, or a long prior.
+4. **C engages more.** C has the highest proposal rate (18% vs 10% for A and 4% for B on the same 50 packets), and every C packet has 12 distinct cell scores. But the per-packet score spread (max minus min) runs 0.11 to a median of 0.19. The low end overlaps the spreads of the rejected batch's unanalysed packets (≤ 0.12), so this check cannot show that every packet was analysed in depth. And 10 fills cannot price the proposals.
+
+### 4.3 Sizes and spend (MEASURED from the subagent transcripts; API-equivalent dollars at Sonnet list price, on the plan, no API credits)
+
+| | packets | median chars / packet | input tokens per batch (cache-creation) | spend |
+|---|--:|--:|--:|--:|
+| A (V1, reused) | 100 | about 17,000 | about 172k total per 10-packet run (V1's record) | $0 here (V1: about $7) |
+| B | 100 | 7,500 | about 120k per 10 packets | **$5.47** |
+| C (amended) | 50 | 20,274 (max 22,725) | about 66k per 2 packets | **$10.93** |
+| C batch rejected under Amendment 1 | 5 | 50,287 | 286k per 5 packets | $1.94 |
+| **judging total** | | | | **$18.34** (budget $20) |
+
+A C packet is therefore roughly **20–25k tokens**. This is INFERRED from those per-batch counts, which include the subagent's own system prompt; the packet's share cannot be separated exactly.
+
+## 5. Recommendation (by the § 3.6 rule)
+
+- **Live desk packet: "none yet".** No arm clears S3 ≥ +0.25 with its CI lower bound > 0. The live desk keeps today's packet; nothing here changes live behaviour.
+- **What the evidence does support (§ 3.6 second clause), for the next judge variant rather than the live desk:**
+  - **Build on C, never on B.** B removes information and the judge does worse than random (top-pick S3 −0.34 [−0.65, −0.02], n = 50).
+  - **Do not go back to A as the base.** A's judge is the base-rate rule the edge program already prices at about 0, on 4,535 packets (S3 −0.05).
+  - C is the only design that both breaks the anchor and has a positive point estimate. It is not evidence of edge.
+- **The one cheap next measurement (a manager decision; not run here because the budget is spent):** judge C on the remaining 50 packets of the sample, about **$11** at the measured rate. That completes all four looks of the program's registered dev rule, so C gets a real `promote` / `screen_fail` / `kill` decision on 100 packets (paired with A and B on 100). Only a `promote` sends C to the program's locked holdout (DESK-EDGE-PROGRAM § 5.4). This lane does not open the holdout.
+- **To build C live**, the live scan builder would need a point-in-time 1m-bar feed with taker volume, plus funding prints, in the packet. That is a DESK-14 / DESK-27-LIVE-FLOW-sized job, worth doing only after a C `promote`.
+
+## 6. What was not verified, and stated confounds
+
+- **n.** C was judged on 50 packets, not 100 (Amendment 1's budget rule). Every C interval is about ±0.35–0.6 R wide; a +0.25 edge cannot be confirmed or excluded at n = 50.
+- **Batch size differs:** A and B 10 per batch, C 2. Smaller batches may give each packet more attention. B vs A (same batch size) is the clean anchor test; C vs A is not clean on attention.
+- **C changes representation and information at once:** it adds funding and taker flow, which A and B lack.
+- **One model:** Sonnet subagents only, with file tools. They are audited, but they are not the tool-less live judge.
+- **The judges' own claims of analysis** are model output. The only mechanical check is score spread per packet, and it is weak (§ 4.2 item 4).
+- **Found and fixed in this PR:** the replay driver's docstring said its candles were spot; they are USD-M perp.

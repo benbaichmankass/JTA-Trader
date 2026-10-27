@@ -7,12 +7,17 @@
   "lane": "DESK-PACKET-REDESIGN",
   "model": null,
   "ceiling_usd": 30,
-  "spend_usd": null,
+  "spend_usd": 18.34,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Dispatched by Manager 2026-10-27a; operator popup 'Yes, all 4 arms (Recommended)', arm D dropped (~17:05Z). Ceiling $30, judging <= $20 (plan subagents, no API credits). Landing: hold.",
-  "updated_at": "2026-10-27T17:17:25Z",
+  "prs": [
+    20683
+  ],
+  "blocked_on": [
+    "manager: merge PR #20683 (landing hold, stacked on #20672)",
+    "manager: decide C on remaining 50 packets (~$11)"
+  ],
+  "note": "RESULT (DEV, PR #20683): no arm USEFUL -> live packet: none yet. Top-pick S3 n=50: A -0.07 [-0.44,+0.33], B -0.34 [-0.65,-0.02], C +0.15 [-0.21,+0.53]; A vs B on 100: +0.16 / +0.02. Anchor confirmed: base-rate R2 A 0.87 -> B 0.07, C 0.17 (both break linearity); direction flips long (top-cell long share A 0.04, B 0.48, C 0.72; contrasts significant). Proposal rate n=50: A 0.10, B 0.04, C 0.18. Judging $18.34 of $20 (plan subagents, 35/35 isolation-compliant). Manager decision: C on the other 50 packets (~$11) for the program's 4-look dev decision. Doc docs/research/desk-packet-redesign-2026-10-27.md",
+  "updated_at": "2026-10-27T17:49:22Z",
   "updated_by": "session_01AFoLuLFCvVBcTaAxDB3nyy",
   "roadmap": [
     "L-DESK"

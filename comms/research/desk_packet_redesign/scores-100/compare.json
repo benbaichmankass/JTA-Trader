@@ -1,0 +1,224 @@
+{
+ "contrasts": {
+  "B-A": {
+   "sel": {
+    "diff": 0.007293406201402159,
+    "ci": [
+     -0.34560432333416474,
+     0.3842049271260892
+    ],
+    "alpha": 0.025,
+    "packets": 100,
+    "differs": false
+   },
+   "top_cell_long_share": {
+    "diff": 0.46,
+    "ci": [
+     0.29,
+     0.6146877205363449
+    ],
+    "alpha": 0.025,
+    "packets": 100,
+    "differs": true
+   }
+  }
+ },
+ "recommendation": "none_yet",
+ "recommendation_reasons": [
+  "no arm has top-pick S3 >= 0.25 with its 95% CI lower bound > 0"
+ ],
+ "arms": {
+  "A": {
+   "arm": "A",
+   "intake": {
+    "rows": 202,
+    "rank_rows": 100,
+    "refused": 0,
+    "reasons": {}
+   },
+   "packets_ranked": 100,
+   "cells_scored": 1200,
+   "s3_top_pick": {
+    "n": 100,
+    "weeks": 44,
+    "s3": 0.16115757947915482,
+    "ci95": [
+     -0.1757121626794349,
+     0.48176498009904717
+    ],
+    "mean_net_r": 0.1761649131990969,
+    "mean_net_r_ci95": [
+     -0.17063309799896484,
+     0.5044480089096385
+    ],
+    "useful": false
+   },
+   "sel": {
+    "mean": 0.04430250823786623,
+    "ci95": [
+     -0.19585341167038645,
+     0.28520619044392503
+    ],
+    "weeks": 44,
+    "packets": 100,
+    "decision": "screen_fail",
+    "reasons": [
+     "mean SEL +0.0443, lower bound -0.0591: not both (>= 0.25, > 0)"
+    ],
+    "looks": [
+     25,
+     50,
+     75,
+     100
+    ]
+   },
+   "behaviour": {
+    "base_rate_r2": {
+     "pooled_r2": 0.794665041814341,
+     "group_r2": [
+      0.9999972243146401,
+      0.999880771993496,
+      0.8960144620732827,
+      0.9499446717014876,
+      0.9020319126159342,
+      0.9855030025171381,
+      0.9997260429374336,
+      0.9999402136063301,
+      0.9999875602366687,
+      0.9470434090359323
+     ],
+     "median_group_r2": 0.9926145227272858,
+     "cells": 1200,
+     "n_constant_or_short_groups": 0
+    },
+    "breaks_linearity": false,
+    "top_cell_long_share": 0.11,
+    "share_cells_scored_positive": 0.35
+   },
+   "proposals": {
+    "intake": {
+     "rows": 102,
+     "no_trade": 95,
+     "propose_entry": 7,
+     "refused": 0,
+     "refused_reasons": {},
+     "over_cap": 0,
+     "duplicate_symbol": 0,
+     "packets_with_rows": 100
+    },
+    "packets_with_valid_proposal": 5,
+    "proposal_rate": 0.05,
+    "valid": 7,
+    "long": 0,
+    "short": 7,
+    "filled": 7,
+    "s3": 0.8782971118722395,
+    "s3_ci95": [
+     -0.5347916065808779,
+     1.777062100410578
+    ],
+    "mean_net_r": 1.0761916640723221,
+    "mean_net_r_ci95": [
+     -0.3327835702187749,
+     1.9615500336718479
+    ]
+   }
+  },
+  "B": {
+   "arm": "B",
+   "intake": {
+    "rows": 200,
+    "rank_rows": 100,
+    "refused": 0,
+    "reasons": {}
+   },
+   "packets_ranked": 100,
+   "cells_scored": 1200,
+   "s3_top_pick": {
+    "n": 100,
+    "weeks": 44,
+    "s3": 0.01610154801789097,
+    "ci95": [
+     -0.24233621622211118,
+     0.2839098280746725
+    ],
+    "mean_net_r": -0.11416267983921158,
+    "mean_net_r_ci95": [
+     -0.38021764298922817,
+     0.16194875823810323
+    ],
+    "useful": false
+   },
+   "sel": {
+    "mean": 0.1166240817454519,
+    "ci95": [
+     -0.1279581640931379,
+     0.3504655028943417
+    ],
+    "weeks": 44,
+    "packets": 100,
+    "decision": "screen_fail",
+    "reasons": [
+     "mean SEL +0.1166, lower bound +0.0162: not both (>= 0.25, > 0)"
+    ],
+    "looks": [
+     25,
+     50,
+     75,
+     100
+    ]
+   },
+   "behaviour": {
+    "base_rate_r2": {
+     "pooled_r2": 0.014870182969605183,
+     "group_r2": [
+      0.2480956906075682,
+      0.08590072689780126,
+      0.045352610833589324,
+      0.07417437127924442,
+      0.21336763055245178,
+      0.2503019443876141,
+      0.2805281130548143,
+      0.07243670439534367,
+      0.069230934731221,
+      0.039861358996189034
+     ],
+     "median_group_r2": 0.08003754908852284,
+     "cells": 1200,
+     "n_constant_or_short_groups": 0
+    },
+    "breaks_linearity": true,
+    "top_cell_long_share": 0.57,
+    "share_cells_scored_positive": 0.5041666666666667
+   },
+   "proposals": {
+    "intake": {
+     "rows": 100,
+     "no_trade": 97,
+     "propose_entry": 3,
+     "refused": 0,
+     "refused_reasons": {},
+     "over_cap": 0,
+     "duplicate_symbol": 0,
+     "packets_with_rows": 100
+    },
+    "packets_with_valid_proposal": 3,
+    "proposal_rate": 0.03,
+    "valid": 3,
+    "long": 2,
+    "short": 1,
+    "filled": 3,
+    "s3": 0.11473590320039258,
+    "s3_ci95": [
+     -0.9471711638270545,
+     2.184300301028139
+    ],
+    "mean_net_r": -0.08889830215795176,
+    "mean_net_r_ci95": [
+     -1.0934453539823024,
+     1.8998933962263955
+    ]
+   }
+  }
+ }
+}

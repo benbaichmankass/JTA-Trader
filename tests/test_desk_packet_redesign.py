@@ -182,3 +182,9 @@ def test_contrast_is_paired_by_packet():
 def test_registered_constants():
     assert pa.S3_USEFUL == 0.25 and pa.R2_BREAK == 0.50 and pa.CONTRAST_ALPHA == pytest.approx(0.025)
     assert json.loads(json.dumps(pm.RAW_TABLES)) == [["1m", 60, 30], ["5m", 300, 48], ["1h", 3600, 48], ["4h", 14400, 30], ["1d", 86400, 20]]
+
+
+def test_score_takes_only_the_looks_the_sample_reaches():
+    """At n=50 the 75- and 100-packet looks are not taken (they would re-use the same 50 packets)."""
+    src = (REPO / "scripts/research/desk_packet_arms.py").read_text()
+    assert "L <= len(order) and set(order[:L]) <= set(ranks)" in src

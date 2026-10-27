@@ -206,13 +206,14 @@ def score_arm(arm: str, mkt: Dict[str, d.Series], classes: Dict[str, List[str]],
     """Every registered per-arm measurement (doc section 3.2-3.5)."""
     order = [s["packet_id"] for s in sample]
     ranks, intake = dl.read_ranks(ranks_path, keys)
+    ranks = {p: v for p, v in ranks.items() if p in set(order)}   # the population is the sample, never the whole file
     labels = dl.cell_labels(mkt, keys, [p for p in order if p in ranks])
     rows = dl.cell_rows(ranks, labels)
     sel = dl.packet_sel(rows)
     wk = dl.weekly_means(sel)
     wk_at, looks = [], []
     for L in dl.DEV_LOOKS:
-        if set(order[:L]) <= set(ranks):
+        if L <= len(order) and set(order[:L]) <= set(ranks):      # a look needs L packets: n=50 takes 2 of 4
             looks.append(L)
             wk_at.append(dl.weekly_means([r for r in sel if r["packet_id"] in set(order[:L])]))
     decision, why = dl.sequential_decision(wk_at, useful=dl.SEL_USEFUL)
