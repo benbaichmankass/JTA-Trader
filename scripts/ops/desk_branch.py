@@ -98,6 +98,13 @@ def mirror(root: Path, read_branch: Callable[[str], bytes | None]) -> dict[str, 
         if blob is None:
             skipped.append({"decision_id": rid, "why": f"cited packet {p} missing on desk/decisions"})
             continue
+        try:
+            why = cdr.desk_write.alt_stat_problems(json.loads(line), json.loads(blob))
+        except (ValueError, KeyError, TypeError) as exc:
+            why = [f"row or packet unreadable for the stat check: {exc}"]
+        if why:  # skip + a visible warning, never a stop: the branch keeps the row, main does not take a wrong label
+            skipped.append({"decision_id": rid, "why": "stat-match: " + why[0]})
+            continue
         dest = root / p
         if dest.exists() and dest.read_bytes() != blob:
             skipped.append({"decision_id": rid, "why": f"cited packet {p} differs on main; not overwritten"})
@@ -136,6 +143,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if res["state"] == "ok" else 1
     res = mirror(ROOT, lambda p: git_show(a.ref, p))
     print(json.dumps(res, indent=2))
+    for sk in res.get("skipped", []):
+        print(f"::warning::desk row {sk['decision_id']} not mirrored: {sk['why']}")
     if res["state"] != "ok":
         return 2
     return 1 if res["skipped"] else 0
