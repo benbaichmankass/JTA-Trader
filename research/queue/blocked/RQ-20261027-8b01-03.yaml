@@ -1,0 +1,105 @@
+id: RQ-20261027-8b01-03
+title: 'Desk D-S0 exit: on a masked blind replay of the two <=1 h 15m legs (ict_scalp_eth_15m, ict_scalp_xrp_15m), does Claude''s close / partial_close beat holding
+  to the bracket, a frequency-matched random-timing baseline and the best static exit, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: experiment
+question: At the first closed bar where an open trade of ict_scalp_eth_15m or ict_scalp_xrp_15m has reached +1.0 R of favourable excursion, given only a MASKED point-in-time
+  packet (no symbol, date or absolute price), does Claude's chosen action (hold / close / partial_close) produce a positive paired dR versus holding to the leg's
+  own exit, net of the full cost stack, and does it also beat a random-timing baseline and the best fixed rule chosen without seeing the test folds?
+why_this_matters: 'DESK-8b: Stage 0 for Claude-on-the-leg on the <=1 h legs, design 6.3 step 2. The per-trade spawned lane (6.3 step 3) is built only if 8a passes
+  AND this role shows a positive, CI-excluding-0 paired dR. Operator 2026-10-27 ~07:00Z.'
+power:
+  expected_n: 45
+  min_detectable_effect: 0.267
+  effect_units: R
+  sd: 0.64
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n = 45 MEASURED 2026-10-27 (desk_replay_driver.py selfcheck: packets built on the candle path at the first closed bar with running high >= +1 R;
+    ict_scalp_eth_15m + ict_scalp_xrp_15m, 154 committed trades). sd 0.64 R MEASURED: pooled std of the hold net_r over the 54 trades with mfe_r >= 1.0. MDE = 2.8
+    * 0.64 / sqrt(45) = 0.267 R. HONEST LIMIT: the dev-run oracle (breakeven at +1 R iff hindsight says it beats hold) is worth only +0.018 R per decision point,
+    so a tighten-to-breakeven judgement cannot reach this MDE; this unit is expected to land INDETERMINATE or FAIL and the follow-up is more decision points (the
+    8a fresh-window trade lists via a driver --evidence-dir option, not yet built), never a lowered bar.'
+  feasibility:
+    source: none
+    accrual_basis: expected_n is a count of committed historical decision points; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261027-8B01-03-DESK-EXIT-S0
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'Over the same pooled decision points: dR = net_r(action replayed on the real path) - net_r(hold to the recorded exit), both net of the full cost stack
+    (fee 7.5 bps round trip; slippage 3.0 bps round trip and funding 1.0 bps per window from execution_costs.resolve_cost_policy(symbol), MEASURED 2026-10-26 for
+    XRPUSDT, ADAUSDT, ETHUSDT). A close fills at the NEXT bar''s open with the symbol''s round-trip slippage on the closing leg (no lookahead fill at the decision
+    bar''s close); a partial_close realises 50% at that fill and holds the remaining 50% to the recorded exit. Statistic = mean dR, 95% trade-resampling bootstrap
+    CI (10,000 draws, seed registered in the run''s inputs). Baselines, same points and cost stack: (B1) STRATEGY''S OWN = hold to the recorded exit, dR = 0; (B2)
+    RANDOM-TIMING = the same action applied with Claude''s per-run action frequencies at random bars of the same trade, 1,000 draws; (B3) BEST STATIC = the single
+    fixed rule from {close at the decision state, partial_close 50% at the decision state, close at +2R if reached else hold} with the best mean dR on the other folds
+    (leave-one-fold-out). Folds = the evidence record''s 4 folds per leg, pooled by fold index.'
+  rule: 'PASS IF n_obs >= 40 AND mean dR (Claude vs hold) has a 95% CI lower bound > 0 AND mean dR > mean dR(B2) with the paired CI of the difference excluding 0
+    AND mean dR >= mean dR(B3) AND dR > 0 in >= 3 of 4 pooled folds AND the post-cutoff stratum has point estimate > 0 (a post-cutoff n < 20 is reported and a PASS
+    is labelled ''masked-replay only, forward-shadow confirmation required''). FAIL IF n_obs >= 40 AND (mean dR <= 0 OR the CI upper bound < 0 OR clause (c1) or (c2)
+    (the planted-oracle scrambled-label arm, as re-registered 2026-10-26) of RQ-20261027-8b01-01 was violated). INDETERMINATE otherwise: because MDE is 0.267 R, an
+    observed |mean dR| < 0.267 R with a CI straddling 0 is the EXPECTED landing for a real but small effect and means ''cannot answer yet''; the record states the
+    observed sd and the n that would resolve +0.20 R. Per-leg dR is reported with its CI and n, no per-leg verdict; n < 20 is ''insufficient_n'', never zero. The
+    registered numbers (40, 3 of 4, the action vocabulary, the B3 grid) are not changed after any result.'
+  what_it_does_not_do: A PASS is Stage-0 for the exit role only and applies nothing. It does not grant an exit mandate (that is DESK-13, Tier-3 grant by the operator
+    after this PASS and a non-contradicting forward-shadow set). It does not exempt a leg from the TP doctrine, and it says nothing about entries (DESK-18) or tighten-only
+    in-trade applies (RQ-20261027-8b01-02).
+requires_result:
+  unit: RQ-20261027-8b01-01
+  verdict: pass
+blocked_on:
+- kind: spend
+  ref: DESK-8-SHORT-HOLD-S0
+  what: 'Judging needs ONE stateless Anthropic API call per packet (scripts/research/desk_judge_api.py, run on the VM by the run-desk-judge system-action, the only
+    place ANTHROPIC_API_KEY exists) over 45 packets. WORST-CASE $ (INFERRED from the script''s own constants: 6 k tokens in at $3.00/MTok uncached + 700 max output
+    at $15.00/MTok = $0.0285 per packet): 45 x 0.0285 = $1.28 for this role; the two roles together $2.57; ESTIMATED typical ~$0.01 per packet from the driver note.
+    NOT SPENT. The manager must approve the dispatch.'
+  clears_when: 'RQ-20261027-8b01-01 has landed verdict pass AND the manager approves the run-desk-judge dispatch for these 45 packets. Then git mv this file to research/queue/,
+    set run.command for `desk_replay_driver.py score --role exit --registered-n 154 --n-min 40`, remove blocked_on, status: queued.'
+masked_replay:
+  population: 'The two <=1 h legs of PR #20551: ict_scalp_eth_15m and ict_scalp_xrp_15m (MEASURED 2026-10-27: both execution: live in config/strategies.yaml, timeframe
+    15m; rostered on bybit_1 only). Trade lists: comms/strategy_evidence/<leg>.json -> source_run, 78 + 76 = 154 trades (MEASURED), of which 45 reach the +1.0 R in-trade
+    decision state on the candle path (MEASURED by desk_replay_driver.py selfcheck 2026-10-27; 26 + 28 trades carry mfe_r >= 1.0 in the lists). The pooled hold sd
+    among the 54 mfe_r >= 1 trades is 0.64 R (MEASURED, 0.660 eth / 0.628 xrp).'
+  construction: 'Identical to RQ-20261026-bf56-02 (same packets, same masking, same mask-key discipline): the exit judging reads the SAME packet as the in-trade judging
+    so the two roles are scored on identical decision points, but in a separate judging session so one role''s answer cannot condition the other.'
+  unmask_key: Written only to a separate file the judging session never reads.
+  leak_controls: Planted-oracle scrambled-label arm (RQ-20261026-bf56-01 clauses c1, c2); pre_cutoff flag with the post-cutoff stratum reported separately; no tools
+    and no repo access in the judging session.
+  action_vocabulary: hold | close | partial_close (50%). Closed enum.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  bucket: own_losses
+  basis: 'stand-in: bounds what a desk exit role could add on legs carrying real bybit_2 risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: null
+  basis: 'est_minutes null rather than guessed: the driver does not exist; the judging step is LLM sessions, the scoring step is CPU only.'
+run:
+  workflow: null
+  inputs:
+    research_unit: RQ-20261027-8b01-03
+  note: Deliberately null until the judging dispatch is approved.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-8b01-01
+- RQ-20261026-bf56-03
+- scripts/research/desk_judge_api.py
+- scripts/research/desk_replay_driver.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null

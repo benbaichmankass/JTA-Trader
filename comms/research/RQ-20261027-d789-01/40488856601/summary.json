@@ -1,0 +1,233 @@
+{
+  "leg": "trend_donchian_sol_prop",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "T3": {
+        "delta_net_r": -1.882,
+        "delta_max_drawdown_r": -0.0589,
+        "fold_wins": 1,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 5.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 129,
+      "net_r": 11.029,
+      "net_r_fee_only": 14.5281,
+      "max_drawdown_r": 12.5669,
+      "by_outcome": {
+        "stop": 33,
+        "take_profit": 19,
+        "trail_stop": 77
+      },
+      "mean_bars_held": 24.124,
+      "net_r_per_capital_day": 0.0851,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.8
+      },
+      "data_start": "2023-10-23 00:00:00+00:00",
+      "data_end": "2025-09-23 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2023-10-23 00:00:00+00:00",
+          "end": "2024-04-15 11:45:00+00:00",
+          "trades": 38,
+          "net_r": 5.2546
+        },
+        {
+          "fold": 2,
+          "start": "2024-04-15 11:45:00+00:00",
+          "end": "2024-10-07 23:30:00+00:00",
+          "trades": 28,
+          "net_r": 0.6236
+        },
+        {
+          "fold": 3,
+          "start": "2024-10-07 23:30:00+00:00",
+          "end": "2025-04-01 11:15:00+00:00",
+          "trades": 29,
+          "net_r": 2.042
+        },
+        {
+          "fold": 4,
+          "start": "2025-04-01 11:15:00+00:00",
+          "end": "2025-09-23 23:00:00+00:00",
+          "trades": 34,
+          "net_r": 3.1086
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261027-d789-01/40488856601/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261027-d789-01/40488856601/arms/A__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--slippage-bps-roundtrip",
+        "5.0",
+        "--funding-bps-per-window",
+        "1.0",
+        "--start",
+        "2023-09-24",
+        "--end",
+        "2025-09-23 23:00"
+      ]
+    },
+    "T3": {
+      "reach_ge_6r": 0.0,
+      "n": 129,
+      "net_r": 9.147,
+      "net_r_fee_only": 12.5847,
+      "max_drawdown_r": 12.508,
+      "by_outcome": {
+        "stop": 33,
+        "take_profit": 23,
+        "trail_stop": 73
+      },
+      "mean_bars_held": 23.488,
+      "net_r_per_capital_day": 0.0725,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.8
+      },
+      "data_start": "2023-10-23 00:00:00+00:00",
+      "data_end": "2025-09-23 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2023-10-23 00:00:00+00:00",
+          "end": "2024-04-15 11:45:00+00:00",
+          "trades": 38,
+          "net_r": 4.6043
+        },
+        {
+          "fold": 2,
+          "start": "2024-04-15 11:45:00+00:00",
+          "end": "2024-10-07 23:30:00+00:00",
+          "trades": 28,
+          "net_r": -1.2564
+        },
+        {
+          "fold": 3,
+          "start": "2024-10-07 23:30:00+00:00",
+          "end": "2025-04-01 11:15:00+00:00",
+          "trades": 29,
+          "net_r": 3.0859
+        },
+        {
+          "fold": 4,
+          "start": "2025-04-01 11:15:00+00:00",
+          "end": "2025-09-23 23:00:00+00:00",
+          "trades": 34,
+          "net_r": 2.713
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261027-d789-01/40488856601/arms/T3__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261027-d789-01/40488856601/arms/T3__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--slippage-bps-roundtrip",
+        "5.0",
+        "--funding-bps-per-window",
+        "1.0",
+        "--start",
+        "2023-09-24",
+        "--end",
+        "2025-09-23 23:00"
+      ]
+    }
+  },
+  "window": {
+    "start": "2023-09-24",
+    "end": "2025-09-23 23:00",
+    "fetch_days": 1100,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "60",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2023-10-23 00:00:00+00:00",
+      "2024-04-15 11:45:00+00:00",
+      "2024-10-07 23:30:00+00:00",
+      "2025-04-01 11:15:00+00:00",
+      "2025-09-23 23:00:00+00:00"
+    ]
+  }
+}

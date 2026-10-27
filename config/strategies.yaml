@@ -49,7 +49,7 @@ strategies:
     model: null
     signal_prefixes: [turtle_soup, sweep_reversal]
     enabled: true
-    execution: shadow        # shadow-guard: allow — turtle_soup net-negative money-loser, operator-approved demote 2026-07-07 (Tier-3)
+    execution: live          # shadow-guard: allow — turtle_soup net-negative money-loser, operator-approved demote 2026-07-07 (Tier-3)  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # DOWNGRADED to shadow 2026-07-07 (Tier-3, operator-approved):
                              # turtle_soup is net-negative at EVERY stop setting on BTCUSDT
                              # (atr_stop_mult sweep 2024-05..2026-05 net 7.5bps — worst 0.30 at
@@ -257,7 +257,7 @@ strategies:
     model: null
     signal_prefixes: [fade_breakout, fade]
     enabled: true
-    execution: shadow        # DEMOTED live -> shadow 2026-06-01 (operator
+    execution: live          # DEMOTED live -> shadow 2026-06-01 (operator  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # decision, Tier-3): no live edge demonstrated —
                              # 16 closed trades, 44% win, net -86R (almost all
                              # bybit_1 demo; real-money bybit_2 +1.55/8). Shadow
@@ -499,7 +499,7 @@ strategies:
     model: null
     signal_prefixes: [ict_scalp]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+    execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260922-UTN353OZ-0001): "Demote 3, re-test
                              # XRP" — fails RULE-D1-STAGE0-NET-OF-FULL-COST
@@ -596,7 +596,7 @@ strategies:
     model: null
     signal_prefixes: [ict_scalp]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+    execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260922-UTN353OZ-0001): "Demote 3, re-test
                              # XRP" — fails RULE-D1-STAGE0-NET-OF-FULL-COST
@@ -698,7 +698,7 @@ strategies:
     model: null
     signal_prefixes: [ict_scalp]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+    execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260922-UTN353OZ-0001): "Demote 3, re-test
                              # XRP" — fails RULE-D1-STAGE0-NET-OF-FULL-COST
@@ -955,7 +955,7 @@ strategies:
     model: null
     signal_prefixes: [fvg_range, fvg_mr]
     enabled: true
-    execution: shadow          # shadow-guard: allow — operator-approved demote 2026-07-28 (AskUserQuestion)
+    execution: live            # shadow-guard: allow — operator-approved demote 2026-07-28 (AskUserQuestion)  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                                # DEMOTED live -> shadow 2026-07-28 (Tier-3,
                                # operator-approved). Was promoted shadow->live +
                                # graduated to real-money bybit_2 on 2026-06-02;
@@ -1037,7 +1037,7 @@ strategies:
     # the worst of the pullback family, and this leg routes to bybit_2 (REAL MONEY).
     # `shadow` keeps it running and logging order packages for data; it places no
     # live order. ROLLBACK: set execution back to `live`.
-    execution: shadow        # shadow-guard: allow — Tier-3 operator-approved 2026-08-23; DEMOTED (was live, promoted 2026-06-02); 4-axis tune discharge found nothing, baseline OOS net_R -13.933 on real money
+    execution: live          # shadow-guard: allow — Tier-3 operator-approved 2026-08-23; DEMOTED (was live, promoted 2026-06-02); 4-axis tune discharge found nothing, baseline OOS net_R -13.933 on real money  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # real-money bybit_2 2026-06-02 (Tier-3, operator-
                              # approved). Runs on bybit_1 (demo) AND bybit_2 (real).
                              # Now live on bybit_1 (demo) AND bybit_2 (real money)
@@ -1475,7 +1475,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_sol_4h, donchian_sol_4h]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+    execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
                              # shadow" — fails RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE
@@ -1611,7 +1611,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_ada_4h, donchian_ada_4h]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+    execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
                              # shadow" — fails RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE
@@ -1643,7 +1643,7 @@ strategies:
     model: null
     signal_prefixes: [trend_donchian_avax_4h, donchian_avax_4h]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator decision 2026-09-28
+    execution: live          # shadow-guard: allow — operator decision 2026-09-28  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # (relayed via manager to lane EXIT-OPS on
                              # PI-20260924-TJTOJHYE-0001): "Demote all 3 to
                              # shadow" — fails RULE-E69-DONCHIAN-4H-RESWEEP-DEMOTE
@@ -1924,7 +1924,7 @@ strategies:
     model: null
     signal_prefixes: [mgc_trend]
     enabled: true
-    execution: shadow        # shadow-guard: allow — operator-approved 2026-06-18 ("move on both").
+    execution: live          # shadow-guard: allow — operator-approved 2026-06-18 ("move on both").  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # DEMOTED live -> shadow 2026-06-18 (Tier-3): net-negative
                              # on BOTH the XAUUSD spot proxy (-50.7R) AND real GC=F 1h
                              # (-15.5R, 2.4y) — see docs/research/recombination-sweep-2026-06-18.md
@@ -2373,7 +2373,7 @@ strategies:
     model: null
     signal_prefixes: [slv_trend]
     enabled: true
-    execution: shadow  # shadow-guard: allow — operator-approved Tier-3 demote 2026-08-24; 0 wins in 13 closed, -$5,375 at 0.77 coverage, gate met 2 consecutive reviews
+    execution: live    # shadow-guard: allow — operator-approved Tier-3 demote 2026-08-24; 0 wins in 13 closed, -$5,375 at 0.77 coverage, gate met 2 consecutive reviews  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
     timeframe: "1h"
     symbols:
       - SLV
@@ -2909,7 +2909,7 @@ strategies:
     model: null
     signal_prefixes: [eth_pullback_prop]
     enabled: true
-    execution: shadow        # shadow-guard: allow — Tier-3 operator-approved 2026-08-23; prop leg, OOS net_R -11.78, breach is terminal
+    execution: live          # shadow-guard: allow — Tier-3 operator-approved 2026-08-23; prop leg, OOS net_R -11.78, breach is terminal  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
     # DEMOTED live -> shadow 2026-08-23. Reverses the 2026-06-25 promotion below on NEW
     # evidence: OOS net_R -11.78 over a 13,206-bar corpus
     # (trainer #9955/#9958), one of 5-of-6 OOS-negative crypto pullback legs. The family
@@ -3109,7 +3109,7 @@ strategies:
     model: null
     signal_prefixes: [avax_pullback, avax_pullback_2h]
     enabled: true
-    execution: shadow        # shadow-guard: allow — DEMOTED 2026-07-22 (Tier-3, operator-approved
+    execution: live          # shadow-guard: allow — DEMOTED 2026-07-22 (Tier-3, operator-approved  # DEMO-FLOOR RULE 2026-10-27 (Tier-3): shadow -> live; ROLLBACK = shadow
                              # same session): 3rd-consecutive-review-confirmed diversified-paper-book
                              # laggard (this window -$3976.67/7t/14.3%WR; unchanged-negative since
                              # 07-07/07-10, worst cell in the cohort). Thin n (7 trades) — a 4-6wk
@@ -3173,14 +3173,21 @@ strategies:
   # § 3.7). Not a candle strategy: src/runtime/strategy_signal_builders.py::claude_desk_signal_builder
   # reads the proposals desk intake (scripts/ops/desk_intake.py) ACCEPTED and emits ONE package per
   # decision_id with the proposal's own entry / stop / TP (both brackets mandatory, else refused) and
-  # the decision_id in meta. No size: each account's RiskManager sizes it. Desk intake accepts nothing
-  # while MD-TRADE-DESK.functions.entry_generation.blocked_until is set (config/mandates.yaml).
+  # the decision_id in meta. No size: each account's RiskManager sizes it. Desk intake accepts a proposal only
+  # while every account rostering this leg is a demo account in MD-TRADE-DESK.functions.entry_generation.demo_accounts;
+  # every other account stays behind its blocked_until (DESK-13). A filled trade is closed at market after the
+  # proposal's max_hold_min (monitor()), and managed every 5m by its per-trade session (config/short_hold.yaml).
   # Rostered on bybit_1 ONLY (the Alpaca half is row DESK-17B). ROLLBACK: delete this block and the roster entry.
   claude_desk:
     model: null
     signal_prefixes: [claude_desk]
     enabled: true
-    execution: shadow        # shadow-guard: allow — DESK-17 dispatch (manager, operator authority, 2026-10-26): "... with execution: shadow (shadow first; it logs order packages and sends nothing)". A flip to live is a later Tier-3 / data-backed decision.
+    execution: live          # DECIDED 2026-10-27, operator popup relayed by manager session_01C1ooo4kqBbng7vytdG1UVs, verbatim
+                             # "Yes, live on bybit_1 demo now (Recommended)": the desk's own entries trade on the bybit_1
+                             # DEMO (Stage-1 mechanics, 1-2 clean trades). Real money stays behind DESK-13: desk intake admits
+                             # a proposal only while EVERY account rostering this leg is in MD-TRADE-DESK's
+                             # entry_generation.demo_accounts and is a demo/paper account (config/mandates.yaml). REVERT:
+                             # execution: shadow (was shadow 2026-10-26..27, DESK-17).
     decision_bar: closed     # the builder decides from the proposal queue, not a forming bar: no catch-up
     confidence: 0.5          # the package confidence (RiskManager's scalar only sizes DOWN from the account basis)
     symbols: [AVAXUSDT]      # LOAD-BEARING scope: the one bybit_1 symbol no other rostered leg trades. Each

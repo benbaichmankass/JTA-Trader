@@ -1,0 +1,111 @@
+id: RQ-20261027-8b01-01
+title: 'Desk DESK-8b D-S0 harness self-check on ict_scalp_eth_15m / ict_scalp_xrp_15m: does the masked replay reproduce the two legs'' recorded net R on HOLD, does
+  the mask hold, and does a planted hindsight oracle show headroom the harness can see?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: deterministic
+question: 'Before any Claude judgement is scored on the two <=1 h legs: (a) does the DESK-7B driver''s HOLD replay reproduce every one of the 154 recorded trades''
+  net_r to within 1e-6 R with the cost stack from execution_costs.resolve_cost_policy; (b) does any packet contain a symbol, date or absolute price; (c) (bf56-01''s
+  re-registered clause, unchanged) does the planted hindsight oracle score above 0 with its 95% CI lower bound above 0, and does the same oracle on outcome ids permuted
+  within leg have a CI containing 0?'
+why_this_matters: 'DESK-8b step of docs/plans/claude-trading-desk-DESIGN.md 6.3 / 8.1. Same instrument-before-finding gate as RQ-20261026-bf56-01 (PASSED on the 4
+  real-money 2h/4h legs, graded 2026-10-27), now on the 15m population. It is also where the in-trade HEADROOM of these legs is measured: the oracle''s mean dR is
+  an upper bound on what any tighten-to-breakeven judgement could add. The dev run saw +0.018 R, below the in-trade MDE, so a FAIL on (c1) is the EXPECTED landing
+  and is the finding, not a harness fault.'
+why_not_inferential: 'A reproduction check: the HOLD arm either equals the committed evidence net_r on every row or it does not, and the mask either leaks a symbol/date/price
+  or it does not. There is no sample whose size sets a detectable effect. Clause (c) is the only statistical clause, and it is graded structurally (a sign and a CI
+  lower bound for the oracle, CI-contains-0 for the scrambled oracle), with no numeric band and not against an effect size.'
+decision_rule:
+  id: RULE-RQ20261027-8B01-01-HARNESS-SELFCHECK
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'Over the two legs'' committed trade lists (MEASURED 2026-10-27 from comms/strategy_evidence/ict_scalp_{eth,xrp}_15m.json: n_trades_oos 78, 76 = 154
+    recorded trades): (a) max over trades of |replay_hold_net_r - recorded net_r|, and the count of trades not replayed; (b) a regex/field scan of every built packet
+    for the real symbol string, any 4-digit-year timestamp, and any price within 0.5% of the real entry; (c1) the hindsight ORACLE (takes tighten-to-breakeven at
+    +1R at a decision point iff hindsight says it beats HOLD): mean and 95% bootstrap CI of paired dR (action vs HOLD) over the decision points; (c2) the SAME oracle
+    decisions replayed against outcome ids permuted within leg: mean and 95% bootstrap CI of paired dR. No LLM cost is incurred.'
+  rule: 'PASS IF (a) max |dR| <= 1e-6 AND replayed = 154 of 154 AND (b) zero leaks in every packet AND (c1) the oracle''s aligned mean dR > 0 with its 95% CI lower
+    bound > 0 AND (c2) the scrambled oracle''s 95% CI contains 0. FAIL IF any of (a), (b), (c1), (c2) is violated with every trade replayed; the record names the
+    violated clause and the leg, and DESK-7B-REPLAY-DRIVER reopens. INDETERMINATE (not a verdict) IF fewer than 154 trades are replayable because candles for a leg''s
+    window could not be fetched: the missing leg and window are named, and RQ-20261027-8b01-02/-03 stay blocked. The 1e-6 and 154 are not changed after any result.'
+  reregistration:
+    note: 'No re-registration: clauses (a), (b), (c1), (c2) are copied from RQ-20261026-bf56-01 as re-registered 2026-10-26. Only the population count (370 -> 154)
+      differs.'
+    seen_before_registration: 'DEV RUN SEEN BEFORE REGISTRATION (disclosed, as bf56-01 did): desk_replay_driver.py selfcheck --fetch --legs ict_scalp_eth_15m,ict_scalp_xrp_15m
+      --registered-n 154 --n-min 40, 2026-10-27: 154 of 154 trades replayed (max |dR| 0), mask clean (45 packets, planted-leak control found), oracle aligned mean
+      dR +0.018 R, 95% CI [0.0, 0.0499] (c1 NOT met), scrambled oracle CI [0, 0] (c2 met). The clauses are bf56-01''s re-registered structural clauses, unchanged;
+      nothing was tuned to this.'
+  what_it_does_not_do: 'Says nothing about Claude''s judgement or the legs'' edge. A PASS unlocks 8b-02/-03. A FAIL on (c1) with every trade replayed means the oracle
+    has no headroom to find on these legs: 8b-02 (in-trade) is then retired with the measured oracle bound, not re-run with a looser clause.'
+masked_replay:
+  population: 'The two <=1 h legs of PR #20551: ict_scalp_eth_15m and ict_scalp_xrp_15m (MEASURED 2026-10-27: both execution: live in config/strategies.yaml, timeframe
+    15m; rostered on bybit_1 only). Trade lists: comms/strategy_evidence/<leg>.json -> source_run, 78 + 76 = 154 trades (MEASURED), of which 45 reach the +1.0 R in-trade
+    decision state on the candle path (MEASURED by desk_replay_driver.py selfcheck 2026-10-27; 26 + 28 trades carry mfe_r >= 1.0 in the lists). The pooled hold sd
+    among the 54 mfe_r >= 1 trades is 0.64 R (MEASURED, 0.660 eth / 0.628 xrp).'
+  construction: 'Packets are built by the driver from the committed trade list and re-fetched candles using desk_scan_packet.py --as-of masking: symbols become aliases,
+    prices are rebased to 100 at the decision bar and expressed in entry-ATR14 units, timestamps are anchored at 2000-01-01T00:00Z, volume and calendar are withheld,
+    every bar at or after the decision bar''s close is dropped. The unmask key is written only to a separate file the judging session never reads.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: gates the desk''s D-S0 on the two <=1 h legs now on bybit_1; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 5
+  basis: 'MEASURED 2026-10-27: the same selfcheck with --fetch on the two 15m legs finished inside the 115 s tool window on a session container; 5 is that rounded
+    up.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/desk_replay_driver.py
+  - selfcheck
+  - --out
+  - '{out_dir}'
+  - --fetch
+  - --legs
+  - ict_scalp_eth_15m,ict_scalp_xrp_15m
+  - --registered-n
+  - '154'
+  - --n-min
+  - '40'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261027-8b01-01
+  note: The driver is scripts/research/desk_replay_driver.py (DESK-7B-REPLAY-DRIVER). It writes {out_dir}/verdict.json with the three registered clauses decided exactly
+    as registered. --fetch tops the two 15m candle series up from Binance Vision.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-bf56-01
+- RQ-20261027-8b01-02
+- RQ-20261027-8b01-03
+- RQ-20261027-8a01-01
+- RQ-20261027-8a01-02
+- scripts/research/desk_replay_driver.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: '2026-10-27T11:42:51+00:00'
+grading:
+  attested: RULE-RQ20261027-8B01-01-HARNESS-SELFCHECK
+  auto: true
+  decision_rule_id: RULE-RQ20261027-8B01-01-HARNESS-SELFCHECK
+  evidence:
+  - research/results/RQ-20261027-8b01-01/40498212318.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

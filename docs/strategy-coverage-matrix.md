@@ -4,31 +4,42 @@
 
 One row per `execution: live` strategy. `regime`: **cell** = has a `config/regime_policy.yaml` entry; **exempt** = permanently regime-gating-N/A (reasoned); **debt** = grandfathered, owed a cell (paid down by Phase-2 / the system-review). `desc` = has a `config/strategy_descriptions.json` entry.
 
-**Coverage:** 3 celled · 8 exempt · **28 in debt** (ceiling 34). The debt count must trend to 0.
+**Coverage:** 7 celled · 13 exempt · **34 in debt** (ceiling 34). The debt count must trend to 0.
 
 | strategy | regime | desc |
 |---|---|---|
 | `ada_pullback_2h` | 🟠 debt | ✅ |
+| `avax_pullback_2h` | 🟠 debt | ✅ |
+| `claude_desk` | ➖ exempt | ✅ |
 | `eth_pullback_2h` | 🟠 debt | ✅ |
+| `eth_pullback_prop_2h` | 🟠 debt | ✅ |
+| `fade_breakout_4h` | ✅ cell | ✅ |
+| `fvg_range_15m` | ✅ cell | ✅ |
 | `gdx_pullback_1d` | 🟠 debt | ✅ |
 | `gld_pullback_1d` | 🟠 debt | ✅ |
 | `gld_pullback_1h` | ✅ cell | ✅ |
+| `htf_pullback_trend_2h` | ✅ cell | ✅ |
 | `iaum_pullback_1d` | 🟠 debt | ✅ |
+| `ict_scalp_5m` | ✅ cell | ✅ |
+| `ict_scalp_avax_5m` | ➖ exempt | ✅ |
 | `ict_scalp_eth_15m` | ➖ exempt | ✅ |
 | `ict_scalp_mgc_15m` | ➖ exempt | ✅ |
 | `ict_scalp_sol_15m` | ➖ exempt | ✅ |
+| `ict_scalp_sol_5m` | ➖ exempt | ✅ |
 | `ict_scalp_xrp_15m` | ➖ exempt | ✅ |
 | `ict_scalp_xrp_5m` | ➖ exempt | ✅ |
 | `ief_pullback_1d` | 🟠 debt | ✅ |
 | `iwm_trend_long_1d` | 🟠 debt | ✅ |
 | `mes_trend_long_1d` | 🟠 debt | ✅ |
 | `mgc_pullback_1d` | 🟠 debt | ✅ |
+| `mgc_trend_1h` | ➖ exempt | ✅ |
 | `mhg_pullback_1d` | 🟠 debt | ✅ |
 | `qld_trend_long_1d` | 🟠 debt | ✅ |
 | `qqq_pullback_1h` | 🟠 debt | ✅ |
 | `qqq_trend_long_1d` | 🟠 debt | ✅ |
 | `scha_trend_long_1d` | 🟠 debt | ✅ |
 | `slv_pullback_1d` | 🟠 debt | ✅ |
+| `slv_trend_1h` | 🟠 debt | ✅ |
 | `sol_pullback_2h` | 🟠 debt | ✅ |
 | `splg_trend_long_1d` | 🟠 debt | ✅ |
 | `spy_pullback_1h` | 🟠 debt | ✅ |
@@ -38,13 +49,17 @@ One row per `execution: live` strategy. `regime`: **cell** = has a `config/regim
 | `tlt_pullback_1h` | 🟠 debt | ✅ |
 | `tqqq_trend_long_1d` | 🟠 debt | ✅ |
 | `trend_donchian` | ✅ cell | ✅ |
+| `trend_donchian_ada_4h` | 🟠 debt | ✅ |
+| `trend_donchian_avax_4h` | 🟠 debt | ✅ |
 | `trend_donchian_eth` | 🟠 debt | ✅ |
 | `trend_donchian_eth_4h` | 🟠 debt | ✅ |
 | `trend_donchian_eth_prop` | ➖ exempt | ✅ |
 | `trend_donchian_sol` | 🟠 debt | ✅ |
+| `trend_donchian_sol_4h` | 🟠 debt | ✅ |
 | `trend_donchian_sol_prop` | ➖ exempt | ✅ |
 | `trend_donchian_xrp_4h` | 🟠 debt | ✅ |
 | `trend_donchian_xrp_adx25` | ➖ exempt | ✅ |
+| `turtle_soup` | ➖ exempt | ✅ |
 | `uso_trend_1h` | 🟠 debt | ✅ |
 | `xrp_pullback_2h` | 🟠 debt | ✅ |
 

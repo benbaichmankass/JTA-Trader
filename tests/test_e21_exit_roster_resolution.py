@@ -50,14 +50,16 @@ def test_the_retired_fallback_covered_no_live_leg():
             routed_live |= set((cfg or {}).get("strategies") or [])
 
     assert len(routed_live) > 0, "no strategy is routed to a live account — check the parse"
-    retired_fallback = {"turtle_soup", "vwap"}
+    # turtle_soup is routed to bybit_1 since 2026-10-27 (DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR)): the deleted fallback
+    # is no longer needed for it (exit monitors resolve from config), so only vwap is still pinned unrouted.
+    retired_fallback = {"vwap"}
     assert retired_fallback & routed_live == set(), (
         "the retired fallback now covers a live leg; re-open the E21 argument "
         f"before trusting this test: {sorted(retired_fallback & routed_live)}"
     )
     # Both names exist in the registry — so the fallback was not merely stale,
     # it named legs that are deliberately NOT executing.
-    assert strategies["turtle_soup"]["execution"] == "shadow"
+    assert strategies["turtle_soup"]["execution"] == "live"
     assert strategies["vwap"]["enabled"] is False
 
 

@@ -113,8 +113,9 @@ LEVERS = ["trail_mult", "tp_r", "trail_decay_tight_mult", "trail_decay_stall_bar
 # ⚠️ AND `n_invisible == 0` IS NOT "THE 9 LEGS ARE MEASURED". It says the hook
 # is now ON their code path. Whether a real row ever lands is a question for
 # `/api/diag/position_telemetry`, not for this constant.
+# turtle_soup added 2026-10-27: it joined the enabled+live population (DEMO-FLOOR RULE) and its unit carries the hook (derived from source).
 TELEMETRY_HOOKED_UNITS = {"trend_donchian", "htf_pullback_trend_2h",
-                          "ict_scalp", "squeeze_breakout_4h"}
+                          "ict_scalp", "squeeze_breakout_4h", "turtle_soup"}
 
 
 def _f(v) -> Optional[float]:

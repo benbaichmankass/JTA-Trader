@@ -1,0 +1,566 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "trend_donchian_eth: 742 trades in the baseline arm 'A' on ETHUSDT 1h candles 2020-07-01 .. 2026-10-15 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'DI', 'SL']",
+  "n": 742,
+  "measurement": {
+    "leg": "trend_donchian_eth",
+    "label": "incumbent_stands",
+    "grade": {
+      "verdict": "fail",
+      "label": "incumbent_stands",
+      "baseline": "A",
+      "candidates": {
+        "DI": {
+          "net_r": 56.2814,
+          "delta_net_r": 2.1556,
+          "max_drawdown_r": 29.7586,
+          "max_drawdown_cap": 41.6506,
+          "folds_ge_incumbent": 6,
+          "passes": false,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": 50.0,
+            "reach_ge_6r": 0.0122,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        },
+        "SL": {
+          "net_r": 42.1916,
+          "delta_net_r": -11.9342,
+          "max_drawdown_r": 22.5577,
+          "max_drawdown_cap": 41.6506,
+          "folds_ge_incumbent": 2,
+          "passes": false,
+          "lever_fired": true,
+          "tp_doctrine": {
+            "declared_tp_r": 50.0,
+            "reach_ge_6r": 0.005,
+            "satisfies_reach_floor": null,
+            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is P(mfe_r >= 6) over this arm's own trades"
+          }
+        }
+      },
+      "fold_majority": 4,
+      "n_floor": 39,
+      "dd_tol_frac": 0.35,
+      "control": null,
+      "delta_r_per_trade": 0.02,
+      "delta_r_bar": 14.84,
+      "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0121,
+        "n": 742,
+        "net_r": 54.1258,
+        "net_r_fee_only": 76.5869,
+        "max_drawdown_r": 30.8523,
+        "by_outcome": {
+          "stop": 359,
+          "trail_stop": 273,
+          "take_profit": 107,
+          "timeout": 3
+        },
+        "mean_bars_held": 32.966,
+        "net_r_per_capital_day": 0.0531,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.6,
+          "vol_skip_above_pctl": 0.0,
+          "vol_skip_below_pctl": 0.1,
+          "vol_pctl_window": 200
+        },
+        "data_start": "2020-07-01 00:00:00+00:00",
+        "data_end": "2026-10-15 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2021-07-18 23:59:50+00:00",
+            "trades": 128,
+            "net_r": 24.1344
+          },
+          {
+            "fold": 2,
+            "start": "2021-07-18 23:59:50+00:00",
+            "end": "2022-08-05 23:59:40+00:00",
+            "trades": 115,
+            "net_r": 9.3352
+          },
+          {
+            "fold": 3,
+            "start": "2022-08-05 23:59:40+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 127,
+            "net_r": -9.4165
+          },
+          {
+            "fold": 4,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2024-09-09 23:59:20+00:00",
+            "trades": 130,
+            "net_r": 12.8425
+          },
+          {
+            "fold": 5,
+            "start": "2024-09-09 23:59:20+00:00",
+            "end": "2025-09-27 23:59:10+00:00",
+            "trades": 128,
+            "net_r": 2.5097
+          },
+          {
+            "fold": 6,
+            "start": "2025-09-27 23:59:10+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 114,
+            "net_r": 14.721
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/A__bt.json",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      },
+      "DI": {
+        "reach_ge_6r": 0.0122,
+        "n": 740,
+        "net_r": 56.2814,
+        "net_r_fee_only": 78.6772,
+        "max_drawdown_r": 29.7586,
+        "by_outcome": {
+          "stop": 357,
+          "trail_stop": 273,
+          "take_profit": 107,
+          "timeout": 3
+        },
+        "mean_bars_held": 33.009,
+        "net_r_per_capital_day": 0.0553,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.6,
+          "direction_filter": "di",
+          "vol_skip_above_pctl": 0.0,
+          "vol_skip_below_pctl": 0.1,
+          "vol_pctl_window": 200
+        },
+        "data_start": "2020-07-01 00:00:00+00:00",
+        "data_end": "2026-10-15 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2021-07-18 23:59:50+00:00",
+            "trades": 128,
+            "net_r": 24.1344
+          },
+          {
+            "fold": 2,
+            "start": "2021-07-18 23:59:50+00:00",
+            "end": "2022-08-05 23:59:40+00:00",
+            "trades": 115,
+            "net_r": 9.3352
+          },
+          {
+            "fold": 3,
+            "start": "2022-08-05 23:59:40+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 126,
+            "net_r": -8.3227
+          },
+          {
+            "fold": 4,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2024-09-09 23:59:20+00:00",
+            "trades": 129,
+            "net_r": 13.9043
+          },
+          {
+            "fold": 5,
+            "start": "2024-09-09 23:59:20+00:00",
+            "end": "2025-09-27 23:59:10+00:00",
+            "trades": 128,
+            "net_r": 2.5097
+          },
+          {
+            "fold": 6,
+            "start": "2025-09-27 23:59:10+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 114,
+            "net_r": 14.721
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/DI__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/DI__bt.json",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--direction-filter",
+          "di",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      },
+      "SL": {
+        "reach_ge_6r": 0.005,
+        "n": 602,
+        "net_r": 42.1916,
+        "net_r_fee_only": 59.8275,
+        "max_drawdown_r": 22.5577,
+        "by_outcome": {
+          "stop": 292,
+          "trail_stop": 223,
+          "take_profit": 85,
+          "timeout": 2
+        },
+        "mean_bars_held": 32.473,
+        "net_r_per_capital_day": 0.0518,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.6,
+          "direction_filter": "slope",
+          "vol_skip_above_pctl": 0.0,
+          "vol_skip_below_pctl": 0.1,
+          "vol_pctl_window": 200
+        },
+        "data_start": "2020-07-01 00:00:00+00:00",
+        "data_end": "2026-10-15 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2020-07-01 00:00:00+00:00",
+            "end": "2021-07-18 23:59:50+00:00",
+            "trades": 106,
+            "net_r": 23.4818
+          },
+          {
+            "fold": 2,
+            "start": "2021-07-18 23:59:50+00:00",
+            "end": "2022-08-05 23:59:40+00:00",
+            "trades": 93,
+            "net_r": 2.6939
+          },
+          {
+            "fold": 3,
+            "start": "2022-08-05 23:59:40+00:00",
+            "end": "2023-08-23 23:59:30+00:00",
+            "trades": 96,
+            "net_r": -4.784
+          },
+          {
+            "fold": 4,
+            "start": "2023-08-23 23:59:30+00:00",
+            "end": "2024-09-09 23:59:20+00:00",
+            "trades": 100,
+            "net_r": 5.1022
+          },
+          {
+            "fold": 5,
+            "start": "2024-09-09 23:59:20+00:00",
+            "end": "2025-09-27 23:59:10+00:00",
+            "trades": 109,
+            "net_r": 4.1988
+          },
+          {
+            "fold": 6,
+            "start": "2025-09-27 23:59:10+00:00",
+            "end": "2026-10-15 23:59:00+00:00",
+            "trades": 98,
+            "net_r": 11.4997
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/SL__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/SL__bt.json",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--direction-filter",
+          "slope",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2020-07-01",
+      "end": "2026-10-15 23:59",
+      "fetch_days": 2330,
+      "feed": {
+        "source": "binance",
+        "ticker": "ETHUSDT",
+        "interval": "60",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2020-07-01 00:00:00+00:00",
+        "2021-07-18 23:59:50+00:00",
+        "2022-08-05 23:59:40+00:00",
+        "2023-08-23 23:59:30+00:00",
+        "2024-09-09 23:59:20+00:00",
+        "2025-09-27 23:59:10+00:00",
+        "2026-10-15 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/A__bt.json",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      },
+      "DI": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/DI__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/DI__bt.json",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--direction-filter",
+          "di",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--direction-filter",
+          "di"
+        ],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      },
+      "SL": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ETHUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/SL__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261026-ed1c-05/40488860220/arms/SL__bt.json",
+          "--vol-skip-below-pctl",
+          "0.1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--direction-filter",
+          "slope",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--direction-filter",
+          "slope"
+        ],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      }
+    }
+  },
+  "note": "FAIL / incumbent_stands: no candidate clears net R / fold / drawdown: the incumbent exit stands"
+}

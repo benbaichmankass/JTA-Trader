@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 by path: a new off-thread runtime pass on the live trader (src/runtime/desk_event_trigger.py, kicked from src/main.py's tick loop) plus two diag log_file names. It places, sizes and amends NOTHING: it only builds a 5m scan packet, lands it on desk/decisions (pointer comms/desk/latest_trigger.json; the hourly pointer is untouched) and posts one desk-trigger-wake marker for the manager. Every failure is a receipt state / label (no halting). Demo-floor work dispatched by the manager (session_01C1ooo4kqBbng7vytdG1UVs) under MD-DEMO-FLOOR-BUILD (operator popup verbatim \"Grant as written (Recommended)\"). Revert: git revert, or set symbols: [] in config/desk_triggers.yaml (no wake is posted).",
+  "why": "DESK-SHORT-HOLD-LANE item 2: the system decides which situations wake Claude between the hourly scans (ATR burst, momentum burst, level break / sweep, near-signal, calendar), rate-limited and deduped with a cost line, every firing logged as a label joinable to Claude's answer and the outcome."
+}

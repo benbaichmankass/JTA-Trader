@@ -94,7 +94,9 @@ def test_routed_to_bybit_1_only_since_the_r2_cut():
     accounts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
     # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (#16548 grant) removed it from bybit_1
     # too: soak complete (38/10 closes), Stage-0 fails (-0.028R, 1/4 folds).
-    assert "eth_pullback_2h" not in accounts["bybit_1"]["strategies"]
+    # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): back on bybit_1 (the demo floor) as a mechanics soak; the
+    # real-money assertions below are unchanged.
+    assert "eth_pullback_2h" in accounts["bybit_1"]["strategies"]
     assert "eth_pullback_2h" not in accounts["bybit_2"]["strategies"], (
         "eth_pullback_2h is back on the real-money bybit_2 roster. That is a "
         "Tier-3 promotion and needs a record clearing the four-clause bar: "

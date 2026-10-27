@@ -160,6 +160,20 @@ id or a bar. A comment of kind `could_not_build` is an incident, NOT a wake. The
 cannot write `desk/decisions`: tell the operator (the fallback workflow covers the hour meanwhile). The hourly
 spawner routine is retired; delete it once the first marker-spawned wake has written its row.
 
+**Desk trigger wake (DESK-SHORT-HOLD-LANE item 2, operator 2026-10-27: the system decides which situations wake
+Claude).** Between the hourly scans the live trader (`src/runtime/desk_event_trigger.py`, `config/desk_triggers.yaml`)
+runs cheap detectors on closed 5m bars (ATR burst, momentum burst, level break / liquidity sweep, a strategy
+near-signal, a calendar event), rate-limited (per-symbol cooldown, `max_per_hour`, `max_per_day`) and deduped. A
+firing lands a 5m scan packet of THAT symbol on `desk/decisions` (pointer `comms/desk/latest_trigger.json`; the
+hourly pointer never moves) and posts ONE comment on the ops-flags PR whose hidden marker has `kind`
+`desk-trigger-wake` (`packet_id`, `packet_sha`, `commit`, `trigger`). **On it, `create_session` exactly as for a
+`desk-wake` (same arguments, title `desk-trigger-wake <packet_id>`, extra tag `desk-trigger`), with the WAKE PROMPT
+followed by ONE line: `Your packet is <packet_id> (event-triggered: <trigger.kind> on <trigger.symbol>); run
+desk_write.py with --packet-id <packet_id>.`** One marker, one wake; never spawn twice for a packet id. It is not a
+`desk-wake` and never counts against the hourly bar. Receipt `/api/diag/log_file?name=desk_trigger_receipt` (with
+the cost line: wakes today × MEASURED $/wake vs the daily ceiling); every firing and its disposition is
+`?name=desk_trigger_labels`.
+
 **Short-hold wake (DESK-SHORT-HOLD-LANE, operator goal 2026-10-27: Claude manages a ≤ 1 h trade from ONE session
 that lives for the life of that trade).** When a package opens on a leg listed in `config/short_hold.yaml` (first `claude_desk`, the desk's own Claude-originated trades; then any short-hold leg; operator 2026-10-27 ~07:05Z: the lane is leg-agnostic and asks for the best trading decision), the
 live trader (`src/runtime/short_hold_wake.py`) lands its first 5-min packet envelope on `live-review/rows`

@@ -254,7 +254,7 @@
    "strategy": "htf_pullback_trend_2h",
    "symbol": "BTCUSDT",
    "tf": "2h",
-   "execution": "shadow",
+   "execution": "live",
    "trail_geometry": {
     "status": "shipped",
     "ref": "trail_mult 5→4, walk-forward PASS 4/6 folds, live 2026-07-12 (#6176/#6177) || RE-SWEEP ATTEMPTED 2026-08-14 AT LIVE PARITY and returned NO VERDICT: m20-exit-lever-sweep run 31771809102, capped TP 0.099 APPLIED (family is in LIVE_TP_CAPPED_FAMILIES), every cell `insufficient_base` because base OOS n (24) is below MIN_OOS_TRADES=25 (m20_fleet_exit_sweep.py:402, operator decision 2026-08-11). SO THIS CELL IS NOT A TO-DO, IT IS A WAIT -- re-running the sweep before this leg accumulates OOS trades returns exactly this again. The shipped decision still rests on its ORIGINAL pre-2026-08-10 no-take-profit evidence, which is why tp_geometry stays `no_take_profit` despite this 08-14 date: a note about the evidence is not the evidence being renewed. || RE-SWEEP 2026-08-15 AT LIVE PARITY RETURNED A VERDICT, AND THE SHIPPED VALUE SURVIVED: relay #9427, --tp-cap-pct 0.099 passed explicitly (the default 0.0 is NOT live parity and would have reproduced the very gap this cell is stale for). Both neighbours of the live trail_mult 4.0 were graded on the merits and BOTH LOST to the config-exact base -- trail3 is_oos_fail (dnet_R IS -12.63 / OOS -5.48, maxDD worse on both), trail5 is_oos_fail (IS +8.39 but OOS -4.69: the overfit shape the IS/OOS split exists to catch, and a re-measurement reporting only the in-sample number would have argued for LOOSENING a live stop). THE 08-14 'NO VERDICT' NOTE ABOVE IS SUPERSEDED BUT NOT WRONG: it was measured at split target 25 and remains true there. This verdict exists ONLY AT TARGET 30 -- base OOS n 24 (target 25, below the MIN_OOS_TRADES=25 floor) vs 31 (target 30), on a leg with 407 lifetime trades. WHY tp_geometry STAYS `no_take_profit` DESPITE THIS BEING A LIVE-PARITY MEASUREMENT: target 30 is not the sanctioned default; flipping it is an OPEN OPERATOR DECISION (decision-queue item 2). Stamping `live_parity` here would retire this cell's staleness on the strength of a configuration nobody has approved, and would drop it out of the stale-decisions count via a field the operator has not yet decided. The geometry field is therefore left as measured-under-the-current-default, and this segment is a note about NEW evidence rather than the cell's vintage being renewed. If item 2 is decided FOR target 30, this cell should flip to `live_parity` and drop off the stale list; if against, it stays here until the leg accumulates OOS trades. SCOPE, so this is not over-read: it tests 4.0 +/- 1 only. It says no neighbour beats the shipped value, NOT that 4.0 is optimal -- no wider grid was run. And verdicts.json reports regime_router 'off' while listing this leg in regime_policy_off_legs (regime_gate_delta 'narrower_live'), so live trades a NARROWER book than this backtest: base and cells share the identical book so the DELTA is sound, but the absolute net_R figures are not the live book's. || **RE-SWEPT 2026-08-17 AT THE SANCTIONED TARGET, AND THE SHIPPED VALUE SURVIVES AGAIN — THIS CELL IS NO LONGER A STALE DECISION.** Run 31989495640 (dispatched on `main`, legs=htf_pullback_trend_2h, levers=trail_geometry, tp_cap_pct=0.099, `split_target_oos` left EMPTY so the script default applied). Live parity is declared from a MEASUREMENT, not the request: the row carries live-TP-reach median 3.493R over n=357 IS trades, which the sweep emits only when the cap actually applies. base n IS=357 **OOS=49**, split 2025-12-27, `split_target_oos=50`. Both neighbours of the live trail_mult 4.0 lost on the merits: trail3 = is_oos_fail (d_net_r IS **-9.3326** / OOS **-11.6777**, gate_reason_OOS `net_r_worse+maxdd_worse` — negative on BOTH sides), trail5 = is_oos_fail (IS +7.7387 but OOS **-4.4355** — again the overfit shape the IS/OOS split exists to catch, and a re-measurement quoting only the in-sample number would have argued for LOOSENING a live stop). **WHY tp_geometry NOW FLIPS `no_take_profit` -> `live_parity`, when the 08-15 segment above deliberately refused to:** that segment's stated blocker was that its verdict existed ONLY at split target 30, which was not then a sanctioned default, and it named the exact condition for flipping — an operator decision on the target. That decision LANDED on 2026-08-16 (`DEFAULT_SPLIT_TARGET_OOS = 50`, `m20_fleet_exit_sweep.py:597`, Tier-3, `e0f0761e` / #9748). This run is at that sanctioned default and on a LARGER out-of-sample base than the one it supersedes (OOS 49 vs 31), so the condition is met more strongly than the 08-15 segment anticipated — it is not being waived. THE 08-15 AND 08-14 SEGMENTS ARE SUPERSEDED BUT NOT WRONG: each remains true at the target it was measured at. STATUS UNCHANGED at `shipped` — this CONFIRMS a lever that is already live under the geometry production actually places; it asks for no new decision. SCOPE, so this is not over-read: it tests 4.0 +/- 1 only. It says no neighbour beats the shipped value, NOT that 4.0 is optimal — no wider grid was run. The regime_router caveat in the 08-15 segment still applies unchanged.",
@@ -640,7 +640,7 @@
    "strategy": "avax_pullback_2h",
    "symbol": "AVAXUSDT",
    "tf": "2h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "sol_pullback_2h / xrp_pullback_2h / ada_pullback_2h / avax_pullback_2h / eth_pullback_prop_2h",
    "trail_geometry": {
     "status": "honest_negative",
@@ -710,7 +710,7 @@
    "strategy": "eth_pullback_prop_2h",
    "symbol": "ETHUSDT",
    "tf": "2h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "sol_pullback_2h / xrp_pullback_2h / ada_pullback_2h / avax_pullback_2h / eth_pullback_prop_2h",
    "trail_geometry": {
     "status": "honest_negative",
@@ -875,7 +875,7 @@
    "strategy": "trend_donchian_sol_4h",
    "symbol": "SOLUSDT",
    "tf": "4h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "trend_donchian_{eth,sol,xrp,ada,avax}_4h",
    "trail_geometry": {
     "status": "honest_negative",
@@ -1110,7 +1110,7 @@
    "strategy": "trend_donchian_ada_4h",
    "symbol": "ADAUSDT",
    "tf": "4h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "trend_donchian_{eth,sol,xrp,ada,avax}_4h",
    "trail_geometry": {
     "status": "honest_negative",
@@ -1183,7 +1183,7 @@
    "strategy": "trend_donchian_avax_4h",
    "symbol": "AVAXUSDT",
    "tf": "4h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "trend_donchian_{eth,sol,xrp,ada,avax}_4h",
    "trail_geometry": {
     "status": "honest_negative",
@@ -1320,7 +1320,7 @@
    "strategy": "fvg_range_15m",
    "symbol": "BTCUSDT",
    "tf": "15m",
-   "execution": "shadow",
+   "execution": "live",
    "trail_geometry": {
     "status": "n/a",
     "ref": "lever not applicable — fvg_range has no trail in its exit structure (stop/target/timeout); nothing to vary || RE-STATUSED 2026-08-14 blocked -> n/a. The legend defines `blocked` as \"cannot process yet (reason given)\" and `n/a` as \"structurally inapplicable\". This ref's own wording -- the lever is not applicable, fvg_range has no trail in its exit structure, nothing to vary -- is the definition of n/a, not of a blocked cell awaiting work. It was also one of only TWO cells carrying a BARE `blocked` with no reason suffix, which the legend requires. Correction of a mis-status, NOT a re-grade: no evidence changed and no count moved (leg is `shadow`, so it was never in the done-condition; headline treats blocked and n/a alike as closed) -- verified by diffing the rollup before and after."
@@ -2832,7 +2832,7 @@
    "strategy": "slv_trend_1h",
    "symbol": "SLV",
    "tf": "1h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "equities 1h fleet (gld/spy/qqq/tlt pullback; slv/uso trend)",
    "trail_geometry": {
     "status": "honest_negative",
@@ -3103,7 +3103,7 @@
    "strategy": "mgc_trend_1h",
    "symbol": "MGC",
    "tf": "1h",
-   "execution": "shadow",
+   "execution": "live",
    "exploded_from": "xauusd_trend_1h / mgc_trend_1h",
    "trail_geometry": {
     "status": "shipped",
@@ -3142,7 +3142,7 @@
    },
    "vol_trail": {
     "status": "pending",
-    "ref": "FIXED 2026-08-12 (was `status: null`, not a legend value). The 2026-08-09 explosion kept the standalone row's vol_trail verdict for `xauusd_trend_1h` (KEEP_FROM_STANDALONE) but the bundle's per-column dict named only `trail_geometry`, so this leg's vol_trail resolved to None and was written as null rather than defaulting. `pending` is this ref's OWN documented rule applied, not a new inference: 'silent or un-run -> `pending`, never an inherited verdict'. Inheriting the sibling's `honest_negative` is exactly what that rule forbids — M20-X #6507's wording covers xauusd, and is silent on mgc_trend_1h. || EXPLODED 2026-08-09 from bundled row 'xauusd_trend_1h / mgc_trend_1h' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict."
+    "ref": "FIXED 2026-08-12 (was `status: null`, not a legend value). The 2026-08-09 explosion kept the standalone row's vol_trail verdict for `xauusd_trend_1h` (KEEP_FROM_STANDALONE) but the bundle's per-column dict named only `trail_geometry`, so this leg's vol_trail resolved to None and was written as null rather than defaulting. `pending` is this ref's OWN documented rule applied, not a new inference: 'silent or un-run -> `pending`, never an inherited verdict'. Inheriting the sibling's `honest_negative` is exactly what that rule forbids — M20-X #6507's wording covers xauusd, and is silent on mgc_trend_1h. || EXPLODED 2026-08-09 from bundled row 'xauusd_trend_1h / mgc_trend_1h' (BL-20260809-COVERAGE-MATRIX-MULTILEG-ROW-ONE-STATUS). Per-leg status from this ref's explicit wording only; silent or un-run -> `pending`, never an inherited verdict. || LIVE-PARITY EVIDENCE EXISTS FOR THIS BLOCKED CELL (surfaced 2026-10-27 when the demo-floor rule flipped mgc_trend_1h to execution: live and the corpus guard began to count it): mgc_trend_1h/vol_trail, corpus cell vt_hot90_t2, verdict is_oos_fail, run 2026-08-10, base_trades_OOS 97. STILL UNGRADED HERE: this PR changes the leg's roster/execution, not its exit evidence, and giving the cell a verdict (honest_negative would be the likely grade) is a status call on a LIVE leg (Tier-3) that I did not verify against the corpus beyond the guard's own report. Left to the manager / exit-refinement."
    },
    "bracket_geometry": {
     "status": "honest_negative",
@@ -3167,7 +3167,7 @@
    "strategy": "ict_scalp_sol_5m",
    "symbol": "SOLUSDT",
    "tf": "5m",
-   "execution": "shadow",
+   "execution": "live",
    "trail_geometry": {
     "status": "n/a",
     "ref": "Fixed SL/TP/timeout bracket; ict_scalp.monitor() only trails to break-even after 1R — no primary trailing stop to reshape. Same basis as ict_scalp_mgc_15m."
@@ -3291,7 +3291,7 @@
    "strategy": "ict_scalp_avax_5m",
    "symbol": "AVAXUSDT",
    "tf": "5m",
-   "execution": "shadow",
+   "execution": "live",
    "trail_geometry": {
     "status": "n/a",
     "ref": "Fixed SL/TP/timeout bracket; ict_scalp.monitor() only trails to break-even after 1R — no primary trailing stop to reshape. Same basis as ict_scalp_mgc_15m."
@@ -3411,7 +3411,7 @@
    "strategy": "ict_scalp_5m",
    "symbol": "BTCUSDT",
    "tf": "5m",
-   "execution": "shadow",
+   "execution": "live",
    "trail_geometry": {
     "status": "n/a",
     "ref": "Fixed SL/TP/timeout bracket; ict_scalp.monitor() only trails to break-even after 1R — no primary trailing stop to reshape. Same basis as ict_scalp_mgc_15m."
@@ -3851,7 +3851,8 @@
   "ABSENT_means_unrecorded": "⚠️ A MISSING tp_geometry MEANS 'WE DID NOT LOOK', NOT 'presumably fine'. Absence collapses three different conditions — (a) measured at live parity and nobody stamped it, (b) measured on the pre-cutover no-TP default, which is the DEFAULT EXPECTATION for anything dated before the cutover, and (c) nobody looked. The reassuring reading is the one that is wrong for most of the population. The roll-up counts these as `unrecorded` and reports the fraction rather than listing marked cells, so completeness is never inferred from the cells that happen to carry a value.",
   "_coverage_2026_08_16": "170 of 416 cells (40.9%) carry a value: live_parity 167, no_take_profit 3, absent 246. Measured directly off this file. The roll-up's own figure is over the LIVE-leg population (a different, smaller denominator) — both are correct and neither is the other.",
   "_remaining_work": "Stamping the 246 absent cells is NOT done here and must not be guessed from dates: BL-20260814-TP-GEOMETRY-RECORDED-ON-2-PERCENT-OF-CELLS-SO-ABSENCE-CANNOT-MEAN-ANYTHING criterion (2) requires each cell's own `ref` to establish live_parity or no_take_profit, with `unrecorded` stamped only where the ref establishes neither. A date is a proxy, and that row exists because a proxy was trusted.",
-  "_unstamped_ceiling": 311,
+  "_unstamped_ceiling": 416,
+  "_ceiling_raised_2026_10_27": "311 -> 416 (+105): the demo-floor rule flipped 12 legs execution: shadow -> live in config/strategies.yaml, so their cells now count as live (12 legs x the matrix lever columns); no cell was un-stamped. Operator rule 2026-10-27, relayed by the manager.",
   "_unstamped_ceiling_note": "272 -> 311 on 2026-10-25 (lane OLD-PR-FOLLOWUPS-1025, merging main into PR #11933): +39 live `stop_geometry` cells (MI-278 U3) added to the 272 ceiling main already carried; measured via `python3 scripts/research/m20_coverage_rollup.py --check`: 311 (the PR's original +44 was against a 229 base; 3 ict_scalp legs and others have since left the live denominator, and the new live soak alias trend_donchian_xrp_adx25 carries one mirrored stop_geometry n/a cell). The ratchet is doing its job: a new column of silent cells is declared in the diff. MI-278 REASONING, PRESERVED (see `_unstamped_ceiling_note_mi278`): the new stop_geometry cells are unstamped on purpose, neither legend value is true of the ict_scalp family. PRIOR NOTES, PRESERVED: 267 -> 272 on 2026-10-22 (lane OPERATOR-DECISIONS-1022): +11 cells for the NEW live soak alias trend_donchian_xrp_adx25 (bybit_1 only), each MIRRORED from the incumbent trend_donchian_xrp_4h row including its tp_geometry stamps; the incumbent's row carries 5 unstamped cells, so the alias adds 5. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: 272. PRIOR NOTES, PRESERVED: 193 -> 191 on 2026-10-02 (lane M20-EXITS-4): two cells (trend_donchian_xrp_4h/giveback_stop, ief_pullback_1d/trail_geometry) were re-swept at live parity and stamped tp_geometry=live_parity with base counts as fields; no leg left the denominator. PRIOR NOTES, PRESERVED: 229 -> 193 on 2026-09-28 (lane EXIT-OPS), and the REASON matters more than the number, same discipline as every prior move on this field. Six legs were demoted live -> shadow in this diff (PI-20260924-TJTOJHYE-0001: trend_donchian_ada_4h/avax_4h/sol_4h; PI-20260922-UTN353OZ-0001: ict_scalp_5m/sol_5m/avax_5m), taking their cells out of the live_only denominator. Leaving the ceiling at 229 would have left slack in which a live cell could silently lose its tp_geometry stamp with the guard still green -- exactly the loosening this field exists to make visible rather than absorb silently. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: unstamped-live count is 193 with the six rows `shadow`. PRIOR NOTES, PRESERVED: STAYED 229 on 2026-09-22 (avax_pullback_2h promotion declined same day); 234 -> 229 on 2026-08-24 (slv_trend_1h demoted, 5 unstamped cells left the denominator).",
   "_ceiling_raised_2026_10_07": "191 -> 267 (+76) in the diff that adds the tp_extend / tp_retarget columns (GEOM-B1-HARNESS): 38 live legs x 2 new columns, every one `pending` or `blocked:no_harness_levers`, i.e. NOTHING has been measured for them yet, so there is no geometry to stamp and stamping one would be a guess. The ratchet is meant to make a growing unmeasured population visible to the reviewer, and this is that. Each cell is stamped `live_parity` by the sweep that first measures it (m20_fleet_exit_sweep passes --tp-cap-pct 0.099 by default), which lowers this number again.",
   "_unstamped_ceiling_note_mi278": "RAISED 229 -> 273 on 2026-09-12 (MI-278 U3), +44 = exactly the live `stop_geometry` cells added in the same change. The ratchet is doing its job: a new column of silent cells must be declared in the diff. [!] I DID NOT STAMP THEM, AND THAT IS NOT LAZINESS -- NEITHER LEGEND VALUE IS TRUE OF THIS FAMILY. `scripts/research/m20_fleet_exit_sweep.py` states it directly: `base_args` applies `--tp-cap-pct` only to a family in `LIVE_TP_CAPPED_FAMILIES` (= CLAMPING_FAMILIES: donchian, pullback, fade, squeeze) 'because only those live units carry `_TP_SENTINEL_CAP_PCT`', and it warns in terms that 'stamping `live_parity` off the flag alone is how a scalp round would self-report a geometry its harness never received'. `ict_scalp` is NOT in that set, so the harness never receives the cap -- `live_parity` would be a false stamp. And `no_take_profit` is equally false: these legs DO have a take-profit (`tp_at_r`, which is the very thing MI-278 swept). [!] SO ABSENCE HERE IS A FOURTH CONDITION THE LEGEND DOES NOT COVER -- 'the clamp does not apply to this family, so there is no TP geometry to record' -- distinct from all three of (a) measured at parity and unstamped, (b) measured on the no-TP default, (c) nobody looked. That is a collapsed state in this very field, filed as BL-20260912-TP-GEOMETRY-HAS-NO-VALUE-FOR-A-FAMILY-THE-LIVE-CLAMP-DOES-NOT-APPLY-TO. [!] NOTE THE 8 PRE-EXISTING ict_scalp `bracket_geometry` CELLS CARRY NO STAMP EITHER, for the same reason -- this change extends a gap rather than creating one, and the gap is structural, not clerical."

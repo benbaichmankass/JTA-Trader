@@ -105,7 +105,8 @@ def test_real_yaml_vwap_is_shadow_others_live():
     # decision left live pending a gated-arm re-grade (RQ-20260928-008).
     assert reg.execution_mode("vwap") == "shadow"
     assert reg.execution_mode("ict_scalp_xrp_5m") == "live"
-    assert reg.execution_mode("turtle_soup") == "shadow"
+    # turtle_soup: shadow -> live 2026-10-27 (DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR)); it trades on bybit_1 only.
+    assert reg.execution_mode("turtle_soup") == "live"
     assert reg.execution_mode("trend_donchian") == "live"
 
 
