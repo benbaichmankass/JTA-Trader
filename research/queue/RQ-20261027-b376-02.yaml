@@ -1,0 +1,53 @@
+id: RQ-20261027-b376-02
+title: 'Routed targets: does every pipeline item routed as `checklist:<ID>` name a checklist row file that exists?'
+status: queued
+cadence: daily
+roadmap:
+- L-OPS
+theme: infra
+priority: 2
+kind: deterministic
+question: Does every routed pipeline item whose routed_to is exactly `checklist:<ID>` point at a row file in docs/claude/work/checklist/?
+why_this_matters: 'Routing is the disposition that stops a due item counting as unrouted. A route to a row that was never written or was renamed reads as handled while nothing owns it (the drop pattern
+  in CLAUDE.md "a finding is only filed when it is on the checklist"). Measured 2026-10-27 before authoring: 38 such items, 0 missing, so the detector starts green and any later FAIL is a new break.'
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question to power.'
+decision_rule:
+  id: RULE-RQ20261027B37602-ROUTE-TARGETS
+  registered_at: '2026-10-27'
+  statistic: scripts/research/infra_selftest.py --check routed_targets_exist
+  rule: 'PASS IF every routed `checklist:<ID>` target exists as docs/claude/work/checklist/<ID>.json. FAIL IF any does not: measurement.missing names the item and the row. routed_to values in other shapes
+    (free text, "checklist row X", unit ids) are not checked. A producer_failed or no_data record is NOT a verdict.'
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account, pipeline item or queue unit.
+  registered_before_run: true
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.4
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent queue fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - routed_targets_exist
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261027-b376-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/infra_selftest.py
+- scripts/ops/pipeline.py
+- RESEARCH-OPS-20261027-0248
+programme: P6

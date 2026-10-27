@@ -311,6 +311,28 @@ def related_paths_exist() -> dict[str, Any]:
             "measurement": {"n_missing": len(missing), "missing": missing[:10]}}
 
 
+def routed_targets_exist() -> dict[str, Any]:
+    """Every pipeline item routed as ``checklist:<ID>`` names a checklist row file that exists (a route to a
+    row that was never written, or was renamed, is a drop that reads as a disposition)."""
+    import re
+    sys.path.insert(0, str(ROOT / "scripts" / "ops"))
+    import pipeline  # noqa: PLC0415
+    res = pipeline.load()
+    items = getattr(res, "items", None) or getattr(res, "folded", None)
+    items = list(items.values()) if isinstance(items, dict) else list(items or [])
+    rows = {f.stem for f in (ROOT / "docs" / "claude" / "work" / "checklist").glob("*.json")}
+    checked, missing = 0, []
+    for it in items:
+        m = re.fullmatch(r"checklist:([A-Za-z0-9_.\-]+)", str(it.get("routed_to") or "").strip())
+        if it.get("state") == "routed" and m:
+            checked += 1
+            if m.group(1) not in rows:
+                missing.append({"item": it.get("id"), "row": m.group(1)})
+    return {"verdict": "fail" if missing else "pass", "read_state": "measured" if checked else "no_data",
+            "population": f"{checked} routed pipeline item(s) of {len(items)} whose routed_to is exactly checklist:<ID>",
+            "n": checked, "measurement": {"n_missing": len(missing), "missing": missing[:10]}}
+
+
 CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "queue_integrity": queue_integrity,
           "disposition_census": disposition_census, "programme_coverage": programme_coverage,
           "machinery_selftests": machinery_selftests,
@@ -318,7 +340,8 @@ CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "que
           "value_coverage": value_coverage, "command_resolvable": command_resolvable,
           "duplicate_commands": duplicate_commands, "power_declared": power_declared,
           "roadmap_ref_valid": roadmap_ref_valid, "never_dispatched_age": never_dispatched_age,
-          "related_paths_exist": related_paths_exist}
+          "related_paths_exist": related_paths_exist,
+          "routed_targets_exist": routed_targets_exist}
 
 
 def main() -> int:

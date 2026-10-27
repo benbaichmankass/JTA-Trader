@@ -1,0 +1,86 @@
+{
+  "run": "RESEARCH-OPS-2026-10-27-0248",
+  "finished_at": "2026-10-27T03:25:00Z",
+  "by": "session_01AFoLuLjABnHEidJWNjPN8p",
+  "floor": 57,
+  "floor_basis": "computed_floor(fired_24h 71)",
+  "authoring_queue_depth": 23,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "trainer"
+  ],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "throughput": {
+    "runnable_before": 72,
+    "runnable_after": 74,
+    "queued": 168,
+    "fired_24h": 71,
+    "results_landed_24h": 86,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "dry-run would_dispatch of b376-01/-02; both count runnable only after this HELD PR merges (E57)"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh 1.85h)",
+    "collector": "ok",
+    "stranded_stamp_prs": [],
+    "incident": null,
+    "watchdog": "newest incident rows 2026-10-17/24 all resolved or self_healed; none open"
+  },
+  "results_read": {
+    "pass": 0,
+    "fail": 0,
+    "indeterminate": 0,
+    "units": [],
+    "note": "research_disposition --unread-only: unread 0 (160 dispositioned, 294 superseded_unread); result_disposition_check: UNGRADED 0, needs_review UNOWNED 0, 11 in grace. Nothing landed since the previous record needed a hand disposition."
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "signal_audit.jsonl rotation",
+      "ref": "SIGNAL-AUDIT-ROTATION"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261027-b376-01",
+    "RQ-20261027-b376-02"
+  ],
+  "followups_filed": [
+    {
+      "routed": "BL-20260812-SIGNAL-AUDIT-JSONL-501MB-NO-ROTATION",
+      "to": "checklist:SIGNAL-AUDIT-ROTATION"
+    },
+    {
+      "routed": "BL-20260809-XAU-PROXY-DATASET-GONE-VERDICTS-UNREPRODUCIBLE",
+      "to": "checklist:ICT-SCALP-EVIDENCE"
+    }
+  ],
+  "authoring": {
+    "queue_depth": 23,
+    "nodes_drafted": 0,
+    "nodes": [],
+    "theme_shortfall": {
+      "ml_health": "3 runnable authored vs share 8; +1 (b376-01)",
+      "infra": "3+1 vs share 6; +1 (b376-02)"
+    },
+    "note": "No programme node converted: the two units are hand units. The ready nodes are build-gated (P3-Q1 waits LIVE-BT-STAGE-B; P1-Q6 declares wait MOMENTUM-LEVERS-LIVE; P2-R5 waits IR-VOL-TARGET-STAGE0) or Tier-3-packet work (P2-R3.c04-pass). Not started: P2-Q4-cross-asset-features needs a data check."
+  },
+  "fixes": [
+    "scripts/research/infra_selftest.py: new detector routed_targets_exist (measured 38 routed checklist:<ID> items, 0 missing before authoring its unit)"
+  ],
+  "not_run": [
+    "C: needs_review triage beyond ownership: 28 left, every one already carries grading.owner + owner_reason; none written this pass (oldest 4 re-read: producer_failed x1, wiring_only x2 owned by PI-20261006-1VPYTX8E-0001 due 2026-10-29, indeterminate x1 awaiting MGC feed)",
+    "E.0: no programme node authored (see authoring.note)",
+    "UNPROVEN_OVERDUE rows from blocker_watch not re-examined",
+    "routing: 23 unrouted due items remain; 2 routed this pass, 475 due in total"
+  ],
+  "handoff": [
+    "MERGE the held PR: two hand units (b376-01 ExtraTrees regime-head variant, b376-02 routed-targets detector) hold under E57.",
+    "PI-20261006-1VPYTX8E-0001 (re-register the roster walk-forward template on the mapper's shape) is due 2026-10-29 and gates 2 of the 28 needs_review units.",
+    "After b376-01: PASS -> disjoint-window confirmation unit; FAIL -> configuration closed (ExtraTrees 300/leaf 20), family stays open, next = HistGB arm.",
+    "23 unrouted due items remain, oldest BL-20260726-BRANCH-PROTECTION-DOC-STALE-4-CHECKS (93d): routing alarm stands."
+  ]
+}
