@@ -1,0 +1,22 @@
+{
+  "id": "CONTEXT-DIET",
+  "title": "Cut every session's fixed context load: lanes read targeted CLAUDE-RULES-CANONICAL sections (not the whole 148 KB), CLAUDE.md and manager SKILL trimmed to pointers with no rule lost",
+  "phase": null,
+  "state": "in_flight",
+  "owner": null,
+  "lane": "session_01AFoLuLdrhLnG3fFjy6GfRn",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-27 ~11:35Z (manager session session_01AFoLuJi1vLTnYv9LbP6539), verbatim: \"Yes let's implement those optimizations, we can get a small lane going on that\". Context (manager MEASURED 11:30Z, wc -c at main): CLAUDE.md 44,201 B (~11k tok, every system prompt); docs/CLAUDE-RULES-CANONICAL.md 147,913 B (~37k tok, read IN FULL by every lane per the SessionStart contract in .claude/settings.json item 1 and CLAUDE.md \u00a7 Every session step 1); .claude/skills/manager/SKILL.md 99,088 B (~25k tok). Approved changes: (1) extend the 2026-10-24 manager-rotation narrowing (MANAGER-HANDOVER-SLIM) to ALL lanes: a lane reads RULE ONE, Permission Tiers + Data-backed Tier-2/3, Prime Directive, Lanes answer to the manager / Reading is never gated, plus any sections its dispatch names; full read only for a manager starting fresh. (2) trim CLAUDE.md and the manager SKILL to pointers: move long history/incident prose verbatim to docs/reference/ or docs/archive/, keep every binding rule stated (pointer + one line), no rule removed. Measure before/after bytes.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-27T11:33:56Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 731
+}

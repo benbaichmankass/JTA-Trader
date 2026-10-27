@@ -1,0 +1,22 @@
+{
+  "id": "DESK-27-LIVE-FLOW",
+  "title": "Desk LIVE FLOW plan: optimize the end-to-end flow for Claude running very short-term trades (trigger -> decision -> fill -> managed exit), shrinking start-to-end time step by step; one plan that combines the live/standing session, market-hour windows (open/close high-vol protocols), event triggers and the per-trade short-hold lane",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR ASKS 2026-10-27 (manager session session_01AFoLuJi1vLTnYv9LbP6539), paraphrased: (1) ~11:20Z: choose specific windows in the day where a Claude session is running or a specific protocol applies, e.g. the first half hour / hour after the market opens and the last hour / half hour before close, i.e. high-volatility times that may be good for a quick trade. (2) ~11:30Z: those timeframes and protocols must be PART OF the general plan for having a LIVE session running, combined, not a separate item: how do we optimize a flow for Claude running very short-term trades, getting it shorter and shorter from start to end. TIMING: plan after the weekly reset (Wed 2026-10-28 ~18Z), at Thursday planning. SCOPE for the plan: (a) the flow and its clock: trigger fire -> packet landed -> session spawned -> decision row -> intake accepted -> order filled -> managed exits -> close; MEASURE each step today (short-hold lane already measures bar_close_to_decision_s: median 175.5s, max 252.5s on pkg-613daaec5b7e4a88) and set a target per step; (b) session mode: fresh session per wake (measured ~$0.62/wake) vs a standing live session for a window (design 5.3 K* ~22 wakes; DESK-10) vs a per-trade lane (DESK-SHORT-HOLD-LANE); (c) windows: which (equity open/close, CME, crypto Asia/London/US opens, funding, scheduled macro), measured by realized vol by time of day from our candles; a window protocol = cadence (5m->1m), trigger thresholds, max hold, size; (d) the event triggers just merged (#20589, config/desk_triggers.yaml) become the per-window trigger set; (e) cost per window and per trade vs weekly capacity (DESK-10); (f) the ladder: demo first (MD-DEMO-FLOOR-BUILD), real money behind DESK-13. COMBINES/SUPERSEDES the window ask; builds on DESK-SHORT-HOLD-LANE, DESK-10-CAPACITY, DESK-6B-VM-WAKE, DESK-26-SYMBOL-ONBOARD; output = a design addendum + ranked build rows.",
+  "priority_rank": 27,
+  "updated_at": "2026-10-27T11:22:52Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 730
+}
