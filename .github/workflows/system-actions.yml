@@ -183,6 +183,7 @@ on:
           - amend-position-sl
           - live-review-dry-run
           - live-review-apply
+          - run-desk-judge
       reason:
         description: "Why this action is being run (audit trail; required for Tier-2)"
         required: false
@@ -726,6 +727,19 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*ref[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Rr]ef[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # run-desk-judge (DESK-18B): packets to judge, first schedule index, and the REQUIRED hard dollar cap.
+            judge_n=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*n[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Nn][[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            judge_offset=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*offset[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Oo]ffset[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            judge_max_usd=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*max_usd[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Mm]ax_usd[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             if [ -z "${action}" ]; then
               echo "::error::Issue body must contain a line of the form 'action: <name>'. Title was: ${ISSUE_TITLE}"
               exit 1
@@ -816,6 +830,9 @@ jobs:
           echo "ACTION_ALLOW_IMMEDIATE=${allow_immediate:-}" >>"$GITHUB_ENV"
           echo "ACTION_REVIEW_ID=${review_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_REVIEW_REF=${review_ref:-}" >>"$GITHUB_ENV"
+          echo "ACTION_JUDGE_N=${judge_n:-}" >>"$GITHUB_ENV"
+          echo "ACTION_JUDGE_OFFSET=${judge_offset:-}" >>"$GITHUB_ENV"
+          echo "ACTION_JUDGE_MAX_USD=${judge_max_usd:-}" >>"$GITHUB_ENV"
           echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${GITHUB_EVENT_NAME})"
 
       - name: Validate action and tier policy
@@ -825,7 +842,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1295,6 +1312,32 @@ jobs:
               echo "::error::live-review-apply ref must be a full 40-hex commit sha (got '${ACTION_REVIEW_REF}')."
               exit 1
             fi
+          fi
+          # run-desk-judge: SPENDS API MONEY. Shape-check only; desk_judge_run.py re-checks and owns the
+          # schedule/overlap/stopping-rule refusals. max_usd has NO default: no cap, no run (<= 40, the largest
+          # option in the operator's spend decision). There is no seed input: the registered seed is hardwired.
+          if [ "${ACTION}" = "run-desk-judge" ]; then
+            if ! printf '%s' "${ACTION_JUDGE_MAX_USD:-}" | grep -Eq '^[0-9]+(\.[0-9]+)?$' \
+               || ! awk -v v="${ACTION_JUDGE_MAX_USD:-0}" 'BEGIN{exit !(v>0 && v<=40)}'; then
+              echo "::error::run-desk-judge requires 'max_usd: <dollars>' (> 0 and <= 40; got '${ACTION_JUDGE_MAX_USD:-}'). There is no default: no cap, no run."
+              exit 1
+            fi
+            if ! printf '%s' "${ACTION_JUDGE_N:-}" | grep -Eq '^[0-9]{1,4}$' || [ "${ACTION_JUDGE_N}" -lt 1 ]; then
+              echo "::error::run-desk-judge requires 'n: <packets>' (integer >= 1; got '${ACTION_JUDGE_N:-}')."
+              exit 1
+            fi
+            if ! printf '%s' "${ACTION_JUDGE_OFFSET:-}" | grep -Eq '^[0-9]{1,4}$'; then
+              echo "::error::run-desk-judge requires 'offset: <first schedule index>' (integer >= 0; got '${ACTION_JUDGE_OFFSET:-}')."
+              exit 1
+            fi
+            if [ $(( 10#${ACTION_JUDGE_OFFSET} + 10#${ACTION_JUDGE_N} )) -gt 1500 ]; then
+              echo "::error::run-desk-judge offset ${ACTION_JUDGE_OFFSET} + n ${ACTION_JUDGE_N} runs past the 1,500-packet registered schedule."
+              exit 1
+            fi
+            case "${ACTION_APPLY:-}" in
+              ""|true|false|True|False) ;;
+              *) echo "::error::run-desk-judge apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
+            esac
           fi
           # phone-dry-test: ONE always-dry phone test ticket (meta.test, submit
           # forced dry). `account` is REQUIRED and `symbol` optional; both are
@@ -1860,6 +1903,7 @@ jobs:
             amend-position-sl)                  SCRIPT="amend_position_sl_action.sh" ;;
             live-review-dry-run)                SCRIPT="live_review_dry_run_action.sh" ;;
             live-review-apply)                  SCRIPT="live_review_apply_action.sh" ;;
+            run-desk-judge)                     SCRIPT="run_desk_judge_action.sh" ;;
             backfill-tpsl-leg-ids)              SCRIPT="backfill_tpsl_leg_ids_action.sh" ;;
             reattach-stranded-package-legs) SCRIPT="reattach_stranded_package_legs_action.sh" ;;
             repair-prop-fill-direction)         SCRIPT="repair_prop_fill_direction_action.sh" ;;
@@ -2244,6 +2288,9 @@ jobs:
           if [ "${ACTION}" = "live-review-apply" ]; then
             REMOTE_CMD="ACTION_REVIEW_ID=$(printf '%q' "${ACTION_REVIEW_ID:-}") ACTION_REVIEW_REF=$(printf '%q' "${ACTION_REVIEW_REF:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
+          if [ "${ACTION}" = "run-desk-judge" ]; then
+            REMOTE_CMD="ACTION_JUDGE_N=$(printf '%q' "${ACTION_JUDGE_N:-}") ACTION_JUDGE_OFFSET=$(printf '%q' "${ACTION_JUDGE_OFFSET:-}") ACTION_JUDGE_MAX_USD=$(printf '%q' "${ACTION_JUDGE_MAX_USD:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
           if [ "${ACTION}" = "backfill-tpsl-leg-ids" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
@@ -2436,6 +2483,19 @@ jobs:
           fi
           exit "${rc}"
 
+      # run-desk-judge: bring the merged judged-1 export (mask-key.json + proposals.jsonl + packets.jsonl) back
+      # to the runner so it rides the audit artifact. Never the issue comment: the key stays out of the thread, and
+      # it never goes near a branch the judge can read (the judge is a stateless API call that sees only packets).
+      - name: Fetch desk-judge export (run-desk-judge only)
+        if: always() && env.ACTION == 'run-desk-judge'
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          mkdir -p desk-judge-export
+          scp -i ~/.ssh/id_rsa -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
+              "${VM_SSH_USER}@${VM_SSH_HOST}:/home/ubuntu/ict-trading-bot/runtime_logs/desk_judge/judged-1/export/*" \
+              desk-judge-export/ || echo "::warning::no desk-judge export on the VM yet (nothing was judged, or the run stopped before the merge)."
+
       - name: Wait for VM to come back (reboot-vm only)
         if: env.ACTION == 'reboot-vm'
         run: |
@@ -2605,6 +2665,7 @@ jobs:
             pre-state.json
             post-state.json
             action-output.txt
+            desk-judge-export/
           retention-days: 7
           if-no-files-found: warn
 
