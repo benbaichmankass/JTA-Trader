@@ -166,14 +166,17 @@ def test_close_on_every_account_class(act):
     assert res["writeback"]["disposition"]["mandate"] == lri.TRADE_MANDATE_ID
 
 
-def test_move_tp_reaches_bybit_and_phone_only(act):
+def test_move_tp_reaches_bybit_alpaca_and_phone(act):
     db = tla._ApplyDB([_tr(1, "bybit_2"), _tr(2, "alpaca_live")], tla.PKG)
-    act["tickets"] = [{"ticket_id": "t2", "account_id": "breakout_2", "status": "filled", "sl": 0.22, "tp": 0.19,
+    act["tickets"] = [{"ticket_id": "t1", "account_id": "tradeify_1", "status": "filled", "sl": 0.22, "tp": 0.19,
+                       "entry": 0.21, "meta": None},
+                      {"ticket_id": "t2", "account_id": "breakout_2", "status": "filled", "sl": 0.22, "tp": 0.19,
                        "entry": 0.21, "meta": None}]
     res = _run(db, act, _ti("move_tp", new_tp=0.1850))
     by = _by(res)
     assert by["bybit_2"]["executed"] and by["breakout_2"]["executed"]
-    assert by["alpaca_live"]["reason"] == "no_action_path:move_tp"
+    assert by["alpaca_live"]["executed"]                              # DESK-3: alpaca move_tp cell
+    assert by["tradeify_1"]["reason"] == "no_action_path:move_tp"
 
 
 def test_widen_and_add_paths(act):

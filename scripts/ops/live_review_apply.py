@@ -73,11 +73,28 @@ pinged once on a real-money or prop account:
 * bybit: close (reduce-only close of the leg), partial_close / change_size < 1 (reduce-only
   partial), move_tp and widen_sl (the monitor's own modify seam on this leg);
 * alpaca: close, only when the leg is the account's ONLY open trade on the symbol (the venue
-  flatten closes the whole symbol);
+  flatten closes the whole symbol); move_tp (``alpaca_amend.tighten(new_tp=...)``: PATCH this
+  trade's own target leg, read back, and refused unless this trade's stop leg still rests);
 * phone: move_tp (``phone_trail.request_tp_amend``, the one-slot amend channel);
 * prop_vm: none yet (the VM executor reads only ``meta.sl_floor``); other / IB: none;
 * any account: add_entry / change_size > 1 -- none: no add-to-an-open-position executor exists yet
   (``no_action_path:add_size``); the account's decision is still computed and recorded.
+
+Not built, and why (DESK-3, MEASURED by reading the executors at 2026-10-27): a prop ``widen_sl``
+has no executor that could carry it. Both prop executors refuse a looser stop BY CONSTRUCTION, on
+the client side: the phone app's amend refuses "amend would loosen the stop"
+(``tools/phone-executor/app/.../MainActivity.kt``, an APK change) and the DXtrade adapter's armed
+modify is tighten-only (``ModifyRollout``, ``rollout_tighten_mismatch``). A prop add has no
+add-to-position ticket path. Alpaca partial_close: the bracket legs reserve every share, so the
+venue refuses a reduce (``insufficient qty``) unless the legs are cancelled first, which would leave
+the leg unbracketed. Tracked on checklist row ``LTR-ACTION-EXECUTOR-GAPS``.
+
+THE DESK'S OWN LEG (``claude_desk``, trading-desk design § 3.8, DESK-3): a close / partial_close of
+a desk-leg trade is the leg's own exit, so it is journaled with the first-class close reason
+``strategy_close`` (``trades.exit_reason``, and ``order_packages.close_reason`` when the last leg
+closes), never ``live_review_close``. A ``widen_sl`` or a size add on a desk-leg trade is refused
+before any read, ``desk_leg_never:<action>`` (design § 2.4: a wider stop and a size change are in
+no desk enum).
 
 Stated limit: a ``widen_sl`` on a TRAILING leg can be re-tightened by the leg's own trail on the
 next monitor pass (the trail ratchets from the running extreme). The widened level is recorded as
@@ -533,12 +550,22 @@ def _save_state(st: Dict[str, Any]) -> None:
 #: change_size > 1) is in no row: no add-to-an-open-position executor exists.
 ACTION_PATHS: Dict[str, frozenset] = {
     "bybit": frozenset({"close", "reduce", "move_tp", "widen_sl"}),
-    "alpaca": frozenset({"close"}),
+    "alpaca": frozenset({"close", "move_tp"}),
     "phone": frozenset({"move_tp"}),
     "prop_vm": frozenset(),
     "other": frozenset(),
 }
 LIVE_REVIEW_CLOSE = "live_review_close"
+#: The desk's own leg (design § 3.8): its exits are the strategy's own, closed ``strategy_close``.
+DESK_LEG = "claude_desk"
+STRATEGY_CLOSE = "strategy_close"
+#: + ":<action key>" -- a wider stop or a size add is never applied to a desk-leg trade (design § 2.4).
+R_DESK_LEG_NEVER = "desk_leg_never"
+
+
+def close_reason_for(pkg: Dict[str, Any]) -> str:
+    """The close reason a live-review / desk close writes: ``strategy_close`` on the desk's own leg."""
+    return STRATEGY_CLOSE if str(pkg.get("strategy_name") or "") == DESK_LEG else LIVE_REVIEW_CLOSE
 
 
 def action_path_key(intent: lri.LiveReviewIntent) -> str:
@@ -577,6 +604,8 @@ def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg:
     ``approve_action`` on a view of THIS leg, with its fresh-entry check when the action adds risk."""
     aid = leg["account_id"]
     key = action_path_key(intent)
+    if str(pkg.get("strategy_name") or "") == DESK_LEG and key in ("widen_sl", "add_size"):
+        return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{R_DESK_LEG_NEVER}:{key}")
     if key not in ACTION_PATHS.get(cls, frozenset()) or (cls in ("bybit", "alpaca") and leg["kind"] != "trade") \
             or (cls == "phone" and leg["kind"] != "ticket"):
         return lri.AmendVerdict(aid, lri.V_REFUSE, None, f"{lri.R_NO_ACTION_PATH}:{key}")
@@ -722,18 +751,20 @@ def _exec_bybit_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.Amen
             missing = "sl" if after.get("venue_sl") is None else "tp"
             return {"result": X_APPLY_FAILED, "send": sent,
                     "detail": f"{lri.R_BRACKETS}:{missing} not read at the venue after the reduce"}
+    reason = close_reason_for(pkg)
     if a == "close" or remaining <= 0:
-        _journal_action(db, t, intent, {"status": "closed", "exit_reason": LIVE_REVIEW_CLOSE, "closed_at": now,
+        _journal_action(db, t, intent, {"status": "closed", "exit_reason": reason, "closed_at": now,
                                         "exit_price": mark},
-                        {"qty": qty, "exit_price_source": "venue_mark_at_apply (ESTIMATED)", "venue_size_after": size1})
+                        {"qty": qty, "exit_price_source": "venue_mark_at_apply (ESTIMATED)", "venue_size_after": size1,
+                         "close_reason": reason})
         open_left = [x for x in db.get_trades(filters={"order_package_id": pkg["order_package_id"], "status": "open"})
                      if not x.get("is_backtest")]
         if not open_left:
-            db.update_order_package(pkg["order_package_id"], {"status": "closed", "close_reason": LIVE_REVIEW_CLOSE})
+            db.update_order_package(pkg["order_package_id"], {"status": "closed", "close_reason": reason})
     else:
         _journal_action(db, t, intent, {"position_size": remaining},
                         {"qty": qty, "exit_price": mark, "exit_price_source": "venue_mark_at_apply (ESTIMATED)",
-                         "venue_size_after": size1})
+                         "venue_size_after": size1, "close_reason": reason})
     return {"result": X_APPLIED, "venue_size_after": size1, "qty": qty}
 
 
@@ -759,13 +790,56 @@ def _exec_alpaca_close(db, leg: Dict[str, Any], pkg: Dict[str, Any], intent: lri
     if any(str(p.get("symbol") or "").upper() == sym and (_f(p.get("size")) or 0) > 0 for p in pos):
         return {"result": X_APPLY_FAILED, "detail": f"venue still holds {sym} after the close", "send": sent}
     now = datetime.now(timezone.utc).isoformat()
-    _journal_action(db, t, intent, {"status": "closed", "exit_reason": LIVE_REVIEW_CLOSE, "closed_at": now,
+    reason = close_reason_for(pkg)
+    _journal_action(db, t, intent, {"status": "closed", "exit_reason": reason, "closed_at": now,
                                     "exit_price": intent.mark},
-                    {"exit_price_source": "mark_at_apply (ESTIMATED)"})
+                    {"exit_price_source": "mark_at_apply (ESTIMATED)", "close_reason": reason})
     if not [x for x in db.get_trades(filters={"order_package_id": pkg["order_package_id"], "status": "open"})
             if not x.get("is_backtest")]:
-        db.update_order_package(pkg["order_package_id"], {"status": "closed", "close_reason": LIVE_REVIEW_CLOSE})
+        db.update_order_package(pkg["order_package_id"], {"status": "closed", "close_reason": reason})
     return {"result": X_APPLIED, "detail": "venue position gone"}
+
+
+def _alpaca_client(aid: str):
+    """THIS account's Alpaca client, or None (could not look)."""
+    from src.runtime.order_monitor import _build_account_client
+
+    client, cfg = _build_account_client(aid)
+    if client is None or not cfg or str(cfg.get("exchange") or "").lower() != "alpaca":
+        return None
+    return client
+
+
+def _exec_alpaca_tp(db, leg: Dict[str, Any], pkg: Dict[str, Any], v: lri.AmendVerdict,
+                    intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Move THIS Alpaca trade's own target leg (scoped by share count) through ``alpaca_amend.tighten``,
+    read back from the venue. Refused before any PATCH when this trade's stop leg is not resting (both
+    brackets, operator 2026-10-26), and ``apply_failed`` when the read-back after it shows no stop leg.
+    The journal is written only after both read back."""
+    from src.units.accounts import alpaca_amend
+
+    t = leg["row"]
+    client = _alpaca_client(t["account_id"])
+    if client is None:
+        return {"result": X_COULD_NOT_LOOK, "detail": f"no alpaca client for {t['account_id']}"}
+    kw = dict(symbol=str(t.get("symbol") or ""), direction=intent.direction,
+              qty=_f(t.get("position_size")) or 0.0, new_tp=v.level)
+    plan = alpaca_amend.tighten(client, apply=False, **kw)
+    if plan.get("result") != alpaca_amend.X_PLANNED:
+        return {"result": plan.get("result"), "detail": plan.get("detail")}
+    if (plan.get("before") or {}).get("stop_leg") is None:
+        return {"result": X_REFUSED, "detail": f"{lri.R_BRACKETS}:sl not resting at the venue before the move_tp"}
+    res = alpaca_amend.tighten(client, apply=True, **kw)
+    if res.get("result") != X_APPLIED:
+        return {"result": res.get("result"), "detail": res.get("detail"), "send": res.get("sent")}
+    if (res.get("after") or {}).get("stop_leg") is None:
+        return {"result": X_APPLY_FAILED, "detail": f"{lri.R_BRACKETS}:sl not read at the venue after the move_tp",
+                "send": res.get("sent")}
+    got = res.get("venue_tp_after")
+    _journal_action(db, t, intent, {"take_profit_1": got},
+                    {"from": _f(t.get("take_profit_1")) or _f(pkg.get("tp")), "to": got, "venue_after": got,
+                     "oco_leg_ids": res.get("oco_leg_ids_after")})
+    return {"result": X_APPLIED, "venue_after": got}
 
 
 def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
@@ -791,6 +865,8 @@ def _exec_trade_action(db, leg: Dict[str, Any], pkg: Dict[str, Any], cls: str, v
         return _exec_bybit_action(db, leg, pkg, v, intent)
     if cls == "alpaca" and key == "close":
         return _exec_alpaca_close(db, leg, pkg, intent)
+    if cls == "alpaca" and key == "move_tp":
+        return _exec_alpaca_tp(db, leg, pkg, v, intent)
     if cls == "phone" and key == "move_tp":
         return _exec_phone_tp(leg, v, intent)
     return {"result": X_REFUSED, "detail": f"{lri.R_NO_ACTION_PATH}:{key}"}
