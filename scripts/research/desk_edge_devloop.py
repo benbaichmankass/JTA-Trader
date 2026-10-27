@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: manual-only - run by DESK-EDGE-PROGRAM dev-batch lanes and the research/queue units RQ-20261027-ed9e-*; no schedule consumes it.
+# wiring: manual-only - run by DESK-EDGE-PROGRAM dev-batch lanes and the research/queue units RQ-20261027-fe57-*; no schedule consumes it.
 """DESK-EDGE-PROGRAM parts 3-4 -- the CHEAP DEV LOOP, the LOCKED HOLDOUT and the promotion rule.
 
 Design and every constant: docs/research/desk-edge-program-2026-10-27.md section 5 (registered before any dev run).
@@ -9,12 +9,18 @@ the folds, weeks and cluster_stats; reuses desk_edge_ceiling for the per-action 
 WHY FORCED-RANK ELICITATION. A judge that proposes on ~0.5 of packets gives ~50 scored fills per 100 packets: an S3
 standard error near 0.3 R, too wide to screen anything. In the dev loop the judge instead SCORES every (asset, side)
 cell of a packet (12 per packet) with its expected excess R over a random entry of the fixed dev bracket GJ, and may
-still name proposals. Each cell has a label (the ceiling's y for GJ), so 100 packets give 1,200 labelled judgements:
-the screen statistic is the weekly rank IC of the judge's scores, the same statistic the ceiling reports, so a judge
-variant is compared directly with what a fitted model extracts from the same packets.
+still name proposals. Every cell has a label (the ceiling's y for GJ), so every packet is scored, not only the ~half
+the judge would trade.
+
+THE SCREEN STATISTIC IS A MEAN, NOT A RANK CORRELATION. SEL_i = mean y of the packet's 2 highest-scored cells minus
+mean y of all its labelled cells: the S3 a top-2 desk earns over picking cells at random IN THE SAME PACKET. Its
+expectation is the policy's S3 (the packet mean of y is ~0 by construction) and the subtraction removes the shock the
+packet's cells share, so it is less noisy than S3 itself. Rank IC was rejected after the DEV-window ceiling: ridge on
+packet fields had IC +0.10 with a flat mean-y-by-decile curve (doc section 4.1), i.e. IC tracked the shape of y, not
+money.
 
   sample   --out DIR --candles DIR [--n 100]              the stratified dev sample (from judged-1 packets) + protocol
-  score    --out DIR --candles DIR --ranks F [--looks]    IC, top-pick S3, sequential decision for one variant
+  score    --out DIR --candles DIR --ranks F             SEL, top-pick S3, sequential decision for one variant
   holdout  --out DIR --candles DIR --promotion F --n N    holdout packets; REFUSES without a dev promotion record
 """
 from __future__ import annotations
@@ -46,7 +52,8 @@ DEV_N = 100                       # packets per variant
 DEV_LOOKS = (25, 50, 75, 100)     # sequential looks, in packets of the variant's sample order
 DEV_SEED = 20261027
 DEV_GEOM = ("GJ", 1.25, 2.0, 48)  # the fixed bracket every cell score is about
-IC_USEFUL = 0.03                  # the weekly rank IC below which a variant is not worth a holdout (doc section 5.2)
+SEL_USEFUL = 0.10                 # R: the selection value below which a variant is not worth a holdout (doc section 5.2)
+TOP_K = 2                         # cells per packet the SEL statistic takes (judged-1's cap)
 KILL_ALPHA = 0.05                 # one-sided, split evenly over the looks (Bonferroni)
 PROMOTE_ALPHA = 0.20              # one-sided screen at the last look (dev is a screen, the holdout is the test)
 PROMOTE_MAX_PER_BATCH = 2
@@ -197,28 +204,32 @@ def read_ranks(path: Path, keys: Dict[str, dict]) -> Tuple[Dict[str, Dict[str, f
     return out, acc
 
 
-def ic_rows(ranks: Dict[str, Dict[str, float]], labels: Dict[Tuple[str, str], dict]) -> List[dict]:
+def cell_rows(ranks: Dict[str, Dict[str, float]], labels: Dict[Tuple[str, str], dict]) -> List[dict]:
     """One row per (packet, cell) with a score and a label."""
     return [{"packet_id": pid, "cell": cell, "score": v, **labels[(pid, cell)]}
             for pid, sc in ranks.items() for cell, v in sc.items() if (pid, cell) in labels]
 
 
-def weekly_ic(rows: List[dict]) -> List[float]:
-    """Per-week Spearman of score vs y (weeks with >= 12 cells and some score variation)."""
-    from scipy.stats import spearmanr
-    wk: Dict[str, List[dict]] = {}
+def packet_sel(rows: List[dict], k: int = TOP_K) -> List[dict]:
+    """Per packet: {week, sel} with sel = mean y of the k highest-scored cells - mean y of all labelled cells."""
+    by: Dict[str, List[dict]] = {}
     for r in rows:
-        wk.setdefault(r["week"], []).append(r)
+        by.setdefault(r["packet_id"], []).append(r)
     out = []
-    for w in sorted(wk):
-        rr = wk[w]
-        s = np.array([r["score"] for r in rr])
-        if len(rr) < 12 or np.ptp(s) == 0:
+    for pid, rr in by.items():
+        if len(rr) < k + 1:
             continue
-        rho = spearmanr(s, [r["y"] for r in rr]).statistic
-        if np.isfinite(rho):
-            out.append(float(rho))
+        rr = sorted(rr, key=lambda r: -r["score"])
+        out.append({"packet_id": pid, "week": rr[0]["week"], "sel": float(np.mean([r["y"] for r in rr[:k]]) - np.mean([r["y"] for r in rr]))})
     return out
+
+
+def weekly_means(sel: List[dict]) -> List[float]:
+    """The week is the resampling unit (packets in one week share a market): one mean per week."""
+    wk: Dict[str, List[float]] = {}
+    for r in sel:
+        wk.setdefault(r["week"], []).append(r["sel"])
+    return [float(np.mean(v)) for _, v in sorted(wk.items())]
 
 
 def one_sided_bounds(v: Sequence[float], alpha: float, seed: int = DEV_SEED, draws: int = 10_000) -> Tuple[float, float]:
@@ -231,7 +242,7 @@ def one_sided_bounds(v: Sequence[float], alpha: float, seed: int = DEV_SEED, dra
 
 
 def top_pick_rows(rows: List[dict]) -> List[dict]:
-    """The policy the dev loop scores alongside IC: per packet, the single highest-scored cell, taken only if its
+    """The policy the dev loop scores alongside SEL: per packet, the single highest-scored cell, taken only if its
     score > 0. Rows in cluster_stats' shape {week, net_r, days, diff}: their mean diff is S3 for the dev bracket."""
     by: Dict[str, dict] = {}
     for r in rows:
@@ -240,49 +251,55 @@ def top_pick_rows(rows: List[dict]) -> List[dict]:
     return [{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["y"]} for r in by.values() if r["score"] > 0]
 
 
-def sequential_decision(ics_at_looks: List[List[float]], looks: Sequence[int] = DEV_LOOKS) -> Tuple[str, List[str]]:
-    """The registered sequential rule. `ics_at_looks[j]` = the weekly ICs using the first looks[j] packets.
-    kill    at any look: the one-sided upper bound (alpha KILL_ALPHA / len(looks)) of mean IC < IC_USEFUL.
-    promote at the last look: mean IC >= IC_USEFUL and its one-sided lower bound (PROMOTE_ALPHA) > 0.
+def sequential_decision(weeks_at_looks: List[List[float]], looks: Sequence[int] = DEV_LOOKS) -> Tuple[str, List[str]]:
+    """The registered sequential rule. `weeks_at_looks[j]` = the weekly mean SELs using the first looks[j] packets.
+    kill    at any look: the one-sided upper bound (alpha KILL_ALPHA / len(looks)) of mean SEL < SEL_USEFUL.
+    promote at the last look: mean SEL >= SEL_USEFUL and its one-sided lower bound (PROMOTE_ALPHA) > 0.
     screen_fail at the last look otherwise; continue between looks."""
     a_kill = KILL_ALPHA / len(looks)
-    for j, v in enumerate(ics_at_looks):
+    for j, v in enumerate(weeks_at_looks):
         if len(v) < 2:
             continue
         _, hi = one_sided_bounds(v, a_kill)
-        if hi < IC_USEFUL:
-            return "kill", [f"look {j + 1} ({looks[j]} packets): IC upper bound {hi:+.4f} < IC_USEFUL {IC_USEFUL}"]
-    if len(ics_at_looks) < len(looks):
-        return "continue", [f"{len(ics_at_looks)} of {len(looks)} looks taken"]
-    v = ics_at_looks[-1]
+        if hi < SEL_USEFUL:
+            return "kill", [f"look {j + 1} ({looks[j]} packets): SEL upper bound {hi:+.4f} < SEL_USEFUL {SEL_USEFUL}"]
+    if len(weeks_at_looks) < len(looks):
+        return "continue", [f"{len(weeks_at_looks)} of {len(looks)} looks taken"]
+    v = weeks_at_looks[-1]
     m = float(np.mean(v)) if v else float("nan")
     lo, _ = one_sided_bounds(v, PROMOTE_ALPHA)
-    if np.isfinite(m) and m >= IC_USEFUL and lo > 0:
-        return "promote", [f"mean IC {m:+.4f} >= {IC_USEFUL}, one-sided {1 - PROMOTE_ALPHA:.0%} lower bound {lo:+.4f} > 0"]
-    return "screen_fail", [f"mean IC {m:+.4f}, lower bound {lo:+.4f}: not both (>= {IC_USEFUL}, > 0)"]
+    if np.isfinite(m) and m >= SEL_USEFUL and lo > 0:
+        return "promote", [f"mean SEL {m:+.4f} >= {SEL_USEFUL}, one-sided {1 - PROMOTE_ALPHA:.0%} lower bound {lo:+.4f} > 0"]
+    return "screen_fail", [f"mean SEL {m:+.4f}, lower bound {lo:+.4f}: not both (>= {SEL_USEFUL}, > 0)"]
 
 
 def promote_batch(results: Dict[str, Tuple[str, float]]) -> List[str]:
-    """Of a batch's variants {name: (decision, mean IC)}, at most PROMOTE_MAX_PER_BATCH `promote`s go on, best IC first."""
+    """Of a batch's variants {name: (decision, mean SEL)}, at most PROMOTE_MAX_PER_BATCH `promote`s go on, best first."""
     ok = sorted([(ic, n) for n, (dec, ic) in results.items() if dec == "promote"], reverse=True)
     return [n for _, n in ok[:PROMOTE_MAX_PER_BATCH]]
 
 
-def holdout_verdict(ics: List[float], pick_rows: List[dict], n_ever_promoted: int) -> Tuple[str, List[str], Dict[str, Any]]:
-    """The registered holdout rule for ONE variant on HOLDOUT_N packets."""
+def holdout_verdict(sel_weeks: List[float], pick_rows: List[dict], n_ever_promoted: int) -> Tuple[str, List[str], Dict[str, Any]]:
+    """The registered holdout rule for ONE variant on HOLDOUT_N packets: the weekly mean SEL's one-sided lower bound
+    (alpha HOLDOUT_ALPHA / every variant ever sent to the holdout) > 0 AND the top-pick S3 (driver statistic) >=
+    HOLDOUT_MIN_PICK_S3."""
     a = HOLDOUT_ALPHA / max(1, n_ever_promoted)
-    lo, _ = one_sided_bounds(ics, a)
+    lo, _ = one_sided_bounds(sel_weeks, a)
     st = d.cluster_stats(pick_rows) if pick_rows else {"n": 0}
     s3 = st.get("paired_diff_vs_random")
-    info = {"mean_ic": float(np.mean(ics)) if ics else None, "ic_lower": lo, "alpha": a, "pick_stats": st}
+    info = {"mean_sel": float(np.mean(sel_weeks)) if sel_weeks else None, "sel_lower": lo, "alpha": a, "pick_stats": st}
     if lo > 0 and s3 is not None and s3 >= HOLDOUT_MIN_PICK_S3:
-        return "pass", [f"IC lower bound {lo:+.4f} > 0 at one-sided {a:.4f}; top-pick S3 {s3:+.3f} >= {HOLDOUT_MIN_PICK_S3}"], info
-    return "fail", [f"IC lower bound {lo:+.4f} (needs > 0 at {a:.4f}); top-pick S3 {s3} (needs >= {HOLDOUT_MIN_PICK_S3})"], info
+        return "pass", [f"SEL lower bound {lo:+.4f} > 0 at one-sided {a:.4f}; top-pick S3 {s3:+.3f} >= {HOLDOUT_MIN_PICK_S3}"], info
+    return "fail", [f"SEL lower bound {lo:+.4f} (needs > 0 at {a:.4f}); top-pick S3 {s3} (needs >= {HOLDOUT_MIN_PICK_S3})"], info
 
 
 # ----------------------------------------------------------------------------- CLI
 def _market(a):
     uni, _ = d.parse_universe()
+    if getattr(a, "fetch", False):
+        d.CANDLE_SINCE = datetime.fromisoformat(a.candles_since).replace(tzinfo=timezone.utc)
+        Path(a.candles).mkdir(parents=True, exist_ok=True)
+        d.fetch_market(Path(a.candles), [u["symbol"] for u in uni])
     mkt, miss = d.load_market(Path(a.candles), [u["symbol"] for u in uni])
     if miss:
         raise SystemExit(f"candles missing {miss}")
@@ -320,25 +337,30 @@ def cmd_score(a: argparse.Namespace) -> int:
     order = [s["packet_id"] for s in smp]
     ranks, acc = read_ranks(Path(a.ranks), keys)
     labels = cell_labels(mkt, keys, [p for p in order if p in ranks])
-    rows_all = ic_rows(ranks, labels)
-    looks, ics_at = [], []
+    rows_all = cell_rows(ranks, labels)
+    looks, wk_at = [], []
+    sel = packet_sel(rows_all)
     for L in DEV_LOOKS:
         have = set(order[:L])
         if not have <= set(ranks):
             break
         looks.append(L)
-        ics_at.append(weekly_ic([r for r in rows_all if r["packet_id"] in have]))
-    dec, why = sequential_decision(ics_at)
+        wk_at.append(weekly_means([r for r in sel if r["packet_id"] in have]))
+    dec, why = sequential_decision(wk_at)
     picks = top_pick_rows(rows_all)
     st = d.cluster_stats(picks) if picks else {"n": 0}
     res = {"variant": a.variant, "decision": dec, "reasons": why, "intake": acc, "looks_taken": looks,
-           "mean_ic_by_look": [float(np.mean(v)) if v else None for v in ics_at], "weeks_by_look": [len(v) for v in ics_at],
+           "mean_sel_by_look": [float(np.mean(v)) if v else None for v in wk_at], "weeks_by_look": [len(v) for v in wk_at],
+           "packets_with_sel": len(sel),
            "cells_scored": len(rows_all), "top_pick": {k: st.get(k) for k in ("n", "mean_net_r", "paired_diff_vs_random", "paired_diff_ci95")},
-           "constants": {"IC_USEFUL": IC_USEFUL, "DEV_LOOKS": DEV_LOOKS, "KILL_ALPHA": KILL_ALPHA, "PROMOTE_ALPHA": PROMOTE_ALPHA, "DEV_GEOM": DEV_GEOM}}
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
-    (out / f"dev-{a.variant}.json").write_text(json.dumps(res, indent=1, default=float) + "\n")
-    print(json.dumps({k: res[k] for k in ("variant", "decision", "looks_taken", "mean_ic_by_look", "cells_scored")}))
+           "constants": {"SEL_USEFUL": SEL_USEFUL, "TOP_K": TOP_K, "DEV_LOOKS": DEV_LOOKS, "KILL_ALPHA": KILL_ALPHA, "PROMOTE_ALPHA": PROMOTE_ALPHA, "DEV_GEOM": DEV_GEOM}}
+    res["verdict"] = {"promote": "pass", "kill": "fail", "screen_fail": "fail"}.get(dec, "indeterminate")
+    if acc["rank_rows"] < 0.9 * len(order):
+        res["verdict"], res["reasons"] = "indeterminate", [f"intake: {acc['rank_rows']} valid rank rows of {len(order)} packets (< 90%)"] + why
+    res["read_state"] = "measured" if rows_all else "no_data"
+    d._write_verdict(Path(a.out), res, f"dev variant {a.variant}: {acc['rank_rows']} ranked packets of the {len(order)}-packet dev sample, "
+                     f"{len(rows_all)} labelled cells", len(sel), "; ".join(why), None, d.candle_manifest(mkt))
+    print(json.dumps({k: res[k] for k in ("variant", "decision", "verdict", "looks_taken", "mean_sel_by_look", "cells_scored")}))
     return 0
 
 
@@ -371,6 +393,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         s.add_argument("--out", required=True)
         s.add_argument("--candles", required=True)
         s.add_argument("--mask-key", default=str(JUDGED1_KEY))
+        s.add_argument("--fetch", action="store_true")
+        s.add_argument("--candles-since", default="2025-05-01")
         s.set_defaults(fn=fn)
     sub.choices["sample"].add_argument("--n", type=int, default=DEV_N)
     sub.choices["sample"].add_argument("--seed", type=int, default=DEV_SEED)

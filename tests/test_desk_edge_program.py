@@ -181,13 +181,20 @@ def test_read_ranks_validates_cells(tmp_path):
 
 def test_sequential_decision_kill_promote_fail():
     rng = np.random.default_rng(0)
-    bad = [list(rng.normal(-0.05, 0.05, 12))]
+    bad = [list(rng.normal(-0.3, 0.1, 12))]
     assert dl.sequential_decision(bad)[0] == "kill"
-    good = [list(rng.normal(0.08, 0.05, k)) for k in (8, 12, 16, 20)]
+    good = [list(rng.normal(0.25, 0.1, k)) for k in (8, 12, 16, 20)]
     assert dl.sequential_decision(good)[0] == "promote"
-    meh = [[0.3, -0.3, 0.25, -0.2, 0.1, -0.1, 0.2, -0.15] * (k // 8) for k in (8, 16, 16, 24)]
-    assert dl.sequential_decision(meh)[0] == "screen_fail"     # mean IC ~ +0.01: neither killed nor promoted
+    meh = [[0.9, -0.9, 0.75, -0.6, 0.3, -0.3, 0.6, -0.45] * (k // 8) for k in (8, 16, 16, 24)]
+    assert dl.sequential_decision(meh)[0] == "screen_fail"     # mean SEL ~ +0.04: neither killed nor promoted
     assert dl.sequential_decision(meh[:2])[0] == "continue"
+
+
+def test_packet_sel_is_top2_minus_packet_mean():
+    rows = [{"packet_id": "P", "week": "w", "score": s, "y": y} for s, y in ((3, 1.0), (2, 0.5), (1, -0.5), (0, -1.0))]
+    sel = dl.packet_sel(rows)
+    assert sel == [{"packet_id": "P", "week": "w", "sel": pytest.approx(0.75 - 0.0)}]
+    assert dl.weekly_means(sel + [{"packet_id": "Q", "week": "w", "sel": 0.25}]) == [pytest.approx(0.5)]
 
 
 def test_promote_batch_cap_and_order():

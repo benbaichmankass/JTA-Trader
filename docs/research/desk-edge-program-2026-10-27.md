@@ -105,7 +105,43 @@ Same harness, features, learners, policy, controls and verdict definitions as §
 
 ## 5. The dev loop, the locked holdout and the pre-registered promotion rule
 
-*(written before any dev run; see below)*
+Registered here before any dev run; every constant is in `scripts/research/desk_edge_devloop.py` and changes only by a new registration, never after a result.
+
+### 5.1 The dev sample
+
+`desk_edge_devloop.py sample`: **100 judged-1 packets**, balanced over fold (4) x session of the cutoff (4) x BTC 168-hour return sign (2) = 32 strata (3-4 each, MEASURED on the first build: 32 strata, min 3, max 4), in a seeded round-robin order so that the first 25, 50 and 75 are themselves near-balanced. Every packet is rebuilt from the candles and its id asserted. Using judged-1 packets means the current judge's own decisions on them are already paid for, and every variant is scored on the same 100 packets (paired by construction).
+
+### 5.2 What a variant is asked, and the screen statistic
+
+A dev variant is a (brief, packet, model, reasoning setup) tuple. On each dev packet the judge first **scores all 12 (asset, side) cells** with its expected net R in excess of a random-time entry of the fixed dev bracket GJ (market, stop 1.25 ATR, target 2.0 R, 48 bars), then may propose as usual (`RANK_ADDENDUM`). Every cell has a label (`y`, the ceiling's construction: the driver's engine and random baseline), so 100 packets give 1,200 labelled judgements instead of about 50 fills.
+
+**Screen statistic: SEL** = per packet, mean `y` of the 2 highest-scored cells minus mean `y` of all its labelled cells; averaged per ISO week, weeks resampled. Its expectation is the S3 of a top-2 desk; the subtraction removes the packet's common shock. **Rank IC is NOT used** (§ 4.1: IC +0.10 with a flat decile curve). The **top-pick S3** (one best cell per packet, if its score > 0, through the driver's `cluster_stats`) is reported beside it.
+
+**`SEL_USEFUL` = +0.10 R**, the same useful-edge line as the ceiling.
+
+### 5.3 Sequential stopping and the promotion rule (dev -> holdout)
+
+Looks after **25, 50, 75 and 100** packets of the sample order.
+- **kill** at any look if the one-sided upper bound of mean SEL at alpha **0.05 / 4** is below +0.10 R: the variant stops and its remaining packets are not judged (the saving).
+- **promote** at the last look if mean SEL >= **+0.10 R** AND its one-sided **80%** lower bound > 0. Dev is a SCREEN, deliberately permissive; the holdout is the TEST.
+- **screen_fail** otherwise.
+- At most **2** promoted variants per batch go on, highest SEL first.
+
+**Power, stated (INFERRED from judged-1's sd of `y`, about 1.6, and its design effect, about 2):** at 100 packets the SE of mean SEL is roughly 0.15-0.2 R. A variant whose true SEL is +0.20 is promoted about 60-75% of the time; a null variant about 15-25%. Dev cannot certify anything; it ranks.
+
+### 5.4 The locked holdout (one look per promoted variant)
+
+- **Window 2025-05-01 .. 2025-10-25**, schedule `make_schedule(seed 20261101, 4-hour gap)`, **300 packets** per promoted variant. `desk_edge_devloop.py holdout` refuses to build a holdout packet unless a committed promotion record says `dev_decision: promote` (`assert_not_locked`; tested).
+- **PASS** if the weekly mean SEL's one-sided lower bound at alpha **0.05 / H** is > 0, where **H = the number of variants EVER sent to the holdout** (the correction for every variant tried that got this far; dev looks are corrected inside the screen), AND the top-pick S3 (driver statistic) >= **+0.05 R**. FAIL otherwise. No re-look, no re-cut, no second seed on the holdout.
+- The holdout window is before the judge's knowledge cutoff, like every replay window (the mask is the defence; the label on any PASS says so).
+
+### 5.5 The full registered run (the Stage-0 evidence record)
+
+Only a variant that PASSED the holdout. **Window 2023-11-01 .. 2025-04-30** (never read by anything before this; `assert_not_locked` refuses it without a holdout PASS). It is registered as its own `research/queue` unit before it runs, with the e535 rule shape: n by power from the holdout's measured sd and effect, S1, S2 and S3 each > 0 with CI lower bound > 0, >= 3 of 4 folds positive, mean > 0 after dropping the 3 best weeks, the driver's engine, costs and baseline unchanged. That record, plus the forward-shadow set (`RQ-20261027-e72b-02`) and Gate 1, is what real money needs; nothing here shortens Gate 1 or `MD-PROMOTE-S1-S2`.
+
+### 5.6 Cost per variant (API-equivalent dollars on the plan; no API credits are spent)
+
+Judging runs only in plan sessions (canonical § "Nothing spends Anthropic API credits"). MEASURED anchors: $0.0688 per packet for a stateless call (judged-1, $103.14 / 1,498), $0.337 per packet for a session carrying ~290k tokens of context (the DESK-18B pilot). A rank reply is about 12 cells longer than a proposal. INFERRED: **$0.05-$0.10 per packet** for a repo-less subagent that sees only the protocol and its packets. So a dev variant is **$5-10** (less if killed at a look), a holdout look **$15-30**, a full run **$100-300** depending on n. Self-consistency with k samples multiplies by k; an Opus judge by about 1.7 (list-price ratio, INFERRED).
 
 ## 6. The lever grid, ranked by expected information per dollar
 
