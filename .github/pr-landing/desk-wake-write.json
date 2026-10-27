@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Skill files (.claude/skills/trading-desk/*) sit outside TIER1_SURFACE, and scripts/ci/check_desk_records.py is imported by the live trader's desk intake (scripts/ops/desk_intake.py via live_review_rows_watch.py), so adding the stat-match rule to decision_problems changes what the VM validates (a mismatched desk row is now refused by intake, visibly). No order path, no gate, no config. Manager merges; after merge the next desk wakes use the new brief (they read it from main). Revert: git revert of the merge commit (wakes then follow the old brief; rows already written are untouched).",
+  "why": "DESK-WAKE-WRITE: hourly desk wakes wrote rows by plain git push, skipping the brief's validation and CAS (7 of 15 rows) and one row carried a statistic from the wrong horizon. Fix is a single stdlib writer (draft -> derived row -> validate -> non-forced push) plus a stat-match rule in the guard and the mirror."
+}

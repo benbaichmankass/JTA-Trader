@@ -1,0 +1,113 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "note": "violated clause(s) (c1); DESK-7B-REPLAY-DRIVER reopens (registered wording).",
+  "clauses": {
+    "a_hold_replay": {
+      "ok": true,
+      "max_abs_dR": 0.0,
+      "tol": 1e-06,
+      "replayed": 154,
+      "of": 154,
+      "trades_in_lists": 154
+    },
+    "b_mask": {
+      "ok": true,
+      "packets_scanned": 45,
+      "leaks": [],
+      "n_leaking": 0,
+      "probe_positive_control_found_planted_leak": true
+    },
+    "c_scrambled_label": {
+      "ok": false,
+      "n": 45,
+      "c1_oracle_aligned": {
+        "ok": false,
+        "mean_dR": 0.018,
+        "ci95": [
+          0.0,
+          0.0499
+        ]
+      },
+      "c2_oracle_scrambled": {
+        "ok": true,
+        "mean_dR": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "oracle": "breakeven (r:0.0) at the +1R decision state iff hindsight says it beats hold"
+    }
+  },
+  "breakeven_at_1r_finding": {
+    "mean_dR": -0.1093,
+    "ci95": [
+      -0.2396,
+      -0.0056
+    ],
+    "n": 45,
+    "population": "45 decision points over 154 committed trades, 2 legs"
+  },
+  "fidelity_diagnostics": {
+    "cost_stack_recompute_max_abs_dev_R": 1.3e-05,
+    "cost_stack_note": "recorded costs are rounded to 5 dp; ~1e-5 R is rounding, 1e-3 R or more would be a policy mismatch",
+    "exit_gross_r_inside_exit_bar_range": 154,
+    "exit_gross_r_outside_exit_bar_range": 0,
+    "median_implied_atr_stop_mult_by_leg": {
+      "ict_scalp_eth_15m": 3.693,
+      "ict_scalp_xrp_15m": 3.452
+    },
+    "mfe_replay_mismatch_by_leg": {
+      "ict_scalp_eth_15m": 11,
+      "ict_scalp_xrp_15m": 16
+    }
+  },
+  "planted_known_answer": {
+    "n": 45,
+    "breakeven_tighten_mean_dR": -0.1093,
+    "oracle_mean_dR": 0.018,
+    "oracle_scrambled_mean_dR": -0.0048,
+    "passed": true,
+    "state": "passed"
+  },
+  "per_leg": {
+    "ict_scalp_eth_15m": {
+      "trades": 78,
+      "replayed": 78,
+      "n_trades_oos_in_record": 78,
+      "population": {
+        "trades": 78,
+        "no_candles": 0,
+        "never_reached_peak_on_candles": 52,
+        "closed_on_decision_bar": 4,
+        "zero_bar_trades": 0,
+        "no_atr": 0,
+        "decision_points": 22,
+        "recorded_mfe_ge_peak": 26,
+        "mfe_replay_mismatch": 11
+      }
+    },
+    "ict_scalp_xrp_15m": {
+      "trades": 76,
+      "replayed": 76,
+      "n_trades_oos_in_record": 76,
+      "population": {
+        "trades": 76,
+        "no_candles": 0,
+        "never_reached_peak_on_candles": 48,
+        "closed_on_decision_bar": 5,
+        "zero_bar_trades": 0,
+        "no_atr": 0,
+        "decision_points": 23,
+        "recorded_mfe_ge_peak": 28,
+        "mfe_replay_mismatch": 16
+      }
+    }
+  },
+  "scrambled_nonzero": true,
+  "candle_sources": [
+    "comms/research/RQ-20261027-8b01-01/40498212318/candles/ETHUSDT_15m_417d.csv",
+    "comms/research/RQ-20261027-8b01-01/40498212318/candles/XRPUSDT_15m_419d.csv"
+  ]
+}

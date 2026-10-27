@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Edits scripts/ci/check_pr_landing.py (the landing guard, LANDING_MACHINERY) and adds an E58-style reproducibility vouch for config/economic_calendar.yaml, which is Tier-2 by name (config/**). A human reads the guard change once; the manager merges.",
+  "why": "CI/tooling only (Tier-1): the guard gains a vouch for automation/econ-calendar-* branches that admits ONLY config/economic_calendar.yaml, and only when scripts/macro/econ_calendar_produce.py --verify reproduces it byte-for-byte from the committed captures with every non-events key identical to base. Anything else still gets the R5 refusal. No order path, no strategy or risk config."
+}

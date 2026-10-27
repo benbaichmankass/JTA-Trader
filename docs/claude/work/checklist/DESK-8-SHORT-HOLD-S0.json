@@ -2,24 +2,29 @@
   "id": "DESK-8-SHORT-HOLD-S0",
   "title": "Desk: confirm run ict_scalp_eth_15m/xrp_15m on a fresh window + blind replay of Claude management on short holds",
   "phase": null,
-  "state": "blocked",
+  "state": "in_flight",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [
-    "DESK-7-BLIND-REPLAY-S0"
+  "prs": [
+    20551
   ],
-  "note": "",
+  "blocked_on": [],
+  "note": "[2026-10-27 lane session_01AFoLuHs2cWVPBBW7B8PbvW, DESK-8-SHORT-HOLD-S0] D1: PR #20551 (held, Tier 3, operator popup verbatim \"Roster on bybit_1 (Recommended)\"): ict_scalp_eth_15m + ict_scalp_xrp_15m on bybit_1 only; tp-doctrine baseline R lines; the two KILLED SOAK-stage1 contracts reopened. D2 (DESK-8a): units RQ-20261027-8a01-01 (eth) / -02 (xrp), research-script-run.yml, scripts/research/ict_scalp_confirm.py, window 2022-10-01..2024-09-30 (disjoint from the 365d and 730d records), same bar as RULE-ICTSCALP-CAUSAL-REBUILD; dispatch_queue dry run = would_dispatch for all. DEV RUN SEEN BEFORE REGISTRATION (eth only): n=116, net -4.88 R, exp -0.042, 2/4 folds -> FAIL; the dispatcher run reproduces it, it is not independent. D3 (DESK-8b): RQ-20261027-8b01-01 self-check (queued) + blocked -02 in-trade / -03 exit, on desk_replay_driver.py with new --registered-n/--n-min flags. HEADROOM FINDING: 45 decision points, oracle breakeven worth only +0.018 R/point (CI [0,0.05]) so the in-trade tighten cannot reach MDE 0.27 R; c1 expected to FAIL. API judging NOT dispatched: worst case $1.28 per role, $2.57 both (INFERRED), awaiting manager approval. Units are in a held PR (new queue units are not self-landable).",
   "priority_rank": 12,
-  "updated_at": "2026-10-25T18:54:18Z",
-  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
+  "updated_at": "2026-10-27T07:09:05Z",
+  "updated_by": "session_01AFoLuHs2cWVPBBW7B8PbvW",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "observation": {
+    "what": "RQ-20261027-8a01-01/-02 (fresh-window confirm) and RQ-20261027-8b01-01 (15m harness self-check) each land a result record via research-script-run.yml",
+    "how_to_check": "ls research/results/RQ-20261027-8a01-01 RQ-20261027-8a01-02 RQ-20261027-8b01-01 and read verdict.json read_state",
+    "due_by": "2026-10-29"
+  },
   "_seq": 687
 }

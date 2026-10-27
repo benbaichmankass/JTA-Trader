@@ -47,7 +47,7 @@ def git_show(ref: str, path: str, cwd: Path = ROOT) -> bytes | None:
 
 # ----------------------------------------------------------------------------- publish
 
-def publish(packet: dict, stage: Path) -> dict[str, object]:
+def publish(packet: dict, stage: Path, pointer_path: str = POINTER) -> dict[str, object]:
     problems = cdr.packet_problems(packet, json.loads(cdr.PACKET_SCHEMA.read_text()))
     meta = packet.get("meta") or {}
     if problems or meta.get("packet_kind") != "scan" or meta.get("mode") != "live":
@@ -58,7 +58,8 @@ def publish(packet: dict, stage: Path) -> dict[str, object]:
     (stage / rel).write_text(json.dumps(packet, sort_keys=True, separators=(",", ":")) + "\n")
     pointer = {"packet_id": pid, "packet_sha": cdr.packet_sha(packet), "path": rel,
                "built_at": meta["built_at"], "info_cutoff_at": meta["info_cutoff_at"]}
-    (stage / POINTER).write_text(json.dumps(pointer, indent=1, sort_keys=True) + "\n")
+    (stage / pointer_path).parent.mkdir(parents=True, exist_ok=True)
+    (stage / pointer_path).write_text(json.dumps(pointer, indent=1, sort_keys=True) + "\n")
     return {"state": "ok", **pointer}
 
 
@@ -98,6 +99,13 @@ def mirror(root: Path, read_branch: Callable[[str], bytes | None]) -> dict[str, 
         if blob is None:
             skipped.append({"decision_id": rid, "why": f"cited packet {p} missing on desk/decisions"})
             continue
+        try:
+            why = cdr.desk_write.alt_stat_problems(json.loads(line), json.loads(blob))
+        except (ValueError, KeyError, TypeError) as exc:
+            why = [f"row or packet unreadable for the stat check: {exc}"]
+        if why:  # skip + a visible warning, never a stop: the branch keeps the row, main does not take a wrong label
+            skipped.append({"decision_id": rid, "why": "stat-match: " + why[0]})
+            continue
         dest = root / p
         if dest.exists() and dest.read_bytes() != blob:
             skipped.append({"decision_id": rid, "why": f"cited packet {p} differs on main; not overwritten"})
@@ -122,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     p1 = sub.add_parser("publish")
     p1.add_argument("--packet", type=Path, required=True)
     p1.add_argument("--stage", type=Path, required=True)
+    p1.add_argument("--pointer", default=POINTER, help="the pointer file to write (a triggered packet uses "
+                    "comms/desk/latest_trigger.json so the hourly pointer is never moved)")
     p2 = sub.add_parser("mirror")
     p2.add_argument("--ref", default="origin/desk/decisions")
     a = ap.parse_args(argv)
@@ -131,11 +141,13 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError) as exc:
             print(json.dumps({"state": "could_not_look", "reason": str(exc)}))
             return 2
-        res = publish(pk, a.stage)
+        res = publish(pk, a.stage, a.pointer)
         print(json.dumps(res, indent=2))
         return 0 if res["state"] == "ok" else 1
     res = mirror(ROOT, lambda p: git_show(a.ref, p))
     print(json.dumps(res, indent=2))
+    for sk in res.get("skipped", []):
+        print(f"::warning::desk row {sk['decision_id']} not mirrored: {sk['why']}")
     if res["state"] != "ok":
         return 2
     return 1 if res["skipped"] else 0

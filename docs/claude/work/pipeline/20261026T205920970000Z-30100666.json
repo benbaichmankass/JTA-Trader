@@ -1,0 +1,18 @@
+{
+  "based_on": "20261026T120003741946Z-6a06a8e0.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "two repo-less reviewer rows land on live-review/rows within one minute of each other and both review_ids are on the branch tip (or the write moves to a per-row file / a VM-side append that cannot drop a line)",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-BLUPK9FX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-APPLY-AUTOFLOW C3 session_01BLuPk9fxkARe5ZjLVV8Uxd 2026-10-26 (PR #20319)",
+    "rerun": "python3 -c \"import json,subprocess;t=subprocess.check_output(['git','show','origin/live-review/rows:comms/live_review/reviews.jsonl'],text=True);ids=[json.loads(l)['review_id'] for l in t.splitlines() if l.strip()];print(len(ids),len(set(ids)))\" and compare against every review_id ever written in git log -p origin/live-review/rows -- comms/live_review/reviews.jsonl"
+  },
+  "routed_to": "checklist:LTR-2-RECORDS",
+  "state": "routed",
+  "what": "REVIEWER-BRIEF.md (#20319) has a repo-less reviewer rewrite the WHOLE comms/live_review/reviews.jsonl on live-review/rows via push_files (read, append one line, write). Two reviewers writing in the same seconds can each base on the same read, so the later commit silently drops the earlier row from the tip. The applied tighten is safe (the VM watcher dispatches at the tip it saw, and the earlier row was seen if the watcher fetched between them, NOT guaranteed), but the mirror (#20306) reads only the tip, so the dropped row never reaches main. Mitigation today: the brief's step 3 re-read + re-append. Hard fix candidates: one file per row under comms/live_review/rows/<review_id>.json read by dispatcher+mirror+watcher, or the watcher scanning every new commit on the branch rather than the tip. UPDATE 2026-10-26 ~12:05Z (manager ask): #20319 now makes the write a compare-and-swap. The contents-API PUT carries the read blob sha (409/422 on a moved file), with a git-data PATCH force=false equivalent, re-read + retry up to 5 then could_not_write; push_files is forbidden for reviews.jsonl. A lost line is now impossible by construction once #20319 merges; this item clears on the observation in due_when."
+}

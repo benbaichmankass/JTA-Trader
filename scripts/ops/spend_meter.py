@@ -499,6 +499,126 @@ def render_capacity(c: dict) -> list[str]:
     return L
 
 
+# ── desk scale lines (DESK-10-CAPACITY, extends the LTR-10/LTR-10B reserve lines) ──────────
+#
+# ONE QUESTION: what does the Claude trading desk cost per decision, per tier, and what does each scale
+# option cost per week? Two currencies, never summed: a SESSION (a desk wake, a session-routed judge
+# batch) is billed against the PLAN allowance and `cost_usd` is its API-EQUIVALENT price; the API judge
+# path spends REAL dollars on the VM's ANTHROPIC_API_KEY under a hard --max-usd. Every line names its
+# population and n and carries a src/runtime/provenance.py grade.
+
+#: MEASURED 2026-10-27 by get_session().usage.cost_usd over EVERY hourly-regime `desk-wake` session in
+#: list_sessions' newest 100 (tag desk-wake, created 2026-10-26T18:38Z..2026-10-27T03:04Z; the six earlier
+#: desk-wake sessions are the build/measure pilots and are excluded). All ten wrote ONE no_trade row, so
+#: this is the cost of a no_trade decision; a propose_entry wake is UNMEASURED (none in the population).
+DESK_WAKE_SAMPLES: tuple[tuple[str, str, float], ...] = (
+    ("session_01A3Nm88rHBBRadhWCzPmmzF", "2026-10-26T18:38:14Z", 0.48571094),
+    ("session_01CfG3nc6pV4kzLy1VmpXcjM", "2026-10-26T19:40:56Z", 0.55051114),
+    ("session_012ReVAveTvbgcymYisbqhNR", "2026-10-26T20:04:00Z", 0.53107354),
+    ("session_017cExCYzxdGqdvvQ3jC6o4R", "2026-10-26T21:04:02Z", 0.49948988),
+    ("session_01YWcyBFZJGTa2KDJcokaew6", "2026-10-26T22:03:34Z", 0.76794138),
+    ("session_019aGfTdnp8ji7CY4FT1UP92", "2026-10-26T23:02:33Z", 0.48417404),
+    ("session_0157fRbXGuAotkcueJQBqkpZ", "2026-10-27T00:03:30Z", 0.95921458),
+    ("session_01WpcgHP7tNGfoF77MG54LWF", "2026-10-27T01:03:55Z", 0.81029744),
+    ("session_01AFoLuL9Dzjsqk7WKsYjCzb", "2026-10-27T02:04:16Z", 0.62826684),
+    ("session_01AFoLuKwtdPDGBowYWWEt2Z", "2026-10-27T03:04:35Z", 0.46478484),
+)
+WAKES_PER_WEEK_HOURLY = 24 * 7
+WAKES_PER_WEEK_15MIN = 4 * 24 * 7
+#: the scan packet is built hourly (desk-scan-packet.yml :03), so a 15-minute wake sees each packet 4x
+PACKETS_PER_HOUR = 1
+
+#: DESK-18B pilot, 5 sessions x 10 packets, reported by the manager from get_session usage.cost_usd
+#: ($16.84 total). NOT re-read this session -- the pilot sessions were not in the 100-session page.
+#: An UPPER BOUND on judging (subagents inside a ~290k-token session context), never a price of it.
+SESSION_JUDGE_PILOT_USD, SESSION_JUDGE_PILOT_PACKETS = 16.84, 50
+#: median masked packet, 40 packets MEASURED 2026-10-26 (DESK-18B-JUDGE-RUN note); protocol length from
+#: scripts/research/desk_judge_api's JUDGE-PROTOCOL.md; output tokens are INFERRED (no API run exists yet)
+JUDGE_PACKET_CHARS, JUDGE_PROTOCOL_CHARS = 16912, 2397
+JUDGE_OUT_TOK_MEAN, JUDGE_OUT_TOK_CEILING = 75, 400
+JUDGE_PACKET_COUNTS = (200, 300, 1000)
+
+
+def _desk_judge_api_prices() -> tuple[dict, float, float, int, int]:
+    """(prices $/MTok, chars/token, cache-write multiplier, wrapper chars, max output tokens) read from
+    the driver the run-desk-judge action calls, so the estimate cannot drift from what it bills."""
+    from scripts.research import desk_judge_api as dja
+    return (dict(dja.PRICES), dja.CHARS_PER_TOKEN, dja.CACHE_WRITE_MULT,
+            len(dja.USER_TMPL), dja.MAX_OUTPUT_TOKENS)
+
+
+def desk_wake_stats(samples: Iterable[tuple[str, str, float]] = DESK_WAKE_SAMPLES) -> dict:
+    costs = sorted(float(c) for _, _, c in samples)
+    if not costs:
+        return {"n": 0, "mean": None, "median": None, "min": None, "max": None}
+    n, mid = len(costs), len(costs) // 2
+    return {"n": n, "mean": sum(costs) / n,
+            "median": costs[mid] if n % 2 else (costs[mid - 1] + costs[mid]) / 2,
+            "min": costs[0], "max": costs[-1]}
+
+
+def desk_api_usd_per_packet() -> dict:
+    """ESTIMATED $/packet on the stateless API path: uncached input (the 2.4k-char protocol is under the
+    1,024-token cache minimum, so nothing is cached) + output at the mean and at the ceiling, plus the
+    driver's own worst-case guard (every input token a cache write, full max_tokens output)."""
+    prices, cpt, cw_mult, wrapper, max_out = _desk_judge_api_prices()
+    chars_in = JUDGE_PACKET_CHARS + JUDGE_PROTOCOL_CHARS + wrapper
+    in_tok = chars_in / cpt
+    base = in_tok * prices["input"]
+    return {"in_tokens": round(in_tok), "mean": (base + JUDGE_OUT_TOK_MEAN * prices["output"]) / 1e6,
+            "ceiling": (base + JUDGE_OUT_TOK_CEILING * prices["output"]) / 1e6,
+            "worst_case_guard": (in_tok * prices["input"] * cw_mult + max_out * prices["output"]) / 1e6}
+
+
+def desk_scale_lines(samples: Iterable[tuple[str, str, float]] = DESK_WAKE_SAMPLES) -> list[dict]:
+    """The desk scale lines. Each: ``label``, ``population``, ``n``, ``usd_per_decision``, ``usd_per_week``
+    (a judged run is one-off: its $/week is ONE run per week), ``currency``, ``provenance`` (+ ``note``)."""
+    from src.runtime import provenance as prov
+    w = desk_wake_stats(samples)
+    out: list[dict] = []
+    if w["n"]:
+        pop = (f"desk-wake sessions 2026-10-26T18:38Z..2026-10-27T03:04Z, all no_trade rows "
+               f"(median ${w['median']:.3f}, range ${w['min']:.3f}-${w['max']:.3f})")
+        out.append({"label": "hourly wake (24/day)", "population": pop, "n": w["n"],
+                    "usd_per_decision": w["mean"], "usd_per_week": w["mean"] * WAKES_PER_WEEK_HOURLY,
+                    "currency": "plan-allowance, API-equivalent USD", "provenance": prov.MEASURED,
+                    "note": "mean of n wakes x 168/week; a propose_entry wake is unmeasured"})
+        out.append({"label": "15-minute wake (96/day)", "population": pop + " -- no wake at this cadence exists",
+                    "n": 0, "usd_per_decision": w["mean"], "usd_per_week": w["mean"] * WAKES_PER_WEEK_15MIN,
+                    "currency": "plan-allowance, API-equivalent USD", "provenance": prov.ESTIMATED,
+                    "note": f"hourly mean x 672/week (assumes cost per wake is cadence-independent); the "
+                            f"packet is hourly, so ${w['mean'] * 4 / PACKETS_PER_HOUR:.3f} per NEW packet "
+                            f"({4 - PACKETS_PER_HOUR} of 4 wakes see a packet already decided)"})
+    api = desk_api_usd_per_packet()
+    sess = SESSION_JUDGE_PILOT_USD / SESSION_JUDGE_PILOT_PACKETS
+    for npk in JUDGE_PACKET_COUNTS:
+        out.append({"label": f"DESK-18 judged run, {npk} packets, API path",
+                    "population": f"{api['in_tokens']} in-tokens/packet from the median of 40 packets; "
+                                  f"output {JUDGE_OUT_TOK_MEAN} tok mean (ceiling {JUDGE_OUT_TOK_CEILING}: "
+                                  f"${api['ceiling'] * npk:.2f}; driver worst-case guard ${api['worst_case_guard'] * npk:.2f})",
+                    "n": 0, "usd_per_decision": api["mean"], "usd_per_week": api["mean"] * npk,
+                    "currency": "real USD, ANTHROPIC_API_KEY", "provenance": prov.ESTIMATED,
+                    "note": "no API run has been made; the first run's usage.jsonl replaces this "
+                            "(the manager's VM dry run, not re-run here, projected $5.97 worst case per 200 packets)"})
+        out.append({"label": f"DESK-18 judged run, {npk} packets, session path",
+                    "population": f"DESK-18B pilot, {SESSION_JUDGE_PILOT_PACKETS} packets in 5 sessions "
+                                  f"(manager-reported, not re-read here)",
+                    "n": SESSION_JUDGE_PILOT_PACKETS, "usd_per_decision": sess, "usd_per_week": sess * npk,
+                    "currency": "plan-allowance, API-equivalent USD", "provenance": prov.MEASURED,
+                    "note": "upper bound (~290k-token subagent context per batch); one pilot, one route"})
+    return out
+
+
+def render_desk_scale(lines: list[dict]) -> list[str]:
+    L = ["DESK SCALE (per decision and per week; two currencies, never summed):"]
+    for d in lines:
+        L.append(f"  {d['label']}: ${d['usd_per_decision']:.4f}/decision, ${d['usd_per_week']:.2f}/week "
+                 f"[{d['provenance'].upper()}, n={d['n']}, {d['currency']}]")
+        L.append(f"      population: {d['population']}")
+        L.append(f"      {d['note']}")
+    return L
+
+
 # ── per-lane dollars: an OPTIONAL, session-supplied observation ─────────────
 
 def normalise_lane_costs(raw: Any) -> list[dict]:
@@ -892,6 +1012,15 @@ def _selftest() -> int:
     cl = capacity(LoadResult(records=[dict(wk, percent=5.0)]), now=cap_now, live_open=1)
     check("plenty of allowance -> not breached, net rate below gross",
           cl["reserve_breached"] is False and cl["rate_pp_per_day"] < cl["rate_gross_pp_per_day"])
+    ds = desk_scale_lines()
+    hw = [d for d in ds if d["label"].startswith("hourly")][0]
+    check("hourly wake line is MEASURED over the sample, 168/week",
+          hw["provenance"] == "measured" and hw["n"] == len(DESK_WAKE_SAMPLES)
+          and abs(hw["usd_per_week"] - hw["usd_per_decision"] * 168) < 1e-9)
+    check("15-min line is ESTIMATED, n=0, 4x the hourly week",
+          [d for d in ds if d["label"].startswith("15-minute")][0]["provenance"] == "estimated"
+          and abs([d for d in ds if d["label"].startswith("15-minute")][0]["usd_per_week"] - hw["usd_per_week"] * 4) < 1e-9)
+    check("six judged-run lines (3 sizes x 2 routes)", sum("judged run" in d["label"] for d in ds) == 6)
     check("a negative count is refused", _raises(lambda: capacity(LoadResult(records=[wk]),
                                                                   now=cap_now, live_open=-1)))
 
@@ -995,11 +1124,13 @@ def main(argv: list[str] | None = None) -> int:
                      review_pp_per_run=args.review_pp_per_run)
         c["pp_per_lane_hour_basis"] = cal["basis"]
         c["pp_per_lane_hour_why"] = cal["why"]
+        desk = desk_scale_lines()
         if args.json:
-            print(json.dumps(c, indent=2))
+            print(json.dumps({**c, "desk_scale": desk}, indent=2))
         else:
             print("\n".join(render_capacity(c)))
             print(f"  pp/lane-hour basis: {cal['basis']} -- {cal['why']}")
+            print("\n".join(render_desk_scale(desk)))
         return 0
 
     if args.section_5:

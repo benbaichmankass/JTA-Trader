@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-CDTDGVDN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane IB-MGC-NAKED-REARM 2026-10-26 (session_01PrzNjGhobUGk86CDtDgvDN)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=500' (row 6673 position_size) vs scripts/ops/diag_fetch.sh 'exchange_positions' (ib_paper MGC size)"
+  },
+  "state": "queued",
+  "what": "ib_paper/MGC journal row 6673 (mgc_pullback_1d, pkg-011a7bf85ee54a6f) says position_size=14.0 and entry 4180.9 while the broker holds short 12 @ avg 4170.59 (MEASURED 2026-10-26 20:03Z, /api/diag/exchange_positions + journal trades). The mismatch is what blocked the naked sweep's re-arm (fixed in PR #20432 by sizing to the broker) but the row itself is still wrong: a close will grade P&L on 14 contracts, and the protective legs (12, OCA oca-protect-t6673) cover the broker qty only. Root-cause where the 2 contracts went (partial fill, an unjournaled reduce, or a netting reconcile) from the IB fill history, then correct the row through the sanctioned repair path (repair-netted-rows / reconcile-netting-rows) with its own evidence."
+}

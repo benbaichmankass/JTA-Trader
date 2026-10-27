@@ -1,0 +1,108 @@
+id: RQ-20261027-8b01-02
+title: 'Desk D-S0 in-trade: on a masked blind replay of the two <=1 h 15m legs (ict_scalp_eth_15m, ict_scalp_xrp_15m), does Claude''s in-trade action beat HOLD, a
+  frequency-matched random-timing baseline and the best static tighten, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: experiment
+question: At the first closed bar where an open trade of ict_scalp_eth_15m or ict_scalp_xrp_15m has reached +1.0 R of favourable excursion, given only a MASKED point-in-time
+  packet (no symbol, date or absolute price), does Claude's chosen action (hold / tighten_sl) produce a positive paired dR versus the leg's own untouched exit, net
+  of the full cost stack, and does it also beat a random-timing baseline and the best fixed rule chosen without seeing the test folds?
+why_this_matters: 'DESK-8b: Stage 0 for Claude-on-the-leg on the <=1 h legs, design 6.3 step 2. The per-trade spawned lane (6.3 step 3) is built only if 8a passes
+  AND this role shows a positive, CI-excluding-0 paired dR. Operator 2026-10-27 ~07:00Z.'
+power:
+  expected_n: 45
+  min_detectable_effect: 0.267
+  effect_units: R
+  sd: 0.64
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n = 45 MEASURED 2026-10-27 (desk_replay_driver.py selfcheck: packets built on the candle path at the first closed bar with running high >= +1 R;
+    ict_scalp_eth_15m + ict_scalp_xrp_15m, 154 committed trades). sd 0.64 R MEASURED: pooled std of the hold net_r over the 54 trades with mfe_r >= 1.0. MDE = 2.8
+    * 0.64 / sqrt(45) = 0.267 R. HONEST LIMIT: the dev-run oracle (breakeven at +1 R iff hindsight says it beats hold) is worth only +0.018 R per decision point,
+    so a tighten-to-breakeven judgement cannot reach this MDE; this unit is expected to land INDETERMINATE or FAIL and the follow-up is more decision points (the
+    8a fresh-window trade lists via a driver --evidence-dir option, not yet built), never a lowered bar.'
+  feasibility:
+    source: none
+    accrual_basis: expected_n is a count of committed historical decision points; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261027-8B01-02-DESK-INTRADE-S0
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'Over the pooled decision points of the two legs (n_obs reported per leg): per decision point, dR = net_r(action replayed on the real path) - net_r(hold
+    = the leg''s recorded exit), both net of the full cost stack (fee 7.5 bps round trip, slippage and funding from execution_costs.resolve_cost_policy(symbol), MEASURED
+    2026-10-26 to return (3.0 bps round trip, 1.0 bps per funding window) for XRPUSDT, ADAUSDT and ETHUSDT), a tightened stop filling at the stop price (a gap at
+    the open) AND charged an extra 0.05 R per stop-out of the tightened stop (live_review_outcomes.py --stop-fill-slip-r; registered here, sensitivities at 0 and
+    0.10 are reported but do not decide). Statistic = mean dR, 95% CI by a trade-resampling bootstrap (10,000 draws, seed registered in the run''s inputs). Baselines
+    on the same decision points and the same cost stack: (B1) STRATEGY''S OWN = HOLD, i.e. dR = 0; (B2) RANDOM-TIMING = the same action vocabulary applied with Claude''s
+    per-run action frequencies but to random bars of the same trade (not the decision state), 1,000 draws, same cost stack; (B3) BEST STATIC = the single fixed tighten
+    rule from live_review_outcomes.py''s table (atr:k, k in {1.0, 1.5, 2.0}, or r:x, x in {0.0, 0.5}) with the best mean dR on the other folds, scored on the held-out
+    fold (leave-one-fold-out). Folds = the evidence record''s own 4 folds per leg (fold_detail), pooled by fold index.'
+  rule: 'PASS IF n_obs >= 40 AND mean dR (Claude vs HOLD) has a 95% CI lower bound > 0 AND mean dR > mean dR(B2) with the paired CI of the difference excluding 0
+    AND mean dR >= mean dR(B3) AND dR > 0 in >= 3 of 4 pooled folds AND the post-cutoff stratum (pre_cutoff = false) has point estimate > 0 (not contradicting the
+    pre_cutoff set; if its n < 20 the stratum is reported and a PASS is labelled ''masked-replay only, forward-shadow confirmation required''). FAIL IF n_obs >= 40
+    AND (mean dR <= 0 OR the CI upper bound < 0 OR clause (c1) or (c2) (the planted-oracle scrambled-label arm, as re-registered 2026-10-26) of RQ-20261027-8b01-01
+    was violated). INDETERMINATE otherwise (the CI straddles 0): the record states the OBSERVED paired sd and the n at which the observed sd would resolve +0.10 R,
+    and the follow-up is more decision points (a longer window per leg or DESK-24 offline sessions), never a lowered bar. Per-leg dR is REPORTED with its own CI and
+    n but no per-leg verdict is made: a leg with n < 20 is ''insufficient_n'', never zero. The registered numbers (40, 0.05, 3 of 4, the action vocabulary, the B3
+    grid) are not changed after any result.'
+  what_it_does_not_do: 'A PASS is Stage-0 for the in-trade role only. It applies nothing, edits no config or roster, and is not a Tier-3 case: an in-trade apply path
+    on strategy trades still needs the operator mandate (DESK-13) and the forward-shadow set must not contradict it. It is not evidence of edge for any leg''s entries,
+    and it does not cover entry generation (DESK-18) or exit (RQ-20261027-8b01-03).'
+requires_result:
+  unit: RQ-20261027-8b01-01
+  verdict: pass
+blocked_on:
+- kind: spend
+  ref: DESK-8-SHORT-HOLD-S0
+  what: 'Judging needs ONE stateless Anthropic API call per packet (scripts/research/desk_judge_api.py, run on the VM by the run-desk-judge system-action, the only
+    place ANTHROPIC_API_KEY exists) over 45 packets. WORST-CASE $ (INFERRED from the script''s own constants: 6 k tokens in at $3.00/MTok uncached + 700 max output
+    at $15.00/MTok = $0.0285 per packet): 45 x 0.0285 = $1.28 for this role; the two roles together $2.57; ESTIMATED typical ~$0.01 per packet from the driver note.
+    NOT SPENT. The manager must approve the dispatch.'
+  clears_when: 'RQ-20261027-8b01-01 has landed verdict pass AND the manager approves the run-desk-judge dispatch for these 45 packets. Then git mv this file to research/queue/,
+    set run.command for `desk_replay_driver.py score --role in_trade --registered-n 154 --n-min 40`, remove blocked_on, status: queued.'
+masked_replay:
+  population: 'The two <=1 h legs of PR #20551: ict_scalp_eth_15m and ict_scalp_xrp_15m (MEASURED 2026-10-27: both execution: live in config/strategies.yaml, timeframe
+    15m; rostered on bybit_1 only). Trade lists: comms/strategy_evidence/<leg>.json -> source_run, 78 + 76 = 154 trades (MEASURED), of which 45 reach the +1.0 R in-trade
+    decision state on the candle path (MEASURED by desk_replay_driver.py selfcheck 2026-10-27; 26 + 28 trades carry mfe_r >= 1.0 in the lists). The pooled hold sd
+    among the 54 mfe_r >= 1 trades is 0.64 R (MEASURED, 0.660 eth / 0.628 xrp).'
+  construction: 'As in RQ-20261027-8b01-01: desk_scan_packet.py --as-of masking (aliases, rebase to 100 at the decision bar, ATR units, timestamps anchored 2000-01-01,
+    volume and calendar withheld, bars at or after the decision bar dropped). The packet adds the open trade''s side, entry/stop/TP in entry-ATR units, bars held
+    and open R. The judging session sees ONLY the packet.'
+  unmask_key: Written only to a separate file the judging session never reads; the scorer joins by opaque packet id.
+  leak_controls: Planted-oracle scrambled-label arm (RQ-20261026-bf56-01 clauses c1, c2); pre_cutoff flag on every row with the post-cutoff stratum reported separately;
+    no tools and no repo access in the judging session.
+  action_vocabulary: hold | tighten_sl (to a stated level in ATR or R, never loosening). Closed enum; prose is bookkeeping, never a label (design 2.4).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: bounds what an in-trade desk could add on legs carrying real bybit_2 risk; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: null
+  basis: 'est_minutes null rather than guessed: the driver does not exist; the judging step is LLM sessions, the scoring step is CPU only.'
+run:
+  workflow: null
+  inputs:
+    research_unit: RQ-20261027-8b01-02
+  note: Deliberately null until the judging dispatch is approved.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-8b01-01
+- RQ-20261026-bf56-02
+- scripts/research/desk_judge_api.py
+- scripts/research/desk_replay_driver.py
+- docs/plans/claude-trading-desk-DESIGN.md
+last_dispatched_at: null

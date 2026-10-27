@@ -146,17 +146,14 @@ related:
 last_dispatched_at: '2026-10-26T17:02:38+00:00'
 grading:
   attested: RULE-RQ2026102690d301-SKLEARNMLP
-  auto: true
-  confirmatory_run: 1
+  auto: false
   decision_rule_id: RULE-RQ2026102690d301-SKLEARNMLP
   evidence:
+  - research/results/RQ-20261026-90d3-01/40303391338.jsonl
   - research/results/RQ-20261026-90d3-01/40364918868.jsonl
-  first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-26'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  note: 'confirmatory run read ''indeterminate'' after a first FAIL: {fail, indeterminate} is not unanimous
-    -> needs_review, not closed'
-  reason: 1 row(s), all measured, all indeterminate
-  rows: 1
-  verdict: null
+  graded_by: 'research-ops-2047 (hand-graded; the grader read fail and indeterminate from two runs of a once unit)'
+  needs_review: false
+  rows: 2
+  verdict: indeterminate
+  reason: 'Rule read verbatim on the later run 40364918868 (all arms ok, 5 folds): candidate minus lgbm_base logloss CV mean BTC +0.0031, ETH -0.0209, SOL -0.0059; holdout BTC +0.0010, ETH -0.0018, SOL +0.0025. Not PASS (needs >= +0.005 on all three; ETH is worse in BOTH runs). Not FAIL (needs worse on every symbol; BTC is +0.0031). INDETERMINATE. The first run 40303391338 read FAIL (BTC -0.0415); ETH is identical to 15 digits across the runs, so only the BTC shard moved: the premise "fixed published shard" did not hold between the two runs. Configuration closed: sklearn MLP default shape (32,16) alpha 1e-3 on 15m; family mlp stays open; next test = RQ-20261026-a142-01 (regularised variant). Shard drift filed as PI (see run record RESEARCH-OPS-20261026-2047).'

@@ -1,0 +1,22 @@
+{
+  "id": "LTR-ACTION-EXECUTOR-GAPS",
+  "title": "Live review trade actions: build the executors that refuse no_action_path today (add_size everywhere; prop VM all; Alpaca reduce/move_tp/widen; IB all) + widen-vs-trail + close exit_price from fill",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane LTR-ALL-ACTIONS (PR #20414). MEASURED from the executor matrix in scripts/ops/live_review_apply.py::ACTION_PATHS at 7968bc40: (1) no add-to-open-position executor exists anywhere, so add_entry / change_size>1 refuse no_action_path:add_size on every account (the account decision is still computed); (2) prop VM accounts refuse every trade action (executor reads only meta.sl_floor); (3) Alpaca supports only a sole-leg close (no partial: caps omit partial_close; no leg-scoped TP/SL widen); (4) IB has no live-review executor; (5) a widen_sl on a trailing leg can be re-tightened by the trail next pass; (6) a live_review_close writes exit_price = venue mark at apply (ESTIMATED) until broker recovery. Re-entry test per gap: a test-backed executor with venue read-back, then 1-2 clean applies per venue (mechanical soak). Rerun: grep ACTION_PATHS scripts/ops/live_review_apply.py. [2026-10-27 lane DESK-3 session_01M8k8r5SY82JPghjLyErpKU] MEASURED by reading the executors on main d1f4d65ed. Alpaca move_tp is BUILT on branch claude/desk-3-executors (Tier 3, hold), so this gap closes on merge. Three gaps stay open, each blocked CLIENT-SIDE rather than at the venue: (a) a prop widen_sl. The phone app refuses any looser stop (tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt:1406 'amend would loosen the stop'; an APK change). The DXtrade adapter's armed modify is tighten-only (src/prop/platform/dxtrade.py ModifyRollout, rollout_tighten_mismatch), and prop_trail treats a looser re-read as a failed step. Building it means reversing both executors' never-loosen invariant, which is its own Tier-3 decision. (b) a prop add: neither executor has an add-to-position ticket path. (c) an Alpaca partial_close: the bracket legs hold every share (AlpacaClient._close_partial reports 'insufficient qty' and deliberately does not cancel). A partial therefore needs the OCO legs' qty re-sized before the reduce. Whether Alpaca accepts a qty PATCH on bracket child legs is UNVERIFIED. Re-entry: verify that against the paper venue, then build it so neither leg is ever removed. Note: the desk never applies a widen or a size change to its own leg (design 2.4), so none of (a)-(c) blocks the desk.",
+  "priority_rank": 30,
+  "updated_at": "2026-10-27T00:41:25Z",
+  "updated_by": "session_01M8k8r5SY82JPghjLyErpKU",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 723
+}

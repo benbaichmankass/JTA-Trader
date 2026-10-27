@@ -1,0 +1,26 @@
+{
+  "run_id": "cj7-backfill-tier-a",
+  "row": "CJ-7-BACKFILL-SCOPE",
+  "lane_session": "session_01NH39kinEyygRPN4ALst35n",
+  "population": "tier A: closed, single-leg, 7 crypto symbols, decided >= 2026-07-01, one trade per package (617 eligible, journal read 2026-10-26) minus the 50 CJ-3 pilot packages = 567",
+  "batches": "12 batches of 47-48 packets; per-batch metadata (sessions, prompt_sha, judged_at) in run.b00..b11.json",
+  "grader_model": "claude-sonnet-5-5",
+  "cost_source": "get_session usage.cost_usd per grader session once idle (API-equivalent pricing), read 2026-10-26",
+  "cost_usd": {
+    "blind_12_sessions": 6.4336,
+    "reveal_accepted_11_sessions": 4.6834,
+    "reveal_failed_by_safeguard_8_sessions": 1.2507,
+    "total": 12.3677,
+    "cap": 15.0
+  },
+  "n_blind": 567,
+  "n_revealed": 496,
+  "reveal_missing": "71 packets: batch 07 (47) and the first 24 of batch 06; every session on them stopped with a safeguard error (reasoning_extraction) before writing a row, including a half-batch bisection. Their blind grades are ingested; reveal is not.",
+  "rejected_passes": [],
+  "safeguard_failed_sessions": [
+    {"batch": "r01", "n_sessions": 1, "recovered_by_retry": true},
+    {"batch": "r06", "n_sessions": 2, "recovered_by_retry": false, "bisect": "r06b (24-47) graded; r06a (0-23) failed"},
+    {"batch": "r07", "n_sessions": 2, "recovered_by_retry": false, "bisect": "r07a and r07b both failed"}
+  ],
+  "acceptance_checks": "per pass: one row per packet in packet order, grader_row_problems() empty, distinct thesis/hindsight text (blind min 47/47, reveal min 47/47 per batch), grade distribution varied, revealed passes changed 1-16 grades per batch; session summaries state hand-written rows. No pass was rejected."
+}

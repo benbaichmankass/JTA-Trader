@@ -1192,6 +1192,22 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.debug("desk_packet_wake kick failed", exc_info=True)
 
+            # Desk EVENT TRIGGERS (DESK-SHORT-HOLD-LANE item 2): cheap detectors on closed bars (config/desk_triggers.yaml)
+            # land a short-timeframe packet and post ONE desk-trigger-wake marker. Off-thread, rate-limited, contained.
+            try:
+                from src.runtime import desk_event_trigger
+                desk_event_trigger.kick()
+            except Exception:  # noqa: BLE001
+                logger.debug("desk_event_trigger kick failed", exc_info=True)
+
+            # Short-hold lane (DESK-SHORT-HOLD-LANE): a package on a config/short_hold.yaml leg gets a 5-min packet on
+            # live-review/rows and one short-hold-wake marker on entry / short-hold-closed on exit. Off-thread, contained.
+            try:
+                from src.runtime import short_hold_wake
+                short_hold_wake.kick()
+            except Exception:  # noqa: BLE001
+                logger.debug("short_hold_wake kick failed", exc_info=True)
+
             # Macro/value thesis sleeve (M28 P3): an ISOLATED, slow-cadence,
             # OBSERVE-ONLY scanner that reads the point-in-time valuation
             # snapshots, forms weeks-horizon value theses (the S1 rule-based

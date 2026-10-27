@@ -237,7 +237,9 @@ def test_real_yaml_loads():
     # docs/research/M27-P0-MGC-15m-findings-2026-07-28.md.
     # 55 → 56 by trend_donchian_xrp_adx25 (2026-10-22, Tier-3, OPERATOR-DECISIONS-1022): bybit_1-only
     # soak alias of trend_donchian_xrp_4h declaring the ADX-tightened trail.
-    assert len(strategies) == 56
+    # 56 → 57 by claude_desk (2026-10-26, DESK-17, Tier-3): the trading desk's own leg,
+    # execution: shadow on bybit_1; emits only accepted desk proposals.
+    assert len(strategies) == 57
 
 
 def test_real_yaml_has_required_strategies():
@@ -284,6 +286,8 @@ def test_real_yaml_has_required_strategies():
         # ungated — the venue-blocked XAUUSD 15m ict_scalp winner re-targeted onto
         # MGC micro-gold futures.
         "ict_scalp_mgc_15m",
+        # DESK-17 (2026-10-26, Tier-3): the desk leg, execution: shadow, bybit_1.
+        "claude_desk",
     }
 
 

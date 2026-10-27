@@ -107,7 +107,9 @@ def test_yaml_entries_pin_validated_params():
     # evaluates and logs order packages, it just places no live order, so the
     # decision is reversible on evidence. Every other pinned param below is
     # unchanged, which is the point of still asserting them.
-    assert slv["execution"] == "shadow" and slv["enabled"] is True
+    # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): shadow -> live on the paper floor (the 2026-08-24 demotion
+    # predates the rule that shadow is not used for non-retired legs).
+    assert slv["execution"] == "live" and slv["enabled"] is True
     # CRITICAL: no long_only key — silver trades both directions
     assert "long_only" not in slv
     assert slv["symbols"] == ["SLV"]

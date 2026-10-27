@@ -10,11 +10,18 @@ name: desk-decisions-mirror
 #      into comms/desk/outcomes.jsonl (scripts/ops/desk_outcomes.py) -- the outcome join that
 #      makes each decision a graded training row;
 #   3. validates the whole desk record with desk-records-guard;
+#   3b. grades Claude's decisions per role (scripts/ops/claude_role_grade.py, DESK-9-GRADING): the no_trade
+#      counterfactual on real forward candles + the n ledger (recorded / graded / needed / earliest ETA per
+#      role and action class) -> comms/desk/role_grade.json. A grading failure is a warning, never a stop of
+#      the mirror (Prime Directive rule 7); the snapshot is rewritten only when an n/state moved or it is
+#      ~20 h old, so it adds at most one landing a day when nothing moved;
 #   4. lands it in ONE self-landing PR (commit-to-main, verify-merged).
 # One run at a time (concurrency group; each run waits for its PR to merge).
-# ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH; desk/decisions is
-# cut from main after this file lands, so push runs fire from the start. The hourly schedule is
-# the backstop and is what computes outcomes once a horizon passes.
+# ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH, and desk/decisions was cut
+# from main before step 3b existed, so a push run NEVER grades (measured 2026-10-27: every run since
+# #20501 was a stale-file push run; the cron also fired late or not at all). The full workflow therefore
+# runs from main: `branch-mirror-heartbeat.yml` dispatches it (`--ref main`) on every main push. Do not
+# rely on the push trigger or the cron for anything beyond mirroring rows.
 # Tier 1: data copy + an offline replay; no runtime effect.
 
 on:
@@ -63,12 +70,25 @@ jobs:
           python3 scripts/ci/check_desk_records.py
           if [ -n "$(git status --porcelain comms/desk)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
+      - name: Grade Claude's decisions per role (DESK-9-GRADING)
+        id: grade
+        continue-on-error: true
+        env:
+          DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
+        run: |
+          set -o pipefail
+          python3 scripts/ops/claude_role_grade.py --live --write comms/desk/role_grade.json \
+            | tee -a "$GITHUB_STEP_SUMMARY" || { echo "::warning::claude_role_grade failed; the mirror still lands"; exit 0; }
+          if [ -n "$(git status --porcelain comms/desk)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
       - name: Land on main (one self-landing PR)
-        if: steps.mirror.outputs.changed == '1'
+        if: steps.mirror.outputs.changed == '1' || steps.grade.outputs.changed == '1'
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: comms/desk
+          paths: comms/desk comms/desk/role_grade.json
+          # the grade snapshot is regenerated hourly (idempotent): on a stale-branch conflict adopt main's copy
+          refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/desk/role_grade.json || true
           message: "desk: mirror decisions from desk/decisions + replayed outcomes"
           pr-title: "desk: mirror decisions from desk/decisions + replayed outcomes"
           pr-body: "Automated mirror (auto-merge): rows on desk/decisions that main's comms/desk/decisions.jsonl lacks, merged by decision_id, plus the packets they cite; and outcomes.jsonl rows for shadow proposals whose horizon has passed (replayed on real candles, net of the full cost stack). scripts/ops/desk_branch.py, scripts/ops/desk_outcomes.py."

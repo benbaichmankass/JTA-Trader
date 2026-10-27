@@ -7,9 +7,11 @@ channel is an Actions poller (no new VM credential): every ~5 min
 `.github/workflows/live-review-wake.yml` runs this, which
 
 1. reads ``/api/diag/live_review_due`` through ``scripts/ops/diag_fetch.sh``;
-2. keeps the due packages on a real-money or prop account (the
+2. keeps the due packages on a reviewed account (the
    ``due.events.daily_floor.accounts`` list in ``config/live_trade_review.yaml``,
-   the one declared set) -- paper packages never wake anyone;
+   the one declared set: real-money, prop and, since the operator's
+   2026-10-26 "All accounts now", the paper and soak books) -- an account off
+   that list never wakes anyone;
 3. drops what was already posted (dedupe on ``package|event|level``) and what
    is inside the per ``package|event`` cooldown, both read back from this
    script's own hidden markers on the ops-flags PR (the same pattern as
@@ -121,7 +123,7 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
     grouped: Dict[str, dict] = {}
     for d in doc.get("due") or []:
         if str(d.get("account_id")) not in cfg["accounts"]:
-            continue  # paper / soak: record-only, never a wake
+            continue  # not a reviewed account: never a wake
         for ev in d.get("events") or []:
             name = ev.get("event")
             if name in NO_WAKE_EVENTS:

@@ -340,6 +340,7 @@ milestones:
       Four ML rows open (ML-HYGIENE, ML-STAGE-DECISIONS, ML-PRODUCERS, ML-DATASET-FIXES) after the 2026-10-08 stage decisions that demoted four heads.
       The ML slice's own plan is being written by ML-ROADMAP-LOOP.
       2026-10-26 CJ-3 (#20390): blind-then-reveal Claude grade built; 50-trade pilot measured $0.0158/trade (Sonnet, comms/claude_judgments/pilot/cj3-pilot-r1/); backfill cap with the operator; CJ-4 validation waits on n >= 150.
+      2026-10-26 CJ-7 tier A backfill (#20434): 567 more blind + 496 revealed Sonnet grades ($12.37 of the $15 cap; 71 reveals blocked by an API safeguard error); stores now 617/546. CJ-4 must pre-register a net-R label rule first: 148 of 617 packages have a stop under 1 ATR and an unreliable net R (comms/claude_judgments/backfill/tier-a/REPORT.md).
       2026-10-22 weekly pass (population = 44 rows resolving to M25): 17 queued, 13 done, 13 landed_unproven, 1 blocked (ML-RQ-RUNNER). Closed since 2026-10-11: ML-PARITY-HARNESS (10-18), ML-TABPFN-AND-STAGE-TRACE and TRAINER-DRIFT-NEXT (10-21), ML-PROMOREADY-OOSEDGE-MEASURE (10-22); ML-TABPFN-LICENCE and ML-UNBLOCK-1018 are landed_unproven. The 'four open ML rows' figure above is superseded by these counts; model-registry stage counts were not re-measured.
     next: Producers for the four demoted heads; apply the stage decisions; the ML lane owns the rest of this slice.
     owner: ML-ROADMAP-LOOP lane
@@ -471,6 +472,11 @@ milestones:
       desk/decisions and posts the desk-wake marker itself; desk-scan-packet.yml is the fallback. MEASURED: bar
       20:00Z packet DP-20261026T2002Z-scan-1h landed by the VM (5fc3079d5, poster vm), wake wrote
       DD-20261026T2002Z-scan-1h-1 (f0db6a14f); the 19:00Z write was refused 403 until the VM got a write credential.
+      DESK-9-GRADING (landed_unproven, PR #20501, 2026-10-27): per-role grading roll-up scripts/ops/claude_role_grade.py
+      -- n ledger per role x action class with explicit insufficient_n / could_not_look states, a no_trade
+      counterfactual priced on real forward candles, and an earliest-ETA to n=20; scheduled on the existing hourly
+      desk-decisions-mirror and live-review-rows-mirror workflows. MEASURED 2026-10-27: 11 desk decisions, all
+      no_trade, 0 propose_entry; 0 priced.
     next: >-
       Critical path (design v1 § 10.1): manager installs the DESK-6 spawner routine (hourly; SKILL.md § 6b) and
       proposals start accruing labels (proposals/day still UNMEASURED) -> DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17

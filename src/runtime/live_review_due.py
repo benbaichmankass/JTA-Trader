@@ -142,12 +142,19 @@ def read_reviews(path: Optional[str] = None) -> Dict[str, Any]:
 def _review_index(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     """Per package: fired (event, level) keys, last review time, max reviewed peak."""
     idx: Dict[str, Dict[str, Any]] = {}
-    for r in rows:
+    ordered = sorted(rows, key=lambda r: _parse_ts(r.get("reviewed_at"))
+                     or datetime.min.replace(tzinfo=timezone.utc))
+    for r in ordered:
         pkg = r.get("order_package_id")
         if not pkg:
             continue
-        slot = idx.setdefault(str(pkg), {"fired": set(), "last": None, "peak": None})
+        slot = idx.setdefault(str(pkg), {"fired": set(), "last": None, "peak": None, "mech": None})
         trig = r.get("trigger") or {}
+        answered = _mechanics_answer(r)
+        if answered is not None:
+            slot["mech"] = answered
+        elif (r.get("mechanics") or {}).get("verdict") == "match":
+            slot["mech"] = None  # a later review read the mismatch as cleared
         slot["fired"].add((str(trig.get("event")), _lvl(trig.get("level"))))
         ts = _parse_ts(r.get("reviewed_at") or trig.get("l0_snapshot_at"))
         if ts and (slot["last"] is None or ts > slot["last"]):
@@ -156,6 +163,62 @@ def _review_index(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         if pk is not None and (slot["peak"] is None or pk > slot["peak"]):
             slot["peak"] = pk
     return idx
+
+
+_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
+_NUM_TOL = 2e-5  # relative; `%g` in a `why` string keeps 6 significant digits
+VENUE_LEVEL, JOURNAL_LEVEL = "venue_sl_diverges", "journal_trade_absent"
+
+
+def _mechanics_answer(r: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """What mechanics evidence a review row answered, or ``None`` if it answered none.
+
+    A row answers when it was triggered by a mechanics event or recommends
+    ``flag_mechanics``. Rows written before ``trigger.level`` could carry a string
+    (the schema said number|null) have a null level, so the level is inferred
+    from the evidence; a mechanics-triggered row that says nothing more answers
+    both mechanics levels. ``numbers`` are the prices the row quotes, which is
+    what a later due computation compares against to see whether the evidence
+    changed.
+    """
+    trig = r.get("trigger") or {}
+    mech = r.get("mechanics") or {}
+    event, level = trig.get("event"), trig.get("level")
+    if event != "mechanics" and (r.get("recommendation") or {}).get("action") != "flag_mechanics":
+        return None
+    text = str(mech.get("evidence") or "")
+    low = text.lower()
+    levels: Set[str] = set()
+    if event == "mechanics" and isinstance(level, str) and not _NUM_RE.fullmatch(level):
+        levels.add(level)
+    if re.search(r"venue\s+(sl|stop)", low):
+        levels.add(VENUE_LEVEL)
+    if re.search(r"trade absent|no such row|trades? table|journal trade", low):
+        levels.add(JOURNAL_LEVEL)
+    if not levels and event == "mechanics":
+        levels = {VENUE_LEVEL, JOURNAL_LEVEL}
+    if not levels:
+        return None
+    nums = [float(m) for m in _NUM_RE.findall(text)]
+    st = r.get("state") or {}
+    nums += [x for x in (_f(st.get("sl")), _f(st.get("tp"))) if x is not None]
+    return {"levels": levels, "numbers": nums}
+
+
+def _mechanics_fired(prior: Dict[str, Any], level: str, current: Optional[List[float]] = None) -> bool:
+    """Has the latest unresolved mechanics review already answered ``level``?
+
+    Re-surfaces on CHANGE, never on repetition: when ``current`` (the prices the
+    due event is made of) names a price the answered row never quoted, the
+    evidence moved and the package is due again.
+    """
+    ans = prior.get("mech")
+    if not ans or level not in ans["levels"]:
+        return False
+    if current and ans["numbers"]:
+        return all(any(abs(c - n) <= _NUM_TOL * max(abs(c), abs(n), 1e-12) for n in ans["numbers"])
+                   for c in current)
+    return True
 
 
 def _lvl(level: Any) -> str:
@@ -362,7 +425,8 @@ def _venue_atr(ctx: Dict[str, Any], venue: Dict[str, Any]) -> Tuple[Optional[flo
 
 
 def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[str, Any],
-                 now: datetime) -> Tuple[List[Tuple[str, Any, str]], List[Dict[str, str]]]:
+                 now: datetime, sig_out: Optional[List[float]] = None
+                 ) -> Tuple[List[Tuple[str, Any, str]], List[Dict[str, str]]]:
     """``(events, could_not_look)`` for the mechanics VENUE half.
 
     Compares each account's last venue read of the package's resting stop to
@@ -371,7 +435,9 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
     naked sweeps own it, and it is not reported as a miss because the venue WAS
     read; ``could_not_look`` (and a stale or package-moved snapshot) is listed
     in ``events_could_not_look``, never folded into "no divergence".
-    Only evaluated when the tolerance is registered in the config.
+    Only evaluated when the tolerance is registered in the config. ``sig_out``, when
+    given, receives the venue and package stop prices of every divergent account:
+    the evidence ``compute_due`` compares against the last answered review.
     """
     mc = (cfg["events"].get("mechanics") or {})
     tol_atr = _f(mc.get("venue_sl_tolerance_atr"))
@@ -430,11 +496,66 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
             continue
         gap = abs(v_sl - pkg_sl)
         if gap > tol:
+            if sig_out is not None:
+                sig_out += [v_sl, pkg_sl]
             bad.append(f"{acct} venue stop {v_sl:g} vs package sl {pkg_sl:g} "
                        f"(gap {gap:.6g} > {tol_atr:g} x ATR {atr:.6g} [{atr_src}])")
     if bad:
         out.append(("mechanics", "venue_sl_diverges", "; ".join(bad)))
     return out, cnl
+
+
+_DIGITS_RE = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _reason_kind(reason: Any) -> str:
+    """The reason with its numbers masked, so 'starts 2.0 bars' and 'starts 47.0 bars'
+    group as one cause and a symbol-specific tail does not split the count."""
+    text = str(reason or "unknown")
+    text = re.sub(r"declared for \S+$", "declared for <symbol>", text)
+    return _DIGITS_RE.sub("N", text)
+
+
+def _coverage_entry(row: Dict[str, Any], tf_seconds: int,
+                    cnl: List[Dict[str, str]]) -> Dict[str, Any]:
+    """One open package's evaluation coverage, due or not.
+
+    ``events_looked`` names the events that WERE evaluated (a quiet one means
+    "looked, nothing fired"); ``events_could_not_look`` the ones that could not
+    be, with the reason. The two never overlap, so a reader can tell a quiet
+    package from a blind one. ``funding`` only counts for perps (n/a otherwise).
+    """
+    missed = {c["event"] for c in cnl}
+    universe = list(MARKET_EVENTS) + ["mechanics"]
+    if not row.get("telemetry_absent"):
+        universe = list(TELEMETRY_EVENTS) + universe
+    if not _is_perp(row.get("symbol")):
+        universe.remove("funding")
+    return {
+        "order_package_id": row.get("order_package_id"), "leg": row.get("strategy"),
+        "account_id": row.get("account_id"), "symbol": row.get("symbol"),
+        "telemetry_state": "telemetry_absent" if row.get("telemetry_absent") else "present",
+        "events_looked": [n for n in universe if n not in missed],
+        "events_could_not_look": cnl,
+    }
+
+
+def summarize_could_not_look(coverage: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Per event: how many open packages could not be evaluated and why (masked
+    reason -> packages). ``packages`` is the denominator."""
+    by_event: Dict[str, Dict[str, Any]] = {}
+    for c in coverage:
+        seen: Set[Tuple[str, str]] = set()
+        for m in c["events_could_not_look"]:
+            kind = _reason_kind(m.get("reason"))
+            if (m["event"], kind) in seen:
+                continue
+            seen.add((m["event"], kind))
+            slot = by_event.setdefault(m["event"], {"packages": 0, "reasons": {}})
+            slot["reasons"][kind] = slot["reasons"].get(kind, 0) + 1
+        for ev in {m["event"] for m in c["events_could_not_look"]}:
+            by_event[ev]["packages"] += 1
+    return {"packages": len(coverage), "by_event": by_event}
 
 
 def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
@@ -458,21 +579,29 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     due: List[Dict[str, Any]] = []
     cooled = 0
     cnl_total = 0
+    coverage: List[Dict[str, Any]] = []
     for row in rows:
         pkg = str(row.get("order_package_id"))
-        prior = idx.get(pkg, {"fired": set(), "last": None, "peak": None})
+        prior = idx.get(pkg, {"fired": set(), "last": None, "peak": None, "mech": None})
         tf = timeframe_seconds(row.get("strategy"), default_tf)
         in_cooldown = prior["last"] is not None and prior["last"] >= bar_start(now, tf)
         events = []
         mk, cnl = market_events(row, (market or {}).get(pkg), cfg, now, tf)
-        vk, vcnl = venue_events(row, (market or {}).get(pkg), cfg, now)
+        venue_sig: List[float] = []
+        vk, vcnl = venue_events(row, (market or {}).get(pkg), cfg, now, sig_out=venue_sig)
         mk, cnl = mk + vk, cnl + vcnl
         if row.get("telemetry_absent"):
             cnl = [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS] + cnl
         if cnl:
             cnl_total += 1
+        coverage.append(_coverage_entry(row, tf, cnl))
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
-            if (name, _lvl(level)) in prior["fired"]:
+            if name == "mechanics" and level == VENUE_LEVEL:
+                # Not the plain fired-set: a repeat of the SAME divergence is quiet, a
+                # changed one is due again. Rows with a null level are covered too.
+                if _mechanics_fired(prior, VENUE_LEVEL, venue_sig):
+                    continue
+            elif (name, _lvl(level)) in prior["fired"]:
                 continue
             if in_cooldown and name not in exempt and name != "daily_floor":
                 continue
@@ -505,8 +634,9 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     mech_on = bool((cfg["events"].get("mechanics") or {}).get("journal_trade_absent", True))
     for row in (mechanics_rows or []) if mech_on else []:
         pkg = str(row.get("order_package_id"))
-        prior = idx.get(pkg, {"fired": set(), "last": None, "peak": None})
-        if ("mechanics", _lvl("journal_trade_absent")) in prior["fired"]:
+        prior = idx.get(pkg, {"fired": set(), "last": None, "peak": None, "mech": None})
+        if ("mechanics", _lvl(JOURNAL_LEVEL)) in prior["fired"] \
+                or _mechanics_fired(prior, JOURNAL_LEVEL):
             continue
         upd = _parse_ts(row.get("updated_at"))
         if upd is None or now - upd > stale_after:
@@ -527,7 +657,9 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             "events_could_not_look": [],
         })
     return {"due": due, "due_count": len(due), "suppressed_by_cooldown": cooled,
-            "packages_with_events_could_not_look": cnl_total}
+            "packages_with_events_could_not_look": cnl_total,
+            "event_coverage": coverage,
+            "could_not_look_summary": summarize_could_not_look(coverage)}
 
 
 def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:

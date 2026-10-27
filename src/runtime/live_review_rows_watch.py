@@ -13,9 +13,13 @@ clause on the row at the pinned commit, refuses a duplicate review_id through
 ``live_review_apply.py``, where each account decides through its own
 ``RiskManager.approve_amend`` and the venue is read back. This file only
 decides WHEN to call it: once per new ``review_id`` whose recommendation is a
-``tighten_sl`` on a dispatchable route (``hold``, ``operator_ask``,
-``flag_mechanics`` and paper rows are logged ``not_dispatchable`` and never
-sent, so they cannot trip the dispatcher's refusal ping).
+``tighten_sl`` or (LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``, 2026-10-26) one of
+the trade actions -- close, partial_close, move_tp, widen_sl, change_size,
+add_entry -- on a dispatchable route, on ANY account class, paper included
+(operator 2026-10-26: "All accounts now", "Real-money, prop and paper at once").
+``hold``, ``operator_ask`` / ``none`` routes and ``flag_mechanics`` are logged
+``not_dispatchable`` and never sent, so they cannot trip the dispatcher's
+refusal ping.
 
 Cadence: ``ensure_started()`` (called from ``record_position_telemetry``,
 which only runs while packages are open) starts ONE daemon thread, once, in
@@ -37,6 +41,15 @@ Receipts (diag ``log_file`` names):
 * ``live_review_rows_watch_status`` -> ``rows_watch_status.json``: the last
   pass (fetch state, tip, counts), so "no new rows" and "could not fetch" are
   readable apart.
+
+DESK-4-INTAKE (2026-10-26): the same loop also fetches ``desk/decisions`` into
+``refs/live-review/desk/decisions`` and, when its tip moved (or the last intake
+could not look), runs ``scripts/ops/desk_intake.py --ref <tip> --apply`` as a
+subprocess. That script validates each new desk decision row (schema v2) and
+hands an in-trade action to ``live_review_apply.run()``; a ``propose_entry`` is
+refused, named, while ``MD-TRADE-DESK``'s entry_generation is blocked. Its
+receipts: ``desk_intake`` (``runtime_logs/desk/intake.jsonl``),
+``desk_intake_status`` and ``desk_watch_status`` (this loop's fetch state).
 """
 from __future__ import annotations
 
@@ -63,6 +76,9 @@ POLL_S = 45
 RETRY_WINDOW_S = 3600
 FETCH_TIMEOUT_S = 30
 DISPATCH_TIMEOUT_S = 600
+DESK_BRANCH = "desk/decisions"
+DESK_LOCAL_REF = f"refs/live-review/{DESK_BRANCH}"
+DESK_INTAKE = ROOT / "scripts" / "ops" / "desk_intake.py"
 
 _started = False
 _start_lock = threading.Lock()
@@ -121,10 +137,14 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
             "lines": lines[-20:]}
 
 
+#: tighten_sl plus the trade-desk actions (LTR-ALL-ACTIONS); every one is re-checked by the dispatcher.
+DISPATCHABLE_ACTIONS = ("tighten_sl", "close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
+
+
 def dispatchable(row: Dict[str, Any]) -> Optional[str]:
     """None when the row is an apply candidate; else why it is not (logged, never sent)."""
     rec = row.get("recommendation") or {}
-    if rec.get("action") != "tighten_sl":
+    if rec.get("action") not in DISPATCHABLE_ACTIONS:
         return f"action_{rec.get('action')}"
     route = (row.get("disposition") or {}).get("route")
     if route not in DISPATCHABLE_ROUTES:
@@ -262,13 +282,61 @@ def _applied_entry(path: Path, review_id: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _desk_intake(tip: str) -> Dict[str, Any]:
+    """Run the desk intake at the pinned tip with --apply. Never raises."""
+    try:
+        r = subprocess.run([sys.executable, str(DESK_INTAKE), "--ref", tip, "--apply"],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "detail": f"desk intake did not run: {type(exc).__name__}"}
+    summary: Dict[str, Any] = {}
+    for ln in (r.stdout or "").splitlines():
+        if ln.startswith("{"):
+            try:
+                summary = json.loads(ln)
+            except ValueError:
+                pass
+    return {"exit": r.returncode, "new": summary.get("new"), "detail": summary.get("detail")
+            or (r.stderr or "").strip()[-200:] or None}
+
+
+def run_desk_pass(git: Git = _git, intake: Callable[[str], Dict[str, Any]] = _desk_intake,
+                  now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
+    """One fetch of desk/decisions -> the desk intake, only when the tip moved or the last intake
+    could not look (exit 3: a row is pending a retry). Dedupe and retries live in the intake."""
+    d = logs or log_dir()
+    status_path = d / "desk_watch_status.json"
+    prev = _load(status_path) or {}
+    status: Dict[str, Any] = {"pass_at": now_fn().isoformat()}
+    rc, out = git("fetch", "--quiet", "--no-write-fetch-head", "origin", f"+refs/heads/{DESK_BRANCH}:{DESK_LOCAL_REF}")
+    if rc != 0:
+        status.update(fetch_state="could_not_fetch", detail=out[-200:], tip=prev.get("tip"),
+                      intake_exit=prev.get("intake_exit"))
+        _write_json(status_path, status)
+        return status
+    rc, tip = git("rev-parse", DESK_LOCAL_REF)
+    if rc != 0:
+        status.update(fetch_state="could_not_read", detail=tip[-200:])
+        _write_json(status_path, status)
+        return status
+    status.update(fetch_state="fetched", tip=tip)
+    if tip == prev.get("tip") and prev.get("intake_exit") in (0, 1, 2):
+        status.update(intake="unchanged", intake_exit=prev.get("intake_exit"))
+    else:
+        res = intake(tip)
+        status.update(intake="ran", intake_exit=res.get("exit"), new=res.get("new"), detail=res.get("detail"))
+    _write_json(status_path, status)
+    return status
+
+
 def _loop() -> None:
     _proof(lambda fp: fp.ensure_seeded())
     while True:
-        try:
-            run_pass()
-        except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
-            logger.warning("rows-watch: pass failed", exc_info=True)
+        for one in (run_pass, run_desk_pass):
+            try:
+                one()
+            except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
+                logger.warning("rows-watch: %s failed", one.__name__, exc_info=True)
         time.sleep(POLL_S)
 
 

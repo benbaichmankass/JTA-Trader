@@ -333,6 +333,11 @@ WRITE_OUTPUTS = {
     # directory rather than a file so the check asks the question the workflow
     # actually answers; naming a file inside it would fail on a correct config.
     "sunset_pass.py": ["comms/sunset"],
+    # DESK-9-GRADING: each grader writes ONE file that the job names explicitly in its `paths` (beside the whole
+    # directory, which the mirror also lands). The refresh-command adopts main's copy on a stale-branch conflict;
+    # the next hourly run recomputes (both writers are idempotent).
+    "claude_role_grade.py": ["comms/desk/role_grade.json"],
+    "live_review_grade.py": ["comms/live_review/outcomes.jsonl"],
 }
 
 def audit_write_outputs(where: str, committed: set, tools, registry) -> tuple:

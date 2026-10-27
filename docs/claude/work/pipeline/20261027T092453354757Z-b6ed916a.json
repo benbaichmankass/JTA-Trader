@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-P6NRDB4X-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-DEMO-LIVE, PR #20585 (running the soak-contract-guard's own remedy)",
+    "rerun": "cp docs/claude/work/SOAKS.json /tmp/s.json && python3 scripts/ops/soak_state.py --backfill && git diff --stat docs/claude/work/SOAKS.json; git checkout docs/claude/work/SOAKS.json  # a large diff dropping KILLED contracts = still open"
+  },
+  "state": "queued",
+  "what": "scripts/ops/soak_state.py --backfill (the remedy check_soak_contracts.py prints) REWRITES docs/claude/work/SOAKS.json from scratch: MEASURED 2026-10-27 on main 359a6e53 it dropped every KILLED contract with its disposition record (e.g. SOAK-stage1-alpaca_paper-gld_pullback_1d, decided 2026-10-25) and replaced the file _comment/as_of (1018-line diff to add one contract). A session following the guard's instruction erases soak history. Fix: --backfill appends only missing contracts and preserves existing entries + dispositions; test it."
+}

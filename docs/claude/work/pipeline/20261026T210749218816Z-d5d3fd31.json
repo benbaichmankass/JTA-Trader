@@ -1,0 +1,23 @@
+{
+  "based_on": "20261026T185243055087Z-6b1760a2.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the pkg-011a7bf85ee54a6f ib_paper snapshot row reads measured, or none_resting on two consecutive sweeps (then it is a real naked position)",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-VXKMOUTK-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-30",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'venue_protection_snapshot?order_package_id=pkg-011a7bf85ee54a6f'",
+    "what": "ib_paper MGC venue protection state after the snapshot deploys"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-MECHANICS-VENUE-SNAPSHOT dry read 2026-10-26 (scripts/ops/venue_snapshot_dry_read.py)",
+    "rerun": "scripts/ops/diag_fetch.sh 'venue_protection_snapshot?order_package_id=pkg-011a7bf85ee54a6f'"
+  },
+  "state": "done",
+  "terminal_reason": "RESOLVED 2026-10-26 by lane IB-MGC-NAKED-REARM. It was a REAL naked position, not a stale view: fresh reads at 20:03Z and 20:44Z (/api/diag/ib_open_orders) showed no MGC leg, and the trader sweep logged 'TARGET-NAKED ... stop_qty=0.0 target_qty=0.0' + 'NOT re-arming' every pass. Root cause of the sweep not re-arming: journal row 6673 position_size=14 vs broker 12, so its foreign-target over-fill check read 0+14>12 (fix: PR #20432). Re-armed via the new rearm-ib-protective action (PR #20431; dry-run #20441, apply #20442): BUY STP 12 @ 4270.0 + BUY LMT 12 @ 3767.0, GTC, OCA oca-protect-t6673, read-back verified. Clearing observation MEASURED: venue_protection_snapshot?order_package_id=pkg-011a7bf85ee54a6f read_state=measured at 2026-10-26T21:07:14Z (venue_sl 4270.0, venue_tp 3767.0, 1 stop + 1 target leg).",
+  "what": "ib_paper MGC (pkg-011a7bf85ee54a6f, short 12) showed NO resting STP/LMT legs on /api/diag/ib_open_orders at 2026-10-26T18:43Z while MHG's two legs were visible. The diag IB order view carries a stale-read caveat (BL-20260826-DIAG-IB-OPEN-ORDERS-SERVES-A-STALE-MONOTONIC-ORDER-VIEW), so this is UNVERIFIED as a naked position. Settle it from the first snapshot row for that package: measured = the view was stale; none_resting for more than one sweep = a naked position the IB naked sweep did not re-arm, so root-cause that sweep. Same package as PI-20261026-UNSVQMPZ-0001."
+}

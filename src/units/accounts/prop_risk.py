@@ -106,6 +106,7 @@ class PropRiskManager(RiskManager):
             account_id=account_name or "",
         )
         self.account_name: Optional[str] = account_name
+        self.backtest_ruleset: Optional[str] = config.get("backtest_ruleset") or None
         # Daily-DD switch with the FIRM-derived limit: (1 - 20%) x the firm's
         # daily-loss amount, on the firm's own reset time + amount basis, read
         # from the account's ``backtest_ruleset`` (operator, 2026-10-09).
@@ -319,6 +320,66 @@ class PropRiskManager(RiskManager):
             return False, "SKIP_MISSION_MET"
 
         return super().evaluate(order, opening=opening)
+
+    # ------------------------------------------------------------------
+    # Live-review / desk amends (DESK-2-RISK-GATE)
+    # ------------------------------------------------------------------
+
+    def firm_limits(self) -> Optional[Dict[str, Any]]:
+        """The ruleset's ``limits:`` block. ``{}`` = no ruleset declared (or ``standard``);
+        None = a declared ruleset we could not read (could not look, never "no rules")."""
+        rel = self.backtest_ruleset
+        if not rel or str(rel).strip().lower() == "standard":
+            return {}
+        from pathlib import Path
+
+        import yaml
+        path = Path(str(rel))
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[3] / "config" / path
+        try:
+            raw = yaml.safe_load(path.read_text()) or {}
+            limits = raw.get("limits") if isinstance(raw, dict) else None
+        except Exception:  # noqa: BLE001 -- unreadable is could-not-look
+            return None
+        return dict(limits) if isinstance(limits, dict) else None
+
+    def amend_cushion(self, risk_usd: float) -> Dict[str, Any]:
+        """Grade an amend's ADDED risk against this account's remaining DD / daily-loss cushion
+        (after open positions' loss to their stops). A read failure grades ``cushion_unknown``."""
+        from src.prop import prop_risk_gate
+        return prop_risk_gate.grade_account_ticket_risk(self.account_name or "", risk_usd=risk_usd)
+
+    def _amend_equity(self) -> Optional[float]:
+        try:
+            return self.dd_switch_equity()
+        except Exception:  # noqa: BLE001 -- could not look
+            return None
+
+    def _prop_layer(self, base: Any, intent: Any, account: Any) -> Any:
+        from src.prop import prop_amend_gate as _pag
+
+        if not base.ok or not _pag.adds_risk(intent):
+            limits: Optional[Dict[str, Any]] = {}
+            equity = None
+        else:
+            limits = self.firm_limits()
+            equity = self._amend_equity()
+        return _pag.decide_prop(base, intent, account, limits=limits, cushion_for=self.amend_cushion,
+                                symbol=(account.extra or {}).get("symbol"),
+                                account_size_usd=self.account_size_usd or None, equity_usd=equity)
+
+    def approve_amend(self, intent: Any, account: Any) -> Any:
+        """The base tighten gate, then the firm's layer (``src.prop.prop_amend_gate``). A tighten
+        only reduces risk, so the DD cushion and the daily-DD switch never refuse it; a human's
+        stop on the phone account does."""
+        return self._prop_layer(super().approve_amend(intent, account), intent, account)
+
+    def approve_action(self, intent: Any, account: Any) -> Any:
+        """The base trade-action gate (both brackets, the fresh-entry check with this account's
+        mission / weekend / overnight / daily-DD refusals), then the firm's layer: an action that
+        ADDS risk must fit the remaining DD cushion and the firm's leverage cap."""
+        return self._prop_layer(super().approve_action(intent, account), intent, account)
 
     def dd_switch_reading(self):
         """A prop account's equity is the operator/executor-reported status

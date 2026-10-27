@@ -149,15 +149,22 @@ def blocked_over_age() -> dict[str, Any]:
     cfg = yaml.safe_load((ROOT / "scripts" / "research" / "research_slo.yaml").read_text()) or {}
     age = int(((cfg.get("slos") or cfg).get("blocked_over_age") or {}).get("blocked_age_days", 21))
     today = date.today()
-    old, total = [], 0
+    old, total, retired = [], 0, 0
     for f in sorted((ROOT / "research" / "queue" / "blocked").glob("RQ-*.yaml")):
+        try:
+            status = (yaml.safe_load(f.read_text(encoding="utf-8")) or {}).get("status")
+        except (yaml.YAMLError, OSError, UnicodeDecodeError):
+            status = None          # unparseable: still counted (queue_integrity names it)
+        if status == "retired":    # a retired unit already has its disposition; it is not a stale block
+            retired += 1
+            continue
         total += 1
         m = re.match(r"RQ-(\d{4})(\d{2})(\d{2})", f.stem)
         if m and (today - date(*map(int, m.groups()))).days > age:
             old.append(f.stem)
     return {"verdict": "fail" if len(old) > 10 else "pass", "read_state": "measured" if total else "no_data",
-            "population": f"{total} unit(s) in research/queue/blocked/ (age from the RQ id date)",
-            "n": total, "measurement": {"over_age": len(old), "age_days": age, "max": 10, "sample": old[:10]}}
+            "population": f"{total} non-retired unit(s) in research/queue/blocked/ (age from the RQ id date; {retired} retired file(s) excluded)",
+            "n": total, "measurement": {"over_age": len(old), "age_days": age, "max": 10, "retired_excluded": retired, "sample": old[:10]}}
 
 
 def theme_supply() -> dict[str, Any]:
@@ -224,9 +231,9 @@ def duplicate_commands() -> dict[str, Any]:
         cmd = (u.get("run") or {}).get("command")
         if not isinstance(cmd, list):
             continue
-        # a unit can be parameterised OUTSIDE its argv (head_to_head, run.inputs): same argv != same question
+        # a unit can be parameterised OUTSIDE its argv (head_to_head, run.inputs, ml_bakeoff): same argv != same question
         inputs = {k: v for k, v in ((u.get("run") or {}).get("inputs") or {}).items() if k != "research_unit"}
-        key = json.dumps([[str(c).replace(i, "<id>") for c in cmd], inputs, u.get("head_to_head")], sort_keys=True, default=str)
+        key = json.dumps([[str(c).replace(i, "<id>") for c in cmd], inputs, u.get("head_to_head"), u.get("ml_bakeoff")], sort_keys=True, default=str)
         if key in seen:
             pairs.append([seen[key], i])
         else:
@@ -304,6 +311,28 @@ def related_paths_exist() -> dict[str, Any]:
             "measurement": {"n_missing": len(missing), "missing": missing[:10]}}
 
 
+def routed_targets_exist() -> dict[str, Any]:
+    """Every pipeline item routed as ``checklist:<ID>`` names a checklist row file that exists (a route to a
+    row that was never written, or was renamed, is a drop that reads as a disposition)."""
+    import re
+    sys.path.insert(0, str(ROOT / "scripts" / "ops"))
+    import pipeline  # noqa: PLC0415
+    res = pipeline.load()
+    items = getattr(res, "items", None) or getattr(res, "folded", None)
+    items = list(items.values()) if isinstance(items, dict) else list(items or [])
+    rows = {f.stem for f in (ROOT / "docs" / "claude" / "work" / "checklist").glob("*.json")}
+    checked, missing = 0, []
+    for it in items:
+        m = re.fullmatch(r"checklist:([A-Za-z0-9_.\-]+)", str(it.get("routed_to") or "").strip())
+        if it.get("state") == "routed" and m:
+            checked += 1
+            if m.group(1) not in rows:
+                missing.append({"item": it.get("id"), "row": m.group(1)})
+    return {"verdict": "fail" if missing else "pass", "read_state": "measured" if checked else "no_data",
+            "population": f"{checked} routed pipeline item(s) of {len(items)} whose routed_to is exactly checklist:<ID>",
+            "n": checked, "measurement": {"n_missing": len(missing), "missing": missing[:10]}}
+
+
 CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "queue_integrity": queue_integrity,
           "disposition_census": disposition_census, "programme_coverage": programme_coverage,
           "machinery_selftests": machinery_selftests,
@@ -311,7 +340,8 @@ CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "que
           "value_coverage": value_coverage, "command_resolvable": command_resolvable,
           "duplicate_commands": duplicate_commands, "power_declared": power_declared,
           "roadmap_ref_valid": roadmap_ref_valid, "never_dispatched_age": never_dispatched_age,
-          "related_paths_exist": related_paths_exist}
+          "related_paths_exist": related_paths_exist,
+          "routed_targets_exist": routed_targets_exist}
 
 
 def main() -> int:

@@ -1,0 +1,35 @@
+{
+  "id": "LTR-ALL-ACTIONS",
+  "title": "Live review + desk: all trade actions (close, partial_close, move_tp, widen_sl, change_size, add_entry) on every account, each with reason + confidence, through each account's own risk manager (MD-TRADE-DESK)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane LTR-ALL-ACTIONS (manager dispatch)",
+  "lane": "session_01Ek4ZF8rHKPrYehmQkcjSrW",
+  "model": "opus-tier",
+  "ceiling_usd": 25,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    20412,
+    20414
+  ],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-26 ~18:56-19:00Z, popup answers to manager session_01C1ooo4kqBbng7vytdG1UVs (verbatim): review rule \"1\" = ADOPT the CLAUDE-GRADE-LOOP rule as proposed (per action class, n>=20 graded: CI95 of delta_r < 0 -> propose recommend-only; > 0 and not OVERCONFIDENT -> propose next scope step; <class>/judgement OVERCONFIDENT at n>=10 -> propose a confidence floor; proposals only). \"we also need to expand the desks mandate so include all trade actions, as long as they have reasoning and confidence attached\". Which book: \"Both\". Actions: \"Close / partial-close\", \"Move take-profit\", \"Widen a stop\", \"Change size / add entry\". Accounts: \"All accounts now\". Desk gate: \"Beat random entries only\" (DESK-13-MANDATE). PART 1 (config+schema+skill+grading): MD-LIVE-TRADE-ACTIONS (sibling, direction mixed) + MD-DESK-TRADE-ACTIONS (blocked_until the DESK-13 gate) + review_rule on MD-LIVE-TIGHTEN-SL; schema actions move_tp/widen_sl/change_size/add_entry + size_fraction/size_multiplier; validator requires reason + confidence-or-table + target; SKILL \u00a7 3b + REVIEWER-BRIEF; LTR-5 counterfactual prices every class hold-vs-action (paired_replay_v1). PART 2: apply path (approve_action + per-account executors, honest no_action_path refusals). SOAK (mechanical, OPERATING-PLAN \u00a7 2): first apply of each action type per venue checked against the venue read-back and recorded here. Closing observation: one applied row per action type per venue with verified_readback true, or a named no_action_path refusal. [2026-10-26 ~19:30Z lane] DESIGN CHANGES relayed by the manager. (1) Operator ~19:00Z verbatim: \"also, the desk is just a more advanced version of the ltr, they should both rely on the same mandate - ltr is just one funciton of the trade desk\" -> ONE mandate MD-TRADE-DESK (supersedes MD-LIVE-TIGHTEN-SL, kept granted as its resolvable alias); in_trade function = this review (all actions incl. tighten_sl), entry_generation function blocked_until the DESK-13 gate; the separate MD-TRADE-DESK entries are dropped. (2) Operator ~19:02Z verbatim: \"in general, every trade always must have BOTH brackets, not related to this skill. Claude can move the brackets, but nothing is supposed to remove brackets\" -> mandate never-list + apply path refuses any action leaving a leg without SL or TP (both_brackets_required), read-back checks both brackets after a reduce; system-wide audit filed as row BRACKETS-ALWAYS. [2026-10-26 ~19:45Z lane] Paper in scope (manager relay of the operator's popup answer, verbatim: \"All accounts now\", option text \"Real-money, prop and paper at once\"): skill \u00a7 0.3 / Q2 paper record-only superseded for MD-TRADE-DESK; REVIEWER-BRIEF routes paper like any account; paper refusals go in the brief, not a ping. Found + fixed in #20414: the VM rows watcher (src/runtime/live_review_rows_watch.py::dispatchable) sent ONLY tighten_sl, so no trade action could ever reach the dispatcher. [2026-10-26 ~21:08Z session_01C1ooo4kqBbng7vytdG1UVs] MERGED #20412+#20414 (merge d1356d40, 20:54Z); DEPLOYED: VM git_sha_running 1ad340db3 (contains d1356d40), last tick 21:04:37Z. NOT yet observed: no trade-action row has dispatched. Paper/soak accounts added to due.daily_floor.accounts (operator 'All accounts now').",
+  "priority_rank": 2,
+  "updated_at": "2026-10-26T21:06:44Z",
+  "updated_by": "session_01C1ooo4kqBbng7vytdG1UVs",
+  "roadmap": [
+    "L-ATM",
+    "L-DESK"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: live review acts with every trade action under MD-LIVE-TRADE-ACTIONS (per-account risk, graded per class)",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md live-review apply path: approve_action + per-account executors and refusals"
+  },
+  "observation": {
+    "what": "one applied live-review row per action type per venue with verified_readback true and both brackets resting after, or a named no_action_path refusal (OPERATING-PLAN \u00a7 2 mechanical soak); the first close/move_tp row reads dispatched in log_file live_review_rows_watch",
+    "how_to_check": "comms/live_review/reviews.jsonl + outcomes; /api/diag/log_file?name=live_review_rows_watch",
+    "due_by": "2026-11-02T21:00Z"
+  },
+  "_seq": 722
+}

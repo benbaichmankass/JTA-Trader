@@ -281,6 +281,45 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
     "bybit_1/trend_donchian_xrp_adx25": R,
     "bybit_1/xrp_pullback_2h": R,
+    # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
+    # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
+    # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
+    "bybit_1/ict_scalp_eth_15m": R,
+    "bybit_1/ict_scalp_xrp_15m": R,
+    # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule", relayed by the manager): every non-retired leg trades on its
+    # demo floor, so these routings are NEW. Each line is VISIBLE DEBT, not a claim of compliance: `ER` = the leg's entry TP is a sentinel /
+    # absent / unreachable (a blocker for exit-refinement, prioritised below real-money legs), `R` = a real declared TP but nothing revises it.
+    # Nothing here fakes a TP; the guard ratchet only shrinks from this point.
+    "alpaca_paper/uso_trend_1h": R,
+    "bybit_1/avax_pullback_2h": ER,
+    "bybit_1/eth_pullback_2h": ER,
+    "bybit_1/eth_pullback_prop_2h": ER,
+    "bybit_1/fade_breakout_4h": ER,
+    "bybit_1/fvg_range_15m": ER,
+    "bybit_1/htf_pullback_trend_2h": ER,
+    "bybit_1/ict_scalp_5m": R,
+    "bybit_1/ict_scalp_avax_5m": R,
+    "bybit_1/ict_scalp_sol_15m": R,
+    "bybit_1/ict_scalp_sol_5m": R,
+    "bybit_1/ict_scalp_xrp_5m": R,
+    "bybit_1/sol_pullback_2h": ER,
+    "bybit_1/squeeze_breakout_4h": ER,
+    "bybit_1/trend_donchian": ER,
+    "bybit_1/trend_donchian_ada_4h": ER,
+    "bybit_1/trend_donchian_avax_4h": ER,
+    "bybit_1/trend_donchian_eth": ER,
+    "bybit_1/trend_donchian_sol": ER,
+    "bybit_1/trend_donchian_sol_4h": ER,
+    "bybit_1/trend_donchian_xrp_4h": R,
+    "bybit_1/turtle_soup": ER,
+    # 2026-10-26 DESK-17: the claude_desk leg (bybit_1 paper soak only, execution: shadow). Its TP is NOT a
+    # config field: every package carries the desk proposal's OWN level (schema-required tp.level + basis +
+    # p_hit, desk-records-guard-checked; src/units/strategies/claude_desk.py refuses a proposal without
+    # both brackets), and the desk revises it through the per-account amend path (desk intake ->
+    # live_review_apply move_tp), not a monitor() verdict. This scan reads neither, so it grades the leg
+    # no_target / no_tp_verdict. A visible, deliberate line until the scan measures proposal TPs
+    # (design § 3.7 "check_tp_doctrine.py measures the desk leg on the proposals' tp.basis"; row DESK-17).
+    "bybit_1/claude_desk": ER,
     "ib_paper/gld_pullback_1d": R,  # moved from alpaca_paper 2026-10-25 (GLD-SOAK-REPLACE); same debt, not new: tp_r 3.5 declared (OPERATOR-DECISIONS-1022), tp_revision still undeclared
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,
@@ -334,9 +373,18 @@ def read_monitor_aliases(builders: Path) -> dict[str, str]:
     return pairs
 
 
+#: Legs whose registered builder is NOT named `<leg>_signal_builder`, so the alias regex above keys them under the builder's
+#: own stem. `ict_scalp_5m` (BTC) is served by `ict_scalp_signal_builder` -> unit `ict_scalp` (strategy_signal_builders.py
+#: monitor_unit table, first row). Added 2026-10-27 when the demo-floor rule put the leg back on a roster and the scan could
+#: not resolve it ("unit_unresolved"), which also broke this guard's self-test.
+_BUILDER_STEM_LEGS = {"ict_scalp_5m": "ict_scalp"}
+
+
 def unit_for(leg: str, aliases: dict[str, str], units_dir: Path) -> str | None:
     if leg in aliases:
         return aliases[leg]
+    if leg in _BUILDER_STEM_LEGS and _BUILDER_STEM_LEGS[leg] in aliases:
+        return aliases[_BUILDER_STEM_LEGS[leg]]
     if (units_dir / f"{leg}.py").is_file():
         return leg
     return None

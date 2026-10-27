@@ -1,0 +1,18 @@
+{
+  "based_on": "20261026T181137621141Z-b4b0f611.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "the rerun command exits 0 (the regime detector imports after candle_io has been loaded), or the item is killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261026-NNN9WGJX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "DESK-18-GEN-REPLAY-S0 lane session_014Wuw5ZTBbMDhhYNnn9wGJx, 2026-10-26",
+    "rerun": "python3 -c \"import sys; sys.path.insert(0,'scripts/ops'); import desk_scan_packet as d; from pathlib import Path; d.candles_from_dir(Path('/nonexistent'),['X'],'1h'); import src.runtime.regime.detector\""
+  },
+  "routed_to": "checklist:LTR-11-PACKET",
+  "state": "routed",
+  "what": "scripts/candle_io.py:48 does sys.path.insert(0, <scripts dir>) and scripts/ml/__init__.py then shadows the top-level `ml` package, so in any process that has loaded candle_io the first `import src.runtime.regime.detector` raises ModuleNotFoundError: No module named 'ml.datasets'. scripts/ops/live_review_packet.py::trend_now swallows that and returns (None, None), so a trend/regime read silently becomes None depending on import order. MEASURED 2026-10-26 by the DESK-18 replay self-check: one masked scan packet had two shas (the first htf_trend call in a process was None, the rest 'trending'). Fixed for desk_scan_packet.htf_trend only (DESK-18 PR, _repo_first()). Same exposure, unfixed: scripts/ops/desk_near_signals.py sets the same sys.path order and imports strategy units that may read the regime package; any other script that reads candles through candle_io and then the regime detector. Lever: make candle_io append instead of prepend (or rename scripts/ml), and make trend_now return a named missing-input reason instead of None."
+}

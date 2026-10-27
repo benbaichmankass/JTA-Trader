@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261026-4ALST35N-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "CJ-7-BACKFILL lane, comms/claude_judgments/backfill/tier-a/REPORT.md § 4",
+    "rerun": "python3 scripts/ops/blind_grade.py validate; join comms/claude_judgments/blind_grades.jsonl to packets by packet_id and compare bracket.risk_atr with journal net R (net_r_label.net_r_for_trade)"
+  },
+  "state": "queued",
+  "what": "CJ-4 LABEL HAZARD: 148 of 617 graded packages (24%) have bracket risk_atr < 1 and their journal net R is on a tiny risk basis (win rate 0.858, median +5.66R, max 3,587R) versus 0.275 / -0.83R for the other 469; several show a stop on the wrong side of the entry. Likely the package SL is not the initial stop (INFERRED). Before CJ-4 reads any result: pre-register the net-R label rule (exclude or re-base these packages, and say which), find why the package sl/entry disagree with the initial bracket for these (ict_scalp 5m/15m mostly), and report CJ-4 on the clean set. The all-617 Spearman of blind p_win vs net R (-0.39) is an artifact of this and must not be quoted."
+}

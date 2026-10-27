@@ -1,6 +1,6 @@
 id: RQ-20261026-e535-01
 title: 'Desk D-S0 entry generation, harness self-check: does the masked scan replay keep the future out of every packet and the past out of every outcome, does its cost function reproduce the committed cost stack, and can it tell a planted oracle from a planted null?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -89,4 +89,15 @@ related:
 - scripts/research/desk_gen_replay_driver.py
 - scripts/ops/desk_scan_packet.py
 - docs/plans/claude-trading-desk-DESIGN.md
-last_dispatched_at: null
+last_dispatched_at: '2026-10-26T20:33:08+00:00'
+grading:
+  attested: RULE-RQ20261026-E535-01-GEN-REPLAY-SELFCHECK
+  auto: true
+  decision_rule_id: RULE-RQ20261026-E535-01-GEN-REPLAY-SELFCHECK
+  evidence:
+  - research/results/RQ-20261026-e535-01/40396667351.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

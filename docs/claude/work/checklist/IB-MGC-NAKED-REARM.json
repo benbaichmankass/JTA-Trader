@@ -1,0 +1,30 @@
+{
+  "id": "IB-MGC-NAKED-REARM",
+  "title": "Re-arm the fully naked ib_paper/MGC short (both brackets) and fix the IB naked sweep that misclassified and refused it",
+  "phase": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": "IB-MGC-NAKED-REARM",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    20431,
+    20432,
+    20446,
+    20454
+  ],
+  "blocked_on": [],
+  "note": "DONE 2026-10-26, lane session_01PrzNjGhobUGk86CDtDgvDN. MERGED, DEPLOYED and OBSERVED. (1) REPAIR: new system-action rearm-ib-protective (#20431, merged 1ad340db): journal levels, broker qty, refuses if any order rests on the symbol, ops clientId, read-back verified. Dry-run #20441 returned ready; apply #20442 placed MGC BUY STP 12 @ 4270.0 + BUY LMT 12 @ 3767.0, GTC, OCA oca-protect-t6673, verified. OBSERVED: venue_protection_snapshot measured 21:07:14Z; ib_open_orders re-read 22:00:58Z shows both legs; MHG legs untouched. (2) ROOT CAUSE + FIX: _check_broker_naked_ib_positions graded a nothing-resting book as target_naked (naked=0) and sized its foreign-target over-fill check on the journal row qty (row 6673 = 14 vs broker 12, so 0+14>12 refused the re-arm). #20432 (merged beb46d523, trader_git_sha beb46d523): nothing-resting => naked; counters before the guard; re-arm qty = min(row qty, broker size - stop cover) via qty_cap; a failed fully-naked re-arm pages and retries. OBSERVED 21:55:18Z: 'covered=2 naked=0 partially_naked=0 target_naked=0'. (3) PI-20261026-VXKMOUTK-0002 closed done (#20446). Residual filed: PI-20261026-CDTDGVDN-0001 (row 6673 journal 14 vs broker 12, P&L would grade on 14). Note: MGC legs belong to ops clientId 9975; a trader trail amend joins oca-protect-t6673 (Error 10147 survivor path), which stays one OCA group.",
+  "updated_at": "2026-10-26T22:03:09Z",
+  "updated_by": "session_01PrzNjGhobUGk86CDtDgvDN",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: IB naked sweep now re-arms a fully naked position sized to the broker qty (#20432); rearm-ib-protective exists as the manual repair (#20431)",
+    "arch": "none: sweep behaviour fix within the existing protection design; no architecture contract changed"
+  },
+  "_seq": 724
+}

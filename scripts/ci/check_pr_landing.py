@@ -538,6 +538,49 @@ def e58_generated_queue_vouch(root: Path, base: str, branch: Optional[str],
                          f"file(s) at the merge-base: " + ", ".join(sorted(queue_paths)[:5])]
 
 
+# ECON-CAL-LANDING, 2026-10-27 (lane econ-cal-landing; operator 2026-10-26: the calendar is a
+# "routinely maintained and updated data feed"). config/economic_calendar.yaml is Tier-2 by name
+# (config/**), so the daily econ-calendar-produce PR failed R5 (#20497). Same admission as E58 --
+# REPRODUCIBILITY, not trust in the bot: the producer's own `--verify --base <base>` is re-run
+# HERE, and the file must come out byte-identical from the committed captures AND differ from the
+# merge-base only inside its `events:` list. It vouches that ONE file; the branch may carry only
+# its own data paths and its three landing files, anything else is the R5 refusal as before.
+ECON_CALENDAR_BRANCH_PREFIX = "automation/econ-calendar-"
+ECON_CALENDAR_CONFIG = "config/economic_calendar.yaml"
+ECON_CALENDAR_PRODUCER = "scripts/macro/econ_calendar_produce.py"
+ECON_CALENDAR_DATA_GLOB = "comms/macro/econ_calendar_*"
+
+
+def econ_calendar_vouch(root: Path, base: str, branch: Optional[str],
+                        changed: list[str]) -> tuple[list[str], list[str]]:
+    """([config/economic_calendar.yaml] | [], notes). Never vouches any other path."""
+    if not branch or not branch.startswith(ECON_CALENDAR_BRANCH_PREFIX):
+        return [], []
+    if ECON_CALENDAR_CONFIG not in changed:
+        return [], []
+    slug = branch.replace("/", "-")
+    own = {f"{LANDING_DIR}/{slug}.json", f"{AUTOMERGE_DIR}/{slug}.txt", f"{BRANCH_SLOT_DIR}/{slug}.json"}
+    foreign = sorted(p for p in changed
+                     if p != ECON_CALENDAR_CONFIG and p not in own
+                     and not fnmatch.fnmatch(p, ECON_CALENDAR_DATA_GLOB))
+    if foreign:
+        return [], [f"econ-calendar {branch}: REFUSED -- the branch changes {len(foreign)} path(s) outside "
+                    f"comms/macro/econ_calendar_* and its landing files ({', '.join(foreign[:4])}); "
+                    f"{ECON_CALENDAR_CONFIG} is not vouched"]
+    if not (root / ECON_CALENDAR_PRODUCER).is_file():
+        return [], [f"econ-calendar {branch}: producer {ECON_CALENDAR_PRODUCER} is absent at HEAD -- nothing vouched"]
+    try:
+        proc = subprocess.run([sys.executable, ECON_CALENDAR_PRODUCER, "--verify", "--base", base],
+                              cwd=str(root), capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return [], [f"econ-calendar {branch}: --verify could not run ({exc}) -- nothing vouched"]
+    if proc.returncode != 0:
+        tail = (proc.stdout + proc.stderr).strip().splitlines()[-3:]
+        return [], [f"econ-calendar {branch}: --verify REFUSED -- nothing vouched: " + " | ".join(tail)]
+    return [ECON_CALENDAR_CONFIG], [f"econ-calendar verified -- {ECON_CALENDAR_PRODUCER} --verify reproduced "
+                                    f"{ECON_CALENDAR_CONFIG} (events list only)"]
+
+
 # Named so a failure can say WHY a path is barred, and so that widening
 # TIER1_SURFACE by mistake still trips a named check.
 TIER3_PATHS = [
@@ -707,6 +750,8 @@ LANDING_MACHINERY = [
     # E58: the two producers whose --verify vouches their own queue PRs.
     "scripts/research/queue_replenish.py",
     "scripts/research/queue_grade.py",
+    # ECON-CAL-LANDING: the producer whose --verify vouches config/economic_calendar.yaml.
+    "scripts/macro/econ_calendar_produce.py",
     "research/templates/**",
     # RESEARCH-LOOP-AUDIT RC2 (2026-10-15): programme question nodes are queue_replenish's
     # sixth source -- a node's `unit:` is a pre-registration exactly like a template, and
@@ -1437,6 +1482,10 @@ def check(root: Path, base: str, branch: Optional[str]) -> tuple[str, list[str],
     barred2 = [p for p in changed if _match(p, TIER2_PATHS) and p not in barred3]
     e58_vouched, e58_notes = e58_generated_queue_vouch(root, base, branch, changed)
     notes.extend(e58_notes)
+    econ_vouched, econ_notes = econ_calendar_vouch(root, base, branch, changed)
+    notes.extend(econ_notes)
+    e58_vouched = e58_vouched + econ_vouched
+    barred2 = [p for p in barred2 if p not in econ_vouched]
     unvouched = [p for p in unvouched_paths(root, base, changed)
                  if p not in barred3 and p not in barred2 and p not in e58_vouched]
     for p in changed:
@@ -1775,6 +1824,56 @@ def _inherit_branch_claim(root: Path, branch: str = "claude/demo") -> None:
     g("commit", "-qm", "somebody's claim lands on main")
     g("checkout", "-q", branch)
     g("merge", "-q", "--no-edit", "main")
+
+
+def _econ_edit(root: Path, fn) -> None:
+    f = root / "config/economic_calendar.yaml"
+    f.write_text(fn(f.read_text(encoding="utf-8")), encoding="utf-8")
+
+
+def _econ_sandbox(tmp: Path, branch: str) -> Path:
+    """Base: the real producer + a calendar config with an empty events list. Branch: one
+    committed capture, the producer's own output, and the three landing files commit-to-main
+    writes (tier 1 / self)."""
+    import shutil
+    root = tmp / "repo"
+    (root / "scripts/macro").mkdir(parents=True)
+    (root / "config").mkdir()
+    (root / "docs").mkdir()
+    (root / "docs/seed.md").write_text("seed\n", encoding="utf-8")
+    for n in ("econ_calendar_produce", "econ_calendar_data", "econ_calendar_fmp", "econ_calendar_fxstreet"):
+        shutil.copy(REPO / "scripts/macro" / f"{n}.py", root / "scripts/macro" / f"{n}.py")
+    real = (REPO / "config/economic_calendar.yaml").read_text(encoding="utf-8")
+    head = real.split("\nevents:")[0].split("\n# Auto-populated")[0].rstrip("\n")
+    (root / "config/economic_calendar.yaml").write_text(head + "\n\nevents: []\n", encoding="utf-8")
+    (root / SESSION_BOARD).parent.mkdir(parents=True, exist_ok=True)
+    (root / SESSION_BOARD).write_text(json.dumps({"merge_slot": {
+        "held_by": None, "branch": None, "pr": None, "claimed_at": None}}, indent=2) + "\n",
+        encoding="utf-8")
+    (root / "scripts/ci").mkdir(parents=True)
+    (root / GUARD_REL).write_text("# the guard\n", encoding="utf-8")
+    for a in (["init", "-q", "-b", "main"], ["config", "user.email", "t@t"], ["config", "user.name", "t"]):
+        subprocess.run(["git", "-C", str(root), *a], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "base"], check=True)
+    subprocess.run(["git", "-C", str(root), "checkout", "-qb", branch], check=True)
+    caps = root / "comms/macro/econ_calendar_captures"
+    caps.mkdir(parents=True)
+    shutil.copy(REPO / "comms/macro/econ_calendar_captures/US-20260729T063800Z.md", caps)
+    subprocess.run([sys.executable, "scripts/macro/econ_calendar_produce.py", "--emit-config",
+                    "config/economic_calendar.yaml", "--as-of", "2026-07-29"],
+                   cwd=str(root), check=True, capture_output=True,
+                   env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})  # no .pyc in the branch diff
+    slug = branch.replace("/", "-")
+    (root / LANDING_DIR).mkdir(parents=True, exist_ok=True)
+    (root / f"{LANDING_DIR}/{slug}.json").write_text(json.dumps(
+        {"tier": 1, "landing": "self", "why": "Machine-generated data commit opened by the "
+         "econ-calendar-produce workflow through commit-to-main; generated calendar content."},
+        indent=2) + "\n", encoding="utf-8")
+    (root / AUTOMERGE_DIR).mkdir(parents=True, exist_ok=True)
+    (root / f"{AUTOMERGE_DIR}/{slug}.txt").write_text("armed\n", encoding="utf-8")
+    _branch_claim(root, branch)
+    return root
 
 
 def _commit(root: Path) -> None:
@@ -2310,6 +2409,44 @@ def self_test() -> int:
                 bad += 1
             else:
                 print(f"self-test: '{name}' correctly refused")
+
+    # ---- ECON-CAL-LANDING: the economic-calendar reproducibility vouch ------
+    # The branch re-runs the REAL producer in a throwaway repo, so the positive control is the
+    # real thing and each plant breaks exactly one property the vouch claims to enforce. The
+    # foreign path is a docs/ file (Tier-1 surface) so only the vouch -- not R5's surface test --
+    # can be what refuses it.
+    econ_branch = "automation/econ-calendar-1-1"
+    econ_plants = {
+        "econ-calendar POSITIVE CONTROL: events regenerated from the captures": (
+            lambda r: None, "declared_self_land"),
+        "econ-calendar planted hand-edited event": (
+            lambda r: _econ_edit(r, lambda t: t.replace("impact: 1.0", "impact: 0.1", 1)), None),
+        "econ-calendar planted extra event not in any capture": (
+            lambda r: _econ_edit(r, lambda t: t.rstrip("\n") + '\n  - {class: nfp, time: "2026-08-20T12:30:00Z", impact: 0.9}\n'), None),
+        "econ-calendar planted edited symbol_event_classes": (
+            lambda r: _econ_edit(r, lambda t: t.replace("MES: [fomc,", "MES: [", 1)), None),
+        "econ-calendar planted foreign path on the branch": (
+            lambda r: ((r / "docs/foreign.md").write_text("x\n", encoding="utf-8")), None),
+    }
+    for name, (plant, want) in econ_plants.items():
+        with tempfile.TemporaryDirectory() as td:
+            root = _econ_sandbox(Path(td), econ_branch)
+            plant(root)
+            _commit(root)
+            state, fails, _ = check(root, "main", econ_branch)
+            if want:
+                if fails or state != want:
+                    print(f"::error::self-test FAILED -- '{name}': the reproducible calendar PR "
+                          f"should self-land (state={state}, fails={fails}).")
+                    bad += 1
+                else:
+                    print(f"self-test: '{name}' self-lands (state={state})")
+            elif not any(f.startswith("R5") for f in fails):
+                print(f"::error::self-test FAILED -- '{name}': the guard did not refuse with R5 "
+                      f"(state={state}, fails={fails}). The vouch must fall back to the Tier-2 refusal.")
+                bad += 1
+            else:
+                print(f"self-test: '{name}' correctly refused (R5)")
 
     # ── R16, the mandate auto-land route ───────────────────────────────────
     # ⚠️ THE CLAUSES ARE NOT RE-PLANTED HERE, DELIBERATELY. They belong to

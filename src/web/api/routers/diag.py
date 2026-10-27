@@ -585,12 +585,30 @@ _DESK_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "desk_wake_post_receipt.json"
 )
 
+# DESK-SHORT-HOLD-LANE (2026-10-27). The live trader's short-hold trigger + 5-min packet producer's receipt:
+# idle / tracking (per-package wake_posted / packet_landed / closed_posted / could_not_*) / could_not_look. Holds
+# no credential. Same anchor as the writer (src.runtime.short_hold_wake._log_dir).
+_SHORT_HOLD_WAKE_RECEIPT = Path(repo_root()) / "runtime_logs" / "short_hold_wake_receipt.json"
+
+# DESK-SHORT-HOLD-LANE item 2 (2026-10-27). The live trader's desk EVENT TRIGGER receipt (quiet / limited / posted /
+# could_not_build / could_not_commit / could_not_post / could_not_look, + the cost line) and its label log (every
+# firing and its disposition). Hold no credential. Same anchors as the writer (src.runtime.desk_event_trigger).
+_DESK_TRIGGER_RECEIPT = Path(repo_root()) / "runtime_logs" / "desk_trigger_receipt.json"
+_DESK_TRIGGER_LABELS = Path(repo_root()) / "runtime_logs" / "desk" / "trigger_labels.jsonl"
+
 # LTR C1 (2026-10-26). The live trader's rows-branch watcher: one line per new
 # live-review/rows row (verdict, per-account venue_after, latencies) and the
 # last pass's status (fetched / could_not_fetch / could_not_read). Same anchor
 # as the writer (src.runtime.live_review_rows_watch.log_dir).
 _LTR_ROWS_WATCH_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch.jsonl"
 _LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch_status.json"
+# DESK-4-INTAKE (2026-10-26): the desk intake's one line per new desk/decisions
+# row (dispatched / refused / not_dispatchable / accepted / expired), its last
+# pass, and the watcher's desk/decisions fetch state. Same anchors as the
+# writers (scripts/ops/desk_intake.py::log_dir, live_review_rows_watch.log_dir).
+_DESK_INTAKE_LOG = Path(repo_root()) / "runtime_logs" / "desk" / "intake.jsonl"
+_DESK_INTAKE_STATUS = Path(repo_root()) / "runtime_logs" / "desk" / "intake_status.json"
+_DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_watch_status.json"
 # LTR first-proof pings (operator 2026-10-26): which stages are proven / seeded,
 # when, the latency from the previous stage. Same anchor as the writer
 # (src.runtime.ltr_first_proof.state_path).
@@ -629,9 +647,16 @@ _LOG_FILES: dict[str, Path] = {
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
     # DESK-6B: did the packet landing post the desk-wake, and if not, why.
     "desk_wake_post_receipt": _DESK_WAKE_POST_RECEIPT,
+    "short_hold_wake_receipt": _SHORT_HOLD_WAKE_RECEIPT,
+    "desk_trigger_receipt": _DESK_TRIGGER_RECEIPT,
+    "desk_trigger_labels": _DESK_TRIGGER_LABELS,
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
+    # DESK-4-INTAKE: what happened to each desk decision row on the VM, and why.
+    "desk_intake": _DESK_INTAKE_LOG,
+    "desk_intake_status": _DESK_INTAKE_STATUS,
+    "desk_watch_status": _DESK_WATCH_STATUS,
     "ltr_first_proof": _LTR_FIRST_PROOF,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
@@ -3777,6 +3802,10 @@ def get_live_review_due(request: Request) -> dict[str, Any]:
     ``config/economic_calendar.yaml``, ``mechanics`` (journal half) from
     telemetry rows whose trade is absent. Each due package lists the events it
     could not evaluate in ``events_could_not_look`` with the reason;
+    ``event_coverage`` repeats that for EVERY open package, due or not
+    (``events_looked`` = evaluated, quiet means nothing fired;
+    ``events_could_not_look`` = blind, with the reason) and
+    ``could_not_look_summary`` counts packages per event and masked reason;
     ``events_not_evaluated`` names the design clauses not read at all
     (``mechanics_venue_tp``, ``vol_regime_cell``). The mechanics VENUE half
     (``venue_sl_diverges``) reads ``venue_protection_snapshot``. ``reviews_state`` (absent /

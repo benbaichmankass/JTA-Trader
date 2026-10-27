@@ -1,0 +1,68 @@
+{
+  "run": "RESEARCH-OPS-2026-10-27-0849",
+  "finished_at": "2026-10-27T09:25:00Z",
+  "by": "session_01AFoLuKsibQcbYef2EhP3DS",
+  "floor": 54,
+  "floor_basis": "computed_floor(fired_24h 67)",
+  "authoring_queue_depth": 30,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+  "needs_review_triaged": 1,
+  "needs_review_left": 28,
+  "throughput": {
+    "runnable_before": 67,
+    "runnable_after": 69,
+    "queued": 161,
+    "fired_24h": 67,
+    "results_landed_24h": 88,
+    "hours_since_last_dispatch": 2.4,
+    "idle_alarm": false,
+    "after_basis": "dry-run would_dispatch of a142-01 (re-armed) and d789-01 (new); both count runnable only after this HELD PR merges (E57)"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (newest receipt #20570 on main)",
+    "collector": "ok",
+    "stranded_stamp_prs": [],
+    "incident": null,
+    "watchdog": "not re-read this pass beyond the previous record (no open incident then)"
+  },
+  "results_read": {
+    "pass": 0,
+    "fail": 0,
+    "indeterminate": 0,
+    "units": [],
+    "note": "research_disposition --unread-only: unread 0 (160 dispositioned, 294 superseded_unread). result_disposition_check: UNGRADED 0, UNOWNED 1 (a142-01, producer_failed) -> triaged this pass. No new verdict-bearing result landed that needed a hand disposition."
+  },
+  "unlocked": [
+    {"unit": "RQ-20261026-a142-01", "how": "cleared last_dispatched_at once (deliberate re-arm of a producer_failed-only unit; Kaggle CPU kernel run 40416273681 failed after ~2h14m with no manifest; sibling 90d3-01 ran cleanly twice on the same backend). Second failure -> pull kaggle-session.log from the run artifact before any third attempt."}
+  ],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": ["RQ-20261027-d789-01"],
+  "followups_filed": [],
+  "authoring": {
+    "queue_depth": 30,
+    "nodes_drafted": 1,
+    "nodes": ["P1-Q7-sol-tp3-prop"],
+    "theme_shortfall": {
+      "new_strategy_prop": "12 runnable authored vs share 15; +1 (d789-01)",
+      "ml_health": "4+1 vs share 8; +1 via a142-01 re-arm (not new authoring)",
+      "infra": "2 vs share 5; none authored this pass"
+    },
+    "note": "d789-01 is a hand unit; the node keeps a needs_authoring line carrying an AUTHORED pointer (same pattern as P1-Q13-pathstate-*), so it still shows in --authoring-queue. Ready nodes left are build-gated (P3-Q1, P1-Q6 declares, P2-R5) or Tier-3-packet work."
+  },
+  "not_run": [
+    "C: needs_review triage beyond the one unowned unit: 28 left, all carrying grading.owner + owner_reason from earlier passes",
+    "E.0: only 1 programme node converted (cap ~10); budget spent on the a142-01 failure diagnosis",
+    "infra and ml_health theme shortfalls not closed by new authoring",
+    "routing: ~473 due pipeline items, oldest unrouted BL-20260726-BRANCH-PROTECTION-DOC-STALE-4-CHECKS (93d); not routed this pass (manager-owned; alarm stands)",
+    "UNPROVEN_OVERDUE rows from blocker_watch not re-examined",
+    "pytest unavailable in this container (tests/test_research_queue.py not run); decision-rule guard, dispatcher dry-run and programme-coverage were run"
+  ],
+  "handoff": [
+    "MERGE the held PR: hand-edited queue units d789-01 (new) and a142-01 (re-armed) hold under E57.",
+    "After d789-01: PASS -> ONE prop_ev_grid unit + Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed (SOL prop tp 3 vs 6, 2023-09..2025-09), family stays open, next = P1-Q2-solprop-derive.",
+    "a142-01: if it fails again, read the Kaggle session log artifact (timeout vs memory) before a third attempt.",
+    "PI-20261006-1VPYTX8E-0001 due 2026-10-29 gates 2 of the 28 needs_review units.",
+    "Routing alarm stands: oldest unrouted item 93d."
+  ]
+}

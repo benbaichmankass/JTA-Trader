@@ -1,0 +1,26 @@
+{
+  "id": "DESK-17B-ALPACA-DESK-LEG",
+  "title": "claude_desk on alpaca_paper: make the desk leg venue-aware (one leg, two venues) before rostering it on an Alpaca book",
+  "phase": null,
+  "state": "blocked",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    20481
+  ],
+  "blocked_on": [
+    "DESK-17-DESK-LEG"
+  ],
+  "note": "Filed 2026-10-27 by lane DESK-17-DESK-LEG. DESK-17 was dispatched to roster claude_desk on bybit_1 AND alpaca_paper; it shipped bybit_1 only, because one leg spanning two venues is not supported by the symbol model. MEASURED by reading the code on the DESK-17 branch: (1) a leg's strategies.yaml symbols: is venue-agnostic. src/config/symbol_sets.py::resolve_symbols(mode=UNION) adds every rostered leg's symbols to EVERY rostering account's data readers, and check_roster_symbol_reachability.py demands each rostering account's pull list name them, so alpaca_paper would have to pull BTCUSDT..AVAXUSDT and bybit_1 SPY..SCHA. (2) Coordinator's per-account symbol_exchange_routing filter (src/core/coordinator.py ~L1232) only separates IB, so a BTCUSDT claude_desk package would reach alpaca_paper's RiskManager/executor (dry under shadow today, live after a flip). Options: (a) a venue-aware symbol scope honoured by resolve_symbols, the routing filter and the reachability guard (Tier 2/3, live tick + dispatch); (b) generalise symbol_exchange_routing to every venue pair except the declared bybit<->prop crypto set; (c) one leg name per venue, which needs desk_intake DESK_LEG and the desk schema's desk_leg to accept a set. Re-entry test: the desk leg on alpaca_paper with check_roster_symbol_reachability rc=0 and a test proving a crypto desk package never reaches an Alpaca account. Rerun: python3 scripts/ci/check_roster_symbol_reachability.py after adding claude_desk to alpaca_paper.",
+  "priority_rank": 10,
+  "updated_at": "2026-10-27T00:21:30Z",
+  "updated_by": "session_016x9xjZVtBV9WtvdiCmQAKD",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 725
+}

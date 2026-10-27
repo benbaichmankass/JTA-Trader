@@ -174,11 +174,12 @@ def build_packet(now: datetime, decisions_text: str) -> Tuple[Optional[Path], Op
         return None, f"{type(exc).__name__}: {str(exc)[:120]}"
 
 
-def commit_packet(stage: Path, pid: str, auth: str, http: ltr_post.Http) -> Tuple[Optional[str], Optional[int]]:
+def commit_packet(stage: Path, pid: str, auth: str, http: ltr_post.Http,
+                  pointer_path: str = POINTER_PATH) -> Tuple[Optional[str], Optional[int]]:
     """Land the staged packet + pointer on ``desk/decisions`` as ONE fast-forward commit (git data API,
     never forced). (commit sha, None) or (None, http code of the step that failed)."""
     base = f"{API}/repos/{REPO}/git"
-    files = [(rel, (stage / rel).read_bytes()) for rel in (json.loads((stage / POINTER_PATH).read_text())["path"], POINTER_PATH)]
+    files = [(rel, (stage / rel).read_bytes()) for rel in (json.loads((stage / pointer_path).read_text())["path"], pointer_path)]
     code: Optional[int] = None
     for _ in range(4):
         code, ref = http("GET", f"{base}/ref/heads/{BRANCH}", None, auth)

@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 by path: new strategy leg (src/units/strategies/claude_desk.py + builder registration) and roster/config edits in config/strategies.yaml + config/accounts.yaml. Dispatched by the manager (session_01C1ooo4kqBbng7vytdG1UVs) as lane DESK-17-DESK-LEG; ONE held PR the manager or operator merges. What runs: claude_desk at execution: shadow on bybit_1 (Bybit DEMO) only -- it logs order packages and sends no order. It emits nothing at all until desk intake accepts a proposal, which it refuses while MD-TRADE-DESK.functions.entry_generation.blocked_until is set. Stacked on #20473 (DESK-4-INTAKE). Revert: git revert of the merge commit (or delete the claude_desk block in config/strategies.yaml and the name on bybit_1's roster).",
+  "why": "DESK-17-DESK-LEG: the claude_desk strategy adapter -- each accepted desk propose_entry becomes ONE order package through the existing intent multiplexer -> Coordinator.multi_account_execute path, with the proposal's own entry/stop/TP (both brackets mandatory, else refused) and its decision_id journaled in the package meta; sized by each account's RiskManager; execution: shadow on bybit_1 only."
+}

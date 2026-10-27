@@ -1,0 +1,240 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "macro_f1",
+  "higher_is_better": true,
+  "metric_caveats": [],
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "lgbm_base",
+  "controls": [
+    "prior"
+  ],
+  "candidates": [
+    "lgbm_yz"
+  ],
+  "arm_status": {
+    "lgbm_base": "ok",
+    "lgbm_yz": "ok",
+    "prior": "ok"
+  },
+  "groups": {
+    "ETHUSDT": {
+      "n_rows": 43800,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "lgbm_base": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6432863785557987,
+                0.6636545887942641,
+                0.6611500030250922,
+                0.6851514486391572,
+                0.6149194420146185
+              ],
+              "n_test_rows": 26280
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5836878626556891
+              ],
+              "n_test_rows": 2539
+            }
+          }
+        },
+        "lgbm_yz": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "parkinson_vol",
+            "garman_klass_vol",
+            "rogers_satchell_vol",
+            "yang_zhang_vol"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6455271371021294,
+                0.6530787325307873,
+                0.6728822867864451,
+                0.7009077787354233,
+                0.6270816076165711
+              ],
+              "n_test_rows": 26280
+            },
+            "holdout": {
+              "fold_metric": [
+                0.5963929165081209
+              ],
+              "n_test_rows": 2539
+            }
+          }
+        },
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.3911028730305839,
+                0.3919481721425266,
+                0.33928346951602767,
+                0.36796536796536794,
+                0.4364747507237054
+              ],
+              "n_test_rows": 26280
+            },
+            "holdout": {
+              "fold_metric": [
+                0.45232959447799825
+              ],
+              "n_test_rows": 2539
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "ETHUSDT": {
+      "cv": {
+        "lgbm_yz": {
+          "lgbm_base": {
+            "n_folds": 5,
+            "mean": 0.006263136348485099,
+            "ci95": [
+              -0.0069711658660390405,
+              0.01949743856300924
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.27454058187862895,
+            "ci95": [
+              0.19972232474941592,
+              0.349358839007842
+            ],
+            "sign_consistent": true
+          }
+        },
+        "prior": {
+          "lgbm_base": {
+            "n_folds": 5,
+            "mean": -0.2682774455301438,
+            "ci95": [
+              -0.340678754431695,
+              -0.19587613662859266
+            ],
+            "sign_consistent": true
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        }
+      },
+      "holdout": {
+        "lgbm_yz": {
+          "lgbm_base": {
+            "n_folds": 1,
+            "mean": 0.012705053852431814,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "prior": {
+            "n_folds": 1,
+            "mean": 0.14406332203012262,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        },
+        "prior": {
+          "lgbm_base": {
+            "n_folds": 1,
+            "mean": -0.1313582681776908,
+            "ci95": null,
+            "note": "single fold: no interval"
+          },
+          "prior": {
+            "n_folds": 1,
+            "mean": 0.0,
+            "ci95": null,
+            "note": "single fold: no interval"
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "indeterminate",
+    "why": "between the pass bar and the fail floor",
+    "candidates": {
+      "lgbm_yz": {
+        "evaluated": true,
+        "passes_all": false,
+        "clauses": [
+          {
+            "holds": false,
+            "what": "['ETHUSDT'] >= 0.01 vs lgbm_base/cv"
+          },
+          {
+            "holds": true,
+            "what": "['ETHUSDT'] > 0.0 vs lgbm_base/holdout"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "lgbm_base": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm_yz": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 15.6
+}

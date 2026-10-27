@@ -227,7 +227,26 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, trend_donchian_xrp_4h, turtle_soup]
+                                        # 2026-10-27 DEMO-FLOOR RULE (Tier-3; operator popup answer "Yes, that's the rule", relayed by the manager):
+                                        # every strategy / ML leg that is not fully retired TRADES on the demo floor -- bybit_1 for crypto,
+                                        # alpaca_paper / ib_paper for equities and futures. Shadow is not used for non-retired legs; the mirror is the
+                                        # portfolio test; real money is promotion only. Added: avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, trend_donchian_xrp_4h, turtle_soup.
+                                        # Excluded (retired by record): vwap (M7 kill), trend_donchian_1h (retired A/B, enabled: false).
+                                        # ROLLBACK: drop these names from this list and set the flipped legs back to execution: shadow.
+                                        # 2026-10-27 DESK-8-SHORT-HOLD-S0 (Tier-3, OPERATOR-APPROVED, popup answer verbatim
+                                        # "Roster on bybit_1 (Recommended)"): ict_scalp_eth_15m + ict_scalp_xrp_15m re-join as
+                                        # Stage-1 MECHANICS legs on demo money so Claude can manage a <=1h trade from a per-trade
+                                        # session (design 6.3). They were cut 2026-10-05 (MD-S1-CUT-ON-STAGE0-FAIL, folds 2/4) and
+                                        # have NOT passed Stage 0: bybit_1 ONLY, nothing on bybit_2 / mirror / prop. Edge is decided
+                                        # by the DESK-8a confirm units, never by this book. Brackets: tp_at_r 1.5 + ATR-buffered SL.
+                                        # ROLLBACK: drop the two names.
+                                        # 2026-10-26 DESK-17 (Tier-3, manager dispatch under operator authority): claude_desk -- the
+                                        # trading desk's own leg, execution: shadow (logs packages, sends nothing). Emits only proposals
+                                        # desk intake accepted (none until MD-TRADE-DESK entry_generation.blocked_until clears).
+                                        # bybit_1 ONLY (alpaca_paper deferred: a leg's symbols: scope is venue-agnostic,
+                                        # so one leg on both venues would fan BTCUSDT packages to Alpaca -- row DESK-17B).
+                                        # ROLLBACK: drop the name.
                                        # 2026-10-15 PROP-GATE-PARITY (Tier-3 roster add on PAPER, operator 'Yes, 1, 2 and 3a'):
                                        # trend_donchian_eth_prop + trend_donchian_sol_prop join the Stage-1 soak. Operator: "if anything,
                                        # the prop accounts should have a higher bar to clear because of the DD limits" -- a prop leg must
@@ -1233,6 +1252,8 @@ accounts:
                                        # ~$150 alpaca_live can later afford ≥1 whole share.
                                        # alpaca_live promotion is a separate Tier-3 gate
                                        # (needs risk_pct→~1.5% + real-venue revalidation).
+      # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule"): only uso_trend_1h is added: qqq/spy/tlt_pullback_1h share a symbol with a 1d leg on this non-slice account and stay off until an allocation record or slices exist.
+      - uso_trend_1h
     symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPLG, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
                                        # ETF pilot 2026-06-20 § 0e adds SLV +

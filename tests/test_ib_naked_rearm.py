@@ -528,3 +528,67 @@ def test_ib_full_stop_cover_is_still_covered(tmp_path, monkeypatch):
 
     summary = om._check_broker_naked_ib_positions(db)
     assert summary["covered"] == 1 and fake.rearmed == [] and pages == []
+
+
+# ── IB-MGC-NAKED-REARM (2026-10-26): fully naked, journal over-states size ───
+
+
+def test_ib_fully_naked_with_oversized_journal_row_rearms_at_broker_qty(
+        tmp_path, monkeypatch):
+    """ib_paper/MGC 2026-10-26: short 12 at the broker, NOTHING resting, journal
+    row 6673 says 14. The sweep reported `target_naked=1 naked=0` and refused
+    ("target qty resting outside the group") because it sized its over-fill
+    check on the row's 14. It must classify NAKED and arm both legs for 12."""
+    pages = _capture_partial_pages(monkeypatch)
+    tn = []
+    monkeypatch.setattr(om, "_emit_target_naked_alert", lambda **kw: tn.append(kw))
+    db = _FakeDB(tmp_path / "j.db")
+    _insert(db, id=6673, account_id="ib_paper", symbol="MGC", direction="short",
+            position_size=14, stop_loss=4270.02857143, take_profit_1=3766.9909,
+            created_at="2026-10-19T12:14:48+00:00", status="open")
+    fake = _SidedIBClient(size=12.0, stop_qty=0.0, target_qty=0.0,
+                          covered_qty=0.0, legs=0)
+    _patch_accounts(monkeypatch, fake)
+
+    summary = om._check_broker_naked_ib_positions(db)
+    assert summary["broker_naked"] == 1
+    assert summary["target_naked"] == 0 and tn == []
+    assert summary.get("rearm_blocked_foreign_target", 0) == 0
+    assert summary["rearmed"] == 1
+    o = fake.rearmed[0]
+    assert o["qty"] == 12.0 and o["sl"] == 4270.02857143 and o["tp"] == 3766.9909
+    assert str(o["oca_key"]) == "6673"
+    assert pages == []
+
+
+def test_ib_fully_naked_failed_rearm_is_counted_and_paged(tmp_path, monkeypatch):
+    pages = _capture_partial_pages(monkeypatch)
+    monkeypatch.setattr(om, "_attempt_naked_autoprotect", lambda *a, **k: False)
+    db = _FakeDB(tmp_path / "j.db")
+    _insert(db, id=1, account_id="ib_paper", symbol="MGC", direction="short",
+            position_size=12, stop_loss=4270.0, take_profit_1=3767.0,
+            created_at="2026-10-19T12:14:48+00:00", status="open")
+    fake = _SidedIBClient(size=12.0, stop_qty=0.0, target_qty=0.0,
+                          covered_qty=0.0, legs=0)
+    _patch_accounts(monkeypatch, fake)
+
+    summary = om._check_broker_naked_ib_positions(db)
+    assert summary["broker_naked"] == 1 and summary["rearmed"] == 0
+    assert len(pages) == 1 and pages[0]["stop_qty"] == 0.0
+
+
+def test_ib_stop_only_book_still_alerts_target_naked(tmp_path, monkeypatch):
+    """The fully-naked carve-out must not swallow a genuine target-naked book."""
+    tn = []
+    monkeypatch.setattr(om, "_emit_target_naked_alert", lambda **kw: tn.append(kw))
+    db = _FakeDB(tmp_path / "j.db")
+    _insert(db, id=1, account_id="ib_paper", symbol="MGC", direction="short",
+            position_size=12, stop_loss=4270.0, take_profit_1=3767.0,
+            created_at="2026-10-19T12:14:48+00:00", status="open")
+    fake = _SidedIBClient(size=12.0, stop_qty=12.0, target_qty=0.0,
+                          covered_qty=12.0, legs=1)
+    _patch_accounts(monkeypatch, fake)
+
+    summary = om._check_broker_naked_ib_positions(db)
+    assert summary["target_naked"] == 1 and len(tn) == 1
+    assert summary["covered"] == 1 and fake.rearmed == []

@@ -160,14 +160,71 @@ id or a bar. A comment of kind `could_not_build` is an incident, NOT a wake. The
 cannot write `desk/decisions`: tell the operator (the fallback workflow covers the hour meanwhile). The hourly
 spawner routine is retired; delete it once the first marker-spawned wake has written its row.
 
+**Desk trigger wake (DESK-SHORT-HOLD-LANE item 2, operator 2026-10-27: the system decides which situations wake
+Claude).** Between the hourly scans the live trader (`src/runtime/desk_event_trigger.py`, `config/desk_triggers.yaml`)
+runs cheap detectors on closed 5m bars (ATR burst, momentum burst, level break / liquidity sweep, a strategy
+near-signal, a calendar event), rate-limited (per-symbol cooldown, `max_per_hour`, `max_per_day`) and deduped. A
+firing lands a 5m scan packet of THAT symbol on `desk/decisions` (pointer `comms/desk/latest_trigger.json`; the
+hourly pointer never moves) and posts ONE comment on the ops-flags PR whose hidden marker has `kind`
+`desk-trigger-wake` (`packet_id`, `packet_sha`, `commit`, `trigger`). **On it, `create_session` exactly as for a
+`desk-wake` (same arguments, title `desk-trigger-wake <packet_id>`, extra tag `desk-trigger`), with the WAKE PROMPT
+followed by ONE line: `Your packet is <packet_id> (event-triggered: <trigger.kind> on <trigger.symbol>); run
+desk_write.py with --packet-id <packet_id>.`** One marker, one wake; never spawn twice for a packet id. It is not a
+`desk-wake` and never counts against the hourly bar. Receipt `/api/diag/log_file?name=desk_trigger_receipt` (with
+the cost line: wakes today × MEASURED $/wake vs the daily ceiling); every firing and its disposition is
+`?name=desk_trigger_labels`.
+
+**Short-hold wake (DESK-SHORT-HOLD-LANE, operator goal 2026-10-27: Claude manages a ≤ 1 h trade from ONE session
+that lives for the life of that trade).** When a package opens on a leg listed in `config/short_hold.yaml` (first `claude_desk`, the desk's own Claude-originated trades; then any short-hold leg; operator 2026-10-27 ~07:05Z: the lane is leg-agnostic and asks for the best trading decision), the
+live trader (`src/runtime/short_hold_wake.py`) lands its first 5-min packet envelope on `live-review/rows`
+(`comms/live_review/short_hold/<pkg>/latest.json`) and posts ONE comment on the ops-flags PR (hidden marker
+`short-hold`, kind `short-hold-wake`: `order_package_id`, `accounts`, `leg`, `symbol`, `side`, `entry`, `sl`, `tp`,
+`opened_at`, `hard_cap_at`, `commit`). It lands a fresh envelope every 5m bar and, on close, rewrites it
+`closed: true` and posts kind `short-hold-closed`. **On a `short-hold-wake` marker, `create_session` once per
+`order_package_id`:**
+
+```
+  model: <the Sonnet model id from the model table>
+  title: short-hold <order_package_id> <leg>
+  tags: ["manager:<your session id>", "short-hold-lane", "DESK-SHORT-HOLD-LANE"]
+  permission_mode: auto
+  source_url: https://github.com/benbaichmankass/Metis-Insights
+  source_revision: live-review/rows
+  outcome_branch: live-review/rows
+  clone_depth: 1
+  sparse_checkout_paths: ["comms/live_review/short_hold"]
+  prompt: |
+    You are a short-hold lane of the Claude trading desk, started by the Metis-Insights manager (which acts with the
+    operator's authority). Package: <order_package_id>. Branch: live-review/rows. Hard cap: <hard_cap_at>.
+    Read your whole contract: `git fetch -q --depth 1 origin main live-review/rows && git show
+    origin/main:.claude/skills/trading-desk/SHORT-HOLD-BRIEF.md`, and follow it EXACTLY and only it. Write rows
+    only through its short_hold_write.py command. No PR, no issue, no messages. Loop until the close or the cap,
+    then give the brief's § 7 report.
+```
+
+One marker, one lane: never spawn twice for a package. On `short-hold-closed` (or the lane's § 7 report, or the
+hard cap passing), read `get_session(<lane>)` and append ONE line to the `DESK-SHORT-HOLD-LANE` row's note (via
+`scripts/ops/checklist.py note`): package, leg, rows written by action, `usage` cost in $, median and max
+`bar_close_to_decision_s` from `comms/live_review/short_hold/latency.jsonl` on `live-review/rows`, and the close
+reason. That is DESK-10's measured $/trade. The lane's `recommended` rows are applied by the VM rows watcher under
+`MD-TRADE-DESK` as any live-review row is; nothing extra is dispatched. A dead lane is not an incident for the
+trade (it keeps its venue brackets): note it and move on. The receipt is
+`/api/diag/log_file?name=short_hold_wake_receipt` (`idle` / `tracking` with per-package states / `could_not_look`).
+
 ## Start of session
 
 0. **Run § "The operating loop"** after the steps below, and at every check-in after that.
 1. **Title yourself.** Call `get_session` with no `session_id` to read your own
    id and `created_at` (UTC), then `set_session_title` to
-   `Manager Session YYYY-MM-DD` using that UTC date (e.g. `Manager Session
-   2026-09-27`). Operator directive, 2026-09-27: the title is how the operator
-   finds the manager among dozens of lanes.
+   `Manager Session YYYY-MM-DD<letter>`, where the date is the UTC date of your
+   `created_at` and the letter is the next unused one for that date (e.g.
+   `Manager Session 2026-10-27a`). The letter is always present: the first manager of the
+   day is `a`, never blank, then `b`, `c`, … Determine it with `list_sessions`
+   (tag `manager`, titles starting `Manager Session <date>`). If you are an incoming manager,
+   the outgoing manager named your letter in the handover: check it against `list_sessions`
+   and use the listing if they disagree. Operator directive, 2026-09-27 (serial letter added
+   2026-10-27): the title is how the operator finds the manager among dozens of lanes, and
+   several managers now serve one day.
 2. Read `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md` and this file; then the
    checklist rows that are `in_flight` or `blocked`.
    **Rotation case (an incoming manager created by § "Manager handover"): read less.**
@@ -1051,7 +1108,7 @@ Also read narrowly: `get_trigger` on named routines and `list_sessions(limit=10)
 The prompt ends with this block, filled in:
 
 ```
-You are lane <ROW-ID>, dispatched by Manager Session <date> (<manager session id>);
+You are lane <ROW-ID>, dispatched by Manager Session <date><letter> (<manager session id>);
 its authority is the operator's (CLAUDE.md § Every session, step 1). Ceiling: $<N>.
 WAKE THE MANAGER when you finish a deliverable, are blocked, or produce something it must act on:
 create_trigger(persistent_session_id="<manager session id>", prompt=<what merged/deployed/observed,
@@ -1148,7 +1205,7 @@ lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-l
 - `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;
 - the same `environment_id`; `source_url` set; `permission_mode: "auto"`;
 - tags `["manager", "predecessor:<old id>"]`;
-- title `Manager Session YYYY-MM-DD`;
+- title `Manager Session YYYY-MM-DD<letter>` (the successor's letter, named in the handoff doc: the next unused letter for that UTC date per `list_sessions`);
 - prompt: read this skill and the handoff doc in full; `CLAUDE.md` is already in the system prompt (do not re-read it); from `docs/CLAUDE-RULES-CANONICAL.md` read only the sections named in § "Start of session" step 2. Then perform V1 (the SHORT diff, including its own depth, `get_session` → lineage) and **wait for the old manager's diff**. Do not start routine work yet.
 
 **3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:

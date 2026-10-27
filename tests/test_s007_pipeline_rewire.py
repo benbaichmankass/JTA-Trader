@@ -52,6 +52,8 @@ def test_registry_roster_is_exactly_turtle_soup_and_vwap():
     assert names == [
         "ada_pullback_2h",
         "avax_pullback_2h",
+        # the trading desk's leg (2026-10-27, DESK-17, Tier-3) — execution: shadow on bybit_1:
+        "claude_desk",
         "eth_pullback_2h",
         # swap-robust prop variant — breakout_1 shadow soak (DRAFT, Tier-3, 2026-06-25):
         "eth_pullback_prop_2h",

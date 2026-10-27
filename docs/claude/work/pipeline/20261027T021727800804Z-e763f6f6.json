@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-SSIONLTR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-DUE-COVERAGE lane, VM diag 2026-10-27 02:13Z, replay of market_events over the 7 open telemetry packages",
+    "rerun": "bash scripts/ops/diag_fetch.sh live_review_due  # read could_not_look_summary.by_event.calendar (needs this PR deployed)"
+  },
+  "state": "queued",
+  "what": "live_review_due calendar event is blind for 6 of 8 open packages: config/economic_calendar.yaml::symbol_event_classes declares only MES MNQ MGC MHG MCL BTC ETH, so ADA, XRP, SPY, GDX, IAUM, GLD read 'no event classes declared for <base>'. The fix is a CONFIG choice (which event classes SPY/GDX/GLD/IAUM and the alts care about) and the same map feeds the news_events event_risk downsizing (src/news/news_events.py:110), so it is not a read-path edit: decide the mapping, add it, confirm could_not_look_summary.by_event.calendar drops to 0."
+}

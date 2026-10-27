@@ -49,6 +49,7 @@ import datetime as _dt
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -277,6 +278,72 @@ def _emit_config_yaml(events: list[dict], *, out_path: Path, base_path: Path, as
     return len(events)
 
 
+def _config_head(text: str) -> str:
+    """Everything above the generated ``events:`` block, normalised the way
+    :func:`_emit_config_yaml` normalises it (so base and head compare like for like)."""
+    head_lines: list[str] = []
+    for ln in text.splitlines():
+        if re.match(r"^events:\s*(\[\s*\]|)\s*$", ln):
+            break
+        head_lines.append(ln)
+    while head_lines and (head_lines[-1].strip() == "" or head_lines[-1].startswith(
+            (_GENERATED_MARK, "# (scripts/macro/econ_calendar_produce.py --emit-config)",
+             "# high/medium-impact events mapped"))):
+        head_lines.pop()
+    return "\n".join(head_lines).rstrip() + "\n"
+
+
+def _git(args: list[str]) -> str:
+    return subprocess.run(["git", "-C", str(REPO_ROOT), *args], capture_output=True,
+                          text=True, check=True).stdout
+
+
+def verify_config(*, base: str, config_rel: str = "config/economic_calendar.yaml",
+                  as_of: Optional[str] = None) -> tuple[bool, str]:
+    """E58-style reproducibility check for the landing guard.
+
+    True only if (1) everything in the config except the ``events:`` list is
+    byte-identical to ``base``'s (merge-base), and (2) re-running this producer over
+    the COMMITTED captures at HEAD, with the base config as its starting point,
+    reproduces the committed file byte-for-byte. Writes nothing in the repo."""
+    import tempfile
+    try:
+        mb = _git(["merge-base", base, "HEAD"]).strip() or base
+        base_text = _git(["show", f"{mb}:{config_rel}"])
+    except (subprocess.SubprocessError, OSError) as exc:
+        return False, f"could not read {config_rel} at merge-base with {base} ({exc})"
+    cfg = REPO_ROOT / config_rel
+    if not cfg.is_file():
+        return False, f"{config_rel} is absent at HEAD"
+    head_text = cfg.read_text(encoding="utf-8")
+    if _config_head(head_text) != _config_head(base_text):
+        return False, "the file differs from base outside its `events:` list (header/defaults/symbol_event_classes)"
+    pit_rows, _ = rows_from_captures(DEFAULT_CAPTURES_DIR)
+    upcoming = _latest_upcoming(pit_rows)
+    cands: list[str] = []
+    if as_of:
+        cands.append(as_of[:10])
+    else:
+        obs = sorted(str(r.get("observed_at")) for r in pit_rows if r.get("observed_at"))
+        if obs:
+            cands.append(obs[-1][:10])
+        try:
+            d = _dt.datetime.fromisoformat(_git(["log", "-1", "--format=%cI", "HEAD"]).strip()).astimezone(
+                _dt.timezone.utc).date()
+            cands += [d.isoformat(), (d - _dt.timedelta(days=1)).isoformat()]
+        except (subprocess.SubprocessError, OSError, ValueError):
+            pass  # no usable HEAD commit date: the capture-date candidate stands alone
+    for ref in dict.fromkeys(cands):
+        with tempfile.TemporaryDirectory() as td:
+            bp, op = Path(td) / "base.yaml", Path(td) / "out.yaml"
+            bp.write_text(base_text, encoding="utf-8")
+            op.write_text(base_text, encoding="utf-8")  # the keep-last-good path writes nothing
+            _emit_config_yaml(build_news_config_events(upcoming, as_of=ref), out_path=op, base_path=bp, as_of=ref)
+            if op.read_text(encoding="utf-8") == head_text:
+                return True, f"{config_rel} reproduced byte-for-byte from the committed captures (as_of={ref})"
+    return False, f"{config_rel} is NOT reproduced by the producer from the committed captures (as_of tried: {cands})"
+
+
 def produce(
     *,
     captures_dir: Path = DEFAULT_CAPTURES_DIR,
@@ -353,7 +420,17 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--as-of", default=None, help="reference date for the config forward window (default: today, UTC)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--json", default=None)
+    ap.add_argument("--verify", action="store_true",
+                    help="write nothing; exit 0 only if the committed config/economic_calendar.yaml is "
+                         "reproduced byte-for-byte from the committed captures and differs from --base "
+                         "only in its events list (the landing guard's E58-style vouch)")
+    ap.add_argument("--base", default="origin/main", help="--verify: the PR base ref")
     args = ap.parse_args(argv)
+
+    if args.verify:
+        ok, msg = verify_config(base=args.base, as_of=args.as_of)
+        print(("VERIFIED: " if ok else "REFUSED: ") + msg)
+        return 0 if ok else 1
 
     summary = produce(
         captures_dir=Path(args.captures_dir),

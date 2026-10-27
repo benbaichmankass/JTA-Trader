@@ -22,6 +22,17 @@ must satisfy comms/schema/live_review.schema.json. The rules the schema cannot s
   to bound); a `tighten_sl` row names its `evidence_source`; an `auto_applied` row needs
   `mechanics.verdict == match`. `insufficient_n` + `no_recommendation` stays valid (the
   reviewer may decline to make a call), and is still never hold.
+* trigger (operator 2026-10-26, GLD re-reviewed ten times): from 2026-10-27 a row whose trigger names a due
+  event carries that event's level (a string for mechanics/swing/...), and `manual` carries none.
+* the `review_id` ends with the row's own `order_package_id` (a row whose id names another package is
+  a corrupted write).
+* LTR-ALL-ACTIONS (operator 2026-10-26, MD-TRADE-DESK, verbatim "as long as they have
+  reasoning and confidence attached"): a trade action (close / partial_close / move_tp /
+  widen_sl / change_size / add_entry) carries a non-empty `reason`, an `evidence_source` of
+  `table` (with `ev_delta_r`) or `judgement` (with `judgement_confidence`), and its own target --
+  move_tp / widen_sl a `level`, partial_close a `size_fraction` in (0, 1), change_size a
+  `size_multiplier` > 0 and != 1, add_entry a `size_fraction` > 0 -- and no target it does not
+  use. A trade action that names no target is refused: there is nothing to apply or to grade.
 
 Canonical source: trade_journal.db order_packages / trades, joined on `order_package_id`.
 Files are append-only and start empty; a leading {"_meta": ...} line is skipped.
@@ -122,11 +133,79 @@ def money_call_problems(row: dict) -> list[str]:
     return out
 
 
+#: LTR-ALL-ACTIONS (MD-TRADE-DESK, operator 2026-10-26): the trade actions beyond a tighten.
+#: ``tp_revise`` stays the legacy (operator-ask) spelling and is not graded here as a trade action.
+TRADE_ACTIONS = ("close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
+_TARGETS = {"close": (), "partial_close": ("size_fraction",), "move_tp": ("level",), "widen_sl": ("level",),
+            "change_size": ("size_multiplier",), "add_entry": ("size_fraction",)}
+
+
+def trade_action_problems(rec: dict) -> list[str]:
+    """Reason + confidence (or table basis) + the action's own target, for every trade action."""
+    act = rec.get("action")
+    if act not in TRADE_ACTIONS:
+        return [f"{k} is set but {act} takes no {k}" for k in ("size_fraction", "size_multiplier")
+                if rec.get(k) is not None]
+    out = []
+    if not str(rec.get("reason") or "").strip():
+        out.append(f"{act} requires a reason (operator: reasoning and confidence attached)")
+    src = rec.get("evidence_source")
+    if src == "judgement":
+        if not _is_num(rec.get("judgement_confidence")):
+            out.append(f"{act} on judgement requires a judgement_confidence in [0, 1]")
+    elif src == "table":
+        if not _is_num(rec.get("ev_delta_r")):
+            out.append(f"{act} on a table basis requires ev_delta_r")
+    else:
+        out.append(f"{act} requires evidence_source table or judgement (got {src!r})")
+    want = _TARGETS[act]
+    for k in ("level", "size_fraction", "size_multiplier"):
+        v = rec.get(k)
+        if k in want:
+            if not _is_num(v) or v <= 0:
+                out.append(f"{act} requires {k} > 0")
+        elif v is not None and k != "level":
+            out.append(f"{k} is set but {act} takes no {k}")
+    sf, sm = rec.get("size_fraction"), rec.get("size_multiplier")
+    if act == "partial_close" and _is_num(sf) and not 0 < sf < 1:
+        out.append("partial_close size_fraction must be in (0, 1) (a full exit is close)")
+    if act == "change_size" and _is_num(sm) and sm == 1:
+        out.append("change_size size_multiplier 1 changes nothing")
+    if act == "close" and rec.get("level") is not None:
+        out.append("close takes no level (it exits at market)")
+    return out
+
+
+#: Operator 2026-10-26 (a wedged GLD package was re-reviewed ten times): the due dedupe keys on
+#: the trigger's (event, level), so a row that answers a due event must carry the level the due
+#: packet gave. Earlier rows are history (they carry a null level and the due side infers it).
+DUE_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target", "daily_floor",
+              "swing", "vol_regime", "funding", "calendar", "mechanics")
+TRIGGER_LEVEL_RULE_FROM = "2026-10-27T00:00:00Z"
+
+
+def trigger_problems(row: dict) -> list[str]:
+    if str(row.get("reviewed_at") or "") < TRIGGER_LEVEL_RULE_FROM:
+        return []
+    trig = row.get("trigger") or {}
+    event, level = trig.get("event"), trig.get("level")
+    if event in DUE_EVENTS and level is None:
+        return [f"trigger.event {event} names a due event but no level (copy event AND level from the wake entry)"]
+    if event == "mechanics" and not isinstance(level, str):
+        return ["trigger.event mechanics needs its string level (venue_sl_diverges / journal_trade_absent)"]
+    if event == "manual" and level is not None:
+        return ["trigger.event manual takes no level (a level means this answers a due event: name that event)"]
+    return []
+
+
 def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
     out: list[str] = []
     _check(row, schema[kind], schema["enums"], kind, out)
     if out or kind != "reviews":
         return out
+    # 2026-10-26: LR-...-pkg-6a8e... was written carrying pkg-465a...'s body; the id must name its own package.
+    if not str(row["review_id"]).endswith("-" + str(row["order_package_id"])):
+        out.append(f"review_id {row['review_id']} does not end with its order_package_id {row['order_package_id']}")
     st, ap, sh, rec, disp = row["state"], row["apply_policy"], row["shadow_policy"], row["recommendation"], row["disposition"]
     if st["peak_provenance"] in ("unverified", "fabricated") and st["peak_r"] == 0:
         out.append("state.peak_r: 0 with unverified/fabricated provenance (unmeasured must be null)")
@@ -168,7 +247,9 @@ def row_problems(row: dict, kind: str, schema: dict) -> list[str]:
         out.append("evidence_source table contradicts basis insufficient_n")
     if rec["basis"] == "could_not_look" and not str(rec.get("reason") or "").strip():
         out.append("basis could_not_look requires a reason")
+    out += trade_action_problems(rec)
     out += money_call_problems(row)
+    out += trigger_problems(row)
     accts = [a["account_id"] for a in row["account_reads"]]
     if len(accts) != len(set(accts)):
         out.append("account_reads names an account more than once")
@@ -186,8 +267,19 @@ def packet_problems(row: dict, packets: Path) -> list[str]:
     f = packets / f"{row.get('review_id')}.json"
     if not f.exists():
         return [f"packet_sha set but {f.name} is missing from comms/live_review/packets/"]
-    got = hashlib.sha256(json.dumps(json.loads(f.read_text()), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    return [] if got == sha else [f"packet_sha does not match {f.name}"]
+    return packet_blob_problems(row, f.read_bytes())
+
+
+def packet_blob_problems(row: dict, blob: bytes) -> list[str]:
+    """packet_sha against the packet's bytes (the mirror reads them from the rows branch)."""
+    sha = row.get("packet_sha")
+    if not sha:
+        return []
+    try:
+        got = hashlib.sha256(json.dumps(json.loads(blob), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    except ValueError:
+        return [f"packet for {row.get('review_id')} is not JSON"]
+    return [] if got == sha else [f"packet_sha does not match {row.get('review_id')}.json"]
 
 
 def _rows(path: Path):
@@ -317,6 +409,50 @@ def _self_test() -> int:
            mut(GOOD_REVIEW, lambda r: r["recommendation"].pop("evidence_source")), "reviews", True)
     expect("table basis applied outside 0.25R is still refused (table path unchanged)",
            mut(GOOD_REVIEW, lambda r: (r["disposition"].update(route="auto_applied"), r.update(applied=True))), "reviews", True)
+    def action(act, **kw):
+        def f(r):
+            judged(r)
+            r["recommendation"].update({"action": act, "level": None, **kw})
+        return f
+    expect("close with reason + confidence passes", mut(GOOD_REVIEW, action("close")), "reviews", False)
+    expect("close without a reason is refused",
+           mut(GOOD_REVIEW, lambda r: (action("close")(r), r["recommendation"].update(reason=" "))), "reviews", True)
+    expect("close without a confidence is refused",
+           mut(GOOD_REVIEW, lambda r: (action("close")(r), r["recommendation"].pop("judgement_confidence"))), "reviews", True)
+    expect("close with no evidence_source is refused",
+           mut(GOOD_REVIEW, lambda r: (action("close")(r), r["recommendation"].update(evidence_source="none"))), "reviews", True)
+    expect("partial_close 0.5 passes", mut(GOOD_REVIEW, action("partial_close", size_fraction=0.5)), "reviews", False)
+    expect("partial_close of 1.0 is refused (that is close)",
+           mut(GOOD_REVIEW, action("partial_close", size_fraction=1.0)), "reviews", True)
+    expect("partial_close without a size is refused", mut(GOOD_REVIEW, action("partial_close")), "reviews", True)
+    expect("move_tp with a level passes", mut(GOOD_REVIEW, action("move_tp", level=2.5)), "reviews", False)
+    expect("move_tp without a level is refused", mut(GOOD_REVIEW, action("move_tp")), "reviews", True)
+    expect("widen_sl with a level passes", mut(GOOD_REVIEW, action("widen_sl", level=0.9)), "reviews", False)
+    expect("change_size 0.5 passes", mut(GOOD_REVIEW, action("change_size", size_multiplier=0.5)), "reviews", False)
+    expect("change_size 1.0 is refused", mut(GOOD_REVIEW, action("change_size", size_multiplier=1.0)), "reviews", True)
+    expect("add_entry 0.5 passes", mut(GOOD_REVIEW, action("add_entry", size_fraction=0.5)), "reviews", False)
+    expect("add_entry with a size_multiplier is refused",
+           mut(GOOD_REVIEW, action("add_entry", size_fraction=0.5, size_multiplier=1.5)), "reviews", True)
+    expect("a size_fraction on a tighten is refused",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].update(size_fraction=0.5)), "reviews", True)
+    expect("a table-basis close needs ev_delta_r",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].update(action="close", level=None, reason="x",
+                                                                 evidence_source="table", ev_delta_r=None)), "reviews", True)
+    expect("a table-basis close with ev_delta_r passes",
+           mut(GOOD_REVIEW, lambda r: r["recommendation"].update(action="close", level=None, reason="x",
+                                                                 evidence_source="table", ev_delta_r=0.3)), "reviews", False)
+    def trig(event, level, at="2026-10-27T01:00:00Z"):
+        return lambda r: (r["trigger"].update(event=event, level=level), r.update(reviewed_at=at))
+    expect("a due event with no level is refused", mut(GOOD_REVIEW, trig("mechanics", None)), "reviews", True)
+    expect("a mechanics event with its string level passes",
+           mut(GOOD_REVIEW, trig("mechanics", "venue_sl_diverges")), "reviews", False)
+    expect("a swing event with no level is refused", mut(GOOD_REVIEW, trig("swing", None)), "reviews", True)
+    expect("a manual row naming a level is refused", mut(GOOD_REVIEW, trig("manual", 1)), "reviews", True)
+    expect("a manual row with no level passes", mut(GOOD_REVIEW, trig("manual", None)), "reviews", False)
+    expect("a pre-rule due event with a null level is history, not refused",
+           mut(GOOD_REVIEW, trig("mechanics", None, "2026-10-26T22:16:00Z")), "reviews", False)
+    expect("a review_id naming another package than the row's is refused",
+           mut(GOOD_REVIEW, lambda r: r.update(order_package_id="pkg-2")), "reviews", True)
     expect("missing account_reads is refused", mut(GOOD_REVIEW, lambda r: r.pop("account_reads")), "reviews", True)
     expect("an account read outside the enum is refused",
            mut(GOOD_REVIEW, lambda r: r["account_reads"][0].update(read="approved")), "reviews", True)

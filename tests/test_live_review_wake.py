@@ -31,9 +31,10 @@ def posted_from(plan, at):
     return lrw.parse_markers([{"body": body}])
 
 
-def test_real_money_wakes_paper_does_not():
-    p = lrw.plan(due(pkg(), pkg("pkg-2", acct="bybit_1")), [], CFG, NOW)
-    assert p["kind"] == "wake" and [e["order_package_id"] for e in p["entries"]] == ["pkg-1"]
+def test_listed_accounts_wake_an_unlisted_one_does_not():
+    # paper is in scope since the operator's 2026-10-26 "All accounts now"
+    p = lrw.plan(due(pkg(), pkg("pkg-2", acct="bybit_1"), pkg("pkg-3", acct="oanda_practice")), [], CFG, NOW)
+    assert p["kind"] == "wake" and [e["order_package_id"] for e in p["entries"]] == ["pkg-1", "pkg-2"]
 
 
 def test_daily_floor_never_wakes():

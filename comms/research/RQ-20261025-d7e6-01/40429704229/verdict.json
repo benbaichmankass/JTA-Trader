@@ -1,0 +1,54 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 1167,
+  "population": "1167 baseline trades pooled over ['ada_pullback_2h', 'eth_pullback_2h', 'xrp_pullback_2h']; arms ['A', 'MT', 'UT', 'RT']; net of the harness's own cost stack (read from the kept emits)",
+  "measurement": {
+    "n_baseline": 1167,
+    "legs": [
+      "ada_pullback_2h",
+      "eth_pullback_2h",
+      "xrp_pullback_2h"
+    ],
+    "bar_r_per_trade": 0.07,
+    "paired_sd_r": 0.6612,
+    "mde_r_per_trade": 0.0481,
+    "diff_r_per_baseline_trade": -0.00871,
+    "ci95_r_per_trade": [
+      -0.03884,
+      0.01918
+    ],
+    "fold_wins": 3,
+    "per_fold_diff_r": [
+      -3.7352,
+      4.0522,
+      4.6092,
+      -14.392,
+      3.3981,
+      -4.0948
+    ],
+    "max_drawdown_r": {
+      "baseline": 34.188,
+      "candidate": 30.185
+    },
+    "controls": {
+      "UT": {
+        "cand_minus_control_r": 40.7919,
+        "fold_wins": 4,
+        "pass": false
+      },
+      "RT": {
+        "cand_minus_control_r": 5.2007,
+        "fold_wins": 4,
+        "pass": false
+      }
+    },
+    "net_r": {
+      "baseline": 122.734,
+      "candidate": 112.572
+    },
+    "verdict": "fail",
+    "note": "CI upper 0.0192 < bar 0.07: MT does not reach the bar on the pool"
+  },
+  "note": "CI upper 0.0192 < bar 0.07: MT does not reach the bar on the pool"
+}

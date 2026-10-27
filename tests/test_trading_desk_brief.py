@@ -12,7 +12,10 @@ import copy
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "ci"))
@@ -51,35 +54,43 @@ def _findings(tmp_path: Path, rows: list[dict], packet: dict) -> list[str]:
     return cdr.findings(decisions=d / "decisions.jsonl", touches=d / "touches.jsonl", packets=d / "packets")
 
 
+def _packet_with_short_row() -> dict:
+    p = _scan_packet()
+    p["history"]["rows"].append({**p["history"]["rows"][0], "side": "short", "n": 1480, "mean_r": -0.03, "sd_r": 1.8})
+    p["features_at_review"] = cdr.project_scan_features(p)
+    return p
+
+
 def _example(packet: dict) -> dict:
-    row = json.loads(_block("desk-brief-example"))
-    row["packet_sha"] = cdr.packet_sha(packet)
-    return row
+    """The brief's worked DRAFT, compiled the way desk_write.py compiles it for a wake."""
+    pointer = {"packet_id": packet["meta"]["packet_id"], "packet_sha": cdr.packet_sha(packet)}
+    return cdr.desk_write.compile_row(json.loads(_block("desk-brief-example")), pointer, packet, {}, now=NOW, skill_sha=None)
 
 
-def test_embedded_schema_equals_the_schema_file():
-    schema = json.loads(cdr.DECISION_SCHEMA.read_text())
-    want = {k: schema[k] for k in ("enums", "role_actions", "role_defaults", "decisions")}
-    assert json.loads(_block("desk-brief-schema")) == want, (
-        "DESK-BRIEF.md's embedded schema drifted from comms/schema/desk_decision.schema.json; re-embed it")
+NOW = datetime(2026, 10, 26, 13, 6, tzinfo=timezone.utc)
 
 
 def test_worked_example_proposal_passes_the_guard(tmp_path):
-    p = _scan_packet()
+    p = _packet_with_short_row()
     assert cdr.packet_problems(p, json.loads(cdr.PACKET_SCHEMA.read_text())) == []
-    assert _findings(tmp_path, [_example(p)], p) == []
+    row = _example(p)
+    assert _findings(tmp_path, [row], p) == []
+    # the wake's own validator agrees with the guard on this row
+    assert cdr.desk_write.row_problems(row, p, json.loads(cdr.DECISION_SCHEMA.read_text())) == []
 
 
-def test_no_trade_twin_passes_and_a_wrong_novelty_is_refused(tmp_path):
-    p = _scan_packet()
-    nt = _example(p)
-    nt.update(action="no_trade", proposal=None, judge_prior=None)
-    for a in nt["alternatives"]:
-        a["chosen"] = a["action"] == "no_trade"
-    assert _findings(tmp_path / "a", [nt], p) == []
+def test_no_trade_twin_passes_and_a_hand_set_novelty_is_refused(tmp_path):
+    p = _packet_with_short_row()
+    draft = json.loads(_block("desk-brief-example"))
+    nt = {k: draft[k] for k in ("session", "confidence", "basis", "rationale", "weighed")} | {"action": "no_trade"}
+    pointer = {"packet_id": p["meta"]["packet_id"], "packet_sha": cdr.packet_sha(p)}
+    row = cdr.desk_write.compile_row(nt, pointer, p, {}, now=NOW, skill_sha=None)
+    assert _findings(tmp_path / "a", [row], p) == []
     bad = _example(p)
-    bad["proposal"]["novelty"] = "new"  # near-signals were not read: the brief says `unverifiable`
+    bad["proposal"]["novelty"] = "new"  # near-signals were not read: the script derives `unverifiable`
     assert any("novelty" in f for f in _findings(tmp_path / "b", [bad], p))
+    with pytest.raises(cdr.desk_write.Refused):  # a wake cannot set a derived field
+        cdr.desk_write.compile_row({**draft, "proposal": {**draft["proposal"], "novelty": "new"}}, pointer, p, {}, now=NOW, skill_sha=None)
 
 
 def test_the_limits_the_brief_quotes_are_the_guards():
