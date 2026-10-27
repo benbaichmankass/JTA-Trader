@@ -164,6 +164,27 @@ A USEFUL set registers a holdout unit (token-free); an INFORMATION-only set is a
 
 **First run (INVALID: lookahead, caught by the registered delay check).** At delay 1 the `metrics` sets read **"information"** at every hold (gross excess +0.67 R at 5 min, +0.43 at 15, +0.31 at 30, +0.24 at 60). At delay 5 they collapsed to +0.04-0.06. A real signal does not vanish between a 1- and a 5-minute delay; a timestamp leak does. MEASURED (BTCUSDT, 2026-06, n 8,616 rows): **a Binance `metrics` row stamped T describes [T, T+5 min)**. Its taker long/short ratio correlates **0.999** with the 1m-kline taker ratio over [T, T+5m) and **0.09** with [T-5m, T). The harness treated it as known at T, so the features read up to 5 minutes of the future. Fixed: a row is usable only from T + 300 s (`METRICS_WINDOW_S`, tested). The invalid record is kept as `comms/research/desk_edge/info-short-hold/verdict-LOOKAHEAD-INVALID.json`. **Not verified the same way:** `bookDepth` snapshot timestamps (treated as instantaneous) and `premiumIndexKlines` (stamped at bar close, like every kline here). **Lesson for every later unit:** a vendor's timestamp convention is a claim to test against an independent series before a feature uses it.
 
+**Corrected run (metrics usable from T + 5 min) — registered verdict NONE, instrument valid.** `comms/research/desk_edge/info-short-hold/verdict.json`. Population: the delay-1 and delay-5 1m builds (holds 5/15/30/60 min, 366,336 actions each, test folds 2-4); every one of 45,792 (cutoff, symbol) cells had metrics, basis and depth values point in time. Controls: planted signal `information` at every hold, shuffled labels `none`.
+
+| hold | best set / learner (delay 1) | gross excess [corrected CI] | VM-S3 | S1 (12.3 bps) | delay 5: best gross excess |
+|---|---|---|---|---|---|
+| 5 min | BASE+all / ridge | +0.072 [+0.011, +0.122] | +0.085 | -0.72 | +0.046 [+0.004, +0.085] |
+| 15 min | BASE / ridge | +0.065 [+0.014, +0.115] | +0.018 | -0.46 | +0.030 [-0.018, +0.074] |
+| 30 min | BASE+all / ridge | +0.063 [+0.006, +0.115] | +0.068 | -0.27 | +0.033 [-0.012, +0.076] |
+| 60 min | BASE+all / ridge | +0.045 [-0.006, +0.095] | +0.049 | -0.19 | +0.023 [-0.022, +0.070] |
+
+- **No set reaches the +0.10 R gross-excess bar at any hold**, so nothing is INFORMATION and nothing is USEFUL. The new information adds at most +0.01 to +0.03 R over BASE (e.g. 30 min: BASE ridge +0.039, BASE+all +0.063). It decays by about half with a 5-minute delay.
+- **S1 is far below zero** (-0.19 to -0.72 R). Trained on the volatility-matched label, the learners no longer pick low-cost moments, so they pay the full measured cost.
+- **What remains untested, and its cost:**
+  - **aggTrades** (trade-size and large-print flow): about 30-60 GB for six symbols over DEV, so a runner job with streaming reduction, not a session. Free data, a build of about a day.
+  - **Bybit tick trades** (the desk's own venue): about 70 MB a day for BTC alone, the same build.
+  - **Liquidations:** no free history found (Binance snapshots discontinued; Bybit publishes none). A paid vendor would be the operator's decision.
+  - **Order-book depth at finer than ±1%:** Binance `bookDepth` stops at 1% bands; a full book needs a paid feed or our own recorder going forward.
+- **Ranked next step (DECIDED by the § 2 tree, nothing bought):**
+  1. **Stop testing timing on these six perps at 5 min to 48 h with public bar, positioning, basis and depth data.** Across every window, horizon and information set the best gross timing is about +0.07 R or less, against a +0.25 R bar.
+  2. If the program continues, the remaining levers are structural rather than informational: a different universe (less efficient venues or assets), maker-only execution with a measured fill model (needs our own maker fills), or event-driven entries (scheduled macro / unlock events: the macro-research skill).
+  3. aggTrades / Bybit trades is the last free information set; at the gross effects measured here, a positive result there is unlikely (INFERRED). It is worth a runner job only if the manager wants the question closed rather than left open.
+
 ### 4.3 The dev-loop pilot: V1 (the current judge) — registered verdict **SCREEN_FAIL**, and why
 
 Unit `RQ-20261027-fe57-01`, registered (commit ee847dfa) before any packet was judged. Judged by 10 Sonnet plan subagents x 10 packets (no API credits), each limited to reading its own batch file and writing its own output. Evidence: `comms/research/desk_edge/dev-1/V1/` (`ranks.jsonl`, `verdict.json`, `rejected/`). The lane scored it with the unit's own command; the dispatcher's run after merge is the registered landing.
