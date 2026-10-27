@@ -1,0 +1,44 @@
+{
+  "run": "RESEARCH-OPS-2026-10-27-1930", "finished_at": "2026-10-27T19:50:00Z", "by": "session_research_ops_1930",
+  "floor": 64, "floor_basis": "computed_floor(fired_24h 80) at the start; 58 at fired_24h 73 after", "authoring_queue_depth": 30,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"], "needs_review_triaged": 0, "needs_review_left": 28,
+  "throughput": {"runnable_before": 50, "runnable_after": 55, "queued": 159, "fired_24h": 73, "results_landed_24h": 92,
+                 "hours_since_last_dispatch": 1.6, "idle_alarm": false,
+                 "after_basis": "throughput script on the committed branch tree; the +5 (e535-03, e535-04, 4ceb-01..03) count on main only after this HELD PR merges (E57)"},
+  "mechanism": {"dispatch_receipt": "ok (dispatch dry-run would_dispatch 53; never-dispatched units are queue depth on github_runner, capacity 3, not a stall)", "collector": "1 orphan fixed, 6 still refused (PI-20261027-RESEARCH-0001)", "stranded_stamp_prs": [], "incident": null,
+                "watchdog": "newest incident rows are 2026-10-17/24 resolved; no open incident"},
+  "results_read": {"pass": 1, "fail": 2, "indeterminate": 0,
+    "units": [
+      {"unit": "RQ-20261026-e535-02", "verdict": "pass", "line": "calibrated: the random-entry null over 6 USDT perps x 6 geometries (n 36000) is NET NEGATIVE on every geometry, pooled -0.112 R (95% -0.143..-0.081), mean cost 0.08-0.15 R; so the desk bar S3 >= +0.25 R is an edge of about +0.36 R over a random entry's net result. n_required(+0.10 R) = 1490 <= 3000, so +0.10 R is reachable by the replay; the E5 record had never landed (orphan), landed this pass"},
+      {"unit": "RQ-20261027-d789-01", "verdict": "fail", "line": "configuration closed: SOL prop tp_r 3.0 vs 6.0, 2023-09-24..2025-09-23 at the breakout_1 stack; family TP-geometry stays open; next test = P1-Q2-solprop-derive (and RQ-20261027-4ceb-03 on the eth prop leg)"},
+      {"unit": "RQ-20261026-a142-01", "verdict": "fail", "line": "configuration closed: regularised sklearn MLP (16 units, alpha 0.1) vs LightGBM on 15m regime shards, logloss, both runs fail both clauses (BTC/ETH/SOL, n 108000); family MLP-on-regime stays open (default-shape MLP missed earlier, 90d3); next test = a different family on the same corpus, authoring left to a topic lane"}
+    ],
+    "note": "DESK-8 results (8a01-01/-02 FAIL, 8b01-01 c1 FAIL) were already read and filed as PI-20261027-W7B8PBVW-0003 by their lane; not re-filed."},
+  "unlocked": [
+    {"unit": "RQ-20261026-e535-03", "how": "git mv blocked/ -> queue, status queued: judged-1 (mask-key + proposals, 1724 rows) is on main and e535-01 landed pass; power re-declared from the measured 732 filled proposals (MDE 0.15 R); decision_rule untouched"},
+    {"unit": "RQ-20261026-e535-04", "how": "same; expected_n 464 (subset new), MDE 0.18 R"}
+  ],
+  "retired": [],
+  "levers_filed": [
+    {"lever": "7 landed run artifacts without an E5 record; 6 refused by research_result.py --emit (dict n, measured+not_applicable, no_data+no_action_warranted)", "ref": "PI-20261027-RESEARCH-0001"}
+  ],
+  "units_authored": ["RQ-20261027-4ceb-01", "RQ-20261027-4ceb-02", "RQ-20261027-4ceb-03"],
+  "fixes_landed": ["scripts/research/desk_gen_replay_driver.py: baselines/score per-row verdict inherits the run verdict when measured (was measured+not_applicable, refused by validate()); landed e535-02 record by correcting its derived records.jsonl to the run verdict (pass) and re-emitting through collect_runner_results --recollect-orphans"],
+  "followups_filed": [],
+  "authoring": {"queue_depth": 30, "nodes_drafted": 2, "nodes": ["P1-Q7-gtd-timeclose-prop", "P1-Q7-sol-tp3-prop"],
+                "theme_shortfall": {"new_strategy_prop": "5 runnable vs share 18; +3 (4ceb-01..03)", "regime": "9 vs 15; none authored", "ml_health": "1 vs 9; none authored"}},
+  "not_run": [
+    "C: needs_review triage: 0 of 28 units touched (all 25 owned; the bucket is gated by PI-20261006-1VPYTX8E-0001 for 2)",
+    "C: blocked/ audit beyond classification: 74 units, 73 with a structured blocked_on, 1 prose (RQ-20260928-010); the infra detector blocked_over_age reads FAIL, so each over-age unit still needs lever+owner or retirement",
+    "E.0: only 2 programme nodes drafted (cap ~10); regime and ml_health theme shortfalls not closed",
+    "routing of ~473 due pipeline items (manager-owned)",
+    "UNPROVEN_OVERDUE rows from blocker_watch not re-examined; pytest unavailable in this container"
+  ],
+  "handoff": [
+    "MERGE the held PR (hand-authored queue units + a driver fix hold under E57); then e535-03/-04 dispatch and give the registered S1/S2/S3 record for judged-1 (scratch read: S3 +0.006 R CI [-0.19,+0.19], i.e. far below the +0.25 R bar).",
+    "DESK: RQ-20261027-e72b-01 (judged-2, ~$92 of Claude judging, MDE 0.29 R, judged P(PASS) <20%) stays blocked on DESK-18D-JUDGE-2, a manager dispatch decision; e72b-02 waits on forward n>=100 (DESK-18E).",
+    "PI-20261027-RESEARCH-0001: fix the producers behind the 6 refused orphans.",
+    "Blocked backlog: infra detector 3a84-12 reads FAIL (74 blocked); a lane should retire or owner each over-age unit.",
+    "ml_health and regime themes remain short; next regime-head test must be a different model family than the two MLP shapes."
+  ]
+}
