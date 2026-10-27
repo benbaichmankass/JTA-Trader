@@ -52,11 +52,19 @@ def test_the_example_tighten_clears_the_vm_dispatchers_clauses():
     assert refusal is None and plan["basis"] == "judgement"
 
 
-def test_the_write_is_a_compare_and_swap_with_a_bounded_retry():
-    """Manager 2026-10-26 ~11:59Z: a lost concurrent line must be impossible, not unlikely."""
+def test_the_write_is_one_create_only_file_per_row_with_a_bounded_retry():
+    """LTR-ROWS-SWAP-TRUNCATION (2026-10-27): a reviewer re-sending the whole reviews.jsonl truncated it
+    (26 rows -> 4). The row is ONE create-only file, so its size never depends on the branch's, and a
+    concurrent reviewer's row is a different path (a lost line stays impossible)."""
     write = BRIEF.split("## 4. The write", 1)[1]
-    assert "never `push_files` for `reviews.jsonl`" in write
-    assert "with `sha: S`" in write and "409" in write          # contents-API CAS
-    assert "`force=false`" in write and "parent T" in write      # Git Data API CAS
-    assert "restart from step 2" in write and "Up to 5 tries" in write
-    assert "`could_not_write`" in write
+    assert "**never write `reviews.jsonl`**" in write and "never `push_files`" in write
+    assert "**`comms/live_review/rows/<review_id>.json`**" in write and "**no `sha`** (create-only)" in write
+    assert "Never add a `sha` to overwrite it" in write
+    assert "`force=false`" in write and "parent T" in write      # Git Data API path still fast-forward only
+    assert "Up to 5 tries" in write and "`could_not_write`" in write and "row_conflict" in write
+    assert "with `sha: S`" not in write                            # the whole-file compare-and-swap is gone
+
+
+def test_the_brief_row_path_is_the_one_the_readers_read():
+    from src.runtime import live_review_rows as rl
+    assert rl.row_path("<review_id>") in BRIEF.split("## 4. The write", 1)[1]
