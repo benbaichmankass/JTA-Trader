@@ -373,9 +373,18 @@ def read_monitor_aliases(builders: Path) -> dict[str, str]:
     return pairs
 
 
+#: Legs whose registered builder is NOT named `<leg>_signal_builder`, so the alias regex above keys them under the builder's
+#: own stem. `ict_scalp_5m` (BTC) is served by `ict_scalp_signal_builder` -> unit `ict_scalp` (strategy_signal_builders.py
+#: monitor_unit table, first row). Added 2026-10-27 when the demo-floor rule put the leg back on a roster and the scan could
+#: not resolve it ("unit_unresolved"), which also broke this guard's self-test.
+_BUILDER_STEM_LEGS = {"ict_scalp_5m": "ict_scalp"}
+
+
 def unit_for(leg: str, aliases: dict[str, str], units_dir: Path) -> str | None:
     if leg in aliases:
         return aliases[leg]
+    if leg in _BUILDER_STEM_LEGS and _BUILDER_STEM_LEGS[leg] in aliases:
+        return aliases[_BUILDER_STEM_LEGS[leg]]
     if (units_dir / f"{leg}.py").is_file():
         return leg
     return None
