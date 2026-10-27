@@ -1,6 +1,6 @@
 id: RQ-20261026-1b57-16
 title: 'Position trading proper: does a 100-day Donchian long-only (months-long holds) pass Stage 0 on the six core perps against the 20-day baseline?'
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 3
@@ -106,3 +106,16 @@ related:
 - RQ-20261018-ef5d-03
 - scripts/research/harness_stage0.py
 last_dispatched_at: '2026-10-26T19:30:21+00:00'
+grading:
+  attested: RULE-RQ20261026-1B57-16-DAILY-DONCHIAN100-LONG
+  auto: true
+  decision_rule_id: RULE-RQ20261026-1B57-16-DAILY-DONCHIAN100-LONG
+  evidence:
+  - research/results/RQ-20261026-1b57-16/40387352493.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,6 +1,6 @@
 id: RQ-20261026-bf56-01
 title: 'Desk D-S0 harness self-check on the real-money 2h/4h legs: does the masked replay reproduce each leg''s recorded net R on HOLD, and does a planted hindsight oracle show the harness can see information that scrambling then destroys?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -93,3 +93,14 @@ related:
 - scripts/research/live_review_outcomes.py
 - docs/plans/claude-trading-desk-DESIGN.md
 last_dispatched_at: '2026-10-26T19:30:21+00:00'
+grading:
+  attested: RULE-RQ20261026-BF56-01-HARNESS-SELFCHECK
+  auto: true
+  decision_rule_id: RULE-RQ20261026-BF56-01-HARNESS-SELFCHECK
+  evidence:
+  - research/results/RQ-20261026-bf56-01/40387359527.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  reason: 4 row(s), all measured, all pass
+  rows: 4
+  verdict: pass
