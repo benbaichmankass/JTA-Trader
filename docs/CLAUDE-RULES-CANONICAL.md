@@ -1936,10 +1936,15 @@ to fix.
 
 ### Session-start documentation read
 
-At the start of every session, before touching any file:
+At the start of every session, before touching any file, **read by role** (operator decision 2026-10-27, lane `CONTEXT-DIET`: a full read
+of this 148 KB document by every lane was ~37k tokens of fixed cost per session):
 
-1. Read the root `CLAUDE.md` end-to-end.
-2. Read this document, `ARCHITECTURE-CANONICAL.md`, and `ROADMAP.md`.
+1. The root `CLAUDE.md` end-to-end — it is already in the system prompt, so it is not re-read.
+2. **A dispatched lane** reads from this document only: RULE ONE; Permission Tiers + Data-backed Tier-2/3 decisions; Prime Directive;
+   "Lanes answer to the manager" + "Reading is never gated" — plus any section its dispatch names, and any other section the moment its
+   work touches it. **A manager starting fresh (not a rotation)** reads this document, `ARCHITECTURE-CANONICAL.md` and `ROADMAP.md` in full.
+   **A rotation manager** reads the targeted sections in `.claude/skills/manager/SKILL.md` § "Start of session". The reduction never
+   narrows a rule: it only decides when a section must be read.
 3. For any file you plan to edit, read it whole.
 4. For any Tier-2 or Tier-3 file you plan to edit, also run
    `git log -p <file> | head -200` and read it. The most recent
