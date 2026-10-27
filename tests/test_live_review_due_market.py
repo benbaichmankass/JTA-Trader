@@ -175,3 +175,60 @@ def test_payload_reads_history_funding_and_calendar(tmp_path):
     cnl = {x["event"]: x["reason"] for x in
            next(d for d in out["due"] if d["order_package_id"] == "pkg-1")["events_could_not_look"]}
     assert cnl["funding"] == "funding_store_absent"
+
+
+def test_coverage_lists_every_package_not_only_due_ones():
+    """A quiet package still reports what it could not evaluate, and what it did."""
+    quiet = row(order_package_id="pkg-q")
+    blind = row(order_package_id="pkg-b", symbol="GLD", strategy="gld_pullback_1h",
+                account_id="alpaca_paper", telemetry_absent=True)
+    market = {"pkg-q": ctx(history=hist([1.0, 1.0, 1.0], [0.1] * 3),
+                           calendar={"state": "read", "events": [], "classes": {"ADA": ["fomc"]}}),
+              "pkg-b": ctx(history=None, reason="history_table_absent")}
+    out = lrd.compute_due([quiet, blind], [], CFG, NOW, market=market)
+    assert {c["order_package_id"] for c in out["event_coverage"]} == {"pkg-q", "pkg-b"}  # due or not
+    cov = {c["order_package_id"]: c for c in out["event_coverage"]}
+    assert set(cov) == {"pkg-q", "pkg-b"}
+    assert "swing" in cov["pkg-q"]["events_looked"]
+    assert not {c["event"] for c in cov["pkg-q"]["events_could_not_look"]} & set(cov["pkg-q"]["events_looked"])
+    assert "funding" in cov["pkg-q"]["events_looked"]            # ADAUSDT is a perp
+    assert "funding" not in cov["pkg-b"]["events_looked"]        # GLD: n/a, neither looked nor missed
+    assert "r_milestone" not in cov["pkg-b"]["events_looked"]    # telemetry absent -> blind, not quiet
+    assert "r_milestone" in {c["event"] for c in cov["pkg-b"]["events_could_not_look"]}
+
+
+def test_summary_groups_reasons_with_numbers_masked():
+    cov = [
+        {"events_could_not_look": [{"event": "vol_regime", "reason": "history starts 2.0 bars after entry"},
+                                   {"event": "calendar", "reason": "no event classes declared for ADA"}]},
+        {"events_could_not_look": [{"event": "vol_regime", "reason": "history starts 47.0 bars after entry"},
+                                   {"event": "calendar", "reason": "no event classes declared for SPY"}]},
+        {"events_could_not_look": []},
+    ]
+    s = lrd.summarize_could_not_look(cov)
+    assert s["packages"] == 3
+    assert s["by_event"]["vol_regime"] == {
+        "packages": 2, "reasons": {"history starts N bars after entry": 2}}
+    assert s["by_event"]["calendar"]["reasons"] == {"no event classes declared for <symbol>": 2}
+
+
+def test_payload_carries_coverage_for_all_open(tmp_path):
+    """End to end through the route function: every open package appears, due or not."""
+    db = str(tmp_path / "j.db")
+    c = sqlite3.connect(db)
+    c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT)")
+    c.execute("INSERT INTO trades VALUES (7, 'open')")
+    cols = "order_package_id,trade_id,strategy,symbol,account_id,direction,updated_at"
+    c.execute(f"CREATE TABLE position_telemetry ({cols}, terminal_state, levers)")
+    c.execute(f"INSERT INTO position_telemetry ({cols}) VALUES (?,?,?,?,?,?,?)",
+              ("pkg-1", "7", "spy_trend_long_1d", "SPY", "alpaca_paper", "long", NOW.isoformat()))
+    c.commit()
+    c.close()
+    cal = tmp_path / "cal.yaml"
+    cal.write_text("symbol_event_classes: {}\nevents: [{class: x, time: '2027-01-01T00:00:00Z', impact: 1}]\n")
+    out = lrd.live_review_due(db_path=db, reviews_path=str(tmp_path / "none.jsonl"), now=NOW,
+                              calendar_path=str(cal))
+    assert out["read_state"] == "looked", out["reason"]
+    assert [c["order_package_id"] for c in out["event_coverage"]] == ["pkg-1"]
+    assert out["could_not_look_summary"]["by_event"]["calendar"]["reasons"] == {
+        "no event classes declared for <symbol>": 1}
