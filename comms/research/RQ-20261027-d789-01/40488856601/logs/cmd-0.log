@@ -1,0 +1,46 @@
+Fetching SOLUSDT 60 candles 2023-10-23 -> 2026-10-27 (source=binance_vision) …
+  vision monthly 2023-10: 744 bars (216 kept)
+  vision monthly 2023-11: 720 bars (936 kept)
+  vision monthly 2023-12: 744 bars (1680 kept)
+  vision monthly 2024-01: 744 bars (2424 kept)
+  vision monthly 2024-02: 696 bars (3120 kept)
+  vision monthly 2024-03: 744 bars (3864 kept)
+  vision monthly 2024-04: 720 bars (4584 kept)
+  vision monthly 2024-05: 744 bars (5328 kept)
+  vision monthly 2024-06: 720 bars (6048 kept)
+  vision monthly 2024-07: 744 bars (6792 kept)
+  vision monthly 2024-08: 744 bars (7536 kept)
+  vision monthly 2024-09: 720 bars (8256 kept)
+  vision monthly 2024-10: 744 bars (9000 kept)
+  vision monthly 2024-11: 720 bars (9720 kept)
+  vision monthly 2024-12: 744 bars (10464 kept)
+  vision monthly 2025-01: 744 bars (11208 kept)
+  vision monthly 2025-02: 672 bars (11880 kept)
+  vision monthly 2025-03: 744 bars (12624 kept)
+  vision monthly 2025-04: 720 bars (13344 kept)
+  vision monthly 2025-05: 744 bars (14088 kept)
+  vision monthly 2025-06: 720 bars (14808 kept)
+  vision monthly 2025-07: 744 bars (15552 kept)
+  vision monthly 2025-08: 744 bars (16296 kept)
+  vision monthly 2025-09: 720 bars (17016 kept)
+  vision monthly 2025-10: 744 bars (17760 kept)
+  vision monthly 2025-11: 720 bars (18480 kept)
+  vision monthly 2025-12: 744 bars (19224 kept)
+  vision monthly 2026-01: 744 bars (19968 kept)
+  vision monthly 2026-02: 672 bars (20640 kept)
+  vision monthly 2026-03: 744 bars (21384 kept)
+  vision monthly 2026-04: 720 bars (22104 kept)
+  vision monthly 2026-05: 744 bars (22848 kept)
+  vision monthly 2026-06: 720 bars (23568 kept)
+  vision monthly 2026-07: 744 bars (24312 kept)
+  vision monthly 2026-08: 744 bars (25056 kept)
+  vision monthly 2026-09: 720 bars (25776 kept)
+  vision daily 2026-10: 26400 bars kept so far
+Wrote 26400 rows (2023-10-23 -> 2026-10-26) to /tmp/exit_lever_ablation_3bksdy2e/trend_donchian_sol_prop__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SOLUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.8 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261027-d789-01/40488856601/arms/A__trades.jsonl --json comms/research/RQ-20261027-d789-01/40488856601/arms/A__bt.json --long-only --tp-cap-pct 0.099 --tp-r 6.0 --slippage-bps-roundtrip 5.0 --funding-bps-per-window 1.0 --start 2023-09-24 --end 2025-09-23 23:00
+[T3] /opt/hostedtoolcache/Python/3.11.17/x64/bin/python3 /home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SOLUSDT --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.8 --fee-bps-roundtrip 7.5 --emit-trades comms/research/RQ-20261027-d789-01/40488856601/arms/T3__trades.jsonl --json comms/research/RQ-20261027-d789-01/40488856601/arms/T3__bt.json --long-only --tp-cap-pct 0.099 --tp-r 3.0 --slippage-bps-roundtrip 5.0 --funding-bps-per-window 1.0 --start 2023-09-24 --end 2025-09-23 23:00
+{
+ "verdict": "fail",
+ "label": "no_reachable_lever_beats_removed",
+ "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+}
