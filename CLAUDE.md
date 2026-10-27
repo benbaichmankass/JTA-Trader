@@ -5,7 +5,7 @@
 > **Production environment — live money is at risk.** You have full, autonomous access to everything you need; the operator grants permission by tier and does not do the work for you.
 
 > ### 🔄 Trimmed to pointers 2026-10-27 (operator, lane `CONTEXT-DIET`; was 44,201 B, in every system prompt)
-> Every binding rule is kept below in a line or two plus a pointer. History, incident narratives and verbatim quotes moved verbatim to
+> Every binding rule is kept below in a line or two plus a pointer; history, incident narratives and verbatim quotes moved verbatim to
 > [`docs/archive/2026-10-27-context-diet/CLAUDE.md.pre-diet`](docs/archive/2026-10-27-context-diet/CLAUDE.md.pre-diet) (*pre-diet*, by section).
 > **Scope of record: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md).**
 
@@ -41,9 +41,8 @@ observed** — say which one you established.
 
 ### Instruction hierarchy
 
-When sources disagree, the higher one wins. Mirrored verbatim in
-[`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Document Priority" — **the two must always agree**
-(`canonical-doc-coherence` enforces it).
+When sources disagree, the higher one wins. Mirrors [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Document Priority"
+(`canonical-doc-coherence` enforces agreement).
 
 1. `docs/CLAUDE-RULES-CANONICAL.md` — how you operate: access, honesty, permission tiers, session discipline.
 2. `docs/ARCHITECTURE-CANONICAL.md` — system architecture, trade/comms pipeline, contracts.
@@ -88,7 +87,8 @@ work? 1–2 clean trades; an instrument, not a decision surface) → *Gate 2* �
 
 - **Prop legs clear a SUPERSET** (operator, 2026-10-15): everything a real-money leg clears **plus** the prop EV/survival gate against the
   firm's DD limits (`comms/prop_survival/<leg>.json`); never a lower bar (`prop-roster-gate-guard`). Live prop trades count as Stage-1 soak trades.
-- ⚠️ **The soak is MECHANICAL — 1–2 clean trades, never a sample size, never a date** (operator, 2026-10-15, binding). Stated ONCE, in
+- ⚠️ **The soak is MECHANICAL — 1–2 clean trades, never a sample size, never a date** (operator, 2026-10-15, binding): *"A soak is a
+  mechanical verification that was already proven in backtesting, and nothing needs to soak for more than one or two trades."* Stated ONCE, in
   [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is MECHANICAL" — point at it, never
   restate it. Realized cost and live-vs-backtest are monitoring, never a soak's exit. `soak-contract-guard` refuses `n_needed` > 2 or a
   calendar field; `soak-doctrine-guard` refuses any live doc, skill or generator that teaches a longer soak.
