@@ -9,11 +9,13 @@
   "ceiling_usd": 16,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    20487
+  ],
   "blocked_on": [],
-  "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: add per-account close/partial_close for desk-leg (claude_desk) trades, close reason strategy_close.",
+  "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: add per-account close/partial_close for desk-leg (claude_desk) trades, close reason strategy_close. [2026-10-27 lane DESK-3 session_01M8k8r5SY82JPghjLyErpKU] PR #20487 (draft, Tier 3, landing hold). BUILT: (1) a claude_desk close/partial_close on bybit and alpaca writes exit_reason/close_reason strategy_close; (2) a new Alpaca move_tp cell, read back, refused unless the trade's stop leg rests; (3) widen_sl and size adds on a desk leg are refused desk_leg_never before any read. NOT BUILT, with the measured reasons on LTR-ACTION-EXECUTOR-GAPS: prop widen (the phone APK and the DXtrade adapter are tighten-only), prop add, Alpaca partial. landed_unproven on merge. Closes when the first claude_desk close on bybit_1/alpaca_paper shows exit_reason=strategy_close in the journal (diag pull).",
   "priority_rank": 8,
-  "updated_at": "2026-10-27T00:41:25Z",
+  "updated_at": "2026-10-27T00:52:17Z",
   "updated_by": "session_01M8k8r5SY82JPghjLyErpKU",
   "roadmap": [
     "L-DESK",
