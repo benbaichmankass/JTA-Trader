@@ -33,7 +33,7 @@ POINTER = "comms/desk/latest_scan.json"
 BRIEF = ".claude/skills/trading-desk/DESK-BRIEF.md"
 SCHEMA = "comms/schema/desk_decision.schema.json"
 SENTINEL_R_FLOOR = 50.0  # src/runtime/target_expectation.py
-TP_VENUE_CAP_PCT = 0.099  # src/runtime/tp_venue_cap.py
+VENUE_CAP_FRACTION = 0.099  # copy of src/runtime/tp_venue_cap.py (this file is stdlib-only); tests/test_desk_wake_write.py pins equality
 REACH_FLOOR = 0.10
 STAT_TOL = 1e-3  # history rows are 6 d.p.; early wakes rounded to 3
 STALE = timedelta(hours=3)
@@ -309,8 +309,8 @@ def proposal_problems(row: dict, packet: dict) -> list[str]:
     tp_r = abs(tp - e) / abs(e - sl)
     if tp_r >= SENTINEL_R_FLOOR:
         out.append(f"TP doctrine: tp is {tp_r:.1f} R from entry (>= {SENTINEL_R_FLOOR:g} R is the sentinel, not a prediction)")
-    if abs(tp - e) / e >= TP_VENUE_CAP_PCT:
-        out.append(f"TP doctrine: tp sits at or beyond the venue cap ({TP_VENUE_CAP_PCT:.1%} from entry)")
+    if abs(tp - e) / e >= VENUE_CAP_FRACTION:
+        out.append(f"TP doctrine: tp sits at or beyond the venue cap ({VENUE_CAP_FRACTION:.1%} from entry)")
     if pr["tp"]["p_hit"] < REACH_FLOOR or pr["tp"]["p_hit"] >= 1:
         out.append(f"TP doctrine: tp.p_hit must be in [{REACH_FLOOR}, 1)")
     if not pr["expected_r_net"] < tp_r:

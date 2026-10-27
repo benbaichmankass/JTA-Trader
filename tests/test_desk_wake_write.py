@@ -220,7 +220,7 @@ def _guard(tmp, row, packet):
 
 
 def test_the_writer_and_the_guard_share_their_constants():
-    assert (dw.SENTINEL_R_FLOOR, dw.TP_VENUE_CAP_PCT, dw.REACH_FLOOR) == (cdr.SENTINEL_R_FLOOR, cdr.TP_VENUE_CAP_PCT, cdr.REACH_FLOOR)
+    assert (dw.SENTINEL_R_FLOOR, dw.VENUE_CAP_FRACTION, dw.REACH_FLOOR) == (cdr.SENTINEL_R_FLOOR, cdr.TP_VENUE_CAP_PCT, cdr.REACH_FLOOR)
 
 
 def test_the_writers_verdict_equals_the_guards_on_mutated_rows(tmp_path):
