@@ -133,7 +133,7 @@ def main(argv=None) -> int:
     with tempfile.TemporaryDirectory() as wd:
         try:
             res = run_leg(a.leg, a.start, a.end, wd)
-        except Exception as e:  # noqa: BLE001 - a leg-level failure is a record, not a crash
+        except Exception as e:  # allow-silent: not silent -- written to verdict.json as read_state producer_failed with the exception text; noqa: BLE001
             res = {"verdict": "not_applicable", "read_state": "producer_failed",
                    "note": f"{type(e).__name__}: {e}", "leg": a.leg}
     doc = {"verdict": res["verdict"], "read_state": res["read_state"], "n": res.get("n", 0),
