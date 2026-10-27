@@ -1,5 +1,5 @@
 {
- "_comment": "SOAK CONTRACTS \u2014 mechanical definitions of done (operator 2026-10-15: a soak passes on 1-2 clean trades; no calendar, no sample size), NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py. Migrated 2026-10-15 (lane SOAK-REDEFINE) from the retired accrual design (n_needed 10, end dates); evidence comms/research/soak_mechanics/2026-10-15.json.",
+ "_comment": "SOAK CONTRACTS — mechanical definitions of done (operator 2026-10-15: a soak passes on 1-2 clean trades; no calendar, no sample size), NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py. Migrated 2026-10-15 (lane SOAK-REDEFINE) from the retired accrual design (n_needed 10, end dates); evidence comms/research/soak_mechanics/2026-10-15.json.",
  "as_of": "2026-10-15",
  "soaks": [
   {
@@ -35,6 +35,14 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-25",
+    "evidence": [
+     "docs/claude/work/checklist/GLD-SOAK-REPLACE.json"
+    ],
+    "reason": "Soak RE-PLACED on ib_paper, not ended on its merits: alpaca_paper's GLD slot is held by a kept zombie OCO, so the leg is refused on every GLD signal and this soak can never close. Operator-approved Tier-3 roster move (GLD-SOAK-REPLACE). Successor: SOAK-stage1-ib_paper-gld_pullback_1d.",
+    "verdict": "KILLED"
+   },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-gld_pullback_1d",
    "kind": "stage1",
@@ -44,15 +52,7 @@
    "n_needed": 1,
    "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
-   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded",
-   "disposition": {
-    "decided_at": "2026-10-25",
-    "verdict": "KILLED",
-    "evidence": [
-     "docs/claude/work/checklist/GLD-SOAK-REPLACE.json"
-    ],
-    "reason": "Soak RE-PLACED on ib_paper, not ended on its merits: alpaca_paper's GLD slot is held by a kept zombie OCO, so the leg is refused on every GLD signal and this soak can never close. Operator-approved Tier-3 roster move (GLD-SOAK-REPLACE). Successor: SOAK-stage1-ib_paper-gld_pullback_1d."
-   }
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "ib_paper",
@@ -73,9 +73,9 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "re_placed_from": "SOAK-stage1-alpaca_paper-gld_pullback_1d",
    "started": "2026-10-25",
-   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded",
-   "re_placed_from": "SOAK-stage1-alpaca_paper-gld_pullback_1d"
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
    "account": "alpaca_paper",
@@ -94,7 +94,7 @@
      "comms/strategy_evidence/gld_pullback_1h.json",
      "comms/research/soak_gate1_regrade/2026-10-10.json"
     ],
-    "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=90, expectancy +0.365R, net +32.84R, folds 3/4, fidelity faithful, slippage 5.0bps RT; failing clauses: none (Stage-0 passes: 3/4 folds). Cut on R-CUT-AFFORD per the 2026-10-04 verdict (0 of 54 setups size above zero on alpaca_live) \u2014 NOT re-measured this session.",
+    "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=90, expectancy +0.365R, net +32.84R, folds 3/4, fidelity faithful, slippage 5.0bps RT; failing clauses: none (Stage-0 passes: 3/4 folds). Cut on R-CUT-AFFORD per the 2026-10-04 verdict (0 of 54 setups size above zero on alpaca_live) — NOT re-measured this session.",
     "verdict": "KILLED"
    },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
@@ -582,15 +582,6 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
-   "disposition": {
-    "decided_at": "2026-10-10",
-    "evidence": [
-     "comms/strategy_evidence/ict_scalp_eth_15m.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
-    ],
-    "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=78, expectancy +0.017R, net +1.32R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
-    "verdict": "KILLED"
-   },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ict_scalp_eth_15m",
    "kind": "stage1",
@@ -599,7 +590,21 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
-   "started": "2026-07-22",
+   "reopened": {
+    "by": "DESK-8-SHORT-HOLD-S0",
+    "on": "2026-10-27",
+    "prior_disposition": {
+     "decided_at": "2026-10-10",
+     "evidence": [
+      "comms/strategy_evidence/ict_scalp_eth_15m.json",
+      "comms/research/soak_gate1_regrade/2026-10-10.json"
+     ],
+     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=78, expectancy +0.017R, net +1.32R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
+     "verdict": "KILLED"
+    },
+    "why": "operator-approved re-roster on bybit_1 (popup verbatim \"Roster on bybit_1 (Recommended)\") as a Stage-1 MECHANICS leg; this soak checks mechanics only and says nothing about edge, which DESK-8a decides"
+   },
+   "started": "2026-10-27",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
@@ -644,15 +649,6 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
-   "disposition": {
-    "decided_at": "2026-10-10",
-    "evidence": [
-     "comms/strategy_evidence/ict_scalp_xrp_15m.json",
-     "comms/research/soak_gate1_regrade/2026-10-10.json"
-    ],
-    "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=76, expectancy +0.054R, net +4.07R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
-    "verdict": "KILLED"
-   },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-ict_scalp_xrp_15m",
    "kind": "stage1",
@@ -661,7 +657,21 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
-   "started": "2026-07-22",
+   "reopened": {
+    "by": "DESK-8-SHORT-HOLD-S0",
+    "on": "2026-10-27",
+    "prior_disposition": {
+     "decided_at": "2026-10-10",
+     "evidence": [
+      "comms/strategy_evidence/ict_scalp_xrp_15m.json",
+      "comms/research/soak_gate1_regrade/2026-10-10.json"
+     ],
+     "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=76, expectancy +0.054R, net +4.07R, folds 2/4, fidelity faithful, slippage 3.0bps RT; failing clauses: R-CUT-FOLDS 2/4 not a majority.",
+     "verdict": "KILLED"
+    },
+    "why": "operator-approved re-roster on bybit_1 (popup verbatim \"Roster on bybit_1 (Recommended)\") as a Stage-1 MECHANICS leg; this soak checks mechanics only and says nothing about edge, which DESK-8a decides"
+   },
+   "started": "2026-10-27",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
   {
@@ -1127,7 +1137,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "recommended_fix": "on no account roster — nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1202,7 +1212,7 @@
      "comms/research/r3_cost_fidelity/2026-10-10.json",
      "comms/research/soak_gate1_regrade/2026-10-10.json"
     ],
-    "reason": "Soak question answered, no extension. (1) Stage-0 n=118, +0.217R, net +25.61R but folds 2/4 \u2014 NOT a majority, so the MD-PROMOTE bar's fold clause refuses (PR #16561 called it PASS on the pooled-net rule only). (2) R3 venue cell ibkr_futures|simulator is DIVERGENT: round-trip 20.7bps CI95 [12.5, 29.3] vs 5.0 modelled (n_entry 23, n_exit 19), so the record's cost stack is optimistic. (3) Signal parity: 279 packages in 114d vs ~36.8 expected (Poisson95 of observed [247.2, 313.7]) \u2014 OUTSIDE the contract's pass rule. Resolver S0->S1: REFUSE R-NO-OP (shadow->live flip is not modelled; no mandate covers it). Leg is still shadow on ib_paper; removing it is a Tier-3 proposal.",
+    "reason": "Soak question answered, no extension. (1) Stage-0 n=118, +0.217R, net +25.61R but folds 2/4 — NOT a majority, so the MD-PROMOTE bar's fold clause refuses (PR #16561 called it PASS on the pooled-net rule only). (2) R3 venue cell ibkr_futures|simulator is DIVERGENT: round-trip 20.7bps CI95 [12.5, 29.3] vs 5.0 modelled (n_entry 23, n_exit 19), so the record's cost stack is optimistic. (3) Signal parity: 279 packages in 114d vs ~36.8 expected (Poisson95 of observed [247.2, 313.7]) — OUTSIDE the contract's pass rule. Resolver S0->S1: REFUSE R-NO-OP (shadow->live flip is not modelled; no mandate covers it). Leg is still shadow on ib_paper; removing it is a Tier-3 proposal.",
     "verdict": "REFUSE"
    },
    "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
@@ -1262,7 +1272,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "recommended_fix": "enabled: false — nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-06-01",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1282,7 +1292,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "recommended_fix": "on no account roster — nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1302,7 +1312,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "recommended_fix": "on no account roster — nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1322,7 +1332,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "recommended_fix": "on no account roster — nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1342,7 +1352,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "recommended_fix": "on no account roster — nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-07-07",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1362,7 +1372,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 1,
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
-   "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "recommended_fix": "enabled: false — nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-05-24",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
