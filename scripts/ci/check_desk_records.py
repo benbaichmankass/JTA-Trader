@@ -310,8 +310,52 @@ def expected_training(r: dict) -> tuple[bool, bool, set]:
         reasons.add("historical_masked")
     if r["pre_cutoff"]:
         reasons.add("pre_cutoff")
-    train = not ({"external_context", "synthetic"} & reasons)
+    # DESK-14 (operator 2026-10-27): an items-based use trains (flagged training.source 'external') but never
+    # gates; a legacy object-only use (no items[]) stays train-ineligible.
+    blocking = {"synthetic"} | (set() if ext_items(r) else {"external_context"})
+    train = not (blocking & reasons)
     return train, train and not reasons, reasons
+
+
+def ext_items(r: dict) -> list:
+    return (r.get("external_context") or {}).get("items") or []
+
+
+def effective_info_at(r: dict) -> str:
+    """The row's effective information time for replay/training: max(info_cutoff_at, max retrieved_at) (DESK-14).
+    Both are fixed-width UTC ISO strings, so the maximum is the lexicographic one."""
+    return max([r["info_cutoff_at"], *[i["retrieved_at"] for i in ext_items(r)]])
+
+
+def ext_items_problems(r: dict) -> list[str]:
+    """The point-in-time-at-decision rule (operator popup 2026-10-27, 'Use judged_at'): every retrieval is stamped
+    retrieved_at <= judged_at, and the summary, hash and feed-gap name are present."""
+    out: list[str] = []
+    ec = r["external_context"]
+    items = ec.get("items") or []
+    judged = _ts(r["judged_at"])
+    for i, it in enumerate(items):
+        if _ts(it["retrieved_at"]) > judged:
+            out.append(f"external_context.items[{i}].retrieved_at {it['retrieved_at']} is after judged_at {r['judged_at']} "
+                       "(a retrieval cannot postdate the decision it informed)")
+        if not (it.get("query") or it.get("url")):
+            out.append(f"external_context.items[{i}] needs a query or a url")
+        if not it["summary"].strip() or not it["why_packet_insufficient"].strip() or not it["feed_gap"].strip():
+            out.append(f"external_context.items[{i}]: summary, why_packet_insufficient and feed_gap are required")
+        if not it["values"]:
+            out.append(f"external_context.items[{i}].values must hold the field/value pairs actually used")
+    if items:
+        if not ec["used"]:
+            out.append("external_context.items[] with used=false")
+        if ec["trigger"] != "judgement":
+            out.append("external_context.items[] requires trigger 'judgement'")
+        if r["training"].get("source") != "external":
+            out.append("a row with external_context.items[] is flagged training.source 'external'")
+    elif ec["trigger"] == "judgement":
+        out.append("external_context.trigger 'judgement' is valid only with items[]")
+    elif r["training"].get("source") is not None:
+        out.append("training.source 'external' needs external_context.items[]")
+    return out
 
 
 def proposal_problems(r: dict, scan: dict | None) -> list[str]:
@@ -457,11 +501,12 @@ def decision_problems(r: dict, schema: dict, packets: Path) -> list[str]:
         if a["trade_id"] is not None and not a["applied"]:
             out.append(f"{a['account_id']}: trade_id names the trade an applied action landed on (null when not applied)")
     ec = r["external_context"]
+    out += ext_items_problems(r)
     if ec["used"]:
         if not ec["sources"]:
             out.append("external_context.used with empty sources")
         if ec["trigger"] is None:
-            out.append("external_context.used requires a trigger (calendar|swing|escalation)")
+            out.append("external_context.used requires a trigger (calendar|swing|escalation|judgement)")
         if ec["trigger"] in ("calendar", "swing") and r["trigger_event"] != ec["trigger"]:
             out.append("external_context.trigger calendar/swing must equal trigger_event (big-event exception only)")
         if not ec["summary"]:
@@ -996,6 +1041,40 @@ def _self_test() -> int:
                dp(_mut(GOOD_DECISION, lambda r: r["external_context"].update(sources=EXT["sources"]))), True)
         expect("external_context trigger outside the exception list is refused",
                dp(_mut(GOOD_DECISION, lambda r: r.update(external_context=dict(EXT, trigger="curiosity")))), True)
+        # external_context.items[] (DESK-14, operator popup 2026-10-27 'Use judged_at')
+        ITEM = {"source": "example-exchange", "query": "BTC funding rate now", "url": "https://example.com/funding",
+                "retrieved_at": "2026-10-26T09:00:10Z", "content_sha256": "a" * 64, "summary": "funding +0.03%/8h",
+                "values": {"funding_8h": 0.0003}, "why_packet_insufficient": "packet has no live funding",
+                "gap_class": "funding", "feed_gap": "bybit_live_funding_rate", "influence": "supporting"}
+        EXTI = {"used": True, "trigger": "judgement", "reproducible": False, "summary": "funding +0.03%/8h",
+                "sources": [{"url_or_id": "https://example.com/funding", "title": "example-exchange", "fetched_at": ITEM["retrieved_at"]}],
+                "items": [ITEM]}
+        TRI = {"train_eligible": True, "gate_eligible": False, "exclusion_reasons": ["external_context"], "source": "external"}
+        def with_items(ec, tr=TRI):
+            return lambda r: (r.update(external_context=ec), r.update(training=tr))
+        expect("items-based external_context after the cutoff, before judged_at, passes",
+               dp(_mut(GOOD_DECISION, with_items(EXTI))), False)
+        expect("items-based external_context is train-eligible and gate-ineligible", [] if expected_training(_mut(GOOD_DECISION, with_items(EXTI)))[:2] == (True, False) else ["x"], False)
+        expect("retrieved_at after judged_at is refused",
+               dp(_mut(GOOD_DECISION, with_items(dict(EXTI, items=[dict(ITEM, retrieved_at="2099-01-01T00:00:00Z")])))), True)
+        expect("items without trigger judgement is refused",
+               dp(_mut(GOOD_DECISION, with_items(dict(EXTI, trigger="escalation")))), True)
+        expect("items without the external training flag is refused",
+               dp(_mut(GOOD_DECISION, with_items(EXTI, {"train_eligible": True, "gate_eligible": False, "exclusion_reasons": ["external_context"]}))), True)
+        expect("items marked train-ineligible is refused",
+               dp(_mut(GOOD_DECISION, with_items(EXTI, dict(TRI, train_eligible=False)))), True)
+        expect("an item with neither query nor url is refused",
+               dp(_mut(GOOD_DECISION, with_items(dict(EXTI, items=[dict(ITEM, query=None, url=None)])))), True)
+        expect("an item without a feed-gap name is refused",
+               dp(_mut(GOOD_DECISION, with_items(dict(EXTI, items=[dict(ITEM, feed_gap="")])))), True)
+        expect("an item without a content hash is refused",
+               dp(_mut(GOOD_DECISION, with_items(dict(EXTI, items=[{k: v for k, v in ITEM.items() if k != "content_sha256"}])))), True)
+        expect("trigger judgement without items is refused",
+               dp(_mut(GOOD_DECISION, lambda r: r.update(external_context=dict(EXTI, items=[])))), True)
+        expect("effective info time is the latest retrieval",
+               [] if effective_info_at(_mut(GOOD_DECISION, with_items(EXTI))) == ITEM["retrieved_at"] else ["x"], False)
+        expect("consuming an items-based row is allowed (it trains)",
+               consumed_problems(GOOD_CONSUMED, ds, {E["decision_id"]: _mut(E, with_items(EXTI))}), False)
         # touches
         expect("a touch on a non-sandbox account flagged sandbox is refused", T(_mut(GOOD_TOUCH, lambda r: r.update(account="acct_a"))), True)
         expect("a loosening long touch is refused", T(_mut(GOOD_TOUCH, lambda r: r.update(level_after=94.0))), True)

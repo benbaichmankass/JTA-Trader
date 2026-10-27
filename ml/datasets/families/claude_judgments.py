@@ -279,6 +279,13 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
         "train_eligible": bool,
         "gate_eligible": bool,
         "pre_cutoff": bool,
+        # outside information (DESK-14): the decision used web/open-source context beyond the packet. Lineage
+        # columns, in NONE of the three groups: a trainer opts in by name (source_flag 'external'), and
+        # ext_effective_info_at = max(info_cutoff_at, max retrieved_at) is the replay clock for such a row.
+        "source_flag": str,
+        "ext_n_items": int,
+        "ext_effective_info_at": str,
+        "ext_feed_gaps": str,
         # features (decision-time)
         "f_open_r": float,
         "f_peak_r": float,
@@ -493,7 +500,13 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
                 continue
             params = d.get("params") or {}
             proposal = d.get("proposal") or {}
+            ext_items = (d.get("external_context") or {}).get("items") or []
+            ext_times = [t for t in (_parse_ts(i.get("retrieved_at")) for i in ext_items) if t is not None]
             yield {
+                "source_flag": "external" if ext_items else None,
+                "ext_n_items": len(ext_items),
+                "ext_effective_info_at": _iso(max([cutoff, *ext_times])) if ext_items else None,
+                "ext_feed_gaps": ",".join(sorted({str(i.get("feed_gap")) for i in ext_items})) if ext_items else None,
                 "judgment_id": did,
                 "kind": f"desk_{d.get('role')}",
                 "source_file": "comms/desk/decisions.jsonl",

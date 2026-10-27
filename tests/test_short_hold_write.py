@@ -49,7 +49,9 @@ def envelope(side="long", verdict="match"):
 
 
 EC = {"query_or_url": "https://example.org/funding", "source": "venue funding page", "retrieved_at": "2026-10-27T09:05:50Z",
-      "extracted": {"funding_rate_8h": 0.0003}, "why_packet_insufficient": "packet carries no funding", "influence": "supporting"}
+      "extracted": {"funding_rate_8h": 0.0003}, "why_packet_insufficient": "packet carries no funding", "influence": "supporting",
+      "summary": "funding +0.03%/8h", "content": "Funding rate 0.0003 next 8h", "gap_class": "funding",
+      "feed_gap": "bybit_live_funding_rate"}
 
 
 def draft(**kw):
@@ -103,7 +105,10 @@ def test_short_side_geometry():
     (draft(size_multiplier=2.0), "takes no size_multiplier"),
     (draft(external_context=[{"query_or_url": "q"}]), "must have exactly"),
     (draft(external_context=[dict(EC, influence="huge")]), "influence"),
-    (draft(external_context=[dict(EC, retrieved_at="2026-10-27T09:30:00Z")]), "at or before the decision"),
+    (draft(external_context=[dict(EC, retrieved_at="2026-10-27T09:30:00Z")]), "judged_at"),
+    (draft(external_context=[dict(EC, gap_class="vibes")]), "gap_class"),
+    (draft(external_context=[dict(EC, feed_gap="")]), "feed_gap"),
+    (draft(external_context=[dict(EC, content="")]), "content"),
 ])
 def test_refusals(d, why):
     with pytest.raises(sw.Refused, match=why):
@@ -197,8 +202,10 @@ def test_external_context_goes_to_training_and_feed_gap_files(remote):
     _git(remote["lane"], "fetch", "-q", "origin")
     tip = "origin/live-review/rows"
     (tr,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.EXTERNAL}").splitlines()]
+    assert "content" not in tr and len(tr["content_sha256"]) == 64  # the text is hashed, never stored
     assert tr["source_flag"] == "external" and tr["extracted"] == {"funding_rate_8h": 0.0003} and tr["review_id"] == rep["review_id"]
     (gap,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.FEED_GAPS}").splitlines()]
     assert gap["fields"] == ["funding_rate_8h"] and gap["influence"] == "supporting"
+    assert gap["feed_gap"] == "bybit_live_funding_rate" and gap["gap_class"] == "funding"
     (row,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.REVIEWS}").splitlines()]
     assert any(f.startswith("external_context: 1 source") for f in row["context_flags"])

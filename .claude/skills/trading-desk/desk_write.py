@@ -38,6 +38,8 @@ REACH_FLOOR = 0.10
 STAT_TOL = 1e-3  # history rows are 6 d.p.; early wakes rounded to 3
 STALE = timedelta(hours=3)
 ACTIONS = ("no_trade", "propose_entry", "watch_note")
+EC_DRAFT_KEYS = {"source", "query", "url", "retrieved_at", "content", "summary", "values", "why_packet_insufficient",
+                 "gap_class", "feed_gap", "influence"}
 SIZE_KEYS = {"size", "qty", "quantity", "notional", "contracts", "lots", "leverage", "position_size",
              "risk_pct", "risk_usd", "risk_amount", "risk_fraction"}
 
@@ -164,7 +166,8 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
     bad = _size_keys(draft)
     if bad:
         raise Refused([f"no-size rule: `{k}` -- size is each account's (RiskManager), never the desk's" for k in bad])
-    allowed = {"action", "session", "confidence", "basis", "rationale", "judge_prior", "proposal", "weighed"}
+    allowed = {"action", "session", "confidence", "basis", "rationale", "judge_prior", "proposal", "weighed",
+               "external_context"}
     extra = sorted(set(draft) - allowed)
     if extra:
         raise Refused([f"draft has fields the script derives or does not accept: {extra} (allowed: {sorted(allowed)})"])
@@ -226,6 +229,8 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
     if problems:
         raise Refused(problems)
 
+    ec_items = external_from_draft(draft.get("external_context"), now)
+    ec_block, training = external_block(ec_items)
     rationale = str(draft.get("rationale") or "")
     built = _ts(meta["built_at"])
     if now - built > STALE and not rationale.startswith("stale_packet:"):
@@ -241,9 +246,54 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
         "alternatives": alts, "judge_prior": draft.get("judge_prior") if action == "propose_entry" else None,
         "confidence": draft.get("confidence"), "basis": draft.get("basis"), "rationale": rationale,
         "escalated_to": None, "intent_id": None, "disposition": {"route": "none", "per_account": []},
-        "external_context": {"used": False, "trigger": None, "sources": [], "summary": None, "reproducible": True},
-        "training": {"train_eligible": True, "gate_eligible": True, "exclusion_reasons": []},
+        "external_context": ec_block, "training": training,
     }
+
+
+def external_from_draft(items, now: datetime) -> list[dict]:
+    """DESK-14: the draft's external_context list -> schema items[]. Each entry is one outside source, logged
+    POINT-IN-TIME-AT-DECISION (operator popup 2026-10-27 'Use judged_at'): retrieved_at <= judged_at (= now), NOT
+    <= the packet's info_cutoff_at. `content` is the text read; only its sha256 is stored."""
+    if items is None:
+        return []
+    if not isinstance(items, list) or not all(isinstance(i, dict) for i in items):
+        raise Refused(["external_context must be a list of entries"])
+    out, problems = [], []
+    for n, i in enumerate(items):
+        if set(i) != EC_DRAFT_KEYS:
+            raise Refused([f"external_context[{n}] keys must be exactly {sorted(EC_DRAFT_KEYS)}; got {sorted(i)}"])
+        try:
+            when = _ts(i["retrieved_at"])
+        except (TypeError, ValueError, AttributeError):
+            problems.append(f"external_context[{n}].retrieved_at is not a UTC time")
+            continue
+        if when > now:
+            problems.append(f"external_context[{n}].retrieved_at {i['retrieved_at']} is after judged_at "
+                            f"{now.strftime('%Y-%m-%dT%H:%M:%SZ')} (a retrieval cannot postdate the decision)")
+        if not (i["query"] or i["url"]):
+            problems.append(f"external_context[{n}] needs a query or a url")
+            continue
+        if not str(i["content"] or "").strip():
+            problems.append(f"external_context[{n}].content is required (the text you read; only its sha256 is stored)")
+        out.append({"source": i["source"], "query": i["query"], "url": i["url"], "retrieved_at": i["retrieved_at"],
+                    "content_sha256": hashlib.sha256(str(i["content"]).encode()).hexdigest(),
+                    "summary": i["summary"], "values": i["values"],
+                    "why_packet_insufficient": i["why_packet_insufficient"], "gap_class": i["gap_class"],
+                    "feed_gap": i["feed_gap"], "influence": i["influence"]})
+    if problems:
+        raise Refused(problems)
+    return out
+
+
+def external_block(items: list[dict]) -> tuple[dict, dict]:
+    """(external_context, training) for a row: items-based use trains, never gates, flagged source external."""
+    if not items:
+        return ({"used": False, "trigger": None, "sources": [], "summary": None, "reproducible": True},
+                {"train_eligible": True, "gate_eligible": True, "exclusion_reasons": []})
+    ec = {"used": True, "trigger": "judgement", "reproducible": False,
+          "sources": [{"url_or_id": i["url"] or i["query"], "title": i["source"], "fetched_at": i["retrieved_at"]} for i in items],
+          "summary": "; ".join(i["summary"] for i in items), "items": items}
+    return ec, {"train_eligible": True, "gate_eligible": False, "exclusion_reasons": ["external_context"], "source": "external"}
 
 
 def _ts(s: str) -> datetime:
@@ -291,11 +341,42 @@ def row_problems(row: dict, packet: dict, schema: dict) -> list[str]:
         out.append("info_cutoff_at must be the packet's, exactly")
     if meta.get("packet_kind") != "scan" or meta.get("mode") != "live":
         out.append("the cited packet must be a live scan packet")
-    if row["training"] != {"train_eligible": True, "gate_eligible": True, "exclusion_reasons": []}:
+    if row["training"] != external_block(row["external_context"].get("items") or [])[1]:
         out.append("training marker disagrees with its derivation")
+    out += external_problems(row)
     out += alt_stat_problems(row, packet)
     if row["proposal"] is not None:
         out += proposal_problems(row, packet)
+    return out
+
+
+def external_problems(row: dict) -> list[str]:
+    """Mirror of check_desk_records.ext_items_problems (tests/test_desk_wake_write.py asserts they agree)."""
+    out: list[str] = []
+    ec = row["external_context"]
+    items = ec.get("items") or []
+    judged = _ts(row["judged_at"])
+    for i, it in enumerate(items):
+        if _ts(it["retrieved_at"]) > judged:
+            out.append(f"external_context.items[{i}].retrieved_at {it['retrieved_at']} is after judged_at {row['judged_at']}")
+        if not (it.get("query") or it.get("url")):
+            out.append(f"external_context.items[{i}] needs a query or a url")
+        if not it["values"]:
+            out.append(f"external_context.items[{i}].values must hold the field/value pairs actually used")
+        if not all(str(it[k]).strip() for k in ("summary", "why_packet_insufficient", "feed_gap")):
+            out.append(f"external_context.items[{i}]: summary, why_packet_insufficient and feed_gap are required")
+    if items:
+        if not ec["used"]:
+            out.append("external_context.items[] with used=false")
+        if ec["trigger"] != "judgement":
+            out.append("external_context.items[] requires trigger 'judgement'")
+        if row["training"].get("source") != "external":
+            out.append("a row with external_context.items[] is flagged training.source 'external'")
+    else:
+        if ec["used"] or ec["trigger"] is not None:
+            out.append("this writer records an outside source only through items[]")
+        if row["training"].get("source") is not None:
+            out.append("training.source 'external' needs external_context.items[]")
     return out
 
 

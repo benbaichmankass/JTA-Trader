@@ -11,7 +11,10 @@
     "basis": ["ev_positive", "preference_within_bound", "insufficient_n", "mechanics", "operator_ask", "default_hold", "record_only"],
     "route": ["auto_applied", "submitted", "recommended", "operator_ask", "none"],
     "label_provenance": ["judgment", "computed", "measured"],
-    "ext_trigger": ["calendar", "swing", "escalation"],
+    "ext_trigger": ["calendar", "swing", "escalation", "judgement"],
+    "gap_class": ["news", "funding", "orderbook", "calendar", "onchain", "macro", "other"],
+    "ext_influence": ["decisive", "supporting", "checked_only"],
+    "training_source": ["external"],
     "gate_verdict": ["approve", "clip", "refuse", "could_not_look", "error", "not_available"],
     "readback": ["match", "mismatch", "could_not_look", "not_applicable"],
     "account_class": ["real_money", "prop", "paper", "soak"],
@@ -143,16 +146,36 @@
             "properties": {"url_or_id": {"type": "string", "minLength": 1}, "title": {"type": ["string", "null"]},
                            "fetched_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"}}}},
           "summary": {"type": ["string", "null"]},
-          "reproducible": {"type": "boolean"}
+          "reproducible": {"type": "boolean"},
+          "items": {
+            "_comment": "DESK-14 (operator 2026-10-27): one entry per outside source the wake used, logged POINT-IN-TIME-AT-DECISION. DECIDED by popup 2026-10-27 ('Use judged_at'): retrieved_at <= judged_at (NOT <= info_cutoff_at: a live wake searches after its packet's cutoff). The row's effective information time for replay/training is max(info_cutoff_at, max retrieved_at). content_sha256 is the sha256 of the text read (the text itself is not stored); values holds the field/value pairs actually used. feed_gap names the data feed the packet lacks (a recurring decisive gap is how a feed gets wired). Optional so rows written before DESK-14 (object-only, trigger calendar|swing|escalation) still validate; a non-empty items[] needs trigger 'judgement' and is train-eligible, gate-INeligible, training.source 'external'.",
+            "type": "array",
+            "items": {"type": "object", "additionalProperties": false,
+              "required": ["source", "query", "url", "retrieved_at", "content_sha256", "summary", "values", "why_packet_insufficient", "gap_class", "feed_gap", "influence"],
+              "properties": {
+                "source": {"type": "string", "minLength": 1},
+                "query": {"type": ["string", "null"]},
+                "url": {"type": ["string", "null"]},
+                "retrieved_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+                "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "summary": {"type": "string", "minLength": 1},
+                "values": {"type": "object"},
+                "why_packet_insufficient": {"type": "string", "minLength": 1},
+                "gap_class": {"type": "string", "enum_ref": "gap_class"},
+                "feed_gap": {"type": "string", "minLength": 1},
+                "influence": {"type": "string", "enum_ref": "ext_influence"}
+              }}
+          }
         }
       },
       "training": {
-        "_comment": "the training marker, written once, derived (the guard recomputes it): external_context or synthetic => not train-eligible; historical_masked or pre_cutoff => trains, never gates. Whether the row WAS trained on is never mutated here: it is the row's presence in consumed.jsonl, and a train-eligible row in no build is never-trained-on (DESK-21's detector reads never_trained_on()).",
+        "_comment": "the training marker, written once, derived (the guard recomputes it): synthetic, or legacy object-only external_context (no items[]), => not train-eligible; items-based external_context => train-eligible, gate-ineligible, training.source 'external'; historical_masked or pre_cutoff => trains, never gates. Whether the row WAS trained on is never mutated here: it is the row's presence in consumed.jsonl, and a train-eligible row in no build is never-trained-on (DESK-21's detector reads never_trained_on()).",
         "type": "object", "additionalProperties": false, "required": ["train_eligible", "gate_eligible", "exclusion_reasons"],
         "properties": {
           "train_eligible": {"type": "boolean"},
           "gate_eligible": {"type": "boolean"},
-          "exclusion_reasons": {"type": "array", "items": {"type": "string", "enum_ref": "exclusion_reason"}}
+          "exclusion_reasons": {"type": "array", "items": {"type": "string", "enum_ref": "exclusion_reason"}},
+          "source": {"_comment": "DESK-14: 'external' flags a row whose decision used outside sources (external_context.items[]); absent otherwise", "type": "string", "enum_ref": "training_source"}
         }
       }
     }
