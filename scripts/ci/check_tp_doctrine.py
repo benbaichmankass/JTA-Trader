@@ -290,9 +290,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # demo floor, so these routings are NEW. Each line is VISIBLE DEBT, not a claim of compliance: `ER` = the leg's entry TP is a sentinel /
     # absent / unreachable (a blocker for exit-refinement, prioritised below real-money legs), `R` = a real declared TP but nothing revises it.
     # Nothing here fakes a TP; the guard ratchet only shrinks from this point.
-    "alpaca_paper/qqq_pullback_1h": ER,
-    "alpaca_paper/spy_pullback_1h": ER,
-    "alpaca_paper/tlt_pullback_1h": ER,
     "alpaca_paper/uso_trend_1h": R,
     "bybit_1/avax_pullback_2h": ER,
     "bybit_1/eth_pullback_2h": ER,

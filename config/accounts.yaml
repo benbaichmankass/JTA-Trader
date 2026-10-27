@@ -1252,10 +1252,7 @@ accounts:
                                        # ~$150 alpaca_live can later afford ≥1 whole share.
                                        # alpaca_live promotion is a separate Tier-3 gate
                                        # (needs risk_pct→~1.5% + real-venue revalidation).
-      # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule"): the four 1h ETF legs below were rostered nowhere.
-      - qqq_pullback_1h
-      - spy_pullback_1h
-      - tlt_pullback_1h
+      # 2026-10-27 DEMO-FLOOR RULE (Tier-3, operator "Yes, that's the rule"): only uso_trend_1h is added: qqq/spy/tlt_pullback_1h share a symbol with a 1d leg on this non-slice account and stay off until an allocation record or slices exist.
       - uso_trend_1h
     symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPLG, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
