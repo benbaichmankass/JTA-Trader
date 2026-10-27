@@ -143,17 +143,20 @@ programme: P2
 related:
 - research/queue/RQ-20261026-90d3-01.yaml
 - scripts/research/ml_bakeoff.py
-last_dispatched_at: '2026-10-27T10:29:16+00:00'
+last_dispatched_at: null
 grading:
   attested: RULE-RQ20261026A14201-REGMLP
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-RQ20261026A14201-REGMLP
   evidence:
   - research/results/RQ-20261026-a142-01/40416273681.jsonl
+  - research/results/RQ-20261026-a142-01/40488866687.jsonl
+  first_fail: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
+    superseded)
   graded_at: '2026-10-27'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-  triage: 'research-ops-0849 (2026-10-27): run 40416273681 (Kaggle CPU kernel) failed after ~2h14m with no run-manifest and no session log on main (the log lives only in the workflow artifact); the sibling 90d3-01 ran cleanly on the same backend twice, so this reads as a one-off kernel failure, not a unit defect. Re-armed ONCE by clearing last_dispatched_at (dispatch_queue.py: a cleared stamp on a producer_failed-only unit is a deliberate re-arm). If it fails again: pull the kaggle-session.log from the run artifact and decide timeout vs memory (routing declares est 40 min, peak 4 GB) before any third attempt. Rule untouched.'
+  verdict: fail

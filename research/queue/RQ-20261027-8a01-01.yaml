@@ -1,6 +1,6 @@
 id: RQ-20261027-8a01-01
 title: 'Desk DESK-8a: does ict_scalp_eth_15m clear its Stage-0 bar on a FRESH window disjoint from every committed record, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -84,3 +84,16 @@ related:
 - docs/plans/claude-trading-desk-DESIGN.md
 - DESK-8-SHORT-HOLD-S0
 last_dispatched_at: '2026-10-27T11:42:51+00:00'
+grading:
+  attested: RULE-DESK8A-ICTSCALP-FRESH-WINDOW-CONFIRM
+  auto: true
+  decision_rule_id: RULE-DESK8A-ICTSCALP-FRESH-WINDOW-CONFIRM
+  evidence:
+  - research/results/RQ-20261027-8a01-01/40498214607.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
