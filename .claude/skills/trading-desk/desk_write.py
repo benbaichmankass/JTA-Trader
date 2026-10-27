@@ -234,7 +234,7 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
         "schema_version": 2, "decision_id": "DD-" + pid[3:] + "-1", "packet_id": pid, "packet_sha": pointer["packet_sha"],
         "packet_kind": "scan", "role": "entry_generation", "order_package_id": None,
         "judged_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "info_cutoff_at": meta["info_cutoff_at"],
-        "trigger_event": "bar_close", "model": "sonnet-tier", "session": str(draft.get("session") or "desk-wake"),
+        "trigger_event": str((meta.get("trigger") or {}).get("kind") or "bar_close"), "model": "sonnet-tier", "session": str(draft.get("session") or "desk-wake"),
         "prompt_sha": None, "skill_sha": skill_sha, "label_version": 1, "label_provenance": "judgment",
         "label_source": "shadow", "pre_cutoff": False, "action": action,
         "params": {"level": None, "level_atr": None, "frac": None, "bars": None}, "proposal": proposal,
@@ -359,7 +359,7 @@ def commit_on(cwd: str, tip: str, blob_text: str, message: str) -> str | None:
 
 
 def run(draft: dict, cwd: str, *, brief_ref: str = "origin/main", check_only: bool = False, tries: int = 5,
-        now: datetime | None = None) -> tuple[int, dict]:
+        now: datetime | None = None, packet_id: str | None = None) -> tuple[int, dict]:
     now = now or datetime.now(timezone.utc)
     if fetch(cwd, brief_ref.split("/", 1)[1]) is None:
         return 2, {"state": "could_not_look", "reason": f"fetch {brief_ref}"}
@@ -381,14 +381,18 @@ def run(draft: dict, cwd: str, *, brief_ref: str = "origin/main", check_only: bo
         if raw is None:
             return 2, {"state": "could_not_look", "reason": f"{DECISIONS} unreadable", "tries": attempt}
         if packet is None:
-            ptr_raw = show(cwd, tip, POINTER)
-            if ptr_raw is None:
-                return 2, {"state": "could_not_look", "reason": "latest_scan"}
-            pointer = json.loads(ptr_raw)
+            if packet_id:  # an event-triggered wake names its packet (the hourly pointer is never moved by one)
+                pointer = {"packet_id": packet_id, "path": f"comms/desk/packets/{packet_id}.json"}
+            else:
+                ptr_raw = show(cwd, tip, POINTER)
+                if ptr_raw is None:
+                    return 2, {"state": "could_not_look", "reason": "latest_scan"}
+                pointer = json.loads(ptr_raw)
             pk_raw = show(cwd, tip, pointer["path"])
             if pk_raw is None:
                 return 2, {"state": "could_not_look", "reason": "packet unreadable"}
             packet = json.loads(pk_raw)
+            pointer.setdefault("packet_sha", packet_sha(packet))
             if (packet.get("meta") or {}).get("packet_id") != pointer["packet_id"] or packet_sha(packet) != pointer["packet_sha"]:
                 return 2, {"state": "could_not_look", "reason": "packet_mismatch"}
         text = raw.decode()
@@ -424,13 +428,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("draft", help="path to the draft JSON")
     ap.add_argument("--check", action="store_true", help="validate and print the compiled row; write nothing")
     ap.add_argument("--cwd", default=".")
+    ap.add_argument("--packet-id", help="an EVENT-TRIGGERED wake: the packet its desk-trigger-wake marker names "
+                    "(default: the hourly pointer comms/desk/latest_scan.json)")
     a = ap.parse_args(argv)
     try:
         draft = json.load(open(a.draft))
     except (OSError, ValueError) as exc:
         print(json.dumps({"state": "refused", "problems": [f"draft unreadable: {exc}"]}))
         return 1
-    rc, res = run(draft, a.cwd, check_only=a.check)
+    rc, res = run(draft, a.cwd, check_only=a.check, packet_id=a.packet_id)
     print(json.dumps(res, indent=1))
     return rc
 

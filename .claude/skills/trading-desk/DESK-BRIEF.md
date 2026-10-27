@@ -74,7 +74,7 @@ A `no_trade` draft is `{"action":"no_trade","confidence":…,"basis":…,"ration
 git fetch -q --depth 1 origin main && git show origin/main:.claude/skills/trading-desk/desk_write.py | python3 - /tmp/draft.json
 ```
 
-It exits `0` written (prints `decision_id`, `commit`, `tries`), `1` refused (prints `problems`: fix the DRAFT and run it again), `2` could_not_look / could_not_write, `3` nothing_due. Add `--check` to validate without writing. It pushes a commit on the branch tip with no force, so a moved branch is a rejected push and it re-reads and retries up to 5 times.
+It exits `0` written (prints `decision_id`, `commit`, `tries`), `1` refused (prints `problems`: fix the DRAFT and run it again), `2` could_not_look / could_not_write, `3` nothing_due. Add `--check` to validate without writing. **An event-triggered wake** (your prompt names a packet id) adds `--packet-id <that id>`: that packet is a short-timeframe scan of ONE symbol (`meta.trigger` says which detector fired), and the row records `trigger_event` = that kind. It pushes a commit on the branch tip with no force, so a moved branch is a rejected push and it re-reads and retries up to 5 times.
 
 If it exits `1` twice for the same reason you cannot satisfy, or `2`: do **not** write the row another way. Report `could_not_write` with the printed reason and your draft; a missing label is visible, a wrong one is not.
 
