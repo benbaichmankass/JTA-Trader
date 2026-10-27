@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261027-CKXOMXWD-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-14-EXTERNAL-CONTEXT (session_01AFoLuLB3eLyZ8GcKxoMxWd)",
+    "rerun": "git cat-file -e origin/main:comms/live_review/short_hold/feed_gaps.jsonl && echo mirrored || echo not-mirrored"
+  },
+  "state": "queued",
+  "what": "DESK-14 follow-up: mirror the short-hold lane's comms/live_review/short_hold/external_context.jsonl and feed_gaps.jsonl from the live-review/rows branch to main and read external_context.jsonl in ml/datasets/families/claude_judgments.py (LTR rows are built from reviews.jsonl; the lane's external lines, flagged source_flag external, sit only on the branch). desk_feed_gaps.py already reads feed_gaps.jsonl once it is on main."
+}

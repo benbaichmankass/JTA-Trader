@@ -60,7 +60,10 @@ DRAFT_KEYS = {"action", "level", "size_fraction", "size_multiplier", "reason", "
 EXTERNAL = "comms/live_review/short_hold/external_context.jsonl"
 FEED_GAPS = "comms/live_review/short_hold/feed_gaps.jsonl"
 INFLUENCE = ("decisive", "supporting", "checked_only")
-EC_KEYS = {"query_or_url", "source", "retrieved_at", "extracted", "why_packet_insufficient", "influence"}
+GAP_CLASSES = ("news", "funding", "orderbook", "calendar", "onchain", "macro", "other")
+# DESK-14: summary + content (hashed, never stored) + the feed-gap name/class are required beside the original keys.
+EC_KEYS = {"query_or_url", "source", "retrieved_at", "extracted", "why_packet_insufficient", "influence",
+           "summary", "content", "gap_class", "feed_gap"}
 MODEL_TIER = "sonnet-tier (short-hold lane)"
 TRIGGER_EVENT = "short_hold"
 
@@ -234,13 +237,18 @@ def external_problems(ec, now: datetime) -> list[str]:
             continue
         t = _ts(e["retrieved_at"])
         if t is None or t > now:
-            out.append(f"external_context[{i}].retrieved_at must be a time at or before the decision")
+            out.append(f"external_context[{i}].retrieved_at must be a time at or before the decision's judged_at "
+                       "(operator 2026-10-27, 'Use judged_at'; not the packet's info_cutoff_at)")
+        if e["gap_class"] not in GAP_CLASSES:
+            out.append(f"external_context[{i}].gap_class must be one of {GAP_CLASSES}")
         if e["influence"] not in INFLUENCE:
             out.append(f"external_context[{i}].influence must be one of {INFLUENCE}")
         if not isinstance(e["extracted"], dict) or not e["extracted"]:
             out.append(f"external_context[{i}].extracted must hold the field/value pairs actually used")
-        if not all(str(e[k] or "").strip() for k in ("query_or_url", "source", "why_packet_insufficient")):
-            out.append(f"external_context[{i}]: query_or_url, source and why_packet_insufficient are required")
+        if not all(str(e[k] or "").strip() for k in ("query_or_url", "source", "why_packet_insufficient", "summary",
+                                                     "content", "feed_gap")):
+            out.append(f"external_context[{i}]: query_or_url, source, summary, content, feed_gap and "
+                       "why_packet_insufficient are required")
     return out
 
 
@@ -249,9 +257,11 @@ def external_lines(row: dict, ec: list) -> tuple[list[dict], list[dict]]:
     run reproduces them without re-fetching; DESK-11 / CJ-2 read them as a feature block flagged source: external."""
     base = {"review_id": row["review_id"], "order_package_id": row["order_package_id"], "leg": row["leg"],
             "decided_at": row["reviewed_at"], "info_cutoff_at": row["info_cutoff_at"], "source_flag": "external"}
-    train = [dict(base, **e) for e in ec]
+    train = [dict(base, **{k: v for k, v in e.items() if k != "content"},
+                  content_sha256=hashlib.sha256(str(e["content"]).encode()).hexdigest()) for e in ec]
     gaps = [{"review_id": row["review_id"], "decided_at": row["reviewed_at"], "leg": row["leg"],
              "source": e["source"], "fields": sorted(e["extracted"]), "influence": e["influence"],
+             "gap_class": e["gap_class"], "feed_gap": e["feed_gap"],
              "why_packet_insufficient": e["why_packet_insufficient"]} for e in ec]
     return train, gaps
 

@@ -63,11 +63,11 @@ Write `/tmp/draft.json` with only these keys:
 {"action":"tighten_sl","level":2412.5,"reason":"5m higher low at 2410 held twice; trail the stop under it to lock +0.6R","judgement_confidence":0.62,"confidence":"anecdote","context_flags":["atr_5m: 3.1"],"session":"<your session id>"}
 ```
 
-With an outside source: add `"external_context":[{"query_or_url":"…","source":"…","retrieved_at":"2026-10-27T09:06:10Z","extracted":{"…":…},"why_packet_insufficient":"…","influence":"supporting"}]`.
+With an outside source: add `"external_context":[{"query_or_url":"…","source":"…","retrieved_at":"2026-10-27T09:06:10Z","extracted":{"…":…},"summary":"…","content":"…","gap_class":"funding","feed_gap":"bybit_live_funding_rate","why_packet_insufficient":"…","influence":"supporting"}]`.
 
 `action` ∈ `hold` · `tighten_sl` · `move_tp` · `partial_close` · `change_size` · `close` · `flag_mechanics`. `level` only on `tighten_sl` / `move_tp` (a price). `size_fraction` only on `partial_close`; `size_multiplier` only on `change_size`. `context_flags`: optional strings, each `"<kind>: <evidence from the envelope>"`.
 
-**`external_context`** (only when you used an outside source): a list, one entry per source, each with exactly `query_or_url`, `source`, `retrieved_at` (UTC, when you read it; never after your decision), `extracted` (the field/value pairs you actually used, e.g. `{"funding_rate_8h": 0.0003}`), `why_packet_insufficient`, `influence` (`decisive` / `supporting` / `checked_only`). The script stores the values point-in-time for training and writes one feed-gap row per entry: a recurring decisive gap is how a missing feed gets wired into the packet.
+**`external_context`** (only when you used an outside source): a list, one entry per source, each with exactly `query_or_url`, `source`, `retrieved_at` (UTC, when you read it; it may be after the packet's `info_cutoff_at` but never after your decision: the rule is `retrieved_at` ≤ the row's `reviewed_at`, operator 2026-10-27 'Use judged_at'), `summary` (one line of what it said), `content` (the text you read, kept short: only its sha256 is stored), `gap_class` (`news` | `funding` | `orderbook` | `calendar` | `onchain` | `macro` | `other`), `feed_gap` (a snake_case NAME for the feed we lack; reuse it for the same missing feed), `extracted` (the field/value pairs you actually used, e.g. `{"funding_rate_8h": 0.0003}`), `why_packet_insufficient`, `influence` (`decisive` / `supporting` / `checked_only`). The script stores the values point-in-time for training and writes one feed-gap row per entry: a recurring decisive gap is how a missing feed gets wired into the packet.
 
 ## 5. The write, then the wait
 
