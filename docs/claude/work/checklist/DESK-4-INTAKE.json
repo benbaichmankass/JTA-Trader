@@ -2,21 +2,21 @@
   "id": "DESK-4-INTAKE",
   "title": "Desk: desk-intent system-action + VM intake endpoint (auth-designed, Tier 2) for 5-min cadence",
   "phase": null,
-  "state": "blocked",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01X2fGetfEkJcEKPMwt7S9wT",
   "model": "claude-opus-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [
-    "DESK-2-RISK-GATE"
+  "prs": [
+    20473
   ],
-  "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: the desk-intent route carries entry proposals (propose_entry) as well as amends; depends on DESK-0B.",
+  "blocked_on": [],
+  "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: the desk-intent route carries entry proposals (propose_entry) as well as amends; depends on DESK-0B. [2026-10-26 lane session_01X2fGetfEkJcEKPMwt7S9wT] Built in PR #20473 (Tier 2, landing hold; manager merges + verifies deploy). DESIGN CHOICE: extended the rows watcher (src/runtime/live_review_rows_watch.py fetches desk/decisions into refs/live-review/desk/decisions and runs scripts/ops/desk_intake.py as a subprocess on a moved tip), NOT a new VM endpoint: the watcher already has seed/dedupe/retry and desk rows land by CAS on a protected append-only branch; an endpoint adds an inbound write surface for no latency gain at hourly cadence (45 s poll) -- fallback only for the 5-min stage. In-trade rows -> LiveReviewIntent -> live_review_apply.run() under MD-TRADE-DESK (each account's RiskManager/PropRiskManager). propose_entry refused 'entry_generation_blocked_until' read from config/mandates.yaml; both brackets required; every row recorded once in runtime_logs/desk/intake.jsonl (diag log_file desk_intake / desk_intake_status / desk_watch_status). Tests: 17 new + 499 changed-package pass; guards 70 pass, ruff/layer re-run PASS. UNVERIFIED until deploy: VM git fetch of desk/decisions (desk_watch_status says could_not_fetch if refused).",
   "priority_rank": 11,
-  "updated_at": "2026-10-26T06:54:29Z",
-  "updated_by": "session_012XMr6ve1Lcf35qUU2faEkd",
+  "updated_at": "2026-10-26T23:26:24Z",
+  "updated_by": "session_01X2fGetfEkJcEKPMwt7S9wT",
   "roadmap": [
     "L-DESK",
     "L-ATM"
