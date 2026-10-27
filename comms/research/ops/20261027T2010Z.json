@@ -1,0 +1,65 @@
+{
+  "run": "DAILY-AUTHORING-2026-10-27",
+  "finished_at": "2026-10-27T20:10:00Z",
+  "by": "session_01AFoLuMGzc5ZQdVGv7Wfi53",
+  "floor": 58,
+  "floor_basis": "computed_floor(fired_24h 73); SLO floor 64",
+  "authoring_queue_depth": 30,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "trainer"
+  ],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "throughput": {
+    "runnable_before": 50,
+    "runnable_after": 64,
+    "queued": null,
+    "fired_24h": 73,
+    "after_basis": "dry-run would_dispatch of the 14 new units; they count runnable only after this HELD PR merges (E57)"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok",
+    "collector": "ok",
+    "stranded_stamp_prs": [],
+    "incident": null
+  },
+  "results_read": {
+    "pass": 0,
+    "fail": 0,
+    "indeterminate": 0,
+    "units": [],
+    "note": "authoring lane; no results read"
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": [
+    "RQ-20261027-3e41-01..06",
+    "RQ-20261027-3e41-09..14",
+    "RQ-20261027-3e41-15..16"
+  ],
+  "followups_filed": [],
+  "authoring": {
+    "queue_depth": 30,
+    "nodes_drafted": 1,
+    "nodes": [
+      "P1-Q7-gtd-timeclose-prop (checked, not authored: sol_prop covered by RQ-20261018-023 FAIL; eth_prop vacuous under stale_exit_bars 12)"
+    ],
+    "theme_shortfall": {
+      "regime": "5 -> 0 (runnable 9 -> 15 of 14)",
+      "new_strategy_prop": "11 -> 5 (5 -> 11 of 16)",
+      "ml_health": "7 -> 5 (1 -> 3 of 8)"
+    }
+  },
+  "not_run": [
+    "needs_review triage (28 left; the lane's scope was supply)",
+    "structural desk levers (universe, maker fills, event-driven): no runnable instrument, see handoff"
+  ],
+  "handoff": [
+    "Desk structural levers need builds, not units: (a) maker fills need our own measured maker fill/adverse-selection data (f679-04 is the perfect-fill upper bound only); (b) event-driven entries need a crypto event calendar store (unlocks/listings) point-in-time, which macro_event_study_run.py cannot read today; (c) a wider universe needs shards beyond the 12 perps in metis-market-data. File each as a build row before units.",
+    "ml_health still 5 short and timeframes/macro over share: ml_bakeoff variants on regime_label are saturated (90+ units); the next ml_health supply should be exit-head / demotion units, which need an owner to scope.",
+    "3e41-07/-08 intentionally unused (timeclose, see node note)."
+  ]
+}

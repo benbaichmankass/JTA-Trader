@@ -1,0 +1,131 @@
+id: RQ-20261027-3e41-15
+title: 'Direction at 15m, LightGBM regularised: does it beat the class prior on log-loss on BTC, ETH and SOL 15m shards (the sub-hour information question the desk program left open)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the published BTC/ETH/SOL 15m v002 shards, direction_label, same six features, purged CV (5 folds, embargo 96 rows = 24 h) and the same bar as the 1h direction line (4591-02,
+  a1f3-12..16), does LightGBM regularised beat the class prior by >= 0.002 nats of log-loss on the CV mean on ALL THREE symbols? Learner values are fixed here before any run.
+why_this_matters: 'Daily authoring lane 2026-10-27, desk entry-edge question: the desk program found no extractable timing information at 1h and 1m from free data; 15m shard direction
+  was tested only with extratrees/MLP/logit (1414-03). A log-loss gain on direction is INFORMATION, not edge: it is not net of any cost stack and never moves a leg by itself. First-test-failed-variants-queued
+  applies; a FAIL closes this configuration only. Trial count for the 15m direction cell across learner kinds: 3 (1414-03, this unit and its sibling).'
+power:
+  expected_n: 36000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Row floor: d=0.1 paired needs ~785 rows; rows are autocorrelated so effective n is lower. expected_n is an ESTIMATE from tail_rows x folds, not a measurement; below the fold
+    floor the unit grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up is a larger
+      or different dataset, not a re-run.'
+decision_rule:
+  id: RULE-RQ202610273e4115-DIR15M
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: Paired per-fold log-loss difference on identical purged folds (5, embargo 24 rows), mean over folds, per symbol; positive = candidate better.
+  rule: 'PASS IF LightGBM regularised beats the class prior by >= +0.002 nats on the CV mean on ALL THREE 15m symbols. FAIL IF it does not beat the prior by >= 0 on the CV mean on ANY
+    symbol (this configuration only: the direction-information line stays open for other learners and horizons). INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable. Thresholds
+    are not changed after any result.'
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path. A log-loss gain on a direction label is not edge, is not net of cost and is not
+    a P&L claim.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 50
+  confidence: 0.15
+  basis: planning weight for the direction-information line (02 Q4), not a measured P&L
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: 'Estimate, NOT measured: 3 shards x 1 arm x 5 folds, comparable to RQ-20261027-b376-01 (40 min); re-declare from the first run.'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_15m:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT_15m:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT_15m:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: direction_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - lgbm_reg
+  learners:
+    prior:
+      kind: prior
+    lgbm_reg:
+      kind: lightgbm
+      params:
+        learning_rate: 0.03
+        min_child_samples: 300
+        n_estimators: 100
+        num_leaves: 7
+        reg_lambda: 10.0
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_15m
+      - ETHUSDT_15m
+      - SOLUSDT_15m
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.002
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261027-3e41-15
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M23
+related:
+- RQ-20261013-1414-03
+- RQ-20261023-a1f3-12
+- scripts/research/ml_bakeoff.py
+last_dispatched_at: null
+programme: P2

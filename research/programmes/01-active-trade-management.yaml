@@ -3209,9 +3209,7 @@ nodes:
   value:
     usd_at_stake_per_month: 250
     confidence: 0.3
-  needs_authoring: 'PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5
-    d, swap 3.3 bps/day) scored with prop_ev_sim on the operator''s B6 bar. The harness lever is --timeout-bars
-    on backtest_trend.py (an exit_lever_ablation arm), then prop_ev_grid.'
+  needs_authoring: 'CHECKED 2026-10-27 (daily authoring lane): NOT authored, because the sol_prop half already ran as RQ-20261018-023 (bar-count time-close, graded FAIL) and the eth_prop half is vacuous by construction (trend_donchian_eth_prop declares stale_exit_bars 12, so a 72/120-bar time-close never binds; exit_lever_ablation.py header). Remaining ask: a prop_ev_grid read of RQ-20261018-023 only if its FAIL was on R rather than on survival -- read that record first. Original ask: PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5 d, swap 3.3 bps/day) scored with prop_ev_sim on the operator''s B6 bar.'
 - id: P1-Q3-eth4h-measured-move-w05-confirm
   goal: G1
   roadmap:
