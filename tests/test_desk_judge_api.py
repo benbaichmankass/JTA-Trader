@@ -83,3 +83,50 @@ def test_estimate_only_needs_no_key(tmp_path):
     a.estimate_only = True
     r = dja.run(a)
     assert r["packets"] == 3 and r["worst_case_usd_per_packet"] > 0
+
+
+class ApiErr(Exception):
+    def __init__(self, status, etype, message):
+        super().__init__(f"Error code: {status}")
+        self.status_code, self.body = status, {"type": "error", "error": {"type": etype, "message": message}}
+
+
+class AlwaysFail:
+    def __init__(self, exc):
+        self.exc, self.calls, self.messages = exc, [], self
+
+    def create(self, **kw):
+        self.calls.append(kw)
+        raise self.exc
+
+
+def test_describe_error_uses_body_and_classifies():
+    msg, retry = dja.describe_error(ApiErr(400, "invalid_request_error", "Your credit balance is too low " + "x" * 300))
+    assert msg.startswith("invalid_request_error: Your credit balance") and len(msg) > 300 and not retry
+    assert dja.describe_error(ApiErr(429, "rate_limit_error", "slow"))[1]
+    assert dja.describe_error(ApiErr(529, "overloaded_error", "busy"))[1]
+    assert dja.describe_error(RuntimeError("conn"))[1]
+
+
+def test_key_never_in_message(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-secret123")
+    msg, _ = dja.describe_error(ApiErr(401, "authentication_error", "bad key sk-secret123"))
+    assert "sk-secret123" not in msg
+
+
+def test_non_retryable_4xx_not_retried_and_dispatch_stops_after_k(tmp_path):
+    a = _setup(tmp_path, n=10)
+    fc = AlwaysFail(ApiErr(400, "invalid_request_error", "credit balance too low"))
+    sleeps = []
+    r = dja.run(a, client=fc, sleep=sleeps.append)
+    assert len(fc.calls) == dja.STOP_AFTER_SAME_FATAL and sleeps == []
+    assert r["stopped"] == "invalid_request_error: credit balance too low [HTTP 400]"
+    lines = [json.loads(x) for x in (tmp_path / "o/usage.jsonl").read_text().splitlines()]
+    assert len(lines) == 3 and all("credit balance too low" in x["problem"] for x in lines)
+
+
+def test_429_is_retried(tmp_path):
+    a = _setup(tmp_path, n=1)
+    fc = AlwaysFail(ApiErr(429, "rate_limit_error", "slow"))
+    dja.run(a, client=fc, sleep=lambda s: None)
+    assert len(fc.calls) == 3
