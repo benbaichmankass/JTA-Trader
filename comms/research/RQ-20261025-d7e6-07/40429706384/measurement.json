@@ -1,0 +1,49 @@
+{
+  "n_baseline": 1731,
+  "legs": [
+    "ada_pullback_2h",
+    "avax_pullback_2h",
+    "eth_pullback_2h",
+    "sol_pullback_2h",
+    "xrp_pullback_2h"
+  ],
+  "bar_r_per_trade": 0.03,
+  "paired_sd_r": 0.0714,
+  "mde_r_per_trade": 0.0043,
+  "diff_r_per_baseline_trade": -0.002,
+  "ci95_r_per_trade": [
+    -0.0051,
+    0.00095
+  ],
+  "fold_wins": 3,
+  "per_fold_diff_r": [
+    0.3223,
+    0.9687,
+    -1.8776,
+    -2.1378,
+    0.7315,
+    -1.463
+  ],
+  "max_drawdown_r": {
+    "baseline": 40.146,
+    "candidate": 40.023
+  },
+  "controls": {
+    "UB": {
+      "cand_minus_control_r": 54.1954,
+      "fold_wins": 6,
+      "pass": true
+    },
+    "RB": {
+      "cand_minus_control_r": -0.2768,
+      "fold_wins": 2,
+      "pass": false
+    }
+  },
+  "net_r": {
+    "baseline": 161.853,
+    "candidate": 158.397
+  },
+  "verdict": "fail",
+  "note": "CI upper 0.0010 < bar 0.03: MB does not reach the bar on the pool"
+}
