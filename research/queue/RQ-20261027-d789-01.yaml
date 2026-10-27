@@ -1,6 +1,6 @@
 id: RQ-20261027-d789-01
 title: 'PROP exit rung: trend_donchian_sol_prop at TP 3R vs the declared TP 6R on a window E65 did not see (2023-09-24 .. 2025-09-23), net of the breakout_1 cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -82,3 +82,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/claude/work/checklist/P5-PROP-PROGRAMME.json
 last_dispatched_at: '2026-10-27T10:29:16+00:00'
+grading:
+  attested: RULE-RQ20261027D78901-SOLPROP-TP3
+  auto: true
+  decision_rule_id: RULE-RQ20261027D78901-SOLPROP-TP3
+  evidence:
+  - research/results/RQ-20261027-d789-01/40488856601.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

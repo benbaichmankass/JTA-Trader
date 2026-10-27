@@ -1,7 +1,7 @@
 id: RQ-20261027-8b01-01
 title: 'Desk DESK-8b D-S0 harness self-check on ict_scalp_eth_15m / ict_scalp_xrp_15m: does the masked replay reproduce the two legs'' recorded net R on HOLD, does
   the mask hold, and does a planted hindsight oracle show headroom the harness can see?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -96,3 +96,16 @@ related:
 - scripts/research/desk_replay_driver.py
 - docs/plans/claude-trading-desk-DESIGN.md
 last_dispatched_at: '2026-10-27T11:42:51+00:00'
+grading:
+  attested: RULE-RQ20261027-8B01-01-HARNESS-SELFCHECK
+  auto: true
+  decision_rule_id: RULE-RQ20261027-8B01-01-HARNESS-SELFCHECK
+  evidence:
+  - research/results/RQ-20261027-8b01-01/40498212318.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

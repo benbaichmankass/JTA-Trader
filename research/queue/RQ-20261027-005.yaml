@@ -5,7 +5,7 @@ id: RQ-20261027-005
 title: 'Programme 01 Q14 transfer of the eth_pullback_2h stale-exit PASS: on sol_pullback_2h does the
   S12 stale exit (12 bars without +0.5 R) beat the declared exit in >= 4 of 6 folds within the drawdown
   bar?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -130,3 +130,15 @@ generated:
   params:
     node: P1-Q14-eth-pb-stale-transfer
 last_dispatched_at: '2026-10-27T06:27:15+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q14-SOL-PB-STALE-TRANSFER
+  evidence:
+  - research/results/RQ-20261027-005/40461206345.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
