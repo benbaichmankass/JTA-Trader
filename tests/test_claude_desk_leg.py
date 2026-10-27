@@ -188,8 +188,10 @@ def test_registered_once_and_rostered_only_on_soak_accounts():
     assert monitor_unit_for("claude_desk") == "claude_desk"
     strategies = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]
     assert strategies["claude_desk"]["execution"] == "live"  # bybit_1 demo only (desk intake's demo floor)
-    # AVAXUSDT only: the one bybit_1 symbol no other leg shares (same-symbol-allocation-guard).
-    assert strategies["claude_desk"]["symbols"] == ["AVAXUSDT"]
+    # Six markets on bybit_1 (DESK-WIDEN): the same-symbol concern is met by bybit_1's slice support plus
+    # claude_desk's declared slice (config/slice_allocation.yaml::declared_slices).
+    assert strategies["claude_desk"]["symbols"] == [
+        "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT"]
     assert "risk_pct" not in strategies["claude_desk"]
     accounts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
     on = sorted(a for a, v in accounts.items() if "claude_desk" in (v.get("strategies") or []))
