@@ -188,7 +188,7 @@ def bracket_problems(draft: dict, packet: dict, sh: dict) -> list[str]:
     act, level = draft.get("action"), draft.get("level")
     st = packet.get("state") or {}
     side = (packet.get("context") or {}).get("direction")
-    mark, sl, tp = sh.get("mark"), st.get("sl"), st.get("tp")
+    mark, sl = sh.get("mark"), st.get("sl")
     out = []
     if act in ("tighten_sl", "move_tp"):
         if not (_num(level) and level > 0):
@@ -354,8 +354,8 @@ def run(draft: dict, cwd: str, pkg: str, *, branch: str = BRANCH, rules_ref: str
         if problems:
             return 1, {"state": "refused", "problems": problems, "row": row}
         text = (show(cwd, tip, reviews_path) or b"").decode()
-        if any((json.loads(l) if l.strip().startswith("{") else {}).get("review_id") == row["review_id"]
-               for l in text.splitlines() if l.strip()):
+        if any((json.loads(ln) if ln.strip().startswith("{") else {}).get("review_id") == row["review_id"]
+               for ln in text.splitlines() if ln.strip()):
             return 3, {"state": "nothing_due", "review_id": row["review_id"],
                        "reason": "this packet already has a row: wait for the next 5-min packet"}
         if check_only:

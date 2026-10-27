@@ -1,7 +1,6 @@
 """DESK-SHORT-HOLD-LANE: the lane's only write path (.claude/skills/trading-desk/short_hold_write.py)."""
 from __future__ import annotations
 
-import copy
 import importlib.util
 import json
 import re
