@@ -50,7 +50,7 @@ Three windows, fixed now and never moved (registered in `scripts/research/desk_e
 
 **Feature tiers.**
 - **P (packet only)** — what the judge saw: per-symbol atr %, `htf_trend`, swing distances (side-signed as room ahead / behind), session; the base-rate rows (mean, sd, p10, p50, p90 at h4/h12/h48 for the action's side, the opposite side's means, the cost); cross-sectional summaries of those (rank of the symbol's base rate among the six, number trending, relative atr); the action's side and geometry.
-- **P+ (packet + missing information)** — P plus, all at or before the cutoff: returns over 1/4/12/24/72/168/336 bars in ATR (side-signed), range position over 24/168/720 bars, volatility percentile and ATR change, 24h volume z-score and taker-buy share over 1/4/24 bars (Binance Vision spot), BTC returns and the six-symbol cross-sectional ranks, hour and weekday, symbol identity, and perp funding (Binance Vision USD-M settlements, last and 3-day mean, side-signed). Each group is also added to P alone (ablation), so a P+ result names the information that carries it.
+- **P+ (packet + missing information)** — P plus, all at or before the cutoff: returns over 1/4/12/24/72/168/336 bars in ATR (side-signed), range position over 24/168/720 bars, volatility percentile and ATR change, 24h volume z-score and taker-buy share over 1/4/24 bars (Binance Vision USD-M perp klines), BTC returns and the six-symbol cross-sectional ranks, hour and weekday, symbol identity, and perp funding (Binance Vision USD-M settlements, last and 3-day mean, side-signed). Each group is also added to P alone (ablation), so a P+ result names the information that carries it.
 
 **Learners.** Ridge regression on `y`; logistic regression on `y > 0`; LightGBM regressor (300 trees, 15 leaves, min 400 per leaf). Fixed hyper-parameters, no tuning on test folds.
 
@@ -71,13 +71,13 @@ Three windows, fixed now and never moved (registered in `scripts/research/desk_e
 
 **Decision branch (registered).** `instrument_invalid` if a control fails; else `bottleneck_judge` if P is present and the judge's S3 CI lower bound is not > 0; `bottleneck_packet_information` if P is not present and P+ is; `information_and_judge_both_find_edge` if P is present and so is the judge; `no_edge_in_reachable_information` if P and P+ are both absent; `inconclusive` otherwise.
 
-**What it cannot say.** It bounds what THESE learners extract with THESE features at THESE geometries; an `absent` is not a proof that no edge exists at other horizons, other entry types (limit/stop), or with data outside the list. It uses spot candles (the desk's venue is the Bybit perp), as the driver does.
+**What it cannot say.** It bounds what THESE learners extract with THESE features at THESE geometries; an `absent` is not a proof that no edge exists at other horizons, other entry types (limit/stop), or with data outside the list. It uses Binance USD-M perp candles, as the driver does (the desk's venue is the Bybit perp). *[Label corrected 2026-10-27 ~18:10Z after registration: this sentence originally said "spot"; the source was always `data/futures/um` (MEASURED, § 4.1). No rule changed.]*
 
 ## 4. The information-ceiling result
 
 ### 4.1 DEV window (the § 3 run) — registered verdict: **inconclusive / inconclusive, instrument valid**
 
-Evidence record: `comms/research/desk_edge/ceiling-dev/ceiling.json` (`desk_edge_ceiling.py build` then `run`; candles Binance Vision spot 1h fetched 2026-10-27 through the driver's `fetch_market`, funding Binance Vision USD-M). **Population:** 4,535 packets (3,816 two-hourly + 1,498 judged-1 cutoffs, 779 shared; every judged-1 packet id reproduced), 380,940 filled actions (4,535 x 84: every action filled), 284,508 of them in test folds 2-4 = 35 ISO weeks. All numbers MEASURED there unless marked.
+Evidence record: `comms/research/desk_edge/ceiling-dev/ceiling.json` (`desk_edge_ceiling.py build` then `run`; candles Binance Vision **USD-M perp** 1h (`fetch_backtest_candles.py` reads `data/futures/um`; MEASURED: identical to perp 1m klines resampled, 720 of 720 hours of 2026-06, 0.0 bps) fetched 2026-10-27 through the driver's `fetch_market`, funding Binance Vision USD-M). **Population:** 4,535 packets (3,816 two-hourly + 1,498 judged-1 cutoffs, 779 shared; every judged-1 packet id reproduced), 380,940 filled actions (4,535 x 84: every action filled), 284,508 of them in test folds 2-4 = 35 ISO weeks. All numbers MEASURED there unless marked.
 
 | | ridge | logit | GBDT |
 |---|---|---|---|
@@ -206,7 +206,7 @@ Relayed by the manager, verbatim: *"we need a bigger edge, like an edge that nee
 
 | source | what | reachable | note |
 |---|---|---|---|
-| Binance Vision USD-M perp klines | 1m, monthly and daily files | yes (fetched 2026-06..09, six symbols, 24 files, 39 MB) | perp, not spot: closer to the desk's venue than the driver's spot candles |
+| Binance Vision USD-M perp klines | 1m, monthly and daily files | yes (fetched 2026-06..09, six symbols, 24 files, 39 MB) | perp, the same source as the driver's 1h candles (Binance USD-M; the desk trades the Bybit perp) |
 | Binance Vision spot klines | **1s**, monthly | yes (HTTP 206 on 2026-08) | sub-minute bars without building them |
 | Binance Vision USD-M aggTrades | every aggregated trade, daily | yes (2026-09-01) | builds 30s bars, signed order flow, trade imbalance |
 | Binance Vision USD-M bookTicker | top of book | **2024-03 yes, 2026-09 no (404)** | historical spread only for older periods |
