@@ -45,6 +45,28 @@ VENUE_CAP_FRACTION = 0.099  # copy of src/runtime/tp_venue_cap.py (this file is 
 REACH_FLOOR = 0.10
 SHORT_HOLD_MAX_MIN = 60  # a live desk proposal is the short-hold kind (operator 2026-10-27); the guard imports it
 DESK_LEG = "claude_desk"
+# Mechanics probe (operator 2026-10-27 popup "Mechanics probe (Recommended)", DESK-18E): at most PROBE_MAX labelled demo trades,
+# no EV claim, excluded from every edge statistic via training.exclusion_reasons. A probe row is basis `mechanics` on a live
+# entry_generation propose_entry; scripts/ci/check_desk_records.py and desk intake import these.
+PROBE_BASIS = "mechanics"
+PROBE_REASON = "mechanics_probe"
+PROBE_MAX = 2
+PROBE_ACCOUNTS = ("bybit_1", "alpaca_paper", "ib_paper")  # intake refuses a probe while any other account rosters the leg
+
+
+def count_probes(text: str) -> int:
+    n = 0
+    for ln in text.splitlines():
+        try:
+            n += is_probe(json.loads(ln))
+        except (ValueError, AttributeError):
+            continue
+    return n
+
+
+def is_probe(row: dict) -> bool:
+    return (row.get("role") == "entry_generation" and row.get("action") == "propose_entry"
+            and row.get("basis") == PROBE_BASIS)
 STRATEGIES = "config/strategies.yaml"
 STAT_TOL = 1e-3  # history rows are 6 d.p.; early wakes rounded to 3
 STALE = timedelta(hours=3)
@@ -229,18 +251,33 @@ def live_proposal_problems(row: dict) -> list[str]:
 # ----------------------------------------------------------------------------- compile
 
 def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: datetime,
-                skill_sha: str | None, scope: dict | None = None) -> dict:
+                skill_sha: str | None, scope: dict | None = None, probe_rows: int = 0) -> dict:
     bad = _size_keys(draft)
     if bad:
         raise Refused([f"no-size rule: `{k}` -- size is each account's (RiskManager), never the desk's" for k in bad])
     allowed = {"action", "session", "confidence", "basis", "rationale", "judge_prior", "proposal", "weighed",
-               "external_context"}
+               "external_context", "mechanics_probe"}
     extra = sorted(set(draft) - allowed)
     if extra:
         raise Refused([f"draft has fields the script derives or does not accept: {extra} (allowed: {sorted(allowed)})"])
     action = draft.get("action")
     if action not in ACTIONS:
         raise Refused([f"action {action!r} is not one of {list(ACTIONS)}"])
+    probe = draft.get("mechanics_probe") is True
+    if "mechanics_probe" in draft and not probe:
+        raise Refused(["`mechanics_probe` is `true` or absent"])
+    if probe:
+        if action != "propose_entry":
+            raise Refused(["a mechanics probe is a propose_entry"])
+        if probe_rows >= PROBE_MAX:
+            raise Refused([f"mechanics probe cap: {probe_rows} probe rows exist (max {PROBE_MAX}, unless the operator re-authorizes)"])
+        d0 = draft.get("proposal") or {}
+        if not is_live("propose_entry", d0.get("symbol"), scope):
+            raise Refused(["a mechanics probe must be on a symbol the claude_desk leg trades (a live row on the demo)"])
+        if d0.get("expected_r_net") is not None or draft.get("judge_prior") is not None:
+            raise Refused(["a mechanics probe carries no EV claim: expected_r_net and judge_prior are null"])
+        if draft.get("basis") != PROBE_BASIS or draft.get("confidence") != "anecdote":
+            raise Refused([f"a mechanics probe is basis `{PROBE_BASIS}` and confidence `anecdote`"])
     meta = packet["meta"]
     pid = meta["packet_id"]
     universe = {u["symbol"]: u for u in packet.get("universe") or []}
@@ -300,6 +337,8 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
 
     ec_items = external_from_draft(draft.get("external_context"), now)
     ec_block, training = external_block(ec_items)
+    if probe:  # never trains, never gates, never counted in an edge statistic
+        training = {"train_eligible": False, "gate_eligible": False, "exclusion_reasons": [PROBE_REASON]}
     live = is_live(action, (proposal or {}).get("symbol"), scope)
     did = "DD-" + pid[3:] + "-1"
     rationale = str(draft.get("rationale") or "")
@@ -386,7 +425,7 @@ def row_problems(row: dict, packet: dict, schema: dict) -> list[str]:
         out.append(f"action {action!r} not in the entry_generation enum")
     if (action == "propose_entry") != (row["proposal"] is not None):
         out.append("proposal is required on propose_entry and null on every other action")
-    if (action == "propose_entry") != (row["judge_prior"] is not None):
+    if (action == "propose_entry") != (row["judge_prior"] is not None) and not is_probe(row):
         out.append("judge_prior is required on propose_entry and null otherwise")
     if row["basis"] == "insufficient_n" and action == "propose_entry":
         out.append("basis insufficient_n is only for no_trade / watch_note")
@@ -418,7 +457,9 @@ def row_problems(row: dict, packet: dict, schema: dict) -> list[str]:
         out.append("info_cutoff_at must be the packet's, exactly")
     if meta.get("packet_kind") != "scan" or meta.get("mode") != "live":
         out.append("the cited packet must be a live scan packet")
-    if row["training"] != external_block(row["external_context"].get("items") or [])[1]:
+    want = ({"train_eligible": False, "gate_eligible": False, "exclusion_reasons": [PROBE_REASON]} if is_probe(row)
+            else external_block(row["external_context"].get("items") or [])[1])
+    if row["training"] != want:
         out.append("training marker disagrees with its derivation")
     out += external_problems(row)
     out += alt_stat_problems(row, packet)
@@ -471,7 +512,10 @@ def proposal_problems(row: dict, packet: dict) -> list[str]:
         out.append(f"TP doctrine: tp sits at or beyond the venue cap ({VENUE_CAP_FRACTION:.1%} from entry)")
     if pr["tp"]["p_hit"] < REACH_FLOOR or pr["tp"]["p_hit"] >= 1:
         out.append(f"TP doctrine: tp.p_hit must be in [{REACH_FLOOR}, 1)")
-    if not pr["expected_r_net"] < tp_r:
+    if is_probe(row):
+        if pr["expected_r_net"] is not None:
+            out.append("a mechanics probe carries no EV claim: expected_r_net is null")
+    elif pr["expected_r_net"] is None or not pr["expected_r_net"] < tp_r:
         out.append("expected_r_net cannot reach the proposal's own gross best case (tp R)")
     u = {x["symbol"]: x for x in packet.get("universe") or []}.get(pr["symbol"])
     if u is None:
@@ -562,7 +606,8 @@ def run(draft: dict, cwd: str, *, brief_ref: str = "origin/main", check_only: bo
             except (ValueError, AttributeError):
                 continue
         try:
-            row = compile_row(draft, pointer, packet, schema, now=now, skill_sha=sha, scope=scope)
+            n_probe = count_probes(text)
+            row = compile_row(draft, pointer, packet, schema, now=now, skill_sha=sha, scope=scope, probe_rows=n_probe)
             problems = row_problems(row, packet, schema)
         except Refused as exc:
             problems = exc.problems

@@ -1,7 +1,7 @@
 {
-  "tier": 2,
+  "tier": 3,
   "landing": "hold",
   "hold_reason": "tier_2_3_needs_approval",
-  "hold_text": "Tier 2: changes the live desk brief (.claude/skills/trading-desk/DESK-BRIEF.md) only; no order path, sizing, risk, 60-minute cap, desk_write.py or packet builder touched. Dispatched by Manager Session 2026-10-27a; operator popup 2026-10-27 ~15:45Z verbatim \"Dispatch now (Recommended)\". Revert: git revert the merge commit.",
-  "why": "DESK-18E: the live desk's 60-minute hold cannot be priced by any net-positive history row; the brief now prices a hold at a fitting horizon and gives record-only symbols a shadow lane. Live proposal rate is unchanged (0); the soak needs an operator call."
+  "hold_text": "Tier 3 (MD-DEMO-FLOOR-BUILD; manager merges): (1) DESK-BRIEF.md fitting-horizon pricing + shadow lane; (2) mechanics probe: operator popup 2026-10-27 ~16:10Z verbatim \"Mechanics probe (Recommended)\", relayed by Manager Session 2026-10-27a. At most 2 probe rows ever (desk_write + desk-records-guard), demo accounts only (desk intake: bybit_1 / alpaca_paper / ib_paper), no EV claim, excluded from training/grade/replay via training.exclusion_reasons mechanics_probe, package confidence scalar 0.05, manual trigger only ('mechanics probe wake' prompt). No RiskManager/sizing/order-path code touched. Revert: git revert the merge commit (or never send the probe wake).",
+  "why": "DESK-18E: the honest live desk cannot produce a soak trade; the operator authorized a labelled mechanics probe so the Stage-1 mechanical soak can run."
 }

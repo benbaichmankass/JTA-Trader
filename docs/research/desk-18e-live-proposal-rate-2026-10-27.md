@@ -29,3 +29,15 @@ All 7 are the same trade: SLV short, 48 bars, shadow, `suggestive` (packets 1339
 - **The mechanical soak still cannot start**: the fix produces no live row, by design (not loosened). Options: (i) wait for a 5m event wake to find structure (unlikely at cost 0.5 R, 0/5 so far); (ii) add short-horizon (h1 on 1h) rows to the packet builder: more honest, but all negative, so it changes the pricing not the rate; (iii) an operator-decided, explicitly labelled *mechanics probe* row (a Tier-3 call: it is a trade without an EV claim); (iv) lift the 60-min hold cap (order path/leg behaviour: out of scope here). Recommend (iii) be put to the operator as the only route to a soak this week.
 - The shadow proposals are SLV 48-bar drift (+4.6..+5.2 R, sd ~5): the judged-1 decomposition says drift, not timing. They feed the forward set; they claim no edge. The off-hours ETF closes were frozen 20:02Z-13:03Z, so shadow rows on equities are meaningful only in US hours.
 - Limits: 29 packets exist, not the 50 requested; one judge session, no repeat (judge variance unmeasured); the "before" is the 29 real sessions, not a re-run of the old brief.
+
+## Addendum — mechanics probe (operator 2026-10-27 ~16:10Z, verbatim "Mechanics probe (Recommended)")
+
+Built in this PR (Tier 3, `landing: hold`): basis `mechanics` on a live `entry_generation` `propose_entry` marks a probe row.
+- **No EV claim:** `expected_r_net` and `judge_prior` null (schema + both validators).
+- **Cap 2, in code:** `desk_write.py` counts existing probe rows and refuses a third; `desk-records-guard` fails a decisions file with more than 2. (Counted across the file, i.e. per the one account that rosters the leg today; `bybit_1`.)
+- **Demo accounts only:** desk intake refuses a probe while any account other than `bybit_1` / `alpaca_paper` / `ib_paper` rosters `claude_desk`.
+- **Excluded everywhere:** `training = {train_eligible:false, gate_eligible:false, exclusion_reasons:["mechanics_probe"]}` (the `claude_judgments` dataset and `desk_grade` already key on those flags; the consumed-leak check refuses consuming it); `desk_outcomes` writes `not_computable` for a probe so the forward-shadow set never replays it. Tests: `tests/test_desk_mechanics_probe.py`.
+- **Trigger:** manual only: the manager sends a wake whose prompt says "mechanics probe wake" (brief § 3a). Reversible by not sending it; revert the PR to remove it.
+- **Minimum size:** the accepted-proposal queue carries `mechanics_probe`, and the `claude_desk` package confidence is capped at 0.05 (the documented scalar that only sizes DOWN). **UNVERIFIED:** whether the RiskManager's scalar floors that, i.e. whether the result is the venue minimum. I did not touch the RiskManager or sizing; read the first probe's fill size before the second.
+- **Soak:** `soak_state` counts clean closed `bybit_1`/`claude_desk` journal trades by leg and account, so a clean probe trade counts as the mechanical soak trade without a SOAKS.json change.
+- Not verified: no probe was written; no live intake/order run (no VM access here).

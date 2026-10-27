@@ -178,7 +178,8 @@ def brackets_problem(proposal: Any) -> Optional[str]:
 
 def classify(row: Dict[str, Any], *, problems: List[str], packet: Optional[Dict[str, Any]],
              gate: Optional[str], leg_rostered: bool,
-             leg_symbols: Optional[List[str]] = None) -> Tuple[str, str, Optional[Dict[str, Any]]]:
+             leg_symbols: Optional[List[str]] = None,
+             carrying: Optional[List[str]] = None) -> Tuple[str, str, Optional[Dict[str, Any]]]:
     """(verdict, detail, plan). verdict in dispatch | accepted | refused | not_dispatchable. Pure."""
     role, action = row.get("role"), row.get("action")
     if action == "propose_entry":
@@ -198,6 +199,8 @@ def classify(row: Dict[str, Any], *, problems: List[str], packet: Optional[Dict[
         sym = str((row.get("proposal") or {}).get("symbol") or "")
         if leg_symbols is None or sym not in leg_symbols:
             return "refused", f"{R_SYMBOL}:{sym} (leg trades {leg_symbols})", None
+        if cdr.desk_write.is_probe(row) and (carrying is None or set(carrying) - set(cdr.desk_write.PROBE_ACCOUNTS)):
+            return "refused", f"probe_account_not_demo:{carrying}", None
         return "accepted", f"queued for {DESK_LEG}", None
     if row.get("label_source") != "live":
         return "not_dispatchable", f"label_source_{row.get('label_source')}", None
@@ -360,7 +363,9 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
     new = [r for r in rows if r["decision_id"] not in seen]
     status["new"] = len(new)
     schema = json.loads(cdr.DECISION_SCHEMA.read_text())
-    gate, leg, leg_syms = entry_gate(mandates_fn(), accounts_fn()), None, None
+    accounts_doc = accounts_fn()
+    gate, leg, leg_syms = entry_gate(mandates_fn(), accounts_doc), None, None
+    carrying = carrying_accounts(accounts_doc)
     worst, handled = 0, set()
     for row in new:
         did = row["decision_id"]
@@ -391,7 +396,7 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
             if leg is None:
                 leg, leg_syms = leg_fn(), symbols_fn()
             verdict, detail, plan = classify(row, problems=problems, packet=packet, gate=gate, leg_rostered=leg,
-                                             leg_symbols=leg_syms)
+                                             leg_symbols=leg_syms, carrying=carrying)
         if verdict == "dispatch" and row.get("intent_id") in intents:
             verdict, detail, plan = "refused", f"duplicate_intent:{row.get('intent_id')}", None
         rec.update(verdict=verdict, detail=detail)
@@ -410,7 +415,8 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
             if apply:
                 _append(accepted_path, {"at": seen_at.isoformat(), "decision_id": did, "intent_id": row.get("intent_id"),
                                         "packet_id": pid, "packet_sha": row.get("packet_sha"), "ref": ref,
-                                        "proposal": row.get("proposal")})
+                                        "proposal": row.get("proposal"),
+                                        **({"mechanics_probe": True} if cdr.desk_write.is_probe(row) else {})})
             else:
                 rec["verdict"] = "would_accept"
         if rec["verdict"] == "could_not_look":
