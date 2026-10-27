@@ -97,3 +97,103 @@ conservative. **OPTIMISTIC** (reported) — a print AT the limit.
 
 Places nothing; changes no order path, `config/strategies.yaml`, `config/accounts.yaml` or risk logic. Not a promotion case. It does not
 see latency or queue position, and it does not price a maker take-profit (a separate lever: TPs are market-triggered today).
+
+## 4. Result — PASS at the threshold (MEASURED, registered run)
+
+Record: `comms/research/desk_maker_fills/maker_fills_record-2026-10-27.json`; result row
+`research/results/RQ-20261027-mk01-01/local-2026-10-27.jsonl`. Run on the lane container after the registration commit was pushed;
+all 240 symbol-day cells measured, 0 failed, 0 RPI prints present in the sample (the column exists; every value was 0).
+
+**Population for every number below:** 6 symbols × 40 days (2025-11-08..2026-10-25, every 9th day) × 22 hourly decision times × both
+directions = **10,560 rows** per arm. CIs resample whole days (40 clusters).
+
+### 4.1 Primary arm (k = 0, W = 5 min, STRICT fill, policy F) — graded
+
+| | value |
+|---|---|
+| pooled mean `delta_F` | **+2.03 bps per entry**, 95% CI **[+1.69, +2.33]** |
+| fill rate (strict) | 88.7 %; median wait 3.5 s |
+| `delta_F` when filled / unfilled | +4.59 / −18.04 bps (check: 0.887 × 4.59 + 0.113 × −18.04 = +2.03) |
+| symbols with mean > 0 | 6 of 6 |
+| verdict | **PASS** (rows 10,560 ≥ 1,000; days 40 ≥ 30; +2.03 ≥ +2.0; CI lo > 0; 6 ≥ 4) |
+
+| symbol | median tick (bps) | fill rate | mean `delta_F` (bps) | 95% CI |
+|---|---|---|---|---|
+| ADAUSDT | 4.00 | 0.80 | +1.93 | [+1.30, +2.52] |
+| AVAXUSDT | 1.07 | 0.88 | +1.52 | [+0.99, +1.98] |
+| BTCUSDT | 0.01 | 0.91 | +2.04 | [+1.79, +2.28] |
+| ETHUSDT | 0.04 | 0.94 | +2.45 | [+2.18, +2.68] |
+| SOLUSDT | 1.11 | 0.89 | +2.13 | [+1.70, +2.52] |
+| XRPUSDT | 0.72 | 0.90 | +2.13 | [+1.69, +2.53] |
+
+### 4.2 Secondary arms (reported, NOT graded; pooled, 10,560 rows each)
+
+| arm | strict fill | strict mean (bps) [CI] | optimistic fill | optimistic mean (bps) |
+|---|---|---|---|---|
+| W 1, k 0 | 0.76 | +1.69 [1.45, 1.91] | 0.90 | +3.15 |
+| W 5, k 0 (primary) | 0.89 | +2.03 [1.69, 2.33] | 0.95 | +3.33 |
+| W 15, k 0 | 0.93 | +1.88 [1.26, 2.37] | 0.97 | +3.21 |
+| W 1, k 1 | 0.67 | +1.50 [1.27, 1.72] | 0.76 | +2.45 |
+| W 5, k 1 | 0.84 | +1.99 [1.63, 2.32] | 0.89 | +3.00 |
+| W 15, k 1 | 0.90 | +1.91 [1.14, 2.46] | 0.93 | +2.92 |
+
+- **Trend-aligned vs counter-trend entries** (sign of the 60-min return before T, 5,002 rows each at W 5 k 0): +2.02 vs +2.05 bps. A
+  breakout-like entry pays no extra selection at this cadence, as measured.
+- **Policy S (skip unfilled), net markouts:** filled maker entries −3.7 / −3.8 / −4.0 / −4.3 bps at 5 / 1 / 15 / 60 min after the
+  fill vs taker entries −6.1 bps (both directions pooled, so the gross drift cancels). Gross of the 2.0-bps maker fee, a filled maker
+  entry is −1.7 bps at 5 min, where no selection would give about +0.4 bps (half the median 0.75-bps tick): **the adverse selection on a
+  fill is about 2 bps**, and it is already inside `delta_F`. Skipping the unfilled 11 % also drops the entries that ran away, which are
+  the signal's best ones when it has edge. **Policy F is the one to build.**
+- **Where the edge comes from:** on BTC/ETH the tick is ~0.01–0.04 bps, so the edge is almost entirely the fee difference (3.5 bps × fill
+  rate) less the runaway; on ADA (4-bps tick) the spread credit is large but so is the runaway (fill 0.80).
+
+### 4.3 How fragile the PASS is (post-hoc, NOT a re-grade)
+
+The margin over X is **0.03 bps**. The verdict stands as registered; these are the things a probe must measure before anyone relies on it:
+
+- **Maker fee (UNVERIFIED on our account).** Recomputed from the committed rows: maker fee 2.5 → +1.59; 3.0 → +1.15; 3.5 → +0.70 bps.
+  Positive at every plausible fee, but below X at any fee above 2.0.
+- **Latency.** 25.9 % of primary rows fill within 1 s of T. An order that takes a few hundred ms to rest can miss some of those, and
+  each miss becomes a fallback paying the runaway. The replay cannot see this; probe (b) can.
+- **The 1-tick spread assumption** goes the other way: it understates the taker's real cost on a wider book.
+
+### 4.4 What it is worth in R
+
+About **2 bps per entry** (policy F). Using the DESK-EDGE-PROGRAM scaling (row `COST-STACK-BYBIT-TAKER-FEE`: 1.8 bps ≈ 0.04 R at a
+1-sd 30-min bracket, ≈ 0.003 R at 48 h holds), that is **≈ +0.045 R per trade at short brackets and ≈ +0.003 R at multi-day holds**.
+A maker take-profit (not measured) could roughly double it at short brackets. **It does not close the desk's S3 gap** (a random
+entry nets −0.112 R pooled; the bar is about +0.36 R absolute). It is a real, durable cost cut for every Bybit leg, not an edge.
+
+## 5. Proposal (Tier 2/3, for the manager — NOT applied by this lane)
+
+The rule's PASS branch says: propose probe (b) and the post-only entry change for the `claude_desk` leg. Neither is applied here.
+
+### 5.1 Probe (b): `bybit_1` DEMO post-only probe — measure demo fidelity and the real maker fee first
+
+- **What:** for each `claude_desk` entry on `bybit_1` (demo), send the entry as `orderType: Limit`, `timeInForce: PostOnly`, price =
+  the near touch from `get_tickers` (`bid1Price` for Buy, `ask1Price` for Sell), with the same `stopLoss` / `takeProfit` attached; if
+  it is not filled within 5 min, cancel and send today's Market order (policy F). A PostOnly reject (Bybit cancels instead of taking)
+  goes straight to the Market order.
+- **Measure, per order:** filled? fill time, fill price, `execFee` / `isMaker` (this verifies the maker fee), reject count, and for
+  each demo fill whether the **mainnet** public prints (`public.bybit.com`, next day) traded at or through the limit before the demo fill
+  time.
+- **Decision rule to register before the probe runs (proposal):** after ≥ 100 post-only orders, demo is *representative* iff the demo
+  strict-fill rate sits within ±10 pp of the replay's strict rate on the same orders' timestamps AND ≥ 90 % of demo fills have a
+  mainnet print at or through the limit by the demo fill time. Otherwise demo matching is optimistic and its fill rate is not evidence.
+  The realized maker fee replaces the published 2.0 in a re-run of `desk_maker_fills.py` (same sample, new constant, recorded as a new
+  run, not a re-grade).
+
+### 5.2 The order-path change (exact shape)
+
+- `src/units/accounts/execute.py` `_submit_order`, Bybit branch, opening orders only (not `reduce_only`, not spot): when the leg's
+  config says `entry_order: post_only_touch`, replace `orderType: "Market"` with `orderType: "Limit"`, `price: <near touch, quantized
+  with quantize_price>`, `timeInForce: "PostOnly"`; keep `stopLoss` / `takeProfit` / Partial-mode fields unchanged (Bybit V5 accepts TP/SL
+  on a Limit entry).
+- A fallback owner in `src/runtime/order_monitor.py`: a resting post-only entry older than 5 min is cancelled and re-sent as the Market
+  order; the journal row records `entry_order`, the limit, the fallback flag and the fill's `isMaker`.
+- `config/strategies.yaml`: `entry_order: post_only_touch` on the `claude_desk` leg only (Tier 3: a strategy parameter, not an
+  `*_ENABLED` flag; the default stays Market). No change to `config/accounts.yaml` or risk logic.
+- Tests: kwargs shape for Buy/Sell; reject → Market fallback; 5-min cancel-and-replace; reduce-only and spot unchanged.
+
+**Recommendation:** run 5.1 first, on the demo leg, as the Tier-2 step. 5.2 beyond `bybit_1` waits for 5.1's demo-fidelity and
+maker-fee readings, because the PASS margin is smaller than either unknown.
