@@ -81,6 +81,10 @@ ERA_DEV_FOLD_OFFSET = 6                              # DEV fold k is era fold k 
 ERA_TEST_FOLDS = (3, 4, 5, 6, 7, 8, 9, 10)
 ERA_N_CONFIGS = 12                                   # both ceiling runs' configurations: the family for this run
 ERA_FOLDS_POSITIVE_NEEDED = 5                        # of the 8 test folds (the DEV run's 2 of 3, scaled)
+# Holding period is a lever (operator popup 2026-10-27 ~16:10Z): the live claude_desk leg holds <= 60 minutes, so the era
+# run adds 1h-bar holds of ONE bar (<= 60 min on the 1h grid) and a 4-bar hold beside the 12..96-bar ones.
+SHORT_GEOMETRIES = (("H1a", 0.5, 1.0, 1), ("H1b", 1.0, 1.0, 1), ("H4", 0.75, 1.5, 4))
+ERA_GEOMETRIES = GEOMETRIES + SHORT_GEOMETRIES
 
 
 def era_fold(cutoff: int) -> int:
@@ -324,7 +328,8 @@ def _one_cutoff(args: Tuple[int, int, int]) -> Optional[dict]:
     return {"cutoff": ce, "fold": _G.get("fold_fn", d.fold_of)(ce), "packet_id": m["meta"]["packet_id"], "pf": pf, "ex": ex}
 
 
-def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int = SEED, fold_window=None) -> List[dict]:
+def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int = SEED, fold_window=None,
+                  geometries: Sequence[tuple] = GEOMETRIES) -> List[dict]:
     """One row per (cutoff, symbol, side, geometry) that FILLS, with the driver's S3 term as `y`. The random-entry pool
     is the driver's fold (default) or, with `fold_window`, every eligible cutoff of that fold's window."""
     rng = np.random.default_rng(rng_seed)
@@ -335,7 +340,7 @@ def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int =
         for sym, s in mkt.items():
             i = s.last_closed(ce)
             for side, sg in SIDES:
-                for gname, sl, tp_r, h in GEOMETRIES:
+                for gname, sl, tp_r, h in geometries:
                     g = {"side": sg, "etype": "market", "offset_atr": 0.0, "sl_atr": sl, "tp_atr": sl * tp_r, "good_till": 1, "horizon": h}
                     t = d.transplant(s, i, g)
                     if t is None or t.state != "filled":
@@ -350,7 +355,7 @@ def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int =
                         continue
                     rows.append({"cutoff": ce, "fold": fold, "week": d.iso_week(ce), "symbol": sym, "side": side, "geom": gname,
                                  "g_sl": sl, "g_tp_r": tp_r, "g_h": float(h), "net_r": t.net_r, "days": t.days,
-                                 "y": t.net_r - base[bk], "b_r": base[bk]})
+                                 "y": t.net_r - base[bk], "b_r": base[bk], "cost_r": t.cost_r})
     return rows
 
 
@@ -387,7 +392,8 @@ def cmd_build(a: argparse.Namespace) -> int:
         if r["cutoff"] in j1 and r["packet_id"] != j1[r["cutoff"]]:
             raise SystemExit(f"judged-1 packet drift at {r['cutoff']}: {r['packet_id']} != {j1[r['cutoff']]}")
         r["judged1"] = r["cutoff"] in j1
-    acts = label_actions(mkt, res, fold_window=era_fold_window if a.era else None)
+    acts = label_actions(mkt, res, fold_window=era_fold_window if a.era else None,
+                         geometries=ERA_GEOMETRIES if a.era else GEOMETRIES)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     meta = {"mode": "era" if a.era else "dev", "test_folds": list(ERA_TEST_FOLDS if a.era else TEST_FOLDS),
@@ -692,6 +698,25 @@ def cmd_run(a: argparse.Namespace) -> int:
         res["gbdt_P+_top_gain"] = [[n, float(v)] for n, v in imp]
     except Exception as e:  # allow-silent: importance is descriptive; its absence is recorded
         res["gbdt_P+_top_gain"] = f"not computed: {e}"
+    # holding period as an axis: per horizon, each learner's policy restricted to that horizon's actions, plus the cost
+    hz = {}
+    gh = np.array([r["g_h"] for r in test_rows])
+    for h in sorted(set(gh.tolist())):
+        m = np.nonzero(gh == h)[0]
+        hrows = [test_rows[j] for j in m]
+        ent = {"actions": len(hrows), "unselected_mean_net_r": float(np.mean([r["net_r"] for r in hrows])),
+               "mean_cost_r": float(np.mean([r["cost_r"] for r in hrows])) if all("cost_r" in r for r in hrows) else None}
+        for tier in ("P", "P+"):
+            for lr in ("ridge", "logit", "gbdt"):
+                e = evaluate(hrows, tiers[tier]["_preds"][lr][te][m], alpha)
+                ent[f"{tier}/{lr}"] = {k: e[k] for k in ("n", "mean_net_r", "paired_diff_vs_random", "paired_diff_ci95", "S3_ci_corrected")}
+        best_hi = max((ent[k]["S3_ci_corrected"][1] for k in ent if "/" in k and ent[k]["S3_ci_corrected"]), default=float("nan"))
+        best_pt = max((ent[k]["paired_diff_vs_random"] for k in ent if "/" in k and ent[k]["paired_diff_vs_random"] is not None), default=float("nan"))
+        ent["horizon_verdict"] = ("no_extractable_s3" if best_hi < USEFUL_S3 else
+                                  "candidate" if best_pt > 0 else "not_excluded")
+        hz[str(int(h))] = ent
+        print(json.dumps({"horizon": int(h), "verdict": ent["horizon_verdict"], "cost_r": ent["mean_cost_r"], "best_S3": best_pt}), flush=True)
+    res["by_horizon"] = hz
     # the pre-registered decision tree
     vp, vpp, valid = res["tier_P"]["verdict"], res["tier_P+"]["verdict"], res["instrument_valid"]
     jj = same.get("judge_judged1", {})
