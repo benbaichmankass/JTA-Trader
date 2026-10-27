@@ -13,6 +13,8 @@ Design of record: [`docs/plans/claude-trading-desk-DESIGN.md`](../../../docs/pla
 
 **The wake contract a repo-less session runs is [`DESK-BRIEF.md`](DESK-BRIEF.md).** It is self-contained: input, judgement, the exact row, the schema, the write. This SKILL.md is the operating context around it, for the manager and for any lane that changes the desk. When the two disagree, fix the disagreement in the same PR; `tests/test_trading_desk_brief.py` pins the brief's embedded schema and example row to the real validator.
 
+**The short-hold lane's contract is [`SHORT-HOLD-BRIEF.md`](SHORT-HOLD-BRIEF.md)** (row `DESK-SHORT-HOLD-LANE`, design § 6.2's per-trade spawned lane): ONE session per package on a `config/short_hold.yaml` leg, started on the VM's `short-hold-wake` marker (`src/runtime/short_hold_wake.py`), deciding hold / tighten_sl / move_tp / partial_close / close every 5m bar from `scripts/ops/short_hold_packet.py`'s envelope, writing only through [`short_hold_write.py`](short_hold_write.py) (the CI validator `check_live_review_records.py`, loaded from `origin/main`), ending at `short-hold-closed` or its hard cap. Its rows are live-review rows: the VM rows watcher applies them under `MD-TRADE-DESK`.
+
 **Entry review or veto of the strategies' signals is NOT the design** (design § 0.2). The desk is a trader, not a reviewer.
 
 ---

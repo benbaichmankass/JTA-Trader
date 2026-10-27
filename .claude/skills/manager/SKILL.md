@@ -160,6 +160,43 @@ id or a bar. A comment of kind `could_not_build` is an incident, NOT a wake. The
 cannot write `desk/decisions`: tell the operator (the fallback workflow covers the hour meanwhile). The hourly
 spawner routine is retired; delete it once the first marker-spawned wake has written its row.
 
+**Short-hold wake (DESK-SHORT-HOLD-LANE, operator goal 2026-10-27: Claude manages a ≤ 1 h trade from ONE session
+that lives for the life of that trade).** When a package opens on a leg listed in `config/short_hold.yaml`, the
+live trader (`src/runtime/short_hold_wake.py`) lands its first 5-min packet envelope on `live-review/rows`
+(`comms/live_review/short_hold/<pkg>/latest.json`) and posts ONE comment on the ops-flags PR (hidden marker
+`short-hold`, kind `short-hold-wake`: `order_package_id`, `accounts`, `leg`, `symbol`, `side`, `entry`, `sl`, `tp`,
+`opened_at`, `hard_cap_at`, `commit`). It lands a fresh envelope every 5m bar and, on close, rewrites it
+`closed: true` and posts kind `short-hold-closed`. **On a `short-hold-wake` marker, `create_session` once per
+`order_package_id`:**
+
+```
+  model: <the Sonnet model id from the model table>
+  title: short-hold <order_package_id> <leg>
+  tags: ["manager:<your session id>", "short-hold-lane", "DESK-SHORT-HOLD-LANE"]
+  permission_mode: auto
+  source_url: https://github.com/benbaichmankass/Metis-Insights
+  source_revision: live-review/rows
+  outcome_branch: live-review/rows
+  clone_depth: 1
+  sparse_checkout_paths: ["comms/live_review/short_hold"]
+  prompt: |
+    You are a short-hold lane of the Claude trading desk, started by the Metis-Insights manager (which acts with the
+    operator's authority). Package: <order_package_id>. Branch: live-review/rows. Hard cap: <hard_cap_at>.
+    Read your whole contract: `git fetch -q --depth 1 origin main live-review/rows && git show
+    origin/main:.claude/skills/trading-desk/SHORT-HOLD-BRIEF.md`, and follow it EXACTLY and only it. Write rows
+    only through its short_hold_write.py command. No PR, no issue, no messages. Loop until the close or the cap,
+    then give the brief's § 7 report.
+```
+
+One marker, one lane: never spawn twice for a package. On `short-hold-closed` (or the lane's § 7 report, or the
+hard cap passing), read `get_session(<lane>)` and append ONE line to the `DESK-SHORT-HOLD-LANE` row's note (via
+`scripts/ops/checklist.py note`): package, leg, rows written by action, `usage` cost in $, median and max
+`bar_close_to_decision_s` from `comms/live_review/short_hold/latency.jsonl` on `live-review/rows`, and the close
+reason. That is DESK-10's measured $/trade. The lane's `recommended` rows are applied by the VM rows watcher under
+`MD-TRADE-DESK` as any live-review row is; nothing extra is dispatched. A dead lane is not an incident for the
+trade (it keeps its venue brackets): note it and move on. The receipt is
+`/api/diag/log_file?name=short_hold_wake_receipt` (`idle` / `tracking` with per-package states / `could_not_look`).
+
 ## Start of session
 
 0. **Run § "The operating loop"** after the steps below, and at every check-in after that.
