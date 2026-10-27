@@ -42,6 +42,7 @@ FEATURE_SETS = ("BASE", "BASE+metrics", "BASE+basis", "BASE+depth", "BASE+all")
 LEARNERS = ("ridge", "gbdt")
 N_FAMILY = 4 * len(LEARNERS) * len(FEATURE_SETS)          # holds x learners x sets = 40
 N_DECILES = 10
+METRICS_WINDOW_S = 300                                   # Binance `metrics` rows are stamped at the START of their 5-min window
 
 
 # ----------------------------------------------------------------------------- data (every series sorted by time)
@@ -63,7 +64,10 @@ def load_metrics(src: Path, sym: str) -> Optional[Dict[str, np.ndarray]]:
         for ln in _zip_csv_lines(f)[1:]:
             p = ln.split(",")
             try:
-                rows.append((_ts(p[0]), float(p[2]), float(p[4]), float(p[5]), float(p[6]), float(p[7])))
+                # LOOKAHEAD FIX (MEASURED 2026-10-27, doc 4.7): a row stamped T describes the window [T, T+5 min) -- its
+                # taker ratio correlates 0.999 with 1m-kline taker flow over [T, T+5m) and 0.09 with [T-5m, T). It is
+                # usable only from T + METRICS_WINDOW_S.
+                rows.append((_ts(p[0]) + METRICS_WINDOW_S, float(p[2]), float(p[4]), float(p[5]), float(p[6]), float(p[7])))
             except (ValueError, IndexError):
                 continue                                    # a blank field in the vendor file: the row is skipped, counted below
     if not rows:

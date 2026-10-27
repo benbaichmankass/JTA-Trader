@@ -302,3 +302,15 @@ def test_info_features_are_point_in_time():
     f = di.info_features(650, "AAA", None, s, None)
     assert f["prem_bps"] == pytest.approx(3.0)
     assert np.isnan(f["prem_chg15"])                           # 15 min before t=650 there is no value yet
+
+
+def test_metrics_rows_are_usable_only_after_their_window(tmp_path):
+    import zipfile as zf
+    from scripts.research import desk_edge_info as di
+    p = tmp_path / "AAA-metrics-2026-06-01.zip"
+    with zf.ZipFile(p, "w") as z:
+        z.writestr("AAA-metrics-2026-06-01.csv", "create_time,symbol,a,b,c,d,e,f\n2026-06-01 00:00:00,AAA,10,1,1.5,1.2,1.1,0.9\n")
+    m = di.load_metrics(tmp_path, "AAA")
+    t0 = int(datetime(2026, 6, 1, tzinfo=timezone.utc).timestamp())
+    assert int(m["t"][0]) == t0 + di.METRICS_WINDOW_S
+    assert np.isnan(di._at(m, t0 + 60, "taker")) and di._at(m, t0 + 300, "taker") == pytest.approx(0.9)
