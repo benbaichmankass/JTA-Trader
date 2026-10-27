@@ -109,7 +109,11 @@ def load_records(rec_dir: Path) -> List[Dict[str, Any]]:
 
 
 #: Accounts whose per-strategy slices + per-slice brackets are live (lane NETTED-SLICES). Empty until that config lands.
-SLICE_SUPPORT_ACCOUNTS: frozenset = frozenset()
+#: bybit_1 declares `position_model: slices` in config/accounts.yaml (NETTED-SLICES soak, operator 2026-10-15) and the runtime implements it
+#: (src/runtime/positions.py POSITION_MODEL_KEY / admit_slice; weights from config/slice_allocation.yaml). Listed here because the
+#: roster-add of ict_scalp_eth_15m / ict_scalp_xrp_15m (DESK-8-SHORT-HOLD-S0) otherwise fails this guard on the XRP and ETH leg sets.
+#: bybit_2 / bybit_portfolio do NOT declare it and stay graded. ROLLBACK: empty this set (and restore the self-test assertion below).
+SLICE_SUPPORT_ACCOUNTS: frozenset = frozenset({"bybit_1"})
 
 _ALLOCATOR_FACTORS = ("allocator_ev", "allocator_corr", "allocator_soak", "conviction")
 
@@ -211,8 +215,9 @@ def self_test() -> int:
     check("slice-supported account passes", grade(g, [], today), [])
     check("slice support is per account", len(grade({("other", "X"): ["a", "b"]}, [], today)), 1)
     SLICE_SUPPORT_ACCOUNTS = saved
-    check("slice support empty until NETTED-SLICES lands", SLICE_SUPPORT_ACCOUNTS, frozenset())
-    # grandfather (real table, real keys)
+    check("slice support lists only accounts declaring position_model: slices", SLICE_SUPPORT_ACCOUNTS, frozenset({"bybit_1"}))
+    # grandfather (real table, real keys): graded as if the account had no slice support, since the table predates it
+    SLICE_SUPPORT_ACCOUNTS = frozenset()
     gk = ("bybit_1", "XRPUSDT")
     legs = sorted(GRANDFATHERED["bybit_1/XRPUSDT"]["legs"])
     grp = {gk: legs}
@@ -226,6 +231,7 @@ def self_test() -> int:
     check("exemption is by exact leg set (third leg)", len(grade({gk: legs + ["zz"]}, [], today)), 1)
     check("exemption is by exact key (other account)", len(grade({("bybit_9", "XRPUSDT"): legs}, [], today)), 1)
     check("every grandfather has a unit and a due", all(x.get("unit") and x.get("due") for x in GRANDFATHERED.values()), True)
+    SLICE_SUPPORT_ACCOUNTS = saved
     print("self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 
