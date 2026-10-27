@@ -1,0 +1,46 @@
+{
+  "unit": "RQ-20261026-ed1c-25",
+  "run_id": "40586588454",
+  "commit_sha": "6fb2492fa8e164a766061f31aa6122e4d794d6b4",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40586588454",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "durable_goods_orders",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "SPY",
+        "--horizons",
+        "3",
+        "--primary-horizons",
+        "3",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "positive",
+        "--trade-horizon",
+        "3",
+        "--cost-symbol",
+        "SPY",
+        "--trade-t-bar",
+        "2.0",
+        "--population",
+        "durable_goods_orders releases (live feed + survey-consensus backfill, one row per release date) joined to SPY daily closes",
+        "--out",
+        "comms/research/RQ-20261026-ed1c-25/40586588454"
+      ],
+      "log": "comms/research/RQ-20261026-ed1c-25/40586588454/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.9
+    }
+  ],
+  "all_ok": true
+}
