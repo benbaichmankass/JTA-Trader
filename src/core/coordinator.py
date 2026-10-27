@@ -203,8 +203,8 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
     ``config/strategies.yaml::<leg>.account_symbols`` says which of the leg's
     ``symbols:`` each rostering account trades, so a SPY desk package never
     reaches ``bybit_1`` and a BTCUSDT one never reaches ``alpaca_paper``
-    (``symbol_exchange_routing`` below only separates IB). Read once per
-    dispatch. An unreadable config returns None and is logged: the desk leg's
+    (``symbol_exchange_routing`` below only separates IB). Cached on the
+    file's mtime. An unreadable config returns None and is logged: the desk leg's
     own builder emits nothing when that file is unreadable, so no scoped
     package exists to mis-route.
     """
