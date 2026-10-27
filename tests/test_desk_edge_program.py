@@ -194,7 +194,7 @@ def test_sequential_decision_kill_promote_fail():
 
 
 def test_packet_sel_is_top2_minus_packet_mean():
-    rows = [{"packet_id": "P", "week": "w", "score": s, "y": y} for s, y in ((3, 1.0), (2, 0.5), (1, -0.5), (0, -1.0))]
+    rows = [{"packet_id": "P", "week": "w", "cell_score": s, "y": y} for s, y in ((3, 1.0), (2, 0.5), (1, -0.5), (0, -1.0))]
     sel = dl.packet_sel(rows)
     assert sel == [{"packet_id": "P", "week": "w", "sel": pytest.approx(0.75 - 0.0)}]
     assert dl.weekly_means(sel + [{"packet_id": "Q", "week": "w", "sel": 0.25}]) == [pytest.approx(0.5)]
@@ -206,9 +206,9 @@ def test_promote_batch_cap_and_order():
 
 
 def test_top_pick_takes_one_positive_cell_per_packet():
-    rows = [{"packet_id": "P1", "cell": "A:long", "score": 0.3, "y": 1.0, "net_r": 1.1, "days": 1, "week": "w"},
-            {"packet_id": "P1", "cell": "A:short", "score": 0.1, "y": -1.0, "net_r": -1.0, "days": 1, "week": "w"},
-            {"packet_id": "P2", "cell": "B:long", "score": -0.2, "y": 2.0, "net_r": 2.0, "days": 1, "week": "w"}]
+    rows = [{"packet_id": "P1", "cell": "A:long", "cell_score": 0.3, "y": 1.0, "net_r": 1.1, "days": 1, "week": "w"},
+            {"packet_id": "P1", "cell": "A:short", "cell_score": 0.1, "y": -1.0, "net_r": -1.0, "days": 1, "week": "w"},
+            {"packet_id": "P2", "cell": "B:long", "cell_score": -0.2, "y": 2.0, "net_r": 2.0, "days": 1, "week": "w"}]
     p = dl.top_pick_rows(rows)
     assert len(p) == 1 and p[0]["diff"] == 1.0
 
@@ -224,7 +224,7 @@ def test_base_rate_emulator_scores_by_the_packets_own_rows():
     acts.append(dict(acts[0], geom="G1"))                     # other geometries are ignored
     rows, tp = dl.emulate_base_rate_rule(cut, acts, (0, 1, 1))
     assert len(rows) == 4
-    top = max(rows, key=lambda r: r["score"])
+    top = max(rows, key=lambda r: r["cell_score"])
     assert top["y"] in (1.0, 0.5) and tp[0]["diff"] in (1.0, 0.5)
 
 

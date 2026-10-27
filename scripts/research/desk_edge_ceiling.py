@@ -578,8 +578,7 @@ def verdict_for(evals: Dict[str, Dict[str, Any]], ics: Dict[str, Dict[str, Any]]
     return "inconclusive", ["no learner meets 'present', and at least one corrected S3 upper bound reaches +%.2f R" % USEFUL_S3]
 
 
-def run_tier(cutoffs: List[dict], acts: List[dict], tier: str, alpha: float, learners=("ridge", "logit", "gbdt"),
-             subsets: Optional[Dict[str, np.ndarray]] = None) -> Dict[str, Any]:
+def run_tier(cutoffs: List[dict], acts: List[dict], tier: str, alpha: float, learners=("ridge", "logit", "gbdt")) -> Dict[str, Any]:
     X, names = feature_rows(cutoffs, acts, tier)
     te = np.array([r["fold"] in TEST_FOLDS for r in acts])
     evals, ics, folds, preds = {}, {}, {}, {}

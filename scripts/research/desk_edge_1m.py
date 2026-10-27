@@ -64,6 +64,12 @@ SEED = 20261027
 EMBARGO_BARS = 600                                   # > the longest hold (480 min); desk_edge_ceiling's EMBARGO_H counts BARS
 
 
+def _only_member(z: zipfile.ZipFile) -> str:
+    """A Binance Vision monthly zip holds exactly one CSV; refuse anything else rather than pick one."""
+    (name,) = z.namelist()
+    return name
+
+
 def geometry(hold: int) -> dict:
     return {"etype": "market", "offset_atr": 0.0, "sl_atr": STOP_SQRT_ATR * math.sqrt(hold),
             "tp_atr": STOP_SQRT_ATR * math.sqrt(hold) * TP_R, "good_till": 1, "horizon": hold}
@@ -75,9 +81,11 @@ def load_1m(klines: Path, symbols) -> Tuple[Dict[str, d.Series], Dict[str, Dict[
     mkt, flow = {}, {}
     for s in symbols:
         rows = []
-        for f in sorted(glob.glob(str(klines / f"{s}-1m-*.zip"))):
+        files = sorted(glob.glob(str(klines / f"{s}-1m-*.zip")))     # every month is read; none is chosen over another
+        print(f"load_1m: {s}: reading all {len(files)} files {[Path(f).name for f in files]}", file=sys.stderr)
+        for f in files:
             z = zipfile.ZipFile(f)
-            for ln in z.read(z.namelist()[0]).decode().splitlines():
+            for ln in z.read(_only_member(z)).decode().splitlines():
                 if ln and not ln.startswith("open_time"):
                     p = ln.split(",")
                     rows.append((int(p[0]) // 1000, float(p[1]), float(p[2]), float(p[3]), float(p[4]), float(p[5]), float(p[9])))
