@@ -28,7 +28,7 @@ Builder: `scripts/research/desk_packet_modes.py`, called through the replay buil
 
 **Stated limits of C.** No equity index: a calendar-hours series would un-mask the calendar every arm withholds; the cross-asset context is the six aliased series (BTC and ETH among them, unnamed, as in A). No news: the replay's packet history has none (`news: could_not_look`). Funding is information A and B do not have (A: `could_not_look`), so C vs A changes representation AND adds funding and flow; that is the design the dispatch asked for, and the contrast cannot separate the two.
 
-**Found while building (RULE ONE):** the replay driver's docstring says its candles are Binance Vision SPOT; they are USD-M PERP (`fetch_backtest_candles.py` `_BINANCE_VISION_BASE = .../futures/um`). A spot-built mode C failed the consistency check on every packet (4–18 bps off), which is how this surfaced. Filed in § 6.
+**Found while building (RULE ONE):** the replay driver's docstring says its candles are Binance Vision SPOT; they are USD-M PERP (`fetch_backtest_candles.py` `_BINANCE_VISION_BASE = .../futures/um`). A spot-built mode C failed the consistency check on every packet (4–18 bps off), which is how this surfaced. Fixed in this PR (the driver docstring now says USD-M PERP).
 
 ### 2.2 The judge, the protocol and isolation
 

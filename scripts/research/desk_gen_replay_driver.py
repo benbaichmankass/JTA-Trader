@@ -54,7 +54,8 @@ MODES
             [--selfcheck-verdict V]    units 03 (all) and 04 (novelty = new).
 
 STATED LIMITS (printed into every verdict)
-* Candles are Binance Vision SPOT klines for the six crypto USDT symbols in the pull lists (the CPU-only
+* Candles are Binance Vision USD-M PERP klines (fetch_backtest_candles.py --source binance_vision reads
+  data/futures/um; corrected 2026-10-27, DESK-PACKET-REDESIGN: this line said SPOT) for the six crypto USDT symbols in the pull lists (the CPU-only
   runner route); the ETF / futures symbols of the pull lists are out of scope. The desk's venue is Bybit perp.
 * Funding is not in the replayed packet (`could_not_look`); the cost stack still charges it.
 * The system book is not reconstructed point in time; novelty is scorer-assigned from the committed lists,
