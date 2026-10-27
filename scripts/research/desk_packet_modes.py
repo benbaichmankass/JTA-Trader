@@ -28,6 +28,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import urllib.error
 import urllib.request
 import zipfile
 from copy import deepcopy
@@ -105,7 +106,7 @@ def _get(url: str) -> Optional[bytes]:
     try:
         with urllib.request.urlopen(url, timeout=120) as r:
             return r.read()
-    except Exception:  # noqa: BLE001 - a missing month is reported by the caller, never guessed
+    except (urllib.error.URLError, OSError):   # HTTPError (404: month not published) is a URLError; the caller names it
         return None
 
 

@@ -371,6 +371,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         s.set_defaults(fn=fn)
     sub.choices["build"].add_argument("--raw", help="desk_packet_modes.fetch_raw cache (arm C)")
     sub.choices["build"].add_argument("--batch-size", type=int, default=0)
+    # provenance: sub.choices — the argparse `score` SUBCOMMAND (its --ranks flag), not a model score field
     sub.choices["score"].add_argument("--ranks", required=True)
     c = sub.add_parser("compare")
     c.add_argument("--out", required=True)
