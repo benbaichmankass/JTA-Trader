@@ -178,8 +178,10 @@ def test_account_routing_and_descriptions():
     # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (#16548 grant) removed all four legs
     # from alpaca_paper: complete soaks whose Stage-0 record fails. The builders
     # stay wired; a re-add is a MD-PROMOTE-S0-S1 act and updates this test.
+    # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): uso_trend_1h is back on its demo floor (alpaca_paper);
+    # the three pullback cells stay off (same-symbol with a 1d leg, no slice support on this account).
     for name in _BUILDERS:
-        assert name not in acct["strategies"]
+        assert (name in acct["strategies"]) == (name == "uso_trend_1h"), name
     assert "USO" in acct["symbols"]
     # SPY/QQQ/TLT already routed; the 1h pullback cells reuse them.
     for sym in ("SPY", "QQQ", "TLT"):

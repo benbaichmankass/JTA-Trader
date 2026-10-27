@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 by path: config/strategies.yaml claude_desk execution: shadow -> live, config/mandates.yaml MD-TRADE-DESK.functions.entry_generation demo_accounts: [bybit_1] (blocked_until kept for every other account), desk intake demo-floor gate, the leg's max-hold close. OPERATOR-APPROVED: popup answer verbatim \"Yes, live on bybit_1 demo now (Recommended)\", relayed by the manager (session_01C1ooo4kqBbng7vytdG1UVs); demo-floor merge under MD-DEMO-FLOOR-BUILD (popup verbatim \"Grant as written (Recommended)\"). Bounds: the leg is rostered on bybit_1 (demo) only; intake refuses every proposal while any real-money / mirror / prop account rosters the leg (tests/test_desk_demo_flip.py); no risk cap, mode, sizing or other roster touched. Revert: git revert the merge commit, or set claude_desk execution: shadow.",
+  "why": "DESK-SHORT-HOLD-LANE item 1, the demo flip: a desk proposal on a desk-leg symbol becomes a live row (route submitted, intent_id, max_hold_min <= 60, market entry) that intake queues for the claude_desk leg on bybit_1 demo with both brackets, so the first Claude-originated short trade can open before the weekly reset."
+}
