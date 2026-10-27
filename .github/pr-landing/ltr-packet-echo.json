@@ -1,5 +1,7 @@
 {
-  "tier": 1,
-  "landing": "self",
-  "why": "Register-only: new checklist row LTR-PACKET-ECHO (MEASURED packet copy loss on live-review/rows) and an appended observation note on LTR-ROWS-SWAP-TRUNCATION. No code, config or order-path change."
+  "tier": 2,
+  "landing": "hold",
+  "why": "LTR-PACKET-ECHO: changes the live-review write path the VM watcher reads. The live trader's in-process wake poster (src/runtime/live_review_wake_post.py) and the Actions poller now commit the packet + outcome table to live-review/rows by machine before posting the wake; the reviewer brief stops the reviewer writing them; the rows mirror alerts once on a packet_sha refusal. Needs the operator's OK, then the manager's deploy (ict-git-sync pull + ict-trader-live restart). No risk, sizing or apply-policy logic changed.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: the live trader's wake poster now commits to live-review/rows; operator OK then manager deploy (landing: hold per the dispatch)."
 }
