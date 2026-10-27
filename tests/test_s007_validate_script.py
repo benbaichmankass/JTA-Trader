@@ -147,7 +147,10 @@ def test_run_checks_strategies_match_roster():
     # on IBKR ib_paper, execution: live on PAPER money); xauusd_trend_1h at
     # 2026-06-11 (M15 Phase 3 — gold 1h trend on OANDA practice, execution:
     # shadow until the creds + smoke test land).
+    # claude_desk at 2026-10-27 (DESK-17, Tier-3): the trading desk's leg, execution:
+    # shadow on bybit_1; emits only accepted desk proposals.
     assert names == {
+        "claude_desk",
         "turtle_soup", "vwap", "ict_scalp_5m", "trend_donchian", "fade_breakout_4h",
         "squeeze_breakout_4h", "fvg_range_15m", "htf_pullback_trend_2h", "trend_donchian_1h",
         "mes_trend_long_1d", "mgc_pullback_1d", "mhg_pullback_1d",

@@ -57,6 +57,9 @@ UNIT_ORDER = (("ict_scalp", "ict_scalp"), ("pullback", "htf_pullback_trend_2h"),
 # `need at least N candles` / `candles_df is required` are ValueErrors that mean "could not evaluate",
 # not "no signal": they must not read as a quiet leg.
 _CANNOT_EVALUATE = ("need at least", "candles_df is required", "undefined on the latest bar")
+#: the desk's own leg (DESK-17). Its signal IS a desk proposal -- the thing a scan packet exists to
+#: elicit -- so no candle probe can find it near or far; it is left out of the system book, by name.
+DESK_LEG = json.loads((REPO / "comms" / "schema" / "desk_decision.schema.json").read_text())["desk_leg"]
 
 Bar = Dict[str, float]
 
@@ -73,14 +76,15 @@ def unit_for(leg: str) -> Optional[str]:
 def rostered_legs(accounts_cfg: Dict[str, dict], strategies_cfg: Dict[str, Any]) -> List[dict]:
     """[{leg, symbol, timeframe, cfg}] -- one row per (leg, symbol) over every account that trades, in
     accounts.yaml order. A leg disabled in strategies.yaml (`enabled: false`) cannot fire and is left out;
-    `execution: shadow` legs stay in (they run and log). Opted-out accounts contribute nothing."""
+    `execution: shadow` legs stay in (they run and log). Opted-out accounts contribute nothing. The desk's
+    own leg (``DESK_LEG``) is left out: it has no candle signal to probe."""
     seen, out = set(), []
     for _, a in accounts_cfg.items():
         if not isinstance(a, dict) or a.get("configured") is False:
             continue
         for leg in a.get("strategies") or []:
             c = strategies_cfg.get(leg)
-            if not isinstance(c, dict) or c.get("enabled") is False:
+            if not isinstance(c, dict) or c.get("enabled") is False or leg == DESK_LEG:
                 continue
             for sym in c.get("symbols") or []:
                 if (leg, sym) not in seen:
