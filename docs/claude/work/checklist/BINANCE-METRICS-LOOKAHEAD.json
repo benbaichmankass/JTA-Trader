@@ -1,0 +1,22 @@
+{
+  "id": "BINANCE-METRICS-LOOKAHEAD",
+  "title": "Binance Vision USD-M daily metrics rows are stamped at the START of their 5-min window: a consumer that treats create_time as known-at leaks up to 5 minutes of future (fix: usable from create_time + 300 s)",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-27 by lane DESK-EDGE-PROGRAM (doc docs/research/desk-edge-program-2026-10-27.md s4.7). Population: BTCUSDT 2026-06, n 8,616 metrics rows vs Binance Vision USD-M 1m klines. The row's sum_taker_long_short_vol_ratio (log) correlates 0.999 with the 1m-kline taker buy/sell ratio over [T, T+5m) and 0.09 with [T-5m, T), 0.042 with [T-10m, T-5m), 0.09 with [T+5m, T+10m). Consequence seen: with create_time as the as-of stamp, a short-hold ceiling read +0.67 R gross excess at 5-min holds; it collapsed under a 5-bar delay; with the +300 s shift it is +0.03 R. Fix in scripts/research/desk_edge_info.py (METRICS_WINDOW_S = 300, tested in tests/test_desk_edge_program.py). REPO GREP (2026-10-27; patterns daily/metrics, sum_open_interest, toptrader, taker_long_short_vol, premiumIndexKlines, premium_index over *.py/*.sh/*.yml/*.yaml): the only other consumer is scripts/research/path_flow_join.py (fetch_oi, sum_open_interest). It is PROTECTED BY DEFAULT: --oi-lag-min defaults to 5 and its refuse_lookahead guard checks the OI source stamp <= close - lag; it would leak only if run with --oi-lag-min < 5. NOT VERIFIED: whether sum_open_interest itself (a snapshot, not a window aggregate) is stamped at window start; the 5-min lag covers either case. premiumIndexKlines: no other consumer (desk_edge_info stamps it at bar close like every kline). Done when: path_flow_join's --oi-lag-min help names this measurement and refuses values < 5 (or a test pins the default), and any new metrics consumer applies the +300 s shift.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-27T18:46:25Z",
+  "updated_by": "session_01AFoLuLyuCsXDg4fGyAGxcp",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 738
+}

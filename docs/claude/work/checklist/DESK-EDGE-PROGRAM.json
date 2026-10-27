@@ -1,0 +1,26 @@
+{
+  "id": "DESK-EDGE-PROGRAM",
+  "title": "Desk edge program: diagnose-then-iterate harness (information ceiling -> ablation/variant grid -> cheap dev loop with locked holdout -> one registered full run) to find a desk entry edge that beats the random-geometry baseline (S3)",
+  "phase": null,
+  "state": "blocked",
+  "owner": null,
+  "lane": "session_01AFoLuLyuCsXDg4fGyAGxcp",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 45,
+  "spend_usd": 7,
+  "tier": 1,
+  "prs": [
+    20672
+  ],
+  "blocked_on": [
+    "PR #20672 merge by the manager (landing: hold)"
+  ],
+  "note": "OPERATOR chat 2026-10-27 ~16:00Z verbatim: \"It's only about finding an edge that passes the baseline, and what we need to focus on is making sure that we're creating robust testing to understand what we need to do to get that edge, and not just making a few random guesses here and there, and then running like days of tests. ... we need to find a way to test that thoroughly so that we can optimize methodically.\" Popups same minute: method \"Diagnose-then-iterate harness (Recommended)\"; judged-2 RQ-20261027-e72b-01 \"Pause it (Recommended)\" (paused; now one candidate the harness ranks). Dispatched by Manager Session 2026-10-27a (session_01AFoLuJi1vLTnYv9LbP6539). Ceiling $25 total incl. at most $15 judge pilot after the information-ceiling result. Deliverables: docs/research/desk-edge-program-2026-10-27.md, scripts/research/desk_edge_*.py + tests, info-ceiling result, pre-registered dev-batch queue units, OPERATING-PLAN s2 desk soak ruling edit. One PR, landing: hold. 2026-10-27 ~17:00Z lane: ceiling DEV branch inconclusive (P/P+ S3 CIs +-0.2 at 35 weeks; instrument valid); V1 pilot SCREEN_FAIL, judge = linear base-rate rule, emulator excludes it on 4,535 packets; operator redirect (bar S3 >= +0.25, short holds, hold rule) recorded in doc s6 with lever/cost/data tables; units fe57-01 (V1, done locally), fe57-02 (1m ceiling, blocked on build), fe57-03 (fade tail, blocked on merge). Spend ~$7 API-equivalent on plan. PR: claude/desk-edge-program, landing hold. 2026-10-27 ~18:15Z lane CLOSE-OUT: all deliverables on PR #20672 (head after this commit). MEASURED results: 1h-packet ceiling inconclusive on DEV (35 wk) and era (190 wk), best P+ GBDT S3 +0.10; V1 judge = linear base-rate rule (R2 0.90-1.00), emulator excludes it; fade-tail fe57-03 FAIL; 1m short holds: no gross timing (S3 was cost selection); hold rule does not win (no cap change); Bybit fees measured all-taker 11 bps RT (row COST-STACK-BYBIT-TAKER-FEE). Spend ~$7 API-equivalent on plan of $45. Lane work finished; row blocked only on the manager merging #20672. FIRST NEXT: decide what new information to acquire (order book / liquidations / cross-market) before any judge spend: no measured lever reaches +0.25. 2026-10-27 ~18:45Z (manager 18:09Z task): new-information short-hold ceiling (Binance metrics/premium/bookDepth + BTC cross-market; VM-S3 + gross excess primary; doc 4.7): registered verdict NONE, instrument valid. Best gross excess +0.072 R (5 min), below +0.10; decays with delay; S1 -0.19..-0.72. A first run read 'information' from a LOOKAHEAD (Binance metrics rows describe [T,T+5m), measured corr 0.999); the delay check caught it, it was fixed and re-run, and the invalid record is kept. Untested and its cost: aggTrades / Bybit ticks (free, about a day of runner build), liquidations (no free history), full order book (paid or forward-recorded). Ranked next: stop public-data timing research on these six perps; structural levers (universe, measured maker fills, event-driven) or close the question with an aggTrades runner job.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-27T18:44:35Z",
+  "updated_by": "session_01AFoLuLyuCsXDg4fGyAGxcp",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 735
+}

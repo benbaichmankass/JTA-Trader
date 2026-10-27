@@ -3198,7 +3198,7 @@ nodes:
   value:
     usd_at_stake_per_month: 300
     confidence: 0.3
-  needs_authoring: 'AUTHORED 2026-10-27 (research-ops 0849) as hand unit RQ-20261027-d789-01 (2023-09-24..2025-09-23, sweep A tp 6 vs T3 tp 3, delta_r 5.0, 3 of 4 folds); this node only follows its verdict. PASS -> ONE prop_ev_grid unit on those trades + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, next = P1-Q2-solprop-derive. Original ask: PROP-EXIT-UNITS (1): SOL at TP 3R on a window NOT used in E65 (E65 exploratory +11.14R/59, 3/4
+  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261027-d789-01 read FAIL -- configuration closed: SOL prop TP 3R vs 6R on 2023-09-24..2025-09-23; family stays open; next test = P1-Q2-solprop-derive. AUTHORED 2026-10-27 (research-ops 0849) as hand unit RQ-20261027-d789-01 (2023-09-24..2025-09-23, sweep A tp 6 vs T3 tp 3, delta_r 5.0, 3 of 4 folds); this node only follows its verdict. PASS -> ONE prop_ev_grid unit on those trades + a Tier-3 note on P5-PROP-PROGRAMME; FAIL -> configuration closed, next = P1-Q2-solprop-derive. Original ask: PROP-EXIT-UNITS (1): SOL at TP 3R on a window NOT used in E65 (E65 exploratory +11.14R/59, 3/4
     folds), scored with prop_ev_sim on the operator''s B6 bar for tradeify_1 / velotrade_1 / breakout_2. Find E65''s
     window in docs/research/prop-exit-evidence-2026-09-24.json first; the instrument is exit_lever_ablation (tp_r=3.0
     arm, prop cost flags) for the trades + prop_ev_grid for the EV. Superseded if P1-Q2-solprop-derive lands a K*.'
@@ -3209,9 +3209,7 @@ nodes:
   value:
     usd_at_stake_per_month: 250
     confidence: 0.3
-  needs_authoring: 'PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5
-    d, swap 3.3 bps/day) scored with prop_ev_sim on the operator''s B6 bar. The harness lever is --timeout-bars
-    on backtest_trend.py (an exit_lever_ablation arm), then prop_ev_grid.'
+  needs_authoring: 'CHECKED 2026-10-27 (daily authoring lane): NOT authored, because the sol_prop half already ran as RQ-20261018-023 (bar-count time-close, graded FAIL) and the eth_prop half is vacuous by construction (trend_donchian_eth_prop declares stale_exit_bars 12, so a 72/120-bar time-close never binds; exit_lever_ablation.py header). Remaining ask: a prop_ev_grid read of RQ-20261018-023 only if its FAIL was on R rather than on survival -- read that record first. Original ask: PROP-EXIT-UNITS (2): a GTD time-close rung for the prop Donchian legs (p90 time-in-market ~5 d, swap 3.3 bps/day) scored with prop_ev_sim on the operator''s B6 bar.'
 - id: P1-Q3-eth4h-measured-move-w05-confirm
   goal: G1
   roadmap:
@@ -16057,3 +16055,51 @@ nodes:
   - unit: RQ-20261024-09a6-02
     verdict: pass
   needs_authoring: 'VARIANT of the failed AI-ATM rung B1 (RQ-20261024-09a6-03: 6 legs, 2558 trades, 50926 bar states; clause 1 failed at tau 0.5 and 0.7, 1 of 6 folds better than the open-R bucket quantile Q0, tau-0.5 coverage 0.617 against a nominal 0.5; clause 2 was decisively negative too: the pulled-in TP earned 51.2 R against 409.6 R as traded, mean diff -0.140 R/trade CI [-0.188, -0.092], 0.036 vs 0.107 R per capital-day, and pulled the TP on 99% of trades). DIAGNOSIS: the EDGE failed on price state, not the design: n is large, the reference is a plain open-R bucket quantile, and the loss is both decisive and in the same direction in every fold. A2 (RQ-20261024-09a6-02) asks whether flow adds exit information beyond price. If A2 PASSES, author ONE unit that re-runs scripts/research/remaining_move_head.py with the flow block joined by scripts/research/path_flow_join.py (same legs, taus, clause 1 thresholds and clause 2 thresholds as 09a6-03; flow columns on >= 80% of states or the leg is dropped and named). If A2 FAILS or is INDETERMINATE the B1 head is not rebuilt on price alone. Not retired: one price-only test is a first test.'
+- id: P1-ATM-ed1c07-sl-confirm
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.2
+  after:
+  - unit: RQ-20261026-ed1c-07
+    verdict: pass
+  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-07 read PASS on trend_donchian (BTC 1h) -- arm SL beat A: net 87.61 vs 72.82 R (+14.79, bar 0.02 x 458 = 9.16), 6 of 6 folds >= A, maxDD 21.92 vs 24.04; arm DI did not (-1.46 R). Chosen from 2 arms (denominator 2). A PASS on one window is a discovery: author ONE confirmation unit on a disjoint partition (a window or symbol cell exit_lever_ablation did not see; same arm SL, same statistic and bar), then the live-producer check on the leg monitor and a Tier-3 declare PROPOSAL with the mirror in the same PR (never a config edit).'
+- id: P1-ATM-ed1c10-c75-confirm
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.2
+  after:
+  - unit: RQ-20261026-ed1c-10
+    verdict: pass
+  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-10 read PASS on trend_donchian (BTC 1h) -- arm C75 beat A: net 85.57 vs 72.82 R (+12.75, bar 9.16), 5 of 6 folds >= A and > the unconditional tight-trail control UT in 5 of 6, maxDD 21.22 vs 24.04; E25 and E35 failed the 5-of-6 fold bar (3 of 6). UT alone was far worse (26.35 R), so the gate, not an early action, carries it. Chosen from 3 arms + 1 control (denominator 3). Author ONE confirmation unit on a disjoint partition (arm C75, same bar), then the live-producer check and a Tier-3 declare PROPOSAL with the mirror. Note ed1c-07 SL and ed1c-10 C75 share leg and baseline: run any combination only as its own single-vs-combo unit.'
+- id: P1-ATM-ed1c17-be-confirm
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.2
+  after:
+  - unit: RQ-20261026-ed1c-17
+    verdict: pass
+  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-17 read PASS on trend_donchian_eth (ETH 1h) -- all three break-even arms beat A (net 54.13 R, n 742): BE075 80.26 (+26.13, 4 of 6 folds >= A), BE15 71.51 (+17.39, 5 of 6), BE10 69.34 (+15.22, 5 of 6); bar 0.02 x 742 = 14.84; maxDD <= 27.25 vs 30.85. Best by net R is BE075 but only 4 of 6 folds; the other two arms carry 5 of 6, so the monotone gain is the finding, not one arm. Chosen from 3 arms (denominator 3). Author ONE confirmation unit on a disjoint partition (all three arms, same bar), then the live-producer check (does the leg monitor expose a break-even floor?) and a Tier-3 declare PROPOSAL with the mirror. Sibling ed1c-18/-19 (BE on sol / BTC) read FAIL: the lever is leg-specific so far.'
+- id: P1-ATM-sol4h-b-overlap
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.2
+  after:
+  - unit: RQ-20261026-1b57-08
+    verdict: pass
+  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-1b57-08 read PASS (rule: pooled n >= 88, net > 0, >= 4 of 6 folds, >= half of powered cells) -- sol_4h as declared on basket B (AVAX/NEAR/ATOM/FIL/TRX/ETC): pooled n 1375, net +111.77 R, 4 of 6 folds positive, 3 of 6 powered cells pass; the last fold is -24.6 R and the pooled t one-sided p is 0.10, so it is a discovery with a weak recent fold, not a confirmation. Per the rule, next = same-book correlation/overlap read of the passing CELLS against the live legs, then the prop EV/survival gate; a re-entry case under MD-PROMOTE-S0-S1 needs its own evidence record (never a roster act). Author the overlap-read unit (cells named in the result''s grade block) and ONE disjoint-window confirmation.'

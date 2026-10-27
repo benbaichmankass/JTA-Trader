@@ -1,0 +1,98 @@
+id: RQ-20261027-fe57-02
+title: 'Desk edge program, levers 1-3 at short timeframes: a token-free 1-minute-bar information ceiling (5-60 min holds, the 60-min-entry hold rule vs a hard 60-min cap, taker vs maker cost) on Binance USD-M perp 1m bars + aggTrades flow; does any hold reach S3 >= +0.25 R AND S1 > 0 on the DEV window?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  On the DEV window (2025-11-01..2026-09-15), at cutoffs every 60 minutes (amended from 15 before the full run, for compute; only a 303-cutoff smoke test had run), for six symbols x {long, short} x brackets of 5, 15, 30 and 60-minute holds (hard cap) and the hold rule
+  "enter within 60 minutes, may run to H" for H in {120, 240, 480} minutes, with features from 1m perp bars and signed trade flow (aggTrades) at or before the cutoff, do the
+  walk-forward learners of desk_edge_ceiling (ridge, logit, GBDT; the same policy and family correction) select entries whose S3 is >= +0.25 R with the 95% CI lower bound > 0
+  AND whose S1 is > 0 under (a) the repo cost stack and (b) maker entry with taker exit, for at least one hold?
+why_this_matters: >-
+  Operator 2026-10-27 ~16:40Z (relayed by the manager, verbatim in docs/research/desk-edge-program-2026-10-27.md section 6): a bigger edge; "maybe it needs to be looking at shorter
+  time frames ... trades that last ... up to half an hour"; "if the trade started within 60 minutes, then it can continue going". The live claude_desk leg is capped at 60-minute
+  holds (DESK-18E), while every 1h-bar test so far (judged-1, the ceilings) is about 48-bar holds. The cost table (section 6.3) says a taker 30-minute hold pays about 0.29 R of a
+  1-sd bracket and maker both sides 0.08 R: this unit finds out whether ANY extractable timing exists at those holds before a single judge token is spent on them.
+  A change to the live cap is Tier 3 and goes to the operator with this record.
+power:
+  expected_n: 4000
+  min_detectable_effect: 0.25
+  effect_units: R
+  sd: 1.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.80
+  basis: >-
+    About 7,700 hourly cutoffs over the DEV window x 84 actions = about 650,000; test folds 2-4 hold about 5,700 cutoffs; the desk-like policy (top 34% of cutoffs, <= 2 symbols) picks about 3,900 per hold.
+    sd 1.6 R INFERRED (judged-1). The constraint is weeks, not picks: 35 test weeks give a weekly-cluster CI of about +-0.2 R (MEASURED on the 1h DEV ceiling, section 4.1), which is
+    exactly why the registered bar is +0.25 R (section 6.1): the DEV window resolves +0.25 on its own and cannot resolve less.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Historical public data only (Binance Vision USD-M 1m klines and aggTrades); nothing accrues. The build is the blocker, not the data.
+decision_rule:
+  id: RULE-RQ20261027-FE57-02-SHORT-HOLD-CEILING
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: >-
+    Per hold (5, 15, 30, 60 min hard cap; 60-min entry window with H = 120, 240, 480 min) and per cost scenario (repo stack 10.5 bps round trip; maker entry + taker exit 9 bps;
+    the scenarios of scripts/research/desk_edge_levers.py SCENARIOS): the walk-forward policy S1 and S3 of the best of the three learners, the driver's cluster_stats on rows
+    {week, net_r, days, diff}, the random-entry baseline drawn from the same symbol, side, hold and driver fold. Family: holds (7) x learners (3) x cost scenarios (2) = 42; corrected
+    CI at two-sided alpha 0.05/42. Controls as in desk_edge_ceiling (planted signal must read present, shuffled labels must not).
+  rule: >-
+    For each hold: CANDIDATE IF the best learner's S3 >= +0.25 R AND its corrected CI lower bound > 0 AND S1 > 0 under the named cost scenario; NO_EDGE IF every learner's corrected S3
+    upper bound < +0.25 R; INCONCLUSIVE otherwise. The HOLD-RULE comparison: the 60-min-entry rule beats the hard 60-min cap only if its S1 exceeds the hard cap's by >= +0.10 R with the
+    paired weekly CI excluding 0 at the same corrected level. A CANDIDATE hold registers a holdout unit (2025-05-01..2025-10-25, token-free) and only then a judge variant at that
+    hold; NO_EDGE at every hold closes short-hold timing on these features and points the program at new information (order book, liquidations: DESK-27-LIVE-FLOW). If either control
+    fails the run is INSTRUMENT_INVALID. Numbers fixed before the run.
+  what_it_does_not_do: >-
+    Token-free research. It places nothing and changes no cap, packet, brief or config; the 60-minute live cap is changed only by a Tier-3 decision the manager takes to the operator
+    with a holdout record behind it.
+blocked_on:
+- kind: work_item
+  ref: DESK-EDGE-PROGRAM
+  what: >-
+    BUILT on PR #20672: scripts/research/desk_edge_1m.py (1m d.Series through the driver's own transplant/random_baseline with d.SEC = 60; features from 1m perp
+    klines incl. taker-buy volume; aggTrades not yet used). The runner needs the `build` step first (1m klines for 2025-10..2026-09 from Binance Vision into
+    --klines, then `desk_edge_1m.py build --klines DIR --out /tmp/desk_edge_1m`); run.command is the scoring step.
+  clears_when: >-
+    scripts/research/desk_edge_1m.py and its tests are on main and the runner can run its build step. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: the same bound as RQ-20261026-e535-03.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 240
+  basis: 'estimate: 1m klines for six symbols over 11 months is about 2.9M bars; 30,000 cutoffs x 12 cells x 7 holds = 2.5M simulated actions plus their random baselines.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_edge_1m.py
+  - run
+  - --out
+  - /tmp/desk_edge_1m
+  - --evidence
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261027-fe57-02
+  timeout_minutes: 360
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-fe57-01
+- RQ-20261027-fe57-03
+- scripts/research/desk_edge_ceiling.py
+- scripts/research/desk_edge_levers.py
+- docs/research/desk-edge-program-2026-10-27.md
+last_dispatched_at: null
