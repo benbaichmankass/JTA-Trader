@@ -253,7 +253,8 @@ Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd
 ## 7. Budget
 
 - **Spent in this lane (API-equivalent on the plan; no API credits):** ceiling, emulator, levers and cost table **$0** (CPU); V1 pilot about **$7** (13 subagent runs x ~172k tokens, 3 of them rejected re-runs). Lane ceiling $25.
-- **Next (all token-free):** `fe57-02` 1m-bar ceiling (build about a day of lane work; runner CPU), `fe57-03` fade test (CPU, about 1 h on a runner: it rebuilds the era packets). Judge spend resumes only for a variant built on information a token-free test found: then dev $5-10 per variant, holdout $15-30, full run $100-300.
+- **Done in this lane, all token-free:** `fe57-02` 1m-bar ceiling plus the delay and mechanism checks, and `fe57-03` fade test (lane container CPU). After merge their units re-run on runners as the registered landings (cpu_long).
+- **Next:** no judge spend is justified on any lever measured here (§ 6.4). The remaining question is **which new information to acquire**: order book and liquidations (DESK-27-LIVE-FLOW), cross-market, Bybit trade dumps for sub-minute flow. That is the manager's call. Any candidate it produces enters at § 5 (dev, then holdout, then full run): dev $5-10 per variant, holdout $15-30, full run $100-300.
 
 ## 8. What was not verified
 
