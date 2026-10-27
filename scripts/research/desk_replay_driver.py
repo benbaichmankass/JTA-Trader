@@ -801,7 +801,7 @@ def selfcheck(legs: Dict[str, Leg], population: List[str], seed: int) -> Dict[st
     complete = replayed == REGISTERED_N_TRADES
     if not complete:
         verdict = "indeterminate"
-        note = ("fewer than the registered 370 trades are replayable (candles for a leg window could not be "
+        note = (f"fewer than the registered {REGISTERED_N_TRADES} trades are replayable (candles for a leg window could not be "
                 "fetched): " + json.dumps(missing) + ". bf56-02/-03 stay blocked.")
     elif a_ok and b_ok and c_ok:
         verdict, note = "pass", "all three registered clauses hold"
@@ -941,6 +941,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         s.add_argument("--fetch", action="store_true", help="top up candles from Binance Vision (the queue runner)")
         s.add_argument("--legs", help="comma list; default = re-parse the real-money 2h/4h population")
         s.add_argument("--seed", type=int, default=DEFAULT_SEED)
+        # DESK-8b: a different registered population (the two 15m ict_scalp legs) registers its OWN trade count and
+        # n floor in its queue unit; unset = the bf56 registered 370 / 126, byte-identical to before.
+        s.add_argument("--registered-n", type=int, help="the unit's registered replayable-trade count (default 370)")
+        s.add_argument("--n-min", type=int, help="the unit's registered pass floor for n_obs (default 126)")
         s.set_defaults(fn=fn)
         if name == "score":
             s.add_argument("--role", required=True, choices=list(ROLE_ACTIONS))
@@ -949,6 +953,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             s.add_argument("--selfcheck-verdict")
             s.add_argument("--model-cutoff", help="the judge model's knowledge cutoff date, YYYY-MM-DD")
     a = ap.parse_args(argv)
+    global REGISTERED_N_TRADES, N_MIN
+    if a.registered_n is not None:
+        REGISTERED_N_TRADES = a.registered_n
+    if a.n_min is not None:
+        N_MIN = a.n_min
     return a.fn(a)
 
 
