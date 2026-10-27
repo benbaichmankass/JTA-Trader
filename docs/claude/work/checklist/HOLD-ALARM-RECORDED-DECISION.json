@@ -1,0 +1,21 @@
+{
+  "id": "HOLD-ALARM-RECORDED-DECISION",
+  "title": "Lane landing files must carry recorded_decision for mandate/operator-decided Tier-2/3 merges (JC-CA-04 paged 10x on legit merges)",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OBSERVED 2026-10-27 ~18:00Z: 10 open send-ping issues (#20577..#20687) from pr-landing-hold-merge-alarm (JC-CA-04), one per Tier-3 hold PR merged under MD-DEMO-FLOOR-BUILD or a recorded operator popup (#20551 #20560 #20561 #20585 #20589 #20592 #20599 #20610 #20662 #20668). The alarm already ACCEPTS a resolving .github/pr-landing/<slug>.json recorded_decision {kind: operator_decision|standing_authorization, ref: <row|pipeline id|repo path>} (scripts/ops/pr_landing_hold_alarm.py, operator 2026-10-09). The lanes simply did not include it. Closed the 10 issues unsent with a comment naming the authority. FIX: add one line to the manager SKILL 'Required dispatch block' (and .github/pr-landing/README.md): a Tier-2/3 hold PR merged under a mandate or recorded operator decision carries recorded_decision with ref 'config/mandates.yaml <MANDATE-ID>' or the checklist row id. Manager-scope-guard: the manager cannot edit the skill, so this needs a lane. CLOSES WHEN: the next mandate merge produces no JC-CA-04 page.",
+  "updated_at": "2026-10-27T18:00:56Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 737
+}

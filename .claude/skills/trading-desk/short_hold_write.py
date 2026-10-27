@@ -28,8 +28,8 @@ Short-hold rules (on top of the guard):
   reasoning and confidence attached"*); ``hold`` is a real, graded call, never a silent default.
 
 ``--dry-run`` (the recommend-only proof): the row goes to ``DRYRUN_REVIEWS`` instead of ``reviews.jsonl``. The VM
-rows watcher reads ONLY ``reviews.jsonl`` on ``live-review/rows`` (``src/runtime/live_review_rows_watch.py``), so
-a dry-run row is never applied; run the dry run on its own branch as well (``--branch``).
+rows watcher reads ONLY ``reviews.jsonl`` and ``comms/live_review/rows/*.json`` on ``live-review/rows``
+(``src/runtime/live_review_rows_watch.py``), so a dry-run row is never applied; run the dry run on its own branch as well (``--branch``).
 
 Exit: 0 written (or ``--check`` clean) / 1 refused / 2 could_not_look|could_not_write / 3 nothing_due|closed.
 """

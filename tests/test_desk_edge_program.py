@@ -194,7 +194,7 @@ def test_sequential_decision_kill_promote_fail():
 
 
 def test_packet_sel_is_top2_minus_packet_mean():
-    rows = [{"packet_id": "P", "week": "w", "score": s, "y": y} for s, y in ((3, 1.0), (2, 0.5), (1, -0.5), (0, -1.0))]
+    rows = [{"packet_id": "P", "week": "w", "cell_score": s, "y": y} for s, y in ((3, 1.0), (2, 0.5), (1, -0.5), (0, -1.0))]
     sel = dl.packet_sel(rows)
     assert sel == [{"packet_id": "P", "week": "w", "sel": pytest.approx(0.75 - 0.0)}]
     assert dl.weekly_means(sel + [{"packet_id": "Q", "week": "w", "sel": 0.25}]) == [pytest.approx(0.5)]
@@ -206,9 +206,9 @@ def test_promote_batch_cap_and_order():
 
 
 def test_top_pick_takes_one_positive_cell_per_packet():
-    rows = [{"packet_id": "P1", "cell": "A:long", "score": 0.3, "y": 1.0, "net_r": 1.1, "days": 1, "week": "w"},
-            {"packet_id": "P1", "cell": "A:short", "score": 0.1, "y": -1.0, "net_r": -1.0, "days": 1, "week": "w"},
-            {"packet_id": "P2", "cell": "B:long", "score": -0.2, "y": 2.0, "net_r": 2.0, "days": 1, "week": "w"}]
+    rows = [{"packet_id": "P1", "cell": "A:long", "cell_score": 0.3, "y": 1.0, "net_r": 1.1, "days": 1, "week": "w"},
+            {"packet_id": "P1", "cell": "A:short", "cell_score": 0.1, "y": -1.0, "net_r": -1.0, "days": 1, "week": "w"},
+            {"packet_id": "P2", "cell": "B:long", "cell_score": -0.2, "y": 2.0, "net_r": 2.0, "days": 1, "week": "w"}]
     p = dl.top_pick_rows(rows)
     assert len(p) == 1 and p[0]["diff"] == 1.0
 
@@ -224,7 +224,7 @@ def test_base_rate_emulator_scores_by_the_packets_own_rows():
     acts.append(dict(acts[0], geom="G1"))                     # other geometries are ignored
     rows, tp = dl.emulate_base_rate_rule(cut, acts, (0, 1, 1))
     assert len(rows) == 4
-    top = max(rows, key=lambda r: r["score"])
+    top = max(rows, key=lambda r: r["cell_score"])
     assert top["y"] in (1.0, 0.5) and tp[0]["diff"] in (1.0, 0.5)
 
 
@@ -237,3 +237,80 @@ def test_fade_takes_the_opposite_side_of_the_top_picks():
     opp = {(r["cutoff"], r["symbol"], r["side"]): r["y"] for r in rows}
     want = sorted(opp[(rows[j]["cutoff"], rows[j]["symbol"], "short" if rows[j]["side"] == "long" else "long")] for j in picks)
     assert sorted(r["diff"] for r in fr) == pytest.approx(want)
+
+
+def test_1m_geometry_scales_with_root_hold_and_maker_is_cheaper():
+    from scripts.research import desk_edge_1m as m1
+    g5, g480 = m1.geometry(5), m1.geometry(480)
+    assert g480["sl_atr"] / g5["sl_atr"] == pytest.approx((480 / 5) ** 0.5)
+    assert g5["tp_atr"] == pytest.approx(g5["sl_atr"] * m1.TP_R) and g5["horizon"] == 5
+    assert m1.EMBARGO_BARS > max(m1.HOLDS_MIN)
+    assert sum(m1.MAKER) < sum(m1.TAKER)
+    # one synthetic trade: maker re-costing keeps the gross and charges less
+    old = d.SEC
+    try:
+        d.SEC = m1.BAR_SEC
+        n = 80
+        t = np.array([T0 + 60 * i for i in range(n)], dtype=np.int64)
+        c = 100 + np.concatenate([np.zeros(30), np.linspace(0, 2, n - 30)])
+        s = d.Series("BTCUSDT", t, c, c + 0.05, c - 0.05, c, np.full(n, 0.1), m1.TAKER[0], m1.TAKER[1], m1.FUND_BPS)
+        tr = d.transplant(s, 29, dict(m1.geometry(15), side=1.0))
+        assert tr.state == "filled"
+        mk = m1.maker_net(tr, s)
+        assert tr.gross_r - tr.cost_r == pytest.approx(tr.net_r) and mk > tr.net_r
+    finally:
+        d.SEC = old
+
+
+def test_1m_action_features_side_signed():
+    from scripts.research import desk_edge_1m as m1
+    ex = {"BTCUSDT": {"ret5": 1.0, "ret60": -2.0, "atr_pct": 3.0}, "ETHUSDT": {"ret5": 0.5, "ret60": 0.0, "atr_pct": 2.0}}
+    lo = m1.action_features(ex, "ETHUSDT", "long", T0, 30)
+    sh = m1.action_features(ex, "ETHUSDT", "short", T0, 30)
+    assert lo["ret5"] == 0.5 and sh["ret5"] == -0.5 and lo["atr_pct"] == sh["atr_pct"] == 2.0
+    assert lo["btc_ret60"] == -2.0 and sh["btc_ret60"] == 2.0 and lo["hold"] == 30.0
+
+
+def test_vm_labels_center_each_volatility_cell():
+    from scripts.research import desk_edge_info as di
+    ex, acts = {}, []
+    rng = np.random.default_rng(5)
+    for c in range(200):
+        atr = 1.0 + (c % 10)
+        ex[c] = {"AAA": {"atr_pct": atr}}
+        for side in ("long", "short"):
+            net = 0.1 * atr + rng.normal()           # higher volatility -> higher net (the cost effect)
+            acts.append({"cutoff": c, "symbol": "AAA", "side": side, "hold": 5, "fold": 2, "net_r": net, "cost_r": 0.5 / atr})
+    di.vm_labels(acts, ex)
+    by = {}
+    for r in acts:
+        by.setdefault((r["side"], r["vol_dec"]), []).append(r)
+    for rows in by.values():
+        assert abs(np.mean([r["y_vm"] for r in rows])) < 1e-9 and abs(np.mean([r["g_vm"] for r in rows])) < 1e-9
+    # a pure volatility selector earns ~0 VM-S3 (it earned S3 under the fold-mean baseline)
+    top = [r for r in acts if ex[r["cutoff"]]["AAA"]["atr_pct"] >= 9]
+    assert abs(np.mean([r["y_vm"] for r in top])) < 1e-9
+
+
+def test_info_features_are_point_in_time():
+    from scripts.research import desk_edge_info as di
+    t = np.array([0, 300, 600, 900], dtype=np.int64)
+    s = {"t": t, "prem": np.array([0.0001, 0.0002, 0.0003, 0.0009])}
+    assert di._at(s, 650, "prem") == 0.0003                  # the value at 900 is in the future
+    assert di._at(s, 650, "prem", 600) == 0.0001
+    assert np.isnan(di._at(s, -1, "prem"))
+    f = di.info_features(650, None, s, None)
+    assert f["prem_bps"] == pytest.approx(3.0)
+    assert np.isnan(f["prem_chg15"])                           # 15 min before t=650 there is no value yet
+
+
+def test_metrics_rows_are_usable_only_after_their_window(tmp_path):
+    import zipfile as zf
+    from scripts.research import desk_edge_info as di
+    p = tmp_path / "AAA-metrics-2026-06-01.zip"
+    with zf.ZipFile(p, "w") as z:
+        z.writestr("AAA-metrics-2026-06-01.csv", "create_time,symbol,a,b,c,d,e,f\n2026-06-01 00:00:00,AAA,10,1,1.5,1.2,1.1,0.9\n")
+    m = di.load_metrics(tmp_path, "AAA")
+    t0 = int(datetime(2026, 6, 1, tzinfo=timezone.utc).timestamp())
+    assert int(m["t"][0]) == t0 + di.METRICS_WINDOW_S
+    assert np.isnan(di._at(m, t0 + 60, "taker")) and di._at(m, t0 + 300, "taker") == pytest.approx(0.9)

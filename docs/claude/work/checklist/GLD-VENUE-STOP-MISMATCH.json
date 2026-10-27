@@ -1,0 +1,21 @@
+{
+  "id": "GLD-VENUE-STOP-MISMATCH",
+  "title": "gld_pullback_1h on alpaca_paper: venue SL 416.09 differs from package SL 414.54 \u2014 root-cause why the venue stop and the package disagree",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OBSERVED: live-review passes since 2026-10-26 23:15Z flag_mechanics on gld_pullback_1h (alpaca_paper, paper only): venue stop 416.09 vs package SL 414.54 (live-review lane 16:15Z, PR #20666, reports it still unfiled, cause unverified). PI-20261026-2U1HUCXC-0002 covers only the due-gate visibility gap (telemetry-less packages are not counted), NOT why the stops diverge. QUESTION: which side moved, and why: a venue-side trail/amend not written back to order_packages, a rounding/tick offset, a reconciler re-place at a different level, or a manual edit. CHECK: alpaca order history for the GLD stop leg (replace events, timestamps) vs order_packages / exit-management amend logs for the package. RISK: the same mechanism on a real-money or prop leg would mean the risk we model is not the risk at the venue. DETECTOR: live_review mechanics verdict mismatch on any account (already fires); CLOSES WHEN: the cause is named with evidence and either fixed (package and venue agree after the next amend) or documented as a deliberate offset with a test.",
+  "updated_at": "2026-10-27T17:10:04Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 736
+}

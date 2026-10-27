@@ -313,3 +313,23 @@ def test_the_writers_verdict_equals_the_guards_on_external_items(tmp_path):
         row, p = _ext_row()
         m(row)
         assert (dw.row_problems(row, p, SCHEMA) == []) == (_guard(tmp_path / str(i), row, p) == []), (i, dw.row_problems(row, p, SCHEMA))
+
+
+def test_a_proposal_on_a_closed_market_is_refused_and_an_open_one_is_not():
+    """DESK-PAPER-ACCOUNTS: an ETF / CME micro is not proposable while its market is closed at the cutoff
+    (the packet's universe[].market, scripts/ops/desk_scan_packet.py::market_state)."""
+    p = _packet()
+    for u in p["universe"]:
+        if u["symbol"] == "ETHUSDT":
+            u["market"] = {"asset_class": "us_equity", "open": False}
+    p["features_at_review"] = cdr.project_scan_features(p)
+    assert cdr.packet_problems(p, json.loads(cdr.PACKET_SCHEMA.read_text())) == []
+    ref = {"packet_id": p["meta"]["packet_id"], "packet_sha": cdr.packet_sha(p)}
+    with pytest.raises(dw.Refused, match="CLOSED at the packet's cutoff"):
+        dw.compile_row(copy.deepcopy(PROPOSE), ref, p, SCHEMA, now=NOW, skill_sha=None)
+    for u in p["universe"]:
+        if u["symbol"] == "ETHUSDT":
+            u["market"]["open"] = True
+    p["features_at_review"] = cdr.project_scan_features(p)
+    ref = {"packet_id": p["meta"]["packet_id"], "packet_sha": cdr.packet_sha(p)}
+    assert dw.compile_row(copy.deepcopy(PROPOSE), ref, p, SCHEMA, now=NOW, skill_sha=None)["action"] == "propose_entry"

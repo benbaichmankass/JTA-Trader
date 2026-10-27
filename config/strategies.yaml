@@ -3190,7 +3190,7 @@ strategies:
                              # execution: shadow (was shadow 2026-10-26..27, DESK-17).
     decision_bar: closed     # the builder decides from the proposal queue, not a forming bar: no catch-up
     confidence: 0.5          # the package confidence (RiskManager's scalar only sizes DOWN from the account basis)
-    symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]  # 2026-10-27 DESK-WIDEN (Tier-3, bybit_1 DEMO only, manager
+    symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT, SPY, QQQ, IWM, GLD, TLT, MES, MGC, MHG]  # 2026-10-27 DESK-WIDEN (Tier-3, bybit_1 DEMO only, manager
                              # dispatch under MD-DEMO-FLOOR-BUILD; operator vision: the desk scans all markets). Was [AVAXUSDT]:
                              # the one bybit_1 symbol no other leg trades. The same-symbol-allocation-guard concern is met by
                              # bybit_1's slice support (SLICE_SUPPORT_ACCOUNTS) PLUS claude_desk's DECLARED slice
@@ -3198,6 +3198,22 @@ strategies:
                              # never blocked or shrunk by a strategy leg's open slice and never dilutes theirs. symbols: is
                              # venue-agnostic, which is why the leg stays rostered on bybit_1 ONLY (row DESK-17B).
                              # ROLLBACK: symbols back to [AVAXUSDT] (and drop the declared_slices block).
+                             # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper only; operator verbatim, chat ~15:58Z: "I do
+                             # want to have the desk live on the other paper accounts as well, so Alpaca and IB."):
+                             # symbols: is now the UNION of three venues; account_symbols below says which of them each
+                             # rostering account trades (src/config/symbol_sets.py::leg_symbols; the coordinator refuses
+                             # a desk package on any other account x symbol as leg_account_scope). Each venue's set is
+                             # instruments that account ALREADY pulls and has an instrument profile for.
+    account_symbols:
+      bybit_1: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]  # the DESK-WIDEN six (declared slice)
+      alpaca_paper: [SPY, QQQ, IWM, GLD, TLT]  # broad US index, small caps, gold, long rates: the most liquid
+                                               # ETFs on its pull list, five distinct risk factors
+      ib_paper: [MES, MGC, MHG]                # every IB-profiled instrument (config/instruments.yaml); IB's ETF
+                                               # rows route to alpaca, so the IB desk trades micro futures only
+                             # alpaca_paper / ib_paper have NO slice support: a desk entry and a strategy leg never
+                             # share a symbol's position there (claude_desk.exclusive_hold_refusal, journalled).
+                             # ROLLBACK: drop alpaca_paper / ib_paper here and from their accounts.yaml rosters,
+                             # and symbols: back to the six Bybit perps.
     tp_source: desk_proposal # the TP is each proposal's own predictive level (tp.level + tp.basis + tp.p_hit,
                              # schema-required, desk-records-guard-checked) — never a tp_r / class default
     shadow_model_ids: []

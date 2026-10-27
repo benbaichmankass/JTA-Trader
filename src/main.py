@@ -823,6 +823,7 @@ def _resolve_tick_symbols(settings: dict) -> list:
                 mode=UNION,
                 strategies_cfg=strategies_cfg,
                 exchange=getattr(acct, "exchange", None),
+                account_id=getattr(acct, "name", None),
             )
             for s in syms:
                 s = str(s).strip()

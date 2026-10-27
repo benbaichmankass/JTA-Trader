@@ -139,6 +139,17 @@ def _w(root: Path, rel: str, data, as_yaml=False):
     p.write_text(yaml.safe_dump(data) if as_yaml else json.dumps(data), encoding="utf-8")
 
 
+@pytest.fixture(autouse=True)
+def _legs_are_retired_unless_testing_the_demo_floor_gate(request, monkeypatch):
+    """DEMO-FLOOR RULE (operator 2026-10-27, "Demote stops at the floor"): an S1 -> OFF edit on a demo-floor account is refused
+    for any leg that is not retired by record (R-DEMO-FLOOR). The tests below exercise the cut / cost-fidelity CLAUSE machinery,
+    which still applies to a RETIRED leg's removal from its floor roster, so they run with the leg retired; the gate itself is
+    tested by the `*_demo_floor_*` tests, which are the only ones that see the real `_retired_by_record`."""
+    if "demo_floor" in request.node.name:
+        return
+    monkeypatch.setattr(mr, "_retired_by_record", lambda root, leg: True)
+
+
 @pytest.fixture
 def repo(tmp_path):
     def build(mandates=None, accounts=None, records=None, r3=..., firings=(), mirror=None,
@@ -1379,3 +1390,27 @@ def test_real_mandates_require_holdout_on_both_promotions_and_not_on_demotion():
         assert by_id[mid]["bar"]["holdout_min_n"] == 25, mid
     # Demotion stays on live net-of-cost (operator, 2026-10-16).
     assert "holdout" not in json.dumps(by_id["MD-DEMOTE-S2-S1"])
+
+
+# ── DEMO-FLOOR RULE: demotion stops at the floor ───────────────────────────────
+@pytest.mark.parametrize("mandate", ["MD-DEMOTE-S1-OFF", CUT_ID])
+def test_s1_off_on_a_demo_floor_account_is_refused_for_a_leg_that_is_not_retired_demo_floor(repo, mandate):
+    """The same fixture that FIRES with the leg retired (above) REFUSES with R-DEMO-FLOOR when it is not."""
+    root = repo(mandates=_cut_mandates() if mandate == CUT_ID else None, r3=_r3({LEG: "divergent"}))
+    res = mr.resolve(LEG, "S1", "OFF", "bybit_1", root=root, mandate_id=mandate)
+    _refused(res, "R-DEMO-FLOOR")
+
+
+def test_a_leg_retired_by_record_may_leave_the_floor_demo_floor(repo, monkeypatch):
+    root = repo(r3=_r3({LEG: "divergent"}))
+    import yaml as _y
+    strat = _y.safe_load((root / mr.STRATEGIES_REL).read_text())
+    strat["strategies"][LEG] = dict(LEG_CFG, enabled=False)
+    (root / mr.STRATEGIES_REL).write_text(_y.safe_dump(strat))
+    assert mr._retired_by_record(root, LEG) is True
+    fired = mr.resolve(LEG, "S1", "OFF", "bybit_1", root=root)
+    assert fired["verdict"] == "FIRE", fired
+
+
+def test_unreadable_strategies_is_not_a_retirement_demo_floor(tmp_path):
+    assert mr._retired_by_record(tmp_path, LEG) is False

@@ -50,7 +50,7 @@ Three windows, fixed now and never moved (registered in `scripts/research/desk_e
 
 **Feature tiers.**
 - **P (packet only)** — what the judge saw: per-symbol atr %, `htf_trend`, swing distances (side-signed as room ahead / behind), session; the base-rate rows (mean, sd, p10, p50, p90 at h4/h12/h48 for the action's side, the opposite side's means, the cost); cross-sectional summaries of those (rank of the symbol's base rate among the six, number trending, relative atr); the action's side and geometry.
-- **P+ (packet + missing information)** — P plus, all at or before the cutoff: returns over 1/4/12/24/72/168/336 bars in ATR (side-signed), range position over 24/168/720 bars, volatility percentile and ATR change, 24h volume z-score and taker-buy share over 1/4/24 bars (Binance Vision spot), BTC returns and the six-symbol cross-sectional ranks, hour and weekday, symbol identity, and perp funding (Binance Vision USD-M settlements, last and 3-day mean, side-signed). Each group is also added to P alone (ablation), so a P+ result names the information that carries it.
+- **P+ (packet + missing information)** — P plus, all at or before the cutoff: returns over 1/4/12/24/72/168/336 bars in ATR (side-signed), range position over 24/168/720 bars, volatility percentile and ATR change, 24h volume z-score and taker-buy share over 1/4/24 bars (Binance Vision USD-M perp klines), BTC returns and the six-symbol cross-sectional ranks, hour and weekday, symbol identity, and perp funding (Binance Vision USD-M settlements, last and 3-day mean, side-signed). Each group is also added to P alone (ablation), so a P+ result names the information that carries it.
 
 **Learners.** Ridge regression on `y`; logistic regression on `y > 0`; LightGBM regressor (300 trees, 15 leaves, min 400 per leaf). Fixed hyper-parameters, no tuning on test folds.
 
@@ -71,13 +71,13 @@ Three windows, fixed now and never moved (registered in `scripts/research/desk_e
 
 **Decision branch (registered).** `instrument_invalid` if a control fails; else `bottleneck_judge` if P is present and the judge's S3 CI lower bound is not > 0; `bottleneck_packet_information` if P is not present and P+ is; `information_and_judge_both_find_edge` if P is present and so is the judge; `no_edge_in_reachable_information` if P and P+ are both absent; `inconclusive` otherwise.
 
-**What it cannot say.** It bounds what THESE learners extract with THESE features at THESE geometries; an `absent` is not a proof that no edge exists at other horizons, other entry types (limit/stop), or with data outside the list. It uses spot candles (the desk's venue is the Bybit perp), as the driver does.
+**What it cannot say.** It bounds what THESE learners extract with THESE features at THESE geometries; an `absent` is not a proof that no edge exists at other horizons, other entry types (limit/stop), or with data outside the list. It uses Binance USD-M perp candles, as the driver does (the desk's venue is the Bybit perp). *[Label corrected 2026-10-27 ~18:10Z after registration: this sentence originally said "spot"; the source was always `data/futures/um` (MEASURED, § 4.1). No rule changed.]*
 
 ## 4. The information-ceiling result
 
 ### 4.1 DEV window (the § 3 run) — registered verdict: **inconclusive / inconclusive, instrument valid**
 
-Evidence record: `comms/research/desk_edge/ceiling-dev/ceiling.json` (`desk_edge_ceiling.py build` then `run`; candles Binance Vision spot 1h fetched 2026-10-27 through the driver's `fetch_market`, funding Binance Vision USD-M). **Population:** 4,535 packets (3,816 two-hourly + 1,498 judged-1 cutoffs, 779 shared; every judged-1 packet id reproduced), 380,940 filled actions (4,535 x 84: every action filled), 284,508 of them in test folds 2-4 = 35 ISO weeks. All numbers MEASURED there unless marked.
+Evidence record: `comms/research/desk_edge/ceiling-dev/ceiling.json` (`desk_edge_ceiling.py build` then `run`; candles Binance Vision **USD-M perp** 1h (`fetch_backtest_candles.py` reads `data/futures/um`; MEASURED: identical to perp 1m klines resampled, 720 of 720 hours of 2026-06, 0.0 bps) fetched 2026-10-27 through the driver's `fetch_market`, funding Binance Vision USD-M). **Population:** 4,535 packets (3,816 two-hourly + 1,498 judged-1 cutoffs, 779 shared; every judged-1 packet id reproduced), 380,940 filled actions (4,535 x 84: every action filled), 284,508 of them in test folds 2-4 = 35 ISO weeks. All numbers MEASURED there unless marked.
 
 | | ridge | logit | GBDT |
 |---|---|---|---|
@@ -103,6 +103,87 @@ Same harness, features, learners, policy, controls and verdict definitions as §
 - **Family:** both ceiling runs, 12 configurations: corrected alpha **0.05 / 12**. **`present` needs S3 > 0 in >= 5 of the 8 test folds** (2 of 3, scaled). `absent` and `inconclusive` as in § 3, at +0.10 R.
 - **Holding period is an axis (amendment, still before the run; operator popup ~16:10Z relayed by the manager: *"Yes, holding period is a lever (Recommended)"*).** The live `claude_desk` leg is capped at a 60-minute hold (DESK-18E, PR #20662); judged-1 held 48 bars. The era action set adds three short holds on the 1h grid: `H1a` (stop 0.5 ATR, 1.0 R, **1 bar = 60 min**), `H1b` (1.0 ATR, 1.0 R, 1 bar), `H4` (0.75 ATR, 1.5 R, 4 bars), beside the 12/24/48/96-bar geometries. Every action records its cost in R. **Per horizon** the run reports each learner's policy restricted to that horizon, the unselected mean net R and the mean cost in R, and labels the horizon `no_extractable_s3` (every corrected S3 upper bound < +0.10 R: no judge spend on it), `candidate` (best point S3 > 0 and not excluded) or `not_excluded`. A 1-bar hold on 1h bars resolves the stop/target order inside one bar by the driver's stop-first rule; a 5-minute-bar replay is the finer instrument and is not built here.
 - **Population limits, stated before the run:** six symbols only (the driver's registered universe); 2021-2023 includes the 2021 bubble and the 2022 crash, so a regime-specific learner can win one era and lose another; that is what the fold clause is for.
+
+### 4.4 EXTENDED ERA (diagnostic only, per § 6.1) — registered verdict **inconclusive / inconclusive, instrument valid**
+
+`comms/research/desk_edge/ceiling-era/ceiling.json`. Population: 9,111 packets (7,986 four-hourly over 2021-01-15..2023-10-25 and the DEV window, plus 1,498 judged-1 cutoffs), 1,092,687 filled actions over 10 geometries (incl. the 1-bar and 4-bar holds), test folds 3-10, family 0.05/12.
+- Policy S3 (corrected CI): P ridge +0.015 [-0.11, +0.15], logit +0.014 [-0.06, +0.08], GBDT +0.051 [-0.13, +0.25]; **P+ GBDT +0.104 [-0.06, +0.28]** (positive in 8 of 8 test folds, +0.02 to +0.15), ridge -0.013, logit -0.022. Controls: planted present, shuffled not. **No tier is `present`; none is `absent`.**
+- Per horizon (1h bars, best learner): 1 bar S3 +0.041 [+0.01, +0.07], 4 bars +0.035, 12 bars +0.032 (`no_extractable_s3` against the run's +0.10 line); 24 / 48 / 96 bars +0.069 / +0.085 / +0.119, CIs spanning 0. Mean cost in R falls from 0.197 (1 bar) to 0.084 (96 bars); unselected S1 from -0.235 to -0.059.
+- **Read under the operator's bar (+0.25 R): nothing in the 1h-bar packet world comes near it, over 190 weeks or 35.** The P+ GBDT's +0.10 is consistent across eras and is the largest 1h-bar signal measured, at less than half the bar.
+
+### 4.5 The 1-MINUTE short-hold ceiling (`RQ-20261027-fe57-02`) — registered verdict **inconclusive; S1 is negative at every hold** (the large S3 is a cost-selection artifact: § 4.6)
+
+`comms/research/desk_edge/ceiling-1m/verdict.json` (`scripts/research/desk_edge_1m.py`). Population: Binance USD-M perp 1m bars, DEV window, 7,632 hourly cutoffs x 6 symbols x 2 sides x 7 holds = 641,088 actions; test folds 2-4; 3,892 policy picks per hold per learner; family 0.05/42. Controls: planted signal `candidate` at 15-480 min (at 5 min even a planted signal cannot pay a 0.97 R cost), shuffled labels never `candidate`: **instrument valid**.
+
+| hold | mean cost R (taker) | unselected S1 taker | best: GBDT taker S3 [corrected CI] | its S1 | GBDT maker-entry S3 | its S1 | verdict |
+|---|---|---|---|---|---|---|---|
+| 5 min | 0.97 | -0.97 | **+0.609 [+0.44, +0.94]** | -0.47 | +0.448 | -0.34 | inconclusive (S1 < 0) |
+| 15 min | 0.56 | -0.55 | **+0.366 [+0.27, +0.52]** | -0.26 | +0.261 | -0.19 | inconclusive (S1 < 0) |
+| 30 min | 0.40 | -0.39 | +0.209 [+0.13, +0.34] | -0.21 | +0.149 | -0.15 | inconclusive |
+| 60 min | 0.28 | -0.28 | +0.157 [+0.10, +0.26] | -0.14 | +0.124 | -0.10 | inconclusive |
+| 120 min | 0.20 | -0.20 | +0.124 [+0.07, +0.20] | -0.09 | +0.083 | -0.07 | no_edge (< +0.25) |
+| 240 min | 0.14 | -0.14 | +0.074 [+0.03, +0.13] | -0.09 | +0.046 | -0.07 | no_edge |
+| 480 min | 0.10 | -0.10 | +0.053 [+0.00, +0.11] | -0.05 | +0.046 | -0.04 | no_edge |
+
+Ridge shows the same shape at about half the size (+0.34 at 5 min, +0.19 at 15 min).
+- ~~This is the first information the program has found.~~ **RETRACTED by § 4.6:** the +0.37 to +0.61 R S3 is not timing. It is the learners choosing moments where the fixed fee is a small share of the bracket (high volatility), which a fold-average random baseline does not match.
+- **Cost removes all of it.** The measured taker round trip costs more than the edge at every hold. With maker entry and taker exit (9 bps) S1 is still negative. With maker on BOTH sides (4 bps; INFERRED: S1_taker + cost_taker x (1 - 4/12.3), assuming every maker order fills at the modelled price) the estimate is about **+0.19 R at 5 min, +0.11 at 15 min, +0.06 at 30 min**. That is an upper bound: an SL is a stop-market order (taker), and maker fills select against you.
+- **Hold rule:** running to 120 / 240 / 480 minutes raises S1 over the hard 60-minute cap by +0.04 / +0.06 / +0.09 R (corrected CIs exclude 0), by paying cost over a longer move. It never reaches the registered +0.10 gain (`wins: false` everywhere), and S1 stays negative at every H. **The hold rule does not win; the live cap stays as is on this evidence.**
+
+### 4.6 Robustness of the short-hold S3 — registered here BEFORE it runs (post-hoc diagnostic, not a new verdict)
+
+An S3 of +0.6 R at 5 minutes on 1m bars could be bar microstructure (the last 1m bar's close and taker flow predicting the next open), which a desk acting seconds to minutes later cannot capture. **Test:** rebuild holds 5/15/30/60 with the entry DELAYED by 1 bar and by 5 bars after the feature bar (`desk_edge_1m.py build --delay 1|5 --holds 5,15,30,60`), and re-run unchanged. **Rule:** if at delay 1 the GBDT taker S3 at 5 and 15 minutes keeps at least half its undelayed value with the corrected CI lower bound > 0, the information is treated as **real at a 1-minute latency**. Otherwise it is **bar microstructure, not tradable** at our latency, and § 6.4 rank 2 says so. Delay 5 prices a 5-minute decision latency (the live desk's realistic one).
+
+**Result (MEASURED; `comms/research/desk_edge/ceiling-1m/delay1/`, `delay5/`, `vol-rule-mechanism.json`):**
+- **By the letter of the rule above the S3 survives:** delay 1 GBDT taker S3 +0.618 [+0.46, +0.90] at 5 min and +0.366 [+0.27, +0.52] at 15 min (ratios 1.01 and 1.00); delay 5 +0.633 / +0.363. **But it does not decay at all with a 5-minute delay, and real order-flow information would.** That pointed at a non-timing source, so two mechanism checks were run (post-hoc, stated as such):
+- **A model-free rule reproduces half of it.** Pick the highest ATR% moments (no direction information at all): S3 **+0.285 [+0.24, +0.33]** at 5 min, +0.137 at 15 min, +0.099 at 30 min, +0.063 at 60 min, -0.005 at 240 min. The GROSS R of those picks is +0.016 / -0.008 / -0.009 / -0.000. All of it is cost: the picks pay 0.33 R of cost against the 0.97 R average at 5 min.
+- **The learners' picks have no gross edge either** (delay 1 re-score with gross reported): gross R of the picks at 5 / 15 / 30 / 60 min is **+0.005 / +0.022 / +0.017 / +0.005** (GBDT), +0.035 / +0.024 / +0.018 / +0.013 (ridge), against +0.008 / +0.002 / +0.003 / +0.002 unselected. Their taker cost is 0.48 / 0.29 / 0.21 / 0.15 R against 0.95 / 0.54 / 0.38 / 0.27 R unselected. **S3 = cost avoided + favourable baseline cells; timing contributes at most about +0.01 to +0.03 R.**
+- **Verdict of the diagnostic: NO TIMING EDGE at 5-60 minutes on 1m bars and taker flow.** § 6.4 rank 2 is closed for these features. Maker execution cannot rescue a gross edge of about +0.02 R.
+- **Methodological finding (for every future registration): the e535 S3 is biased at short holds.** Its random baseline is the fold mean, not matched on volatility, so any selector that prefers high-volatility moments earns S3 from cost alone when cost is a large share of the bracket. At 48-bar holds cost is about 0.11 R, so the bias is small, but not zero (the era's 1-bar S3 of +0.04 is the same size as this effect). **Every new unit should report GROSS excess R (picks' gross minus the random entries' gross) beside S3,** or draw the baseline from the same volatility decile. The registered e535 statistic is not changed here.
+
+### 4.7 NEW INFORMATION at short holds — registered here BEFORE it runs (manager 18:09Z: token-free; no data bought)
+
+**Question.** Does information the 1m bars lack carry GROSS timing at 5-60 minute holds that survives a 1-5 bar decision delay: positioning (open interest, top-trader and taker long/short ratios), the perp-spot basis (premium index), order-book depth imbalance, and cross-market leads (BTC's basis, OI and flow for every symbol)?
+
+**Data (all free Binance Vision USD-M, DEV window, six symbols):** `metrics` (5-minute OI, OI value, top-trader account and position long/short ratios, taker long/short volume ratio), `premiumIndexKlines` 1m, `bookDepth` (notional within +-1/2/3/4/5% of mid, a snapshot about every 33 s). Every value is taken at or before the feature bar.
+**Not available free:** liquidations (Binance `liquidationSnapshot` 404 in 2023 and 2026; Bybit's public site has only trades, klines and index data); bookTicker (404 for 2024-06 and 2025-06). **aggTrades** (tick trades with size) is available but is about 4-20 MB per symbol-day, roughly 30-60 GB for the DEV window: priced here, not downloaded.
+
+**Labels:** the delay-1 and delay-5 builds of § 4.6 (holds 5/15/30/60 min, measured 12.3 bps taker). New in this run, the two statistics of row `DESK-S3-VOL-MATCHED-BASELINE`, used as PRIMARY:
+- **VM-S3** = net R minus the mean net R of every action in the same (symbol, side, hold, driver fold, ATR%-decile of the symbol) cell. The hourly grid is the random-time population, so this is a random-entry baseline matched on volatility.
+- **Gross excess** = gross R (before cost) minus the same cell's mean gross R.
+- Learners train on VM-S3. S1 and the e535 S3 are reported beside them.
+
+**Feature sets:** BASE (the § 4.5 1m features), BASE+metrics, BASE+basis, BASE+depth, BASE+all (which adds BTC's basis / OI / depth for every symbol). Learners: ridge and GBDT. Family: 4 holds x 2 learners x 5 sets = **40**, two-sided alpha 0.05/40. Controls: planted signal (on BASE+all) must reach INFORMATION; shuffled labels must not.
+
+**Rule (per hold and set, at delay 1; delay 5 reported):**
+- **INFORMATION** if the policy picks' gross excess >= **+0.10 R** with corrected CI lower bound > 0.
+- **USEFUL** if also VM-S3 >= **+0.25 R** with corrected CI lower bound > 0 AND S1 > 0 at 12.3 bps.
+- **NONE** otherwise.
+
+A USEFUL set registers a holdout unit (token-free); an INFORMATION-only set is a lead whose next step is execution cost; NONE everywhere points the program at paid or heavy data (aggTrades, Bybit trades, liquidations) or a different universe.
+
+**First run (INVALID: lookahead, caught by the registered delay check).** At delay 1 the `metrics` sets read **"information"** at every hold (gross excess +0.67 R at 5 min, +0.43 at 15, +0.31 at 30, +0.24 at 60). At delay 5 they collapsed to +0.04-0.06. A real signal does not vanish between a 1- and a 5-minute delay; a timestamp leak does. MEASURED (BTCUSDT, 2026-06, n 8,616 rows): **a Binance `metrics` row stamped T describes [T, T+5 min)**. Its taker long/short ratio correlates **0.999** with the 1m-kline taker ratio over [T, T+5m) and **0.09** with [T-5m, T). The harness treated it as known at T, so the features read up to 5 minutes of the future. Fixed: a row is usable only from T + 300 s (`METRICS_WINDOW_S`, tested). The invalid record is kept as `comms/research/desk_edge/info-short-hold/verdict-LOOKAHEAD-INVALID.json`. **Not verified the same way:** `bookDepth` snapshot timestamps (treated as instantaneous) and `premiumIndexKlines` (stamped at bar close, like every kline here). **Lesson for every later unit:** a vendor's timestamp convention is a claim to test against an independent series before a feature uses it.
+
+**Corrected run (metrics usable from T + 5 min) — registered verdict NONE, instrument valid.** `comms/research/desk_edge/info-short-hold/verdict.json`. Population: the delay-1 and delay-5 1m builds (holds 5/15/30/60 min, 366,336 actions each, test folds 2-4); every one of 45,792 (cutoff, symbol) cells had metrics, basis and depth values point in time. Controls: planted signal `information` at every hold, shuffled labels `none`.
+
+| hold | best set / learner (delay 1) | gross excess [corrected CI] | VM-S3 | S1 (12.3 bps) | delay 5: best gross excess |
+|---|---|---|---|---|---|
+| 5 min | BASE+all / ridge | +0.072 [+0.011, +0.122] | +0.085 | -0.72 | +0.046 [+0.004, +0.085] |
+| 15 min | BASE / ridge | +0.065 [+0.014, +0.115] | +0.018 | -0.46 | +0.030 [-0.018, +0.074] |
+| 30 min | BASE+all / ridge | +0.063 [+0.006, +0.115] | +0.068 | -0.27 | +0.033 [-0.012, +0.076] |
+| 60 min | BASE+all / ridge | +0.045 [-0.006, +0.095] | +0.049 | -0.19 | +0.023 [-0.022, +0.070] |
+
+- **No set reaches the +0.10 R gross-excess bar at any hold**, so nothing is INFORMATION and nothing is USEFUL. The new information adds at most +0.01 to +0.03 R over BASE (e.g. 30 min: BASE ridge +0.039, BASE+all +0.063). It decays by about half with a 5-minute delay.
+- **S1 is far below zero** (-0.19 to -0.72 R). Trained on the volatility-matched label, the learners no longer pick low-cost moments, so they pay the full measured cost.
+- **What remains untested, and its cost:**
+  - **aggTrades** (trade-size and large-print flow): about 30-60 GB for six symbols over DEV, so a runner job with streaming reduction, not a session. Free data, a build of about a day.
+  - **Bybit tick trades** (the desk's own venue): about 70 MB a day for BTC alone, the same build.
+  - **Liquidations:** no free history found (Binance snapshots discontinued; Bybit publishes none). A paid vendor would be the operator's decision.
+  - **Order-book depth at finer than ±1%:** Binance `bookDepth` stops at 1% bands; a full book needs a paid feed or our own recorder going forward.
+- **Ranked next step (DECIDED by the § 2 tree, nothing bought):**
+  1. **Stop testing timing on these six perps at 5 min to 48 h with public bar, positioning, basis and depth data.** Across every window, horizon and information set the best gross timing is about +0.07 R or less, against a +0.25 R bar.
+  2. If the program continues, the remaining levers are structural rather than informational: a different universe (less efficient venues or assets), maker-only execution with a measured fill model (needs our own maker fills), or event-driven entries (scheduled macro / unlock events: the macro-research skill).
+  3. aggTrades / Bybit trades is the last free information set; at the gross effects measured here, a positive result there is unlikely (INFERRED). It is worth a runner job only if the manager wants the question closed rather than left open.
 
 ### 4.3 The dev-loop pilot: V1 (the current judge) — registered verdict **SCREEN_FAIL**, and why
 
@@ -169,7 +250,7 @@ Relayed by the manager, verbatim: *"we need a bigger edge, like an edge that nee
 
 | source | what | reachable | note |
 |---|---|---|---|
-| Binance Vision USD-M perp klines | 1m, monthly and daily files | yes (fetched 2026-06..09, six symbols, 24 files, 39 MB) | perp, not spot: closer to the desk's venue than the driver's spot candles |
+| Binance Vision USD-M perp klines | 1m, monthly and daily files | yes (fetched 2026-06..09, six symbols, 24 files, 39 MB) | perp, the same source as the driver's 1h candles (Binance USD-M; the desk trades the Bybit perp) |
 | Binance Vision spot klines | **1s**, monthly | yes (HTTP 206 on 2026-08) | sub-minute bars without building them |
 | Binance Vision USD-M aggTrades | every aggregated trade, daily | yes (2026-09-01) | builds 30s bars, signed order flow, trade imbalance |
 | Binance Vision USD-M bookTicker | top of book | **2024-03 yes, 2026-09 no (404)** | historical spread only for older periods |
@@ -202,8 +283,8 @@ Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd
 | rank | lever | measured on DEV | estimated added edge | P(real, judgement) | next step (token-free first) |
 |---|---|---|---|---|---|
 | 1 | **Execution cost: maker / limit entries** | not an S3 lever (the baseline pays the same cost); S1 gain = cost saved vs the MEASURED taker cost: +0.17 R at 30 min, +0.12 R at 60 min, +0.07 R at 4 h, +0.02 R at 48 h (§ 6.3); 0 maker fills so far | +0.1 to +0.2 R **S1** at <= 60-min holds, after adverse selection about half of it | 0.7 | limit-entry geometries in the action set (the driver already simulates `limit` fills); a 1m-bar version for <= 60 min |
-| 2 | **Shorter bars and holds (1m bars, 5-30 min holds) + event / flow windows** | not yet measured; cost table above says taker S3 must be +0.3 to +0.7 R before S1 is positive | unknown; the one place a large edge is plausible (order-flow imbalance, liquidation cascades: DESK-27-LIVE-FLOW) | 0.2 | build the 1m-bar ceiling on Binance perp 1m + aggTrades flow (`RQ-20261027-fe57-02`) |
-| 3 | **Hold rule: enter within 60 min, run to H** | partly measurable now: the era run's per-horizon table covers 1, 4, 12, 24, 48, 96 bars on the same decisions (§ 4.4 when it lands); on DEV unselected S1 rises from -0.15 R (12 bars) to -0.055 R (96 bars) because cost falls with the hold | at the 1h bar it changes S1 by +0.05 to +0.10 R via cost; S3 about 0 at every hold so far | 0.5 (on S1), 0.1 (on S3) | 1m-bar ceiling with H in {60, 120, 240, 480} min vs a hard 60-min cap (`fe57-02`) |
+| 2 | **Shorter bars and holds (1m bars, 5-60 min holds) + flow** | **MEASURED (`fe57-02`, § 4.5-4.6): no timing edge.** Gross R of model picks +0.005 to +0.035 at 5-60 min; the large S3 is cost selection | about +0.02 R gross: too small for any cost | - | closed for 1m bars + taker flow; order book / liquidations (DESK-27-LIVE-FLOW) are the untested remainder |
+| 3 | **Hold rule: enter within 60 min, run to H** | **MEASURED (`fe57-02`):** S1 gain over the hard 60-min cap +0.04 / +0.06 / +0.09 R at H = 120 / 240 / 480 (CIs exclude 0), below the registered +0.10, S1 still negative at every H | cost only | - | **does not win**; the live cap is not changed on this evidence |
 | 4 | **Session / event window** | top 5% picks in 07-13 UTC: S3 +0.153 [-0.15, +0.49]; other windows -0.05 to -0.09 | +0.15 if real | 0.15 (one of 4 windows, post-hoc) | test on the era folds and the 1m ceiling, registered |
 | 5 | **Fade the model's most confident tail** | DEV (found by looking): top 1% S3 -0.244, top 0.2% **-0.400 [-0.59, -0.27]** (n 570). **Registered test `RQ-20261027-fe57-03` on era folds 3-6: FAIL** — faded top 1% S3 +0.045 [-0.10, +0.19] corrected (n 4,761), faded top 0.2% -0.029 [-0.21, +0.27] (n 953); `comms/research/desk_edge/fade-era/verdict.json` | **closed** | - | none |
 | 6 | **Asymmetric geometry (target vs stop)** | S3 about 0 at every geometry (-0.013 to +0.007 unselected); unselected S1 best at 2 ATR / 3 R / 96 bars (-0.055) | via cost only (S1) | 0.6 on S1, ~0 on S3 | none beyond rank 3 |
@@ -211,16 +292,17 @@ Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd
 | 8 | **Direction-neutral pairs (best long + best short)** | all: -0.006 [-0.05, +0.04]; top 5%: -0.074 [-0.22, +0.10] | ~0 | 0.05 | none |
 | 9 | **Judge levers (brief, Sonnet vs Opus, self-consistency)** | V1 is a linear base-rate rule; the rule is excluded (§ 4.3) | only on information the base rates lack | 0.05 until rank 2 or 5 finds information | none until then |
 
-**Reading of the table (DECIDED by the § 2 tree):** no lever measured so far gives S3 near +0.25 on DEV. Of the two that could, rank 5 FAILED its registered test and rank 2 is unmeasured; the largest MEASURED lever (rank 1) moves S1, not S3. **No judge spend until a token-free lever clears the bar.**
+**Reading of the table (DECIDED by the § 2 tree):** no lever measured so far gives S3 near +0.25 on DEV. Of the two that could, rank 5 FAILED its registered test and rank 2 has no gross edge (§ 4.6); the largest MEASURED lever (rank 1) moves S1, not S3. **No judge spend until a token-free lever clears the bar.**
 
 ## 7. Budget
 
 - **Spent in this lane (API-equivalent on the plan; no API credits):** ceiling, emulator, levers and cost table **$0** (CPU); V1 pilot about **$7** (13 subagent runs x ~172k tokens, 3 of them rejected re-runs). Lane ceiling $25.
-- **Next (all token-free):** `fe57-02` 1m-bar ceiling (build about a day of lane work; runner CPU), `fe57-03` fade test (CPU, about 1 h on a runner: it rebuilds the era packets). Judge spend resumes only for a variant built on information a token-free test found: then dev $5-10 per variant, holdout $15-30, full run $100-300.
+- **Done in this lane, all token-free:** `fe57-02` 1m-bar ceiling plus the delay and mechanism checks, and `fe57-03` fade test (lane container CPU). After merge their units re-run on runners as the registered landings (cpu_long).
+- **Next:** no judge spend is justified on any lever measured here (§ 6.4). The remaining question is **which new information to acquire**: order book and liquidations (DESK-27-LIVE-FLOW), cross-market, Bybit trade dumps for sub-minute flow. That is the manager's call. Any candidate it produces enters at § 5 (dev, then holdout, then full run): dev $5-10 per variant, holdout $15-30, full run $100-300.
 
 ## 8. What was not verified
 
-- Fill probability and adverse selection of maker entries (no maker fill exists to measure); the maker fee is Bybit's published 0.02% per side, not measured.
+- Fill probability and adverse selection of maker entries (no maker fill exists to measure); the maker fee is Bybit's published 0.02% per side, not measured. <!-- population-ok: a published fee schedule, not a sample statistic -->
 - That the extended-era DEV folds equal the driver's folds to the bar (the era fold windows are rebuilt from the driver's arithmetic with a ceiling at the second).
 - The judge's behaviour beyond Sonnet: the base-rate-rule finding is for the Sonnet subagent setup only.
 - Whether V1's subagents, which had file tools, are representative of a tool-less API judge: their transcripts show no foreign reads, but the 3 rejected batches show the setup invites shortcuts.

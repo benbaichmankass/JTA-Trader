@@ -36,12 +36,20 @@ SCENARIOS = {"repo stack (7.5 fee + 3 slip)": 10.5, "MEASURED Bybit taker (11.0 
 FUNDING_BPS_PER_8H = 1.0
 
 
+def _only_member(z: zipfile.ZipFile) -> str:
+    """A Binance Vision monthly zip holds exactly one CSV; refuse anything else rather than pick one."""
+    (name,) = z.namelist()
+    return name
+
+
 def cost_table(klines: Path) -> list:
     closes = collections.defaultdict(list)
-    for f in sorted(glob.glob(str(klines / "*-1m-*.zip"))):
+    files = sorted(glob.glob(str(klines / "*-1m-*.zip")))      # every file is read; none is chosen over another
+    print(f"cost_table: reading all {len(files)} 1m kline files under {klines}: {[Path(f).name for f in files]}", file=sys.stderr)
+    for f in files:
         s = Path(f).name.split("-")[0]
         z = zipfile.ZipFile(f)
-        txt = z.read(z.namelist()[0]).decode().splitlines()
+        txt = z.read(_only_member(z)).decode().splitlines()
         closes[s] += [float(ln.split(",")[4]) for ln in txt if ln and not ln.startswith("open_time")]
     rows = []
     for h in HOLDS_MIN:

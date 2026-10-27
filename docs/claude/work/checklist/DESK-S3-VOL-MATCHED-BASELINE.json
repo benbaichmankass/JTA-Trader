@@ -1,0 +1,22 @@
+{
+  "id": "DESK-S3-VOL-MATCHED-BASELINE",
+  "title": "S3 (e535 random-entry baseline) is biased toward high-volatility selectors where cost is a large share of the bracket: add a GROSS-excess and a volatility-decile-matched baseline as companion statistics to the desk scorers",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-27 by lane DESK-EDGE-PROGRAM (docs/research/desk-edge-program-2026-10-27.md s4.6; comms/research/desk_edge/ceiling-1m/vol-rule-mechanism.json): on 1m perp bars a MODEL-FREE rule that picks the highest ATR% moments earns S3 +0.285 [+0.24,+0.33] at 5-min holds with gross R +0.016 (cost 0.33 R vs 0.97 R average); fitted learners' S3 +0.37..+0.61 at 5-15 min has gross R +0.005..+0.035. Cause: desk_gen_replay_driver.random_baseline draws from the whole fold, not the same volatility state, so selecting low-cost-in-R moments reads as timing. Small at 48-bar holds (cost ~0.11 R), about +0.04 R at 1-bar holds (era ceiling). Build: report gross excess R (picks' gross minus random entries' gross) and an ATR-decile-matched baseline beside S3 in desk_gen_replay_driver.score / desk_edge_* (companion only: the registered e535 statistic and rules are not changed). Done when both are in the scorer output with a test showing the vol-rule's S3 vanishes under the matched baseline.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-27T18:09:42Z",
+  "updated_by": "session_01AFoLuLyuCsXDg4fGyAGxcp",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 737
+}

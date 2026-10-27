@@ -65,7 +65,6 @@ PROMOTE_MAX_PER_BATCH = 2
 HOLDOUT_N = 300                   # packets per promoted variant
 HOLDOUT_ALPHA = 0.05              # one-sided, divided by the number of variants EVER sent to the holdout
 HOLDOUT_MIN_PICK_S3 = 0.05
-CELL_KEYS = ("alias", "side", "score")
 
 
 def _in(ts: int, w: Tuple[datetime, datetime]) -> bool:
@@ -199,6 +198,7 @@ def read_ranks(path: Path, keys: Dict[str, dict]) -> Tuple[Dict[str, Dict[str, f
             else:
                 sc: Dict[str, float] = {}
                 for c in cells:
+                    # provenance: read_ranks — `score` here is the JUDGE's own reply field (its expected excess R for the cell), not a predictor's output
                     a, side, v = c.get("alias"), c.get("side"), c.get("score")
                     if a not in keys[pid]["alias"] or side not in ("long", "short") or not isinstance(v, (int, float)) or not math.isfinite(v):
                         why = "bad cell"
@@ -217,7 +217,7 @@ def read_ranks(path: Path, keys: Dict[str, dict]) -> Tuple[Dict[str, Dict[str, f
 
 def cell_rows(ranks: Dict[str, Dict[str, float]], labels: Dict[Tuple[str, str], dict]) -> List[dict]:
     """One row per (packet, cell) with a score and a label."""
-    return [{"packet_id": pid, "cell": cell, "score": v, **labels[(pid, cell)]}
+    return [{"packet_id": pid, "cell": cell, "cell_score": v, **labels[(pid, cell)]}
             for pid, sc in ranks.items() for cell, v in sc.items() if (pid, cell) in labels]
 
 
@@ -230,7 +230,7 @@ def packet_sel(rows: List[dict], k: int = TOP_K) -> List[dict]:
     for pid, rr in by.items():
         if len(rr) < k + 1:
             continue
-        rr = sorted(rr, key=lambda r: -r["score"])
+        rr = sorted(rr, key=lambda r: -r["cell_score"])
         out.append({"packet_id": pid, "week": rr[0]["week"], "sel": float(np.mean([r["y"] for r in rr[:k]]) - np.mean([r["y"] for r in rr]))})
     return out
 
@@ -257,9 +257,9 @@ def top_pick_rows(rows: List[dict]) -> List[dict]:
     score > 0. Rows in cluster_stats' shape {week, net_r, days, diff}: their mean diff is S3 for the dev bracket."""
     by: Dict[str, dict] = {}
     for r in rows:
-        if r["packet_id"] not in by or r["score"] > by[r["packet_id"]]["score"]:
+        if r["packet_id"] not in by or r["cell_score"] > by[r["packet_id"]]["cell_score"]:
             by[r["packet_id"]] = r
-    return [{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["y"]} for r in by.values() if r["score"] > 0]
+    return [{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["y"]} for r in by.values() if r["cell_score"] > 0]
 
 
 def sequential_decision(weeks_at_looks: List[List[float]], looks: Sequence[int] = DEV_LOOKS, useful: float = SEL_USEFUL) -> Tuple[str, List[str]]:
@@ -390,7 +390,7 @@ def emulate_base_rate_rule(cutoffs: List[dict], acts: List[dict], weights: Tuple
             continue
         pf = cut[a["cutoff"]]["pf"][a["symbol"]]
         sc = sum(w * (pf[f"br_{a['side']}_h{h}_mean_r"] or 0.0) for w, h in zip(weights, ce.HORIZONS))
-        rows.append({"packet_id": a["cutoff"], "week": a["week"], "score": sc, "y": a["y"], "net_r": a["net_r"], "days": a["days"]})
+        rows.append({"packet_id": a["cutoff"], "week": a["week"], "cell_score": sc, "y": a["y"], "net_r": a["net_r"], "days": a["days"]})
     return rows, top_pick_rows(rows)
 
 
@@ -452,6 +452,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         sub.choices[nm].add_argument("--geom", default=DEV_GEOM[0], choices=sorted(DEV_GEOMS))
     sub.choices["sample"].add_argument("--n", type=int, default=DEV_N)
     sub.choices["sample"].add_argument("--seed", type=int, default=DEV_SEED)
+    # provenance: cmd_score — the `score` subcommand GRADES a variant's judged ranks; it reads no predictor
     sub.choices["score"].add_argument("--ranks", required=True)
     sub.choices["score"].add_argument("--sample", required=True)
     sub.choices["score"].add_argument("--variant", required=True)

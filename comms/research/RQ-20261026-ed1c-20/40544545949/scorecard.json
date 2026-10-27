@@ -1,0 +1,131 @@
+{
+  "rows": [
+    {
+      "horizon_days": 3,
+      "n": 143,
+      "ic": -0.033436,
+      "ic_t": -0.397,
+      "overlap_factor": 1.0,
+      "n_eff": 143.0,
+      "ic_t_eff": -0.397,
+      "pearson": -0.105762,
+      "sign_hit_rate": 0.476923,
+      "mean_fwd_return": -0.000968
+    }
+  ],
+  "summary": {
+    "max_n": 143,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": false,
+    "any_flagged_horizon_overlap_corrected": false,
+    "strongest_ic_horizon_days": 3,
+    "strongest_ic": -0.033436,
+    "strongest_ic_t": -0.397,
+    "strongest_ic_t_eff": -0.397,
+    "t_flag": 2.0,
+    "verdict": "no_edge_at_tested_horizons"
+  },
+  "meta": {
+    "kind": "retail_sales_mom",
+    "symbol": "SPY",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 143,
+    "releases_with_value": 143,
+    "price_bars": 5489,
+    "first_release": "2015-01-14",
+    "last_release": "2026-10-15",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 143,
+    "rows": [
+      {
+        "horizon_days": 3,
+        "n": 143,
+        "ic": -0.033436,
+        "ic_t": -0.397,
+        "overlap_factor": 1.0,
+        "n_eff": 143.0,
+        "ic_t_eff": -0.397,
+        "pearson": -0.105762,
+        "sign_hit_rate": 0.476923,
+        "mean_fwd_return": -0.000968
+      }
+    ],
+    "summary": {
+      "max_n": 143,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 3,
+      "strongest_ic": -0.033436,
+      "strongest_ic_t": -0.397,
+      "strongest_ic_t_eff": -0.397,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        3
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "positive"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 3,
+        "n": 143,
+        "ic": -0.033436,
+        "ic_t_eff": -0.397,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": false
+      }
+    ],
+    "sign_book": {
+      "horizon_days": 3,
+      "cost_frac_roundtrip": 0.0005,
+      "book_net": {
+        "n": 130,
+        "mean": -0.00142078,
+        "t": -0.923
+      },
+      "floor_all_long_net": {
+        "n": 130,
+        "mean": -0.00062526,
+        "t": -0.406
+      },
+      "book_minus_floor": {
+        "n": 130,
+        "mean": -0.00079552,
+        "t": -0.332
+      },
+      "book_hit_rate": 0.4615,
+      "cost_stack": {
+        "cost_symbol": "SPY",
+        "fee_bps_roundtrip": 0.0,
+        "fee_source": "profile_loader.roundtrip_fee_bps_for",
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0,
+        "funding_applied": false,
+        "total_bps_roundtrip": 5.0,
+        "cost_frac": 0.0005
+      }
+    },
+    "ic_grade": {
+      "verdict": "fail",
+      "note": "no pre-registered horizon reached the t-bar in the expected sign"
+    },
+    "trade_rule": {
+      "horizon": 3,
+      "min_n": 100,
+      "t_bar": 2.0
+    }
+  }
+}

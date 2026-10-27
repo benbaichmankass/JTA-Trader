@@ -23,7 +23,7 @@ TWO FEATURE TIERS
   P   PACKET ONLY: fields of the masked packet the judge saw (per-symbol atr %, htf_trend, swing distances,
       session; the 36 base-rate rows; cross-sectional summaries of those), plus the action's side and geometry.
   P+  P plus information the packet does NOT carry, every value at or before the cutoff: multi-horizon returns,
-      range position, volatility state, volume and taker-buy flow (Binance Vision spot), cross-asset (BTC and
+      range position, volatility state, volume and taker-buy flow (Binance Vision USD-M perp klines), cross-asset (BTC and
       the six-symbol cross-section), calendar, symbol identity, and point-in-time perp funding (Binance Vision
       USD-M fundingRate). Feature groups are ablated one at a time, so a P+ win names WHICH information.
 
@@ -578,8 +578,7 @@ def verdict_for(evals: Dict[str, Dict[str, Any]], ics: Dict[str, Dict[str, Any]]
     return "inconclusive", ["no learner meets 'present', and at least one corrected S3 upper bound reaches +%.2f R" % USEFUL_S3]
 
 
-def run_tier(cutoffs: List[dict], acts: List[dict], tier: str, alpha: float, learners=("ridge", "logit", "gbdt"),
-             subsets: Optional[Dict[str, np.ndarray]] = None) -> Dict[str, Any]:
+def run_tier(cutoffs: List[dict], acts: List[dict], tier: str, alpha: float, learners=("ridge", "logit", "gbdt")) -> Dict[str, Any]:
     X, names = feature_rows(cutoffs, acts, tier)
     te = np.array([r["fold"] in TEST_FOLDS for r in acts])
     evals, ics, folds, preds = {}, {}, {}, {}

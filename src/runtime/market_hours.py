@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
 
-ASSET_CLASSES = ("crypto", "fx", "us_equity")
+ASSET_CLASSES = ("crypto", "fx", "us_equity", "cme_futures")
 
 # Months fully inside US daylight-saving time. March and November are
 # transition months — treated as standard time (the conservative edge).
@@ -71,6 +71,20 @@ def is_market_open(asset_class: str, ts: datetime | None = None) -> bool:
         else:
             open_t, close_t = time(14, 30), time(21, 0)
         return open_t <= t < close_t
+
+    if cls == "cme_futures":
+        # CME Globex (the micro equity-index / metals contracts ib_paper trades):
+        # Sun 18:00 ET -> Fri 17:00 ET, with a daily 17:00-18:00 ET maintenance
+        # break. ET from the same DST-month table as us_equity_session.
+        et = ts - timedelta(hours=(4 if ts.month in _FULL_DST_MONTHS else 5))
+        wd, t = et.weekday(), et.time()
+        if wd == 5:  # Saturday
+            return False
+        if wd == 6:  # Sunday: opens 18:00 ET
+            return t >= time(18, 0)
+        if wd == 4:  # Friday: closes 17:00 ET for the weekend
+            return t < time(17, 0)
+        return not (time(17, 0) <= t < time(18, 0))  # Mon-Thu daily break
 
     return True  # crypto / unknown: 24/7
 
@@ -115,4 +129,21 @@ def asset_class_for_exchange(exchange: str) -> str:
         return "fx"
     if e == "alpaca":
         return "us_equity"
+    if e in ("interactive_brokers", "ib"):
+        return "cme_futures"
     return "crypto"
+
+
+def asset_class_for_symbol(symbol: str) -> str:
+    """The asset class a SYMBOL trades as, from its instrument profile's exchange
+    (``config/instruments.yaml``; SPY -> alpaca -> ``us_equity``, MES ->
+    interactive_brokers -> ``cme_futures``). An unprofiled symbol or an
+    unreadable profile reads ``crypto`` (24/7), the module's fail-permissive
+    posture. Used by the claude_desk leg (DESK-PAPER-ACCOUNTS) and the desk
+    scan packet."""
+    try:
+        from src.core.profile_loader import load_instrument_profiles
+        prof = (load_instrument_profiles() or {}).get(str(symbol or "").upper())
+    except Exception:  # noqa: BLE001 -- fail-permissive, as is_market_open
+        prof = None
+    return asset_class_for_exchange(getattr(prof, "exchange", "") if prof is not None else "")

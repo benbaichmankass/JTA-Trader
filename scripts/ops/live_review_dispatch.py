@@ -15,8 +15,9 @@ every account still decides through its own ``RiskManager.approve_amend`` and
 its own executor inside ``live_review_apply.py``. This file only decides
 whether a row may be handed over at all.
 
-1. **Resolve the row.** The row is read from the COMMITTED
-   ``comms/live_review/reviews.jsonl`` at ``HEAD`` (``git show``), never from a
+1. **Resolve the row.** The row is read from the COMMITTED per-row file
+   ``comms/live_review/rows/<review_id>.json`` (LTR-ROWS-SWAP-TRUNCATION), else
+   ``comms/live_review/reviews.jsonl``, at ``HEAD`` (``git show``), never from a
    working-tree edit. On the VM, ``HEAD`` is ``main`` as pulled by
    ``ict-git-sync``. A row that is not there yet is ``could_not_look``
    (exit 3): git-sync may lag by up to ~5 min, so re-dispatch.
@@ -99,6 +100,8 @@ from typing import Any, Dict, List, Optional, Tuple
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
+
+from src.runtime import live_review_rows as rows_lib  # noqa: E402
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 MANDATE_ID = "MD-LIVE-TIGHTEN-SL"
@@ -228,8 +231,16 @@ def _num(v: Any) -> Optional[float]:
     return float(v) if math.isfinite(v) else None
 
 
-def find_row(text: Optional[str], review_id: str) -> Tuple[Optional[Dict[str, Any]], str]:
-    """(row, detail). The LAST row with this id wins (the file is append-only)."""
+def find_row(text: Optional[str], review_id: str,
+             row_file: Optional[str] = None) -> Tuple[Optional[Dict[str, Any]], str]:
+    """(row, detail). A per-row file ``comms/live_review/rows/<review_id>.json`` (``row_file``, the
+    reviewer's create-only write since LTR-ROWS-SWAP-TRUNCATION) wins; else the LAST legacy
+    ``reviews.jsonl`` row with this id (that file is append-only)."""
+    if row_file is not None:
+        row, why = rows_lib.parse_row_file(rows_lib.row_path(review_id), row_file)
+        if row is not None:
+            return row, "ok"
+        return None, f"{rows_lib.row_path(review_id)} is not a valid row: {why}"
     if text is None:
         return None, f"{REVIEWS_PATH} is not readable at HEAD"
     found = None
@@ -449,7 +460,8 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
             return out
         out["ref_detail"] = rdetail
         at = ref
-    row, detail = find_row(_committed_text(REVIEWS_PATH, at), review_id)
+    row, detail = find_row(_committed_text(REVIEWS_PATH, at), review_id,
+                           _committed_text(rows_lib.row_path(review_id), at))
     if row is None:
         out.update(verdict="could_not_look", detail=detail, exit=EXIT_UNREADABLE)
         return out

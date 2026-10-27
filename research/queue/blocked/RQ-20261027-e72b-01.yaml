@@ -1,0 +1,125 @@
+id: RQ-20261027-e72b-01
+title: 'Desk D-S0 entry generation, configuration C1 (US-session cutoffs, stop >= 1.0 ATR) on a time-disjoint window: does a selective desk beat a random entry with the same bracket, net of the full cost stack, on packets no judged-1 decision ever saw?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  On MASKED scan packets (the driver's own builder and mask) at US-session bar closes (cutoff hour 13..20 UTC) sampled with a FRESH seed from a window that is disjoint in time from judged-1 (2024-11-01 .. 2025-10-25), with the judge instructed to propose only a stop at least 1.0 ATR14 from entry (configuration C1),
+  do Claude's proposals earn, replayed on the real candles with the full cost stack, (S1) a positive mean net R per filled proposal, (S2) a positive net R per capital-day, and (S3) more than a random entry with the SAME bracket geometry at random times on the same symbol in the same fold, with the S3 interval excluding 0,
+  in at least 3 of 4 calendar folds, and with mean net R still > 0 after the 3 best weeks are removed?
+why_this_matters: >-
+  DESK-18C-EDGE-OPT, operator 2026-10-27 ~12:10Z: "optimize the edge ... I still want to get this live as soon as possible." Judged-1 (1,498 packets, 732 filled) was INDETERMINATE: S1 +0.159 CI [-0.053, +0.355], but S3 +0.006 CI [-0.19, +0.19], because a random SHORT with the desk's own geometry earned +0.153 in the same symbol and fold:
+  the S1 is the window's short-side drift, not timing. 723 of 732 proposals were shorts, 33 weeks carried them, and removing the 3 best weeks leaves +0.003 R. Judged-1 is therefore an EXPLORATION set. C1 is the one configuration chosen from it
+  (docs/research/desk-18c-edge-optimization-2026-10-27.md): two a-priori-plausible clauses, not a search winner. This unit is the held-out test of C1, under a rule registered before a single judged-2 packet exists.
+power:
+  expected_n: 470
+  min_detectable_effect: 0.29
+  effect_units: R
+  sd: 1.6
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    sd 1.61 = MEASURED sd of the paired difference d_i over the 175 judged-1 proposals that satisfy C1 (hour 13..20 and stop >= 1.0 ATR; the decomposition's records.jsonl). expected_n 470 = 1,341 scheduled US-session packets (MEASURED: the schedule generator returns 1,341 for this window, not 1,500, because the 2-hour gap and the 13..20 hours exhaust it) x 0.35 C1-filled proposals per packet (MEASURED on judged-1: 175 C1-filled of 499 US-session packets;
+    a different window can move the rate, and judged-1's rate was set by a regime in which shorts paid). MDE at design effect 2.0 (MEASURED by a one-way week ANOVA on d_i over judged-1: all proposals 2.25, stop >= 1.0 ATR alone 1.9, US-session alone 1.0; C1 itself was not separately measured) = 2.8 x 1.61 x sqrt(2.0) / sqrt(470) = 0.29 R; at design effect 1.0, 0.21 R.
+    POWER IS LOW AND STATED: for a true S3 of +0.10 R power is 0.16 to 0.27, for +0.16 R it is 0.33 to 0.58, for +0.26 R (the in-sample C1 point estimate, which is selection-inflated: it was chosen from ~70 examined slices) 0.70 to 0.93 (normal approximation at n 470, design effect 2.0 to 1.0). This unit can confirm a large effect and kill a null; it cannot certify a small one. The n a +0.10 R S3
+    needs is 1,600 (design effect 1) to 3,200 (design effect 2) filled proposals, about 4,600 to 9,100 US-session packets ($320 to $630 at the measured $0.0688 per packet), more than one year of US-session cutoffs at a 2-hour gap holds; that is why the registered answer to a low-power INDETERMINATE is a second disjoint window, not a lowered bar.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      The n is bought with judging calls on a historical window, not with calendar time. 1,341 packets cost about $92 (judged-1 MEASURED: $103.14 for 1,498 packets = $0.0688 per packet, Sonnet repo-less sessions; 1,341 x 0.0688 = $92.3). The schedule is capped at 1,341 by the window (MEASURED); a longer window or a smaller gap is a different registered unit.
+      While the unit is admitted `accruing`, research_disposition refuses a terminal disposition without an `accrual_override_reason` of >= 20 characters; the reason at promotion is that the n was acquired by the judging run, not awaited.
+decision_rule:
+  id: RULE-RQ20261027-E72B-01-DESK-C1-CONFIRM
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: >-
+    Population: the judged packets of the registered schedule, in schedule order, in whole batches of 250 packets. Schedule: `desk_gen_edge_decompose.py packets` = us_schedule(2024-11-01, 2025-10-25, n up to 1500 (1,341 exist), seed 20261028, min gap 2 h, cutoff hours 13..20 UTC); the first k of the schedule are the length-k schedule.
+    The run stops at a batch boundary once 600 VALID proposals exist in the judged packets or the schedule is exhausted: a count taken before any replay (the `confirm` mode refuses a verdict if the judged packets are not a schedule prefix or judging continued past the stop).
+    The judge is given the driver's JUDGE-PROTOCOL.md plus the C1 addendum the `packets` mode writes (stop >= 1.0 x ATR14 from entry); no repo, no tools, no web. The judge model must not be the one whose repo-read could reveal the key: the key goes public once committed.
+    Engine, cost stack, random-entry baseline (200 draws, the proposal's own geometry, same symbol, same fold, random eligible hourly cutoffs), weekly-cluster bootstrap (10,000 draws, seed 20261028), four equal calendar folds of the WINDOW (a fold counts only with n >= 20): the driver's own functions, unchanged.
+    Scored set = the filled proposals that satisfy C1 (cutoff hour 13..20 AND the stop >= 1.0 ATR14 at the cutoff); a filled proposal that violates C1 is excluded and counted (`excluded_by_c1`). S1 = mean net R; S2 = sum net R / sum capital-days; S3 = mean of (net_i - mean net R of the 200 random draws with proposal i's geometry).
+    Robustness: `mean_after_dropping_best_weeks` = mean net R after removing the 3 ISO weeks with the largest summed net R.
+  rule: >-
+    PASS IF the landed verdict of RQ-20261026-e535-01 is pass AND the stopping rule was respected AND n_filled(C1) >= 300 AND S1 > 0 with its CI lower bound > 0 AND S2 > 0 with its CI lower bound > 0 AND S3 > 0 with its CI lower bound > 0
+    AND mean net R > 0 in >= 3 of 4 folds (each with n >= 20) AND mean net R > 0 after dropping the 3 best weeks. The window is before the judge's knowledge cutoff, so every PASS is labelled 'masked-replay only, pre-cutoff window: forward-shadow confirmation required' and is NOT by itself real-money eligible.
+    FAIL IF n_filled(C1) >= 300 AND (S1 <= 0 OR S3 <= 0): the desk's timing is no better than a random entry with its own bracket on a window it did not help choose. A FAIL closes configuration C1 and, with judged-1's S3 of +0.006, is the evidence to stop optimising the current packet and judge and to test a changed packet (conditional base rates, proposals 1 to 3 of the report's packet list), each with its own rule.
+    INDETERMINATE otherwise (n_filled(C1) < 300, or S3 > 0 with an interval straddling 0, or a PASS clause unmet): the record states the observed sd, the design effect, the power at S3 = +0.10 and +0.16 R, and the follow-up is a SECOND disjoint window (2023-11-01 .. 2024-10-25, same rule, same seed family), never a lowered bar and never a re-cut of C1 on this window's results.
+    The registered numbers (300, 600, 250, 3 of 4, 20, 3 weeks, the 1.0 ATR floor, the 13..20 hours, the 200 draws, the 2-hour gap) are not changed after any result.
+  what_it_does_not_do: >-
+    Stage 0 for ONE configuration of entry generation. It places and changes nothing and edits no config or roster. A PASS is a discovery on one disjoint window: D-S0 for the filtered desk additionally needs the forward-shadow set (RQ-20261027-e72b-02, n >= 100, S1 and S3 point estimates > 0),
+    the unfiltered units RQ-20261026-e535-03 and -04 are not touched and keep their own rule, and no Tier-3 step (a real-money leg, MD-PROMOTE-S1-S2, DESK-13) follows from it alone.
+requires_result:
+  unit: RQ-20261026-e535-01
+  verdict: pass
+blocked_on:
+- kind: work_item
+  ref: DESK-18D-JUDGE-2
+  what: >-
+    The judged-2 file does not exist. A lane must run `desk_gen_edge_decompose.py packets` (seed 20261028, batches of 250), give each packet to one repo-less judging session with JUDGE-PROTOCOL.md (which carries the C1 addendum) and nothing else, collect proposals.jsonl, and commit it with mask-key.json. It spends Claude tokens: a manager dispatch with a ceiling of $95 (1,341 packets x $0.0688 = $92.3).
+  clears_when: >-
+    comms/research/desk_gen_replay/judged-2/{mask-key.json,proposals.jsonl} are on main and RQ-20261026-e535-01 has landed with verdict pass. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+masked_replay:
+  population: >-
+    The six crypto USDT perps ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT (the driver's registered universe; re-parse before running). Binance Vision spot 1h klines from 2024-05-01 (the 3,000-bar base-rate look-back needs 125 days before the first cutoff).
+  construction: >-
+    `desk_gen_edge_decompose.py packets --start 2024-11-01 --end 2025-10-25 --seed 20261028 --n 250 --offset K` per batch: the driver's build_masked_packet and leak scan (aliases re-drawn per packet, prices rebased to 100, time anchored in year 2000), the key's fold cut on THIS window. The scorer re-derives every judged packet from the candles and refuses on a sha mismatch.
+  unmask_key: comms/research/desk_gen_replay/judged-2/mask-key.json (public once committed; a judge that can read this repo is not a valid judge).
+  leak_controls: >-
+    Per-packet alias permutation; the driver's leak scan; the random-entry baseline (same geometry at other times, which is also the permuted-packet control). THE WINDOW IS BEFORE THE JUDGE'S KNOWLEDGE CUTOFF (2026-06-01): there is no post-cutoff stratum, and the PASS label says so. Disjointness in TIME from judged-1 is the point: a fresh seed on judged-1's window would resample the same 33 weeks (judged-1 already holds 499 of that window's ~1,400 US-session candidates) and could not confirm anything.
+  novelty: >-
+    Not used. The strategies' committed Stage-0 lists do not cover this window, so the scorer's novelty classes read `unclassifiable`; C1 does not depend on them (the live packet shows the strategies' book, so novelty is the live desk's own call).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: the same bound as RQ-20261026-e535-03; the confidence is lower because judged-1 found S3 = +0.006 and C1 was chosen from ~70 examined slices.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: 'estimate: scoring re-derives about 1,500 packets at ~0.3 s each, then 525 x 200 random draws of at most 96 bars. The judging step is Claude sessions and is not this unit.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_gen_edge_decompose.py
+  - confirm
+  - --out
+  - '{out_dir}'
+  - --candles
+  - /tmp/desk_gen_candles_2024
+  - --fetch
+  - --candles-since
+  - '2024-05-01'
+  - --mask-key
+  - comms/research/desk_gen_replay/judged-2/mask-key.json
+  - --proposals
+  - comms/research/desk_gen_replay/judged-2/proposals.jsonl
+  - --start
+  - '2024-11-01'
+  - --end
+  - '2025-10-25'
+  - --seed
+  - '20261028'
+  inputs:
+    research_unit: RQ-20261027-e72b-01
+  timeout_minutes: 60
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-e535-01
+- RQ-20261026-e535-03
+- RQ-20261026-e535-04
+- RQ-20261027-e72b-02
+- scripts/research/desk_gen_edge_decompose.py
+- scripts/research/desk_gen_replay_driver.py
+- docs/research/desk-18c-edge-optimization-2026-10-27.md
+last_dispatched_at: null
