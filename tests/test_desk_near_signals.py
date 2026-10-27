@@ -30,6 +30,15 @@ def test_every_current_rostered_leg_resolves_to_a_unit():
     assert unresolved == []
 
 
+def test_the_desk_leg_is_not_in_the_system_book():
+    """claude_desk's signal is a desk proposal, not a candle pattern: probing it would always read
+    unlooked. It is excluded by name (from the desk schema), and only it."""
+    assert m.DESK_LEG == "claude_desk"
+    acc = {"bybit_1": {"strategies": ["claude_desk", "x_trend_1d"]}}
+    strat = {"claude_desk": {"symbols": ["AVAXUSDT"]}, "x_trend_1d": {"symbols": ["AAA"]}}
+    assert [r["leg"] for r in m.rostered_legs(acc, strat)] == ["x_trend_1d"]
+
+
 def test_read_only_no_order_path():
     src = (REPO / "scripts/ops/desk_near_signals.py").read_text()
     for banned in ("place_order", "multi_account_execute", "log_signal", "signal_builder(", ".write_text", "open("):

@@ -2,22 +2,21 @@
   "id": "DESK-17-DESK-LEG",
   "title": "claude_desk strategy adapter: accepted proposals -> one order package each via Coordinator.multi_account_execute; shadow first on bybit_1 + alpaca_paper",
   "phase": null,
-  "state": "blocked",
-  "owner": null,
-  "lane": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_016x9xjZVtBV9WtvdiCmQAKD",
   "model": "claude-opus-5-5",
   "ceiling_usd": 16,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
-  "blocked_on": [
-    "DESK-0B-SCHEMA-V2",
-    "DESK-4-INTAKE"
+  "prs": [
+    20481
   ],
-  "note": "Filed 2026-10-26 by the manager from trading-desk design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10.2, PR #20258, lane DESK-15); design approved as the build plan by the operator ('Approve as the build plan'). Scope/depends exactly as \u00a7 10.2. [2026-10-26 lane session_01X2fGetfEkJcEKPMwt7S9wT, DESK-4 #20473] What DESK-17 now needs from intake: (1) roster a 'claude_desk' key in config/strategies.yaml (execution: shadow) -- until then desk_intake refuses a cleared live proposal 'desk_leg_not_rostered:claude_desk'; (2) consume runtime_logs/desk/accepted_proposals.jsonl (one line per accepted propose_entry: decision_id, intent_id, packet_id/sha, ref, full proposal incl. both brackets) -> one package each via Coordinator.multi_account_execute, carrying decision_id; (3) entries flow only once MD-TRADE-DESK.functions.entry_generation.blocked_until is removed (DESK-13 gate); (4) the watcher thread starts only while a package is open (record_position_telemetry) -- with no open package desk rows wait; start it from the tick loop if the desk leg must act from flat; (5) desk-leg tp_revise/close/partial_close already dispatch once the packet's package.leg == claude_desk. DESK-4-INTAKE blocker on this row clears when #20473 merges.",
+  "blocked_on": [],
+  "note": "Filed 2026-10-26 by the manager from trading-desk design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10.2, PR #20258, lane DESK-15); design approved as the build plan by the operator ('Approve as the build plan'). Scope/depends exactly as \u00a7 10.2. [2026-10-26 lane session_01X2fGetfEkJcEKPMwt7S9wT, DESK-4 #20473] What DESK-17 now needs from intake: (1) roster a 'claude_desk' key in config/strategies.yaml (execution: shadow) -- until then desk_intake refuses a cleared live proposal 'desk_leg_not_rostered:claude_desk'; (2) consume runtime_logs/desk/accepted_proposals.jsonl (one line per accepted propose_entry: decision_id, intent_id, packet_id/sha, ref, full proposal incl. both brackets) -> one package each via Coordinator.multi_account_execute, carrying decision_id; (3) entries flow only once MD-TRADE-DESK.functions.entry_generation.blocked_until is removed (DESK-13 gate); (4) the watcher thread starts only while a package is open (record_position_telemetry) -- with no open package desk rows wait; start it from the tick loop if the desk leg must act from flat; (5) desk-leg tp_revise/close/partial_close already dispatch once the packet's package.leg == claude_desk. DESK-4-INTAKE blocker on this row clears when #20473 merges. [2026-10-27 lane session_016x9xjZVtBV9WtvdiCmQAKD] BUILT, stacked on #20473: src/units/strategies/claude_desk.py + claude_desk_signal_builder (registered once, priority 0) read runtime_logs/desk/accepted_proposals.jsonl and emit ONE package per decision_id through the existing multiplexer -> Coordinator.multi_account_execute path; entry/SL/TP straight from the proposal; both brackets mandatory (refused both_brackets_required); decision_id + tp basis/p_hit journaled in order_packages.meta; consumption read from the journal (fail closed if unreadable); good_till_bars expiry recorded expired_unfilled in runtime_logs/desk/desk_leg.jsonl. strategies.yaml claude_desk execution: shadow; rostered on bybit_1 ONLY with symbols [AVAXUSDT]. TWO DEVIATIONS from the dispatch, both guard-measured: (1) alpaca_paper NOT rostered -- a leg's symbols: is venue-agnostic and the coordinator's venue filter only separates IB, so one leg on both venues would fan crypto packages to Alpaca (row DESK-17B); (2) symbols narrowed to AVAXUSDT -- same-symbol-allocation-guard refuses a second leg on bybit_1's BTC/ETH/SOL/XRP/ADA net positions without an allocation record or NETTED-SLICES slice support, and the desk leg has no allocator history to weight. Also fixed in #20473's code: desk_intake._leg_rostered tested the top level of strategies.yaml (only key: strategies), so it could never be True. REMAINDER (this row): widen symbols once allocation exists; limit/stop entry types (refused entry_type_unsupported today -- multiplexer places at signal price); check_tp_doctrine reads the leg as no_target/no_tp_verdict (baselined bybit_1/claude_desk ER with a comment) until it measures proposal TPs; the watcher only runs while a package is open (DESK-4 note 4). landed_unproven closes on: one claude_desk shadow package on bybit_1 with decision_id in meta, sized and recorded DRY (SOAK-shadow-claude_desk) -- impossible until MD-TRADE-DESK entry_generation.blocked_until clears.",
   "priority_rank": 9,
-  "updated_at": "2026-10-26T23:26:24Z",
-  "updated_by": "session_01X2fGetfEkJcEKPMwt7S9wT",
+  "updated_at": "2026-10-27T00:53:10Z",
+  "updated_by": "session_016x9xjZVtBV9WtvdiCmQAKD",
   "roadmap": [
     "L-DESK"
   ],

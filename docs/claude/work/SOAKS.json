@@ -1479,6 +1479,25 @@
    ],
    "started": "2026-10-15",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "package_complete",
+    "sized_and_routed_dry"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
+   "id": "SOAK-shadow-claude_desk",
+   "kind": "shadow",
+   "leg": "claude_desk",
+   "metric": "shadow order packages for claude_desk (any rostered account), each carrying the proposal's decision_id",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal; desk grading is DESK-9",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
+   "started": "2026-10-26",
+   "verifies": "shadow MECHANICS: an accepted desk proposal becomes ONE package (side, entry, the proposal's real SL and TP, decision_id in meta), and every rostered account (bybit_1) sizes it and records it DRY. Cannot start until MD-TRADE-DESK entry_generation.blocked_until clears (no proposal is accepted before)."
   }
  ]
 }

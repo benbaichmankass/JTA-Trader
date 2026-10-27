@@ -6170,3 +6170,61 @@ for _builder, _monitor_unit in (
     (avax_pullback_2h_signal_builder, "htf_pullback_trend_2h"),
 ):
     _builder.monitor_unit = _monitor_unit
+
+
+def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
+    """The Claude trading desk's leg (DESK-17, design § 3.7) — accepted proposals, not candles.
+
+    Reads ``runtime_logs/desk/accepted_proposals.jsonl`` (written by ``scripts/ops/desk_intake.py``
+    only once ``MD-TRADE-DESK.functions.entry_generation.blocked_until`` clears) and emits at most
+    ONE actionable signal for this tick's symbol: the oldest unconsumed, unexpired proposal, with the
+    proposal's own entry / stop / TP and its ``decision_id`` in ``meta`` (journaled on the order
+    package). A proposal is consumed once a ``claude_desk`` order package carries its decision_id;
+    that is read from the journal, and an unreadable journal emits nothing this tick (fail closed —
+    a second package for one decision is the failure to avoid). Refused / expired proposals are
+    recorded once in ``runtime_logs/desk/desk_leg.jsonl``. Honours ``enabled``.
+    """
+    from datetime import datetime, timezone
+
+    from src.units.strategies import claude_desk as cd
+    from src.units.strategies import load_strategy_config
+
+    name = cd.NAME
+    symbol = cd.norm_symbol(settings.get("SYMBOL", settings.get("symbol", "")))
+
+    def _none(reason: str) -> Dict[str, Any]:
+        return _with_signal_package(name, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": name, "reason": reason}})
+
+    try:
+        cfg = (load_strategy_config() or {}).get(name) or {}
+    except Exception as exc:  # noqa: BLE001
+        return _none(f"config_unreadable: {exc}")
+    if not bool(cfg.get("enabled", False)):
+        return _none("disabled")
+    rows = cd.read_queue()
+    if not rows:
+        return _none("no_accepted_proposals")
+    try:
+        from src.units.db.database import Database
+        from src.utils.paths import trade_journal_db_path
+        pkgs = Database(db_path=trade_journal_db_path()).get_order_packages_by_strategy(name)
+    except Exception as exc:  # noqa: BLE001 -- fail closed: never mint a second package
+        return _none(f"journal_unreadable: {type(exc).__name__}")
+    now = datetime.now(timezone.utc)
+    pkg, terminal = cd.select(rows, symbol=symbol, consumed=cd.consumed_decision_ids(pkgs),
+                              now=now, cfg=cfg)
+    cd.record(terminal, now=now)
+    if pkg is None:
+        return _none("no_open_proposal_for_symbol")
+    meta = dict(pkg["meta"], strategy_name=name)
+    return _with_signal_package(name, {
+        "symbol": pkg["symbol"],
+        "side": "buy" if pkg["direction"] == "long" else "sell",
+        "price": pkg["entry"],
+        "entry_price": pkg["entry"],
+        "stop_loss": pkg["sl"],
+        "take_profit": pkg["tp"],
+        "confidence": pkg["confidence"],
+        "meta": meta,
+    })

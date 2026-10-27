@@ -194,7 +194,9 @@ def _load_yaml(rel: str) -> Optional[Dict[str, Any]]:
 
 
 def _leg_rostered() -> bool:
-    return DESK_LEG in (_load_yaml("config/strategies.yaml") or {})
+    """The leg is configured in ``config/strategies.yaml``'s ``strategies:`` section (the file's
+    only top-level key -- a top-level membership test can never be true)."""
+    return DESK_LEG in ((_load_yaml("config/strategies.yaml") or {}).get("strategies") or {})
 
 
 def _apply(plan: Dict[str, Any], evidence_rel: str) -> Dict[str, Any]:

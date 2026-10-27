@@ -161,8 +161,12 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     unrouted = sorted(n for n, c in legs.items() if rdm.classify(c) is None)
     # 52 -> 53 on 2026-10-22: trend_donchian_xrp_adx25, the bybit_1 soak alias of
     # trend_donchian_xrp_4h (OPERATOR-DECISIONS-1022); it routes like the incumbent.
-    assert len(legs) == 53
-    assert unrouted == ["turtle_soup"]
+    # 53 -> 54 on 2026-10-27: claude_desk (DESK-17), the trading desk's leg. It is
+    # correctly UNROUTED: it reads no candles and carries no harness-family params --
+    # its bracket is each desk proposal's own, so no regime-cell harness can replay it
+    # (its offline Stage 0 is the desk replay, DESK-18, not this matrix).
+    assert len(legs) == 54
+    assert unrouted == ["claude_desk", "turtle_soup"]
 
 
 # --------------------------------------------------------------------------

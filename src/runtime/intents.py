@@ -414,6 +414,9 @@ DEFAULT_PRIORITIES: Dict[str, int] = {
     "xrp_pullback_2h": 0,
     "ada_pullback_2h": 0,
     "avax_pullback_2h": 0,
+    # claude_desk (DESK-17): the desk leg. 0 = it never out-votes an established leg on a shared
+    # symbol; a proposal that loses a bar's arbitration is retried until it expires.
+    "claude_desk": 0,
     # Alpaca ETF legs added 2026-09-10 (Option-A roster change) WITHOUT a row
     # here, so each fell through to the fallback — which then sat at 10, ABOVE
     # 45 of 50 mapped legs, so omission WON the arbitration (pipeline item
