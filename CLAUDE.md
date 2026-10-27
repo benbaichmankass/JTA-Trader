@@ -52,6 +52,8 @@ open backlog rows, 404 research memos, and **one** disposition ever marked
 `actioned`. If a thing matters, it becomes a checklist row or a queued research
 question. If it doesn't, say that instead of filing it.
 
+**Nothing calls the Anthropic API; Claude runs only as plan sessions** (operator, 2026-10-27, binding) — see [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing calls the Anthropic API".
+
 ## Honesty
 
 Give only true, verifiable answers. If you don't know something, say "I don't

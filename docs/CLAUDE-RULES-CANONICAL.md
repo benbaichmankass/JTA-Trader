@@ -542,6 +542,10 @@ Turning a feature off to stop it affecting trades is a *trade-path* decision. Sw
 
 **Mechanism:** [`docs/reference/shadowed-features.yaml`](reference/shadowed-features.yaml) lists each feature that is off or annotate-only on the trade path, with its data artifact, freshness check and owner. `shadowed-features-guard` ([`scripts/ci/check_shadowed_features.py`](../scripts/ci/check_shadowed_features.py)) fails on an entry with no live owner, no named freshness check (a `gap`/`could_not_verify` needs a live row that closes it), or a decision other than `shadowed`/`annotate`, and fails if `execution: shadow` legs exist with no `shadow_legs` entry. It prints its population each run. The `weekly-audit` CORE pass (C10) re-checks it. The registry was seeded by measurement; what could not be verified is marked `could_not_verify`, not filled in.
 
+## Nothing calls the Anthropic API — Claude runs only as plan sessions (operator decision 2026-10-27, binding)
+
+Verbatim: *"No API: plan sessions only."* No service, workflow, script or cron in this system calls the Anthropic API; Claude work happens only in plan sessions (a VM marker the manager turns into a spawned session, or a manager dispatch). The `run-desk-judge` system-action is retired and hard-refuses. Existing `anthropic` SDK importers (`src/runtime/insights/generator.py`, `src/prop/screenshot_parse.py`) are not changed by this line; they are reported to the operator for a decision.
+
 ## Honesty
 
 Give only true, verifiable answers.
