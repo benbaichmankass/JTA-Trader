@@ -2418,10 +2418,15 @@ jobs:
           # trader unless the two hosts coincide (degenerate config), same
           # pattern as vm-ib-gateway-recover.yml / vm-ib-gateway-selftest.yml.
           SSH_TARGET_HOST="${VM_SSH_HOST}"
+          # ServerAlive keeps a long, quiet action (run-desk-judge: block-buffered python, minutes
+          # without output) from being dropped as idle. 2026-10-27 #20541 died at ~5 min with
+          # "client_loop: send disconnect: Broken pipe" (exit 255) and returned no output.
           SSH_ARGS=( -i ~/.ssh/id_rsa
                      -o BatchMode=yes
                      -o StrictHostKeyChecking=accept-new
-                     -o ConnectTimeout=15 )
+                     -o ConnectTimeout=15
+                     -o ServerAliveInterval=30
+                     -o ServerAliveCountMax=10 )
           if [ "${ACTION}" = "gateway-logs" ] || [ "${ACTION}" = "gateway-forensics" ]; then
             SSH_TARGET_HOST="${GATEWAY_HOST}"
             if [ "${GATEWAY_HOST}" != "${VM_SSH_HOST}" ]; then
