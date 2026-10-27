@@ -609,6 +609,10 @@ _LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "r
 _DESK_INTAKE_LOG = Path(repo_root()) / "runtime_logs" / "desk" / "intake.jsonl"
 _DESK_INTAKE_STATUS = Path(repo_root()) / "runtime_logs" / "desk" / "intake_status.json"
 _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_watch_status.json"
+# DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
+# without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
+# src/units/strategies/claude_desk.py::record (ledger_path()).
+_DESK_LEG_LEDGER = Path(repo_root()) / "runtime_logs" / "desk" / "desk_leg.jsonl"
 # LTR first-proof pings (operator 2026-10-26): which stages are proven / seeded,
 # when, the latency from the previous stage. Same anchor as the writer
 # (src.runtime.ltr_first_proof.state_path).
@@ -657,6 +661,7 @@ _LOG_FILES: dict[str, Path] = {
     "desk_intake": _DESK_INTAKE_LOG,
     "desk_intake_status": _DESK_INTAKE_STATUS,
     "desk_watch_status": _DESK_WATCH_STATUS,
+    "desk_leg": _DESK_LEG_LEDGER,
     "ltr_first_proof": _LTR_FIRST_PROOF,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,

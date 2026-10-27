@@ -186,9 +186,12 @@ def _accepted(symbol: str, price: float, at: datetime) -> dict:
                          "tp": {"level": price * 1.01, "basis": "swing_level", "p_hit": 0.4}}}
 
 
-@pytest.mark.parametrize("now,want", [(datetime(2026, 10, 27, 15, 0, tzinfo=timezone.utc), "buy"),
-                                      (datetime(2026, 10, 27, 21, 30, tzinfo=timezone.utc), "none")])
-def test_builder_waits_while_the_etf_market_is_closed(tmp_path, now, want):
+@pytest.mark.parametrize("now,want,why", [
+    (datetime(2026, 10, 27, 15, 0, tzinfo=timezone.utc), "buy", None),
+    (datetime(2026, 10, 27, 21, 30, tzinfo=timezone.utc), "none", "market_closed:us_equity"),
+    # 15:30 ET with a 45-min max hold: the time-stop would land after the 16:00 ET close -> wait
+    (datetime(2026, 10, 27, 19, 30, tzinfo=timezone.utc), "none", "market_closes_before_max_hold:us_equity:45m")])
+def test_builder_waits_while_the_etf_market_is_closed(tmp_path, now, want, why):
     from src.runtime import strategy_signal_builders as ssb
     row = _accepted("SPY", 700.0, now)
 
@@ -209,8 +212,8 @@ def test_builder_waits_while_the_etf_market_is_closed(tmp_path, now, want):
             patch.object(cd, "record", return_value=0):
         sig = ssb.claude_desk_signal_builder({"SYMBOL": "SPY"})
     assert sig.get("side") == want, sig.get("meta")
-    if want == "none":
-        assert sig["meta"]["reason"] == "market_closed:us_equity"
+    if why:
+        assert sig["meta"]["reason"] == why
 
 
 # desk_write's closed-market refusal: tests/test_desk_wake_write.py::test_a_proposal_on_a_closed_market_is_refused...
