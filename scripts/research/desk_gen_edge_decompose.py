@@ -28,7 +28,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-from scripts.research import desk_gen_replay_driver as d
+from scripts.research import desk_gen_replay_driver as d  # noqa: E402
 
 SUSPECT_LO, SUSPECT_HI = 1332, 1365          # packet indices judged from base-rate rows only (manager's flag)
 

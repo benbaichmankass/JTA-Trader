@@ -9,8 +9,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.research import desk_gen_edge_decompose as e
-from scripts.research import desk_gen_replay_driver as d
+from scripts.research import desk_gen_edge_decompose as e  # noqa: E402
+from scripts.research import desk_gen_replay_driver as d  # noqa: E402
 
 
 def _series(n: int = 400, drift: float = -0.05, seed: int = 3):
