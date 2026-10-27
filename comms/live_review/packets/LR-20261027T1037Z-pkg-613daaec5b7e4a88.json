@@ -1,0 +1,219 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "bybit_orders: SL 2325.1 / TP 2273.35, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "read"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "short",
+    "order_package_id": "pkg-011a7bf85ee54a6f",
+    "symbol": "MGC"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-23929c3f526440c3",
+    "symbol": "GDX"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-465a5d7d27644027",
+    "symbol": "ADAUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-64d4fa5ab0c34305",
+    "symbol": "IAUM"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-976b459f5c954df0",
+    "symbol": "MHG"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-b1e4fdf9b9d049a3",
+    "symbol": "XRPUSDT"
+   }
+  ],
+  "direction": "short",
+  "funding": null,
+  "news": {
+   "adjustment": 0.008333,
+   "decision": "neutral",
+   "ts": "2026-10-27T10:36:48.503564+00:00",
+   "veto": false
+  },
+  "previous_review": null,
+  "symbol": "ETHUSDT"
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0413,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": 0.0,
+  "peak_r": null,
+  "r_to_stop": 1.0,
+  "r_to_target": 1.5
+ },
+ "info_cutoff_at": "2026-10-27T10:38:16Z",
+ "leg": "ict_scalp_eth_15m",
+ "mechanics": {
+  "evidence": "package sl 2325.10185714 / tp 2273.34721429 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest verdict not assembled by this generator yet"
+  }
+ ],
+ "order_package_id": "pkg-613daaec5b7e4a88",
+ "packet_version": 2,
+ "priced_options": null,
+ "regime": {
+  "adx_now": 12.784,
+  "atr_now_over_entry": 1.0413,
+  "cell_entry": "chop/volatile",
+  "cell_now": null,
+  "trend_now": "chop"
+ },
+ "review_id": "LR-20261027T1037Z-pkg-613daaec5b7e4a88",
+ "short_hold": {
+  "atr": 3.752857142857075,
+  "bar": "2026-10-27T10:30:00Z",
+  "bar_close": "2026-10-27T10:35:00Z",
+  "entry": 2304.4,
+  "mark": 2305.4,
+  "minutes_held": 1.1,
+  "open_r_at_mark": -0.0483,
+  "r_unit": "risk_per_unit",
+  "read_state": "read",
+  "recent_bars": [
+   {
+    "close": 2310.28,
+    "high": 2311.58,
+    "low": 2309.42,
+    "open": 2311.51,
+    "t": "2026-10-27T09:35:00Z"
+   },
+   {
+    "close": 2309.35,
+    "high": 2310.78,
+    "low": 2307.31,
+    "open": 2310.28,
+    "t": "2026-10-27T09:40:00Z"
+   },
+   {
+    "close": 2307.53,
+    "high": 2310.04,
+    "low": 2307.53,
+    "open": 2309.35,
+    "t": "2026-10-27T09:45:00Z"
+   },
+   {
+    "close": 2309.31,
+    "high": 2310.28,
+    "low": 2307.5,
+    "open": 2307.53,
+    "t": "2026-10-27T09:50:00Z"
+   },
+   {
+    "close": 2313.01,
+    "high": 2313.02,
+    "low": 2309.3,
+    "open": 2309.31,
+    "t": "2026-10-27T09:55:00Z"
+   },
+   {
+    "close": 2308.89,
+    "high": 2314.02,
+    "low": 2307.95,
+    "open": 2313.01,
+    "t": "2026-10-27T10:00:00Z"
+   },
+   {
+    "close": 2303.71,
+    "high": 2309.29,
+    "low": 2302.55,
+    "open": 2308.89,
+    "t": "2026-10-27T10:05:00Z"
+   },
+   {
+    "close": 2298.41,
+    "high": 2303.71,
+    "low": 2297.81,
+    "open": 2303.71,
+    "t": "2026-10-27T10:10:00Z"
+   },
+   {
+    "close": 2301.69,
+    "high": 2303.43,
+    "low": 2297.57,
+    "open": 2298.41,
+    "t": "2026-10-27T10:15:00Z"
+   },
+   {
+    "close": 2302.62,
+    "high": 2303.61,
+    "low": 2301.31,
+    "open": 2301.69,
+    "t": "2026-10-27T10:20:00Z"
+   },
+   {
+    "close": 2304.52,
+    "high": 2304.75,
+    "low": 2301.8,
+    "open": 2302.62,
+    "t": "2026-10-27T10:25:00Z"
+   },
+   {
+    "close": 2305.4,
+    "high": 2306.6,
+    "low": 2303.84,
+    "open": 2304.52,
+    "t": "2026-10-27T10:30:00Z"
+   }
+  ],
+  "risk_per_unit": 20.70185714,
+  "timeframe": "5m"
+ },
+ "state": {
+  "atr_now_over_entry": 1.0413,
+  "bars_held": 1,
+  "giveback_r": null,
+  "open_r": 0.0,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": "chop/volatile",
+  "regime_cell_now": null,
+  "sl": 2325.10185714,
+  "tp": 2273.34721429
+ }
+}
