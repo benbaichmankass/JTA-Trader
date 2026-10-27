@@ -6,13 +6,17 @@
   "owner": "lane-desk-short-hold-lane",
   "lane": null,
   "model": null,
-  "ceiling_usd": 15,
+  "ceiling_usd": 25,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    20557,
+    20559,
+    20560
+  ],
   "blocked_on": [],
-  "note": "[2026-10-27 lane desk-short-hold-lane] Built: PR A (brief + short_hold_write.py + short_hold_packet.py + manager step) and PR B (src/runtime/short_hold_wake.py trigger + config/short_hold.yaml), both held tier_2_3_needs_approval. Companion of DESK-8 (DESK-8-SHORT-HOLD rosters ict_scalp_eth_15m / ict_scalp_xrp_15m on bybit_1; DESK-8-SHORT-HOLD-S0 is the Stage-0 confirm). Recommend-only dry run in progress on desk/short-hold-dryrun (pkg-465a5d7d27644027, lane session_01AFoLuJkpLS99B6nvJL7tEN).",
-  "updated_at": "2026-10-27T07:08:44Z",
+  "note": "[2026-10-27 07:45Z lane desk-short-hold-lane] PRs: docs #20557 (self-land, head bf91d314), A #20559 (held, head 6c71d4c5: brief + short_hold_write.py + short_hold_packet.py + manager step), B #20560 (held, head 8a68b651: VM trigger short_hold_wake.py + config/short_hold.yaml legs claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m). DRY RUN MEASURED (recommend-only, branch desk/short-hold-dryrun, pkg-465a5d7d27644027 ada_pullback_2h on bybit_1/bybit_2/bybit_portfolio, lane session_01AFoLuJkpLS99B6nvJL7tEN, Sonnet, 07:03-07:41Z): 8 rows written via short_hold_write.py, 0 refused, 0 applied (dryrun_reviews.jsonl, which the VM never reads); cost $1.10 total from get_session().usage (spawn + 8 decisions = ~$0.14/decision); bar_close->decision median 72.9 s over the 7 steady cycles (max 201.5 s = a producer restart of mine), packet->decision median 52.6 s; re-wake = background git poll returning on the next packet (worked every cycle, ended on closed:true ~35 s after it landed). Envelope build 27-38 s from a session (24.6 s first). INFERRED for a 1 h trade: 12 cycles ~ $1.5-1.7. Caveat: dry run never applies, so the lane re-proposed the same tighten (0.205) 8x; live, state.sl moves after an apply. STILL MISSING for 'first managed short trade': (1) the demo flip: desk_write.py live rows for bybit_1 (label_source live, route submitted, intent_id, max_hold), desk-records-guard accepting them, MD-TRADE-DESK entry_generation scoped (bybit_1 demo allowed, real money blocked_until DESK-13), intake account scope, claude_desk execution: live for bybit_1 - Tier 3, quote popup 'Yes, live on bybit_1 demo now (Recommended)'; (2) VM event triggers (ATR burst, level break/sweep, 5m/15m momentum, near-signals, calendar) posting a triggered short-TF desk-wake, rate-limited, logged as labels; (3) external_context mechanism for desk rows (row DESK-14); (4) merge + deploy A then B, verify the VM can write live-review/rows (receipt short_hold_wake_receipt, could_not_commit = http code). Next session picks up (1) first: without it no Claude-originated trade can open, so nothing else is exercisable.",
+  "updated_at": "2026-10-27T07:51:28Z",
   "updated_by": "session_01AFoLuKV7JzCZvnNYX7XeEu",
   "roadmap": [
     "L-DESK"
