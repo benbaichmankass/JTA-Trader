@@ -161,7 +161,7 @@ cannot write `desk/decisions`: tell the operator (the fallback workflow covers t
 spawner routine is retired; delete it once the first marker-spawned wake has written its row.
 
 **Short-hold wake (DESK-SHORT-HOLD-LANE, operator goal 2026-10-27: Claude manages a ≤ 1 h trade from ONE session
-that lives for the life of that trade).** When a package opens on a leg listed in `config/short_hold.yaml`, the
+that lives for the life of that trade).** When a package opens on a leg listed in `config/short_hold.yaml` (first `claude_desk`, the desk's own Claude-originated trades; then any short-hold leg; operator 2026-10-27 ~07:05Z: the lane is leg-agnostic and asks for the best trading decision), the
 live trader (`src/runtime/short_hold_wake.py`) lands its first 5-min packet envelope on `live-review/rows`
 (`comms/live_review/short_hold/<pkg>/latest.json`) and posts ONE comment on the ops-flags PR (hidden marker
 `short-hold`, kind `short-hold-wake`: `order_package_id`, `accounts`, `leg`, `symbol`, `side`, `entry`, `sl`, `tp`,

@@ -3,7 +3,8 @@
 
 A short-hold lane is ONE session that lives for ONE trade (design § 6.2 "per-trade spawned lane"). Every
 ~5 minutes it reads the newest in-trade packet the VM landed for its package and decides one of
-hold / tighten_sl / move_tp / partial_close / close. It never hand-builds the row. It writes a short DRAFT and runs
+hold / tighten_sl / move_tp / partial_close / change_size / close -- the best trading decision now. It never
+hand-builds the row. It writes a short DRAFT and runs
 
     git fetch -q --depth 1 origin main && git show origin/main:.claude/skills/trading-desk/short_hold_write.py \
         | python3 - --package <pkg> DRAFT.json
@@ -14,7 +15,9 @@ which, in order:
    timestamp, state, option and account read is copied from the packet, so none can be mistyped;
 3. VALIDATES it with ``scripts/ci/check_live_review_records.py`` itself, loaded from origin/main (the CI guard and
    the mirror run the same function: there is no second copy of the rules), plus the short-hold rules below;
-4. writes ONE commit on the branch tip -- the packet, its priced table, the row and a latency line -- pushed WITHOUT
+4. writes ONE commit on the branch tip -- the packet, its priced table, the row, a latency line and, when the lane
+   used outside sources, its ``external_context`` lines (INTO training, flagged source: external) and feed-gap rows
+   (operator 2026-10-27 ~07:12Z) -- pushed WITHOUT
    force, so a moved branch is a rejected push that is re-read and retried, never a lost line.
 
 Short-hold rules (on top of the guard):
@@ -50,10 +53,14 @@ ENVELOPE = "comms/live_review/short_hold/{pkg}/latest.json"
 PACKETS = "comms/live_review/packets/{rid}.json"
 VALIDATOR = "scripts/ci/check_live_review_records.py"
 SCHEMA = "comms/schema/live_review.schema.json"
-ACTIONS = ("hold", "tighten_sl", "move_tp", "partial_close", "close", "flag_mechanics")
+ACTIONS = ("hold", "tighten_sl", "move_tp", "partial_close", "change_size", "close", "flag_mechanics")
 CONFIDENCE = ("measured", "suggestive", "anecdote")
-DRAFT_KEYS = {"action", "level", "size_fraction", "reason", "judgement_confidence", "confidence", "context_flags",
-              "session"}
+DRAFT_KEYS = {"action", "level", "size_fraction", "size_multiplier", "reason", "judgement_confidence", "confidence",
+              "context_flags", "session", "external_context"}
+EXTERNAL = "comms/live_review/short_hold/external_context.jsonl"
+FEED_GAPS = "comms/live_review/short_hold/feed_gaps.jsonl"
+INFLUENCE = ("decisive", "supporting", "checked_only")
+EC_KEYS = {"query_or_url", "source", "retrieved_at", "extracted", "why_packet_insufficient", "influence"}
 MODEL_TIER = "sonnet-tier (short-hold lane)"
 TRIGGER_EVENT = "short_hold"
 
@@ -127,6 +134,7 @@ def compile_row(draft: dict, env: dict, *, now: datetime) -> dict:
     if not isinstance(flags, list) or not all(isinstance(f, str) for f in flags):
         problems.append("context_flags must be a list of strings")
     problems += bracket_problems(draft, packet, env.get("short_hold") or packet.get("short_hold") or {})
+    problems += external_problems(draft.get("external_context"), now)
     if problems:
         raise Refused(problems)
 
@@ -142,7 +150,8 @@ def compile_row(draft: dict, env: dict, *, now: datetime) -> dict:
            "confidence": draft.get("confidence", "anecdote"),
            "evidence_source": "none" if act == "flag_mechanics" else "judgement",
            "judgement_confidence": None if act == "flag_mechanics" else conf, "reason": reason,
-           "size_fraction": draft.get("size_fraction") if act == "partial_close" else None, "size_multiplier": None}
+           "size_fraction": draft.get("size_fraction") if act == "partial_close" else None,
+           "size_multiplier": draft.get("size_multiplier") if act == "change_size" else None}
     sh = env.get("short_hold") or packet.get("short_hold") or {}
     atr = sh.get("atr")
     if level is not None and _num(atr) and atr > 0 and _num(sh.get("mark")):
@@ -162,7 +171,8 @@ def compile_row(draft: dict, env: dict, *, now: datetime) -> dict:
         "recommendation": rec, "judge_prior": None, "applied": False,
         "apply_policy": {"bound_r": 0.25, "within_bound": None, "tighten_r": None},
         "shadow_policy": {"bound_r": 0.5, "within_bound": None, "would_apply": None, "tighten_r": None},
-        "context_flags": list(flags),
+        "context_flags": list(flags) + ([f"external_context: {len(draft['external_context'])} source(s), see {EXTERNAL}"]
+                                        if draft.get("external_context") else []),
         "account_reads": [{"account_id": b["account_id"], "account_class": b.get("account_class"),
                            "read": "no_action" if hold_like else (b.get("read_if_amend") or "unknown"),
                            "evidence": b.get("evidence")} for b in bounds],
@@ -201,7 +211,49 @@ def bracket_problems(draft: dict, packet: dict, sh: dict) -> list[str]:
             out.append("partial_close needs size_fraction in (0, 1) (a full exit is close)")
     elif draft.get("size_fraction") is not None:
         out.append(f"{act} takes no size_fraction")
+    if act == "change_size":
+        m = draft.get("size_multiplier")
+        if not (_num(m) and m > 0 and m != 1):
+            out.append("change_size needs size_multiplier > 0 and != 1 (< 1 reduces, > 1 adds)")
+    elif draft.get("size_multiplier") is not None:
+        out.append(f"{act} takes no size_multiplier")
     return out
+
+
+def external_problems(ec, now: datetime) -> list[str]:
+    """external_context[] (operator 2026-10-27 ~07:12Z): every outside source Claude used, point-in-time, with the
+    values it used; it goes into training (flagged source: external) and raises a feed-gap row."""
+    if ec is None:
+        return []
+    if not isinstance(ec, list):
+        return ["external_context must be a list of entries"]
+    out = []
+    for i, e in enumerate(ec):
+        if not isinstance(e, dict) or set(e) != EC_KEYS:
+            out.append(f"external_context[{i}] must have exactly {sorted(EC_KEYS)}")
+            continue
+        t = _ts(e["retrieved_at"])
+        if t is None or t > now:
+            out.append(f"external_context[{i}].retrieved_at must be a time at or before the decision")
+        if e["influence"] not in INFLUENCE:
+            out.append(f"external_context[{i}].influence must be one of {INFLUENCE}")
+        if not isinstance(e["extracted"], dict) or not e["extracted"]:
+            out.append(f"external_context[{i}].extracted must hold the field/value pairs actually used")
+        if not all(str(e[k] or "").strip() for k in ("query_or_url", "source", "why_packet_insufficient")):
+            out.append(f"external_context[{i}]: query_or_url, source and why_packet_insufficient are required")
+    return out
+
+
+def external_lines(row: dict, ec: list) -> tuple[list[dict], list[dict]]:
+    """(training rows, feed-gap rows). The extracted values are stored here point-in-time so a replay or a training
+    run reproduces them without re-fetching; DESK-11 / CJ-2 read them as a feature block flagged source: external."""
+    base = {"review_id": row["review_id"], "order_package_id": row["order_package_id"], "leg": row["leg"],
+            "decided_at": row["reviewed_at"], "info_cutoff_at": row["info_cutoff_at"], "source_flag": "external"}
+    train = [dict(base, **e) for e in ec]
+    gaps = [{"review_id": row["review_id"], "decided_at": row["reviewed_at"], "leg": row["leg"],
+             "source": e["source"], "fields": sorted(e["extracted"]), "influence": e["influence"],
+             "why_packet_insufficient": e["why_packet_insufficient"]} for e in ec]
+    return train, gaps
 
 
 # ----------------------------------------------------------------------------- git
@@ -310,6 +362,13 @@ def run(draft: dict, cwd: str, pkg: str, *, branch: str = BRANCH, rules_ref: str
             return 0, {"state": "check_ok", "review_id": row["review_id"], "row": row}
         files = {reviews_path: append(text, row),
                  LATENCY: append((show(cwd, tip, LATENCY) or b"").decode(), latency_line(row, env, now, attempt))}
+        if draft.get("external_context"):
+            train, gaps = external_lines(row, draft["external_context"])
+            for path, lines in ((EXTERNAL, train), (FEED_GAPS, gaps)):
+                t = (show(cwd, tip, path) or b"").decode()
+                for ln in lines:
+                    t = append(t, ln)
+                files[path] = t
         pkt_path = PACKETS.format(rid=row["review_id"])
         if show(cwd, tip, pkt_path) is None:
             files[pkt_path] = json.dumps(env["packet"], indent=1, sort_keys=True) + "\n"

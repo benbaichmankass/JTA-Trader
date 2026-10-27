@@ -49,6 +49,10 @@ def envelope(side="long", verdict="match"):
             "short_hold": packet["short_hold"], "closed": False}
 
 
+EC = {"query_or_url": "https://example.org/funding", "source": "venue funding page", "retrieved_at": "2026-10-27T09:05:50Z",
+      "extracted": {"funding_rate_8h": 0.0003}, "why_packet_insufficient": "packet carries no funding", "influence": "supporting"}
+
+
 def draft(**kw):
     d = {"action": "hold", "reason": "5m higher lows intact", "judgement_confidence": 0.6, "confidence": "anecdote",
          "session": "session_X"}
@@ -66,6 +70,7 @@ def valid(row, env):
     (draft(action="move_tp", level=2440.0), "recommended", "MD-TRADE-DESK"),
     (draft(action="partial_close", size_fraction=0.5), "recommended", "MD-TRADE-DESK"),
     (draft(action="close"), "recommended", "MD-TRADE-DESK"),
+    (draft(action="change_size", size_multiplier=1.5), "recommended", "MD-TRADE-DESK"),
 ])
 def test_every_lane_action_compiles_to_a_row_the_guard_accepts(d, route, mandate):
     env = envelope()
@@ -95,6 +100,11 @@ def test_short_side_geometry():
     (draft(reason=""), "reason is required"),
     (draft(action="widen_sl", level=2380.0), "action must be one of"),
     (draft(review_id="LR-x"), "not allowed"),
+    (draft(action="change_size", size_multiplier=1.0), "size_multiplier"),
+    (draft(size_multiplier=2.0), "takes no size_multiplier"),
+    (draft(external_context=[{"query_or_url": "q"}]), "must have exactly"),
+    (draft(external_context=[dict(EC, influence="huge")]), "influence"),
+    (draft(external_context=[dict(EC, retrieved_at="2026-10-27T09:30:00Z")]), "at or before the decision"),
 ])
 def test_refusals(d, why):
     with pytest.raises(sw.Refused, match=why):
@@ -180,3 +190,16 @@ def test_closed_envelope_stops_the_lane(remote):
     _git(remote["seed"], "commit", "-qam", "closed"), _git(remote["seed"], "push", "-q", str(remote["origin"]), "HEAD:refs/heads/live-review/rows")
     code, rep = sw.run(draft(), remote["lane"], PKG, now_fn=lambda: NOW)
     assert code == 3 and rep["state"] == "closed"
+
+
+def test_external_context_goes_to_training_and_feed_gap_files(remote):
+    code, rep = sw.run(draft(external_context=[EC]), remote["lane"], PKG, now_fn=lambda: NOW)
+    assert code == 0, rep
+    _git(remote["lane"], "fetch", "-q", "origin")
+    tip = "origin/live-review/rows"
+    (tr,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.EXTERNAL}").splitlines()]
+    assert tr["source_flag"] == "external" and tr["extracted"] == {"funding_rate_8h": 0.0003} and tr["review_id"] == rep["review_id"]
+    (gap,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.FEED_GAPS}").splitlines()]
+    assert gap["fields"] == ["funding_rate_8h"] and gap["influence"] == "supporting"
+    (row,) = [json.loads(x) for x in _git(remote["lane"], "show", f"{tip}:{sw.REVIEWS}").splitlines()]
+    assert any(f.startswith("external_context: 1 source") for f in row["context_flags"])
