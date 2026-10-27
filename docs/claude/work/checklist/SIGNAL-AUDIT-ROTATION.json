@@ -11,8 +11,8 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Owns BL-20260812-SIGNAL-AUDIT-JSONL-501MB-NO-ROTATION (routed by RESEARCH-OPS-20261027-0248). Step 1 (Tier 1): sample the file size twice >=24h apart via /api/diag/log_file and state MB/day and the date the volume reaches 80%. Step 2 (Tier 2, operator OK): install a rotation timer like the shadow-prediction log's, or record why growth is acceptable. Also resolve whether rsyslog RSS is tied to this file. Not started; clears_when is in the pipeline item.",
-  "updated_at": "2026-10-27T02:52:22Z",
+  "note": "Owns BL-20260812-SIGNAL-AUDIT-JSONL-501MB-NO-ROTATION (routed by RESEARCH-OPS-20261027-0248). Population: runtime_logs/signal_audit.jsonl on the live trader, 501 MB measured 2026-08-12 (one sample, no growth rate yet). Step 1 (Tier 1): sample its size twice >=24h apart via /api/diag/log_file and state MB/day over the named window and the projected date the volume fills. Step 2 (Tier 2, operator OK): install a rotation timer like the shadow-prediction log's, or record why growth is acceptable. Also resolve whether rsyslog RSS is tied to this file. Not started; clears_when is in the pipeline item.",
+  "updated_at": "2026-10-27T03:10:23Z",
   "updated_by": "research-ops-0248",
   "roadmap": [
     "L-LADDER"
