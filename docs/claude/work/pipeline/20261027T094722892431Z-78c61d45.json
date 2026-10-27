@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-P6NRDB4X-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-DEMO-LIVE, PR #20585 (tests/test_banking_mechanism_audit.py pin)",
+    "rerun": "python3 -m pytest -q tests/test_banking_mechanism_audit.py::test_telemetry_hook_set_is_derived_not_trusted  # claude_desk still in legs_structurally_invisible = open"
+  },
+  "state": "queued",
+  "what": "src/units/strategies/claude_desk.py does not call record_position_telemetry, so a live desk trade on the bybit_1 demo has no peak-R / MFE telemetry (structurally invisible, same as fade_breakout_4h / fvg_range_15m). The desk's trades are the training corpus for the students: hook the unit (as MI-164 did for ict_scalp) and drop it from the pinned invisible list."
+}
