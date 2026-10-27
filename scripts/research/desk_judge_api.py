@@ -25,7 +25,11 @@ and are INFERRED for `claude-sonnet-5-5` -- pass --price-* to override. Verify t
 the dollar column.
 
   python3 scripts/research/desk_judge_api.py --packets P/packets.jsonl --protocol P/JUDGE-PROTOCOL.md \\
-      --out OUT --offset 0 --n 200 --max-usd 5 [--estimate-only]
+      --out OUT --offset 0 --n 200 --max-usd 5 [--estimate-only] [--deadline-s 840]
+
+`--deadline-s` (added by the run-desk-judge system-action, whose workflow job has a wall-clock limit): stop BEFORE the
+next call once that many seconds have passed since the start. A kill mid-call would lose a billed call's ledger line;
+stopping between calls cannot. The stop is resumable exactly like a cap stop.
 """
 from __future__ import annotations
 
@@ -114,6 +118,8 @@ def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> dict[str
     (out / "judged").mkdir(parents=True, exist_ok=True)
     ledger = out / "usage.jsonl"
     spent, done, skipped, unparsed, stopped = 0.0, 0, 0, 0, ""
+    t0 = time.monotonic()
+    deadline_s = getattr(a, "deadline_s", None)
     est = [worst_case_cost(len(protocol) + len(json.dumps(p, separators=(",", ":"))) + len(USER_TMPL), prices) for _, p in packets]
     if a.estimate_only:
         return {"estimate_only": True, "packets": len(packets), "worst_case_usd_total": round(sum(est), 4),
@@ -126,6 +132,9 @@ def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> dict[str
         if a.skip_done and f.exists():
             skipped += 1
             continue
+        if deadline_s is not None and time.monotonic() - t0 > deadline_s:
+            stopped = f"deadline_s {deadline_s} reached before packet index {idx}; re-dispatch the same inputs to resume"
+            break
         if spent + est[k] > a.max_usd:
             stopped = f"max_usd {a.max_usd} would be exceeded by packet index {idx} (spent {spent:.4f} + worst case {est[k]:.4f})"
             break
@@ -166,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--price-output", type=float, default=PRICES["output"])
     p.add_argument("--no-skip-done", dest="skip_done", action="store_false")
     p.add_argument("--estimate-only", action="store_true")
+    p.add_argument("--deadline-s", type=float, default=None)
     a = p.parse_args(argv)
     print(json.dumps(run(a)))
     return 0
