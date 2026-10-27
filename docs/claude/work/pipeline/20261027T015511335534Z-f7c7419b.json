@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "comms/desk/role_grade.json shows either propose_entry n_recorded >= 5, or no_trade n_independent >= 20 with a verdict (NO_TRADE_ADDS_VALUE means abstaining was right; NO_TRADE_COSTS_VALUE means open a DESK-BRIEF amendment row)",
+    "kind": "observation"
+  },
+  "id": "PI-20261027-VIPEZN1F-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-09",
+    "how_to_check": "python3 scripts/ops/claude_role_grade.py --live --json | python3 -c \"import sys,json;d=json.load(sys.stdin);print([ (r['class'],r['n_recorded'],r['n_graded'],r['verdict']) for r in d['rows'] if r['role']=='entry_generation'])\"",
+    "what": "propose_entry recorded count and the no_trade counterfactual verdict"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "DESK-9-GRADING lane session_01Bd47ounpxZqiN5ViPEzn1F (PR #20501)",
+    "rerun": "python3 scripts/ops/claude_role_grade.py --live --json"
+  },
+  "state": "queued",
+  "what": "The desk has never made a propose_entry: 0 of 11 recorded entry_generation decisions (all no_trade, comms/desk/decisions.jsonl on main 2026-10-27). With 0 proposals the DESK-13 entry gate (OOS edge vs random, n>=30) and desk_grade's propose_entry grading cannot accrue; abstention is only gradeable via the new no_trade counterfactual (claude_role_grade.py). Question for the desk owner: is always-abstaining the correct read of these packets (the no_trade counterfactual will say, from n=20 independent windows, ~2026-11-08), or does DESK-BRIEF.md bias to no_trade so no proposal ever exists to learn from?"
+}
