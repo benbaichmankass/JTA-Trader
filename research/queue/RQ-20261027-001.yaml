@@ -5,7 +5,7 @@ id: RQ-20261027-001
 title: 'Programme 01 Q11 rung 2 DOSE (variants after the eba2-07 near miss): on ada_pullback_2h does the
   metric-TRIGGERED tight trail at a different dose (2.0 x ATR or 3.5 x ATR instead of 2.5) beat the declared
   exit AND its own unconditional control, on net R in 5 of 6 folds over 2020-07..2026-10?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -145,3 +145,15 @@ generated:
   params:
     node: P1-Q11-transfer-read
 last_dispatched_at: '2026-10-27T06:27:15+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q11-R2-ADA-DOSE
+  evidence:
+  - research/results/RQ-20261027-001/40461203921.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

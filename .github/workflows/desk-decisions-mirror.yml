@@ -15,6 +15,9 @@ name: desk-decisions-mirror
 #      role and action class) -> comms/desk/role_grade.json. A grading failure is a warning, never a stop of
 #      the mirror (Prime Directive rule 7); the snapshot is rewritten only when an n/state moved or it is
 #      ~20 h old, so it adds at most one landing a day when nothing moved;
+#   3c. feed-gap alerts (scripts/ops/desk_feed_gaps.py, DESK-14): every external_context.items[] a wake logged is a
+#      named data feed the packet lacks -> comms/desk/feed_gaps.jsonl + ONE pipeline item per NEW gap name. A failure
+#      is a warning, never a stop (Prime Directive rule 7);
 #   4. lands it in ONE self-landing PR (commit-to-main, verify-merged).
 # One run at a time (concurrency group; each run waits for its PR to merge).
 # ⚠️ A `push` run uses the workflow file AS IT EXISTS ON THE PUSHED BRANCH, and desk/decisions was cut
@@ -81,12 +84,20 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY" || { echo "::warning::claude_role_grade failed; the mirror still lands"; exit 0; }
           if [ -n "$(git status --porcelain comms/desk)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
+      - name: Raise feed-gap alerts (DESK-14)
+        id: gaps
+        continue-on-error: true
+        run: |
+          python3 scripts/ops/desk_feed_gaps.py --file-pipeline | tee -a "$GITHUB_STEP_SUMMARY" \
+            || echo "::warning::desk_feed_gaps failed; the mirror still lands"
+          if [ -n "$(git status --porcelain comms/desk docs/claude/work/pipeline)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
+
       - name: Land on main (one self-landing PR)
-        if: steps.mirror.outputs.changed == '1' || steps.grade.outputs.changed == '1'
+        if: steps.mirror.outputs.changed == '1' || steps.grade.outputs.changed == '1' || steps.gaps.outputs.changed == '1'
         uses: ./.github/actions/commit-to-main
         with:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: comms/desk comms/desk/role_grade.json
+          paths: comms/desk comms/desk/role_grade.json docs/claude/work/pipeline
           # the grade snapshot is regenerated hourly (idempotent): on a stale-branch conflict adopt main's copy
           refresh-command: git fetch -q origin main && git checkout FETCH_HEAD -- comms/desk/role_grade.json || true
           message: "desk: mirror decisions from desk/decisions + replayed outcomes"
