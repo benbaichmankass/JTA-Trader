@@ -1,0 +1,46 @@
+{
+  "unit": "RQ-20261026-ed1c-20",
+  "run_id": "40544545949",
+  "commit_sha": "367e5ef02b9e489263fdb38f2520ed81aadbd86c",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40544545949",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "retail_sales_mom",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "SPY",
+        "--horizons",
+        "3",
+        "--primary-horizons",
+        "3",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "positive",
+        "--trade-horizon",
+        "3",
+        "--cost-symbol",
+        "SPY",
+        "--trade-t-bar",
+        "2.0",
+        "--population",
+        "retail_sales_mom releases (live feed + survey-consensus backfill, one row per release date) joined to SPY daily closes",
+        "--out",
+        "comms/research/RQ-20261026-ed1c-20/40544545949"
+      ],
+      "log": "comms/research/RQ-20261026-ed1c-20/40544545949/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2.5
+    }
+  ],
+  "all_ok": true
+}
