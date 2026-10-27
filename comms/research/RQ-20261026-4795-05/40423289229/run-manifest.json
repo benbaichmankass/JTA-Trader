@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261026-4795-05",
+  "run_id": "40423289229",
+  "commit_sha": "d6116eebf31fa0f2b738380264a05758ec09285e",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40423289229",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "michigan_sentiment",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "SPY",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.0",
+        "--expected-sign",
+        "either",
+        "--population",
+        "michigan_sentiment releases (live feed + survey-consensus backfill) joined to SPY daily closes",
+        "--out",
+        "comms/research/RQ-20261026-4795-05/40423289229"
+      ],
+      "log": "comms/research/RQ-20261026-4795-05/40423289229/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.7
+    }
+  ],
+  "all_ok": true
+}
