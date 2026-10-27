@@ -54,7 +54,8 @@ MODES
             [--selfcheck-verdict V]    units 03 (all) and 04 (novelty = new).
 
 STATED LIMITS (printed into every verdict)
-* Candles are Binance Vision SPOT klines for the six crypto USDT symbols in the pull lists (the CPU-only
+* Candles are Binance Vision USD-M PERP klines (fetch_backtest_candles.py --source binance_vision reads
+  data/futures/um; corrected 2026-10-27, DESK-PACKET-REDESIGN: this line said SPOT) for the six crypto USDT symbols in the pull lists (the CPU-only
   runner route); the ETF / futures symbols of the pull lists are out of scope. The desk's venue is Bybit perp.
 * Funding is not in the replayed packet (`could_not_look`); the cost stack still charges it.
 * The system book is not reconstructed point in time; novelty is scorer-assigned from the committed lists,
@@ -316,8 +317,11 @@ def simulate(s: Series, i: int, side: float, etype: str, level: float, stop: flo
 
 # ----------------------------------------------------------------------------- packets
 def build_masked_packet(mkt: Dict[str, Series], classes: Dict[str, List[str]], cutoff_epoch: int, k: int,
-                        seed: int = SEED) -> Tuple[dict, dict]:
-    """(masked packet, key). Aliases are re-drawn per packet (seeded), so ASSET_01 is not one symbol forever."""
+                        seed: int = SEED, mode: str = "A", raw: Any = None) -> Tuple[dict, dict]:
+    """(masked packet, key). Aliases are re-drawn per packet (seeded), so ASSET_01 is not one symbol forever.
+    `mode` (DESK-PACKET-REDESIGN): "A" = today's packet (default, unchanged); "B" = base-rate rows removed; "C" = raw
+    bars (needs `raw`, a desk_packet_modes.RawStore). B and C keep A's packet_id, aliases and rebasing, so the same key
+    scores them; they are not the live desk schema and skip its validator."""
     cutoff = datetime.fromtimestamp(cutoff_epoch, tz=timezone.utc)
     order = np.random.default_rng(seed + 1000 + k).permutation(len(mkt))
     syms = [sorted(mkt)[j] for j in order]
@@ -336,6 +340,9 @@ def build_masked_packet(mkt: Dict[str, Series], classes: Dict[str, List[str]], c
     if bad:
         raise AssertionError(f"masked packet fails desk-records-guard: {bad[:3]}")
     key.update(index=k, cutoff_epoch=cutoff_epoch, fold=fold_of(cutoff_epoch))
+    if mode != "A":
+        from scripts.research import desk_packet_modes as pm   # noqa: E402 - optional builder modes
+        m = pm.apply(mode, m, key, raw)
     return m, key
 
 
