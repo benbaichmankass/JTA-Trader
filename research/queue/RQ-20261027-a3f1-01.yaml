@@ -1,4 +1,4 @@
-id: RQ-20261027-mk01-01
+id: RQ-20261027-a3f1-01
 title: 'Desk maker fills: does a post-only entry at the touch beat a Market entry on the 6 desk Bybit perps, net of fees and adverse selection (strict trade-through fill, fallback-to-taker), on Bybit''s own trade prints?'
 status: done
 cadence: once
@@ -36,7 +36,7 @@ power:
     source: none
     accrual_basis: Public historical trade prints over a pinned day list; nothing accrues.
 decision_rule:
-  id: RULE-RQ20261027-MK01-01-MAKER-FILLS
+  id: RULE-RQ20261027-A3F1-01-MAKER-FILLS
   registered_at: '2026-10-27'
   registered_before_run: true
   statistic: >-
@@ -80,7 +80,7 @@ run:
   - --out
   - '{out_dir}'
   inputs:
-    research_unit: RQ-20261027-mk01-01
+    research_unit: RQ-20261027-a3f1-01
   timeout_minutes: 180
 lands:
   store: research/results/
@@ -93,15 +93,15 @@ related:
 - docs/research/desk-edge-program-2026-10-27.md
 last_dispatched_at: null
 grading:
-  attested: RULE-RQ20261027-MK01-01-MAKER-FILLS
+  attested: RULE-RQ20261027-A3F1-01-MAKER-FILLS
   auto: false
-  decision_rule_id: RULE-RQ20261027-MK01-01-MAKER-FILLS
+  decision_rule_id: RULE-RQ20261027-A3F1-01-MAKER-FILLS
   evidence:
-  - research/results/RQ-20261027-mk01-01/local-2026-10-27.jsonl
+  - research/results/RQ-20261027-a3f1-01/local-2026-10-27.jsonl
   - comms/research/desk_maker_fills/maker_fills_record-2026-10-27.json
   graded_at: '2026-10-27'
   grader: lane DESK-MAKER-FILLS (the harness's own verdict under the registered constants)
-  note: 'Run locally on the lane container after the registration commit 1ab13e21 was pushed. PASS by 0.03 bps over X; not a promotion case. Next step per the rule: probe (b) + post-only entry proposal to the manager (docs/research/desk-maker-fills-2026-10-27.md s5).'
+  note: 'Registered as RQ-20261027-mk01-01 / RULE-RQ20261027-MK01-01-MAKER-FILLS in commit 1ab13e21; renamed after the run to this id ONLY because research_result.py requires a hex segment (rule text, sample and thresholds unchanged). Run locally on the lane container after the registration commit was pushed. PASS by 0.03 bps over X; not a promotion case. Next step per the rule: probe (b) + post-only entry proposal to the manager (docs/research/desk-maker-fills-2026-10-27.md s5).'
   reason: 1 row, measured, pass (n 10,560, 40 days, mean +2.03 bps, CI [1.69, 2.33], 6 of 6 symbols positive)
   rows: 1
   verdict: pass

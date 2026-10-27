@@ -5,10 +5,10 @@
 Lane `DESK-MAKER-FILLS` (Tier 1, research), dispatched by Manager Session 2026-10-27a. Checklist row
 `docs/claude/work/checklist/DESK-MAKER-FILLS.json` (roadmap `L-DESK`). Operator popup 2026-10-27 ~22:10Z: *"Maker fills (Recommended)"*
 to *"Which structural lever should the desk edge work build first?"*. Pipeline row `PI-20261027-GV7WFI53-0001`.
-Unit `research/queue/RQ-20261027-mk01-01.yaml`, rule `RULE-RQ20261027-MK01-01-MAKER-FILLS`, harness `scripts/research/desk_maker_fills.py`.
+Unit `research/queue/RQ-20261027-a3f1-01.yaml`, rule `RULE-RQ20261027-A3F1-01-MAKER-FILLS`, harness `scripts/research/desk_maker_fills.py`.
 
 **The unit (rule, sample, thresholds) and the harness with its registered constants were committed and pushed before the registered run
-(commit `1ab13e21`, 2026-10-27T23:20:51Z).** § 1–3 of this doc restate them and were written while the run was in progress, before its
+(commit `1ab13e21`, 2026-10-27T23:20:51Z).** It was registered as `RQ-20261027-mk01-01` / `RULE-RQ20261027-MK01-01-MAKER-FILLS` and renamed after the run to the ids below only because `research_result.py` requires a hex id segment; the rule text, sample and thresholds are byte-for-byte unchanged (`git diff 1ab13e21 -- research/queue/`). § 1–3 of this doc restate them and were written while the run was in progress, before its
 result was read. Results are in § 4.
 
 ## 1. Inventory (what exists today)
@@ -101,7 +101,7 @@ see latency or queue position, and it does not price a maker take-profit (a sepa
 ## 4. Result — PASS at the threshold (MEASURED, registered run)
 
 Record: `comms/research/desk_maker_fills/maker_fills_record-2026-10-27.json`; result row
-`research/results/RQ-20261027-mk01-01/local-2026-10-27.jsonl`. Run on the lane container after the registration commit was pushed;
+`research/results/RQ-20261027-a3f1-01/local-2026-10-27.jsonl`. Run on the lane container after the registration commit was pushed;
 all 240 symbol-day cells measured, 0 failed, 0 RPI prints present in the sample (the column exists; every value was 0).
 
 **Population for every number below:** 6 symbols × 40 days (2025-11-08..2026-10-25, every 9th day) × 22 hourly decision times × both

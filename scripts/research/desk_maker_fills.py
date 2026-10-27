@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Maker-entry fill rate and adverse selection on Bybit linear perps, from Bybit's own trade prints.
 
-Lane DESK-MAKER-FILLS (checklist row), unit RQ-20261027-mk01-01. Question: if an entry were sent as a
+Lane DESK-MAKER-FILLS (checklist row), unit RQ-20261027-a3f1-01. Question: if an entry were sent as a
 post-only limit at the touch instead of a Market order, how often would it fill, how much adverse
 selection would it carry, and does it beat the taker entry NET of fees and of that selection?
 
@@ -60,8 +60,8 @@ from typing import Dict, Iterable, List, Optional, Sequence
 
 import numpy as np
 
-RULE_ID = "RULE-RQ20261027-MK01-01-MAKER-FILLS"
-UNIT_ID = "RQ-20261027-mk01-01"
+RULE_ID = "RULE-RQ20261027-A3F1-01-MAKER-FILLS"
+UNIT_ID = "RQ-20261027-a3f1-01"
 SYMBOLS = ("ADAUSDT", "AVAXUSDT", "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT")
 BASE_URL = "https://public.bybit.com/trading"
 TAKER_FEE_BPS = 5.5
