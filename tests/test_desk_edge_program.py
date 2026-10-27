@@ -237,3 +237,35 @@ def test_fade_takes_the_opposite_side_of_the_top_picks():
     opp = {(r["cutoff"], r["symbol"], r["side"]): r["y"] for r in rows}
     want = sorted(opp[(rows[j]["cutoff"], rows[j]["symbol"], "short" if rows[j]["side"] == "long" else "long")] for j in picks)
     assert sorted(r["diff"] for r in fr) == pytest.approx(want)
+
+
+def test_1m_geometry_scales_with_root_hold_and_maker_is_cheaper():
+    from scripts.research import desk_edge_1m as m1
+    g5, g480 = m1.geometry(5), m1.geometry(480)
+    assert g480["sl_atr"] / g5["sl_atr"] == pytest.approx((480 / 5) ** 0.5)
+    assert g5["tp_atr"] == pytest.approx(g5["sl_atr"] * m1.TP_R) and g5["horizon"] == 5
+    assert m1.EMBARGO_BARS > max(m1.HOLDS_MIN)
+    assert sum(m1.MAKER) < sum(m1.TAKER)
+    # one synthetic trade: maker re-costing keeps the gross and charges less
+    old = d.SEC
+    try:
+        d.SEC = m1.BAR_SEC
+        n = 80
+        t = np.array([T0 + 60 * i for i in range(n)], dtype=np.int64)
+        c = 100 + np.concatenate([np.zeros(30), np.linspace(0, 2, n - 30)])
+        s = d.Series("BTCUSDT", t, c, c + 0.05, c - 0.05, c, np.full(n, 0.1), m1.TAKER[0], m1.TAKER[1], m1.FUND_BPS)
+        tr = d.transplant(s, 29, dict(m1.geometry(15), side=1.0))
+        assert tr.state == "filled"
+        mk = m1.maker_net(tr, s)
+        assert tr.gross_r - tr.cost_r == pytest.approx(tr.net_r) and mk > tr.net_r
+    finally:
+        d.SEC = old
+
+
+def test_1m_action_features_side_signed():
+    from scripts.research import desk_edge_1m as m1
+    ex = {"BTCUSDT": {"ret5": 1.0, "ret60": -2.0, "atr_pct": 3.0}, "ETHUSDT": {"ret5": 0.5, "ret60": 0.0, "atr_pct": 2.0}}
+    lo = m1.action_features(ex, "ETHUSDT", "long", T0, 30)
+    sh = m1.action_features(ex, "ETHUSDT", "short", T0, 30)
+    assert lo["ret5"] == 0.5 and sh["ret5"] == -0.5 and lo["atr_pct"] == sh["atr_pct"] == 2.0
+    assert lo["btc_ret60"] == -2.0 and sh["btc_ret60"] == 2.0 and lo["hold"] == 30.0
