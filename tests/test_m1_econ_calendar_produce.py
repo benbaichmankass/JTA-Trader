@@ -119,3 +119,13 @@ def _seed(tmp_path: Path) -> Path:
     caps.mkdir(exist_ok=True)
     (caps / "US-20260729T063800Z.md").write_text(FIXTURE, encoding="utf-8")
     return caps
+
+
+def test_config_head_ignores_events_block_only():
+    from scripts.macro.econ_calendar_produce import _GENERATED_MARK, _config_head
+
+    head = "defaults:\n  pre_window_minutes: 60\nsymbol_event_classes:\n  MES: [fomc]\n"
+    a = head + "\nevents: []\n"
+    b = head + "\n" + _GENERATED_MARK + "\n# (scripts/macro/econ_calendar_produce.py --emit-config). Forward\n# high/medium-impact events mapped to x.\nevents:\n  - {class: fomc, time: \"2026-10-28T18:30:00Z\", impact: 1.0}\n"
+    assert _config_head(a) == _config_head(b)
+    assert _config_head(a) != _config_head(a.replace("MES: [fomc]", "MES: []"))
