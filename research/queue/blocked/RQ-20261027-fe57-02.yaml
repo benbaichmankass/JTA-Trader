@@ -8,7 +8,7 @@ roadmap:
 - L-DESK
 kind: experiment
 question: >-
-  On the DEV window (2025-11-01..2026-09-15), at cutoffs every 15 minutes, for six symbols x {long, short} x brackets of 5, 15, 30 and 60-minute holds (hard cap) and the hold rule
+  On the DEV window (2025-11-01..2026-09-15), at cutoffs every 60 minutes (amended from 15 before the full run, for compute; only a 303-cutoff smoke test had run), for six symbols x {long, short} x brackets of 5, 15, 30 and 60-minute holds (hard cap) and the hold rule
   "enter within 60 minutes, may run to H" for H in {120, 240, 480} minutes, with features from 1m perp bars and signed trade flow (aggTrades) at or before the cutoff, do the
   walk-forward learners of desk_edge_ceiling (ridge, logit, GBDT; the same policy and family correction) select entries whose S3 is >= +0.25 R with the 95% CI lower bound > 0
   AND whose S1 is > 0 under (a) the repo cost stack and (b) maker entry with taker exit, for at least one hold?
@@ -27,7 +27,7 @@ power:
   alpha: 0.05
   power: 0.80
   basis: >-
-    About 30,000 fifteen-minute cutoffs over the DEV window; test folds 2-4 hold about 22,000; the desk-like policy (top 34% of cutoffs, <= 2 symbols) picks about 15,000 per hold.
+    About 7,700 hourly cutoffs over the DEV window x 84 actions = about 650,000; test folds 2-4 hold about 5,700 cutoffs; the desk-like policy (top 34% of cutoffs, <= 2 symbols) picks about 3,900 per hold.
     sd 1.6 R INFERRED (judged-1). The constraint is weeks, not picks: 35 test weeks give a weekly-cluster CI of about +-0.2 R (MEASURED on the 1h DEV ceiling, section 4.1), which is
     exactly why the registered bar is +0.25 R (section 6.1): the DEV window resolves +0.25 on its own and cannot resolve less.
   feasibility:
@@ -56,10 +56,11 @@ blocked_on:
 - kind: work_item
   ref: DESK-EDGE-PROGRAM
   what: >-
-    The 1m-bar mode does not exist. A lane builds it in scripts/research/desk_edge_ceiling.py (a 1m Series through the driver's own simulate/transplant/random_baseline, which are
-    bar-index based; features from 1m klines and aggTrades; the hold-rule bracket = an entry window of 60 bars then a horizon H), with tests, and fills in run.command below.
+    BUILT on PR #20672: scripts/research/desk_edge_1m.py (1m d.Series through the driver's own transplant/random_baseline with d.SEC = 60; features from 1m perp
+    klines incl. taker-buy volume; aggTrades not yet used). The runner needs the `build` step first (1m klines for 2025-10..2026-09 from Binance Vision into
+    --klines, then `desk_edge_1m.py build --klines DIR --out /tmp/desk_edge_1m`); run.command is the scoring step.
   clears_when: >-
-    The 1m mode and its tests are on main and run.command names it. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+    scripts/research/desk_edge_1m.py and its tests are on main and the runner can run its build step. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
 compute: cpu_heavy
 value:
   usd_at_stake_per_month: 500
@@ -75,9 +76,11 @@ routing:
 run:
   command:
   - python3
-  - scripts/research/desk_edge_ceiling.py
-  - run-1m
+  - scripts/research/desk_edge_1m.py
+  - run
   - --out
+  - /tmp/desk_edge_1m
+  - --evidence
   - '{out_dir}'
   inputs:
     research_unit: RQ-20261027-fe57-02
