@@ -302,7 +302,7 @@ Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd
 
 ## 8. What was not verified
 
-- Fill probability and adverse selection of maker entries (no maker fill exists to measure); the maker fee is Bybit's published 0.02% per side, not measured.
+- Fill probability and adverse selection of maker entries (no maker fill exists to measure); the maker fee is Bybit's published 0.02% per side, not measured. <!-- population-ok: a published fee schedule, not a sample statistic -->
 - That the extended-era DEV folds equal the driver's folds to the bar (the era fold windows are rebuilt from the driver's arithmetic with a ceiling at the second).
 - The judge's behaviour beyond Sonnet: the base-rate-rule finding is for the Sonnet subagent setup only.
 - Whether V1's subagents, which had file tools, are representative of a tool-less API judge: their transcripts show no foreign reads, but the 3 rejected batches show the setup invites shortcuts.

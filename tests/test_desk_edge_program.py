@@ -299,7 +299,7 @@ def test_info_features_are_point_in_time():
     assert di._at(s, 650, "prem") == 0.0003                  # the value at 900 is in the future
     assert di._at(s, 650, "prem", 600) == 0.0001
     assert np.isnan(di._at(s, -1, "prem"))
-    f = di.info_features(650, "AAA", None, s, None)
+    f = di.info_features(650, None, s, None)
     assert f["prem_bps"] == pytest.approx(3.0)
     assert np.isnan(f["prem_chg15"])                           # 15 min before t=650 there is no value yet
 

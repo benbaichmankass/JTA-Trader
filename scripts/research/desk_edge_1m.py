@@ -177,7 +177,7 @@ _G: Dict[str, Any] = {}
 
 def _build_symbol(sym: str) -> List[dict]:
     d.SEC = BAR_SEC
-    mkt, flow, cuts = _G["mkt"], _G["flow"], _G["cuts"]
+    mkt, cuts = _G["mkt"], _G["cuts"]
     s = mkt[sym]
     rng = np.random.default_rng(SEED + d.REGISTERED_SYMBOLS.index(sym))
     base: Dict[Tuple, Tuple] = {}

@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import collections
 import glob
-import io
 import json
 import math
 import sys
@@ -121,7 +120,7 @@ def _at(series: Dict[str, np.ndarray], t: int, key: str, lag_s: int = 0) -> floa
     return float(series[key][j]) if j >= 0 else float("nan")
 
 
-def info_features(c: int, sym: str, met, prem, dep) -> Dict[str, float]:
+def info_features(c: int, met, prem, dep) -> Dict[str, float]:
     o: Dict[str, float] = {}
     if met is not None:
         oi = _at(met, c, "oi")
@@ -230,7 +229,7 @@ def run_build(build: Path, met, prem, dep, alpha: float, controls: bool) -> Dict
     extra = {}
     for c in ex:
         for s in ex[c]:
-            extra[(c, s)] = info_features(c, s, met.get(s), prem.get(s), dep.get(s))
+            extra[(c, s)] = info_features(c, met.get(s), prem.get(s), dep.get(s))
     vm_rows = [dict(r, y=r["y_vm"], y_e535=r["y"]) for r in acts]          # learners train on VM-S3
     te = np.array([r["fold"] in ce.TEST_FOLDS for r in acts])
     test = [dict(acts[j]) for j in np.nonzero(te)[0]]
