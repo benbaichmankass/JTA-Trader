@@ -51,7 +51,8 @@ JUDGED1_KEY = REPO / "comms/research/desk_gen_replay/judged-1/mask-key.json"
 DEV_N = 100                       # packets per variant
 DEV_LOOKS = (25, 50, 75, 100)     # sequential looks, in packets of the variant's sample order
 DEV_SEED = 20261027
-DEV_GEOM = ("GJ", 1.25, 2.0, 48)  # the fixed bracket every cell score is about
+DEV_GEOM = ("GJ", 1.25, 2.0, 48)  # the fixed bracket every cell score is about (V1)
+DEV_GEOMS = {g[0]: g for g in ce.GEOMETRIES + ce.SHORT_GEOMETRIES}   # a variant may name another registered bracket
 SEL_USEFUL = 0.10                 # R: the selection value below which a variant is not worth a holdout (doc section 5.2)
 TOP_K = 2                         # cells per packet the SEL statistic takes (judged-1's cap)
 KILL_ALPHA = 0.05                 # one-sided, split evenly over the looks (Bonferroni)
@@ -117,6 +118,12 @@ def _session(cutoff: int) -> str:
     return "asia" if h < 7 else "europe" if h < 13 else "us" if h < 21 else "late_us"
 
 
+def rank_addendum(geom: Tuple = DEV_GEOM) -> str:
+    _, sl, tp_r, h = geom
+    return RANK_ADDENDUM.replace("stop 1.25 x atr, target 2.0 x the stop distance, exit at 48 bars",
+                                 f"stop {sl:g} x atr, target {tp_r:.1f} x the stop distance, exit at {h} bar{'s' if h != 1 else ''}")
+
+
 RANK_ADDENDUM = """
 
 ## Dev-loop scoring (DESK-EDGE-PROGRAM; this block binds your reply)
@@ -132,13 +139,13 @@ cells, so use the full range your evidence supports; identical scores carry no i
 
 # ----------------------------------------------------------------------------- scoring a variant
 def cell_labels(mkt: Dict[str, d.Series], keys: Dict[str, dict], pids: Sequence[str], seed: int = DEV_SEED,
-                window: Tuple[datetime, datetime] = DEV) -> Dict[Tuple[str, str], dict]:
+                window: Tuple[datetime, datetime] = DEV, geom: Tuple = DEV_GEOM) -> Dict[Tuple[str, str], dict]:
     """{(packet_id, real_symbol+side): {y, net_r, days, week, fold}} for the dev bracket, via the driver's engine and
     random baseline (same symbol, side, fold; the ceiling's construction)."""
     rng = np.random.default_rng(seed)
     base: Dict[Tuple, Optional[float]] = {}
     out: Dict[Tuple[str, str], dict] = {}
-    _, sl, tp_r, h = DEV_GEOM
+    _, sl, tp_r, h = geom
     for pid in pids:
         k = keys[pid]
         c, fold = int(k["cutoff_epoch"]), int(k["fold"])
@@ -322,7 +329,7 @@ def cmd_sample(a: argparse.Namespace) -> int:
     (out / "sample.json").write_text(json.dumps({"seed": a.seed, "n": len(smp), "source": str(Path(a.mask_key)), "packets": smp}, indent=1) + "\n")
     (out / "JUDGE-PROTOCOL.md").write_text(d.JUDGE_PROTOCOL % {"cap": d.MAX_PER_PACKET, "sent": d.cdr.SENTINEL_R_FLOOR,
                                                               "cap_pct": d.cdr.TP_VENUE_CAP_PCT * 100, "reach": d.cdr.REACH_FLOOR,
-                                                              "minrisk": d.MIN_RISK_ATR} + RANK_ADDENDUM)
+                                                              "minrisk": d.MIN_RISK_ATR} + rank_addendum(DEV_GEOMS[a.geom]))
     strata: Dict[str, int] = {}
     for s in smp:
         strata[str(tuple(s["stratum"]))] = strata.get(str(tuple(s["stratum"])), 0) + 1
@@ -336,7 +343,7 @@ def cmd_score(a: argparse.Namespace) -> int:
     smp = json.loads(Path(a.sample).read_text())["packets"]
     order = [s["packet_id"] for s in smp]
     ranks, acc = read_ranks(Path(a.ranks), keys)
-    labels = cell_labels(mkt, keys, [p for p in order if p in ranks])
+    labels = cell_labels(mkt, keys, [p for p in order if p in ranks], geom=DEV_GEOMS[a.geom])
     rows_all = cell_rows(ranks, labels)
     looks, wk_at = [], []
     sel = packet_sel(rows_all)
@@ -353,7 +360,7 @@ def cmd_score(a: argparse.Namespace) -> int:
            "mean_sel_by_look": [float(np.mean(v)) if v else None for v in wk_at], "weeks_by_look": [len(v) for v in wk_at],
            "packets_with_sel": len(sel),
            "cells_scored": len(rows_all), "top_pick": {k: st.get(k) for k in ("n", "mean_net_r", "paired_diff_vs_random", "paired_diff_ci95")},
-           "constants": {"SEL_USEFUL": SEL_USEFUL, "TOP_K": TOP_K, "DEV_LOOKS": DEV_LOOKS, "KILL_ALPHA": KILL_ALPHA, "PROMOTE_ALPHA": PROMOTE_ALPHA, "DEV_GEOM": DEV_GEOM}}
+           "constants": {"SEL_USEFUL": SEL_USEFUL, "TOP_K": TOP_K, "DEV_LOOKS": DEV_LOOKS, "KILL_ALPHA": KILL_ALPHA, "PROMOTE_ALPHA": PROMOTE_ALPHA, "DEV_GEOM": DEV_GEOMS[a.geom]}}
     res["verdict"] = {"promote": "pass", "kill": "fail", "screen_fail": "fail"}.get(dec, "indeterminate")
     if acc["rank_rows"] < 0.9 * len(order):
         res["verdict"], res["reasons"] = "indeterminate", [f"intake: {acc['rank_rows']} valid rank rows of {len(order)} packets (< 90%)"] + why
@@ -436,6 +443,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         s.add_argument("--fetch", action="store_true")
         s.add_argument("--candles-since", default="2025-05-01")
         s.set_defaults(fn=fn)
+    for nm in ("sample", "score"):
+        sub.choices[nm].add_argument("--geom", default=DEV_GEOM[0], choices=sorted(DEV_GEOMS))
     sub.choices["sample"].add_argument("--n", type=int, default=DEV_N)
     sub.choices["sample"].add_argument("--seed", type=int, default=DEV_SEED)
     sub.choices["score"].add_argument("--ranks", required=True)
