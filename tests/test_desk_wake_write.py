@@ -240,3 +240,76 @@ def test_the_writers_verdict_equals_the_guards_on_mutated_rows(tmp_path):
         writer_ok = dw.row_problems(row, p, SCHEMA) == []
         guard_ok = _guard(tmp_path / str(i), row, p) == []
         assert writer_ok == guard_ok, (i, dw.row_problems(row, p, SCHEMA))
+
+
+# ---- DESK-14: external_context[] (operator popup 2026-10-27, 'Use judged_at')
+
+EXT_DRAFT = {"source": "venue funding page", "query": "BTC funding", "url": "https://example.org/funding",
+             "retrieved_at": "2026-10-26T13:04:00Z", "content": "Funding 0.03% next 8h", "summary": "funding +0.03%/8h",
+             "values": {"funding_8h": 0.0003}, "why_packet_insufficient": "packet carries no live funding",
+             "gap_class": "funding", "feed_gap": "bybit_live_funding_rate", "influence": "supporting"}
+
+
+def _ext_row(item_mut=None, **draft_kw):
+    p = _packet()
+    item = dict(EXT_DRAFT, **(item_mut or {}))
+    row = dw.compile_row(dict(NO_TRADE, external_context=[item], **draft_kw),
+                         {"packet_id": p["meta"]["packet_id"], "packet_sha": cdr.packet_sha(p)}, p, SCHEMA,
+                         now=NOW, skill_sha=None)
+    return row, p
+
+
+def test_an_external_context_draft_is_logged_point_in_time_and_trains(tmp_path):
+    row, p = _ext_row()
+    (item,) = row["external_context"]["items"]
+    assert item["content_sha256"] == dw.hashlib.sha256(EXT_DRAFT["content"].encode()).hexdigest() and "content" not in item
+    assert row["external_context"]["trigger"] == "judgement" and row["external_context"]["reproducible"] is False
+    assert row["training"] == {"train_eligible": True, "gate_eligible": False, "exclusion_reasons": ["external_context"],
+                               "source": "external"}
+    # retrieved AFTER the packet's info_cutoff_at but before judged_at: the rule the operator chose
+    assert item["retrieved_at"] > row["info_cutoff_at"] and item["retrieved_at"] <= row["judged_at"]
+    assert dw.row_problems(row, p, SCHEMA) == [] and _guard(tmp_path, row, p) == []
+    assert cdr.effective_info_at(row) == item["retrieved_at"]
+
+
+def test_retrieved_after_judged_at_is_refused_by_the_writer_and_the_guard(tmp_path):
+    with pytest.raises(dw.Refused, match="after judged_at"):
+        _ext_row({"retrieved_at": "2026-10-26T13:30:00Z"})
+    row, p = _ext_row()
+    row["external_context"]["items"][0]["retrieved_at"] = "2026-10-26T13:30:00Z"
+    assert any("after judged_at" in m for m in dw.row_problems(row, p, SCHEMA))
+    assert any("after judged_at" in m for m in _guard(tmp_path, row, p))
+
+
+@pytest.mark.parametrize("mut,needle", [
+    ({"content": ""}, "content"), ({"feed_gap": ""}, "feed_gap"), ({"gap_class": "vibes"}, "gap_class"),
+    ({"values": {}}, "values"), ({"query": None, "url": None}, "query or a url"), ({"influence": "huge"}, "influence"),
+])
+def test_a_bad_external_item_is_refused(origin, mut, needle):
+    bare, wake = origin
+    rc, res = dw.run(dict(NO_TRADE, external_context=[dict(EXT_DRAFT, **mut)]), str(wake), now=NOW)
+    assert rc == 1 and needle in " ".join(res["problems"]), res
+    assert branch_rows(bare) == []
+
+
+def test_an_external_draft_is_written_and_a_stray_key_is_not_accepted(origin):
+    bare, wake = origin
+    rc, res = dw.run(dict(NO_TRADE, external_context=[dict(EXT_DRAFT, extra=1)]), str(wake), now=NOW)
+    assert rc == 1 and "keys must be exactly" in res["problems"][0]
+    rc, res = dw.run(dict(NO_TRADE, external_context=[EXT_DRAFT]), str(wake), now=NOW)
+    assert rc == 0, res
+    assert branch_rows(bare)[0]["external_context"]["items"][0]["feed_gap"] == "bybit_live_funding_rate"
+
+
+def test_the_writers_verdict_equals_the_guards_on_external_items(tmp_path):
+    muts = [lambda r: None,
+            lambda r: r["external_context"]["items"][0].update(retrieved_at="2026-10-26T13:30:00Z"),
+            lambda r: r["external_context"]["items"][0].update(query=None, url=None),
+            lambda r: r["external_context"]["items"][0].update(values={}),
+            lambda r: r["external_context"].update(trigger="escalation"),
+            lambda r: r["training"].pop("source"),
+            lambda r: r["training"].update(train_eligible=False)]
+    for i, m in enumerate(muts):
+        row, p = _ext_row()
+        m(row)
+        assert (dw.row_problems(row, p, SCHEMA) == []) == (_guard(tmp_path / str(i), row, p) == []), (i, dw.row_problems(row, p, SCHEMA))

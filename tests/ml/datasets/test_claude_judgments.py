@@ -223,6 +223,29 @@ def test_desk_rows_join_and_respect_training_marker(env):
     assert rep["partition_ok"]
 
 
+def test_external_context_desk_row_trains_flagged_external(env):
+    """DESK-14: an items-based outside-information row is IN the corpus, flagged, with its replay clock."""
+    comms, _ = env
+    ext = _decision("DD-20261027T1000Z-e")
+    cutoff = ext["info_cutoff_at"]
+    retrieved = ext["judged_at"]
+    ext["external_context"] = {"used": True, "items": [
+        {"feed_gap": "bybit_live_funding_rate", "retrieved_at": retrieved},
+        {"feed_gap": "econ_calendar", "retrieved_at": cutoff}]}
+    ext["training"] = {"train_eligible": True, "gate_eligible": False, "exclusion_reasons": ["external_context"],
+                       "source": "external"}
+    _write(comms / "desk" / "decisions.jsonl", [ext, _decision("DD-20261027T1000Z-n")])
+    _write(comms / "desk" / "outcomes.jsonl", [
+        {"decision_id": d, "kind": "replayed", "computed_at": "2026-10-28T00:00:00Z", "net_r": 0.5, "provenance": "computed"}
+        for d in ("DD-20261027T1000Z-e", "DD-20261027T1000Z-n")])
+    rows, _ = _run(comms, None)
+    by = {r["judgment_id"]: r for r in rows}
+    e, n = by["DD-20261027T1000Z-e"], by["DD-20261027T1000Z-n"]
+    assert e["source_flag"] == "external" and e["ext_n_items"] == 2 and e["gate_eligible"] is False
+    assert e["ext_effective_info_at"] == retrieved and e["ext_feed_gaps"] == "bybit_live_funding_rate,econ_calendar"
+    assert n["source_flag"] is None and n["ext_n_items"] == 0 and n["ext_effective_info_at"] is None
+
+
 def test_build_writes_dataset(env, tmp_path):
     comms, db = env
     _write(comms / "live_review" / "reviews.jsonl", [_review("LR-20261025T1616Z-pkg-1", 1)])
