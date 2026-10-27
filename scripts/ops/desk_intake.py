@@ -17,9 +17,14 @@ and NO gate:
   DESK-2), its own ``apply_mode`` (``config/live_trade_review.yaml``) and its own executor, and the
   venue is read back. All four verdicts (approve / clip / refuse / could_not_look) stay the apply's.
 * a ``propose_entry`` is REFUSED, named, while ``MD-TRADE-DESK.functions.entry_generation.blocked_until``
-  is in force (read from ``config/mandates.yaml`` on every pass, never hard-coded). Once it clears,
-  a proposal is queued for the ``claude_desk`` leg (DESK-17) in ``accepted_proposals.jsonl``; until
-  that leg is rostered in ``config/strategies.yaml`` it is refused ``desk_leg_not_rostered``.
+  is in force for any account that rosters the ``claude_desk`` leg (read from ``config/mandates.yaml`` and
+  ``config/accounts.yaml`` on every pass, never hard-coded). THE DEMO FLOOR (operator popup 2026-10-27,
+  verbatim *"Yes, live on bybit_1 demo now (Recommended)"*): the gate is open when EVERY rostering account
+  is in ``entry_generation.demo_accounts`` AND is a demo/paper account in ``config/accounts.yaml``; one
+  real-money, mirror or prop account carrying the leg closes it for all. Once open, a live proposal on a
+  symbol the leg trades (``strategies.yaml`` ``symbols:``) is queued for the ``claude_desk`` leg (DESK-17)
+  in ``accepted_proposals.jsonl``; until that leg is rostered it is refused ``desk_leg_not_rostered``, and a
+  symbol outside its ``symbols:`` is refused ``symbol_not_in_desk_leg``.
   BOTH brackets are required on every proposal (operator 2026-10-26: *"every trade always must have
   BOTH brackets"*); a missing one is refused ``both_brackets_required``.
 
@@ -79,6 +84,10 @@ APPLY_ACTION = {("in_trade", "tighten_sl"): "tighten_sl", ("in_trade", "tp_revis
                 ("exit", "close"): "close", ("exit", "partial_close"): "partial_close"}
 R_BRACKETS = "both_brackets_required"
 R_GATED = "entry_generation_blocked_until"
+R_SYMBOL = "symbol_not_in_desk_leg"
+#: An account the demo floor may admit: config/accounts.yaml marks it a demo (``demo: true``) or a paper/soak
+#: account. Checked IN ADDITION to the mandate's demo_accounts list, so a mis-typed list cannot admit real money.
+DEMO_CLASSES = {"paper", "soak"}
 
 Git = Callable[..., Tuple[int, str]]
 
@@ -113,9 +122,26 @@ def _num(v: Any) -> Optional[float]:
 
 # --------------------------------------------------------------------------- pure checks
 
-def entry_gate(mandates_doc: Optional[Dict[str, Any]]) -> Optional[str]:
+def _accounts(accounts_doc: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(accounts_doc, dict):
+        return None
+    acc = accounts_doc.get("accounts", accounts_doc)
+    return acc if isinstance(acc, dict) else None
+
+
+def carrying_accounts(accounts_doc: Any) -> Optional[List[str]]:
+    """Every account whose ``strategies:`` roster carries the desk leg; None when unreadable."""
+    acc = _accounts(accounts_doc)
+    if acc is None:
+        return None
+    return sorted(k for k, v in acc.items() if isinstance(v, dict) and DESK_LEG in (v.get("strategies") or []))
+
+
+def entry_gate(mandates_doc: Optional[Dict[str, Any]], accounts_doc: Any = None) -> Optional[str]:
     """None when desk-generated entries may pass; else why not. Fail closed: an unreadable store, an
-    ungranted MD-TRADE-DESK or a missing entry_generation function all refuse."""
+    ungranted MD-TRADE-DESK or a missing entry_generation function all refuse. With ``blocked_until`` set,
+    the demo floor opens the gate only when every account rostering the leg is listed in
+    ``demo_accounts`` AND is a demo/paper account in ``accounts_doc`` (unreadable accounts => closed)."""
     if not isinstance(mandates_doc, dict):
         return f"{R_GATED}:mandates_unreadable"
     m = next((x for x in mandates_doc.get("mandates") or [] if isinstance(x, dict) and x.get("id") == MANDATE_ID), None)
@@ -125,8 +151,21 @@ def entry_gate(mandates_doc: Optional[Dict[str, Any]]) -> Optional[str]:
     if not isinstance(fn, dict):
         return f"{R_GATED}:no_entry_generation_function"
     blocked = str(fn.get("blocked_until") or "").strip()
-    if blocked:
-        return f"{R_GATED}: {' '.join(blocked.split())[:160]}"
+    if not blocked:
+        return None
+    gated = f"{R_GATED}: {' '.join(blocked.split())[:160]}"
+    demo = set(fn.get("demo_accounts") or [])
+    if not demo:
+        return gated
+    acc, carrying = _accounts(accounts_doc), carrying_accounts(accounts_doc)
+    if acc is None or carrying is None:
+        return f"{R_GATED}:accounts_unreadable"
+    if not carrying:
+        return f"{R_GATED}:no_account_rosters_{DESK_LEG}"
+    bad = [a for a in carrying if a not in demo or not (acc[a].get("demo") is True
+                                                        or acc[a].get("account_class") in DEMO_CLASSES)]
+    if bad:
+        return f"{R_GATED}:not_a_demo_account:{','.join(bad)} -- {gated[len(R_GATED) + 2:][:120]}"
     return None
 
 
@@ -138,7 +177,8 @@ def brackets_problem(proposal: Any) -> Optional[str]:
 
 
 def classify(row: Dict[str, Any], *, problems: List[str], packet: Optional[Dict[str, Any]],
-             gate: Optional[str], leg_rostered: bool) -> Tuple[str, str, Optional[Dict[str, Any]]]:
+             gate: Optional[str], leg_rostered: bool,
+             leg_symbols: Optional[List[str]] = None) -> Tuple[str, str, Optional[Dict[str, Any]]]:
     """(verdict, detail, plan). verdict in dispatch | accepted | refused | not_dispatchable. Pure."""
     role, action = row.get("role"), row.get("action")
     if action == "propose_entry":
@@ -155,6 +195,9 @@ def classify(row: Dict[str, Any], *, problems: List[str], packet: Optional[Dict[
             return "not_dispatchable", f"record_only:{row.get('label_source')}/{disp.get('route')}", None
         if not leg_rostered:
             return "refused", f"desk_leg_not_rostered:{DESK_LEG}", None
+        sym = str((row.get("proposal") or {}).get("symbol") or "")
+        if leg_symbols is None or sym not in leg_symbols:
+            return "refused", f"{R_SYMBOL}:{sym} (leg trades {leg_symbols})", None
         return "accepted", f"queued for {DESK_LEG}", None
     if row.get("label_source") != "live":
         return "not_dispatchable", f"label_source_{row.get('label_source')}", None
@@ -191,6 +234,13 @@ def _load_yaml(rel: str) -> Optional[Dict[str, Any]]:
         return yaml.safe_load((ROOT / rel).read_text()) or {}
     except Exception:  # noqa: BLE001 -- unreadable is its own state (fail closed for entries)
         return None
+
+
+def _leg_symbols() -> Optional[List[str]]:
+    """The desk leg's ``symbols:`` (what its builder evaluates); None when unreadable."""
+    cfg = ((_load_yaml("config/strategies.yaml") or {}).get("strategies") or {}).get(DESK_LEG)
+    syms = cfg.get("symbols") if isinstance(cfg, dict) else None
+    return [str(s) for s in syms] if isinstance(syms, list) else None
 
 
 def _leg_rostered() -> bool:
@@ -279,7 +329,9 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
              apply_fn: Callable[[Dict[str, Any], str], Dict[str, Any]] = _apply,
              now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None,
              mandates_fn: Callable[[], Optional[Dict[str, Any]]] = lambda: _load_yaml("config/mandates.yaml"),
-             leg_fn: Callable[[], bool] = _leg_rostered, flag_fn: Callable[[str], None] = _flag) -> Dict[str, Any]:
+             leg_fn: Callable[[], bool] = _leg_rostered, flag_fn: Callable[[str], None] = _flag,
+             accounts_fn: Callable[[], Any] = lambda: _load_yaml("config/accounts.yaml"),
+             symbols_fn: Callable[[], Optional[List[str]]] = _leg_symbols) -> Dict[str, Any]:
     """Every new decision row at ``ref`` -> one recorded disposition. Returns the status written."""
     d = logs or log_dir()
     state_path, status_path, log_path = d / "intake_state.json", d / "intake_status.json", d / "intake.jsonl"
@@ -308,7 +360,7 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
     new = [r for r in rows if r["decision_id"] not in seen]
     status["new"] = len(new)
     schema = json.loads(cdr.DECISION_SCHEMA.read_text())
-    gate, leg = entry_gate(mandates_fn()), None
+    gate, leg, leg_syms = entry_gate(mandates_fn(), accounts_fn()), None, None
     worst, handled = 0, set()
     for row in new:
         did = row["decision_id"]
@@ -337,8 +389,9 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
         else:
             problems = cdr.decision_problems(row, schema, pk_dir) if packet is not None else ["packet_id missing"]
             if leg is None:
-                leg = leg_fn()
-            verdict, detail, plan = classify(row, problems=problems, packet=packet, gate=gate, leg_rostered=leg)
+                leg, leg_syms = leg_fn(), symbols_fn()
+            verdict, detail, plan = classify(row, problems=problems, packet=packet, gate=gate, leg_rostered=leg,
+                                             leg_symbols=leg_syms)
         if verdict == "dispatch" and row.get("intent_id") in intents:
             verdict, detail, plan = "refused", f"duplicate_intent:{row.get('intent_id')}", None
         rec.update(verdict=verdict, detail=detail)

@@ -1229,15 +1229,22 @@ mandates:
       entry_generation:
         what: desk-generated NEW entries from the desk's scan packet (trading-desk SKILL)
         actions: [propose_entry]
-        state: shadow
+        state: live_demo
+        # The demo floor (operator popup 2026-10-27, relayed by manager session_01C1ooo4kqBbng7vytdG1UVs, verbatim
+        # "Yes, live on bybit_1 demo now (Recommended)"): desk-generated entries trade on these accounts ONLY, and
+        # only while every account rostering the claude_desk leg is one of them AND is a demo/paper account in
+        # config/accounts.yaml (scripts/ops/desk_intake.py entry_gate). blocked_until below still binds every
+        # other account (real money, mirrors, prop). REVERT: delete demo_accounts and set state back to shadow.
+        demo_accounts: [bybit_1]
         blocked_until: >-
           The DESK-13 gate, operator verbatim "Beat random entries only": the
           desk's entries show OOS edge vs the random-entry baseline, net of the
           full cost stack, at n >= 30 graded decisions
           (scripts/ops/desk_grade.py promotion_gate), recorded as a committed
           evidence record on row DESK-13-MANDATE. Until then generated entries
-          stay shadow (record-only, every one replayed and graded). Clearing it
-          is a committed record plus the manager's PR, never a session's own act.
+          trade only on demo_accounts above and are record-only everywhere else
+          (every one replayed and graded). Clearing it is a committed record
+          plus the manager's PR, never a session's own act.
     scope: >-
       Every account carrying the package (real-money, prop and paper), each
       through its own RiskManager (approve_amend for a tighten, approve_action

@@ -12,6 +12,14 @@ against comms/schema/desk_decision.schema.json (read from origin/main) and the g
 a commit on top of the tip pushed WITHOUT force, so a moved branch is a rejected push, never a lost line.
 A refusal prints the reasons and writes nothing. There is no flag that skips validation.
 
+LIVE vs SHADOW (the bybit_1 demo flip, operator popup 2026-10-27 "Yes, live on bybit_1 demo now (Recommended)"):
+a `propose_entry` is written `label_source: live`, `route: submitted` with an `intent_id` exactly when, on
+origin/main, the claude_desk leg in config/strategies.yaml is `enabled: true` + `execution: live` and the
+proposal's symbol is in the leg's `symbols:`; it then needs `max_hold_min` <= 60 and a `market` entry. Every
+other row stays shadow (record-only). Which ACCOUNTS may trade it is not decided here: desk intake
+(scripts/ops/desk_intake.py) admits it only while every account rostering the leg is a demo account in
+MD-TRADE-DESK's entry_generation.demo_accounts, and each account's RiskManager sizes it.
+
 Exit: 0 written (or `--check` clean) / 1 refused / 2 could_not_look|could_not_write / 3 nothing_due.
 The rules mirror scripts/ci/check_desk_records.py; tests/test_desk_wake_write.py asserts they agree.
 """
@@ -35,6 +43,9 @@ SCHEMA = "comms/schema/desk_decision.schema.json"
 SENTINEL_R_FLOOR = 50.0  # src/runtime/target_expectation.py
 VENUE_CAP_FRACTION = 0.099  # copy of src/runtime/tp_venue_cap.py (this file is stdlib-only); tests/test_desk_wake_write.py pins equality
 REACH_FLOOR = 0.10
+SHORT_HOLD_MAX_MIN = 60  # a live desk proposal is the short-hold kind (operator 2026-10-27); the guard imports it
+DESK_LEG = "claude_desk"
+STRATEGIES = "config/strategies.yaml"
 STAT_TOL = 1e-3  # history rows are 6 d.p.; early wakes rounded to 3
 STALE = timedelta(hours=3)
 ACTIONS = ("no_trade", "propose_entry", "watch_note")
@@ -157,10 +168,66 @@ def alt_stat_problems(row: dict, packet: dict) -> list[str]:
     return out
 
 
+# ----------------------------------------------------------------------------- the desk leg's live scope
+
+def leg_scope(strategies_yaml: str | None) -> dict | None:
+    """The claude_desk block of config/strategies.yaml, read without a YAML library (this file is stdlib-only):
+    {"enabled", "execution", "symbols"}. None when the block or a field cannot be read (=> every row is shadow).
+    tests/test_desk_demo_flip.py pins this against yaml.safe_load of the real file."""
+    if not strategies_yaml:
+        return None
+    lines = strategies_yaml.splitlines()
+    try:
+        i = next(n for n, ln in enumerate(lines) if re.match(rf"^  {DESK_LEG}:\s*(#.*)?$", ln))
+    except StopIteration:
+        return None
+    block = []
+    for ln in lines[i + 1:]:
+        if ln.strip() and not ln.startswith("   ") and not ln.lstrip().startswith("#"):
+            break
+        block.append(ln)
+    got: dict = {}
+    for ln in block:
+        m = re.match(r"^    (enabled|execution|symbols):\s*(.*?)\s*(#.*)?$", ln)
+        if not m:
+            continue
+        k, v = m.group(1), m.group(2)
+        if k == "symbols":
+            sm = re.match(r"^\[(.*)\]$", v)
+            if not sm:
+                return None
+            got[k] = [s.strip().strip("'\"") for s in sm.group(1).split(",") if s.strip()]
+        elif k == "enabled":
+            got[k] = v.lower() == "true"
+        else:
+            got[k] = v.strip("'\"")
+    if set(got) != {"enabled", "execution", "symbols"}:
+        return None
+    return got
+
+
+def is_live(action: str, symbol: str | None, scope: dict | None) -> bool:
+    return (action == "propose_entry" and scope is not None and scope["enabled"] and scope["execution"] == "live"
+            and symbol in scope["symbols"])
+
+
+def live_proposal_problems(row: dict) -> list[str]:
+    """A live desk proposal (it trades on the bybit_1 demo) is the short-hold kind. Shared with the guard."""
+    if row.get("label_source") != "live" or row.get("action") != "propose_entry" or not isinstance(row.get("proposal"), dict):
+        return []
+    pr, out = row["proposal"], []
+    mh = pr.get("max_hold_min")
+    if not isinstance(mh, int) or isinstance(mh, bool) or not 1 <= mh <= SHORT_HOLD_MAX_MIN:
+        out.append(f"a live proposal is the short-hold kind: max_hold_min is required, 1..{SHORT_HOLD_MAX_MIN} (got {mh!r})")
+    if (pr.get("entry") or {}).get("type") != "market":
+        out.append("a live proposal enters at `market` (the claude_desk leg refuses limit/stop as entry_type_unsupported)")
+    return out
+
+
 # ----------------------------------------------------------------------------- compile
 
 def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: datetime,
-                skill_sha: str | None) -> dict:
+                skill_sha: str | None, scope: dict | None = None) -> dict:
     bad = _size_keys(draft)
     if bad:
         raise Refused([f"no-size rule: `{k}` -- size is each account's (RiskManager), never the desk's" for k in bad])
@@ -182,9 +249,9 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
         if not isinstance(d, dict):
             raise Refused(["propose_entry needs a `proposal` object"])
         keys = {"symbol", "side", "horizon_bars", "entry", "stop", "tp", "expected_r_net", "thesis"}
-        if set(d) != keys:
-            raise Refused([f"proposal keys must be exactly {sorted(keys)} (venue_class, timeframe, novelty and "
-                           f"onboarding are derived from the packet); got {sorted(d)}"])
+        if set(d) - {"max_hold_min"} != keys:
+            raise Refused([f"proposal keys must be exactly {sorted(keys)} plus optional max_hold_min (venue_class, "
+                           f"timeframe, novelty and onboarding are derived from the packet); got {sorted(d)}"])
         u = universe.get(d["symbol"])
         if u is None:
             raise Refused([f"proposal symbol {d['symbol']} is not in the scan packet's universe"])
@@ -193,6 +260,8 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
                     "expected_r_net": d["expected_r_net"], "thesis": d["thesis"],
                     "novelty": novelty_for(packet, d["symbol"], d["side"]),
                     "onboarding": "onboarded" if u["tier"] == "full" else "pending"}
+        if "max_hold_min" in d:
+            proposal["max_hold_min"] = d["max_hold_min"]
 
     def priced(symbol, side, horizon, level, chosen):
         h = history_row(packet, symbol, side, horizon) if isinstance(horizon, int) else None
@@ -226,21 +295,24 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
     if problems:
         raise Refused(problems)
 
+    live = is_live(action, (proposal or {}).get("symbol"), scope)
+    did = "DD-" + pid[3:] + "-1"
     rationale = str(draft.get("rationale") or "")
     built = _ts(meta["built_at"])
     if now - built > STALE and not rationale.startswith("stale_packet:"):
         rationale = f"stale_packet: built {meta['built_at']}. {rationale}"
     return {
-        "schema_version": 2, "decision_id": "DD-" + pid[3:] + "-1", "packet_id": pid, "packet_sha": pointer["packet_sha"],
+        "schema_version": 2, "decision_id": did, "packet_id": pid, "packet_sha": pointer["packet_sha"],
         "packet_kind": "scan", "role": "entry_generation", "order_package_id": None,
         "judged_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "info_cutoff_at": meta["info_cutoff_at"],
         "trigger_event": "bar_close", "model": "sonnet-tier", "session": str(draft.get("session") or "desk-wake"),
         "prompt_sha": None, "skill_sha": skill_sha, "label_version": 1, "label_provenance": "judgment",
-        "label_source": "shadow", "pre_cutoff": False, "action": action,
+        "label_source": "live" if live else "shadow", "pre_cutoff": False, "action": action,
         "params": {"level": None, "level_atr": None, "frac": None, "bars": None}, "proposal": proposal,
         "alternatives": alts, "judge_prior": draft.get("judge_prior") if action == "propose_entry" else None,
         "confidence": draft.get("confidence"), "basis": draft.get("basis"), "rationale": rationale,
-        "escalated_to": None, "intent_id": None, "disposition": {"route": "none", "per_account": []},
+        "escalated_to": None, "intent_id": ("DI-" + did[3:]) if live else None,
+        "disposition": {"route": "submitted" if live else "none", "per_account": []},
         "external_context": {"used": False, "trigger": None, "sources": [], "summary": None, "reproducible": True},
         "training": {"train_eligible": True, "gate_eligible": True, "exclusion_reasons": []},
     }
@@ -270,7 +342,12 @@ def row_problems(row: dict, packet: dict, schema: dict) -> list[str]:
         out.append("basis insufficient_n is only for no_trade / watch_note")
     if any(v is not None for v in row["params"].values()):
         out.append("params are all null on an entry_generation row")
-    if row["disposition"] != {"route": "none", "per_account": []} or row["intent_id"] or row["escalated_to"]:
+    if row["label_source"] == "live":
+        if action != "propose_entry" or row["disposition"] != {"route": "submitted", "per_account": []} \
+                or not row["intent_id"] or row["escalated_to"]:
+            out.append("a live row is a propose_entry routed `submitted`, with an intent_id and no escalation")
+        out += live_proposal_problems(row)
+    elif row["disposition"] != {"route": "none", "per_account": []} or row["intent_id"] or row["escalated_to"]:
         out.append("a shadow row routes `none`, with no intent and no escalation")
     alts = row["alternatives"]
     chosen = [a for a in alts if a["chosen"]]
@@ -371,6 +448,7 @@ def run(draft: dict, cwd: str, *, brief_ref: str = "origin/main", check_only: bo
     if schema_raw is None:
         return 2, {"state": "could_not_look", "reason": f"{SCHEMA} unreadable on {brief_ref}"}
     schema = json.loads(schema_raw)
+    scope = leg_scope((show(cwd, brief_ref, STRATEGIES) or b"").decode() or None)
     packet = pointer = None
     last = "no attempt"
     for attempt in range(1, tries + 1):
@@ -399,7 +477,7 @@ def run(draft: dict, cwd: str, *, brief_ref: str = "origin/main", check_only: bo
             except (ValueError, AttributeError):
                 continue
         try:
-            row = compile_row(draft, pointer, packet, schema, now=now, skill_sha=sha)
+            row = compile_row(draft, pointer, packet, schema, now=now, skill_sha=sha, scope=scope)
             problems = row_problems(row, packet, schema)
         except Refused as exc:
             problems = exc.problems
@@ -409,12 +487,13 @@ def run(draft: dict, cwd: str, *, brief_ref: str = "origin/main", check_only: bo
             return 0, {"state": "valid", "row": row}
         sep = "" if not text or text.endswith("\n") else "\n"
         new = text + sep + json.dumps(row, separators=(",", ":")) + "\n"
-        c = commit_on(cwd, tip, new, f"desk: {row['decision_id']} {row['action']} (shadow)")
+        c = commit_on(cwd, tip, new, f"desk: {row['decision_id']} {row['action']} ({row['label_source']})")
         if c is None:
             return 2, {"state": "could_not_write", "reason": "commit build failed", "tries": attempt}
         p = git("push", "origin", f"{c}:refs/heads/{BRANCH}", cwd=cwd)  # no force: a moved branch rejects the push
         if p.returncode == 0:
-            return 0, {"state": "written", "decision_id": row["decision_id"], "action": row["action"], "commit": c, "tries": attempt}
+            return 0, {"state": "written", "decision_id": row["decision_id"], "action": row["action"],
+                       "label_source": row["label_source"], "intent_id": row["intent_id"], "commit": c, "tries": attempt}
         last = p.stderr.decode()[-300:]
     return 2, {"state": "could_not_write", "reason": last, "tries": tries}
 
