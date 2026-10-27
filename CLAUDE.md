@@ -1,70 +1,39 @@
 # Metis Insights — CLAUDE.md
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-09-21` · registered in [`docs/DOCUMENT-INDEX.md`](docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-27` · registered in [`docs/DOCUMENT-INDEX.md`](docs/DOCUMENT-INDEX.md)
 
-> **Production environment — live money is at risk.** You have full, autonomous
-> access to everything you need to operate this system. The operator grants
-> permission by tier; they do not do the work for you.
+> **Production environment — live money is at risk.** You have full, autonomous access to everything you need; the operator grants permission by tier and does not do the work for you.
 
-> ### 🔄 This file was cut on 2026-09-21 (operator-directed operating reset)
-> It was 547 KB, of which a generated SESSION-BRIEF block was 39.4% — ~215 KB of
-> overdue monitoring rows injected ahead of every session's first tool call. That
-> block, its generator, and the eight-register operating model it served are
-> **retired**. Reference material moved verbatim to [`docs/reference/`](docs/reference/);
-> the pre-cut file is preserved at
-> [`docs/archive/2026-09-21-operating-reset/CLAUDE.md.pre-cut`](docs/archive/2026-09-21-operating-reset/CLAUDE.md.pre-cut).
+> ### 🔄 Trimmed to pointers 2026-10-27 (operator, lane `CONTEXT-DIET`; was 44,201 B, in every system prompt)
+> Every binding rule is kept below in a line or two plus a pointer. History, incident narratives and verbatim quotes moved verbatim to
+> [`docs/archive/2026-10-27-context-diet/CLAUDE.md.pre-diet`](docs/archive/2026-10-27-context-diet/CLAUDE.md.pre-diet) (*pre-diet*, by section).
 > **Scope of record: [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md).**
 
 ---
 
 ## 🔍 RULE ONE — Always verify
 
-**Before you assert anything, check it. Every time.** Full text + worked
-examples: [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md)
-§ "RULE ONE — Always verify". The short form, because the failures never come
-from skipping a *hard* check — they come from a one-liner that looked
-conclusive:
+**Before you assert anything, check it. Every time.** Full text + worked examples:
+[`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "RULE ONE — Always verify".
 
-- **A search returning nothing is not proof of absence.** Show the probe can
-  find a positive before trusting that it is quiet; a negative needs a
-  denominator.
-- **Read the field, not the prose about it.** Config/DB/code are the truth;
-  comments, refs and docs are claims about it. When they disagree the field
-  wins (*field beats comment*) and the prose gets fixed.
-- **Always state the population.** Every quantitative claim names what it was
-  measured over. A figure whose sign flips on a filter choice is not a figure.
-- **Cross-check with arithmetic**, not a careful re-read.
-- **Verify your own output too**, hardest when it confirms what you expected.
-- **"It was already like that" / "the doc says so" / "a previous session
-  checked it" are not verification.** If you did not check it this session, say
-  so plainly rather than assert it.
+- **A search returning nothing is not proof of absence.** Show the probe can find a positive; a negative needs a denominator.
+- **Read the field, not the prose about it.** Config/DB/code are the truth; comments and docs are claims (*field beats comment*).
+- **Always state the population.** Every quantitative claim names what it was measured over.
+- **Cross-check with arithmetic**, not a re-read. **Verify your own output too**, hardest when it confirms what you expected.
+- **"It was already like that" / "the doc says so" / "a previous session checked it" are not verification** — say so if you did not check.
 
 ## ⚠️ If you see something, say something
 
-Don't leave bugs lying around. A session that observes broken, degraded or
-suspicious infrastructure either **fixes it** (in tier and in scope), **files it
-with enough detail that a later session can act without re-deriving your
-observation**, or **flags it to the operator** when it is tier-gated. "Not my
-task" and "it was already like that" are not dispositions.
+Broken, degraded or suspicious infrastructure is either **fixed** (in tier and scope), **filed** with enough detail that a later session can
+act without re-deriving it, or **flagged to the operator** when tier-gated. "Not my task" / "it was already like that" are not dispositions.
+**Filing is not a parking lot**: if it matters it becomes a checklist row or queue unit; if not, say so.
 
-⚠️ **Filing is not a parking lot.** Measured over 30 days before the reset: 951
-open backlog rows, 404 research memos, and **one** disposition ever marked
-`actioned`. If a thing matters, it becomes a checklist row or a queued research
-question. If it doesn't, say that instead of filing it.
-
-**Nothing spends Anthropic API credits; Claude runs only on the plan (cloud sessions or plan-authenticated Claude Code)** (operator, 2026-10-27, binding) — see [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits".
+**Nothing spends Anthropic API credits; Claude runs only on the plan** (operator, 2026-10-27, binding) — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits".
 
 ## Honesty
 
-Give only true, verifiable answers. If you don't know something, say "I don't
-know" and state how you'd find out. Never guess, speculate, or report work you
-didn't do as done. On a live trading system a confident wrong answer is worse
-than "I need to check" — verify against the actual code, config, diag output or
-database before you assert.
-
-**Merged ≠ deployed ≠ observed.** These are three different facts and this repo
-has paid for collapsing them more than any other mistake. Say which one you
-established.
+Give only true, verifiable answers; say "I don't know" and how you'd find out; never report undone work as done. **Merged ≠ deployed ≠
+observed** — say which one you established.
 
 ---
 
@@ -72,350 +41,114 @@ established.
 
 ### Instruction hierarchy
 
-When sources disagree, the higher one wins. If a higher doc is silent, defer
-to the next. Mirrored verbatim in
-[`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Document
-Priority" — **the two must always agree** (`canonical-doc-coherence` enforces it).
+When sources disagree, the higher one wins. Mirrored verbatim in
+[`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Document Priority" — **the two must always agree**
+(`canonical-doc-coherence` enforces it).
 
-1. `docs/CLAUDE-RULES-CANONICAL.md` — how you operate: access, honesty,
-   permission tiers, session discipline.
-2. `docs/ARCHITECTURE-CANONICAL.md` — system architecture, trade/comms
-   pipeline, contracts.
-3. `docs/plans/OPERATING-PLAN-2026-09-21.md` — the promotion ladder, the
-   research loop, and how work is chosen. Adopted 2026-09-21.
-4. `docs/claude/work/MANAGER-CHECKLIST.json` — what is actually being worked
-   right now, and by whom. Once `docs/claude/work/checklist/` exists the rows live
-   there, one file per row, and are edited ONLY through
-   `scripts/ops/checklist.py add|set|note|archive-lane` and read through
-   `src/runtime/checklist_store.py` (guard: `checklist-readers-guard`).
-5. Skills under `.claude/skills/` (binding, composable workflows) — the manager
-   contract is `.claude/skills/manager/SKILL.md`.
+1. `docs/CLAUDE-RULES-CANONICAL.md` — how you operate: access, honesty, permission tiers, session discipline.
+2. `docs/ARCHITECTURE-CANONICAL.md` — system architecture, trade/comms pipeline, contracts.
+3. `docs/plans/OPERATING-PLAN-2026-09-21.md` — the promotion ladder, the research loop, and how work is chosen. Adopted 2026-09-21.
+4. `docs/claude/work/MANAGER-CHECKLIST.json` — what is being worked now, and by whom. Rows live in `docs/claude/work/checklist/`, edited
+   ONLY via `scripts/ops/checklist.py add|set|note|archive-lane`, read via `src/runtime/checklist_store.py` (`checklist-readers-guard`).
+5. Skills under `.claude/skills/` (binding, composable workflows) — the manager contract is `.claude/skills/manager/SKILL.md`.
 6. The root `CLAUDE.md` — repo orientation and pointers.
-7. Focused implementation specs and workflow-helper docs (e.g.
-   `docs/github-actions-workflows.md`, `docs/reference/*`).
-8. `ROADMAP.md`, `docs/sprint-logs/`, `docs/claude/*` and historical notes —
-   context only.
+7. Focused implementation specs and workflow-helper docs (e.g. `docs/github-actions-workflows.md`, `docs/reference/*`).
+8. `ROADMAP.md`, `docs/sprint-logs/`, `docs/claude/*` and historical notes — context only.
 
+**Two categories of work. That is the whole taxonomy.** A question → `research/queue/<id>.yaml`. A build → a row in
+[`docs/claude/work/checklist/`](docs/claude/work/checklist/). A spec, memo or design doc no row or unit points at **is not work — it is a
+memo**. The checklist is the live Workflow page (`GET /api/bot/work/checklist`, read from the VM tree; `ict-git-sync` pulls `main` every
+~5 min). **Push, then answer.**
 
-**Two categories. That is the whole taxonomy.**
+### The roadmap loop (operator, 2026-10-11, binding)
 
-| A question | → `research/queue/<id>.yaml` |
-|---|---|
-| **A build** | → **a row in [`docs/claude/work/checklist/`](docs/claude/work/checklist/)** (one file per row; `MANAGER-CHECKLIST.json` was deleted at the 2026-10-08 cutover) |
-
-Nothing else is work. A spec file, a memo or a design doc that no checklist row
-and no queue unit points at **is not work — it is a memo**, and this repo has
-404 of those. The checklist is served to the operator as the live **Workflow
-page** on the SPA (`GET /api/bot/work/checklist`), which reads the file from the
-VM's working tree; `ict-git-sync` pulls `main` every ~5 min, so the page is
-exactly as fresh as the last push **to `main`**. **Push, then answer.**
-
-### The roadmap loop — the plan the two categories are built from (operator, 2026-10-11, binding)
-
-[`ROADMAP.md`](ROADMAP.md) opens with a **generated "Live roadmap" block** (source:
-[`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml)): 7 goals, each with a measure and
-a dated baseline, and the milestones that serve them. It is the high-level plan — it informs what
-is built and **authorizes nothing** (tiers and mandates unchanged), and it is not a third category
-of work. **Checklist rows and queue units are built and prioritised FROM its milestones** — each
-carries a `roadmap` ref — and **a closing row writes its outcome back** to the milestone and to
-[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) (`writeback` field). Cadence:
-per merge (the lane), every daily review (`python3 scripts/ops/roadmap_map.py --report`), and a
-weekly roadmap pass. Contract: [`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md)
+[`ROADMAP.md`](ROADMAP.md)'s generated "Live roadmap" block (source `docs/roadmap/milestones.yaml`) informs what is built and **authorizes
+nothing**. Rows and queue units carry a `roadmap` ref; a closing row writes its outcome back (`writeback`). Contract: manager skill
 § "The roadmap loop"; guard `roadmap-map-guard`.
 
-⚠️ **Off the trade path is not off the data path** (operator, 2026-10-26, binding): a feature removed from or neutralised on the trade path keeps its data collection running with a freshness check on the consumed artifact, gets an owning row/unit with a re-entry test, and is recorded `shadowed`/`annotate`, never dropped — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Off the trade path is not off the data path"; registry `docs/reference/shadowed-features.yaml`, guard `shadowed-features-guard`.
+⚠️ **Off the trade path is not off the data path** (operator, 2026-10-26, binding): a feature removed from the trade path keeps its data
+collection + freshness check, gets an owning row/unit with a re-entry test, and is recorded `shadowed`/`annotate`, never dropped —
+canonical § "Off the trade path is not off the data path"; `docs/reference/shadowed-features.yaml`, guard `shadowed-features-guard`.
 
-### The follow-through pipeline — what exists, and what does not
+### The follow-through pipeline
 
-**`docs/claude/work/PIPELINE.jsonl` is the intake for anything that will need
-picking up later.** Append-only JSONL, never a JSON array — a shared array is
-what produced the archived registers' merge conflicts. Schema, every invariant
-and the reasoning: `scripts/ops/pipeline.py` (guarded by `pipeline-guard`).
-
-An item is **refused** unless it carries three things, and each refusal maps to
-a reason work used to get dropped (plan § 3b):
-
-| required | because, without it |
-|---|---|
-| `due_when` | nothing ever makes it ask for attention |
-| `origin.rerun` | nobody can re-ask whether the finding still applies |
-| `terminal_reason` (to close) | it can stop being mentioned instead of ending |
-
-**Due is COMPUTED, not declared** — an item becomes due because the clock or
-the condition says so, whether or not anyone chose to look. `killed` is a
-first-class outcome: closing a dead row *with a stated reason* is worth more
-than carrying it.
-
-⚠️ **THE PULL IS CONNECTED** (corrected 2026-09-29, FIX-SA-09; this paragraph
-read "built but not yet connected … `A3` … is not built" after both were
-`done`). `GET /api/bot/work/brief` (`src/web/api/routers/work.py`) calls
-`render_daily_brief.py`, which renders a ranked, capped §0 built on
-`pipeline.due()` plus `unrouted_count()` on the operator's own Workflow page **on every request** —
-there is no file to go stale. Checklist rows `A3` and `A7` are `done`. What
-that establishes: a due item *reaches the page*. What it does **not**: that
-anyone routes it — the unrouted count is a number the page shows, and
-JC-SA-06 tracks it growing. *Field beats comment.*
-
-⚠️ **The 1,065 archived backlog rows and 91 monitoring rows ARE imported** (corrected
-2026-09-30, SA-ROUTE; this paragraph read "NOT imported … until A8 runs" after A8
-merged in #12679). MEASURED by folding `docs/claude/work/pipeline/` and grouping on
-`origin.ref`: 91 rows from `OPEN-ITEMS.json` (5 done · 73 killed · 4 queued · 9
-routed) and 1,065 from the archived backlogs (5 done · 476 killed · 577 queued · 7
-routed). A8 is `landed_unproven`, not `done` — the open remainder is being driven to a
-disposition by `SA-ROUTE`. Re-run the grouping rather than quoting these numbers.
-
-**If you are filing something that needs picking up later, it goes in the
-pipeline** — not into a new register, and not into a memo.
-
-**Retired 2026-09-21** and archived under
-[`docs/archive/2026-09-21-operating-reset/`](docs/archive/2026-09-21-operating-reset/):
-the work store (`docs/claude/work/objects|intents|steps/`), `OPEN-ITEMS.json`,
-the four review backlogs, `SESSIONS.json`, `MANAGER-LEASE.json`,
-`MERGE-QUEUE.json`, `DUE.*`, `READOUT.md`, the coordination board, the
-generated SESSION-BRIEF block and its generator, and ~24 governance crons. Do
-not resurrect them.
+**`docs/claude/work/PIPELINE.jsonl` is the intake for anything that will need picking up later** — append-only JSONL; schema in
+`scripts/ops/pipeline.py` (guard `pipeline-guard`). Refused without `due_when`, `origin.rerun` and (to close) `terminal_reason`. Due is
+COMPUTED, never declared; `killed` with a stated reason is a first-class outcome. `GET /api/bot/work/brief` renders due items on every
+request. Something needing pickup later goes here — not a new register, not a memo. **Retired 2026-09-21, do not resurrect**
+(`docs/archive/2026-09-21-operating-reset/`): the work store, `OPEN-ITEMS.json`, review backlogs, `SESSIONS.json`, `MANAGER-LEASE.json`,
+`MERGE-QUEUE.json`, `DUE.*`, `READOUT.md`, the coordination board, the SESSION-BRIEF block, ~24 governance crons. History: pre-diet § "The follow-through pipeline".
 
 ### The promotion ladder — edge is decided OFFLINE
 
-```
-STAGE 0  Backtest        offline harness
-         Is there an edge, NET OF THE FULL COST STACK?
-         Leaves when — the result clears the rule REGISTERED BEFORE THE RUN,
-         at the declared power. Nothing reaches a book without a committed
-         evidence record.
-                          ▼  GATE 1  ▼
-STAGE 1  Soak             bybit_1 · alpaca_paper
-         Do the MECHANICS work? 1–2 clean trades — no sample size, no
-         calendar (the binding paragraph below). This stage may be wide — it
-         is an instrument, not a decision surface. It is also where legs that
-         have not passed shadow live data so we can learn how to tweak them.
-                          ▼  GATE 2  ▼
-STAGE 2  Live + mirror    bybit_2 + bybit_portfolio · alpaca_live + alpaca_portfolio
-         Real money. The mirror carries the IDENTICAL roster and the
-         IDENTICAL trades, at honest size. Its net-of-cost window is the
-         DEMOTION signal.
-```
+**Stage 0 Backtest** (offline; edge NET OF THE FULL COST STACK; leaves when the result clears a rule REGISTERED BEFORE THE RUN at the declared
+power; nothing reaches a book without a committed evidence record) → *Gate 1* → **Stage 1 Soak** (`bybit_1` · `alpaca_paper`; do the MECHANICS
+work? 1–2 clean trades; an instrument, not a decision surface) → *Gate 2* → **Stage 2 Live + mirror** (`bybit_2`+`bybit_portfolio` ·
+`alpaca_live`+`alpaca_portfolio`; real money; the mirror's net-of-cost window is the DEMOTION signal).
 
-**Prop legs clear a SUPERSET of this ladder** (operator, 2026-10-15: *"if anything, the prop accounts
-should have a higher bar to clear because of the DD limits"*): everything a real-money leg clears —
-Stage 0 net of the full cost stack, a PASSED mechanical Stage-1 soak, Gate 2 —
-**plus** the prop EV/survival gate against the firm's DD limits (`comms/prop_survival/<leg>.json`).
-Never a lower bar. `prop-roster-gate-guard` enforces it on roster adds; `trend_donchian_eth_prop` /
-`trend_donchian_sol_prop` are grandfathered by name (exemption lapses 2026-11-07 / 2026-12-11, row
-`PROP-GATE-PARITY`). **Amendment (operator, 2026-10-15): live prop trades count as Stage-1 soak trades**
-(1–2 distinct clean signals on the mechanical checklist); a pass feeds `MD-PROMOTE-S1-S2` (bybit_2 +
-bybit_portfolio together, human merge) after a portfolio-overlap check, with cost checked against Bybit's
-own MEASURED cost for the symbol.
-
-⚠️ **THE SOAK IS MECHANICAL — 1–2 clean trades, never a sample size, never a date** (operator,
-2026-10-15, binding, verbatim): *"A soak is a mechanical verification that was already proven in
-backtesting, and nothing needs to soak for more than one or two trades."* Realized cost and
-live-vs-backtest are monitoring, never a soak's exit. This rule has been re-taught wrongly four times
-(2026-07-26, 07-28, 09-09, 10-15); it is stated ONCE, in
-[`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is
-MECHANICAL" — point at it, never restate it. `soak-contract-guard` refuses a contract with `n_needed` > 2
-or a calendar field; `soak-doctrine-guard` refuses a live doc, skill or generator that teaches a longer soak.
-
-**A live or paper book never establishes edge.** It checks mechanics and cost.
-If a proposal advances a leg on live-book P&L, that is a category error.
-
-**Stage 2 is one stage, not two** (operator, 2026-09-21): the mirror and the
-live account carry the same strategies and take the same trades at all times.
-Both halves are enforced by strict equality in
-`tests/test_paper_portfolio_accounts.py` —
-`test_bybit_portfolio_mirrors_bybit_2_exactly` and
-`test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies`. Roster
-equality is not trade equality: since 2026-09-30 every trade-shaping account
-field (`side_filter`, `risk`, `mode`, …) must also be equal, fail-closed, in
-`test_mirror_trade_shaping_fields_equal_live`. Before then `alpaca_portfolio`
-traded the shorts `alpaca_live`'s `side_filter: long` suppresses. The Alpaca
-one carries the only sanctioned divergence: the two declared affordability
-proxies (`splg_trend_long_1d`, `iaum_pullback_1d`) are dropped, because
-mirroring a sub-$100 proxy on a ~$98k paper book doubles the exposure its
-primary already carries.
-
-**The Alpaca invariant is now LANDED AND SATISFIED.** Until 2026-09-21 the
-Alpaca half was a SUBSET assertion — it guaranteed no live leg trades without a
-paper counterpart and deliberately allowed the mirror to run extra, so **Gate
-2's demotion signal could not be read off the Alpaca mirror's aggregate.**
-DECIDED 2026-09-21 (operator, plan item **B2**): strict equality, like Bybit,
-with the surplus-leg cost accepted — and the roster was cut the same day, so
-the test and the config now agree. MEASURED **at the 2026-09-21 cut** by parsing
-`config/accounts.yaml`: `alpaca_live` **3** legs (2 after the proxy carve-out),
-`alpaca_portfolio` cut **14 → 2**, so **12 legs removed**. ⚠️ **Those counts are
-history, not current.** MEASURED 2026-10-26 by parsing `config/accounts.yaml` at
-`main` `75535c87b` (population: the `strategies:` roster of each Alpaca account):
-`alpaca_live` **1** leg (`iaum_pullback_1d`, itself a declared affordability
-proxy, so **0** after the carve-out) and `alpaca_portfolio` **0** legs. The mirror is
-therefore EMPTY, the case decided below, and **the Alpaca Gate-2 demotion signal does
-not exist right now**. Re-run the parse; never quote these counts. What ends for those 12 is narrower than
-"they stop trading" — all 12 also sit on `alpaca_paper`, so each keeps a paper
-record; what ends is their record at the *portfolio* risk basis and their
-presence in `/api/bot/performance`'s `paperPortfolio` block.
-
-⚠️ **And the EMPTY-`alpaca_live` case is decided too: equality wins, no
-exception** (operator, same day). If Gate 2 demotes the last live leg the
-mirror empties with it — accepted, with the cost stated on the test: at that
-moment the Alpaca demotion signal disappears and nothing flags the gap. Do not
-reintroduce a non-empty guard without reopening that decision.
-
-⚠️ Two earlier drafts of this paragraph were wrong in ways worth remembering:
-one said *"no invariant exists"* (inferred, never checked); another said *"live
-5 legs"*, true only before **A6** (#12673) pulled `tlt_pullback_1h` and
-`tlt_pullback_1d` the same day — which is why the surplus the operator approved
-was **12, not the 9** every note said.
+- **Prop legs clear a SUPERSET** (operator, 2026-10-15): everything a real-money leg clears **plus** the prop EV/survival gate against the
+  firm's DD limits (`comms/prop_survival/<leg>.json`); never a lower bar (`prop-roster-gate-guard`). Live prop trades count as Stage-1 soak trades.
+- ⚠️ **The soak is MECHANICAL — 1–2 clean trades, never a sample size, never a date** (operator, 2026-10-15, binding). Stated ONCE, in
+  [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is MECHANICAL" — point at it, never
+  restate it. Realized cost and live-vs-backtest are monitoring, never a soak's exit. `soak-contract-guard` refuses `n_needed` > 2 or a
+  calendar field; `soak-doctrine-guard` refuses any live doc, skill or generator that teaches a longer soak.
+- **A live or paper book never establishes edge.** It checks mechanics and cost. Advancing a leg on live-book P&L is a category error.
+- **Stage 2 is one stage** (operator, 2026-09-21): mirror and live take the same strategies and trades, enforced by strict equality in
+  `tests/test_paper_portfolio_accounts.py`; sanctioned divergence: the two Alpaca affordability proxies only. **Empty `alpaca_live` ⇒ empty
+  mirror: equality wins** (do not reintroduce a non-empty guard without reopening). **Re-parse `config/accounts.yaml` for roster counts;
+  never quote them** (pre-diet § "Stage 2 is one stage").
 
 ### The TP doctrine — no fictional take-profits (operator, 2026-10-06, binding)
 
-**Every leg's bracket carries a REAL predictive take-profit at entry, the
-prediction moves through the trade, a momentum/trailing exit does not exempt
-a leg, and compliance is MEASURED in audits.** The operator's words and the
-four clauses are canonical in
-[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "TP
-doctrine"; the measurement is `python3 scripts/ci/check_tp_doctrine.py`
-(guard `tp-doctrine-guard`, a ratchet over every (account, leg) routing in
-`config/accounts.yaml`). A `tp_r: 50.0` sentinel, an inherited class default
-that rests at the venue cap, and a `tp_intent: none` declaration are all
-**non-compliant** — the doctrine says the trail decides when the thesis has
-failed, not where the move was expected to end. ⚠️ **Re-run the guard, never
-quote its counts**: they move with every roster edit. Legs that fail are
-prioritised by money at stake (real-money and prop first, then mirrors, then
-paper) through the exit-refinement skill and `research/queue/`.
+Every leg's bracket carries a REAL predictive take-profit at entry, the prediction moves through the trade, a momentum/trailing exit does
+not exempt a leg, and compliance is MEASURED — [`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "TP doctrine"; run
+`python3 scripts/ci/check_tp_doctrine.py` (guard `tp-doctrine-guard`; `tp_r: 50.0`, a rest-at-venue-cap default and `tp_intent: none` are
+non-compliant). **Re-run the guard, never quote its counts.**
 
 ### The daily sync, and standing authorizations
 
-One session a day with the operator. The manager pushes the brief **before** the
-sync. Six sections, fixed order: **what came due · taken under mandate ·
-decisions for you · what moved · what is running · spend.** Contract:
-[`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md).
+One session a day; the manager pushes the brief **before** it. Six sections, fixed order: **what came due · taken under mandate ·
+decisions for you · what moved · what is running · spend.** ⚠️ **The sync is NOT measured in time and there is no cap on decisions**
+(operator, 2026-09-21) — never report session length as a metric.
 
-⚠️ **The sync is NOT measured in time, and there is no cap on decisions**
-(operator, 2026-09-21). Two earlier drafts of this file set a 30-minute ceiling
-and then a 30-minute floor; both were rejected — *"it takes however long it
-takes… I don't want us tracking an arbitrary time limit to measure
-performance."* **Do not report session length as a metric.**
-
-**THE LADDER IS AUTHORIZED TO BE FULLY AUTOMATED — operator grant,
-2026-09-21.** ⚠️ **Read `config/mandates.yaml` for what is granted; this
-paragraph is not the source.** As of 2026-09-28 it holds **13 granted
-mandates** (10 on 2026-09-24, "Grant all 10 as written"; 3 process mandates on
-2026-09-27). `MD-PROMOTE-S1-S2`'s `blocked_until` was **REMOVED 2026-09-28**
-(PR #13582) after both clauses cleared (clause (a) re-measured on that branch:
-0 of 27 re-priceable Bybit-perp evidence records differ from
-`execution_costs.slippage_bps_roundtrip_for(symbol)`; clause (b) cleared by
-operator reaffirmation 2026-09-27) — it is now armed, with `bar.cost_tolerance_bps`
-set to **2.0** (operator decision, verbatim "Arm, tolerance 2 bps", checklist
-row MANDATE-ARM), superseding the prior 0.0 INFERRED placeholder. Armed is
-distinct from auto-land: `MD-PROMOTE-S1-S2` carries no `autoland` field, so a
-fire still opens a human-merge PR, and **exactly one entry is armed for
-auto-land: `MD-DEMOTE-S2-S1`, operator, 2026-09-27**. Until
-2026-09-27 this paragraph said "AS OF 2026-09-24 NOT ONE MANDATE IS GRANTED",
-three days after the grant, and a manager session repeated it to the operator
-as fact before reading the file. *Field beats comment.* A **mandate** is an
-authorization granted once, in advance, in `config/mandates.yaml`. When one
-fires: a realtime ping, then the evidence record in section 1 of the next
-brief. A decision arriving twice in the same shape is raised as *"should this
-become a mandate?"*
-
-⚠️ **This paragraph read "THE LADDER IS FULLY AUTOMATED … with no human in the
-path — including promotion to a real-money roster" from 2026-09-21 until
-2026-09-24, and that was FALSE IN THE FIELD the whole time**: `config/mandates.yaml`
-did not exist anywhere in git, so there was nowhere to record an authorization
-and section 1 of the brief — *"taken under mandate"* — could only ever be empty.
-Ten files referenced the path; only `scripts/ops/render_daily_brief.py` was
-honest about it (*"today: absent — B5 is not built"*). **The store was then
-created (2026-09-24) with an empty `mandates:` list and PROPOSED entries; the
-operator granted them the same day — see the paragraph above for the current
-count, and the file itself for the truth.** Corrected rather than quietly fixed because the failure is the one
-this repo pays for most — a doc describing a mechanism that does not exist, read
-as a description of one that does. *Field beats comment.*
-
-⚠️ **A session may PROPOSE a mandate; only the operator GRANTS one.** Moving an
-entry from `proposed:` into `mandates:` is the operator's act. A session writing
-its own authorization is the same failure class as self-landing a PR that grants
-its own next PR — the asymmetry IS the control.
-
-⚠️ **"If the evidence supports it" is the entire safety property** once nobody
-is in the path: a committed evidence record, named harness, stated n, **net of
-the full cost stack**, clearing a rule registered before the run. A claim in a
-PR body is not a record. **B1** makes it checkable; **B5** builds the mechanism.
-
-⚠️ **The real-money promotion mandate's D1 block is CLEARED (2026-09-28, PR
-#13582)** — the CLI paths backing the current promotion corpus (the
-trend/pullback/squeeze/ict_scalp/fvg_range/chop_scalp/pairs/fade/funding_carry/
-run_backtest_vwap harnesses) resolve slippage and funding through
-`execution_costs.resolve_cost_policy()`'s venue-aware non-zero defaults, not a
-silent `0.0` — verified in
-[`docs/research/d1-cost-stack-verification-2026-09-25.md`](docs/research/d1-cost-stack-verification-2026-09-25.md).
-`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Two harness
-families still lack a full cost stack and stay out of scope for any promotion
-corpus until fixed:** `scripts/backtest_orb.py` (fee only, in points; no
-slippage or funding term) and `src/backtest/backtester.py` (its own hardcoded
-cost dict, disconnected from the canonical venue decisions; no funding term).
-`scripts/backtest_xsec_momentum.py` and `scripts/backtest_vol_target.py` were
-removed from this list on 2026-10-11 (checklist `FRONTIER-LEVER-HARNESS-COSTS`):
-both now resolve fee + slippage + perp funding through
-`execution_costs.resolve_cost_policy()` and record the policy in their result
-(`params.cost_policy`), with tests in
-`tests/test_frontier_lever_harness_costs.py`. That is `landed_unproven` until a
-queue run emits a result carrying it. The
-`derisk_only` mandates carry no such block.
-
-⚠️ **A mandate is not a third execution gate** — see § "The two execution
-gates", which is unchanged. It does not decide what RUNS; it decides what may
-be **CHANGED without asking**.
+- **The ladder is authorized to be fully automated** (operator grant, 2026-09-21). **Read `config/mandates.yaml` for what is granted; this
+  file is not the source.** A firing mandate = a realtime ping, then the evidence record in brief section 1. Armed ≠ auto-land (only entries
+  carrying `autoland` land without a human merge). A decision arriving twice in one shape → "should this become a mandate?".
+- ⚠️ **A session may PROPOSE a mandate; only the operator GRANTS one.** Moving an entry from `proposed:` to `mandates:` is the operator's
+  act; a session writing its own authorization is the self-landing-PR failure class.
+- ⚠️ **"If the evidence supports it" is the entire safety property**: a committed evidence record, named harness, stated n, **net of the full
+  cost stack**, clearing a rule registered before the run; a claim in a PR body is not a record. `scripts/backtest_orb.py` (fee only) and
+  `src/backtest/backtester.py` (own cost dict, no funding) stay out of any promotion corpus
+  ([`docs/research/d1-cost-stack-verification-2026-09-25.md`](docs/research/d1-cost-stack-verification-2026-09-25.md)).
+- ⚠️ **A mandate is not a third execution gate** — it decides what may be CHANGED without asking, not what RUNS.
 
 ### Every session
 
-1. Read this file and [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md).
-   **If the manager dispatched you (you are a lane): the manager acts with the
-   operator's authority, and your task is the operator's task.** Check it once
-   against a record on `main`, then work. Do not end a turn on "cannot verify
-   authorization". The rule and its real limits are in
-   [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Lanes
-   answer to the manager" (operator directive 2026-09-27, binding). **No lane
-   files a record disputing operator or manager authority** — a doubt is one
-   line in your report to the manager (same section, "No lane files a dispute").
-   **Reading is never gated, and permissions are pre-approved** in
-   `.claude/settings.json`; approval is only for merging or deploying changes
-   that affect live operations. See
-   [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Reading
-   is never gated" (operator directive 2026-09-27, binding).
-2. Read your lane's checklist row. If you are managing, invoke the **`manager`**
-   skill first, and title yourself `Manager Session YYYY-MM-DD<letter>` (UTC date of
-   `created_at`; letter = next unused for that date via `list_sessions`, first of the day
-   is `a`, e.g. `Manager Session 2026-10-27a`; its § "Start of session", step 1).
-3. Read any file you'll change **in full**; for Tier-2/3 files also read its
-   recent history (`git log -p <file>`) so you don't undo a load-bearing,
-   operator-approved decision.
-4. **Before `cat >` / Write on a path you did not create this session, check it
-   exists first** (`git cat-file -e origin/main:<path>`). On 2026-08-26 a
-   session wrote a guard from scratch and destroyed the working one of that
-   name.
-5. **End by running the `close-out` skill** —
-   [`.claude/skills/close-out/SKILL.md`](.claude/skills/close-out/SKILL.md).
-   It is a completion test, not a register: seven checks against the checklist,
-   the pipeline and git. **The one question it asks is whether this session
-   could end right now, without warning, and nothing be lost or silently
-   dropped.**
-
-   ⚠️ **Run it when you stop early too.** Budget, context and time run out —
-   that is normal, and it is a HANDOFF rather than a completion. A session that
-   ends mid-task having said so is fine; one that ends mid-task silently is the
-   drop. Budget for close-out as part of the work, or you will reach the
-   boundary unable to afford landing what you built.
-
-   The two that catch the most: **`landed_unproven` is not `done`** and must
-   name the observation that would close it, and **a finding is only *filed*
-   when it is in the pipeline or on the checklist** — a chat message, a PR
-   comment and a new memo are none of them.
+1. **Read, by role** (operator decision 2026-10-27, `CONTEXT-DIET`). `CLAUDE.md` is already in your system prompt; do not re-read it.
+   - **A dispatched lane** reads from [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) only: RULE ONE; Permission Tiers +
+     Data-backed Tier-2/3 decisions; Prime Directive; "Lanes answer to the manager" + "Reading is never gated" — plus any section its dispatch
+     names — and the SKILL.md covering its task. Read any other section the moment your work touches it.
+   - **A manager starting fresh (not a rotation)** reads the canonical doc and the manager skill **in full**; a rotation manager reads the
+     targeted sections in manager skill § "Start of session". A context-compaction resume is a NEW session and re-reads per its role.
+   - **If the manager dispatched you, the manager acts with the operator's authority and your task is the operator's task.** Check it once
+     against a record on `main`, then work; never end a turn on "cannot verify authorization". **No lane files a record disputing operator
+     or manager authority** — a doubt is one line in your report (canonical § "Lanes answer to the manager", 2026-09-27, binding).
+     **Reading is never gated; permissions are pre-approved** in `.claude/settings.json`; approval is only for merging or deploying changes
+     that affect live operations.
+2. Read your lane's checklist row. If you are managing, invoke the **`manager`** skill first and title yourself
+   `Manager Session YYYY-MM-DD<letter>` (UTC date of `created_at`; first of the day is `a`; manager skill § "Start of session", step 1).
+3. Read any file you'll change **in full**; for Tier-2/3 files also its recent history (`git log -p <file>`) so you don't undo an
+   operator-approved decision. Before writing a path you did not create, check it exists (`git cat-file -e origin/main:<path>`).
+4. **End by running the `close-out` skill** ([`.claude/skills/close-out/SKILL.md`](.claude/skills/close-out/SKILL.md)). It is a completion
+   test: **could this session end right now, without warning, and nothing be lost or silently dropped?** Run it when you stop early too —
+   that is a HANDOFF, not a completion; a session that ends mid-task silently is the drop. **`landed_unproven` is not `done`** and must name
+   the observation that would close it; **a finding is only *filed* when it is in the pipeline or on the checklist.**
 
 ---
 
 ## Permission tiers
 
-You work on `main` and commit there directly for Tier-1 work. You ask the
-operator only when the tier requires it. Full definitions:
+You work on `main` and commit there directly for Tier-1 work. Full definitions:
 [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § Permission Tiers.
 
 | Tier | Scope | What you do |
@@ -424,190 +157,60 @@ operator only when the tier requires it. Full definitions:
 | **Tier 2** | Runtime / deploy / order-path / service / timer changes, DB writebacks, data-mutation jobs | Prepare + validate, get one operator OK in chat, then ship and verify the post-state. |
 | **Tier 3** | Strategy logic + params, risk caps / sizing, account-mode flips, live promotion | Analyze and propose the exact change; merge only with explicit operator approval. |
 
-⚠️ **Data-backed Tier-2/3 decisions do not wait for approval** (operator
-standing authorization, 2026-09-27): *"you can make tier 2 and 3 decisions
-autonomously as long as they are backed by data, just let me know that they
-have happened."* The rules are:
-- **Decide, ship and verify** when a committed evidence record settles the
-  question.
-- **Then notify the operator at once**: what changed, the evidence, whether it
-  is merged, deployed or observed, and the revert.
-- **Ask first only** when the data leaves the question open or the action
-  cannot be reverted.
-- **A real-money promotion on the fee-only corpus stays blocked until D1.**
-
-⚠️ **"The data leaves the question open" is not itself a reason to ask**
-(operator directive, 2026-09-29, on PR #13698 — a promotion popup for a leg
-that was `execution: shadow` with an `insufficient_n` cost-fidelity verdict,
-which should never have reached the operator): *"either we have enough data
-to decide, or we don't and then getting that data becomes a task which needs
-to happen so that a decision can be made."* So before asking: is getting the
-missing data itself a well-defined task (a research-queue unit, a Stage-1
-soak placement, a replay or backfill)? If yes, **file it** — no popup —
-and only ask when the choice is genuinely a preference no data would settle.
-`scripts/ops/mandate_resolver.py` returns a third verdict, `NEEDS_DATA` (never
-`FIRE`, never a decisive `REFUSE`), naming the exact clause lacking evidence
-and auto-filing the pipeline row that gets it. Full classification:
-[`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md) §
-"Before any operator popup: classify the decision".
-
-Full terms: [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md)
-§ "Data-backed Tier-2/3 decisions".
+⚠️ **Data-backed Tier-2/3 decisions do not wait for approval** (operator, 2026-09-27): decide, ship and verify when a committed evidence
+record settles it, then **notify the operator at once** (what changed, evidence, merged/deployed/observed, revert). Ask first only when
+the data leaves the question open or the action cannot be reverted; **a real-money promotion on a fee-only corpus stays blocked.** Terms:
+canonical § "Data-backed Tier-2/3 decisions". **"The data leaves the question open" is not itself a reason to ask** (2026-09-29): getting
+the data is a task (queue unit, Stage-1 soak, replay/backfill) — **file it, no popup**; ask only on a preference no data would settle
+(`scripts/ops/mandate_resolver.py` → `NEEDS_DATA`; manager skill § "Before any operator popup: classify the decision").
 
 ## The two execution gates
 
-Exactly two declared, default-permissive switches decide whether a strategy
-trades — both visible in YAML and surfaced on `/api/bot/config`:
+Exactly two declared, default-permissive switches decide whether a strategy trades — both in YAML and on `/api/bot/config`:
 
-- **Account level** — `config/accounts.yaml::mode: live | dry_run`. The only
-  path that may write `mode:` is the `set-account-mode` system-action
-  (operator-gated).
-- **Strategy level** — `config/strategies.yaml::execution: live | shadow`.
-  `live` (default) executes; `shadow` runs and logs order packages everywhere
-  but never sends a live order. Enforced in `Coordinator.multi_account_execute`
-  by folding into the same `effective_dry` resolution as `mode:` — no new order
-  path. *(Exception: the M22 market-neutral pairs sleeve is an ISOLATED 2-leg
-  order path — `src.units.strategies.pairs_executor.run_pairs_tick`, called once
-  per tick from `src/main.py`, NOT via `multi_account_execute`. Its gate lives
-  in `config/pairs.yaml`.)*
+- **Account level** — `config/accounts.yaml::mode: live | dry_run`. Only the `set-account-mode` system-action (operator-gated) writes `mode:`.
+- **Strategy level** — `config/strategies.yaml::execution: live | shadow`. `shadow` runs and logs order packages but never sends a live
+  order; folded into the same `effective_dry` in `Coordinator.multi_account_execute`. *(Exception: the M22 pairs sleeve is an isolated
+  2-leg path, `pairs_executor.run_pairs_tick`; its gate is `config/pairs.yaml`.)*
 
-Both default permissive, so omitting either never strands capability. **There is
-no third gate**: never hide a capability behind a default-off `*_ENABLED` flag
-(the pattern that stranded MES). What `accounts.yaml` / `strategies.yaml`
-declare, runs.
+**There is no third gate**: never hide a capability behind a default-off `*_ENABLED` flag (the pattern that stranded MES). The
+`config/account_state.yaml` dry-only fold was retired 2026-09-29 (JC-CA-06); do not re-add one (`canonical-doc-coherence`).
+**`accounts.yaml::symbols` is NOT a gate**: the `strategies:` roster decides what trades; `symbols:` is an additive data-pull list, and a
+symbol missing from it is a bug in the PULL LIST, never a reason a rostered leg does not trade (operator, 2026-09-22;
+`roster-symbol-reachability` prints current counts).
 
-⚠️ **The `config/account_state.yaml` dry-only fold was retired on 2026-09-29 by operator decision JC-CA-06** ("Retire it").
-- **What it was:** a third, dry-only input to `effective_dry` in `Coordinator.multi_account_execute`, read through `account_state_dry_run()`. FIX-CA-32 had documented it and surfaced it on `/api/bot/config`.
-- **What was removed:** the fold, its reader, the file and the API field.
-- **Why no account changed mode:** every entry read `dry_run: false` on main and on the VM at retirement.
-- **Guard:** `canonical-doc-coherence` requires both gate sections to name any such fold if it returns. Do not re-add one; a dry switch is `set-account-mode`, which is visible in git.
+The trader runs 24/7 and never switches itself off — no auto-flip, no mode-toggling breaker, no go-dry-on-boot default; transient issues
+route through `RiskManager` per-trade (canonical § Prime Directive).
 
-⚠️ **`accounts.yaml::symbols` IS NOT A GATE, and it was one until 2026-09-22.**
-The `strategies:` roster is the single source of truth for what an account
-trades; `symbols:` is a **purely additive DATA-PULL list** that legitimately
-names instruments no leg trades. ⚠️ **The count of such entries moves with every
-roster edit — re-run it, never quote it.** It read **21** at midday on
-2026-09-22 and **19** four hours later, because `ada_pullback_2h` joining
-`bybit_2`'s roster turned ADAUSDT from declared-but-untraded into
-declared-and-traded. `python3 scripts/ci/check_roster_symbol_reachability.py`
-prints the current count beside its denominators for exactly that reason.
+⚠️ **There is no halting — in ANY pipeline** (operator, 2026-10-09, binding; Prime Directive rule 7). Trading, prop execution, training,
+research and data pipelines never halt themselves: failures are contained per item and retried with diagnosis; when one keeps failing, ONE
+red flag reaches the operator while the pipeline keeps trying. A self-halt needs the operator's verbatim permission recorded in the repo
+(verbatim quote: pre-diet § "The two execution gates").
 
-Until E42 the tick's fetch set came from the pull
-lists **alone**, so a rostered leg whose symbol nobody had declared got no
-candles, no signal and no order while reading as wired — the MES pattern spelled
-as an omission instead of a flag. `_resolve_tick_symbols` now fetches
-`UNION(roster-implied, declared)`. **A symbol missing from a pull list is a bug
-in the PULL LIST, never a reason a rostered leg does not trade** (operator,
-2026-09-22); `roster-symbol-reachability` reports it in those words. Reverse
-only by reopening that decision.
+⚠️ **The ONE sanctioned exception: the account-level daily drawdown switch** (operator, 2026-10-09): `accounts.yaml::<acct>.risk.daily_dd_switch`,
+`armed` defaults `false` (arming is an explicit per-account YAML act); prop default 0.8 × the firm's daily limit at the firm's reset, others
+3%; **keep open, block new** (open positions keep SL/TP). A per-trade `RiskManager` refusal, never a `mode:` flip; row `DAILY-DD-SWITCH`.
 
-The trader runs 24/7 and never switches itself off — no auto-flip, no breaker
-that toggles mode, no "safety" default that goes dry on boot. Transient issues
-route through `RiskManager` per-trade: the account stays live and individual
-trades are refused with a logged cause. Full Prime Directive:
-[`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § Prime Directive.
-
-⚠️ **There is no halting — in ANY pipeline** (operator directive 2026-10-09,
-binding; Prime Directive rule 7). Verbatim: *"I never asked for a
-functionality for it to halt myself, nor was it made clear to me in any design
-spec that that's something that would happen. There is no halting. If
-something doesn't work, it tries to figure it out and try again. If it
-consistently is incapable, then yes, it obviously needs to raise a red flag so
-that somebody knows to help it. But there is, this is going back to the same
-thing as adding more and more gates that don't need to be there. Under
-absolutely no circumstances does any pipeline halt training on its own without
-getting verbatim permission from me, the operator. That should not happen
-under any circumstances. There is no halting. There's no halting."* Trading,
-prop execution, training, research and data pipelines never halt themselves.
-A failure is contained per item, retried with diagnosis, and when it keeps
-failing ONE red flag reaches the operator while the pipeline keeps trying. A
-self-halt exists only with the operator's verbatim permission recorded in the
-repo. The prop executor's AUTO-REVERT `halted` latch was removed under it.
-
-⚠️ **The ONE sanctioned exception: the account-level daily drawdown switch**
-(operator, 2026-10-09, same day, verbatim): *"I overreacted regarding the
-halting. There is one thing that I want to take back, and that is the daily
-drawdown on at the account level. That's the only place I want there to be
-like a automatic off switch, basically, where if we lose more than a defined
-amount from the account in a day, then the account automatically turns off
-until it resets the next day. But that should be a default off. We'll arm all
-of them, but I, the default for when it's built should be off so that like we
-know that it's something that has to actively be done and turned on. And the
-default setting should be, for the prop accounts, obviously it should be like
-the prop accounts daily drawdown with a buffer. And for the other accounts, it
-should be 3%."* Popup answers: **keep open, block new** (open positions keep
-their SL/TP; only new entries are refused until the daily reset; one alert on
-trip, one on reset) and a prop buffer of **20% of the firm's limit** (limit =
-0.8 × the firm's daily limit, at the firm's reset time). Config:
-`config/accounts.yaml::<acct>.risk.daily_dd_switch` (`armed` defaults to
-`false` in code; arming is an explicit per-account YAML act). It is a
-per-trade `RiskManager` refusal, never a `mode:` flip. Checklist row
-`DAILY-DD-SWITCH`. No other self-halt is sanctioned by this.
-
-⚠️ **CI is asymmetric, and this is the single mechanical fact behind the roster
-drift.** `scripts/check_dry_run_in_diff.py` fails any PR that adds a
-`mode: dry_run` or `execution: shadow` line without an operator marker; across
-all 78 guards **nothing blocks turning a leg on**, and nothing requires evidence
-before it reaches a real-money roster. That is why the roster went 36 → 55 while
-every memo said cut.
-
-⚠️ **And it is sharper than "off is guarded, on is free"** (verified 2026-09-21
-by running the guard against a real diff): there are **two spellings of off**,
-and the guard sees only one. Setting `execution: shadow` is guarded; **removing
-a leg from an account's `strategies:` roster is not.** So **B1 must key on
-roster membership**, not on the `mode`/`execution` fields — a guard watching
-only the fields can be walked around by editing the list, in either direction.
+⚠️ **CI is asymmetric**: `scripts/check_dry_run_in_diff.py` guards turning a leg OFF; **nothing blocks turning one on**, and **removing a leg
+from a `strategies:` roster is unguarded** — a promotion guard must key on roster membership, not the `mode`/`execution` fields.
 
 ---
 
 ## What this is
 
-Automated multi-strategy trading system (ICT + pairs + macro/value) on two
-Oracle VMs, with a FastAPI on `:8001` consumed by one front end.
+Multi-strategy trading system (ICT + pairs + macro/value) on two Oracle VMs; FastAPI `:8001` feeds one front end.
 
-```
-ict-bot-arm (141.145.193.91) — live trader
-  ├── ict-trader-live.service  — trading pipeline (src/main.py → pipeline.py)
-  ├── ict-web-api.service      — FastAPI :8001  (/api/bot/*, /api/diag/*, /ws/market)
-  └── caddy.service            — HTTPS at ict-bot.duckdns.org → localhost:8001
+- `ict-bot-arm` (141.145.193.91) — live trader: `ict-trader-live.service` (src/main.py → pipeline.py), `ict-web-api.service` (FastAPI :8001,
+  `/api/bot/*`, `/api/diag/*`, `/ws/market`), `caddy.service` (HTTPS `ict-bot.duckdns.org` → :8001).
+- `ict-trainer-vm` (158.178.209.121) — ML lifecycle · `ict-ib-gateway` (10.0.0.251) — IB Gateway, isolated.
 
-ict-trainer-vm (158.178.209.121) — ML lifecycle (datasets, training, registry, eval)
-ict-ib-gateway (10.0.0.251)      — IB Gateway, isolated on its own box
-```
+**The Svelte SPA is the only live consumer** (operator, 2026-09-01): `benbaichmankass/ict-trader-dashboard`, calling the API
+**browser-direct** through Caddy — **CORS is load-bearing.**
 
-**The Svelte SPA is the only live consumer** (operator decision, 2026-09-01) —
-`benbaichmankass/ict-trader-dashboard` on GitHub Pages, calling the API
-**browser-direct** through Caddy. **CORS is load-bearing.** The Streamlit
-dashboard and the Android app are retired from the live feed.
-
-| you want | go to |
-|---|---|
-| endpoint shapes, field caveats, `BotStats`/`Position`, CORS list | [`docs/reference/bot-api-reference.md`](docs/reference/bot-api-reference.md) |
-| which tier a route is / adding a route | [`docs/api-tier-policy.md`](docs/api-tier-policy.md) (CI-enforced) |
-| env vars and runtime toggles | [`docs/reference/env-vars.md`](docs/reference/env-vars.md) |
-| DB schema, provenance rules, collapsed states | [`docs/reference/data-model.md`](docs/reference/data-model.md) |
-| VM topology + the authority split | [`docs/reference/vm-topology.md`](docs/reference/vm-topology.md) |
-| reaching `/api/diag/*` from a session | [`docs/reference/diag-access.md`](docs/reference/diag-access.md) |
-| what a web session can/can't do, GitHub-MCP quirks, relays | [`docs/reference/session-capabilities.md`](docs/reference/session-capabilities.md) |
-| watchdogs, naked-position autoprotect, retired surfaces | [`docs/reference/runtime-notes.md`](docs/reference/runtime-notes.md) |
-| system architecture, trade/comms pipeline, contracts | [`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) |
-| prop-account design (Breakout manual bridge) | [`docs/integrations/prop-accounts-architecture-DESIGN.md`](docs/integrations/prop-accounts-architecture-DESIGN.md) |
-
-**Read these on demand, not at session start.** They answer *"what does this
-endpoint return"* / *"what does this var do"* — questions you only have once you
-are in the code.
-
-### Three things from the reference that bind you before you open it
-
-1. **Numbers carry provenance.** `src/runtime/provenance.py` owns the
-   vocabulary: `MEASURED` (broker fill) · `ESTIMATED` (defensible
-   reconstruction) · `FABRICATED` (synthesised, no anchor) · `UNVERIFIED` (none
-   recorded — **never** folded into measured). Import it; do not add another
-   bespoke `exclude_*` predicate.
-2. **A count that reads `0` may mean "we could not look".** Many fields return
-   `null` for an unmeasured quantity and publish an explicit read-state beside
-   it. When a field encodes a condition, ask whether *"we did not look"* and
-   *"we looked and found nothing"* are distinguishable; if not, that is the bug
+Reference: `docs/reference/*` (bot-api, env-vars, data-model, vm-topology, diag-access, session-capabilities, runtime-notes) and `docs/api-tier-policy.md` — **on demand, not at session start.** Three rules bind you first:
+1. **Numbers carry provenance** — `src/runtime/provenance.py`: `MEASURED` · `ESTIMATED` · `FABRICATED` · `UNVERIFIED` (never folded into
+   measured). Import it; do not add another bespoke `exclude_*` predicate.
+2. **A count that reads `0` may mean "we could not look".** Publish an explicit read-state beside a nullable quantity
    (`scripts/ci/check_collapsed_states.py`).
 3. **Render a missing/null field as "—", never `0` or "unknown".**
 
@@ -615,93 +218,30 @@ are in the code.
 
 ## Access & autonomy
 
-Everything you need is wired into the repo:
+- **VMs/DBs/GitHub** — `VM_SSH_KEY` and `DIAG_READ_TOKEN` are Actions secrets; read both VMs and run tiered changes via workflows you dispatch
+  (skills `diag-data`, `vm-ops`, `git-actions`, `db-wiring`); GitHub via the MCP tools.
 
-- **VMs** — the SSH key (`VM_SSH_KEY`) and diag token (`DIAG_READ_TOKEN`) are in
-  Actions secrets. You read both VMs and run tiered changes through GitHub
-  Actions workflows you dispatch yourself. Skills: `diag-data`, `vm-ops`,
-  `git-actions`.
-- **Databases** — full read access via the diag/journal relays and the Data
-  Explorer API. Skill: `db-wiring`.
-- **GitHub** — issues, PRs, files, branches, CI via the GitHub MCP tools.
-
-Retrieve the state you need yourself, then act. The only actions you genuinely
-cannot perform are physical or credential ones: rotating exchange/prop account
-keys, clearing an OCI console CAPTCHA, or anything needing a human at a broker.
-When you hit one, say so plainly and say exactly what the operator must do.
-Before writing any "operator: do X manually" instruction, check the
-`before-asking-the-operator` skill.
-
-**Tiered production mutations** run through the `system-actions` workflow's
-fixed allowlist — dispatch by opening a labelled issue. Tier-1 fires
-autonomously; Tier-2 after an operator OK in chat. Allowlist:
-[`docs/claude/system-actions.md`](docs/claude/system-actions.md).
+Retrieve state yourself, then act. Physical/credential actions (rotating exchange/prop keys, an OCI CAPTCHA, a human at a broker) are the
+operator's: say exactly what to do, after the `before-asking-the-operator` skill. Tiered production mutations run through the
+`system-actions` workflow's fixed allowlist ([`docs/claude/system-actions.md`](docs/claude/system-actions.md)): Tier-1 autonomous, Tier-2
+after an operator OK in chat.
 
 ---
 
 ## Skills
 
-**`research-ops`** (`.claude/skills/research-ops/SKILL.md`) is the routine research-operations pass — 4×/day, bounded Sonnet lane dispatched by the manager: pipeline health, runnable floor, blocked-unit audit, results read, follow-ups filed. It keeps research flowing; it does not replace topic research (`perf-followup`, ML, readouts).
+Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup is binding** — before generating task output, scan the
+catalog; precedents are example outputs, not authority. **The manager contract is `.claude/skills/manager/SKILL.md`.**
 
-**`weekly-audit`** (`.claude/skills/weekly-audit/SKILL.md`, operator 2026-10-14/15) is the Monday 06:07Z audit — a completion test, not a memo: a CORE pass every week plus a deep pass rotating by ISO week mod 4; every finding becomes a checklist row or pipeline item with a detector, and the one-page report lands in a self-landing PR. It replaces the retired `full-system-audit` program.
-
-**The ML / AI-trader build plan is reviewed every week, not when someone remembers** (operator,
-2026-10-11). Plan: `ROADMAP.md` § "AI trader (ML) — build plan"; machine-readable form
-`docs/plans/ml-plan-items.yaml` (every item → its checklist row or `research/queue/` unit);
-checker `python3 scripts/ops/ml_plan_status.py --plumbing`. The loop (plan vs measured progress,
-plumbing validation, ≥1 new idea per run, roadmap + work-queue write-back, run record in
-`comms/ml-plan/`) is step 9 of the Sunday `/ml-review` — see `ml-review` § "The ML plan loop"
-and `manager` § "Weekly: the ML plan loop". It is a recurring step of existing routines, not a new cron.
-
-**The frontier scan is the other half of that loop** (operator, 2026-10-11): the mandate is *better models,
-not variations of the first good one* — a weekly scan of outside open-source models/methods (and
-strategy ideas) that turns every kept idea into a pre-registered queue unit, plus a model-family
-diversity check (`python3 scripts/ops/ml_plan_status.py --diversity`; 78% of registered models were
-GBDT on 2026-10-11). Skill: [`.claude/skills/frontier-research/SKILL.md`](.claude/skills/frontier-research/SKILL.md);
-row `FRONTIER-RESEARCH`; first scan `docs/research/frontier-scan-2026-10-11.md`.
-
-Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup
-is binding** — before generating any task output, scan the catalog; if a skill
-matches, derive from it rather than from a precedent artifact. Precedents are
-example outputs, not authority.
-
-**The manager contract is `.claude/skills/manager/SKILL.md`.** Read it before
-spawning or supervising anything.
-
-⚠️ **Ten process skills were retired on 2026-09-21** and archived under
-`docs/archive/2026-09-21-operating-reset/skills/`: `duty`, `delegate-work`,
-`research-driver`, `session-coordination`, `session-handoff`,
-`session-receipt`, `backlog-drain`, `full-system-audit`, `system-review`,
-`workplan-vs-architecture`. They served the retired operating model. Domain
-skills (backtesting, the three reviews, VM/DB/ops, new-strategy, …) are
-unchanged.
-
-### The three reviews stay separate
-
-`/health-review` (technical/pipeline/data health) · `/performance-review`
-(trading + strategy performance, per-package grading) · `/ml-review` (model
-lifecycle, promotion/demotion against the `candidate → shadow → advisory`
-ladder). Each has its own rubric and output template. The `/system-review`
-roll-up that ran all three plus register maintenance is retired — the operator
-called it bloated and its backlog-drive mandate is gone with the backlogs.
-
-**Every `/performance-review` hands off to `/perf-followup`**
-(`.claude/skills/perf-followup/SKILL.md`, operator 2026-10-10): tune the
-underperformers, a wider-context lessons post-mortem, extrapolate the lessons to
-other and new strategies, and portfolio-level research. The manager dispatches
-one `PERF-FOLLOWUP-<week>` lane when the review's PR merges.
+- `research-ops` (4×/day) · `weekly-audit` (Mon 06:07Z) · `frontier-research` (weekly; `ml_plan_status.py --diversity`) · the ML plan, reviewed
+  weekly as step 9 of the Sunday `/ml-review` (`ROADMAP.md` § "AI trader (ML) — build plan"). The three reviews stay separate:
+  `/health-review` · `/performance-review` (hands off to `/perf-followup`) · `/ml-review`. The `/system-review` roll-up and ten process
+  skills were retired 2026-09-21 (`docs/archive/2026-09-21-operating-reset/skills/`); do not resurrect.
 
 ---
 
 ## Repo identity
 
-Renamed to **`benbaichmankass/Metis-Insights`** on 2026-07-23; the old
-`ict-trading-bot` name still works via GitHub's 301 redirect — **do not chase a
-rename sweep.**
-
-- **The MCP repo name is whatever THIS session's scope says — read it, don't
-  assume.** A denial on either name is a scope mismatch, not an outage. Re-read
-  the session's allowed list before concluding anything about GitHub.
-- **VM clone dirs stay `/home/ubuntu/ict-trading-bot` and
-  `/opt/ict-trading-bot`.** A GitHub rename does not move the on-disk clone;
-  sweeping those paths would break the deploys.
+Renamed to **`benbaichmankass/Metis-Insights`** 2026-07-23; the old name still redirects — **do not chase a rename sweep.** The MCP repo
+name is whatever THIS session's scope says (a denial is a scope mismatch, not an outage). VM clone dirs stay `/home/ubuntu/ict-trading-bot`
+and `/opt/ict-trading-bot`.
