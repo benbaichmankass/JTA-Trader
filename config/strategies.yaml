@@ -3173,14 +3173,21 @@ strategies:
   # § 3.7). Not a candle strategy: src/runtime/strategy_signal_builders.py::claude_desk_signal_builder
   # reads the proposals desk intake (scripts/ops/desk_intake.py) ACCEPTED and emits ONE package per
   # decision_id with the proposal's own entry / stop / TP (both brackets mandatory, else refused) and
-  # the decision_id in meta. No size: each account's RiskManager sizes it. Desk intake accepts nothing
-  # while MD-TRADE-DESK.functions.entry_generation.blocked_until is set (config/mandates.yaml).
+  # the decision_id in meta. No size: each account's RiskManager sizes it. Desk intake accepts a proposal only
+  # while every account rostering this leg is a demo account in MD-TRADE-DESK.functions.entry_generation.demo_accounts;
+  # every other account stays behind its blocked_until (DESK-13). A filled trade is closed at market after the
+  # proposal's max_hold_min (monitor()), and managed every 5m by its per-trade session (config/short_hold.yaml).
   # Rostered on bybit_1 ONLY (the Alpaca half is row DESK-17B). ROLLBACK: delete this block and the roster entry.
   claude_desk:
     model: null
     signal_prefixes: [claude_desk]
     enabled: true
-    execution: shadow        # shadow-guard: allow — DESK-17 dispatch (manager, operator authority, 2026-10-26): "... with execution: shadow (shadow first; it logs order packages and sends nothing)". A flip to live is a later Tier-3 / data-backed decision.
+    execution: live          # DECIDED 2026-10-27, operator popup relayed by manager session_01C1ooo4kqBbng7vytdG1UVs, verbatim
+                             # "Yes, live on bybit_1 demo now (Recommended)": the desk's own entries trade on the bybit_1
+                             # DEMO (Stage-1 mechanics, 1-2 clean trades). Real money stays behind DESK-13: desk intake admits
+                             # a proposal only while EVERY account rostering this leg is in MD-TRADE-DESK's
+                             # entry_generation.demo_accounts and is a demo/paper account (config/mandates.yaml). REVERT:
+                             # execution: shadow (was shadow 2026-10-26..27, DESK-17).
     decision_bar: closed     # the builder decides from the proposal queue, not a forming bar: no catch-up
     confidence: 0.5          # the package confidence (RiskManager's scalar only sizes DOWN from the account basis)
     symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT]  # 2026-10-27 DESK-WIDEN (Tier-3, bybit_1 DEMO only, manager

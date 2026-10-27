@@ -46,7 +46,9 @@ def test_population_is_enabled_and_live(mod):
     # trend_donchian_xrp_4h, OPERATOR-DECISIONS-1022) joins the enabled+live population.
     # 39 -> 53 on 2026-10-27: DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR) flipped 14 legs shadow -> live, so they join the
     # enabled+live population. The banking-half FINDING was measured on 39 and is NOT re-measured here.
-    assert len(legs) == 53, f"population drifted from the 2026-10-27 denominator: {len(legs)}"
+    # 53 -> 54 on 2026-10-27: claude_desk shadow -> live on the bybit_1 demo (operator popup "Yes, live on bybit_1 demo
+    # now (Recommended)", PR #20585, row DESK-SHORT-HOLD-LANE).
+    assert len(legs) == 54, f"population drifted from the 2026-10-27 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
@@ -191,8 +193,12 @@ def test_telemetry_hook_set_is_derived_not_trusted(mod):
     # 0 -> 2 on 2026-10-27 (DEMO-FLOOR RULE, Tier-3 held PR): fade_breakout_4h and fvg_range_15m went
     # shadow -> live and their units do NOT carry record_position_telemetry, so they are structurally invisible to
     # peak-R telemetry again. Pinned as the measured state (not as acceptable): pipeline item filed to hook them.
-    assert sorted(gap["legs_structurally_invisible"]) == ["fade_breakout_4h", "fvg_range_15m"], gap["legs_structurally_invisible"]
-    assert gap["n_invisible"] == 2
+    # 2 -> 3 on 2026-10-27 (PR #20585): claude_desk went shadow -> live on the bybit_1 demo and its unit does not carry
+    # record_position_telemetry either. Pinned as the measured state, not as acceptable: pipeline item
+    # PI-20261027-P6NRDB4X-0002 hooks it (a desk trade's peak-R path is a training input).
+    assert sorted(gap["legs_structurally_invisible"]) == ["claude_desk", "fade_breakout_4h", "fvg_range_15m"], \
+        gap["legs_structurally_invisible"]
+    assert gap["n_invisible"] == 3
 
 
 def test_counterfactual_never_claims_to_be_net(mod):

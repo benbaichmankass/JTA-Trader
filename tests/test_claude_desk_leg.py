@@ -168,11 +168,13 @@ def test_builder_refuses_bracketless_proposal(monkeypatch, tmp_path):
 
 # ---------------------------------------------------------------- shadow sends nothing
 
-def test_shadow_sends_nothing(monkeypatch):
-    """The coordinator's execution gate: a claude_desk package is DRY on every account while the
-    leg is execution: shadow -- same resolution as every shadow leg (no new order path)."""
+def test_live_on_the_demo_floor_through_the_existing_gate(monkeypatch):
+    """DECIDED 2026-10-27 (operator popup "Yes, live on bybit_1 demo now (Recommended)"): the leg is
+    execution: live and the coordinator's ordinary execution gate (the same resolution as every leg, no new
+    order path) decides; a flip back to shadow is the revert. Which accounts may receive a desk package is
+    decided upstream by desk intake's demo-floor gate (tests/test_desk_demo_flip.py)."""
     from src.strategy_registry import execution_mode
-    assert execution_mode("claude_desk") == "shadow"
+    assert execution_mode("claude_desk") == "live"
     import src.core.coordinator as coord
     src = Path(coord.__file__).read_text()
     assert 'execution_mode(str(pkg.strategy)) == "shadow"' in src and '_dry_cause = "execution:shadow"' in src
@@ -185,7 +187,7 @@ def test_registered_once_and_rostered_only_on_soak_accounts():
     assert "claude_desk" in _resolve_builders() and DEFAULT_PRIORITIES["claude_desk"] == 0
     assert monitor_unit_for("claude_desk") == "claude_desk"
     strategies = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]
-    assert strategies["claude_desk"]["execution"] == "shadow"
+    assert strategies["claude_desk"]["execution"] == "live"  # bybit_1 demo only (desk intake's demo floor)
     # Six markets on bybit_1 (DESK-WIDEN): the same-symbol concern is met by bybit_1's slice support plus
     # claude_desk's declared slice (config/slice_allocation.yaml::declared_slices).
     assert strategies["claude_desk"]["symbols"] == [
