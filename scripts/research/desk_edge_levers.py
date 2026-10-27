@@ -27,10 +27,11 @@ from scripts.research import desk_edge_ceiling as ce  # noqa: E402
 from scripts.research import desk_gen_replay_driver as d  # noqa: E402
 
 HOLDS_MIN = (1, 5, 15, 30, 60, 240, 720, 2880)
-# round-trip bps. The repo stack is execution_costs' DEFAULT_FEE_BPS_ROUNDTRIP + PERP_SLIPPAGE_BPS_ROUNDTRIP; the Bybit
-# rows use its published VIP0 linear-perp fees (taker 0.055%, maker 0.02% per side: INFERRED from the public schedule,
-# not read from the account) and an assumed slippage.
-SCENARIOS = {"repo stack (7.5 fee + 3 slip)": 10.5, "Bybit VIP0 taker both sides (11 + 3 slip)": 14.0,
+# round-trip bps. The repo stack is execution_costs' DEFAULT_FEE_BPS_ROUNDTRIP + PERP_SLIPPAGE_BPS_ROUNDTRIP. The MEASURED
+# row is our own Bybit fills: 1,411 fills, all taker at 5.5 bps per side (comms/research/desk_edge/levers/
+# bybit-fee-measured-2026-10-27.json) plus R3's measured market slippage, 1.29 bps round trip (2026-10-25). The maker rows
+# use Bybit's published maker fee (0.02% per side: INFERRED from the public schedule; we have no maker fill to measure).
+SCENARIOS = {"repo stack (7.5 fee + 3 slip)": 10.5, "MEASURED Bybit taker (11.0 fee + 1.3 slip)": 12.3,
              "maker entry, taker exit (2+5.5 fee + 1.5 slip)": 9.0, "maker both sides (2+2 fee, 0 slip)": 4.0}
 FUNDING_BPS_PER_8H = 1.0
 

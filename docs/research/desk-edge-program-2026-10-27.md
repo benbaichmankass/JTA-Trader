@@ -182,36 +182,36 @@ What sub-minute research would take: 30s bars from Bybit trade dumps for six sym
 
 Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd). Population: Binance USD-M perp 1m klines, 2026-06-01..2026-09-30, six symbols, non-overlapping returns, median over symbols.
 
-| hold | 1-sd move | median abs move | repo stack 10.5 bps | Bybit VIP0 taker 14 bps | maker in / taker out 9 bps | maker both 4 bps |
+| hold | 1-sd move | median abs move | repo stack 10.5 bps | **MEASURED Bybit taker 12.3 bps** | maker in / taker out 9 bps | maker both 4 bps |
 |---|---|---|---|---|---|---|
-| 1 min | 9.2 bps | 3.8 | **1.14** | **1.52** | 0.98 | 0.43 |
-| 5 min | 20.8 | 8.3 | 0.50 | 0.67 | 0.43 | 0.19 |
-| 15 min | 34.4 | 14.1 | 0.31 | 0.41 | 0.26 | 0.12 |
-| 30 min | 49.1 | 19.7 | 0.21 | 0.29 | 0.18 | 0.08 |
-| 60 min | 68.3 | 27.9 | 0.15 | 0.21 | 0.13 | 0.06 |
-| 4 h | 128 | 55 | 0.08 | 0.11 | 0.07 | 0.03 |
-| 12 h | 205 | 108 | 0.06 | 0.07 | 0.05 | 0.02 |
-| 48 h | 520 | 269 | 0.03 | 0.04 | 0.03 | 0.02 |
+| 1 min | 9.2 bps | 3.8 | 1.14 | **1.33** | 0.98 | 0.43 |
+| 5 min | 20.8 | 8.3 | 0.50 | **0.59** | 0.43 | 0.19 |
+| 15 min | 34.4 | 14.1 | 0.30 | **0.36** | 0.26 | 0.12 |
+| 30 min | 49.1 | 19.7 | 0.21 | **0.25** | 0.18 | 0.08 |
+| 60 min | 68.3 | 27.9 | 0.15 | **0.18** | 0.13 | 0.06 |
+| 4 h | 128 | 55 | 0.08 | **0.10** | 0.07 | 0.03 |
+| 12 h | 205 | 108 | 0.06 | **0.07** | 0.05 | 0.02 |
+| 48 h | 520 | 269 | 0.03 | **0.04** | 0.03 | 0.02 |
 
-- **Where cost kills:** at 1-5 minutes a taker round trip costs 0.5-1.5 R of a 1-sd bracket; no plausible timing edge clears that. At 15-30 minutes taker costs 0.3-0.4 R: a variant would need S3 of about +0.55 to +0.65 to reach the +0.25 bar in S1.
-- **Where maker execution rescues it:** maker on both sides cuts 30-minute cost from 0.29 R to 0.08 R and 15-minute cost from 0.41 R to 0.12 R. That is the single largest MEASURED lever on S1 for short holds, before fill probability and adverse selection (not measured: a limit that fills is more often a limit the market ran through).
-- **Flag (say something):** the replay charges **7.5 bps fee + 3 bps slippage** round trip (`execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP`, `PERP_SLIPPAGE_BPS_ROUNDTRIP`) for every crypto perp. Bybit's published VIP0 linear taker fee is 0.055% per side = **11 bps round trip in fees alone** (INFERRED from the public schedule; the account's real tier was NOT read). If the desk pays VIP0 taker, every replay in this repo under-charges cost by about 3.5 bps a round trip: negligible at 48 h (0.007 R), material at 30-60 min (0.05-0.07 R). Filed for the manager in § 8.
+- **Where cost kills:** at 1-5 minutes a taker round trip costs 0.6-1.3 R of a 1-sd bracket; no plausible timing edge clears that. At 15-30 minutes taker costs 0.25-0.36 R: a variant would need S3 of about +0.5 to +0.6 to reach +0.25 in S1.
+- **Where maker execution rescues it:** maker on both sides cuts 30-minute cost from 0.25 R to 0.08 R and 15-minute cost from 0.36 R to 0.12 R: the largest MEASURED lever on S1 for short holds, before fill probability and adverse selection (not measured; and **we have never placed a maker fill**: 0 of 1,411).
+- **The fee flag, settled with data (manager decision 16:58Z).** MEASURED on our own Bybit fills (`GET /api/bot/pnl/exchange/fills?days=90`, bybit_1 1,000 fills 2026-09-13..10-27 truncated, bybit_2 257 and bybit_portfolio 154 since 2026-07-30; `comms/research/desk_edge/levers/bybit-fee-measured-2026-10-27.json`): **every fill is taker at 5.50 bps per side (p10 = p90)** = **11.0 bps fee round trip**; R3's measured market slippage on bybit_2 is **1.29 bps** round trip [-0.88, +3.56], n 74 (`comms/research/r3_cost_fidelity/2026-10-25.json`). The replay charges 7.5 fee + 3.0 slippage = 10.5: **fee under-charged by 3.5 bps, slippage over-charged by 1.7, net all-in about 1.8 bps under** (about 0.04 R on a 1-sd 30-minute bracket, 0.003 R at 48 h). Filed as checklist row **`COST-STACK-BYBIT-TAKER-FEE`** (Tier 2: it changes every Stage-0 corpus' cost). Every table here uses the measured 12.3 bps. The journal's own fee columns cannot answer this: the latest 1,000 trades are all `cost_source = estimate` (none `broker`).
 
 ### 6.4 The levers, ranked by estimated added edge x probability (DEV, MEASURED where stated; `comms/research/desk_edge/levers/levers-dev-ridge.json`, ridge on P+, test folds 2-4, 35 weeks; post-hoc looks, 24 lines)
 
 | rank | lever | measured on DEV | estimated added edge | P(real, judgement) | next step (token-free first) |
 |---|---|---|---|---|---|
-| 1 | **Execution cost: maker / limit entries** | not an S3 lever (the baseline pays the same cost); S1 gain = cost saved: +0.21 R at 30 min, +0.15 R at 60 min, +0.08 R at 4 h, +0.02 R at 48 h (§ 6.3) | +0.1 to +0.2 R **S1** at <= 60-min holds, after adverse selection about half of it | 0.7 | limit-entry geometries in the action set (the driver already simulates `limit` fills); a 1m-bar version for <= 60 min |
+| 1 | **Execution cost: maker / limit entries** | not an S3 lever (the baseline pays the same cost); S1 gain = cost saved vs the MEASURED taker cost: +0.17 R at 30 min, +0.12 R at 60 min, +0.07 R at 4 h, +0.02 R at 48 h (§ 6.3); 0 maker fills so far | +0.1 to +0.2 R **S1** at <= 60-min holds, after adverse selection about half of it | 0.7 | limit-entry geometries in the action set (the driver already simulates `limit` fills); a 1m-bar version for <= 60 min |
 | 2 | **Shorter bars and holds (1m bars, 5-30 min holds) + event / flow windows** | not yet measured; cost table above says taker S3 must be +0.3 to +0.7 R before S1 is positive | unknown; the one place a large edge is plausible (order-flow imbalance, liquidation cascades: DESK-27-LIVE-FLOW) | 0.2 | build the 1m-bar ceiling on Binance perp 1m + aggTrades flow (`RQ-20261027-fe57-02`) |
 | 3 | **Hold rule: enter within 60 min, run to H** | partly measurable now: the era run's per-horizon table covers 1, 4, 12, 24, 48, 96 bars on the same decisions (§ 4.4 when it lands); on DEV unselected S1 rises from -0.15 R (12 bars) to -0.055 R (96 bars) because cost falls with the hold | at the 1h bar it changes S1 by +0.05 to +0.10 R via cost; S3 about 0 at every hold so far | 0.5 (on S1), 0.1 (on S3) | 1m-bar ceiling with H in {60, 120, 240, 480} min vs a hard 60-min cap (`fe57-02`) |
 | 4 | **Session / event window** | top 5% picks in 07-13 UTC: S3 +0.153 [-0.15, +0.49]; other windows -0.05 to -0.09 | +0.15 if real | 0.15 (one of 4 windows, post-hoc) | test on the era folds and the 1m ceiling, registered |
-| 5 | **Fade the model's most confident tail** | top 1%: S3 **-0.244** [-0.39, +0.07]; top 0.2%: **-0.400 [-0.59, -0.27]** (n 570): the model's most confident picks are reliably WRONG | +0.25 to +0.40 if the reversal is real | 0.15 (found by looking; extreme momentum reverting is plausible) | registered test on era folds 3-6, which this model has not been scored on (`RQ-20261027-fe57-03`) |
+| 5 | **Fade the model's most confident tail** | DEV (found by looking): top 1% S3 -0.244, top 0.2% **-0.400 [-0.59, -0.27]** (n 570). **Registered test `RQ-20261027-fe57-03` on era folds 3-6: FAIL** — faded top 1% S3 +0.045 [-0.10, +0.19] corrected (n 4,761), faded top 0.2% -0.029 [-0.21, +0.27] (n 953); `comms/research/desk_edge/fade-era/verdict.json` | **closed** | - | none |
 | 6 | **Asymmetric geometry (target vs stop)** | S3 about 0 at every geometry (-0.013 to +0.007 unselected); unselected S1 best at 2 ATR / 3 R / 96 bars (-0.055) | via cost only (S1) | 0.6 on S1, ~0 on S3 | none beyond rank 3 |
 | 7 | **Selectivity: abstain unless confident** | as built it HURTS (rank 5); top 20% / 5%: -0.016 / -0.009 | <= 0 as built | - | only through rank 5 |
 | 8 | **Direction-neutral pairs (best long + best short)** | all: -0.006 [-0.05, +0.04]; top 5%: -0.074 [-0.22, +0.10] | ~0 | 0.05 | none |
 | 9 | **Judge levers (brief, Sonnet vs Opus, self-consistency)** | V1 is a linear base-rate rule; the rule is excluded (§ 4.3) | only on information the base rates lack | 0.05 until rank 2 or 5 finds information | none until then |
 
-**Reading of the table (DECIDED by the § 2 tree):** no lever measured so far gives S3 near +0.25 on DEV. The two that could (rank 2, rank 5) are unmeasured or post-hoc; the largest MEASURED lever (rank 1) moves S1, not S3. **No judge spend until a token-free lever clears the bar.**
+**Reading of the table (DECIDED by the § 2 tree):** no lever measured so far gives S3 near +0.25 on DEV. Of the two that could, rank 5 FAILED its registered test and rank 2 is unmeasured; the largest MEASURED lever (rank 1) moves S1, not S3. **No judge spend until a token-free lever clears the bar.**
 
 ## 7. Budget
 
@@ -220,7 +220,7 @@ Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd
 
 ## 8. What was not verified
 
-- The account's real Bybit fee tier (the cost table carries both the repo stack and VIP0); fill probability and adverse selection of maker entries.
+- Fill probability and adverse selection of maker entries (no maker fill exists to measure); the maker fee is Bybit's published 0.02% per side, not measured.
 - That the extended-era DEV folds equal the driver's folds to the bar (the era fold windows are rebuilt from the driver's arithmetic with a ceiling at the second).
 - The judge's behaviour beyond Sonnet: the base-rate-rule finding is for the Sonnet subagent setup only.
 - Whether V1's subagents, which had file tools, are representative of a tool-less API judge: their transcripts show no foreign reads, but the 3 rejected batches show the setup invites shortcuts.
