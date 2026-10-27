@@ -488,6 +488,19 @@ def _leg_execution(root: Path, leg: str) -> str:
     return str((cfg or {}).get("execution", "live")).strip().lower()
 
 
+#: The demo floor (operator rule 2026-10-27, "Demote stops at the floor"): the paper accounts every non-retired leg trades on.
+DEMO_FLOOR_ACCOUNTS = ("bybit_1", "alpaca_paper", "ib_paper")
+
+
+def _retired_by_record(root: Path, leg: str) -> bool:
+    """A leg is RETIRED only by a record: `enabled: false` in config/strategies.yaml (the marker `vwap` and
+    `trend_donchian_1h` carry, each with an operator-approved retirement comment). A missing or unreadable
+    config is NOT a retirement ("could not look" is never a removal signal)."""
+    strategies = (_yaml(root, STRATEGIES_REL) or {}).get("strategies") or {}
+    cfg = strategies.get(leg) if isinstance(strategies, dict) else None
+    return isinstance(cfg, dict) and cfg.get("enabled") is False
+
+
 def _soak_data_task(leg: str, soak: Optional[str], mid: str, account: str) -> Dict[str, Any]:
     """The data task for `R-NOT-SOAKED` / `R-EXECUTION-SHADOW` -- #13698's case.
 
@@ -908,6 +921,12 @@ def _decide(leg: str, frm: str, to: str, account: str, root: Path,
     if not adds and not removes:
         raise _Refuse("R-NO-OP", f"{leg} is already where {frm} -> {to} would put it")
 
+    if (frm, to) == ("S1", "OFF") and account in DEMO_FLOOR_ACCOUNTS and not _retired_by_record(root, leg):
+        # DEMO-FLOOR RULE (operator 2026-10-27, popup "Demote stops at the floor (Recommended)"): a failing leg is demoted
+        # out of real money and the mirror, never off its demo floor. Only a retirement record removes it.
+        raise _Refuse("R-DEMO-FLOOR", f"{mid}: {leg} is not retired by record ({STRATEGIES_REL} enabled: false); "
+                                      f"S1 -> OFF would remove it from the demo floor ({account}). A failing leg "
+                                      "stays on the floor; only an explicit retirement record removes it")
     if direction == "add_risk":
         _add_risk(leg, frm, to, account, exchange, venue, m, rosters, acfg, root, ctx)
     elif mid == S1_CUT_MANDATE_ID:
