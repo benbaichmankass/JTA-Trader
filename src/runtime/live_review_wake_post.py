@@ -30,8 +30,10 @@ Receipt: ``runtime_logs/ltr_wake_post_receipt.json``, read through
 ``/api/diag/log_file?name=ltr_wake_post_receipt``. ``state`` keeps apart:
 ``nothing_due`` (looked, no real-money/prop wake event) · ``already_posted``
 (due, but the markers say it went out) · ``posted`` (with ``http_code`` and
-``latency_s`` from the due computation) · ``could_not_post`` (with
-``http_code`` or ``reason``) · ``due_could_not_look`` (the due computation
+``latency_s`` from the due computation; ``evidence`` = per package the
+rows-branch commit of its packet + table, LTR-PACKET-ECHO) · ``could_not_post`` (with
+``http_code`` or ``reason``; ``evidence_commit_failed`` posts nothing and leaves the wake to the
+Actions poller) · ``evidence_backoff`` (inside ``EVIDENCE_BACKOFF_S`` after such a failure) · ``due_could_not_look`` (the due computation
 itself could not look; the poller owns that flag).
 """
 from __future__ import annotations
@@ -72,6 +74,9 @@ _wake_mod: Any = None
 #: Last markers read from the PR, so a due-but-already-posted event costs no
 #: GitHub call on every pass. Refreshed whenever the plan against it is non-empty.
 _cached_markers: List[dict] = []
+#: LTR-PACKET-ECHO: after a failed evidence commit, no packet build/commit from here until this monotonic time.
+EVIDENCE_BACKOFF_S = 600
+_evidence_backoff_until = float("-inf")
 
 
 def receipt_path() -> Path:
@@ -168,7 +173,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
              receipt: Optional[Path] = None,
              build_bundle: Optional[Callable[[str], Dict[str, Any]]] = None) -> Dict[str, Any]:
     """One due computation -> at most one comment. Returns (and writes) the receipt."""
-    global _cached_markers
+    global _cached_markers, _evidence_backoff_until
     computed_at = now_fn()
     if due_fn is None:
         from src.runtime.live_review_due import live_review_due as due_fn  # noqa: N806
@@ -212,8 +217,25 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
     for e in p["entries"]:
         e["poster"] = "vm"
         e["due_computed_at"] = computed_at.isoformat()
+    if time.monotonic() < _evidence_backoff_until:
+        rec.update(state="evidence_backoff", reason="the last evidence commit failed; the Actions poller covers this window")
+        write_receipt(rec, receipt)
+        return rec
     # LTR C2: the decision packet rides the comment (built on the VM, read-only).
     bundles = wake.attach_packets(p, build=build_bundle) if build_bundle else wake.attach_packets(p)
+    # LTR-PACKET-ECHO: the packet + table land on live-review/rows by machine, byte-exact, BEFORE the wake
+    # is posted, so the reviewer only writes its row. A failed commit posts nothing from here: the Actions
+    # poller (same markers, its own token) posts within ~5 min and lands the evidence itself, and this
+    # poster backs off for EVIDENCE_BACKOFF_S instead of rebuilding packets every pass.
+    ev = wake.land_evidence(p, bundles, auth, http)
+    rec["evidence"] = {k: {kk: v for kk, v in st.items() if kk != "reason"} for k, st in ev.items()}
+    if any(st.get("state") == "could_not_commit" for st in ev.values()):
+        _evidence_backoff_until = time.monotonic() + EVIDENCE_BACKOFF_S
+        codes = [st.get("http_code") for st in ev.values() if st.get("state") == "could_not_commit"]
+        rec.update(state="could_not_post", http_code=codes[0] if codes else None,
+                   reason="evidence_commit_failed: left to the Actions poller")
+        write_receipt(rec, receipt)
+        return rec
     rec["packet_states"] = {e["order_package_id"]: e.get("packet_state") for e in p["entries"]}
     body = wake.render(p, computed_at, "VM poster (ict-trader-live, in process)", bundles)
     code, data = http("POST", f"{API}/repos/{REPO}/issues/{pr}/comments",

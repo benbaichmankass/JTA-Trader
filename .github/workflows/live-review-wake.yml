@@ -11,7 +11,13 @@ name: live-review-wake
 #
 # Token-free (no model is called). No new secret. NO HALTING: a failed read posts
 # one could-not-look flag per 6 h and the poller keeps running.
-# Tier 1: one read-only diag GET, one PR comment.
+# LTR-PACKET-ECHO (2026-10-27): before the comment is posted, each built packet and its outcome table
+# are committed BY MACHINE, byte-exact, to live-review/rows (one fast-forward git-data commit, never
+# forced; land_evidence in the script). The reviewer only writes its own row file. A package whose
+# evidence could not land is posted with packet_state could_not_commit and no packet block, so no
+# reviewer is started on evidence the branch does not carry.
+# Tier 1 by itself (one read-only diag GET, one PR comment, data files on a data branch); the evidence
+# commit is part of the Tier-2 live-review write path (LTR-PACKET-ECHO).
 
 on:
   schedule:
@@ -24,7 +30,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write  # LTR-PACKET-ECHO: packet + table land on live-review/rows (git data API) before the comment
   pull-requests: write
   issues: write
 

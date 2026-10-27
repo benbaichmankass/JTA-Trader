@@ -118,7 +118,7 @@ def test_a_money_row_the_checker_refuses_is_skipped(tmp_path):
 
 def test_a_packet_sha_that_does_not_match_its_packet_is_skipped(tmp_path):
     res = lrm.mirror(tmp_path, branch([row("LR-20261026T1200Z-pkg-F", True, False)], {f"{lrm.PACKETS}/LR-20261026T1200Z-pkg-F.json": '{"p":9}'}))
-    assert res["mirrored"] == 0 and res["skipped"][0]["why"].startswith("schema: packet_sha")
+    assert res["mirrored"] == 0 and res["skipped"][0]["why"].startswith("packet_sha: packet_sha does not match")
 
 
 def test_schema_skips_do_not_fail_the_run_but_other_skips_do(tmp_path, monkeypatch, capsys):
@@ -188,3 +188,62 @@ def test_a_shrunken_tip_fails_the_run(tmp_path, monkeypatch):
     monkeypatch.setattr(lrm, "git_row_files", lambda ref, cwd=None: [])
     monkeypatch.setattr(lrm, "git_history", lambda ref, *a, **k: [("\n".join(full) + "\n").encode()])
     assert lrm.main([]) == 1
+
+
+# ── LTR-PACKET-ECHO: a packet_sha refusal is loud (one flag), a missing packet waits, killed rows are named ──
+def test_a_packet_sha_mismatch_alerts_once_and_does_not_fail_every_run(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(lrm, "ROOT", tmp_path)
+    monkeypatch.setattr(lrm, "git_row_files", lambda ref, cwd=None: [])
+    monkeypatch.setattr(lrm, "git_history", lambda ref, *a, **k: [])
+    rid = "LR-20261027T1831Z-pkg-976b"
+    read = branch([row(rid, True, False)], {f"{lrm.PACKETS}/{rid}.json": '{"p":9}'})  # re-typed: a key dropped
+    monkeypatch.setattr(lrm, "git_show", lambda ref, path, cwd=None: read(path))
+    gh_calls, posted = [], []
+
+    def fake_gh(args):
+        gh_calls.append(args)
+        if args[0] == "api":
+            return "".join(posted)
+        posted.append(args[args.index("--body") + 1])
+        return ""
+    monkeypatch.setattr(lrm, "_gh", fake_gh)
+    assert lrm.main(["--flag-pr", "17895"]) == 0           # refused, kept running, not red every hour
+    err = capsys.readouterr().err
+    assert f"::error::rows-branch row {rid} REFUSED" in err and "flag: flagged" in err
+    assert len(posted) == 1 and rid in posted[0] and "<!-- ltr-mirror-refused " in posted[0]
+    assert lrm.main(["--flag-pr", "17895"]) == 0
+    assert "flag: already_flagged" in capsys.readouterr().err and len(posted) == 1   # ONE flag per row
+
+
+def test_a_row_with_no_committed_packet_waits_and_mirrors_once_the_packet_lands(tmp_path):
+    rid = "LR-20261027T1900Z-pkg-G"
+    r = row(rid, True, False)
+    res = lrm.mirror(tmp_path, branch([r], {}))
+    assert res["mirrored"] == 0 and res["skipped"][0]["why"].startswith("cited file ") and "missing" in res["skipped"][0]["why"]
+    assert lrm.alert_keys(res["skipped"]) == [(f"{rid}|cited_file", f"`{rid}`: {res['skipped'][0]['why']}")]
+    res = lrm.mirror(tmp_path, branch([r], {f"{lrm.PACKETS}/{rid}.json": '{"p":1}'}))
+    assert res["mirrored"] == 1 and res["skipped"] == []
+
+
+def test_plan_flag_skips_keys_already_flagged_and_ignores_schema_refusals():
+    sk = [{"review_id": "A", "why": "packet_sha: x"}, {"review_id": "B", "why": "schema: y"},
+          {"review_id": "C", "why": "cited file z missing on the rows branch"}]
+    assert [k for k, _ in lrm.plan_flag(sk, [])] == ["A|packet_sha", "C|cited_file"]
+    assert [k for k, _ in lrm.plan_flag(sk, [{"keys": ["A|packet_sha"]}])] == ["C|cited_file"]
+
+
+def test_the_legacy_wrong_package_row_is_killed_with_its_reason_not_schema_refused(tmp_path):
+    rid = "LR-20261026T2311Z-pkg-6a8e3fb325464be3"
+    bad = row(rid, False, False, order_package_id="pkg-465a5d7d27644027")
+    (tmp_path / lrm.KILLED).parent.mkdir(parents=True)
+    (tmp_path / lrm.KILLED).write_text((ROOT / lrm.KILLED).read_text())
+    res = lrm.mirror(tmp_path, branch([bad, row("LR-20261026T1200Z-pkg-D", False, False)], {}))
+    assert res["review_ids"] == ["LR-20261026T1200Z-pkg-D"] and res["skipped"] == []
+    assert res["killed"][0]["review_id"] == rid and "superseded_by LR-20261026T2312Z-pkg-6a8e3fb325464be3" in res["killed"][0]["why"]
+
+
+def test_every_killed_row_states_a_reason_and_what_supersedes_it():
+    doc = json.loads((ROOT / lrm.KILLED).read_text())
+    assert doc["killed"]
+    for k in doc["killed"]:
+        assert k["review_id"].startswith("LR-") and len(k["reason"]) > 40 and k["superseded_by"].startswith("LR-")

@@ -33,6 +33,7 @@ Exit codes: 0 ran (posted or nothing new) · 1 could not look · 2 crashed/usage
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import subprocess
@@ -40,7 +41,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 FETCH = ROOT / "scripts" / "ops" / "diag_fetch.sh"
@@ -60,6 +61,14 @@ PACKET_BUILDER = ROOT / "scripts" / "ops" / "live_review_packet.py"
 PACKET_TIMEOUT_S = 180
 #: GitHub caps a comment at 65,536 chars; keep headroom for the head + marker.
 MAX_BODY_CHARS = 60000
+#: LTR-PACKET-ECHO (2026-10-27): the packet and its outcome table land on the rows branch BY MACHINE,
+#: byte-exact, before the wake comment is posted, so a reviewer never re-types them (a reviewer's re-typed
+#: packet dropped ``"sd_r":null`` and the mirror refused the row: packet_sha mismatch).
+ROWS_BRANCH = "live-review/rows"
+PACKETS_DIR = "comms/live_review/packets"
+REPO = "benbaichmankass/Metis-Insights"
+API = "https://api.github.com"
+HTTP_TIMEOUT_S = 15
 
 
 def _ts(v: Any) -> Optional[datetime]:
@@ -180,6 +189,144 @@ def attach_packets(p: Dict[str, Any], build=build_bundle) -> Dict[str, Dict[str,
     return bundles
 
 
+def evidence_files(b: Dict[str, Any]) -> List[Tuple[str, bytes]]:
+    """The rows-branch files a built bundle lands: the packet and (when priced) its table. Same bytes as
+    ``live_review_packet.py --write`` writes on main, so the mirror copies them across unchanged."""
+    pk = b.get("packet") or {}
+    out = [(f"{PACKETS_DIR}/{pk.get('review_id')}.json", (json.dumps(pk, indent=1, sort_keys=True) + "\n").encode())]
+    tp, table = b.get("table_path"), b.get("table")
+    if isinstance(tp, str) and tp.startswith("comms/live_review/tables/") and ".." not in tp and table is not None:
+        out.append((tp, (json.dumps(table, indent=2) + "\n").encode()))
+    return out
+
+
+Http = Callable[[str, str, Optional[bytes], str], Tuple[Optional[int], Any]]
+
+
+def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[Optional[int], Any]:
+    """(status, parsed JSON or None). Never raises; status None = no response."""
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(url, data=body, method=method, headers={
+        "Authorization": auth, "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json", "User-Agent": "metis-ltr-wake"})
+    try:
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
+            raw = resp.read()
+            return resp.status, (json.loads(raw) if raw else None)
+    except urllib.error.HTTPError as exc:
+        return exc.code, None
+    except Exception:  # noqa: BLE001 — a network failure is a state, never a raise
+        return None, None
+
+
+def _branch_blob(path: str, auth: str, http: Http) -> Tuple[str, Optional[bytes], Optional[int]]:
+    """('absent' | 'present' | 'unknown', bytes, http code) for ``path`` at the rows-branch tip."""
+    import urllib.parse
+    code, doc = http("GET", f"{API}/repos/{REPO}/contents/{path}?ref={urllib.parse.quote(ROWS_BRANCH, safe='')}",
+                     None, auth)
+    if code == 404:
+        return "absent", None, code
+    if code == 200 and isinstance(doc, dict) and doc.get("encoding") == "base64":
+        try:
+            return "present", base64.b64decode(doc.get("content") or ""), code
+        except ValueError:
+            pass
+    return "unknown", None, code
+
+
+def commit_files(files: List[Tuple[str, bytes]], message: str, auth: str,
+                 http: Http) -> Tuple[Optional[str], Optional[int]]:
+    """ONE fast-forward commit adding ``files`` to the rows branch through the git data API (never forced;
+    the same shape ``src/runtime/desk_packet_wake.py::commit_packet`` uses on desk/decisions, which needs
+    no git credential on the VM). (commit sha, None) or (None, http code of the step that failed)."""
+    base = f"{API}/repos/{REPO}/git"
+    code: Optional[int] = None
+    for _ in range(4):
+        code, ref = http("GET", f"{base}/ref/heads/{ROWS_BRANCH}", None, auth)
+        if code != 200 or not isinstance(ref, dict):
+            return None, code
+        head = ref["object"]["sha"]
+        code, cm = http("GET", f"{base}/commits/{head}", None, auth)
+        if code != 200 or not isinstance(cm, dict):
+            return None, code
+        entries = []
+        for rel, data in files:
+            code, blob = http("POST", f"{base}/blobs", json.dumps(
+                {"content": base64.b64encode(data).decode(), "encoding": "base64"}).encode(), auth)
+            if code != 201 or not isinstance(blob, dict):
+                return None, code
+            entries.append({"path": rel, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+        code, tree = http("POST", f"{base}/trees", json.dumps({"base_tree": cm["tree"]["sha"], "tree": entries}).encode(), auth)
+        if code != 201 or not isinstance(tree, dict):
+            return None, code
+        code, new = http("POST", f"{base}/commits", json.dumps(
+            {"message": message, "tree": tree["sha"], "parents": [head]}).encode(), auth)
+        if code != 201 or not isinstance(new, dict):
+            return None, code
+        code, _ = http("PATCH", f"{base}/refs/heads/{ROWS_BRANCH}", json.dumps({"sha": new["sha"], "force": False}).encode(), auth)
+        if code == 200:
+            return new["sha"], None
+        if code != 422:  # 422 = not a fast-forward: someone appended first; re-read the tip and retry
+            return None, code
+    return None, code
+
+
+def land_evidence(p: Dict[str, Any], bundles: Dict[str, Dict[str, Any]], auth: str,
+                  http: Http = http_json) -> Dict[str, Dict[str, Any]]:
+    """Land every built bundle's packet + table on the rows branch, create-only, in ONE commit, and stamp
+    ``evidence_state`` on the entries. Per package: ``committed`` (``evidence_commit``) · ``exists`` (the
+    same bytes are already there: an earlier pass) · ``evidence_conflict`` (a file of that name holds other
+    bytes; never overwritten) · ``could_not_commit`` (``evidence_http_code``). A package that is not
+    ``committed`` / ``exists`` has its bundle state set to that value, so its block does not ride the comment
+    and no reviewer is started on evidence that is not on the branch. Never raises."""
+    out: Dict[str, Dict[str, Any]] = {}
+    need: List[Tuple[str, bytes]] = []
+    need_pkgs: List[str] = []
+    for pkg, b in bundles.items():
+        if b.get("state") != "built":
+            continue
+        st: Dict[str, Any] = {"state": "exists"}
+        mine: List[Tuple[str, bytes]] = []
+        for rel, data in evidence_files(b):
+            have, blob, code = _branch_blob(rel, auth, http)
+            if have == "absent":
+                mine.append((rel, data))
+            elif have == "unknown":
+                st = {"state": "could_not_commit", "http_code": code, "reason": f"could not read {rel}"}
+                break
+            elif blob != data:
+                st = {"state": "evidence_conflict", "reason": f"{rel} exists on {ROWS_BRANCH} with other bytes"}
+                break
+        if st["state"] == "exists" and mine:
+            need += mine
+            need_pkgs.append(pkg)
+            st = {"state": "pending"}
+        out[pkg] = st
+    if need:
+        ids = ", ".join(str((bundles[k].get("packet") or {}).get("review_id")) for k in need_pkgs)
+        sha, code = commit_files(need, f"live-review: evidence {ids} (machine, byte-exact)", auth, http)
+        for k in need_pkgs:
+            out[k] = ({"state": "committed", "commit": sha} if sha else
+                      {"state": "could_not_commit", "http_code": code, "reason": "git data API commit failed"})
+    for pkg, st in out.items():
+        if st["state"] not in ("committed", "exists"):
+            bundles[pkg] = dict(bundles[pkg], state=st["state"], reason=st.get("reason"))
+    for e in p.get("entries") or []:
+        st = out.get(e.get("order_package_id"))
+        if not st:
+            continue
+        e["evidence_state"] = st["state"]
+        if st.get("commit"):
+            e["evidence_commit"] = st["commit"]
+        if st["state"] not in ("committed", "exists"):
+            e["packet_state"] = st["state"]
+            e["packet_reason"] = st.get("reason")
+            if st.get("http_code") is not None:
+                e["evidence_http_code"] = st["http_code"]
+    return out
+
+
 def _bundle_block(pkg: str, b: Dict[str, Any]) -> str:
     doc = {k: b.get(k) for k in ("packet_sha", "table_path", "packet", "table")}
     return (f"<details><summary>review packet <code>{(b.get('packet') or {}).get('review_id')}</code> "
@@ -213,7 +360,11 @@ def render(p: Dict[str, Any], now: datetime, run_url: str,
                 "packages. Manager: dispatch ONE Sonnet LIVE-REVIEW lane per package "
                 "(`.claude/skills/manager/SKILL.md` § Live-review wake).")
         lines = [f"- `{e['order_package_id']}` {e['leg']} {e['symbol']} on {', '.join(map(str, e['accounts']))}: "
-                 f"**{e['event']}** @ {e['level']} — {e['why']} (due_at {e['due_at']})" for e in p["entries"]]
+                 f"**{e['event']}** @ {e['level']} — {e['why']} (due_at {e['due_at']})"
+                 + (f"; evidence on `{ROWS_BRANCH}`: **{e['evidence_state']}**"
+                    + (f" `{str(e['evidence_commit'])[:12]}`" if e.get("evidence_commit") else "")
+                    if e.get("evidence_state") else "")
+                 for e in p["entries"]]
     return "\n".join([head, "", *lines, "", *blocks, "", f"Run: {run_url}", "",
                       f"<!-- {MARKER} {json.dumps(marker, separators=(',', ':'), default=str)} -->",
                       "", "---", "_Generated by [Claude Code](https://claude.ai/code)_"])
@@ -268,6 +419,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     p = plan(doc, posted, load_cfg(), now)
     # The packet build is minutes of diag reads; a print-only run skips it.
     bundles = attach_packets(p) if (p["kind"] == "wake" and args.live) else None
+    if bundles:
+        # LTR-PACKET-ECHO: packet + table land on the rows branch by machine BEFORE the wake is posted.
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+        ev = land_evidence(p, bundles, f"token {token}")
+        print(f"ltr-wake: evidence {json.dumps(ev, sort_keys=True)}")
     body = render(p, now, os.environ.get("RUN_URL", ""), bundles) if p["kind"] != "quiet" else ""
     print(f"ltr-wake: {p['kind']} — {p.get('why') or p.get('reason')}")
     if body:
