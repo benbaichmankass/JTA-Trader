@@ -178,6 +178,9 @@ DEFAULT_ALLOCATION_CONFIG: dict = {
     "symbol_budget_trades": 1.0,
     "declared_slices": {},
 }
+#: Accounts that may declare a slice. Shared runtime code changes behaviour ONLY through this demo
+#: allowlist (MD-DEMO-FLOOR-BUILD): a YAML entry for any other account is dropped with a warning.
+DECLARED_SLICE_ACCOUNTS = frozenset({"bybit_1", "alpaca_paper", "ib_paper"})
 _TTL_S = 300.0
 _CFG_CACHE: Optional[tuple] = None
 _LIVE_CACHE: Optional[tuple] = None
@@ -207,10 +210,16 @@ def load_allocation_config(force: bool = False) -> dict:
         if raw.get("symbol_budget_trades") is not None:
             cfg["symbol_budget_trades"] = max(0.0, float(raw["symbol_budget_trades"]))
         if isinstance(raw.get("declared_slices"), dict):
-            cfg["declared_slices"] = {
-                str(a): {str(leg): float(b) for leg, b in (legs or {}).items() if float(b) > 0}
-                for a, legs in raw["declared_slices"].items() if isinstance(legs, dict)
-            }
+            decl = {}
+            for a, legs in raw["declared_slices"].items():
+                if not isinstance(legs, dict):
+                    continue
+                if str(a) not in DECLARED_SLICE_ACCOUNTS:
+                    logger.warning("allocator_ev: declared_slices for %r ignored -- not a demo account %s",
+                                   a, sorted(DECLARED_SLICE_ACCOUNTS))
+                    continue
+                decl[str(a)] = {str(leg): float(b) for leg, b in legs.items() if float(b) > 0}
+            cfg["declared_slices"] = decl
     except Exception as exc:  # noqa: BLE001
         logger.warning("allocator_ev: allocation config unreadable (%s) — pinned defaults", exc)
     _CFG_CACHE = (now, cfg)

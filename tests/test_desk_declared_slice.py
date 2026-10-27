@@ -103,3 +103,16 @@ def test_planner_gives_the_desk_weight_one_and_does_not_dilute_the_pool():
     alloc = plan["per_account"]["bybit_1"]["allocation"]
     assert alloc["claude_desk"] == 1.0
     assert alloc["a"] == pytest.approx(0.5) and alloc["b"] == pytest.approx(0.5)
+
+
+def test_non_demo_accounts_in_the_yaml_are_ignored(tmp_path, monkeypatch):
+    f = tmp_path / "slice_allocation.yaml"
+    f.write_text("declared_slices:\n  bybit_1: {claude_desk: 0.5}\n  bybit_2: {claude_desk: 0.5}\n"
+                 "  breakout_1: {claude_desk: 0.5}\n  alpaca_live: {x: 0.5}\n")
+    monkeypatch.setattr(ae, "_ALLOC_CONFIG_PATH", f)
+    cfg = ae.load_allocation_config(force=True)
+    try:
+        assert cfg["declared_slices"] == {"bybit_1": {"claude_desk": 0.5}}
+    finally:
+        monkeypatch.undo()
+        ae.load_allocation_config(force=True)
