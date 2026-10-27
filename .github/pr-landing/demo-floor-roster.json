@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 3 by path: roster edits in config/accounts.yaml (bybit_1 + alpaca_paper) and execution: shadow -> live flips for 14 legs in config/strategies.yaml. Basis: the operator's demo-floor rule, popup answer \"Yes, that's the rule\", RELAYED by the manager's scheduled redirect (session_01C1ooo4kqBbng7vytdG1UVs) -- the lane could not see the popup itself. Only paper/demo accounts gain a newly-live leg (checked by parsing every account roster). Stacked on #20551 (shares the bybit_1 roster line). Revert: git revert the merge commit, or drop the added names from bybit_1/alpaca_paper and set the 14 flipped legs back to execution: shadow.",
+  "why": "Demo-floor rule: every non-retired leg trades on its demo floor (bybit_1 crypto, alpaca_paper / ib_paper equities and futures). Adds 23 legs to bybit_1, 4 to alpaca_paper, flips 14 shadow legs live, backfills 13 soak contracts and reopens 12 KILLED stage-1 contracts as mechanics soaks, adds 25 visible tp-doctrine debt lines, and updates the exit-coverage matrix to match."
+}
