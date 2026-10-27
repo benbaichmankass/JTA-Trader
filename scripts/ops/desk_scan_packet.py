@@ -537,6 +537,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--write", action="store_true", help="live mode: write comms/desk/packets/<packet_id>.json")
     ap.add_argument("--mask-key-out", type=Path)
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--trigger-json", help="an EVENT-TRIGGERED packet (src/runtime/desk_event_trigger.py): the JSON "
+                    "{kind, symbol, bar, detail} recorded as meta.trigger; the packet id gains -<symbol>-<kind>")
     a = ap.parse_args(argv)
     if a.self_test:
         return _self_test()
@@ -578,6 +580,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     p = build_scan_packet(cutoff=cutoff, tf=tf, universe=uni, candles=candles, horizons=horizons,
                           lookback=a.lookback, system_book=sb, near_signals=ns, desk_book=db, unread_why=unread,
                           near_signals_why=ns_why)
+    if a.trigger_json:
+        trig = json.loads(a.trigger_json)
+        p["meta"]["trigger"] = trig
+        p["meta"]["packet_id"] += f"-{trig['symbol']}-{trig['kind']}"
     key = None
     if historical:
         p, key = mask_packet(p)
