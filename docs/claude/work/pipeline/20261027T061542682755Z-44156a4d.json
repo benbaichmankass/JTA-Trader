@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 21,
+    "clears_when": "An Alpaca re-arm refusal/ POST failure after the own-leg cancel is observed (then build the fix, Tier 3 hold) or the manager kills it with a stated reason, or the operator asks for the hardening now.",
+    "kind": "event",
+    "last_checked": "2026-10-27"
+  },
+  "id": "PI-20261027-KYYBSZXS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane session_01AFoLuMyH2T24e8kYYbSZXs (BRACKETS-ALWAYS alpaca follow-up, 2026-10-27); code read at main 6b643dc5e",
+    "rerun": "grep -n '_scoped_rearm_cancel\\|kept_targets' src/units/accounts/alpaca_client.py; journal alpaca_* rows with protection_repairs>0 opened after 2026-09-29 - any such row with a refused re-arm (runtime log 'place_protective refused') means this hole fired"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 3,
+  "what": "Alpaca place_protective (src/units/accounts/alpaca_client.py ~2499-2607) is cancel-before-place with no restore: _scoped_rearm_cancel DELETEs this position's own resting legs (2753-2759), then the OCO POST; if the POST is refused the position is left with NO bracket until the next sweep (re-arm budget _ALPACA_REARM_CAP=3/24h in order_monitor.py), and on a refused stop with standalone sibling target(s) it DELETEs those targets too (2586-2603: 'must be re-placed by their owner' - nobody re-places them). Both violate BRACKETS-ALWAYS (nothing removes a bracket). NOT reproduced in live data: the 7 soak faults in WR-20261027-0548Z were the held-stop-invisible false-naked bug (FIX-SA-03), fixed; zero Alpaca re-arms since 2026-09-28. Reachable only when the stop side is genuinely absent. Fix shape (Tier 3, order path): POST the OCO first where the venue allows, or re-place the cancelled legs on refusal and read back; never DELETE a sibling target. Do not build before a re-arm refusal is observed or the operator asks - this is a latent hole, not a measured loss."
+}
