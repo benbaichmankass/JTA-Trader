@@ -50,7 +50,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import statistics
 import sys
 from collections import Counter
@@ -432,7 +431,8 @@ def _self_test() -> int:
     g0 = {"generated_at": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "rows": [{"role": "r", "class": "c", "n_recorded": 1, "n_graded": 0,
           "n_not_yet_graded": 1, "state": "insufficient_n", "verdict": None}]}
     assert write_snapshot(g0, snap, t0) and not write_snapshot(g0, snap, t0 + timedelta(hours=3))
-    g1 = json.loads(json.dumps(g0)); g1["rows"][0]["n_graded"] = 1
+    g1 = json.loads(json.dumps(g0))
+    g1["rows"][0]["n_graded"] = 1
     assert write_snapshot(g1, snap, t0 + timedelta(hours=3)) and write_snapshot(g1, snap, t0 + timedelta(hours=30))
     e = eta(0, 0, 20, 2.0, 0.5, t0)
     assert e["eta_earliest"] == (t0 + timedelta(days=10.5)).date().isoformat(), e

@@ -161,7 +161,8 @@ def test_snapshot_is_not_rewritten_for_a_timestamp_alone(tmp_path):
                                                             "n_not_yet_graded": 1, "state": "insufficient_n", "verdict": None}]}
     p = tmp_path / "s.json"
     assert rg.write_snapshot(g, p, T0) and not rg.write_snapshot(dict(g, generated_at="2026-10-26T05:00:00Z"), p, T0 + timedelta(hours=5))
-    moved = json.loads(json.dumps(g)); moved["rows"][0]["n_graded"] = 1
+    moved = json.loads(json.dumps(g))
+    moved["rows"][0]["n_graded"] = 1
     assert rg.write_snapshot(moved, p, T0 + timedelta(hours=5))
     assert rg.write_snapshot(moved, p, T0 + timedelta(hours=40))                                    # age rolls it daily
 

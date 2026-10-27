@@ -472,6 +472,11 @@ milestones:
       desk/decisions and posts the desk-wake marker itself; desk-scan-packet.yml is the fallback. MEASURED: bar
       20:00Z packet DP-20261026T2002Z-scan-1h landed by the VM (5fc3079d5, poster vm), wake wrote
       DD-20261026T2002Z-scan-1h-1 (f0db6a14f); the 19:00Z write was refused 403 until the VM got a write credential.
+      DESK-9-GRADING (landed_unproven, PR #20501, 2026-10-27): per-role grading roll-up scripts/ops/claude_role_grade.py
+      -- n ledger per role x action class with explicit insufficient_n / could_not_look states, a no_trade
+      counterfactual priced on real forward candles, and an earliest-ETA to n=20; scheduled on the existing hourly
+      desk-decisions-mirror and live-review-rows-mirror workflows. MEASURED 2026-10-27: 11 desk decisions, all
+      no_trade, 0 propose_entry; 0 priced.
     next: >-
       Critical path (design v1 § 10.1): manager installs the DESK-6 spawner routine (hourly; SKILL.md § 6b) and
       proposals start accruing labels (proposals/day still UNMEASURED) -> DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17
