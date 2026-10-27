@@ -1,7 +1,18 @@
 """WORK-SYSTEM: the attention watch — digest, edge alerts, silence alarms."""
 from __future__ import annotations
 
+import json
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
 from scripts.ops import attention_watch as a
+
+
+@pytest.fixture(autouse=True)
+def _isolate_due_seen(tmp_path, monkeypatch):
+    # build() persists the live-review first-seen cache; never into the real runtime_logs.
+    monkeypatch.setattr(a, "LR_DUE_SEEN", tmp_path / "lr_due_seen.json")
 
 
 def test_self_test_passes():
@@ -138,3 +149,94 @@ def test_prop_feed_probe_unreadable_state_is_unknown_not_ok(tmp_path, monkeypatc
     (tmp_path / "accounts" / "tradeify_1" / "feed" / "backoff").mkdir(parents=True)  # a dir: read_text raises
     r = a.probe_prop_feed(now)
     assert r["status"] == a.UNKNOWN and "tradeify_1" in r["detail"]
+
+# -- LTR-1B-ATTENTION-PROBE: live_review_due_stale ---------------------------------
+NOW = datetime(2026, 10, 27, 5, 0, tzinfo=timezone.utc)
+TH = (120.0, 120.0)
+
+
+def _row(rid, at):
+    return json.dumps({"review_id": rid, "reviewed_at": at.strftime("%Y-%m-%dT%H:%M:%SZ")})
+
+
+def _due(*pkgs):
+    return {"read_state": "looked", "reason": None, "due_count": len(pkgs),
+            "due": [{"order_package_id": p, "leg": "l", "account_id": "x",
+                     "events": [{"event": "r_milestone", "level": 1.0}]} for p in pkgs]}
+
+
+def _probe(tmp_path, due=None, branch="", main="", now=NOW, persist=True):
+    return a.probe_live_review_due_stale(
+        now, due_doc=due if due is not None else _due(), branch_text=branch, main_text=main,
+        seen_path=tmp_path / "seen.json", persist=persist, thresholds=TH)
+
+
+def test_quiet_is_ok(tmp_path):
+    r = _row("A", NOW - timedelta(hours=5))
+    assert _probe(tmp_path, branch=r, main=r)["status"] == a.OK
+
+
+def test_due_package_breaches_only_after_threshold(tmp_path):
+    assert _probe(tmp_path, due=_due("p1"), now=NOW - timedelta(minutes=150))["status"] == a.OK
+    assert _probe(tmp_path, due=_due("p1"), now=NOW - timedelta(minutes=60))["status"] == a.OK  # clock keeps first sight
+    out = _probe(tmp_path, due=_due("p1"), now=NOW)
+    assert out["status"] == a.BREACHED and "unreviewed" in out["detail"]
+
+
+def test_due_clock_resets_when_package_is_reviewed(tmp_path):
+    _probe(tmp_path, due=_due("p1"), now=NOW - timedelta(minutes=200))
+    _probe(tmp_path, due=_due(), now=NOW - timedelta(minutes=100))      # reviewed: dropped from the cache
+    assert _probe(tmp_path, due=_due("p1"), now=NOW)["status"] == a.OK  # a fresh due, a fresh clock
+
+
+def test_rows_branch_ahead_past_gap_breaches(tmp_path):
+    """The 2026-10-26 incident: branch has rows main never got."""
+    old, new = _row("A", NOW - timedelta(hours=6)), _row("B", NOW - timedelta(hours=3))
+    out = _probe(tmp_path, branch=old + "\n" + new, main=old)
+    assert out["status"] == a.BREACHED and "mirror is stuck" in out["detail"]
+
+
+def test_rows_branch_ahead_within_gap_is_ok(tmp_path):
+    old, new = _row("A", NOW - timedelta(hours=6)), _row("B", NOW - timedelta(minutes=30))
+    assert _probe(tmp_path, branch=old + "\n" + new, main=old)["status"] == a.OK
+
+
+def test_unparseable_branch_line_does_not_hide_a_stuck_row(tmp_path):
+    old = _row("A", NOW - timedelta(hours=4))
+    out = _probe(tmp_path, branch="{not json\n" + old, main="")
+    assert out["status"] == a.BREACHED
+
+
+def test_route_could_not_look_is_unknown_not_ok(tmp_path):
+    r = _row("A", NOW - timedelta(hours=5))
+    out = _probe(tmp_path, due={"read_state": "could_not_look", "reason": "telemetry_table_absent",
+                                "due_count": None, "due": []}, branch=r, main=r)
+    assert out["status"] == a.UNKNOWN and "could_not_look" in out["detail"]
+
+
+def test_rows_ref_missing_is_unknown(tmp_path):
+    r = a.probe_live_review_due_stale(NOW, due_doc=_due(), branch_text=None, main_text="",
+                                      seen_path=tmp_path / "s.json", thresholds=TH)
+    assert r["status"] == a.UNKNOWN
+
+
+def test_breach_wins_over_unknown(tmp_path):
+    old = _row("A", NOW - timedelta(hours=4))
+    out = _probe(tmp_path, due={"read_state": "could_not_look", "reason": "x", "due_count": None, "due": []},
+                 branch=old, main="")
+    assert out["status"] == a.BREACHED
+
+
+def test_dry_run_does_not_write_the_cache(tmp_path):
+    _probe(tmp_path, due=_due("p1"), persist=False)
+    assert not (tmp_path / "seen.json").exists()
+
+
+def test_unreadable_thresholds_is_unknown(tmp_path):
+    assert a._lr_thresholds(tmp_path / "missing.yaml") is None
+    assert a._lr_thresholds()  # the committed config carries watch:
+
+
+def test_probe_is_registered_and_labelled():
+    assert "live_review_due_stale" in a.PROBE_LABEL
+    assert a.build(NOW, persist_seen=False)["probes"]["live_review_due_stale"]["status"] in (a.OK, a.BREACHED, a.UNKNOWN)

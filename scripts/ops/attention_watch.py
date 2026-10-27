@@ -84,6 +84,13 @@ from scripts.ops import prop_silence  # noqa: E402
 # ⚠️ Anchored to the repo root, like work_digest_now.py: the unit carries no
 # data-dir drop-in and diag reads the receipt through repo_root().
 STATE = REPO_ROOT / "runtime_logs" / "attention_watch_state.json"
+# LTR-1B-ATTENTION-PROBE: when each (package, event) was first seen DUE. The due
+# route recomputes ``bar_start`` from "now" on every call, so "due since" exists
+# nowhere else; this observation cache is the only memory the probe has.
+LR_DUE_SEEN = REPO_ROOT / "runtime_logs" / "live_review_due_seen.json"
+LR_CONFIG = REPO_ROOT / "config" / "live_trade_review.yaml"
+LR_REVIEWS_REL = "comms/live_review/reviews.jsonl"
+LR_ROWS_REF = "refs/live-review/live-review/rows"   # the VM watcher's own fetch namespace
 RECEIPT = REPO_ROOT / "runtime_logs" / "attention_watch_receipt.json"
 
 CHECKLIST = REPO_ROOT / "docs" / "claude" / "work" / "MANAGER-CHECKLIST.json"
@@ -346,6 +353,128 @@ def probe_desk_wake_post(now: datetime) -> dict:
     return {"status": OK, "detail": f"desk packet+wake producer ran {hours:.1f}h ago; state {state}"}
 
 
+def _lr_thresholds(path: Path | None = None) -> tuple[float, float] | None:
+    """(due_stale_minutes, rows_lag_minutes) from config/live_trade_review.yaml ``watch:``."""
+    try:
+        import yaml  # noqa: PLC0415
+        w = (yaml.safe_load((path or LR_CONFIG).read_text()) or {}).get("watch") or {}
+        return float(w["due_stale_minutes"]), float(w["rows_lag_minutes"])
+    except Exception:  # noqa: BLE001  # allow-silent: caller reports unknown
+        return None
+
+
+def _lr_ts(v: Any) -> datetime | None:
+    try:
+        t = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def _lr_rows(text: str) -> tuple[dict[str, datetime | None], int]:
+    """{review_id: reviewed_at} from a reviews.jsonl body, and the unparseable-line count."""
+    out: dict[str, datetime | None] = {}
+    bad = 0
+    for ln in text.splitlines():
+        if not ln.strip():
+            continue
+        try:
+            d = json.loads(ln)
+            out[str(d["review_id"])] = _lr_ts(d.get("reviewed_at"))
+        except (ValueError, KeyError, TypeError):
+            bad += 1
+    return out, bad
+
+
+def _lr_due_clause(now: datetime, mins: float, due_doc: dict | None, seen_path: Path,
+                   persist: bool) -> tuple[str, str]:
+    """(status, detail): a due package unreviewed past ``mins``. ``due_doc`` None -> read the route's payload."""
+    if due_doc is None:
+        try:
+            from src.runtime.live_review_due import live_review_due  # noqa: PLC0415
+            due_doc = live_review_due()
+        except Exception as exc:  # noqa: BLE001  # allow-silent: -> unknown
+            return UNKNOWN, f"due route unreadable ({type(exc).__name__})"
+    if due_doc.get("read_state") != "looked":
+        # could_not_look: due_count is null, which is NOT "nothing due".
+        return UNKNOWN, f"due route could_not_look ({due_doc.get('reason')})"
+    prior = _read_json(seen_path).get("seen") or {}
+    seen: dict[str, str] = {}
+    ages: list[tuple[float, str]] = []
+    for d in due_doc.get("due") or []:
+        for ev in d.get("events") or []:
+            key = f"{d.get('order_package_id')}|{ev.get('event')}|{ev.get('level')}"
+            first = _lr_ts(prior.get(key)) or now
+            seen[key] = first.isoformat()
+            ages.append(((now - first).total_seconds() / 60, f"{d.get('leg')}/{d.get('account_id')} {ev.get('event')}"))
+    if persist:
+        try:
+            _write_json(seen_path, {"at": now.isoformat(), "seen": seen})
+        except OSError:
+            pass  # the clock restarts next pass; the probe still answers from this one
+    old = sorted((a for a in ages if a[0] > mins), reverse=True)
+    if old:
+        return BREACHED, (f"{len(old)} due event(s) unreviewed > {mins:.0f}m; oldest {old[0][0]:.0f}m "
+                          f"({old[0][1]})")
+    return OK, f"{due_doc.get('due_count')} due, none unreviewed > {mins:.0f}m"
+
+
+def _lr_rows_clause(now: datetime, mins: float, branch_text: str | None, main_text: str | None) -> tuple[str, str]:
+    """(status, detail): rows on live-review/rows that main lacks for > ``mins`` since their reviewed_at."""
+    if branch_text is None:
+        return UNKNOWN, f"{LR_ROWS_REF} not readable on this host (watcher never fetched it?)"
+    branch, bad = _lr_rows(branch_text)
+    main, _ = _lr_rows(main_text or "")
+    ahead = {rid: t for rid, t in branch.items() if rid not in main}
+    if not ahead:
+        return OK, f"main has all {len(branch)} rows-branch rows" + (f" ({bad} unparseable line(s) on branch)" if bad else "")
+    stamped = {rid: t for rid, t in ahead.items() if t is not None}
+    if not stamped:
+        return UNKNOWN, f"{len(ahead)} rows-branch row(s) missing from main, none with a readable reviewed_at"
+    rid, t = min(stamped.items(), key=lambda kv: kv[1])
+    lag = (now - t).total_seconds() / 60
+    if lag > mins:
+        return BREACHED, (f"{len(ahead)} review row(s) on live-review/rows not on main; oldest {rid} "
+                          f"reviewed {lag:.0f}m ago (bound {mins:.0f}m) — the rows mirror is stuck")
+    return OK, f"{len(ahead)} row(s) ahead of main, oldest {lag:.0f}m (bound {mins:.0f}m)"
+
+
+def probe_live_review_due_stale(now: datetime, *, due_doc: dict | None = None,
+                                branch_text: str | None = None, main_text: str | None = None,
+                                seen_path: Path | None = None, persist: bool = True,
+                                thresholds: tuple[float, float] | None = None) -> dict:
+    """Live trade review has gone quiet: (1) a due package stays unreviewed past
+    ``watch.due_stale_minutes``, or (2) reviews exist on ``live-review/rows`` that never
+    reach main's reviews.jsonl past ``watch.rows_lag_minutes`` (the 2026-10-26 mirror stall:
+    one schema-invalid row blocked every later row, nothing alerted).
+
+    Either clause breaching breaches the probe; a clause that could not look is ``unknown``
+    (never ``ok``) unless the other already breached. Inputs are injectable for tests; by
+    default clause 1 calls ``live_review_due()`` (the route's own function) and clause 2
+    reads the VM watcher's fetched ref against the working tree's reviews.jsonl."""
+    th = thresholds or _lr_thresholds()
+    if th is None:
+        return {"status": UNKNOWN, "detail": "config/live_trade_review.yaml watch: thresholds unreadable"}
+    if branch_text is None:
+        branch_text = _git("show", f"{LR_ROWS_REF}:{LR_REVIEWS_REL}")
+    if main_text is None:
+        try:
+            main_text = (REPO_ROOT / LR_REVIEWS_REL).read_text()
+        except FileNotFoundError:
+            main_text = ""   # no review has ever landed: a legitimate empty, not a blind spot
+        except OSError:
+            main_text = None
+    if main_text is None:
+        rows = (UNKNOWN, f"{LR_REVIEWS_REL} unreadable")
+    else:
+        rows = _lr_rows_clause(now, th[1], branch_text, main_text)
+    due = _lr_due_clause(now, th[0], due_doc, seen_path or LR_DUE_SEEN, persist)
+    parts = [f"due: {due[1]}", f"rows: {rows[1]}"]
+    sts = {due[0], rows[0]}
+    st = BREACHED if BREACHED in sts else UNKNOWN if UNKNOWN in sts else OK
+    return {"status": st, "detail": "; ".join(parts)}
+
+
 def _retired_accounts() -> set:
     """Accounts marked ``retired: true`` in config/accounts.yaml (fail-open: unreadable -> none)."""
     try:
@@ -557,7 +686,7 @@ def read_blocker_watch() -> tuple[str, list[dict]]:
 
 
 # ── the pass ─────────────────────────────────────────────────────────────────
-def build(now: datetime | None = None) -> dict:
+def build(now: datetime | None = None, persist_seen: bool = True) -> dict:
     now = now or _now()
     today = now.date()
     res = pipeline.load(REPO_ROOT / pipeline.STORE)
@@ -582,6 +711,7 @@ def build(now: datetime | None = None) -> dict:
             "manager": probe_manager(now),
             "report": probe_report(now),
             "desk_wake_post": probe_desk_wake_post(now),
+            "live_review_due_stale": probe_live_review_due_stale(now, persist=persist_seen),
             # TRAIL-PAUSE-PULSE: prop_trail_paused_<account>, one per executor
             # account with a state dir on this host; see prop_trail_watch.py.
             # a retired account (breakout_1, operator 2026-10-09: "shouldn't be
@@ -603,6 +733,7 @@ PROBE_LABEL = {
     "manager": "manager's register not written",
     "report": "scheduled work report missing or broken",
     "desk_wake_post": "the desk packet+wake trigger stopped (producer silent, wake missing, or packet build/commit/post failing)",
+    "live_review_due_stale": "live trade review gone quiet (a due package unreviewed past the bound, or reviews on live-review/rows not reaching main)",
     **prop_trail_watch.LABELS,
     **prop_silence.LABELS,
     "prop_feed": "a prop account feed keeps failing (red-flagged; retrying on a capped backoff)",
@@ -813,7 +944,7 @@ def compose_block(v: dict, msgs: list[tuple[str, str]]) -> tuple[str, str, list[
 def prepare(dry_run: bool = False, digest_now: bool = False) -> dict:
     """Build this hour's attention block. Writes nothing; ``commit`` does,
     and only after the digest carrying the block was enqueued."""
-    v = build()
+    v = build(persist_seen=not dry_run)
     state = _read_json(STATE)
     msgs, new_state = plan_messages(v, state, digest_now=digest_now)
     block, pri, new = compose_block(v, msgs)

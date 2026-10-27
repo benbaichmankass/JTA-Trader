@@ -101,6 +101,21 @@ due:
   # timeframe, except for these events.
   cooldown_exempt: [giveback, mechanics]
 
+# -- attention watch (LTR-1B-ATTENTION-PROBE, 2026-10-27) ----------------------
+# Read by scripts/ops/attention_watch.py::probe_live_review_due_stale ONLY; the due
+# computation ignores it (load_config returns the `due:` block alone). Registered
+# BEFORE first use. No existing threshold fits (telemetry_max_age_minutes is a
+# 30-minute telemetry freshness bound, daily_floor.hours a 24 h cadence), so both
+# are new, both ~2 h as the row specified: long enough for one reviewer cycle,
+# short enough that the 2026-10-26 23:19Z mirror stall (hours, silent) pages the
+# same night.
+watch:
+  # A package that has stayed in the due list this long without a review covering it.
+  due_stale_minutes: 120
+  # A row on live-review/rows that main's comms/live_review/reviews.jsonl still
+  # lacks this long after its reviewed_at (the mirror is stuck or failing).
+  rows_lag_minutes: 120
+
 # -- apply (LTR-6R-APPLY-PATH; design § 4, desk design § 3.0) -----------------
 # apply_mode is a sanctioned *_MODE selector (CLAUDE-RULES-CANONICAL § Prime
 # Directive rule 6), NOT a gate on trading and NOT a halting latch:
