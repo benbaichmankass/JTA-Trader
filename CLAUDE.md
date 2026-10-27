@@ -382,8 +382,9 @@ be **CHANGED without asking**.
    [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Reading
    is never gated" (operator directive 2026-09-27, binding).
 2. Read your lane's checklist row. If you are managing, invoke the **`manager`**
-   skill first, and title yourself `Manager Session YYYY-MM-DD` (its § "Start of
-   session", step 1).
+   skill first, and title yourself `Manager Session YYYY-MM-DD<letter>` (UTC date of
+   `created_at`; letter = next unused for that date via `list_sessions`, first of the day
+   is `a`, e.g. `Manager Session 2026-10-27a`; its § "Start of session", step 1).
 3. Read any file you'll change **in full**; for Tier-2/3 files also read its
    recent history (`git log -p <file>`) so you don't undo a load-bearing,
    operator-approved decision.
