@@ -49,6 +49,7 @@ import datetime as _dt
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -293,7 +294,6 @@ def _config_head(text: str) -> str:
 
 
 def _git(args: list[str]) -> str:
-    import subprocess
     return subprocess.run(["git", "-C", str(REPO_ROOT), *args], capture_output=True,
                           text=True, check=True).stdout
 
@@ -310,7 +310,7 @@ def verify_config(*, base: str, config_rel: str = "config/economic_calendar.yaml
     try:
         mb = _git(["merge-base", base, "HEAD"]).strip() or base
         base_text = _git(["show", f"{mb}:{config_rel}"])
-    except Exception as exc:  # noqa: BLE001
+    except (subprocess.SubprocessError, OSError) as exc:
         return False, f"could not read {config_rel} at merge-base with {base} ({exc})"
     cfg = REPO_ROOT / config_rel
     if not cfg.is_file():
@@ -331,8 +331,8 @@ def verify_config(*, base: str, config_rel: str = "config/economic_calendar.yaml
             d = _dt.datetime.fromisoformat(_git(["log", "-1", "--format=%cI", "HEAD"]).strip()).astimezone(
                 _dt.timezone.utc).date()
             cands += [d.isoformat(), (d - _dt.timedelta(days=1)).isoformat()]
-        except Exception:  # noqa: BLE001
-            pass
+        except (subprocess.SubprocessError, OSError, ValueError):
+            pass  # no usable HEAD commit date: the capture-date candidate stands alone
     for ref in dict.fromkeys(cands):
         with tempfile.TemporaryDirectory() as td:
             bp, op = Path(td) / "base.yaml", Path(td) / "out.yaml"
