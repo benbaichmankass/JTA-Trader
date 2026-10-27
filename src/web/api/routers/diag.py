@@ -585,6 +585,11 @@ _DESK_WAKE_POST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "desk_wake_post_receipt.json"
 )
 
+# DESK-SHORT-HOLD-LANE (2026-10-27). The live trader's short-hold trigger + 5-min packet producer's receipt:
+# idle / tracking (per-package wake_posted / packet_landed / closed_posted / could_not_*) / could_not_look. Holds
+# no credential. Same anchor as the writer (src.runtime.short_hold_wake._log_dir).
+_SHORT_HOLD_WAKE_RECEIPT = Path(repo_root()) / "runtime_logs" / "short_hold_wake_receipt.json"
+
 # LTR C1 (2026-10-26). The live trader's rows-branch watcher: one line per new
 # live-review/rows row (verdict, per-account venue_after, latencies) and the
 # last pass's status (fetched / could_not_fetch / could_not_read). Same anchor
@@ -636,6 +641,7 @@ _LOG_FILES: dict[str, Path] = {
     "ltr_wake_post_receipt": _LTR_WAKE_POST_RECEIPT,
     # DESK-6B: did the packet landing post the desk-wake, and if not, why.
     "desk_wake_post_receipt": _DESK_WAKE_POST_RECEIPT,
+    "short_hold_wake_receipt": _SHORT_HOLD_WAKE_RECEIPT,
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,

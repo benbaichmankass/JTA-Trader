@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "DESK-SHORT-HOLD-LANE, part B (the trade side): new code in the live trader's tick loop (src/main.py kicks src/runtime/short_hold_wake.py) that, for packages on the legs in config/short_hold.yaml, lands a 5-min packet envelope on live-review/rows every bar and posts short-hold-wake / short-hold-closed markers on the ops-flags PR. It places, sizes and amends nothing and applies nothing, but it runs inside ict-trader-live and writes to the branch the VM rows watcher applies from, so the manager dispatch (session_01C1ooo4kqBbng7vytdG1UVs, relaying the operator's approved goal of 2026-10-27) said: 'the trader-side marker and any apply wiring are Tier 2/3, so hold those PRs ... the manager merges after review.' Land after part A (#A: the envelope builder scripts/ops/short_hold_packet.py lives there; without it every build reads could_not_build, contained).",
+  "why": "Short-hold lane, trade side: short_hold_wake.py (trigger + 5-min packets + close), config/short_hold.yaml (ict_scalp_eth_15m, ict_scalp_xrp_15m), the tick-loop kick, the diag receipt name, tests."
+}
