@@ -1,6 +1,6 @@
 id: RQ-20261025-d7e6-07
 title: 'POOLED read of the giveback SELECTOR bank (d7e6-02..06): does MB beat A, the unconditional bank UB and the random flag RB across the five pullback-2h legs together?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -105,3 +105,16 @@ requires_result:
 not_before: '2026-10-27T00:00:00Z'
 programme: P1
 last_dispatched_at: '2026-10-27T01:17:37+00:00'
+grading:
+  attested: RULE-RQ20261025-D7E6-07-POOLED-BANK-SELECTOR
+  auto: true
+  decision_rule_id: RULE-RQ20261025-D7E6-07-POOLED-BANK-SELECTOR
+  evidence:
+  - research/results/RQ-20261025-d7e6-07/40429706384.jsonl
+  graded_at: '2026-10-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
