@@ -79,6 +79,14 @@ Changes (the arm's question is unchanged: raw bars, no summaries):
 - **Registered budget rule invoked (§ 2.2):** C runs on the first **50** packets of the sample order (near-balanced: the first 50 cover every stratum). A and B are scored on all 100. Every C-vs-A contrast is paired on those 50 packets, and A's and B's numbers are also reported on the same 50.
 - Arms now differ in batch size (A 10, B 10, C 2). This is a stated confound: smaller batches may draw more attention per packet.
 
+### 3.8 Amendment 2 — C on packets 51–100, and a fixed size cap (manager decision ~17:58Z; committed before any of packets 51–100 was judged)
+
+Manager, verbatim: *"DECISION: yes, judge arm C on the remaining 50 packets ... Lane ceiling raised to $42 total, judging up to $30. Run it under the registered 4-look rule, unchanged ... cap C's size so every batch is judged. That is a fixed rule, not a per-packet choice, so register the cap before judging."*
+
+- **C runs on all 100 packets.** Packets 51–100 are judged with the same amended packet, protocol, batch size (2) and isolation audit. The registered dev rule (DESK-EDGE-PROGRAM § 5.3: looks at 25 / 50 / 75 / 100, `SEL_USEFUL` +0.25) is unchanged, and so are §§ 3.1–3.6 here. The C − A and C − B contrasts are recomputed on 100.
+- **Fixed size cap:** a judge-facing C packet over **`MAX_C_CHARS` = 24,000** characters is **refused** (never judged, counted). Packets are never trimmed one by one. MEASURED on the amended build: 100 of 100 packets fit (median 20,274, max 22,725). The rebuild under the cap is byte-identical to the batches already judged (50 of 50 batch files hash-equal).
+- **Budget:** judging cap $30 (spent $18.34 before this amendment); about $11 projected for packets 51–100.
+
 ## 4. Results
 
 Evidence: `comms/research/desk_packet_redesign/` (`B/ranks.jsonl`, `C/ranks.jsonl`, the protocols, `build.json` sizes, `scores-100/`, `scores-50/` with `compare.json`, `isolation-audit.txt`, `C/example-packet.txt`). Arm A's ranks are V1's committed `comms/research/desk_edge/dev-1/V1/ranks.jsonl`. Every number below is MEASURED by `scripts/research/desk_packet_arms.py score|compare` on the DEV window. Population: the dev sample, all 100 packets for A vs B, and the first 50 packets of the sample order (33 ISO weeks, all 32 strata) for any comparison involving C.

@@ -188,3 +188,13 @@ def test_score_takes_only_the_looks_the_sample_reaches():
     """At n=50 the 75- and 100-packet looks are not taken (they would re-use the same 50 packets)."""
     src = (REPO / "scripts/research/desk_packet_arms.py").read_text()
     assert "L <= len(order) and set(order[:L]) <= set(ranks)" in src
+
+
+def test_c_size_cap_is_registered_and_enforced_in_build():
+    """Amendment 2: one fixed cap for every C packet, refused (not trimmed) above it."""
+    assert pa.MAX_C_CHARS == 24_000 and pa.BATCH_C == 2
+    src = (REPO / "scripts/research/desk_packet_arms.py").read_text()
+    assert 'if len(text) > MAX_C_CHARS:' in src
+    raw = _raw()
+    txt = pm.render_raw_text(pm.raw_packet(_packet_a(), _key(raw, T0 + 7 * 3600), raw))
+    assert len(txt) < pa.MAX_C_CHARS            # two aliases here; six real ones measured 20,274 median

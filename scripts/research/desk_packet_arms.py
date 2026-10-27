@@ -39,6 +39,11 @@ R2_GROUP = 10               # packets per R^2 group, in sample order (V1's batch
 SEED = 20261027
 DRAWS = 10_000
 BATCH_B = 10
+# Amendment 2 (2026-10-27, manager decision, registered before judging packets 51-100): a fixed size cap for arm C.
+# A judge-facing C packet over MAX_C_CHARS is REFUSED (never judged, counted), never trimmed packet by packet. 24,000
+# chars is about 1.2x the amended median (20,274) and above its max (22,725); with BATCH_C packets per batch it keeps
+# every batch near the ~66k-token batches that were all analysed, far from the 286k-token batch that was not.
+MAX_C_CHARS = 24_000
 BATCH_C = 2                 # amendment 1: 5 large packets per batch invited skipped analysis
 
 SUBAGENT_RULES = """
@@ -101,6 +106,8 @@ def build_arm(arm: str, mkt: Dict[str, d.Series], classes: Dict[str, List[str]],
             why += pm.check_against_1h(m)
             why += [f"leak: {x}" for x in d.leak_scan(txt, key, sorted(mkt))]
             text = pm.render_raw_text(m)
+            if len(text) > MAX_C_CHARS:
+                why.append(f"size cap: {len(text)} chars > MAX_C_CHARS {MAX_C_CHARS}")
         else:
             why += [f"leak: {x}" for x in d.leak_scan(txt, key, sorted(mkt))]
             text = f"### PACKET {pid}\n" + json.dumps(m, sort_keys=True) + "\n"
