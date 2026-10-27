@@ -213,7 +213,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/llm-delegate/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/live-trade-review/AMENDMENTS.md` | instruction | unknown | — | never | `dir:skills-are-binding-workflows / not-assessed` | — |
 | `.claude/skills/live-trade-review/SKILL.md` | instruction | live | — | 2026-10-25 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` | instruction | live | — | 2026-10-26 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/macro-research/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/manager/SKILL.md` | instruction | live | — | 2026-09-21 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/frontier-research/SKILL.md` | instruction | live | — | 2026-10-11 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |

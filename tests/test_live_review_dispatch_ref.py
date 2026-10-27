@@ -58,6 +58,25 @@ def test_the_row_is_read_at_the_ref_not_head(world, monkeypatch):  # noqa: F811
     assert seen and set(seen) == {SHA}
 
 
+def test_a_per_row_file_at_the_ref_is_read_and_applied_once(world, monkeypatch):  # noqa: F811
+    """LTR-ROWS-SWAP-TRUNCATION: the reviewer's create-only comms/live_review/rows/<id>.json."""
+    _fake_git(monkeypatch)
+    files = world["files"]
+    files["comms/live_review/rows/" + RID + ".json"] = files[d.REVIEWS_PATH].strip().splitlines()[-1]
+    files[d.REVIEWS_PATH] = ""
+    world["writeback"] = APPLIED_WB
+    assert d.dispatch(RID, apply=True, ref=SHA)["exit"] == 0
+    assert d.dispatch(RID, apply=True, ref=SHA)["verdict"] == "refused" and len(world["calls"]) == 1
+
+
+def test_a_per_row_file_named_for_another_review_is_not_read(world, monkeypatch):  # noqa: F811
+    _fake_git(monkeypatch)
+    files = world["files"]
+    files["comms/live_review/rows/" + RID + ".json"] = '{"review_id": "LR-someone-else"}'
+    out = d.dispatch(RID, apply=True, ref=SHA)
+    assert out["exit"] == d.EXIT_UNREADABLE and "not a valid row" in out["detail"] and world["calls"] == []
+
+
 def test_a_duplicate_review_id_via_ref_is_refused(world, monkeypatch):  # noqa: F811
     _fake_git(monkeypatch)
     world["writeback"] = APPLIED_WB

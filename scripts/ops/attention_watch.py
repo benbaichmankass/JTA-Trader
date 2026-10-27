@@ -391,6 +391,24 @@ def _lr_rows(text: str, refuses: Any = None) -> tuple[dict[str, datetime | None]
     return out, bad, refused
 
 
+def _lr_branch_text() -> str | None:
+    """The rows branch's rows as one JSONL body: the legacy reviews.jsonl verbatim, then each per-row
+    file ``comms/live_review/rows/<review_id>.json`` (LTR-ROWS-SWAP-TRUNCATION) as one line. None when
+    the watcher's fetched ref is unreadable here."""
+    legacy = _git("show", f"{LR_ROWS_REF}:{LR_REVIEWS_REL}")
+    listing = _git("ls-tree", "--name-only", LR_ROWS_REF, "--", "comms/live_review/rows/")
+    if legacy is None and not listing:
+        return None
+    lines = [legacy.rstrip("\n")] if legacy else []
+    for path in (listing or "").splitlines():
+        body = _git("show", f"{LR_ROWS_REF}:{path}") if path.endswith(".json") else None
+        try:
+            lines.append(json.dumps(json.loads(body or ""), separators=(",", ":")))
+        except ValueError:
+            lines.append(f"<unparseable {path}>")
+    return "\n".join(lines) + "\n"
+
+
 def _lr_refuses() -> Any:
     """row -> bool: does check_live_review_records refuse this row? The live_review_rows_mirror
     SKIPS such a row for good, so it can never reach main and is not a stall. None if the
@@ -479,12 +497,13 @@ def probe_live_review_due_stale(now: datetime, *, due_doc: dict | None = None,
     Either clause breaching breaches the probe; a clause that could not look is ``unknown``
     (never ``ok``) unless the other already breached. Inputs are injectable for tests; by
     default clause 1 calls ``live_review_due()`` (the route's own function) and clause 2
-    reads the VM watcher's fetched ref against the working tree's reviews.jsonl."""
+    reads the VM watcher's fetched ref (legacy reviews.jsonl + per-row files) against the working
+    tree's reviews.jsonl."""
     th = thresholds or _lr_thresholds()
     if th is None:
         return {"status": UNKNOWN, "detail": "config/live_trade_review.yaml watch: thresholds unreadable"}
     if branch_text is None:
-        branch_text = _git("show", f"{LR_ROWS_REF}:{LR_REVIEWS_REL}")
+        branch_text = _lr_branch_text()
     if main_text is None:
         try:
             main_text = (REPO_ROOT / LR_REVIEWS_REL).read_text()

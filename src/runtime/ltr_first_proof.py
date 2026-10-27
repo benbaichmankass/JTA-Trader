@@ -158,6 +158,15 @@ def _committed_reviews() -> List[Dict[str, Any]]:
                     rows.append(json.loads(ln))
                 except ValueError:
                     pass
+    try:  # the reviewers' per-row files (LTR-ROWS-SWAP-TRUNCATION); best-effort like the rest
+        from src.runtime import live_review_rows
+        from src.runtime.live_review_rows_watch import LOCAL_REF, _git
+        read = live_review_rows.read_at(LOCAL_REF, _git)
+        if read["state"] == "ok":
+            have = {r.get("review_id") for r in rows if isinstance(r, dict)}
+            rows.extend(r for r in read["rows"] if r["review_id"] not in have)
+    except Exception:  # noqa: BLE001
+        pass
     return rows
 
 

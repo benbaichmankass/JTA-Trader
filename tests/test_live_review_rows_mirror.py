@@ -123,6 +123,8 @@ def test_a_packet_sha_that_does_not_match_its_packet_is_skipped(tmp_path):
 
 def test_schema_skips_do_not_fail_the_run_but_other_skips_do(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(lrm, "ROOT", tmp_path)
+    monkeypatch.setattr(lrm, "git_row_files", lambda ref, cwd=None: [])
+    monkeypatch.setattr(lrm, "git_history", lambda ref, *a, **k: [])
     bad = row("LR-20261026T2311Z-pkg-6a8e", False, False, order_package_id="pkg-465a")
     monkeypatch.setattr(lrm, "git_show", lambda ref, path, cwd=None: branch([bad], {})(path))
     assert lrm.main([]) == 0
@@ -138,3 +140,51 @@ def test_heartbeat_dispatches_both_mirrors_from_main_on_a_main_push():
     text = (ROOT / ".github/workflows/branch-mirror-heartbeat.yml").read_text()
     assert "desk-decisions-mirror.yml" in text and "live-review-rows-mirror.yml" in text
     assert 'gh workflow run "$wf"' in text and "--ref main" in text
+
+
+# ---- LTR-ROWS-SWAP-TRUNCATION: per-row files, and a shrunken legacy file is refused -------------
+
+def _files_branch(legacy_rows, row_files, cited):
+    """The rows branch with a legacy reviews.jsonl AND per-row files comms/live_review/rows/<id>.json."""
+    store = {lrm.REVIEWS: ("\n".join(legacy_rows) + "\n").encode()}
+    for line in row_files:
+        store[f"comms/live_review/rows/{json.loads(line)['review_id']}.json"] = json.dumps(json.loads(line), indent=1).encode()
+    store.update({k: v.encode() for k, v in cited.items()})
+    return store.get, sorted(p for p in store if p.startswith("comms/live_review/rows/"))
+
+
+def test_a_per_row_file_mirrors_as_one_line_and_legacy_rows_still_mirror(tmp_path):
+    a, b = row("LR-20261027T1600Z-pkg-A"), row("LR-20261027T1601Z-pkg-B")
+    read, files = _files_branch([a], [b], {**cited_files("LR-20261027T1600Z-pkg-A"), **cited_files("LR-20261027T1601Z-pkg-B")})
+    res = lrm.mirror(tmp_path, read, files, history=[])
+    assert res["mirrored"] == 2 and not res["skipped"]
+    lines = (tmp_path / lrm.REVIEWS).read_text().splitlines()
+    assert [json.loads(x)["review_id"] for x in lines] == ["LR-20261027T1600Z-pkg-A", "LR-20261027T1601Z-pkg-B"]
+    assert json.loads(lines[1]) == json.loads(b) and "\n" not in lines[1]
+    assert lrm.mirror(tmp_path, read, files, history=[])["mirrored"] == 0
+
+
+def test_a_shrunken_legacy_file_is_refused_and_per_row_files_still_mirror(tmp_path):
+    full = [row(f"LR-20261027T15{i:02d}Z-pkg-{i}", packet=False, table=False) for i in range(26)]
+    cut = full[:4] + [full[4][:40]]
+    new = row("LR-20261027T1622Z-pkg-N", packet=False, table=False)
+    read, files = _files_branch(cut, [new], {})
+    res = lrm.mirror(tmp_path, read, files, history=[("\n".join(full) + "\n").encode()])
+    assert res["review_ids"] == ["LR-20261027T1622Z-pkg-N"]
+    hard = [x for x in res["skipped"] if x["why"].startswith("shrunk:")]
+    assert len(hard) == 1 and "22 review_id(s)" in hard[0]["why"]
+
+
+def test_unreadable_history_refuses_the_legacy_file(tmp_path):
+    read, files = _files_branch([row("LR-20261027T1600Z-pkg-A", packet=False, table=False)], [], {})
+    res = lrm.mirror(tmp_path, read, files, history_unreadable=True)
+    assert res["mirrored"] == 0 and res["skipped"][0]["why"].startswith("shrunk: could not read")
+
+
+def test_a_shrunken_tip_fails_the_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(lrm, "ROOT", tmp_path)
+    full = [row(f"LR-20261027T15{i:02d}Z-pkg-{i}", packet=False, table=False) for i in range(3)]
+    monkeypatch.setattr(lrm, "git_show", lambda ref, path, cwd=None: branch(full[:1], {})(path))
+    monkeypatch.setattr(lrm, "git_row_files", lambda ref, cwd=None: [])
+    monkeypatch.setattr(lrm, "git_history", lambda ref, *a, **k: [("\n".join(full) + "\n").encode()])
+    assert lrm.main([]) == 1

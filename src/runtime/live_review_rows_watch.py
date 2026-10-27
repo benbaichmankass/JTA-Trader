@@ -28,6 +28,14 @@ the live trader only. It fetches the rows branch into
 working tree, ``origin/*`` and ict-git-sync are untouched) every
 ``POLL_S`` seconds. It never touches the exit loop.
 
+Rows (LTR-ROWS-SWAP-TRUNCATION, 2026-10-27): a reviewer creates ONE file,
+``comms/live_review/rows/<review_id>.json``; the legacy ``reviews.jsonl`` is still read, so
+nothing already written is lost (``src/runtime/live_review_rows.py``). A tip on which a
+review_id this watcher already saw is gone, or on which the row count fell below the last
+accepted tip's, is REFUSED: nothing is dispatched from it, ``fetch_state`` reads
+``refused_shrunk``, ONE alert goes out per incident, and the next pass looks again (the fix
+is to restore the file on the branch). No halting: the loop keeps polling.
+
 First start: every review_id already on the branch is SEEDED as seen and never
 dispatched, so a restart cannot replay old decisions. A dispatch that could not
 look (exit 3) is retried on later passes for ``RETRY_WINDOW_S``; past that the
@@ -64,12 +72,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from src.runtime import live_review_rows as rows_lib
+
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 ROWS_BRANCH = "live-review/rows"
 LOCAL_REF = f"refs/live-review/{ROWS_BRANCH}"
-REVIEWS_PATH = "comms/live_review/reviews.jsonl"
+REVIEWS_PATH = rows_lib.REVIEWS_PATH
 DISPATCH = ROOT / "scripts" / "ops" / "live_review_dispatch.py"
 DISPATCHABLE_ROUTES = ("recommended", "auto_applied")
 POLL_S = 45
@@ -152,16 +162,14 @@ def dispatchable(row: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _rows(text: str) -> List[Dict[str, Any]]:
-    out = []
-    for line in text.splitlines():
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(r, dict) and r.get("review_id"):
-            out.append(r)
-    return out
+def _alert(text: str) -> bool:
+    """ONE operator flag on the alert channel. Never raises."""
+    try:
+        from src.runtime import telegram_channels
+        return bool(telegram_channels.send("alert", text))
+    except Exception:  # noqa: BLE001
+        logger.warning("rows-watch: alert send failed", exc_info=True)
+        return False
 
 
 def _load(path: Path) -> Optional[Dict[str, Any]]:
@@ -185,7 +193,8 @@ def _append(path: Path, doc: Dict[str, Any]) -> None:
 
 
 def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _dispatch,
-             now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
+             now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None,
+             alert: Callable[[str], bool] = _alert) -> Dict[str, Any]:
     """One fetch -> zero or more dispatches. Returns the status it wrote."""
     d = logs or log_dir()
     state_path, status_path, log_path = d / "rows_watch_state.json", d / "rows_watch_status.json", d / "rows_watch.jsonl"
@@ -197,22 +206,46 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
         _write_json(status_path, status)
         return status
     rc, tip = git("rev-parse", LOCAL_REF)
-    rc2, text = git("show", f"{tip}:{REVIEWS_PATH}") if rc == 0 else (1, "")
-    if rc != 0 or rc2 != 0:
-        status.update(fetch_state="could_not_read", detail=(tip if rc else text)[-200:])
+    read = rows_lib.read_at(tip, git) if rc == 0 else {"state": "could_not_read", "detail": tip}
+    if read["state"] != "ok":
+        status.update(fetch_state="could_not_read", detail=str(read.get("detail"))[-200:])
         _write_json(status_path, status)
         return status
-    rows = _rows(text)
+    rows = read["rows"]
     state = _load(state_path)
-    status.update(fetch_state="fetched", tip=tip, rows=len(rows))
+    status.update(fetch_state="fetched", tip=tip, rows=len(rows), legacy_rows=read["legacy_rows"],
+                  file_rows=read["file_rows"], bad_lines=read["bad_lines"], bad_files=len(read["bad_files"]))
     if state is None:
         state = {"seeded_at": seen_at.isoformat(), "seeded_tip": tip,
-                 "seen": sorted(r["review_id"] for r in rows), "pending": {}}
+                 "seen": sorted(r["review_id"] for r in rows), "pending": {}, "tip_rows": len(rows)}
         _write_json(state_path, state)
         status.update(new=0, seeded=len(state["seen"]))
         _write_json(status_path, status)
         return status
     seen = set(state.get("seen") or [])
+    lost = rows_lib.lost_ids(seen, rows)
+    prev_rows = state.get("tip_rows")
+    if lost or (isinstance(prev_rows, int) and len(rows) < prev_rows):
+        # Never act on a shrunken file: refuse this tip, flag once, look again next pass (no halting).
+        detail = (f"rows branch shrank at {tip[:12]}: {len(rows)} rows < {prev_rows} at the last accepted tip"
+                  f"; {len(lost)} already-seen review_id(s) gone (first: {', '.join(lost[:3]) or '-'})"
+                  f"; {read['bad_lines']} unparseable line(s)")
+        status.update(fetch_state="refused_shrunk", detail=detail, lost=len(lost), new=0)
+        flag = state.get("shrink_alerted") or {}
+        if not flag:
+            sent = alert(f"⚠️ live-review rows watcher REFUSED {ROWS_BRANCH} tip {tip[:12]}: {detail}. "
+                         f"Nothing is applied from it. Restore {REVIEWS_PATH} on the branch "
+                         f"(the 2026-10-27 truncation repair, fb2640ef8, is the pattern).")
+            flag = {"at": seen_at.isoformat(), "sent": sent}
+        if flag.get("tip") != tip:  # one receipt line per refused tip, not one per 45 s pass
+            _append(log_path, {"verdict": "refused_shrunk", "ref": tip, "seen_at": seen_at.isoformat(),
+                               "detail": detail, "lost": lost[:20]})
+            state["shrink_alerted"] = dict(flag, tip=tip)
+            _write_json(state_path, state)
+        _write_json(status_path, status)
+        return status
+    if state.pop("shrink_alerted", None):
+        status["shrink_cleared"] = True
     pending: Dict[str, Any] = state.get("pending") or {}
     new = [r for r in rows if r["review_id"] not in seen]
     status["new"] = len(new)
@@ -251,7 +284,7 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
         pending.pop(rid, None)
         seen.add(rid)
         _append(log_path, rec)
-    state.update(seen=sorted(seen), pending=pending)
+    state.update(seen=sorted(seen), pending=pending, tip_rows=len(rows))
     _write_json(state_path, state)
     _write_json(status_path, status)
     return status
