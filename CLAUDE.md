@@ -214,6 +214,8 @@ live-vs-backtest are monitoring, never a soak's exit. This rule has been re-taug
 MECHANICAL" — point at it, never restate it. `soak-contract-guard` refuses a contract with `n_needed` > 2
 or a calendar field; `soak-doctrine-guard` refuses a live doc, skill or generator that teaches a longer soak.
 
+⚠️ **STAGE 1 IS THE DEMO FLOOR: every non-retired leg TRADES there** (operator, 2026-10-27, binding, popup *"Yes, that's the rule"*): bybit_1 for crypto, alpaca_paper / ib_paper for equities and futures; shadow is not a holding stage; demotion stops at the floor (popup *"Demote stops at the floor (Recommended)"*); only a retirement record removes a leg. Stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "Stage 1 is the DEMO FLOOR"; point at it.
+
 **A live or paper book never establishes edge.** It checks mechanics and cost.
 If a proposal advances a leg on live-book P&L, that is a category error.
 
