@@ -1,0 +1,83 @@
+id: RQ-20261027-8a01-02
+title: 'Desk DESK-8a: does ict_scalp_xrp_15m clear its Stage-0 bar on a FRESH window disjoint from every committed record, net of the full cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: experiment
+question: ict_scalp_xrp_15m (XRPUSDT 15m, live config in config/strategies.yaml) has committed Stage-0 records on the trailing 365 d (n=76) and 730 d windows ending
+  2026-10-02 (comms/strategy_evidence/, powered verdict FAIL under RULE-ICTSCALP-CAUSAL-REBUILD). On the 730 d window 2022-10-01..2024-09-30, which ends before the
+  730 d record starts (2024-10-02) and so shares no bar with either record, does the leg produce n >= 88 trades with net R > 0, expectancy > 0 and a strict majority
+  of 4 time-folds positive, net of fee + slippage + funding from execution_costs.resolve_cost_policy?
+why_this_matters: 'Design docs/plans/claude-trading-desk-DESIGN.md 6.3 step 1 (DESK-8a): a short-hold leg only exists, and Claude only manages it, after a PASS here.
+  Operator 2026-10-27 ~07:00Z: Claude manages a <=1 h trade from a per-trade session before the weekly reset. The leg is on bybit_1 as a Stage-1 MECHANICS leg (PR
+  #20551); a book never establishes edge, so this unit is what does.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.26
+  effect_units: R
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n INFERRED from the same leg at the same 15m cadence: the committed 730 d record has n=132 and the 365 d record n=76; a pre-window of the same
+    length should land the same order. MDE = 2.8 * 1.0 / sqrt(120) = 0.26 R at an INFERRED per-trade sd of 1.0 R (the committed path_stats worst/best trade are -1.2
+    / +1.5 R, so 1.0 is generous). HONEST LIMIT: the leg''s recorded expectancy is +0.017 R (eth) / +0.054 R (xrp), far below 0.26 R, so a PASS here means "the leg
+    did not fail the same bar on a disjoint window", NOT "a positive edge was established": the reported bootstrap CI says how wide the uncertainty is. The bar is
+    the pre-existing one, not a powered test of a small edge.'
+  feasibility:
+    source: none
+    accrual_basis: Historical candles from data.binance.vision; nothing accrues. n is bounded by the window, not the calendar.
+decision_rule:
+  id: RULE-DESK8A-ICTSCALP-FRESH-WINDOW-CONFIRM
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'On scripts/research/ict_scalp_confirm.py --leg ict_scalp_xrp_15m (window 2022-10-01..2024-09-30): the leg''s LIVE config (regime_debt_matrix.build_harness_cmd,
+    the same lever map build_strategy_evidence.py uses), harness scripts/backtest_ict_scalp.py, fee from the venue resolver, slippage and funding from execution_costs.resolve_cost_policy(symbol)
+    passed explicitly. Over the emitted trades: n, pooled net R, expectancy, 4 contiguous equal-count time-folds (build_strategy_evidence.time_folds), folds positive,
+    fidelity, and a seeded 10,000-draw bootstrap 95% CI of expectancy (reported, decides nothing).'
+  rule: 'SAME bar as RULE-ICTSCALP-CAUSAL-REBUILD (registered 2026-10-02), nothing relaxed or added: PASS iff fidelity = faithful AND n >= 88 AND net R > 0 AND expectancy
+    > 0 AND 2 * folds_positive > 4. FAIL iff n >= 88 and any other clause fails. INDETERMINATE (underpowered, never FAIL) iff n < 88: the record states n and the
+    follow-up is a longer window, never a lowered floor. The 88, the window and the 4 folds are not changed after any result. A PASS does not move the leg off bybit_1
+    and proposes nothing: promotion is MD-PROMOTE-S1-S2 / a Tier-3 proposal. A FAIL does not remove the leg either (that is the operator''s or MD-S1-CUT-ON-STAGE0-FAIL''s
+    act) but means the leg has no Stage-0 pass and the per-trade Claude lane (DESK-8 step 3) must not be built on it.'
+  seen_before_registration: No dev run of this leg was made before registration; its first run is the dispatcher's.
+  what_it_does_not_do: Establishes no edge by itself at this power, changes no config or roster, and says nothing about Claude's management (that is DESK-8b).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: gates whether the short-hold per-trade lane has a leg worth managing; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: 'INFERRED: 24 monthly Binance Vision 15m files plus one harness pass; the 2026-10-27 dev run on the ETH leg finished inside a few minutes on a session container.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ict_scalp_confirm.py
+  - --leg
+  - ict_scalp_xrp_15m
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 45
+  inputs:
+    research_unit: RQ-20261027-8a01-02
+  note: scripts/research/ict_scalp_confirm.py writes {out_dir}/verdict.json; read_state producer_failed is a record, not a pass.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261002-701
+- comms/strategy_evidence/ict_scalp_xrp_15m.json
+- docs/plans/claude-trading-desk-DESIGN.md
+- DESK-8-SHORT-HOLD-S0
+last_dispatched_at: null

@@ -68,7 +68,8 @@
           "built_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
           "info_cutoff_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
           "generator": {"type": "string", "minLength": 1},
-          "missing_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          "missing_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "trigger": {"_comment": "OPTIONAL: present only on an EVENT-TRIGGERED scan packet (src/runtime/desk_event_trigger.py, row DESK-SHORT-HOLD-LANE item 2): which detector fired, on what symbol and bar, with its measured detail. A decision row on this packet carries trigger_event = kind.", "type": ["object", "null"], "additionalProperties": false, "required": ["kind", "symbol", "bar", "detail"], "properties": {"kind": {"type": "string", "minLength": 1}, "symbol": {"type": "string", "minLength": 1}, "bar": {"type": "string", "minLength": 1}, "detail": {"type": "object"}}}
         }
       },
       "package": {
