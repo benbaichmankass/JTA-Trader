@@ -371,19 +371,40 @@ def _lr_ts(v: Any) -> datetime | None:
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
 
 
-def _lr_rows(text: str) -> tuple[dict[str, datetime | None], int]:
-    """{review_id: reviewed_at} from a reviews.jsonl body, and the unparseable-line count."""
+def _lr_rows(text: str, refuses: Any = None) -> tuple[dict[str, datetime | None], int, set[str]]:
+    """({review_id: reviewed_at}, unparseable-line count, ids ``refuses`` rejects) from a reviews.jsonl body."""
     out: dict[str, datetime | None] = {}
+    refused: set[str] = set()
     bad = 0
     for ln in text.splitlines():
         if not ln.strip():
             continue
         try:
             d = json.loads(ln)
-            out[str(d["review_id"])] = _lr_ts(d.get("reviewed_at"))
+            rid = str(d["review_id"])
+            out[rid] = _lr_ts(d.get("reviewed_at"))
         except (ValueError, KeyError, TypeError):
             bad += 1
-    return out, bad
+            continue
+        if refuses is not None and refuses(d):
+            refused.add(rid)
+    return out, bad, refused
+
+
+def _lr_refuses() -> Any:
+    """row -> bool: does check_live_review_records refuse this row? The live_review_rows_mirror
+    SKIPS such a row for good, so it can never reach main and is not a stall. None if the
+    checker cannot be loaded (the caller then answers unknown, never ok)."""
+    try:
+        sys.path.insert(0, str(REPO_ROOT / "scripts" / "ci"))
+        try:
+            import check_live_review_records as rules  # noqa: PLC0415
+            schema = json.loads(rules.SCHEMA.read_text())
+        finally:
+            sys.path.pop(0)
+        return lambda row: bool(rules.row_problems(row, "reviews", schema)) if isinstance(row, dict) else True
+    except Exception:  # noqa: BLE001  # allow-silent: caller reports unknown
+        return None
 
 
 def _lr_due_clause(now: datetime, mins: float, due_doc: dict | None, seen_path: Path,
@@ -419,30 +440,37 @@ def _lr_due_clause(now: datetime, mins: float, due_doc: dict | None, seen_path: 
     return OK, f"{due_doc.get('due_count')} due, none unreviewed > {mins:.0f}m"
 
 
-def _lr_rows_clause(now: datetime, mins: float, branch_text: str | None, main_text: str | None) -> tuple[str, str]:
-    """(status, detail): rows on live-review/rows that main lacks for > ``mins`` since their reviewed_at."""
+def _lr_rows_clause(now: datetime, mins: float, branch_text: str | None, main_text: str | None,
+                    refuses: Any = None) -> tuple[str, str]:
+    """(status, detail): rows on live-review/rows that main lacks for > ``mins`` since their reviewed_at.
+    A row ``refuses`` rejects is excluded (the mirror skips it permanently) and counted in the detail."""
     if branch_text is None:
         return UNKNOWN, f"{LR_ROWS_REF} not readable on this host (watcher never fetched it?)"
-    branch, bad = _lr_rows(branch_text)
-    main, _ = _lr_rows(main_text or "")
-    ahead = {rid: t for rid, t in branch.items() if rid not in main}
+    if refuses is None:
+        return UNKNOWN, "scripts/ci/check_live_review_records not importable: cannot tell a stuck row from a refused one"
+    branch, bad, refused = _lr_rows(branch_text, refuses)
+    main, _, _ = _lr_rows(main_text or "")
+    ahead = {rid: t for rid, t in branch.items() if rid not in main and rid not in refused}
+    excl = sum(1 for rid in refused if rid not in main)
+    note = (f" ({excl} schema-refused row excluded)" if excl == 1 else f" ({excl} schema-refused rows excluded)") if excl else ""
     if not ahead:
-        return OK, f"main has all {len(branch)} rows-branch rows" + (f" ({bad} unparseable line(s) on branch)" if bad else "")
+        return OK, f"main has all {len(branch) - excl} mirrorable rows-branch rows" + note + (f" ({bad} unparseable line(s) on branch)" if bad else "")
     stamped = {rid: t for rid, t in ahead.items() if t is not None}
     if not stamped:
-        return UNKNOWN, f"{len(ahead)} rows-branch row(s) missing from main, none with a readable reviewed_at"
+        return UNKNOWN, f"{len(ahead)} rows-branch row(s) missing from main, none with a readable reviewed_at" + note
     rid, t = min(stamped.items(), key=lambda kv: kv[1])
     lag = (now - t).total_seconds() / 60
     if lag > mins:
         return BREACHED, (f"{len(ahead)} review row(s) on live-review/rows not on main; oldest {rid} "
-                          f"reviewed {lag:.0f}m ago (bound {mins:.0f}m) — the rows mirror is stuck")
-    return OK, f"{len(ahead)} row(s) ahead of main, oldest {lag:.0f}m (bound {mins:.0f}m)"
+                          f"reviewed {lag:.0f}m ago (bound {mins:.0f}m) — the rows mirror is stuck" + note)
+    return OK, f"{len(ahead)} row(s) ahead of main, oldest {lag:.0f}m (bound {mins:.0f}m)" + note
 
 
 def probe_live_review_due_stale(now: datetime, *, due_doc: dict | None = None,
                                 branch_text: str | None = None, main_text: str | None = None,
                                 seen_path: Path | None = None, persist: bool = True,
-                                thresholds: tuple[float, float] | None = None) -> dict:
+                                thresholds: tuple[float, float] | None = None,
+                                refuses: Any = None) -> dict:
     """Live trade review has gone quiet: (1) a due package stays unreviewed past
     ``watch.due_stale_minutes``, or (2) reviews exist on ``live-review/rows`` that never
     reach main's reviews.jsonl past ``watch.rows_lag_minutes`` (the 2026-10-26 mirror stall:
@@ -467,7 +495,8 @@ def probe_live_review_due_stale(now: datetime, *, due_doc: dict | None = None,
     if main_text is None:
         rows = (UNKNOWN, f"{LR_REVIEWS_REL} unreadable")
     else:
-        rows = _lr_rows_clause(now, th[1], branch_text, main_text)
+        rows = _lr_rows_clause(now, th[1], branch_text, main_text,
+                               refuses if refuses is not None else _lr_refuses())
     due = _lr_due_clause(now, th[0], due_doc, seen_path or LR_DUE_SEEN, persist)
     parts = [f"due: {due[1]}", f"rows: {rows[1]}"]
     sts = {due[0], rows[0]}

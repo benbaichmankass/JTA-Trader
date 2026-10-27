@@ -165,10 +165,10 @@ def _due(*pkgs):
                      "events": [{"event": "r_milestone", "level": 1.0}]} for p in pkgs]}
 
 
-def _probe(tmp_path, due=None, branch="", main="", now=NOW, persist=True):
+def _probe(tmp_path, due=None, branch="", main="", now=NOW, persist=True, refuses=lambda row: False):
     return a.probe_live_review_due_stale(
         now, due_doc=due if due is not None else _due(), branch_text=branch, main_text=main,
-        seen_path=tmp_path / "seen.json", persist=persist, thresholds=TH)
+        seen_path=tmp_path / "seen.json", persist=persist, thresholds=TH, refuses=refuses)
 
 
 def test_quiet_is_ok(tmp_path):
@@ -214,9 +214,10 @@ def test_route_could_not_look_is_unknown_not_ok(tmp_path):
     assert out["status"] == a.UNKNOWN and "could_not_look" in out["detail"]
 
 
-def test_rows_ref_missing_is_unknown(tmp_path):
+def test_rows_ref_missing_is_unknown(tmp_path, monkeypatch):
+    monkeypatch.setattr(a, "_git", lambda *args: None)  # the watcher never fetched the ref
     r = a.probe_live_review_due_stale(NOW, due_doc=_due(), branch_text=None, main_text="",
-                                      seen_path=tmp_path / "s.json", thresholds=TH)
+                                      seen_path=tmp_path / "s.json", thresholds=TH, refuses=lambda row: False)
     assert r["status"] == a.UNKNOWN
 
 
@@ -240,3 +241,32 @@ def test_unreadable_thresholds_is_unknown(tmp_path):
 def test_probe_is_registered_and_labelled():
     assert "live_review_due_stale" in a.PROBE_LABEL
     assert a.build(NOW, persist_seen=False)["probes"]["live_review_due_stale"]["status"] in (a.OK, a.BREACHED, a.UNKNOWN)
+
+
+def test_schema_refused_row_ahead_of_main_is_not_counted(tmp_path):
+    """The mirror skips a checker-refused row for good (MIRROR-STALL), so it is not a stall."""
+    bad = _row("BAD", NOW - timedelta(hours=6))
+    out = _probe(tmp_path, branch=bad, main="", refuses=lambda row: row["review_id"] == "BAD")
+    assert out["status"] == a.OK and "1 schema-refused row excluded" in out["detail"]
+
+
+def test_valid_lagging_row_still_breaches_beside_a_refused_one(tmp_path):
+    bad, good = _row("BAD", NOW - timedelta(hours=6)), _row("GOOD", NOW - timedelta(hours=3))
+    out = _probe(tmp_path, branch=bad + "\n" + good, main="", refuses=lambda row: row["review_id"] == "BAD")
+    assert out["status"] == a.BREACHED and "GOOD" in out["detail"] and "1 schema-refused row excluded" in out["detail"]
+
+
+def test_checker_not_importable_is_unknown_never_ok(tmp_path):
+    r = _row("A", NOW - timedelta(hours=5))
+    out = a.probe_live_review_due_stale(NOW, due_doc=_due(), branch_text=r, main_text="",
+                                        seen_path=tmp_path / "s.json", thresholds=TH,
+                                        refuses=None)
+    # refuses=None means "load the real checker"; force the failure path directly
+    assert a._lr_rows_clause(NOW, 120, r, "", None)[0] == a.UNKNOWN
+    assert out["status"] in (a.OK, a.BREACHED, a.UNKNOWN)
+
+
+def test_real_checker_refuses_the_incident_row_shape():
+    refuses = a._lr_refuses()
+    assert refuses is not None
+    assert refuses({"review_id": "x", "reviewed_at": "2026-10-26T23:13:00Z"}) is True
