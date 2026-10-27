@@ -1,0 +1,67 @@
+name: branch-mirror-heartbeat
+
+# Runs the two branch mirrors FROM MAIN's workflow files, on a trigger that does not depend on
+# either (a) GitHub's cron or (b) the copy of the file that sits on the data branch.
+#
+# Measured 2026-10-27 (DESK-9-GRADING / LTR-5-GRADING, manager finding):
+#   * `push` to desk/decisions or live-review/rows runs the workflow file AS IT EXISTS ON THAT BRANCH.
+#     Both branches were cut from main earlier, so every push run used a stale mirror: desk-mirror runs
+#     at 03:05Z and 04:06Z were push runs without the claude_role_grade step #20501 added to main.
+#   * the `48 * * * *` / `41 * * * *` schedules fire late or not at all on this repo (desk-mirror
+#     01:06, 02:05, 03:05, 04:06 were all `push`; the rows mirror's :41 run fired 43 min late).
+# A push to MAIN always runs main's own file, and main moves every few minutes (automation data
+# commits, PR landings), so each main push asks both mirrors for a run via workflow_dispatch, which
+# also always executes main's file (`--ref main`). The mirrors stay idempotent: a run with nothing to
+# land opens no PR. Their own `push`/`schedule` triggers stay as additional paths.
+#
+# Throttle: skip a mirror when it already has a queued/waiting run (that run will pick up whatever
+# changed) or its newest run was created < 10 min ago and has finished. A run that is IN PROGRESS
+# does not block the dispatch (it queues behind it via the mirror's concurrency group), so a row
+# pushed after the in-progress run read the branch is still picked up.
+# A dispatch failure is a warning, never a stop (Prime Directive rule 7).
+# Tier 1: dispatches two Tier-1 data-copy workflows; no runtime effect.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: branch-mirror-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Dispatch the branch mirrors from main
+        run: |
+          for wf in desk-decisions-mirror.yml live-review-rows-mirror.yml; do
+            runs=$(gh run list --repo "$REPO" --workflow "$wf" --limit 5 --json status,createdAt) \
+              || { echo "::warning::could not list runs of $wf; dispatching anyway"; runs='[]'; }
+            verdict=$(printf '%s' "$runs" | python3 -c '
+          import json, sys, datetime as dt
+          runs = json.load(sys.stdin)
+          if any(r["status"] in ("queued", "waiting", "pending", "requested") for r in runs):
+              print("skip: a queued run will pick this up")
+          elif runs and runs[0]["status"] == "completed" and (
+                  dt.datetime.now(dt.timezone.utc)
+                  - dt.datetime.fromisoformat(runs[0]["createdAt"].replace("Z", "+00:00"))).total_seconds() < 600:
+              print("skip: ran < 10 min ago")
+          else:
+              print("dispatch")
+          ')
+            echo "$wf: $verdict" | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ "$verdict" = "dispatch" ]; then
+              gh workflow run "$wf" --repo "$REPO" --ref main \
+                || echo "::warning::could not dispatch $wf"
+            fi
+          done

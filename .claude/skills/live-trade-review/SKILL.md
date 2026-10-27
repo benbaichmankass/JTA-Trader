@@ -180,7 +180,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 ### Step 6. Record, validate, report
 
 1. Write the packet to `comms/live_review/packets/<review_id>.json`, then append one row per package, carrying its `packet_sha`, to `comms/live_review/reviews.jsonl` (schema `comms/schema/live_review.schema.json`).
-2. Run `python3 scripts/ci/check_live_review_records.py`. It must exit 0 **on the real rows**.
+2. Run `python3 scripts/ci/check_live_review_records.py`. It must exit 0 **on the real rows**. This is the gate before the rows-branch push in step 3: a row that fails must never be pushed (the branch is append-only). `live_review_rows_mirror.py` re-runs the same rules and skips a failing row as `schema: …`.
 3. **Land the rows on the rows branch, not through a main PR** (operator 2026-10-26, popup verbatim *"Approve: rows branch + pinned commit (Recommended)"*). Commit the new rows **plus every file they cite** (the packet, and the outcome table named in `outcome_table_source`) on top of `origin/live-review/rows` and push straight to it; it is protected append-only (no force-push, no deletion) with no PR or check gate. Record the pushed commit's full 40-hex sha: it is the `ref` for Step 7. A mirror PR later copies the rows onto `main`'s `reviews.jsonl` by review_id, so `main` keeps the full record. **Fallback:** if the push is refused, or the branch does not exist yet, land the rows in a self-landing PR to `main` as before (automerge file + merge-slot claim) and use Step 7 without `ref`.
 4. Report to the manager. For each package give:
    - leg, accounts, state;
