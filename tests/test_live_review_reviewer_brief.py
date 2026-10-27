@@ -68,3 +68,13 @@ def test_the_write_is_one_create_only_file_per_row_with_a_bounded_retry():
 def test_the_brief_row_path_is_the_one_the_readers_read():
     from src.runtime import live_review_rows as rl
     assert rl.row_path("<review_id>") in BRIEF.split("## 4. The write", 1)[1]
+
+
+def test_the_reviewer_never_writes_the_packet_or_the_table():
+    """LTR-PACKET-ECHO (2026-10-27): a re-typed packet dropped "sd_r":null and the mirror refused the row.
+    The wake poster commits packet + table byte-exact; the reviewer only reads that the packet exists."""
+    write = BRIEF.split("## 4. The write", 1)[1]
+    assert "**never write `comms/live_review/packets/` or `comms/live_review/tables/`**" in write
+    assert "Your ONE write is your row file" in write and "evidence_missing" in write
+    assert "= the block's `packet` object" not in write and "`table_path` = the block's `table` object" not in write
+    assert "ADDS only `comms/live_review/rows/<review_id>.json`" in write   # the git-data path writes one file too

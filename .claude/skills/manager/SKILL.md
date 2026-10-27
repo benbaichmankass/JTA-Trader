@@ -112,7 +112,11 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
 - **`ltr-wake`** (live review, LTR-1B/C3, operator 2026-10-26): per real-money/prop package, dispatch ONE Sonnet reviewer — a packet-built
   package on the `live-review/rows` branch with the REVIEWER-BRIEF + the marker entry + packet block verbatim; otherwise the repo-lane
   fallback with the `live-trade-review` skill. **Never create a session with no `source_url`** (403 on every write, MEASURED DESK-6). Do not
-  file `live-review-apply` for a `tighten_sl`; the VM rows watcher applies it.
+  file `live-review-apply` for a `tighten_sl`; the VM rows watcher applies it. The wake poster commits the packet + table to
+  `live-review/rows` byte-exact BEFORE posting (entry `evidence_state` `committed`/`exists`, LTR-PACKET-ECHO); the reviewer writes only its
+  row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
+  an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
+  mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.
 - **`desk-wake` / `desk-trigger-wake`** (operator 2026-10-26/27): `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b
   specifies (Sonnet, auto, `desk/decisions`, depth-1 sparse checkout, WAKE PROMPT verbatim; the trigger kind adds the packet-id line). Do
   not read the packet. `could_not_commit` http 403 → tell the operator.
