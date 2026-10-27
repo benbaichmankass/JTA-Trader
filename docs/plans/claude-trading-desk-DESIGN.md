@@ -94,12 +94,12 @@ named lift condition. None of them is the design's resting state.
 | restriction today | stage it belongs to | what lifts it, on what evidence | row |
 |---|---|---|---|
 | in-trade applies are tighten-only on strategy trades | phase 1 | strategy-trade `close` / `partial_close`: the D-S0 exit unit passes, then an operator-granted exit mandate (§ 8.3) | DESK-7, DESK-13 |
-| no desk entries | phase 1 | phase 2 shadow proposals start once the scan packet and the skill land; real orders start once D-S0 entry generation passes and the leg soaks 1–2 clean trades on paper (§ 8) | DESK-0B, DESK-16, DESK-6, DESK-18, DESK-17 |
+| ~~desk entries shadow until D-S0~~ **superseded 2026-10-27** | — | **DECIDED (operator popup 2026-10-27, verbatim: *"Yes, live on bybit_1 demo now (Recommended)"*):** `claude_desk`'s own entries trade on `bybit_1` DEMO now, as a Stage-1 mechanics run; real money, mirrors and prop stay behind the DESK-13 gate exactly as before. ⚠️ The flip itself (`execution: live` for bybit_1, the `MD-TRADE-DESK` scope, intake acceptance) is row `DESK-SHORT-HOLD-LANE` item 1; until it merges the leg still reads `execution: shadow` in `config/strategies.yaml` (*field beats comment*). Every non-retired leg trades on its demo floor (operator popup 2026-10-27, verbatim *"Yes, that's the rule"*; `OPERATING-PLAN` § 2) | DESK-17, DESK-13, DESK-SHORT-HOLD-LANE |
 | desk entries only on paper | phase 3 | `MD-PROMOTE-S1-S2` moves `claude_desk` onto `bybit_2` + mirror (a human-merge PR) | DESK-17, manager |
 | no desk on prop accounts | phase 3 | the prop superset gate: the prop EV/survival gate against the firm's DD limits | DESK-17 + prop gate |
 | 15-min floor on cadence | phases 1–3 | 5 min: VM packets + VM intake (DESK-1, DESK-4b). Below 5 min: a student, not Claude (§ 5.1) | DESK-1, DESK-4, DESK-19 |
 | Claude decides every role | phases 1–3 | per role, a student passes S-shadow → S-advisory → S-drives (§ 4.3); Claude drops to a ρ audit | DESK-19 |
-| packet is the only feed | phase 1 | live web context per decision, logged (`external_context`), as the next milestone after the prototype | DESK-14 |
+| ~~packet is the only feed~~ **superseded 2026-10-27** | — | **Claude decides when the packet is not enough and searches.** Every use is logged point-in-time on the decision (`external_context[]`: query/URL, source, `retrieved_at` ≤ `info_cutoff_at`, the extracted values used, why the packet was not enough, influence `decisive` / `supporting` / `checked_only`), goes **INTO training** as a feature block flagged `source: external`, and writes a **feed-gap row** that alerts the operator. Lineage: operator 2026-10-25 ~19:00Z (packet-only for the prototype; web is the next milestone) → 2026-10-25 ~21:45Z (standardize the reasoning; feed gaps drive infra) → **2026-10-27 ~07:12Z** (log it, put it into training, alert on the missing feed) | DESK-14 |
 
 The phases are: **1** in-trade on the strategies' trades (live) · **2** + entry generation in shadow,
 every proposal a graded label · **3** the desk trades its own leg on paper, then real money · **4** the
@@ -203,6 +203,13 @@ trains on exactly what the teacher saw; the dataset schema **is** the packet sch
 
 The common envelope is v0's (`decision_id, packet_sha, role, model, prompt_sha, skill_sha,
 label_version, action, params, judge_prior, confidence, basis, rationale, external_context, …`).
+
+**`external_context[]` (rewritten 2026-10-27; it was a logged big-event *exception*).** Operator 2026-10-27 ~07:12Z:
+Claude itself decides whether the packet is enough or whether it needs a search, and it may build better context
+than the VM gives it. Each use is one entry: `query_or_url`, `source`, `retrieved_at` (never after the row's
+`info_cutoff_at`), `extracted` (the field/value pairs actually used), `why_packet_insufficient`, `influence`
+(`decisive` / `supporting` / `checked_only`). The values go INTO training (§ 4.1) and each entry writes a feed-gap
+row (§ 4.1, DESK-14).
 
 **`propose_entry` — the entry-generation action.** Every field is required. A proposal missing one is
 refused by the guard, not defaulted.
@@ -521,8 +528,13 @@ A label is the triple **(packet, decision, realised outcome)**, joined on `packe
   source re-qualifies through CJ-4 before any manifest trains on it (distillation § 3.3).
 - **The feed.** Desk rows are a `claude_judgments` source (`kind: desk_<role>`, DESK-11 into CJ-2), so
   the students see exactly the projected `features_at_review` the teacher saw.
-- **Exception rows** (`external_context.used = true`) are excluded from training sets by default and
-  graded separately (v0 rule, unchanged).
+- **External context goes INTO training** (operator 2026-10-27 ~07:12Z; supersedes the v0 rule "exception
+  rows are excluded from training sets by default"). The extracted values on `external_context[]` are stored
+  point-in-time on the row, so a replay or training run reproduces them without re-fetching, and they enter
+  the dataset as a feature block flagged `source: external`. A student is trained with and without that block:
+  that ablation is what says whether the feed is worth wiring natively. Each use also writes a feed-gap row
+  (field/source, symbol, decision id, influence); a recurring `decisive` gap is a request to wire that feed
+  into the packet (`config/news_feeds.yaml` / the scan packet).
 
 ### 4.2 The hand-off path per role
 
@@ -651,7 +663,7 @@ it.
 | **Stable ids** | `decision_id → intent_id → order_package_id → trade_id(per account) → outcome_id`, one join, no fuzzy match | DESK-0B, DESK-20 |
 | **Schema versioning** | `schema_version` on packets and rows; `label_version` = (model, skill_sha, prompt_sha) on decisions | DESK-0 (built), DESK-0B |
 | **Canonical store** | records project over existing stores: `comms/desk/` and `comms/live_review/` (append-only, guarded), `order_packages` meta, the trade journal for fills and outcomes. A new table only with the operator's OK and a backfill (Generation Discipline Rule 3) | DESK-20 |
-| **Label quality** | no post-hoc relabel (append-only; a correction is a new row that cites the old one); the post-trade grade is blind first (CJ-3); exception rows are separable (`external_context.used`) | DESK-0 guard, CJ-3 |
+| **Label quality** | no post-hoc relabel (append-only; a correction is a new row that cites the old one); the post-trade grade is blind first (CJ-3); external-context rows stay separable (`external_context[]`, flagged `source: external`) but are INCLUDED in training (operator 2026-10-27 ~07:12Z) | DESK-0 guard, CJ-3 |
 | **Coverage, not just volume** | targets per (role × regime cell × symbol class × state bucket). Where a cell is under-covered, the teacher sample ρ and **shadow-only exploration** (a share of scan wakes forced to price a proposal the desk would not make) fill it, so the dataset is not only the states Claude likes. Exploration never reaches an order | DESK-23 (new) |
 | **The consumer path, proven** | desk rows → `claude_judgments` (CJ-2, `kind: desk_<role>`) → manifests (CJ-5, DESK-19) → registry. A **"recorded but never trained on" detector** fails when a decision row older than 14 days is in no dataset build's consumed-id list | DESK-11, CJ-2, DESK-21 (new) |
 
@@ -896,16 +908,27 @@ it: the repo is public, and it is the risk manager's number, not the desk's.
 - **Marginal cost per extra package in an already-live session** is only Δ × rate ≈ $0.0007 a wake.
   So once a desk session is live, adding packages is nearly free. Keeping it live is what costs.
 
-### 6.3 The flow that works, and what gates it
+### 6.3 The flow that works (rewritten 2026-10-27; the strategies' 15m legs are a side source, not the plan)
 
-1. **Stage 0 for the leg** (DESK-8a): a registered confirm run of `ict_scalp_eth_15m` and
-   `ict_scalp_xrp_15m` on a fresh window. A short-hold leg only exists after a PASS.
-2. **Stage 0 for Claude-on-the-leg** (DESK-8b): blind replay (§ 8 D-S0) of in-trade decisions on those
-   two trade lists. The candles are masked and ATR-normalised. The candidate actions are replayed on the
-   real paths.
-3. **Then** the per-trade spawned lane: the desk manager, or a Haiku watcher if the desk session is
-   rotated out, sees `package_created` on a short-hold leg and spawns a Sonnet lane at the leg's cadence.
-   The lane runs until `trade_closed`.
+**DECIDED (operator 2026-10-27 ~07:05Z, relayed by the manager):** a short hold is a **Claude-originated trade**,
+not a strategy leg Claude watches. Claude, with no specific strategy, reads the market from the indicators the
+system provides (and the web when it needs it, § 2.4 / DESK-14) and says *"the next bar is going to be big green
+or big red, let's get in and get out quickly"*; then it manages that trade from entry to exit. The system, not a
+standing Claude, decides WHEN to look: event triggers on the VM (volatility / ATR burst, a range or level break
+or liquidity sweep, a 5m/15m momentum burst, the strategies' near-signals, scheduled calendar/news events) post a
+desk wake carrying a shorter-timeframe scan of the triggering symbol, rate-limited, deduped and each logged as a
+label (fired / Claude's answer / outcome).
+
+1. **Entry:** the triggered wake proposes a full structure (side, entry type, SL, TP, max hold ≤ 1 h, thesis);
+   `claude_desk` trades it on `bybit_1` DEMO (operator popup 2026-10-27, verbatim *"Yes, live on bybit_1 demo now
+   (Recommended)"*: a Stage-1 mechanics run; real money stays behind DESK-13). Both brackets, always.
+2. **Per-trade session** (row `DESK-SHORT-HOLD-LANE`, `.claude/skills/trading-desk/SHORT-HOLD-BRIEF.md`): spawned
+   when a `claude_desk` package (or any `config/short_hold.yaml` package) opens; every 5m bar it makes **the best
+   trading decision now** (hold / tighten_sl / move_tp / partial_close / change_size / close, each with reason and
+   confidence). The leg's history is evidence, never a constraint (operator 2026-10-27 ~07:05Z). It ends at exit or
+   a hard cap and applies through `live_review_apply.py` under `MD-TRADE-DESK`.
+3. **Side source:** the `ict_scalp_eth_15m` / `ict_scalp_xrp_15m` Stage-0 confirm (DESK-8a) and the blind replay
+   (DESK-8b) remain useful evidence for managing short holds; they no longer gate the lane.
 
 ---
 
