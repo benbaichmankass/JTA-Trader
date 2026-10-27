@@ -39,13 +39,14 @@ R2_GROUP = 10               # packets per R^2 group, in sample order (V1's batch
 SEED = 20261027
 DRAWS = 10_000
 BATCH_B = 10
-BATCH_C = 5
+BATCH_C = 2                 # amendment 1: 5 large packets per batch invited skipped analysis
 
 SUBAGENT_RULES = """
 ## Isolation (binding; a batch that breaks it is rejected and re-judged)
 Use ONLY the Read tool on this one file and the Write tool on your one output file. Do not use Bash, Grep, Glob, any
 script, calculator or code: read the data and reason over it yourself; a computed score is a rejected batch. Do not
-open any other path. Write every reply line for every packet in this file to the output file, then stop.
+open any other path. Analyse EVERY packet's own data before scoring it: a packet scored without reading its bars is a
+rejected batch. Write every reply line for every packet in this file to the output file, then stop.
 """
 
 PROTO_B_INTRO = ("You see ONE masked market scan packet. Symbols are aliases (re-drawn per packet), prices are rebased so each\n"
@@ -55,7 +56,8 @@ PROTO_B_INTRO = ("You see ONE masked market scan packet. Symbols are aliases (re
 PROTO_C_INTRO = ("You see ONE masked RAW market packet: six aliases (re-drawn per packet; two of them are the two largest crypto\n"
                  "assets, unnamed), each with multi-timeframe OHLC bars before the decision time (1m, 5m, 1h, 4h, 1d), relative\n"
                  "volume and taker-buy share per bar, and the perpetual funding prints known at the decision time. There are NO\n"
-                 "summaries and NO precomputed statistics or base rates: read the bars. Prices are basis points from the alias's\n"
+                 "summaries and NO precomputed statistics or base rates: read the bars (high, low, close; the open is the previous close).\n"
+                 "Prices are basis points from the alias's\n"
                  "last 1h close; a price LEVEL in your reply is on the rebased scale 100 x (1 + bps/10000), so the last close is\n"
                  "100. `atr_1h` is the 1h ATR(14) on that scale (the bracket below is defined in it). Calendar dates are withheld;\n"
                  "the session label is given. The strategies' book is NOT shown. Decide whether any alias offers a trade worth\n"

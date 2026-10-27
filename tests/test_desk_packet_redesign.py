@@ -128,7 +128,7 @@ def test_mode_c_carries_no_summary_and_rebases_to_the_last_close():
 def test_check_against_1h_flags_a_mismatch():
     raw = _raw()
     c = pm.raw_packet(_packet_a(), _key(raw, T0 + 7 * 3600), raw)
-    c["assets"]["ASSET_01"]["bars"]["1h"][-1][3] = 9
+    c["assets"]["ASSET_01"]["bars"]["1h"][-1][2] = 9
     assert pm.check_against_1h(c) == ["ASSET_01: newest 1h close 9 bps, expected 0"]
 
 
@@ -181,4 +181,4 @@ def test_contrast_is_paired_by_packet():
 
 def test_registered_constants():
     assert pa.S3_USEFUL == 0.25 and pa.R2_BREAK == 0.50 and pa.CONTRAST_ALPHA == pytest.approx(0.025)
-    assert json.loads(json.dumps(pm.RAW_TABLES)) == [["1m", 60, 90], ["5m", 300, 96], ["1h", 3600, 96], ["4h", 14400, 60], ["1d", 86400, 30]]
+    assert json.loads(json.dumps(pm.RAW_TABLES)) == [["1m", 60, 30], ["5m", 300, 48], ["1h", 3600, 48], ["4h", 14400, 30], ["1d", 86400, 20]]

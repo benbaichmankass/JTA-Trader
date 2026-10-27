@@ -69,6 +69,16 @@ The edge program's labels (`desk_edge_devloop.cell_labels`: the driver's engine 
 - An arm that breaks anchoring (§ 3.3) without being USEFUL changes no live design: it is evidence for which packet the next judge variant should be built on, and it is reported as such.
 - A USEFUL arm whose SEL decision is not `promote` is recommended **only to the edge program's holdout**, not to live: the program's holdout and full registered run (DESK-EDGE-PROGRAM § 5.4–5.5) are what real money needs; nothing here shortens Gate 1.
 
+### 3.7 Amendment 1 — arm C's size and batch (committed 2026-10-27 before any further C judging; no C outcome label had been computed)
+
+The first C batch (5 packets, Sonnet subagent, isolation-compliant) MEASURED **286k cache-creation + 2.43M cache-read input tokens, about $1.94 API-equivalent**. A C packet is therefore about **50k real tokens**, not the 17k estimated from chars / 3, because numeric tables tokenise near one token per character. That prices 100 C packets at about $39 against a judging budget of $20. The judge's own hand-back also said it **did not analyse packets 2–5** of the batch, and their cell scores are near-flat (|score| ≤ 0.06). Under § 2.2 that batch is **rejected**: its file is kept under `rejected/`, it is never scored, and no label was computed for it.
+
+Changes (the arm's question is unchanged: raw bars, no summaries):
+- Rows per alias: 1m × 30 (30 min), 5m × 48 (4 h), 1h × 48 (2 days), 4h × 30 (5 days), 1d × 20 (20 days), down from 90 / 96 / 96 / 60 / 30. The open column is dropped, since it is the previous close. **MEASURED median 20,274 chars (max 22,725)**; tokens are given in § 4 from the subagents' own counts.
+- **2 packets per batch.** The protocol now requires each packet's own bars to be analysed before it is scored; a batch scored without reading its bars is rejected.
+- **Registered budget rule invoked (§ 2.2):** C runs on the first **50** packets of the sample order (near-balanced: the first 50 cover every stratum). A and B are scored on all 100. Every C-vs-A contrast is paired on those 50 packets, and A's and B's numbers are also reported on the same 50.
+- Arms now differ in batch size (A 10, B 10, C 2). This is a stated confound: smaller batches may draw more attention per packet.
+
 ## 4. Results
 
 *(appended after judging)*

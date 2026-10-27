@@ -40,8 +40,11 @@ import numpy as np
 
 MODES = ("A", "B", "C")
 VISION = "https://data.binance.vision/data"
-# rows per alias in mode C, by timeframe (oldest first). 90 min of 1m, 8 h of 5m, 4 days of 1h, 10 days of 4h, 30 days of 1d.
-RAW_TABLES: Tuple[Tuple[str, int, int], ...] = (("1m", 60, 90), ("5m", 300, 96), ("1h", 3600, 96), ("4h", 14400, 60), ("1d", 86400, 30))
+# rows per alias in mode C, by timeframe (oldest first): 30 min of 1m, 4 h of 5m, 2 days of 1h, 5 days of 4h, 20 days of 1d.
+# Amendment 1 (2026-10-27, before any further C judging): the registered 90/96/96/60/30 rows measured ~50k tokens per
+# packet in the first judge batch (numbers tokenise near 1 token per char), which priced 100 packets at ~$39 and the
+# judge skipped analysing 4 of 5 packets. Cut to 176 rows per alias, and the open column is dropped (o = previous c).
+RAW_TABLES: Tuple[Tuple[str, int, int], ...] = (("1m", 60, 30), ("5m", 300, 48), ("1h", 3600, 48), ("4h", 14400, 30), ("1d", 86400, 20))
 FUNDING_PRINTS = 9          # the last 9 funding prints (3 days at 8h) known at the cutoff
 RAW_SCHEMA = "desk-raw-v1"
 
@@ -193,7 +196,7 @@ def raw_packet(packet_a: dict, key: dict, raw: RawStore, tables: Sequence[Tuple[
             med = float(np.median(a[:, 5])) if len(a) else 0.0
             rows = []
             for r in a:
-                bps = [int(round((x / ref - 1.0) * 1e4)) for x in r[1:5]]
+                bps = [int(round((x / ref - 1.0) * 1e4)) for x in r[2:5]]       # h, l, c (o is the previous c)
                 rv = int(round(100 * r[5] / med)) if med > 0 else None
                 tbs = int(round(100 * r[6] / r[5])) if r[5] > 0 else None
                 rows.append(bps + [rv, tbs])
@@ -203,7 +206,7 @@ def raw_packet(packet_a: dict, key: dict, raw: RawStore, tables: Sequence[Tuple[
         assets[alias] = {"atr_1h": uni[alias]["atr"], "session": uni[alias].get("session"),
                          "funding_bps_per_8h": fp, "bars": tabs}
     return {"schema": RAW_SCHEMA, "packet_id": packet_a["meta"]["packet_id"], "packet_mode": "C",
-            "columns": ["o_bps", "h_bps", "l_bps", "c_bps", "rel_volume", "taker_buy_pct"],
+            "columns": ["h_bps", "l_bps", "c_bps", "rel_volume", "taker_buy_pct"],
             "tables": [[nm, n] for nm, _, n in tables], "gaps": gaps, "news": "could_not_look", "assets": assets}
 
 
@@ -215,8 +218,8 @@ def check_against_1h(c_packet: dict, packet_a_close_bps_last: float = 0.0) -> Li
         h = a["bars"].get("1h") or []
         if not h:
             out.append(f"{alias}: no 1h bars")
-        elif abs(h[-1][3] - packet_a_close_bps_last) > 1:
-            out.append(f"{alias}: newest 1h close {h[-1][3]} bps, expected 0")
+        elif abs(h[-1][2] - packet_a_close_bps_last) > 1:
+            out.append(f"{alias}: newest 1h close {h[-1][2]} bps, expected 0")
     return out
 
 
