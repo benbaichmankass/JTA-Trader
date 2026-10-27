@@ -295,6 +295,10 @@ def compile_row(draft: dict, pointer: dict, packet: dict, schema: dict, *, now: 
         u = universe.get(d["symbol"])
         if u is None:
             raise Refused([f"proposal symbol {d['symbol']} is not in the scan packet's universe"])
+        mkt = u.get("market") if isinstance(u.get("market"), dict) else {}
+        if mkt.get("open") is False:
+            raise Refused([f"{d['symbol']}'s market ({mkt.get('asset_class')}) is CLOSED at the packet's cutoff: a desk "
+                           "entry is a market order, so propose an open market or record no_trade"])
         proposal = {"symbol": d["symbol"], "venue_class": u["venue_class"], "side": d["side"], "timeframe": u["timeframe"],
                     "horizon_bars": d["horizon_bars"], "entry": d["entry"], "stop": d["stop"], "tp": d["tp"],
                     "expected_r_net": d["expected_r_net"], "thesis": d["thesis"],

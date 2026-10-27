@@ -140,11 +140,12 @@ def test_entry_gate_reads_the_mandate_and_fails_closed():
     assert di.entry_gate({"mandates": []}).endswith("MD-TRADE-DESK_not_granted")
 
 
-def test_the_real_mandate_store_admits_the_bybit_1_demo_only():
+def test_the_real_mandate_store_admits_the_three_paper_desk_books_only():
     """Field beats comment: config/mandates.yaml + config/accounts.yaml as they stand. The demo floor (operator
-    popup 2026-10-27) opens the gate for the leg rostered on bybit_1 only; without the accounts it stays closed."""
+    popup 2026-10-27; widened to Alpaca + IB paper by the operator's chat 2026-10-27 ~15:58Z) opens the gate for the
+    leg rostered on bybit_1 / alpaca_paper / ib_paper; without the accounts it stays closed."""
     mandates, accounts = di._load_yaml("config/mandates.yaml"), di._load_yaml("config/accounts.yaml")
-    assert di.carrying_accounts(accounts) == ["bybit_1"]
+    assert di.carrying_accounts(accounts) == ["alpaca_paper", "bybit_1", "ib_paper"]
     assert di.entry_gate(mandates, accounts) is None
     assert di.entry_gate(mandates).startswith(di.R_GATED)
 

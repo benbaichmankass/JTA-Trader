@@ -6217,6 +6217,20 @@ def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
     cd.record(terminal, now=now)
     if pkg is None:
         return _none("no_open_proposal_for_symbol")
+    # DESK-PAPER-ACCOUNTS: a desk entry is a MARKET order, so a proposal on an ETF (alpaca_paper) or a CME micro
+    # (ib_paper) waits while its market is closed -- no package, NOT consumed and NOT terminal: it is re-tried every
+    # tick and becomes expired_unfilled at its good_till_bars like any other unfilled proposal. Crypto is 24/7.
+    # The max-hold exit is a market close too, so the market must still be open when it comes due.
+    from datetime import timedelta
+
+    from src.runtime.market_hours import asset_class_for_symbol, is_market_open
+    _cls = asset_class_for_symbol(pkg["symbol"])
+    if not is_market_open(_cls, now):
+        return _none(f"market_closed:{_cls}")
+    _mh = (pkg.get("meta") or {}).get("max_hold_min")
+    if isinstance(_mh, int) and not isinstance(_mh, bool) and _mh > 0 \
+            and not is_market_open(_cls, now + timedelta(minutes=_mh)):
+        return _none(f"market_closes_before_max_hold:{_cls}:{_mh}m")
     meta = dict(pkg["meta"], strategy_name=name)
     return _with_signal_package(name, {
         "symbol": pkg["symbol"],

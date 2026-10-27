@@ -1247,7 +1247,10 @@ mandates:
         # only while every account rostering the claude_desk leg is one of them AND is a demo/paper account in
         # config/accounts.yaml (scripts/ops/desk_intake.py entry_gate). blocked_until below still binds every
         # other account (real money, mirrors, prop). REVERT: delete demo_accounts and set state back to shadow.
-        demo_accounts: [bybit_1]
+        # 2026-10-27 DESK-PAPER-ACCOUNTS: alpaca_paper + ib_paper added (operator verbatim, chat ~15:58Z, relayed by
+        # Manager Session 2026-10-27a: "I do want to have the desk live on the other paper accounts as well, so Alpaca
+        # and IB."). Both are account_class: paper; the floor still closes for all if a real-money account rosters the leg.
+        demo_accounts: [bybit_1, alpaca_paper, ib_paper]
         blocked_until: >-
           The DESK-13 gate, operator verbatim "Beat random entries only": the
           desk's entries show OOS edge vs the random-entry baseline, net of the

@@ -49,6 +49,8 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 REPO = Path(__file__).resolve().parents[2]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 ACCOUNTS_REL = "config/accounts.yaml"
 STRATEGIES_REL = "config/strategies.yaml"
 RECORDS_REL = "comms/same_symbol_allocation"
@@ -83,8 +85,19 @@ GRANDFATHERED: Dict[str, Dict[str, Any]] = {
 }
 
 
+#: Legs that never SHARE a symbol's position on an account without slice support: the coordinator refuses the second
+#: arrival per package, journalled (``src/units/strategies/claude_desk.py::exclusive_hold_refusal``, called from
+#: ``Coordinator.multi_account_execute``; DESK-PAPER-ACCOUNTS 2026-10-27). Such a leg is not part of a shared slot, so it
+#: is left out of the group. ``self_test`` pins the coordinator call: delete the refusal and this guard goes red.
+EXCLUSIVE_HOLD_LEGS: frozenset = frozenset({"claude_desk"})
+COORDINATOR_REL = "src/core/coordinator.py"
+
+
 def groups(accounts_text: str, strategies_text: str) -> Dict[Key, List[str]]:
-    """(account, symbol) -> sorted legs, only where >= 2 legs share the key."""
+    """(account, symbol) -> sorted legs, only where >= 2 legs share the key. A leg's symbols on an account are its
+    per-account scope when it declares ``account_symbols`` (``src.config.symbol_sets.leg_symbols``)."""
+    from src.config.symbol_sets import leg_symbols
+
     acc = (yaml.safe_load(accounts_text) or {}).get("accounts") or {}
     strat = (yaml.safe_load(strategies_text) or {}).get("strategies") or {}
     out: Dict[Key, List[str]] = defaultdict(list)
@@ -92,7 +105,9 @@ def groups(accounts_text: str, strategies_text: str) -> Dict[Key, List[str]]:
         for leg in (a or {}).get("strategies") or []:
             if not isinstance(leg, str):
                 continue
-            for sym in (strat.get(leg) or {}).get("symbols") or []:
+            if leg in EXCLUSIVE_HOLD_LEGS and name not in SLICE_SUPPORT_ACCOUNTS:
+                continue
+            for sym in leg_symbols(strat.get(leg), name):
                 out[(name, str(sym))].append(leg)
     return {k: sorted(set(v)) for k, v in sorted(out.items()) if len(set(v)) >= 2}
 
@@ -232,6 +247,17 @@ def self_test() -> int:
     check("exemption is by exact key (other account)", len(grade({("bybit_9", "XRPUSDT"): legs}, [], today)), 1)
     check("every grandfather has a unit and a due", all(x.get("unit") and x.get("due") for x in GRANDFATHERED.values()), True)
     SLICE_SUPPORT_ACCOUNTS = saved
+    # exclusive-hold legs (DESK-PAPER-ACCOUNTS): out of the group on a non-slice account, in it on a slice account,
+    # per-account scope honoured, and the runtime refusal that justifies leaving them out is really called.
+    sx = yaml.safe_dump({"strategies": {"a": {"symbols": ["X"]}, "claude_desk": {
+        "symbols": ["X", "Y"], "account_symbols": {"acc": ["X"], "bybit_1": ["X"], "other": ["Y"]}}}})
+    check("exclusive leg left out on a non-slice account", groups(acct({"acc": ["a", "claude_desk"]}), sx), {})
+    check("exclusive leg counted on a slice account",
+          groups(acct({"bybit_1": ["a", "claude_desk"]}), sx), {("bybit_1", "X"): ["a", "claude_desk"]})
+    check("per-account scope: the leg's other symbols are not on this account",
+          groups(acct({"other": ["a", "claude_desk"]}), sx), {})
+    coord = (REPO / COORDINATOR_REL).read_text(encoding="utf-8")
+    check("the coordinator calls the exclusive-hold refusal", "exclusive_hold_refusal(" in coord, True)
     print("self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 

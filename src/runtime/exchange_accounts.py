@@ -107,6 +107,7 @@ def live_bybit_fill_accounts(
                 roster=cfg.get("strategies"),
                 mode=UNION,
                 strategies_cfg=_strategies_cfg,
+                account_id=account_id,
             )
         except Exception:  # noqa: BLE001  — FAIL-SAFE: falls back to the declared list below, which IS the pre-E42 behaviour, so a resolver fault cannot narrow the sweep
             raw = cfg.get("symbols") or []

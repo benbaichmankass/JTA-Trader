@@ -123,6 +123,8 @@ from typing import Any, Dict, List
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
+from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols  # noqa: E402
+
 ACCOUNTS = REPO / "config" / "accounts.yaml"
 STRATEGIES = REPO / "config" / "strategies.yaml"
 
@@ -255,6 +257,17 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any],
                                else "declares no `symbols:`"),
                 })
                 continue
+            # A leg with a per-account scope (`account_symbols`, DESK-PAPER-ACCOUNTS)
+            # needs only ITS slice here; a rostering account the map gives nothing
+            # would roster a leg that can never trade on it.
+            syms = leg_symbols(scfg, name)
+            if not syms:
+                out.append({
+                    "kind": "strategy_unknown", "account": name,
+                    "strategy": str(strat), "symbol": "",
+                    "detail": f"`{ACCOUNT_SYMBOLS_KEY}` names no symbol of the leg for {name}",
+                })
+                continue
             for sym in syms:
                 n = _norm(sym)
                 if n not in declared:
@@ -278,7 +291,7 @@ def orphan_pulls(accounts: Dict[str, Any],
             continue
         implied = set()
         for strat in (cfg.get("strategies") or []):
-            for sym in ((strategies.get(strat) or {}).get("symbols") or []):
+            for sym in leg_symbols(strategies.get(strat), name):
                 implied.add(_norm(sym))
         for sym in (cfg.get("symbols") or []):
             if _norm(sym) not in implied:
@@ -392,6 +405,18 @@ def _self_test() -> int:
     a9 = {"x": {"strategies": ["vwap"], "symbols": ["btc/usdt"]}}
     check("9 (case + `/` differences normalise to the same symbol -> clean)",
           findings(a9, strategies, profiled) == [])
+
+    # 9b. A per-account leg scope (`account_symbols`): each account needs only its own slice, and a
+    #     rostering account the map does not name is strategy_unknown (the leg could never trade there).
+    s9 = {"desk": {"symbols": ["BTCUSDT", "AVAXUSDT"],
+                   "account_symbols": {"a": ["BTCUSDT"], "b": ["AVAXUSDT"]}}}
+    a9b = {"a": {"strategies": ["desk"], "symbols": ["BTCUSDT"]},
+           "b": {"strategies": ["desk"], "symbols": ["AVAXUSDT"]},
+           "c": {"strategies": ["desk"], "symbols": ["BTCUSDT"]}}
+    f9b = findings(a9b, s9, profiled)
+    check("9b (scoped leg: each account checked on its own slice; an unnamed rostering account -> "
+          "strategy_unknown)",
+          [(f["kind"], f["account"]) for f in f9b] == [("strategy_unknown", "c")])
 
     # 10-13. THE UNION-STATE AXIS. These are the controls the FIRST version of
     #     this guard did not have and needed most: its message asserted the

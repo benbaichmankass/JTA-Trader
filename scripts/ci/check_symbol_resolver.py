@@ -171,6 +171,20 @@ def self_test() -> int:  # noqa: C901
           resolve_symbols(declared=["AVAXUSDT"], roster=["leg_x"],
                           mode=UNION, strategies_cfg=scfg) == ["AVAXUSDT"])
 
+    # --- per-account leg scope (DESK-PAPER-ACCOUNTS): `account_symbols` only NARROWS a leg's union.
+    sc = {"leg_v": {"symbols": ["BTCUSDT", "SPY", "MES"],
+                    "account_symbols": {"crypto": ["BTCUSDT"], "eq": ["SPY", "NOTINUNION"]}}}
+    check("4b (a scoped leg contributes only the account's own slice of its symbols)",
+          resolve_symbols(declared=[], roster=["leg_v"], mode=UNION, strategies_cfg=sc,
+                          account_id="crypto") == ["BTCUSDT"]
+          and resolve_symbols(declared=[], roster=["leg_v"], mode=UNION, strategies_cfg=sc,
+                              account_id="eq") == ["SPY"])
+    check("4c (no account_id -> the whole union, the pre-scope answer; an unnamed account -> nothing)",
+          resolve_symbols(declared=[], roster=["leg_v"], mode=UNION, strategies_cfg=sc)
+          == ["BTCUSDT", "SPY", "MES"]
+          and resolve_symbols(declared=[], roster=["leg_v"], mode=UNION, strategies_cfg=sc,
+                              account_id="other") == [])
+
     # --- the mode is explicit. A caller that forgets it must not get a
     #     plausible default; it must fail loudly.
     try:
@@ -297,10 +311,12 @@ def self_test() -> int:  # noqa: C901
             cfg = cfg or {}
             d = resolve_symbols(declared=cfg.get("symbols"),
                                 roster=cfg.get("strategies"), mode=DECLARED,
-                                strategies_cfg=strat, exchange=cfg.get("exchange"))
+                                strategies_cfg=strat, exchange=cfg.get("exchange"),
+                                account_id=name)
             u = resolve_symbols(declared=cfg.get("symbols"),
                                 roster=cfg.get("strategies"), mode=UNION,
-                                strategies_cfg=strat, exchange=cfg.get("exchange"))
+                                strategies_cfg=strat, exchange=cfg.get("exchange"),
+                                account_id=name)
             if d != u:
                 diverged.append(f"{name}: UNION adds {[s for s in u if s not in d]}")
         check(f"18 (DECLARED == UNION on all {len(acc)} live accounts, so "

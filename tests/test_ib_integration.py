@@ -226,6 +226,8 @@ class TestAccountsYaml:
             # 2026-10-25 GLD-SOAK-REPLACE (Tier-3, operator-approved): re-placed from
             # alpaca_paper, whose GLD slot is wedged by a kept zombie OCO.
             "gld_pullback_1d",
+            # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to MES/MGC/MHG.
+            "claude_desk",
         ]
 
         live = accts["ib_live"]
@@ -286,6 +288,7 @@ class TestLoadAccounts:
             "ict_scalp_mgc_15m",
             "spy_trend_long_1d", "qqq_trend_long_1d", "iwm_trend_long_1d", "tlt_pullback_1d",
             "gld_pullback_1d",  # 2026-10-25 GLD-SOAK-REPLACE
+            "claude_desk",  # 2026-10-27 DESK-PAPER-ACCOUNTS (paper; MES/MGC/MHG)
         ]  # long-only diversifier + WS-A metals sleeve; BTCUSDT strats (turtle_soup/
         #   vwap/ict_scalp_5m) dropped 2026-07-07 (#5850) — dead no-ops on IBKR futures.
         #   4 ETF cells added 2026-07-07 (STK support step 6) — ROUTE-verdict per

@@ -105,7 +105,7 @@ def _with_desk_on(account):
 
 
 def test_the_gate_admits_the_bybit_1_demo_and_refuses_a_real_money_roster():
-    assert di.entry_gate(MANDATES, ACCOUNTS) is None  # rostered on bybit_1 only today
+    assert di.entry_gate(MANDATES, ACCOUNTS) is None  # rostered on bybit_1 + alpaca_paper + ib_paper (all paper)
     why = di.entry_gate(MANDATES, _with_desk_on("bybit_2"))
     assert why.startswith(di.R_GATED) and "not_a_demo_account:bybit_2" in why
     assert di.entry_gate(MANDATES, None).endswith("accounts_unreadable")
@@ -115,8 +115,8 @@ def test_a_demo_list_cannot_admit_a_real_money_account():
     """demo_accounts is checked AGAINST config/accounts.yaml: listing bybit_2 does not make it a demo."""
     m = copy.deepcopy(MANDATES)
     fn = next(x for x in m["mandates"] if x["id"] == "MD-TRADE-DESK")["functions"]["entry_generation"]
-    fn["demo_accounts"] = ["bybit_1", "bybit_2"]
-    assert "not_a_demo_account:bybit_2" in di.entry_gate(m, _with_desk_on("bybit_2"))
+    fn["demo_accounts"] = list(fn["demo_accounts"]) + ["bybit_2"]
+    assert "not_a_demo_account:bybit_2 --" in di.entry_gate(m, _with_desk_on("bybit_2"))
 
 
 class _Git:
