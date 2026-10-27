@@ -235,3 +235,70 @@ def test_journal_unreadable_is_not_an_empty_open_set(tmp_path):
     assert out["open_count"] == 1 and out["open_count_complete"] is False
     assert out["journal_open_state"] == "could_not_look" and out["journal_open_reason"]
     assert out["telemetry_less"] == []
+
+
+# ---------------------------------------------------------------- mechanics dedupe (GLD wedge)
+# Operator 2026-10-26: a wedged paper package must not be re-reviewed every bar. The review
+# rows of that period carry a null trigger.level (the schema said number|null), so the
+# dedupe is inferred from the row's evidence and re-surfaces only when the evidence moves.
+def _gld_row():
+    return row(order_package_id="pkg-gld", strategy="gld_pullback_1h", account_id="alpaca_paper",
+               symbol="GLD", direction="long", telemetry_absent=True)
+
+
+def _gld_ctx(venue_sl=416.09, pkg_sl=414.53875):
+    return {"pkg-gld": {
+        "venue": {"state": "read", "pkg_sl": pkg_sl, "pkg_tp": None, "meta_atr": 2.0925,
+                  "snapshots": [{"account_id": "alpaca_paper", "read_state": "measured",
+                                 "venue_sl": venue_sl, "ref_sl": pkg_sl,
+                                 "read_at": NOW.isoformat()}]},
+        "history": []}}
+
+
+def _flag(event="manual", level=None, evidence="alpaca_paper: venue SL 416.09 != package SL 414.53875",
+          sl=414.53875, at=NOW - timedelta(minutes=50), verdict="mismatch", action="flag_mechanics"):
+    return {"order_package_id": "pkg-gld", "reviewed_at": at.isoformat(),
+            "trigger": {"event": event, "level": level},
+            "mechanics": {"verdict": verdict, "evidence": evidence},
+            "recommendation": {"action": action}, "state": {"sl": sl, "tp": 461.32723, "peak_r": None}}
+
+
+def _mech_due(reviews, ctx=None):
+    res = lrd.compute_due([_gld_row()], reviews, CFG, NOW, market=ctx or _gld_ctx())
+    return [(e["event"], e["level"]) for d in res["due"] for e in d["events"] if e["event"] == "mechanics"]
+
+
+def test_gld_wedge_is_due_once_then_quiet_on_an_unchanged_repeat():
+    assert _mech_due([]) == [("mechanics", "venue_sl_diverges")]
+    for ev, lv in (("manual", None), ("mechanics", None), ("mechanics", "venue_sl_diverges")):
+        assert _mech_due([_flag(ev, lv)]) == [], (ev, lv)  # null-level history rows too
+    many = [_flag(at=NOW - timedelta(hours=h)) for h in range(1, 11)]
+    assert _mech_due(many) == []
+
+
+def test_gld_wedge_is_due_again_when_the_venue_stop_changes():
+    assert _mech_due([_flag()], _gld_ctx(venue_sl=417.5)) == [("mechanics", "venue_sl_diverges")]
+    assert _mech_due([_flag()], _gld_ctx(pkg_sl=413.9)) == [("mechanics", "venue_sl_diverges")]
+    # ... and quiet again once that new state has been answered
+    again = [_flag(), _flag("mechanics", "venue_sl_diverges", "alpaca_paper: venue SL 417.5 != package SL 414.53875")]
+    assert _mech_due(again, _gld_ctx(venue_sl=417.5)) == []
+
+
+def test_cleared_mismatch_forgets_the_answer():
+    ok = _flag(verdict="match", action="hold", evidence="venue matches", at=NOW - timedelta(minutes=20))
+    assert _mech_due([_flag(), ok]) == [("mechanics", "venue_sl_diverges")]
+
+
+def test_a_later_review_that_is_not_a_mechanics_answer_does_not_reopen_it():
+    mkt = review("pkg-gld", "giveback", 1.0, at=NOW - timedelta(minutes=10))
+    mkt["mechanics"] = {"verdict": "mismatch", "evidence": "alpaca_paper: venue SL 416.09 != package SL 414.53875"}
+    assert _mech_due([_flag(), mkt]) == []
+
+
+def test_market_events_still_dedupe_on_event_and_level_and_ignore_the_mechanics_rule():
+    at = NOW - timedelta(hours=3)
+    r = row(open_r=1.2, peak_r=1.2)
+    assert lrd.compute_due([r], [review(event="r_milestone", level=1.0, at=at)], CFG, NOW)["due_count"] == 0
+    r = row(open_r=2.2, peak_r=2.2)
+    res = lrd.compute_due([r], [review(event="r_milestone", level=1.0, at=at)], CFG, NOW)
+    assert [e["level"] for d in res["due"] for e in d["events"]] == [2.0]
