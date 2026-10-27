@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # wiring: manual-only - run once by a system-action on the live VM (the only place ANTHROPIC_API_KEY legitimately exists) for the DESK-18B judging run; no schedule consumes it.
-"""DESK-18B -- stateless batch judge: ONE Anthropic Messages API call per masked packet.
+"""RETIRED 2026-10-27 (operator: "No API: plan sessions only") -- the `run-desk-judge` system-action now hard-refuses and
+nothing may call this script. Kept for reference only; judging is done by manager-spawned plan sessions.
+
+DESK-18B -- stateless batch judge: ONE Anthropic Messages API call per masked packet.
 
 Why this exists: the pilot judged 50 packets through five manager-spawned sessions at $0.337/packet MEASURED,
 because every batch carried ~290k tokens of session context. A stateless call carries only JUDGE-PROTOCOL.md
@@ -101,6 +104,29 @@ def judge_one(client: Any, model: str, protocol: str, packet: dict) -> tuple[str
     return text, usage
 
 
+STOP_AFTER_SAME_FATAL = 3          # K identical non-retryable errors in a row end the dispatch at once
+
+
+def describe_error(e: BaseException) -> tuple[str, bool]:
+    """(`<type>: <full message>`, retryable). Prefers the API response body's error type + message; never the key.
+
+    Retryable: 429, 5xx, and errors with no HTTP status (connection / timeout). Any other 4xx is not.
+    """
+    status = getattr(e, "status_code", None)
+    body = getattr(e, "body", None)
+    etype, msg = type(e).__name__, str(e)
+    if isinstance(body, dict):
+        inner = body.get("error") if isinstance(body.get("error"), dict) else body
+        etype = str(inner.get("type") or etype)
+        msg = str(inner.get("message") or msg)
+    text = f"{etype}: {msg}" + (f" [HTTP {status}]" if status else "")
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if key:
+        text = text.replace(key, "[redacted]")
+    retryable = not (isinstance(status, int) and 400 <= status < 500 and status != 429)
+    return text, retryable
+
+
 def load_packets(path: Path) -> list[tuple[str, dict]]:
     out = []
     for line in path.read_text().splitlines():
@@ -118,6 +144,7 @@ def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> dict[str
     (out / "judged").mkdir(parents=True, exist_ok=True)
     ledger = out / "usage.jsonl"
     spent, done, skipped, unparsed, stopped = 0.0, 0, 0, 0, ""
+    fatal_msg, fatal_run = "", 0
     t0 = time.monotonic()
     deadline_s = getattr(a, "deadline_s", None)
     est = [worst_case_cost(len(protocol) + len(json.dumps(p, separators=(",", ":"))) + len(USER_TMPL), prices) for _, p in packets]
@@ -138,20 +165,35 @@ def run(a: argparse.Namespace, client: Any = None, sleep=time.sleep) -> dict[str
         if spent + est[k] > a.max_usd:
             stopped = f"max_usd {a.max_usd} would be exceeded by packet index {idx} (spent {spent:.4f} + worst case {est[k]:.4f})"
             break
-        for attempt in range(3):               # a transient API failure is retried; it never halts the run
+        err, fatal = "no reply", False
+        for attempt in range(3):               # a transient (429/5xx/connection) failure is retried; a 4xx is not
             try:
                 text, usage = judge_one(client, a.model, protocol, pkt)
                 break
-            except Exception as e:             # noqa: BLE001  # allow-silent: logged to the usage ledger as a problem, retried 3x, the packet then stays visibly missing
+            except Exception as e:             # noqa: BLE001  # allow-silent: full message logged to the usage ledger, retried 3x only when retryable, the packet then stays visibly missing
                 text, usage = "", {}
-                err = f"{type(e).__name__}: {str(e)[:120]}"
+                err, retryable = describe_error(e)
+                if not retryable:
+                    fatal = True
+                    break
                 sleep(2 ** (attempt + 1))
+        if text:
+            fatal_run = 0
+        elif fatal:
+            fatal_run = fatal_run + 1 if err == fatal_msg else 1
+            fatal_msg = err
+        else:
+            fatal_run = 0
         cost = call_cost(usage, prices)
         spent += cost
-        rows, why = parse_rows(text, pid) if text else (None, locals().get("err", "no reply"))
+        rows, why = parse_rows(text, pid) if text else (None, err)
         with ledger.open("a") as fh:
             fh.write(json.dumps({"index": idx, "packet_id": pid, "model": a.model, "usage": usage,
                                  "cost_usd": round(cost, 6), "parsed": rows is not None, "problem": why}) + "\n")
+        if fatal_run >= STOP_AFTER_SAME_FATAL:
+            stopped = fatal_msg
+            unparsed += 1
+            break
         if rows is None:
             unparsed += 1                       # no judged file: the packet stays visible as missing, never a silent no_trade
             continue

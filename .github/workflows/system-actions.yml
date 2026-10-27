@@ -1317,6 +1317,8 @@ jobs:
           # schedule/overlap/stopping-rule refusals. max_usd has NO default: no cap, no run (<= 40, the largest
           # option in the operator's spend decision). There is no seed input: the registered seed is hardwired.
           if [ "${ACTION}" = "run-desk-judge" ]; then
+            echo "::error::run-desk-judge is RETIRED (operator decision 2026-10-27, 'No API: plan sessions only'): it spends Anthropic API credits, and nothing in this system may; Claude runs only on the plan. Desk judging goes through a manager-spawned plan session (checklist DESK-18B-JUDGE-RUN)."
+            exit 1
             if ! printf '%s' "${ACTION_JUDGE_MAX_USD:-}" | grep -Eq '^[0-9]+(\.[0-9]+)?$' \
                || ! awk -v v="${ACTION_JUDGE_MAX_USD:-0}" 'BEGIN{exit !(v>0 && v<=40)}'; then
               echo "::error::run-desk-judge requires 'max_usd: <dollars>' (> 0 and <= 40; got '${ACTION_JUDGE_MAX_USD:-}'). There is no default: no cap, no run."
@@ -2421,6 +2423,10 @@ jobs:
           SSH_ARGS=( -i ~/.ssh/id_rsa
                      -o BatchMode=yes
                      -o StrictHostKeyChecking=accept-new
+                     # keepalive: a silent long action (#20541 run-desk-judge) was
+                     # dropped as idle ("Broken pipe", exit 255) after ~5 min.
+                     -o ServerAliveInterval=30
+                     -o ServerAliveCountMax=10
                      -o ConnectTimeout=15 )
           if [ "${ACTION}" = "gateway-logs" ] || [ "${ACTION}" = "gateway-forensics" ]; then
             SSH_TARGET_HOST="${GATEWAY_HOST}"

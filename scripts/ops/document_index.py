@@ -328,6 +328,11 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:DESK-5-lane-authored-it-2026-10-26-schema-and-example-test-pinned",
         "repo-less desk wake contract; each routine-fired desk wake reads it from main",
     ),
+    ".claude/skills/trading-desk/SHORT-HOLD-BRIEF.md": (
+        "live",
+        "read:DESK-SHORT-HOLD-LANE-lane-authored-it-2026-10-27-draft-example-and-actions-test-pinned",
+        "per-trade short-hold lane contract; each lane reads it from main",
+    ),
     # Written 2026-10-14 by lane AI-TRADER-PROGRAMME, the same session that took
     # every measurement in them (ml_plan_status --diversity, the research queue
     # and results stores, the committed per-trade ledgers via
