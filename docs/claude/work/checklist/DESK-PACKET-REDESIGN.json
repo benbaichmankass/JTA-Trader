@@ -7,7 +7,7 @@
   "lane": "DESK-PACKET-REDESIGN",
   "model": null,
   "ceiling_usd": 42,
-  "spend_usd": 18.34,
+  "spend_usd": 29.89,
   "tier": 1,
   "prs": [
     20683
@@ -15,8 +15,8 @@
   "blocked_on": [
     "manager: merge PR #20683 (landing hold, stacked on #20672)"
   ],
-  "note": "RESULT (DEV, PR #20683): no arm USEFUL -> live packet: none yet. Top-pick S3 n=50: A -0.07 [-0.44,+0.33], B -0.34 [-0.65,-0.02], C +0.15 [-0.21,+0.53]; A vs B on 100: +0.16 / +0.02. Anchor confirmed: base-rate R2 A 0.87 -> B 0.07, C 0.17 (both break linearity); direction flips long (top-cell long share A 0.04, B 0.48, C 0.72; contrasts significant). Proposal rate n=50: A 0.10, B 0.04, C 0.18. Judging $18.34 of $20 (plan subagents, 35/35 isolation-compliant). Manager decision: C on the other 50 packets (~$11) for the program's 4-look dev decision. Doc docs/research/desk-packet-redesign-2026-10-27.md Manager 17:58Z: judge C on packets 51-100 (ceiling $42, judging <= $30); amendment 2 registers MAX_C_CHARS 24,000 before judging.",
-  "updated_at": "2026-10-27T18:00:12Z",
+  "note": "FINAL (n=100, PR #20683): no arm USEFUL; C screen_fail under the registered 4-look rule (SEL +0.10 week-weighted, -0.03 packet-weighted; top-pick S3 +0.015 [-0.24,+0.29]). Live packet: none yet; no holdout. Anchor broken in B/C (R2 0.79 -> 0.015 / 0.22), direction flips long (C 79% top cells). Judging $29.89 of $30 (plan subagents; 60/60 batches isolation-compliant). Next C variant ranked in doc section 5: horizon match first (token-free ceiling at H1b/H4 before any spend).",
+  "updated_at": "2026-10-27T18:06:00Z",
   "updated_by": "session_01AFoLuLFCvVBcTaAxDB3nyy",
   "roadmap": [
     "L-DESK"

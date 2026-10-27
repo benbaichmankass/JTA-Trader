@@ -21,6 +21,28 @@
     "packets": 100,
     "differs": true
    }
+  },
+  "C-A": {
+   "sel": {
+    "diff": -0.12861583030530452,
+    "ci": [
+     -0.5951669102816534,
+     0.3592646838154857
+    ],
+    "alpha": 0.025,
+    "packets": 100,
+    "differs": false
+   },
+   "top_cell_long_share": {
+    "diff": 0.68,
+    "ci": [
+     0.5445530803080308,
+     0.7961165048543689
+    ],
+    "alpha": 0.025,
+    "packets": 100,
+    "differs": true
+   }
   }
  },
  "recommendation": "none_yet",
@@ -217,6 +239,104 @@
     "mean_net_r_ci95": [
      -1.0934453539823024,
      1.8998933962263955
+    ]
+   }
+  },
+  "C": {
+   "arm": "C",
+   "intake": {
+    "rows": 202,
+    "rank_rows": 100,
+    "refused": 0,
+    "reasons": {}
+   },
+   "packets_ranked": 100,
+   "cells_scored": 1200,
+   "s3_top_pick": {
+    "n": 100,
+    "weeks": 44,
+    "s3": 0.0151155224982808,
+    "ci95": [
+     -0.24275122141878916,
+     0.29085355263095886
+    ],
+    "mean_net_r": -0.14287543236363465,
+    "mean_net_r_ci95": [
+     -0.3999661835158791,
+     0.1339760767240068
+    ],
+    "useful": false
+   },
+   "sel": {
+    "mean": 0.10141934176217861,
+    "ci95": [
+     -0.15233217841079547,
+     0.36516158255140246
+    ],
+    "weeks": 44,
+    "packets": 100,
+    "decision": "screen_fail",
+    "reasons": [
+     "mean SEL +0.1014, lower bound -0.0133: not both (>= 0.25, > 0)"
+    ],
+    "looks": [
+     25,
+     50,
+     75,
+     100
+    ]
+   },
+   "behaviour": {
+    "base_rate_r2": {
+     "pooled_r2": 0.2221703036368804,
+     "group_r2": [
+      0.15274011319891512,
+      0.20148000049041903,
+      0.33614433127024335,
+      0.5299507629570407,
+      0.25582241941399964,
+      0.4412084571617024,
+      0.17955268272339509,
+      0.403239668997153,
+      0.4265163476797005,
+      0.13636635409168574
+     ],
+     "median_group_r2": 0.2959833753421215,
+     "cells": 1200,
+     "n_constant_or_short_groups": 0
+    },
+    "breaks_linearity": true,
+    "top_cell_long_share": 0.79,
+    "share_cells_scored_positive": 0.5341666666666667
+   },
+   "proposals": {
+    "intake": {
+     "rows": 102,
+     "no_trade": 87,
+     "propose_entry": 15,
+     "refused": 1,
+     "refused_reasons": {
+      "TP doctrine: tp sits at or beyond the venue cap (9.9% from entry) -- the cap wea": 1
+     },
+     "over_cap": 0,
+     "duplicate_symbol": 0,
+     "packets_with_rows": 100
+    },
+    "packets_with_valid_proposal": 13,
+    "proposal_rate": 0.13,
+    "valid": 14,
+    "long": 13,
+    "short": 1,
+    "filled": 14,
+    "s3": 0.2678475882675605,
+    "s3_ci95": [
+     -0.38733357875619484,
+     0.8420422092939204
+    ],
+    "mean_net_r": 0.1354420624715815,
+    "mean_net_r_ci95": [
+     -0.4833912213148829,
+     0.6865420783107447
     ]
    }
   }

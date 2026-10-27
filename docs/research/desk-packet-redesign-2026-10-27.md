@@ -144,23 +144,74 @@ Evidence: `comms/research/desk_packet_redesign/` (`B/ranks.jsonl`, `C/ranks.json
 | B | 100 | 7,500 | about 120k per 10 packets | **$5.47** |
 | C (amended) | 50 | 20,274 (max 22,725) | about 66k per 2 packets | **$10.93** |
 | C batch rejected under Amendment 1 | 5 | 50,287 | 286k per 5 packets | $1.94 |
-| **judging total** | | | | **$18.34** (budget $20) |
+| **judging total at the n = 50 stage** (final: § 4.4) | | | | **$18.34** (budget then $20) |
 
 A C packet is therefore roughly **20–25k tokens**. This is INFERRED from those per-batch counts, which include the subagent's own system prompt; the packet's share cannot be separated exactly.
 
-## 5. Recommendation (by the § 3.6 rule)
+### 4.4 The 100-packet dev verdict (Amendment 2; MEASURED, all three arms on all 100 packets, 44 weeks)
 
-- **Live desk packet: "none yet".** No arm clears S3 ≥ +0.25 with its CI lower bound > 0. The live desk keeps today's packet; nothing here changes live behaviour.
-- **What the evidence does support (§ 3.6 second clause), for the next judge variant rather than the live desk:**
-  - **Build on C, never on B.** B removes information and the judge does worse than random (top-pick S3 −0.34 [−0.65, −0.02], n = 50).
-  - **Do not go back to A as the base.** A's judge is the base-rate rule the edge program already prices at about 0, on 4,535 packets (S3 −0.05).
-  - C is the only design that both breaks the anchor and has a positive point estimate. It is not evidence of edge.
-- **The one cheap next measurement (a manager decision; not run here because the budget is spent):** judge C on the remaining 50 packets of the sample, about **$11** at the measured rate. That completes all four looks of the program's registered dev rule, so C gets a real `promote` / `screen_fail` / `kill` decision on 100 packets (paired with A and B on 100). Only a `promote` sends C to the program's locked holdout (DESK-EDGE-PROGRAM § 5.4). This lane does not open the holdout.
-- **To build C live**, the live scan builder would need a point-in-time 1m-bar feed with taker volume, plus funding prints, in the packet. That is a DESK-14 / DESK-27-LIVE-FLOW-sized job, worth doing only after a C `promote`.
+Evidence: `comms/research/desk_packet_redesign/scores-100/` (`arm-A.json`, `arm-B.json`, `arm-C.json`, `compare.json`). C packets 51–100 were judged in 25 batches of 2. The isolation audit found **all 25 compliant**, so arm C totals 50 of 50 batches compliant and B 10 of 10. All 100 C packets were under the 24,000-char cap; none was refused.
+
+| n = 100 | A | B | C |
+|---|--:|--:|--:|
+| **top-pick S3** (95% weekly CI) | +0.161 [−0.18, +0.48] | +0.016 [−0.24, +0.28] | **+0.015 [−0.24, +0.29]** |
+| USEFUL (S3 ≥ +0.25, CI lower > 0) | no | no | **no** |
+| SEL, the program's week-weighted mean (95% CI) | +0.044 [−0.20, +0.29] | +0.117 [−0.13, +0.35] | +0.101 [−0.15, +0.37] |
+| **registered dev decision** (4 looks, `SEL_USEFUL` +0.25) | `screen_fail` | `screen_fail` | **`screen_fail`** (mean +0.101 < +0.25; one-sided 80% lower bound −0.013) |
+| SEL, packet-weighted mean (the contrast's statistic) | +0.101 | +0.109 | −0.027 |
+| base-rate R², pooled / median per 10 packets | 0.79 / 0.99 | 0.015 / 0.08 | 0.22 / 0.30 |
+| breaks linearity | — | yes | **yes** |
+| top-cell long share | 0.11 | 0.57 | 0.79 |
+| proposal rate (long / short) | 0.05 (0 / 7) | 0.03 (2 / 1) | **0.13 (13 / 1)** |
+| proposal S3 (descriptive) | +0.88 [−0.53, +1.78], 7 fills | +0.11 [−0.95, +2.18], 3 fills | +0.27 [−0.39, +0.84], 14 fills |
+
+Contrasts (paired by packet, two-sided alpha 0.025):
+
+| | SEL difference | top-cell long share difference |
+|---|--:|--:|
+| B − A | +0.007 [−0.35, +0.38], no | +0.46 [+0.29, +0.61], **yes** |
+| C − A | −0.129 [−0.60, +0.36], no | +0.68 [+0.54, +0.80], **yes** |
+
+**Reading.**
+1. **C is `screen_fail` under the program's registered rule.** No packet design reaches the holdout, and nothing here asks to open it.
+2. **The first 50 packets' C estimate (+0.15) did not hold.** C's packet-weighted SEL is +0.165 on packets 1–50 and **−0.219 on packets 51–100** (descriptive split, not a registered test). Its top-pick S3 over all 100 is +0.015.
+3. **The two SEL weightings disagree in sign for C** (week-weighted +0.101, packet-weighted −0.027). C's mean SEL is not robust to how packets are weighted within a week. 44 weeks do not resolve an effect this size, as the edge program's § 4.1 predicted.
+4. **The behavioural findings held at 100.**
+   - The base-rate anchor is gone in B and C (R² 0.015 and 0.22, against 0.79 for A).
+   - The direction flips long (C: 79% of top cells and 13 of 14 proposals).
+   - C proposes more than either other arm (13%, against 5% for A and 3% for B).
+   - None of this turned into S3.
+
+**Spend, all judging (MEASURED, Sonnet list price, plan subagents, no API credits):**
+- B, 100 packets: $5.47.
+- C, 100 packets in 50 batches: $22.48.
+- The C batch rejected under Amendment 1: $1.94.
+- **Total: $29.89, against the $30 judging cap.** The lane's other work was CPU-only.
+
+## 5. Recommendation (by the § 3.6 rule) — final, on 100 packets
+
+- **Live desk packet: "none yet".** No arm is USEFUL, and C's registered dev decision is `screen_fail`. The live desk keeps today's packet. No holdout is requested.
+- **Never build on B** (manager, agreed): it removes information and earns nothing (S3 +0.02).
+- **C is still the better base than A for any future judge variant, but not for the information it carries.**
+  - It is the design whose answers are not the summary read back (R² 0.22, against 0.79).
+  - Its information content is the same raw data the edge program's token-free ceiling already priced at about zero at these horizons: P+ with returns, range, volatility, taker flow, BTC cross-asset and funding gave policy S3 −0.03 to +0.08, every interval spanning 0 (DESK-EDGE-PROGRAM § 4.1).
+  - The judge reading the bars does no better than a fitted model reading the same bars.
+
+**What I would change in C next, ranked by expected information per dollar** (each run is a NEW registered dev variant; nothing below is run here):
+
+| rank | change | why it buys information | cost |
+|---|---|---|---|
+| 1 | **Horizon: match the bracket to the data.** Re-ask C's judge for a short bracket (the era run's `H1b` 1-bar or `H4` 4-bar geometry, both already in `desk_edge_ceiling`) instead of GJ's 48 bars. **First** run the token-free ceiling on C's information at those horizons (the era run's per-horizon table, DESK-EDGE-PROGRAM § 4.2, or `fe57-02`'s 1m ceiling). Judge only a horizon the ceiling does not exclude. | C's 1m / 5m tables say almost nothing about a 48-hour outcome; the mismatch is the most likely reason fine-grained data added nothing. The ceiling step is free and can kill the idea before any spend. | ceiling $0 (CPU); then about $22 per 100 packets |
+| 2 | **Data window: buy weeks, not packets.** Spread the next 100 packets over the era folds (2021-01 .. 2023-10, about 140 weeks) instead of 100 packets in 44 DEV weeks. | The weeks set the CI (§ 4.4 item 3; edge program § 4.1). The same spend gives an interval about 40% narrower (INFERRED from √(140 / 44)). Lowest risk per dollar. | about $22 per 100 packets |
+| 3 | **Timeframe mix: put the tokens where the horizon is.** For a short bracket, drop the 1d and 4h tables and lengthen 1m (for example 120 rows) and 5m. | Within the same 24,000-char cap, more rows at the scale the bracket is decided on. Worth doing together with rank 1, not alone. | $0 extra (same cap) |
+| 4 | **Symbol set: narrow to BTC + ETH, named.** | Fewer cells, more rows per asset, and cross-asset context the judge can name (masking keeps dates hidden). Smallest expected gain: the ceiling's symbol-identity ablation was −0.03. | about $15 per 100 packets |
+
+**Not recommended:** another C run on the same 100 DEV packets at the GJ bracket. Its question is answered (`screen_fail`).
 
 ## 6. What was not verified, and stated confounds
 
-- **n.** C was judged on 50 packets, not 100 (Amendment 1's budget rule). Every C interval is about ±0.35–0.6 R wide; a +0.25 edge cannot be confirmed or excluded at n = 50.
+- **n.** § 4.1–4.3 report C at n = 50 (Amendment 1's budget rule); § 4.4 reports it at n = 100 (Amendment 2). At 100 packets in 44 weeks every interval is about ±0.25–0.5 R wide, and the week-weighted and packet-weighted SEL disagree in sign for C.
+- **Protocol wording:** C's intro says "OHLC bars" while each row carries h, l, c, rel_vol, taker_buy_pct. The column header itself is correct (and the intro's next sentence says the open is the previous close). One judge flagged the mismatch and read the rows correctly; no batch shows a misread, but this was not checked for every batch.
 - **Batch size differs:** A and B 10 per batch, C 2. Smaller batches may give each packet more attention. B vs A (same batch size) is the clean anchor test; C vs A is not clean on attention.
 - **C changes representation and information at once:** it adds funding and taker flow, which A and B lack.
 - **One model:** Sonnet subagents only, with file tools. They are audited, but they are not the tool-less live judge.
