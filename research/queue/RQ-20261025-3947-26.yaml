@@ -1,6 +1,6 @@
 id: RQ-20261025-3947-26
 title: 'Regime head: does LightGBM large (400 trees, 63 leaves) beat the shipped-shape LightGBM on logloss on the 15m published shards (all three symbols)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -152,11 +152,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-RQ20261025394726-LIGHTGBMLARGE(400TREES,63LEAVES)
   evidence:
-  - research/results/RQ-20261025-3947-26/40376150262.jsonl
+  - research/results/RQ-20261025-3947-26/40407379450.jsonl
   first_fail: 1 row(s), all measured, all fail
-  graded_at: '2026-10-26'
+  graded_at: '2026-10-27'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
