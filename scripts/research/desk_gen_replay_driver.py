@@ -316,8 +316,11 @@ def simulate(s: Series, i: int, side: float, etype: str, level: float, stop: flo
 
 # ----------------------------------------------------------------------------- packets
 def build_masked_packet(mkt: Dict[str, Series], classes: Dict[str, List[str]], cutoff_epoch: int, k: int,
-                        seed: int = SEED) -> Tuple[dict, dict]:
-    """(masked packet, key). Aliases are re-drawn per packet (seeded), so ASSET_01 is not one symbol forever."""
+                        seed: int = SEED, mode: str = "A", raw: Any = None) -> Tuple[dict, dict]:
+    """(masked packet, key). Aliases are re-drawn per packet (seeded), so ASSET_01 is not one symbol forever.
+    `mode` (DESK-PACKET-REDESIGN): "A" = today's packet (default, unchanged); "B" = base-rate rows removed; "C" = raw
+    bars (needs `raw`, a desk_packet_modes.RawStore). B and C keep A's packet_id, aliases and rebasing, so the same key
+    scores them; they are not the live desk schema and skip its validator."""
     cutoff = datetime.fromtimestamp(cutoff_epoch, tz=timezone.utc)
     order = np.random.default_rng(seed + 1000 + k).permutation(len(mkt))
     syms = [sorted(mkt)[j] for j in order]
@@ -336,6 +339,9 @@ def build_masked_packet(mkt: Dict[str, Series], classes: Dict[str, List[str]], c
     if bad:
         raise AssertionError(f"masked packet fails desk-records-guard: {bad[:3]}")
     key.update(index=k, cutoff_epoch=cutoff_epoch, fold=fold_of(cutoff_epoch))
+    if mode != "A":
+        from scripts.research import desk_packet_modes as pm   # noqa: E402 - optional builder modes
+        m = pm.apply(mode, m, key, raw)
     return m, key
 
 
