@@ -448,6 +448,18 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    run-desk-judge)
+        # 2026-10-27 (DESK-18B-JUDGE-RUN): SPENDS ANTHROPIC API MONEY up to the dispatch's max_usd. Dry-run unless
+        # apply:true. Exit 0 includes a cap/deadline stop (the designed stop; the comment says which).
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview, or a judged batch: per-call ledger, dollars spent and intake in the run)"; priority="normal" ;;
+            2) result="refused (no cap, bad range, overlap/gap with a judged batch, or the stopping rule is met) — nothing built, nothing spent"; priority="high" ;;
+            3) result="ENVIRONMENT (no API key / packets step failed / judge failed) — see the run; any spend is in the ledger"; priority="high" ;;
+            4) result="judged, but intake could not run — the ledger shows the spend; re-dispatch the same inputs"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     amend-position-sl)
         # 2026-10-24 (AMEND-SL-ACTION): tighten one live Bybit stop, venue +
         # journal together; dry-run unless apply:true.

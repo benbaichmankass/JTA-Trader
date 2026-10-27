@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "DESK-18B-JUDGE-RUN (checklist row, tier 2). Adds the run-desk-judge system-action: it SPENDS ANTHROPIC API MONEY (up to the dispatch's max_usd, hard ceiling $40) judging the registered DESK-18 packet schedule on the live VM. Merging is safe on its own: nothing runs until an issue with 'action: run-desk-judge', 'max_usd:' and 'apply: true' is opened, and the default is a dry run that makes no API call. Held for the operator's API-spend decision (~07:45Z 2026-10-27: $40 cap / a 300-packet ~$7 first batch / not now). Dispatched by the manager (session_01C1ooo4kqBbng7vytdG1UVs); the manager merges.",
+  "why": "New Tier-2 system-action on the VM: it reads the VM's ANTHROPIC_API_KEY from .env and makes paid API calls. No trader, config, order-path or service change."
+}

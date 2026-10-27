@@ -42,7 +42,7 @@ Each package block in the comment is:
 ## 3. The output: ONE row, exactly this shape
 
 - `review_id` = `packet.review_id`; `packet_sha` = the block's `packet_sha`; `outcome_table_source` = `table_path` (or `null` with no table).
-- `state` and `features_at_review` are copied from the packet; `trigger` comes from the wake marker entry (`event`, `level`, `l0_snapshot_at` = its `due_at`).
+- `state` and `features_at_review` are copied from the packet; `trigger` comes from the wake marker entry (`event`, `level`, `l0_snapshot_at` = its `due_at`). **Copy `event` AND `level` exactly as the entry gives them** (e.g. `mechanics` / `venue_sl_diverges`, `swing` / a bar timestamp): the due gate dedupes on that pair, so a null level on a due event re-opens it every bar. `level` is a number or a string; null only for `manual` / `first_live_run` / `dry_rehearsal`. The validator refuses a null level on a due event from 2026-10-27.
 - `model`: the model TIER, never a model identifier (e.g. `sonnet-tier (repo-less reviewer)`); `session`: your session id.
 - The row must pass `scripts/ci/check_live_review_records.py`, i.e. this schema (`comms/schema/live_review.schema.json`, embedded verbatim and kept equal by `tests/test_live_review_reviewer_brief.py`) PLUS these cross-field rules:
   - `applied` <=> `route == auto_applied` (you write `recommended`, so `applied: false`);
@@ -193,7 +193,7 @@ Each package block in the comment is:
       "trade_id": {"type": ["integer", "null"]},
       "leg": {"type": "string", "minLength": 1},
       "accounts": {"type": "array", "items": {"type": "string"}},
-      "trigger": {"type": "object", "required": ["event", "level", "l0_snapshot_at"], "properties": {"event": {"type": "string"}, "level": {"type": ["number", "null"]}, "l0_snapshot_at": {"type": ["string", "null"]}}},
+      "trigger": {"type": "object", "required": ["event", "level", "l0_snapshot_at"], "properties": {"event": {"type": "string"}, "level": {"type": ["number", "string", "null"]}, "l0_snapshot_at": {"type": ["string", "null"]}}},
       "info_cutoff_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
       "state": {"type": "object", "required": ["open_r", "peak_r", "peak_provenance", "giveback_r", "bars_held", "sl", "tp", "atr_now_over_entry", "regime_cell_now", "regime_cell_entry"], "properties": {"open_r": {"type": ["number", "null"]}, "peak_r": {"type": ["number", "null"]}, "peak_provenance": {"type": "string", "enum_ref": "peak_provenance"}, "giveback_r": {"type": ["number", "null"]}, "bars_held": {"type": ["integer", "null"]}, "sl": {"type": ["number", "null"]}, "tp": {"type": ["number", "null"]}, "atr_now_over_entry": {"type": ["number", "null"]}, "regime_cell_now": {"type": ["string", "null"]}, "regime_cell_entry": {"type": ["string", "null"]}}},
       "features_at_review": {"type": "object", "values": {"type": ["number", "null"]}},

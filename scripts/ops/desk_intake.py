@@ -226,7 +226,8 @@ def _apply(plan: Dict[str, Any], evidence_rel: str) -> Dict[str, Any]:
 
 
 def _flag(line: str) -> None:
-    """ONE high-priority ping for a row that kept failing (Prime Directive rule 7: flag, keep trying)."""
+    """ONE high-priority ping for a row that kept failing (Prime Directive rule 7: flag, keep trying).
+    ``enqueue_trade_update`` routes it to the TRADES channel through ``src.runtime.telegram_channels``."""
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
         enqueue_trade_update(symbol="desk", account="desk-intake", strategy=DESK_LEG, priority="high",

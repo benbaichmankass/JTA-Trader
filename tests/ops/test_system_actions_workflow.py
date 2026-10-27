@@ -387,6 +387,9 @@ EXPECTED_ACTIONS = {
     # live_review_apply.py). DRY-RUN by default; apply gated; idempotent per
     # review_id; re-checks MD-LIVE-TIGHTEN-SL's package-level clauses on the row.
     "live-review-apply": "live_review_apply_action.sh",
+    # 2026-10-27 — DESK-18B-JUDGE-RUN: the judging run. SPENDS ANTHROPIC API MONEY
+    # (Tier 2). Dry-run unless apply:true; no default for max_usd.
+    "run-desk-judge": "run_desk_judge_action.sh",
     # Audit F-39 / MI-241. Re-attaches the three order_packages rows that were
     # flipped to `closed` while their legs were still OPEN, so order_monitor's
     # `status="open"` selector can never pick them up and those legs are managed
@@ -491,6 +494,7 @@ TIER_2_ACTIONS = {
     "amend-position-sl",
     "live-review-dry-run",
     "live-review-apply",
+    "run-desk-judge",
 }
 
 

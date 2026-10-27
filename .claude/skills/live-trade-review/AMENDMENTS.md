@@ -15,3 +15,5 @@
 -->
 - 2026-10-26 · new_skill_sha: `091da047` · prior: `3db7a2fc` · basis: operator grant, not a graded lesson (MD-TRADE-DESK, popup 2026-10-26 ~18:56-19:00Z), n=0 graded calls of the new classes · change: SKILL.md § 3b, the trade actions close / partial_close / move_tp / widen_sl / change_size / add_entry with reason + confidence + target + § 0.3 paper in scope ("All accounts now") · PR #20412
 - 2026-10-26 · new_skill_sha: `92470935` · prior: `4e928c3d` · basis: operator grant, not a graded lesson (MD-TRADE-DESK), n=0 graded calls of the new classes · change: REVIEWER-BRIEF.md steps 5-6 + re-embedded schema for the trade actions · PR #20412
+- 2026-10-26 · new_skill_sha: `7e85d854` · prior: `a404f827` · basis: mechanical, n=0 · change: SKILL.md § 4 `trigger.event`+`trigger.level` must be the due trigger exactly as given (schema level now number|string|null; GLD wedge was re-reviewed 10x because rows recorded a null level) · PR #20468
+- 2026-10-26 · new_skill_sha: `6a3b3120` · prior: `92470935` · basis: mechanical, n=0 · change: REVIEWER-BRIEF.md step 3 copy event AND level; re-embedded schema (level may be a string) · PR #20468
