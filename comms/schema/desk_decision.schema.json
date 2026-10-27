@@ -88,7 +88,8 @@
           "expected_r_net": {"type": "number"},
           "thesis": {"_comment": "bookkeeping, never a feature", "type": "string", "minLength": 1},
           "novelty": {"type": "string", "enum_ref": "novelty"},
-          "onboarding": {"type": "string", "enum_ref": "onboarding"}
+          "onboarding": {"type": "string", "enum_ref": "onboarding"},
+          "max_hold_min": {"_comment": "OPTIONAL (absent on rows before 2026-10-27). Minutes after the fill at which the claude_desk leg closes the trade at market (src/units/strategies/claude_desk.py monitor). REQUIRED and <= 60 on a label_source live row: a live desk trade is the short-hold kind (operator 2026-10-27: get in and get out quickly), managed by its per-trade session (SHORT-HOLD-BRIEF.md).", "type": ["integer", "null"], "minimum": 1, "maximum": 1440}
         }
       },
       "alternatives": {

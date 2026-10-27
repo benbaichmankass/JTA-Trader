@@ -1508,6 +1508,28 @@
    "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-10-26",
    "verifies": "shadow MECHANICS: an accepted desk proposal becomes ONE package (side, entry, the proposal's real SL and TP, decision_id in meta), and every rostered account (bybit_1) sizes it and records it DRY. Cannot start until MD-TRADE-DESK entry_generation.blocked_until clears (no proposal is accepted before)."
+  },
+  {
+   "account": "bybit_1",
+   "checklist": [
+    "signal_fired",
+    "order_size_side",
+    "bracket_real_at_venue",
+    "management_no_fault",
+    "exit_journaled",
+    "fill_and_fees"
+   ],
+   "design": "mechanical",
+   "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
+   "id": "SOAK-stage1-bybit_1-claude_desk",
+   "kind": "stage1",
+   "leg": "claude_desk",
+   "metric": "clean closed trades on bybit_1/claude_desk (each = one entry + one journaled exit)",
+   "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "started": "2026-10-27",
+   "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   }
  ]
 }
