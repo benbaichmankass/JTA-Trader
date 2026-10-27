@@ -1,0 +1,83 @@
+id: RQ-20261027-d789-01
+title: 'PROP exit rung: trend_donchian_sol_prop at TP 3R vs the declared TP 6R on a window E65 did not see (2023-09-24 .. 2025-09-23), net of the breakout_1 cost stack'
+status: queued
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+question: 'E65 (docs/research/prop-exit-evidence-2026-09-24.json, window 2025-09-24 .. 2026-09-23) read SOL at TP 3R at +11.14 R over 59 trades, 3 of 4 folds, but as an EXPLORATORY arm chosen after seeing results. On the two years BEFORE that window, at the same breakout_1 cost stack (fee 7.5 bps, slippage 5.0 bps, funding 1.0 bps per window), does trend_donchian_sol_prop with tp_r 3.0 beat the declared tp_r 6.0 by at least 5 R net, with no worse max drawdown, in at least 3 of 4 calendar folds?'
+why_this_matters: 'Node P1-Q7-sol-tp3-prop (PROP-EXIT-UNITS 1), value $300/mo at confidence 0.3. A PASS read on one window is a discovery, not a confirmation (research-ops SKILL step D): this is the disjoint-window test of the E65 discovery. Multiple-testing denominator: E65 ran the SOL leg through the TP geometries it reports, so the selection pool for "TP 3R" is that geometry set; this unit is a single pre-registered arm vs the incumbent, trial count 1 on the new window.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ESTIMATE, not measured. A long-only 1h Donchian(20) SOL leg on a 730 d window carries on the order of 100-130 trades (E65 reports 59 at TP 3R over 365 d). The grade's own floor is n_floor 39 on the baseline arm; the first run replaces this figure with the measured n.
+  feasibility:
+    source: none
+    accrual_basis: Re-measure of committed public price history at a declared cost stack; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261027D78901-SOLPROP-TP3
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: 'Arm A = trend_donchian_sol_prop as declared in config/strategies.yaml (tp_r 6.0); arm T3 = the same leg with tp_r=3.0; both at --fee-bps-roundtrip=7.5 --slippage-bps-roundtrip=5.0 --funding-bps-per-window=1.0, over 2023-09-24 .. 2025-09-23 23:00 (ends the day before E65 starts). exit_lever_ablation.py --grade sweep: dR = net_r(T3) - net_r(A), maxDD of each, fold_wins = of 4 equal calendar folds those where T3 out-earns A.'
+  rule: 'PASS IF dR >= 5.0 AND maxDD(T3) <= maxDD(A) AND fold_wins >= 3 AND n(A) >= 39: TP 3R replicates on a disjoint window; the follow-up is ONE prop_ev_grid unit (tradeify_1 / velotrade_1 / breakout_2, operator B6 bar) on these trades, and a Tier-3 note for the manager on P5-PROP-PROGRAMME, never a config edit. FAIL IF n(A) >= 39 and the PASS condition does not hold: configuration closed (SOL prop, tp_r 3.0 vs 6.0, this window and stack); the TP-geometry family stays open and the next test is P1-Q2-solprop-derive. INDETERMINATE IF n(A) < 39.'
+  min_n: n(A) >= 39
+  what_it_does_not_do: 'No positive control: no committed record exists for this window, so reproduction of a prior run is not asserted; the harness argv is the same builder the committed records use. Changes no roster, params or risk. Is not a prop EV-per-life result (prop_ev_grid is the follow-up). A backtest TP comparison is not edge and not a P&L claim.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: two harness runs over a ~2 y public 1h candle fetch, comparable to RQ-20261015-1bf3-03 (25 min estimate).'
+value:
+  bucket: information
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: planning weight copied from node P1-Q7-sol-tp3-prop; no balances stated
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 90
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0
+  - --arm
+  - T3=tp_r=3.0;--fee-bps-roundtrip=7.5;--slippage-bps-roundtrip=5.0;--funding-bps-per-window=1.0
+  - --days
+  - '1100'
+  - --start
+  - '2023-09-24'
+  - --end
+  - 2025-09-23 23:00
+  - --grade
+  - sweep
+  - --baseline
+  - A
+  - --delta-r
+  - '5.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261027-d789-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/prop-exit-evidence-2026-09-24.json
+- scripts/research/exit_lever_ablation.py
+- docs/claude/work/checklist/P5-PROP-PROGRAMME.json
