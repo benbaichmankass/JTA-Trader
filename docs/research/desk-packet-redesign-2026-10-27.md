@@ -208,6 +208,12 @@ Contrasts (paired by packet, two-sided alpha 0.025):
 
 **Not recommended:** another C run on the same 100 DEV packets at the GJ bracket. Its question is answered (`screen_fail`).
 
+**Manager decision (2026-10-27 ~18:07Z): none of the four now; lane closed, no further spend.**
+- Rank 1's token-free short-horizon ceiling already exists: DESK-EDGE-PROGRAM `RQ-20261027-fe57-02`, PR #20672 § 4.5 (verified on that branch). It finds S3 +0.37 to +0.61 at 5–15 minutes but **S1 < 0 at every hold** under the MEASURED taker cost (row `COST-STACK-BYBIT-TAKER-FEE`).
+- A short-horizon judge therefore cannot be profitable until a maker-execution path exists, and judge spend before that is not justified.
+- **Standing recommendation for any future judge run: rank 2, buy weeks, not packets.** Spread the dev sample over many weeks (for example the era folds), because the weeks, not the packets, set the interval (§ 4.4 item 3).
+- **Closing observation for this row:** a future judge run on short-horizon raw packets (mode C at a matched bracket), after a maker-execution path exists.
+
 ## 6. What was not verified, and stated confounds
 
 - **n.** § 4.1–4.3 report C at n = 50 (Amendment 1's budget rule); § 4.4 reports it at n = 100 (Amendment 2). At 100 packets in 44 weeks every interval is about ±0.25–0.5 R wide, and the week-weighted and packet-weighted SEL disagree in sign for C.
@@ -216,4 +222,4 @@ Contrasts (paired by packet, two-sided alpha 0.025):
 - **C changes representation and information at once:** it adds funding and taker flow, which A and B lack.
 - **One model:** Sonnet subagents only, with file tools. They are audited, but they are not the tool-less live judge.
 - **The judges' own claims of analysis** are model output. The only mechanical check is score spread per packet, and it is weak (§ 4.2 item 4).
-- **Found and fixed in this PR:** the replay driver's docstring said its candles were spot; they are USD-M perp.
+- **Found and fixed in this PR:** the replay driver's docstring said its candles were spot; they are USD-M perp. The same claim appears in DESK-EDGE-PROGRAM's doc (§ 4.1, "candles Binance Vision spot 1h fetched ... through the driver's `fetch_market`"). That file is on PR #20672 and is not edited here; it is flagged to the manager.
