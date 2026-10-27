@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "OPERATOR 2026-10-27 ~12:10Z verbatim: \"Ok, let's see if we can optimize the edge here - perhaps more selectivity, or better packets, or something else - I still want to get this live as soon as possible.\" Context: judged-1 complete (1,498 packets, 732 valid proposals, $103.14); scratch registered scoring -03 INDETERMINATE mean net R +0.159 CI [-0.053,+0.355] n732; -04 INDETERMINATE +0.039 CI [-0.177,+0.250] n464 (PR #20594). Discipline: judged-1 is now an EXPLORATION set; any filter chosen on it must be re-tested on data it did not see (fresh-seed judged-2 and/or the live demo forward set) with a rule registered BEFORE that run. Model Sonnet, ceiling $6 (CPU analysis, no judging spend). || WRITEBACK 2026-10-27 (lane DESK-18C-EDGE-OPT, PR #20626, report docs/research/desk-18c-edge-optimization-2026-10-27.md). MEASURED on judged-1 (732 filled): S3 +0.006 [-0.19,+0.19]; random same-geometry shorts +0.153 R vs desk +0.159, so S1 is short-side drift (723/732 shorts); dropping the 3 best of 33 weeks leaves +0.003 R; 76 slices examined, none survives multiplicity; suspect batch 1332-1365 (22 fills) S1 -0.69 and excluding it changes no verdict. REGISTERED (blocked): RQ-20261027-e72b-01 (judged-2, configuration C1 = US-session AND stop>=1.0 ATR, time-disjoint window 2024-11-01..2025-10-25, 1,341 packets, ~$92, MDE 0.29 R, P(PASS) judged below 20%) and RQ-20261027-e72b-02 (forward-shadow replay). FOLLOW-UPS FILED: DESK-18D-JUDGE-2, DESK-18E-LIVE-PROPOSAL-RATE (live desk 0 propose_entry in 22 wakes). CLOSES AS landed_unproven: the observation that closes it is the e72b-01 verdict (judged-2) and the forward n>=100 read.",
   "priority_rank": 1,
-  "updated_at": "2026-10-27T15:31:27Z",
+  "updated_at": "2026-10-27T15:46:06Z",
   "updated_by": "session_01AFoLuLbwrJEhhtpz8jSSq8",
   "roadmap": [
     "L-DESK"
@@ -23,6 +23,11 @@
   "writeback": {
     "roadmap": "none: no L-DESK milestone moves; judged-1 found no timing edge and the confirm units are blocked, so no milestone status changed",
     "arch": "none: no architecture contract changed; findings live in docs/research/desk-18c-edge-optimization-2026-10-27.md"
+  },
+  "observation": {
+    "what": "RQ-20261027-e72b-01 (judged-2, configuration C1) lands a verdict, and RQ-20261027-e72b-02 (forward set) reaches n_filled >= 100",
+    "how_to_check": "read research/results/RQ-20261027-e72b-01 verdict.json (PASS/FAIL/INDETERMINATE) and the forward unit result n_all/n_c1; the live rate is tracked by DESK-18E-LIVE-PROPOSAL-RATE",
+    "due_by": "2026-11-30"
   },
   "_seq": 734
 }

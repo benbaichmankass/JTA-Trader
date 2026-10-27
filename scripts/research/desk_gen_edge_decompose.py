@@ -48,7 +48,7 @@ def _pool(s: d.Series, start: datetime, end: datetime, fold: int) -> np.ndarray:
     return np.array([j for j in np.nonzero(m)[0] if d.fold_of(int(close[j]), start, end) == fold], dtype=int)
 
 
-def records(mkt, classes, keys, by, legs, rost, cutoff, seed=d.SEED, draws=d.B_R_DRAWS, packets=None,
+def records(mkt, keys, by, legs, rost, cutoff, seed=d.SEED, draws=d.B_R_DRAWS, packets=None,
             start: datetime = d.WINDOW_START, end: datetime = d.WINDOW_END) -> list[dict]:
     """The driver's score() loop, field for field, plus covariates. Filled proposals only (as score())."""
     rng = np.random.default_rng(seed + 7)
@@ -196,7 +196,7 @@ def cmd_decompose(a: argparse.Namespace) -> int:
     rost = d.rostered_legs(sorted(mkt))
     legs, _gaps = d.load_strategy_lists(rost)
     cutoff = datetime.fromisoformat(a.model_cutoff).replace(tzinfo=timezone.utc)
-    recs = records(mkt, classes, keys, by, legs, rost, cutoff, packets=packets)
+    recs = records(mkt, keys, by, legs, rost, cutoff, packets=packets)
     # the reproduction assertion: the driver's own score() on the same inputs
     ref = d.score(mkt, keys, by, legs, rost, subset="all", cutoff=cutoff, selfcheck=None)
     assert ref["stats"]["n"] == len(recs), (ref["stats"]["n"], len(recs))
@@ -369,7 +369,7 @@ def cmd_confirm(a: argparse.Namespace) -> int:
     rost = d.rostered_legs(sorted(mkt))
     legs, _ = d.load_strategy_lists(rost)
     cutoff = datetime.fromisoformat(a.model_cutoff).replace(tzinfo=timezone.utc)
-    allr = records(mkt, classes, keys, by, legs, rost, cutoff, seed=a.seed, packets=packets, start=start, end=end)
+    allr = records(mkt, keys, by, legs, rost, cutoff, seed=a.seed, packets=packets, start=start, end=end)
     recs = [r for r in allr if c1_pass(r)]
     st = d.cluster_stats(recs, seed=a.seed) if recs else {"n": 0}
     st["n"] = len(recs)
