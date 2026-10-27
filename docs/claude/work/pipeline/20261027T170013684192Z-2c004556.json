@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-W7B8PBVW-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-8-SHORT-HOLD-S0 close-out (session_01AFoLuHs2cWVPBBW7B8PbvW)",
+    "rerun": "ls comms/research/RQ-20261027-8a01-01 RQ-20261027-8a01-02 RQ-20261027-8b01-01 and read each verdict.json (verdict, measurement.clauses)"
+  },
+  "state": "queued",
+  "what": "DESK-8 results (landed 2026-10-27): ict_scalp_eth_15m and ict_scalp_xrp_15m both FAIL RULE-DESK8A-ICTSCALP-FRESH-WINDOW-CONFIRM on the fresh window 2022-10..2024-09 (eth net -4.88R exp -0.042 folds 2/4; xrp net +8.57R exp +0.074 but folds 2/4 = fold-majority clause only). RQ-20261027-8b01-01 failed clause c1 (oracle headroom +0.018R per decision point), so blocked units RQ-20261027-8b01-02/-03 (in-trade/exit judging) cannot pass as registered. Decide: (a) retire 8b01-02/-03 with the measured oracle bound, or re-register an exit-role oracle; (b) whether any Claude-managed short-hold lane should run on these legs at all, given no Stage-0 pass (they stay on bybit_1 as mechanics legs under the demo-floor rule); (c) update 8b01-02/-03 blocked_on text, which still names the retired API judge."
+}
