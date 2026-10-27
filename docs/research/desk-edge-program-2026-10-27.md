@@ -141,6 +141,27 @@ An S3 of +0.6 R at 5 minutes on 1m bars could be bar microstructure (the last 1m
 - **Verdict of the diagnostic: NO TIMING EDGE at 5-60 minutes on 1m bars and taker flow.** § 6.4 rank 2 is closed for these features. Maker execution cannot rescue a gross edge of about +0.02 R.
 - **Methodological finding (for every future registration): the e535 S3 is biased at short holds.** Its random baseline is the fold mean, not matched on volatility, so any selector that prefers high-volatility moments earns S3 from cost alone when cost is a large share of the bracket. At 48-bar holds cost is about 0.11 R, so the bias is small, but not zero (the era's 1-bar S3 of +0.04 is the same size as this effect). **Every new unit should report GROSS excess R (picks' gross minus the random entries' gross) beside S3,** or draw the baseline from the same volatility decile. The registered e535 statistic is not changed here.
 
+### 4.7 NEW INFORMATION at short holds — registered here BEFORE it runs (manager 18:09Z: token-free; no data bought)
+
+**Question.** Does information the 1m bars lack carry GROSS timing at 5-60 minute holds that survives a 1-5 bar decision delay: positioning (open interest, top-trader and taker long/short ratios), the perp-spot basis (premium index), order-book depth imbalance, and cross-market leads (BTC's basis, OI and flow for every symbol)?
+
+**Data (all free Binance Vision USD-M, DEV window, six symbols):** `metrics` (5-minute OI, OI value, top-trader account and position long/short ratios, taker long/short volume ratio), `premiumIndexKlines` 1m, `bookDepth` (notional within +-1/2/3/4/5% of mid, a snapshot about every 33 s). Every value is taken at or before the feature bar.
+**Not available free:** liquidations (Binance `liquidationSnapshot` 404 in 2023 and 2026; Bybit's public site has only trades, klines and index data); bookTicker (404 for 2024-06 and 2025-06). **aggTrades** (tick trades with size) is available but is about 4-20 MB per symbol-day, roughly 30-60 GB for the DEV window: priced here, not downloaded.
+
+**Labels:** the delay-1 and delay-5 builds of § 4.6 (holds 5/15/30/60 min, measured 12.3 bps taker). New in this run, the two statistics of row `DESK-S3-VOL-MATCHED-BASELINE`, used as PRIMARY:
+- **VM-S3** = net R minus the mean net R of every action in the same (symbol, side, hold, driver fold, ATR%-decile of the symbol) cell. The hourly grid is the random-time population, so this is a random-entry baseline matched on volatility.
+- **Gross excess** = gross R (before cost) minus the same cell's mean gross R.
+- Learners train on VM-S3. S1 and the e535 S3 are reported beside them.
+
+**Feature sets:** BASE (the § 4.5 1m features), BASE+metrics, BASE+basis, BASE+depth, BASE+all (which adds BTC's basis / OI / depth for every symbol). Learners: ridge and GBDT. Family: 4 holds x 2 learners x 5 sets = **40**, two-sided alpha 0.05/40. Controls: planted signal (on BASE+all) must reach INFORMATION; shuffled labels must not.
+
+**Rule (per hold and set, at delay 1; delay 5 reported):**
+- **INFORMATION** if the policy picks' gross excess >= **+0.10 R** with corrected CI lower bound > 0.
+- **USEFUL** if also VM-S3 >= **+0.25 R** with corrected CI lower bound > 0 AND S1 > 0 at 12.3 bps.
+- **NONE** otherwise.
+
+A USEFUL set registers a holdout unit (token-free); an INFORMATION-only set is a lead whose next step is execution cost; NONE everywhere points the program at paid or heavy data (aggTrades, Bybit trades, liquidations) or a different universe.
+
 ### 4.3 The dev-loop pilot: V1 (the current judge) — registered verdict **SCREEN_FAIL**, and why
 
 Unit `RQ-20261027-fe57-01`, registered (commit ee847dfa) before any packet was judged. Judged by 10 Sonnet plan subagents x 10 packets (no API credits), each limited to reading its own batch file and writing its own output. Evidence: `comms/research/desk_edge/dev-1/V1/` (`ranks.jsonl`, `verdict.json`, `rejected/`). The lane scored it with the unit's own command; the dispatcher's run after merge is the registered landing.
