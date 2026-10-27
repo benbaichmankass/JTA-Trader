@@ -202,9 +202,15 @@ trade (it keeps its venue brackets): note it and move on. The receipt is
 0. **Run § "The operating loop"** after the steps below, and at every check-in after that.
 1. **Title yourself.** Call `get_session` with no `session_id` to read your own
    id and `created_at` (UTC), then `set_session_title` to
-   `Manager Session YYYY-MM-DD` using that UTC date (e.g. `Manager Session
-   2026-09-27`). Operator directive, 2026-09-27: the title is how the operator
-   finds the manager among dozens of lanes.
+   `Manager Session YYYY-MM-DD<letter>`, where the date is the UTC date of your
+   `created_at` and the letter is the next unused one for that date (e.g.
+   `Manager Session 2026-10-27a`). The letter is always present: the first manager of the
+   day is `a`, never blank, then `b`, `c`, … Determine it with `list_sessions`
+   (tag `manager`, titles starting `Manager Session <date>`). If you are an incoming manager,
+   the outgoing manager named your letter in the handover: check it against `list_sessions`
+   and use the listing if they disagree. Operator directive, 2026-09-27 (serial letter added
+   2026-10-27): the title is how the operator finds the manager among dozens of lanes, and
+   several managers now serve one day.
 2. Read `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md` and this file; then the
    checklist rows that are `in_flight` or `blocked`.
    **Rotation case (an incoming manager created by § "Manager handover"): read less.**
@@ -1088,7 +1094,7 @@ Also read narrowly: `get_trigger` on named routines and `list_sessions(limit=10)
 The prompt ends with this block, filled in:
 
 ```
-You are lane <ROW-ID>, dispatched by Manager Session <date> (<manager session id>);
+You are lane <ROW-ID>, dispatched by Manager Session <date><letter> (<manager session id>);
 its authority is the operator's (CLAUDE.md § Every session, step 1). Ceiling: $<N>.
 WAKE THE MANAGER when you finish a deliverable, are blocked, or produce something it must act on:
 create_trigger(persistent_session_id="<manager session id>", prompt=<what merged/deployed/observed,
@@ -1185,7 +1191,7 @@ lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-l
 - `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;
 - the same `environment_id`; `source_url` set; `permission_mode: "auto"`;
 - tags `["manager", "predecessor:<old id>"]`;
-- title `Manager Session YYYY-MM-DD`;
+- title `Manager Session YYYY-MM-DD<letter>` (the successor's letter, named in the handoff doc: the next unused letter for that UTC date per `list_sessions`);
 - prompt: read this skill and the handoff doc in full; `CLAUDE.md` is already in the system prompt (do not re-read it); from `docs/CLAUDE-RULES-CANONICAL.md` read only the sections named in § "Start of session" step 2. Then perform V1 (the SHORT diff, including its own depth, `get_session` → lineage) and **wait for the old manager's diff**. Do not start routine work yet.
 
 **3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:

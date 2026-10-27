@@ -85,7 +85,16 @@ def test_the_starved_twins_route_to_disjoint_accounts() -> None:
         # The base legs left bybit_1 on 2026-10-05 (MD-S1-CUT-ON-STAGE0-FAIL,
         # #16548), so a base may be unrouted; the twin must still be routed.
         assert routed.get(twin), f"{twin} is unrouted -- fixture assumption broken"
-        assert not (routed.get(base, set()) & routed[twin]), (
+        # 2026-10-27 (DEMO-FLOOR RULE, Tier-3 held PR): the base legs are back on bybit_1 beside their twins. That
+        # account declares `position_model: slices` (per-strategy slices, not one winner per symbol), so sharing it is
+        # no longer starvation. Sharing is only allowed on a slices account; any other shared account still fails.
+        with open("config/accounts.yaml") as fh:
+            _accts = yaml.safe_load(fh)["accounts"]
+        _slices = {a for a, c in _accts.items() if (c or {}).get("position_model") == "slices"}
+        shared = routed.get(base, set()) & routed[twin]
+        assert shared <= _slices, (f"{base} and {twin} share non-slice account(s) {sorted(shared - _slices)}; "
+                                    "the disjoint-account argument in DEFAULT_PRIORITIES' header must be re-derived")
+        assert not (shared - _slices), (
             f"{base} and {twin} now share an account; the disjoint-account "
             "argument in DEFAULT_PRIORITIES' header no longer holds and must "
             "be re-derived rather than trusted"
@@ -123,7 +132,11 @@ def test_a_shadow_leg_can_win_a_symbol_and_starve_a_live_leg() -> None:
     runs AFTER this election -- so it does not keep a leg out of the contest."""
     by_symbol = _enabled_legs_by_symbol()
     eth = dict(by_symbol["ETHUSDT"])
-    assert eth.get("eth_pullback_prop_2h") == "shadow"
+    # eth_pullback_prop_2h was `shadow` when this was written; the demo-floor rule (2026-10-27, Tier-3 held PR) made
+    # it live, and the rule is that shadow is not used for non-retired legs, so the real tree no longer holds a shadow
+    # ETH leg to point at. The property (the election takes NAMES and runs before the execution gate) is unchanged
+    # and is what the winner assertion below still checks; the premise assertion is updated to the new state.
+    assert eth.get("eth_pullback_prop_2h") == "live"
     assert eth.get("trend_donchian_eth") == "live"
     assert _same_side_winner(["trend_donchian_eth", "eth_pullback_prop_2h"]) == "eth_pullback_prop_2h"
 

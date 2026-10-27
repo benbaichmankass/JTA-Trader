@@ -216,7 +216,9 @@ def test_measured_state_2026_08_17():
     # passed_unshipped x1); neither bucket count moves, which is the check that they were worked
     # rather than reclassified.
     movable = cut.get("movable", [])
-    assert {i[3] for i in movable} == {"tp_extend", "tp_retarget"}
+    # 2026-10-27 (DEMO-FLOOR RULE, Tier-3 held PR): 12 legs went execution shadow -> live, so their matrix cells join the live population. Their pending cells add three more movable columns
+    # (bracket_geometry, exit_head_ml, vol_trail); pinned as the measured set so any OTHER column still fails.
+    assert {i[3] for i in movable} == {"tp_extend", "tp_retarget", "bracket_geometry", "exit_head_ml", "vol_trail"}
     # 76 -> 73 on 2026-10-18 (lane ACTIVE-MGMT-DRIVE-1018, Programme 01 confirmations
     # read from the runner): three of those cells RESOLVED and so left `pending` --
     # xrp_pullback_2h tp_extend and ada_pullback_2h tp_extend -> honest_negative
@@ -229,7 +231,7 @@ def test_measured_state_2026_08_17():
     # trend_donchian_xrp_adx25 (bybit_1 only) mirrors the incumbent trend_donchian_xrp_4h row,
     # whose one movable cell is tp_extend `pending`; the alias therefore adds exactly one, in a
     # column already pinned above.
-    assert len(movable) == 74
+    assert len(movable) == 102   # 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE)
     #
     # E65 (2026-09-24, PR #12868): 4 -> 2. The `exit_ladder` cells on
     # trend_donchian_eth_prop and trend_donchian_sol_prop RESOLVED to
@@ -252,7 +254,7 @@ def test_measured_state_2026_08_17():
     # of `no_sweep_path`, which is the correct behavior: the cell is no longer
     # open. The one that remains: squeeze_breakout_4h exit_ladder
     # (blocked:no_harness_levers).
-    assert len(cut.get("no_sweep_path", [])) == 1
+    assert len(cut.get("no_sweep_path", [])) == 2   # 1 -> 2 on 2026-10-27: fvg_range_15m joined the live population (squeeze_breakout_4h is the other; both exit_ladder)
     assert {i[3] for i in cut["no_sweep_path"]} == {"exit_ladder"}
 
 
@@ -273,8 +275,8 @@ def test_internal_keys_are_not_printed_as_buckets():
     # ...while the measured count IS rendered (0 since the 2026-09-29
     # out_of_scope_family correction, 1 since the 2026-09-29
     # regime_flip_exit resolution; see test_measured_state_2026_08_17 above).
-    assert "MOVABLE BY A SESSION: 74" in text   # 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
-    assert "NO SWEEP PATH AT ALL: 1" in text
+    assert "MOVABLE BY A SESSION: 102" in text   # 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
+    assert "NO SWEEP PATH AT ALL: 2" in text
 
 
 def test_the_cut_is_NOT_inside_the_partition():

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-W7B8PBVW-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-8-SHORT-HOLD-S0 (session_01AFoLuHs2cWVPBBW7B8PbvW), PR #20561 demo-floor rule",
+    "rerun": "python3 -m pytest tests/test_desk_near_signals.py -k resolves_to_a_unit"
+  },
+  "state": "queued",
+  "what": "Add name-family rules to scripts/ops/desk_near_signals.py UNIT_ORDER for fade_breakout_4h, fvg_range_15m, squeeze_breakout_4h and turtle_soup so the desk's near-signal probe can look at them instead of reading `unlooked`. They were put on the bybit_1 demo floor by the demo-floor rule (PR #20561); tests/test_desk_near_signals.py pins the four as the known gap."
+}

@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261027-0849",
+  "title": "Research-ops pass 2026-10-27 08:49Z",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "claude/research-ops-20261027-0849",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane research-ops-0849] 08:49Z pass started: runnable 67/floor 54, 1 UNOWNED needs_review (a142-01).  09:25Z: pipeline healthy (runnable 67/floor 54); triaged unowned a142-01 (Kaggle producer_failed -> re-armed once); authored RQ-20261027-d789-01 (SOL prop TP3 vs TP6, disjoint window) + node write-back; record comms/research/ops/20261027T0925Z.json. HELD PR (E57 queue edits); merge-slot claim committed. landed_unproven until d789-01 and a142-01 results land.",
+  "updated_at": "2026-10-27T09:06:16Z",
+  "updated_by": "session_01AFoLuKsibQcbYef2EhP3DS",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261027-d789-01 emitted+dispatched and a142-01 re-run produces a measured result on main",
+    "how_to_check": "ls research/results/RQ-20261027-d789-01 research/results/RQ-20261026-a142-01",
+    "due_by": "2026-11-03T00:00Z"
+  },
+  "_seq": 729
+}
