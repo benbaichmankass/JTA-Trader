@@ -1,0 +1,160 @@
+{
+  "rows": [
+    {
+      "horizon_days": 1,
+      "n": 141,
+      "ic": 0.003122,
+      "ic_t": 0.037,
+      "overlap_factor": 1.0,
+      "n_eff": 141.0,
+      "ic_t_eff": 0.037,
+      "pearson": 0.013071,
+      "sign_hit_rate": 0.524823,
+      "mean_fwd_return": 0.001256
+    },
+    {
+      "horizon_days": 3,
+      "n": 141,
+      "ic": 0.002901,
+      "ic_t": 0.034,
+      "overlap_factor": 1.0,
+      "n_eff": 141.0,
+      "ic_t_eff": 0.034,
+      "pearson": 0.053375,
+      "sign_hit_rate": 0.485714,
+      "mean_fwd_return": 0.002386
+    },
+    {
+      "horizon_days": 5,
+      "n": 141,
+      "ic": 0.076417,
+      "ic_t": 0.904,
+      "overlap_factor": 1.0,
+      "n_eff": 141.0,
+      "ic_t_eff": 0.904,
+      "pearson": 0.138425,
+      "sign_hit_rate": 0.510638,
+      "mean_fwd_return": 0.004068
+    }
+  ],
+  "summary": {
+    "max_n": 141,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": false,
+    "any_flagged_horizon_overlap_corrected": false,
+    "strongest_ic_horizon_days": 5,
+    "strongest_ic": 0.076417,
+    "strongest_ic_t": 0.904,
+    "strongest_ic_t_eff": 0.904,
+    "t_flag": 2.0,
+    "verdict": "no_edge_at_tested_horizons"
+  },
+  "meta": {
+    "kind": "ism_manufacturing",
+    "symbol": "SPY",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 141,
+    "releases_with_value": 141,
+    "price_bars": 5488,
+    "first_release": "2015-01-02",
+    "last_release": "2026-10-01",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 141,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 141,
+        "ic": 0.003122,
+        "ic_t": 0.037,
+        "overlap_factor": 1.0,
+        "n_eff": 141.0,
+        "ic_t_eff": 0.037,
+        "pearson": 0.013071,
+        "sign_hit_rate": 0.524823,
+        "mean_fwd_return": 0.001256
+      },
+      {
+        "horizon_days": 3,
+        "n": 141,
+        "ic": 0.002901,
+        "ic_t": 0.034,
+        "overlap_factor": 1.0,
+        "n_eff": 141.0,
+        "ic_t_eff": 0.034,
+        "pearson": 0.053375,
+        "sign_hit_rate": 0.485714,
+        "mean_fwd_return": 0.002386
+      },
+      {
+        "horizon_days": 5,
+        "n": 141,
+        "ic": 0.076417,
+        "ic_t": 0.904,
+        "overlap_factor": 1.0,
+        "n_eff": 141.0,
+        "ic_t_eff": 0.904,
+        "pearson": 0.138425,
+        "sign_hit_rate": 0.510638,
+        "mean_fwd_return": 0.004068
+      }
+    ],
+    "summary": {
+      "max_n": 141,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 5,
+      "strongest_ic": 0.076417,
+      "strongest_ic_t": 0.904,
+      "strongest_ic_t_eff": 0.904,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        1,
+        3,
+        5
+      ],
+      "min_n": 100,
+      "t_bar": 3.0,
+      "expected_sign": "either"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 141,
+        "ic": 0.003122,
+        "ic_t_eff": 0.037,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 3,
+        "n": 141,
+        "ic": 0.002901,
+        "ic_t_eff": 0.034,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 5,
+        "n": 141,
+        "ic": 0.076417,
+        "ic_t_eff": 0.904,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      }
+    ]
+  }
+}
