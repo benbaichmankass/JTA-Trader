@@ -591,7 +591,11 @@ mandates:
       review in the next daily brief.
 
   - id: MD-DEMOTE-S1-OFF
-    grants: drop a Stage-1 leg whose realized cost diverges from its harness assumption
+    grants: drop a RETIRED Stage-1 leg whose realized cost diverges from its harness assumption (AMENDED 2026-10-27, demo-floor rule -- a leg that is not retired by record is never dropped from its demo floor)
+    amended_at: '2026-10-27'
+    amended_by: operator (Ben), relayed by the manager
+    amended_source: >-
+      Operator popup 2026-10-27 in the manager session, answer verbatim "Demote stops at the floor (Recommended)" (option text: "Rewrite both so a failing leg is demoted down to its demo floor (and out of real money / mirror), never off it; only an explicit retirement record removes a leg."). RELAYED to this lane by the manager (triggers trig_012sCfWT2ELERyWZsCF6LgKB, trig_01VASFdPF5VhHGTUd6dHJM6m and trig_01Sd4WZrVbRjgE1UFZrAtd71, Manager Session 2026-10-27a); the lane did not see the popup itself (CLAUDE-RULES-CANONICAL § Lanes answer to the manager).
     direction: derisk_only
     granted_by: operator (Ben)
     granted_at: '2026-09-24'
@@ -620,6 +624,8 @@ mandates:
       Never when either side of the comparison is unreadable -- an unmeasurable
       venue shows no divergence, and "could not measure" must not read as
       "diverged". Never an addition under this id.
+      Never a leg that is NOT retired by record (config/strategies.yaml `enabled: false`): demotion stops at the demo floor, so a
+      divergent leg stays on bybit_1 / alpaca_paper / ib_paper; the resolver REFUSEs with R-DEMO-FLOOR (operator 2026-10-27).
     evidence_required: >-
       The R3 cost-fidelity record that decided it and the per-leg verdict it
       carries, the leg's modelled cost stack, the tolerance applied, plus the
@@ -930,7 +936,11 @@ mandates:
   # 2026-10-04. GRANTED by the operator. Transcribed here by lane MANDATE-S1-CUT
   # in a PR the lane does not merge (landing: hold); the manager reviews and merges.
   - id: MD-S1-CUT-ON-STAGE0-FAIL
-    grants: remove a Stage-1 leg from its Stage-1 paper roster when its Stage-0 evidence record fails
+    grants: remove a RETIRED Stage-1 leg from its Stage-1 paper roster when its Stage-0 evidence record fails (AMENDED 2026-10-27, demo-floor rule -- a Stage-0 fail demotes a leg out of real money and the mirror, never off its demo floor)
+    amended_at: '2026-10-27'
+    amended_by: operator (Ben), relayed by the manager
+    amended_source: >-
+      Operator popup 2026-10-27 in the manager session, answer verbatim "Demote stops at the floor (Recommended)" (option text: "Rewrite both so a failing leg is demoted down to its demo floor (and out of real money / mirror), never off it; only an explicit retirement record removes a leg."). RELAYED to this lane by the manager (triggers trig_012sCfWT2ELERyWZsCF6LgKB, trig_01VASFdPF5VhHGTUd6dHJM6m and trig_01Sd4WZrVbRjgE1UFZrAtd71, Manager Session 2026-10-27a); the lane did not see the popup itself (CLAUDE-RULES-CANONICAL § Lanes answer to the manager).
     direction: derisk_only
     proposed_by: SOAK-WATCH lane (manager session_01MM8o5js6TcDFeNAPBY4Ntv)
     proposed_at: '2026-10-04'
@@ -995,6 +1005,8 @@ mandates:
       the soak snapshot path, its captured_at and the soak's state; the
       resolver verdict line. Plus the realtime ping to the operator and the
       section-1 evidence review in the next daily brief.
+      Never a leg that is NOT retired by record (config/strategies.yaml `enabled: false`): a Stage-0 fail does not remove a leg from its demo floor
+      (bybit_1 / alpaca_paper / ib_paper); the resolver REFUSEs with R-DEMO-FLOOR (operator 2026-10-27).
     scope_accounts: [bybit_1, alpaca_paper]
     bar:
       # Same floor as MD-PROMOTE-S0-S1 / MD-PROMOTE-S1-S2: a record below it
@@ -1278,4 +1290,47 @@ mandates:
 # MD-PROMOTE-S1-S2-SOAK-AMEND (proposed 2026-10-15 by lane SOAK-REDEFINE) was
 # GRANTED by the operator the same day and folded into MD-PROMOTE-S1-S2 above
 # -- see that entry's `amended_at` / `amendment_source`.
+  - id: MD-DEMO-FLOOR-BUILD
+    grants: merge_and_deploy_demo_floor_tier2_3_changes_without_per_pr_popup
+    direction: add_risk
+    proposed_by: session_01C1ooo4kqBbng7vytdG1UVs
+    proposed_at: '2026-10-27'
+    granted_by: operator (Ben)
+    granted_at: '2026-10-27'
+    source:
+      - >-
+        The operator popup in manager session session_01C1ooo4kqBbng7vytdG1UVs, ~08:50Z, 2026-10-27. Question: "Grant MD-DEMO-FLOOR-BUILD as written above? The manager merges and deploys
+        demo-floor-only Tier-2/3 changes without a per-PR popup and tells you after each one. Real money, mirrors, prop, risk caps and modes stay out of scope. It expires at the first
+        Claude-managed demo trade or 2026-11-04." Answer, verbatim: "Grant as written (Recommended)".
+      - >-
+        The operator asked for it, verbatim: "Ok, what's next then? Can you give me a mandate to approve?"
+      - >-
+        The operator's amendment to the expiry, verbatim (~08:55Z): "Actually, I think we should only have it expire once a demo trade happens - it's a test that needs to run and once it does,
+        we will need to expand the mandate to live trading and make it permanent". This SUPERSEDES the 2026-11-04 date in the first answer: there is no calendar expiry.
+      - >-
+        RELAYED to this lane by the manager (triggers trig_012sCfWT2ELERyWZsCF6LgKB, trig_01VASFdPF5VhHGTUd6dHJM6m and trig_01Sd4WZrVbRjgE1UFZrAtd71, Manager Session 2026-10-27a,
+        session_01AFoLuJi1vLTnYv9LbP6539); the operator then took this session out of auto mode so the edit could be made. The lane did not see the popups itself (CLAUDE-RULES-CANONICAL
+        § Lanes answer to the manager). The PR carrying this entry is held (tier_2_3_needs_approval) for a human merge.
+    recurrence: >-
+      Every demo-floor Tier-2/3 change this week (the roster, the desk leg, the short-hold lane, the triggers) arrived as its own popup for a change whose only effect is on paper money.
+    fires_when: >-
+      A Tier-2/3 PR whose only effect is on the demo floor is green and the manager has read the diff.
+    bounds:
+      accounts: [bybit_1, alpaca_paper, ib_paper]
+      in_scope: >-
+        Roster and `execution` changes on those accounts; desk / short-hold / trigger code; demo-scoped mandate wiring (e.g. MD-TRADE-DESK entry_generation for bybit_1).
+      out_of_scope: >-
+        Any real-money, mirror (bybit_portfolio, alpaca_portfolio) or prop account's roster, risk caps, mode or sizing.
+      shared_code_rule: >-
+        Code shared with real money (order path, scripts/ops/live_review_apply.py) changes behaviour only through a demo-account allowlist, with tests proving real-money behaviour unchanged.
+      invariant: Both brackets always; nothing removes an SL or a TP.
+      requires: CI green, the manager's own read of the diff, the revert named in the PR.
+      notify: >-
+        The operator immediately after each use: what changed, the evidence, merged/deployed/observed, the revert.
+    expires_on_event: first Claude-managed demo trade closed (row DESK-SHORT-HOLD-LANE milestone) -- the first closed claude_desk demo trade
+    on_expiry: >-
+      alert the operator at once and raise the next-step decision: expand to live trading and make it permanent (only the operator grants; never auto-renew)
+    never: >-
+      Never auto-renewed and never extended by a session. Never any real-money, mirror or prop account, risk cap, mode or sizing. Never removes an SL or a TP.
+
 proposed: []
