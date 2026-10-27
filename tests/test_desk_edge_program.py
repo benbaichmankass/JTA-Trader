@@ -269,3 +269,36 @@ def test_1m_action_features_side_signed():
     sh = m1.action_features(ex, "ETHUSDT", "short", T0, 30)
     assert lo["ret5"] == 0.5 and sh["ret5"] == -0.5 and lo["atr_pct"] == sh["atr_pct"] == 2.0
     assert lo["btc_ret60"] == -2.0 and sh["btc_ret60"] == 2.0 and lo["hold"] == 30.0
+
+
+def test_vm_labels_center_each_volatility_cell():
+    from scripts.research import desk_edge_info as di
+    ex, acts = {}, []
+    rng = np.random.default_rng(5)
+    for c in range(200):
+        atr = 1.0 + (c % 10)
+        ex[c] = {"AAA": {"atr_pct": atr}}
+        for side in ("long", "short"):
+            net = 0.1 * atr + rng.normal()           # higher volatility -> higher net (the cost effect)
+            acts.append({"cutoff": c, "symbol": "AAA", "side": side, "hold": 5, "fold": 2, "net_r": net, "cost_r": 0.5 / atr})
+    di.vm_labels(acts, ex)
+    by = {}
+    for r in acts:
+        by.setdefault((r["side"], r["vol_dec"]), []).append(r)
+    for rows in by.values():
+        assert abs(np.mean([r["y_vm"] for r in rows])) < 1e-9 and abs(np.mean([r["g_vm"] for r in rows])) < 1e-9
+    # a pure volatility selector earns ~0 VM-S3 (it earned S3 under the fold-mean baseline)
+    top = [r for r in acts if ex[r["cutoff"]]["AAA"]["atr_pct"] >= 9]
+    assert abs(np.mean([r["y_vm"] for r in top])) < 1e-9
+
+
+def test_info_features_are_point_in_time():
+    from scripts.research import desk_edge_info as di
+    t = np.array([0, 300, 600, 900], dtype=np.int64)
+    s = {"t": t, "prem": np.array([0.0001, 0.0002, 0.0003, 0.0009])}
+    assert di._at(s, 650, "prem") == 0.0003                  # the value at 900 is in the future
+    assert di._at(s, 650, "prem", 600) == 0.0001
+    assert np.isnan(di._at(s, -1, "prem"))
+    f = di.info_features(650, "AAA", None, s, None)
+    assert f["prem_bps"] == pytest.approx(3.0)
+    assert np.isnan(f["prem_chg15"])                           # 15 min before t=650 there is no value yet
