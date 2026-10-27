@@ -208,3 +208,18 @@ def test_top_pick_takes_one_positive_cell_per_packet():
             {"packet_id": "P2", "cell": "B:long", "score": -0.2, "y": 2.0, "net_r": 2.0, "days": 1, "week": "w"}]
     p = dl.top_pick_rows(rows)
     assert len(p) == 1 and p[0]["diff"] == 1.0
+
+
+def test_base_rate_emulator_scores_by_the_packets_own_rows():
+    pf = {}
+    for side, v in (("long", 0.3), ("short", -0.3)):
+        for h in ce.HORIZONS:
+            pf[f"br_{side}_h{h}_mean_r"] = v
+    cut = [{"cutoff": 1, "pf": {"A": pf, "B": {k: -x for k, x in pf.items()}}}]
+    acts = [{"cutoff": 1, "symbol": s, "side": side, "geom": "GJ", "week": "w", "y": y, "net_r": y, "days": 1.0}
+            for s, side, y in (("A", "long", 1.0), ("A", "short", -1.0), ("B", "long", -0.5), ("B", "short", 0.5))]
+    acts.append(dict(acts[0], geom="G1"))                     # other geometries are ignored
+    rows, tp = dl.emulate_base_rate_rule(cut, acts, (0, 1, 1))
+    assert len(rows) == 4
+    top = max(rows, key=lambda r: r["score"])
+    assert top["y"] in (1.0, 0.5) and tp[0]["diff"] in (1.0, 0.5)

@@ -364,6 +364,46 @@ def cmd_score(a: argparse.Namespace) -> int:
     return 0
 
 
+BASE_RATE_RULES = {"h12+h48": (0, 1, 1), "h48": (0, 0, 1), "h4+h12+h48": (1, 1, 1)}
+
+
+def emulate_base_rate_rule(cutoffs: List[dict], acts: List[dict], weights: Tuple[int, int, int]) -> Tuple[List[dict], List[dict]]:
+    """The judge EMULATOR: score each GJ cell by a weighted sum of the packet's own base-rate means for that cell's side
+    (h4, h12, h48). V1's scores were 90-100% explained by such a sum (doc section 4.3), so this prices the current judge
+    on every built packet for free. Returns (cell rows for packet_sel, top-pick rows for cluster_stats)."""
+    cut = {c["cutoff"]: c for c in cutoffs}
+    rows = []
+    for a in acts:
+        if a["geom"] != DEV_GEOM[0]:
+            continue
+        pf = cut[a["cutoff"]]["pf"][a["symbol"]]
+        sc = sum(w * (pf[f"br_{a['side']}_h{h}_mean_r"] or 0.0) for w, h in zip(weights, ce.HORIZONS))
+        rows.append({"packet_id": a["cutoff"], "week": a["week"], "score": sc, "y": a["y"], "net_r": a["net_r"], "days": a["days"]})
+    return rows, top_pick_rows(rows)
+
+
+def cmd_emulate(a: argparse.Namespace) -> int:
+    import pickle
+    cutoffs = pickle.loads((Path(a.ceiling) / "cutoffs.pkl").read_bytes())
+    acts = pickle.loads((Path(a.ceiling) / "actions.pkl").read_bytes())
+    res = {}
+    for name, w in BASE_RATE_RULES.items():
+        rows, tp = emulate_base_rate_rule(cutoffs, acts, w)
+        sel = packet_sel(rows)
+        wk = weekly_means(sel)
+        lo, hi = one_sided_bounds(wk, 0.025)
+        st = d.cluster_stats(tp)
+        res[name] = {"packets": len(sel), "weeks": len(wk), "mean_sel": float(np.mean(wk)), "sel_ci95": [lo, hi],
+                     "sd_sel_per_packet": float(np.std([s["sel"] for s in sel], ddof=1)),
+                     "top_pick": {k: st.get(k) for k in ("n", "mean_net_r", "paired_diff_vs_random", "paired_diff_ci95")},
+                     "excluded_as_useful": bool(hi < SEL_USEFUL)}
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "base-rate-emulator.json").write_text(json.dumps(res, indent=1, default=float) + "\n")
+    print(json.dumps({k: (v["mean_sel"], v["sel_ci95"]) for k, v in res.items()}))
+    return 0
+
+
 def cmd_holdout(a: argparse.Namespace) -> int:
     promo = json.loads(Path(a.promotion).read_text())
     mkt, classes = _market(a)
@@ -402,6 +442,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     sub.choices["score"].add_argument("--sample", required=True)
     sub.choices["score"].add_argument("--variant", required=True)
     sub.choices["holdout"].add_argument("--promotion", required=True)
+    em = sub.add_parser("emulate", help="the base-rate judge emulator over a ceiling build (token-free)")
+    em.add_argument("--out", required=True)
+    em.add_argument("--ceiling", required=True, help="a desk_edge_ceiling.py build --out directory")
+    em.set_defaults(fn=cmd_emulate)
     sub.choices["holdout"].add_argument("--n", type=int, default=HOLDOUT_N)
     a = ap.parse_args(argv)
     return a.fn(a)
