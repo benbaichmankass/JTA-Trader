@@ -56,6 +56,7 @@ NAME = "claude_desk"
 SIGNAL_LOGIC = "desk"
 ROOT = Path(__file__).resolve().parents[3]
 
+PROBE_CONFIDENCE = 0.05  # DESK-18E mechanics probe: the package confidence scalar, i.e. the smallest the sizing scalar allows to ask for
 R_BRACKETS = "both_brackets_required"
 R_GEOMETRY = "bracket_geometry"
 R_SIDE = "side_invalid"
@@ -147,6 +148,9 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError(why)
     conf = _num((cfg or {}).get("confidence"))
     conf = 0.5 if conf is None else max(0.0, min(1.0, conf))
+    probe = bool(row.get("mechanics_probe"))
+    if probe:  # DESK-18E: minimum size via the documented confidence scalar (it only sizes DOWN); the RiskManager still sizes it
+        conf = min(conf, PROBE_CONFIDENCE)
     return {
         "symbol": norm_symbol(p["symbol"]),
         "direction": p["side"],
@@ -172,6 +176,7 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
             "novelty": p.get("novelty"),
             "venue_class": p.get("venue_class"),
             "max_hold_min": p.get("max_hold_min"),
+            "mechanics_probe": probe,
         },
     }
 

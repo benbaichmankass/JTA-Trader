@@ -312,9 +312,11 @@ def expected_training(r: dict) -> tuple[bool, bool, set]:
         reasons.add("historical_masked")
     if r["pre_cutoff"]:
         reasons.add("pre_cutoff")
+    if desk_write.is_probe(r):  # DESK-18E mechanics probe: no EV claim, never trained on, never gates, in no edge statistic
+        reasons.add(desk_write.PROBE_REASON)
     # DESK-14 (operator 2026-10-27): an items-based use trains (flagged training.source 'external') but never
     # gates; a legacy object-only use (no items[]) stays train-ineligible.
-    blocking = {"synthetic"} | (set() if ext_items(r) else {"external_context"})
+    blocking = {"synthetic", desk_write.PROBE_REASON} | (set() if ext_items(r) else {"external_context"})
     train = not (blocking & reasons)
     return train, train and not reasons, reasons
 
@@ -376,10 +378,16 @@ def proposal_problems(r: dict, scan: dict | None) -> list[str]:
         out.append(f"TP doctrine: tp sits at or beyond the venue cap ({TP_VENUE_CAP_PCT:.1%} from entry) -- the cap wearing a target's label")
     if pr["tp"]["p_hit"] < REACH_FLOOR or pr["tp"]["p_hit"] >= 1:
         out.append(f"TP doctrine: tp.p_hit must be in [{REACH_FLOOR}, 1) (below the reach floor the target is not a prediction)")
-    if r["judge_prior"] is None:
+    probe = desk_write.is_probe(r)
+    if probe:
+        if r["judge_prior"] is not None or pr["expected_r_net"] is not None:
+            out.append("a mechanics probe carries no EV claim: judge_prior and expected_r_net are null")
+        if r["label_source"] != "live" or r["confidence"] != "anecdote":
+            out.append("a mechanics probe is a live row with confidence `anecdote`")
+    elif r["judge_prior"] is None:
         out.append("propose_entry requires judge_prior (P(TP before SL))")
     out += desk_write.live_proposal_problems(r)
-    if not pr["expected_r_net"] < tp_r:
+    if not probe and (pr["expected_r_net"] is None or not pr["expected_r_net"] < tp_r):
         out.append("expected_r_net cannot reach the proposal's own gross best case (tp R)")
     if scan is None:
         return out
@@ -684,6 +692,10 @@ def findings(decisions: Path = DECISIONS, touches: Path = TOUCHES, packets: Path
                 if r.get("decision_id") in byid:
                     out.append(f"{tag}: duplicate decision_id {r.get('decision_id')}")
                 byid[r.get("decision_id")] = r
+        if kind == "decisions":
+            n_probe = sum(1 for _, r, e in _rows(p) if not e and isinstance(r, dict) and desk_write.is_probe(r))
+            if n_probe > desk_write.PROBE_MAX:
+                out.append(f"{p.name}: {n_probe} mechanics-probe rows exceed the cap of {desk_write.PROBE_MAX} (operator re-authorization needed)")
     for p, fn, idk in ((outcomes, outcome_problems, "outcome_id"), (consumed, consumed_problems, None)):
         if not p.exists():
             continue
