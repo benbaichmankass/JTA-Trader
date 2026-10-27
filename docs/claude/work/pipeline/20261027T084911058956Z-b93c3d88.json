@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-W7B8PBVW-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane DESK-8-SHORT-HOLD-S0 (session_01AFoLuHs2cWVPBBW7B8PbvW), PR #20561 demo-floor rule",
+    "rerun": "python3 -m pytest tests/test_banking_mechanism_audit.py -k telemetry_hook"
+  },
+  "state": "queued",
+  "what": "Hook record_position_telemetry into the fade_breakout_4h and fvg_range_15m units: both went execution: live on the bybit_1 demo floor (PR #20561) and are structurally invisible to peak-R telemetry again (tests/test_banking_mechanism_audit.py pins n_invisible == 2 as the measured state, not as acceptable). Also re-measure the banking-half finding on the new 53-leg population (it was measured on 39)."
+}

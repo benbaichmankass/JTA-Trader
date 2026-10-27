@@ -44,7 +44,9 @@ def test_population_is_enabled_and_live(mod):
     # taking them out of the enabled+live population this test defines.
     # 38 -> 39 on 2026-10-22: trend_donchian_xrp_adx25 (bybit_1 soak alias of
     # trend_donchian_xrp_4h, OPERATOR-DECISIONS-1022) joins the enabled+live population.
-    assert len(legs) == 39, f"population drifted from the 2026-10-22 denominator: {len(legs)}"
+    # 39 -> 53 on 2026-10-27: DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR) flipped 14 legs shadow -> live, so they join the
+    # enabled+live population. The banking-half FINDING was measured on 39 and is NOT re-measured here.
+    assert len(legs) == 53, f"population drifted from the 2026-10-27 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
@@ -103,11 +105,14 @@ def test_be_at_r_is_unreachable_over_the_population():
 
 
 def test_the_units_that_read_be_at_r_are_outside_the_population(mod):
-    """turtle_soup is `execution: shadow`; vwap is `enabled: false`."""
+    """vwap is `enabled: false`. turtle_soup WAS outside the population (`execution: shadow`); since 2026-10-27
+    (DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR)) it is inside it and its be_at_r is READ by its unit, so it is the one
+    population leg allowed to declare it. The banking-half finding is not re-measured on the new population."""
     legs = mod.load_population()
-    assert "turtle_soup" not in legs
     assert "vwap" not in legs
     for name, cfg in legs.items():
+        if name == "turtle_soup":
+            continue  # its unit reads be_at_r: not inert
         assert cfg.get("be_at_r") is None, f"{name} declares an inert be_at_r"
 
 
@@ -183,7 +188,11 @@ def test_telemetry_hook_set_is_derived_not_trusted(mod):
     # ⚠️ It does NOT assert those legs have telemetry. Zero invisible means the
     # hook is on their path; whether a row exists is a live-fleet observation
     # (`/api/diag/position_telemetry`) that no unit test can stand in for.
-    assert gap["n_invisible"] == 0, gap["legs_structurally_invisible"]
+    # 0 -> 2 on 2026-10-27 (DEMO-FLOOR RULE, Tier-3 held PR): fade_breakout_4h and fvg_range_15m went
+    # shadow -> live and their units do NOT carry record_position_telemetry, so they are structurally invisible to
+    # peak-R telemetry again. Pinned as the measured state (not as acceptable): pipeline item filed to hook them.
+    assert sorted(gap["legs_structurally_invisible"]) == ["fade_breakout_4h", "fvg_range_15m"], gap["legs_structurally_invisible"]
+    assert gap["n_invisible"] == 2
 
 
 def test_counterfactual_never_claims_to_be_net(mod):

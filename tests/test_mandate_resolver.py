@@ -779,27 +779,20 @@ def test_real_repo_refuses_rather_than_crashing():
 
 
 # ── #13698: the real regression this change was written for ────────────────
-def test_real_slv_trend_1h_never_fires_while_execution_is_shadow():
-    """Regression pin, read from the ACTUAL committed tree, not a fixture.
+def test_real_slv_trend_1h_is_live_on_the_demo_floor_so_the_shadow_clause_no_longer_applies():
+    """Re-pinned 2026-10-27 (DEMO-FLOOR RULE, operator rule relayed by the manager).
 
-    This session ran the PRE-FIX resolver against `slv_trend_1h -> alpaca_live`
-    and it answered FIRE: the leg is `execution: shadow` (zero real exits ever)
-    and R3 grades its Stage-1 cost fidelity `insufficient_n`, resting the whole
-    promotion on the provisional placeholder. This is exactly what PR #13698
-    exposed. The premise is asserted explicitly so this test fails LOUDLY,
-    by name, the day it stops describing the real leg -- a silently-vacuous
-    pin is worse than no pin (RULE ONE: prove the probe can find a positive).
+    This test used to assert the REAL `slv_trend_1h` was `execution: shadow` and that the resolver answered
+    NEEDS_DATA / R-EXECUTION-SHADOW (the #13698 regression). The demo-floor rule put the leg live on the paper
+    floor, so that premise is gone BY DECISION, not by drift. The shadow-clause regression itself is still
+    pinned, hermetically, by `test_the_slv_shape_reproduced_in_a_fixture` below; this test now pins the new
+    premise on the real tree so a silent flip back is loud.
     """
     strategies = (mr._yaml(REPO, mr.STRATEGIES_REL) or {}).get("strategies") or {}
     cfg = strategies.get("slv_trend_1h") or {}
-    assert str(cfg.get("execution", "live")).strip().lower() == "shadow", (
-        "slv_trend_1h is no longer execution: shadow on main -- this pin's "
-        "premise has changed; re-verify #13698 is actually resolved before "
-        "updating or retiring this test")
+    assert str(cfg.get("execution", "live")).strip().lower() == "live"
     res = mr.resolve("slv_trend_1h", "S1", "S2", "alpaca_live", root=REPO)
-    assert res["verdict"] == mr.NEEDS_DATA, res
-    assert res["clause"] == "R-EXECUTION-SHADOW", res
-    assert res["verdict"] != mr.FIRE
+    assert res["clause"] != "R-EXECUTION-SHADOW", res
 
 
 def test_the_slv_shape_reproduced_in_a_fixture(repo):
