@@ -2,7 +2,7 @@
   "id": "DESK-14-LIVE-WEB-CONTEXT",
   "title": "Desk next milestone: live web reads alongside the repo packet, for Claude AND web-capable models, to support packet-based decisions (after the prototype is in production)",
   "phase": null,
-  "state": "blocked",
+  "state": "queued",
   "owner": "manager",
   "lane": null,
   "model": "claude-opus-5-5",
@@ -10,13 +10,11 @@
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [
-    "DESK-6-SHADOW-PILOT"
-  ],
-  "note": "[2026-10-25 ~19:00Z session_01UKBXozpiJicMHHyMp47MnN] OPERATOR (chat, close paraphrase): for now the packet is Claude's only context, with no live web reads (popup 17:58Z: repo feeds + logged exception). In future we should aim to have live web reads, together with models that can also do live web reads, to support the decisions they make from the packets. That should be the NEXT MILESTONE once this prototype is up and running in production. Design must keep: packet stays the shared base input; web context logged per decision (the external_context field) so replays/training can separate it; cost per web read inside the capacity reserve. [2026-10-25 ~21:45Z manager session_01AZiErvK92E59gCqBV5GoQX] OPERATOR (chat, spitballing, verbatim excerpt): \"maybe there's a way for Claude to use wider live news and live data context, but then like standardize the reasoning in a way which the models can learn from, and which maybe can also help drive like infra builds that we need in order to make sure that the right live data is getting to the models when they're making decisions. Doesn't need to be in the first version ... but maybe it should be like the next step.\" Scope additions for this milestone (manager reading, not yet decided): (1) STRUCTURED EXTRACTION: each web read emits a typed record (event_type, entity/symbol, direction, magnitude, surprise_vs_consensus, timestamp, source class) alongside the free-text summary, so external_context rows become learnable features instead of reproducible:false noise. (2) PIT ARCHIVE: fetched content + extraction stored point-in-time so later replays/training CAN reproduce them (lifts the default exclusion for archived rows). (3) FEED-GAP LOG: every time Claude reaches for the web for something the packet lacked, log the missing field/source; recurring gaps become checklist rows to wire that feed (config/news_feeds.yaml / docs/news_layer.md) into the packet, so models get it natively. (4) VALUE TEST: DESK-7 blind replay A/B, packet-only vs packet+context, net of cost, before anything web-sourced influences live action. Ranking unchanged: after Monday open and DESK-6 shadow pilot.",
+  "blocked_on": [],
+  "note": "[2026-10-25 ~19:00Z session_01UKBXozpiJicMHHyMp47MnN] OPERATOR (chat, close paraphrase): for now the packet is Claude's only context, with no live web reads (popup 17:58Z: repo feeds + logged exception). In future we should aim to have live web reads, together with models that can also do live web reads, to support the decisions they make from the packets. That should be the NEXT MILESTONE once this prototype is up and running in production. Design must keep: packet stays the shared base input; web context logged per decision (the external_context field) so replays/training can separate it; cost per web read inside the capacity reserve. [2026-10-25 ~21:45Z manager session_01AZiErvK92E59gCqBV5GoQX] OPERATOR (chat, spitballing, verbatim excerpt): \"maybe there's a way for Claude to use wider live news and live data context, but then like standardize the reasoning in a way which the models can learn from, and which maybe can also help drive like infra builds that we need in order to make sure that the right live data is getting to the models when they're making decisions. Doesn't need to be in the first version ... but maybe it should be like the next step.\" Scope additions for this milestone (manager reading, not yet decided): (1) STRUCTURED EXTRACTION: each web read emits a typed record (event_type, entity/symbol, direction, magnitude, surprise_vs_consensus, timestamp, source class) alongside the free-text summary, so external_context rows become learnable features instead of reproducible:false noise. (2) PIT ARCHIVE: fetched content + extraction stored point-in-time so later replays/training CAN reproduce them (lifts the default exclusion for archived rows). (3) FEED-GAP LOG: every time Claude reaches for the web for something the packet lacked, log the missing field/source; recurring gaps become checklist rows to wire that feed (config/news_feeds.yaml / docs/news_layer.md) into the packet, so models get it natively. (4) VALUE TEST: DESK-7 blind replay A/B, packet-only vs packet+context, net of cost, before anything web-sourced influences live action. Ranking unchanged: after Monday open and DESK-6 shadow pilot. [2026-10-27 lane session_01Bd47ounpxZqiN5ViPEzn1F] stale block cleared 2026-10-27: DESK-6-SHADOW-PILOT is done",
   "priority_rank": 17,
-  "updated_at": "2026-10-25T21:41:32Z",
-  "updated_by": "session_01AZiErvK92E59gCqBV5GoQX",
+  "updated_at": "2026-10-27T01:29:58Z",
+  "updated_by": "session_01Bd47ounpxZqiN5ViPEzn1F",
   "roadmap": [
     "L-DESK"
   ],

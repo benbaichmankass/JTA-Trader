@@ -935,8 +935,27 @@ the generator's output (do not hand-compute):
 4. **Promotion gate (rule (b))**: `NOT_YET (failing …)` or `ELIGIBLE_TO_PROPOSE`. Eligible is a proposal in
    `proposed_tweaks[]` for the operator, never a stage change.
 
-n=0 priced is reported as n=0. A `no_trade`-only window grades nothing yet; say that, and say which
-DESK-20 baseline would grade it.
+n=0 priced is reported as n=0. A `no_trade`-only window is graded by the roll-up below (the no_trade
+counterfactual), not by `desk_grade.py`, which still counts it `not_computable` until DESK-20.
+
+### Per-role roll-up (DESK-9-GRADING) — runs on a schedule, you read it
+
+```bash
+python3 scripts/ops/claude_role_grade.py --live            # markdown: one row per (role, action class)
+cat comms/desk/role_grade.json                             # the scheduled snapshot (hourly desk-decisions-mirror)
+```
+
+The snapshot is written by the existing hourly `desk-decisions-mirror` workflow (and the closed-review pricing by
+`live-review-rows-mirror`: `live_review_grade.py --live --write-outcomes`), so grading does **not** wait for a review to
+remember it; weekly-audit C13 fails if the snapshot is more than 2 days old. In the review: quote each row's
+`n_recorded / n_graded / n_not_yet_graded (+ breakdown) / n_needed / state / eta_earliest` as printed. `state`
+is `graded | insufficient_n | no_data | not_gradeable_by_design | could_not_look`: **a class that could not be
+graded is never reported as a grade**, and `eta_earliest` assumes every new call prices (say so). The `no_trade`
+row is the desk's abstention priced against what entering would have done on the real forward path, net of cost:
+its **verdict basis is the desk's own best listed-and-declined candidate** (`abstain_value`, independent 12-bar
+windows, n ≥ 20 — it can fail); the random-entry line is ~ the round-trip cost by symmetry and is context only; the
+hindsight best cell is an upper bound, never graded. The adopted CLAUDE-GRADE-LOOP rule is applied from the
+`use_rules` the Live review section already prints (per class, n ≥ 20 graded): proposals only.
 
 ## Output
 

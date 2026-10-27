@@ -41,7 +41,7 @@ desk-scan-packet.yml, hourly at :03  ─► packet ─► reads latest_scan.json
 
 - **Due.** A scan is due when the newest packet's `packet_id` has no row yet. A wake with nothing due records nothing and ends (design § 2.5: *"a cadence wake with nothing due costs one call and records nothing"*).
 - **One wake, one packet, one row.** `no_trade` is a decision and is recorded whenever a scan was due: it is how a student learns when not to trade.
-- **The label.** Every `propose_entry` is replayed on the real path from `info_cutoff_at`, whether or not anything traded, by `scripts/ops/desk_outcomes.py` (a `replayed` outcome, or `expired_unfilled`). A `no_trade` gets a `not_computable` placeholder naming DESK-20, which prices its baseline bracket. Rows are train-eligible and never-trained-on until a dataset build lists them in `comms/desk/consumed.jsonl` (`check_desk_records.never_trained_on()`; DESK-21 alarms on it).
+- **The label.** Every `propose_entry` is replayed on the real path from `info_cutoff_at`, whether or not anything traded, by `scripts/ops/desk_outcomes.py` (a `replayed` outcome, or `expired_unfilled`). A `no_trade` gets a `not_computable` placeholder naming DESK-20, which prices its baseline bracket. Until DESK-20 the `no_trade` is priced at GRADE time by `scripts/ops/claude_role_grade.py` (what entering would have done, on real forward candles; hourly into `comms/desk/role_grade.json`). Rows are train-eligible and never-trained-on until a dataset build lists them in `comms/desk/consumed.jsonl` (`check_desk_records.never_trained_on()`; DESK-21 alarms on it).
 
 ## 2. Roles (design § 2.1)
 

@@ -21,6 +21,11 @@ Three checks, each printing its population:
    clone whose oldest commit is not older than ``LOOP_START`` cannot see the whole window, so it reads
    ``could_not_look`` (exit 2), never pass.
 
+4. ROLE GRADE RAN ON ITS SCHEDULE. ``comms/desk/role_grade.json`` (``claude_role_grade.py``, written by the hourly
+   ``desk-decisions-mirror`` workflow, DESK-9-GRADING) exists and its ``generated_at`` is no older than
+   ``ROLE_GRADE_MAX_AGE_DAYS``. A missing or stale snapshot is a FINDING: the grading is wired to a schedule, so a
+   silent schedule is the failure this check exists to catch.
+
 Exit 0 all pass · 1 a finding · 2 could not look (a check could not read its input; findings still print).
 """
 from __future__ import annotations
@@ -42,6 +47,8 @@ for _p in (REPO, REPO / "scripts" / "ops", REPO / "scripts" / "research"):
 import desk_grade as dg  # noqa: E402
 
 GRACE_DAYS = 1
+ROLE_GRADE = REPO / "comms" / "desk" / "role_grade.json"
+ROLE_GRADE_MAX_AGE_DAYS = 2
 LOOP_START = "2026-10-27T00:00:00Z"
 BRIEFS = {                      # every contract a judging session follows (its blob sha is the row's skill_sha)
     ".claude/skills/live-trade-review/SKILL.md": ".claude/skills/live-trade-review/AMENDMENTS.md",
@@ -78,6 +85,18 @@ def desk_check(decisions: List[dict], outcomes: List[dict], now: datetime) -> Di
                 missing.append(d["decision_id"])
     return {"state": "fail" if missing else "pass", "population": f"{len(decisions)} decisions; {due} past their window + {GRACE_DAYS}d",
             "missing_outcome": missing}
+
+
+def role_grade_check(snapshot: Optional[dict], now: datetime) -> Dict[str, Any]:
+    if snapshot is None:
+        return {"state": "fail", "population": "comms/desk/role_grade.json", "findings": ["snapshot missing: the desk-decisions-mirror grade step has not landed one"]}
+    t = dg._ts(snapshot.get("generated_at"))
+    if t is None:
+        return {"state": "fail", "population": "comms/desk/role_grade.json", "findings": ["generated_at unreadable"]}
+    age = (now - t).total_seconds() / 86400
+    stale = age > ROLE_GRADE_MAX_AGE_DAYS
+    return {"state": "fail" if stale else "pass", "population": f"{len(snapshot.get('rows') or [])} role/class rows, generated {snapshot['generated_at']}",
+            "findings": [f"snapshot is {age:.1f}d old (> {ROLE_GRADE_MAX_AGE_DAYS}d): the scheduled grade step is not landing"] if stale else []}
 
 
 def amendment_entries(text: str) -> Dict[str, str]:
@@ -139,6 +158,11 @@ def run(live: bool, now: Optional[datetime] = None) -> Dict[str, Any]:
             print(f"check_claude_grade_loop: journal unreadable: {exc}", file=sys.stderr)
     res["ltr_graded"] = ltr_check(reviews, dg.read_jsonl(REPO / "comms/live_review/outcomes.jsonl"), trades, now)
     res["desk_graded"] = desk_check(dg.read_jsonl(dg.DECISIONS), dg.read_jsonl(dg.OUTCOMES), now)
+    try:
+        snap = json.loads(ROLE_GRADE.read_text(encoding="utf-8")) if ROLE_GRADE.exists() else None
+    except ValueError:
+        snap = {}
+    res["role_grade_fresh"] = role_grade_check(snap, now)
     for brief, log in BRIEFS.items():
         lp = REPO / log
         res[f"amendments:{brief.split('/')[2]}/{brief.rsplit('/', 1)[1]}"] = brief_check(brief_versions(brief),
@@ -163,6 +187,9 @@ def _self_test() -> int:
         ("brief: entry without n fails", brief_check(["abcdef1234"], {"abcdef12": "vibes"})["state"] == "fail"),
         ("brief: entry with n passes", brief_check(["abcdef1234"], amendment_entries(
             "- 2026-11-01 · new_skill_sha: `abcdef12` · prior: `1111111` · basis: live_review_grade --json since 10-26, n=24 hold graded"))["state"] == "pass"),
+        ("role grade: missing snapshot fails", role_grade_check(None, now)["state"] == "fail"),
+        ("role grade: fresh passes", role_grade_check({"generated_at": "2026-11-01T00:00:00Z", "rows": []}, now)["state"] == "pass"),
+        ("role grade: stale fails", role_grade_check({"generated_at": "2026-10-28T00:00:00Z", "rows": []}, now)["state"] == "fail"),
         ("brief: shallow is could_not_look", brief_check(None, {})["state"] == "could_not_look"),
     ]
     bad = [n for n, ok in cases if not ok]

@@ -182,7 +182,8 @@ consumed file. Worked example: 2026-10-26, that checker watched `comms/macro/eco
 ### C13. The Claude grading loop ran (CLAUDE-GRADE-LOOP, operator 2026-10-26)
 
 `python3 scripts/ops/check_claude_grade_loop.py --live` - **re-run, never quote**; report each check's
-population line. Three checks: every live-trade-review row on a trade closed > 1 day ago has an
+population line. Four checks: (4) `comms/desk/role_grade.json` (DESK-9-GRADING, written hourly by `desk-decisions-mirror`) exists and is
+no older than 2 days - a stale snapshot means the scheduled grade step is not landing, find out why; every live-trade-review row on a trade closed > 1 day ago has an
 `outcomes.jsonl` row; every desk decision past its grading window has an outcome row (a `not_computable`
 row with its reason counts); every version of live-trade-review `SKILL.md` / `REVIEWER-BRIEF.md` and
 `DESK-BRIEF.md` committed since 2026-10-27 has an `AMENDMENTS.md` line with a graded basis stating `n=`.
