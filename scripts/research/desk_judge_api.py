@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # wiring: manual-only - run once by a system-action on the live VM (the only place ANTHROPIC_API_KEY legitimately exists) for the DESK-18B judging run; no schedule consumes it.
-"""DESK-18B -- stateless batch judge: ONE Anthropic Messages API call per masked packet.
+"""RETIRED 2026-10-27 (operator: "No API: plan sessions only") -- the `run-desk-judge` system-action now hard-refuses and
+nothing may call this script. Kept for reference only; judging is done by manager-spawned plan sessions.
+
+DESK-18B -- stateless batch judge: ONE Anthropic Messages API call per masked packet.
 
 Why this exists: the pilot judged 50 packets through five manager-spawned sessions at $0.337/packet MEASURED,
 because every batch carried ~290k tokens of session context. A stateless call carries only JUDGE-PROTOCOL.md

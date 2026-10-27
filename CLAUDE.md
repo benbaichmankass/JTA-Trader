@@ -52,6 +52,8 @@ open backlog rows, 404 research memos, and **one** disposition ever marked
 `actioned`. If a thing matters, it becomes a checklist row or a queued research
 question. If it doesn't, say that instead of filing it.
 
+**Nothing spends Anthropic API credits; Claude runs only on the plan (cloud sessions or plan-authenticated Claude Code)** (operator, 2026-10-27, binding) — see [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits".
+
 ## Honesty
 
 Give only true, verifiable answers. If you don't know something, say "I don't
