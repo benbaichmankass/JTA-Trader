@@ -53,7 +53,11 @@ DEV_LOOKS = (25, 50, 75, 100)     # sequential looks, in packets of the variant'
 DEV_SEED = 20261027
 DEV_GEOM = ("GJ", 1.25, 2.0, 48)  # the fixed bracket every cell score is about (V1)
 DEV_GEOMS = {g[0]: g for g in ce.GEOMETRIES + ce.SHORT_GEOMETRIES}   # a variant may name another registered bracket
-SEL_USEFUL = 0.10                 # R: the selection value below which a variant is not worth a holdout (doc section 5.2)
+# R: the selection value below which a variant is not worth a holdout. +0.10 for V1 (RQ-20261027-fe57-01, registered
+# and run at 0.10); raised to +0.25 for every LATER variant by the operator's direction of 2026-10-27 ~16:40Z ("an edge
+# that needs more than 35 weeks to prove ... isn't a strong enough edge"): the bar is one the DEV window resolves alone.
+SEL_USEFUL_V1 = 0.10
+SEL_USEFUL = 0.25
 TOP_K = 2                         # cells per packet the SEL statistic takes (judged-1's cap)
 KILL_ALPHA = 0.05                 # one-sided, split evenly over the looks (Bonferroni)
 PROMOTE_ALPHA = 0.20              # one-sided screen at the last look (dev is a screen, the holdout is the test)
@@ -258,7 +262,7 @@ def top_pick_rows(rows: List[dict]) -> List[dict]:
     return [{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["y"]} for r in by.values() if r["score"] > 0]
 
 
-def sequential_decision(weeks_at_looks: List[List[float]], looks: Sequence[int] = DEV_LOOKS) -> Tuple[str, List[str]]:
+def sequential_decision(weeks_at_looks: List[List[float]], looks: Sequence[int] = DEV_LOOKS, useful: float = SEL_USEFUL) -> Tuple[str, List[str]]:
     """The registered sequential rule. `weeks_at_looks[j]` = the weekly mean SELs using the first looks[j] packets.
     kill    at any look: the one-sided upper bound (alpha KILL_ALPHA / len(looks)) of mean SEL < SEL_USEFUL.
     promote at the last look: mean SEL >= SEL_USEFUL and its one-sided lower bound (PROMOTE_ALPHA) > 0.
@@ -268,16 +272,16 @@ def sequential_decision(weeks_at_looks: List[List[float]], looks: Sequence[int] 
         if len(v) < 2:
             continue
         _, hi = one_sided_bounds(v, a_kill)
-        if hi < SEL_USEFUL:
-            return "kill", [f"look {j + 1} ({looks[j]} packets): SEL upper bound {hi:+.4f} < SEL_USEFUL {SEL_USEFUL}"]
+        if hi < useful:
+            return "kill", [f"look {j + 1} ({looks[j]} packets): SEL upper bound {hi:+.4f} < the bar {useful}"]
     if len(weeks_at_looks) < len(looks):
         return "continue", [f"{len(weeks_at_looks)} of {len(looks)} looks taken"]
     v = weeks_at_looks[-1]
     m = float(np.mean(v)) if v else float("nan")
     lo, _ = one_sided_bounds(v, PROMOTE_ALPHA)
-    if np.isfinite(m) and m >= SEL_USEFUL and lo > 0:
-        return "promote", [f"mean SEL {m:+.4f} >= {SEL_USEFUL}, one-sided {1 - PROMOTE_ALPHA:.0%} lower bound {lo:+.4f} > 0"]
-    return "screen_fail", [f"mean SEL {m:+.4f}, lower bound {lo:+.4f}: not both (>= {SEL_USEFUL}, > 0)"]
+    if np.isfinite(m) and m >= useful and lo > 0:
+        return "promote", [f"mean SEL {m:+.4f} >= {useful}, one-sided {1 - PROMOTE_ALPHA:.0%} lower bound {lo:+.4f} > 0"]
+    return "screen_fail", [f"mean SEL {m:+.4f}, lower bound {lo:+.4f}: not both (>= {useful}, > 0)"]
 
 
 def promote_batch(results: Dict[str, Tuple[str, float]]) -> List[str]:
@@ -353,14 +357,15 @@ def cmd_score(a: argparse.Namespace) -> int:
             break
         looks.append(L)
         wk_at.append(weekly_means([r for r in sel if r["packet_id"] in have]))
-    dec, why = sequential_decision(wk_at)
+    useful = SEL_USEFUL_V1 if a.variant == "V1" else SEL_USEFUL      # V1 was registered and run at +0.10
+    dec, why = sequential_decision(wk_at, useful=useful)
     picks = top_pick_rows(rows_all)
     st = d.cluster_stats(picks) if picks else {"n": 0}
     res = {"variant": a.variant, "decision": dec, "reasons": why, "intake": acc, "looks_taken": looks,
            "mean_sel_by_look": [float(np.mean(v)) if v else None for v in wk_at], "weeks_by_look": [len(v) for v in wk_at],
            "packets_with_sel": len(sel),
            "cells_scored": len(rows_all), "top_pick": {k: st.get(k) for k in ("n", "mean_net_r", "paired_diff_vs_random", "paired_diff_ci95")},
-           "constants": {"SEL_USEFUL": SEL_USEFUL, "TOP_K": TOP_K, "DEV_LOOKS": DEV_LOOKS, "KILL_ALPHA": KILL_ALPHA, "PROMOTE_ALPHA": PROMOTE_ALPHA, "DEV_GEOM": DEV_GEOMS[a.geom]}}
+           "constants": {"SEL_USEFUL": useful, "TOP_K": TOP_K, "DEV_LOOKS": DEV_LOOKS, "KILL_ALPHA": KILL_ALPHA, "PROMOTE_ALPHA": PROMOTE_ALPHA, "DEV_GEOM": DEV_GEOMS[a.geom]}}
     res["verdict"] = {"promote": "pass", "kill": "fail", "screen_fail": "fail"}.get(dec, "indeterminate")
     if acc["rank_rows"] < 0.9 * len(order):
         res["verdict"], res["reasons"] = "indeterminate", [f"intake: {acc['rank_rows']} valid rank rows of {len(order)} packets (< 90%)"] + why

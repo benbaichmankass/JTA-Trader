@@ -155,8 +155,73 @@ Only a variant that PASSED the holdout. **Window 2023-11-01 .. 2025-04-30** (nev
 
 Judging runs only in plan sessions (canonical § "Nothing spends Anthropic API credits"). MEASURED anchors: $0.0688 per packet for a stateless call (judged-1, $103.14 / 1,498), $0.337 per packet for a session carrying ~290k tokens of context (the DESK-18B pilot). A rank reply is about 12 cells longer than a proposal. INFERRED: **$0.05-$0.10 per packet** for a repo-less subagent that sees only the protocol and its packets. So a dev variant is **$5-10** (less if killed at a look), a holdout look **$15-30**, a full run **$100-300** depending on n. Self-consistency with k samples multiplies by k; an Opus judge by about 1.7 (list-price ratio, INFERRED).
 
-## 6. The lever grid, ranked by expected information per dollar
+## 6. The operator's redirect (2026-10-27 ~16:40Z): a BIGGER edge, shorter bars, the hold rule
+
+Relayed by the manager, verbatim: *"we need a bigger edge, like an edge that needs more than 35 weeks to prove that it's statistically significant isn't a strong enough edge, so we do need to think about ways of refining and optimizing to improve it, not just reconstructing testing to make it look better. ... maybe we can raise the cap for from 60 minutes for like cases where ... if the trade started within 60 minutes, then it can continue going ... maybe it needs to be looking at shorter time frames ... 30-second bars and trades that last ... up to half an hour."*
+
+### 6.1 The bar (registered now, before any further variant)
+
+- **TARGET: S3 >= +0.25 R on the DEV window alone**, with its 95% weekly-cluster CI lower bound > 0. That is what about 35-45 DEV weeks resolve on their own (§ 4.1: about +-0.2 R). `desk_edge_devloop.SEL_USEFUL` = **+0.25** for every variant after V1 (V1 was registered and run at +0.10, and keeps that rule).
+- **For a hold whose cost is a large share of its move, S3 is not enough: S1 > 0 is also required at the stated cost scenario.** A random entry pays the full round trip, so at a 30-minute taker hold a variant can have S3 +0.25 and still lose money (§ 6.3: cost about 0.29 R of a 1-sd stop).
+- **The extended-era run (§ 4.2) is now ONLY a ceiling DIAGNOSTIC and a robustness check** for a variant that already clears the bar on DEV. It was registered and started before this direction, so it is finished and reported as a diagnostic. **It is never used to make a small edge significant.**
+
+### 6.2 Data we HAVE for shorter timeframes (MEASURED from this container, 2026-10-27)
+
+| source | what | reachable | note |
+|---|---|---|---|
+| Binance Vision USD-M perp klines | 1m, monthly and daily files | yes (fetched 2026-06..09, six symbols, 24 files, 39 MB) | perp, not spot: closer to the desk's venue than the driver's spot candles |
+| Binance Vision spot klines | **1s**, monthly | yes (HTTP 206 on 2026-08) | sub-minute bars without building them |
+| Binance Vision USD-M aggTrades | every aggregated trade, daily | yes (2026-09-01) | builds 30s bars, signed order flow, trade imbalance |
+| Binance Vision USD-M bookTicker | top of book | **2024-03 yes, 2026-09 no (404)** | historical spread only for older periods |
+| **Bybit public trade dumps** (`public.bybit.com/trading/<SYM>/`) | every trade on the desk's own venue, daily csv.gz | yes (BTCUSDT 2026-09-01 = 70 MB) | the honest source for Bybit sub-minute bars and flow; large (~2 GB/symbol/month for BTC) |
+| Bybit REST API (`api.bybit.com`) | klines, order book | **no: HTTP 403** from this container | matches the scan builder's note (geo-blocked from a session) |
+
+What sub-minute research would take: 30s bars from Bybit trade dumps for six symbols over the DEV window is roughly 10 GB/symbol to download and reduce to bars (INFERRED from one day's size), so a runner job with streaming reduction, not a session. **1m perp bars are enough to start** and cost minutes.
+
+### 6.3 Cost per horizon (MEASURED: `scripts/research/desk_edge_levers.py costs`, `comms/research/desk_edge/levers/cost-per-horizon.json`)
+
+Cost as a fraction of the 1-sd move at that hold (= cost in R for a stop of 1 sd). Population: Binance USD-M perp 1m klines, 2026-06-01..2026-09-30, six symbols, non-overlapping returns, median over symbols.
+
+| hold | 1-sd move | median abs move | repo stack 10.5 bps | Bybit VIP0 taker 14 bps | maker in / taker out 9 bps | maker both 4 bps |
+|---|---|---|---|---|---|---|
+| 1 min | 9.2 bps | 3.8 | **1.14** | **1.52** | 0.98 | 0.43 |
+| 5 min | 20.8 | 8.3 | 0.50 | 0.67 | 0.43 | 0.19 |
+| 15 min | 34.4 | 14.1 | 0.31 | 0.41 | 0.26 | 0.12 |
+| 30 min | 49.1 | 19.7 | 0.21 | 0.29 | 0.18 | 0.08 |
+| 60 min | 68.3 | 27.9 | 0.15 | 0.21 | 0.13 | 0.06 |
+| 4 h | 128 | 55 | 0.08 | 0.11 | 0.07 | 0.03 |
+| 12 h | 205 | 108 | 0.06 | 0.07 | 0.05 | 0.02 |
+| 48 h | 520 | 269 | 0.03 | 0.04 | 0.03 | 0.02 |
+
+- **Where cost kills:** at 1-5 minutes a taker round trip costs 0.5-1.5 R of a 1-sd bracket; no plausible timing edge clears that. At 15-30 minutes taker costs 0.3-0.4 R: a variant would need S3 of about +0.55 to +0.65 to reach the +0.25 bar in S1.
+- **Where maker execution rescues it:** maker on both sides cuts 30-minute cost from 0.29 R to 0.08 R and 15-minute cost from 0.41 R to 0.12 R. That is the single largest MEASURED lever on S1 for short holds, before fill probability and adverse selection (not measured: a limit that fills is more often a limit the market ran through).
+- **Flag (say something):** the replay charges **7.5 bps fee + 3 bps slippage** round trip (`execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP`, `PERP_SLIPPAGE_BPS_ROUNDTRIP`) for every crypto perp. Bybit's published VIP0 linear taker fee is 0.055% per side = **11 bps round trip in fees alone** (INFERRED from the public schedule; the account's real tier was NOT read). If the desk pays VIP0 taker, every replay in this repo under-charges cost by about 3.5 bps a round trip: negligible at 48 h (0.007 R), material at 30-60 min (0.05-0.07 R). Filed for the manager in § 8.
+
+### 6.4 The levers, ranked by estimated added edge x probability (DEV, MEASURED where stated; `comms/research/desk_edge/levers/levers-dev-ridge.json`, ridge on P+, test folds 2-4, 35 weeks; post-hoc looks, 24 lines)
+
+| rank | lever | measured on DEV | estimated added edge | P(real, judgement) | next step (token-free first) |
+|---|---|---|---|---|---|
+| 1 | **Execution cost: maker / limit entries** | not an S3 lever (the baseline pays the same cost); S1 gain = cost saved: +0.21 R at 30 min, +0.15 R at 60 min, +0.08 R at 4 h, +0.02 R at 48 h (§ 6.3) | +0.1 to +0.2 R **S1** at <= 60-min holds, after adverse selection about half of it | 0.7 | limit-entry geometries in the action set (the driver already simulates `limit` fills); a 1m-bar version for <= 60 min |
+| 2 | **Shorter bars and holds (1m bars, 5-30 min holds) + event / flow windows** | not yet measured; cost table above says taker S3 must be +0.3 to +0.7 R before S1 is positive | unknown; the one place a large edge is plausible (order-flow imbalance, liquidation cascades: DESK-27-LIVE-FLOW) | 0.2 | build the 1m-bar ceiling on Binance perp 1m + aggTrades flow (`RQ-20261027-fe57-02`) |
+| 3 | **Hold rule: enter within 60 min, run to H** | partly measurable now: the era run's per-horizon table covers 1, 4, 12, 24, 48, 96 bars on the same decisions (§ 4.4 when it lands); on DEV unselected S1 rises from -0.15 R (12 bars) to -0.055 R (96 bars) because cost falls with the hold | at the 1h bar it changes S1 by +0.05 to +0.10 R via cost; S3 about 0 at every hold so far | 0.5 (on S1), 0.1 (on S3) | 1m-bar ceiling with H in {60, 120, 240, 480} min vs a hard 60-min cap (`fe57-02`) |
+| 4 | **Session / event window** | top 5% picks in 07-13 UTC: S3 +0.153 [-0.15, +0.49]; other windows -0.05 to -0.09 | +0.15 if real | 0.15 (one of 4 windows, post-hoc) | test on the era folds and the 1m ceiling, registered |
+| 5 | **Fade the model's most confident tail** | top 1%: S3 **-0.244** [-0.39, +0.07]; top 0.2%: **-0.400 [-0.59, -0.27]** (n 570): the model's most confident picks are reliably WRONG | +0.25 to +0.40 if the reversal is real | 0.15 (found by looking; extreme momentum reverting is plausible) | registered test on era folds 3-6, which this model has not been scored on (`RQ-20261027-fe57-03`) |
+| 6 | **Asymmetric geometry (target vs stop)** | S3 about 0 at every geometry (-0.013 to +0.007 unselected); unselected S1 best at 2 ATR / 3 R / 96 bars (-0.055) | via cost only (S1) | 0.6 on S1, ~0 on S3 | none beyond rank 3 |
+| 7 | **Selectivity: abstain unless confident** | as built it HURTS (rank 5); top 20% / 5%: -0.016 / -0.009 | <= 0 as built | - | only through rank 5 |
+| 8 | **Direction-neutral pairs (best long + best short)** | all: -0.006 [-0.05, +0.04]; top 5%: -0.074 [-0.22, +0.10] | ~0 | 0.05 | none |
+| 9 | **Judge levers (brief, Sonnet vs Opus, self-consistency)** | V1 is a linear base-rate rule; the rule is excluded (§ 4.3) | only on information the base rates lack | 0.05 until rank 2 or 5 finds information | none until then |
+
+**Reading of the table (DECIDED by the § 2 tree):** no lever measured so far gives S3 near +0.25 on DEV. The two that could (rank 2, rank 5) are unmeasured or post-hoc; the largest MEASURED lever (rank 1) moves S1, not S3. **No judge spend until a token-free lever clears the bar.**
 
 ## 7. Budget
 
+- **Spent in this lane (API-equivalent on the plan; no API credits):** ceiling, emulator, levers and cost table **$0** (CPU); V1 pilot about **$7** (13 subagent runs x ~172k tokens, 3 of them rejected re-runs). Lane ceiling $25.
+- **Next (all token-free):** `fe57-02` 1m-bar ceiling (build about a day of lane work; runner CPU), `fe57-03` fade test (CPU, about 1 h on a runner: it rebuilds the era packets). Judge spend resumes only for a variant built on information a token-free test found: then dev $5-10 per variant, holdout $15-30, full run $100-300.
+
 ## 8. What was not verified
+
+- The account's real Bybit fee tier (the cost table carries both the repo stack and VIP0); fill probability and adverse selection of maker entries.
+- That the extended-era DEV folds equal the driver's folds to the bar (the era fold windows are rebuilt from the driver's arithmetic with a ceiling at the second).
+- The judge's behaviour beyond Sonnet: the base-rate-rule finding is for the Sonnet subagent setup only.
+- Whether V1's subagents, which had file tools, are representative of a tool-less API judge: their transcripts show no foreign reads, but the 3 rejected batches show the setup invites shortcuts.
+- The lever table's lines are 24 post-hoc looks on one learner (ridge); none is evidence until a registered test.

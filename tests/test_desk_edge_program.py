@@ -183,11 +183,14 @@ def test_sequential_decision_kill_promote_fail():
     rng = np.random.default_rng(0)
     bad = [list(rng.normal(-0.3, 0.1, 12))]
     assert dl.sequential_decision(bad)[0] == "kill"
-    good = [list(rng.normal(0.25, 0.1, k)) for k in (8, 12, 16, 20)]
+    good = [list(rng.normal(0.45, 0.1, k)) for k in (8, 12, 16, 20)]
     assert dl.sequential_decision(good)[0] == "promote"
     meh = [[0.9, -0.9, 0.75, -0.6, 0.3, -0.3, 0.6, -0.45] * (k // 8) for k in (8, 16, 16, 24)]
     assert dl.sequential_decision(meh)[0] == "screen_fail"     # mean SEL ~ +0.04: neither killed nor promoted
     assert dl.sequential_decision(meh[:2])[0] == "continue"
+    v1ish = [list(rng.normal(0.15, 0.05, k)) for k in (8, 12, 16, 20)]
+    assert dl.sequential_decision(v1ish, useful=dl.SEL_USEFUL_V1)[0] == "promote"
+    assert dl.sequential_decision(v1ish)[0] != "promote"           # the raised bar (operator, 16:40Z)
 
 
 def test_packet_sel_is_top2_minus_packet_mean():
@@ -223,3 +226,14 @@ def test_base_rate_emulator_scores_by_the_packets_own_rows():
     assert len(rows) == 4
     top = max(rows, key=lambda r: r["score"])
     assert top["y"] in (1.0, 0.5) and tp[0]["diff"] in (1.0, 0.5)
+
+
+def test_fade_takes_the_opposite_side_of_the_top_picks():
+    from scripts.research import desk_edge_levers as lv
+    rows, x = _acts(n_cut=50, signal=0.0, seed=3)
+    picks = np.nonzero(x >= np.quantile(x, 0.9))[0]
+    fr = lv.fade_rows(rows, x, 0.1)
+    assert len(fr) == len(picks)
+    opp = {(r["cutoff"], r["symbol"], r["side"]): r["y"] for r in rows}
+    want = sorted(opp[(rows[j]["cutoff"], rows[j]["symbol"], "short" if rows[j]["side"] == "long" else "long")] for j in picks)
+    assert sorted(r["diff"] for r in fr) == pytest.approx(want)
