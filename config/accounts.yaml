@@ -227,7 +227,14 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop, claude_desk]
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m]
+                                        # 2026-10-27 DESK-8-SHORT-HOLD-S0 (Tier-3, OPERATOR-APPROVED, popup answer verbatim
+                                        # "Roster on bybit_1 (Recommended)"): ict_scalp_eth_15m + ict_scalp_xrp_15m re-join as
+                                        # Stage-1 MECHANICS legs on demo money so Claude can manage a <=1h trade from a per-trade
+                                        # session (design 6.3). They were cut 2026-10-05 (MD-S1-CUT-ON-STAGE0-FAIL, folds 2/4) and
+                                        # have NOT passed Stage 0: bybit_1 ONLY, nothing on bybit_2 / mirror / prop. Edge is decided
+                                        # by the DESK-8a confirm units, never by this book. Brackets: tp_at_r 1.5 + ATR-buffered SL.
+                                        # ROLLBACK: drop the two names.
                                         # 2026-10-26 DESK-17 (Tier-3, manager dispatch under operator authority): claude_desk -- the
                                         # trading desk's own leg, execution: shadow (logs packages, sends nothing). Emits only proposals
                                         # desk intake accepted (none until MD-TRADE-DESK entry_generation.blocked_until clears).
