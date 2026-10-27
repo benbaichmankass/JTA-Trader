@@ -1230,7 +1230,7 @@ V2-V5 are unchanged as checks; do them with targeted reads (`get_trigger` on the
 
 **5. STAND DOWN.** Only after V1–V5 pass:
 - the old manager takes no further actions;
-- its last message points to the new session;
+- its last message points to the new session **with a clickable link**, `https://claude.ai/code/<new session id>`, plus the new title (`Manager Session YYYY-MM-DD<letter>`), so an operator who opens the old session can get to the right one in one tap (operator, 2026-10-27);
 - the **new** manager archives the old session (§ "Archive protocol") **after confirming nothing still wakes it**, for example a fired `send_later` lands in the new session. Then it deletes the disabled old triggers.
 
 **If any check fails, the old manager stays responsible and fixes it. It never goes quiet with a check open.** A handover that stops partway is a HANDOFF with the gaps named in the handoff doc, not a completion.
@@ -1248,7 +1248,7 @@ V2-V5 are unchanged as checks; do them with targeted reads (`get_trigger` on the
 - [ ] V3 id sweep: grep of prompts / charters / lane briefs for old id finds none (positive control shown): <evidence>
 - [ ] V4 wake round-trips: (a) old->new <trigger id>  (b) assistant->new <evidence>  (c) lane ack <lane id>
 - [ ] V5 operator told in one message: new link, what moved, what did not and why
-- [ ] STAND DOWN: old manager's last message points to the new session; new manager has archived the old one after a wake landed in the new session
+- [ ] STAND DOWN: old manager's last message links the new session (https://claude.ai/code/<new id>); new manager has archived the old one after a wake landed in the new session
 ```
 
 ## The ladder the manager is moving things along
