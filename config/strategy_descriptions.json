@@ -222,5 +222,9 @@
  "gdx_pullback_1d": {
   "short": "GDX daily pullback trader (Alpaca paper) — buys/sells pullbacks within the prevailing gold-miners trend; the equity-beta cousin of the GLD/SLV metals pullbacks.",
   "how_it_works": "Watches the VanEck Gold Miners ETF on daily candles during US market hours. When a 40-day trend filter is in force and price pulls back into the deeper zone of the recent range, it enters in the trend direction (long and short) with a 2x ATR(14) stop and an ATR trailing exit, via bracket orders on the Alpaca paper account. Mirrors the gld_pullback_1d structure on the miners ETF (higher beta than spot metal)."
+ },
+ "claude_desk": {
+  "short": "The Claude trading desk's own leg (Bybit demo, shadow) — trades only the entry proposals the desk makes and desk intake accepts, one order package per proposal.",
+  "how_it_works": "Not a candle strategy. The desk writes a propose_entry decision (symbol, side, entry, a stop with its basis, and a real predictive take-profit with its basis and hit probability); desk intake validates it and, only once the MD-TRADE-DESK entry_generation block is lifted, queues it. Each tick this leg turns the oldest unconsumed, unexpired proposal on the tick's symbol into ONE order package with exactly the proposal's entry, stop and take-profit (a proposal missing either bracket is refused) and the decision_id in its meta. Each account's RiskManager sizes it; it runs execution: shadow on bybit_1 and only on AVAXUSDT (the one symbol no other bybit_1 leg trades), so it logs packages and sends no order. A proposal not taken within its good-till window expires."
  }
 }

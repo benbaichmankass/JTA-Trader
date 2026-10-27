@@ -281,6 +281,14 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
     "bybit_1/trend_donchian_xrp_adx25": R,
     "bybit_1/xrp_pullback_2h": R,
+    # 2026-10-26 DESK-17: the claude_desk leg (bybit_1 paper soak only, execution: shadow). Its TP is NOT a
+    # config field: every package carries the desk proposal's OWN level (schema-required tp.level + basis +
+    # p_hit, desk-records-guard-checked; src/units/strategies/claude_desk.py refuses a proposal without
+    # both brackets), and the desk revises it through the per-account amend path (desk intake ->
+    # live_review_apply move_tp), not a monitor() verdict. This scan reads neither, so it grades the leg
+    # no_target / no_tp_verdict. A visible, deliberate line until the scan measures proposal TPs
+    # (design § 3.7 "check_tp_doctrine.py measures the desk leg on the proposals' tp.basis"; row DESK-17).
+    "bybit_1/claude_desk": ER,
     "ib_paper/gld_pullback_1d": R,  # moved from alpaca_paper 2026-10-25 (GLD-SOAK-REPLACE); same debt, not new: tp_r 3.5 declared (OPERATOR-DECISIONS-1022), tp_revision still undeclared
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,

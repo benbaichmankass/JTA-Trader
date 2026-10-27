@@ -227,7 +227,13 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop, claude_desk]
+                                        # 2026-10-26 DESK-17 (Tier-3, manager dispatch under operator authority): claude_desk -- the
+                                        # trading desk's own leg, execution: shadow (logs packages, sends nothing). Emits only proposals
+                                        # desk intake accepted (none until MD-TRADE-DESK entry_generation.blocked_until clears).
+                                        # bybit_1 ONLY (alpaca_paper deferred: a leg's symbols: scope is venue-agnostic,
+                                        # so one leg on both venues would fan BTCUSDT packages to Alpaca -- row DESK-17B).
+                                        # ROLLBACK: drop the name.
                                        # 2026-10-15 PROP-GATE-PARITY (Tier-3 roster add on PAPER, operator 'Yes, 1, 2 and 3a'):
                                        # trend_donchian_eth_prop + trend_donchian_sol_prop join the Stage-1 soak. Operator: "if anything,
                                        # the prop accounts should have a higher bar to clear because of the DD limits" -- a prop leg must

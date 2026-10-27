@@ -60,9 +60,26 @@ population:
     regime_macro/unmeasured: 139
     strategy/measured: 4
     strategy/unmeasured: 68
-  strategy_modules: 15
+  strategy_modules: 16
   ml_models: 76
 strategy_modules:
+  claude_desk:
+    file: src/units/strategies/claude_desk.py
+    # DESK-17 (2026-10-26): reads NO candles. Its only input is the accepted-proposal queue
+    # runtime_logs/desk/accepted_proposals.jsonl (scripts/ops/desk_intake.py) plus the journal's
+    # claude_desk order_packages.meta (consumed decision_ids). Health: unmeasured.
+    candle_columns: []
+    runtime_imports: []
+    legs:
+      strategy_ids: 1
+      enabled: 1
+      enabled_live: 0
+      enabled_shadow: 1
+      disabled: 0
+      accounts_yaml_rostered_legs: 1
+      accounts_yaml_roster_entries: 1
+      timeframes:
+        proposal: 1
   fade_breakout_4h:
     file: src/units/strategies/fade_breakout_4h.py
     candle_columns:

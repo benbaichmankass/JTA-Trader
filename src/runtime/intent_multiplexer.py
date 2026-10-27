@@ -88,6 +88,7 @@ from src.runtime.strategy_signal_builders import (
     avax_pullback_2h_signal_builder,
     mgc_pullback_1d_signal_builder,
     mhg_pullback_1d_signal_builder,
+    claude_desk_signal_builder,
     squeeze_breakout_4h_signal_builder,
     ict_scalp_signal_builder,
     ict_scalp_sol_5m_signal_builder,
@@ -408,6 +409,9 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         # `enabled` flag.
         "mgc_pullback_1d": mgc_pullback_1d_signal_builder,
         "mhg_pullback_1d": mhg_pullback_1d_signal_builder,
+        # claude_desk: the trading desk's own leg (DESK-17). Emits only accepted desk
+        # proposals (scripts/ops/desk_intake.py), one package per decision_id.
+        "claude_desk": claude_desk_signal_builder,
     }
 
 
