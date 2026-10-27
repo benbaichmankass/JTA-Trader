@@ -281,6 +281,11 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
     "bybit_1/trend_donchian_xrp_adx25": R,
     "bybit_1/xrp_pullback_2h": R,
+    # 2026-10-27 DESK-8-SHORT-HOLD-S0 (operator-approved bybit_1 Stage-1 mechanics re-roster): both carry a real
+    # declared entry TP (tp_at_r 1.5, ATR-buffered SL); tp_revision is undeclared (ict_scalp.monitor() returns no
+    # TP verdict; eth_15m's stale-exit is a close, not a TP move). A visible, deliberate line; exit-refinement owns it.
+    "bybit_1/ict_scalp_eth_15m": R,
+    "bybit_1/ict_scalp_xrp_15m": R,
     # 2026-10-26 DESK-17: the claude_desk leg (bybit_1 paper soak only, execution: shadow). Its TP is NOT a
     # config field: every package carries the desk proposal's OWN level (schema-required tp.level + basis +
     # p_hit, desk-records-guard-checked; src/units/strategies/claude_desk.py refuses a proposal without
