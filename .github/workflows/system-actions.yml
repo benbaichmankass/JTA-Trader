@@ -2421,6 +2421,10 @@ jobs:
           SSH_ARGS=( -i ~/.ssh/id_rsa
                      -o BatchMode=yes
                      -o StrictHostKeyChecking=accept-new
+                     # keepalive: a silent long action (#20541 run-desk-judge) was
+                     # dropped as idle ("Broken pipe", exit 255) after ~5 min.
+                     -o ServerAliveInterval=30
+                     -o ServerAliveCountMax=10
                      -o ConnectTimeout=15 )
           if [ "${ACTION}" = "gateway-logs" ] || [ "${ACTION}" = "gateway-forensics" ]; then
             SSH_TARGET_HOST="${GATEWAY_HOST}"
