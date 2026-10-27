@@ -394,8 +394,13 @@ accounts:
       risk_pct: 0.0075                  # 0.75% per trade (Tier-3, operator 2026-10-22: "Cut its risk
                                        # to ~0.75%"; OPERATOR-DECISIONS-1022). Was 1.5% (S-026 G2);
                                        # ROLLBACK: 0.015.
-      leverage: 3                      # 3× leverage — same as bybit_2; applied
-                                       # via /v5/position/set-leverage at boot.
+      leverage: 10                     # 10× (Tier-3, operator popup 2026-10-27 ~22:10Z, verbatim
+                                       # "Raise leverage on bybit_1 (Recommended)"; row BYBIT1-MARGIN-STARVED).
+                                       # MEASURED 22:25Z: margin balance $39.1k (BTC/USDC/ETH collateral not
+                                       # counted toward margin) vs position IM $40.0k at 3× -> available -$881,
+                                       # every new entry sized 0. Leverage only lifts the margin cap in
+                                       # RiskManager.position_size (risk.py ~L1254), never the risk-sized qty.
+                                       # Applied via /v5/position/set-leverage at boot. ROLLBACK: 3.
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
         armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
