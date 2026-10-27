@@ -1083,7 +1083,9 @@ def cmd_baselines(a: argparse.Namespace) -> int:
     rost = rostered_legs(sorted(mkt)) if mkt else {}
     legs, gaps = load_strategy_lists(rost) if mkt else ([], [])
     res = baselines(mkt, missing, legs, gaps, rost, a.seed)
-    recs = [{"leg": f"random_entry_{g}", "population": f"random-entry null, geometry {g}", "n": v["n"], "verdict": "not_applicable",
+    recs = [{"leg": f"random_entry_{g}", "population": f"random-entry null, geometry {g}", "n": v["n"],
+             # research_result.validate(): a measured row carries the run's verdict; not_applicable is only for no_data rows
+             "verdict": res["verdict"] if v["n"] else "not_applicable",
              "read_state": "measured" if v["n"] else "no_data", "mean_net_r": v.get("mean_net_r")}
             for g, v in res.get("geometries", {}).items()]
     pop = (f"random-entry null over {len(mkt)} symbols x 2 sides x {len(REFERENCE_GEOMETRIES)} geometries x {BASELINE_DRAWS_PER_CELL} draws; "
@@ -1233,7 +1235,8 @@ def cmd_score(a: argparse.Namespace) -> int:
     pop = (f"entry generation, subset={a.subset}: {st['n']} filled proposals from {len(by)} judged of {len(packets)} masked packets "
            f"over {', '.join(sorted(mkt))}")
     notes = "; ".join(res["reasons"]) or "all registered clauses met"
-    recs = [{"leg": k, "population": f"{k} entry generation", "n": v["n"], "verdict": "not_applicable",
+    recs = [{"leg": k, "population": f"{k} entry generation", "n": v["n"],
+             "verdict": res["verdict"] if v["n"] >= 20 else "not_applicable",
              "read_state": "measured" if v["n"] >= 20 else "no_data", "mean_net_r": v["mean_net_r"]}
             for k, v in (st.get("by_symbol") or {}).items()]
     _write_verdict(Path(a.out), res, pop, st["n"], f"{notes} | {note}", recs or None, src)
