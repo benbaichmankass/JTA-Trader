@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261027-GV7WFI53-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-20261027 close-out (session_01AFoLuMGzc5ZQdVGv7Wfi53)",
+    "rerun": "python3 scripts/ci/check_research_queue_health.py and read comms/research/ops/20261027T2010Z.json handoff"
+  },
+  "state": "queued",
+  "what": "Desk structural levers need BUILDS before any unit can be authored (edge-program lane's recommended levers: universe, maker fills, event-driven entries): (a) maker fills: our own measured maker fill rate + adverse selection on bybit (RQ-20261026-f679-04 is the perfect-fill upper bound only); (b) event-driven entries: a point-in-time crypto event calendar store (unlocks/listings) readable by macro_event_study_run.py; (c) wider universe: market_features shards beyond the 12 perps in metis-market-data. Also ml_health theme is ~5 units short and regime_label bake-offs are saturated (90+ units): next ml_health supply should be exit-head / demotion units needing an owner to scope. Decide which builds to checklist-row (manager), then author the units the day each instrument lands."
+}
