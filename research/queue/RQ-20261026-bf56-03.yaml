@@ -1,6 +1,6 @@
 id: RQ-20261026-bf56-03
 title: 'Desk D-S0 exit: on a masked blind replay of the four real-money 2h/4h legs, does Claude''s close / partial_close beat holding to the bracket, a frequency-matched random-timing baseline and the best static exit, net of the full cost stack?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -57,14 +57,6 @@ decision_rule:
 requires_result:
   unit: RQ-20261026-bf56-01
   verdict: pass
-blocked_on:
-- kind: work_item
-  ref: DESK-7B-REPLAY-DRIVER
-  what: >-
-    Same driver as RQ-20261026-bf56-02 (masked packets, judging-session action collection, real-path replay of close / partial_close with the full cost stack, bootstrap and baselines). The close / partial_close replay is not in
-    live_review_outcomes.py, which prices tighten only.
-  clears_when: >-
-    DESK-7B-REPLAY-DRIVER is done AND RQ-20261026-bf56-01 has landed with verdict pass. Then: git mv this file to research/queue/, fill run.workflow and run.command for the scoring step, remove blocked_on, status: queued.
 masked_replay:
   population: >-
     The four real-money 2h/4h legs: xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h (MEASURED 2026-10-26 by parsing config/accounts.yaml at main 38f8bcf8; bybit_2 and its exact mirror bybit_portfolio
@@ -89,10 +81,18 @@ routing:
   est_minutes: null
   basis: 'est_minutes null rather than guessed: the driver does not exist; the judging step is LLM sessions, the scoring step is CPU only.'
 run:
-  workflow: null
+  workflow: research-script-run.yml
+  command: [python3, scripts/research/desk_replay_driver.py, score, --role, exit, --actions-file, comms/research/desk_replay/judged-1/actions-exit.jsonl, --mask-key, comms/research/desk_replay/judged-1/mask-key.json, --selfcheck-verdict, comms/research/RQ-20261026-bf56-01/40387359527/verdict.json, --model-cutoff, '2026-07-01', --out, '{out_dir}', --fetch]
+  timeout_minutes: 30
   inputs:
     research_unit: RQ-20261026-bf56-03
-  note: Deliberately null until DESK-7B-REPLAY-DRIVER lands.
+  note: >-
+    Unblocked 2026-10-28 by lane DESK-MGMT-S0 per clears_when (DESK-7B-REPLAY-DRIVER done; RQ-20261026-bf56-01 verdict pass, research/results/RQ-20261026-bf56-01/40387359527.jsonl).
+    Judging: 176 of 176 registered packets (desk_replay_driver.py packets --fetch, seed 20261026), judged in 8 isolated batches of 22 by plan subagents (packet + protocol only, no repo, no answers; Read tool only),
+    protocol comms/research/desk_replay/judged-1/PROTOCOL-exit.md, intake actions-exit.jsonl. No Anthropic API credits spent. Statistic, n, baselines and rule unchanged.
+    --model-cutoff 2026-07-01 is the judge model's stated knowledge cutoff (June 2026) rounded up, so the post-cutoff stratum is conservative.
+    COST BASIS: the registered stack is fee 7.5 bps round trip (the Stage-0 evidence records' cost_stack.fees) + slippage 3.0 + funding 1.0/window, and the verdict is graded on it.
+    The merged Bybit linear taker fee is 11.0 bps (#20783). Both are recorded: the lane's 11.0-bps sensitivity (hold and action both repriced) is in comms/research/desk_replay/judged-1/fee-sensitivity.json; it does not decide.
 lands:
   store: research/results/
   assert_field: read_state
