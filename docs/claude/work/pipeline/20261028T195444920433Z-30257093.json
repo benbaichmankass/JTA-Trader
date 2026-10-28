@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-82K6MX8C-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "COST-STACK-RECOST-SWEEP (session_01AFoLuMzDa4jg4s82k6mX8c)",
+    "rerun": "git diff origin/main -- comms/strategy_evidence/trend_donchian_sol_prop.json | grep -c 'research_unit\\|supersedes\\|fold_basis\\|data_start' (on the pre-restore commit b87be8445: records had lost these keys); and: python3 scripts/ops/build_strategy_evidence.py --dry-run | head to see --days default 365 applies to every leg"
+  },
+  "state": "queued",
+  "what": "[evidence-producer] scripts/ops/build_strategy_evidence.py rebuilds a record from scratch, so a re-run silently DROPS every hand-stamped annotation (MEASURED 2026-10-28 over 28 re-run legs: research_grading on 3 ict_scalp_*_15m records, decision_bar/decision_bar_note on 6, research_unit/supersedes/fold_basis/data_start/data_end on 2 long-window records) and `--days` defaults to 365 for every leg, so a leg whose committed record was measured at a longer window (trend_donchian_eth_4h 1095d, _sol_4h 1095d, _sol_prop 2170d, _xrp_4h and _xrp_adx25 1460d) is silently replaced by a 365d record with far fewer trades (sol_prop n 577 -> 63) and a different verdict. Both were caught by hand in COST-STACK-RECOST-SWEEP (PR #20966), not by the producer. FIX (Tier-1 tooling): (1) carry forward non-measured annotation keys from the existing record, or refuse the overwrite when it would drop one; (2) default --days to the existing record's window_days when one exists, and refuse a shorter window unless --allow-shorter-window is passed. Pair with a test. Until then, re-run these legs only with an explicit --days equal to the committed window_days."
+}
