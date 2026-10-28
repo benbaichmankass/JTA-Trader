@@ -1,5 +1,7 @@
 # JTA Trader rename — operator steps and follow-ups
 
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+
 Operator decision 2026-10-28: the project is **JTA Trader** (scope: docs + UI + GitHub repo). Runtime identifiers do **not** change.
 
 ## Do NOT rename (identifiers)
