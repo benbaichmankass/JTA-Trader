@@ -1,0 +1,22 @@
+{
+  "based_on": "20261015T063805220128Z-2294b4bb.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "The GLD wedge is root-caused and closed (the row is closed with the correct exit_reason), or it is shown that a stop rests at the venue throughout AND the wedge is a market-closed deferral that clears at the RTH open; or the manager kills it with a stated reason.",
+    "kind": "event",
+    "last_checked": "2026-10-28"
+  },
+  "id": "PI-20260930-ZPDIPMDA-0001",
+  "next_action": "ask_operator",
+  "observation_20261028": "[HEALTH-REVIEW-20261028 session_01AFoLuK9sfam8pmqP2UuRgz] LIVE read 2026-10-28 19:08Z: trader journal 'alpaca close GLD still insufficient-qty ... share_hold=cancel_accepted_ineffective (2e843e04 still new, 891ddff0 still held) ... needs operator/venue action'; alpaca_open_orders 19:17Z shows the OCO stop 416.09 qty 39 'held' while exchange_positions uPnL implies GLD ~371 (~11% through the stop). Day 29 of the wedge, stalled across the 10-09/10-17/10-21/10-24 reviews. Root cause is venue-side (Alpaca paper accepts the cancel 2xx and never moves the orders; our ids match the venue's own open-order list), so no code fix closes it. Exact operator decision: (a) open an Alpaca support ticket to cancel orders 2e843e04-5487-470c-a702-70e796fbd05e and 891ddff0-b24d-4039-9322-8492bcd51e66 on the paper account (the trader then closes GLD on its next probe), or (b) kill this item and record the GLD position as a venue-wedged exclusion. Cost of waiting: gld_pullback_1d on alpaca_paper is soak-dead (starved) and every GLD intent there is refused.",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ALPACA-REARM (session_01FWD56p45DUf3cUzpDiPmDA) observing the #14545 deploy, 2026-09-30",
+    "rerun": "diag_fetch 'journalctl?unit=ict-trader-live&lines=3000' | grep -E 'standing wedge|active close is in flight' ; then alpaca_open_orders for alpaca_paper GLD (is a stop resting?) and journal?table=trades for the open GLD row."
+  },
+  "routed_to": "operator via manager (HEALTH-REVIEW-20261028 call C1); ORDER-AUDIT-3 kept as context",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 2,
+  "what": "alpaca_paper GLD: package pkg-6a8e3fb325464be3 (gld_pullback_1h) is a 'standing wedge'. The order monitor returns verdict close/sl_cross (exit_price 382.95) every ~30 s, and logs 'close RE-PROBE of a standing wedge ... last observed 415.2min ago (re-probe every 60min)' at 2026-09-30 06:18Z. So a stop-cross exit has been wanted for about 7 h without closing. Because of it, the Alpaca naked sweep skips GLD's re-arm on EVERY sweep ('an active close is in flight', now counted as active_close_skipped=1). The same skip already appeared on the 2026-09-29 18:55Z line. A position that the close cannot flatten, and that the sweep will not re-arm, can sit with no resting stop. NOT established: whether GLD currently has a resting stop at the venue, and why the close is wedged (it may be the market-closed deferral; 06:18Z is outside RTH). Paper account, so no real money is at risk, but the same interaction applies on alpaca_live."
+}

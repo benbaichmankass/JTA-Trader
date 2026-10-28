@@ -232,6 +232,40 @@ def _ib_positions(pos_payload: Any) -> List[Dict[str, Any]]:
     return out
 
 
+def _ib_broker_sized(ctx, rows: List[Dict[str, Any]]) -> tuple:
+    """Size each IB position row by the BROKER's quantity where it was read.
+
+    Protection guards the position at the venue, so the venue's size is the
+    one a resting stop/target must cover. Sizing on the journal row instead
+    turned a journal over-count into a false NAKED page: 2026-10-28 health
+    review, ib_paper/MGC row 6673 journal 14 vs broker 12 with stop and target
+    12 resting graded "NAKED by 2" (the journal gap is INV-JOURNAL-EXCHANGE's
+    finding, not a protection one). It also makes the check catch the reverse
+    case, a broker position larger than its journal row. A row keeps its
+    journal qty when the broker side was not read or the (account, root)
+    carries more than one journal row (netted rows cannot be split here).
+    """
+    broker: Dict[tuple, float] = {}
+    for acct in ((ctx.get("exchange_positions") or {}).get("accounts") or []):
+        plist = acct.get("positions")
+        if plist is None:          # could-not-read: keep the journal qty
+            continue
+        for p in plist:
+            key = (acct.get("account_id"), _root(str(p.get("symbol") or "").upper()))
+            broker[key] = broker.get(key, 0.0) + abs(_num(p.get("size")) or 0.0)
+    per_key: Dict[tuple, int] = {}
+    for r in rows:
+        per_key[(r["account"], r["root"])] = per_key.get((r["account"], r["root"]), 0) + 1
+    notes = []
+    for r in rows:
+        key = (r["account"], r["root"])
+        if key in broker and per_key[key] == 1 and abs(broker[key] - r["qty"]) > 1e-9:
+            notes.append(f"{r['account']}/{r['symbol']} trade {r['id']}: sized on broker "
+                         f"{broker[key]:g} (journal {r['qty']:g})")
+            r["qty"] = broker[key]
+    return rows, notes
+
+
 def inv_stop_covers_position(ctx) -> Result:
     """Every open IB position must have resting STOP quantity >= its size."""
     ib, pos = ctx.get("ib_open_orders"), ctx.get("positions")
@@ -244,6 +278,7 @@ def inv_stop_covers_position(ctx) -> Result:
     if not rows:
         return Result(NOT_MEASURED, "IB open positions on cleanly-read accounts", 0,
                       detail=f"no IB rows on an orders_read account (blind: {blind})")
+    rows, sized = _ib_broker_sized(ctx, rows)
     viol = []
     for r in rows:
         e = idx.get((r["account"], r["root"]))
@@ -254,7 +289,8 @@ def inv_stop_covers_position(ctx) -> Result:
             viol.append(f"{r['account']}/{r['symbol']} trade {r['id']}: "
                         f"position {r['qty']:g} vs resting stop {stop:g} — NAKED by {r['qty']-stop:g}")
     return Result(FAIL if viol else PASS, "IB open positions on cleanly-read accounts",
-                  len(rows), viol, detail=f"blind accounts (not counted): {blind}")
+                  len(rows), viol, detail=f"blind accounts (not counted): {blind}"
+                  + (f" · {'; '.join(sized)}" if sized else ""))
 
 
 def inv_stop_not_over_covering(ctx) -> Result:
@@ -272,6 +308,7 @@ def inv_stop_not_over_covering(ctx) -> Result:
     if not rows:
         return Result(NOT_MEASURED, "IB open positions on cleanly-read accounts", 0,
                       detail=f"no IB rows on an orders_read account (blind: {blind})")
+    rows, _ = _ib_broker_sized(ctx, rows)
     viol = []
     for r in rows:
         e = idx.get((r["account"], r["root"]))
@@ -303,6 +340,7 @@ def inv_declared_target_rests(ctx) -> Result:
     if not rows:
         return Result(NOT_MEASURED, "IB positions declaring a take_profit", 0,
                       detail=f"no such row on an orders_read account (blind: {blind})")
+    rows, _ = _ib_broker_sized(ctx, rows)
     viol = []
     for r in rows:
         e = idx.get((r["account"], r["root"]))
@@ -1328,6 +1366,24 @@ def _self_test() -> int:
     }
     expect("month-coded local_symbol still matches its root (stop)",
            "INV-PROTECT-STOP", month_coded, PASS)
+
+    # (c3) REGRESSION CONTROL — 2026-10-28: a journal row over-counting the
+    #      broker (ib_paper/MGC 14 vs 12) with stop + target sized to the
+    #      broker's 12 is NOT naked; a broker position larger than its journal
+    #      row and its legs IS.
+    over = _fx_good()
+    over["positions"][0]["qty"] = 123
+    expect("journal over-count with broker-sized legs is not naked (stop)",
+           "INV-PROTECT-STOP", over, PASS)
+    expect("journal over-count with broker-sized legs is not naked (target)",
+           "INV-PROTECT-TARGET", over, PASS)
+    expect("journal over-count is still the journal-vs-exchange finding",
+           "INV-JOURNAL-EXCHANGE", over, FAIL)
+    under = _fx_good()
+    under["positions"][0]["qty"] = 100
+    under["exchange_positions"]["accounts"][0]["positions"][0]["size"] = 110
+    expect("broker position larger than its legs is naked though the journal is covered",
+           "INV-PROTECT-STOP", under, FAIL)
     expect("month-coded local_symbol still matches its root (target)",
            "INV-PROTECT-TARGET", month_coded, PASS)
 

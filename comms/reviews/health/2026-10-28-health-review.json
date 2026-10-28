@@ -1,0 +1,655 @@
+{
+ "request_id": "REQ-20261028-1920-health-review",
+ "reviewed_at": "2026-10-28T19:40:00+00:00",
+ "reviewer": "claude",
+ "lane": "HEALTH-REVIEW-20261028 (session_01AFoLuK9sfam8pmqP2UuRgz)",
+ "window_start": "2026-10-24T08:10:00+00:00",
+ "window_end": "2026-10-28T19:20:00+00:00",
+ "window": {
+  "start": "2026-10-24T08:10:00+00:00",
+  "end": "2026-10-28T19:20:00+00:00",
+  "anchor": "comms/reviews/health/2026-10-24-health-review.json reviewed_at"
+ },
+ "overall_assessment": "investigate",
+ "operator_attention_required": true,
+ "prior_calls_scorecard": {
+  "source_record": "comms/reviews/health/2026-10-24-health-review.json (pre-redesign: no calls[]; graded its findings concern/watch items and filed PIs)",
+  "n_calls": 8,
+  "hit": 5,
+  "miss": 0,
+  "unresolved": 2,
+  "void": 1,
+  "brier": "INDETERMINATE",
+  "calls": [
+   {
+    "id": "PI-20261024-ONHEALTH-0001 (unattributed 03:59Z ssh)",
+    "result": "hit",
+    "check_rerun": "full-window ssh sweep: every non-trainer accept uses one key (suffix Xoek); no second key",
+    "action_happened": "yes",
+    "action_state": "closed+detector",
+    "reviews_open": 1
+   },
+   {
+    "id": "PI-20261024-ONHEALTH-0002 (sweep cannot cover window)",
+    "result": "hit",
+    "check_rerun": "ssh_auth_sweep.py covered 321 slices, 0 unreadable, whole 4.5-day window",
+    "action_happened": "yes",
+    "action_state": "closed+detector",
+    "reviews_open": 1
+   },
+   {
+    "id": "PI-20261024-ONHEALTH-0003 (gate unmeetable)",
+    "result": "hit",
+    "check_rerun": "gate redefined (87 vs due 510); due still rising",
+    "action_happened": "yes (gate narrowed); the volume trend is not closed -> new row HEALTH-20261028-PIPELINE-ROUTING-OWNER",
+    "action_state": "closed-no-detector",
+    "reviews_open": 1
+   },
+   {
+    "id": "PI-20261017-VMDGITZI-0002 (disk prevention)",
+    "result": "unresolved",
+    "check_rerun": "77.5% used (<85% target) but -0.42 GB/day; bak-* bound not read",
+    "action_happened": "partly (prune ran 10-17); prevention not shipped",
+    "action_state": "moving",
+    "reviews_open": 3
+   },
+   {
+    "id": "PI-20261021-41BO5V65-0001 (SHA surface disagreement)",
+    "result": "hit",
+    "check_rerun": "status git_sha_on_disk 37646efca and health git_drift 6e12741 both on main, 9 min apart",
+    "action_happened": "no change needed this read",
+    "action_state": "closed-no-detector",
+    "reviews_open": 2
+   },
+   {
+    "id": "pipeline_plumbing / non_tp_sl_closes",
+    "result": "hit",
+    "check_rerun": "24 closes, 0 reconciler/watchdog/orphan",
+    "action_happened": "n/a",
+    "action_state": "closed+detector",
+    "reviews_open": 1
+   },
+   {
+    "id": "PI-20261006-5FUGHVX8-0001 (TP doctrine)",
+    "result": "unresolved",
+    "check_rerun": "check_tp_doctrine.py: 0 compliant of 77 routings (was 0/52; population grew with the demo floor); real_money 6: entry 2 / revision 5 fail",
+    "action_happened": "no",
+    "action_state": "stalled",
+    "reviews_open": 4
+   },
+   {
+    "id": "strategy_silence (25-min tail)",
+    "result": "void",
+    "check_rerun": "21-min audit tail again; journalctl shows all but splg evaluating",
+    "action_happened": "n/a",
+    "action_state": "closed-no-detector",
+    "reviews_open": 1
+   }
+  ],
+  "stalled": [
+   {
+    "id": "PI-20260930-ZPDIPMDA-0001 GLD wedge",
+    "reviews": [
+     "10-09",
+     "10-17",
+     "10-21",
+     "10-24"
+    ],
+    "why_not_closing": "venue-side defect; every lane re-observed and re-routed it; the decision it needs is the operator's (broker support or kill)",
+    "decided": "escalated to ask_operator with the exact choice (call C1)"
+   },
+   {
+    "id": "PI-20261006-5FUGHVX8-0001 TP doctrine",
+    "reviews": [
+     "10-09",
+     "10-17",
+     "10-21",
+     "10-24"
+    ],
+    "why_not_closing": "a multi-leg Tier-3 build with no owning lane; debt grows as legs are rostered",
+    "decided": "put to the manager as a scoping decision (call C5); not re-filed"
+   }
+  ],
+  "series": [
+   {
+    "review": "2026-10-28",
+    "n_resolved": 6,
+    "brier": null
+   }
+  ]
+ },
+ "checks": [
+  {
+   "id": "H1",
+   "status": "ok",
+   "value": "all canonical trader-VM units active; heartbeat age 20 s; health snapshots 815 in 168 h, 813 ok, 2 git_drift warn (10-26 04:33Z, 10-27 15:36Z), max gap 15.5 min",
+   "population": "services list from /api/diag/services (the trader VM's units; ict-ib-gateway-watchdog.timer reads inactive there by design: it runs on the gateway VM)",
+   "window": "168 h of snapshots; services at 19:14Z",
+   "evidence": "diag status, services; /api/bot/health/latest, history?hours=168",
+   "prior": [
+    "ok",
+    "ok",
+    "ok",
+    "ok"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H2",
+   "status": "ok",
+   "value": "running 3b6794253 (booted 18:35:22Z) vs main 37646efca: 0 files under src/ or config/ differ (23 files total); verify_running_roster layer 5 strategies_yaml + accounts_yaml current, 14 accounts / 57 strategies loaded; two SHA surfaces agree (status on-disk 37646efca, health git_drift 6e12741 = main 9 min earlier)",
+   "population": "files under src/+config/ changed since the running SHA; 14 account rosters",
+   "window": "19:14Z read",
+   "evidence": "git diff --name-only 3b6794253..origin/main -- src config; verify_running_roster.py --status-json <status.status>",
+   "prior": [
+    "ok",
+    "ok",
+    "watch",
+    "ok"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H3",
+   "status": "ok",
+   "value": "8/8 probeable accounts read (bybit_1/2/portfolio, ib_paper, alpaca_paper/portfolio/live/options_paper): exchange_positions error=null, reachability state all down=false, balances api_ok true",
+   "population": "accounts with dry_run=false on a probeable venue; NOT probed: breakout_2, tradeify_1, velotrade_1 (live prop, manual-bridge, no API probe) = could_not_look; ib_live, oanda_practice, breakout_1 dry",
+   "window": "19:10-19:15Z",
+   "evidence": "diag exchange_positions; log_file account_reachability_alert_state; /api/bot/accounts/balances",
+   "prior": [
+    "ok",
+    "ok",
+    "ok",
+    "ok"
+   ],
+   "coverage": "8 of 11 live accounts"
+  },
+  {
+   "id": "H4",
+   "status": "watch",
+   "value": "11 invariants: 1 FAIL (INV-JOURNAL-EXCHANGE ib_paper/MGC journal 14 vs broker 12, filed PI-20261026-CDTDGVDN-0001), 3 not_measured (prop x2, netted dup: nothing to test), 7 pass incl. INV-PROTECT-STOP/TARGET/OVERCOVER on 2 IB positions and PROTECT-LEG-MATCHES-ROW n=10 Bybit legs. Before this run's instrument fix the same payloads read 3 FAIL: the protection checks sized on the journal 14 and paged MGC 'NAKED by 2' though the broker's 12 is fully covered",
+   "population": "11 open positions across 6 accounts; (account,symbol) pairs observed both sides n=11",
+   "window": "19:14-19:20Z",
+   "evidence": "system_invariants.py --payloads (stems ib_open_orders, bybit_open_orders, exchange_positions, positions [/api/bot/positions?include_paper=true], journal_trades, exit_loop_health, order_packages)",
+   "prior": [
+    "ok",
+    "ok",
+    null,
+    "ok"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H5",
+   "status": "watch",
+   "value": "24 closes, 5 opens in window; rejections in window 11 (bybit_1 margin-starved x3 on 10-27, fixed by BYBIT1-MARGIN-STARVED; opposite-slice/flip-suppressed holds x6; slice_ledger_divergent x1). splg_trend_long_1d raises 'no candle data' every tick: SPLG is delisted (renamed SPYM) so a rostered alpaca_paper leg never evaluates",
+   "population": "trades journal page 500 rows (2026-09-28..10-28) covering the window; audit tail 600 rows = only 21 min (18:53-19:14Z), 48/54 enabled strategies with *_eval there, the 6 absent verified evaluating in journalctl (XRP/ADA 2h-4h legs, claude_desk) except splg",
+   "window": "window for journal; 21 min for audit (partial)",
+   "evidence": "diag journal?table=trades&limit=500; audit?limit=600; journalctl?unit=ict-trader-live.service&lines=2000",
+   "prior": [
+    "ok",
+    "ok",
+    null,
+    "watch"
+   ],
+   "coverage": "partial: audit 21 min of 4.5 d"
+  },
+  {
+   "id": "H6",
+   "status": "concern",
+   "value": "24 closed: sl 20, tp 1, sl_cross 1, live_review_close 2 (desk close under MD-TRADE-DESK), 0 reconciler/watchdog/orphan closes; positive control: the probe returns non-TP/SL reasons (live_review_close). BUT the GLD wedge persists: alpaca_paper GLD 39 long, stop 416.09 'held' with price ~371, close refused 'insufficient qty' every probe, day 29",
+   "population": "closed rows in window n=24 (real_money 4, paper 20); open venue positions n=11",
+   "window": "window",
+   "evidence": "trades pull; jctl; alpaca_open_orders; orphan_events (newest 2026-09-17)",
+   "prior": [
+    "watch",
+    "watch",
+    null,
+    "watch"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H7",
+   "status": "ok",
+   "value": "INV-1..8 recent=0 (48 h window) at 18:34Z; totals INV-2 123, INV-3 75 (historic, reported); 0 closed rows missing pnl/exit_reason/exit_price, 0 closed<opened in window",
+   "population": "trades + order_packages written in last 48 h; window closes n=24",
+   "window": "18:34Z timer run",
+   "evidence": "journalctl?unit=ict-db-integrity.service; trades pull",
+   "prior": [
+    "watch",
+    "ok",
+    null,
+    "ok"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H8",
+   "status": "watch",
+   "value": "5 producer ledgers fresh + non-vacuous; news_decisions log could_not_look (diag log absent)",
+   "population": "consumer-side readers named by check_producer_liveness.py (5 + 1)",
+   "window": "now",
+   "evidence": "python3 scripts/macro/check_producer_liveness.py",
+   "prior": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "coverage": "5/6"
+  },
+  {
+   "id": "H9",
+   "status": "ok",
+   "value": "research-health alerts 19 in window, 19 delivered.telegram; 0 undelivered",
+   "population": "alert runs in comms/research/health 10-24..10-28 (61 runs)",
+   "window": "window",
+   "evidence": "comms/research/health/*.json runs[].delivered",
+   "prior": [
+    null,
+    "ok",
+    null,
+    "ok"
+   ],
+   "coverage": "research alerts only; trade-refusal pings not enumerated"
+  },
+  {
+   "id": "H10",
+   "status": "watch",
+   "value": "61 monitor runs, max gap 2.84 h, 0 gaps > 4 h; fired 68/24 h, landed 80/24 h; red SLO-days (latest per day, 5 days): theme_share_min_ratio 4, research_ops_not_run 4, runnable_floor 3, authoring_supply_ratio_7d 2",
+   "population": "5 days x 16 SLOs; 61 runs",
+   "window": "2026-10-24..10-28",
+   "evidence": "comms/research/health/2026-10-2[4-8].json",
+   "prior": [
+    "watch",
+    "watch",
+    null,
+    "watch"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H11",
+   "status": "ok",
+   "value": "ict-trainer.timer active+enabled; last cycle 2026-10-28 00:53-01:24Z overall_rc 0, trained 66, skipped 6, enforced 3; dataset_builds_24h failed 0 ok 98; 5 manifests untrained > 93 d (prop-mission-policy, btc-regime-15m, xsym-yz, exit-policy-v1, setup-candidates-paper) -> /ml-review; trainer disk 52%",
+   "population": "cycles in window (1 per day)",
+   "window": "last cycle",
+   "evidence": "trainer-vm-diag #20979; /api/bot/ml/status",
+   "prior": [
+    null,
+    "skip",
+    null,
+    "ok"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H12",
+   "status": "concern",
+   "value": "live VM root 22.5% free (10.1 GB) at 19:05Z vs 26.7% (12.0 GB) 10-24 08:00Z: -0.42 GB/day; at that rate 10% free (~4.5 GB of ~45 GB) is crossed ~2026-11-11 (13 d); CPU 50%, memory 13.3%",
+   "population": "trader VM root fs; 4 readings 10-17 (post-prune ~15 GB), 10-24, 10-28",
+   "window": "10-17..10-28",
+   "evidence": "diag status vm_health; health/latest disk ctx; 10-24 review",
+   "prior": [
+    "26.7% free",
+    "93% used",
+    "",
+    "pre"
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H13",
+   "status": "watch",
+   "value": "full-window ssh sweep: 41,792 accepts over 321 slices, 0 unreadable; 262 non-trainer accepts, all user ubuntu, publickey, one key (suffix Xoek); collaborators: 1 (owner); authors on main: Ben 993, Claude 18, github-actions 2; regex scan of 51,872 added lines in config/.github/scripts/src/deploy: 0 credential hits; run_secret_scanning could_not_look (GitHub Advanced Security not enabled). Workflow change 10-26 lets a system-action carry the admin BRANCH_PROTECTION_TOKEN to the live VM (operator-approved popup 10-26 ~19:15Z)",
+   "population": "sources: ssh auth log (full window), collaborators, commit authors, added-line regex; NOT: secret-scanning API, deploy keys, Actions secrets",
+   "window": "2026-10-24T08:00Z..10-28T19:00Z",
+   "evidence": "ssh_auth_sweep.py; list_repository_collaborators; git log; grep",
+   "prior": [
+    "watch",
+    "watch",
+    "could_not_look",
+    null
+   ],
+   "coverage": "4 of 6 sources"
+  },
+  {
+   "id": "H14",
+   "status": "ok",
+   "value": "76 commits touched Tier-2/3 paths of 1,013 on main in window; every Tier-2/3 titled commit carries 'hold' or 'operator-approved' (manager-merged); no new default-off *_ENABLED gate, no mode auto-flip found in titles; deploy claims checked by H2",
+   "population": "commits touching config/ src/runtime src/core src/units/accounts deploy .github/workflows scripts/ops/*.sh",
+   "window": "window",
+   "evidence": "git log origin/main --since=2026-10-24T08:10Z -- <paths>",
+   "prior": [
+    "ok",
+    null,
+    null,
+    null
+   ],
+   "coverage": "titles + H2, not each diff"
+  },
+  {
+   "id": "H15",
+   "status": "concern",
+   "value": "gate 87 (high_severity 4, owner_closed 14, unrouted 69); due 510; unrouted 59 alarm BREACHED oldest 94 d; review_followthrough: health-review cohort 10 filed / 5 done / 5 open; backlog 337 open, 275 no owner",
+   "population": "pipeline store 2,361 items / 6,308 records, 0 unreadable",
+   "window": "now",
+   "evidence": "pipeline.py --gate, --stats; review_followthrough.py --source health-review --window-days 7",
+   "prior": [
+    "369 due, 0 unrouted",
+    "256 due",
+    "110 due",
+    null
+   ],
+   "coverage": "full"
+  },
+  {
+   "id": "H16",
+   "status": "watch",
+   "value": "soak-state.json (2026-10-25): 35 subjects: ready 8, accruing 12, dead 15 (13 'on NO account roster' now rostered on bybit_1 since the 10-27 demo-floor change, so the artifact is stale until the 11-01 weekly grade); gld_pullback_1d alpaca_paper dead (starved by the GLD wedge)",
+   "population": "soaks in soak-state.json n=35",
+   "window": "as of 10-25",
+   "evidence": "docs/claude/work/soak-state.json; SOAKS.json (68 rows)",
+   "prior": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "coverage": "full"
+  }
+ ],
+ "analysis": {
+  "trend": [
+   "Live VM free disk 15 GB (10-17 post-prune) -> 12.0 (10-24) -> 10.1 GB (10-28): -0.42 GB/day, crosses 10% ~2026-11-11.",
+   "Pipeline due 110 -> 256 -> 369 -> 510 and unrouted 25 -> 0 -> 59 across the last four reviews; intake outruns routing.",
+   "TP-doctrine compliance 0 of 52 -> 0 of 77 routings: the debt grows with every leg rostered."
+  ],
+  "questions": [
+   {
+    "q": "Why is the alpaca_paper GLD position still open 29 days after its stop was crossed?",
+    "hypotheses": [
+     "H-a venue: Alpaca paper accepts the cancel (2xx) but never moves orders 2e843e04/891ddff0, so the shares stay reserved and our market close is refused",
+     "H-b ours: we cancel the wrong ids or do not cancel",
+     "H-c noise/market-closed deferral"
+    ],
+    "test": "compare the trader's cancel targets with alpaca_open_orders; read whether the stop price was crossed in RTH",
+    "result": "ids match the venue's own open orders; trader logs 'cancel_accepted_ineffective' 19:08Z in RTH; uPnL implies price ~371 vs stop 416.09",
+    "survivor": "H-a",
+    "p": 0.85,
+    "impact": "paper only; gld_pullback_1d starved on alpaca_paper (soak dead); 39 shares unmanaged"
+   },
+   {
+    "q": "Is a rostered leg silent because of the symbol, not the strategy?",
+    "hypotheses": [
+     "H-a SPLG renamed (SPYM), feed returns nothing",
+     "H-b Alpaca IEX data gap for one symbol",
+     "H-c transient"
+    ],
+    "test": "Yahoo chart for SPLG vs SPYM; persistence across days",
+    "result": "SPLG 'symbol may be delisted'; SPYM firstTradeDate 2005-11-15 = SPLG inception; Yahoo 404 seen 10-26 too, Alpaca empty every tick today",
+    "survivor": "H-a",
+    "p": 0.9,
+    "impact": "one Stage-1 leg (alpaca_paper) never trades; violates the demo-floor rule"
+   },
+   {
+    "q": "Is disk erosion a slow leak or noise?",
+    "hypotheses": [
+     "H-a monotonic growth (journal/WAL/logs/backups)",
+     "H-b noise around a plateau"
+    ],
+    "test": "4 readings over 11 days",
+    "result": "monotonic, ~0.42 GB/day after the 10-17 prune",
+    "survivor": "H-a (composition pending disk-usage-report #20981)",
+    "p": 0.9,
+    "impact": "trader VM write path; DB writes fail at full disk"
+   },
+   {
+    "q": "Why does the open set keep growing?",
+    "hypotheses": [
+     "H-a no lane owns routing",
+     "H-b a routing job broke",
+     "H-c intake spike (demo-floor + desk lanes)"
+    ],
+    "test": "research-ops record not_run list; stats series",
+    "result": "research-ops declares routing not run; no routing job exists to break; intake also high (10 health items in 7 d)",
+    "survivor": "H-a with H-c contributing",
+    "p": 0.7,
+    "impact": "findings age out unowned (275 ownerless health items)"
+   },
+   {
+    "q": "Is the MGC 'NAKED by 2' page real money-at-risk?",
+    "hypotheses": [
+     "H-a venue under-protected",
+     "H-b journal over-count read as a position"
+    ],
+    "test": "exchange_positions MGC size vs resting STP/LMT qty",
+    "result": "broker 12, stop 12, target 12; journal row 14",
+    "survivor": "H-b; instrument fixed in this PR",
+    "p": 0.95,
+    "impact": "a false money-at-risk page"
+   }
+  ],
+  "correlations": [
+   "GLD wedge -> gld_pullback_1d soak dead -> GLD short intents refused (available_usd 82) : one cause, three symptoms.",
+   "Unrouted growth and research_ops_not_run red SLO share the cause: routing is listed as not run by the only recurring pass that could do it."
+  ],
+  "hunt": "Read journalctl WARNING/ERROR signatures (14 in a 10-min slice): GLD wedge x5 (known), SPLG empty bars x8 (new to the live path), exchange close failed x1. Found the SPLG leg dead.",
+  "surprises": [
+   "SPLG ticker is delisted while the leg stays rostered and 'accruing' in soak-state.",
+   "soak-state.json marks 13 now-rostered bybit_1 legs 'dead on NO account roster' (stale since 10-27)."
+  ]
+ },
+ "calls": [
+  {
+   "id": "HR-20261028-C1",
+   "claim": "The GLD wedge will not clear without a venue action; code cannot close it",
+   "evidence": "jctl 19:08Z cancel_accepted_ineffective; alpaca_open_orders 19:17Z",
+   "population": "1 position, alpaca_paper",
+   "trend": "day 29, 4 reviews",
+   "cause": "Alpaca paper ignores accepted cancels on 2 OCO legs",
+   "p": 0.85,
+   "blast_radius": "paper",
+   "tier": "operator (venue)",
+   "check": {
+    "command": "diag_fetch 'alpaca_open_orders' | GLD rows on alpaca_paper",
+    "rule": "orders 2e843e04/891ddff0 gone or GLD position gone",
+    "resolves_when": "next review"
+   },
+   "ending": "pipeline PI-20260930-ZPDIPMDA-0001 -> ask_operator"
+  },
+  {
+   "id": "HR-20261028-C2",
+   "claim": "splg_trend_long_1d trades again once its symbol is SPYM",
+   "evidence": "jctl empty bars; Yahoo SPLG/SPYM",
+   "population": "1 leg, alpaca_paper (+ alpaca_options_paper symbols)",
+   "trend": "since at least 10-26",
+   "cause": "ticker rename",
+   "p": 0.9,
+   "blast_radius": "demo floor",
+   "tier": 3,
+   "check": {
+    "command": "diag audit / journalctl grep splg_trend_long_1d",
+    "rule": "an evaluation on SPYM bars, no 'no candle data'",
+    "resolves_when": "first trading day after merge+deploy"
+   },
+   "ending": "row HEALTH-20261028-SPLG-DELISTED"
+  },
+  {
+   "id": "HR-20261028-C3",
+   "claim": "Live VM free disk falls below 10% by ~2026-11-11 without prevention",
+   "evidence": "status vm_health; health/latest disk",
+   "population": "trader VM root fs",
+   "trend": "-0.42 GB/day",
+   "cause": "pending #20981 composition",
+   "p": 0.75,
+   "blast_radius": "real money (write path)",
+   "tier": 2,
+   "check": {
+    "command": "diag_fetch status | .vm_health.disk",
+    "rule": "used <= 85% on 2026-11-04",
+    "resolves_when": "2026-11-04"
+   },
+   "ending": "pipeline PI-20261017-VMDGITZI-0002 (due 10-31, owner routed)"
+  },
+  {
+   "id": "HR-20261028-C4",
+   "claim": "Unrouted due items keep rising until one lane owns routing",
+   "evidence": "pipeline.py --stats",
+   "population": "2,361 items",
+   "trend": "0 -> 59 in 4 d",
+   "cause": "routing has no owner",
+   "p": 0.7,
+   "blast_radius": "observability / follow-through",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/ops/pipeline.py --stats",
+    "rule": "unrouted_alarm.breached empty",
+    "resolves_when": "two consecutive weekly reviews"
+   },
+   "ending": "row HEALTH-20261028-PIPELINE-ROUTING-OWNER"
+  },
+  {
+   "id": "HR-20261028-C5",
+   "claim": "TP-doctrine compliance stays 0 without an owning build lane",
+   "evidence": "check_tp_doctrine.py",
+   "population": "77 routings",
+   "trend": "0/52 -> 0/77",
+   "cause": "no owner; debt grows with rostering",
+   "p": 0.8,
+   "blast_radius": "real money exits",
+   "tier": 3,
+   "check": {
+    "command": "python3 scripts/ci/check_tp_doctrine.py",
+    "rule": "real_money compliant >= 1",
+    "resolves_when": "next review"
+   },
+   "ending": "manager decision (report line 3); PI-20261006-5FUGHVX8-0001 carries it"
+  },
+  {
+   "id": "HR-20261028-C6",
+   "claim": "Protection invariants no longer page on a journal over-count",
+   "evidence": "system_invariants.py self-test 66/66; live payloads 3 FAIL -> 1 FAIL",
+   "population": "IB positions",
+   "trend": "-",
+   "cause": "instrument sized on journal qty",
+   "p": 0.95,
+   "blast_radius": "observability",
+   "tier": 1,
+   "check": {
+    "command": "system_invariants.py --self-test",
+    "rule": "66/66",
+    "resolves_when": "merge"
+   },
+   "ending": "fixed in this PR (merged pending; not deployed: a repo-side script)"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 87,
+  "due_total": 510,
+  "excluded": 423,
+  "sources": [
+   "pipeline.py --gate"
+  ],
+  "walked": 5,
+  "dispositions": {
+   "kept_open": 3,
+   "redated": 1,
+   "escalated": 1
+  },
+  "count_untriaged": 82,
+  "note": "Bounded walk: the 4 high-severity items + the GLD wedge. JN54P2HH-0006 and HVCIFOQV-0001 kept_open (no new observation this run); WQAPZD8B-0003 kept_open (prop fill 90 is outside the last 100 prop fills; needs a deeper read); WH81NW96-0001 redated (3/4 shards whole)."
+ },
+ "security_check": {
+  "status": "watch",
+  "sources_checked": [
+   "ssh_auth_sweep full window",
+   "collaborators",
+   "commit authors",
+   "added-line regex"
+  ],
+  "could_not_look": [
+   "run_secret_scanning (GHAS not enabled)",
+   "deploy keys",
+   "Actions secrets"
+  ],
+  "signals": []
+ },
+ "new_work_compliance": {
+  "status": "ok",
+  "commits_tier23": 76,
+  "commits_total": 1013
+ },
+ "soak_decisions_due": [
+  "8 soaks 'ready' in soak-state 2026-10-25 -> /performance-review (MD-PROMOTE-S1-S2)",
+  "soak-state stale vs the 10-27 rostering until the 11-01 grade"
+ ],
+ "recommended_action": "Operator: decide the GLD venue wedge (Alpaca ticket or kill). Manager: land SPLG->SPYM (Tier 3, data-backed) and assign pipeline routing an owner; disk prevention due 10-31.",
+ "findings": {
+  "H1": {
+   "status": "ok",
+   "note": "all canonical trader-VM units active; heartbeat age 20 s; health snapshots 815 in 168 h, 813 ok, 2 git_drift warn (10-26 04:33Z, 10-27 15:36Z), max gap 15.5 min"
+  },
+  "H2": {
+   "status": "ok",
+   "note": "running 3b6794253 (booted 18:35:22Z) vs main 37646efca: 0 files under src/ or config/ differ (23 files total); verify_running_roster layer 5 strategies_yaml + accounts_yaml current, 14 accounts / 57 strategies loaded; two SHA surfaces agree (status on-disk 37646efca, health git_drift 6e12741 = main 9 min earlier)"
+  },
+  "H3": {
+   "status": "ok",
+   "note": "8/8 probeable accounts read (bybit_1/2/portfolio, ib_paper, alpaca_paper/portfolio/live/options_paper): exchange_positions error=null, reachability state all down=false, balances api_ok true"
+  },
+  "H4": {
+   "status": "watch",
+   "note": "11 invariants: 1 FAIL (INV-JOURNAL-EXCHANGE ib_paper/MGC journal 14 vs broker 12, filed PI-20261026-CDTDGVDN-0001), 3 not_measured (prop x2, netted dup: nothing to test), 7 pass incl. INV-PROTECT-STOP/TARGET/OVERCOVER on 2 IB positions and PROTECT-LEG-MATCHES-ROW n=10 Bybit legs. Before this run's instrument fix the same payloads read 3 FAIL: the protection checks sized on the journal 14 and paged MGC 'NAKED by 2' though the broker's 12 is fully covered"
+  },
+  "H5": {
+   "status": "watch",
+   "note": "24 closes, 5 opens in window; rejections in window 11 (bybit_1 margin-starved x3 on 10-27, fixed by BYBIT1-MARGIN-STARVED; opposite-slice/flip-suppressed holds x6; slice_ledger_divergent x1). splg_trend_long_1d raises 'no candle data' every tick: SPLG is delisted (renamed SPYM) so a rostered alpaca_paper leg never evaluates"
+  },
+  "H6": {
+   "status": "concern",
+   "note": "24 closed: sl 20, tp 1, sl_cross 1, live_review_close 2 (desk close under MD-TRADE-DESK), 0 reconciler/watchdog/orphan closes; positive control: the probe returns non-TP/SL reasons (live_review_close). BUT the GLD wedge persists: alpaca_paper GLD 39 long, stop 416.09 'held' with price ~371, close refused 'insufficient qty' every probe, day 29"
+  },
+  "H7": {
+   "status": "ok",
+   "note": "INV-1..8 recent=0 (48 h window) at 18:34Z; totals INV-2 123, INV-3 75 (historic, reported); 0 closed rows missing pnl/exit_reason/exit_price, 0 closed<opened in window"
+  },
+  "H8": {
+   "status": "watch",
+   "note": "5 producer ledgers fresh + non-vacuous; news_decisions log could_not_look (diag log absent)"
+  },
+  "H9": {
+   "status": "ok",
+   "note": "research-health alerts 19 in window, 19 delivered.telegram; 0 undelivered"
+  },
+  "H10": {
+   "status": "watch",
+   "note": "61 monitor runs, max gap 2.84 h, 0 gaps > 4 h; fired 68/24 h, landed 80/24 h; red SLO-days (latest per day, 5 days): theme_share_min_ratio 4, research_ops_not_run 4, runnable_floor 3, authoring_supply_ratio_7d 2"
+  },
+  "H11": {
+   "status": "ok",
+   "note": "ict-trainer.timer active+enabled; last cycle 2026-10-28 00:53-01:24Z overall_rc 0, trained 66, skipped 6, enforced 3; dataset_builds_24h failed 0 ok 98; 5 manifests untrained > 93 d (prop-mission-policy, btc-regime-15m, xsym-yz, exit-policy-v1, setup-candidates-paper) -> /ml-review; trainer disk 52%"
+  },
+  "H12": {
+   "status": "concern",
+   "note": "live VM root 22.5% free (10.1 GB) at 19:05Z vs 26.7% (12.0 GB) 10-24 08:00Z: -0.42 GB/day; at that rate 10% free (~4.5 GB of ~45 GB) is crossed ~2026-11-11 (13 d); CPU 50%, memory 13.3%"
+  },
+  "H13": {
+   "status": "watch",
+   "note": "full-window ssh sweep: 41,792 accepts over 321 slices, 0 unreadable; 262 non-trainer accepts, all user ubuntu, publickey, one key (suffix Xoek); collaborators: 1 (owner); authors on main: Ben 993, Claude 18, github-actions 2; regex scan of 51,872 added lines in config/.github/scripts/src/deploy: 0 credential hits; run_secret_scanning could_not_look (GitHub Advanced Security not enabled). Workflow change 10-26 lets a system-action carry the admin BRANCH_PROTECTION_TOKEN to the live VM (operator-approved popup 10-26 ~19:15Z)"
+  },
+  "H14": {
+   "status": "ok",
+   "note": "76 commits touched Tier-2/3 paths of 1,013 on main in window; every Tier-2/3 titled commit carries 'hold' or 'operator-approved' (manager-merged); no new default-off *_ENABLED gate, no mode auto-flip found in titles; deploy claims checked by H2"
+  },
+  "H15": {
+   "status": "concern",
+   "note": "gate 87 (high_severity 4, owner_closed 14, unrouted 69); due 510; unrouted 59 alarm BREACHED oldest 94 d; review_followthrough: health-review cohort 10 filed / 5 done / 5 open; backlog 337 open, 275 no owner"
+  },
+  "H16": {
+   "status": "watch",
+   "note": "soak-state.json (2026-10-25): 35 subjects: ready 8, accruing 12, dead 15 (13 'on NO account roster' now rostered on bybit_1 since the 10-27 demo-floor change, so the artifact is stale until the 11-01 weekly grade); gld_pullback_1d alpaca_paper dead (starved by the GLD wedge)"
+  }
+ }
+}
