@@ -146,6 +146,7 @@ on:
           - flatten-ib-position
           - flatten-bybit-position
           - switch-bybit-position-mode
+          - set-bybit-collateral-switch
           - flatten-alpaca-position
           - rearm-alpaca-protective
           - cancel-ib-order
@@ -657,6 +658,16 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*confirm_account[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Cc]onfirm_account[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # set-bybit-collateral-switch: which coin, and ON/OFF. Own names —
+            # `switch` alone is too generic to risk a collision.
+            coin=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*coin[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Cc]oin[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            collateral_switch=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*collateral_switch[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Cc]ollateral_switch[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # flatten-ib-position: apply gates dry-run (default) vs execute.
             apply=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*apply[[:space:]]*:' \
@@ -811,6 +822,8 @@ jobs:
           echo "ACTION_APPLY=${apply:-}" >>"$GITHUB_ENV"
           echo "ACTION_POSITION_MODE=${position_mode:-}" >>"$GITHUB_ENV"
           echo "ACTION_CONFIRM_ACCOUNT=${confirm_account:-}" >>"$GITHUB_ENV"
+          echo "ACTION_COIN=${coin:-}" >>"$GITHUB_ENV"
+          echo "ACTION_COLLATERAL_SWITCH=${collateral_switch:-}" >>"$GITHUB_ENV"
           echo "ACTION_ORDER_ID=${order_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_PERM_ID=${perm_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_FORCE_PROTECTIVE=${force_protective:-}" >>"$GITHUB_ENV"
@@ -842,7 +855,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply|run-desk-judge)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|set-bybit-collateral-switch|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1163,6 +1176,45 @@ jobs:
                 fi
                 if [ "${ACTION_CONFIRM_ACCOUNT}" != "${ACCOUNT_ID}" ]; then
                   echo "::error::switch-bybit-position-mode apply requires 'confirm_account: ${ACCOUNT_ID}' to echo the target account (got '${ACTION_CONFIRM_ACCOUNT}')."
+                  exit 1
+                fi
+                ;;
+            esac
+          fi
+          # set-bybit-collateral-switch: account + coin + switch required; apply
+          # additionally requires confirm_account echoing account. The python
+          # script ALSO refuses any account that is not a bybit demo/paper
+          # account, so the workflow check is the legible first line, not the only one.
+          if [ "${ACTION}" = "set-bybit-collateral-switch" ]; then
+            if ! printf '%s' "${ACCOUNT_ID}" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+              echo "::error::set-bybit-collateral-switch requires 'account: <id>' (allowed: A-Z a-z 0-9 _ -)."
+              exit 1
+            fi
+            case "${ACTION_COIN:-}" in
+              BTC|ETH) ;;
+              *)
+                echo "::error::set-bybit-collateral-switch requires 'coin: BTC|ETH' (got '${ACTION_COIN:-}')."
+                exit 1
+                ;;
+            esac
+            case "${ACTION_COLLATERAL_SWITCH:-}" in
+              ON|OFF) ;;
+              *)
+                echo "::error::set-bybit-collateral-switch requires 'collateral_switch: ON|OFF' (got '${ACTION_COLLATERAL_SWITCH:-}')."
+                exit 1
+                ;;
+            esac
+            case "${ACTION_APPLY:-}" in
+              ""|true|false|True|False) ;;
+              *)
+                echo "::error::set-bybit-collateral-switch apply must be true or false (got '${ACTION_APPLY}')."
+                exit 1
+                ;;
+            esac
+            case "${ACTION_APPLY:-}" in
+              true|True)
+                if [ "${ACTION_CONFIRM_ACCOUNT}" != "${ACCOUNT_ID}" ]; then
+                  echo "::error::set-bybit-collateral-switch apply requires 'confirm_account: ${ACCOUNT_ID}' (got '${ACTION_CONFIRM_ACCOUNT}')."
                   exit 1
                 fi
                 ;;
@@ -1880,6 +1932,7 @@ jobs:
             rearm-ib-protective)                SCRIPT="rearm_ib_protective_action.sh" ;;
             flatten-bybit-position)             SCRIPT="flatten_bybit_position_action.sh" ;;
             switch-bybit-position-mode)         SCRIPT="bybit_switch_position_mode_action.sh" ;;
+            set-bybit-collateral-switch)        SCRIPT="bybit_set_collateral_switch_action.sh" ;;
             flatten-alpaca-position)            SCRIPT="flatten_alpaca_position_action.sh" ;;
             rearm-alpaca-protective)            SCRIPT="rearm_alpaca_protective_action.sh" ;;
             close-stranded-journal-row)         SCRIPT="close_stranded_journal_row_action.sh" ;;
@@ -2153,6 +2206,9 @@ jobs:
           fi
           if [ "${ACTION}" = "switch-bybit-position-mode" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_POSITION_MODE=$(printf '%q' "${ACTION_POSITION_MODE:-}") ACTION_CONFIRM_ACCOUNT=$(printf '%q' "${ACTION_CONFIRM_ACCOUNT:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "set-bybit-collateral-switch" ]; then
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_COIN=$(printf '%q' "${ACTION_COIN:-}") ACTION_COLLATERAL_SWITCH=$(printf '%q' "${ACTION_COLLATERAL_SWITCH:-}") ACTION_CONFIRM_ACCOUNT=$(printf '%q' "${ACTION_CONFIRM_ACCOUNT:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "rearm-alpaca-protective" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_ROW=$(printf '%q' "${ACTION_ROW:-}") ${REMOTE_CMD}"

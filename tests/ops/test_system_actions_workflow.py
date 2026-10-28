@@ -240,6 +240,7 @@ EXPECTED_ACTIONS = {
     # account before a different-account key rotation).
     "flatten-bybit-position": "flatten_bybit_position_action.sh",
     "switch-bybit-position-mode": "bybit_switch_position_mode_action.sh",
+    "set-bybit-collateral-switch": "bybit_set_collateral_switch_action.sh",
     # 2026-07-15 — Alpaca sibling of flatten-bybit-position: one-shot guarded
     # native flatten of a single Alpaca position. AlpacaClient.close cancels the
     # reserving protective bracket (held_for_orders) then market-closes — the
@@ -459,6 +460,7 @@ TIER_2_ACTIONS = {
     "rearm-ib-protective",
     "flatten-bybit-position",
     "switch-bybit-position-mode",
+    "set-bybit-collateral-switch",
     "flatten-alpaca-position",
     "rearm-alpaca-protective",
     "close-stranded-journal-row",
