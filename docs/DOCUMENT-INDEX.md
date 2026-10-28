@@ -162,7 +162,6 @@ markers that were cheaper to lie to than to satisfy — `new-table-wiring-guard`
 |---|---|---|
 | `docs/claude/DUE.md` | `scripts/ops/render_due_list.py` | verified: generator exists and names the file |
 | `docs/claude/READOUT.md` | `scripts/ops/constraint_readout.py` | verified: generator exists and names the file |
-| `docs/research/xa-d2b-conviction-verification-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/strategy-coverage-matrix.md` | `scripts/check_strategy_coverage.py` | verified: generator exists and names the file |
 | `docs/training-population-matrix.md` | `scripts/check_training_population.py` | verified: generator exists and names the file |
 
@@ -1094,6 +1093,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ws-a-s2-retune-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ws-a-s3-significance-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ws-a-s3b-fee-headroom-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/xa-d2b-conviction-verification-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-conditional-hit-rate-2026-08-19.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-entry-axis-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-joint-geometry-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

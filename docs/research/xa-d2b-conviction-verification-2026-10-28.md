@@ -1,6 +1,6 @@
 # MB-20260618-XA-D2B — M16 D2/D2b conviction sizing: verification (2026-10-28)
 
-> **Doc status:** `live` · category `research` · last verified `2026-10-28` · lane `XA-D2B-VERIFY` (dispatched by Manager Session 2026-10-27a)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · lane `XA-D2B-VERIFY` (Manager Session 2026-10-27a); status unverified by a second reader
 
 **Disposition: KILLED as framed** ("verify c_reg is populated"). `c_reg` cannot be populated because its enabler is unwired; the feature it would feed is not applying and its parent milestone is re-scoped. One Tier-1 observability fix ships (the soak log now carries the component inputs).
 
