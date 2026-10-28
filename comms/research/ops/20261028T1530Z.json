@@ -1,0 +1,92 @@
+{
+  "run": "RESEARCH-OPS-2026-10-28-1449",
+  "finished_at": "2026-10-28T15:30:00Z",
+  "by": "session_01AFoLuJi1vLTnYv9LbP6539-ro1449",
+  "floor": 58,
+  "floor_basis": "computed_floor(fired_24h 73)",
+  "authoring_queue_depth": 35,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "throughput": {"runnable_before": 53, "runnable_after": 53, "queued": 146, "fired_24h": 73, "results_landed_24h": 86,
+                 "hours_since_last_dispatch": 1.0, "idle_alarm": false,
+                 "after_basis": "runnable 53 < floor 58 by 5; health check H1-REFILL says templates hold 66 unclaimed points, so replenish refills it; no hand top-up needed"},
+  "mechanism": {"dispatch_receipt": "ok (liveness fresh 1.06 h)", "collector": "ok (0 unreadable result files, 1480 units)",
+                "stranded_stamp_prs": "not listed (GitHub Actions MCP failed to connect; PR list not read)",
+                "incident": null,
+                "watchdog": "watchdog_incidents.jsonl newest row 2026-10-24 (resolved); no escalated row after it"},
+  "checks": {"packet_as_of": "2026-10-28T14:50:43Z", "since": "2026-10-28T09:20:00Z",
+             "runnable_by_track": {"TRADING": 46, "MODEL": 4, "INFRA": 3},
+             "graded_by_window": {"7d": {"TRADING": {"pass": 73, "fail": 300, "indeterminate": 29}, "MODEL": {"pass": 10, "fail": 31, "indeterminate": 25}}},
+             "fails_without_next": 1, "followups": {"needs_authoring": 4, "fired": 1}, "needs_review": 28,
+             "could_not_look": ["GitHub Actions workflow run list and stamp PR list (MCP github-actions CONNECTION_CLOSED)", "pytest/guards not run on this clone"]},
+  "results_read": {
+    "pass": 7, "fail": 2, "indeterminate": 1,
+    "units": [
+      "15 result rows with generated_at >= 09:20Z (10 graded + 5 ungraded) read at row level for: 001, 2a2e-09, -10, -12, -13, -14, 4dd3-01, fe57-01",
+      "RQ-20261028-001 (P1-ATM-ed1c07-sl-confirm) PASS, but NOT a confirmation: SL net 30.68 vs A 29.34 R (+1.34, bar 0.78), n(A) 39 = the floor exactly, n(SL) 37; per-fold SL-minus-A = 0, 0, 0, -0.97, 0, +2.30. 'folds_ge_incumbent 5' counts 4 exact ties as wins; 1 strictly better, 1 worse. The +1.34 R is the effect of dropping 2 trades. Window actually measured 2019-12-31..2020-06-30 (feed start), not the registered 2017-09. No Tier-3 proposal. Defect filed as PI-20261028-9LBP6539-0001",
+      "FAIL configuration closed: RQ-20261027-fe57-01 desk judge V1 on the 100-packet dev sample, mean SEL +0.044, lower bound -0.059 (bar >= 0.1 and > 0); family desk-judge stays open; next test = the other fe57 variants already queued",
+      "FAIL configuration closed: RQ-20261028-2a2e-10 direction-label transfer to SOL 1h, CatBoost -0.0006 and HGB vs class prior on LOG-LOSS (bar 0.002), sign inconsistent over 5 folds; the LightGBM control is 0.007-0.008 WORSE than both; family GBDT-on-direction stays open; next test = a feature-richer direction probe (see analysis.model.next_tests)",
+      "PASS (lead, discovery) RQ-20261028-2a2e-12/-13/-14: adx-max AX30 on spy_trend_long_1d +4.66 R (3/4 strict folds, n 164 vs 186), vol-skip-above VH80 on iwm_trend_long_1d +8.12 R (3/4, n 106 vs 118), vol-skip-below VL10 on scha_trend_long_1d +1.72 R (3/4, n 70 vs 78). All three at the minimum fold majority, all with zero strict ties. ETF cost stack = fee 0 / slippage 5 bps (resolved per venue, not a default). Each unit's own rule says confirm on a disjoint window before any Tier-3 note; history is exhausted by the full-length windows, so confirmation is forward only. No Tier-3 note filed",
+      "PASS RQ-20261028-2a2e-09 SOL 1h regime head: HGB and ExtraTrees beat the class prior by 0.11 and 0.066 log-loss (5 folds, CI above 0.005 bar) but HGB vs the LightGBM control is +0.0015 [-0.0002, +0.0033] and ExtraTrees is -0.044: no family beats the incumbent",
+      "INDETERMINATE RQ-20261028-4dd3-01 (eth AX50 forward): baseline n=0 by design (window opens 2026-10-27); stays queued monthly, do not retire",
+      "PASS infra ae17-43/-44/-45 and d1f5-01 (self-checks), b376-02 (recurring, ungraded by design): mechanics only"]
+  },
+  "unlocked": [], "retired": [],
+  "levers_filed": [{"lever": "exit_lever_ablation.py fold-win rule counts ties (>=) as wins; add strict_wins/tied_folds and re-grade last-30d PASSes", "ref": "PI-20261028-9LBP6539-0001"}],
+  "units_authored": [],
+  "followups_filed": ["PI-20261028-9LBP6539-0001"],
+  "authoring": {"queue_depth": 35, "nodes_drafted": 0, "nodes": [],
+                "theme_shortfall": {"regime": "10 vs 14", "ml_health": "0 vs 8", "new_strategy_prop": "10 vs 16", "infra": "3+3 vs 6"},
+                "note": "0 nodes drafted ON PURPOSE: the two candidate nodes, P1-ATM-ed1c10-c75-confirm and P1-ATM-ed1c17-be-confirm, would reuse the ed1c07 confirmation design that just returned n(A)=39 with a tie-counted PASS on a 6-month window; on BTC/ETH 1h the public feed starts 2019-12-31, so their disjoint early partition is the same 6 months. Authoring them unchanged is a test whose PASS and FAIL lead to the same action (value of information ~0). They need the strict-win rule (PI-...-0001) and a longer feed first. OPS-AUTHOR-SKIPPED will warn on this record; the handoff names why. Escalated to the manager."},
+  "analysis": {
+    "rows_opened": ["RQ-20261028-001", "RQ-20261028-2a2e-09", "RQ-20261028-2a2e-10", "RQ-20261028-2a2e-12", "RQ-20261028-2a2e-13", "RQ-20261028-2a2e-14", "RQ-20261028-4dd3-01", "RQ-20261027-fe57-01", "RQ-20261026-ed1c-07", "RQ-20261026-ed1c-10"],
+    "trading": {
+      "meaning": [
+        "ed1c-07 SL on BTC 1h: the lead looked confirmed (PASS, 5 of 6 folds) but only 1 fold is strictly better and the whole +1.34 R is 2 removed trades on 39, so the lead's belief is unchanged from before the run (it stands on the primary-window 6 of 6 strict folds, +14.79 R, 2 arms), not raised; batch denominator for the lead is 2 arms",
+        "The tie-counting rule bites only when a lever rarely fires: measured strictly on ed1c-07 (SL 6/6 strict), ed1c-10 (C75 5/6 strict, 0 ties), 2a2e-12/13/14 (3 strict wins each, 0 ties except AX40 1), so the earlier PASSes are not tainted; the defect is confined to short windows, so the fix is a flag on new pre-registrations, not a mass re-grade",
+        "Equity-ETF lever PASSes (spy adx-max, iwm vol-skip-above, scha vol-skip-below) all land at exactly the 3-of-4 fold minimum with 2 arms each and one unit per leg, and SCHA's neighbouring arm VL20 is -1.49 R, so the surface is not monotone; these are 3 leads from 3 independent cells, not a family result, and each needs a forward confirmation that cannot be run before ~39 more trades accrue per leg",
+        "fe57-01 desk judge V1: SEL rises with the number of looks (-0.058, -0.015, +0.033, +0.044 at 25/50/75/100 looks) but its lower bound stays -0.059, so the judge improves with information yet has not separated from random at n=100 packets and 44 weeks; so the direction of the effect is a lead for a larger sample, not a verdict that the judge is empty"],
+      "fail_diagnoses": [
+        {"cluster": "desk judge V1 (fe57-01)", "hypotheses": ["noise (n=100 packets, CI spans zero)", "power / n", "idea wrong"], "test": "mean SEL vs look count, top-pick paired diff vs random +0.162 R CI [-0.17, +0.48]", "survivor": "power", "next": "the larger-sample fe57 variants already queued; no new unit"}],
+      "next_tests": [
+        {"id_or_node": "strict-win flag in exit_lever_ablation.py (PI-20261028-9LBP6539-0001)", "decision_changed": "whether a short-window ablation PASS may feed a Tier-3 note", "on_pass": "keep current 'confirmation' protocol", "on_fail": "any confirmation unit whose lever fires in under half the folds is INDETERMINATE", "premortem": "changing the rule after seeing results; mitigated by applying it only to units registered afterwards"},
+        {"id_or_node": "P1-ATM-ed1c10-c75-confirm / ed1c17-be-confirm (deferred)", "decision_changed": "whether C75 / break-even arms go to a live-producer check", "on_pass": "Tier-3 declare note", "on_fail": "close the lead on that partition", "premortem": "6-month partition at n~39 returns tie-counted noise again; so deferred until the feed or flag exists"}]},
+    "model": {
+      "meaning": [
+        "SOL 1h regime head (2a2e-09): three model families all beat the class prior (HGB +0.112, ExtraTrees +0.066, LightGBM incumbent best) but HGB differs from LightGBM by +0.0015 log-loss with a CI touching zero, so the family is not what limits the head; so a family swap is worth ~0 and the regime head's remaining headroom is in features or targets",
+        "Direction label on SOL 1h (2a2e-10): no learner beats the prior (CatBoost -0.0006, CI [-0.004, +0.003]) and LightGBM is 0.0089 worse than the prior, an overfit signature on 6 price-only features; so the same inputs that make the regime head work carry no direction signal at 1h, consistent with direction being the hard target"],
+      "fail_diagnoses": [
+        {"cluster": "direction-label transfer (2a2e-10)", "hypotheses": ["noise", "features carry no direction information", "power (5 folds, 24,000 test rows)", "cost drag (n/a, log-loss metric)"], "test": "learner vs prior CIs all include zero; LightGBM-vs-prior negative; ordering of arms identical across folds", "survivor": "idea (6 price-only features lack direction signal), noise not excluded", "next": "a probe with the cross-asset / funding features (node P2-Q4-cross-asset-features); not authored this pass"}],
+      "next_tests": [
+        {"id_or_node": "P2-Q4-cross-asset-features", "decision_changed": "whether the direction head gets any new input family", "on_pass": "authoring a direction bake-off with those features", "on_fail": "direction stays regime-conditioned only", "premortem": "the feature plumbing for 1h SOL may not exist in ml_bakeoff"}]},
+    "cross_track": [
+      {"from": "MODEL", "finding": "the regime head is family-insensitive (2a2e-09) while direction is feature-limited (2a2e-10)", "feeds": "TRADING regime gates: the vol-skip levers (2a2e-13/-14) rely on a vol read that any family supplies, so no model upgrade is a prerequisite"},
+      {"from": "TRADING", "finding": "low-fire levers produce tie-counted PASSes on short windows", "feeds": "PI-20261028-9LBP6539-0001 and the label definition for any exit-lever head (a lever that never fires is a null class)"}],
+    "surprises": ["a confirmation unit whose PASS rests on ties and 2 trades", "the registered 2017-09 window returned only 6 months of data without the unit going no_data"]
+  },
+  "calls": [
+    {"call": "PI-20261028-9LBP6539-0001 is dispositioned (fixed, routed to a lane, or killed with reason) by 2026-11-04", "p": 0.55,
+     "check": {"command": "python3 scripts/ops/pipeline.py --due | grep 9LBP6539", "rule": "item absent from the unrouted list or state != queued", "resolves_when": "2026-11-04"}},
+    {"call": "RQ-20261028-4dd3-01 next grade is INDETERMINATE (n<39) again and is not retired", "p": 0.97,
+     "check": {"command": "python3 scripts/research/research_ops_checks.py --since 24h", "rule": "4dd3-01 verdict indeterminate, status queued", "resolves_when": "2026-10-29"}},
+    {"call": "needs_review drops below 28 on the next pass only if a triage PR is written", "p": 0.3,
+     "check": {"command": "python3 scripts/research/queue_grade.py --health", "rule": "needs_review count < 28", "resolves_when": "2026-10-29"}}
+  ],
+  "prior_calls_scorecard": [{"call": "previous record (20261028T0920Z) carried no calls", "p": null, "check_rerun": "n/a", "outcome": "void", "action_happened": false}],
+  "not_run": [
+    "C: needs_review triage (28 left, 25 owned) not done; blocked/ (75 files) audit read only through blocker_watch (STALE_BLOCK 2: DESK-18D-JUDGE-2, DESK-23-COVERAGE; NOT_RUNNING 47; UNPROVEN_OVERDUE 37), none acted on",
+    "A: workflow run list and stranded stamp PR list (GitHub Actions MCP github-actions failed to connect)",
+    "D: ML plan write-back and programme write-back not re-checked beyond the results listed",
+    "E: 0 nodes and 0 units authored (reason in authoring.note)",
+    "routing of due pipeline items: 509 due, 58 unrouted, routing alarm oldest 94 d; not routed by this pass",
+    "pytest and the guard suite not run on this clone (only pipeline --check, checklist)"
+  ],
+  "handoff": [
+    "Manager: decide whether exit_lever_ablation.py gets the strict-win flag (PI-20261028-9LBP6539-0001) and whether P1-ATM-ed1c10-c75-confirm / ed1c17-be-confirm should wait for it; until then do not read 001 as a confirmation of the SL lead.",
+    "ml_health 0 vs 8 and new_strategy_prop 10 vs 16 stay short; top authoring ask P3-Q1-live-bt-stage-b remains blocked on LIVE-BT-STAGE-B.",
+    "Two STALE_BLOCK rows from blocker_watch: DESK-18D-JUDGE-2 (blocked_on empty) and DESK-23-COVERAGE (finished: DESK-6-SHADOW-PILOT done); they need a state fix by their owner.",
+    "Routing alarm: 58 unrouted due pipeline items, oldest 94 d.",
+    "fe57 judge variants: read the larger-sample ones when they land (power is the survivor, not the idea)."
+  ]
+}
