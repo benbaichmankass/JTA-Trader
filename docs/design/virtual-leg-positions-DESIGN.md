@@ -45,8 +45,10 @@ that bracket forward on bars, and nothing grades it.
 
 ## 2. Practitioner precedent (R1 of `docs/reference/trading-and-model-practice-principles.md`)
 
-- **Carver, subsystem positions** [S7, S9 in `docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md`; PRAC]. In *Systematic
-  Trading* and on qoppac, each trading rule/instrument "subsystem" keeps its **own notional position**. The portfolio nets them into
+- **Carver, subsystem positions** (R. Carver, *Systematic Trading*, 2015, the "trading subsystem" framework; PRAC). This is not
+  one of the `[S#]` sources in `docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md`: its Carver entries [S7, S9] are the
+  stop-loss posts. The next practice refresh should add the book as a source. In Carver's framework each trading rule/instrument
+  "subsystem" keeps its **own notional position**. The portfolio nets them into
   one traded position. Performance, forecast diagnostics and rule weights are computed on the **subsystem** series, never on the
   netted book. That way a rule that is netted out still has a track record. Our case is the discrete version: a leg's held intent is a
   subsystem position the book did not take.
