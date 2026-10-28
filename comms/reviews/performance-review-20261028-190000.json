@@ -1,0 +1,1911 @@
+{
+ "request_id": "perf-review-20261028",
+ "reviewed_at": "2026-10-28T19:00:00Z",
+ "reviewer": "claude",
+ "window_start": "2026-10-21T19:00:00Z",
+ "window_end": "2026-10-28T19:00:00Z",
+ "_scope_note": "Windows lifetime/30d/7d from /api/bot/performance (no 90d token; 90d R from giveback_census over telemetry-joined rows). Classes never pooled; mirrors are journal account_class paper. OBSERVED live 2026-10-28 19:00-19:40Z. No balances (public repo).",
+ "overall_assessment": "investigate",
+ "prior_calls_scorecard": {
+  "n_calls": 9,
+  "hit": 0,
+  "miss": 1,
+  "unresolved": 0,
+  "void": 0,
+  "not_scorable_no_p": 8,
+  "brier": "INDETERMINATE",
+  "note": "Prior records (2026-10-10 JSON, 2026-10-21 brief) carried no calls[] or p; graded from recommended_action and brief section 7. Actions that never happened: M8 pullback sweep (3rd review), TP fixes, census --since-days fix, scalp diagnosis.",
+  "series": [
+   {
+    "review": "2026-10-28",
+    "n_resolved": 1,
+    "brier": "INDETERMINATE"
+   }
+  ]
+ },
+ "checks": {
+  "C1": {
+   "status": "ok",
+   "population": "/api/bot/performance window=all|30d|7d perStrategy, real_money top-level + paper block",
+   "result": "real_money all 467/-157.31R, 30d 20/-8.77R, 7d 7/-3.89R; paper all 1650/-141.66R, 30d 267/-17.91R, 7d 30/-15.31R. 90d window: could_not_look (no route token)."
+  },
+  "C2": {
+   "status": "ok",
+   "population": "live_vs_backtest.py default Stage-2 legs, whole history per book",
+   "result": "BELOW_BACKTEST: bybit_2 xrp_pullback_2h real n=19 pct 1.2, mirror n=15 pct 4.1; ada_pullback_2h real now CONSISTENT pct 7.2; others CONSISTENT or INSUFFICIENT_N."
+  },
+  "C3": {
+   "status": "could_not_look",
+   "population": "no sequential decay instrument (row PERF-CHECKS-SCORECARD)",
+   "result": "interim: paper 7d expR -0.51 vs lifetime -0.09; real 30d -0.44 vs lifetime ex-vwap -0.08"
+  },
+  "C4": {
+   "status": "ok",
+   "population": "real_money_close_attribution analyse() over the diag-journal dump (its own route 401): 486 real-money closes 2026-05-09..10-28, decision set 467",
+   "result": "strategy exits 77.3%, non-strategy 22.7% lifetime; 7d: 7/7 sl. Script unmodified run is VOID (PI-20261028-PVRNY2JI-0006)."
+  },
+  "C5": {
+   "status": "ok",
+   "population": "realized_slippage.py, 4230 fills, 90d",
+   "result": "bybit_perps 0.66 bps round trip (CI -1.33..2.64) vs 3.0 assumed; 0/27 verdicts flip. Alpaca/IBKR/prop/OANDA unmeasurable."
+  },
+  "C6": {
+   "status": "ok",
+   "population": "live_review_grade / desk_grade / claude_role_grade --live since 2026-10-21",
+   "result": "live review: 124 reviews/22 pkgs, 0 altering priced; hold vs close n=8 mean dR -1.00. Desk: 1 priced +2.42R INDETERMINATE; system legs n=14 mean -1.52R."
+  },
+  "C7": {
+   "status": "ok",
+   "population": "check_tp_doctrine.py, 77 routings / 51 legs",
+   "result": "compliant 0/77 (real_money 0/6, prop 0/6, mirror 0/5, paper 0/60)."
+  },
+  "C8": {
+   "status": "ok",
+   "population": "classify_paper_records.py journal shape 30d n=287",
+   "result": "A 103, B 7, C 9, P 168; ict_scalp_mgc_15m pnl coverage 0.00"
+  },
+  "C9": {
+   "status": "ok",
+   "population": "claude_strategy_scores.jsonl rows reviewed_at>=2026-07-30 joined to journal, n=1358",
+   "result": "A 10 (100% win, outcome-leaked), B 366 (36.6%), C 862 (44.3%), D 120 (33.3%): grade_drift persists. Freshness ok (0.6d)."
+  },
+  "C10": {
+   "status": "ok",
+   "population": "comms/research/ops/20261028T1530Z.json + research_disposition --unread-only",
+   "result": "floor 58; unread 0; superseded_unread 294; corpus_unreadable 0"
+  },
+  "C11": {
+   "status": "ok",
+   "population": "paper_book_tracker bybit_1 full book 1482 rows -> cohort 192; trade_quality_review breakout_1",
+   "result": "DECAY FLAG: recent 30d n=19 -6218.53 vs prior +6523.52; pullback -12526.95 vs trend +12831.94. Prop: 23 resolved, -205.11, WR 21.7%."
+  },
+  "C12": {
+   "status": "ok",
+   "population": "review_followthrough performance-review backlog: 59 pipeline + 10 checklist rows",
+   "result": "69 triaged, count_untriaged 0"
+  }
+ },
+ "analysis": {
+  "questions": [
+   {
+    "question": "Q1 xrp_pullback_2h BELOW_BACKTEST on real money",
+    "money_at_stake": "about -8 R/month per book (3 trades/wk x -0.63R)",
+    "hypotheses": [
+     {
+      "name": "noise",
+      "predicts": "no structure; ~0.6 of 12 below p5 by chance",
+      "test": "count comparisons",
+      "result": "untested"
+     },
+     {
+      "name": "fidelity forming bar",
+      "predicts": "entry-gap only",
+      "test": "10-18 live_bt_trade_join + 10-28 entry_time check",
+      "result": "survived"
+     },
+     {
+      "name": "cost",
+      "predicts": "slippage > 3bps",
+      "test": "realized_slippage 0.66bps",
+      "result": "eliminated"
+     },
+     {
+      "name": "regime",
+      "predicts": "pullback family co-moves",
+      "test": "paper book families",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "Fix OBSERVED; re-read the post-switch trades only",
+    "p": 0.55
+   },
+   {
+    "question": "Q2 giveback rising",
+    "money_at_stake": "+0.1R retained over about 117 trades/month is about +12R/month",
+    "hypotheses": [
+     {
+      "name": "noise",
+      "predicts": "30d within 90d",
+      "test": "Fisher 10/32 vs 15/126",
+      "result": "eliminated",
+      "note": "p=0.013"
+     },
+     {
+      "name": "regime chop",
+      "predicts": "two-sided stops",
+      "test": "10-28 sequence",
+      "result": "survived"
+     },
+     {
+      "name": "exit change",
+      "predicts": "break date",
+      "test": "none",
+      "result": "untested"
+     },
+     {
+      "name": "measurement",
+      "predicts": "coverage shift",
+      "test": "coverage 64% vs 26%",
+      "result": "untested"
+     }
+    ],
+    "conclusion": "real, likely regime plus a non-adapting exit",
+    "p": 0.5
+   },
+   {
+    "question": "Q3 paper-book decay flag",
+    "money_at_stake": "paper; same family carries 2 real-money legs",
+    "hypotheses": [
+     {
+      "name": "decay",
+      "predicts": "trend cells fail too",
+      "test": "per family",
+      "result": "eliminated"
+     },
+     {
+      "name": "family regime",
+      "predicts": "pullback cells co-move",
+      "test": "per cell",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "pullback family sag; the M8 sweep must run",
+    "p": 0.55
+   },
+   {
+    "question": "Q4 ict_scalp 5m signal collapse in October",
+    "money_at_stake": "avax_5m about +7R/month if stranded",
+    "hypotheses": [
+     {
+      "name": "market structure",
+      "predicts": "harness on Oct bars also quiet",
+      "test": "replay (filed)",
+      "result": "untested"
+     },
+     {
+      "name": "live-side change",
+      "predicts": "harness finds Sep-like counts",
+      "test": "replay (filed)",
+      "result": "untested"
+     },
+     {
+      "name": "data feed",
+      "predicts": "stale bar ts",
+      "test": "audit tail current",
+      "result": "eliminated"
+     }
+    ],
+    "conclusion": "open; D3",
+    "p": 0.5
+   },
+   {
+    "question": "Q5 live-review holds",
+    "money_at_stake": "every open package",
+    "hypotheses": [
+     {
+      "name": "selection",
+      "predicts": "gap shrinks as winners close",
+      "test": "wait n>=20",
+      "result": "untested"
+     },
+     {
+      "name": "skill gap",
+      "predicts": "gap persists",
+      "test": "same",
+      "result": "untested"
+     }
+    ],
+    "conclusion": "not actionable at n=8",
+    "p": 0.55
+   },
+   {
+    "question": "Q6 grade informativeness",
+    "money_at_stake": "none directly",
+    "hypotheses": [
+     {
+      "name": "rubric uninformative",
+      "predicts": "B<C",
+      "test": "cohort table",
+      "result": "survived"
+     }
+    ],
+    "conclusion": "already handled by redesign; PI-\u2026-0004 killed",
+    "p": 0.9
+   },
+   {
+    "question": "Q7 Alpaca proxy-only real book",
+    "money_at_stake": "tiny $; governance",
+    "hypotheses": [
+     {
+      "name": "evidence sufficient",
+      "predicts": "n_oos >= power floor",
+      "test": "evidence record n_oos=8",
+      "result": "eliminated"
+     }
+    ],
+    "conclusion": "Tier-3 proposal D6",
+    "p": 0.7
+   }
+  ],
+  "surprises": [
+   "ict_scalp 5m family 125 closes in Sep -> 6 in Oct while live",
+   "giveback worsened against the prior \"stable\" call",
+   "/api/bot/db/table/trades now 401",
+   "promotion-evidence guard passes IAUM on n_oos=8",
+   "two-sided stops on 10-28",
+   "checked, not surprising: no real-money non-strategy close in 7d; 0 unread results; grading fresh"
+  ]
+ },
+ "calls": [
+  {
+   "id": "D1",
+   "claim": "xrp_pullback_2h trades inside its band post closed-bar switch",
+   "p": 0.55,
+   "money_at_stake": "~8R/month/book",
+   "decision": "re-read post-switch; no demote",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h (post 2026-10-22T11:51Z closes)",
+    "rule": "n>=10 post-switch bybit_2 closes: pct>=5 hit; <5 miss",
+    "resolves_when": "n>=10 post-switch closes (~late Nov)"
+   },
+   "ending": "PI-20261028-PVRNY2JI-0001"
+  },
+  {
+   "id": "D2",
+   "claim": "deep-then-loss stays >=20% at n_deep>=40 (30d)",
+   "p": 0.5,
+   "money_at_stake": "~12R/month",
+   "decision": "exit-refinement unit by regime cell/family",
+   "tier": 1,
+   "check": {
+    "command": "giveback_census.py on 30d closed_at filter",
+    "rule": ">=0.20 hit; <0.15 miss",
+    "resolves_when": "n_deep>=40 in a 30d window"
+   },
+   "ending": "PI-20261028-PVRNY2JI-0002"
+  },
+  {
+   "id": "D3",
+   "claim": "ict_scalp 5m silence is market structure",
+   "p": 0.5,
+   "money_at_stake": "~7R/month",
+   "decision": "harness replay Sep vs Oct",
+   "tier": 1,
+   "check": {
+    "command": "scripts/backtest_ict_scalp.py live params Sep/Oct bars",
+    "rule": "harness Oct <=2x live Oct packages hit; >3x miss",
+    "resolves_when": "replay lands"
+   },
+   "ending": "PI-20261028-PVRNY2JI-0003"
+  },
+  {
+   "id": "D4",
+   "claim": "pullback sag is regime: >=2 of 4 folds net>0 per leg",
+   "p": 0.55,
+   "money_at_stake": "paper -12.5k lifetime; real via xrp/ada",
+   "decision": "M8 walk-forward, owner perf-followup",
+   "tier": 1,
+   "check": {
+    "command": "direction_walkforward.py on --emit-trades per leg",
+    "rule": ">=2/4 folds hit; <=1 miss",
+    "resolves_when": "sweep artifacts exist"
+   },
+   "ending": "PI-20261010-WQAPZD8B-0004"
+  },
+  {
+   "id": "D5",
+   "claim": "hold-vs-close gap is selection",
+   "p": 0.55,
+   "money_at_stake": "reviewer touches every package",
+   "decision": "wait for n",
+   "tier": 1,
+   "check": {
+    "command": "live_review_grade.py --live --json hold_vs_close",
+    "rule": "n>=20 mean>-0.25 hit; <=-0.5 miss",
+    "resolves_when": "n>=20 graded holds"
+   },
+   "ending": "PI-20261028-PVRNY2JI-0004"
+  },
+  {
+   "id": "D6",
+   "claim": "IAUM cannot clear the power floor on its own evidence",
+   "p": 0.7,
+   "money_at_stake": "tiny $",
+   "decision": "Tier-3 proposal: re-evidence at power; keep until then",
+   "tier": 3,
+   "check": {
+    "command": "research_queue.py admission + evidence record n_oos",
+    "rule": "n_oos>=49 and net R>0 keep; else removal proposal",
+    "resolves_when": "re-evidence unit lands"
+   },
+   "ending": "PI-20261028-PVRNY2JI-0005"
+  },
+  {
+   "id": "D7",
+   "claim": "attribution check void until its route is fixed",
+   "p": 0.9,
+   "money_at_stake": "blind on real-money close mechanics",
+   "decision": "Tier-1 tooling fix",
+   "tier": 1,
+   "check": {
+    "command": "python3 scripts/research/real_money_close_attribution.py",
+    "rule": "exit 0 unmodified",
+    "resolves_when": "fix lands"
+   },
+   "ending": "PI-20261028-PVRNY2JI-0006"
+  }
+ ],
+ "strategy_performance": [
+  {
+   "class": "real_money",
+   "strategy": "trend_donchian",
+   "all": {
+    "n": 15,
+    "win_rate_pct": 40.0,
+    "net_r": 7.64,
+    "exp_r": 0.5095,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.8667
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "trend_donchian_eth_4h",
+   "all": {
+    "n": 16,
+    "win_rate_pct": 31.2,
+    "net_r": 6.2,
+    "exp_r": 0.3876,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.625
+   },
+   "30d": {
+    "n": 5,
+    "win_rate_pct": 20.0,
+    "net_r": -3.59,
+    "exp_r": -0.7188,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.8
+   },
+   "7d": {
+    "n": 2,
+    "win_rate_pct": 0.0,
+    "net_r": -2.16,
+    "exp_r": -1.0804,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "tlt_pullback_1h",
+   "all": {
+    "n": 1,
+    "win_rate_pct": 100.0,
+    "net_r": 1.29,
+    "exp_r": 1.2941,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "fade_breakout_4h",
+   "all": {
+    "n": 7,
+    "win_rate_pct": 42.9,
+    "net_r": -0.84,
+    "exp_r": -0.1203,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "ief_pullback_1d",
+   "all": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.48,
+    "exp_r": -0.4772,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "squeeze_breakout_4h",
+   "all": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.11,
+    "exp_r": -1.1119,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "slv_pullback_1d",
+   "all": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.03,
+    "exp_r": -1.0255,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "iaum_pullback_1d",
+   "all": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.47,
+    "exp_r": -1.4705,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "htf_pullback_trend_2h",
+   "all": {
+    "n": 6,
+    "win_rate_pct": 16.7,
+    "net_r": -3.95,
+    "exp_r": -0.6586,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.8333
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "trend_donchian_xrp_4h",
+   "all": {
+    "n": 7,
+    "win_rate_pct": 14.3,
+    "net_r": -0.94,
+    "exp_r": -0.1349,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.5714
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.02,
+    "exp_r": -1.0185,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "trend_donchian_sol_prop",
+   "all": {
+    "n": 3,
+    "win_rate_pct": 0.0,
+    "net_r": -2.92,
+    "exp_r": -0.975,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   },
+   "30d": {
+    "n": 3,
+    "win_rate_pct": 0.0,
+    "net_r": -2.92,
+    "exp_r": -0.975,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 2,
+    "win_rate_pct": 0.0,
+    "net_r": -2.02,
+    "exp_r": -1.0102,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "ict_scalp_5m",
+   "all": {
+    "n": 35,
+    "win_rate_pct": 54.3,
+    "net_r": 4.94,
+    "exp_r": 0.1411,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.9143
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "eth_pullback_2h",
+   "all": {
+    "n": 19,
+    "win_rate_pct": 26.3,
+    "net_r": -2.47,
+    "exp_r": -0.1301,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.7368
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "ada_pullback_2h",
+   "all": {
+    "n": 17,
+    "win_rate_pct": 23.5,
+    "net_r": -4.33,
+    "exp_r": -0.2548,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   },
+   "30d": {
+    "n": 6,
+    "win_rate_pct": 50.0,
+    "net_r": 3.42,
+    "exp_r": 0.5698,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 100.0,
+    "net_r": 2.35,
+    "exp_r": 2.3499,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "xrp_pullback_2h",
+   "all": {
+    "n": 19,
+    "win_rate_pct": 15.8,
+    "net_r": -11.98,
+    "exp_r": -0.6307,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.6842
+   },
+   "30d": {
+    "n": 5,
+    "win_rate_pct": 0.0,
+    "net_r": -4.65,
+    "exp_r": -0.93,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 2,
+    "win_rate_pct": 0.0,
+    "net_r": -2.06,
+    "exp_r": -1.0296,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "real_money",
+   "strategy": "vwap",
+   "all": {
+    "n": 318,
+    "win_rate_pct": 23.6,
+    "net_r": -145.85,
+    "exp_r": -0.4586,
+    "pnl_measured_only_usd": null,
+    "pnl_coverage": 0.7547
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_mgc_15m",
+   "all": {
+    "n": 22,
+    "win_rate_pct": 9.1,
+    "net_r": 8.24,
+    "exp_r": 0.3745,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   },
+   "30d": {
+    "n": 6,
+    "win_rate_pct": 0.0,
+    "net_r": -3.58,
+    "exp_r": -0.5963,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.06,
+    "exp_r": -1.0583,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "uso_trend_1h",
+   "all": {
+    "n": 22,
+    "win_rate_pct": 54.5,
+    "net_r": 17.41,
+    "exp_r": 0.7912,
+    "pnl_measured_only_usd": 7915,
+    "pnl_coverage": 0.4545
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_ada_4h",
+   "all": {
+    "n": 21,
+    "win_rate_pct": 57.1,
+    "net_r": 11.11,
+    "exp_r": 0.529,
+    "pnl_measured_only_usd": 2710,
+    "pnl_coverage": 0.1429
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 100.0,
+    "net_r": 1.5,
+    "exp_r": 1.5043,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_xrp_4h",
+   "all": {
+    "n": 10,
+    "win_rate_pct": 40.0,
+    "net_r": -1.28,
+    "exp_r": -0.1276,
+    "pnl_measured_only_usd": 3539,
+    "pnl_coverage": 0.2
+   },
+   "30d": {
+    "n": 2,
+    "win_rate_pct": 0.0,
+    "net_r": -2.01,
+    "exp_r": -1.0064,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "tlt_pullback_1d",
+   "all": {
+    "n": 7,
+    "win_rate_pct": 57.1,
+    "net_r": 0.63,
+    "exp_r": 0.0897,
+    "pnl_measured_only_usd": 1410,
+    "pnl_coverage": 0.4286
+   },
+   "30d": {
+    "n": 3,
+    "win_rate_pct": 66.7,
+    "net_r": 1.11,
+    "exp_r": 0.3686,
+    "pnl_measured_only_usd": 1410,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.01,
+    "exp_r": -1.0075,
+    "pnl_measured_only_usd": -1187,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "pairs_sol_eth_b",
+   "all": {
+    "n": 185,
+    "win_rate_pct": 47.0,
+    "net_r": 0.02,
+    "exp_r": 0.0001,
+    "pnl_measured_only_usd": 45,
+    "pnl_coverage": 0.2432
+   },
+   "30d": {
+    "n": 37,
+    "win_rate_pct": 45.9,
+    "net_r": -0.06,
+    "exp_r": -0.0017,
+    "pnl_measured_only_usd": 21,
+    "pnl_coverage": 0.9189
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "eth_pullback_prop_2h",
+   "all": {
+    "n": 2,
+    "win_rate_pct": 50.0,
+    "net_r": -1.02,
+    "exp_r": -0.5102,
+    "pnl_measured_only_usd": -37,
+    "pnl_coverage": 0.5
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.05,
+    "exp_r": -1.0492,
+    "pnl_measured_only_usd": -37,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.05,
+    "exp_r": -1.0492,
+    "pnl_measured_only_usd": -37,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_sol_4h",
+   "all": {
+    "n": 18,
+    "win_rate_pct": 50.0,
+    "net_r": 4.51,
+    "exp_r": 0.2504,
+    "pnl_measured_only_usd": 667,
+    "pnl_coverage": 0.2778
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "pairs_bnb_btc_b",
+   "all": {
+    "n": 173,
+    "win_rate_pct": 48.6,
+    "net_r": -0.06,
+    "exp_r": -0.0003,
+    "pnl_measured_only_usd": 14,
+    "pnl_coverage": 0.341
+   },
+   "30d": {
+    "n": 48,
+    "win_rate_pct": 47.9,
+    "net_r": -0.03,
+    "exp_r": -0.0007,
+    "pnl_measured_only_usd": 9,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "pairs_bnb_btc_a",
+   "all": {
+    "n": 172,
+    "win_rate_pct": 47.7,
+    "net_r": -0.07,
+    "exp_r": -0.0004,
+    "pnl_measured_only_usd": -10,
+    "pnl_coverage": 0.3488
+   },
+   "30d": {
+    "n": 48,
+    "win_rate_pct": 58.3,
+    "net_r": 0.01,
+    "exp_r": 0.0002,
+    "pnl_measured_only_usd": -6,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ief_pullback_1d",
+   "all": {
+    "n": 4,
+    "win_rate_pct": 50.0,
+    "net_r": 5.9,
+    "exp_r": 1.475,
+    "pnl_measured_only_usd": -181,
+    "pnl_coverage": 0.75
+   },
+   "30d": {
+    "n": 3,
+    "win_rate_pct": 66.7,
+    "net_r": 6.13,
+    "exp_r": 2.0435,
+    "pnl_measured_only_usd": -181,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9966,
+    "pnl_measured_only_usd": -1029,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "qld_trend_long_1d",
+   "all": {
+    "n": 2,
+    "win_rate_pct": 0.0,
+    "net_r": -1.41,
+    "exp_r": -0.7041,
+    "pnl_measured_only_usd": -229,
+    "pnl_coverage": 0.5
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.42,
+    "exp_r": -0.4183,
+    "pnl_measured_only_usd": -229,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "pairs_sol_eth_a",
+   "all": {
+    "n": 187,
+    "win_rate_pct": 44.9,
+    "net_r": 0.08,
+    "exp_r": 0.0004,
+    "pnl_measured_only_usd": 37,
+    "pnl_coverage": 0.2674
+   },
+   "30d": {
+    "n": 37,
+    "win_rate_pct": 54.1,
+    "net_r": -0.06,
+    "exp_r": -0.0016,
+    "pnl_measured_only_usd": 28,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_eth_4h",
+   "all": {
+    "n": 31,
+    "win_rate_pct": 38.7,
+    "net_r": -5.86,
+    "exp_r": -0.189,
+    "pnl_measured_only_usd": -9884,
+    "pnl_coverage": 0.3548
+   },
+   "30d": {
+    "n": 9,
+    "win_rate_pct": 22.2,
+    "net_r": -5.74,
+    "exp_r": -0.6377,
+    "pnl_measured_only_usd": -8049,
+    "pnl_coverage": 0.7778
+   },
+   "7d": {
+    "n": 3,
+    "win_rate_pct": 0.0,
+    "net_r": -3.1,
+    "exp_r": -1.0334,
+    "pnl_measured_only_usd": -2090,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "tqqq_trend_long_1d",
+   "all": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -1.0021,
+    "pnl_measured_only_usd": -1066,
+    "pnl_coverage": 1.0
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -1.0021,
+    "pnl_measured_only_usd": -1066,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "spy_pullback_1h",
+   "all": {
+    "n": 15,
+    "win_rate_pct": 40.0,
+    "net_r": -6.43,
+    "exp_r": -0.4289,
+    "pnl_measured_only_usd": -1656,
+    "pnl_coverage": 0.2667
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.29,
+    "exp_r": -0.2858,
+    "pnl_measured_only_usd": -10,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian",
+   "all": {
+    "n": 29,
+    "win_rate_pct": 41.4,
+    "net_r": 23.86,
+    "exp_r": 0.8229,
+    "pnl_measured_only_usd": -5388,
+    "pnl_coverage": 0.4828
+   },
+   "30d": {
+    "n": 2,
+    "win_rate_pct": 50.0,
+    "net_r": -0.66,
+    "exp_r": -0.3278,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.93,
+    "exp_r": -0.9304,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_sol",
+   "all": {
+    "n": 11,
+    "win_rate_pct": 36.4,
+    "net_r": -0.49,
+    "exp_r": -0.0442,
+    "pnl_measured_only_usd": -1445,
+    "pnl_coverage": 0.6364
+   },
+   "30d": {
+    "n": 3,
+    "win_rate_pct": 0.0,
+    "net_r": -2.96,
+    "exp_r": -0.9878,
+    "pnl_measured_only_usd": -1117,
+    "pnl_coverage": 0.6667
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_eth",
+   "all": {
+    "n": 21,
+    "win_rate_pct": 33.3,
+    "net_r": -1.05,
+    "exp_r": -0.05,
+    "pnl_measured_only_usd": -1009,
+    "pnl_coverage": 0.4286
+   },
+   "30d": {
+    "n": 5,
+    "win_rate_pct": 20.0,
+    "net_r": -1.87,
+    "exp_r": -0.3745,
+    "pnl_measured_only_usd": 366,
+    "pnl_coverage": 0.6
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.68,
+    "exp_r": -0.6779,
+    "pnl_measured_only_usd": -616,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "vwap",
+   "all": {
+    "n": 29,
+    "win_rate_pct": 17.2,
+    "net_r": -32.95,
+    "exp_r": -1.1362,
+    "pnl_measured_only_usd": -1923,
+    "pnl_coverage": 0.9655
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_xrp_15m",
+   "all": {
+    "n": 39,
+    "win_rate_pct": 41.0,
+    "net_r": -9.85,
+    "exp_r": -0.2526,
+    "pnl_measured_only_usd": -3020,
+    "pnl_coverage": 0.4103
+   },
+   "30d": {
+    "n": 5,
+    "win_rate_pct": 0.0,
+    "net_r": -2.07,
+    "exp_r": -0.415,
+    "pnl_measured_only_usd": -827,
+    "pnl_coverage": 0.4
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.04,
+    "exp_r": -0.0431,
+    "pnl_measured_only_usd": 0,
+    "pnl_coverage": 0.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_avax_5m",
+   "all": {
+    "n": 82,
+    "win_rate_pct": 50.0,
+    "net_r": -11.58,
+    "exp_r": -0.1412,
+    "pnl_measured_only_usd": 2270,
+    "pnl_coverage": 0.6463
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9972,
+    "pnl_measured_only_usd": -288,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9972,
+    "pnl_measured_only_usd": -288,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_avax_4h",
+   "all": {
+    "n": 23,
+    "win_rate_pct": 39.1,
+    "net_r": 4.83,
+    "exp_r": 0.2099,
+    "pnl_measured_only_usd": 1385,
+    "pnl_coverage": 0.1304
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "qqq_pullback_1h",
+   "all": {
+    "n": 20,
+    "win_rate_pct": 20.0,
+    "net_r": -17.6,
+    "exp_r": -0.8798,
+    "pnl_measured_only_usd": -208,
+    "pnl_coverage": 0.45
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 100.0,
+    "net_r": 1.78,
+    "exp_r": 1.7801,
+    "pnl_measured_only_usd": 744,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_xrp_5m",
+   "all": {
+    "n": 44,
+    "win_rate_pct": 50.0,
+    "net_r": -33.75,
+    "exp_r": -0.7671,
+    "pnl_measured_only_usd": 2342,
+    "pnl_coverage": 0.5682
+   },
+   "30d": {
+    "n": 6,
+    "win_rate_pct": 66.7,
+    "net_r": 2.76,
+    "exp_r": 0.4606,
+    "pnl_measured_only_usd": -502,
+    "pnl_coverage": 0.8333
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 100.0,
+    "net_r": 1.49,
+    "exp_r": 1.4944,
+    "pnl_measured_only_usd": 1223,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_eth_15m",
+   "all": {
+    "n": 38,
+    "win_rate_pct": 42.1,
+    "net_r": 3.15,
+    "exp_r": 0.083,
+    "pnl_measured_only_usd": -8983,
+    "pnl_coverage": 0.5526
+   },
+   "30d": {
+    "n": 5,
+    "win_rate_pct": 40.0,
+    "net_r": 1.76,
+    "exp_r": 0.3525,
+    "pnl_measured_only_usd": -471,
+    "pnl_coverage": 0.8
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.8,
+    "exp_r": -0.7999,
+    "pnl_measured_only_usd": -275,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "sol_pullback_2h",
+   "all": {
+    "n": 10,
+    "win_rate_pct": 20.0,
+    "net_r": -5.46,
+    "exp_r": -0.5462,
+    "pnl_measured_only_usd": -32,
+    "pnl_coverage": 0.3
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9974,
+    "pnl_measured_only_usd": -95,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9974,
+    "pnl_measured_only_usd": -95,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_eth_prop",
+   "all": {
+    "n": 7,
+    "win_rate_pct": 28.6,
+    "net_r": -2.44,
+    "exp_r": -0.3492,
+    "pnl_measured_only_usd": -2885,
+    "pnl_coverage": 1.0
+   },
+   "30d": {
+    "n": 7,
+    "win_rate_pct": 28.6,
+    "net_r": -2.44,
+    "exp_r": -0.3492,
+    "pnl_measured_only_usd": -2885,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 3,
+    "win_rate_pct": 66.7,
+    "net_r": 0.56,
+    "exp_r": 0.1867,
+    "pnl_measured_only_usd": 514,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "tlt_pullback_1h",
+   "all": {
+    "n": 15,
+    "win_rate_pct": 26.7,
+    "net_r": -7.16,
+    "exp_r": -0.4774,
+    "pnl_measured_only_usd": -1032,
+    "pnl_coverage": 0.4667
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "eth_pullback_2h",
+   "all": {
+    "n": 33,
+    "win_rate_pct": 27.3,
+    "net_r": -5.24,
+    "exp_r": -0.1589,
+    "pnl_measured_only_usd": -2310,
+    "pnl_coverage": 0.4848
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.07,
+    "exp_r": -1.068,
+    "pnl_measured_only_usd": -47,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.07,
+    "exp_r": -1.068,
+    "pnl_measured_only_usd": -47,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ada_pullback_2h",
+   "all": {
+    "n": 49,
+    "win_rate_pct": 38.8,
+    "net_r": 4.86,
+    "exp_r": 0.0993,
+    "pnl_measured_only_usd": -326,
+    "pnl_coverage": 0.6327
+   },
+   "30d": {
+    "n": 12,
+    "win_rate_pct": 50.0,
+    "net_r": 7.0,
+    "exp_r": 0.583,
+    "pnl_measured_only_usd": 7894,
+    "pnl_coverage": 0.8333
+   },
+   "7d": {
+    "n": 2,
+    "win_rate_pct": 100.0,
+    "net_r": 4.81,
+    "exp_r": 2.4064,
+    "pnl_measured_only_usd": 4315,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "trend_donchian_sol_prop",
+   "all": {
+    "n": 6,
+    "win_rate_pct": 0.0,
+    "net_r": -5.57,
+    "exp_r": -0.928,
+    "pnl_measured_only_usd": -3065,
+    "pnl_coverage": 0.6667
+   },
+   "30d": {
+    "n": 6,
+    "win_rate_pct": 0.0,
+    "net_r": -5.57,
+    "exp_r": -0.928,
+    "pnl_measured_only_usd": -3065,
+    "pnl_coverage": 0.6667
+   },
+   "7d": {
+    "n": 4,
+    "win_rate_pct": 0.0,
+    "net_r": -3.72,
+    "exp_r": -0.9289,
+    "pnl_measured_only_usd": -1133,
+    "pnl_coverage": 0.5
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "htf_pullback_trend_2h",
+   "all": {
+    "n": 25,
+    "win_rate_pct": 12.0,
+    "net_r": -24.38,
+    "exp_r": -0.9752,
+    "pnl_measured_only_usd": 3105,
+    "pnl_coverage": 0.24
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_sol_5m",
+   "all": {
+    "n": 61,
+    "win_rate_pct": 52.5,
+    "net_r": 9.78,
+    "exp_r": 0.1603,
+    "pnl_measured_only_usd": -7434,
+    "pnl_coverage": 0.4098
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "squeeze_breakout_4h",
+   "all": {
+    "n": 10,
+    "win_rate_pct": 10.0,
+    "net_r": -3.36,
+    "exp_r": -0.3363,
+    "pnl_measured_only_usd": -1,
+    "pnl_coverage": 0.1
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "gld_pullback_1h",
+   "all": {
+    "n": 13,
+    "win_rate_pct": 0.0,
+    "net_r": -12.51,
+    "exp_r": -0.9624,
+    "pnl_measured_only_usd": -2822,
+    "pnl_coverage": 0.3846
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "slv_trend_1h",
+   "all": {
+    "n": 23,
+    "win_rate_pct": 21.7,
+    "net_r": -9.14,
+    "exp_r": -0.3972,
+    "pnl_measured_only_usd": -2952,
+    "pnl_coverage": 0.2609
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_5m",
+   "all": {
+    "n": 62,
+    "win_rate_pct": 40.3,
+    "net_r": -6.92,
+    "exp_r": -0.1116,
+    "pnl_measured_only_usd": -1129,
+    "pnl_coverage": 0.4355
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.87,
+    "exp_r": -0.8725,
+    "pnl_measured_only_usd": -598,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -0.87,
+    "exp_r": -0.8725,
+    "pnl_measured_only_usd": -598,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "ict_scalp_sol_15m",
+   "all": {
+    "n": 47,
+    "win_rate_pct": 38.3,
+    "net_r": 5.96,
+    "exp_r": 0.1267,
+    "pnl_measured_only_usd": -1933,
+    "pnl_coverage": 0.3617
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.06,
+    "exp_r": -1.0594,
+    "pnl_measured_only_usd": -2040,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "xrp_pullback_2h",
+   "all": {
+    "n": 36,
+    "win_rate_pct": 19.4,
+    "net_r": -9.15,
+    "exp_r": -0.2541,
+    "pnl_measured_only_usd": -12947,
+    "pnl_coverage": 0.5
+   },
+   "30d": {
+    "n": 11,
+    "win_rate_pct": 18.2,
+    "net_r": -4.15,
+    "exp_r": -0.3771,
+    "pnl_measured_only_usd": -7514,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 4,
+    "win_rate_pct": 0.0,
+    "net_r": -3.86,
+    "exp_r": -0.9657,
+    "pnl_measured_only_usd": -4418,
+    "pnl_coverage": 1.0
+   }
+  },
+  {
+   "class": "paper",
+   "strategy": "mes_trend_long_1d",
+   "all": {
+    "n": 4,
+    "win_rate_pct": 0.0,
+    "net_r": -1.16,
+    "exp_r": -0.2889,
+    "pnl_measured_only_usd": -16256,
+    "pnl_coverage": 0.25
+   },
+   "30d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9981,
+    "pnl_measured_only_usd": -16256,
+    "pnl_coverage": 1.0
+   },
+   "7d": {
+    "n": 1,
+    "win_rate_pct": 0.0,
+    "net_r": -1.0,
+    "exp_r": -0.9981,
+    "pnl_measured_only_usd": -16256,
+    "pnl_coverage": 1.0
+   }
+  }
+ ],
+ "trade_decision_grades": [],
+ "_trade_decision_grades_note": "Closed trades are graded per trade by the daily grade-closed-trades cron (fresh, max reviewed_at 2026-10-28T03:51Z); per skill C9 the rubric is a check, so no hand grading this run. No blind-then-reveal run.",
+ "insights_review": [],
+ "_insights_note": "M13 insights not pulled this run (section 4).",
+ "proposed_tweaks": [
+  {
+   "scope": "config/accounts.yaml::alpaca_live.strategies (iaum_pullback_1d)",
+   "current_value": "[iaum_pullback_1d]",
+   "proposed_value": "unchanged pending re-evidence at declared power (PI-20261028-PVRNY2JI-0005)",
+   "evidence": "Stage-0 n_oos=8 folds +5.47/+1.89/+0.52/-0.72 approximate; live n=1 -1.47R; GLD primary not rostered so mirror empty",
+   "tier": 3,
+   "risk_note": "leg runs with no demotion signal; review reads it weekly"
+  }
+ ],
+ "backlog_drain": [
+  {
+   "id": "PB-20260609-001",
+   "disposition": "killed",
+   "note": "141 d, no owner, never actioned. The regime-selectivity skill and config/regime_policy.yaml now own vol-axis coverage; a performance-review row does not. Reopen as a regime-selectivity unit if an off-cell needs the vol axis."
+  },
+  {
+   "id": "PB-20260620-002",
+   "disposition": "killed",
+   "note": "130 d, no owner. An idea, not a performance finding: it belongs in the research map or IDEAS.md. Re-entry test: perp funding elevated plus a backtest_funding_carry.py re-run that clears the bar."
+  },
+  {
+   "id": "PB-20260622-002",
+   "disposition": "killed",
+   "note": "128 d. tlt_pullback_1d has n=7 lifetime closes (C1 2026-10-28), so a TLT-only confidence floor would be fitted on single digits. Reopen as a research unit at n>=30."
+  },
+  {
+   "id": "PB-20260630-002",
+   "disposition": "killed",
+   "note": "Premise superseded by the soak doctrine (OPERATING-PLAN \u00a7 2, 2026-10-15: a soak is 1-2 clean trades, never a sample size). The \"20-30 clean closed paper trades\" bar is non-compliant. Promotion of tqqq/qld goes through Stage-0 evidence and M"
+  },
+  {
+   "id": "PB-20260707-NATIVE-MES-PULL",
+   "disposition": "killed",
+   "note": "113 d, no owner. MES cells are on ib_paper under DEMO-FLOOR, and their live record now accrues; a deeper history pull is a data task for the futures programme, not a performance row. Re-entry: a futures-programme unit names it."
+  },
+  {
+   "id": "SRQ-20260715-REALMONEY-ALLOC-BENCHMARK",
+   "disposition": "kept_open",
+   "note": "Recurring, run this review: incumbent bybit_2 lifetime ex-vwap expR about -0.08 over 149 closes; no candidate sleeve is queued; the Alpaca real book is one proxy leg with an empty mirror (Q7/D6). Verdict neutral. Next run: the next performa"
+  },
+  {
+   "id": "PRB-20260720-OPTIONS-PORTFOLIO-GRADUATION",
+   "disposition": "kept_open",
+   "note": "Re-validated: no options strategy has closed trades in the 30d C1 scorecard, so no options strategy is near the promotion bar. Standing operator gate; kept as a watch."
+  },
+  {
+   "id": "PB-20260729-ALLOCATOR-VENUE-FEE",
+   "disposition": "kept_open",
+   "note": "Not re-run (code question; src/ is out of this lane scope). 91 d with no owner; this is a tooling bug, not a performance finding. Re-routed for the manager to dispatch as a Tier-2 tooling lane or kill."
+  },
+  {
+   "id": "PB-20260807-ICTSCALP-STOP-DID-NOT-CONTAIN-8R",
+   "disposition": "killed",
+   "note": "The row marks its own premise SUPERSEDED (an exit-price reconstruction artefact). Scalp capture is now measured each week by giveback_census.py over telemetry-final rows (C1/C4), which states population and coverage."
+  },
+  {
+   "id": "PB-20260816-BYBIT-TP-CAP-BINDS-ON-ALPACA-AND-IB-LEGS",
+   "disposition": "killed",
+   "note": "Superseded by check_tp_doctrine.py, which measures TP reach per routing (TP-REACH-FLOOR, re-run 2026-10-28: below_floor 11 / reachable 9 / unmeasured 28) and is owned by tp-doctrine-guard. A sentinel cap on Alpaca legs shows there as entry_"
+  },
+  {
+   "id": "PB-20260816-REACH-R-IS-CLAMPED-NOT-CAP-R",
+   "disposition": "kept_open",
+   "note": "Not fixed (a one-line docstring in src/runtime/exit_plan_realism.py, outside this lane scope). Kept for the exit-refinement owner."
+  },
+  {
+   "id": "PB-20260816-M31-P4-PARITY-PRECONDITIONS",
+   "disposition": "killed",
+   "note": "Superseded: backtest-vs-live parity is now live_vs_backtest.py + live_bt_trade_join.py (C2/C4), both run each review with stated denominators per leg. The M31 P4 framing is not used by any current check."
+  },
+  {
+   "id": "PB-20260816-REACHABILITY-REGISTRY-IGNORES-THE-CORPUS-TP-REACH-IT-KEEPS-RE-MEASURING",
+   "disposition": "killed",
+   "note": "Superseded by check_tp_doctrine.py TP-REACH-FLOOR, which reads reach evidence per routing. A registry-vs-corpus redesign is a tooling call for tp-doctrine-guard, not a performance row."
+  },
+  {
+   "id": "PB-20260817-NO-COMMITTED-PER-TRADE-HARNESS-MFE",
+   "disposition": "killed",
+   "note": "Folded into PI-20261028-PVRNY2JI-0002 (the giveback / exit unit), which needs per-trade MFE from the harness and states it in its rule."
+  },
+  {
+   "id": "PB-20260817-RR-FLOOR-UNMEASURED-ON-LIVE-REGIME-DATA",
+   "disposition": "killed",
+   "note": "Folded into PI-20261028-PVRNY2JI-0002: the exit unit splits giveback by regime cell, which is the live-regime measurement this row asked for."
+  },
+  {
+   "id": "PB-20260817-SPRINT-LOG-TEMPLATE-HAS-NO-GUARD",
+   "disposition": "killed",
+   "note": "Mis-filed as performance. Sprint logs are context only (CLAUDE.md hierarchy item 8) and doc-freshness owns format. No trading consequence."
+  },
+  {
+   "id": "PB-20260821-R-AND-DOLLARS-DISAGREE-IN-SIGN",
+   "disposition": "resolved",
+   "note": "Re-checked live 2026-10-28: /api/bot/performance window=30d real_money totalR -8.77 with totalPnlMeasuredOnly -23.8 and PF 0.50, and 7d -3.89 R with -11.0 and PF 0.38. Signs agree. No per-strategy expectancyR in the 30d payload exceeds |2.5"
+  },
+  {
+   "id": "PB-20260822-AVAX-SCALP-SIZED-OFF-MARGIN-NOT-RISK",
+   "disposition": "kept_open",
+   "note": "Cannot be sampled: ict_scalp_avax_5m closed 1 trade in October (C1) and its packages fell 86 -> 14. Waits on PI-20261028-PVRNY2JI-0003 (the scalp-silence replay)."
+  },
+  {
+   "id": "PB-20260824-PULLBACK-FILTER-COSTS-MONEY-ON-ALL-FIVE-LEGS-GENERALIZES-ON-ONE",
+   "disposition": "killed",
+   "note": "Folded into PI-20261010-WQAPZD8B-0004, re-filed 2026-10-28 with an owner: the per-leg M8 walk-forward of the pullback family. It re-tests pullback_frac with a fold rule registered first."
+  },
+  {
+   "id": "PB-20260830-XRP-4H-FIRST-CLOSE-UNDER-NEW-BRACKET-UNVERIFIED",
+   "disposition": "kept_open",
+   "note": "Re-validated: trend_donchian_xrp_4h has 7 real-money closes and 3 convictable (all losses, real_money_close_attribution.py). The broker-truth read of the first post-bracket close was not done this session (needs a venue order-history pull)."
+  },
+  {
+   "id": "BL-20260831-FEASIBILITY-OBSERVATIONS-ARE-BLIND-TO-RUN-CONFIG",
+   "disposition": "killed",
+   "note": "Research-queue tooling, not performance. research-ops (4x/day) owns queue feasibility. 58 d with no owner. Re-entry: research-ops files it against research_queue.py if a mis-admitted unit is observed."
+  },
+  {
+   "id": "BL-20260831-QUEUE-DISPATCHED-ROWS-CARRY-NO-IDENTITY-ON-THE-ONE-ROUTE-THAT-HAS-EVER-WORKED",
+   "disposition": "killed",
+   "note": "Research-pipeline identity is research-ops territory; the 10-28 research-ops record reports 0 unread and 0 corpus_unreadable (C10), so the gap is not blinding the disposition stage. 58 d with no owner."
+  },
+  {
+   "id": "BL-20260831-E35-CORPUS-SUPERSEDES-THE-BASELINE-ITS-MONTHLY-JOB-ASKS-ABOUT",
+   "disposition": "killed",
+   "note": "A design call about the e35 corpus that research-ops / programme-review own. 58 d with no owner. Re-entry: the programme review names a longitudinal e35 question."
+  },
+  {
+   "id": "BL-20260831-CORPUS-JOB-SCANS-EVERY-LEG-REPORT-TWICE-SO-THE-HISTORY-SIDECAR-ARCHIVES-THE-RUNS-OWN-ROWS",
+   "disposition": "killed",
+   "note": "e35 sweep tooling, not performance; research-ops owns it. 58 d with no owner."
+  },
+  {
+   "id": "PB-20260906-R-CONTAMINATION-QUANTIFIED-AND-THE-HEADLINE-SIGN-IS-WRONG",
+   "disposition": "kept_open",
+   "note": "Part (1) OBSERVED 2026-10-28: window=30d expectancyR -0.44 agrees in sign with totalPnl and PF 0.50 on the same payload. Part (2) not re-checked. Kept until part (2) is."
+  },
+  {
+   "id": "BL-20260908-THE-BACKTEST-VS-LIVE-EXIT-COMPARISON-IS-BLOCKED-ON-RETENTION-NOT-MEASURABILITY-AND-THE-CALIBRATOR-NEEDS-A-QUERY-NOT-AN-INSTRUMENT",
+   "disposition": "killed",
+   "note": "Folded into PI-20261028-PVRNY2JI-0002 (the exit unit retains its --emit-trades artifact by its rule) and superseded by live_bt_trade_join.py (comms/research/live_bt_join/2026-10-18/), which retains both halves."
+  },
+  {
+   "id": "BL-20260908-THE-GLD-COMPAT-MATRIX-GRADES-RISK-PCT-NOT-THE-ACCOUNT-SO-ITS-11-UNREAD-UNITS-CANNOT-BE-TERMINALLY-DISPOSITIONED",
+   "disposition": "kept_open",
+   "note": "Still relevant to real money: alpaca_live trades IAUM as a GLD affordability proxy because GLD is unaffordable, and the compat matrix does not see account size. Kept; tied to D6 (PI-20261028-PVRNY2JI-0005)."
+  },
+  {
+   "id": "BL-20260911-A-RATE-PER-TRADE-ROW-COUNTS-ACCOUNT-FANOUT-AS-INDEPENDENT-AND-INFLATES-N-UNEQUALLY",
+   "disposition": "kept_open",
+   "note": "Re-measured 2026-10-28: 39 closes in 7 d came from 25 distinct decisions (1.56x). The 2026-10-28 review states decisions beside trades. Kept as the standing convention row."
+  },
+  {
+   "id": "BL-20260911-A-TRAILED-STOP-OUT-IS-ATTRIBUTED-TO-THE-DECLARED-GEOMETRY-THAT-DID-NOT-END-IT",
+   "disposition": "killed",
+   "note": "An analysis convention, now carried by the exit unit PI-20261028-PVRNY2JI-0002, which must split exits at the declared stop from exits at an amended stop. 47 d with no owner."
+  },
+  {
+   "id": "BL-20260911-LOSING-STREAK-SIZE-GATE-IS-A-FLEET-WIDE-ABSOLUTE-SO-IT-UNDER-SERVES-A-SMALL-REAL-MONEY-ACCOUNT",
+   "disposition": "kept_open",
+   "note": "Still true on its premise: bybit_2 real-money $ losses are single digits per trade, far below a $500 floor. A risk-config question (Tier-3). Kept for the operator via the manager."
+  },
+  {
+   "id": "BL-20260912-THE-NETTING-ATTRIBUTED-PATH-CARRIES-THE-LARGEST-SHARE-OF-THE-WINNER-COLLAPSE-AND-IS-100-PERCENT-ESTIMATED",
+   "disposition": "kept_open",
+   "note": "Re-validated: real_money_close_attribution.py (2026-10-28, journal-dump input) still lists netting_attributed 1 and netted_misattributed 2 in the lifetime decision set; none in the 7d window. Kept for health-review (OI-20260908 root cause)."
+  },
+  {
+   "id": "BL-20260912-FOR-55-PERCENT-OF-WINNERS-THAT-MISSED-TARGET-THE-MECHANISM-THAT-STOPPED-THE-RUN-IS-NOT-IN-THE-JOURNAL",
+   "disposition": "kept_open",
+   "note": "Still true: 7d exits include 3+1+1 trailed-stop wins journaled as plain sl (2026-10-28 table), so what ended the run is not distinguishable from the declared stop. Kept; feeds PI-20261028-PVRNY2JI-0002."
+  },
+  {
+   "id": "BL-20260912-THE-SCALP-FAMILY-S-TARGET-HAS-NO-SWEEP-E35-EXCLUDES-IT-BY-DESIGN-AND-THE-FLEET-SWEEP-DOES-NOT-SWEEP-A-TARGET",
+   "disposition": "resolved",
+   "note": "Cleared: PR #11933 (merged 2026-10-25T13:35Z) made the ict_scalp target and stop buffer sweepable end to end (scripts/backtest_ict_scalp.py --tp-at-r / --atr-sl-buffer-mult, scripts/research/m27/ict_scalp_exit_sweep.py) and swept them: 175 "
+  },
+  {
+   "id": "BL-20260912-HALF-THE-NETTING-ATTRIBUTED-POPULATION-CANNOT-BE-ADJUDICATED-ONE-TO-ONE-AGAINST-THE-VENUE",
+   "disposition": "killed",
+   "note": "Duplicate scope of BL-20260912-THE-NETTING-ATTRIBUTED-PATH-\u2026, which is kept open for health-review. One netting row is enough."
+  },
+  {
+   "id": "BL-20260912-THE-BLEED-MEMO-S-HEADLINE-TABLE-IS-THE-ONE-TABLE-ITS-REPRODUCER-DOES-NOT-COMPUTE",
+   "disposition": "killed",
+   "note": "About a September memo nobody now cites as authority. The 10-28 analyst design (tables are computed by named scripts, C-layer) is the convention this asked for."
+  },
+  {
+   "id": "BL-20260912-THE-OKX-PROXY-BASIS-IS-FIT-FOR-THE-TREND-LEGS-AND-GRADES-UNFIT-ON-THE-SCALP-LEGS-IT-WAS-NEVER-VALIDATED-AGAINST",
+   "disposition": "kept_open",
+   "note": "Relevant to D3: the scalp-silence replay must use a price basis validated for scalp legs. Kept and linked to PI-20261028-PVRNY2JI-0003."
+  },
+  {
+   "id": "BL-20260912-U15S-OWN-CODE-NO-LONGER-REPRODUCES-U15S-OWN-PUBLISHED-TABLE-ONE-CONTROL-PACKAGE-FLIPPED-AND-NOBODY-WOULD-HAVE-KNOWN",
+   "disposition": "killed",
+   "note": "A one-row reproduction gap in a September memo (30 vs 31) with no decision resting on it. The retained-input convention is carried by the 10-28 analyst design. 46 d with no owner."
+  },
+  {
+   "id": "BL-20260912-THE-M20-WALKFORWARD-ARM-SET-CANNOT-GRADE-TARGET-GEOMETRY-BECAUSE-TP-GEOMETRY-IS-PERFECTLY-CONFOUNDED-WITH-FAMILY-AND-BLOCK-UNIT",
+   "disposition": "killed",
+   "note": "Superseded by PR #11933 (merged 2026-10-25), which swept target geometry within the ict_scalp family itself (175 cells, walk-forward graded), the within-family design this row said was missing."
+  },
+  {
+   "id": "BL-20260913-NETTING-ATTRIBUTION-REWRITES-POSITION-SIZE-ON-A-ROW-THAT-STAYS-OPEN-SO-THE-EXIT-REASON-FILTER-EVERY-ANALYSIS-USES-CANNOT-SEE-IT",
+   "disposition": "kept_open",
+   "note": "A code-path bug (_netting_apply_close) that health-review owns; not re-run in this lane. Kept."
+  },
+  {
+   "id": "BL-20260913-ORDER-PACKAGE-ID-IS-NOT-A-FANOUT-KEY-16-OF-110-MULTI-ROW-PACKAGES-REPEAT-AN-ACCOUNT-AND-CARRY-6-OF-7-DISAGREEMENTS-IN-ONE-DID-CELL",
+   "disposition": "killed",
+   "note": "Merged into BL-20260911-A-RATE-PER-TRADE-ROW-COUNTS-ACCOUNT-FANOUT-\u2026, kept open as the single fan-out convention row."
+  },
+  {
+   "id": "BL-20260917-THE-M20-OBJECTS-DONE-CONDITION-DELIVERABLE-IS-CARRIED-BY-ONE-GREEN-UNMERGED-PR-AND-THE-LANES-OWN-WRAP-NAMES-A-DIFFERENT-PR-AS-THE-HIGHEST-VALUE-CLICK",
+   "disposition": "resolved",
+   "note": "Part (1) cleared: PR #11933 MERGED 2026-10-25T13:35Z by the operator (verified 2026-10-28 via the GitHub API). Its U4 proposals are in docs/research/m20-u4-scalp-exit-proposals-2026-09-12.md for the operator."
+  },
+  {
+   "id": "PI-20260924-2S8DXGTZ-0001",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: gld_pullback_1h is not on a real-money roster; its evidence record reads pass. The decision is the operator's; no change."
+  },
+  {
+   "id": "PI-20260924-2S8DXGTZ-0002",
+   "disposition": "resolved",
+   "note": "Re-run 2026-10-28: check_roster_promotion_evidence.py --population reports failing 0, passing 12, so the six named real-money slots pass B1. The gap that remains, that the bar passes iaum_pullback_1d on n_oos=8 (below the power floor), is a"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0001",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: 23 no-trade packages still read accountClass real_money (examples trend_donchian_eth_prop emitted, tlt/iaum_pullback_1d rejected). The bug persists. Health-review owns it."
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0002",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: the orphaned pairs_bnb_btc_a packages all date 2026-07-16..10-01 (BUG-049); none newer. The cause is still unstated, so the item is kept; there has been no recurrence for 27 d."
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0003",
+   "disposition": "resolved",
+   "note": "Re-run 2026-10-28: the grade-closed-trades cron is landing (263 cron rows; max reviewed_at 2026-10-28T03:51Z; check_grading_freshness fresh at 0.6 d)."
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0004",
+   "disposition": "killed",
+   "note": "Superseded by the 2026-10-28 skill redesign. The rubric is now check C9, not a judgement, and C9 publishes the cohort-vs-outcome table every week (2026-10-28: B 36.6% win n=366 < C 44.3% n=862; risk_management unknown 447/448). The fix this"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0005",
+   "disposition": "killed",
+   "note": "The live/mirror pair no longer exists: alpaca_portfolio carries 0 legs after the proxy carve-out (config/accounts.yaml re-read 2026-10-28). The rerun command also no longer parses (the route returns a list). Re-entry: an Alpaca mirror is re"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0006",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: 0 reconciler_filled in the last 200 journal rows, and none in the 39 closes of the last 7 d. The mechanism behind 6289 et al. is still unnamed. Kept for health-review; there is no recurrence."
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0001",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: 6549 and 6528 now read closeReason sl with pnlProvenance measured (relabelled). The root cause of the original watchdog close is not stated on the item. Kept for health-review to confirm it was the FIX-SA-02 relabel."
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0002",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: mgc_trend_1h packages since 10-04: rejected/None 45, rejected/all_accounts_noop 3, rejected/no_fill_all_accounts 2. The leg is execution live on ib_paper, so 45 refusals carry no recorded cause. Still a bug. Health-review"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0003",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: the velotrade_1 fills list shows tickets through prop-manual-352368257478. The 10-08 ticket df6e8938ab89 is not in the returned page. Not resolved this session."
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0004",
+   "disposition": "kept_open",
+   "note": "Re-validated 2026-10-28: no M8 artifact for avax_pullback_2h or sol_pullback_2h. The tracker now reads DECAY FLAG (recent 30d n=19, -$6,219; pullback family -$12,527 lifetime against trend +$12,832). This is the third review to name the swe"
+  },
+  {
+   "id": "PI-20261021-4ZLRFEV1-0002",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: 6610/6603 still ESTIMATED (-22,368/-18,300). The new MGC trade 6740 is 1 contract, -398 ESTIMATED (-1.06 R with the x10 multiplier), so sizing looks sane on the one new trade but valuation is still not MEASURED (pnl cover"
+  },
+  {
+   "id": "PI-20261021-4ZLRFEV1-0003",
+   "disposition": "kept_open",
+   "note": "Re-run 2026-10-28: giveback_census.py --since-days 7 on the 30d dump returns n_graded 76, the same as the 30d count, so the flag is still ignored. Still unowned. A small Tier-1 script fix."
+  },
+  {
+   "id": "PI-20261026-4A80398B-0002",
+   "disposition": "resolved",
+   "note": "Answered in docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE Q7: alpaca_live=[iaum_pullback_1d], alpaca_portfolio=[]. IAUM Stage-0 n_oos=8 with folds +5.47/+1.89/+0.52/-0.72 and fidelity approximate. Live n=1 at -1.47 R (worse than"
+  },
+  {
+   "id": "PB-20260707-MGC-PULLBACK-1H-WALKFORWARD",
+   "disposition": "kept_open",
+   "note": "Re-validated: no walk-forward result for mgc_pullback_1h under research/results. Still the open lead. Routed to /perf-followup Track 3 (extrapolate) to author it as a research/queue unit with a pre-registered rule."
+  },
+  {
+   "id": "PB-20260707-MGC-TREND-1H-STRUCTURAL",
+   "disposition": "kept_open",
+   "note": "Re-validated: mgc_trend_1h is now execution live on ib_paper (DEMO-FLOOR), and 45 of 50 packages since 10-04 were rejected with no close_reason (PI-20261010-WQAPZD8B-0002). The structural-driver question stands. Routed to /perf-followup Tra"
+  },
+  {
+   "id": "BL-20260913-EVERY-PROFITABLE-LEG-IS-SIZED-SMALLER-PER-UNIT-OF-RISK-THAN-EVERY-LOSING-ONE-ON-REAL-MONEY",
+   "disposition": "kept_open",
+   "note": "Not re-measured this session. Routed to /perf-followup Track 4 (portfolio: sizing vs contribution), which is its natural owner."
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 69,
+  "triaged": 69,
+  "resolved": 6,
+  "fixed_now": 0,
+  "closed_stale": 26,
+  "kept_open": 27,
+  "checklist_rows_reported_to_manager": 10,
+  "count_untriaged": 0
+ },
+ "paper_book_tracker": {
+  "n": 192,
+  "net_usd": 304.99,
+  "win_rate": 0.38,
+  "recent_30d": {
+   "n": 19,
+   "net_usd": -6218.53
+  },
+  "prior": {
+   "n": 173,
+   "net_usd": 6523.52
+  },
+  "family_net": {
+   "trend": 12831.94,
+   "pullback": -12526.95
+  },
+  "decay_flag": true,
+  "delta_vs_prev": "+13 trades, +3181.04 since 2026-10-10",
+  "assessment": "pullback-family regime sag, not book decay (trend cells positive); M8 sweep owed"
+ },
+ "real_money_allocation_benchmark": {
+  "incumbent": "bybit_2",
+  "candidate": null,
+  "incumbent_expectancy_r": -0.077,
+  "candidate_expectancy_r": null,
+  "incumbent_max_dd": null,
+  "candidate_max_dd": null,
+  "correlation_estimate": null,
+  "diversifies": false,
+  "verdict": "neutral",
+  "proposed_action": "none; Alpaca real book is one proxy leg (D6)",
+  "note": "incumbent expR lifetime ex-vwap over 149 closes; no candidate sleeve queued; paper-proxy caveat n/a"
+ },
+ "live_review": {
+  "population": "124 reviews on 22 packages; 2 altering, 0 priced (no_trade_row 2)",
+  "hold_vs_close": {
+   "n": 8,
+   "mean_dr": -0.9989,
+   "hit": 0.0,
+   "provenance": "ESTIMATED"
+  },
+  "q1_verdict": "INDETERMINATE",
+  "calibration": "INDETERMINATE (n=7)",
+  "alarm": "not triggered (0 priced applies)"
+ },
+ "desk": {
+  "population": "69 decisions (65 no_trade, 4 propose_entry), 1 priced",
+  "desk_net": {
+   "n": 1,
+   "mean_r": 2.4174,
+   "verdict": "INDETERMINATE"
+  },
+  "system_legs": {
+   "n": 14,
+   "mean_r": -1.5199,
+   "ci95": [
+    -3.2251,
+    0.1854
+   ]
+  },
+  "gate": "NOT_YET"
+ },
+ "anomalies": [
+  "/api/bot/db/table/trades 401 (PI-20261028-PVRNY2JI-0006)",
+  "ict_scalp 5m family signal collapse Oct (PI-20261028-PVRNY2JI-0003)",
+  "DECISION-BAR-MATCH observation MET 2026-10-28 (xrp/ada/eth_prop decide on closed bar; control eth_4h forming) - manager register row",
+  "grade_drift B<C persists",
+  "telemetry rows 668 total in the position_telemetry pull",
+  "preliminary 19:02Z mis-stated mes_trend_long_1d as biggest R hit; corrected (-1.02R with x5 multiplier)"
+ ],
+ "recommended_action": "(1) Manager: mark DECISION-BAR-MATCH observation met (evidence section 2 Q1). (2) Dispatch /perf-followup with D2-D5 and the M8 pullback sweep (D4, 3rd time named, now owned). (3) Operator: D6 (Alpaca IAUM proxy-only real book). (4) Health: D7 route 401; mes exchange_flat close (PI-20261025-KERS1025-0001).",
+ "operator_attention_required": true,
+ "claude_channel_ping": "/performance-review 10-28 \u2014 7d: 39 closes / 25 decisions, real -3.9R (7), paper -15.3R (30). xrp BELOW band (fix observed). Giveback 91%->133%. 69/69 backlog triaged. Hands off to /perf-followup."
+}
