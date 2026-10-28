@@ -53,7 +53,7 @@ checks the packet cannot see (workflow runs, stranded stamp PRs, watchdog incide
 into the record's `checks` block; that is the only place they are repeated.
 
 **2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** Budget at least half the pass here.
-1. **Grade the previous record's `analysis.calls`** (`previous_calls` in the packet): hit / miss / not yet, one line each,
+1. **Grade the previous record's `calls`** (`previous_calls` in the packet; Layer 0 of the shared pattern): hit / miss / not yet, one line each,
    and what the miss teaches. First, before anything else.
 2. **Open the rows, not the titles.** For every PASS and at least the 5 largest FAIL clusters in the window, open the
    result rows (arms, folds, n, cost basis). A verdict you did not open is "not read", whatever the grader wrote.
@@ -72,24 +72,35 @@ into the record's `checks` block; that is the only place they are repeated.
 6. **Cross-track feeds.** TRADING results → MODEL labels / features (a lever that works is a label; a leg that fails is a
    negative class); MODEL results → TRADING decisions (a head that cannot beat the prior is not a gate). Name each feed's
    destination node or unit.
-7. **Calls for next time.** 2–5 falsifiable predictions with a probability ("ed1c-07's confirmation unit PASSes: 0.35").
+7. **Calls for next time.** 2–5 falsifiable predictions, each with a probability and a pre-registered check
+   (`command`, `rule`, `resolves_when`) the next pass re-runs.
+
+The shared pattern's ANALYSIS prompts (compete hypotheses with *noise* always one of them, count comparisons, hunt
+surprises, premortem, neutral framing) apply to every step above: `docs/reference/llm-analyst-skill-design.md` § 3.
 
 **3. ACT** — steps B–E mechanics: author what step 2.4–2.5 decided (follow-ups the packet shows as `needs_authoring` first),
 triage `needs_review`, unlock / retire. A follow-up re-handed-off twice is authored by this pass or retired with a reason.
 
-**4. RECORD** — step F's record gains two blocks (the old fields stay):
+**4. RECORD** — step F's record gains the shared pattern's four top-level blocks (the old fields stay), shape as in
+`docs/reference/llm-analyst-skill-design.md` § 4 and `comms/schema/performance_review_response.template.json`:
 ```json
-"checks":   {"packet_as_of": "...", "runnable_by_track": {"TRADING": 46, "MODEL": 12, "INFRA": 3},
-             "graded": {"pass": 3, "fail": 15, "indeterminate": 5}, "fails_without_next": 9,
-             "followups": {"needs_authoring": 7, "fired": 13}, "needs_review": 28},
-"analysis": {"grade_of_previous": [{"call": "...", "outcome": "hit|miss|not_yet", "why": "..."}],
-             "rows_opened": ["RQ-...", "..."],
-             "trading": {"meaning": ["cluster: what moved, by how much, denominator"], "fail_diagnoses": [
-                          {"cluster": "...", "cause": "design|power|cost|regime|harness|idea", "evidence": "...", "next": "node/unit id"}],
-                         "next_tests": [{"id_or_node": "...", "decision_changed": "...", "on_pass": "...", "on_fail": "...", "why_now": "..."}]},
-             "model":   {"meaning": [], "fail_diagnoses": [], "next_tests": []},
+"prior_calls_scorecard": [{"call": "...", "p": 0.35, "check_rerun": "<command>", "outcome": "hit|miss|unresolved|void",
+                           "action_happened": true}],
+"checks":   {"packet_as_of": "...", "since": "...", "runnable_by_track": {"TRADING": 46, "MODEL": 12, "INFRA": 3},
+             "graded_by_window": {"7d": {}, "30d": {}}, "fails_without_next": 9,
+             "followups": {"needs_authoring": 7, "fired": 13}, "needs_review": 28, "could_not_look": []},
+"analysis": {"rows_opened": ["RQ-..."],
+             "trading": {"meaning": ["cluster: what moved, by how much, batch denominator, so ..."],
+                         "fail_diagnoses": [{"cluster": "...", "hypotheses": ["noise", "..."], "test": "...",
+                                             "survivor": "design|power|cost|regime|harness|idea", "next": "node/unit id"}],
+                         "next_tests": [{"id_or_node": "...", "decision_changed": "...", "on_pass": "...", "on_fail": "...",
+                                         "premortem": "..."}]},
+             "model": {"meaning": [], "fail_diagnoses": [], "next_tests": []},
              "cross_track": [{"from": "TRADING|MODEL", "finding": "...", "feeds": "node/unit/row"}],
-             "calls": [{"call": "...", "p": 0.35, "resolves_by": "2026-10-29"}]}
+             "surprises": []},
+"calls": [{"call": "ed1c-07's confirmation unit PASSes", "p": 0.35,
+           "check": {"command": "python3 scripts/research/research_ops_checks.py --since 7d", "rule": "...",
+                     "resolves_when": "2026-10-30"}}]
 ```
 **Quality bar** (the manager checks it): every `meaning` line has a "so" — a sentence that only repeats a packet number is
 deleted; every FAIL cluster in the packet has a diagnosis or is named in `not_run`; every `next_tests` row names a decision.

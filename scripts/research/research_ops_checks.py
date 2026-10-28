@@ -26,7 +26,8 @@ records 2026-10-27T0925Z .. 2026-10-28T0300Z, see docs/research/research-ops-red
   needs_review      the bucket, its owners, and its size across the last records (stagnation).
   ops_trend         per record: nodes drafted, triaged, results read, steps not run.
   stale             queued units never dispatched whose id date is older than --stale-days.
-  previous_calls    the `analysis.calls` of the newest record of this kind, for the session to grade.
+  graded_by_window  verdicts per track by grading.graded_at over 7d / 30d / lifetime (never one window alone).
+  previous_calls    the top-level `calls` of the newest record of this kind (Layer 0 of the shared pattern grades them).
 
 Read-only. Writes only --out (default stdout).
     python3 scripts/research/research_ops_checks.py --since 2026-10-27T21:10:00Z
@@ -244,6 +245,18 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
                 stale.append({"unit": uid, "track": track(u), "age_days": (now - born).days})
     stale.sort(key=lambda x: -x["age_days"])
 
+    # windows: lifetime / 30d / 7d by grading.graded_at (docs/reference/llm-analyst-skill-design.md s2: never the
+    # since-last-run window alone)
+    windows: Dict[str, Dict[str, Dict[str, int]]] = {}
+    for label, days in (("7d", 7), ("30d", 30), ("lifetime", None)):
+        cut = None if days is None else (now - timedelta(days=days)).date().isoformat()
+        c: Dict[str, Counter] = defaultdict(Counter)
+        for u in units.values():
+            g = u.get("grading") or {}
+            if g.get("verdict") and (cut is None or str(g.get("graded_at") or "") >= cut):
+                c[track(u)][str(g["verdict"])] += 1
+        windows[label] = {tr: dict(v) for tr, v in sorted(c.items())}
+
     prev = load_records(root, OPS_DIR if kind == "research_ops" else REVIEW_DIR, 1)
     graded = Counter(r["verdict"] for r in results if r["verdict"])
     return {
@@ -262,6 +275,7 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
                     "by_track": {tr: dict(Counter(r["verdict"] for r in results if r["track"] == tr))
                                  for tr in ("TRADING", "MODEL", "INFRA")},
                     "units": results},
+        "graded_by_window": windows,
         "batches": {b: {"n": sum(c.values()), **dict(c)} for b, c in sorted(batches.items()) if sum(c.values()) >= 3},
         "fails_without_next": fails_without_next,
         "followups": {"summary": dict(fu_summary), "items": followups},
@@ -273,7 +287,7 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
                        "not_run": len(r.get("not_run") or [])} for r in recs],
         "stale": {"days": stale_days, "count": len(stale), "by_track": dict(Counter(s["track"] for s in stale)), "oldest": stale[:10]},
         "previous_calls": {"file": prev[0]["_file"] if prev else None,
-                           "calls": ((prev[0].get("analysis") or {}).get("calls") if prev else None)},
+                           "calls": ((prev[0].get("calls") or (prev[0].get("analysis") or {}).get("calls")) if prev else None)},
     }
 
 

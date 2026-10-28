@@ -13,8 +13,9 @@ What this lane changed: [`.claude/skills/research-ops/SKILL.md`](../../.claude/s
 section "How a pass runs"), a new skill [`.claude/skills/programme-review/SKILL.md`](../../.claude/skills/programme-review/SKILL.md)
 (the weekly review's procedure previously lived only in the routine prompt), and the CHECKS script
 [`scripts/research/research_ops_checks.py`](../../scripts/research/research_ops_checks.py). Shared pattern:
-`docs/reference/llm-analyst-skill-design.md` (lane ANALYTIC-SKILL-DESIGN; **not on main when this was written**, so the
-two skills restate the contract they need in a few lines rather than depend on it).
+`docs/reference/llm-analyst-skill-design.md` (lane ANALYTIC-SKILL-DESIGN, PR #20855): its four layers (prior calls,
+CHECKS, ANALYSIS, decisions), record blocks and ANALYSIS prompts are pointed at by both skills, not restated; what this
+doc adds is the research-specific checks and questions.
 
 ## 1. Diagnosis — what the last passes actually did
 
@@ -52,7 +53,7 @@ Most of the quant methodology was benchmarked on 2026-10-16
 | **Rank research by expected value of information** — what a study is worth is the decision improvement it buys minus its cost; EVPI is a ceiling that screens questions out early; a portfolio's VOI ranges over orders of magnitude and contradicts expert ranking | Value-of-information literature in health research prioritisation, e.g. [PMC5963256](https://pmc.ncbi.nlm.nih.gov/articles/PMC5963256), [PMC6125050](https://pmc.ncbi.nlm.nih.gov/articles/PMC6125050), SWOG's use of EVSI in trial selection [PMC3933300](https://pmc.ncbi.nlm.nih.gov/articles/PMC3933300) [ACAD] | ANALYSIS step "what to test next": each proposal states *which decision it changes, what we would do on each branch, and the cost*. A test whose both branches lead to the same action has VOI ≈ 0 and is not proposed (finding 6). |
 | **Online FDR / alpha-investing** — a stream of tests spends and earns an error budget; generalised alpha-investing controls online FDR with little power loss vs offline BH | Foster & Stine 2008 (via secondary citation); Ramdas, Zrnic, Wainwright & Jordan, *Ann. Stat.* 2018 [arXiv 1603.09000](https://arxiv.org/abs/1603.09000v3) [ACAD] | CHECKS `batches` prints k-of-n per authoring batch; ANALYSIS must quote it beside any PASS it forwards. The formal ledger stays `trial_ledger.py` (row RESEARCH-TRIAL-LEDGER, report-only). |
 | **Pre-mortem / prospective hindsight** — assume the plan failed, then ask why | Klein, *HBR* Sept 2007 (via secondary summaries, e.g. [Ness Labs](https://nesslabs.com/?p=9829)) [PRAC; the "30 %" figure is secondhand and not used] | programme review: each programme's top proposal carries one line "if this comes back FAIL, the most likely reason is …", which is also the first variant to queue. |
-| **Score your own forecasts** — calibration improves only when predictions are written down and graded | Tetlock & Gardner, *Superforecasting* (2015) and the Good Judgment Project's Brier scoring [ACAD; not re-read by this lane] | every record carries `analysis.calls` (prediction + probability); the next run grades them first, from the CHECKS packet's `previous_calls`. |
+| **Score your own forecasts** — calibration improves only when predictions are written down and graded | Tetlock & Gardner, *Superforecasting* (2015) and the Good Judgment Project's Brier scoring [ACAD; not re-read by this lane] | every record carries top-level `calls` (prediction, probability, pre-registered check); the next run grades them first, from the CHECKS packet's `previous_calls`. |
 | **Hold the entries fixed, use matched controls, confirm on a fresh window** | benchmark § 2; practice review § C.2 [ACAD/PRAC] | unchanged; ANALYSIS checks a forwarded PASS has its confirmation unit (finding 3). |
 | **Failure post-mortems as a register** — "track every model tried" (Arnott, Harvey & Markowitz 2019) | benchmark S-list [ACAD] | `fails_without_next` is the register's missing column; ANALYSIS writes the diagnosis per FAIL cluster, not per unit. |
 

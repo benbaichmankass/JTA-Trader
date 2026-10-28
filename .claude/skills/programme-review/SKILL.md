@@ -70,7 +70,12 @@ Fixed questions, open answers. Do them in this order.
    become labels / features / negative classes for P2), MODEL → TRADING (a head that cannot beat the prior is not a gate;
    one that can is a Tier-3 candidate), P1 ↔ P5, P3 → P1 (exit-process every new leg), P6 → everyone. Each feed names
    its destination node, unit or row and its state.
-7. **Calls for next week.** 3–6 falsifiable predictions with probabilities, at least one per track.
+7. **Calls for next week.** 3–6 falsifiable predictions with probabilities, at least one per track, each with a
+   pre-registered check (`command`, `rule`, `resolves_when`).
+
+The shared ANALYSIS prompts (read wide, compete hypotheses with *noise* always one, judge the residual, count
+comparisons, hunt surprises, premortem, neutral framing, no quota) bind every step above:
+`docs/reference/llm-analyst-skill-design.md` § 3. Pointed at, not restated.
 
 ## Step 3 — ACT
 
@@ -89,18 +94,23 @@ Fixed questions, open answers. Do them in this order.
 
 ## Step 4 — RECORD and LAND
 
-`comms/research/programme_review/<YYYYMMDD>.json` (newest file = next week's `previous_calls`):
+`comms/research/programme_review/<YYYYMMDD>.json` (newest file = next week's `previous_calls`), with the shared
+pattern's four top-level blocks (`docs/reference/llm-analyst-skill-design.md` § 4; reference shape
+`comms/schema/performance_review_response.template.json`) plus this skill's own fields:
 ```json
-{"run": "PROGRAMME-REVIEW-2026-10-28", "finished_at": "...", "by": "<session id>",
- "population": "...", "checks": {"graded": {}, "runnable_by_track": {}, "fails_without_next": 0, "batches_quoted": []},
- "analysis": {"grade_of_previous": [{"call": "...", "outcome": "hit|miss|not_yet", "why": "..."}],
-              "ranking_error": "...",
+{"run": "PROGRAMME-REVIEW-2026-10-28", "finished_at": "...", "by": "<session id>", "population": "...",
+ "prior_calls_scorecard": [{"call": "...", "p": 0.4, "check_rerun": "<command>", "outcome": "hit|miss|unresolved|void",
+                            "action_happened": true}],
+ "checks": {"graded_by_window": {}, "runnable_by_track": {}, "fails_without_next": 0, "batches_quoted": [], "could_not_look": []},
+ "analysis": {"ranking_error": "...",
               "programmes": {"P1": {"learned": [], "fail_diagnoses": [], "answered": [], "retired": [],
                                     "next": [{"node_or_unit": "...", "decision_changed": "...", "on_pass": "...",
                                               "on_fail": "...", "cost": "...", "premortem": "..."}]}},
               "tracks": {"TRADING": "three sentences: where trading research stands", "MODEL": "same"},
               "feeds": [{"from": "P1", "to": "P2", "what": "...", "dest": "node/unit/row", "state": "..."}],
-              "calls": [{"call": "...", "p": 0.4, "track": "MODEL", "resolves_by": "2026-11-04"}]},
+              "surprises": []},
+ "calls": [{"call": "...", "p": 0.4, "track": "MODEL",
+            "check": {"command": "...", "rule": "...", "resolves_when": "2026-11-04"}}],
  "nodes_authored": [], "nodes_added": [], "rows_filed": [], "not_run": [], "handoff": []}
 ```
 **Quality bar** (the manager reads this before merging): every `learned` line is a belief with its evidence and
