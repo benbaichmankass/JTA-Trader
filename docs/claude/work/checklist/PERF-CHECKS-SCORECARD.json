@@ -1,0 +1,21 @@
+{
+  "id": "PERF-CHECKS-SCORECARD",
+  "title": "Build the missing /performance-review CHECK instrument: per-leg four-window scorecard (lifetime/90d/30d/7d) + live percentile in own-backtest band + per-leg CUSUM decay on standardised per-trade R vs Stage-0 mean + comparison count (checks C1+C3)",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane ANALYTIC-SKILL-DESIGN 2026-10-28. MEASURED gap: grep -rli cusum scripts src -> 0 files; reviews 2026-09-24..10-10 read only the since-last-review window (4/4). Practice basis: CUSUM on performance vs expectation (Philips, Yashchin & Stein 2003), live percentile in own-backtest bootstrap (Liu 2026), MinTRL/PSR (Bailey & Lopez de Prado 2012), multiple comparisons (Harvey & Liu 2015) -- docs/research/analytic-skill-design-2026-10-28.md. Reuse live_vs_backtest.py bootstrap + giveback_census.py R join; one script, read-only, prints with populations and could_not_look; CUSUM threshold pre-registered in the script before first run (target false-alarm rate stated). Done when .claude/skills/performance-review/SKILL.md C1/C3 name it and C3 drops 'interim'.",
+  "updated_at": "2026-10-28T07:22:18Z",
+  "updated_by": "session_01AFoLuKAsTEfWtN86LdcMHd",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 748
+}

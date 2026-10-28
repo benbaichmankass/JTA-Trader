@@ -1,11 +1,101 @@
 {
-  "_comment": "Template documenting the JSON Claude returns from /performance-review (introduced 2026-05-26). Owns per-decision A-F grading + per-strategy aggregates + M13 insights cross-check + Tier-3 tweak proposals. Per-decision grades are ALSO appended (keyed by order_package_id) to comms/claude_strategy_scores.jsonl — the durable, trainer-ingestible score log. This file is documentation, not a validated JSON Schema.",
+  "_comment": "Template documenting the JSON Claude returns from /performance-review (introduced 2026-05-26). Owns per-decision A-F grading + per-strategy aggregates + M13 insights cross-check + Tier-3 tweak proposals. Per-decision grades are ALSO appended (keyed by order_package_id) to comms/claude_strategy_scores.jsonl — the durable, trainer-ingestible score log. This file is documentation, not a validated JSON Schema. Two-layer redesign 2026-10-28 (lane ANALYTIC-SKILL-DESIGN): adds prior_calls_scorecard (Layer 0), checks (Layer 1), analysis + calls (Layer 2); a companion markdown docs/reviews/<date>-performance-review.md carries the same sections for the operator.",
   "request_id": "REQ-YYYYMMDD-HHMMSS-<slug>",
   "reviewed_at": "YYYY-MM-DDTHH:MM:SS+00:00",
   "reviewer": "claude",
   "window_start": "YYYY-MM-DDTHH:MM:SS+00:00",
   "window_end": "YYYY-MM-DDTHH:MM:SS+00:00",
   "overall_assessment": "healthy | caution | investigate",
+  "prior_calls_scorecard": {
+    "_comment": "Layer 0 (2026-10-28): the previous review's calls[] graded by re-running each call's own check. Older records without calls[] use recommended_action + proposed_tweaks[] and say so. brier is INDETERMINATE below 10 resolved calls.",
+    "source_record": "comms/reviews/performance-review-<stamp>.json",
+    "n_calls": 0,
+    "hit": 0,
+    "miss": 0,
+    "unresolved": 0,
+    "void": 0,
+    "brier": "0.0 | INDETERMINATE",
+    "calls": [
+      {
+        "id": "C-<stamp>-1",
+        "result": "hit | miss | unresolved | void",
+        "check_rerun": "<command + output summary>",
+        "action_happened": "yes | no — <why, and re-filed as / killed because>"
+      }
+    ],
+    "series": [
+      {
+        "review": "<stamp>",
+        "n_resolved": 0,
+        "brier": null
+      }
+    ]
+  },
+  "checks": {
+    "_comment": "Layer 1 CHECKS C1-C12 (SKILL.md table). Each entry: status ok | could_not_look, the population (n, windows, classes) and the script output summary. Numbers only; no interpretation here.",
+    "C1_leg_scorecard": {
+      "status": "ok | could_not_look",
+      "population": "<legs, windows lifetime/90d/30d/7d, classes>",
+      "result": "<table or path>"
+    },
+    "C2_expected_vs_realised": {},
+    "C3_decay": {
+      "status": "ok | could_not_look",
+      "interim": true
+    },
+    "C4_attribution": {},
+    "C5_cost_drift": {},
+    "C6_baselines": {},
+    "C7_tp_doctrine": {},
+    "C8_data_coverage": {},
+    "C9_grading": {},
+    "C10_research_pipeline": {},
+    "C11_books_benchmarks": {},
+    "C12_backlog_gate": {}
+  },
+  "analysis": {
+    "_comment": "Layer 2 ANALYSIS: Claude's reasoning. 3-7 material questions ranked by money at stake; each with competing hypotheses (noise always one), the test run, and what survived. Write it in prose first (the markdown), then copy here.",
+    "questions": [
+      {
+        "question": "<= 200 chars",
+        "money_at_stake": "<R or $ per month + arithmetic>",
+        "hypotheses": [
+          {
+            "name": "noise | regime | cost | execution | decay_overfit | measurement | <other>",
+            "predicts": "<what it predicts that the others do not>",
+            "test": "<command / pull run>",
+            "result": "survived | eliminated | untested"
+          }
+        ],
+        "conclusion": "<= 240 chars",
+        "p": 0.0
+      }
+    ],
+    "surprises": [
+      {
+        "observation": "<= 200 chars",
+        "explanation_or_open_question": "<= 200 chars",
+        "owner": "<row / unit / PI id or none>"
+      }
+    ]
+  },
+  "calls": [
+    {
+      "_comment": "Every decision this review makes, ranked by money. The NEXT review's Layer 0 re-runs check.command and applies check.rule as written.",
+      "id": "C-<stamp>-1",
+      "claim": "<= 200 chars",
+      "p": 0.0,
+      "money_at_stake": "<R or $ per month>",
+      "decision": "<what changes>",
+      "tier": "1 | 2 | 3",
+      "check": {
+        "command": "<runnable command>",
+        "rule": "<pre-registered pass/fail>",
+        "resolves_when": "<n or date>"
+      },
+      "ending": "<checklist row | queue unit | PI id | proposed_tweaks[i] | no action, because ...>"
+    }
+  ],
   "strategy_performance": [
     {
       "_comment": "Per-strategy aggregates over the window. One entry per strategy with >=1 decision. shadow strategies show n_filled=0 (no live orders).",
