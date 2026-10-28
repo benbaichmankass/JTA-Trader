@@ -257,7 +257,7 @@ MOM_N = 3                                             # momentum sign flip of th
 
 
 def fixed_policy() -> Policy:
-    def p(s, e, fi, kk, st, mem):
+    def p(s, e, fi, kk, st, mem):  # inert: s, st, mem — the shared Decider/Policy/loader signature; this implementation does not need them
         return ["fixed"] if (kk - fi + 1) in checkpoints(e.horizon) else []
     return p
 
@@ -524,23 +524,23 @@ Answer with ONLY JSON lines, one per packet, in the order given, nothing else:
 
 # ----------------------------------------------------------------------------- static rules (B3 menu; no judging)
 def _static(name: str) -> Decider:
-    def hold(k, j, st):
+    def hold(k, j, st):  # inert: k, j, st — the shared Decider/Policy/loader signature; this implementation does not need them
         return {"action": "hold"}
 
-    def close1(k, j, st):
+    def close1(k, j, st):  # inert: j, st — the shared Decider/Policy/loader signature; this implementation does not need them
         return {"action": "close"} if k == 0 else {"action": "hold"}
 
-    def breakeven(k, j, st):
+    def breakeven(k, j, st):  # inert: k, j — the shared Decider/Policy/loader signature; this implementation does not need them
         return {"action": "tighten_sl", "level_r": 0.0} if st["close_r"] >= 0.5 and st["stop_r"] < 0 else {"action": "hold"}
 
-    def trail1(k, j, st):
+    def trail1(k, j, st):  # inert: k, j — the shared Decider/Policy/loader signature; this implementation does not need them
         x = st["close_r"] - 1.0
         return {"action": "tighten_sl", "level_r": x} if x > st["stop_r"] else {"action": "hold"}
 
-    def partial1r(k, j, st):
+    def partial1r(k, j, st):  # inert: k, j — the shared Decider/Policy/loader signature; this implementation does not need them
         return {"action": "partial_close"} if st["close_r"] >= 1.0 and not st["partial_taken"] else {"action": "hold"}
 
-    def cut_loser(k, j, st):
+    def cut_loser(k, j, st):  # inert: k, j — the shared Decider/Policy/loader signature; this implementation does not need them
         return {"action": "close"} if st["close_r"] <= -0.5 else {"action": "hold"}
 
     return {"hold": hold, "close_at_ckpt1": close1, "breakeven_at_0.5r": breakeven, "trail_1r": trail1,
@@ -559,7 +559,7 @@ def _rule2(name: str, s: Optional[g.Series] = None, side: float = 0.0) -> Decide
         return {"action": "tighten_sl", "level_r": x} if x > st["stop_r"] + 1e-9 and x <= st["close_r"] - MIN_GAP_R \
             else {"action": "hold"}
 
-    def d(k, j, st):
+    def d(k, j, st):  # inert: k — the shared Decider/Policy/loader signature; this implementation does not need them
         if name in ("chandelier_2atr", "chandelier_3atr"):
             return chandelier(2.0 if name.endswith("2atr") else 3.0, st)
         if name in ("channel_10", "channel_20"):
@@ -595,7 +595,7 @@ def matched_random(claude_checkins: List[dict], seed: int) -> Decider:
     rng = np.random.default_rng(seed)
     queue = list(acts)
 
-    def d(k, j, st):
+    def d(k, j, st):  # inert: k, j — the shared Decider/Policy/loader signature; this implementation does not need them
         if not queue or rng.random() >= q:
             return {"action": "hold"}
         c = queue.pop(0)
@@ -907,7 +907,7 @@ def _prepare_market(a: argparse.Namespace) -> Tuple[Dict[str, g.Series], List[st
     return mkt, missing, {u["symbol"]: u["classes"] for u in uni}, g.candle_manifest(mkt) if mkt else []
 
 
-def load_claude_entries(mkt: Dict[str, g.Series], classes: Optional[Dict[str, List[str]]] = None) -> List[Entry]:
+def load_claude_entries(mkt: Dict[str, g.Series], classes: Optional[Dict[str, List[str]]] = None) -> List[Entry]:  # inert: classes — the shared Decider/Policy/loader signature; this implementation does not need them
     """The judged-1 fills. Proposal validity is the LANDED intake's (e535-03: 732 propose_entry rows, 0 refused, 0
     over cap, 0 duplicate), asserted here, so the masked packets are not re-derived: the packet builder's base rates
     moved with the fee (#20783, 7.5 -> 11.0 bps), so a re-derived packet no longer hashes to what the judge saw."""
@@ -1160,7 +1160,7 @@ def cmd_score(a: argparse.Namespace) -> int:
     res = evaluate(mkt, entries, dec, a.policy)
     res["label"] = a.label
     res["candles"] = src
-    res["limits"] = [l.strip() for l in __doc__.split("STATED LIMITS (printed into every verdict)")[1].strip().split("*") if l.strip()]
+    res["limits"] = [x.strip() for x in __doc__.split("STATED LIMITS (printed into every verdict)")[1].strip().split("*") if x.strip()]
     (out / "score.json").write_text(json.dumps({k: v for k, v in res.items() if k not in ("rows", "label_rows")}, indent=1, default=str))
     (out / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in res["rows"]))
     (out / "labels.jsonl").write_text("".join(json.dumps(r) + "\n" for r in res["label_rows"]))
@@ -1177,7 +1177,7 @@ def cmd_score(a: argparse.Namespace) -> int:
 def _oracle(s: g.Series, e: Entry, pick: str) -> Decider:
     """Hindsight manager at checkpoint 1: close when the rest of the HOLD path ends worse than closing now
     (pick='oracle'), or the reverse ('anti'). Reads the future on purpose: a planted known answer."""
-    def d(k, j, st):
+    def d(k, j, st):  # inert: j, st — the shared Decider/Policy/loader signature; this implementation does not need them
         if k != 0:
             return {"action": "hold"}
         hold_net = run(s, e)[0].net_r
@@ -1192,7 +1192,7 @@ def _random_policy(seed: int) -> Callable[[Entry], Decider]:
     def mk(e: Entry) -> Decider:
         rng = np.random.default_rng(int(hashlib.sha256(f"{seed}|{e.entry_id}".encode()).hexdigest()[:8], 16))
 
-        def d(k, j, st):
+        def d(k, j, st):  # inert: j, k — the shared Decider/Policy/loader signature; this implementation does not need them
             a = ACTIONS[int(rng.integers(0, len(ACTIONS)))]
             if a in ("tighten_sl",):
                 return {"action": a, "level_r": st["stop_r"] + 0.5 * (st["close_r"] - MIN_GAP_R - st["stop_r"])}
