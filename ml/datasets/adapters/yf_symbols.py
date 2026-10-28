@@ -52,7 +52,7 @@ _DEFAULT_TICKER_MAP: Mapping[str, str] = {
     # point of a coverage question is that absence must be visible.
     **{t: t for t in (
         "GDX", "GLD", "IAUM", "IEF", "IWM", "QLD", "QQQ",
-        "SCHA", "SLV", "SPLG", "SPY", "TLT", "TQQQ", "USO",
+        "SCHA", "SLV", "SPYM", "SPY", "TLT", "TQQQ", "USO",
     )},
     # --- INVERSE ETFs: fetchable for RESEARCH, deliberately NOT tradeable ----
     # SH (-1x S&P 500) and PSQ (-1x QQQ) are the M15 alpaca short-PROXY
@@ -109,7 +109,7 @@ _DEFAULT_TICKER_MAP: Mapping[str, str] = {
     # match than the others" — but a loose match that SIZES beats a perfect
     # match that cannot. These are markers for what an account this size can
     # actually hold; the strategy params are expected to need re-tuning onto
-    # whichever ones clear, exactly as SPLG/IAUM were.
+    # whichever ones clear, exactly as SPYM/IAUM were.
     #
     # ⚠️ MEMBERSHIP HERE IS NOT A DECLARATION OF TRADEABILITY — the same rule
     # that governs SH/PSQ/TBF/TBX above. None of these appear in
@@ -117,7 +117,7 @@ _DEFAULT_TICKER_MAP: Mapping[str, str] = {
     # They are here so the affordability probe can MEASURE them. Declaring any
     # of them is Tier-3 and happens only on evidence.
     **{t: t for t in (
-        # S&P 500 / US large cap  (roster: SPY $745 unreachable, SPLG unmeasured)
+        # S&P 500 / US large cap  (roster: SPY $745 unreachable, SPYM unmeasured)
         "VOO", "IVV", "SPTM",
         # Nasdaq-100 / broad tech (roster: QQQ $689 unreachable; QLD/TQQQ are
         # LEVERAGED and were excluded on P(breach), PB-20260630-002)
