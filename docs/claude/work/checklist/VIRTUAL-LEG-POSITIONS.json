@@ -11,8 +11,8 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-28 lane VIRTUAL-LEG-POSITIONS-DESIGN] Operator popup 2026-10-28 ~20:15Z: 'Keep holding + record virtual trades' - real book stays one-way, held legs get a virtual per-leg position. DESIGN: docs/design/virtual-leg-positions-DESIGN.md (projection over trades hold rows JOIN order_packages; bracket from the leg's own package; bar walk via trade_reconstruction.first_touch_outcome, SL-first ties, censoring never marked-to-close; full cost stack via ml/datasets/labeling/cost_policy.py; provenance ESTIMATED, record_kind virtual; GET /api/bot/virtual_positions; no new table). Rollout = 6 steps, steps 3 and 5 Tier-2. Queued for the operator's build approval at Thursday planning 06:17Z; 3 open questions in design section 11.",
-  "updated_at": "2026-10-28T20:20:44Z",
+  "note": "[2026-10-28 lane VIRTUAL-LEG-POSITIONS-DESIGN] Operator popup 2026-10-28 ~20:15Z: 'Keep holding + record virtual trades' - real book stays one-way, held legs get a virtual per-leg position. DESIGN: docs/design/virtual-leg-positions-DESIGN.md (projection over trades hold rows JOIN order_packages; bracket from the leg's own package; bar walk via trade_reconstruction.first_touch_outcome, SL-first ties, censoring never marked-to-close; full cost stack via ml/datasets/labeling/cost_policy.py; provenance ESTIMATED, record_kind virtual; GET /api/bot/virtual_positions; no new table). Rollout = 6 steps, steps 3 and 5 Tier-2. Queued for the operator's build approval at Thursday planning 06:17Z; 3 open questions in design section 11. MEASURED (trainer diag #21002, trainer journal newest trades row 2026-10-28T07:50Z, window 30d): 29 opposite-side hold rows = 29 distinct signals with SL+TP, 11 legs on bybit_1 (23), ib_paper (4: mgc_trend_1h 3, ict_scalp_mgc_15m 1), alpaca_paper (2); none on real-money accounts in the window. Recovers 11..29 virtual positions (bound depends on the one-per-leg rule + bar walk). All-time backfill population: 990 hold rows since 2026-05-31.",
+  "updated_at": "2026-10-28T21:15:00Z",
   "updated_by": "session_01AFoLuJDG2ovywE8XR1C3SX",
   "roadmap": [
     "L-DATA"

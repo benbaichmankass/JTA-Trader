@@ -141,7 +141,46 @@ operator for a table plus a backfill (CLAUDE.md § Generation Discipline Rule 3)
 MEASURED via trainer-VM diag relay [#21002](https://github.com/benbaichmankass/Metis-Insights/issues/21002) over the trainer's synced
 `trade_journal.db`. Population, window and freshness: see below.
 
-<!-- MEASUREMENT -->
+**Population.** These are `trades` rows with `timestamp >= now − 30 d` and `entry_reason LIKE '%flip_suppressed_hold_policy%'` in
+`/home/ubuntu/ict-trading-bot/data/trade_journal.db` on the trainer, read 2026-10-28 ~20:40Z. **Freshness:** the trainer copy's newest
+`trades.timestamp` is `2026-10-28T07:50:21Z`, so the window is 2026-09-28 07:50Z → 2026-10-28 07:50Z. Anything the live journal wrote after
+07:50Z today is not counted.
+
+**Probe check (a negative needs a denominator).** In the window there are 528 `trades` rows in total and 44 rows with any `intent_noop`.
+**29 of those are opposite-side holds.** The selector finds positives, and the trigger case is among them (rows 6743, 6749, 6752 and 6753
+below). All-time there are **990** hold rows, the first on `2026-05-31T16:15Z`, the day `hold` became the default. That is the backfill
+population for rollout step 2.
+
+| account | leg | symbol | held side | held rows = distinct signals | with SL+TP | first → last |
+|---|---|---|---|---:|---:|---|
+| bybit_1 | ict_scalp_eth_15m | ETHUSDT | short | 9 | 9 | 09-30 → 10-02 |
+| bybit_1 | ict_scalp_sol_15m | SOLUSDT | long / short | 3 / 1 | 4 | 09-28 → 09-30 |
+| bybit_1 | ict_scalp_sol_5m | SOLUSDT | long / short | 3 / 2 | 5 | 09-28 → 10-01 |
+| ib_paper | mgc_trend_1h | MGC | long | 3 | 3 | 10-27 15:13 → 17:01 |
+| bybit_1 | ict_scalp_xrp_5m | XRPUSDT | long | 2 | 2 | 09-30 → 10-01 |
+| ib_paper | ict_scalp_mgc_15m | MGC | long | 1 | 1 | 10-27 10:56 |
+| alpaca_paper | gld_pullback_1d | GLD | short | 1 | 1 | 10-16 |
+| alpaca_paper | spy_pullback_1h | SPY | short | 1 | 1 | 10-01 |
+| bybit_1 | fade_breakout_4h | BTCUSDT | long | 1 | 1 | 09-28 |
+| bybit_1 | ict_scalp_5m | BTCUSDT | long | 1 | 1 | 10-02 |
+| bybit_1 | trend_donchian_eth | ETHUSDT | long | 1 | 1 | 10-04 |
+| **total** | **11 legs on 3 accounts** | | | **29** | **29** | |
+
+**What it recovers (stated as bounds, not as one number).** Every held row in the window is its own package and its own signal: 29 rows,
+29 packages, 29 distinct (strategy, symbol, side, SL, TP) keys. So `signal_key` dedupe collapses nothing here. Every row carries a finite SL
+and TP, so every one can open a virtual position. How many positions open depends on the § 3.1 one-position-per-leg rule, which needs the
+bar walk to know when each position closed:
+
+- **Upper bound: 29 virtual positions.**
+- **Lower bound: 11**, one per (account, leg) if each leg's holds all overlapped a single open virtual position.
+
+For example, the three `mgc_trend_1h` holds are one hour apart with drifting entries (4072.4 / 4076.7 / 4074.3). They become one position
+unless the first one resolved within the hour. Today all 29 are recorded with **no outcome**.
+
+**Reading.** In this window the gap is mostly **demo crypto scalp legs on `bybit_1`** (23 of 29 rows; `ict_scalp_eth_15m` alone is 9). The
+real-money accounts show **no** hold rows in this population (`bybit_2`, `alpaca_live`, the portfolios). That is MEASURED for the
+window, not a claim about how the code behaves on them. On `ib_paper` the trigger case is 4 rows on 2026-10-27, all held behind the
+`mgc_pullback_1d` short (qty 14).
 
 ## 6. Grading and labelling: VIRTUAL, ESTIMATED, never in measured P&L
 
