@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-POWER-CHECK",
+  "title": "Make power a real check: compare realised n with the unit's power.expected_n at grading time",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-28 (lane SKILL-DESIGN-RESEARCH, research_ops_checks.py --since 7d on origin/main 5b649d568): 345 of 368 pass/fail verdicts graded in the window carry only power_state 'accruing', incl. rows with n=458 (RQ-20261026-ed1c-07). research-ops SKILL step D said an accruing read 'cannot answer yet'; queue_grade.py and research_digest.py treat it as decorative (digest comment 2026-10-11: ~60% of rows). So no step checks power. Build: queue_grade (or the E5 writer) records realised_n vs power.expected_n and a powered/underpowered flag; research_ops_checks.py then reports verdicts on underpowered rows. Report-only first; changes no verdict. Re-run: python3 scripts/research/research_ops_checks.py --since 7d -> results.power_label_uninformative.",
+  "updated_at": "2026-10-28T07:29:59Z",
+  "updated_by": "session_01AFoLuN1BN82nvr53thcT7e",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "_seq": 747
+}

@@ -226,7 +226,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/performance-review/REVEAL-GRADE-BRIEF.md` | instruction | live | — | 2026-10-26 | `dir:skills-are-binding-workflows / read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade` | reveal pass grader contract; its git blob sha is the revealed grade's prompt_sha |
 | `.claude/skills/performance-review/SKILL.md` | instruction | live | — | 2026-09-24 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/regime-selectivity/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/research-ops/SKILL.md` | instruction | live | — | 2026-10-10 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/programme-review/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/research-ops/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/sprint-format/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/system-report/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/trading-desk/AMENDMENTS.md` | instruction | unknown | — | never | `dir:skills-are-binding-workflows / not-assessed` | — |
@@ -1002,6 +1003,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-firm-deepdive-2026-10-04.md` | evidence | unknown | — | 2026-10-04 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/research-loop-audit-2026-10-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop as built vs intended: why results go ungraded, why intake reads exhausted, compute use, root causes and the proposed build (lane RESEARCH-LOOP-AUDIT-AND-DRIVER). |
+| `docs/research/research-ops-redesign-2026-10-28.md` | evidence | unknown | — | 2026-10-28 | `dir:research-is-measurement / read:SKILL-DESIGN-RESEARCH-lane-authored-and-measured-it-2026-10-28` | Diagnosis of the research-ops passes 2026-10-27..28 and the 2026-10-21 programme review, practice sources, and the two-layer (CHECKS + ANALYSIS) redesign of research-ops and the programme review (lane SKILL-DESIGN-RESEARCH). |
 | `docs/research/research-ops-benchmark-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop benchmarked against published research-ops practice (quant multiple testing, MLOps tracking, pre-registration, stage-gate, SRE): gap table, filed rows and operator decisions (lane RESEARCH-OPS-BENCHMARK-1016). |
 | `docs/research/tp-doctrine-w43-proposals-2026-10-22.md` | evidence | unknown | — | 2026-10-22 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trainer-workload-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
