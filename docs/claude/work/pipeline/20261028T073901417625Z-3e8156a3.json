@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-LFC7HPXG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "SKILL-DESIGN-MODEL / docs/research/ml-review-frontier-diagnosis-2026-10-28.md § 2 (Power row)",
+    "rerun": "grep -l 'ml_bakeoff:' research/queue/*.yaml research/queue/blocked/*.yaml | xargs grep -A6 '^power:' — compare expected_n/effect_units against the decision_rule's test unit (folds vs rows)"
+  },
+  "routed_to": "ML-REVIEW",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 1,
+  "what": "[ml] Audit every queued/blocked ML research unit's power block for unit-of-analysis mismatch: RQ-20261018-ff8f-04 registers power on 24,000 OOS rows (d=0.1 needs ~785 rows) while its decision rule is a paired t-interval over 5 folds; measured fold sd ~0.03 implies ~70 folds for +0.010 (ML-READ-1025). Re-register power on the test unit (folds, Nadeau-Bengio corrected variance) or redesign before the unit runs. ml-review A2 / frontier gate 6 are the standing check."
+}

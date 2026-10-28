@@ -144,7 +144,7 @@ def test_build_writes_valid_schema(tmp_path: Path):
     assert meta["family"] == "setup_candidates"
     assert meta["leakage_test_status"] == "passed"
     assert meta["row_count"] >= 5
-    assert meta["label_version"] == "triple-barrier-v1"
+    assert meta["label_version"] == "triple-barrier-v2-costnet"
 
 
 def test_no_lookahead_entry_is_next_bar(tmp_path: Path):

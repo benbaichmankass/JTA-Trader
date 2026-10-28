@@ -2,20 +2,29 @@
   "id": "RESEARCH-INTERVENTION-CONTROL-SET",
   "title": "Standard control set for any intervention/management test: hold-to-recorded-exit, matched random intervention (same count+type of actions at random check-ins), best static rule chosen without test folds",
   "phase": "build",
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "session_01AFoLuK2GHCcWHiYRJwDYar",
+  "lane": "FIX-RESEARCH-CONTROLS",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "From PRACTICE-RESEARCH-TRADE-MGMT-AI F.3.2 / C.3.2. Evidence: Akepanidtaworn et al. JF 2023 (institutional sells underperform random sells) is the counterfactual the strongest exit evidence uses. RQ-20261027-8b01-03 already carries all three controls; SCOPE (Tier 1): lift them into a research template / shared helper so every desk-management and exit unit gets them by default, with group-by-trade bootstrap. FIRST STEP: extract the frequency-matched random-timing baseline from the 8b01-03 harness into a reusable function.",
-  "updated_at": "2026-10-28T06:40:31Z",
-  "updated_by": "session_01AFoLuML1AwiQNaDn7uKHXj",
+  "note": "Built: scripts/research/intervention_controls.py (hold_to_bracket, matched_random_intervention, best_static_rule leave-one-fold-out, group-by-trade bootstrap, control_set); desk_replay_driver B2/B3 now call it (draw-for-draw equal to the old logic, tested). Guard check_research_queue_design_fields.py rule 2. NOT closed (landed_unproven): observation that closes it = the first NEW hand-written intervention unit after merge either passes the guard with a full intervention_controls block or is refused. Open follow-up: 15 generated programme-node intervention units are counted but not graded for controls; their per-node controls belong to the programme-authoring lane (SKILL-DESIGN-RESEARCH).",
+  "updated_at": "2026-10-28T08:02:26Z",
+  "updated_by": "session_01AFoLuK2GHCcWHiYRJwDYar",
   "roadmap": [
     "L-DESK"
   ],
+  "writeback": {
+    "roadmap": "L-DESK next: intervention tests (desk exit/in-trade, active-management programme 01) get control_set from scripts/research/intervention_controls.py; guard research-queue-design-fields-guard enforces intervention_controls on new hand-written units",
+    "arch": "none: research tooling and CI only, no runtime component changed"
+  },
+  "observation": {
+    "what": "the first NEW hand-written intervention/exit unit after merge either carries a full intervention_controls block or is refused by research-queue-design-fields-guard",
+    "how_to_check": "python3 scripts/ci/check_research_queue_design_fields.py --base origin/main on a PR adding such a unit; and grep -L intervention_controls on new research/queue units matching the guard keywords",
+    "due_by": "2026-11-04T00:00Z"
+  },
   "_seq": 748
 }

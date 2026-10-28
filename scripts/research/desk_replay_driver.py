@@ -79,6 +79,7 @@ for _p in (REPO, REPO / "scripts" / "ops"):
         sys.path.insert(0, str(_p))
 
 from scripts.research import live_review_outcomes as lro  # noqa: E402  (path pricing: compose, not rewrite)
+from scripts.research.intervention_controls import best_static_rule, matched_random_intervention  # noqa: E402  (shared B2/B3)
 from src.runtime import execution_costs as xc  # noqa: E402
 import desk_scan_packet as dsp  # noqa: E402  (ATR definition, bar convention, TF_SECONDS)
 
@@ -493,12 +494,9 @@ def _r(x: Optional[float], nd: int = 4) -> Optional[float]:
 def b2_random_timing(points: List[Point], freq: Dict[Tuple, float], seed: int,
                      slip: float) -> np.ndarray:
     """Per-point mean dR over B2_DRAWS draws: Claude's action mix, applied at random valid bars of the same trade.
-    A drawn non-hold action with no valid bar on that trade scores 0 (it could not be applied) and is not hidden."""
-    rng = np.random.default_rng(seed + 2)
+    A drawn non-hold action with no valid bar on that trade scores 0 (it could not be applied) and is not hidden.
+    The draw itself is the shared `intervention_controls.matched_random_intervention`."""
     kinds = [s for s in freq if s != ("hold",)]
-    probs = np.array([freq.get(("hold",), 0.0)] + [freq[s] for s in kinds])
-    probs = probs / probs.sum()
-    per_point = np.zeros(len(points))
     table: List[Dict[Tuple, np.ndarray]] = []
     for p in points:
         tb = {}
@@ -506,17 +504,7 @@ def b2_random_timing(points: List[Point], freq: Dict[Tuple, float], seed: int,
             vals = [dR(p, s, j, slip) for j in range(len(p.path["idx"]) - 1)]
             tb[s] = np.array([v for v in vals if v is not None], dtype=float)
         table.append(tb)
-    for i, tb in enumerate(table):
-        choice = rng.choice(len(probs), size=B2_DRAWS, p=probs)
-        tot = 0.0
-        for c in choice:
-            if c == 0:
-                continue
-            arr = tb[kinds[c - 1]]
-            if len(arr):
-                tot += arr[rng.integers(0, len(arr))]
-        per_point[i] = tot / B2_DRAWS
-    return per_point
+    return matched_random_intervention(table, freq, seed + 2, B2_DRAWS)
 
 
 def b3_best_static(points: List[Point], role: str, slip: float) -> Tuple[np.ndarray, Dict[int, Optional[Tuple]]]:
@@ -527,19 +515,7 @@ def b3_best_static(points: List[Point], role: str, slip: float) -> Tuple[np.ndar
         for g, spec in enumerate(grid):
             v = dR(p, spec, None, slip)
             mat[i, g] = np.nan if v is None else v
-    mat0 = np.where(np.isnan(mat), 0.0, mat)        # an inapplicable static rule leaves the trade untouched
-    folds = np.array([p.fold or 0 for p in points])
-    chosen: Dict[int, Optional[Tuple]] = {}
-    out = np.zeros(len(points))
-    for f in sorted(set(folds.tolist())):
-        train = folds != f
-        if not train.any():
-            chosen[f] = None
-            continue
-        best = int(np.argmax(mat0[train].mean(axis=0)))
-        chosen[f] = grid[best]
-        out[folds == f] = mat0[folds == f, best]
-    return out, chosen
+    return best_static_rule(mat, [p.fold or 0 for p in points], grid)
 
 
 def required_n(sd: float, effect: float) -> Optional[int]:

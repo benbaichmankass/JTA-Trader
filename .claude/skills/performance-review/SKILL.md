@@ -1,126 +1,197 @@
 ---
 name: performance-review
-description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE and its RESEARCH PIPELINE — per-strategy aggregate stats, per-order-package decision grading, comparison against actual closed-trade PnL, and proposed tweaks to consider. Reviews the M13 AI-analyst insights log (/api/bot/insights/*) and cross-checks its claims against real data. ALSO owns the research pipeline end to end (2026-08-30): are backtests queued and routable, are they running, were their results READ and dispositioned, what analysis follows, and what action item comes out. Owns comms/claude_strategy_scores.jsonl (per-decision grading, append-only) and docs/claude/work/PIPELINE.jsonl (trading + research follow-ups, filed via scripts/ops/pipeline.py). Also answers \"did anyone read that sweep\", \"is the research queue healthy\", \"/research-review\". Use when the operator says "run the performance review", "/performance-review", "score the recent trades", or "how are the strategies doing". NOT for ML/model perf (use /ml-review) and NOT for system/pipeline plumbing (use /health-review).
+description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE, in two layers. Layer 1 CHECKS is fixed and deterministic (every leg over lifetime / 90d / 30d / 7d windows, live vs its own backtest band, attribution, decay, cost, baselines, data coverage, grading, research-pipeline and backlog gates, each computed by a named script). Layer 2 ANALYSIS is Claude's work (read each material leg's full history, backtest evidence, prior reviews and what happened to their calls; form competing hypotheses and try to falsify them; hunt what does not fit; rank findings by money; make every call a row or queue unit with a pre-registered check). Opens by grading the previous review's calls. Owns comms/claude_strategy_scores.jsonl (per-decision grading, append-only) and files trading + research follow-ups to docs/claude/work/PIPELINE.jsonl via scripts/ops/pipeline.py. Also answers \"did anyone read that sweep\", \"is the research queue healthy\", \"/research-review\". Use when the operator says "run the performance review", "/performance-review", "score the recent trades", or "how are the strategies doing". NOT for ML/model perf (use /ml-review) and NOT for system/pipeline plumbing (use /health-review).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-09-24` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
-# /performance-review — trading performance + the research pipeline
+# /performance-review — CHECKS, then ANALYSIS
 
-> Also answers to **`/research-review`**. The two halves share a session because a
-> research verdict (*this bracket cell improves this leg*) and a performance
-> reading (*this leg is bleeding*) are the two inputs to the same decision — but
-> they keep **separate backlogs**, because they are graded against different bars.
+> Also answers to **`/research-review`**. Follows the shared pattern in
+> [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md). Serves the **TRADING** research track
+> ([`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md)).
 
-> **⚠️ READ FIRST — WHAT THIS SESSION IS.** This is **full end-to-end QA of the
-> trading/strategy layer**, NOT a scan-and-sweep-under-the-rug exercise. Your job
-> is to actively **HUNT** for issues (bad decisions, correctness gaps in scoring,
-> strategies quietly bleeding, money-at-risk conditions), **ROOT-CAUSE** them,
-> **PROPOSE** the exact fix or tweak, decide the Tier-3 calls **WITH the
-> operator**, and then **drive** them. **Finding a fixable issue and logging it to
-> a backlog as a post-it note instead of driving it is a REVIEW FAILURE** — that
-> is how problems become operational catastrophes. You can ALWAYS weigh in with
-> the operator — but raising the flags is YOUR job; never passively wait for the
-> operator to point at the problem. This framing governs every review session.
+> **Why it has this shape (redesign 2026-10-28, lane `ANALYTIC-SKILL-DESIGN`).** The operator asked
+> whether this review moves performance, suspecting it was either too loose (no deep thinking) or too
+> scripted (statistics in, statistics out), and that it checked last week's trades while ignoring each
+> strategy's whole record. Measured on the last six reviews
+> ([`docs/research/analytic-skill-design-2026-10-28.md`](../../../docs/research/analytic-skill-design-2026-10-28.md) § 1):
+> **it was both.** The grading core was scripted (82% of 908 grades since 2026-09-20 came from the daily
+> rubric cron; `risk_management: unknown` on 907/908; the B cohort won 32% of the time and the C cohort
+> 46%, so the grade carried no information). The analysis was loose: 4 of 4 JSON reviews read only the
+> window since the previous review; none formed or tested a hypothesis; 3 of 4 proposed nothing; 10 of
+> 13 filed items were mechanics, not performance; a recommendation ("run the M8 sweep for
+> `ada_pullback_2h`") was repeated twice and never ran; and the 2026-10-21 headline finding had already
+> been attributed three days earlier. The prep routine asked for "grading and numbers only". **The fix
+> is a split of labour, not more rules:** scripts compute the checks so Claude never spends its
+> reasoning on arithmetic; Claude spends it on the questions the checks raise.
 
-This is the **trading-performance** session of the three-way review
-split (`/health-review` covers system/pipeline health,
-`/ml-review` covers the training center + model lifecycle). It grades
-every decision the strategies made in the window, compares the grades
-to what actually happened in the trade book, surfaces the M13 AI
-analyst's view of the same window, and proposes (never enacts) tweaks
-to consider.
+## The shape in one screen
 
-Strategy *parameter* / *risk-cap* changes are **Tier-3** — propose
-them in `proposed_tweaks[]`; merging requires explicit operator
-approval. This skill is the evidence-gathering and analysis step that
-precedes that approval.
+| Layer | Who does it | What it must produce | What it must NOT do |
+|---|---|---|---|
+| **0. Prior calls** | Claude, from the last review's `calls[]` | each call graded `hit / miss / unresolved / void`, with the check it named re-run | re-argue a call instead of running its check |
+| **1. CHECKS** | named scripts; Claude runs them and reads them | the fixed tables C1–C12 below, **every leg, every window**, each with its population | narrate, rank or interpret; quote a number without its n and window |
+| **2. ANALYSIS** | Claude | 3–7 **material questions**, each with competing hypotheses, the test run, what survived, confidence, and money at stake; surprises; ranked decisions | restate check numbers as findings; end on "n too small"; repeat a prior call without saying why it did not happen |
+| **3. Decisions** | Claude | every call is a checklist row / queue unit / pipeline item with a **pre-registered check**, or `no action, because …` | write a memo; enact a Tier-3 change |
 
-If the user asked about *technical/pipeline health* — STOP, use
-`/health-review`. If the user asked about *model training / promotion
-/ shadow predictions* — STOP, use `/ml-review`.
+**Where the effort goes.** The checks are table stakes: run them, do not admire them. The value of
+this session is layer 2. A review whose ANALYSIS section is a paraphrase of its CHECKS tables has not
+been done. **Dispatch note for the manager:** this is an analysis job; give it a model and a ceiling
+that can carry the ANALYSIS layer, not a numbers-only lane.
 
-**Coordination (binding, corrected 2026-09-24):** the coordination board this
-paragraph used to point at (GitHub issue #6927 / `docs/claude/coordination-board.md`)
-is retired — `docs/claude/coordination-board.md` itself says #6927 "is retired,
-readable, and takes no writes. Do not post there." — and posting there is a
-no-op under the 2026-09-21 operating reset (`docs/plans/OPERATING-PLAN-2026-09-21.md`;
-CLAUDE.md § "How work is organised"). The live model is **one manager session
-plus scoped lanes**: read your lane's row in
-`docs/claude/work/MANAGER-CHECKLIST.json` before your first diag pull, and
-before landing a PR claim this branch's merge slot with
-`scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by
-<session-id>` per `.claude/skills/manager/SKILL.md`. This skill still
-dispatches real live-VM diag/system-action requests and commits pipeline
-filings, so check the checklist for another lane already working the same
-window before you duplicate its pulls.
+**No predetermined outcome.** There is no quota of findings, tweaks or demotions. "No leg is outside
+what its backtest predicts and nothing surprised me" is a valid conclusion **if** the ANALYSIS section
+shows the falsification attempt behind it (A4). A red week is not a finding; a leg outside its own
+expected band, a cost that drifted, or a mechanism that explains several legs is.
 
-## Scope (what this skill DOES)
+**Scope.** Trading + strategy performance (every account, paper and prop included), per-decision
+grading, the Claude reviewer and desk grades, and the research pipeline's read/disposition stages.
+**Out of scope:** pipeline plumbing / DB integrity / service state (`/health-review` — route
+mechanics findings there, do not let them crowd out performance); models (`/ml-review`); editing
+`config/` or `src/` (Tier-3 changes are proposed only); running sweeps (`backtesting`).
+**Coordination:** read your lane's row in `docs/claude/work/MANAGER-CHECKLIST.json` first; claim
+the merge slot with `scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by
+<session-id>` before landing (`.claude/skills/manager/SKILL.md`).
 
-1. **Establish the window** — since the last performance-review
-   (§ "The review window").
-2. **Pull trade data** for the window via the diag relays
-   (§ "Fetching trade data").
-3. **Read the M13 insights cache** — the AI analyst's view of the same
-   window (§ "M13 insights review").
-4. **Aggregate per-strategy stats** — trade count, win-rate, PnL,
-   average hold time, rejection ratio, per-account contribution
-   (§ "Per-strategy aggregates").
-5. **Grade every order-package decision** A/B/C/D/F + the three
-   training-friendly labels, anchored on `signal_logic` (§ "Per-decision
-   scoring").
-6. **Verify scores against real outcomes** — small wins on bad setups
-   stay graded poorly; stop-outs on textbook setups stay graded fairly
-   (§ "Verification").
-7. **Persist scores** to `comms/claude_strategy_scores.jsonl`
-   (append-only, dedupe by `order_package_id`).
-8. **Diagnose before proposing a demote/kill** — underperformance is a
-   trigger to root-cause + robustly re-test, NEVER a reason to reflexively
-   flip a strategy off (§ "Underperformance → diagnose, don't demote").
-9. **Propose tweaks** — config/strategies.yaml params to consider, with
-   evidence (§ "Proposed tweaks").
-9. **Drain the performance-review backlog** — strategy follow-ups from
-   prior sessions (§ "Draining the backlog").
-10. **Update the diversified paper-book tracker** — append a dated
-    snapshot of the 10-cell paper cohort + review what's new
-    (§ "Diversified paper-book tracker").
-11. **Run the real-money allocation benchmark (RECURRING)** — does a
-    ready-for-live strategy portfolio actually improve the live
-    real-money book's risk-adjusted PnL (incl. via regime
-    diversification), or is the capital better left where it is? This is
-    the standing bar for (re-)adding a strategy to a live real-money
-    account (§ "Real-money allocation benchmark").
-12. **Grade the live-trade-review calls** — the "Live review" section: every
-    review priced against holding on real candles, net of the full cost stack
-    (§ "Live review").
-13. **Emit the response JSON** + **post a one-line update to the Claude
-    channel** (§ "Output" + § "Posting to the Claude channel").
+## Layer 0 — grade the previous review's calls (always first)
 
-## Out of scope (DO NOT do here)
+Open the newest `comms/reviews/performance-review-*.json` (and its markdown under `docs/reviews/`).
+For each entry in its `calls[]` (older records without `calls[]`: use `recommended_action` and
+`proposed_tweaks[]`, and say so):
 
-- Pipeline plumbing / DB integrity / service state → `/health-review`.
-- Model training / registry / shadow predictions → `/ml-review`.
-- Editing `config/strategies.yaml`, `config/accounts.yaml`,
-  `config/risk_caps.yaml`, or `src/runtime/*` — Tier-3, operator
-  approval gate.
-- Backtesting — the `backtesting` skill is the path; this skill may
-  *reference* sweep outputs (`/api/bot/backtests/sweeps`) to anchor a
-  tweak proposal but does not run sweeps.
+1. **Re-run the check the call named** (`check.command`), and apply its `check.rule` as written. Do
+   not substitute a new rule.
+2. Grade it exactly one way: `hit` (the rule resolved as predicted), `miss` (resolved the other way),
+   `unresolved` (its `resolves_when` has not arrived: say what is still missing), `void` (the check
+   could not run: name why; a void call is a tooling finding).
+3. For any call whose **action** did not happen (no row moved, no unit ran): say why in one line and
+   either re-file it with an owner or kill it with a reason. **A call repeated without this line is the
+   failure this layer exists to stop** (the M8 sweep, 2026-10-04 and 2026-10-10).
+4. Score the batch: `n_calls`, hits, misses, unresolved, void, and the **Brier score** over resolved
+   calls using each call's stated `p`. Below 10 resolved calls, report the counts and say the score is
+   `INDETERMINATE`. Keep a running series in `prior_calls_scorecard` so calibration is visible across
+   reviews.
 
-## The review window
+## Layer 1 — CHECKS (fixed, deterministic, every run)
 
-Window runs from the last performance-review to now. Determine "last
-review" in this order:
+Every check is computed by a script or a fixed query. Claude's job here is to run it, state its
+population, and record a failed check as `could_not_look` (never `0`, never omitted). **Windows are
+lifetime, 90d, 30d and 7d for every leg with any closed trade in the last 90 days, never just "since
+the last review"**; classes (real_money / mirror / paper / prop) are never pooled. Procedures and
+caveats for each pull are in § "Reference" below.
 
-1. The newest `reviewed_at` across rows in
-   `comms/claude_strategy_scores.jsonl` (the canonical anchor — every
-   review appends here).
-2. If the file has only its `_meta` line (no reviews yet), fall back
-   to the last 24h.
+| # | Check | Computed by | Population / note |
+|---|---|---|---|
+| **C1** | **Per-leg scorecard, four windows**: n, net R (sum, mean), net $ (measured-only beside total), win rate, R per capital-day | `/api/bot/performance` `perStrategy[]` (lifetime, provenance counts) + `scripts/research/giveback_census.py` (R/cap-day; filter the trade dump by `closed_at` per window, its `--since-days` is ignored on the JSON path) | bucket-A rows (§ Bucket records) + flagged C; `pnl_coverage` beside every $ |
+| **C2** | **Expected vs realised**: live cumulative R against the leg's own Stage-0 band for the same n | `python3 scripts/research/live_vs_backtest.py` (default Stage-2 legs; `--leg` for Stage-1 legs) | whole history per book; verdict `CONSISTENT / BELOW_BACKTEST / NO_BACKTEST / INSUFFICIENT_N` |
+| **C3** | **Decay**: is the recent window drifting from the leg's own lifetime and backtest mean? | interim: C1's 30d and 90d mean R vs lifetime mean R vs the C2 band, and `scripts/research/as_traded_stage0.py` (latest-25% fold) for legs C2 flags. **No CUSUM / sequential test exists yet** (row `PERF-CHECKS-SCORECARD`) | say `interim` until the scorecard lands |
+| **C4** | **Attribution**: entry vs exit vs execution vs cost, per flagged leg | `scripts/research/live_bt_trade_join.py` (per-trade join to the backtest bar), `scripts/research/real_money_close_attribution.py` (what actually closed each real-money trade), `giveback_census.py` (peak R vs realised R) | run for every leg C2 or C3 flags and every real-money leg |
+| **C5** | **Cost drift**: realised slippage / fee / funding vs the cost the backtest assumed | `scripts/research/realized_slippage.py` (per venue, MEASURED fills) | per venue; cite the cost policy it compares to |
+| **C6** | **Baselines**: hold vs act for Claude's in-trade calls; random entry for the desk; leg vs its family siblings | `scripts/ops/live_review_grade.py --live --json`, `scripts/ops/desk_grade.py --live --json`, `scripts/ops/claude_role_grade.py --live` (§ Live review, § Desk); C1 grouped by family | each comparison with n, CI and verdict as the generator prints it |
+| **C7** | **TP doctrine** | `python3 scripts/ci/check_tp_doctrine.py` (re-run, never quote) | routings per class |
+| **C8** | **Data coverage**: bucket A/B/C split, `pnl_coverage`, `journalTrust`, R-telemetry coverage | `scripts/analysis/classify_paper_records.py` (journal-shaped rows), `/api/bot/trades/closed` `journalTrust` | a leg with low coverage is flagged, not graded |
+| **C9** | **Grading**: freshness, and whether the grade carries information (grade cohort vs net R) | `scripts/ci/check_grading_freshness.py`; grade-vs-outcome table over `comms/claude_strategy_scores.jsonl` rows in the 90d window | the rubric is a check, not a judgement; a cohort inversion is `grade_drift` |
+| **C10** | **Research pipeline**: queue health, unread results, dispositions | the latest `comms/research/ops/` record (research-ops runs 4×/day) + `python3 scripts/research/research_disposition.py --unread-only` | `superseded_unread` is not a finding; `corpus_unreadable` is `could_not_look` |
+| **C11** | **Books and benchmarks**: paper-book tracker append, real-money allocation benchmark, prop trade quality | `scripts/ops/paper_book_tracker.py`, § Real-money allocation benchmark, `scripts/prop/trade_quality_review.py` | as each section states |
+| **C12** | **Backlog gate**: every open performance/research pipeline item re-checked | § Draining the backlog | `count_untriaged` MUST be 0 |
 
-Cap practical pulls at the diag limits. If the gap exceeds one pull,
-page back with the journal `since`/`until` parameters and note
-truncation in the response.
+A check that needs a tool that does not exist is listed with `could_not_look: no instrument` and the
+row that builds it. Do not hand-roll a cruder substitute (`docs/research/RESEARCH-CAPABILITY-INDEX.md`
+routes the 300+ research scripts by question).
+
+## Layer 2 — ANALYSIS (Claude's work)
+
+Practice basis: [`docs/research/analytic-skill-design-2026-10-28.md`](../../../docs/research/analytic-skill-design-2026-10-28.md) § 3
+and the principles list (T1–T3, M4–M7, R3–R5).
+
+**A1 — Read wide context before you form a view.** For each leg you will discuss: its committed
+Stage-0 evidence (`comms/strategy_evidence/<leg>.json`) and the cost basis it was measured on; its
+research units and results (`research/queue/`, `research/results/`); the last four performance
+reviews and perf-followup records (`comms/reviews/`, `comms/perf_followup/`) and what happened to
+their calls (Layer 0); open pipeline items and checklist rows that name it (`grep` the leg); live
+review rows on it (`comms/live_review/reviews.jsonl`); regime state; the operator's current priorities
+(`docs/claude/work/IDEAS.md`, the latest weekly planning record). **Search before you claim a new
+finding**: if the repo already answered the question, cite that answer and move on.
+
+**A2 — Choose the material questions (3–7).** Rank by money at stake, not by this week's P&L:
+real-money exposure first, then the size of the deviation from expectation (C2 percentile, C3 drift),
+then lifetime $ or R, then mechanisms that touch several legs. A leg with a red week inside its own
+band is usually not material. A green leg far above its band is (luck, or a measurement error?).
+
+**A3 — For each question, compete the hypotheses and try to kill your favourite.**
+- Write **at least two** explanations, one of which is always *noise* (what the leg's own backtest
+  distribution says the chance of this result is at this n), plus the relevant ones of *regime*,
+  *cost*, *execution / fidelity*, *decay / overfit*, *measurement artefact*.
+- For each, state **what it predicts that the others do not**, in data you can actually read (a
+  regime split, a per-trade join, a cost line, a sibling leg, an earlier period).
+- **Run that test now** where a script or diag pull answers it (C4–C6 tools, `diag-data`); otherwise
+  it becomes a queue unit with the rule written before it runs.
+- Record which hypotheses survived, which were eliminated and by what evidence. Your confidence is a
+  probability, not an adjective.
+- **Judge the residual, not the raw P&L**: take out what the instrument or its regime did (the leg's
+  siblings, the asset's own move) and what cost did, before you call anything decay.
+- **Count your comparisons.** Reviewing ~30 legs at 5%, about 1.5 will look significant by chance; say
+  how many you looked at when you report one that did.
+- **Verify against data, not by re-reading your own reasoning.** A claim is checked by a query, a
+  script or a diag pull. Rereading your reasoning does not check it.
+
+**A4 — Hunt what does not fit.** List the things that surprised you: a number that contradicts a
+prior review, a doc, or the backtest; a leg that behaves unlike its siblings; a cost that moved; a
+grade cohort that inverts. For each: an explanation you tested, or an open question with its owner.
+If nothing surprised you, say what you checked to look for surprises.
+
+**A5 — Look across legs.** If the same mechanism explains several legs (a bar-timing mismatch, a
+cost-model gap, an exit-path giveback), the finding is structural: one tooling or methodology row,
+not N leg-level ones (§ Underperformance → diagnose, don't demote, step 3).
+
+**A6 — Decide, ranked by money.** Each finding becomes one entry in `calls[]`:
+`claim`, `money_at_stake` (R or $ per month, with the arithmetic), `confidence p` (0–1), `decision`
+(what changes, its tier), and a **pre-registered `check`** (`command`, `rule`, `resolves_when`) that
+the next review will run in Layer 0. Its ending is a checklist row, a queue unit, a pipeline id, a
+`proposed_tweaks[]` entry (Tier-3, with the diagnosis block if it is a demote), or
+`no action, because …`. "n is too small" is never an ending on its own: name the n that would answer
+it, when it arrives, and the unit or row that waits for it.
+
+**Before you file a decision, run a premortem on it:** assume it is three months later and the change
+made money worse, and say why. If the answer is plausible, add it to the call's `check`.
+
+**Reason first, fill the template last.** Write the ANALYSIS in prose, then copy it into the JSON.
+Do not draft the analysis inside the JSON fields. Read prior reviews for their **calls and checks**
+(Layer 0), not for their conclusions, so that you do not inherit their framing.
+
+**Anti-patterns (each was measured in the 2026-09-24…10-21 reviews):** reading only the window;
+restating the CHECKS tables as findings; mechanics findings filed as performance; repeating a prior
+call without Layer 0; a "new" finding the repo had already answered; a recommendation that names no
+owner and no check.
+
+## Output
+
+Two files, one PR. The markdown is for the operator; the JSON is for the next review and the tools.
+
+**`docs/reviews/<YYYY-MM-DD>-performance-review.md`** — fixed sections, in this order:
+
+```
+# Performance review <date> — <one-sentence answer: what most affects money now>
+## 0. Prior calls      — table: call · p · check re-run · result (hit/miss/unresolved/void) · action happened?
+## 1. CHECKS           — C1–C12 tables; populations and windows; could_not_look listed. Numbers only.
+## 2. ANALYSIS         — per material question: hypotheses · test run · result · survivor · p · money at stake
+##    Surprises        — what did not fit, and what you did about it
+## 3. Decisions        — ranked by money: call · decision · tier · pre-registered check · ending (row/unit/PI id)
+## 4. Not done         — what was not run or not pulled, and why
+```
+
+**`comms/reviews/performance-review-<stamp>.json`** — conforming to
+`comms/schema/performance_review_response.template.json`: the existing fields (§ Reference → Output
+fields) plus `checks{}` (C1–C12, each `{status: ok | could_not_look, population, result}`),
+`prior_calls_scorecard{}`, `analysis{questions[], surprises[]}` and `calls[]`.
+
+Then the Claude-channel ping (§ Posting) and the hand-off to `/perf-followup`: it **tests** the
+`calls[]` and open hypotheses this review could not settle in-session; it does not redo the review.
+
+---
+
+# Reference — procedures the checks and analysis rely on
 
 ## Fetching trade data (use the diag-data skill)
 
@@ -145,15 +216,9 @@ pulls:
 > ⚠️ **BEFORE YOU CONCLUDE ANYTHING FROM A FIELD IN THESE PULLS, read
 > `docs/CLAUDE-RULES-CANONICAL.md` § "The row you are reading outranks the
 > label in it".** Every pull above returns STORED fields, and a stored field's
-> name is a claim about what wrote it, not a measurement. One session produced
-> **four** wrong conclusions about a live real-money strategy from exactly these
-> rows — `pnl` read as the account's money, a portfolio total quoted without
-> `position_size`, `exit_reason` read as the exit mechanism without
-> `exit_price`, netting mode asserted from prose over the venue's own
-> `positionIdx` — and in **three of the four the settling field was in the row
-> already being read**. The drafted outputs were a real-money demotion and a
-> Tier-3 entry-gate change. **"Always verify" was in force and prevented none of
-> them**, because a journal query IS a measurement — of the journal.
+> name is a claim about what wrote it, not a measurement (`pnl` is not the
+> account's money without `position_size`; `exit_reason` is not the exit
+> mechanism without `exit_price`). A journal query IS a measurement — of the journal.
 > Cheap mechanical answers: `journalTrust` rides in the `/api/bot/trades/closed`
 > response already (⚠️ `no_record` is NOT "trusted"); `scripts/ops/column_provenance.py
 > trades.<column>` names every writer; `scripts/ops/strategy_liveness.py <strategy>`
@@ -192,12 +257,6 @@ discretionary-exit rate out of missing data; carry them through as unclassified.
 The exit classification is a judgement about closeness; `--tolerance-bps`
 decides it, and the output says how many rows would move if it changed. A split
 with rows near the boundary is not robust at that n.
-
-Measured 2026-08-23 (n=13 closed fills — read the counts, not the percentages):
-9 exited at the declared stop, 1 at target, 2 manual in profit, 1 unclassified;
-net +$35.96, win rate 23.1%; entry slippage median **−6.0 bps** (i.e. *better*
-than ticketed), worst +46.0 bps. **Execution fidelity is good and strategy
-quality is the weak half** — a conclusion no aggregate PnL number produces.
 
 **Batch the diag-labeled rows above into ONE `vm-diag-request` issue.**
 Per the `diag-data` skill's default pattern (MB-20260706-CI-MINUTES —
@@ -295,6 +354,13 @@ would have hidden a real refusal among them. `n_rejected` is the remainder:
 a package refused for a cause, on a leg that is `execution: live`.
 
 ## Per-decision scoring (PERSISTED, keyed by order package)
+
+> **This rubric is check C9, not analysis** (2026-10-28). Since 2026-09-29 the daily
+> `grade-closed-trades` cron writes it for every closed trade. Measured over the 908 rows with
+> `reviewed_at` ≥ 2026-09-20 it carried no outcome information (B cohort 32% wins, C cohort 46%,
+> D 16%; no A or F; `risk_management: unknown` on 907). Read its cohort-vs-outcome table in C9; do
+> not spend the session hand-grading packages. Claude's own judgement of a trade belongs in the
+> blind-then-reveal grade below and in the ANALYSIS layer.
 
 The score belongs to the **strategy DECISION**, so it is keyed by
 `order_package_id` and persisted to
@@ -448,118 +514,29 @@ false` if the generator hasn't run yet) and:
   the responsible owner — not this skill — but staleness affects the
   dashboard users see.
 
-## The research pipeline — is it running, and is anyone READING it?
+## The research pipeline — is anyone READING it? (check C10)
 
-**Operator directive, 2026-08-30.** Asked what should happen when a review finds
-landed-but-unread results: *"It should read the results and decide what to do
-with them — basically, I want the handling of this pipeline to become part of
-the performance review … ensuring there is a healthy pipeline of backtests,
-monitoring that they are running properly, reviewing and validating results,
-running analyses to infer decisions, and then creating and implementing action
-items based on the findings."*
+**Operator directive, 2026-08-30:** the review owns *"ensuring there is a healthy pipeline of
+backtests, monitoring that they are running properly, reviewing and validating results, running
+analyses to infer decisions, and then creating and implementing action items based on the
+findings."* Since 2026-10-10 stages 1–3 run 4×/day as `.claude/skills/research-ops/SKILL.md`; this
+review **reads its newest record** (`ls -1 comms/research/ops/*.json | sort | tail -1`) and re-derives
+nothing it already covers. What stays here:
 
-So this session owns the research pipeline end to end, and it is **five stages,
-not one**. A review that reports "N sweeps ran" has done stage 2 and skipped the
-three that produce a decision.
-
-⚠️ **WHY THIS EXISTS.** R1–R6 of
-[`docs/research/RESEARCH-WORKFLOW-ARCHITECTURE-2026-08-27.md`](../../../docs/research/RESEARCH-WORKFLOW-ARCHITECTURE-2026-08-27.md)
-stop at *landed* — R2 makes landing part of the run and **no stage covers
-read**. Measured 2026-08-30, `grep -c 'corpus\|research/queue'` across the
-system-review / health-review / performance-review / ml-review / research-driver
-SKILL.md files returned **0 for all five**: the research pipeline was invisible
-to every review this repo runs. First survey: **92 unread / 196 superseded /
-0 dispositioned** — every sweep the fleet has ever run landed and was
-dispositioned by nothing.
-
-⚠️ **This is NOT the question `provenance-consumer-guard` asks.** Eight analysis
-scripts read these corpora, so a consumer EXISTS. This asks one level over:
-**was a consumer RUN, on THIS batch, and did a decision come out of it.** A tool
-that *could* have read a result is not a record that anyone did.
-
-> **Routine cadence (2026-10-10):** Stages 1–2 and the read-what-landed half of Stage 3 run 4x/day as `.claude/skills/research-ops/SKILL.md`; this review reads its latest record (`comms/research/ops/`) rather than re-deriving them.
-
-### Stage 1 — is the pipeline HEALTHY (are jobs queued and routable)?
-
-Read `research/queue/*.yaml` through `scripts/research/research_queue.py`. Report
-how many jobs are `cleared` / `underpowered` / `undeclared` / `unverifiable` /
-`not_applicable`, and how many route `runner` / `trainer` / `gpu` / `unroutable`.
-⚠️ **`not_applicable` is NOT `cleared`** — a deterministic job never took the
-power test. **An EMPTY queue is a finding, not a clean bill of health**: it means
-nothing is being asked, which is the state that precedes months of silence.
-
-### Stage 2 — is it RUNNING (did the dispatcher fire, did rows land)?
-
-The `research-queue-dispatch` cron is a **DRY RUN by design** — `fire` defaults
-false and cron passes nothing, so a green scheduled run has spent nothing and
-proves only that the queue parses. Check `last_dispatched_at` per job against its
-declared cadence, and check that a fired job's rows actually reached `main`
-(R2's landing assertion). ⚠️ **A landing assertion can pass vacuously on a
-CUMULATIVE store** — `BL-20260830-E35-LANDING-ASSERTION-IS-VACUOUS-ON-A-CUMULATIVE-CORPUS`
-reported `landed — 6624 rows, exit 0` on a run whose rows were entirely on an
-unmerged branch, because the predicate was satisfied by history. Scope any such
-check on the run's OWN stamp.
-
-### Stage 3 — REVIEW and VALIDATE the results (the key)
-
-    python3 scripts/research/research_disposition.py --report
-    python3 scripts/research/research_disposition.py --unread-only
-
-Five states, never collapsed. ⚠️ **`superseded_unread` is NOT a finding** — most
-historical units are superseded by construction, and treating them as failures
-is the desensitized-alarm P1. ⚠️ **`corpus_unreadable` is *we could not look*,**
-never *nothing unread*.
-
-**VALIDATE before you conclude, and the first check is POWER.** Read each unit's
-`n_oos` against the floor its own queue job declared (`n >= (z_α/2 + z_β)² / d²`;
-at α=0.05, power=0.80, d=0.4 that is **49.06**). A leg below it is `underpowered`
-— which is a READ whose answer is *"this cannot answer the question"*, and R4
-converts that into a data-acquisition task rather than a verdict. Measured at
-introduction, m20 units sat at `n_oos` 30–36 with one at **4**. Quoting a verdict
-off those would be the read-a-number-off-the-wrong-population error.
-
-### Stage 4 — RUN THE ANALYSES that turn a result into a decision
-
-Do not re-derive an analysis that exists. `docs/research/RESEARCH-CAPABILITY-INDEX.md`
-routes every one of the 104 research scripts by the QUESTION it answers — use it,
-and if no tool answers your question say so rather than hand-rolling a cruder
-one (`RC-BUILT-A-MECHANISM-THAT-ALREADY-EXISTED`).
-
-### Stage 5 — RECORD the disposition, and CREATE the action item
-
-A disposition that lives only in the report is not a record. Write it:
-
-    from scripts.research.research_disposition import append
-    append({"corpus": "m20", "run_stamp": "...", "leg": "...",
-            "verdict": "actioned|no_action_warranted|underpowered|superseded",
-            "reason": "<what the numbers said and what follows>",
-            "actions": ["BL-...", "PR #..."]})
-
-⚠️ **`append` REFUSES a vacuous reason**, using the same `_NON_REASONS`
-vocabulary `backlog_drive` is hardened with — "carried forward unchanged" cannot
-satisfy this. `actioned` **must** name what was done. Deferring is permitted; it
-must be SAID, not achieved by silence.
-
-⚠️ **CORRECTED 2026-09-24 — `docs/claude/research-review-backlog.json` and
-`docs/claude/performance-review-backlog.json` no longer exist.** Both were
-retired in the 2026-09-21 operating reset along with the other archived
-registers (CLAUDE.md § "How work is organised"; content migrated verbatim to
-`docs/archive/2026-09-21-operating-reset/registers/`, e.g.
-`SRQ-20260715-REALMONEY-ALLOC-BENCHMARK` now lives on as
-`PIPELINE.jsonl#SRQ-20260715-REALMONEY-ALLOC-BENCHMARK`). Anything needing
-follow-up — a research follow-up as much as a trading tweak-to-consider —
-goes to **`docs/claude/work/PIPELINE.jsonl`**, filed via
-`scripts.ops.pipeline.append(item, intent="new"|"update")` (mint the id with
-`python3 scripts/ops/pipeline.py --mint-id "<this session's ref>"`; **never
-edit the file by hand**, and never write a JSON array). It refuses an item
-without `due_when` and `origin.rerun`, which is stricter than the old
-backlogs' free-text follow-up fields, not looser — a research/performance
-item still needs a `clears_when` (or a date) and a rerun command the same way
-a health finding does. Draining still means the same thing: enumerate every
-open (non-terminal) item this skill's population touches, re-validate it
-against this window's data, and either move it to `done`/`killed` (with
-`terminal_reason`) or append an `update` record with the fresh evidence — never
-leave a re-validated item's record unchanged if the evidence moved.
+- **Stage 1 healthy?** `scripts/research/research_queue.py` states (`cleared / underpowered /
+  undeclared / unverifiable / not_applicable`) and routes. `not_applicable` is NOT `cleared`; **an
+  EMPTY queue is a finding.**
+- **Stage 2 running?** `last_dispatched_at` per job against its cadence; a landing check must be
+  scoped to the run's OWN stamp (a cumulative store passes vacuously,
+  `BL-20260830-E35-LANDING-ASSERTION-IS-VACUOUS-ON-A-CUMULATIVE-CORPUS`).
+- **Stage 3 read and validated?** `python3 scripts/research/research_disposition.py --report` and
+  `--unread-only`. `superseded_unread` is not a finding; `corpus_unreadable` is *we could not look*.
+  **Power first:** a unit below the `n_oos` floor its own job declared (α=0.05, power 0.80, d=0.4 →
+  49.06) is `underpowered`, a read whose answer is "this cannot answer the question".
+- **Stages 4–5 decide and record** — ANALYSIS-layer work: use the tool
+  `docs/research/RESEARCH-CAPABILITY-INDEX.md` routes to the question, then
+  `scripts.research.research_disposition.append({...verdict, reason, actions})` (it refuses a vacuous
+  reason; `actioned` must name what was done).
 
 ## Underperformance → diagnose, don't demote (BINDING — operator directive 2026-07-30)
 
@@ -648,14 +625,12 @@ instead (§ "Draining the backlog").
 
 ## Draining the backlog — a HARD COMPLETION GATE (not a sample)
 
-⚠️ **CORRECTED 2026-09-24 — there is no more standalone
-`docs/claude/performance-review-backlog.json` to enumerate.** It was retired
-2026-09-21; its still-open rows were migrated verbatim into
-`docs/claude/work/PIPELINE.jsonl` (e.g. `SRQ-20260715-REALMONEY-ALLOC-BENCHMARK`,
-`PB-20260707-IBKR-STK-ETF-SUPPORT`). The gate below is unchanged in spirit —
-every open item this skill owns still gets touched every run, not sampled —
-it just reads from the pipeline now, alongside `docs/claude/strategy-refinement-queue.json`
-(§ "Draining the strategy-refinement queue", unaffected by the reset).
+Open performance/research follow-ups live in `docs/claude/work/PIPELINE.jsonl` (the old
+`docs/claude/performance-review-backlog.json` was retired 2026-09-21 and its open rows migrated),
+alongside `docs/claude/strategy-refinement-queue.json` (§ "Draining the strategy-refinement queue").
+File and update via `scripts.ops.pipeline.append(item, intent="new"|"update")` (mint ids with
+`python3 scripts/ops/pipeline.py --mint-id "<ref>"`; never edit by hand; `due_when` and `origin.rerun`
+are required).
 
 **A performance-review is NOT complete until every open (non-terminal) pipeline
 item whose `origin.ref` traces to a performance-review/research finding —
@@ -764,9 +739,7 @@ Every run:
    and, if a cell/family warrants follow-up, add a `SRQ-…` item to the
    backlog.
 
-⚠️ Measured 2026-10-04: the tracker had not been appended since 2026-07-22 —
-the 2026-09-24 and 2026-09-27 reviews skipped this step (their records carry
-`paper_book_tracker: null`). The append is part of the run, not optional.
+The append is part of the run, not optional.
 
 The tracker file is append-only history — **never rewrite prior
 snapshot lines** (same discipline as the scores jsonl). Updating the
@@ -957,7 +930,7 @@ windows, n ≥ 20 — it can fail); the random-entry line is ~ the round-trip co
 hindsight best cell is an upper bound, never graded. The adopted CLAUDE-GRADE-LOOP rule is applied from the
 `use_rules` the Live review section already prints (per class, n ≥ 20 graded): proposals only.
 
-## Output
+## Output fields (JSON) — the existing fields, kept
 
 Emit a single JSON object conforming to
 `comms/schema/performance_review_response.template.json`:
@@ -995,16 +968,19 @@ Emit a single JSON object conforming to
 Each `note`/`rationale` ≤240 chars; cite `order_package_id`,
 `trade_id`, strategy name, and numbers so the operator can verify
 fast.
+- **New 2026-10-28:** `checks{}` (C1–C12: `{status: ok | could_not_look, population, result}`),
+  `prior_calls_scorecard{n_calls, hit, miss, unresolved, void, brier, series[]}`, `analysis{questions[
+  {question, money_at_stake, hypotheses[{name, predicts, test, result: survived | eliminated | untested}],
+  conclusion, p}], surprises[]}`, and `calls[]` (`{id, claim, p, money_at_stake, decision, tier, check:
+  {command, rule, resolves_when}, ending}`). Layer 0 of the next review reads `calls[]`.
 
 ## Hand-off: `/perf-followup` (operator, 2026-10-10)
 
-Grading is not the end of the review. Once the response JSON is committed, say in the
-PR body and the Claude-channel ping that the review **hands off to `/perf-followup`**
-(`.claude/skills/perf-followup/SKILL.md`): the routine that tunes underperformers, runs
-the wider-context lessons post-mortem, extrapolates lessons, and files portfolio-level
-research. The manager dispatches it as one lane when this review's PR merges — you do
-not run it in this session. Anything in this review you leave open for research
-(`proposed_tweaks[]` demote candidates, `grade_drift`, benchmark verdicts) is its input.
+Once the review's PR is up, say in the PR body and the ping that it **hands off to `/perf-followup`**
+(`.claude/skills/perf-followup/SKILL.md`). The manager dispatches it as one lane when this PR merges; you
+do not run it here. Its input is this review's `calls[]` and `analysis.questions[]`: it **tests** the
+hypotheses this session could not settle (queue units with rules registered before they run), extrapolates
+them to other legs, and runs the portfolio track. It does not redo this review's checks or analysis.
 
 ## What you DO write (and what you don't)
 

@@ -129,6 +129,27 @@ Routed through `ml/__main__.py` → `ml/cli.py`. Subcommands (verified):
 - **Registry** — `ml/registry-store/` (append-only; never edit a past
   `StageEvent`). Read with `list-models`.
 
+## Cost-net labels and the enforced cost gate (2026-10-28, Tier-2, operator-approved)
+
+Operator popup 2026-10-28, verbatim: *"Yes, ship it today (Recommended)"* for labels net of
+the full cost stack plus an enforced cost gate on model promotion; revert is one config value.
+
+- **Labels.** `setup_candidates` / `exit_candidates` triple-barrier labels charge fee +
+  slippage + perp funding, venue-correct per symbol, through `src/runtime/execution_costs.py`
+  (`ml/datasets/labeling/cost_policy.py`; the hold label pays only the holding cost, funding).
+  Each row carries `label_cost_basis` (`net` / `gross` / `realized` / `harness`) and
+  `label_cost_r`. A dataset keeps the basis it was BUILT with — rebuild to change it.
+- **Gate.** Every `ml train` writes `cost_gate.json` and `cost_*` metrics: the model's net R
+  per opportunity vs the incumbent and the take-all / take-none / matched-random baselines on
+  the same eval rows, plus PSR and a deflated Sharpe over `n_trials` (manifests on the same
+  dataset). A run that does not beat them registers at `candidate`; a retrain of a
+  shadow/advisory model that does not beat them keeps the incumbent's state. `promote-stage`
+  refuses a forward move on a failed/missing evaluation. Families with no net-R value column
+  (regime / direction / execution heads) are `not_applicable` — a gap, not a pass.
+- **Revert:** `config/ml_training.yaml::cost_net_labels: false` (labels gross, gate report-only).
+- **Soak:** the `shadow_soak` gate is mechanical — 1–2 clean scored shadow predictions, no
+  calendar term (operator 2026-10-28, *"Same as trades: 1-2 clean"*).
+
 ## The 3-stage deployment ladder
 
 `candidate → shadow → advisory`

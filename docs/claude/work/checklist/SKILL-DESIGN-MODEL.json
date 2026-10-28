@@ -1,0 +1,38 @@
+{
+  "id": "SKILL-DESIGN-MODEL",
+  "title": "Redesign /ml-review + /frontier-research on the two-layer pattern (fixed CHECKS + LLM ANALYSIS, graded calls) from researched MRM/monitoring practice",
+  "phase": "W44",
+  "state": "landed_unproven",
+  "owner": "lane SKILL-DESIGN-MODEL",
+  "lane": null,
+  "model": "opus",
+  "ceiling_usd": 25,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20856
+  ],
+  "blocked_on": [],
+  "note": "Dispatched by manager session_01AFoLuJi1vLTnYv9LbP6539 (operator 2026-10-28 ~07:15Z: redesign weekly reviews today; avoid too-loose and too-scripted). Evidence: docs/research/ml-review-frontier-diagnosis-2026-10-28.md (scored R-0927, R-1011, P-1014, U-1018, P-1021, M-1025 + 14 frontier units: 7 ran / 7 blocked; 90/96 template notes; trainer relay skipped 3 of 4; question monoculture; ff8f-04 power on rows not folds). Ceiling $25.  [07:40Z] PR #20856 up. Filed PI-20261028-LFC7HPXG-0001 (power-on-wrong-unit audit of ML units).  [08:17Z] #20856 MERGED (squash) \u2014 merged, not yet observed. Aligned to llm-analyst-skill-design (#20855) four layers. Closes on tonight's ML-FRONTIER-PREP record (observation). Lane closed.",
+  "updated_at": "2026-10-28T08:33:53Z",
+  "updated_by": "session_01AFoLuLfc7hpXGoTfng6YMZ",
+  "roadmap": [
+    "M25"
+  ],
+  "observation": {
+    "what": "Tonight's ML-FRONTIER-PREP run (2026-10-28 ~18:53Z) publishes an /ml-review record with checks C1..C9 each ok|finding|could-not-look, analysis A1..A6 incl. a graded calls[] block, and a frontier block with grades[] and per-candidate power/business_question",
+    "how_to_check": "ls comms/reviews/ml-review-20261028*.json comms/ml-plan/20261028*.json; python3 -c \"import json,glob;d=json.load(open(sorted(glob.glob(\\\"comms/reviews/ml-review-2026102*\\\"))[-1]));print(sorted(d[\\\"checks\\\"]), \\\"grade\\\" in d[\\\"analysis\\\"])\"",
+    "due_by": "2026-10-29"
+  },
+  "lane_history": [
+    {
+      "lane": "SKILL-DESIGN-MODEL",
+      "archived_at": "2026-10-28T08:17:15Z"
+    }
+  ],
+  "writeback": {
+    "roadmap": "none: skill/process redesign; no M25 milestone state moves until tonight's run observes it (ML-PROGRAMME-PLAN owns the ROADMAP ML-block pointer)",
+    "arch": "none: no architecture change (skill text + review template only)"
+  },
+  "_seq": 747
+}

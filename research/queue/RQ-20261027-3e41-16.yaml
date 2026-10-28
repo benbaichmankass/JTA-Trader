@@ -1,6 +1,6 @@
 id: RQ-20261027-3e41-16
 title: 'Direction at 15m, CatBoost depth 4: does it beat the class prior on log-loss on BTC, ETH and SOL 15m shards (the sub-hour information question the desk program left open)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -128,3 +128,17 @@ related:
 - scripts/research/ml_bakeoff.py
 last_dispatched_at: '2026-10-28T01:33:52+00:00'
 programme: P2
+grading:
+  attested: RULE-RQ202610273e4116-DIR15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ202610273e4116-DIR15M
+  evidence:
+  - research/results/RQ-20261027-3e41-16/40613142451.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

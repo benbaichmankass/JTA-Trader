@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-V8KBRR5H-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-TRAINING-PRINCIPLES-GAPS lane session_01AFoLuKS3FoW3zbV8kBRr5H, branch claude/ml-training-principles-gaps",
+    "rerun": "grep -n label_cost_basis ml/datasets/families/conviction_meta.py ml/datasets/families/setup_labels_audit.py"
+  },
+  "state": "queued",
+  "what": "UNSTAMPED COST BASIS on conviction_meta and setup_labels_audit rows: they carry no label_cost_basis, so the enforced cost gate refuses them (eval_not_cost_net) at any shadow/advisory promotion. Their R comes from journal pnl (realized, net) and M30 backtest panels (cost basis not verified here). Verify each source's cost basis and stamp label_cost_basis (realized / harness / net) in the family builders, so a genuinely cost-net head can pass."
+}

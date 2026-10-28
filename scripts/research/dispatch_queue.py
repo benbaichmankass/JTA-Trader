@@ -1037,15 +1037,53 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
                      f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
                      f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
     if infra_queued:
+        out["block_kind"] = "infra"
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
     elif len(competing) > max_queued:
+        out["block_kind"] = "repo_queued"
         out["block"] = (f"{len(competing)} workflow runs are queued repo-wide (> {max_queued}): research "
                         "must not add to a saturated runner pool -- deferring every fire this cycle")
     elif inflight >= max_inflight:
+        out["block_kind"] = "inflight"
         out["block"] = (f"{inflight} research compute run(s) already queued/in progress (cap "
                         f"{max_inflight}) -- deferring every fire this cycle")
     return out
+
+
+#: STARVATION FLOOR (lane RESEARCH-DISPATCH-STARVATION-1028). The repo-queued cap defers EVERY fire while more
+#: than --max-repo-queued runs wait, and the pool it protects is the 20-job hosted-runner limit that PR / push CI
+#: saturates in bursts. MEASURED 2026-10-28: 06:04Z (41 queued) and 07:10Z (25 queued) both deferred all 56-58
+#: due units, 55 routed to github_runner and 3 to kaggle_cpu, with 0 research runs in flight and 20/20 runner
+#: slots held by Guards / pytest-run; the last fire had been 05:12Z, so the watchdog saw 141 min idle. A cap that
+#: can defer forever is a halt (Prime Directive 7), so once nothing has been dispatched for this long the
+#: repo-queued block is lifted for EXACTLY ONE fire per cycle. Infra yield and an unreadable ``gh`` are untouched.
+STARVATION_HOURS = 1.5
+
+
+def starvation_override(pressure: Dict[str, Any], jobs: List[Any], now: datetime,
+                        after_hours: float) -> Optional[str]:
+    """Lift a ``repo_queued`` block when no unit has been dispatched for ``after_hours``.
+
+    Mutates ``pressure`` (block -> None, ``starvation_override`` -> the reason) and returns the reason, or None
+    when the block stays. Only ``block_kind == "repo_queued"`` is liftable. The age is the newest
+    ``last_dispatched_at`` stamp across the queue; no stamp at all counts as starved."""
+    if pressure.get("block_kind") != "repo_queued" or after_hours <= 0:
+        return None
+    newest: Optional[datetime] = None
+    for j in jobs:
+        ts = _parse_ts(j.raw.get("last_dispatched_at"))
+        if ts is not None and (newest is None or ts > newest):
+            newest = ts
+    age_h = None if newest is None else (now - newest).total_seconds() / 3600.0
+    if age_h is not None and age_h < after_hours:
+        return None
+    since = "no dispatch stamp on record" if age_h is None else f"nothing dispatched for {age_h:.1f} h"
+    reason = (f"starvation floor: {since} (>= {after_hours:g} h) -- lifting the repo-queued block "
+              f"({pressure['block']}) for ONE fire this cycle")
+    pressure["starvation_override"] = reason
+    pressure["block"] = None
+    return reason
 
 
 def _gh_api_json(path: str) -> Optional[Any]:
@@ -1269,6 +1307,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-repo-queued", type=int, default=10,
                     help="defer every fire while more than this many workflow runs are queued "
                          "repo-wide (research must never starve a system-action)")
+    ap.add_argument("--starvation-hours", type=float, default=None,
+                    help="lift the repo-queued backpressure block for ONE fire per cycle once nothing has been "
+                         "dispatched for this many hours (0 = never). Default: research_compute.yaml "
+                         f"limits.starvation_hours, else {STARVATION_HOURS:g}. See starvation_override()")
     ap.add_argument("--max-fires-per-workflow", type=int, default=1,
                     help="fire at most this many units per workflow FILE per cycle; the rest are "
                          "deferred (same-workflow runs cancel each other in a concurrency group "
@@ -1337,6 +1379,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                                 stale_after_hours=args.pressure_stale_hours,
                                 infra_names=list((cfg or {}).get("limits", {}).get("infra_workflows") or []))
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
+        _starve_h = args.starvation_hours if args.starvation_hours is not None else \
+            float((cfg or {}).get("limits", {}).get("starvation_hours", STARVATION_HOURS))
+        _floor = starvation_override(pressure, jobs, now, _starve_h)
+        if _floor:
+            print(f"::warning::research-queue-dispatch {_floor}", file=sys.stderr)
+            max_inflight = int(pressure.get("inflight_research") or 0) + 1   # exactly one fire
         if pressure["block"]:
             print(f"::notice::research-queue-dispatch deferred every fire: {pressure['block']}", file=sys.stderr)
     inflight = int(pressure.get("inflight_research") or 0)

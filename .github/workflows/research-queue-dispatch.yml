@@ -550,8 +550,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Only a FRESH receipt PR is the liveness signal. One older than 90 min did not merge (it conflicts
+          # with a main that moved on: #20788, 2026-10-28, blocked every later receipt AND comms/research/
+          # utilization landing for 6 h+), so it is stuck, not in flight -- land this run's receipt anyway.
           n="$(gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
-                --jq '[.[] | select(.head.ref | startswith("automation/research-queue-receipt"))] | length' || echo 0)"
+                --jq '[.[] | select((.head.ref | startswith("automation/research-queue-receipt")) and ((now - (.created_at | fromdateiso8601)) < 5400))] | length' || echo 0)"
           echo "open receipt PRs: ${n}"
           if [ "${n}" != "0" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; fi
 

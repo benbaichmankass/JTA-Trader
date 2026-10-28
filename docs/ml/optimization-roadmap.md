@@ -182,7 +182,8 @@ honest promotion. Closes G1, G2, G3, G7.
   **Never scored on a holdout** (the no-leakage guardrail). Added the `oos_edge` gate to
   `gates.py` (required; `insufficient_data` when no datasets supplied) and made `drift_clean`
   gate on numeric **KS ≤ 0.2 / PSI ≤ 0.25** ceilings (not just the verdict bucket). `min shadow
-  volume` (`sample_sufficiency`) + `min days in shadow` (`shadow_soak`) already existed — now
+  volume` (`sample_sufficiency`) + `min days in shadow` (`shadow_soak`; *retired 2026-10-28:
+  the soak is now mechanical, 1–2 clean scored predictions, no calendar term*) already existed — now
   one mechanical packet. Wired through `gate-check`/`stage-guard` (`--datasets-root`,
   `--baseline-trainer`, `--n-folds`/`--label-horizon`/`--embargo-fraction`) and into the
   `/ml-review` skill (cite the packet's `ready` + `blocking[]`). Boundary tests pin each

@@ -1,22 +1,159 @@
 {
-  "_comment": "Template documenting the JSON Claude returns from /ml-review (introduced 2026-05-26). Covers trainer-VM service health, every model in the registry, promotion/demotion recommendations against the 7-stage ladder, and forward-looking experiment proposals. This skill never edits ml/configs/ — proposals only. This file is documentation, not a validated JSON Schema.",
+  "_comment": "Template documenting the JSON Claude returns from /ml-review (introduced 2026-05-26; two-layer CHECKS + ANALYSIS shape 2026-10-28, see .claude/skills/ml-review/SKILL.md). Carries the shared pattern's four blocks (prior_calls_scorecard, checks C1-C9, analysis, calls; docs/reference/llm-analyst-skill-design.md) plus promotion/demotion proposals against the 3-stage ladder (candidate -> shadow -> advisory) and experiment proposals. This skill never edits ml/configs/ — proposals only. This file is documentation, not a validated JSON Schema.",
   "request_id": "REQ-YYYYMMDD-HHMMSS-<slug>",
   "reviewed_at": "YYYY-MM-DDTHH:MM:SS+00:00",
   "reviewer": "claude",
   "window_start": "YYYY-MM-DDTHH:MM:SS+00:00",
   "window_end": "YYYY-MM-DDTHH:MM:SS+00:00",
   "overall_assessment": "healthy | caution | investigate",
+  "prior_calls_scorecard": {
+    "_comment": "Layer 0 (pattern docs/reference/llm-analyst-skill-design.md § 6): the previous ml-review record's calls[] graded by re-running each call's own check. Older records without calls[] grade promotion_recommendations[] / next_by_value_per_cost[] / 're-read next week' lines and say so. brier is INDETERMINATE below 10 resolved calls.",
+    "source_record": "comms/reviews/ml-review-<stamp>.json",
+    "n_calls": 0,
+    "hit": 0,
+    "miss": 0,
+    "unresolved": 0,
+    "void": 0,
+    "brier": "0.0 | INDETERMINATE",
+    "calls": [
+      {
+        "id": "ML-<stamp>-1",
+        "result": "hit | miss | unresolved | void",
+        "check_rerun": "<command + output summary>",
+        "action_happened": "yes | no — <why, and re-filed as / killed because>"
+      }
+    ],
+    "series": [
+      {
+        "review": "<stamp>",
+        "n_resolved": 0,
+        "brier": null
+      }
+    ]
+  },
+  "checks": {
+    "_comment": "Layer 1 CHECKS C1..C9 (SKILL.md table). Each entry: state ok | finding | could-not-look, numbers (windows lifetime/90d/30d/7d where they apply), population, locator. Numbers only; no interpretation here. A missing instrument is 'could-not-look: no instrument' + the row that builds it.",
+    "C1_trainer_registry": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C2_freshness": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C3_business_use": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C4_learning_chain": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C5_serve_parity": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C6_champion_challenger": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C7_drift_split": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C8_concentration": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C9_research_backlog": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    }
+  },
+  "analysis": {
+    "_comment": "Layer 2 ANALYSIS: Claude's reasoning (pattern § 3). 3-7 material questions ranked by money/decision impact; each with competing hypotheses (noise always one), the test run, and what survived. Prose first (the markdown), then copied here.",
+    "questions": [
+      {
+        "question": "<= 200 chars",
+        "impact": "<legs / R / decision affected + arithmetic>",
+        "hypotheses": [
+          {
+            "name": "noise | regime_mix | capability_loss | wiring | data_limit | underpowered | measurement | <other>",
+            "predicts": "<what it predicts that the others do not>",
+            "test": "<command / pull run>",
+            "result": "survived | eliminated | untested"
+          }
+        ],
+        "conclusion": "<= 240 chars",
+        "p": 0.0
+      }
+    ],
+    "surprises": [
+      {
+        "observation": "<= 200 chars",
+        "explanation_or_open_question": "<= 200 chars",
+        "owner": "<row / unit / PI id or none>"
+      }
+    ]
+  },
+  "calls": [
+    {
+      "_comment": "Layer 3: every decision this review makes, ranked by impact. The NEXT review's Layer 0 re-runs check.command and applies check.rule as written.",
+      "id": "ML-<stamp>-1",
+      "claim": "<= 200 chars",
+      "p": 0.0,
+      "impact": "<legs / decision affected>",
+      "decision": "<what changes>",
+      "tier": "1 | 2 | 3",
+      "check": {
+        "command": "<runnable command>",
+        "rule": "<pre-registered pass/fail>",
+        "resolves_when": "<n or date>"
+      },
+      "ending": "<checklist row | queue unit | PI id | promotion_recommendations[i] | no action, because ...>"
+    }
+  ],
   "trainer_findings": {
-    "trainer_service":  {"status": "ok | watch | concern | skip", "note": "<= 160 chars"},
-    "trainer_datasets": {"status": "ok | watch | concern | skip", "note": "<= 160 chars"},
-    "trainer_registry": {"status": "ok | watch | concern | skip", "note": "<= 160 chars"},
-    "trainer_models":   {"status": "ok | watch | concern | skip", "note": "per-model roll-up; concern only when an advisory+/live model degrades on live/shadow data"}
+    "trainer_service": {
+      "status": "ok | watch | concern | skip",
+      "note": "<= 160 chars"
+    },
+    "trainer_datasets": {
+      "status": "ok | watch | concern | skip",
+      "note": "<= 160 chars"
+    },
+    "trainer_registry": {
+      "status": "ok | watch | concern | skip",
+      "note": "<= 160 chars"
+    },
+    "trainer_models": {
+      "status": "ok | watch | concern | skip",
+      "note": "per-model roll-up; concern only when an advisory+/live model degrades on live/shadow data"
+    }
   },
   "model_status": [
     {
-      "_comment": "REQUIRED — one entry per model in `python -m ml list-models`. The standing answer to 'how is each model doing'. [] only when the trainer relay errored (then trainer_findings.trainer_models = skip).",
+      "_comment": "Only models at shadow/advisory and any model a consumer reads (C3). Every other registered model is one count line in model_status_summary. [] only when the trainer relay errored (then checks.C1 = could-not-look).",
       "model_id": "btc-regime-5m-baseline-v1",
-      "stage": "research_only | candidate | backtest_approved | shadow | advisory | limited_live | live_approved",
+      "stage": "candidate | shadow | advisory (canonical 3-stage; normalize legacy names via ml.manifest.canonical_stage)",
       "registry_status": "candidate | promoted | ...",
       "last_training": {
         "run_id": "YYYYMMDDThhmmssZ",
@@ -36,9 +173,10 @@
       "note": "<= 160 chars — one-line health verdict for this model"
     }
   ],
+  "model_status_summary": "e.g. '73 candidate models (gbdt 60, ...): train nightly, no consumer'",
   "promotion_recommendations": [
     {
-      "_comment": "Tier-3 stage moves. The shadow->advisory step is THE live-trading gate; advisory->limited_live->live_approved are the same Tier-3 gate, more cautiously evidenced. Demotions are also Tier-3 (less risky but still operator-decided).",
+      "_comment": "Tier-3 stage moves (or data-backed per canonical § Data-backed Tier-2/3 decisions). shadow->advisory is THE live-trading gate; demotions are Tier-3 too. Cite the gate-check packet AND the C3 decision value.",
       "model_id": "...",
       "current_stage": "shadow",
       "proposed_stage": "advisory",
@@ -62,9 +200,9 @@
   ],
   "backlog_drain": [
     {
-      "_comment": "Result of draining docs/claude/ml-review-backlog.json this run. action: fixed | deferred | invalid.",
-      "item_id": "MB-YYYYMMDD-NNN",
-      "action": "fixed | deferred | invalid",
+      "_comment": "One entry per open ML row in docs/claude/work/pipeline/ (population: skill § Backlog drain). action: resolved | fixed_now | invalid | kept_open.",
+      "item_id": "PI-YYYYMMDD-XXXXXXXX-NNNN",
+      "action": "resolved | fixed_now | invalid | kept_open",
       "note": "<= 160 chars"
     }
   ],
@@ -78,5 +216,14 @@
     "delivered_via": "send-ping | pending-pings.jsonl | skipped (relay failure)",
     "priority": "low | normal | high | urgent",
     "message": "<= 200 chars"
+  },
+  "backlog_coverage": {
+    "open_at_start": 0,
+    "triaged": 0,
+    "resolved": 0,
+    "fixed_now": 0,
+    "closed_stale": 0,
+    "kept_open": 0,
+    "count_untriaged": 0
   }
 }
