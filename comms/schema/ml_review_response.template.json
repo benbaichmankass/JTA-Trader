@@ -1,22 +1,123 @@
 {
-  "_comment": "Template documenting the JSON Claude returns from /ml-review (introduced 2026-05-26). Covers trainer-VM service health, every model in the registry, promotion/demotion recommendations against the 7-stage ladder, and forward-looking experiment proposals. This skill never edits ml/configs/ — proposals only. This file is documentation, not a validated JSON Schema.",
+  "_comment": "Template documenting the JSON Claude returns from /ml-review (introduced 2026-05-26; two-layer CHECKS + ANALYSIS shape 2026-10-28, see .claude/skills/ml-review/SKILL.md). Covers the fixed checks C1-C9, the analysis A1-A6, gradable calls, promotion/demotion proposals against the 3-stage ladder (candidate -> shadow -> advisory) and experiment proposals. This skill never edits ml/configs/ — proposals only. This file is documentation, not a validated JSON Schema.",
   "request_id": "REQ-YYYYMMDD-HHMMSS-<slug>",
   "reviewed_at": "YYYY-MM-DDTHH:MM:SS+00:00",
   "reviewer": "claude",
   "window_start": "YYYY-MM-DDTHH:MM:SS+00:00",
   "window_end": "YYYY-MM-DDTHH:MM:SS+00:00",
   "overall_assessment": "healthy | caution | investigate",
+  "checks": {
+    "_comment": "Layer 1. One entry per check C1..C9 (skill § Layer 1). state: ok | finding | could-not-look. A could-not-look on a required check forces overall_assessment=investigate.",
+    "C1_trainer_registry": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C2_freshness": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C3_business_use": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C4_learning_chain": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C5_serve_parity": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C6_champion_challenger": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C7_drift_split": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C8_concentration": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    },
+    "C9_research_backlog": {
+      "state": "ok | finding | could-not-look",
+      "numbers": "headline numbers",
+      "population": "what it was measured over",
+      "locator": "relay issue / endpoint / script + exit code"
+    }
+  },
+  "analysis": {
+    "_comment": "Layer 2 (A1-A6). Reasoning over the checks + wide context; every claim names population and MEASURED/INFERRED; every recommendation names a rejected alternative.",
+    "value": "A1: legs changed by ML x/rostered, real-money x/y, why models do/don't add value",
+    "tested": "A2: hypotheses and what results do/don't say, incl. power on the test unit",
+    "next": [
+      {
+        "rank": 1,
+        "experiment": "...",
+        "ev_per_cost": "(value x p_pass x powered) / cost, with reasons",
+        "unit_or_row": "RQ-...|ROW",
+        "rejected_alternative": "..."
+      }
+    ],
+    "risk": "A4: what is getting worse, which drift kind, mechanism + refuting observation",
+    "stages": "A5: proposals with gate packet + decision value, or 'none, because'",
+    "grade": [
+      {
+        "call_id": "from the previous record's calls[]",
+        "grade": "right | wrong | unresolved",
+        "evidence": "..."
+      }
+    ]
+  },
+  "calls": [
+    {
+      "_comment": "This week's gradable calls; next week's A6 grades them.",
+      "id": "CALL-YYYYMMDD-NN",
+      "call": "...",
+      "kind": "proposal | hold | watch | next | reread",
+      "grade_by": "the observation + date that settles it"
+    }
+  ],
   "trainer_findings": {
-    "trainer_service":  {"status": "ok | watch | concern | skip", "note": "<= 160 chars"},
-    "trainer_datasets": {"status": "ok | watch | concern | skip", "note": "<= 160 chars"},
-    "trainer_registry": {"status": "ok | watch | concern | skip", "note": "<= 160 chars"},
-    "trainer_models":   {"status": "ok | watch | concern | skip", "note": "per-model roll-up; concern only when an advisory+/live model degrades on live/shadow data"}
+    "trainer_service": {
+      "status": "ok | watch | concern | skip",
+      "note": "<= 160 chars"
+    },
+    "trainer_datasets": {
+      "status": "ok | watch | concern | skip",
+      "note": "<= 160 chars"
+    },
+    "trainer_registry": {
+      "status": "ok | watch | concern | skip",
+      "note": "<= 160 chars"
+    },
+    "trainer_models": {
+      "status": "ok | watch | concern | skip",
+      "note": "per-model roll-up; concern only when an advisory+/live model degrades on live/shadow data"
+    }
   },
   "model_status": [
     {
-      "_comment": "REQUIRED — one entry per model in `python -m ml list-models`. The standing answer to 'how is each model doing'. [] only when the trainer relay errored (then trainer_findings.trainer_models = skip).",
+      "_comment": "Only models at shadow/advisory and any model a consumer reads (C3). Every other registered model is one count line in model_status_summary. [] only when the trainer relay errored (then checks.C1 = could-not-look).",
       "model_id": "btc-regime-5m-baseline-v1",
-      "stage": "research_only | candidate | backtest_approved | shadow | advisory | limited_live | live_approved",
+      "stage": "candidate | shadow | advisory (canonical 3-stage; normalize legacy names via ml.manifest.canonical_stage)",
       "registry_status": "candidate | promoted | ...",
       "last_training": {
         "run_id": "YYYYMMDDThhmmssZ",
@@ -36,9 +137,10 @@
       "note": "<= 160 chars — one-line health verdict for this model"
     }
   ],
+  "model_status_summary": "e.g. '73 candidate models (gbdt 60, ...): train nightly, no consumer'",
   "promotion_recommendations": [
     {
-      "_comment": "Tier-3 stage moves. The shadow->advisory step is THE live-trading gate; advisory->limited_live->live_approved are the same Tier-3 gate, more cautiously evidenced. Demotions are also Tier-3 (less risky but still operator-decided).",
+      "_comment": "Tier-3 stage moves (or data-backed per canonical § Data-backed Tier-2/3 decisions). shadow->advisory is THE live-trading gate; demotions are Tier-3 too. Cite the gate-check packet AND the C3 decision value.",
       "model_id": "...",
       "current_stage": "shadow",
       "proposed_stage": "advisory",
@@ -62,9 +164,9 @@
   ],
   "backlog_drain": [
     {
-      "_comment": "Result of draining docs/claude/ml-review-backlog.json this run. action: fixed | deferred | invalid.",
-      "item_id": "MB-YYYYMMDD-NNN",
-      "action": "fixed | deferred | invalid",
+      "_comment": "One entry per open ML row in docs/claude/work/pipeline/ (population: skill § Backlog drain). action: resolved | fixed_now | invalid | kept_open.",
+      "item_id": "PI-YYYYMMDD-XXXXXXXX-NNNN",
+      "action": "resolved | fixed_now | invalid | kept_open",
       "note": "<= 160 chars"
     }
   ],
@@ -78,5 +180,14 @@
     "delivered_via": "send-ping | pending-pings.jsonl | skipped (relay failure)",
     "priority": "low | normal | high | urgent",
     "message": "<= 200 chars"
+  },
+  "backlog_coverage": {
+    "open_at_start": 0,
+    "triaged": 0,
+    "resolved": 0,
+    "fixed_now": 0,
+    "closed_stale": 0,
+    "kept_open": 0,
+    "count_untriaged": 0
   }
 }
