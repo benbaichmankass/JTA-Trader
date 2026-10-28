@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "every confidence bucket (<0.6, 0.6-0.7, >0.7) has n >= 20 graded LTR trade actions vs counterfactual hold (live_review_grade.py --live --json)",
+    "kind": "event"
+  },
+  "id": "PI-20261028-KD5SQ3JJ-0003",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "operator",
+    "ref": "operator decision 2026-10-28 ~10:30Z (relayed by manager session_01AFoLuJi1vLTnYv9LbP6539); row LTR-PRACTICE-REDESIGN",
+    "rerun": "python3 scripts/ops/live_review_grade.py --live --json  # bucket the graded trade actions by recommendation.judgement_confidence (<0.6, 0.6-0.7, >0.7) x account class; per bucket: n, mean(action - hold)"
+  },
+  "state": "queued",
+  "what": "LTR confidence floor. Operator 2026-10-28 ~10:30Z, verbatim: \"Let's keep the confidence without a floor until we have data to support a minimum\". Until this item resolves there is NO confidence floor on LTR trade actions. Data question: grade every applied or recommended LTR trade action (close / partial_close / tighten_sl / move_tp) against its counterfactual hold, bucketed by recommendation judgement_confidence (<0.6, 0.6-0.7, >0.7) and by account class (real_money / prop / paper). PRE-REGISTERED RULE (registered 2026-10-28, before any read): once every bucket has n >= 20 graded actions, propose a floor at the LOWEST confidence bucket whose mean (action net_r - counterfactual hold net_r) is >= 0; if no bucket qualifies, or n < 20 in a bucket, propose no floor. Any floor is Tier 3 and goes to the operator; nothing is enforced by this item."
+}
