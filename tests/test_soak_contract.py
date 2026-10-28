@@ -84,6 +84,18 @@ def test_a_reconciler_close_after_clean_trades_is_a_mechanical_fail(tmp_path):
     assert rows[0]["state"] == "mechanical_fail" and "reconciler_filled" in rows[0]["reason"]
 
 
+def test_a_live_review_close_is_neutral_not_a_fault(tmp_path):
+    db = _db(tmp_path, "2026-10-04T00:00:00",
+             [_trade(2, "live_review_close", exit_price=101.0)])
+    rows = ss.soak_states(today=date(2026, 10, 4), db_path=db, contracts_path=_contracts(tmp_path))
+    assert rows[0]["state"] == "awaiting_first_trade"
+    (tmp_path / "b").mkdir()
+    db = _db(tmp_path / "b", "2026-10-04T00:00:00",
+             [_trade(2, "live_review_close", exit_price=101.0), _trade(3)])
+    rows = ss.soak_states(today=date(2026, 10, 4), db_path=db, contracts_path=_contracts(tmp_path))
+    assert rows[0]["state"] == "passed"
+
+
 def test_one_clean_trade_passes_by_default(tmp_path):
     db = _db(tmp_path, "2026-10-04T00:00:00", [_trade(2)])
     rows = ss.soak_states(today=date(2026, 10, 4), db_path=db, contracts_path=_contracts(tmp_path))

@@ -83,7 +83,7 @@ MIN_FOLD_TRADES = 50            # the trainer's own --min-fold-trades default
 def cost_policy(symbol: str) -> Dict[str, float]:
     """The harness CLI's own resolution (backtest_ict_scalp.main), via the one resolver."""
     slip, fund = ec.resolve_cost_policy(symbol)
-    return {"fee_bps_roundtrip": float(ec.DEFAULT_FEE_BPS_ROUNDTRIP),
+    return {"fee_bps_roundtrip": float(ec.resolve_fee_bps_roundtrip(symbol)),
             "slippage_bps_roundtrip": float(slip),
             "funding_bps_per_window": float(fund),
             "exit_fee_bps": float(slip) / 2.0}

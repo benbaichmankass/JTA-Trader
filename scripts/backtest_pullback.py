@@ -1376,7 +1376,7 @@ def main(argv: List[str]) -> int:
                    help="Chandelier trail distance in ATR (live default 5.0).")
     p.add_argument("--timeout-bars", type=int, default=200)
     p.add_argument("--cooldown-bars", type=int, default=1)
-    p.add_argument("--fee-bps-roundtrip", type=float, default=FEE_BPS_ROUNDTRIP)
+    p.add_argument("--fee-bps-roundtrip", type=float, default=None)
     p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
                    help="Execution-realism (P1 § 3.B): round-trip slippage in bps of "
                         "notional (half-spread + impact, summed over both sides). "
@@ -1677,7 +1677,7 @@ def main(argv: List[str]) -> int:
     if _tpg_refusal:
         print(f"ERROR: {_tpg_refusal}", file=sys.stderr)
         return 2
-    FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
+    FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(args.symbol, args.fee_bps_roundtrip)
     # Mandatory venue-aware cost policy (operator directive 2026-08-04): a faithful
     # backtest is net-of-real-cost by default. Unset flags resolve to the venue-aware
     # defaults (funding is perp-only → 0 for MES/GLD/EURUSD, never a fabricated cost);

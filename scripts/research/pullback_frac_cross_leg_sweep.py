@@ -63,7 +63,8 @@ sys.path.insert(0, str(REPO))
 
 from research import m20_fleet_exit_sweep as fleet  # noqa: E402
 from research import pullback_frac_cross_leg_scope as scope_mod  # noqa: E402
-from src.runtime.execution_costs import DEFAULT_FEE_BPS_ROUNDTRIP  # noqa: E402
+from src.runtime.execution_costs import (  # noqa: E402
+    DEFAULT_FEE_BPS_ROUNDTRIP, resolve_fee_bps_roundtrip)
 
 # ---------------------------------------------------------------------------
 # THE GRID. Every value has a REASON -- none is a round number picked to widen
@@ -152,7 +153,7 @@ def plan_legs(data_dir: Path, only: Optional[List[str]]) -> tuple[list, list]:
             "declared_frac": float(c["pullback_frac"]),
             "stratum": "full" if row["span"] == "full" else f"capped_{row['span']}",
             "base": fleet.base_args(name, c, fam, data, resample, 0.0,
-                                    fee_bps_roundtrip=DEFAULT_FEE_BPS_ROUNDTRIP),
+                                    fee_bps_roundtrip=resolve_fee_bps_roundtrip(sym)),
         })
     return runnable, skipped
 

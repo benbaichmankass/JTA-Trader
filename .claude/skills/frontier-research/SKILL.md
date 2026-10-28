@@ -1,6 +1,6 @@
 ---
 name: frontier-research
-description: The WEEKLY frontier scan — look OUTSIDE the repo for better models, methods and strategy ideas than the ones we happened to pick first, triage them against our data/compute/latency/leakage constraints, and turn every kept idea into a pre-registered research/queue unit (or a checklist lever row) with a declared baseline it must beat net of cost. Also owns the model-FAMILY diversity check (ml_plan_status.py --diversity) that stops capacity piling onto one family. Use when the manager dispatches a FRONTIER-SCAN-<week> lane, when /ml-review reaches step 9 (the ML plan loop), when perf-followup runs Track 3, or the operator says "scan for better models", "what's new in open-source time-series / tabular models", "are we stuck on one model family". NOT for tuning an existing model (model-training / perf-followup Track 1) and NOT for grading results (research-ops).
+description: The WEEKLY frontier scan — look OUTSIDE the repo for better models, methods and strategy ideas than the ones we happened to pick first, triage them against our data/compute/latency/leakage constraints, and turn every kept idea into a pre-registered research/queue unit (or a checklist lever row) with a declared baseline it must beat net of cost. Also owns the model-FAMILY diversity check (ml_plan_status.py --diversity) that stops capacity piling onto one family. Also owns the weekly PRACTICE & METHODOLOGY REFRESH (two tracks, TRADING and MODEL: how real firms manage trades and build/evaluate models, kept in docs/reference/trading-and-model-practice-principles.md). Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, when the manager dispatches a FRONTIER-SCAN-<week> lane, when perf-followup runs Track 3, or the operator says "scan for better models", "what's new in open-source time-series / tabular models", "are we stuck on one model family". NOT for tuning an existing model (model-training / perf-followup Track 1) and NOT for grading results (research-ops).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-11` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -28,10 +28,12 @@ The first scan's output is the worked example:
 
 ## Cadence and who runs it
 
-Weekly. The manager dispatches one `FRONTIER-SCAN-<YYYY-MM-DD>` lane (Sonnet, ceiling ~$8) the same
-day as the Sunday `/ml-review`; `ml-review` § "The ML plan loop" step 4 *consumes* its output (ideas →
-the plan's track N) and `perf-followup` Track 3 runs the **strategy half** of this skill (§ "Strategy
-frontier" below). No new cron: the manager binds it to the weekly routine it already runs. A run that
+Weekly, **on Wednesday after the weekly usage reset (~18:00Z)**, in the **`ML-FRONTIER-PREP-<date>` lane of the
+"Weekly review prep" routine (Wed ~18:53Z)**. Its outputs feed **Thursday-morning planning** (operator, 2026-10-28:
+all weekly routines run Wednesday night right after the reset). The same lane runs the model scan (Steps 0–5), the
+strategy half (§ "Strategy frontier"), unless `perf-followup` Track 3 already ran it that week, and the **Practice &
+methodology refresh** (§ below). `ml-review` § "The ML plan loop" *consumes* the output (ideas → the plan's track N).
+No new cron: the routine already exists, and the assistant manager binds this track to it. A run that
 finds nothing writes "none, because" with the sources it checked — silence is the failure.
 
 ## Step 0 — close the loop on the previous scan (always first)
@@ -144,7 +146,7 @@ blocker, not re-filed.
 > (`research/queue/README.md`): nothing below is a parallel system. Other skills point here; they do not restate it.
 
 ```
- SCAN      weekly: /ml-review step 9 → this skill (Steps 0-5)  ·  perf-followup Track 3 (strategy half)
+ SCAN      weekly (Wed after reset): ML-FRONTIER-PREP lane → this skill (Steps 0-5 + practice refresh)  ·  perf-followup Track 3 (strategy half)
    │       → a pre-registered research/queue unit (decision_rule + ml_bakeoff block) or a lever row
    ▼
  RUN       research-queue-dispatch.yml (hourly) fires the unit:
@@ -166,7 +168,7 @@ blocker, not re-filed.
 
 | part | routine | cadence |
 |---|---|---|
-| scan, register units, file lever rows | `ml-review` step 9 → `frontier-research` | weekly (Sunday) |
+| scan, register units, file lever rows; practice & methodology refresh | ML-FRONTIER-PREP lane ("Weekly review prep" routine) → `frontier-research` | weekly (Wednesday ~18:53Z, after the reset) |
 | fire the unit | `research-queue-dispatch.yml` | hourly |
 | read result, apply rule, file follow-up | `research-ops` § D | 4×/day |
 | plan vs field, plumbing, roadmap write-back | `ml-review` § "The ML plan loop" | weekly |
@@ -221,6 +223,56 @@ is a Stage-0 `new_strategy_prop` unit on an **existing dispatchable harness** wh
 the harness's cost stack against CLAUDE.md's list of harnesses still lacking one — a unit on a
 fee-only harness is blocked on a cost lever row, not run), with the same decision rule shape and a
 placebo/shared-beta control where the mechanism could be plain beta. Keep ≤ 3 per week.
+
+## Practice & methodology refresh (two tracks; same weekly lane)
+
+> **Operator, 2026-10-28 (via the manager):** best practice on how to manage trades and how to train models must be
+> researched and updated "not one-off; part of the research routine, at least once a week". And: all research divides
+> into exactly two tracks, **TRADING** (how to trade better) and **MODEL** (how to build a better AI trader), with
+> research-ops methodology applying to both.
+
+The model scan above looks for better *models*. This track looks for better *practice*: how real firms manage open
+trades, run research, and build and evaluate trading models. It checks our live designs against that practice. The
+baseline is [`docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md`](../../../docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md),
+and the canonical list is [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md)
+(T1–T10, M1–M10, R1–R6). Time-box about 1h within the lane.
+
+1. **Read the previous refresh** (the newest `docs/research/practice-review-*.md` and the `practice` block of the last
+   run record). For each gap it filed, find its row or unit state. A gap still `queued` after two refreshes is raised
+   to the manager, not re-filed (the same rule as lever rows).
+2. **Scan, one pass per track. Record the sources actually checked**, tagged ACAD / PRAC / VEND:
+   - **TRADING:** trade management and exits; stops, trails and time exits; discretionary vs systematic intervention;
+     execution and cost; market-making inventory practice; new evidence on LLM or agent trading behaviour.
+   - **MODEL:** labelling, CV and leakage; multiple testing; meta-labelling and bet sizing; RL and imitation for
+     trading; how firms' ML research → production pipelines are run; new LLM-trading results (live, contamination-free
+     benchmarks first).
+
+   Weight peer-reviewed and named-practitioner sources over vendor ones. Say what you read (full text, abstract or
+   summary).
+3. **Revise.** Write a new dated `docs/research/practice-review-<date>.md` with only the deltas (new sources, findings
+   strengthened or weakened, each with its source). Edit the canonical list in place, and date the change in its
+   "Last revised" line. A principle is removed only with a stated reason and source.
+4. **Re-check our live designs against the list**: the desk tests (`trading-desk`, D-S0 units), the live trade review
+   triggers (`config/live_trade_review.yaml`), the exit pipeline (`exit-refinement`), and ML training and evaluation
+   (`model-training`, `ml-review`, `ml_bakeoff` units, `ml/promotion/`). Each violation names the principle.
+5. **File every gap**: a build becomes a checklist row (`scripts/ops/checklist.py add`), a question becomes a
+   `research/queue/` unit with its rule registered first. A memo is not filing. A design change to a Tier-2/3 surface
+   is a *proposal* on its row; this lane never applies it.
+6. **Output: two short sections in the run record and the weekly brief**, one per track:
+   `TRADING: sources N, deltas …, gaps filed …` and `MODEL: sources N, deltas …, gaps filed …`, plus
+   `RESEARCH-OPS` if anything changed there. A track that found nothing writes "none, because" with the sources it
+   checked.
+
+Add to the run record, next to `frontier`:
+
+```json
+{"practice": {
+  "run": "<session>", "finished_at": "...",
+  "previous_refresh_read": [{"gap": "ROW-or-RQ", "state": "…"}],
+  "trading": {"sources_checked": [{"url": "…", "tag": "ACAD|PRAC|VEND", "read": "full|abstract|summary"}], "deltas": ["…"], "gaps_filed": ["ROW|RQ-…"], "none_because": null},
+  "model":   {"sources_checked": [], "deltas": [], "gaps_filed": [], "none_because": null},
+  "principles_revised": ["T3: …"]}}
+```
 
 ## The run record
 
