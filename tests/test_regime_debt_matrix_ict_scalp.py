@@ -165,7 +165,8 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     # correctly UNROUTED: it reads no candles and carries no harness-family params --
     # its bracket is each desk proposal's own, so no regime-cell harness can replay it
     # (its offline Stage 0 is the desk replay, DESK-18, not this matrix).
-    assert len(legs) == 54
+    # 54 -> 53 on 2026-10-28: gld_pullback_1h retired by record (STRATEGY-STATUS-MODEL, operator Q4).
+    assert len(legs) == 53
     assert unrouted == ["claude_desk", "turtle_soup"]
 
 
