@@ -343,6 +343,179 @@ not run here.
   in session. D3 tests it by replay instead.
 - **Checklist rows (10 of the 69 backlog)** were triaged and reported to the manager, not edited (the register is the manager's).
 
+---
+
+<!-- ML-FRONTIER-PREP:BEGIN -->
+# MODEL track — /ml-review 2026-10-28 — the ML is learning, but nothing it learns reaches a real-money order; this week's ML research did not ask whether it could
+
+> Lane `ML-FRONTIER-PREP-20261028` (Tier 1, read-only, Opus). Runs `.claude/skills/ml-review/SKILL.md` and
+> `.claude/skills/frontier-research/SKILL.md` (both two-layer). **Nothing was promoted or queued, and no config, src or manifest was touched.** New units are
+> **proposed** in § 3 (each labelled MODEL or TRADING), as the dispatch asked. Merged / deployed / observed are labelled throughout.
+> Records: `comms/reviews/ml-review-20261028-200000.json` · `comms/ml-plan/20261028T2000Z-ML-FRONTIER-PREP.json`.
+> Practice & methodology refresh: owned this week by the sibling lane `PRACTICE-REFRESH-20261028`, so this section does not repeat it.
+
+**Headline numbers (MEASURED):**
+- **ML changes 5 of 51 rostered legs, and 0 of 7 real-money legs.** I re-parsed `config/accounts.yaml`, `config/regime_policy.yaml::trend_vol` and the `exit_head_action` entries in `config/strategies.yaml` at `main@6e12741c9`. The 5 legs are: router cells on `trend_donchian`, `ict_scalp_5m` and `squeeze_breakout_4h`; exit-head `close` on `trend_donchian`, `trend_donchian_sol` and `trend_donchian_eth`. All 5 are on `bybit_1`, which matches ML-COVERAGE-AUDIT.
+- **First broken hop of the learning chain: H6 promoted → H7 changes an order.** For the teacher and trade data, the chain breaks earlier, at H3 → H4 (C4).
+
+**Trainer pulls:** #20968 (cycle, cost gate, builds; its 10 MB `list-models` dump crowded out the rest), #20982 (stage-guard, gate-check parity/labels/AUC, drift scan, audit) and #20991 (gate `ready`/`blocking`). Trainer HEAD `859215393`, timer active (next 2026-10-29 00:52Z), disk 52 %, 5.9 GB RAM, **1 vCPU**.
+
+## 0 · Prior calls
+
+- **Follow-through** (`review_followthrough.py`, window 7 d):
+  - ml-review cohort: 4 filed, 0 done, 0 killed, 4 open.
+  - ml-review backlog: 23 open, 48 % due, median age 24 d, 6 with no owner.
+  - frontier cohort: 19 filed, 7 done, 12 open; backlog 24 open.
+- **The last scan's kept calls** (`comms/ml-plan/20261018T0700Z.json` frontier block; ML-READ-1025 left no `calls[]`): 5 kept, 1 dropped.
+
+| call (10-18) | unit | outcome | grade | why |
+|---|---|---|---|---|
+| yz vs advisory fc, identical folds | ff8f-01 | INDETERMINATE (`power_state: accruing`) | **miss** | underpowered by design: 5-fold macro-F1 |
+| TabICL at full n | ff8f-02 | INDETERMINATE; the TabPFN arm was *unavailable* (CPU > 5,000-row limit) | **miss** | an arm was missing and the design could not reach power |
+| calibrated linear head | ff8f-03 | FAIL (2 measured runs) | **hit** | informative |
+| GRU over the feature window | ff8f-04 (+3 c0d* variants) | INDETERMINATE ×4 | **miss** | power was registered on 24,000 rows; the test was over 5 folds, which needed about 70 |
+| TSFM bake-off | 9da8-01 | machine FAIL; lane: underpowered for the FAIL | **miss** | about 17 folds were needed; 5 were run |
+| TabPFN arm (dropped, licence) | — | not tested | **unresolved** | — |
+
+- **Score: 1 hit, 4 miss, 1 unresolved.** The Brier series is INDETERMINATE (fewer than 10 resolved calls).
+- **What changes in this week's triage because of the grade:** gate 6 (power on the test unit) is now applied *before* a candidate is kept, not after it runs. § 2.2 shows the rule is metric-specific.
+
+## 1 · CHECKS
+
+| # | check | population | state | reading |
+|---|---|---|---|---|
+| C1 | trainer + registry | 97 registry rows (`/api/bot/ml/registry`, mirror age 118 s, ~18:55Z); last cycle | **ok** (one stage drift filed) | Timer active; the 10-28 cycle trained 66, refused 6 (all tracked), rc 0. One finished (complete_with_refusals) and one resumed at 08:22Z with 0 to run. No `manifest_oom_red_flag` in the 100-line cycle tail. Stage counts: advisory 3 · shadow 20 · candidate 73 · research_only 1, against a plan expectation of shadow 21 / candidate 72. That gap is one shadow→candidate move with no recorded decision, already filed (ML-F26 close note). `stage-guard`: every head `hold`; no demote proposed. |
+| C2 | data + label freshness | 72 manifests; dataset families | **finding** | Builds: 98 ok / 0 failed / 2 skipped in 24 h. `TRAINING-STALENESS`: 5 stale, 2 never trained, 1 awaiting source (each tracked by a plan row). **Every `setup_candidates` dataset is frozen gross (2026-06..08) and has not been rebuilt since the cost-net label switch** (MEASURED by trainer #20864/#20865; rebuild = `PI-20261028-V8KBRR5H-0004`, due 11-06). Labels: gate-check `labels_accruing` is 0.92–0.99 on all 8 heads read (BTC/ETH 1h 0.98–0.99). **The 1h label wall of 10-18 is cleared.** |
+| C3 | business-use map | 51 rostered legs, 7 real-money (re-parsed); 23 shadow/advisory models | **finding** | **5/51 legs; 0/7 real-money.** Of the 3 advisory heads, only the BTC 15m vol head reaches a router cell; **SOL-15m and MES-5m advisory change 0 legs.** Since 10-22, conviction carries `c_strat` only, with no learned input (ML-COVERAGE-AUDIT § 6, not re-measured). **The one model that closes trades, `exit-head-donchian-1h-v1` on 3 legs, is not in the registry** (0 of 97 rows), so neither stage-guard nor the new cost gate sees it. |
+| C4 | learning chain H1→H7 | sources in ML-PROGRAMME § 7; since 10-21 | **finding** | H1 produced ✅ (desk, live-review rows and closes accrue). H2 labelled ✅ for synthetic and trade rows. H3 in a dataset ✅ (`claude_judgments`, 627 rows, built nightly). **H4 trained ❌ for teacher data: 0 manifests train on it.** H4 ✅ for market features (66 manifests trained 10-28). H5 scored ✅ (26 heads log live, 25 varying). **H6 promoted: no stage change since 10-11** except one unexplained shadow→candidate (filed). **H7: 5/51 legs.** |
+| C5 | serve parity + soak | 23 shadow/advisory heads | **finding** | gate-check `live_parity` on 8 heads: 0 mismatches in every sample (24–50 rows sampled of 3,546–16,200). **But both yang-zhang heads serve `vol_bucket` dead on the live side** (`dead_live=['vol_bucket']` on btc-15m yz-v1 and btc-1h yz-v1), while fc/lgbm heads show none. This is the open audit defect `PI-20260927-3WM5HADW-0005`, now MEASURED live. The served multiclass score is still max-probability-shaped (BTC 5m mean 0.995): `PI-20260927-3WM5HADW-0004`, INFERRED. Soak: mechanical (`shadow_soak` 1 clean prediction; 10,721 on sol-5m), per OPERATING-PLAN § 2. |
+| C6 | champion vs challenger + cost gate | the 9 cost-gated heads; shadow pairs | **finding** | See § 2.1. **The 9 `setup-candidates-metalabel-*` heads were all refused at 10:11Z** (`cost_gate_passed: 0`, enforced). The trainer dry-run on #20880 gave the reason as `eval_not_cost_net`: 376/376 eval rows unstamped. Confirmed on the trainer (#20968): `eval_not_cost_net: 376 of 376 eval rows … {'unstamped': 376}` ×5, 354/354 ×2, 324/324 ×2. On the 23 shadow/advisory heads, `cost_net` reads `insufficient_data: family has no net-R decision value yet`. Live regime discrimination AUC (advisory metric, not a gate): MES-5m 0.755 · BTC-15m fc-v2 0.721 · yz-v1 0.709 · SOL-15m 0.696 · fc-v1 0.651 · BTC-1h v2 0.600 · yz 0.590 · **ETH-1h 0.539 (below the 0.55 RG4 floor)**. Same-replay comparisons this window are the `ml_bakeoff` units (same folds and rows per unit, fixed-cost-free classification metric): no cross-unit comparison is reported as a result. |
+| C7 | drift, split | advisory + the nearest shadow | **watch** | (a) KS/PSI from `/api/bot/shadow/drift`: BTC-15m fc-pcv-v2 *moderate* KS 0.129 (10-11 0.12; 10-21 *minor* 0.075). SOL-15m fc-pcv-v2 *moderate* KS 0.103 (10-21 *minor* 0.079). MES-5m *minor* KS 0.093. btc-15m yz-v1 *moderate* KS 0.139 / PSI 0.154. Plan-only drift scan (run in #20968, read in #20982): 23 rows in 3 h, **all `skip_no_drift`**, service Result=success. 0 drifted, 0 persistent, no `DRIFT-REMEDIATE` row. The timer stays retired (unit file absent). (b) Labelled decay: **could-not-look, no instrument** (`LIVE-DECAY-MONITOR` row). The MES margin series is in § 2.4. |
+| C8 | concentration | registry; open plan items | **finding** | `MANIFEST-CONCENTRATION`: gbdt is 76/97. All 3 advisory heads share one target (`regime_label`). **This week's research: 50 ML units graded; 43 on `regime_label`, 7 on `direction_label`, 0 on a target any consumer prices** (§ 2.2). |
+| C9 | research landed + backlog | 79 ML result records / 50 units, `generated_at` ≥ 10-21; 27 open ML pipeline rows | **finding** | Verdicts on the latest record per unit: 21 FAIL · 21 INDETERMINATE · 6 PASS · 2 producer_failed. All 6 PASSes are regime-head log-loss or feature lift (SOL 1h range-vol ×3, SOL 1h HGB/ExtraTrees, the weekly LightGBM-vs-prior monitor). Backlog: § 4. |
+
+## 2 · ANALYSIS
+
+**2.1 What the cost gate (#20869) means for the registry.**
+
+What was merged, deployed and observed:
+- #20869 was merged at 09:18Z as `a65ef0085`, and was deployed on the trainer (HEAD contains it, #20880).
+- Observed: the 9 cost-gated heads wrote `cost_gate_*` metrics at 10:11Z, all refused.
+
+Why they were refused (MEASURED, #20880 and the registry):
+- The evaluation rows predate the `label_cost_basis` column. The `setup_candidates` datasets were built gross in June–August and never rebuilt.
+- The refusal is therefore **about the data, not about the models**.
+
+What it means for the registry:
+1. **No entry-decision model can be promoted at all until the cost-net rebuild lands** (`PI-20261028-V8KBRR5H-0004`, routed to ML-PROGRAMME-PLAN, due 11-06). That was the point of the gate.
+2. **The gate is `not_applicable` to all 23 shadow and advisory heads.** They are regime classifiers or execution-quality scorers with no value column. So **every head that can be promoted today faces no decision-value gate.** The cost gate closes the door on the models that could be priced, and leaves open the door for the ones that cannot. This is the stated gap in `cost_gate.py`'s docstring, and it now governs every pending stage decision.
+3. **The numbers under the refusal say the setups lose; the meta-label does not rescue them.**
+   - Take-all is −0.43 R/opp (BTC metalabel set, n=376) and −0.49 R/opp (p2pool, n=324).
+   - `p2pool-v1`'s +0.041 R/opp (PSR 0.79) is on these unstamped rows: 42 taken, about +0.31 R per taken trade.
+   - The full cost stack measured on #20880 (~0.34 R per synthetic BTC 1h trade) is the same size.
+   - My preliminary called this the "cheapest real test". **Corrected:** it is probably ≈ 0 net (INFERRED, p ≈ 0.25 that it beats take-none after the rebuild).
+4. **Rejected alternative:** relaxing the gate to accept `harness` or unstamped rows for the 9 heads. That would put gross evidence back into the promotion path that the operator closed this morning.
+
+**2.2 The research question monoculture got worse, and half of it cannot answer its own question.**
+
+- The 10-28 diagnosis counted 7 frontier units all on one regime classifier. This week the whole ML research stream ran **50 graded units, 43 on `regime_label` and 7 on `direction_label`**. Every model family tried (HGB, ExtraTrees, MLP, CatBoost, logit, larger and smaller LightGBM, GRU, TabICL, TSFM) was tried on the same target.
+- **Pattern no single unit shows:** every arm either matches the shipped LightGBM or loses to it on log-loss. Logit, MLP and ExtraTrees FAIL at 1h, and HGB and CatBoost come back INDETERMINATE. The SOL 1h exceptions are feature lift.
+
+Is it the learner, the test design or the target? Two competing hypotheses:
+- **(i) The target is saturated.** The regime label is a 3-class volatility bucket, and LightGBM on these features already extracts what there is. Test: the weekly monitor shows LightGBM beating the class prior by about 0.10 log-loss with tight CIs (2a2e-11), while challengers move by ≤ 0.005. That fits saturation.
+- **(ii) Noise.** Does not fit: the 1h FAILs are sign-consistent losses, not noise.
+
+Power audit (pipeline item `PI-20261028-LFC7HPXG-0001`, routed to this review):
+- The fold sd of the paired log-loss delta is MEASURED at about 0.003 (3947-22 and ed1c-29: CI half-width 0.0035–0.0042 over 5 folds).
+- So a +0.005 bar at 5 folds is borderline powered (about 60 %), and a +0.002 bar (2a2e-10) needs about 19 folds.
+- The macro-F1 bars (+0.005/+0.010) need 17–70 folds (9da8-01, ff8f-04).
+- All **4 queued ML units and the blocked 7ee1-01 register power on OOS rows**, not on folds.
+
+Conclusion: more learners on `regime_label` are low value per dollar. The open questions that change orders are trade management (Q-TM1/2), take/skip (Q-SEL1) and breadth onto real-money symbols (Q-REG1), and ML-PROGRAMME § 4.3 ranks them top-5. They have **0 units queued** (grep of `research/queue` for Q-TM/Q-SEL/Q-REG/TM-BENCH: 0 hits).
+
+**2.3 Is it learning?** Yes, up to scoring:
+- The nightly cycle trains 66 manifests at rc 0, builds are clean, and 25 heads score live with varying output.
+- The breaks are structural, not mechanical:
+  - (H4) the 627-row teacher corpus and the trade data train no head that can be promoted;
+  - (H6) no stage has moved in 17 days;
+  - (H7) the decision surfaces read one BTC vol head and one exit head that is outside the registry.
+- **The first broken hop is H6→H7, for the reason in ML-COVERAGE-AUDIT § 3.** The plan aimed at BTC-15m depth and never had a breadth objective. Nothing is broken in the pipes.
+
+**2.4 Drift and the MES advisory watch.**
+- Score drift on the BTC and SOL advisory heads went from minor on 10-21 to moderate today. That is the first moderate read since 10-11 for SOL, so it is a **watch**, not persistent (persistent needs 2 consecutive weekly reads; the 10-21 read was minor).
+- **MES** (`PI-20261004-AHCVAAF5-0001`, registered rule: margin < 4.0 pts for 3 consecutive cycles → open a `[refinement]` row):
+  - The margin over `mes-regime-5m-baseline-v1` was 3.95, 3.91 and 3.84 on 10-23..25, then 4.04, 3.97 and 4.19 (registry runs).
+  - **The rule fired on 10-25**, so the row is filed (§ 4).
+  - Analysis: the 6-cycle mean is 3.98 with sd 0.12. The rule's 4.0 threshold sits in the noise of the series, so the rule measures noise, not decay.
+  - The refinement row's hypothesis is therefore "no capability loss; replace the macro-F1 margin rule with the head's decision value on the legs it feeds". MES-5m feeds **0** legs (C3), which makes this a wiring-or-retire question, not a promotion question.
+
+**2.5 Frontier scan (sources and triage).**
+
+Sources:
+
+| source | state | read |
+|---|---|---|
+| Hugging Face Hub | checked | model search for time-series and tabular models; papers search. **NX-AI/TiRex-2**: Apache-2.0 on the Hub card, 82.5 M parameters, updated 2026-10-07, arXiv 2607.01204. **ibm-granite TTM-r2**: Apache-2.0, 805 K parameters |
+| arXiv | checked | via HF papers. 2606.27100 (*TSFMs for financial return forecasting*, abstract read): gains over random walk "small and sparse"; Diebold–Mariano rejects only 2 of 10 tasks. 2607.05291 (*RV forecasting with TSFMs vs econometric benchmarks*, abstract read): only TTM beats Log-HAR at every horizon, narrowly; a TTM+Log-HAR equal-weight average enters the MCS for 98–100 % of assets. 2607.10286 (*TradeLens*, abstract read): judge agentic trading by intelligence-to-profit conversion from traces. 2605.16895 (*The Alpha Illusion*, secondary listing): LLM-agent backtest alpha is not deployment evidence (contamination) |
+| Lab releases | checked (secondary) | an aggregator dated 2026-10-23 lists Toto 2.0, TiRex-2, TimesFM-3 (research-only licence), t0-gamma and Timestral (USD 20 M revenue cap) as released May–Oct 2026. Only TiRex-2's licence was confirmed primary |
+| Quant practitioner literature | checked, thin | no 2026 primary on crypto TSMOM net of funding, and no 2026 meta-labeling primary found. Perpetuals background only (He, Manela, Ross, von Wachter; SSRN 4301150) |
+| GitHub / competitions | **could-not-look** (not run this week; required every other week) | named so that `FRONTIER-SCAN-COMPLETENESS` counts it |
+
+Triage (six gates):
+
+| candidate | family | gate result | kept? | p_pass | power |
+|---|---|---|---|---|---|
+| TTM-r2 + Log-HAR average as the vol input for a pooled crypto vol head (Q-REG1) | ts_foundation_model + econometric | passes all 6 (CPU, Apache-2.0, mirror-publishable; business = router cells on XRP/ADA/AVAX, which carry 4 of the 7 real-money legs) | **proposed** (§ 3, P3) | 0.25 | folds; needs ≥ 17 (measured sd) |
+| TiRex-2 as a remaining-move feature for Q-TM1 | ts_foundation_model | gate 5: no consumer until Q-TM1 passes (the plan's earned-learner rule); the loader for non-Chronos TSFMs is missing (`PI-20261022-5AEVV1RL-0001`) | dropped this week | — | — |
+| TradeLens-style intelligence-to-profit attribution of `claude_desk` decisions | method | passes; business = Q-TM4(a), whether the desk earns its decisions | **proposed** (P4, TRADING) | 0.5 informative | decisions; desk n accruing |
+| further TabICL/TabPFN/GRU/learner variants on `regime_label` | various | gate 5 (no consumer reads the gain) + C8 (crowded cell) | **dropped** | — | — |
+| conformal abstention / selective classification as a wrapper on Q-SEL1 take/skip | conformal_calibration | passes; cost gate applicable | **proposed** inside P1 | 0.3 | trades (5,063-trade ledger corpus: MDE ≈ 0.018 R at sd 0.45) |
+
+## 3 · Decisions — proposed units and rows (none queued; each labelled)
+
+Ranked by expected value per cost. Each carries `p` and a pre-registered check in the review JSON `calls[]`.
+
+| # | track | proposal | why now | cost to a verdict | rejected alternative |
+|---|---|---|---|---|---|
+| **P1** | **MODEL** | **Q-SEL1, net:** a within-family take/skip head on the ledger corpus (5,063+ trades, cost-net R), against take-all / take-none / matched-random / the strategy's own confidence, with a conformal-abstention arm. Rule: S-OFFLINE plus beats take-all by ≥ +0.02 R/trade net. Power on trades: MDE ≈ 0.018 R | the only ML question the new cost gate can price; real-money legs are in the corpus | runner, about $3 | re-running the 9 metalabel heads on the rebuilt synthetic set alone (smaller n, synthetic) |
+| **P2** | **MODEL** | **Q-TM1:** a GBDT action-value exit/tighten policy vs the incumbent on TM-BENCH v1 (6 money legs, 6 purged folds), registered exactly as ML-PROGRAMME § 4.3 drafts it | the plan's #1 by information per dollar; earned by A1's PASS; 0 units queued | runner, about $4 | another regime-head learner |
+| **P3** | **MODEL → TRADING** | **Q-REG1 with a frontier arm:** a pooled crypto vol head for XRP/ADA/AVAX, with a Log-HAR control and a TTM-r2 + Log-HAR average arm (2607.05291). Rule: beats the per-symbol prior and HAR on log-loss by ≥ 0.005 over ≥ 20 walk-forward folds (measured sd 0.003), then the net-of-cost regime-cell walk-forward | puts the one proven signal in reach of 4 of the 7 real-money legs | runner, about $4; TTM is CPU-sized | a TiRex-2 or Chronos-2 arm (bigger, the 2607.05291 evidence favours TTM) |
+| **P4** | **TRADING** | **Desk viability:** attribute each `claude_desk` decision's net R against the rule counterfactual (B0/B1), TradeLens-style. Rule: desk decision value > 0 net and ≥ B1, at n ≥ 150 decisions (DESK-19) | decides whether desk labels are teacher data (C4 H4) | Tier-1 script, about $3 | training on the 627 desk rows now (no evidence the teacher beats the incumbent) |
+| **P5** | **MODEL** | **Price the regime heads and the exit head:** a decision-value column for the router cells (blocked vs allowed intents, net R) and for `exit-head-donchian-1h-v1` (closes vs hold-to-rule), so the cost gate stops reading `not_applicable` on every head that can change an order, and the exit head enters the registry | closes the gap § 2.1 names; required before any shadow→advisory call | build row, Sonnet, about $6 | promotion decisions on macro-F1 (the M6 anti-pattern) |
+| **P6** | **MODEL** | **Pause new `regime_label`/`direction_label` learner variants** (research-ops intake) until P1–P3 have run; re-register or retire the 4 queued ML units (power on rows, not folds) | 43 of 50 units this week; power audit | $0 (a manager call) | letting the queue drain as is |
+
+**Stages:** no promote and no demote. No head is gate-ready on a decision value. A head that changes nothing (SOL-15m, MES-5m advisory) is a wiring-or-retire question for the operator once P5 can price it.
+
+**Gate packets (`ready`/`blocking`):** `stage-guard` (#20982) returns `hold` for every shadow and advisory head, so it proposes no stage change. The per-head `ready`/`blocking` reprint with `--datasets-root` was chased three times. #20982 had a summary-script error, #20991 a heredoc error, and #21005 was still **queued on the runner at publish time** (fired 20:19Z). So the packet flags are **could-not-look**, and no conclusion here depends on them: no promotion is argued. The nearest head, btc-15m yz-v1, is blocked anyway by the dead live `vol_bucket` (C5).
+
+## 4 · Backlog drain and not done
+
+**Population:** 27 open ML pipeline rows at the start of the run (`origin.ref` names ml-review, `routed_to` starts `ML`, or `what` starts `[ml]`/`[refinement]`). **All 27 triaged, so `count_untriaged` = 0.**
+
+| disposition | n | items |
+|---|---|---|
+| resolved (done) | 5 | `PI-20261015-WNBZB5WN-0001` (holdouts evaluated again) · `PI-20261004-AHCVAAF5-0001` (MES rule fired → refinement row) · `PI-20261018-WH81NW96-0002` (1h labels 0.98) · `PI-20261021-WG8OPB7N-0002` (drift timer retired) · `PI-20260929-K85Q64SF-0005` (MES baselines demoted with a stated reason) |
+| killed (superseded) | 2 | `MB-20260613-002` VPIN → Q-TM7 · `MB-20260705-FC-SLTP-GEOMETRY` → Q-TM9 |
+| kept open, re-read this run | 19 | 16 re-dated with a fresh observation (`pipeline.py --redate`). The **MEASURED news**: yz `vol_bucket` dead live (`3WM5HADW-0005`); label provenance still unfixed (`MVBJLVJ3`, 0 grep hits); ETH-1h AUC 0.539 (`MB-20260627-003`); the drift endpoint now reads 5 archives but still has no covered-span field (`BL-…DRIFT-GATE…`). Plus `LFC7HPXG` (power audit done, re-register proposed), `PI-20260925-D9FNL9SC-0001` (live_parity now computes on 8 heads, 0 mismatches; its pass/fail status waits on #21005) and `PI-20261018-WH81NW96-0003` (yz blocked by `vol_bucket`; packet waits on #21005) |
+| kept open, not due | 1 | `PI-20261022-5AEVV1RL-0001` (TSFM loaders, due 11-05) |
+
+**Filed this run:**
+- `PI-20261028-GNVUF1ES-0001`: the MES-5m `[refinement]` row (attempt 1/3: price it or retire it).
+- `-0002`: the cost gate covers no promotable head; the exit head is outside the registry (P5).
+- `-0003`: research monoculture and the P1–P6 decision for the manager.
+
+**Raised to the manager (not re-filed):**
+- `FRONTIER-LEVER-XSEC-RUNNER`: queued 17 d across ≥ 2 scans. Dispatch or kill; about $5 Sonnet to build the runner wrapper.
+- `MB-20260618-XA-D2B` (c_reg conviction lens): 132 d, no owner. Schedule under ML-PROGRAMME-PLAN or kill.
+
+**Not done:**
+- GitHub and competitions sources (every other week; next week).
+- C7(b) labelled decay (no instrument).
+- Practice refresh (sibling lane).
+- No send-ping. The manager relays the brief, and the lane's report goes to the manager.
+
+<!-- ML-FRONTIER-PREP:END -->
+
 <!-- PRACTICE-REFRESH:BEGIN -->
 ## TRADING + MODEL — weekly practice refresh (lane `PRACTICE-REFRESH-20261028`, session_01AFoLuJpe2bJTErX7QGAmaS)
 

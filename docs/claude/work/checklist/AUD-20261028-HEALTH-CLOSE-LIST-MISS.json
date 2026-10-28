@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-HEALTH-CLOSE-LIST-MISS",
+  "title": "C8: the 10-24 health review's non_tp_sl_closes list missed reconciler close 6470, and 'orphans: ok' reads a file last written 09-17",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 C8 (independent re-test). Re-derived from /api/diag/journal?table=trades&limit=2000 (MEASURED 19:00Z): row 6470 ib_paper MES mes_trend_long_1d closed 2026-10-23T13:34Z exit_reason=exchange_flat_reconciled, closed_by position_snapshot_reconciler, pnl -16256.25 (paper) -- inside the 10-24 review's window, absent from its list (operator_flatten x3, pairs_revert x10, watchdog x1). Its orphans verdict 'ok' rests on orphan_events.jsonl newest 2026-09-17 plus '0 orphan-marked rows': a reducer that cannot tell 'no orphans' from 'writer dead'. The close itself is owned by IB-PAPER-CLOSE-6470. Fix (Tier 1, health-review skill/instrument): build the non-TP/SL list from journal exit_reason over the whole window (all accounts), and make orphans read reconciler closes, not a marker file. Detector: health-review CHECKS self-test with a planted reconciler close. check: next health review lists every exit_reason not in {tp,sl,sl_cross,strategy_close,...} for its window.",
+  "updated_at": "2026-10-28T19:04:05Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 757
+}
