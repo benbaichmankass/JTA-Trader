@@ -12,7 +12,7 @@
   "prs": [],
   "blocked_on": [],
   "note": "Built per the operator dispatch (unit-level string practice_precedent, guard-enforced on NEW units, grandfathered: 1474 of 1475 existing units lack it, MEASURED by the guard 2026-10-28), superseding the row text (optional per-arm block, report-only census first). Templates and programme unit_defaults carry it; PLANNING.md section 1a documents it. NOT closed (landed_unproven): the observation that closes it = the next replenish run emits units that pass the guard. The programme precedent values are honest but coarse (principle ids or none: reason), and the per-arm precedent the row envisaged is not built.",
-  "updated_at": "2026-10-28T07:51:39Z",
+  "updated_at": "2026-10-28T08:02:26Z",
   "updated_by": "session_01AFoLuK2GHCcWHiYRJwDYar",
   "roadmap": [
     "L-PROGRAMMES"
@@ -20,6 +20,11 @@
   "writeback": {
     "roadmap": "L-PROGRAMMES next: every new queue unit carries practice_precedent (principles R1); generated units get it from templates and programme unit_defaults",
     "arch": "none: research tooling and CI only, no runtime component changed"
+  },
+  "observation": {
+    "what": "the next queue_replenish run emits units carrying practice_precedent and its PR passes research-queue-design-fields-guard",
+    "how_to_check": "python3 scripts/ci/check_research_queue_design_fields.py --base origin/main on the next replenish PR; grep -c practice_precedent on newly added research/queue units",
+    "due_by": "2026-11-04T00:00Z"
   },
   "_seq": 747
 }

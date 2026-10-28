@@ -47,7 +47,7 @@ units grandfathered and counted on every run). Principles: `docs/reference/tradi
   `hold_to_bracket`, `matched_random: {draws: >= 100}` (same count and type of actions at random check-ins),
   `best_static: {grid: [...], excludes_test_folds: true}` and `bootstrap_group: trade`. The harness calls
   `scripts/research/intervention_controls.py` (`control_set`), which `desk_replay_driver.py` already uses for B2/B3. Worked
-  example: `research/queue/blocked/RQ-20261027-8b01-03.yaml`.
+  example: the B1/B2/B3 arms of `research/queue/blocked/RQ-20261027-8b01-03.yaml` (a pre-registered unit, not edited).
 
 ## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
 Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends
