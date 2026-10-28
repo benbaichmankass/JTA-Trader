@@ -27,8 +27,8 @@ currently have.
 |---|---|
 | `candidate` | Freshly registered. Ran train + evaluate. No further validation yet. |
 | `paper` | Has passed leakage + walk-forward checks. Suitable for paper-trading evaluation. |
-| `advisory` | Has passed transaction-cost evaluation and beats the heuristic baseline. May annotate or veto live trades only if the operator opts the strategy into advisory mode. |
-| `live-approved` | Has passed the shadow-mode soak (≥ 7 days clean) and is approved for limited live influence. Operator approval required. |
+| `advisory` | Has passed the enforced cost-net evaluation (`ml/promotion/cost_gate.py`) and beats the heuristic baseline. May annotate or veto live trades only if the operator opts the strategy into advisory mode. |
+| `live-approved` | Has passed the MECHANICAL shadow soak (1–2 clean scored shadow predictions, no calendar term) and is approved for limited live influence. Operator approval required. |
 | `champion` | The current incumbent for its `model_family`. At most one per family at a time. |
 
 ## Allowed transitions
@@ -60,10 +60,32 @@ durable record.
 | Transition | Gates |
 |---|---|
 | `candidate → paper` | `leakage_test_passed`, `walk_forward_evaluation_complete` |
-| `candidate → champion` | `comparison_against_incumbent_complete`, `operator_explicit_approval` |
-| `paper → advisory` | `transaction_cost_evaluation_complete`, `metrics_beat_heuristic_baseline` |
-| `advisory → live-approved` | `shadow_mode_clean_soak_at_least_7d`, `operator_explicit_approval`, `rollback_plan_documented` |
-| `live-approved → champion` | `comparison_against_incumbent_complete`, `operator_explicit_approval` |
+| `candidate → champion` | `cost_net_evaluation_beats_incumbent_and_baselines`, `comparison_against_incumbent_complete`, `operator_explicit_approval` |
+| `paper → advisory` | `cost_net_evaluation_beats_incumbent_and_baselines`, `metrics_beat_heuristic_baseline` |
+| `advisory → live-approved` | `shadow_mechanics_clean_1_to_2_scored_predictions`, `cost_net_evaluation_beats_incumbent_and_baselines`, `operator_explicit_approval`, `rollback_plan_documented` |
+| `live-approved → champion` | `cost_net_evaluation_beats_incumbent_and_baselines`, `comparison_against_incumbent_complete`, `operator_explicit_approval` |
+
+**Two gates are computed and enforced, not acknowledged** (row `ML-TRAINING-PRINCIPLES-GAPS`,
+operator Tier-2 popups 2026-10-28, verbatim):
+
+- *"Yes, ship it today (Recommended)"*: `cost_net_evaluation_beats_incumbent_and_baselines`.
+  Every training run computes the model's cost-net decision value on its evaluation rows
+  (net R collected per opportunity, labels net of fee + slippage + funding) against the
+  incumbent and the take-all / take-none / matched-random baselines on the same rows, and
+  writes `cost_gate.json` beside `metrics.json`. A run that does not beat them lands at
+  `candidate`, and a retrain of a shadow/advisory model that does not beat them does not
+  replace the served state. `promote-stage` into shadow/advisory, and `promote` into
+  advisory / live-approved / champion, refuse a failed or missing evaluation whatever
+  `--gates-acknowledged` says. Families with no net-R value column (regime, direction,
+  execution-quality heads) are `not_applicable`: they have no cost-net decision value yet,
+  which is a stated gap, not a pass. Revert: `config/ml_training.yaml::cost_net_labels: false`
+  (one value; labels return to gross and the gate to report-only).
+- *"Same as trades: 1-2 clean"*: the calendar string `shadow_mode_clean_soak_at_least_7d` is
+  retired. The soak is mechanical: `shadow_mechanics_clean_1_to_2_scored_predictions`,
+  computed by `ml.promotion.gates.count_clean_shadow_predictions` (the `shadow_soak` gate in
+  `gate-check` / `stage-guard`). It never has a calendar term and never needs more than two
+  predictions ([`docs/plans/OPERATING-PLAN-2026-09-21.md`](../plans/OPERATING-PLAN-2026-09-21.md)
+  § 2 "The soak is MECHANICAL"). Promotion is decided on the offline cost-net evidence.
 
 Rollback transitions (`paper ← candidate`, `advisory ← paper`,
 `live-approved → advisory`, `champion → candidate`) carry no

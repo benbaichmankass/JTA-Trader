@@ -409,4 +409,4 @@ def test_build_writes_valid_schema(tmp_path: Path):
     assert meta["family"] == "exit_candidates"
     assert meta["leakage_test_status"] == "passed"
     assert meta["row_count"] >= 10
-    assert meta["label_version"] == "exit-hold-triple-barrier-v1"
+    assert meta["label_version"] == "exit-hold-triple-barrier-v2-costnet"
