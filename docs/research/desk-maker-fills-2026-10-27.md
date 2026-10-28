@@ -111,8 +111,8 @@ directions = **10,560 rows** per arm. CIs resample whole days (40 clusters).
 
 | | value |
 |---|---|
-| pooled mean `delta_F` | **+2.03 bps per entry**, 95% CI **[+1.69, +2.33]** |
-| fill rate (strict) | 88.7 %; median wait 3.5 s |
+| pooled mean `delta_F` (n = 10,560 rows, 40 days) | **+2.03 bps per entry**, 95% CI **[+1.69, +2.33]** |
+| fill rate (strict; n = 10,560 rows) | 88.7 %; median wait 3.5 s |
 | `delta_F` when filled / unfilled | +4.59 / −18.04 bps (check: 0.887 × 4.59 + 0.113 × −18.04 = +2.03) |
 | symbols with mean > 0 | 6 of 6 |
 | verdict | **PASS** (rows 10,560 ≥ 1,000; days 40 ≥ 30; +2.03 ≥ +2.0; CI lo > 0; 6 ≥ 4) |

@@ -46,17 +46,14 @@ from __future__ import annotations
 
 import argparse
 import gzip
-import io
 import json
-import math
-import os
 import sys
 import time
 import urllib.request
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
 
 import numpy as np
 
@@ -89,7 +86,7 @@ BOOT_REPS = 2000
 BOOT_SEED = 20261027
 
 
-def sample_days() -> List[date]:
+def sample_days() -> list[date]:
     return [SAMPLE_END - timedelta(days=SAMPLE_STEP_DAYS * i) for i in range(SAMPLE_N_DAYS)]
 
 
@@ -173,10 +170,10 @@ def first_fill(p: Prints, t0: float, t1: float, limit: float, tick: float, long:
 def decision_rows(p: Prints, symbol: str, day: date, tick: float,
                   windows: Sequence[int] = WINDOWS_MIN, offsets: Sequence[int] = OFFSETS,
                   markouts: Sequence[int] = MARKOUTS_MIN, hours: Sequence[int] = HOURS,
-                  taker_fee: float = TAKER_FEE_BPS, maker_fee: float = MAKER_FEE_BPS) -> List[dict]:
+                  taker_fee: float = TAKER_FEE_BPS, maker_fee: float = MAKER_FEE_BPS) -> list[dict]:
     """One row per (T, direction, W, k): delta_F (strict + optimistic), fill flags, markouts."""
     day0 = datetime(day.year, day.month, day.day, tzinfo=timezone.utc).timestamp()
-    rows: List[dict] = []
+    rows: list[dict] = []
     if len(p.ts) == 0:
         return rows
     t_last = float(p.ts[-1])
@@ -230,14 +227,14 @@ def decision_rows(p: Prints, symbol: str, day: date, tick: float,
     return rows
 
 
-def fetch_day(symbol: str, day: date, cache: Optional[Path], retries: int = 4) -> bytes:
+def fetch_day(symbol: str, day: date, cache: Path | None, retries: int = 4) -> bytes:
     name = f"{symbol}{day.isoformat()}.csv.gz"
     if cache is not None:
         fp = cache / name
         if fp.exists() and fp.stat().st_size > 0:
             return gzip.decompress(fp.read_bytes())
     url = f"{BASE_URL}/{symbol}/{name}"
-    last_exc: Optional[Exception] = None
+    last_exc: Exception | None = None
     for attempt in range(retries):
         try:
             with urllib.request.urlopen(url, timeout=300) as r:
@@ -246,7 +243,7 @@ def fetch_day(symbol: str, day: date, cache: Optional[Path], retries: int = 4) -
                 cache.mkdir(parents=True, exist_ok=True)
                 (cache / name).write_bytes(gz)
             return gzip.decompress(gz)
-        except Exception as exc:  # noqa: BLE001 -- retried, then recorded per cell
+        except Exception as exc:  # noqa: BLE001 -- retried, then recorded per cell  # allow-silent: retried 4x then re-raised as RuntimeError naming the URL
             last_exc = exc
             time.sleep(2 ** (attempt + 1))
     raise RuntimeError(f"fetch failed for {url}: {last_exc}")
@@ -268,11 +265,11 @@ def day_block_ci(values: np.ndarray, days: np.ndarray, reps: int = BOOT_REPS, se
     return float(values.mean()), float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))
 
 
-def _sel(rows: List[dict], W: int, k: int, pred=None) -> List[dict]:
+def _sel(rows: list[dict], W: int, k: int, pred=None) -> list[dict]:
     return [r for r in rows if r["W"] == W and r["k"] == k and (pred is None or pred(r))]
 
 
-def summarize(rows: List[dict], W: int, k: int, pred=None, mode: str = "strict") -> dict:
+def summarize(rows: list[dict], W: int, k: int, pred=None, mode: str = "strict") -> dict:
     sel = _sel(rows, W, k, pred)
     if not sel:
         return {"n": 0}
@@ -281,7 +278,7 @@ def summarize(rows: List[dict], W: int, k: int, pred=None, mode: str = "strict")
     days = np.array([r["day"] for r in sel])
     mean, lo, hi = day_block_ci(d, days)
     filled = np.array([r[f"filled_{mode}"] for r in sel])
-    out = {"n": len(sel), "days": int(len(np.unique(days))), "mean_delta_F_bps": mean,
+    out = {"n": len(sel), "days": len(np.unique(days)), "mean_delta_F_bps": mean,
            "ci95_lo": lo, "ci95_hi": hi, "sd_delta_F_bps": float(d.std(ddof=1)) if len(d) > 1 else None,
            "fill_rate": float(filled.mean()),
            "mean_delta_F_if_filled_bps": float(d[filled].mean()) if filled.any() else None,
@@ -300,7 +297,7 @@ def summarize(rows: List[dict], W: int, k: int, pred=None, mode: str = "strict")
     return out
 
 
-def grade(rows: List[dict], symbols: Sequence[str], days_measured: int) -> dict:
+def grade(rows: list[dict], symbols: Sequence[str], days_measured: int) -> dict:
     prim = summarize(rows, PRIMARY_W, PRIMARY_K)
     per_sym = {s: summarize(rows, PRIMARY_W, PRIMARY_K, pred=lambda r, s=s: r["symbol"] == s) for s in symbols}
     positive = sum(1 for s in symbols if (per_sym[s].get("mean_delta_F_bps") or -1) > 0)
@@ -318,7 +315,7 @@ def grade(rows: List[dict], symbols: Sequence[str], days_measured: int) -> dict:
                            "fill": "strict (trade-through by >= 1 tick)", "policy": "F (fallback taker at T+W)"}}
 
 
-def secondary(rows: List[dict], symbols: Sequence[str]) -> dict:
+def secondary(rows: list[dict], symbols: Sequence[str]) -> dict:
     out = {}
     for W in WINDOWS_MIN:
         for k in OFFSETS:
@@ -337,8 +334,8 @@ def run(args) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     cache = Path(args.cache) if args.cache else None
-    rows: List[dict] = []
-    cells: Dict[str, dict] = {}
+    rows: list[dict] = []
+    cells: dict[str, dict] = {}
     for day in days:
         for sym in symbols:
             key = f"{sym}|{day.isoformat()}"
@@ -348,9 +345,9 @@ def run(args) -> int:
                 tick = infer_tick(p.price)
                 r = decision_rows(p, sym, day, tick)
                 rows.extend(r)
-                cells[key] = {"state": "measured", "n_prints": int(len(p.ts)), "n_rpi_dropped": p.n_rpi_dropped,
+                cells[key] = {"state": "measured", "n_prints": len(p.ts), "n_rpi_dropped": p.n_rpi_dropped,
                               "tick": tick, "rows": len(r), "secs": round(time.time() - t0, 1)}
-            except Exception as exc:  # noqa: BLE001 -- recorded per cell, never dropped
+            except Exception as exc:  # noqa: BLE001 -- recorded per cell, never dropped  # allow-silent: the error is written to the cell as producer_failed and printed; cells_failed lands in the record
                 cells[key] = {"state": "producer_failed", "error": str(exc)[:300]}
             finally:
                 if cache is not None and not args.keep_cache:
@@ -389,7 +386,7 @@ def run(args) -> int:
     return 0
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")

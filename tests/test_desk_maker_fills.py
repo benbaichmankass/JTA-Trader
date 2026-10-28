@@ -80,11 +80,11 @@ def _path(prices_by_min, start_side="Sell"):
 
 def test_delta_F_filled_equals_spread_plus_fee_diff():
     # price dips one tick through 10.00 at minute 2, then back; ends far later so markouts exist.
-    path = {m: 10.0 for m in range(0, 180)}
+    path = {m: 10.0 for m in range(180)}
     path[2] = 9.99
     p = mf.parse_prints(_csv(_path(path)))
     rows = mf.decision_rows(p, "TESTUSDT", DAY, TICK, windows=(5,), offsets=(0,), markouts=(1,), hours=(1,))
-    long = [r for r in rows if r["dir"] == 1][0]
+    long = next(r for r in rows if r["dir"] == 1)
     assert long["filled_strict"] is True
     expected = (10.01 - 10.0) / 10.005 * 1e4 + (mf.TAKER_FEE_BPS - mf.MAKER_FEE_BPS)
     assert long["delta_F_strict"] == pytest.approx(expected)
@@ -92,15 +92,15 @@ def test_delta_F_filled_equals_spread_plus_fee_diff():
 
 def test_delta_F_unfilled_pays_the_runaway():
     # price rises for a long: never trades through the bid -> fallback taker at T+5 min pays more.
-    path = {m: 10.0 + 0.01 * (m + 1) for m in range(0, 180)}
+    path = {m: 10.0 + 0.01 * (m + 1) for m in range(180)}
     p = mf.parse_prints(_csv(_path(path)))
     rows = mf.decision_rows(p, "TESTUSDT", DAY, TICK, windows=(5,), offsets=(0,), markouts=(1,), hours=(1,))
-    long = [r for r in rows if r["dir"] == 1][0]
+    long = next(r for r in rows if r["dir"] == 1)
     assert long["filled_strict"] is False and long["filled_optimistic"] is False
     # last print at or before T+5min is minute 4's (10.05, Buy) -> ask 10.05; taker ask_T was 10.01
     expected = (10.01 - 10.05) / 10.005 * 1e4
     assert long["delta_F_strict"] == pytest.approx(expected)
-    short = [r for r in rows if r["dir"] == -1][0]
+    short = next(r for r in rows if r["dir"] == -1)
     assert short["filled_strict"] is True     # a short resting at the ask is filled by the rally
 
 
