@@ -45,7 +45,7 @@ appended in § 3 onwards, and labelled.
 22 % help (mean +0.58 R when they do) and 13 % hurt (mean −1.70 R when they do): a tighten that bites usually
 stops out a trade that would have recovered to its TP.
 
-| slice | cell | n | mean dR | 95 % CI |
+| slice | cell | n | mean dR | 95 % CI | <!-- population-ok: n is a column of every row; population stated above the table -->
 |---|---|---|---|---|
 | open R at action | < 0 | 20 | −0.203 | [−0.796, +0.128] |
 | | 0 .. 0.5 | 135 | **−0.194** | [−0.333, −0.057] |
@@ -219,7 +219,7 @@ The worst lost 0.14–0.25 R.
 The apply path stops auto-applying tightens on any account. Expressed as a change: under MD-TRADE-DESK, a `tighten_sl`
 row is dispatched as `recommend`, not `apply`; every other action class is untouched.
 
-| evidence (net of the full cost stack) | n | mean dR | 95 % CI |
+| evidence (net of the full cost stack) | n | mean dR | 95 % CI | <!-- population-ok: n is a column of every row -->
 |---|---|---|---|
 | Claude tightens, all (S0) | 981 | −0.097 | [−0.140, −0.047] |
 | today's live gate alone, ≥ 1 ATR from price (S0) | 581 | **−0.102** | [−0.170, −0.028] |
