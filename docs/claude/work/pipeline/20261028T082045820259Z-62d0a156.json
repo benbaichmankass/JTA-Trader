@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the research-ops skill ages handoffs (an item in 3 consecutive records gets one owner) and needs_review_left falls below 28, or killed with a stated reason by the research-ops skill owner",
+    "kind": "observation"
+  },
+  "id": "PI-20261028-LLDESIGN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "ANALYTIC-SKILL-DESIGN 2026-10-28 section 5 research-ops",
+    "rerun": "python3 -c \"import json,glob; r=[json.load(open(p)) for p in sorted(glob.glob('comms/research/ops/*.json'))[-15:]]; print([x.get('needs_review_left') for x in r])\""
+  },
+  "state": "queued",
+  "what": "[research-ops] The handoff loop does not close (MEASURED 2026-10-28 by lane ANALYTIC-SKILL-DESIGN over all 66 records in comms/research/ops/, 20261011T0050Z..20261028T0300Z). (1) needs_review_left is 28 on 15 consecutive records (10-25T0930Z..10-28T0300Z), with needs_review_triaged 0 on the last 4. (2) The ml_health theme shortfall is in the handoff of 24 of 66 records. (3) Tier-3 candidates were carried in 27 of 66 handoffs (e.g. SL arm ed1c-07, C75 ed1c-10, BE ed1c-17 awaiting a disjoint-window confirmation). (4) The skill has no surprises slot; 'surpris' hits 11 of 66 records, all of them the macro term. Proposed changes for the research-ops skill owner (SKILL-DESIGN-RESEARCH, per the manager split of 2026-10-28; pattern in docs/reference/llm-analyst-skill-design.md): a Layer 0 that ages handoffs, so an item in 3 consecutive records gets ONE owner and leaves the handoff; a surprises[] field in the run record; results_read.rules_read '<k> of <n>'; a dedicated triage lane for the 28 needs_review units. Details: docs/research/analytic-skill-design-2026-10-28.md section 5."
+}
