@@ -35,6 +35,20 @@ recurring planning session does.
   configuration already closed states what is different (window, conditioning, harness fix). Otherwise it is
   another draw from the same distribution and only inflates the number of trials.
 
+## 1a. A unit names its practice precedent, and an intervention test declares its controls (operator 2026-10-28)
+Guard: `scripts/ci/check_research_queue_design_fields.py` (`research-queue-design-fields-guard`; new units graded, existing
+units grandfathered and counted on every run). Principles: `docs/reference/trading-and-model-practice-principles.md` R1, T1, M6.
+- **`practice_precedent:`** (every new unit). One string: the principle id(s) (`T1`..`T10`, `M1`..`M10`, `R1`..`R6`), a
+  `[S#]` tag from the dated practice review, a URL or a `docs/research|reference/` path that the design rests on; or
+  `none: <reason, >= 10 chars>` when no precedent was found or the question is house-specific. Say `none`, never invent a
+  source. Generated units take it from the template (`practice_precedent:`) or the programme (`unit_defaults:`).
+- **`intervention_controls:`** (every new hand-written unit whose title or question tests an intervention, exit or
+  active-management action; detected by keyword, so a false hit writes `{not_applicable: <reason>}`). Declare
+  `hold_to_bracket`, `matched_random: {draws: >= 100}` (same count and type of actions at random check-ins),
+  `best_static: {grid: [...], excludes_test_folds: true}` and `bootstrap_group: trade`. The harness calls
+  `scripts/research/intervention_controls.py` (`control_set`), which `desk_replay_driver.py` already uses for B2/B3. Worked
+  example: the B1/B2/B3 arms of `research/queue/blocked/RQ-20261027-8b01-03.yaml` (a pre-registered unit, not edited).
+
 ## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
 Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends
 it to the right compute and spends scarce resources on the highest-value work. The policy is data:

@@ -288,6 +288,8 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
         unit["roadmap"] = [str(m) for m in roadmap] if isinstance(roadmap, list) else str(roadmap)
     if tpl.get("why_not_inferential"):
         unit["why_not_inferential"] = _fill(tpl["why_not_inferential"], p)
+    if tpl.get("practice_precedent"):
+        unit["practice_precedent"] = _fill(tpl["practice_precedent"], p)
     unit["question"] = _fill(tpl["question"], p)
     unit["why_this_matters"] = _fill(tpl.get("why_this_matters", ""), p)
     power = _fill(tpl["power"], p)
@@ -521,6 +523,9 @@ def load_programmes(root: Path) -> List[Tuple[str, str, Dict[str, Any]]]:
                 if str(a.get("verdict")) not in _VERDICTS or not (a.get("unit") or a.get("node")):
                     raise ValueError(f"{rel}: node {nid} has a malformed `after` entry {a!r}")
             if n.get("unit"):
+                # programme-wide design fields (research-queue-design-fields-guard): a node's own value wins
+                for k, v in (doc.get("unit_defaults") or {}).items():
+                    n["unit"].setdefault(k, v)
                 bad = [k for k in _UNIT_RESERVED if k in n["unit"]]
                 for k in ("question", "decision_rule", "lands"):
                     if k not in n["unit"]:
