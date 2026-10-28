@@ -814,7 +814,7 @@ window (2026-10-21T19:00Z → 2026-10-28T19:00Z) lies inside page 0, whose oldes
 
 | Account | Cells | Cells with ≥1 row | Fills (closed + open) | Rejected rows |
 |---|---|---|---|---|
-| bybit_1 | 31 | 19 | 21 | 6 |
+| bybit_1 | 31 | 19 | 20 | 7 |
 | alpaca_paper | 15 | 1 | **0** | 3 |
 | ib_paper | 11 | 2 | **1** | 14 |
 
@@ -838,8 +838,8 @@ Quiet or zero-fill cells, classified:
   - `claude_desk` on alpaca_paper and ib_paper: added 10-27 (`DESK-PAPER-ACCOUNTS`, `landed_unproven`). No desk row on either yet; too new to call blocked.
 
 **(b) IS IT LEARNING?** Source: `/api/bot/ml/registry` (trainer mirror, age 72 s, 97 rows), `/api/bot/ml/status`, `/api/bot/shadow/stats` (retained
-window 2026-10-24 → 10-28, 18,232 records), read ~19:05Z. The trainer-VM relay read (#20971) was queued behind the ML-REVIEW lane's pull. Its dataset
-row counts are in § 10.6 (b2) if it returned before close; otherwise `could-not-look`. Population: 97 registered models by `dataset_ref.family`. "Runs 7 d"
+window 2026-10-24 → 10-28, 18,232 records), read ~19:05Z. The trainer-VM relay read (#20971) was queued behind the ML-REVIEW lane's pull. It returned at
+19:09Z; its dataset read is § (b2) below (its own registry parse is not used: the `runs[]` keys differ from the script's guess). Population: 97 registered models by `dataset_ref.family`. "Runs 7 d"
 counts registry `runs[]` entries since 2026-10-21T19Z.
 
 | Family | Models | Stages | Retrained 7 d (models / runs) | New models 7 d | Scored live (shadow log) | Changes an order |
@@ -861,6 +861,28 @@ Rows produced (H1) in the same 7 d: 60 trade rows, of which 28 closed, 5 open an
 trade outcome) it breaks at **H5 scored**: they retrain, but nothing scores live and nothing changes an order. The order-influencing exit heads sit
 outside the registry. A first broken hop at H3/H4 for cost-net labels is already measured by `ML-TRAINING-PRINCIPLES-GAPS` (0 exit_candidates datasets).
 
+**(b2) Datasets on the trainer VM** (`trainer-vm-diag` #20971, run 40750315630, 19:09Z; `datasets-out/<family>`: file count, rows from
+parquet metadata or line count, newest file mtime). Population: 23 dataset directories.
+
+| Dataset | Rows | Newest file | Reading |
+|---|---|---|---|
+| market_features / market_raw | 4,324,903 / 6,452,149 | 2026-10-28 | growing; feeds the scoring regime heads |
+| trade_outcomes · setup_labels | 2,909 · 2,909 | 2026-10-28 | rebuilt daily, but no model in these families scores live |
+| conviction_meta | 1,644 | 2026-10-28 | rebuilt; 4 candidates, 0 scored |
+| claude_judgments | 627 | 2026-10-28 | the desk/teacher record exists as a dataset; no registry family trains on it |
+| **review_journal** | **0** | 2026-10-28 | **the LTR review rows reach no dataset**: H2 broken for the live-review source |
+| **setup_candidates** | 42,328 | **2026-08-04** | **frozen 12 weeks**, yet 8 of its experiment dirs show 8 runs each in 7 d: retraining on unchanged data (M-G3) |
+| **exit_head** | 166,793 | **2026-09-07** | **frozen 7 weeks**, while those heads can close trades (M-G1) |
+| embeddings · corpus_panel · corpus_embeddings | 98,601 · 6,027 · 5,964 | 2026-07-01 .. 07-04 | frozen; their models last ran in July |
+| backtest_results · backtest_trades*.db | 0 | — | empty |
+
+Trainer services at 19:09Z: `ict-trainer.service` inactive (timer-driven, as designed); `ict-trainer-publish`, `-forecast` and `-git-sync` timers firing.
+**Reading, refined:** across the four sources ML-PROGRAMME § 7 names, the first broken hop is:
+- desk decisions: H3 (in a dataset: yes, `claude_judgments` 627), H4 (trained) **0**;
+- live-review rows: H2/H3, **0 rows** in `review_journal`;
+- trade closes: H4 yes (trade_outcomes, conviction_meta), H5 (scored) **0**;
+- exit heads: H3 frozen since 09-07, and H6 promoted *outside* the registry.
+
 ### 10.7 Gaps for Thursday (proposed; nothing queued by this lane)
 
 | # | Track | Gap | Principle | Proposed disposition |
@@ -874,7 +896,7 @@ outside the registry. A first broken hop at H3/H4 for cost-net labels is already
 | 7 | TRADING | Vol-scaled sizing judged on pooled Sharpe | T11 | Propose a research unit: per-asset-class vol-target arm (crypto / equity ETF / futures), judged on tails and Sharpe net of cost |
 | 8 | MODEL | Exit heads close trades from outside the registry | M10 | **Escalated** (BL-20260908-…, queued 7 weeks): decide register-and-gate vs `exit_head_action: none` |
 | 9 | MODEL | Desk/LTR decision repeatability unmeasured | M11 | Propose a research unit: re-run k = 3 on a stored sample of LTR snapshots; report the flip rate, and refuse to apply a flipping recommendation |
-| 10 | MODEL | Trade-level families retrain but never score | M1, M10 | Propose that `ML-PROGRAMME-PLAN` name the first trade-level family to reach shadow scoring, with a date-free done-condition |
+| 10 | MODEL | Trade-level families retrain but never score; setup_candidates/exit_head datasets frozen (08-04 / 09-07); review_journal 0 rows | M1, M10 | Propose that `ML-PROGRAMME-PLAN` name the first trade-level family to reach shadow scoring, with a date-free done-condition |
 | 11 | MODEL | No deflation in perf-followup re-tests | M5 | Propose a skill edit: Track 1 records the variant count and reports DSR/PSR (as `ml/promotion/cost_gate.json` now does) |
 | 12 | MODEL | Learning ledger absent (`scripts/ops/ml_learning_ledger.py` missing; row `ML-LEARNING-LEDGER` not found) | R6 | Propose a build row: compute § 10.6 (b) mechanically every ml-review |
 | 13 | BOTH | No per-leg floor liveness check; a raising builder leaves no audit row | R6 | Propose a health-review CHECK, H17 "every rostered leg × floor account: rows 7 d, classified quiet / blocked", plus a `<leg>_error` audit event |
