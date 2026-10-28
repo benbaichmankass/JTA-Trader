@@ -104,3 +104,12 @@ def test_omitting_the_reason_preserves_pre_optin_behaviour():
     """
     assert bucket_for("rejected") == "refused"
     assert bucket_for("rejected", None) == "refused"
+
+
+def test_journalled_wrapped_policy_hold_is_not_a_refusal():
+    """trades.entry_reason carries 'REJECTED: ' ahead of the reason (ib_paper alert 2026-10-28)."""
+    wrapped = "REJECTED: intent_noop:flip_suppressed_hold_policy: desired long opposes current short (qty=14.0)"
+    assert bucket_for("rejected", wrapped) == "policy_skipped"
+    # a real refusal stays a refusal, wrapped or not
+    assert bucket_for("rejected", "REJECTED: sizing_failed: boom") == "refused"
+    assert bucket_for("rejected", "intent_close_flatten_failed: x") == "refused"
