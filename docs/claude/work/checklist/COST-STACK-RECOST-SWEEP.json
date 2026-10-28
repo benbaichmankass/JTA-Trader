@@ -2,7 +2,7 @@
   "id": "COST-STACK-RECOST-SWEEP",
   "title": "Operator choice: re-cost committed crypto Stage-0 evidence records at the measured 11.0 bps Bybit fee",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "session_01AFoLuMzDa4jg4s82k6mX8c",
   "lane": null,
   "model": null,
@@ -11,8 +11,8 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Blocked on operator choice and on #20783 + #20813 merging. 28 Bybit-linear records in comms/strategy_evidence shift -0.008..-0.083 R/trade (table: comms/research/desk_edge/levers/bybit-fee-recost-impact-2026-10-28.json); one verdict flips: ict_scalp_eth_15m net_r 1.318 -> -1.005 (xrp_15m stays +1.09). mes/mgc/mhg unchanged. Sweep = re-run build_strategy_evidence for those legs after merge and compare net_r_oos to the impact table. Closes when the operator chooses sweep or no-sweep and, if sweep, records are re-baselined. Basis: n=28 legs re-costed of 29 listed in the impact table (turtle_soup has no harness), per-trade fee shift measured over each leg's committed source_run trades; operator approved the sweep 2026-10-28 (manager dispatches it after #20813 merges).",
-  "updated_at": "2026-10-28T18:20:32Z",
+  "note": "2026-10-28 sweep done: 28 legs re-run at 11.0 bps; fee-isolated shifts 0.61-1.40x of prediction (none >2x); eth_15m flip confirmed; xrp_15m NOT positive on re-measured window (window drift); 5 pass->fail flips, all bybit_1-only. Result: comms/research/desk_edge/levers/bybit-fee-recost-sweep-result-2026-10-28.json. PR held for manager merge.",
+  "updated_at": "2026-10-28T18:53:16Z",
   "updated_by": "session_01AFoLuMzDa4jg4s82k6mX8c",
   "roadmap": [
     "L-LADDER"
