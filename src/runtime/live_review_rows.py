@@ -21,6 +21,14 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 REVIEWS_PATH = "comms/live_review/reviews.jsonl"
 ROWS_DIR = "comms/live_review/rows"
 
+#: Actions a review row (or a desk decision) may RECOMMEND but no automatic path may EXECUTE.
+#: Operator 2026-10-28 ~20:35Z, popup verbatim "Advice-only tightens (Recommended)", on the evidence of
+#: LTR-TIGHTEN-OPTIMIZE (comms/research/ltr_tighten_optimize/verdict.json; DESK-LIFECYCLE-S0, PR #20967):
+#: no stop-tighten cell or rule beat hold-to-bracket net of cost. Read by live_review_rows_watch,
+#: live_review_dispatch and desk_intake; each logs the row as ADVICE_ONLY_VERDICT so it stays graded.
+ADVICE_ONLY_ACTIONS = ("tighten_sl",)
+ADVICE_ONLY_VERDICT = "tighten_advice_only"
+
 #: ``git(*args) -> (returncode, stdout-or-stderr)``, the live_review_rows_watch seam.
 Git = Callable[..., Tuple[int, str]]
 
