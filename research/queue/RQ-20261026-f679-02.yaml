@@ -1,6 +1,6 @@
 id: RQ-20261026-f679-02
 title: 'Prop pace, pooled-bar test leg (1h): Donchian-55 / trail 6.0 vs Donchian-20 on the six 4b82-05 perps'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -120,3 +120,16 @@ programme_node:
   goal: G2
   after: []
 last_dispatched_at: '2026-10-27T20:00:19+00:00'
+grading:
+  attested: RULE-RQ20261026-F679-02-TREND-D55-1H
+  auto: true
+  decision_rule_id: RULE-RQ20261026-F679-02-TREND-D55-1H
+  evidence:
+  - research/results/RQ-20261026-f679-02/40574160194.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
