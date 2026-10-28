@@ -551,7 +551,7 @@ STATIC_RULES = ("hold", "close_at_ckpt1", "breakeven_at_0.5r", "trail_1r", "part
 
 
 # ----------------------------------------------------------------------------- v2 practitioner rule arms (M2-M7; no judging)
-def _rule2(name: str) -> Decider:
+def _rule2(name: str, s: Optional[g.Series] = None, side: float = 0.0) -> Decider:
     """Practice-review F.1 rule arms, evaluated at every check-in of the policy they run under (C1E = every bar + tags).
     Chandelier uses the series ATR (14-bar, the packet's), not ATR(22): stated."""
     def chandelier(k_atr: float, st):
@@ -562,9 +562,13 @@ def _rule2(name: str) -> Decider:
     def d(k, j, st):
         if name in ("chandelier_2atr", "chandelier_3atr"):
             return chandelier(2.0 if name.endswith("2atr") else 3.0, st)
-        if name == "channel_12":
-            return {"action": "close"} if any(t.endswith("_against") and t.startswith("break") for t in st.get("tags", [])) \
-                else {"action": "hold"}
+        if name in ("channel_10", "channel_20"):
+            n = int(name.split("_")[1])
+            lo = max(0, j - n)
+            if s is None or j <= lo:
+                return {"action": "hold"}
+            against = (s.c[j] < s.l[lo:j].min()) if side > 0 else (s.c[j] > s.h[lo:j].max())
+            return {"action": "close"} if against else {"action": "hold"}
         if name in ("timestop_12", "timestop_24"):
             T = int(name.split("_")[1])
             return {"action": "close"} if st["bars_held"] >= T and st["mfe_r"] < 0.5 else {"action": "hold"}
@@ -578,7 +582,7 @@ def _rule2(name: str) -> Decider:
     return d
 
 
-RULES2 = ("chandelier_2atr", "chandelier_3atr", "channel_12", "timestop_12", "timestop_24", "breakeven_at_1r",
+RULES2 = ("chandelier_2atr", "chandelier_3atr", "channel_10", "channel_20", "timestop_12", "timestop_24", "breakeven_at_1r",
           "partial1r_chandelier3")
 
 
@@ -631,7 +635,7 @@ def explore(mkt: Dict[str, g.Series], entries: List["Entry"], seed: int = SEED) 
         wk = [e.week for e in es]
         rules[f"hold|{src}"] = cluster_mean_ci(hold, wk, seed)
         for rn in RULES2:
-            v = [run(mkt[e.symbol], e, _rule2(rn), POLICIES["C1E"]())[0].net_r - h for e, h in zip(es, hold)]
+            v = [run(mkt[e.symbol], e, _rule2(rn, mkt[e.symbol], e.side), POLICIES["C1E"]())[0].net_r - h for e, h in zip(es, hold)]
             st = cluster_mean_ci(v, wk, seed)
             st["folds_positive"], st["folds"] = folds_positive(v, [e.fold for e in es])
             rules[f"{rn}|{src}"] = st
@@ -1033,8 +1037,15 @@ def cmd_step(a: argparse.Namespace) -> int:
 M1_DRAWS = 50
 
 
+def _lab(c: dict) -> dict:
+    return {"k": c["k"], "bars_held": c["bars_held"], "now_r": round(c["now_r"], 4), "tags": c["tags"], "action": c["action"],
+            "level_r": c["level_r"]}
+
+
 def _ablate(dec: Dict[Tuple[str, int], dict], eid: str, k: int, to: dict) -> Decider:
-    return lambda kk, j, st: to if kk == k else dec.get((eid, kk))
+    """Claude's answers with check-in k's replaced by `to`. A changed answer can open a path with check-ins Claude never
+    saw: those default to HOLD (stated convention), so the counterfactual always completes."""
+    return lambda kk, j, st: to if kk == k else dec.get((eid, kk), {"action": "hold"})
 
 
 def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str, int], dict],
@@ -1047,12 +1058,13 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
     by_pair: Dict[str, Dict[str, Entry]] = {}
     for e in entries:
         by_pair.setdefault(e.pair_id, {})[e.source] = e
-    menu = {**{f"v1:{r}": (lambda r=r: (_static(r), fixed_policy())) for r in STATIC_RULES},
-            **{f"v2:{r}": (lambda r=r: (_rule2(r), POLICIES["C1E"]())) for r in RULES2}}
+    menu = {**{f"v1:{r}": (lambda s_, side_, r=r: (_static(r), fixed_policy())) for r in STATIC_RULES},
+            **{f"v2:{r}": (lambda s_, side_, r=r: (_rule2(r, s_, side_), POLICIES["C1E"]())) for r in RULES2}}
     static: Dict[str, Dict[str, Dict[str, float]]] = {"claude": {r: {} for r in menu}, "random": {r: {} for r in menu}}
     rows, acct = [], {"pairs": 0, "pending_claude_mgmt": 0, "decisions": 0, "invalid": 0, "actions": {},
                       "moved_stop_exits": 0, "policy": policy}
     abl: List[dict] = []
+    label_rows: List[dict] = []
     fold_of_pair: Dict[str, int] = {}
     for pid, d in sorted(by_pair.items()):
         if "claude" not in d or "random" not in d:
@@ -1083,12 +1095,21 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
                     to = {"action": "hold"} if c["action"] != "hold" else {"action": "close"}
                     alt = run(s, e, _ablate(dec, e.entry_id, c["k"], to), pol())[0]
                     if alt.state == "filled":
+                        label_rows.append({"pair_id": pid, "src": src, "arm": "claude", "policy": policy, **_lab(c),
+                                       "value": res.net_r - alt.net_r, "counterfactual": to["action"]})
                         abl.append({"src": src, "week": e.week, "action": c["action"], "tags": c["tags"],
                                     "held": _bucket(c["bars_held"], HELD_EDGES, HELD_LABELS),
                                     "now_r": _bucket(c["now_r"], NOWR_EDGES, NOWR_LABELS), "value": res.net_r - alt.net_r})
             for rule, mk in menu.items():
-                dd, pp = mk()
-                static[src][rule][pid] = run(s, e, dd, pp)[0].net_r
+                dd, pp = mk(s, e.side)
+                rr = run(s, e, dd, pp)[0]
+                static[src][rule][pid] = rr.net_r
+                if rule.startswith("v2:"):                  # F.2 labels: each rule action priced by ablation
+                    for c in rr.checkins:
+                        if c["action"] != "hold":
+                            dd2, pp2 = mk(s, e.side)
+                            alt = run(s, e, lambda k, j, st, kk=c["k"], f=dd2: {"action": "hold"} if k == kk else f(k, j, st), pp2)[0]
+                            label_rows.append({"pair_id": pid, "src": src, "arm": rule, "policy": "C1E", **_lab(c), "value": rr.net_r - alt.net_r})
         rows.append(row)
     for src, tag in (("claude", "C"), ("random", "R")):
         hold = {r["pair_id"]: r[f"{tag}_h"] for r in rows}
@@ -1125,7 +1146,7 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
         st = fx["contrasts"][name]
         labels[name] = grade_contrast(st, st["folds_positive"], None) if st["n"] else ("indeterminate", "not judged")
     return {"factorial": fx, "static_rules_dR": static_table, "ablation": ablation, "labels": labels,
-            "accounting": acct, "rows": rows}
+            "accounting": acct, "rows": rows, "label_rows": label_rows}
 
 
 def cmd_score(a: argparse.Namespace) -> int:
@@ -1140,8 +1161,9 @@ def cmd_score(a: argparse.Namespace) -> int:
     res["label"] = a.label
     res["candles"] = src
     res["limits"] = [l.strip() for l in __doc__.split("STATED LIMITS (printed into every verdict)")[1].strip().split("*") if l.strip()]
-    (out / "score.json").write_text(json.dumps({k: v for k, v in res.items() if k != "rows"}, indent=1, default=str))
+    (out / "score.json").write_text(json.dumps({k: v for k, v in res.items() if k not in ("rows", "label_rows")}, indent=1, default=str))
     (out / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in res["rows"]))
+    (out / "labels.jsonl").write_text("".join(json.dumps(r) + "\n" for r in res["label_rows"]))
     c = res["factorial"]["contrasts"]
     print(json.dumps({"label": a.label, "pairs": res["accounting"]["pairs"],
                       "cells": {k: (v["mean"], v["ci95"]) for k, v in res["factorial"]["cells"].items()},

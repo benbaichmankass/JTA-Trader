@@ -33,7 +33,7 @@ intervention"**, never as "management fails".
 Rule arms M2–M7 run token-free on the WHOLE population at every bar (C1E); B3 = the best rule of the combined menu
 chosen leave-one-fold-out. M4 (re-score with the entry model) is not replayable for a Claude entry (no entry model)
 and is out of scope here; it belongs in the strategy arm. Deviations from F.1, stated: ATR is the 14-bar ATR of the
-packet (F.1: ATR(22)); the channel is 12 bars (F.1: 10 / 20); the time stop is fixed at 12 / 24 bars (F.1: the leg's
+packet (F.1: ATR(22)); the channel is 12 bars (F.1: 10 / 20; amended to 10 / 20 in § 0.1b); the time stop is fixed at 12 / 24 bars (F.1: the leg's
 median winning duration; the desk has no leg history).
 
 ### 0.1b Additions from the FINAL practice review (PR #20844, § F.1 / F.2; manager 06:45Z)
@@ -120,7 +120,7 @@ Population: 732 Claude entries and 732 matched random entries, current cost stac
 | HOLD itself (net R / trade) | +0.132 [−0.086, +0.331] | +0.184 [+0.038, +0.310] |
 | Chandelier 2 x ATR | **−0.128 [−0.226, −0.017]** | **−0.091 [−0.153, −0.019]** |
 | Chandelier 3 x ATR | **−0.093 [−0.144, −0.038]** | **−0.043 [−0.084, −0.001]** |
-| channel 12 | −0.027 [−0.072, +0.017] | −0.012 [−0.045, +0.021] |
+| channel 10 / 20 (re-run after the F.1 amendment) | −0.051 [−0.105, +0.002] / −0.005 [−0.032, +0.022] | −0.025 [−0.065, +0.012] / −0.019 [−0.046, +0.003] |
 | time stop 12 / 24 | −0.018 / −0.003 | −0.016 / −0.004 |
 | breakeven at +1 R | −0.050 [−0.097, +0.003] | −0.008 [−0.046, +0.029] |
 | partial at +1 R + Chandelier 3 | −0.051 [−0.098, +0.003] | −0.052 [−0.103, +0.005] |
@@ -234,8 +234,59 @@ e535-03's 7.5 bps fee; **+0.1315 R at the current 11 bps**).
 Rounds 3–4 were not judged. Kept in `comms/research/desk_lifecycle/pilot/` as a record and as the batched-mode cost
 anchor; not reused by v2 (different packets, different policy).
 
-### 7.3 v2 pilot
-*(after the manager's go; not run)*
+### 7.3 v2 pilot — **PILOT, n = 20 pairs (40 trades), below the 126 floor: not a verdict**
+
+Manager GO 06:53Z (cap $8). Population: the first 20 pairs of the registered seeded order (seed 20261031) of the 732
+judged-1 fills and their matched random partners; policy **C4E**; 4 Sonnet plan subagents x 10 trades, walker mode;
+WALK-PROTOCOL.md sha256 231ce3b1908b7946 (committed before judging). Evidence: `comms/research/desk_lifecycle/pilot-v2/`
+(`entries.jsonl`, `decisions.jsonl`, `rounds/round-walk-key.jsonl`, `score.json`, `pairs.jsonl`, `labels.jsonl`).
+
+**Mechanics (MEASURED).** 40 of 40 trades walked to close; **122 check-ins** answered (hold 68, tighten_sl 45, move_tp 4,
+close 5; **0 invalid**); 18 trades exited at a moved stop. Under HOLD the same 40 trades would reach 260 C4E check-ins:
+Claude's tightening ended trades earlier (ratio 0.47). **Isolation audit: 162 tool calls across 4 transcripts, every one the
+registered walk command (regex), 0 violations.**
+
+**Cost (MEASURED from the transcripts' usage, Sonnet list prices, on the plan; no API credits):** 15.17 M cache-read,
+0.44 M cache-write, 42 k output tokens = **$6.85 for 122 check-ins = $0.056 per check-in ($0.17 per trade)**. Cache reads
+dominate (each walk call re-reads the judge's growing context), so fewer trades per judge is cheaper per check-in
+(INFERRED: ~5 trades per judge roughly halves it).
+
+**Read (PILOT; every interval spans 0 unless stated).**
+
+| contrast (mean [95% cluster CI], n = 20 pairs) | Claude entries | random entries |
+|---|---|---|
+| HOLD net R / trade | −0.084 [−0.770, +0.555] | +0.307 [−0.401, +1.025] |
+| Claude-managed net R / trade | −0.123 [−0.486, +0.273] | +0.176 [−0.402, +0.712] |
+| **management dR vs HOLD (M0)** | −0.039 [−0.578, +0.421] | −0.131 [−0.580, +0.380] |
+| **vs its matched random intervention (M1)** | +0.168 [−0.012, +0.476] | −0.138 [−0.347, +0.072] |
+| vs best rule B3 | −0.081 [−0.277, +0.193] | −0.031 [−0.465, +0.464] |
+| interaction (Claude-entry mgmt value − random-entry mgmt value) | +0.091 [−0.427, +0.678] | |
+
+**When does acting add value (per-check-in ablation, both entry sources, PILOT):** the 5 `close` answers (all at the −0.5 R
+trigger) were worth **+0.346 R each [+0.294, +0.493]** vs holding on; the 45 `tighten_sl` answers −0.072 [−0.422, +0.234],
+and tightening at the +1 R milestone −0.484 [−1.139, +0.221] (n 17); the 68 `hold` answers were worth +0.375 [−0.087, +0.856]
+vs closing there. The pattern the practice review predicts (judgement helps when rare and information-driven, hurts as
+frequent tweaking) is what the pilot shows at n = 20: Claude acted on 44 % of check-ins, mostly tightening, and the
+tightening is where it lost.
+
+**Power, re-measured.** The paired sd of Claude's management dR is **1.06 (Claude entries) and 1.18 R (random)**, not the
+0.7 R registered from the rule arms. At sd 1.1, 200 pairs resolves about **±0.16 R**; ±0.10 R needs ≈ (2.8 x 1.1 / 0.1)^2 x 1.1
+≈ 1,040 trades ≈ **520 pairs** per arm. The rule (graded on the OBSERVED CI) is unchanged; the n it buys is what changes.
+
+### 7.4 Full-run options with the MEASURED $0.056 / check-in (decided Thursday with the operator)
+
+Check-ins per trade = the HOLD-path load x the pilot's managed / hold ratio 0.47 (MEASURED for C4E; assumed for the others).
+
+| option | pairs | check-ins | $ (at $0.056) | resolves |
+|---|---|---|---|---|
+| **A. 3 policies (C1E, C4E, E)** | 200 each | ~2,080 + 1,220 + 920 ≈ 4,220 | **~$235** | ±0.16 R per arm |
+| **B. fallback C4E + E** | 126 each | ~770 + 580 ≈ 1,350 | **~$75** | ±0.20 R per arm |
+| C. C4E only, powered for ±0.10 R | 520 | ~3,170 | ~$178 | ±0.10 R |
+| D. C4E only, all 732 pairs | 732 | ~4,470 | ~$250 | ±0.085 R |
+
+Every row halves if the judge carries ~5 trades instead of 10 (INFERRED; measure on the first batch). The pilot's 20 pairs are
+reusable in any option (the protocol and packet builder are unchanged since the pilot; the channel 10 / 20 amendment touches
+only the scorer). The rule arms, M0 and M1 cost nothing at any n.
 
 ## 8. Not verified / limits
 
