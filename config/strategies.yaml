@@ -3214,6 +3214,13 @@ strategies:
                              # share a symbol's position there (claude_desk.exclusive_hold_refusal, journalled).
                              # ROLLBACK: drop alpaca_paper / ib_paper here and from their accounts.yaml rosters,
                              # and symbols: back to the six Bybit perps.
+    entry_order: post_only_touch  # DESK-MAKER-FILLS probe (b), Tier 3, PENDING OPERATOR YES (PR held): enter as a
+                             # post-only limit at the near touch with the bracket attached; unfilled after 5 min (or
+                             # rejected as post-only) -> the Market entry. Effective ONLY on a demo + account_class
+                             # paper Bybit derivatives account (src/units/accounts/maker_entry.py fences real money),
+                             # so here: bybit_1 only; alpaca_paper / ib_paper keep their own Market path. Evidence:
+                             # RQ-20261027-a3f1-01 (+2.03 bps/entry, PASS at threshold). Probe rule: PR body /
+                             # docs/research/desk-maker-fills-2026-10-27.md s5.1. ROLLBACK: delete this line (= market).
     tp_source: desk_proposal # the TP is each proposal's own predictive level (tp.level + tp.basis + tp.p_hit,
                              # schema-required, desk-records-guard-checked) — never a tp_r / class default
     shadow_model_ids: []

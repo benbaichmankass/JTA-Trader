@@ -482,6 +482,13 @@ milestones:
       strategies.yaml::claude_desk.account_symbols (coordinator leg_account_scope); desk and strategy legs never
       share a symbol's position on the non-slice books (refused, journalled); ETF/CME entries wait on market hours.
       UNOBSERVED: no desk order on either paper book yet.
+      DESK-EDGE-PROGRAM (done 2026-10-27, #20672 merged): diagnose-then-iterate harness
+      (scripts/research/desk_edge_{ceiling,devloop,levers,1m,info}.py; doc docs/research/desk-edge-program-2026-10-27.md;
+      evidence comms/research/desk_edge/). MEASURED over the six desk perps: 1h-packet information ceiling
+      inconclusive (DEV bounded +-0.2 R at 35 weeks; era best P+ GBDT +0.10 R); judge V1 SCREEN_FAIL (a linear
+      base-rate rule, R2 0.90-1.00); fade FAIL; 1m short holds no gross timing (S1 < 0 everywhere); new public
+      information best gross excess +0.072 R; Bybit fills all taker at 11 bps (stack about 1.8 bps high). Next:
+      stop public-data timing research on these perps; structural levers next.
     next: >-
       Critical path (design v1 § 10.1): manager installs the DESK-6 spawner routine (hourly; SKILL.md § 6b) and
       proposals start accruing labels (proposals/day still UNMEASURED) -> DESK-18 D-S0 entry-generation replay on masked historical scan packets; DESK-4a intake -> DESK-17

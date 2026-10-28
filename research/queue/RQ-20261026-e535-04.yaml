@@ -102,4 +102,17 @@ related:
 - scripts/research/desk_gen_replay_driver.py
 - scripts/ops/desk_scan_packet.py
 - docs/plans/claude-trading-desk-DESIGN.md
-last_dispatched_at: '2026-10-27T23:40:48+00:00'
+last_dispatched_at: null
+grading:
+  confirmatory_run: 1
+  evidence:
+  - research/results/RQ-20261026-e535-04/40603775266.jsonl
+  graded_at: '2026-10-28'
+  grader: manual (lane DESK-E535-04-SCORER-DEFECT)
+  note: >-
+    RE-QUEUED for a fresh run, not a confirmatory one: run 40603775266 is a scorer/driver defect, not a result (decision_rule untouched). Three plumbing defects in
+    scripts/research/desk_gen_replay_driver.py, fixed in the same PR: (1) claude_desk (rostered on all six symbols since 2026-10-27 DESK-WIDEN, no Stage-0 list) made 457 of 732 cells unclassifiable;
+    (2) the two packet indices judged-1 withheld for mask leak (406, 805) read as a skipped packet, so the stopping rule was flagged broken; (3) counts.filled was taken after the subset filter, so fill_rate read 0.
+    The landed row is read and superseded by the re-run; the fixed driver scores the same judged-1 export.
+  rows: 1
+  verdict: indeterminate

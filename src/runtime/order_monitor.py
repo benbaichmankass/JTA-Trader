@@ -15807,6 +15807,22 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning("run_monitor_tick: close-wedge sweep raised: %s", exc)
 
+    # DESK-MAKER-FILLS probe (b): resolve resting post-only entries (fill -> fee record; reject or
+    # 5-min expiry -> the stored Market entry, re-pointing notes.trade_id). BEFORE the forward
+    # reconciler, which would otherwise orphan a cancelled zero-fill entry the fallback replaced.
+    # Selects only rows carrying notes.maker_probe, so it is a no-op for every other trade.
+    try:
+        with _phase("sweep_maker_entries"):
+            from src.units.accounts.clients import account_order_status as _mk_status
+            from src.units.accounts.maker_entry import sweep_maker_entries
+            maker = sweep_maker_entries(
+                db, build_client=_build_account_client, order_status=_mk_status,
+            )
+        if maker.get("resolved") or maker.get("errors"):
+            summaries["__maker_entries__"] = maker
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("run_monitor_tick: maker-entry sweep raised: %s", exc)
+
     # BUG-042: write-back reconciler. Runs unconditionally every tick
     # (the MONITOR_RECONCILE_ENABLED gate was removed 2026-06-15,
     # BL-20260615-MGCNAKED — self-heal is baseline correctness).

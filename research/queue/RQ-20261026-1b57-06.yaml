@@ -1,6 +1,6 @@
 id: RQ-20261026-1b57-06
 title: 'As-declared breadth transfer: does xrp_4h (trend_donchian_xrp_4h) clear Stage 0 on basket C (SUI/APT/ARB/OP/INJ) it was never measured on?'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -119,3 +119,16 @@ related:
 - scripts/research/harness_stage0.py
 - research/programmes/03-strategy-improvement.yaml
 last_dispatched_at: '2026-10-27T21:24:39+00:00'
+grading:
+  attested: RULE-20261026-1B57-06-TRANSFER-XRP-4H-C
+  auto: true
+  decision_rule_id: RULE-20261026-1B57-06-TRANSFER-XRP-4H-C
+  evidence:
+  - research/results/RQ-20261026-1b57-06/40583249040.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
