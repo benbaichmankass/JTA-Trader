@@ -358,3 +358,84 @@ def test_the_failure_alert_listener_is_created_only_for_main_runs():
     d = yaml.safe_load((REPO / ".github/workflows/claude-run-failure-alert.yml").read_text())
     wr = (d.get(True) or d["on"])["workflow_run"]
     assert wr.get("branches") == ["main"] and "pytest-run" in wr["workflows"]
+
+
+# ── starvation floor (lane RESEARCH-DISPATCH-STARVATION-1028) ──
+# MEASURED 2026-10-28: 06:04Z (41 queued) and 07:10Z (25 queued) deferred every due unit with 0 research in flight
+# and 20/20 hosted-runner slots held by PR / push CI; the last fire was 05:12Z -> the watchdog saw 141 min idle.
+def _jobs_with_stamp(stamp):
+    return [type("J", (), {"raw": {"last_dispatched_at": stamp}})()]
+
+
+def _repo_queued_block():
+    queued = _evruns([("pytest-run", "pull_request")] * 12)
+    return dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": queued, "in_progress": []})
+
+
+def test_a_repo_queued_block_lifts_once_nothing_was_dispatched_for_the_floor():
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    p = _repo_queued_block()
+    assert p["block_kind"] == "repo_queued" and p["block"]
+    why = dq.starvation_override(p, _jobs_with_stamp((now - timedelta(minutes=118)).isoformat()), now, 1.5)
+    assert why and "starvation floor" in why and "2.0 h" in why and p["block"] is None
+
+
+def test_a_recent_dispatch_keeps_the_block():
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    p = _repo_queued_block()
+    assert dq.starvation_override(p, _jobs_with_stamp((now - timedelta(minutes=52)).isoformat()), now, 1.5) is None
+    assert p["block"] and "starvation_override" not in p
+
+
+def test_no_stamp_anywhere_counts_as_starved_and_zero_disables_the_floor():
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    assert dq.starvation_override(_repo_queued_block(), _jobs_with_stamp(None), now, 1.5)
+    assert dq.starvation_override(_repo_queued_block(), _jobs_with_stamp(None), now, 0) is None
+
+
+def test_infra_yield_and_an_unreadable_gh_are_never_lifted():
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    infra = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, infra_names=["system-actions"],
+                            runs_by_status={"queued": _evruns([("system-actions", "workflow_dispatch")]), "in_progress": []})
+    assert infra["block"] and dq.starvation_override(infra, _jobs_with_stamp(None), now, 1.5) is None and infra["block"]
+    blind = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": None, "in_progress": []})
+    assert dq.starvation_override(blind, _jobs_with_stamp(None), now, 1.5) is None and blind["block"]
+
+
+def test_a_starved_saturated_cycle_fires_exactly_one_unit(tmp_path, monkeypatch):
+    """END TO END: 12 queued CI runs, 3 due units, no stamps -> the floor fires ONE, not three, and stamps it."""
+    units = [(f"RQ-20300101-00{i}", "research-script-run.yml") for i in range(1, 4)]
+    q = tmp_path / "queue"
+    q.mkdir()
+    for uid, wf in units:
+        (q / f"{uid}.yaml").write_text(_unit_text(uid, wf))
+    fired = []
+
+    def fake_run(cmd, *a, **k):
+        class P:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        if cmd[:3] == ["gh", "workflow", "run"]:
+            fired.append(cmd)
+        return P()
+
+    queued = _evruns([("pytest-run", "pull_request")] * 12)
+    monkeypatch.setattr(dq, "gh_runs", lambda status, limit=200: queued if status == "queued" else [])
+    monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: {"research_unit", "power_state"})
+    from scripts.research import script_run
+    monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
+    monkeypatch.setattr(dq.subprocess, "run", fake_run)
+    rc = dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json"])
+    assert rc == 0
+    assert len(fired) == 1, fired
+    # the same cycle with the floor disabled dispatches nothing: the pre-fix behaviour, reproduced
+    fired.clear()
+    for uid, wf in units:
+        (q / f"{uid}.yaml").write_text(_unit_text(uid, wf))
+    assert dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--starvation-hours", "0"]) == 0
+    assert fired == []

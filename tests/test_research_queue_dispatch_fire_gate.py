@@ -199,5 +199,7 @@ def test_a_receipt_pr_in_flight_skips_the_next_receipt_landing():
     steps = yaml.safe_load(WF.read_text())["jobs"]["land"]["steps"]
     rcpt = next(s for s in steps if s.get("id") == "rcpt")
     assert "automation/research-queue-receipt" in rcpt["run"]
+    # a receipt PR that has sat > 90 min is stuck (conflicting), not in flight: it must not wedge landings
+    assert "fromdateiso8601" in rcpt["run"] and "5400" in rcpt["run"]
     land = next(s for s in steps if s.get("name") == "Land the liveness receipt")
     assert land["if"].strip() == "steps.rcpt.outputs.skip != 'true'"

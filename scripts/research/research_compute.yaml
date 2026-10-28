@@ -108,6 +108,7 @@ classes:
 limits:
   max_total_inflight: 8        # runner 3 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1
   max_repo_queued: 10          # unchanged from the dispatcher's flag default
+  starvation_hours: 1.5        # nothing dispatched this long -> the repo-queued block is lifted for ONE fire/cycle (dispatch_queue.starvation_override)
   # YIELD TO INFRA (GH-CAPACITY-INFRA-FIRST, operator 2026-10-15): while any fresh run of one of these
   # workflows (gh `workflowName`, i.e. the file's `name:`) is QUEUED, the dispatcher fires nothing -- every
   # backend's workflow, trainer and Kaggle included, holds a GitHub runner while it polls. Research uses
