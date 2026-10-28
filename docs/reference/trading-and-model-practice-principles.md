@@ -17,7 +17,7 @@ rule. The conflict is then raised to the manager as a question; nobody resolves 
 exits, active management, sizing, costs, venues). **MODEL** covers how to build a better AI trader (data, labels,
 features, training, evaluation, model families, infra, desk-as-teacher). **RESEARCH-OPS** applies to both.
 
-Last revised: 2026-10-28 (lane `PRACTICE-RESEARCH-TRADE-MGMT-AI`).
+Last revised: 2026-10-28 (lane `PRACTICE-RESEARCH-TRADE-MGMT-AI`; T11 added by lane `ROADMAP-PRIORITIES-AM-PRINCIPLE`).
 
 ## TRADING
 
@@ -31,6 +31,7 @@ Last revised: 2026-10-28 (lane `PRACTICE-RESEARCH-TRADE-MGMT-AI`).
 - **T8.** Isolate the exit's contribution with **fixed or random entries** before crediting management. [S17]
 - **T9.** Profit targets are justified for **mean-reversion** legs. For **trend** legs, practice lets a trail do the work. Under our TP doctrine, measure that cost; do not assume it. [S9, S25]
 - **T10.** Partials and scaling out **reshape the distribution** of outcomes; the evidence does not show they add expectancy. Test them as arms, never as defaults. [S26]
+- **T11.** **Active management is the whole bracket, one action class at a time** (operator, binding, 2026-10-28: *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"*). The classes are SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, and hold. Each is triggered by live market data and leaves both brackets in place. Each graduates from advice-only to executed on its own registered, net-of-cost test against hold and a matched random intervention (T1). Tightening is tested and loses (#20967, #21003); the rest are untested. This is a binding rule, and the canonical text is [`docs/ARCHITECTURE-CANONICAL.md`](../ARCHITECTURE-CANONICAL.md) § "Active management". Evidence for the hold baseline: [S1, S2, S3]
 
 ## MODEL
 
