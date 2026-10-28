@@ -1,0 +1,459 @@
+{
+  "leg": "spy_trend_long_1d",
+  "label": "reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "AX30",
+    "baseline": "B",
+    "candidates": {
+      "AX30": {
+        "delta_net_r": 4.6639,
+        "delta_max_drawdown_r": -5.4141,
+        "fold_wins": 3,
+        "passes": true
+      },
+      "AX40": {
+        "delta_net_r": 4.2776,
+        "delta_max_drawdown_r": 0.9251,
+        "fold_wins": 3,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 1.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "AX30 beats the removed-lever baseline by 4.6639 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 186,
+      "net_r": 23.2806,
+      "net_r_fee_only": 29.4068,
+      "max_drawdown_r": 20.8365,
+      "by_outcome": {
+        "take_profit": 71,
+        "stop": 110,
+        "trail_stop": 4,
+        "timeout": 1
+      },
+      "mean_bars_held": 13.522,
+      "net_r_per_capital_day": 0.0093,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "1997-10-20 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "1997-10-20 00:00:00+00:00",
+          "end": "2005-01-20 18:00:00+00:00",
+          "trades": 34,
+          "net_r": -4.7057
+        },
+        {
+          "fold": 2,
+          "start": "2005-01-20 18:00:00+00:00",
+          "end": "2012-04-23 12:00:00+00:00",
+          "trades": 43,
+          "net_r": 0.6345
+        },
+        {
+          "fold": 3,
+          "start": "2012-04-23 12:00:00+00:00",
+          "end": "2019-07-26 06:00:00+00:00",
+          "trades": 53,
+          "net_r": 5.0107
+        },
+        {
+          "fold": 4,
+          "start": "2019-07-26 06:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 56,
+          "net_r": 22.3417
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/B__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "2.0",
+        "--end",
+        "2026-10-27"
+      ]
+    },
+    "AX30": {
+      "reach_ge_6r": 0.0,
+      "n": 164,
+      "net_r": 27.9445,
+      "net_r_fee_only": 33.1335,
+      "max_drawdown_r": 15.4224,
+      "by_outcome": {
+        "take_profit": 65,
+        "stop": 95,
+        "trail_stop": 3,
+        "timeout": 1
+      },
+      "mean_bars_held": 14.329,
+      "net_r_per_capital_day": 0.0119,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 30.0,
+        "adx_period": 14
+      },
+      "data_start": "1997-10-20 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "1997-10-20 00:00:00+00:00",
+          "end": "2005-01-20 18:00:00+00:00",
+          "trades": 30,
+          "net_r": -3.5608
+        },
+        {
+          "fold": 2,
+          "start": "2005-01-20 18:00:00+00:00",
+          "end": "2012-04-23 12:00:00+00:00",
+          "trades": 39,
+          "net_r": 4.7886
+        },
+        {
+          "fold": 3,
+          "start": "2012-04-23 12:00:00+00:00",
+          "end": "2019-07-26 06:00:00+00:00",
+          "trades": 48,
+          "net_r": 7.2629
+        },
+        {
+          "fold": 4,
+          "start": "2019-07-26 06:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 47,
+          "net_r": 19.4545
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX30__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX30__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "2.0",
+        "--adx-max",
+        "30",
+        "--end",
+        "2026-10-27"
+      ]
+    },
+    "AX40": {
+      "reach_ge_6r": 0.0,
+      "n": 179,
+      "net_r": 27.5582,
+      "net_r_fee_only": 33.4068,
+      "max_drawdown_r": 21.7616,
+      "by_outcome": {
+        "take_profit": 70,
+        "stop": 104,
+        "trail_stop": 4,
+        "timeout": 1
+      },
+      "mean_bars_held": 13.765,
+      "net_r_per_capital_day": 0.0112,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 40.0,
+        "adx_period": 14
+      },
+      "data_start": "1997-10-20 00:00:00+00:00",
+      "data_end": "2026-10-27 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "1997-10-20 00:00:00+00:00",
+          "end": "2005-01-20 18:00:00+00:00",
+          "trades": 31,
+          "net_r": -4.5992
+        },
+        {
+          "fold": 2,
+          "start": "2005-01-20 18:00:00+00:00",
+          "end": "2012-04-23 12:00:00+00:00",
+          "trades": 43,
+          "net_r": 0.6345
+        },
+        {
+          "fold": 3,
+          "start": "2012-04-23 12:00:00+00:00",
+          "end": "2019-07-26 06:00:00+00:00",
+          "trades": 52,
+          "net_r": 6.0593
+        },
+        {
+          "fold": 4,
+          "start": "2019-07-26 06:00:00+00:00",
+          "end": "2026-10-27 00:00:00+00:00",
+          "trades": 53,
+          "net_r": 25.4643
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX40__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "2.0",
+        "--adx-max",
+        "40",
+        "--end",
+        "2026-10-27"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": "2026-10-27",
+    "fetch_days": 7300,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "SPY",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "1997-10-20 00:00:00+00:00",
+      "2005-01-20 18:00:00+00:00",
+      "2012-04-23 12:00:00+00:00",
+      "2019-07-26 06:00:00+00:00",
+      "2026-10-27 00:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "B": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/B__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "2.0",
+        "--end",
+        "2026-10-27"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "AX30": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX30__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX30__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "2.0",
+        "--adx-max",
+        "30",
+        "--end",
+        "2026-10-27"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--adx-max",
+        "30"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "AX40": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SPY",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261028-2a2e-12/40666184333/arms/AX40__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "2.0",
+        "--adx-max",
+        "40",
+        "--end",
+        "2026-10-27"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--adx-max",
+        "40"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
