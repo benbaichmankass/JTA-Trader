@@ -4,17 +4,27 @@
 > **Checklist row:** [`docs/claude/work/checklist/ML-COVERAGE-AUDIT.json`](../claude/work/checklist/ML-COVERAGE-AUDIT.json) · roadmap `M25`, `L-DATA`
 > **Operator question (2026-10-28 ~06:20Z, paraphrased):** *"We've been building MLs for a while. If they only cover ~4 symbols we've seriously gone wrong with the roadmap. Find exactly what we have, why it is that way, and use it to plan next week's builds and infra."*
 
-> ⚠️ **DRAFT 2026-10-28 ~06:45Z.** Inventory (§ 1), infra (§ 1c), coverage (§ 2) and why (§ 3) are in. Still to come: the ground-truth table per strategy leg × floor account (§ 6) and the "how did we report done" section (§ 7). Auto-merge is disarmed until those land.
-
-## Answer in four lines
+## Answer
 
 1. **Per-symbol models cover 4 of 23 rostered symbols** (BTC, ETH, SOL, MES). The manager's first look was right.
-2. **Order-changing ML reaches 5 of 51 rostered legs (9.8%). All 5 are `bybit_1` demo legs. 0 of the 7 legs that trade real money or prop get one.** The 5 legs: the BTC vol gate on 3 legs, plus the donchian exit head on 3 legs, with BTC donchian counted once.
-3. **Three causes:**
-   - After 2026-07-21 the plan pointed the ML effort at model depth on BTC 15m, and no breadth objective ever existed.
-   - The data and infra pipeline only builds features for BTC, ETH, SOL and MES. No head was ever built for the other symbols, so no features were added for them either.
-   - An ML output only changes an order through a per-leg cell that someone has to write. Those cells exist for 3 BTC legs only, so even the SOL and MES advisory heads gate nothing.
-4. **Next week's plan:** 7 builds that reuse the BTC recipe instead of adding more BTC variants (§ 4). In order: data for the alt coins, one pooled crypto vol head, the router cells for real-money legs, a wider exporter, a pooled daily head for equities and metals, freezing the BTC variant families, and a coverage detector.
+2. **Order-changing ML reaches 5 of 51 rostered legs (9.8%). All 5 are `bybit_1` demo legs. 0 of the 7 real-money or prop legs get one** (§ 2).
+   - **Since 2026-10-22, no learned model feeds conviction on any leg**: every package carries `c_strat` only (§ 6, measured on packages).
+3. **The data-generation chain is mostly broken at the floor** (§ 6).
+   - Of 57 rostered leg × demo-floor pairs, only **14 (25%) closed a trade in the last 14 days**.
+   - The rest: 16 are BLOCKED (signals, no fills; most rejections record no reason), 6 SILENT, 2 have NEVER signalled since June, and 19 are quiet.
+   - 48% of closed trades since 06-01 carry the close reason `other` and 15% `reconciler`.
+4. **What the floor does generate is recorded and not learned from** (§ 1c):
+   - The teacher data (desk decisions, live reviews and grades: `claude_judgments`, 627 rows) is built nightly, and **0 manifests train on it**.
+   - Trade data trains only candidate models.
+5. **Why** (§ 3):
+   - After 2026-07-21 the plan pointed the ML effort at BTC-15m depth and never had a breadth objective.
+   - The builders and exporter cover 4 symbols, and the trainer has 0 spare CPU.
+   - Router cells exist for 3 BTC legs only.
+   - **Every "done" check measured a declaration or a job run, never per-leg output** (§ 8).
+6. **The fixes:**
+   - ML breadth fixes are in § 4; the full gap list (G1–G11) is in § 7. The `ML-PROGRAMME-PLAN` lane owns the design.
+   - One standing probe (`chain_probe`, § 8) would have caught all of this.
+   - Filed: `PI-20261028-AGEAUDIT-0001` (root-cause every blocked/silent leg from audit relay #20840) and `-0002` (persist the rejection reason).
 
 ---
 
@@ -150,7 +160,7 @@ Sources: `GET /api/bot/ml/{status,builds,cycle}` read 2026-10-28 ~06:35Z (mirror
 
 **Not a cause:** compute spend. Nothing here is blocked on money; every block is a builder, exporter or cell that was never written.
 
-## 4. Gap list and fixes (input to `ML-PROGRAMME-PLAN`, which owns the programme design and sequencing)
+## 4. ML-breadth fixes (input to `ML-PROGRAMME-PLAN`, which owns the programme design and sequencing; the full gap list is § 7)
 
 Ordered by value to real-money and desk legs, then cost. All builds use the **existing recipe** (LightGBM vol-regime head on `market_features`, which is the one family that has earned advisory) applied across symbols. They add no new variants. Every new head enters as `candidate`. Shadow is autonomous, advisory is Tier-3, and a router cell is Tier-3 with walk-forward evidence. Ceilings are per row.
 
@@ -178,7 +188,155 @@ Ordered by value to real-money and desk legs, then cost. All builds use the **ex
 
 That freezes about 17 manifests. Keep the advisory head, its shadow twins (`lgbm-v2`, `fc-pcv-v1`, `yz`), the funding `svble` head (P1) and `flow` (P2) on the nightly cycle.
 
-## 5. What this audit did not establish (and how it closes)
+## 6. Ground truth: every strategy leg × its demo-floor account (operator scope extension 2026-10-28 ~06:25Z)
+
+**Populations and sources:**
+- **Rows:** every `config/strategies.yaml` strategy (57) × each demo-floor account (`bybit_1` · `alpaca_paper` · `ib_paper`) it is rostered on at `main@7108d8a3a`. That gives 57 rostered pairs (51 strategies; `claude_desk` sits on 3 floors, and `spy/qqq/iwm/tlt` on 2); the 6 unrostered strategies get one row each.
+- **Packages:** `GET /api/bot/order-packages?strategy=<leg>&since=2026-06-01&include_paper&include_demo&limit=200`, read 2026-10-28 ~06:50Z.
+  - ⚠️ A package row carries **no account field**, so package columns are per strategy across all accounts (finding G8).
+  - The 200-row cap is hit by `mgc_trend_1h` and `vwap` (marked `+`).
+- **Trades:** `GET /api/bot/trades/closed?since=2026-06-01&include_paper&include_demo`, paged to exhaustion: **1,812 closed trades**, filtered to the floor account.
+- **"hist pkgs/wk" is a PROXY:** packages since 06-01 ÷ 21 weeks. It is **not** the Stage-0 expected rate. No per-leg Stage-0 signal rate is recorded anywhere machine-readable (`strategies.yaml` has no such field, and `SOAKS.json` correctly refuses `expected_per_week` as a soak exit), finding G9. So "QUIET-BY-RATE?" is a proxy judgement, not a measured one.
+- **Soak state:** `scripts/ops/soak_state.py` computes it from the DB and **no route serves it** (G10), so it is UNMEASURED here. 68 contracts exist in `docs/claude/work/SOAKS.json`.
+- **Model consumption:** every closed trade on every account lands in `trade_outcomes`/`setup_labels` (§ 1c), so every row's trades are **consumed by candidate models only**. "ML at decision" is the § 2 tier: A = order-changing; C = per-symbol shadow scores exist but are log-only; D = none.
+- **Measured on packages:** since 2026-10-22, conviction carries **only `c_strat`** (15 packages across 10 legs, 2026-10-22..27). Before that it carried `c_setup` (+`c_wr`). `c_setup` stopped when `setup-quality-baseline-v0` was retired from shadow by operator decision 2026-10-21 (degenerate flat scores; registry `stage_history`). So **no ML input reaches conviction on any leg today**: tier B of § 2 is empty in fact, not just unmeasured.
+
+**State legend:**
+- **ACTIVE:** a trade closed on the floor account in the last 14 d.
+- **BLOCKED:** packages in the last 14 d but no floor fill.
+- **QUIET <30d:** a package in the last 30 d but no recent fill.
+- **SILENT:** the proxy rate is ≥ 0.5 packages/wk but there has been no package for > 30 d.
+- **QUIET-BY-RATE?:** the proxy rate is < 0.5/wk.
+- **NEVER:** 0 packages since 06-01.
+
+| leg | floor acct | symbol · tf | hist pkgs/wk (proxy) | last package | pkgs 14d | rejected/pkgs | last floor trade | trades 14d / 30d / since 06-01 | ML at decision (§ 2 tier) | state |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `trend_donchian_1h` | bybit_1 | BTCUSDT · 1h | 0.1 | 2026-06-01 | 0 | 0/2 | — | 0 / 0 / 0 | C | QUIET-BY-RATE? |
+| `trend_donchian_eth_4h` | bybit_1 | ETHUSDT · 4h | 1.3 | 2026-10-24 | 3 | 3/27 | 2026-10-25 | 2 / 5 / 19 | C | ACTIVE |
+| `trend_donchian_xrp_adx25` | bybit_1 | XRPUSDT · 4h | 0.0 | — | 0 | 0/0 | — | 0 / 0 / 0 | D | NEVER SIGNALLED (0 pkgs since 06-01) |
+| `xrp_pullback_2h` | bybit_1 | XRPUSDT · 2h | 2.8 | 2026-10-25 | 4 | 19/58 | 2026-10-27 | 4 / 5 / 23 | D | ACTIVE |
+| `ada_pullback_2h` | bybit_1 | ADAUSDT · 2h | 3.3 | 2026-10-24 | 3 | 18/69 | 2026-10-24 | 2 / 7 / 38 | D | ACTIVE |
+| `trend_donchian_eth_prop` | bybit_1 | ETHUSDT · 1h | 6.0 | 2026-10-24 | 16 | 0/125 | 2026-10-24 | 7 / 7 / 7 | C | ACTIVE |
+| `trend_donchian_sol_prop` | bybit_1 | SOLUSDT · 1h | 2.3 | 2026-10-21 | 3 | 0/48 | 2026-10-21 | 2 / 2 / 2 | C | ACTIVE |
+| `claude_desk` | bybit_1 | 14 symbols · — | 0.1 | 2026-10-27 | 2 | 2/2 | — | 0 / 0 / 0 | C | BLOCKED: signals, no fill |
+| `claude_desk` | ib_paper | 14 symbols · — | 0.1 | 2026-10-27 | 2 | 2/2 | — | 0 / 0 / 0 | C | BLOCKED: signals, no fill |
+| `claude_desk` | alpaca_paper | 14 symbols · — | 0.1 | 2026-10-27 | 2 | 2/2 | — | 0 / 0 / 0 | C | BLOCKED: signals, no fill |
+| `ict_scalp_eth_15m` | bybit_1 | ETHUSDT · 15m | 3.8 | 2026-10-27 | 1 | 41/80 | 2026-10-27 | 1 / 7 / 39 | C | ACTIVE |
+| `ict_scalp_xrp_15m` | bybit_1 | XRPUSDT · 15m | 2.8 | 2026-10-27 | 2 | 21/59 | 2026-10-05 | 0 / 7 / 38 | D | BLOCKED: signals, no fill |
+| `avax_pullback_2h` | bybit_1 | AVAXUSDT · 2h | 7.4 | 2026-10-27 | 1 | 126/155 | 2026-07-25 | 0 / 0 / 8 | D | BLOCKED: signals, no fill |
+| `eth_pullback_2h` | bybit_1 | ETHUSDT · 2h | 5.2 | 2026-10-27 | 1 | 8/109 | 2026-09-24 | 0 / 0 / 22 | C | BLOCKED: signals, no fill |
+| `eth_pullback_prop_2h` | bybit_1 | ETHUSDT · 2h | 0.3 | 2026-10-27 | 1 | 2/7 | 2026-07-18 | 0 / 0 / 1 | C | BLOCKED: signals, no fill |
+| `sol_pullback_2h` | bybit_1 | SOLUSDT · 2h | 4.1 | 2026-10-27 | 1 | 52/87 | 2026-09-16 | 0 / 0 / 11 | C | BLOCKED: signals, no fill |
+| `fade_breakout_4h` | bybit_1 | BTCUSDT · 4h | 2.0 | 2026-09-30 | 0 | 29/43 | — | 0 / 0 / 0 | C | QUIET <30d |
+| `fvg_range_15m` | bybit_1 | BTCUSDT · 15m | 0.0 | 2026-06-04 | 0 | 0/1 | 2026-06-05 | 0 / 0 / 1 | C | QUIET-BY-RATE? |
+| `htf_pullback_trend_2h` | bybit_1 | BTCUSDT · 2h | 4.7 | 2026-09-15 | 0 | 31/99 | 2026-08-10 | 0 / 0 / 25 | C | SILENT (rate >=0.5/wk, no pkg 30d) |
+| `ict_scalp_5m` | bybit_1 | BTCUSDT · 5m | 4.0 | 2026-10-27 | 2 | 27/84 | 2026-10-28 | 1 / 1 / 33 | A | ACTIVE |
+| `ict_scalp_avax_5m` | bybit_1 | AVAXUSDT · 5m | 9.4 | 2026-10-27 | 1 | 114/197 | 2026-10-27 | 1 / 4 / 82 | D | ACTIVE |
+| `ict_scalp_sol_5m` | bybit_1 | SOLUSDT · 5m | 6.0 | 2026-10-01 | 0 | 67/127 | 2026-09-27 | 0 / 1 / 61 | C | QUIET <30d |
+| `ict_scalp_sol_15m` | bybit_1 | SOLUSDT · 15m | 3.5 | 2026-10-01 | 0 | 31/73 | 2026-10-02 | 0 / 3 / 48 | C | QUIET <30d |
+| `ict_scalp_xrp_5m` | bybit_1 | XRPUSDT · 5m | 2.6 | 2026-10-05 | 0 | 10/54 | 2026-10-05 | 0 / 5 / 44 | D | QUIET <30d |
+| `squeeze_breakout_4h` | bybit_1 | BTCUSDT · 4h | 0.7 | 2026-10-02 | 0 | 4/15 | 2026-09-28 | 0 / 1 / 8 | A | QUIET <30d |
+| `trend_donchian` | bybit_1 | BTCUSDT · 1h | 1.8 | 2026-10-04 | 0 | 0/37 | 2026-10-05 | 0 / 1 / 30 | A | QUIET <30d |
+| `trend_donchian_ada_4h` | bybit_1 | ADAUSDT · 4h | 1.6 | 2026-09-21 | 0 | 2/33 | 2026-10-04 | 0 / 1 / 21 | D | SILENT (rate >=0.5/wk, no pkg 30d) |
+| `trend_donchian_avax_4h` | bybit_1 | AVAXUSDT · 4h | 1.2 | 2026-09-20 | 0 | 0/26 | 2026-09-21 | 0 / 0 / 23 | D | SILENT (rate >=0.5/wk, no pkg 30d) |
+| `trend_donchian_eth` | bybit_1 | ETHUSDT · 1h | 2.4 | 2026-10-27 | 1 | 18/51 | 2026-10-02 | 0 / 5 / 20 | A | BLOCKED: signals, no fill |
+| `trend_donchian_sol` | bybit_1 | SOLUSDT · 1h | 1.1 | 2026-10-04 | 0 | 9/24 | 2026-10-05 | 0 / 3 / 11 | A | QUIET <30d |
+| `trend_donchian_sol_4h` | bybit_1 | SOLUSDT · 4h | 1.4 | 2026-09-21 | 0 | 6/30 | 2026-09-22 | 0 / 0 / 19 | C | SILENT (rate >=0.5/wk, no pkg 30d) |
+| `trend_donchian_xrp_4h` | bybit_1 | XRPUSDT · 4h | 0.5 | 2026-10-08 | 0 | 0/11 | 2026-10-09 | 0 / 1 / 6 | D | QUIET <30d |
+| `turtle_soup` | bybit_1 | BTCUSDT · 15m | 0.1 | 2026-09-23 | 0 | 2/3 | — | 0 / 0 / 0 | C | QUIET-BY-RATE? |
+| `mes_trend_long_1d` | ib_paper | MES · 1d | 0.4 | 2026-10-06 | 0 | 0/9 | 2026-10-23 | 1 / 1 / 4 | C | ACTIVE |
+| `mgc_pullback_1d` | ib_paper | MGC · 1d | 1.4 | 2026-10-19 | 1 | 21/30 | 2026-09-21 | 0 / 0 / 5 | D | BLOCKED: signals, no fill |
+| `mhg_pullback_1d` | ib_paper | MHG · 1d | 0.9 | 2026-09-17 | 0 | 11/18 | 2026-09-14 | 0 / 0 / 6 | D | SILENT (rate >=0.5/wk, no pkg 30d) |
+| `mgc_trend_1h` | ib_paper | MGC · 1h | 9.5+ | 2026-10-27 | 28 | 199/200 | 2026-09-10 | 0 / 0 / 3 | D | BLOCKED: signals, no fill |
+| `ict_scalp_mgc_15m` | ib_paper | MGC · 15m | 2.0 | 2026-10-27 | 3 | 18/41 | 2026-10-26 | 3 / 7 / 23 | D | ACTIVE |
+| `spy_trend_long_1d` | ib_paper | SPY · 1d | 0.1 | 2026-10-06 | 0 | 2/3 | — | 0 / 0 / 0 | D | QUIET <30d |
+| `spy_trend_long_1d` | alpaca_paper | SPY · 1d | 0.1 | 2026-10-06 | 0 | 2/3 | — | 0 / 0 / 0 | D | QUIET <30d |
+| `qqq_trend_long_1d` | ib_paper | QQQ · 1d | 0.3 | 2026-10-06 | 0 | 4/6 | — | 0 / 0 / 0 | D | QUIET <30d |
+| `qqq_trend_long_1d` | alpaca_paper | QQQ · 1d | 0.3 | 2026-10-06 | 0 | 4/6 | 2026-09-24 | 0 / 0 / 2 | D | QUIET <30d |
+| `iwm_trend_long_1d` | ib_paper | IWM · 1d | 0.1 | 2026-08-05 | 0 | 0/3 | — | 0 / 0 / 0 | D | QUIET-BY-RATE? |
+| `iwm_trend_long_1d` | alpaca_paper | IWM · 1d | 0.1 | 2026-08-05 | 0 | 0/3 | 2026-08-28 | 0 / 0 / 4 | D | QUIET-BY-RATE? |
+| `tlt_pullback_1d` | ib_paper | TLT · 1d | 0.6 | 2026-10-21 | 4 | 7/13 | — | 0 / 0 / 0 | D | BLOCKED: signals, no fill |
+| `tlt_pullback_1d` | alpaca_paper | TLT · 1d | 0.6 | 2026-10-21 | 4 | 7/13 | 2026-10-22 | 2 / 2 / 5 | D | ACTIVE |
+| `gld_pullback_1d` | ib_paper | GLD · 1d | 0.6 | 2026-10-20 | 3 | 9/13 | — | 0 / 0 / 0 | D | BLOCKED: signals, no fill |
+| `ief_pullback_1d` | alpaca_paper | IEF · 1d | 0.2 | 2026-10-21 | 3 | 2/5 | 2026-10-22 | 2 / 2 / 4 | D | ACTIVE |
+| `slv_trend_1h` | alpaca_paper | SLV · 1h | 2.9 | 2026-10-23 | 7 | 45/61 | 2026-08-25 | 0 / 0 / 14 | D | BLOCKED: signals, no fill |
+| `slv_pullback_1d` | alpaca_paper | SLV · 1d | 0.3 | 2026-09-17 | 0 | 3/7 | 2026-09-28 | 0 / 1 / 4 | D | QUIET-BY-RATE? |
+| `gdx_pullback_1d` | alpaca_paper | GDX · 1d | 0.6 | 2026-10-21 | 4 | 9/12 | 2026-09-28 | 0 / 1 / 2 | D | BLOCKED: signals, no fill |
+| `tqqq_trend_long_1d` | alpaca_paper | TQQQ · 1d | 0.1 | 2026-10-02 | 0 | 2/3 | 2026-10-14 | 1 / 1 / 1 | D | ACTIVE |
+| `qld_trend_long_1d` | alpaca_paper | QLD · 1d | 0.1 | 2026-09-21 | 0 | 0/2 | 2026-10-14 | 1 / 1 / 2 | D | ACTIVE |
+| `splg_trend_long_1d` | alpaca_paper | SPLG · 1d | 0.0 | — | 0 | 0/0 | — | 0 / 0 / 0 | D | NEVER SIGNALLED (0 pkgs since 06-01) |
+| `iaum_pullback_1d` | alpaca_paper | IAUM · 1d | 0.6 | 2026-10-20 | 3 | 8/12 | 2026-09-21 | 0 / 0 / 2 | D | BLOCKED: signals, no fill |
+| `scha_trend_long_1d` | alpaca_paper | SCHA · 1d | 0.0 | 2026-08-17 | 0 | 0/1 | 2026-08-24 | 0 / 0 / 1 | D | QUIET-BY-RATE? |
+| `uso_trend_1h` | alpaca_paper | USO · 1h | 1.9 | 2026-09-24 | 0 | 24/39 | 2026-09-24 | 0 / 0 / 11 | D | SILENT (rate >=0.5/wk, no pkg 30d) |
+| `vwap` | — | BTCUSDT · 5m | 9.5+ | 2026-06-08 | 0 | 0/200 | — | 0 / 0 / 0 | C | NOT ROSTERED |
+| `xauusd_trend_1h` | — | XAUUSD · 1h | 0.4 | 2026-06-15 | 0 | 0/8 | — | 0 / 0 / 0 | D | NOT ROSTERED |
+| `gld_pullback_1h` | — | GLD · 1h | 2.6 | 2026-08-28 | 0 | 41/54 | — | 0 / 0 / 0 | D | NOT ROSTERED |
+| `spy_pullback_1h` | — | SPY · 1h | 3.7 | 2026-10-01 | 0 | 56/77 | — | 0 / 0 / 0 | D | NOT ROSTERED |
+| `qqq_pullback_1h` | — | QQQ · 1h | 3.3 | 2026-09-28 | 0 | 50/70 | — | 0 / 0 / 0 | D | NOT ROSTERED |
+| `tlt_pullback_1h` | — | TLT · 1h | 4.3 | 2026-10-02 | 0 | 72/90 | — | 0 / 0 / 0 | D | NOT ROSTERED |
+
+**Read-out (57 rostered leg × floor pairs):**
+- 14 ACTIVE, 16 BLOCKED, 12 QUIET <30d, 6 SILENT, 7 QUIET-BY-RATE?, 2 NEVER.
+- **Only 14 of 57 (25%) put a trade on the demo floor in the last 14 days.** For comparison, the manager's 06:20Z journal count was 23 of 51 strategies in 14 d. That count was any trade on the floor account by strategy, from `/api/diag/journal` capped at 1,000 rows. Both are measurements; they differ in route and population.
+- **ML tier of the 14 ACTIVE pairs:** 1 is tier A (`ict_scalp_5m`), 5 are tier C, 8 are tier D.
+
+**Rejected packages with no recorded reason:** e.g. `mgc_trend_1h` 103 of 119 since 09-01, `avax_pullback_2h` 39/48, `slv_trend_1h` 26/26. The package's `closeReason` is null, so the route cannot say why (finding G3a). The batched audit read is in flight (vm-diag issue #20840, 18 legs). Until it answers, every BLOCKED/SILENT cause below is **"not yet established"**, not a guess.
+
+## 7. Gap list: cause and fix, ordered by data/learning value
+
+The manager's brief says the plan lane (`ML-PROGRAMME-PLAN`) owns sequencing and design. This list states each gap, its cause as far as measured, and the fix the evidence points at.
+
+| # | gap (measured) | cause | fix |
+|---|---|---|---|
+| **G1** | **Teacher data is recorded and never trained.** `claude_judgments` is built nightly (627 rows: 59 desk decisions, 98 live reviews, 617 blind / 546 revealed grades), and **0 manifests train on it** | the pipe was built "so it exists the day they do" (family docstring), and the student rows `DESK-19`/`20`/`21` are `blocked` as "later phase" | a first student manifest on `claude_judgments` (entry-generation role) at candidate. `DESK-20` outcome join first, so labels exist |
+| **G2** | **No learned model reaches any decision since 2026-10-22** (conviction is `c_strat` only on every package). Trade data trains only candidates | `setup-quality-baseline-v0` was retired (degenerate); `trade-outcome-winrate` retired 06-30; `setup-quality-lgbm-v2` demoted 09-29 (4 of 9 features never served); nothing replaced them | a non-degenerate trade-outcome/setup head with **value-equal served features** to shadow, then conviction. Pair with § 4 rows 1–3 for the regime side |
+| **G3** | **16 BLOCKED pairs**: signals but no floor fills, e.g. `mgc_trend_1h` 199/200 rejected (last fill 09-10), `avax_pullback_2h` 126/155 (last fill 07-25), `sol_pullback_2h` (last 09-16), `eth_pullback_2h` (last 09-24), `slv_trend_1h` (last 08-25), `claude_desk` (2/2 `no_fill_all_accounts`), and the IB copies of `tlt`/`gld` | **(a)** most rejections carry no reason on the package. Visible reasons: `all_accounts_noop`, `no_fill_all_accounts`, `empty_sizing_map: all_accounts_excluded_pre_sizing`. Per-leg root cause is pending audit #20840 | persist the rejection reason on the package; run `scripts/ops/dead_leg_audit.py` on a schedule; root-cause each leg from #20840 (the desk leg is `DESK-17`, in flight) |
+| **G4** | **6 SILENT legs** (≥ 0.5/wk historically, no package > 30 d): `htf_pullback_trend_2h`, `trend_donchian_{ada,avax,sol}_4h`, `mhg_pullback_1d`, `uso_trend_1h` | not established (audit #20840) | same audit; `strategy_liveness.py` on a schedule |
+| **G5** | **2 legs NEVER signalled since 06-01**: `trend_donchian_xrp_adx25`, `splg_trend_long_1d` | not established | same |
+| **G6** | **Dirty labels**: of 1,812 closed trades since 06-01, **878 (48%) read `other` and 265 (15%) `reconciler`** on `/api/bot/trades/closed`. Packages show `reconciler_filled`, `exchange_flat_reconciled`, `stuck_*` closes | the route normalises unknown reasons to `other`; reconciler and watchdog closes are bugs under the session contract | map every exit reason (no `other`); fix the reconciler-close paths per leg; until then, label builders must exclude or flag non-TP/SL/strategy closes |
+| **G7** | ML coverage: § 2 (5/51 legs order-changing, 0/7 real money; 19/23 symbols tier D) | § 3 | § 4 rows 1–7 |
+| **G8** | packages carry no account | API shape | add `accounts[]` (from the package's fan-out) to `/api/bot/order-packages` |
+| **G9** | no per-leg expected signal rate, so "quiet by design" cannot be told from "blocked" | never recorded at Stage 0 | record `expected_signals_per_week` from the leg's Stage-0 evidence as a **monitoring** field (never a soak exit) |
+| **G10** | soak state is computed but not served | no route | serve `soak_state.soak_states()` read-only |
+| **G11** | the build log omits symbol/timeframe (F-INFRA-1) | logging | add the fields to every `market_*` build row |
+
+## 8. How did we report "done" without this?
+
+Every check that went green measured a **declaration or a job run**. None measured **output per leg**:
+
+- **DEMO-FLOOR (#20561 merged).** It established roster membership (layer 4, YAML). Nothing checks that each rostered leg produces packages and fills (layer 6).
+  - `scripts/ops/verify_running_roster.py` is `manual-only`.
+  - The inverse-roster anomaly detector it names (`PI-20260922-E32-…`) is not built.
+- **`soak-contract-guard`.** It proves a contract *exists* for every rostered leg, not that a trade happened.
+- **`check_strategy_coverage.py` / `regime_coverage_exemptions.yaml`.** They prove a cell *or an exemption* exists. 47 legs pass by exemption or debt.
+- **Trainer health.** "66 trained, rc 0" and "110 builds ok" measure that jobs ran, not that the data covers the roster or that anything consumes it. `claude_judgments` builds 627 rows nightly and reads `ok`.
+- **`ml_plan_status.py --plumbing/--diversity`.** It counts model **families** and registry/shadow liveness, never rostered legs or symbols.
+- **The liveness tools exist and run on no schedule:**
+  - `strategy_liveness.py` (manual);
+  - `leg_flow_report.py` (manual);
+  - `dead_leg_audit.py` (the 2026-08-14 "signals but never places" gap, exactly G3);
+  - `verify_running_roster.py` (manual-only).
+  - The detector that would catch G1, `DESK-21-NEVER-TRAINED-DETECTOR`, is `blocked`.
+
+**Proposed standing probe (one, Tier 1): `chain_probe`.**
+- **Schedule:** daily, plus on demand.
+- **Covers:** every rostered leg × floor account.
+- **Measures, each with an explicit read-state:**
+  1. last package age against 3× the leg's expected interval (G9);
+  2. packages → fills ratio over 14 d;
+  3. share of closes that are TP/SL/strategy;
+  4. whether its trades land in a dataset;
+  5. whether ≥ 1 non-candidate model consumes that dataset;
+  6. whether any model scores its decisions (§ 2 tier).
+- **Output:** a red row in brief section 1 (`GET /api/bot/work/brief`).
+- **Turns red when:**
+  - a rostered leg has no package within 3× its expected interval;
+  - ≥ 3 packages and 0 fills in 14 d;
+  - a dataset has rows and 0 consuming manifests;
+  - a rostered symbol is tier D.
+- **What it would have caught:** run on 2026-10-28, it flags the 16 BLOCKED, 6 SILENT and 2 NEVER pairs, G1 and G2. G2 would have gone red on 2026-10-22, the day conviction lost its last ML input.
+
+## 9. What this audit did not establish (and how it closes)
 
 | item | state | closes by |
 |---|---|---|

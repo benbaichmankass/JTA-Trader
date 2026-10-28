@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-AGEAUDIT-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-COVERAGE-AUDIT, docs/research/ml-coverage-audit-2026-10-28.md",
+    "rerun": "python3 -c \"import json,urllib.request;r=json.load(urllib.request.urlopen('https://ict-bot.duckdns.org/api/bot/order-packages?limit=200&since=2026-09-01&strategy=mgc_trend_1h&include_paper=true&include_demo=true'))['rows'];print(sum(1 for x in r if x['status']=='rejected' and not x.get('closeReason')),len(r))\""
+  },
+  "state": "queued",
+  "what": "Rejected order packages persist no rejection reason: closeReason is null on most status=rejected packages (mgc_trend_1h 103 of 119 since 2026-09-01, avax_pullback_2h 39/48, slv_trend_1h 26/26 on GET /api/bot/order-packages). The route cannot say why a leg is blocked, which hid 16 BLOCKED demo-floor legs (ml-coverage-audit-2026-10-28 § 6/§ 7 G3a). Fix: persist the refusal reason on the package and surface it on the route."
+}

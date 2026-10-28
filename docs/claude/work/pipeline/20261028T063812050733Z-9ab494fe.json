@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261028-AGEAUDIT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-COVERAGE-AUDIT, docs/research/ml-coverage-audit-2026-10-28.md",
+    "rerun": "re-run the § 6 table: GET /api/bot/order-packages?strategy=<leg>&since=2026-06-01&include_paper=true&include_demo=true and GET /api/bot/trades/closed?since=2026-06-01&include_paper=true&include_demo=true (paged), joined to config/accounts.yaml floor rosters; then GET /api/diag/audit_query?strategy=<leg>&since=<date> via the vm-diag relay"
+  },
+  "state": "queued",
+  "what": "Root-cause every BLOCKED/SILENT/NEVER demo-floor leg from docs/research/ml-coverage-audit-2026-10-28.md § 6 (16 BLOCKED, 6 SILENT, 2 NEVER of 57 rostered leg x floor pairs; e.g. mgc_trend_1h 199/200 packages rejected since 06-01 with null closeReason, avax_pullback_2h last floor fill 2026-07-25, sol_pullback_2h 09-16, eth_pullback_2h 09-24, slv_trend_1h 08-25). Read the batched audit_query relay (vm-diag issue #20840), name the cause per leg (risk refusal / sizing exclusion / venue / data / gate / error) and fix in tier or file per leg."
+}
