@@ -144,7 +144,7 @@ All five act **only** on legs rostered on `bybit_1` alone, so no real-money acco
 - **Decision rule, fixed now:** emit a non-hold class only if its predicted value beats hold by **≥ τ = 0.15 R**; otherwise HOLD.
 - **"Mostly hold" sanity, on held-out corpus-B folds, net of cost.** The model may ship as an **advice producer** (`ML-HOLDBIAS-EXIT-MODEL` done) only if:
   (a) its *as-if-applied* policy is ≥ hold-to-bracket pooled, with trade-clustered LB > −0.01 R/trade;
-  (b) its advice rate is ≤ 15 % of check-ins;
+  (b) its advice rate is ≤ 15 % of check-ins; <!-- population-ok: pre-registered threshold over the held-out corpus-B check-ins, not a measurement -->
   (c) no leg is worse than −0.05 R/trade.
   Failing (a)–(c) means the model is retrained or retired. Its advice is not fed to the LTR record.
 - **Label contribution to § 5b:** `ML-EXIT-ACTIONGRID-LABELS` is offered as the **shared Stage-A label source** for § 5b's unpriced classes (widen, TP extend, TP pull-in, to-structure), so the rule replays and the model train on one priced table.
