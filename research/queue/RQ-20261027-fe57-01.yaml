@@ -1,0 +1,108 @@
+id: RQ-20261027-fe57-01
+title: 'Desk edge program, dev batch 1, variant V1 (the judged-1 judge as it is: Sonnet, judged-1 protocol, plus the forced-rank scoring block) on the 100-packet stratified dev sample: does the judge rank (asset, side) cells so that its top 2 beat a random pick in the same packet (SEL), and how does it compare with the fitted models on the same packets?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  On the 100 judged-1 packets of the registered dev sample (desk_edge_devloop.py sample, seed 20261027, balanced over fold x session x BTC 168h regime), scored by the
+  judged-1 judge setup (Sonnet, the driver's JUDGE-PROTOCOL.md, no tools) plus RANK_ADDENDUM (every one of the 12 (asset, side) cells scored with its expected net R in excess
+  of a random-time entry of the bracket GJ: market, stop 1.25 ATR, target 2.0 R, 48 bars), is the weekly mean SEL (mean y of the 2 highest-scored cells minus the packet's mean y,
+  y = the driver's S3 term for that cell) at least +0.10 R with its one-sided 80% lower bound above 0, under the sequential rule of docs/research/desk-edge-program-2026-10-27.md section 5.3?
+why_this_matters: >-
+  DESK-EDGE-PROGRAM, operator 2026-10-27 ~16:00Z: "we need to find a way to test that thoroughly so that we can optimize methodically." This is the pilot of the dev loop
+  (the dispatch allows at most $15 of judging, after the information ceiling, which ran first: comms/research/desk_edge/ceiling-dev/ceiling.json, branch inconclusive).
+  V1 is the reference every later variant is compared with, on the same packets. It also measures, for the first time, whether the judge's ordering of cells carries
+  any money at all, with 1,200 labelled judgements instead of the ~50 fills a proposal-only run of 100 packets would give.
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: R
+  sd: 1.6
+  design: one_sample
+  alpha: 0.10
+  power: 0.80
+  basis: >-
+    n = 100 packets (one SEL per packet), about 45 ISO weeks (the dev sample spans the DEV window). sd 1.6 R = the sd of y for GJ-like brackets INFERRED from judged-1's paired-difference
+    sd (1.61 on the C1 subset, 1.5-1.6 overall; DESK-18C decomposition). SEL subtracts the packet mean, which removes the shared shock; its sd is not yet measured and is taken
+    as the sd of y (conservative). MDE = 2.5 x 1.6 x sqrt(design effect 1.3) / sqrt(100) = 0.45 R at one-sided alpha 0.10, power 0.80 (design effect 1.3 INFERRED: one packet per
+    week-stratum on average, so less clustering than judged-1's 2.25). STATED: this is a SCREEN, deliberately underpowered for small effects; the registered holdout (300 packets)
+    is the test. The pilot's first deliverable is the MEASURED sd of SEL, which re-prices every later variant.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      The n is bought with judging calls on already-built historical packets, not with calendar time: 100 packets, judged in 10 batches of 10 by repo-less plan subagents
+      (no API credits; canonical "Nothing spends Anthropic API credits"). INFERRED cost $5-10 API-equivalent.
+decision_rule:
+  id: RULE-RQ20261027-FE57-01-DEV-V1
+  registered_at: '2026-10-27'
+  registered_before_run: true
+  statistic: >-
+    Population: the 100 packets of comms/research/desk_edge/dev-1/sample.json in its order; the judge's `rank` rows (desk_edge_devloop.read_ranks: exactly 12 valid cells or the
+    row is refused and counted). Labels: desk_edge_devloop.cell_labels (the driver's transplant + random_baseline, 2,000 draws, same symbol, side and driver fold, seed 20261027).
+    SEL per packet = mean y of the 2 highest-scored cells minus mean y of all labelled cells; weekly means; one-sided week-bootstrap bounds (10,000 draws, seed 20261027).
+    Looks at 25, 50, 75, 100 packets. Reported beside it: top-pick S3 (one best cell per packet when its score > 0; the driver's cluster_stats), the share of long cells in the
+    judge's top 2, and the same SEL for the ceiling models' out-of-sample predictions on the same packets where the extended-era run has them.
+  rule: >-
+    KILL at any look IF the one-sided upper bound (alpha 0.05/4) of mean SEL < +0.10 R. PROMOTE at the 100-packet look IF mean SEL >= +0.10 R AND its one-sided 80% lower bound > 0;
+    a promoted V1 goes to the locked holdout (desk_edge_devloop.py holdout, 300 packets, 2025-05-01..2025-10-25, its own registered unit). SCREEN_FAIL otherwise. A KILL or
+    SCREEN_FAIL of V1 is the evidence that the current judge's cell ordering carries no usable money at the dev bracket: later variants must change the judge (brief, model,
+    reasoning) or the packet, and V1 stays the comparison. If fewer than 90 packets return a valid rank row, the verdict is INDETERMINATE (intake failure, re-judge the missing
+    packets with the same setup; never a different one). The registered numbers (100, the looks, +0.10, 0.05/4, 80%, GJ, top 2) are not changed after any result.
+  what_it_does_not_do: >-
+    It is a dev SCREEN. It places nothing, changes no brief, packet, config or roster, and no promotion of any kind follows from it; only the holdout and then a full registered run
+    (docs/research/desk-edge-program-2026-10-27.md sections 5.4-5.5) can produce Stage-0 evidence. The proposals V1 also writes are recorded but not scored here.
+masked_replay:
+  population: >-
+    The six crypto USDT perps of the driver's registered universe; Binance Vision USD-M perp 1h klines from 2025-05-01 (the 3,000-bar base-rate look-back before 2025-11-01).
+  construction: >-
+    The judged-1 packets themselves (desk_gen_replay_driver.build_masked_packet, seed 20261026, their own index), rebuilt and id-asserted by `sample`.
+  unmask_key: comms/research/desk_gen_replay/judged-1/mask-key.json (public; the judging subagent is given only the protocol and its 10 packets and is told to use no tools; the lane records each subagent's tool-use count).
+  leak_controls: >-
+    Per-packet alias permutation and the driver's mask; the random-entry baseline. Window before the judge's knowledge cutoff, like every replay window.
+  novelty: Not used.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 500
+  confidence: 0.05
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: the same bound as RQ-20261026-e535-03.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: 'estimate: 100 packets x 12 cells replayed plus 288 random-baseline cells of 2,000 draws; MEASURED ~0.06 s per cell on the lane container.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_edge_devloop.py
+  - score
+  - --out
+  - '{out_dir}'
+  - --candles
+  - /tmp/desk_edge_candles
+  - --fetch
+  - --ranks
+  - comms/research/desk_edge/dev-1/V1/ranks.jsonl
+  - --sample
+  - comms/research/desk_edge/dev-1/sample.json
+  - --variant
+  - V1
+  inputs:
+    research_unit: RQ-20261027-fe57-01
+  timeout_minutes: 60
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261026-e535-03
+- RQ-20261027-e72b-01
+- scripts/research/desk_edge_devloop.py
+- scripts/research/desk_edge_ceiling.py
+- docs/research/desk-edge-program-2026-10-27.md
+last_dispatched_at: null

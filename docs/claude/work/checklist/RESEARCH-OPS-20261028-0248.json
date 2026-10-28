@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261028-0248",
+  "title": "Research-ops pass 2026-10-28 02:48Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261028-0248",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane] runnable 46 vs floor 62 (fired_24h 78); dispatcher/collector healthy (last dispatch 1.3 h, 94 results 24h, 0 unreadable). Read 25 results landed since 21:10Z at verdict level: 3 pass (infra/baseline only), 15 fail (configurations closed, families open), 5 indeterminate (3e41-15/-16 between bars; e535-04 scorer defect, filled 0). No units or nodes authored; ml_health 0/9 and new_strategy_prop 2/17 stand. Not run: stranded-PR list, blocked/ audit, needs_review triage (28 left). Record comms/research/ops/20261028T0300Z.json.",
+  "updated_at": "2026-10-28T02:53:13Z",
+  "updated_by": "session_01AFoLuN6rBSpmMQfBZVu972",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "the run record is on main and the 3 RESULTS-UNDISPOSITIONED units (0142-20, 0142-21, f50f-01) get a verdict from the grader",
+    "how_to_check": "python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-11-03"
+  },
+  "_seq": 742
+}

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2: changes the VM-side scan packet builder (scripts/ops/desk_scan_packet.py DEFAULT_HORIZONS 4,12,48 -> 1,4,12,48) and the DESK-BRIEF.md the live wakes read. Adds 1-bar (60 min) base-rate rows to the hourly scan so a wake can price a hold at the 60-minute cap. No strategies/accounts/risk/order-path change. Revert: git revert the merge commit.",
+  "why": "Hourly desk wakes since 20:00Z wrote no_trade because no scan-1h row priced a <=60 min hold; operator's morning OK."
+}

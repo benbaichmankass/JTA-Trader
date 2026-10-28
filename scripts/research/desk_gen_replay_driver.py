@@ -464,21 +464,42 @@ def eligible_cutoffs(s: Series, start: datetime, end: datetime, fold: Optional[i
 
 
 def random_baseline(s: Series, g: dict, pool: np.ndarray, rng: np.random.Generator, draws: int) -> Dict[str, Any]:
-    nets, refused, unfilled = [], 0, 0
+    nets, grosses, refused, unfilled = [], [], 0, 0
     if not len(pool):
-        return {"mean": None, "n": 0, "refused": 0, "unfilled": 0, "draws": 0}
+        return {"mean": None, "gross_mean": None, "n": 0, "refused": 0, "unfilled": 0, "draws": 0}
     for j in rng.choice(pool, size=draws, replace=True):
         t = transplant(s, int(j), g)
         if t is None or t.state == "unresolved":
             continue
         if t.state == "filled":
             nets.append(t.net_r)
+            grosses.append(t.gross_r)
         elif t.state == "refused":
             refused += 1
         else:
             unfilled += 1
-    return {"mean": float(np.mean(nets)) if nets else None, "n": len(nets), "refused": refused,
-            "unfilled": unfilled, "draws": draws}
+    return {"mean": float(np.mean(nets)) if nets else None, "gross_mean": float(np.mean(grosses)) if grosses else None,
+            "n": len(nets), "refused": refused, "unfilled": unfilled, "draws": draws}
+
+
+def atr_pct_of(s: Series) -> np.ndarray:
+    """ATR% = ATR / close at each bar (as-of, bars <= t only). The volatility state the matched baseline conditions on."""
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return s.atr / s.c
+
+
+def vol_matched_pool(s: Series, pool: np.ndarray, i: int, n_dec: int = 10,
+                     window: Optional[Tuple[datetime, datetime]] = None) -> np.ndarray:
+    """The members of `pool` (the symbol's cutoffs of ONE fold) in the same ATR%-decile as bar `i`. Deciles are the
+    symbol's own, cut over the whole registered window (all folds), so a fold's pool is never re-binned by its own
+    contents (`window` overrides the registered window for a re-windowed program). Empty when bar i has no ATR%. Never crosses symbols (a Series is one symbol) or folds (pool is one fold)."""
+    ap = atr_pct_of(s)
+    if not np.isfinite(ap[i]):
+        return pool[:0]
+    allc = eligible_cutoffs(s, *(window or (WINDOW_START, WINDOW_END)))
+    edges = np.quantile(ap[allc], np.linspace(0, 1, n_dec + 1)[1:-1])
+    dec = np.searchsorted(edges, ap[pool])
+    return pool[dec == int(np.searchsorted(edges, ap[i]))]
 
 
 # ----------------------------------------------------------------------------- strategy-own lists and novelty
@@ -495,12 +516,18 @@ class LegList:
     ext: List[int] = field(default_factory=list)       # exit epochs
 
 
+# The arm under test is not part of "the strategies' book" it is compared with: it has no Stage-0 list (it is a
+# proposal-queue leg, not a candle strategy), and left in it makes every non-duplicate cell `unclassifiable`.
+DESK_OWN_LEGS = frozenset({"claude_desk"})
+
+
 def rostered_legs(symbols: Iterable[str]) -> Dict[str, set]:
     """{symbol: {strategy names on ANY account roster whose strategies.yaml entry trades that symbol and is not
     `enabled: false`}}: the system's book, by config (RULE ONE: the roster is read, not assumed). A shadow leg
     stays in (it builds and logs packages); a disabled one produces none."""
     acc, strat = dsp._load_cfg()
     names = {s for a in acc.values() if isinstance(a, dict) and a.get("configured") is not False for s in (a.get("strategies") or [])}
+    names -= DESK_OWN_LEGS
     out: Dict[str, set] = {s: set() for s in symbols}
     for n in names:
         cfg = strat.get(n) or {}
@@ -715,12 +742,28 @@ def grade_arm(st: Dict[str, Any], *, n_min: int, selfcheck: Optional[bool], labe
     return "pass", why
 
 
+def stopping_design(judged_idx: List[int], key_idx: Iterable[int], valid_index: List[int]) -> Dict[str, Any]:
+    """The registered stopping rule's accounting. The schedule is the mask key's index set, NOT range(n): a packet
+    withheld at build time (mask leak) has no key and was never offered to a judge, so its hole is not a skipped
+    packet. Judged packets are a PREFIX when they are exactly the keyed indices up to the last judged one."""
+    idx = sorted(judged_idx)
+    keyed = sorted(set(int(k) for k in key_idx))
+    prefix_ok = bool(idx) and idx == [k for k in keyed if k <= idx[-1]]
+    last_start = ((idx[-1]) // BATCH) * BATCH if idx else 0
+    n_before_last = sum(1 for j in valid_index if j < last_start)
+    return {"packets_judged": len(idx), "is_schedule_prefix": prefix_ok, "batch": BATCH, "stop_proposals": STOP_PROPOSALS,
+            "valid_proposals_before_last_batch": n_before_last, "valid_proposals_total": len(valid_index),
+            "schedule_exhausted": bool(idx) and idx[-1] >= SCHEDULE_LEN - 1,
+            "stopping_rule_respected": bool(prefix_ok and (n_before_last < STOP_PROPOSALS))}
+
+
 def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict]],
           legs: List[LegList], rostered: Dict[str, set], *, subset: str, cutoff: Optional[datetime],
           selfcheck: Optional[bool], seed: int = SEED, draws: int = B_R_DRAWS) -> Dict[str, Any]:
     rng = np.random.default_rng(seed + 7)
+    rng_vm = np.random.default_rng(seed + 11)       # companions draw from their OWN stream: the registered S3 draws are unchanged
     recs: List[dict] = []
-    counts = {"proposals_valid": 0, "filled": 0, "unfilled": 0, "refused": 0, "unresolved": 0,
+    counts = {"proposals_valid": 0, "filled": 0, "filled_in_subset": 0, "unfilled": 0, "refused": 0, "unresolved": 0,
               "novelty": {}, "excluded_by_subset": 0}
     pools: Dict[Tuple[str, int], np.ndarray] = {}
     valid_index: List[int] = []                      # packet index of EVERY valid proposal, whatever its fate
@@ -746,10 +789,11 @@ def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict
             if t.state != "filled":
                 counts[t.state] = counts.get(t.state, 0) + 1
                 continue
+            counts["filled"] += 1                                   # every fill, whatever its novelty
             if subset == "new" and nov not in ("new", "new_no_leg"):
                 counts["excluded_by_subset"] += 1
                 continue
-            counts["filled"] += 1
+            counts["filled_in_subset"] += 1
             g = geometry_of(s, i, side, pr["entry"]["type"], lvl, stp, tpl, pr["entry"]["good_till_bars"], pr["horizon_bars"])
             br = None
             if g is not None:
@@ -757,24 +801,25 @@ def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict
                 if pk not in pools:
                     pools[pk] = eligible_cutoffs(s, WINDOW_START, WINDOW_END, key["fold"])
                 br = random_baseline(s, g, pools[pk], rng, draws)
+                bm = random_baseline(s, g, vol_matched_pool(s, pools[pk], i), rng_vm, draws)
+            else:
+                bm = None
             diff = None if br is None or br["mean"] is None else t.net_r - br["mean"]
+            diff_gross = None if br is None or br["gross_mean"] is None else t.gross_r - br["gross_mean"]
+            diff_matched = None if bm is None or bm["mean"] is None else t.net_r - bm["mean"]
             recs.append({"packet_id": pid, "symbol": sym, "side": pr["side"], "week": iso_week(ce), "fold": key["fold"],
                          "net_r": t.net_r, "days": t.days, "diff": diff, "exit": t.reason, "novelty": nov,
+                         "gross_r": t.gross_r, "diff_gross": diff_gross, "diff_matched": diff_matched,
+                         "diff_gross_matched": None if bm is None or bm["gross_mean"] is None else t.gross_r - bm["gross_mean"],
                          "pre_cutoff": None if cutoff is None else bool(ce < _epoch(cutoff)),
                          "b_r_mean": None if br is None else br["mean"]})
     # the registered stopping rule: judged packets are a schedule PREFIX, taken in whole batches, and the run stopped
     # as soon as the count of VALID proposals (a count taken before any replay, so it cannot depend on a result)
     # reached STOP_PROPOSALS
-    idx = sorted(int(keys[pid]["index"]) for pid in by)
-    prefix_ok = idx == list(range(len(idx)))
-    last_start = ((len(idx) - 1) // BATCH) * BATCH if idx else 0
-    n_before_last = sum(1 for j in valid_index if j < last_start)
-    design = {"packets_judged": len(idx), "is_schedule_prefix": prefix_ok, "batch": BATCH, "stop_proposals": STOP_PROPOSALS,
-              "valid_proposals_before_last_batch": n_before_last, "valid_proposals_total": len(valid_index),
-              "schedule_exhausted": len(idx) >= SCHEDULE_LEN,
-              "stopping_rule_respected": bool(prefix_ok and (n_before_last < STOP_PROPOSALS))}
+    design = stopping_design([int(keys[pid]["index"]) for pid in by], [k["index"] for k in keys.values()], valid_index)
     st = cluster_stats(recs, seed)
     st["n"] = len(recs)
+    st["companions"] = s3_companions(recs, seed)
     if recs:
         folds = {}
         for f in range(1, N_FOLDS + 1):
@@ -806,6 +851,23 @@ def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict
     st["n_to_resolve"] = {f"{e:+.2f}R": required_n(st.get("sd_net_r", float("nan")), e) for e in (0.10, 0.20)}
     return {"verdict": verdict, "reasons": why, "subset": subset, "stats": st, "counts": counts, "design": design,
             "fill_rate": (counts["filled"] / counts["proposals_valid"]) if counts["proposals_valid"] else None}
+
+
+def s3_companions(recs: List[dict], seed: int = SEED) -> Dict[str, Any]:
+    """DESK-S3-VOL-MATCHED-BASELINE. COMPANIONS beside the registered S3 (stats["paired_diff_vs_random"]); no decision rule
+    reads them. Each is the weekly-cluster mean of a paired difference over the filled proposals that have it (n stated):
+      S3                    net R minus the whole-fold random entries' net R (the registered statistic, repeated for the table)
+      gross_excess          GROSS R (before cost) minus the same random entries' gross R
+      S3_matched            net R minus random entries from the SAME symbol, fold and ATR%-decile as the proposal
+      gross_excess_matched  gross R minus those matched entries' gross R
+    A selector that only finds cheap-cost-in-R (high-ATR%) moments has a large S3 and ~0 on the other three."""
+    out: Dict[str, Any] = {}
+    for name, key in (("S3", "diff"), ("gross_excess", "diff_gross"), ("S3_matched", "diff_matched"),
+                      ("gross_excess_matched", "diff_gross_matched")):
+        rows = [dict(r, diff=r[key]) for r in recs if r.get(key) is not None]
+        st = cluster_stats(rows, seed) if rows else {}
+        out[name] = {"n": len(rows), "mean": st.get("paired_diff_vs_random"), "ci95": st.get("paired_diff_ci95")}
+    return out
 
 
 # ----------------------------------------------------------------------------- self-check (unit 01)
@@ -1204,14 +1266,10 @@ def cmd_intake(a: argparse.Namespace) -> int:
         print(json.dumps(err))
         return 2
     keys, packets, by, intake = got
-    idx = sorted(int(keys[pid]["index"]) for pid in by)
-    valid = sum(len(v) for v in by.values())
-    last_start = ((len(idx) - 1) // BATCH) * BATCH if idx else 0
-    before = sum(len(v) for pid, v in by.items() if int(keys[pid]["index"]) < last_start)
-    print(json.dumps({"packets_judged": len(idx), "is_schedule_prefix": idx == list(range(len(idx))), "batch": BATCH,
-                      "valid_proposals_total": valid, "valid_proposals_before_last_batch": before, "stop_proposals": STOP_PROPOSALS,
-                      "next_batch_allowed": idx == list(range(len(idx))) and valid < STOP_PROPOSALS and len(idx) < SCHEDULE_LEN,
-                      "intake": intake}))
+    valid_index = [int(keys[pid]["index"]) for pid, v in by.items() for _ in v]
+    d = stopping_design([int(keys[pid]["index"]) for pid in by], [k["index"] for k in keys.values()], valid_index)
+    print(json.dumps({**d, "next_batch_allowed": d["is_schedule_prefix"] and d["valid_proposals_total"] < STOP_PROPOSALS
+                      and not d["schedule_exhausted"], "intake": intake}))
     return 0
 
 

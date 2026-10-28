@@ -7,6 +7,9 @@ description: The Claude trading desk's operating procedure. The desk DRIVES the 
 
 # /trading-desk — the desk drives; the models learn from it
 
+> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
+
+
 > **Operator, 2026-10-26 ~06:55Z (verbatim, row `DESK-15-ENTRY-GENERATION`):** *"the Claude trading desk is driving the trading, and the MLs, the systems MLs that we're building are learning from that Claude decision-making how to do it themselves so that we can eventually remove Claude from the flow and have only our own AIs doing the trading."*
 
 Design of record: [`docs/plans/claude-trading-desk-DESIGN.md`](../../../docs/plans/claude-trading-desk-DESIGN.md) (v1, operator-approved as the build plan 2026-10-26; § 11 all DECIDED). Checklist rows `DESK-5-SKILL` (this file) and `DESK-6-SHADOW-PILOT` (the routine it runs under). Roadmap `L-DESK`.

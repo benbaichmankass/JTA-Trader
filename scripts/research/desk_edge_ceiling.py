@@ -355,7 +355,8 @@ def label_actions(mkt: Dict[str, d.Series], cutoffs: List[dict], rng_seed: int =
                         continue
                     rows.append({"cutoff": ce, "fold": fold, "week": d.iso_week(ce), "symbol": sym, "side": side, "geom": gname,
                                  "g_sl": sl, "g_tp_r": tp_r, "g_h": float(h), "net_r": t.net_r, "days": t.days,
-                                 "y": t.net_r - base[bk], "b_r": base[bk], "cost_r": t.cost_r})
+                                 "y": t.net_r - base[bk], "b_r": base[bk], "cost_r": t.cost_r,
+                                 "atr_pct": float(s.atr[i] / s.c[i])})
     return rows
 
 
@@ -530,6 +531,10 @@ def evaluate(rows: List[dict], pred: np.ndarray, alpha: float) -> Dict[str, Any]
     st = d.cluster_stats(sr) if sr else {"n": 0}
     out = {k: st.get(k) for k in ("n", "weeks", "mean_net_r", "mean_ci95", "net_r_per_capital_day", "paired_diff_vs_random", "paired_diff_ci95")}
     out["S3_ci_corrected"] = list(cluster_ci(sr, "diff", alpha)) if sr else None
+    if picks and all("atr_pct" in r for r in rows):
+        # DESK-S3-VOL-MATCHED-BASELINE companions (never read by a rule): gross_excess, S3_matched; see desk_vm_baseline
+        from scripts.research import desk_vm_baseline as vm
+        out["companions"] = vm.companions(vm.annotate(rows, lambda r: r["atr_pct"]), picks, d.cluster_stats)
     out["long_share"] = float(np.mean([rows[j]["side"] == "long" for j in picks])) if picks else None
     out["geoms"] = {g: sum(1 for j in picks if rows[j]["geom"] == g) for g in sorted({rows[j]["geom"] for j in picks})}
     return out

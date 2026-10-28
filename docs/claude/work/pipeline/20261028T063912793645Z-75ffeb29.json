@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "exit-policy-v1 appears in /api/bot/ml/registry, OR the manifest is retired/re-scoped by a recorded decision (TM-BENCH or ML-LEARNING-LEDGER row note), OR the trainer log shows a different cause that is then fixed",
+    "kind": "observation"
+  },
+  "id": "PI-20261028-QFMQD2BK-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PROGRAMME-PLAN (session_01AFoLuMW7djezsBqFMqd2Bk), docs/plans/ML-PROGRAMME-2026-10-28.md § 3.1 / § 8",
+    "rerun": "python3 -c \"import yaml,glob,json,urllib.request;r={m['model_id'] for m in json.load(urllib.request.urlopen('https://ict-bot.duckdns.org/api/bot/ml/registry'))['rows']};print([yaml.safe_load(open(f)).get('model_id') for f in glob.glob('ml/configs/*.yaml') if yaml.safe_load(open(f)).get('model_id') not in r])\"; grep -c exit_candidates scripts/ops/build_trainer_datasets.sh"
+  },
+  "state": "queued",
+  "what": "exit-policy-v1 (ml/configs/exit-policy-v1.yaml, target should_hold, the ONLY in-trade manifest) has never registered: its model_id is absent from GET /api/bot/ml/registry (97 rows, 2026-10-28 06:25Z; also absent: mes-execution-quality-baseline-v0, setup-candidates-metalabel-paper-v1). INFERRED cause: its dataset family exit_candidates (ml/datasets/families/exit_candidates.py) is never built by scripts/ops/build_trainer_datasets.sh (0 mentions; positive control setup_candidates: 9), so the manifest clean-skips nightly on an empty dataset. Disposition per docs/plans/ML-PROGRAMME-2026-10-28.md: re-scope onto TM-BENCH action-value labels (proposed row TM-BENCH) and detect via proposed row ML-LEARNING-LEDGER; the manager decides whether to file those rows or to wire the family build."
+}

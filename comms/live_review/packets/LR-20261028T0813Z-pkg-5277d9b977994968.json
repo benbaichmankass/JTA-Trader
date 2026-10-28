@@ -1,0 +1,104 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "bybit_orders: SL 1.3236 / TP 1.3341, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "long",
+    "order_package_id": "pkg-32a5162bbbdd4ef6",
+    "symbol": "SPY"
+   },
+   {
+    "direction": "long",
+    "order_package_id": "pkg-c45677aa2d574a52",
+    "symbol": "XRPUSDT"
+   }
+  ],
+  "direction": "long",
+  "funding": null,
+  "news": {
+   "adjustment": 0.019451,
+   "decision": "neutral",
+   "ts": "2026-10-28T08:04:11.357026+00:00",
+   "veto": false
+  },
+  "previous_review": null,
+  "symbol": "XRPUSDT"
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 1.0031,
+  "bars_since_peak": null,
+  "giveback_r": null,
+  "open_r": 0.1006,
+  "peak_r": null,
+  "r_to_stop": 1.1006,
+  "r_to_target": 1.3994
+ },
+ "info_cutoff_at": "2026-10-28T08:13:19Z",
+ "leg": "ict_scalp_xrp_15m",
+ "mechanics": {
+  "evidence": "bybit_1: venue TP 1.3341 != package TP 1.34074",
+  "verdict": "mismatch"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime='chop' vol_regime='unknown': not both known"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest verdict not assembled by this generator yet"
+  }
+ ],
+ "order_package_id": "pkg-5277d9b977994968",
+ "packet_version": 2,
+ "priced_options": null,
+ "regime": {
+  "adx_now": 15.6375,
+  "atr_now_over_entry": 1.0031,
+  "cell_entry": null,
+  "cell_now": null,
+  "trend_now": "chop"
+ },
+ "review_id": "LR-20261028T0813Z-pkg-5277d9b977994968",
+ "state": {
+  "atr_now_over_entry": 1.0031,
+  "bars_held": 1,
+  "giveback_r": null,
+  "open_r": 0.1006,
+  "peak_provenance": "estimated",
+  "peak_r": null,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 1.32334,
+  "tp": 1.34074
+ }
+}

@@ -354,6 +354,13 @@ class TestNovelty:
         assert set(r) == set(drv.REGISTERED_SYMBOLS) and all(isinstance(v, set) for v in r.values())
         assert "xrp_pullback_2h" in r["XRPUSDT"] and "ada_pullback_2h" in r["ADAUSDT"]
 
+    def test_the_desk_leg_is_not_part_of_the_strategies_book(self):
+        # claude_desk is rostered on every replay symbol and has no Stage-0 list: left in, nothing is ever `new`
+        r = drv.rostered_legs(drv.REGISTERED_SYMBOLS)
+        assert all("claude_desk" not in names for names in r.values())
+        legs, gaps = drv.load_strategy_lists(r)
+        assert not any(g.startswith("claude_desk") for g in gaps)
+
     def test_a_rostered_leg_without_a_record_is_a_named_gap(self):
         legs, gaps = drv.load_strategy_lists({"BTCUSDT": {"no_such_leg_xyz"}})
         assert legs == [] and any("no_such_leg_xyz" in g and "no committed evidence record" in g for g in gaps)
@@ -583,14 +590,18 @@ class TestRoundTrip:
         assert drv.main(args + ["--out", str(tmp_path / "bad")]) == 2
         assert "differ from what the judge saw" in capsys.readouterr().out
 
-    def _judged(self, candles_dir, tmp_path, keep, n=6, propose=True):
+    def _judged(self, candles_dir, tmp_path, keep, n=6, propose=True, extra=(), withhold=()):
         out = tmp_path / "pkd"
         assert drv.main(["packets", "--out", str(out), "--candles-dir", str(candles_dir), "--n", str(n)]) == 0
+        if withhold:                                    # a packet withheld at build time (mask leak) has no key
+            kf = json.loads((out / "mask-key.json").read_text())
+            kf["keys"] = [k for k in kf["keys"] if k["index"] not in withhold]
+            (out / "mask-key.json").write_text(json.dumps(kf))
         packets = [json.loads(r) for r in (out / "packets.jsonl").read_text().splitlines()]
         keys = {k["packet_id"]: k for k in json.loads((out / "mask-key.json").read_text())["keys"]}
         rows = []
         for r in packets:
-            if keys[r["packet_id"]]["index"] not in keep:
+            if r["packet_id"] not in keys or keys[r["packet_id"]]["index"] not in keep:
                 continue
             alias = r["packet"]["universe"][0]["symbol"]
             rows.append({"packet_id": r["packet_id"], "action": "propose_entry", "judge_prior": 0.4, "proposal": _proposal(alias)} if propose
@@ -601,8 +612,33 @@ class TestRoundTrip:
         sc = tmp_path / "sc.json"
         sc.write_text(json.dumps({"verdict": "pass"}))
         assert drv.main(["score", "--out", str(res), "--candles-dir", str(candles_dir), "--proposals", str(pf), "--mask-key",
-                         str(out / "mask-key.json"), "--selfcheck-verdict", str(sc), "--model-cutoff", "2026-06-01"]) == 0
+                         str(out / "mask-key.json"), "--selfcheck-verdict", str(sc), "--model-cutoff", "2026-06-01", *extra]) == 0
         return json.loads((res / "verdict.json").read_text())["measurement"]
+
+    def test_a_leak_withheld_index_is_not_a_skipped_packet(self, candles_dir, tmp_path):
+        # judged-1 withheld indices 406 and 805: no key, never offered to a judge; the rest was judged in full
+        m = self._judged(candles_dir, tmp_path, keep={0, 1, 3, 4, 5}, withhold={2})
+        assert m["design"]["is_schedule_prefix"] is True and m["design"]["stopping_rule_respected"] is True
+        assert m["design"]["packets_judged"] == 5
+
+    def test_judged_1_shape_is_a_respected_prefix_and_exhausts_the_schedule(self):
+        held = {406, 805}
+        keyed = [i for i in range(drv.SCHEDULE_LEN) if i not in held]
+        d = drv.stopping_design(keyed, keyed, [i for i in keyed if i % 2 == 0][:732])
+        assert d["packets_judged"] == 1498 and d["is_schedule_prefix"] is True
+        assert d["schedule_exhausted"] is True and d["stopping_rule_respected"] is True
+        assert drv.stopping_design([i for i in keyed if i != 100], keyed, [])["is_schedule_prefix"] is False
+
+    def test_a_keyed_packet_left_unjudged_is_still_not_a_prefix(self, candles_dir, tmp_path):
+        m = self._judged(candles_dir, tmp_path, keep={0, 1, 3, 4, 5}, withhold=())
+        assert m["design"]["is_schedule_prefix"] is False
+
+    def test_filled_counts_every_fill_before_the_subset_filter(self, candles_dir, tmp_path):
+        m = self._judged(candles_dir, tmp_path, keep={0, 1, 2, 3, 4, 5}, extra=("--subset", "new"))
+        c = m["counts"]
+        assert c["excluded_by_subset"] > 0                                         # the real rostered legs make some cells non-new
+        assert c["filled"] == c["filled_in_subset"] + c["excluded_by_subset"] and c["filled"] > 0
+        assert m["fill_rate"] == pytest.approx(c["filled"] / c["proposals_valid"])
 
     def test_judged_packets_that_are_not_a_schedule_prefix_are_not_scored_as_a_verdict(self, candles_dir, tmp_path):
         m = self._judged(candles_dir, tmp_path, keep={0, 2, 3})                 # packet 1 skipped
@@ -657,3 +693,27 @@ class TestRoundTrip:
         assert all(g["mean_cost_r"] > 0 for g in m["geometries"].values())
         assert m["n_required_at_pooled_sd"]["+0.10R"] > m["n_required_at_pooled_sd"]["+0.20R"] > 0
         assert v["data_inputs"] and v["read_state"] == "measured"
+
+
+# ----------------------------------------------------------------------------- DESK-S3-VOL-MATCHED-BASELINE (driver form)
+class TestVolMatchedCompanions:
+    def test_matched_pool_is_same_symbol_fold_and_decile_and_never_wider_than_the_fold(self, market):
+        ser = market["ETHUSDT"]
+        pool = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END, 2)
+        ap = drv.atr_pct_of(ser)
+        i = int(pool[len(pool) // 2])
+        mp = drv.vol_matched_pool(ser, pool, i)
+        assert 0 < len(mp) < len(pool) and set(mp.tolist()) <= set(pool.tolist())
+        allc = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END)
+        edges = np.quantile(ap[allc], np.linspace(0, 1, 11)[1:-1])
+        assert len({int(np.searchsorted(edges, ap[j])) for j in mp}) == 1 == len({int(np.searchsorted(edges, ap[i]))})
+        # a pool from another fold yields only that fold's members: matching cannot draw across folds
+        other = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END, 3)
+        assert not set(drv.vol_matched_pool(ser, other, i).tolist()) & set(pool.tolist())
+
+    def test_random_baseline_reports_gross_and_keeps_the_registered_net_mean(self, market):
+        ser = market["BTCUSDT"]
+        g = {"side": 1.0, "etype": "market", "offset_atr": 0.0, "sl_atr": 1.5, "tp_atr": 3.0, "good_till": 1, "horizon": 24}
+        pool = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END, 2)
+        r = drv.random_baseline(ser, g, pool, np.random.default_rng(1), 100)
+        assert r["gross_mean"] > r["mean"]                                           # gross = net + a positive cost

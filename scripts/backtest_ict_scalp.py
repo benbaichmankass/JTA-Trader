@@ -1339,9 +1339,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Force-close a trade after N bars if neither SL nor TP hits (default: 24 → 2h on 5m).")
     p.add_argument("--cooldown-bars", type=int, default=3,
                    help="Skip N bars after each exit before re-evaluating (default: 3).")
-    p.add_argument("--fee-bps-roundtrip", type=float, default=FEE_BPS_ROUNDTRIP,
-                   help="Round-trip fee in bps of notional (default: the shared "
-                        "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP).")
+    p.add_argument("--fee-bps-roundtrip", type=float, default=None,
+                   help="Round-trip fee in bps of notional (default unset = the venue "
+                        "fee via execution_costs.resolve_fee_bps_roundtrip; 0 = fee-only arm).")
     p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
                    help="Execution-realism (P1 § 3.B): round-trip slippage in bps of "
                         "notional (half-spread + impact, both sides). DEFAULT (unset) = "
@@ -1536,7 +1536,7 @@ def main(argv: List[str]) -> int:
     if _tpg_refusal:
         print(f"ERROR: {_tpg_refusal}", file=sys.stderr)
         return 2
-    FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
+    FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(args.symbol, args.fee_bps_roundtrip)
     SLIPPAGE_BPS_ROUNDTRIP = (
         execution_costs.slippage_bps_roundtrip_for(args.symbol)
         if args.slippage_bps_roundtrip is None else args.slippage_bps_roundtrip)

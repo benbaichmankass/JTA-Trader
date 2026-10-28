@@ -1,6 +1,6 @@
 id: RQ-20261027-3e41-04
 title: 'adx-max lever, trend_donchian_eth_4h: does an arm (AX40/AX50) beat the declared leg net of the full cost stack (dR >= 1.0 R, >= 3 of 4 calendar folds, no worse drawdown)?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: regime
@@ -94,4 +94,15 @@ related:
 - scripts/research/exit_lever_ablation.py
 - RQ-20261022-326f-05
 - RQ-20261023-a1f3-11
-last_dispatched_at: null
+last_dispatched_at: '2026-10-28T03:53:11+00:00'
+grading:
+  attested: RULE-RQ202610273e4104-ADX_MAX
+  auto: true
+  decision_rule_id: RULE-RQ202610273e4104-ADX_MAX
+  evidence:
+  - research/results/RQ-20261027-3e41-04/40629206501.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

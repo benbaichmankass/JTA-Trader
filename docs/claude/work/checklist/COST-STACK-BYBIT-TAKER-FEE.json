@@ -2,21 +2,27 @@
   "id": "COST-STACK-BYBIT-TAKER-FEE",
   "title": "Replay/backtest cost stack under-charges Bybit perp fees: modelled 7.5 bps fee round trip vs MEASURED 11.0 bps (every fill taker at 5.5 bps/side); net all-in about 1.8 bps RT under after slippage",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "done",
+  "owner": "session_01AFoLuMcBGfVrxBvpvBWnHW",
+  "lane": "COST-STACK-BYBIT-TAKER-FEE",
   "model": null,
-  "ceiling_usd": null,
+  "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    20783
+  ],
   "blocked_on": [],
-  "note": "MEASURED 2026-10-27 by lane DESK-EDGE-PROGRAM (manager decision 16:58Z: settle with data). Population: GET /api/bot/pnl/exchange/fills?days=90 for bybit_1 (1,000 fills, truncated, 2026-09-13..10-27), bybit_2 (257, 2026-07-31..10-25), bybit_portfolio (154): 1,411 fills, ALL is_maker=false, fee/notional = 5.50 bps per side in every fill (p10=p90=5.5). Record: comms/research/desk_edge/levers/bybit-fee-measured-2026-10-27.json. The stack charges execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP 7.5 + PERP_SLIPPAGE_BPS_ROUNDTRIP 3.0 = 10.5 bps; measured = 11.0 fee + 1.29 slippage (R3 2026-10-25 bybit_perps|market, n 74, CI [-0.88,+3.56]) = 12.3 bps: fee -3.5 bps, slippage +1.7 bps, net about -1.8 bps a round trip. Impact: about 0.003 R at 48h holds, 0.04 R at a 1-sd 30-min bracket. Also MEASURED: zero maker fills, so the maker lever has never been exercised live. Fix: venue fee per instrument (config/instruments.yaml -> profile_loader.roundtrip_fee_bps_for returns None for crypto today) = 11.0 for Bybit linear taker; changes every Stage-0 corpus' cost, so it is Tier 2 (cost-model single owner guard). Until then DESK-EDGE-PROGRAM tables use the measured 12.3 bps.",
+  "note": "MERGED 42bc6c9ff (operator popup 2026-10-28 ~05:55Z: \"Merge + re-cost sweep\"). OBSERVED on main 06:00Z: src.core.profile_loader.roundtrip_fee_bps_for BTCUSDT=11.0, ETHUSDT=11.0, MES=None (falls to default). Harness routing is COST-STACK-HARNESS-RESOLVER (#20813); the 28-leg re-cost sweep is its follow-on.",
   "priority_rank": 2,
-  "updated_at": "2026-10-27T17:02:58Z",
-  "updated_by": "session_01AFoLuLyuCsXDg4fGyAGxcp",
+  "updated_at": "2026-10-28T05:56:29Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
   "roadmap": [
     "L-DESK"
   ],
+  "writeback": {
+    "roadmap": "L-LADDER: Bybit linear taker fee is the measured 11.0 bps RT in the cost model",
+    "arch": "cost model: roundtrip_fee_bps_for returns venue fee for bybit:linear"
+  },
   "_seq": 736
 }
