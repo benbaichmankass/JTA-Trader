@@ -2,7 +2,7 @@
   "id": "DESK-1H-HORIZON-MISMATCH",
   "title": "Hourly desk wakes cannot price a <=60 min hold: scan-1h carried only 4/12/48-bar rows",
   "phase": "build",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "DESK-1H-HORIZON-MISMATCH",
   "model": null,
@@ -11,8 +11,8 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Root cause: packet side (DESK-18E fixed the brief, deferred option (ii)). Fix: DEFAULT_HORIZONS (1,4,12,48). Tier 2 hold. Expect priceable, not profitable.",
-  "updated_at": "2026-10-28T03:51:44Z",
+  "note": "Merged #20803 (DEFAULT_HORIZONS 1,4,12,48 + brief). Merged is not deployed or observed. Closes when: a scan-1h packet on desk/decisions after the VM pulls main carries horizon_bars=1 history rows (176 rows) and a wake prices on them. Expect priceable, not profitable.",
+  "updated_at": "2026-10-28T05:53:42Z",
   "updated_by": "session_01AFoLuJEiLttWnLhnbHgpQX",
   "roadmap": [
     "L-DESK"
