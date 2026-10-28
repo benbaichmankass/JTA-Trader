@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH",
+  "title": "Both applied live-review closes still cannot be priced (replay_mismatch) after the join fix",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 deep pass 0 (OUTCOME). Fixed in this PR: price_all joined trades only by review.trade_id, and both close reviews (pkg-613daaec, pkg-5277d9b9; journal 6741, 6759) carried trade_id=null -> no_trade_row; now joins via the package's linked_trade_id (test added). That also raised closed trades gradable for holds 11 -> 35 and hold-vs-close n 8 -> 27. The 2 closes now fail at replay_mismatch: the hold replay cannot reproduce the realised exit. Likely cause (INFERRED, p~0.6): candle timeframe -- both legs are 15m scalps and the replay pulls meta.timeframe or '1h'; or the applied close itself is the realised exit, which the hold replay is not meant to reproduce. Fix: root-cause in live_review_counterfactual.price_review for applied closes. Detector: a test with an applied close on a 15m leg. check: live_review_grade.py --live; rule: altering calls priced >= 1 of 2.",
+  "updated_at": "2026-10-28T19:04:06Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 761
+}

@@ -1,0 +1,77 @@
+{
+  "run": "RESEARCH-OPS-2026-10-28-2048", "finished_at": "2026-10-28T21:05:00Z", "by": "session_01AFoLuJwGPpM8LDLfQvRe1A",
+  "floor": 48, "floor_basis": "computed_floor(fired_24h 60)", "authoring_queue_depth": 35,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"], "needs_review_triaged": 0, "needs_review_left": 28,
+  "throughput": {"runnable_before": 47, "runnable_after": 48, "queued": 147, "fired_24h": 60, "results_landed_24h": 66,
+                 "hours_since_last_dispatch": 2.9, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok", "collector": "ok", "stranded_stamp_prs": [],
+                "incident": null,
+                "note": "GitHub MCP actions_list read: dispatch runs #613-#623 in the last 14 h, 8 of 11 success; failures #618, #621 (and #604) ran 37-52 min, consistent with the dispatcher job limit, job logs not opened (limit). Open PR list read: no automation/research-queue-* head among the first page."},
+  "results_read": {"pass": 2, "fail": 3, "indeterminate": 1,
+    "units": ["RQ-20261027-3e41-03", "RQ-20261025-3947-11", "RQ-20261022-4b82-18", "RQ-20261028-2a2e-01", "RQ-20261028-2a2e-03", "RQ-20261028-2a2e-06", "RQ-20261027-3e41-15", "RQ-20261027-3e41-16"]},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": ["RQ-20261028-b37d-01"],
+  "followups_filed": [{"item": "forward confirmation of 3e41-03 (needs ~90 d of new AVAX history)", "ref": "PI-20261028-HOPS2048-0001"}],
+  "authoring": {"queue_depth": 35, "nodes_drafted": 0, "nodes": [], "hand_units": 1,
+                "note": "No programme node drafted: the top asks are blocked (P3-Q1 on LIVE-BT-STAGE-B) or are Tier-3 packets for the manager (P2-R3.c03/c04). One hand unit authored where the analysis found a decision-changing test; the MODEL candidates were skipped on purpose (VOI ~0, see analysis.model).",
+                "skipped_on_purpose": true, "theme_shortfall": {"regime": 2, "ml_health": 7, "new_strategy_prop": 7, "infra": 1}},
+  "checks": {"packet_as_of": "2026-10-28T20:49:42Z", "since": "2026-10-28T15:30:00Z",
+             "runnable_by_track": {"TRADING": 43, "MODEL": 0, "INFRA": 4},
+             "graded_by_window": {"7d": {"TRADING": {"pass": 73, "fail": 301, "indeterminate": 29}, "MODEL": {"pass": 10, "fail": 31, "indeterminate": 25}}},
+             "fails_without_next": 0, "followups": {"needs_authoring": 3, "fired": 1}, "needs_review": 28,
+             "result_disposition": {"UNOWNED": 0, "UNGRADED": 3, "in_grace": 17},
+             "stale": 2,
+             "followthrough_research_ops_7d": {"filed": 63, "done": 2, "killed": 0, "open": 61, "backlog_open": 103, "no_owner_over_14d": 21},
+             "could_not_look": ["workflow job logs for failed dispatch runs", "authoring-queue theme split beyond the health line"]},
+  "prior_calls_scorecard": [
+    {"call": "PI-20261028-9LBP6539-0001 dispositioned by 2026-11-04", "p": 0.55, "check_rerun": "python3 scripts/ops/pipeline.py --due --all | grep 9LBP6539", "outcome": "unresolved", "action_happened": false},
+    {"call": "RQ-20261028-4dd3-01 next grade INDETERMINATE (n<39), not retired", "p": 0.97, "check_rerun": "research_ops_checks.py --since 24h", "outcome": "unresolved", "action_happened": false},
+    {"call": "needs_review drops below 28 only if a triage PR is written", "p": 0.3, "check_rerun": "queue_grade.py --health", "outcome": "hit", "action_happened": true}
+  ],
+  "analysis": {
+    "rows_opened": ["RQ-20261027-3e41-03", "RQ-20261027-3e41-04", "RQ-20261028-2a2e-01", "RQ-20261028-2a2e-03", "RQ-20261022-4b82-18", "RQ-20261025-3947-11", "RQ-20261027-3e41-15", "RQ-20261027-3e41-16"],
+    "trading": {
+      "meaning": [
+        "vol-skip-below-pctl on trend_donchian_avax_4h: VL30 +22.66 R over B (32.1 -> 54.8 R), maxDD 16.9 -> 7.4, 4 of 4 folds strictly better, trades 264 -> 173; but it is 1 of 5 vol-skip cells (SOL, ADA, sol_prop, eth_prop failed) and 2 of 14 in batch 3e41, so it is a discovery and a one-leg effect, not a lever that generalises. So it feeds a plateau test and a forward confirmation, not a Tier-3 note yet.",
+        "Squeeze 4h baseline B (2a2e-01 graded FAIL because no variant beat B by 0.05 R/trade) is itself positive: pooled +82.6 R, 0.048 R/trade, one-sided p 0.082, 5 of 6 folds, 3 of 6 cells; 63.5 R of it is SOL and 31 R ADA, BTC ~0, AVAX and XRP negative, last fold only +5.6 R. So the FAIL label hides that the baseline sits at the Stage-0 edge, thin, concentrated and decaying; it is not a prop-pace candidate on this evidence.",
+        "Daily pullback basket (2a2e-03) FAIL: pooled passes but 2 of 6 cells pass; per-cell n is 21 over 6 years, so breadth fails on thin n, not on a measured loss. So the idea is under-sampled at 1d, not wrong."
+      ],
+      "fail_diagnoses": [
+        {"cluster": "R-armed tight trail on trend_donchian_sol_4h (3947-11)", "hypotheses": ["noise", "test design (declared exit already trails at 5x ATR with a decay stall)", "idea wrong"], "test": "rows opened: incumbent_stands, no arm clears net R / folds / DD", "survivor": "design", "next": "no new unit: the neighbouring 3947 arms already cover trail variants; value of another ~0"},
+        {"cluster": "sweep-reversal at 4h (4b82-18)", "hypotheses": ["noise", "idea wrong", "cost drag"], "test": "FAR baseline negative in every fold (-23.7, -28.7, -5.7, -18.9 R on ADA); SWEEP -0.12 R/trade vs FAR -0.088", "survivor": "idea", "next": "no new unit: parent 1h also FAILed; same direction at two bar sizes; family stays open under policy"}
+      ],
+      "next_tests": [
+        {"id_or_node": "RQ-20261028-b37d-01", "decision_changed": "whether the AVAX vol-skip lead becomes a Tier-3 proposal path", "on_pass": "plateau: file the manager note once the forward window (PI-20261028-HOPS2048-0001) confirms", "on_fail": "close 3e41-03 as a one-cell discovery, nothing proposed", "premortem": "neighbours fail only because trade count drops (173 trades at VL30); the grade reads dR, DD and folds so a thin-n failure shows as fold_wins < 3"}
+      ]},
+    "model": {
+      "meaning": [
+        "15m direction, LightGBM and CatBoost vs the class prior: all six symbol-learner deltas are positive (0.0004-0.0011 nats) but below the 0.002 bar, BTC CI lower bound just above 0 for both, SOL sign inconsistent. So there is a tiny, borderline-significant information gain at 15m. 0.001 nats is roughly 0.1 percent of the prior log-loss, far below any cost stack, so it changes no gate."
+      ],
+      "fail_diagnoses": [],
+      "next_tests": []},
+    "cross_track": [
+      {"from": "TRADING", "finding": "vol-skip below the 30th percentile helps AVAX 4h by removing dead-volatility entries (264 to 173 trades)", "feeds": "regime labels for the MODEL vol head: dead-vol entry as a negative class (node P2-Q4 family, no unit yet)"}
+    ],
+    "surprises": ["MODEL runnable is 0 (ml_health 0 of 7 share) while 6 ml_health units read queued but are 'once and already ran'; their status has not closed.", "The dispatcher alarm 'idle backends' lists four backends with nothing due while TRADING runnable is 43."]
+  },
+  "calls": [
+    {"call": "RQ-20261028-b37d-01: both VL25 and VL35 pass (plateau)", "p": 0.4,
+     "check": {"command": "python3 -c \"import json,glob;m=json.loads(open(sorted(glob.glob('research/results/RQ-20261028-b37d-01/*.jsonl'))[-1]).readlines()[-1])['measurement'];print({k:v['passes'] for k,v in m['grade']['candidates'].items()})\"", "rule": "both true = plateau", "resolves_when": "2026-10-30"}},
+    {"call": "MODEL runnable_by_track stays 0 on the next pass unless a MODEL unit is authored", "p": 0.8,
+     "check": {"command": "python3 scripts/research/research_ops_checks.py --since 24h", "rule": "runnable_by_track.MODEL == 0", "resolves_when": "2026-10-29"}},
+    {"call": "needs_review stays 28 on the next pass", "p": 0.85,
+     "check": {"command": "python3 scripts/research/queue_grade.py --health", "rule": "needs_review == 28", "resolves_when": "2026-10-29"}}
+  ],
+  "not_run": [
+    "C: needs_review triage (28 left, 25 owned, UNOWNED 0) not written; blocker_watch ran (STALE_BLOCK rows from the last pass unchanged)",
+    "E: programme node authoring (0 nodes), on purpose, reason in authoring.note"
+  ],
+  "limits": ["pytest absent on this clone; guards run directly", "failed dispatch run job logs not opened", "routing of due pipeline items left to the manager (64 unrouted)"],
+  "handoff": [
+    "Manager: MODEL track has 0 runnable units; ml_health share 7 unmet. The 6 queued ml_health units are 'once, already ran' with status not closed; the grader should close them. Needs an authoring lane for MODEL (P2-Q4-cross-asset-features is the ready node).",
+    "Manager: P2-R3.c03 / c04 are Tier-3 PACKET asks (confirmed regime gates on eth_pullback_2h and trend_donchian_sol), not backtests; they need a packet, not a unit.",
+    "Squeeze 4h baseline is thin and SOL-concentrated; nothing proposed (2a2e-01).",
+    "PI-20261028-9LBP6539-0001 (strict-win flag) still queued: do not read ed1c-style confirmation passes as confirmations until it is dispositioned.",
+    "64 unrouted due pipeline items (python3 scripts/ops/pipeline.py --due)."
+  ]
+}
