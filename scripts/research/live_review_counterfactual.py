@@ -429,7 +429,12 @@ def price_all(reviews: Iterable[dict], packages: Dict[str, dict], trades: Dict[i
     res = []
     for rv in reviews:
         pkg = packages.get(rv["order_package_id"])
-        tr = trades.get(int(rv["trade_id"])) if rv.get("trade_id") is not None else None
+        # A review written before the package filled carries trade_id=null; the package's
+        # linked_trade_id is then the join (WEEKLY-AUDIT-2026-10-28: both applied closes read no_trade_row).
+        tid = rv.get("trade_id") if rv.get("trade_id") is not None else (pkg or {}).get("linked_trade_id")
+        tr = trades.get(int(tid)) if tid is not None else None
+        if tid is not None and rv.get("trade_id") is None:
+            rv = dict(rv, trade_id=tid)
         bars = None
         if pkg is not None and (rv.get("recommendation") or {}).get("action") in ALTERING:
             tf = _meta(pkg).get("timeframe") or "1h"

@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-DEMO-FLOOR-NO-EVAL",
+  "title": "7 rostered demo-floor legs emit no eval/refusal line, so quiet-by-design cannot be told from blocked",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 C13a. MEASURED: /api/diag/audit?limit=3000 (1000 rows, 18:22-18:57Z) shows *_eval lines for 45 legs, ~14 per leg; none for bybit_1 trend_donchian_1h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_xrp_4h and alpaca_paper splg_trend_long_1d (claude_desk excluded: the desk has its own records). xrp/ada_pullback_2h and eth_prop produced packages this week, so absence of an eval line is not absence of evaluation -- which is the defect: for xrp_adx25 (0 packages since added 10-22) and splg (0 packages since 07-29; BL-20260807-SPLG-NO-CANDLES) no record says why. Fix (Tier 1, observability): every rostered leg's builder logs one *_eval line per bar with its reason; a C13 instrument lists rostered legs with no eval in 24h. Detector: that instrument. check: same audit read; rule: 0 rostered non-desk floor legs without an eval line in 24h.",
+  "updated_at": "2026-10-28T19:04:06Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 759
+}

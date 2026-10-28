@@ -3384,8 +3384,14 @@ def account_alpaca_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, An
             "unrealised_pnl": _price(pos.get("unrealized_pnl")),
         } for pos in raw if isinstance(pos, dict)]
 
+    # Declared venue-wedged orders on a CONFIRMED-flat symbol move to a visible side list
+    # (config/venue_wedged_orders.yaml); a held or unreadable position excludes nothing.
+    from src.runtime import venue_wedged_orders
+    orders, wedged_excluded = venue_wedged_orders.partition(str(aid), orders, positions)
+
     return {
         "orders": orders,
+        "orders_excluded_venue_wedged": wedged_excluded,
         "positions": positions,
         "positions_state": positions_state,
         # "read" | "truncated" | "could_not_look": whether `held` bracket legs
