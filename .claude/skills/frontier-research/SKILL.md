@@ -65,6 +65,8 @@ Point at it; do not restate it. The evidence for this redesign is in
 
 ## Step 0 — close the loop on the previous scan (always first)
 
+**Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source frontier --window-days 7` and record its line before grading.
+
 **Grade the previous scan's calls (Layer 0, required).** Grade each `candidates[]` entry in the last record, kept or dropped,
 `hit | miss | unresolved | void`:
 - **A kept idea** is a hit if its unit ran and was informative. That means PASS, FAIL, or an INDETERMINATE at a powered design. An

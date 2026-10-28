@@ -1014,8 +1014,10 @@ _OWNER_PR = re.compile(r"PR\s*#\d+")
 
 def owner_of(item: dict, rows: dict[str, dict], unit_exists=lambda uid: False) -> tuple[str, str]:
     """-> (kind, ref) kind in row|unit|pr|unresolved. ``routed_to`` is free text
-    that leads with the owner ('A7', 'checklist row A7 | ...', 'RQ-..', 'PR #1')."""
-    text = re.sub(r"^checklist row\s+", "", str(item.get("routed_to") or "").strip())
+    that leads with the owner ('A7', 'checklist row A7 | ...', 'checklist:A7',
+    'RQ-..', 'PR #1'). The 'checklist:<ROW>' form was unparsed until 2026-10-28
+    (REVIEW-FOLLOWTHROUGH: 40 routed items, 9 of them due, read as unowned)."""
+    text = re.sub(r"^checklist(?:\s+row\s+|\s*:\s*)", "", str(item.get("routed_to") or "").strip())
     if _OWNER_PR.match(text):
         return "pr", _OWNER_PR.match(text).group(0)
     m = _OWNER_TOKEN.match(text)
@@ -1621,6 +1623,7 @@ def _selftest() -> int:
         base(id="G-HIGH", state="routed", routed_to="LIVE", severity="high"),
         base(id="G-NOROW", state="routed", routed_to="no such row at all"),
         base(id="X-LIVE", state="routed", routed_to="LIVE | x"),
+        base(id="X-LIVE-COLON", state="routed", routed_to="checklist:LIVE"),
         base(id="X-UNIT", state="routed", routed_to="RQ-1 (unit)"),
         base(id="X-PR", state="routed", routed_to="PR #12 held"),
         base(id="X-NOTDUE", state="routed", routed_to="GONE",
@@ -1634,9 +1637,9 @@ def _selftest() -> int:
     check("planted high-severity item with a live owner is in the gate",
           gs["ids"]["high_severity"] == ["G-HIGH"])
     check("live-owner row/unit/PR items are EXCLUDED, and counted by reason",
-          gs["excluded"] == {"owner_row_live": 1, "owner_unit": 1, "owner_pr": 1})
+          gs["excluded"] == {"owner_row_live": 2, "owner_unit": 1, "owner_pr": 1})
     check("denominator: gate + excluded == due (not-due item in neither)",
-          gs["due"] == 8 and gs["gate"] == 5 and gs["excluded_total"] == 3)
+          gs["due"] == 9 and gs["gate"] == 5 and gs["excluded_total"] == 4)
 
     print("— POSITIVE CONTROL: two branches each appending one record merge "
           "cleanly with plain git (the actual property this re-point buys) —")

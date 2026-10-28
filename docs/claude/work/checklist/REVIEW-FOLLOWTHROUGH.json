@@ -1,0 +1,32 @@
+{
+  "id": "REVIEW-FOLLOWTHROUGH",
+  "title": "Review follow-through: per-source check script + Thursday-planning one-disposition step + backlog triage pre-read",
+  "phase": "build",
+  "state": "landed_unproven",
+  "owner": "lane REVIEW-FOLLOWTHROUGH (session_01AFoLuLiQXvHK8JuXiaoXxz)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20871
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-10-28 ask relayed by Manager Session 2026-10-27a. PR #20871: scripts/ops/review_followthrough.py (guard review-followthrough), manager SKILL \u00a7 'Review follow-through' (step 0 table, carry-over, one disposition a/b/c, WIP cap), docs/reviews/2026-10-29-followthrough-triage.md (T1-T8 proposals, nothing killed), pipeline.owner_of fix for routed_to 'checklist:<ROW>' (40 items read unowned), Layer-0 line in performance-review/ml-review/frontier-research. MEASURED 2026-10-28 pipeline.py --stats: 2344 items, 1011 open, 505 due, 54 unrouted (oldest 94d), 838 killed vs 495 done. NOT YET: Layer-0 lines for health-review + weekly-audit (#20857) and research-ops + programme-review (#20859) -- PRs open, lines forwarded to the manager. CLOSES WHEN: (1) the 2026-10-29 planning Artifact opens with review_followthrough.py's table and records one disposition per T-group; AND (2) on 2026-11-05 'review_followthrough.py --window-days 7' shows no-owner=0 for every review source's 10-29..11-05 cohort, and the Layer-0 lines are present in all six review skills.",
+  "updated_at": "2026-10-28T08:58:18Z",
+  "updated_by": "session_01AFoLuLiQXvHK8JuXiaoXxz",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: milestones.yaml is edited only once agreed in weekly planning (manager SKILL \u00a7 Weekly planning, part B2); L-OPS line to be updated in the 2026-10-29 planning PR",
+    "arch": "none: ops tooling and skill text only; no pipeline/contract change in ARCHITECTURE-CANONICAL"
+  },
+  "observation": {
+    "what": "Thursday planning uses the follow-through check and leaves no review item unowned",
+    "how_to_check": "(1) the 2026-10-29 WEEKLY-PLANNING Artifact/PR opens with python3 scripts/ops/review_followthrough.py --window-days 7 output and records one disposition per T-group of docs/reviews/2026-10-29-followthrough-triage.md; (2) on 2026-11-05 run python3 scripts/ops/review_followthrough.py --window-days 7 and confirm no-owner = 0 for every review source; grep the six review skills for review_followthrough.py",
+    "due_by": "2026-11-05"
+  },
+  "_seq": 752
+}

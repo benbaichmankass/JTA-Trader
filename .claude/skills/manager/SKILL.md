@@ -428,6 +428,28 @@ morning**, built on those outputs and a **post-review capacity reading** (`spend
 capacity actually left. Triggers contradicting this order are re-timed by the manager (a lane may propose, never edit them); the table below
 is the pre-2026-10-19 timing where they disagree. Mirrored in `OPERATING-PLAN-2026-09-21.md` § 7b.
 
+### Review follow-through: every review output gets ONE disposition in Thursday planning (operator, 2026-10-28, binding)
+
+Operator: *"a clear pipeline for any follow-up tasks or insights or new ideas that come out of those reviews to actually be turned into work
+tasks that we will definitely get to."* MEASURED 2026-10-28: filing works and getting to it does not (505 of 1,011 open pipeline items due;
+838 killed vs 495 done). Basis: postmortem action-item tracking and retro carry-over practice
+([`docs/reviews/2026-10-29-followthrough-triage.md`](../../../docs/reviews/2026-10-29-followthrough-triage.md) § 1). These steps are
+mandatory in the planning routine's prompt and come BEFORE part (B) 1:
+
+0. **First agenda item: the numbers.** Run `python3 scripts/ops/review_followthrough.py --window-days 7` and put its table (with its
+   population line) at the top of the Artifact. Each review's Layer 0 runs the same script with `--source <review>` first, so a review starts
+   by grading its own prior follow-ups.
+1. **Carry-over first.** Last week's (a) items that are not `done` are scheduled first this week, ahead of anything new, or re-dispositioned
+   to (b) or (c) with a reason. A second carry-over of the same item is a decision for the operator, not a third silent carry.
+2. **Every follow-up, insight and idea this week's reviews filed gets exactly ONE disposition:** **(a) scheduled this week** — a checklist
+   row or `research/queue` unit, an owning lane and a capacity estimate (USD ceiling, Sonnet/Opus) inside the week's plan; **(b) dated** for a
+   named later ISO week, with a reason (redate the pipeline item via `pipeline.py --redate`); **(c) killed**, with a `terminal_reason`.
+   **Nothing leaves planning `routed` without an owner and a date**; the script's `no-owner` column must read 0 for this week's cohort.
+3. **WIP limit.** The (a) set's summed capacity estimates may not exceed the post-review capacity reading (`spend_meter.py --capacity`) less
+   the standing routines' cost. Overflow goes to (b) by priority, never into (a) "if there is time".
+4. **Close.** The PR that closes planning records each disposition (checklist rows / units / pipeline records) and the follow-through table on
+   `WEEKLY-PLANNING`; next Thursday's step 0 grades it.
+
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wed **08:20Z** (first run 2026-10-14). **It is a dialogue, not a report**
 (operator, verbatim: *"it's a dialogue between both of us to work together on building our understanding, and then based on that, the work
 priorities"*): never publish a finished plan for sign-off; priorities are never finalised without the operator (re-ping if absent).

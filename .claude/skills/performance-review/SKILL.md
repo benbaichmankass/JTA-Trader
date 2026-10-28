@@ -56,6 +56,8 @@ the merge slot with `scripts/ops/claim_merge_slot.py --branch-claim --branch <br
 
 ## Layer 0 — grade the previous review's calls (always first)
 
+**Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source performance-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
+
 Open the newest `comms/reviews/performance-review-*.json` (and its markdown under `docs/reviews/`).
 For each entry in its `calls[]` (older records without `calls[]`: use `recommended_action` and
 `proposed_tweaks[]`, and say so):
