@@ -1,0 +1,340 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 24000,
+  "population": "1 group(s) ['SOLUSDT_1h']; baseline prior; candidates ['catboost', 'hgb']; metric logloss; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "no candidate reaches the registered floor on any clause",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "logloss",
+    "higher_is_better": false,
+    "metric_caveats": [],
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "prior",
+    "controls": [
+      "lgbm",
+      "logit"
+    ],
+    "candidates": [
+      "catboost",
+      "hgb"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "catboost": "ok",
+      "hgb": "ok",
+      "lgbm": "ok",
+      "logit": "ok"
+    },
+    "groups": {
+      "SOLUSDT_1h": {
+        "n_rows": 40000,
+        "classes": [
+          "down",
+          "flat",
+          "up"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7010172818997609,
+                  0.702469482056259,
+                  0.7066273782419196,
+                  0.7146463169298974,
+                  0.7187211844289476
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "catboost": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7033809288193851,
+                  0.7024961981701545,
+                  0.7038586942700179,
+                  0.7136756878083965,
+                  0.7229967497291188
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "hgb": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7015472535335977,
+                  0.7030306161965786,
+                  0.7042489216853525,
+                  0.7166732846771091,
+                  0.7252635690397188
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7107897462380612,
+                  0.7093343338400576,
+                  0.7106358560035252,
+                  0.7235490028566454,
+                  0.7337955763660905
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "logit": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7031583753153418,
+                  0.7062560506442854,
+                  0.7091909077734355,
+                  0.7152760858149387,
+                  0.7184114518888765
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "SOLUSDT_1h": {
+        "cv": {
+          "catboost": {
+            "prior": {
+              "n_folds": 5,
+              "mean": -0.000585323048057651,
+              "ci95": [
+                -0.00402816272500327,
+                0.0028575166288879687
+              ],
+              "sign_consistent": false
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.008339251301461426,
+              "ci95": [
+                0.0060198338129499734,
+                0.010658668789972878
+              ],
+              "sign_consistent": true
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": 0.0011769225279610219,
+              "ci95": [
+                -0.0036022748367043125,
+                0.005956119892626356
+              ],
+              "sign_consistent": false
+            }
+          },
+          "hgb": {
+            "prior": {
+              "n_folds": 5,
+              "mean": -0.0014564003151144255,
+              "ci95": [
+                -0.005505873713874669,
+                0.0025930730836458186
+              ],
+              "sign_consistent": false
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.007468174034404651,
+              "ci95": [
+                0.00580767233108399,
+                0.009128675737725312
+              ],
+              "sign_consistent": true
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": 0.0003058452609042472,
+              "ci95": [
+                -0.005445847701662682,
+                0.006057538223471176
+              ],
+              "sign_consistent": false
+            }
+          },
+          "lgbm": {
+            "prior": {
+              "n_folds": 5,
+              "mean": -0.008924574349519076,
+              "ci95": [
+                -0.01400359676571718,
+                -0.0038455519333209717
+              ],
+              "sign_consistent": true
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": -0.007162328773500403,
+              "ci95": [
+                -0.013917175910620642,
+                -0.0004074816363801642
+              ],
+              "sign_consistent": true
+            }
+          },
+          "logit": {
+            "prior": {
+              "n_folds": 5,
+              "mean": -0.0017622455760186728,
+              "ci95": [
+                -0.003769723760864562,
+                0.00024523260882721625
+              ],
+              "sign_consistent": false
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.007162328773500403,
+              "ci95": [
+                0.0004074816363801642,
+                0.013917175910620642
+              ],
+              "sign_consistent": true
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "fail",
+      "why": "no candidate reaches the registered floor on any clause",
+      "candidates": {
+        "catboost": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['SOLUSDT_1h'] >= 0.002 vs prior/cv"
+            }
+          ]
+        },
+        "hgb": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['SOLUSDT_1h'] >= 0.002 vs prior/cv"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "catboost": {
+        "kind": "catboost",
+        "licence": "Apache-2.0",
+        "research_only": false,
+        "weights": ""
+      },
+      "hgb": {
+        "kind": "sklearn_hgb",
+        "licence": "BSD-3-Clause",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "logit": {
+        "kind": "numpy_logit",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 31.6
+  }
+}
