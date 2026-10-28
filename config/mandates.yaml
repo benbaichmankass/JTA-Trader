@@ -1238,6 +1238,14 @@ mandates:
         what: the live trade review -- managing OPEN order packages (live-trade-review SKILL; REVIEWER-BRIEF for a repo-less reviewer)
         actions: [tighten_sl, close, partial_close, move_tp, widen_sl, change_size, add_entry]
         state: armed (apply_mode in config/live_trade_review.yaml decides per account)
+        # ADVICE ONLY (operator popup 2026-10-28 ~20:35Z, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539,
+        # verbatim "Advice-only tightens (Recommended)"): tighten_sl may be RECOMMENDED and is graded, but no
+        # automatic path executes it (src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS; the rows watcher,
+        # live_review_dispatch.py and desk_intake.py log it tighten_advice_only). Evidence:
+        # comms/research/ltr_tighten_optimize/verdict.json over DESK-LIFECYCLE-S0 (#20967): 981 Claude tightens
+        # -0.097 R [-0.140, -0.047] net of the full cost stack; no registered tighten rule beat hold OOS.
+        # Every other action above is unchanged. REVERT: revert the PR that added this (ADVICE_ONLY_ACTIONS = ()).
+        advice_only: [tighten_sl]
       entry_generation:
         what: desk-generated NEW entries from the desk's scan packet (trading-desk SKILL)
         actions: [propose_entry]

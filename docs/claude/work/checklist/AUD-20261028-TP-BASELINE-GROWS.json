@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-TP-BASELINE-GROWS",
+  "title": "TP-doctrine baseline grew 50->77 in 3 PRs on 10-27 although it 'may only shrink'; nothing detects a baseline edit",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 C2. MEASURED from git show of scripts/ci/check_tp_doctrine.py BASELINE_2026_10_06 per commit: 50 (38a752038, 10-24) -> 51 (#20481) -> 53 (#20551) -> 75 (#20561 DEMO-FLOOR RULE) -> 77 (#20668). All 3 were operator-approved Tier-3 roster PRs; each added its new non-compliant routings to the baseline in the same diff, so the guard's 'NEW non-compliant routing FAILS' rule never fired. Current: 0 of 77 routings compliant (real-money 0/6, prop 0/6, mirror 0/5, paper 0/60). Fix (Tier 1): a guard that fails when len(BASELINE) on the PR head > base ref unless the PR body/landing file carries an explicit tp_debt_added list (so growth is a visible decision, never a side effect). Detector = that guard + a self-test planting one added line. check: count BASELINE entries on main next week; rule: growth only with a tp_debt_added record.",
+  "updated_at": "2026-10-28T19:04:05Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 756
+}

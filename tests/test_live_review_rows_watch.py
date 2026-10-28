@@ -4,7 +4,18 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from src.runtime import live_review_rows_watch as w
+from src.runtime import live_review_rows as rows_lib
+
+
+@pytest.fixture(autouse=True)
+def _legacy_tighten_path(monkeypatch):
+    """These tests exercise the tighten mechanics kept for the record and for a revert. Production makes a
+    tighten advice only (rows_lib.ADVICE_ONLY_ACTIONS, operator 2026-10-28); tests/test_tighten_advice_only.py
+    covers that with the real value."""
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
 
 T0 = datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc)
 TIP = "a" * 40

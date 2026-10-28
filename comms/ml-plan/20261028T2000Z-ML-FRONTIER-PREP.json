@@ -1,0 +1,390 @@
+{
+ "run": "ML-FRONTIER-PREP-20261028 (session_01AFoLuN22ii2fatGnVUF1Es; manager session_01AFoLuJi1vLTnYv9LbP6539)",
+ "finished_at": "2026-10-28T21:00:00Z",
+ "plan_items": 80,
+ "open": 49,
+ "flags": [
+  "STALE x6 (ML-R5, ML-X2, ML-P1, ML-P2, ML-D4, ML-F24)",
+  "CLOSED-OPEN x3 (ML-D3, ML-F22L, ML-F27)",
+  "UNPLANNED x6",
+  "REGISTRY-STAGES-CHANGED shadow 20 vs 21"
+ ],
+ "plumbing_findings": [
+  "yz vol_bucket dead live",
+  "exit head outside registry",
+  "cost gate not_applicable on all promotable heads",
+  "exec-quality constant (tracked)"
+ ],
+ "results_read": [
+  {
+   "unit": "50 ml_bakeoff units generated_at>=2026-10-21",
+   "verdict": "21 fail / 21 indeterminate / 6 pass / 2 producer_failed",
+   "plan_item": "various (research-ops graded)"
+  }
+ ],
+ "ideas": "none queued: dispatch said propose only -- six proposals P1-P6 in docs/reviews/2026-10-28-weekly-walkthrough.md and PI-20261028-GNVUF1ES-0003",
+ "frontier": {
+  "run": "session_01AFoLuN22ii2fatGnVUF1Es",
+  "finished_at": "2026-10-28T20:00Z",
+  "previous_scan_read": [
+   {
+    "unit": "RQ-20261018-ff8f-01",
+    "verdict": "INDETERMINATE",
+    "family": "gbdt"
+   },
+   {
+    "unit": "RQ-20261018-ff8f-02",
+    "verdict": "INDETERMINATE",
+    "family": "tabular_foundation_model"
+   },
+   {
+    "unit": "RQ-20261018-ff8f-03",
+    "verdict": "FAIL",
+    "family": "linear_logit"
+   },
+   {
+    "unit": "RQ-20261018-ff8f-04",
+    "verdict": "INDETERMINATE",
+    "family": "deep_sequence"
+   },
+   {
+    "unit": "RQ-20261011-9da8-01",
+    "verdict": "FAIL (underpowered)",
+    "family": "ts_foundation_model"
+   }
+  ],
+  "grades": [
+   {
+    "candidate": "yz vs advisory fc (ff8f-01)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "research/results/RQ-20261018-ff8f-01: indeterminate, power_state accruing (5-fold macro-F1)"
+   },
+   {
+    "candidate": "TabICL full n (ff8f-02)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "indeterminate; tabpfn arm unavailable (CPU >5000 rows)"
+   },
+   {
+    "candidate": "calibrated linear head (ff8f-03)",
+    "call": "kept",
+    "grade": "hit",
+    "evidence": "fail on 2 measured runs (39143692192, 39404046651)"
+   },
+   {
+    "candidate": "GRU feature window (ff8f-04)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "indeterminate x4 incl c0d1/2/3; ~70 folds needed, 5 run"
+   },
+   {
+    "candidate": "TSFM bake-off (9da8-01)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "machine fail, lane: underpowered (~17 folds needed)"
+   },
+   {
+    "candidate": "TabPFN research arm",
+    "call": "dropped",
+    "grade": "unresolved",
+    "evidence": "licence gate; never tested"
+   }
+  ],
+  "diversity": {
+   "command": "ml_plan_status.py --diversity",
+   "findings": [
+    "MANIFEST-CONCENTRATION gbdt 76/97",
+    "3 open plan items untagged (ML-N1, ML-V1, ML-D3)",
+    "no CONCENTRATION/FAIL-STREAK on open plan items"
+   ]
+  },
+  "sources_checked": [
+   {
+    "source": "hf-models-search",
+    "state": "checked",
+    "date": "2026-10-28",
+    "note": "TiRex-2 apache-2.0 82.5M upd 2026-10-07 (primary, Hub card); TTM-r2 apache-2.0 805K"
+   },
+   {
+    "source": "arxiv (via hf papers)",
+    "state": "checked",
+    "date": "2026-10-28",
+    "note": "2606.27100, 2607.05291, 2607.10286 abstracts (primary); 2605.16895 (secondary listing)"
+   },
+   {
+    "source": "lab-releases",
+    "state": "checked",
+    "date": "2026-10-28",
+    "note": "secondary aggregator 2026-10-23: Toto 2.0, TiRex-2, TimesFM-3 (research-only), t0-gamma, Timestral; only TiRex-2 licence confirmed primary"
+   },
+   {
+    "source": "quant-practitioner",
+    "state": "checked",
+    "date": "2026-10-28",
+    "note": "thin: no 2026 primary on crypto TSMOM net of funding or meta-labeling; SSRN 4301150 background"
+   },
+   {
+    "source": "github",
+    "state": "could-not-look",
+    "date": "2026-10-28",
+    "note": "not run this week (every-other-week row)"
+   },
+   {
+    "source": "competitions",
+    "state": "could-not-look",
+    "date": "2026-10-28",
+    "note": "not run this week (every-other-week row)"
+   }
+  ],
+  "candidates": [
+   {
+    "name": "TTM-r2 + Log-HAR average vol input (Q-REG1 arm)",
+    "family": "ts_foundation_model",
+    "licence": "apache-2.0 (primary)",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "PROPOSED P3 (not queued per dispatch)",
+    "baseline": "per-symbol LightGBM vol head + HAR control",
+    "kill": "fails log-loss vs HAR at >=20 folds",
+    "business_question": "router trend_vol cells for XRP/ADA/AVAX (4 of 7 real-money legs)",
+    "power": {
+     "unit": "folds",
+     "n": 20,
+     "mde": 0.005,
+     "ok": true
+    },
+    "p_pass": 0.25
+   },
+   {
+    "name": "TiRex-2 remaining-move feature for Q-TM1",
+    "family": "ts_foundation_model",
+    "licence": "apache-2.0 (primary)",
+    "gate_failed": "business_question",
+    "kept": false,
+    "unit_or_row": "PI-20261022-5AEVV1RL-0001 (loader)",
+    "baseline": "Q-TM1 winner",
+    "kill": "n/a",
+    "business_question": "none until Q-TM1 passes (earned-learner rule)",
+    "power": {
+     "unit": "trades",
+     "n": null,
+     "mde": null,
+     "ok": false
+    },
+    "p_pass": null
+   },
+   {
+    "name": "TradeLens-style desk decision attribution",
+    "family": "rule_baseline",
+    "licence": "method",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "PROPOSED P4 (TRADING)",
+    "baseline": "B0/B1 rule counterfactual",
+    "kill": "desk value <= B1 at n>=150",
+    "business_question": "Q-TM4(a): is desk data teacher data",
+    "power": {
+     "unit": "decisions",
+     "n": 150,
+     "mde": null,
+     "ok": false
+    },
+    "p_pass": 0.5
+   },
+   {
+    "name": "more learner variants on regime_label/direction_label (TabICL/TabPFN/GRU/HGB/...)",
+    "family": "various",
+    "licence": "various",
+    "gate_failed": "business_question",
+    "kept": false,
+    "unit_or_row": "P6 pause",
+    "baseline": "shipped LightGBM",
+    "kill": "n/a",
+    "business_question": "no consumer prices the gain",
+    "power": {
+     "unit": "folds",
+     "n": 5,
+     "mde": 0.005,
+     "ok": false
+    },
+    "p_pass": null
+   },
+   {
+    "name": "conformal abstention wrapper on Q-SEL1 take/skip",
+    "family": "conformal_calibration",
+    "licence": "n/a",
+    "gate_failed": "none",
+    "kept": true,
+    "unit_or_row": "PROPOSED inside P1",
+    "baseline": "take-all / take-none / matched-random / strategy confidence",
+    "kill": "no +0.02R/trade net",
+    "business_question": "entry take/skip on real-money legs (cost gate applicable)",
+    "power": {
+     "unit": "trades",
+     "n": 5063,
+     "mde": 0.018,
+     "ok": true
+    },
+    "p_pass": 0.3
+   }
+  ],
+  "strategy_ideas": [
+   {
+    "name": "none: perf-followup Track 3 owns the strategy half this week (PERF-REVIEW-PREP lane)",
+    "unit_or_row": null
+   }
+  ],
+  "none_because": null,
+  "lever_rows": [
+   {
+    "row": "FRONTIER-LEVER-XSEC-RUNNER",
+    "scans_queued": ">=2",
+    "disposition": "raised to manager in handoff"
+   },
+   {
+    "row": "FRONTIER-LEVER-TSFM-TIMESTRAL (7ee1-01 blocked)",
+    "scans_queued": 1,
+    "disposition": "keep; power block mis-registered (LFC7HPXG)"
+   }
+  ]
+ },
+ "practice": {
+  "run": "owned by PRACTICE-REFRESH-20261028 this week",
+  "none_because": "sibling lane runs the practice & methodology refresh"
+ },
+ "drift": {
+  "scan_rc": "success (plan-only, #20968)",
+  "heads_scanned": 23,
+  "drifted": [],
+  "persistent": [],
+  "watch": [
+   "btc-regime-15m-lgbm-fc-pcv-v2 (KS moderate 0.129)",
+   "sol-regime-15m-lgbm-fc-pcv-v2 (KS moderate 0.103)",
+   "btc-regime-15m-lgbm-yz-v1 (KS 0.139/PSI 0.154)"
+  ],
+  "rows_filed": [],
+  "could_not_look": [
+   "labelled decay: no instrument"
+  ]
+ },
+ "checks": {
+  "C1": "ok",
+  "C2": "finding",
+  "C3": "finding",
+  "C4": "finding",
+  "C5": "finding",
+  "C6": "finding",
+  "C7": "ok",
+  "C8": "finding",
+  "C9": "finding"
+ },
+ "calls": [
+  {
+   "id": "ML-20261028-1",
+   "claim": "No setup-candidates metalabel head passes the cost gate on cost-net rows once PI-20261028-V8KBRR5H-0004 rebuilds the corpus (p2pool-v1 included).",
+   "p": 0.75,
+   "impact": "entry take/skip; 0 legs today",
+   "decision": "no promotion path for entry heads until rebuild; P1 (Q-SEL1 on the ledger corpus) is the real test",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/ml/registry -> runs[-1].metrics.cost_gate_passed for model_id startswith setup-candidates-metalabel, on a run after the rebuild",
+    "rule": "hit if every cost_gate_passed == 0 with no eval_not_cost_net reason; miss if any == 1",
+    "resolves_when": "first cycle after PI-20261028-V8KBRR5H-0004 closes (due 2026-11-06)"
+   },
+   "ending": "PI-20261028-V8KBRR5H-0004 (existing, ML-PROGRAMME-PLAN)"
+  },
+  {
+   "id": "ML-20261028-2",
+   "claim": "Further regime_label/direction_label learner variants will not beat shipped LightGBM by the registered margin: of the next 10 such units graded, <= 1 PASS.",
+   "p": 0.8,
+   "impact": "research capacity (43 of 50 units this week)",
+   "decision": "P6: pause new variants; re-register or retire the 4 queued units",
+   "tier": "1",
+   "check": {
+    "command": "research/results/*/ records generated after 2026-10-28 whose unit has ml_bakeoff and target regime_label|direction_label; count verdict==pass",
+    "rule": "hit if pass <= 1 of the next 10; miss if >= 3",
+    "resolves_when": "10 such units graded, or 2026-11-25"
+   },
+   "ending": "proposal P6 to the manager; PI-20261028-LFC7HPXG-0001"
+  },
+  {
+   "id": "ML-20261028-3",
+   "claim": "ML still changes 5/51 rostered legs and 0/7 real-money legs at the next weekly review unless a Q-REG1/P5 unit lands.",
+   "p": 0.85,
+   "impact": "breadth of ML on the book",
+   "decision": "P3 + P5 proposed",
+   "tier": "1",
+   "check": {
+    "command": "re-parse config/accounts.yaml (mode live) + config/regime_policy.yaml trend_vol + config/strategies.yaml exit_head_action; count legs read by any model",
+    "rule": "hit if real-money legs changed == 0 and no Q-REG1 unit graded; void if a Q-REG1 unit landed",
+    "resolves_when": "2026-11-04 ml-review"
+   },
+   "ending": "no action, because breadth work is owned by ML-PROGRAMME-PLAN (Q-REG1); this call tracks it"
+  },
+  {
+   "id": "ML-20261028-4",
+   "claim": "MES-5m advisory margin over its baseline stays in 3.7-4.3 pts (noise, not decay) over the next 6 cycles.",
+   "p": 0.7,
+   "impact": "MES-5m advisory (changes 0 legs)",
+   "decision": "refinement row PI-20261028-GNVUF1ES-0001 opened per the registered rule; hypothesis H0 no capability loss",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/ml/registry -> macro_f1(mes-regime-5m-lgbm-v2) - macro_f1(mes-regime-5m-baseline-v1) per cycle date 2026-10-29..11-03",
+    "rule": "hit if all 6 in [3.7,4.3]; miss if any < 3.5 or the mean falls below 3.8",
+    "resolves_when": "6 cycles after 2026-10-28"
+   },
+   "ending": "PI-20261028-GNVUF1ES-0001"
+  },
+  {
+   "id": "ML-20261028-5",
+   "claim": "BTC-15m and SOL-15m advisory score drift (moderate today, minor 10-21) is transient: next weekly read is minor or none for both.",
+   "p": 0.55,
+   "impact": "router cells on 3 BTC legs (BTC head)",
+   "decision": "watch, no remediation row (first-time moderate)",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2 and sol-regime-15m-lgbm-fc-pcv-v2",
+    "rule": "hit if both verdict in {none,minor}; miss if either moderate/significant (then persistent -> DRIFT-REMEDIATE row)",
+    "resolves_when": "2026-11-04 ml-review"
+   },
+   "ending": "no action, because drift is first-time moderate (skill C7 rule)"
+  },
+  {
+   "id": "ML-20261028-6",
+   "claim": "TTM-r2 + Log-HAR average beats the per-symbol LightGBM vol head on log-loss on XRP/ADA/AVAX at >= 20 folds (if P3 is registered).",
+   "p": 0.25,
+   "impact": "router cells on real-money symbols (4 of 7 real-money legs)",
+   "decision": "P3 proposed",
+   "tier": "1",
+   "check": {
+    "command": "research/results/<P3 unit>/ verdict",
+    "rule": "hit if pass at powered design; miss if fail/underpowered",
+    "resolves_when": "P3 unit graded; void if not registered by 2026-11-25"
+   },
+   "ending": "proposal P3 (not queued, per dispatch)"
+  }
+ ],
+ "writebacks": [
+  "pipeline: 5 done, 2 killed, 17 re-dated, 3 new",
+  "plan file not edited (CLOSED-OPEN/STALE flags left for ML-PROGRAMME-PLAN, which owns the plan rewrite this week)"
+ ],
+ "rows_filed": [
+  "ML-FRONTIER-PREP-20261028 (lane row)"
+ ],
+ "units_filed": [],
+ "next_by_value_per_cost": [
+  "P6 pause variants ($0)",
+  "P1 Q-SEL1 net (~$3, after V8KBRR5H-0004)",
+  "P2 Q-TM1 (~$4)",
+  "P3 Q-REG1 + TTM/HAR (~$4)",
+  "P5 price the order-changing heads (~$6)",
+  "P4 desk attribution (~$3)"
+ ],
+ "handoff": [
+  "Manager: P1-P6 dispositions (PI-20261028-GNVUF1ES-0003)",
+  "Manager: FRONTIER-LEVER-XSEC-RUNNER queued 17 d over >=2 scans -- dispatch (~$5 Sonnet) or kill",
+  "Manager: MB-20260618-XA-D2B 132 d no owner -- schedule or kill",
+  "Next ml-review: grade calls ML-20261028-1..6; GitHub + competitions sources due"
+ ]
+}
