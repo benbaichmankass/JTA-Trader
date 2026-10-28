@@ -16199,3 +16199,55 @@ nodes:
   - unit: RQ-20261026-1b57-08
     verdict: pass
   needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-1b57-08 read PASS (rule: pooled n >= 88, net > 0, >= 4 of 6 folds, >= half of powered cells) -- sol_4h as declared on basket B (AVAX/NEAR/ATOM/FIL/TRX/ETC): pooled n 1375, net +111.77 R, 4 of 6 folds positive, 3 of 6 powered cells pass; the last fold is -24.6 R and the pooled t one-sided p is 0.10, so it is a discovery with a weak recent fold, not a confirmation. Per the rule, next = same-book correlation/overlap read of the passing CELLS against the live legs, then the prop EV/survival gate; a re-entry case under MD-PROMOTE-S0-S1 needs its own evidence record (never a roster act). Author the overlap-read unit (cells named in the result''s grade block) and ONE disjoint-window confirmation.'
+# ── 2026-10-28 full action space (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch) ───────────────────────────
+# Operator 2026-10-28, verbatim: "active management isn't only tightening - it can be any movement in either bracket
+# triggered by developments in the live market data" / "SL tightening is just one lever". Each action class graduates
+# from advice-only on its OWN registered, net-of-cost test vs hold AND a matched random intervention (T1); a FAIL on one
+# class says nothing about another (docs/ARCHITECTURE-CANONICAL.md § "Active management"). C1 tighten is tested and loses
+# (#20967 merged, #21003 held); C4/C6 ride Q2/Q3/Q8. The nodes below are the untested classes; research-ops authors each
+# ladder, cheapest rung first, on the real-money legs first.
+- id: P1-Q12-c2-sl-widen
+  question: Q12
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C2 SL widen: does widening the stop on a live trigger (vol expansion, event risk, a liquidity sweep before a level) beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q12-c3-sl-structure
+  question: Q12
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C3 SL move-to-structure: does re-anchoring the stop to new structure (swing / FVG / level) beat hold net of cost? Reuse the Q10 --trail-level flags as a re-anchor, not a trail. Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q12-c5-tp-pullin
+  question: Q12
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C5 TP pull-in: does pulling the target in on momentum loss, a liquidity level ahead, or vol contraction beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q12-c7-partial
+  question: Q12
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C7 partial close: does a triggered partial close (level reached, event ahead), with both brackets kept on the remainder, beat hold net of cost? Judge on expectancy, not on distribution shape (principle T10). Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q12-c8-full-close
+  question: Q12
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C8 full close: does a triggered exit-now (thesis invalidated, regime flip, event) beat hold net of cost on each leg as traded (not the fixed bracket the Q8 line failed on)? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'

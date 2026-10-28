@@ -4,6 +4,31 @@
 
 > **2026-10-14 amendment (lane `IN-TRADE-EXIT-MODEL`, operator direction via the manager):** the exit line now has a stated **destination — Q8, the in-trade exit model**: at every bar of an open trade, P(SL before TP | state now), and an exit-now rule graded net of cost. Q1–Q7 are the rungs that feed it or ship alongside it; nothing below was removed. The operator's words are verbatim on checklist row `IN-TRADE-EXIT-MODEL`.
 
+## The full action space — reframe (2026-10-28, lane `ROADMAP-PRIORITIES-AM-PRINCIPLE`)
+
+> **Operator, verbatim (2026-10-28 ~21:00Z, relayed by the Manager Session):** *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"* / *"SL tightening is just one lever"*. And (~21:05Z): *"I'll settle for a conservative production ML that will mostly recommend holding outside of edge cases"*.
+
+The binding statement is [`docs/ARCHITECTURE-CANONICAL.md`](../../ARCHITECTURE-CANONICAL.md) § "Active management". Its roadmap milestone is `L-AM-STANDARD` (week priority 3).
+
+**What changes for this programme.**
+- Every question here is asked per **action class**, not only for "the stop".
+- Each class has its **own** ladder and its **own** registered, net-of-cost graduation test. The test is against hold and against a matched random intervention (principle T1).
+- A class is advice-only until that test passes.
+- A FAIL on one class is evidence about that class only.
+
+| class | bracket move | live-market triggers to test | evidence to date | state |
+|---|---|---|---|---|
+| **C1 SL tighten** | stop toward price | structure, ATR, momentum, giveback from peak | DESK-LIFECYCLE-S0 (#20967): Claude's management loses to hold, and the loss is in tightening. LTR-TIGHTEN-OPTIMIZE (#21003, held): 0 of 61 registered rules beat hold out of sample. Leg-specific harness arms (e.g. RQ-20261026-ed1c-17 break-even on `trend_donchian_eth`) are separate per-leg records. | **tested, loses as a class** → advice-only |
+| **C2 SL widen** | stop away from price | vol expansion, event risk, a liquidity sweep before a level | none | untested |
+| **C3 SL move-to-structure** | stop re-anchored to a swing, FVG or level | new structure forming beyond the stop | Q10 level-triggered trail (RQ-20261022-001..006 FAIL as a trail; fvg-on-4h unmeasured) | untested as a re-anchor |
+| **C4 TP extend** | target further | momentum intact near the target, regime trend | Q3, RQ-20261007-080 measured-move PASS (pooled) | partly tested (Q3) |
+| **C5 TP pull-in** | target nearer | momentum loss, liquidity level ahead, vol contraction | B1 remaining-move head FAIL on edge (L-ATM 2026-10-25) | untested as a triggered class |
+| **C6 TP revise** | target re-estimated both ways | the TP doctrine's live prediction | Q2 / Q3 / Q8 | in progress (TP doctrine) |
+| **C7 partial close** | part of the size off, both brackets kept on the rest | far-rung / level reached, event ahead | eba2-12..-14 far-rung bank (variants); principle T10: partials reshape, unproven on expectancy | untested as a triggered class |
+| **C8 full close** | exit now | thesis invalidated, regime flip, event | Q8 exit-now line CLOSED FAIL on the fixed bracket (2026-10-18) | tested on the fixed bracket only |
+
+**Question Q12** (in § 2) carries this reframe. Nodes `P1-Q12-*` in [`research/programmes/01-active-trade-management.yaml`](../../../research/programmes/01-active-trade-management.yaml) are `needs_authoring` until research-ops drafts each ladder.
+
 ## AI active trade management — the merged programme (2026-10-24, lane `ATM-AI-MERGE`)
 
 > **Operator, verbatim (2026-10-24, relayed by Manager Session 2026-10-24, row `ATM-AI-MERGE`):** *"I want to start sort of trying to merge our two top priorities and trying to get active management, like under AI management, and seeing like what kind of models we can build to help us like with the live management of trades and moving the brackets as conditions change."*
@@ -286,6 +311,7 @@ DESTINATION (Q8): per-bar path data ─▶ first-passage census ─▶ simple st
 | **Q6** | Does the live producer reproduce the harness decision (parity), observe-only, on the first confirmed leg? | TP-DOCTRINE B1 merged the verdict contract; no leg declares a rule; a flip is Tier-3 on an evidence record | rows `TP-DOCTRINE`, `GEOM-CENSUS`; soak `target_extension_soak` (B1 design) |
 | **Q8 — destination** | **At every bar of an open trade, what is P(SL before TP \| state now) — and is there an exit-now rule (exit when E[R \| hold] < R_now − cost) that beats holding the bracket, net of the full cost stack, out of sample?** | The operator's stated destination (2026-10-14, row `IN-TRADE-EXIT-MODEL`): *"at any given moment, are we going to hit the stop loss before we hit the take profit? … improving them so that they turn from bad trades to good trades."* Entry-time giveback prediction (`RQ-20261014-9d20-01/-03`) is a cheap first rung, not the destination | **new** `RQ-20261014-d6e7-01..05` (runnable chain) + `blocked/RQ-20261014-d6e7-06`; builds `EXIT-PATH-EMIT-OFFLINE` (Tier-1, the priority), `EXIT-PATH-TELEMETRY-LIVE` (Tier-2 proposal) |
 | **Q7** | Can the prop paths carry the same bracket (dxtrade REST TP amend plumbed; browser and phone not)? | Prop is the money at stake after real money; `RQ-20261007-002` found 0/24 extension cells on the 6R near-sentinel | rows `PROP-TRAIL-PHONE`, `PROP-EXIT-READ`; re-run `RQ-20261007-002` only after gradable prop closes |
+| **Q12** | **For each action class (SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close), does a trigger in live market data make that move beat hold, net of the full cost stack, out of sample, and against a matched random intervention?** | Operator 2026-10-28: *"SL tightening is just one lever"*; each class graduates from advice-only on its own test (ARCHITECTURE-CANONICAL § "Active management"); C1 tighten is tested and loses (#20967, #21003) | nodes `P1-Q12-*` (needs_authoring); Q2/Q3/Q8/Q10/Q11 units are its existing rungs for C3, C4, C6 and C8 |
 
 ## 3. Test ladders — cheap and decisive first, expensive last
 
