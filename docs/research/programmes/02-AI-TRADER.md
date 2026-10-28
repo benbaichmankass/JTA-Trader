@@ -30,7 +30,7 @@ Population: research units with a result row generated 2026-10-21T19:30Z..2026-1
 | setup-metalabel cost refusal (9 heads) | **harness / data** (gross rows) | refusal reason `eval_not_cost_net` | `P2-Q2-costnet-metalabel-regate` after PI-...-0004 |
 | giveback from entry columns (`4b82-22/-23`) | **information**: the signal is in-trade | P1 `eba2-01/-04` PASS in-trade | `P2-desk-checkin-exit-head` |
 
-**Answered / unlocked / retired.** Answered: learner choice on the regime head (LightGBM stands; recorded as a belief, no family retired). Unlocked: the in-trade action-value target (desk labels). Nothing retired.
+**Answered / unlocked / retired.** Answered: learner choice on the regime head at the six shared features plus range-vol (the 23 tested learner configurations did not beat the shipped LightGBM; LightGBM stands; nothing retired). Unlocked: the in-trade action-value target (desk labels). Nothing retired.
 
 **Next 3-4 weeks (value-ranked; MODEL supply is a BUILD gap, named)**
 
