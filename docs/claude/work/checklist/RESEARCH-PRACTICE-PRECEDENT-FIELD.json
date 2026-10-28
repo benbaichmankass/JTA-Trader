@@ -2,20 +2,24 @@
   "id": "RESEARCH-PRACTICE-PRECEDENT-FIELD",
   "title": "Research units and design arms declare a practice precedent (source URL + ACAD/PRAC/VEND tag) or 'novel'",
   "phase": "build",
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "session_01AFoLuK2GHCcWHiYRJwDYar",
+  "lane": "FIX-RESEARCH-CONTROLS",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "From PRACTICE-RESEARCH-TRADE-MGMT-AI F.3.1 (docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md). Operator 2026-10-28: designs must rest on real-world practice, not ad hoc choices treated as definitive. SCOPE (Tier 1): an optional 'precedent:' block per arm in research/queue unit schema + research/queue/PLANNING.md authoring rule; report-only census first; guard later only if the field is adopted. FIRST STEP: add the field to the unit template and the DESK-LIFECYCLE-S0 unit as the worked example.",
-  "updated_at": "2026-10-28T06:40:30Z",
-  "updated_by": "session_01AFoLuML1AwiQNaDn7uKHXj",
+  "note": "Built per the operator dispatch (unit-level string practice_precedent, guard-enforced on NEW units, grandfathered: 1474 of 1475 existing units lack it, MEASURED by the guard 2026-10-28), superseding the row text (optional per-arm block, report-only census first). Templates and programme unit_defaults carry it; PLANNING.md section 1a documents it. NOT closed (landed_unproven): the observation that closes it = the next replenish run emits units that pass the guard. The programme precedent values are honest but coarse (principle ids or none: reason), and the per-arm precedent the row envisaged is not built.",
+  "updated_at": "2026-10-28T07:51:39Z",
+  "updated_by": "session_01AFoLuK2GHCcWHiYRJwDYar",
   "roadmap": [
     "L-PROGRAMMES"
   ],
+  "writeback": {
+    "roadmap": "L-PROGRAMMES next: every new queue unit carries practice_precedent (principles R1); generated units get it from templates and programme unit_defaults",
+    "arch": "none: research tooling and CI only, no runtime component changed"
+  },
   "_seq": 747
 }

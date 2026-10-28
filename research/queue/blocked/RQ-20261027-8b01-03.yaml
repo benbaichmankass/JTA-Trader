@@ -64,6 +64,18 @@ blocked_on:
     NOT SPENT. The manager must approve the dispatch.'
   clears_when: 'RQ-20261027-8b01-01 has landed verdict pass AND the manager approves the run-desk-judge dispatch for these 45 packets. Then git mv this file to research/queue/,
     set run.command for `desk_replay_driver.py score --role exit --registered-n 154 --n-min 40`, remove blocked_on, status: queued.'
+practice_precedent: "T1, T8, M6 (docs/reference/trading-and-model-practice-principles.md): judge an intervention against hold-to-exit and a matched random intervention, net of cost [S1, S17]"
+intervention_controls:
+  hold_to_bracket: B1 (dR = 0 against the recorded exit)
+  matched_random:
+    draws: 1000
+    note: B2, the judge's own action frequencies at random valid bars of the same trade
+  best_static:
+    grid: [close, partial_close, close_at_r_2.0]
+    excludes_test_folds: true
+    note: B3, leave-one-fold-out
+  bootstrap_group: trade
+  harness: scripts/research/intervention_controls.py
 masked_replay:
   population: 'The two <=1 h legs of PR #20551: ict_scalp_eth_15m and ict_scalp_xrp_15m (MEASURED 2026-10-27: both execution: live in config/strategies.yaml, timeframe
     15m; rostered on bybit_1 only). Trade lists: comms/strategy_evidence/<leg>.json -> source_run, 78 + 76 = 154 trades (MEASURED), of which 45 reach the +1.0 R in-trade

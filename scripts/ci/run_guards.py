@@ -1964,6 +1964,24 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "research-queue-design-fields-guard",
+        # RESEARCH-PRACTICE-PRECEDENT-FIELD + RESEARCH-INTERVENTION-CONTROL-SET: a NEW queue unit carries
+        # `practice_precedent`; a NEW hand-written intervention/management test declares its controls.
+        # Same new-vs-grandfathered grading as the decision-rule guard above. The template / programme
+        # globs are included because the generators emit the field from them.
+        "when": {"globs": ["research/queue/**", "research/templates/**", "research/programmes/**",
+                           "scripts/ci/check_research_queue_design_fields.py",
+                           "scripts/research/intervention_controls.py"]},
+        "steps": [
+            ["python3", "scripts/ci/check_research_queue_design_fields.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_research_queue_design_fields.py",
+                         "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
         "name": "collapsed-state-guard",
         "when": {"regex": r"\.py$"},
         # Self-test FIRST, so a guard that silently stopped matching cannot read
