@@ -52,7 +52,7 @@ records filed, traced to authored → fired → graded), `needs_review`, `stale`
 checks the packet cannot see (workflow runs, stranded stamp PRs, watchdog incidents). Copy the packet's headline numbers
 into the record's `checks` block; that is the only place they are repeated.
 
-**2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** Budget at least half the pass here.
+**2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** Run "The mechanical minimum" (below) first; then budget at least half the remainder here.
 0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source research-ops --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
 1. **Grade the previous record's `calls`** (`previous_calls` in the packet; Layer 0 of the shared pattern): hit / miss / not yet, one line each,
    and what the miss teaches. First, before anything else.
@@ -106,6 +106,33 @@ triage `needs_review`, unlock / retire. A follow-up re-handed-off twice is autho
 **Quality bar** (the manager checks it): every `meaning` line has a "so" — a sentence that only repeats a packet number is
 deleted; every FAIL cluster in the packet has a diagnosis or is named in `not_run`; every `next_tests` row names a decision.
 An empty `analysis` with full `checks` is a **too-scripted** pass and is reported as such in the one-line report.
+
+## The mechanical minimum, and what `not_run` means (RESEARCH-SLO-ROOTCAUSE, 2026-10-28; binding)
+
+MEASURED on the four newest records (`comms/research/ops/20261027T2110Z`, `20261028T0300Z`, `T0920Z`, `T1530Z`): all four
+declared the same steps `not_run` (A workflow run list, C `needs_review` triage + `blocked/` audit, E authoring, due-item
+routing), with 4-7 `not_run` entries each. `research_slo.yaml::research_ops_not_run` counts the **entries in that list**
+(breach > 2), so the SLO was structurally in breach on every pass. Causes, in order of weight:
+
+1. **Step order.** The ANALYSIS layer is "at least half the pass" and runs before the steps; the mechanical steps are what is
+   left when the budget ends (4 of 4 records say "budget"/"MCP down"). So the mechanical minimum below runs **first** and is
+   cheap by construction (read-only commands, one line each); ANALYSIS then gets the rest.
+2. **Tooling name confusion.** All four blamed "the github-actions MCP failed to connect". The `github` / GitHub MCP server's
+   `actions_list` / `actions_get` / `list_pull_requests` tools are a separate server and were available. Step A uses them;
+   only when they too fail, read the tree (`docs/claude/work/research-queue-dispatch-receipt.json`, `git log -- research/queue`)
+   and record `read_state: tree_only` -- that is a **done** step with a stated limit, not `not_run`.
+3. **Steps that cannot go to zero.** `needs_review` stays at 28 by design: 25 units are owned (`grading.owner`) and are
+   dispositioned. Step C is **done** when `python3 scripts/research/result_disposition_check.py --list` shows UNOWNED 0 and
+   UNGRADED 0; record the counts. Only an unowned unit, or an owned one whose named gap has since closed, is triage work.
+   The `blocked/` audit is **done** when `blocker_watch.py` ran and every `STALE_BLOCK` row is fixed or filed (NOT_RUNNING /
+   UNPROVEN_OVERDUE rows are listed by count in `handoff`, not re-audited each pass).
+4. **Out-of-skill asks.** "Routing of due pipeline items" is not a step of this skill; do not list it in `not_run`. Put the
+   count in `handoff` (`python3 scripts/ops/pipeline.py --due` shows it); the manager owns routing.
+5. **Authoring.** Zero nodes drafted on purpose (value of information ~0) is legitimate but must be recorded as
+   `authoring.nodes_drafted: 0` with `authoring.skipped_on_purpose: true` -- the health check's `OPS-AUTHOR-SKIPPED` reads that.
+
+**`not_run` holds only whole steps (A-F) that produced nothing, one short entry each.** Limits (pytest absent, a tool down but
+a fallback used, a count not re-checked) go in a `limits` list, never `not_run`. Target: `len(not_run) <= 2`.
 
 ## What changed on 2026-10-15 (RESEARCH-LOOP-AUDIT, `docs/research/research-loop-audit-2026-10-15.md`)
 

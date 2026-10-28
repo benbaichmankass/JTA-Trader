@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "An IAUM re-evidence unit is admitted (research_queue.py) and lands: n_oos >= 49 and net R > 0 -> keep (done); otherwise a roster-removal proposal with the diagnosis block goes to the operator. Separately, the promotion-evidence guard either checks power or records why it does not.",
+    "kind": "event"
+  },
+  "id": "PI-20261028-PVRNY2JI-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "rerun": "python3 -c \"import json;d=json.load(open('comms/strategy_evidence/iaum_pullback_1d.json'));print(d['n_trades_oos'],d['fidelity'],[f['net_r'] for f in d['fold_detail']])\"; python3 scripts/research/live_vs_backtest.py --leg iaum_pullback_1d"
+  },
+  "state": "queued",
+  "what": "[performance][real-money] D6: alpaca_live's only leg is iaum_pullback_1d, a declared GLD affordability proxy whose primary is on no roster, so the mirror alpaca_portfolio is empty and there is no Gate-2 demotion signal. Stage-0 evidence: n_oos=8, 4 folds, fold net R +5.47/+1.89/+0.52/-0.72, fidelity approximate. Live n=1 at -1.47R (worse than every backtest trade). check_roster_promotion_evidence passes it (12/12) although n_oos is far below the queue power floor (about 49). TIER-3 PROPOSAL for the operator: (a) re-evidence IAUM as a standalone leg at declared power (a data task); (b) keep it as-is until then, because removal is a roster decision the data does not yet force. Methodology gap: the promotion bar does not check power."
+}

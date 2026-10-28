@@ -1,6 +1,6 @@
 id: RQ-20261028-d1f5-02
 title: 'Desk lifecycle factorial v2 (C48): with the CHECK-IN POLICY as a factor (every bar / every 4 bars + events / events only), does Claude managing a whole trade beat hold-to-bracket AND a matched random intervention AND the best practitioner rule, per entry source, net of the full cost stack, and WHEN does acting add value?'
-status: blocked
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -8,6 +8,15 @@ roadmap:
 - L-DESK
 - L-ATM
 kind: experiment
+practice_precedent: 'S1, T1 (docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md F.1; docs/reference/trading-and-model-practice-principles.md)'
+intervention_controls:
+  hold_to_bracket: true
+  # registered + primary verdict: 50 draws (frozen, see decision_rule). The 100-draw control below is the robustness
+  # re-score added after the result (comms/research/desk_lifecycle/full-c4e/robustness-m1-100/score.json); same decisions,
+  # same verdict (vs M1: -0.011 / -0.049 R vs registered -0.013 / -0.046 R).
+  matched_random: {draws: 100, registered_draws: 50}
+  best_static: {grid: [chandelier_2atr, chandelier_3atr, channel_10, channel_20, timestop_12, timestop_24, breakeven_1r, partial1r_chandelier3], excludes_test_folds: true}
+  bootstrap_group: week
 question: >-
   On 200 of the 732 committed judged-1 Claude entries (seeded) and one matched random partner each (same symbol, fold, side, ATR-unit bracket; 1h; 48-bar time stop), each trade walked bar by bar from fill to close by a judge
   that sees only the check-ins its policy triggers (C1E every bar; C4E every 4 bars + events; E events only: R milestones -0.5/+0.5/+1/+1.5/+2, ATR regime change, momentum flip, 12-bar level break), deciding hold |
@@ -73,15 +82,6 @@ strategy_arm:
 requires_result:
   unit: RQ-20261028-d1f5-01
   verdict: pass
-blocked_on:
-- kind: work_item
-  ref: DESK-LIFECYCLE-S0
-  what: >-
-    Judging is a plan-session lane task (no API credits; the token-free dispatcher cannot judge): OPTION C (operator 07:05Z): C4E x 520 pairs, ~3,170 walked check-ins, ~$178 at the MEASURED $0.056 per check-in (design doc 7.4); runs after the ~18:00Z reset on the manager's GO, walkers batched with few trades per judge to cut cache cost. The 20-pair pilot is done (design doc 7.3).
-    The strategy arm needs its loader (forced-exit entries from comms/strategy_evidence) built on the same engine.
-  clears_when: >-
-    -01 has landed with verdict pass AND the manager approves the spend AND a judging lane has written decisions for every pending packet (step reports pending 0). Then: git mv to research/queue/, fill run.command with the
-    score step (--policy) over the committed entries + decisions, remove blocked_on, status: queued.
 masked_replay:
   population: >-
     judged-1 (comms/research/desk_gen_replay/judged-1: 1,498 masked scan packets, 732 propose_entry rows, all valid and all filled per the landed intake of RQ-20261026-e535-03), six crypto USDT perps ADA AVAX BTC ETH SOL XRP,
@@ -109,7 +109,7 @@ run:
   workflow: null
   inputs:
     research_unit: RQ-20261028-d1f5-02
-  note: Null until judged (blocked_on).
+  note: 'Judged by a plan lane (walk mode) and scored locally: python3 scripts/research/desk_lifecycle_driver.py score --out comms/research/desk_lifecycle/full-c4e --entries comms/research/desk_lifecycle/full-c4e/entries.jsonl --decisions comms/research/desk_lifecycle/full-c4e/decisions.jsonl --policy C4E --label registered --fetch'
 lands:
   store: research/results/
   assert_field: read_state
@@ -123,3 +123,15 @@ related:
 - scripts/research/desk_lifecycle_driver.py
 - docs/research/desk-lifecycle-factorial-2026-10-28.md
 last_dispatched_at: null
+grading:
+  auto: false
+  decision_rule_id: RULE-RQ20261028-D1F5-02-LIFECYCLE
+  verdict: fail
+  graded_at: '2026-10-28'
+  grader: lane DESK-LIFECYCLE-S0 (session_01AFoLuJGUG7n1WDzgCysB32), registered rule applied to the scorer output
+  evidence:
+  - comms/research/desk_lifecycle/full-c4e/verdict.json
+  - comms/research/desk_lifecycle/full-c4e/score.json
+  reason: >-
+    Management dR vs HOLD: Claude entries -0.159 R [-0.261, -0.041] (n 473 trades), random entries -0.124 R [-0.197, -0.043] (n 465); both n >= 126 with the CI upper < 0 = FAIL.
+    938 of 1,040 registered trades walked (102 unjudged: batches b088-b099 stopped at the $200 ceiling). Design doc section 7.5.
