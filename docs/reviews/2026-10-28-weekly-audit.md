@@ -1,6 +1,6 @@
 # Weekly audit 2026-10-28 — the controls pass on what they can see, and three of them could not see the failure
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-10-28` · lane `WEEKLY-AUDIT-2026-10-28` (session_01AFoLuNJQxJiQDru41ZvLWg, dispatched by manager session_01AFoLuJi1vLTnYv9LbP6539) · window 2026-10-21T19Z → 2026-10-28T19Z · deep pass **0 OUTCOME+INDEPENDENCE** (ISO week 44 mod 4 = 0) · run 18:49–19:10Z, partial where marked
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-28` · lane `WEEKLY-AUDIT-2026-10-28` (session_01AFoLuNJQxJiQDru41ZvLWg, dispatched by manager session_01AFoLuJi1vLTnYv9LbP6539) · window 2026-10-21T19Z → 2026-10-28T19Z · deep pass **0 OUTCOME+INDEPENDENCE** (ISO week 44 mod 4 = 0) · run 18:49–19:10Z, partial where marked
 
 ## 0. Prior calls (2026-10-19 audit: 11 findings F1–F10 and D1)
 
