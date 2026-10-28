@@ -1,0 +1,77 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "dev variant V1: 100 ranked packets of the 100-packet dev sample, 1200 labelled cells",
+  "n": 100,
+  "measurement": {
+    "variant": "V1",
+    "decision": "screen_fail",
+    "reasons": [
+      "mean SEL +0.0444, lower bound -0.0594: not both (>= 0.1, > 0)"
+    ],
+    "intake": {
+      "rows": 202,
+      "rank_rows": 100,
+      "refused": 0,
+      "reasons": {}
+    },
+    "looks_taken": [
+      25,
+      50,
+      75,
+      100
+    ],
+    "mean_sel_by_look": [
+      -0.057736617077810096,
+      -0.015266712911220282,
+      0.03335787561939267,
+      0.04443173042657536
+    ],
+    "weeks_by_look": [
+      21,
+      33,
+      40,
+      44
+    ],
+    "packets_with_sel": 100,
+    "cells_scored": 1200,
+    "top_pick": {
+      "n": 100,
+      "mean_net_r": 0.1463383047491315,
+      "paired_diff_vs_random": 0.16221225759602242,
+      "paired_diff_ci95": [
+        -0.17375915122386543,
+        0.4830813830576724
+      ]
+    },
+    "constants": {
+      "SEL_USEFUL": 0.1,
+      "TOP_K": 2,
+      "DEV_LOOKS": [
+        25,
+        50,
+        75,
+        100
+      ],
+      "KILL_ALPHA": 0.05,
+      "PROMOTE_ALPHA": 0.2,
+      "DEV_GEOM": [
+        "GJ",
+        1.25,
+        2.0,
+        48
+      ]
+    },
+    "verdict": "fail",
+    "read_state": "measured"
+  },
+  "note": "mean SEL +0.0444, lower bound -0.0594: not both (>= 0.1, > 0)",
+  "data_inputs": [
+    "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+    "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+    "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+    "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+    "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+    "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+  ]
+}

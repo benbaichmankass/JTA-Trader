@@ -1,0 +1,249 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "logloss",
+  "higher_is_better": false,
+  "metric_caveats": [],
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "prior",
+  "controls": [
+    "lgbm"
+  ],
+  "candidates": [
+    "hgb",
+    "extratrees"
+  ],
+  "arm_status": {
+    "prior": "ok",
+    "hgb": "ok",
+    "extratrees": "ok",
+    "lgbm": "ok"
+  },
+  "groups": {
+    "SOLUSDT_1h": {
+      "n_rows": 40000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.6233023088408689,
+                0.6615932323931564,
+                0.7073498491802256,
+                0.7333340656486018,
+                0.8166655933783897
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "hgb": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5576779650154543,
+                0.5871172054973561,
+                0.634226107354971,
+                0.6220075364497268,
+                0.582936416573615
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "extratrees": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5735040023198066,
+                0.6055876156217075,
+                0.6572102784230812,
+                0.667043845815142,
+                0.706706775064309
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        },
+        "lgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5612632846152714,
+                0.5871180603179504,
+                0.634796669580171,
+                0.6241476919058663,
+                0.5841437517861933
+              ],
+              "n_test_rows": 24000
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "SOLUSDT_1h": {
+      "cv": {
+        "hgb": {
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.11165596371002384,
+            "ci95": [
+              0.02411734947050838,
+              0.19919457794953932
+            ],
+            "sign_consistent": true
+          },
+          "lgbm": {
+            "n_folds": 5,
+            "mean": 0.0015008454628658407,
+            "ci95": [
+              -0.0002499388928758274,
+              0.003251629818607509
+            ],
+            "sign_consistent": true
+          }
+        },
+        "extratrees": {
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.06643850643943923,
+            "ci95": [
+              0.03512111513398008,
+              0.09775589774489837
+            ],
+            "sign_consistent": true
+          },
+          "lgbm": {
+            "n_folds": 5,
+            "mean": -0.043716611807718776,
+            "ci95": [
+              -0.10026596489669028,
+              0.012832741281252724
+            ],
+            "sign_consistent": true
+          }
+        },
+        "lgbm": {
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.110155118247158,
+            "ci95": [
+              0.022421492005713806,
+              0.1978887444886022
+            ],
+            "sign_consistent": true
+          },
+          "lgbm": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "pass",
+    "why": "candidate(s) ['hgb', 'extratrees'] meet every pass_if clause",
+    "passing": [
+      "hgb",
+      "extratrees"
+    ],
+    "candidates": {
+      "hgb": {
+        "evaluated": true,
+        "passes_all": true,
+        "clauses": [
+          {
+            "holds": true,
+            "what": "['SOLUSDT_1h'] >= 0.005 vs prior/cv"
+          }
+        ]
+      },
+      "extratrees": {
+        "evaluated": true,
+        "passes_all": true,
+        "clauses": [
+          {
+            "holds": true,
+            "what": "['SOLUSDT_1h'] >= 0.005 vs prior/cv"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    },
+    "hgb": {
+      "kind": "sklearn_hgb",
+      "licence": "BSD-3-Clause",
+      "research_only": false,
+      "weights": ""
+    },
+    "extratrees": {
+      "kind": "sklearn_extratrees",
+      "licence": "BSD-3-Clause",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 19.8
+}
