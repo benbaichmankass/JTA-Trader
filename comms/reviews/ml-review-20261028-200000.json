@@ -1,0 +1,383 @@
+{
+ "request_id": "ML-REVIEW-20261028",
+ "reviewed_at": "2026-10-28T21:00:00Z",
+ "reviewer": "ML-FRONTIER-PREP-20261028 (session_01AFoLuN22ii2fatGnVUF1Es)",
+ "window_start": "2026-10-21T00:00:00Z",
+ "window_end": "2026-10-28T20:30:00Z",
+ "overall_assessment": "investigate",
+ "overall_assessment_reason": "pipes healthy (cycle rc 0, builds clean, parity clean, labels accruing) but ML changes 0/7 real-money legs, the cost gate prices no promotable head, and research capacity is 86% on one unpriced target",
+ "prior_calls_scorecard": {
+  "graded": [
+   {
+    "candidate": "yz vs advisory fc (ff8f-01)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "research/results/RQ-20261018-ff8f-01: indeterminate, power_state accruing (5-fold macro-F1)"
+   },
+   {
+    "candidate": "TabICL full n (ff8f-02)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "indeterminate; tabpfn arm unavailable (CPU >5000 rows)"
+   },
+   {
+    "candidate": "calibrated linear head (ff8f-03)",
+    "call": "kept",
+    "grade": "hit",
+    "evidence": "fail on 2 measured runs (39143692192, 39404046651)"
+   },
+   {
+    "candidate": "GRU feature window (ff8f-04)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "indeterminate x4 incl c0d1/2/3; ~70 folds needed, 5 run"
+   },
+   {
+    "candidate": "TSFM bake-off (9da8-01)",
+    "call": "kept",
+    "grade": "miss",
+    "evidence": "machine fail, lane: underpowered (~17 folds needed)"
+   },
+   {
+    "candidate": "TabPFN research arm",
+    "call": "dropped",
+    "grade": "unresolved",
+    "evidence": "licence gate; never tested"
+   }
+  ],
+  "hit": 1,
+  "miss": 4,
+  "unresolved": 1,
+  "void": 0,
+  "brier": "INDETERMINATE (<10 resolved calls)",
+  "note": "ML-READ-1025 left no calls[]; graded the 10-18 frontier keep/drop calls"
+ },
+ "checks": {
+  "C1": {
+   "state": "ok",
+   "population": "97 registry rows; last cycle 2026-10-28",
+   "reading": "timer active; cycle rc 0, 66 trained, 6 refusals tracked; stages adv 3/shadow 20/cand 73/research_only 1 vs plan 21/72 (one unexplained shadow->candidate, filed); stage-guard all hold; 0 oom flags in last 100 cycle lines"
+  },
+  "C2": {
+   "state": "finding",
+   "population": "72 manifests; dataset families",
+   "reading": "builds 98 ok/0 failed 24h; 5 stale, 2 never trained; setup_candidates datasets frozen gross 2026-06..08 (rebuild PI-20261028-V8KBRR5H-0004); labels_accruing 0.92-0.99 on 8 heads"
+  },
+  "C3": {
+   "state": "finding",
+   "population": "51 rostered legs, 7 real-money (re-parsed main@6e12741c9)",
+   "reading": "ML changes 5/51 legs, 0/7 real-money; SOL-15m and MES-5m advisory change 0 legs; exit-head-donchian-1h-v1 closes trades on 3 legs and is not in the registry",
+   "legs_changed": 5,
+   "rostered": 51,
+   "real_money_changed": 0,
+   "real_money": 7
+  },
+  "C4": {
+   "state": "finding",
+   "population": "ML-PROGRAMME \u00a7 7 sources since 2026-10-21",
+   "reading": "H1-H3 ok; H4 broken for teacher data (627 rows, 0 manifests); H5 ok (25 varying heads); H6 no stage change since 10-11; H7 5/51",
+   "first_broken_hop": "H6->H7 (H3->H4 for teacher/trade data)"
+  },
+  "C5": {
+   "state": "finding",
+   "population": "8 shadow/advisory heads gate-checked",
+   "reading": "live_parity 0 mismatches on all 8; yz heads dead_live vol_bucket (PI-20260927-3WM5HADW-0005 MEASURED live); served score max-proba-shaped (INFERRED)"
+  },
+  "C6": {
+   "state": "finding",
+   "population": "9 cost-gated metalabel heads; 6 heads gate-packet",
+   "reading": "all 9 refused eval_not_cost_net (unstamped rows); cost_net insufficient_data on all shadow/advisory heads; AUC 0.539-0.755",
+   "gate_packets": "could-not-look: #21005 queued at publish; stage-guard all hold (#20982)"
+  },
+  "C7": {
+   "state": "ok",
+   "population": "23 shadow/advisory (scan) + 4 drift reads",
+   "reading": "plan-only scan 23 rows all skip_no_drift (rc success); KS moderate on BTC/SOL 15m advisory (watch, first time since 10-11); labelled decay could-not-look: no instrument (LIVE-DECAY-MONITOR)",
+   "drift_b": "could-not-look: no instrument"
+  },
+  "C8": {
+   "state": "finding",
+   "population": "registry 97; 50 ML units graded since 10-21",
+   "reading": "gbdt 76/97; all 3 advisory share regime_label; 43/50 units on regime_label, 7 direction_label, 0 on a priced target"
+  },
+  "C9": {
+   "state": "finding",
+   "population": "79 ML result records / 50 units generated_at>=2026-10-21; 27 open ML pipeline rows",
+   "reading": "21 fail, 21 indeterminate, 6 pass (all regime feature/learner lift), 2 producer_failed; backlog 27/27 triaged"
+  }
+ },
+ "analysis": {
+  "questions": [
+   {
+    "q": "What does the cost gate (#20869) mean for the registry?",
+    "answer": "Refusal is about data (unstamped gross rows), not models; no entry-value model can be promoted until the rebuild; the gate is not_applicable to every promotable head; underlying setups lose net (take-all -0.43/-0.49 R/opp)",
+    "status": "MEASURED"
+   },
+   {
+    "q": "Why did 50 units produce no order-changing result?",
+    "answer": "target saturation on regime_label (H1) favoured over noise (H2): challengers move <=0.005 log-loss while LightGBM beats prior by ~0.10 with tight CIs; 1h FAILs sign-consistent",
+    "status": "INFERRED",
+    "rejected": "more learners on regime_label"
+   },
+   {
+    "q": "Is it learning?",
+    "answer": "yes to H5; breaks at H6->H7 (no breadth objective), and H3->H4 for teacher data",
+    "status": "MEASURED"
+   },
+   {
+    "q": "MES-5m margin rule",
+    "answer": "rule fired 10-23..25; series mean 3.98 sd 0.12 = noise around the threshold; head changes 0 legs -> wiring-or-retire",
+    "status": "MEASURED"
+   }
+  ],
+  "surprises": [
+   "exit-head-donchian-1h-v1 closes trades on 3 legs but is not in the registry",
+   "yz heads serve vol_bucket dead live",
+   "p2pool's +0.041 R/opp is the size of the measured cost stack per taken trade (correction to the preliminary)"
+  ]
+ },
+ "calls": [
+  {
+   "id": "ML-20261028-1",
+   "claim": "No setup-candidates metalabel head passes the cost gate on cost-net rows once PI-20261028-V8KBRR5H-0004 rebuilds the corpus (p2pool-v1 included).",
+   "p": 0.75,
+   "impact": "entry take/skip; 0 legs today",
+   "decision": "no promotion path for entry heads until rebuild; P1 (Q-SEL1 on the ledger corpus) is the real test",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/ml/registry -> runs[-1].metrics.cost_gate_passed for model_id startswith setup-candidates-metalabel, on a run after the rebuild",
+    "rule": "hit if every cost_gate_passed == 0 with no eval_not_cost_net reason; miss if any == 1",
+    "resolves_when": "first cycle after PI-20261028-V8KBRR5H-0004 closes (due 2026-11-06)"
+   },
+   "ending": "PI-20261028-V8KBRR5H-0004 (existing, ML-PROGRAMME-PLAN)"
+  },
+  {
+   "id": "ML-20261028-2",
+   "claim": "Further regime_label/direction_label learner variants will not beat shipped LightGBM by the registered margin: of the next 10 such units graded, <= 1 PASS.",
+   "p": 0.8,
+   "impact": "research capacity (43 of 50 units this week)",
+   "decision": "P6: pause new variants; re-register or retire the 4 queued units",
+   "tier": "1",
+   "check": {
+    "command": "research/results/*/ records generated after 2026-10-28 whose unit has ml_bakeoff and target regime_label|direction_label; count verdict==pass",
+    "rule": "hit if pass <= 1 of the next 10; miss if >= 3",
+    "resolves_when": "10 such units graded, or 2026-11-25"
+   },
+   "ending": "proposal P6 to the manager; PI-20261028-LFC7HPXG-0001"
+  },
+  {
+   "id": "ML-20261028-3",
+   "claim": "ML still changes 5/51 rostered legs and 0/7 real-money legs at the next weekly review unless a Q-REG1/P5 unit lands.",
+   "p": 0.85,
+   "impact": "breadth of ML on the book",
+   "decision": "P3 + P5 proposed",
+   "tier": "1",
+   "check": {
+    "command": "re-parse config/accounts.yaml (mode live) + config/regime_policy.yaml trend_vol + config/strategies.yaml exit_head_action; count legs read by any model",
+    "rule": "hit if real-money legs changed == 0 and no Q-REG1 unit graded; void if a Q-REG1 unit landed",
+    "resolves_when": "2026-11-04 ml-review"
+   },
+   "ending": "no action, because breadth work is owned by ML-PROGRAMME-PLAN (Q-REG1); this call tracks it"
+  },
+  {
+   "id": "ML-20261028-4",
+   "claim": "MES-5m advisory margin over its baseline stays in 3.7-4.3 pts (noise, not decay) over the next 6 cycles.",
+   "p": 0.7,
+   "impact": "MES-5m advisory (changes 0 legs)",
+   "decision": "refinement row PI-20261028-GNVUF1ES-0001 opened per the registered rule; hypothesis H0 no capability loss",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/ml/registry -> macro_f1(mes-regime-5m-lgbm-v2) - macro_f1(mes-regime-5m-baseline-v1) per cycle date 2026-10-29..11-03",
+    "rule": "hit if all 6 in [3.7,4.3]; miss if any < 3.5 or the mean falls below 3.8",
+    "resolves_when": "6 cycles after 2026-10-28"
+   },
+   "ending": "PI-20261028-GNVUF1ES-0001"
+  },
+  {
+   "id": "ML-20261028-5",
+   "claim": "BTC-15m and SOL-15m advisory score drift (moderate today, minor 10-21) is transient: next weekly read is minor or none for both.",
+   "p": 0.55,
+   "impact": "router cells on 3 BTC legs (BTC head)",
+   "decision": "watch, no remediation row (first-time moderate)",
+   "tier": "1",
+   "check": {
+    "command": "GET /api/bot/shadow/drift?model_id=btc-regime-15m-lgbm-fc-pcv-v2 and sol-regime-15m-lgbm-fc-pcv-v2",
+    "rule": "hit if both verdict in {none,minor}; miss if either moderate/significant (then persistent -> DRIFT-REMEDIATE row)",
+    "resolves_when": "2026-11-04 ml-review"
+   },
+   "ending": "no action, because drift is first-time moderate (skill C7 rule)"
+  },
+  {
+   "id": "ML-20261028-6",
+   "claim": "TTM-r2 + Log-HAR average beats the per-symbol LightGBM vol head on log-loss on XRP/ADA/AVAX at >= 20 folds (if P3 is registered).",
+   "p": 0.25,
+   "impact": "router cells on real-money symbols (4 of 7 real-money legs)",
+   "decision": "P3 proposed",
+   "tier": "1",
+   "check": {
+    "command": "research/results/<P3 unit>/ verdict",
+    "rule": "hit if pass at powered design; miss if fail/underpowered",
+    "resolves_when": "P3 unit graded; void if not registered by 2026-11-25"
+   },
+   "ending": "proposal P3 (not queued, per dispatch)"
+  }
+ ],
+ "trainer_findings": [
+  "eval_not_cost_net on all 9 metalabel heads (376/354/324 unstamped)",
+  "yz dead_live vol_bucket",
+  "trainer 1 vCPU, 52% disk"
+ ],
+ "model_status": [
+  {
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "stage": "advisory",
+   "lens": "c_reg / router trend_vol",
+   "legs_changed": 3,
+   "auc_live": 0.721,
+   "parity": "0 mismatches",
+   "drift": "moderate KS 0.129",
+   "note": "the only advisory head that reaches an order (BTC router cells)"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+   "stage": "advisory",
+   "legs_changed": 0,
+   "auc_live": 0.696,
+   "drift": "moderate KS 0.103",
+   "note": "changes 0 legs: wiring-or-retire question"
+  },
+  {
+   "model_id": "mes-regime-5m-lgbm-v2",
+   "stage": "advisory",
+   "legs_changed": 0,
+   "auc_live": 0.755,
+   "drift": "minor KS 0.093",
+   "note": "refinement row PI-20261028-GNVUF1ES-0001"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-yz-v1",
+   "stage": "shadow",
+   "auc_live": 0.709,
+   "note": "vol_bucket dead live: not promotable until 3WM5HADW-0005 fixed"
+  },
+  {
+   "model_id": "exit-head-donchian-1h-v1",
+   "stage": "(not in registry)",
+   "legs_changed": 3,
+   "note": "closes trades; outside stage-guard and cost gate (PI-20261028-GNVUF1ES-0002)"
+  }
+ ],
+ "model_status_summary": "97 registered: 3 advisory, 20 shadow, 73 candidate (gbdt 76/97), 1 research_only; 9 metalabel candidates refused by the cost gate (data, not model)",
+ "promotion_recommendations": [],
+ "promotion_note": "none: no head has a priced decision value; SOL-15m/MES-5m advisory change 0 legs (wiring-or-retire, Tier-3, after P5 prices them)",
+ "experiments_proposed": [
+  {
+   "id": "P1",
+   "track": "MODEL",
+   "what": "Q-SEL1 net take/skip on the ledger corpus + conformal abstention arm",
+   "power": "trades n>=5063, MDE ~0.018R",
+   "cost_usd": 3,
+   "p": 0.3
+  },
+  {
+   "id": "P2",
+   "track": "MODEL",
+   "what": "Q-TM1 GBDT action-value exit/tighten policy on TM-BENCH v1",
+   "cost_usd": 4,
+   "p": 0.35
+  },
+  {
+   "id": "P3",
+   "track": "MODEL->TRADING",
+   "what": "Q-REG1 pooled crypto vol head XRP/ADA/AVAX + Log-HAR control + TTM-r2/Log-HAR average arm",
+   "power": "folds >=20 at sd 0.003",
+   "cost_usd": 4,
+   "p": 0.25
+  },
+  {
+   "id": "P4",
+   "track": "TRADING",
+   "what": "claude_desk decision attribution vs B0/B1 (TradeLens-style)",
+   "power": "decisions n>=150",
+   "cost_usd": 3,
+   "p": 0.5
+  },
+  {
+   "id": "P5",
+   "track": "MODEL",
+   "what": "decision-value column for router cells + exit head; register the exit head",
+   "cost_usd": 6,
+   "row": "PI-20261028-GNVUF1ES-0002"
+  },
+  {
+   "id": "P6",
+   "track": "MODEL",
+   "what": "pause regime/direction learner variants; re-register or retire 4 queued units",
+   "cost_usd": 0,
+   "row": "PI-20261028-GNVUF1ES-0003"
+  }
+ ],
+ "backlog_drain": [
+  {
+   "id": "PI-20261015-WNBZB5WN-0001",
+   "outcome": "resolved"
+  },
+  {
+   "id": "PI-20261004-AHCVAAF5-0001",
+   "outcome": "resolved"
+  },
+  {
+   "id": "PI-20261018-WH81NW96-0002",
+   "outcome": "resolved"
+  },
+  {
+   "id": "PI-20261021-WG8OPB7N-0002",
+   "outcome": "resolved"
+  },
+  {
+   "id": "PI-20260929-K85Q64SF-0005",
+   "outcome": "resolved"
+  },
+  {
+   "id": "MB-20260613-002",
+   "outcome": "killed (superseded Q-TM7)"
+  },
+  {
+   "id": "MB-20260705-FC-SLTP-GEOMETRY",
+   "outcome": "killed (superseded Q-TM9)"
+  },
+  {
+   "id": "20 others",
+   "outcome": "kept_open, re-read (see brief \u00a7 4)"
+  }
+ ],
+ "backlog_coverage": {
+  "open_at_start": 27,
+  "triaged": 27,
+  "resolved": 5,
+  "fixed_now": 0,
+  "closed_stale": 2,
+  "kept_open": 20,
+  "count_untriaged": 0
+ },
+ "anomalies": [
+  "research monoculture 43/50 regime_label",
+  "cost gate covers no promotable head",
+  "exit head outside registry"
+ ],
+ "recommended_action": "Manager: decide P1-P6; land the cost-net rebuild (V8KBRR5H-0004) before any entry-model call; fix yz vol_bucket before any yz promotion",
+ "operator_attention_required": false,
+ "claude_channel_ping": "/ml-review \u2014 ML changes 5/51 legs (real-money 0); chain: H6->H7; 6 proposals; calls hit/miss 1/4; trainer=ok.",
+ "sources": [
+  "GET /api/bot/ml/{registry,status,cycle,builds} ~18:55-19:00Z",
+  "GET /api/bot/shadow/{stats,drift}",
+  "trainer-vm-diag #20968 (run 40749642636)",
+  "trainer-vm-diag #20982",
+  "scripts/ops/ml_plan_status.py --plumbing/--diversity",
+  "scripts/ops/review_followthrough.py",
+  "docs/research/ml-coverage-audit-2026-10-28.md",
+  "docs/plans/ML-PROGRAMME-2026-10-28.md",
+  "research/results/* generated_at>=2026-10-21",
+  "comms/ml-plan/20261028T2000Z-ML-FRONTIER-PREP.json"
+ ]
+}
