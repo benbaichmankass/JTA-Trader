@@ -1,13 +1,38 @@
 {
-  "_comment": "Template documenting the JSON Claude returns from /ml-review (introduced 2026-05-26; two-layer CHECKS + ANALYSIS shape 2026-10-28, see .claude/skills/ml-review/SKILL.md). Covers the fixed checks C1-C9, the analysis A1-A6, gradable calls, promotion/demotion proposals against the 3-stage ladder (candidate -> shadow -> advisory) and experiment proposals. This skill never edits ml/configs/ — proposals only. This file is documentation, not a validated JSON Schema.",
+  "_comment": "Template documenting the JSON Claude returns from /ml-review (introduced 2026-05-26; two-layer CHECKS + ANALYSIS shape 2026-10-28, see .claude/skills/ml-review/SKILL.md). Carries the shared pattern's four blocks (prior_calls_scorecard, checks C1-C9, analysis, calls; docs/reference/llm-analyst-skill-design.md) plus promotion/demotion proposals against the 3-stage ladder (candidate -> shadow -> advisory) and experiment proposals. This skill never edits ml/configs/ — proposals only. This file is documentation, not a validated JSON Schema.",
   "request_id": "REQ-YYYYMMDD-HHMMSS-<slug>",
   "reviewed_at": "YYYY-MM-DDTHH:MM:SS+00:00",
   "reviewer": "claude",
   "window_start": "YYYY-MM-DDTHH:MM:SS+00:00",
   "window_end": "YYYY-MM-DDTHH:MM:SS+00:00",
   "overall_assessment": "healthy | caution | investigate",
+  "prior_calls_scorecard": {
+    "_comment": "Layer 0 (pattern docs/reference/llm-analyst-skill-design.md § 6): the previous ml-review record's calls[] graded by re-running each call's own check. Older records without calls[] grade promotion_recommendations[] / next_by_value_per_cost[] / 're-read next week' lines and say so. brier is INDETERMINATE below 10 resolved calls.",
+    "source_record": "comms/reviews/ml-review-<stamp>.json",
+    "n_calls": 0,
+    "hit": 0,
+    "miss": 0,
+    "unresolved": 0,
+    "void": 0,
+    "brier": "0.0 | INDETERMINATE",
+    "calls": [
+      {
+        "id": "ML-<stamp>-1",
+        "result": "hit | miss | unresolved | void",
+        "check_rerun": "<command + output summary>",
+        "action_happened": "yes | no — <why, and re-filed as / killed because>"
+      }
+    ],
+    "series": [
+      {
+        "review": "<stamp>",
+        "n_resolved": 0,
+        "brier": null
+      }
+    ]
+  },
   "checks": {
-    "_comment": "Layer 1. One entry per check C1..C9 (skill § Layer 1). state: ok | finding | could-not-look. A could-not-look on a required check forces overall_assessment=investigate.",
+    "_comment": "Layer 1 CHECKS C1..C9 (SKILL.md table). Each entry: state ok | finding | could-not-look, numbers (windows lifetime/90d/30d/7d where they apply), population, locator. Numbers only; no interpretation here. A missing instrument is 'could-not-look: no instrument' + the row that builds it.",
     "C1_trainer_registry": {
       "state": "ok | finding | could-not-look",
       "numbers": "headline numbers",
@@ -64,35 +89,46 @@
     }
   },
   "analysis": {
-    "_comment": "Layer 2 (A1-A6). Reasoning over the checks + wide context; every claim names population and MEASURED/INFERRED; every recommendation names a rejected alternative.",
-    "value": "A1: legs changed by ML x/rostered, real-money x/y, why models do/don't add value",
-    "tested": "A2: hypotheses and what results do/don't say, incl. power on the test unit",
-    "next": [
+    "_comment": "Layer 2 ANALYSIS: Claude's reasoning (pattern § 3). 3-7 material questions ranked by money/decision impact; each with competing hypotheses (noise always one), the test run, and what survived. Prose first (the markdown), then copied here.",
+    "questions": [
       {
-        "rank": 1,
-        "experiment": "...",
-        "ev_per_cost": "(value x p_pass x powered) / cost, with reasons",
-        "unit_or_row": "RQ-...|ROW",
-        "rejected_alternative": "..."
+        "question": "<= 200 chars",
+        "impact": "<legs / R / decision affected + arithmetic>",
+        "hypotheses": [
+          {
+            "name": "noise | regime_mix | capability_loss | wiring | data_limit | underpowered | measurement | <other>",
+            "predicts": "<what it predicts that the others do not>",
+            "test": "<command / pull run>",
+            "result": "survived | eliminated | untested"
+          }
+        ],
+        "conclusion": "<= 240 chars",
+        "p": 0.0
       }
     ],
-    "risk": "A4: what is getting worse, which drift kind, mechanism + refuting observation",
-    "stages": "A5: proposals with gate packet + decision value, or 'none, because'",
-    "grade": [
+    "surprises": [
       {
-        "call_id": "from the previous record's calls[]",
-        "grade": "right | wrong | unresolved",
-        "evidence": "..."
+        "observation": "<= 200 chars",
+        "explanation_or_open_question": "<= 200 chars",
+        "owner": "<row / unit / PI id or none>"
       }
     ]
   },
   "calls": [
     {
-      "_comment": "This week's gradable calls; next week's A6 grades them.",
-      "id": "CALL-YYYYMMDD-NN",
-      "call": "...",
-      "kind": "proposal | hold | watch | next | reread",
-      "grade_by": "the observation + date that settles it"
+      "_comment": "Layer 3: every decision this review makes, ranked by impact. The NEXT review's Layer 0 re-runs check.command and applies check.rule as written.",
+      "id": "ML-<stamp>-1",
+      "claim": "<= 200 chars",
+      "p": 0.0,
+      "impact": "<legs / decision affected>",
+      "decision": "<what changes>",
+      "tier": "1 | 2 | 3",
+      "check": {
+        "command": "<runnable command>",
+        "rule": "<pre-registered pass/fail>",
+        "resolves_when": "<n or date>"
+      },
+      "ending": "<checklist row | queue unit | PI id | promotion_recommendations[i] | no action, because ...>"
     }
   ],
   "trainer_findings": {

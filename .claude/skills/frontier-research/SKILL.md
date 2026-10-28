@@ -34,21 +34,24 @@ the plan's track N) and `perf-followup` Track 3 runs the **strategy half** of th
 frontier" below). No new cron: the manager binds it to the weekly routine it already runs. A run that
 finds nothing writes "none, because" with the sources it checked — silence is the failure.
 
-## Two layers: CHECKS, then ANALYSIS (operator, 2026-10-28, binding)
+## The four layers (operator, 2026-10-28, binding)
 
-The scan has the same two layers as `/ml-review` (shared pattern: `docs/reference/llm-analyst-skill-design.md`; evidence for this
-redesign: [`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../docs/research/ml-review-frontier-diagnosis-2026-10-28.md)).
+The scan follows the shared pattern in [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md).
+Point at it; do not restate it. The evidence for this redesign is in
+[`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../docs/research/ml-review-frontier-diagnosis-2026-10-28.md).
 
-**CHECKS** are mechanical, and each ends `ok | finding | could-not-look`:
-- **F1**, the previous scan's units and their state (Step 0);
-- **F2**, `--diversity` (Step 1);
-- **F3**, the source floor (Step 2: every *required* source row checked, or named as could-not-look with the reason);
-- **F4**, the lever rows filed by earlier scans and how many scans each has been `queued`/`blocked`.
-
-**ANALYSIS** is judgement, written in the fixed slots of Steps 0, 3 and 4:
-- the grade of last week's keep/drop calls;
-- a reasoned triage of each candidate, including *which question the business uses* it would answer;
-- the ranking by expected value per cost, with the power check.
+- **Layer 0: prior calls** (Step 0). Last scan's keep/drop calls are graded `hit | miss | unresolved | void` by re-running each
+  call's check.
+- **Layer 1: CHECKS**, each ending `ok | finding | could-not-look`:
+  - **F1**, the previous scan's units and their state (Step 0);
+  - **F2**, `--diversity` (Step 1);
+  - **F3**, the source floor (Step 2);
+  - **F4**, the lever rows filed by earlier scans and how many scans each has stayed `queued`/`blocked`.
+- **Layer 2: ANALYSIS** (Step 3, gates 5–6; Step 4). This is reasoned triage: which question the business uses, whether the
+  test is powered, and competing explanations for why a family has not paid off (the test design, the target, the data, or the
+  idea itself).
+- **Layer 3: decisions** (Step 5). Each kept idea is a unit with its rule registered first. Each kept or dropped candidate is a
+  `calls[]` entry with `p` and a check.
 
 **The diagnosis, which these rules answer:**
 - **Question monoculture.** All 7 frontier units that ran tested a volatility-regime classifier's macro-F1. None asked a question
@@ -60,11 +63,11 @@ redesign: [`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../
 
 ## Step 0 — close the loop on the previous scan (always first)
 
-**Grade the previous scan's calls (ANALYSIS, required).** Grade each `candidates[]` entry in the last record, kept or dropped,
-`right | wrong | unresolved`:
-- **A kept idea** is right if its unit ran and was informative. That means PASS, FAIL, or an INDETERMINATE at a powered design. An
-  idea that is still blocked, or came back underpowered by design, counts as *wrong*. The keep call is what is graded, not the model.
-- **A dropped idea** is wrong if later evidence showed the gate was misread.
+**Grade the previous scan's calls (Layer 0, required).** Grade each `candidates[]` entry in the last record, kept or dropped,
+`hit | miss | unresolved | void`:
+- **A kept idea** is a hit if its unit ran and was informative. That means PASS, FAIL, or an INDETERMINATE at a powered design. An
+  idea that is still blocked, or came back underpowered by design, counts as a *miss*. The keep call is what is graded, not the model.
+- **A dropped idea** is a miss if later evidence showed the gate was misread.
 
 Write `grades[]` into the run record, and say what you change in this week's triage because of them. A lever row that is still
 `queued`/`blocked` after two scans is raised to the manager as the blocker, with the dollar cost to clear it, in the
@@ -291,12 +294,12 @@ Add to the ml-review record `comms/ml-plan/<stamp>.json` a `frontier` block:
 ```
 
 so next week's Step 0 reads exactly what this one found. Two keys are added to the `frontier` block, beside the ones above:
-- `"grades": [{"candidate": "…", "call": "kept|dropped", "grade": "right|wrong|unresolved", "evidence": "…"}]` (Step 0);
+- `"grades": [{"candidate": "…", "call": "kept|dropped", "grade": "hit|miss|unresolved|void", "evidence": "…"}]` (Step 0);
 - in each `candidates[]` entry: `"business_question": "…"`, `"power": {"unit": "folds|trades|rows", "n": N, "mde": x, "ok": true}` and
   `"p_pass": 0.x`.
 
 `sources_checked[]` entries carry `"state": "checked|could-not-look"`. The brief section is `MODEL track — frontier: sources
-k/required, kept n (units …), dropped m, last week graded r/w/u`.
+k/required, kept n (units …), dropped m, last week graded hit/miss h/m`.
 
 ## Hard limits
 

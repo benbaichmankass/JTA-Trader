@@ -1,6 +1,6 @@
 ---
 name: ml-review
-description: Weekly review of the ICT bot's ML LIFECYCLE, built in two layers. A fixed CHECKS layer (scripts and relays with stated populations) covers registry state, data and label freshness, the produced→labelled→trained→scored→changes-an-order chain, serve parity, drift split into score drift vs labelled decay, champion vs challenger on one replay and cost stack, and family concentration. An ANALYSIS layer then reasons over that evidence and a wide context: why each model does or does not add value to the decisions it feeds, which hypotheses were tested, the next experiments ranked by expected value per cost, and a self-grade of the previous review's calls. It also covers promotion/demotion proposals against the 3-stage ladder (candidate→shadow→advisory), the ML plan loop and the backlog drain. Files follow-ups to docs/claude/work/pipeline/ and the checklist. Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, or when the operator says "run the ml review", "/ml-review", "how are the models doing", "is the ML learning", or "what should we train next". NOT for live trading promotion past shadow (Tier-3, operator-gated): this skill proposes and the operator promotes. NOT for system health (use /health-review) and NOT for strategy trade scoring (use /performance-review).
+description: Weekly review of the ICT bot's ML LIFECYCLE, built on the shared four-layer analyst pattern (docs/reference/llm-analyst-skill-design.md). Layer 0 grades the previous review's calls. A fixed CHECKS layer (scripts and relays with stated populations) covers registry state, data and label freshness, the produced→labelled→trained→scored→changes-an-order chain, serve parity, drift split into score drift vs labelled decay, champion vs challenger on one replay and cost stack, and family concentration. An ANALYSIS layer then reasons over that evidence and a wide context: why each model does or does not add value to the decisions it feeds, which hypotheses were tested, and the next experiments ranked by expected value per cost. Each decision is a call with a pre-registered check. It also covers promotion/demotion proposals against the 3-stage ladder (candidate→shadow→advisory), the ML plan loop and the backlog drain. Files follow-ups to docs/claude/work/pipeline/ and the checklist. Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, or when the operator says "run the ml review", "/ml-review", "how are the models doing", "is the ML learning", or "what should we train next". NOT for live trading promotion past shadow (Tier-3, operator-gated): this skill proposes and the operator promotes. NOT for system health (use /health-review) and NOT for strategy trade scoring (use /performance-review).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -9,23 +9,18 @@ description: Weekly review of the ICT bot's ML LIFECYCLE, built in two layers. A
 
 > **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`. A principle never overrides a binding rule.
 
-> **Why this shape (operator, 2026-10-28, binding; redesign evidence in
-> [`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../docs/research/ml-review-frontier-diagnosis-2026-10-28.md)).**
-> The weekly reviews failed in two opposite ways.
-> - **Too loose:** the trainer relay was skipped in 3 of the last 4 runs, so there was no promotion packet and no soak audit, and the review published anyway.
-> - **Too scripted:** 90 of 96 per-model notes in the 2026-10-11 review were two template phrases.
+> **Why this shape (operator, 2026-10-28, binding).** This skill follows the shared pattern in
+> [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md): **Layer 0** prior calls ·
+> **Layer 1** CHECKS · **Layer 2** ANALYSIS · **Layer 3** decisions. Point at it; do not restate it. The pattern governs its
+> rules (windows, sequential decay tests, competing hypotheses, neutral framing, no quota, probabilities with pre-registered
+> checks) and the output template. This file only adds what is specific to ML.
 >
-> Meanwhile the one decision-relevant fact went unworked for a month: the SOL advisory head gates no order. No review asked whether the ML is *learning*.
->
-> The fix is two layers:
-> - **CHECKS:** fixed scripts and populations, run every time, each ending `ok | finding | could-not-look`.
-> - **ANALYSIS:** your reasoning over the checks plus wide context, in a fixed template that names the questions but not the answers.
->
-> The checks guarantee coverage. The analysis is where the review earns its cost. A review that only restates the checks is a
-> failed review, and so is one that skips them.
->
-> Shared pattern: `docs/reference/llm-analyst-skill-design.md` (lane `ANALYTIC-SKILL-DESIGN`). Where it and this file differ on
-> shape, the pattern doc wins and this file is aligned in the next edit.
+> The ML evidence for the redesign is in
+> [`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../docs/research/ml-review-frontier-diagnosis-2026-10-28.md):
+> - **too loose:** the trainer relay was skipped in 3 of the last 4 runs, so there was no gate packet and no soak audit;
+> - **too scripted:** 90 of 96 per-model notes were two template phrases;
+> - **wrong metric:** demotion arguments about a head that gates no order;
+> - **not asked:** whether the ML is learning.
 
 **What this session is.** End-to-end QA of the ML lifecycle. HUNT for broken or degenerate models, stalled cycles, GIGO datasets,
 drift, heads that influence nothing, and data that is recorded but never learned from. ROOT-CAUSE what you find, then FIX it in
@@ -33,7 +28,7 @@ tier or FILE it as a row or unit. Put the Tier-3 calls to the operator with the 
 is a review failure. It is one of three reviews (`/health-review`, `/performance-review`); do not do their work.
 
 **Cadence and coordination.** The review runs weekly, in the `ML-FRONTIER-PREP-<date>` lane of the Wednesday "Weekly review prep" routine (~18:53Z, after
-the usage reset), and it feeds Thursday planning. The same lane runs `frontier-research`, and its output feeds A3 below. Read your
+the usage reset), and it feeds Thursday planning. The same lane runs `frontier-research`, and its kept candidates feed the next-experiments question below. Read your
 checklist row, title it `ML-REVIEW-<YYYYMMDD>` (exempt from the `UNPLANNED` flag), and check the checklist for another lane already
 on the trainer (a cycle or a build) before you pull. Claim the merge slot before landing
 (`scripts/ops/claim_merge_slot.py --branch-claim --branch <b> --held-by <session>`). **Do not re-measure** what a same-week lane
@@ -41,7 +36,23 @@ already measured with a locator (e.g. `ML-COVERAGE-AUDIT`, `ML-PROGRAMME-PLAN`).
 
 ---
 
+## Layer 0 — PRIOR CALLS (always first)
+
+Read the previous `comms/reviews/ml-review-*.json` `calls[]`, and the previous `comms/ml-plan/*.json` `calls[]` / `frontier.grades`.
+Re-run each call's own `check.command` and apply its `check.rule` as written. Grade each call `hit | miss | unresolved | void`,
+and say whether its action happened. If it did not, say why, and re-file or kill it.
+- Older records have no `calls[]`. For those, grade `promotion_recommendations[]`, `next_by_value_per_cost[]` and every
+  "re-read next week" line, and say that you did. Example: P-1014's "BTC moderate drift: re-read next week".
+- Keep the Brier series in `prior_calls_scorecard`. Below 10 resolved calls it is `INDETERMINATE` (pattern § 6).
+
 ## Layer 1 — CHECKS (run all of them; fixed order; each prints a state)
+
+**Pattern rules apply to every row** (pattern § 2):
+- **Windows** are lifetime / 90d / 30d / 7d. The training OOS figure is the lifetime baseline.
+- Each check is measured **against its own expectation**: the registered gate, the training OOS metric, or the incumbent.
+- **Decay is judged by a sequential test, never by one window.** The ML instrument for this is `LIVE-DECAY-MONITOR` (CUSUM,
+  practice principle M10). Until that instrument exists, C7(b) reads `could_not_look: no instrument` and names the row. A cruder
+  substitute is never hand-rolled in the session.
 
 **Fire the trainer pull FIRST** (C1 block below). The Actions runner has queued it for 20–30+ minutes (2026-10-11), and C1, C5
 and C6 wait on it. Do everything else meanwhile.
@@ -109,7 +120,7 @@ here, plan-only. **Do not re-add a timer and do not set `RETRAIN_PLAN_ONLY=0`.**
 
 ---
 
-## Layer 2 — ANALYSIS (reason; the template fixes the questions, not the answers)
+## Layer 2 — ANALYSIS (reason; the pattern fixes the method, not the answers)
 
 Read the checks **together with** the wide context:
 - the previous review record and its calls;
@@ -118,52 +129,46 @@ Read the checks **together with** the wide context:
 - the practice principles;
 - what `/performance-review` said about the legs these models feed.
 
-Then answer A1–A6. Every claim names its population and its MEASURED / INFERRED status. Every recommendation carries a stated
-alternative you rejected and why.
+Every claim names its population and its MEASURED / INFERRED status. Every recommendation names the alternative you rejected,
+and why.
 
-**A1. Value: which models add value to the decisions they feed, and why or why not?**
-- Start from C3, not from the registry. For each model that can change an order, give its *decision value*: what the consumer
-  would do without it, on which legs, net of cost, out of sample (M6, M10). Say whether that value is measured or only implied by a
-  classification metric. A macro-F1 lift is feature lift, not value.
-- For each consumer that reads no model, and each model that feeds no consumer, give your read of *why*. Wiring? A missing cell?
-  A degenerate head? A question nobody owns?
-- Group every candidate-only model into **one line** (count and families). Name a candidate individually only when it matters to an answer.
+The pattern's ten prompts (§ 3) apply; read them first. The questions below are where the ML review usually finds its 3–7
+material ones. They are **candidates, not a quota**: pick by money and decision impact, write ≥ 2 hypotheses per question (one
+is always noise / expected variation), run the discriminating test, and record what was eliminated.
 
-**A2. Hypotheses: what did this week test, and what does it mean?**
-- Take each result in C9 and each C6/C7 finding. State the hypothesis, what the result says **and does not say**, and whether the
-  test could have answered it at all.
-- Check power on the **unit of the test**: folds for a fold-paired interval, not rows. Apply the corrected resampled variance where
-  folds overlap. The diagnosis § 2 case: a "power" block satisfied on 24,000 rows behind a 5-fold paired test that needed ~70 folds.
-- Look for patterns across results that no single unit shows. Examples: every arm matches LightGBM; every null comes from one data
-  limit; every family tested on the same target.
+- **Value (start from C3, not from the registry).** For each model that can change an order, what is its *decision value*?
+  That is: what the consumer would do without it, on which legs, net of cost, out of sample (M6, M10). Say whether that value is
+  measured or only implied by a classification metric; a macro-F1 lift is feature lift, not value. For each consumer that reads
+  no model, and each model that feeds none, ask why: wiring, a missing cell, a degenerate head, or a question nobody owns. Every
+  candidate-only model is **one line** (count and families).
+- **What this week's tests mean.** Take each C9 result and each C6/C7 finding. Say what it shows **and does not show**, and
+  whether the test could have answered the question at all. Check power on the **unit of the test**: folds for a fold-paired
+  interval, with the corrected resampled variance (`ff8f-04`: "power" was computed on 24,000 rows, but the test was over 5 folds
+  and needed ~70). Look for patterns no single unit shows: every arm matches LightGBM, every null comes from one data limit,
+  every family was tested on one target.
+- **Is it learning?** Find the first broken C4 hop, and the reason it broke.
+- **Drift and risk.** Use C5/C7. An input shift on a head whose labelled performance holds is a regime-mix question, not a
+  capability failure. Name the mechanism you believe and the observation that would refute it.
+- **Next experiments, ranked by expected value per cost.**
+  - Score each as (decision value if it passes) × p(pass) × (powered at the registered design?) ÷ (cost and time to a verdict).
+  - Combine A-questions with the frontier scan's kept candidates.
+  - Prefer real-money legs, order-changing consumers and the broken C4 hop over another variant in a crowded cell (C8).
+- **Stages.**
+  - Cite the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
+  - A head that changes no order is a wiring-or-retire question, not a promotion question.
+  - Never `promote` on `ready: false`.
+  - `shadow → advisory` and every demotion are Tier-3, or data-backed per canonical § "Data-backed Tier-2/3 decisions".
 
-**A3. Next experiments, ranked by expected value per cost.**
-- Combine A1/A2 with the frontier scan's kept candidates. Rank by:
+## Layer 3 — DECISIONS
 
-  (decision value if it passes) × (probability it passes, with your reason) × (is it powered at the registered design) ÷ (cost and time to a verdict).
+Every call is a `calls[]` entry with `p`, `tier` and a **pre-registered `check`** (`command`, `rule`, `resolves_when`). Its
+ending is one of:
+- a checklist row;
+- a `research/queue/` unit (rule registered first, power on the test unit);
+- a pipeline item;
+- `no action, because …`.
 
-- Prefer questions on **legs and decisions that matter** (real-money legs, order-changing consumers, the C4 hop that is broken)
-  over another variant in a crowded cell (C8).
-- Each of the top items becomes a pre-registered `research/queue/` unit, or a lever row plus a blocked unit (§ "The ML plan loop"
-  step 4). Give the rejected alternatives one line each.
-
-**A4. Risks and drift: is anything influencing orders getting worse, and why?**
-- Use C5 and C7, and say which kind of drift it is: score/input distribution or labelled decay.
-- An input shift on a head whose labelled performance holds is a regime-mix question, not a capability failure (B6 in the diagnosis).
-- Name the mechanism you believe, and the observation that would refute it.
-
-**A5. Promotion / demotion.**
-- Propose only what the evidence supports, citing the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
-- A head that changes no order is not a promotion question. It is a wiring-or-retire question.
-- `shadow → advisory` and every demotion are Tier-3, or covered by the data-backed authorization (canonical § "Data-backed Tier-2/3
-  decisions") when a committed evidence record settles them.
-- Never recommend `promote` while the packet reads `ready: false`.
-
-**A6. Self-grade: were last week's calls right?**
-- Read the previous record's `calls[]`. Grade each one `right | wrong | unresolved` against what happened, with the evidence.
-  Calls include proposals, holds, "watch", ranked next steps and "re-read next week".
-- Say what you would have needed to see to call it right, and what you change because of it.
-- This is the review's effective challenge of itself (SR 26-2). A review that skips A6 is incomplete.
+Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as written.
 
 **Anti-patterns (each one is a review failure; check your draft against them before you publish):**
 - one row per registered model as the body of the review;
@@ -173,43 +178,43 @@ alternative you rejected and why.
 - a promotion argument about a head that changes nothing;
 - a comparison on different rows or costs reported as a result;
 - a missing check footnoted instead of chased;
-- a call graded by the same session that made it in the same week;
-- a proposal with no rejected alternative.
+- a proposal with no rejected alternative;
+- plus the pattern's list (§ 5): week-only windows, restating numbers, predetermined outcomes, amnesia, dead-end endings.
 
 ---
 
 ## Output — fixed template
 
-**1. The brief** (Markdown, ≤ 1 screen, into the run record and the weekly brief), always in this order. Every section is present;
-an empty one says "none, because …".
+**1. The brief.** Markdown in the pattern's § 4 order, headed `MODEL track — /ml-review <date> — <the one sentence that most
+affects money/risk now>`:
+- `0 Prior calls`
+- `1 CHECKS`: C1–C9 tables, each with population + windows, could-not-look listed
+- `2 ANALYSIS`
+- `3 Decisions`
+- `4 Not done`
 
-```
-MODEL track — /ml-review <date> · overall: healthy | caution | investigate
-CHECKS  C1 … C9: one line each, state + headline number + population (could-not-look named)
-VALUE   (A1) legs changed by ML x/rostered · real-money x/y · the 1–3 sentences that matter
-TESTED  (A2) hypotheses and what they showed, incl. power on the test unit
-NEXT    (A3) ranked experiments → unit/row ids · rejected alternatives
-RISK    (A4) what is getting worse and why (mechanism + refuting observation)
-STAGES  (A5) proposals with packet + decision value, or "none, because"
-GRADE   (A6) last week's calls: right r / wrong w / unresolved u, and what changes
-TRADING track — only where an output touches a leg's trading (cite the leg and hand it to /performance-review)
-```
+Under `1 CHECKS`, always print the two headline numbers: ML changes x/rostered legs and y/real-money legs, and the first broken
+C4 hop. Add a `TRADING track` line only where a decision touches a leg's trading; cite the leg and hand it to `/performance-review`.
 
-**2. The response JSON**, per `comms/schema/ml_review_response.template.json`: `checks{C1..C9: {state, numbers, population, locator}}`,
-`analysis{value, tested, next[], risk, stages[], grade[]}`, `calls[]` (this week's gradable calls, read by next week's A6),
-`model_status[]` (**only** shadow/advisory models and any model a consumer reads; the rest is one count line in
-`model_status_summary`), `promotion_recommendations[]`, `experiments_proposed[]`, `backlog_drain[]`, `backlog_coverage`, `anomalies[]`,
-`recommended_action`, `operator_attention_required`. Write it to `comms/reviews/ml-review-<YYYYMMDD-HHMMSS>.json`.
+**2. The response JSON** follows `comms/schema/ml_review_response.template.json`. It carries the pattern's four blocks,
+`prior_calls_scorecard`, `checks{C1..C9}`, `analysis{questions[], surprises[]}` and `calls[]`, plus the ML blocks:
+- `model_status[]`: **only** shadow/advisory models and any model a consumer reads; everything else is one count line in
+  `model_status_summary`;
+- `promotion_recommendations[]`, `experiments_proposed[]`;
+- `backlog_drain[]`, `backlog_coverage`;
+- `anomalies[]`, `recommended_action`, `operator_attention_required`.
+
+Write it to `comms/reviews/ml-review-<YYYYMMDD-HHMMSS>.json`.
 
 **3. The ML plan run record** `comms/ml-plan/<YYYYMMDDTHHMMZ>.json` (§ "The ML plan loop" step 6).
 
 **4. One ping** via the `send-ping` system-action (fallback `docs/claude/pending-pings.jsonl`), ≤ 200 chars:
-`/ml-review — ML changes x/N legs (real-money y); chain: <first broken hop|ok>; <P> proposals; calls graded r/w/u; trainer=<state>.`
+`/ml-review — ML changes x/N legs (real-money y); chain: <first broken hop|ok>; <P> proposals; calls hit/miss h/m; trainer=<state>.`
 Priority `high` only if an advisory head is decaying on labelled data.
 
 ---
 
-## Lifecycle rules (unchanged in substance; they feed C1/C5/C6/A5)
+## Lifecycle rules (unchanged in substance; they feed C1/C5/C6 and the stages question)
 
 - **3-stage ladder** `candidate → shadow → advisory`. Normalize legacy names with `ml.manifest.canonical_stage` and report the
   canonical stage. `candidate → shadow` is the trainer's autonomous track: note readiness, and the `model-training` skill flips it.
@@ -257,7 +262,7 @@ The consolidated programme is `docs/plans/ML-PROGRAMME-2026-10-28.md`: its § 4.
    locators**. A line is killed only by its registered exhaustion condition, never by one pass.
 3. **Plumbing.** C2/C4/C5. A silent or constant head with no owning row is a finding: fix it, file it, or add it to
    `plumbing.tracked` **with** its owning row.
-4. **Ideas — at least one per run, or "none, because".** Come from A3. Each idea becomes:
+4. **Ideas — at least one per run, or "none, because".** Come from the next-experiments question. Each idea becomes:
    - a `research/queue/` unit with its decision rule registered **before** the run (`perf-followup` § "Filing a queue unit"), with
      power computed on the test unit; or
    - a lever row plus a unit in `research/queue/blocked/`.
@@ -274,8 +279,7 @@ The consolidated programme is `docs/plans/ML-PROGRAMME-2026-10-28.md`: its § 4.
    {run, finished_at, plan_items, open, flags, plumbing_findings,
     results_read[{unit, verdict, plan_item}], ideas[{id, source, rule_registered, power_unit}] | "none: …",
     frontier{… frontier-research § "The run record"}, practice{…}, drift{scan_rc, heads_scanned, drifted, persistent, watch, rows_filed, could_not_look},
-    checks{C1..C9 states}, calls[{id, call, kind: proposal|hold|watch|next|reread, grade_by: "<observation + date>"}],
-    grades[{call_id, grade, evidence}], writebacks, rows_filed, units_filed, next_by_value_per_cost, handoff}
+    checks{C1..C9 states}, calls[ same shape as the review JSON calls[] ], writebacks, rows_filed, units_filed, next_by_value_per_cost, handoff}
    ```
 
    Cite its path in the response JSON's `sources` and in the ping.
