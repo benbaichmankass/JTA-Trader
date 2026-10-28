@@ -1,0 +1,13 @@
+{
+  "due_when": {"due_date": "2026-11-04", "kind": "date"},
+  "id": "PI-20261028-NNERIDLE-0002",
+  "next_action": "operator_decision",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "gh api 'repos/{owner}/{repo}/actions/runs?status=queued&per_page=100' older than 24h; for each, actions/runs/<id>/jobs total_count",
+    "what": "ghost queued runs (0 jobs) older than 24h: 36 of 38 listed at 2026-10-28T20:05Z, 21 from 2026-05-15 (issue-triggered vm-*/trainer/health workflows), 11 from 2026-09-12, 3 later; operator decides whether to cancel"
+  },
+  "origin": {"kind": "session", "ref": "RESEARCH-RUNNER-IDLE read-only follow-up", "rerun": "gh api 'repos/{owner}/{repo}/actions/runs?status=queued&per_page=100' --jq '[.workflow_runs[]|select(.created_at<\"2026-10-27\")]|length'"},
+  "state": "queued",
+  "what": "[stuck-runs] Old queued runs have no jobs (sampled 3 of 36: 0 jobs each), so they hold no runner and cannot be served by any label; the dispatcher already ignores them (>24 h filter). Likely orphaned at run creation (GitHub side), not a runner-label or concurrency deadlock. Harmless to dispatch; cancel only to tidy. They are not the cause of the repo-queued deferral: the 17 counted were fresh runs (12 claude-run-failure-alert listeners excluded, PR checks)."
+}
