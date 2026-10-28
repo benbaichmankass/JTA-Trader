@@ -341,7 +341,7 @@ jobs:
           echo "${HEALTH}"
           if [ "${HRC}" -eq 3 ]; then
             echo "::notice::research-queue health: runnable below target but fillable — dispatching research-queue-replenish.yml (its concurrency group serialises it with the daily run)."
-            gh workflow run research-queue-replenish.yml -f target=25 \
+            gh workflow run research-queue-replenish.yml \
               || echo "::error::could not dispatch research-queue-replenish.yml — see the step log above."
           elif [ "${HRC}" -ne 0 ]; then
             echo "::warning::research-queue health tripped — dispatching send-ping."

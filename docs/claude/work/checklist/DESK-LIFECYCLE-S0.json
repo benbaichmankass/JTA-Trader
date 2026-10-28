@@ -13,12 +13,16 @@
     20842
   ],
   "blocked_on": [],
-  "note": "2026-10-28 ~07:20Z lane: v2 PILOT run on manager GO 06:53Z (cap $8): 20 pairs, C4E, 4 Sonnet walkers; 40/40 trades closed, 122 check-ins (hold 68, tighten 45, move_tp 4, close 5; 0 invalid); isolation audit 162 tool calls 0 violations; MEASURED $6.85 = $0.056/check-in. PILOT read (not a verdict): mgmt dR vs HOLD -0.039 [-0.58,+0.42] (Claude entries) / -0.131 [-0.58,+0.38] (random); vs matched random M1 +0.168 [-0.01,+0.48] / -0.138; closes at -0.5R +0.35 R each [+0.29,+0.49] (n5), tightens -0.07, tighten at +1R -0.48 (n17). Paired sd 1.06-1.18 R (not 0.7): 200 pairs resolves +-0.16 R. Full-run options doc 7.4: A 3 policies x200 ~$235; B C4E+E x126 ~$75; C C4E x520 ~$178 (+-0.10 R); D C4E x732 ~$250. Decided Thursday. C60 (-03) not funded. Lane spend: judges ~$9 MEASURED/estimated (v1 ~$2 + v2 $6.85), session ~$25-30 INFERRED.",
+  "note": "2026-10-28 ~20:30Z lane: FULL RUN (option C, C4E x 520 pairs) DONE, registered verdict FAIL. Claude whole-trade management dR vs HOLD: Claude entries -0.159 R [-0.261,-0.041] (n 473 trades), random entries -0.124 R [-0.197,-0.043] (n 465); vs matched random intervention -0.013 / -0.046 (sig.); vs best rule -0.075 / -0.101. Loss = frequent tightening (981 of 1,155 actions, -0.097 each); holds worth +0.142 vs closing; only positive pocket (n.s.) = closes at <= -0.5 R. Entry value indeterminate (-0.09), interaction 0. Coverage 938/1,040 trades (b088-b099 stopped at the $200 ceiling); 3,156 check-ins, 0 invalid; isolation 0 violations after voiding + re-judging b018. Spend: judges $159.48 MEASURED + pilot $6.85; session INFERRED ~$25-35. Evidence comms/research/desk_lifecycle/full-c4e/, doc s7.5; RQ-20261028-d1f5-02 graded fail. PR pending manager merge (hold).",
   "priority_rank": 1,
-  "updated_at": "2026-10-28T07:01:23Z",
+  "updated_at": "2026-10-28T18:52:31Z",
   "updated_by": "session_01AFoLuJGUG7n1WDzgCysB32",
   "roadmap": [
     "L-DESK"
   ],
+  "writeback": {
+    "roadmap": "L-DESK where: DESK-LIFECYCLE-S0 outcome (C48 full-lifecycle factorial, option C: Claude whole-trade management FAILS vs hold on both entry sources; hold is the default; loss-cut pocket only)",
+    "arch": "none: research harness and evidence only"
+  },
   "_seq": 746
 }

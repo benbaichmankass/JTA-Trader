@@ -176,7 +176,9 @@ def ops_authoring_skips(root: Path, *, last: int = 3) -> dict:
         if depth is not None and int(depth) == 0:
             continue
         if "nodes_drafted" in a:
-            if int(a.get("nodes_drafted") or 0) == 0:
+            # a deliberate zero (value of information ~0) is not a skip, but only with its stated reason
+            on_purpose = a.get("skipped_on_purpose") is True and bool(str(a.get("note") or "").strip())
+            if int(a.get("nodes_drafted") or 0) == 0 and not on_purpose:
                 skipped.append(f.stem)
             continue
         if not any(re.search(r"\bP\d+-Q", str(x)) for x in d.get("units_authored") or []):
@@ -328,6 +330,11 @@ def _self_test() -> int:
         assert ops_authoring_skips(r)["skipped"] == ["20300101T0000Z"], ops_authoring_skips(r)
         (od / "20300101T1800Z.json").write_text(_json.dumps({"authoring": {"queue_depth": 4, "nodes_drafted": 0}}))
         assert ops_authoring_skips(r)["skipped"] == ["20300101T1800Z"], ops_authoring_skips(r)   # newest 3 only
+        (od / "20300101T1900Z.json").write_text(_json.dumps({"authoring": {"queue_depth": 4, "nodes_drafted": 0, "skipped_on_purpose": True, "note": "VOI ~0"}}))
+        assert ops_authoring_skips(r)["skipped"] == ["20300101T1800Z"], "a reasoned deliberate zero is not a skip"
+        (od / "20300101T1900Z.json").write_text(_json.dumps({"authoring": {"queue_depth": 4, "nodes_drafted": 0, "skipped_on_purpose": True}}))
+        assert ops_authoring_skips(r)["skipped"] == ["20300101T1800Z", "20300101T1900Z"], "no reason, still a skip"
+        (od / "20300101T1900Z.json").unlink()
         (od / "20300101T0000Z.json").write_text(_json.dumps({"authoring_queue_depth": 6, "units_authored": ["RQ-2 (programme node P2-Q4-x)"]}))
         assert ops_authoring_skips(r, last=4)["skipped"] == ["20300101T1800Z"], "a legacy record that drafted a node is not a skip"
         assert _exit_code(["OPS-AUTHOR-SKIPPED x"]) == 0 and _exit_code(["RESULTS-UNDISPOSITIONED 3"]) == 0

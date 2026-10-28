@@ -12,7 +12,9 @@ name: research-queue-replenish
 # `queue_replenish.py --verify` at the merge-base and demands the same bytes
 # (a hand-edited or non-template unit holds for a human, as before).
 #
-# Daily at 05:50 UTC -- half an hour before the dispatcher's 06:20 slot, so
+# Four times a day (05:50, 11:50, 17:50, 23:50 UTC; RESEARCH-SLO-ROOTCAUSE 2026-10-28: one daily fill to a
+# fixed 25 could not hold a ~57-63 floor against ~72 fires/24h; the target is now the computed floor).
+# First slot: 05:50 UTC -- half an hour before the dispatcher's 06:20 slot, so
 # the first dispatch of the day sees a full queue. schedule-keeper covers a
 # dropped slot; the `dedupe` job skips GitHub's late duplicate.
 #
@@ -22,11 +24,14 @@ name: research-queue-replenish
 on:
   schedule:
     - cron: "50 5 * * *"
+    - cron: "50 11 * * *"
+    - cron: "50 17 * * *"
+    - cron: "50 23 * * *"
   workflow_dispatch:
     inputs:
       target:
-        description: "Runnable units to keep queued"
-        default: "25"
+        description: "Runnable units to keep queued (blank = the computed floor)"
+        default: ""
 
 concurrency:
   group: research-queue-replenish
@@ -86,11 +91,11 @@ jobs:
         env:
           # An input reaches the shell through env, never by interpolation
           # into `run:` (review fix 2026-09-29).
-          TARGET: ${{ inputs.target || '25' }}
+          TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
           python3 scripts/research/queue_replenish.py --self-test
-          python3 scripts/research/queue_replenish.py --write --target "${TARGET}" | tee /tmp/replenish.txt
+          python3 scripts/research/queue_replenish.py --write ${TARGET:+--target "${TARGET}"} | tee /tmp/replenish.txt
           python3 scripts/research/dispatch_queue.py | tail -3
           echo "count=$(git status --porcelain research/queue | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
       - name: Land the new units on main

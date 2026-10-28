@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "python3 scripts/research/real_money_close_attribution.py exits 0 unmodified against the live API and prints POPULATION 1..3.",
+    "kind": "event"
+  },
+  "id": "PI-20261028-PVRNY2JI-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "rerun": "python3 scripts/research/real_money_close_attribution.py | head -5; curl -sS -o /dev/null -w '%{http_code}\\n' 'https://ict-bot.duckdns.org/api/bot/db/table/trades?limit=1'"
+  },
+  "state": "queued",
+  "what": "[performance][tooling] D7: scripts/research/real_money_close_attribution.py is VOID unmodified. Its second route GET /api/bot/db/table/trades now answers HTTP 401, both unauthenticated and with the DIAG_READ_TOKEN bearer (measured 2026-10-28 ~19:20Z), while its docstring says the route was verified unauthenticated on 2026-09-08. The 2026-10-28 review ran its unmodified analyse() over the diag-journal dump instead (same raw exit_reason column). Fix: read journal?table=trades through scripts/ops/diag_fetch.sh, or restore the route's tier. Health-review / api-tier-policy decides which."
+}
