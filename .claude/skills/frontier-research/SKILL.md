@@ -3,7 +3,7 @@ name: frontier-research
 description: The WEEKLY frontier scan — look OUTSIDE the repo for better models, methods and strategy ideas than the ones we happened to pick first, triage them against our data/compute/latency/leakage constraints, and turn every kept idea into a pre-registered research/queue unit (or a checklist lever row) with a declared baseline it must beat net of cost. Also owns the model-FAMILY diversity check (ml_plan_status.py --diversity) that stops capacity piling onto one family. Also owns the weekly PRACTICE & METHODOLOGY REFRESH (two tracks, TRADING and MODEL: how real firms manage trades and build/evaluate models, kept in docs/reference/trading-and-model-practice-principles.md). Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, when the manager dispatches a FRONTIER-SCAN-<week> lane, when perf-followup runs Track 3, or the operator says "scan for better models", "what's new in open-source time-series / tabular models", "are we stuck on one model family". NOT for tuning an existing model (model-training / perf-followup Track 1) and NOT for grading results (research-ops).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-11` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /frontier-research — stay on top of what is out there, test it, apply it
 
@@ -36,7 +36,44 @@ methodology refresh** (§ below). `ml-review` § "The ML plan loop" *consumes* t
 No new cron: the routine already exists, and the assistant manager binds this track to it. A run that
 finds nothing writes "none, because" with the sources it checked — silence is the failure.
 
+## The four layers (operator, 2026-10-28, binding)
+
+The scan follows the shared pattern in [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md).
+Point at it; do not restate it. The evidence for this redesign is in
+[`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../docs/research/ml-review-frontier-diagnosis-2026-10-28.md).
+
+- **Layer 0: prior calls** (Step 0). Last scan's keep/drop calls are graded `hit | miss | unresolved | void` by re-running each
+  call's check.
+- **Layer 1: CHECKS**, each ending `ok | finding | could-not-look`:
+  - **F1**, the previous scan's units and their state (Step 0);
+  - **F2**, `--diversity` (Step 1);
+  - **F3**, the source floor (Step 2);
+  - **F4**, the lever rows filed by earlier scans and how many scans each has stayed `queued`/`blocked`.
+- **Layer 2: ANALYSIS** (Step 3, gates 5–6; Step 4). This is reasoned triage: which question the business uses, whether the
+  test is powered, and competing explanations for why a family has not paid off (the test design, the target, the data, or the
+  idea itself).
+- **Layer 3: decisions** (Step 5). Each kept idea is a unit with its rule registered first. Each kept or dropped candidate is a
+  `calls[]` entry with `p` and a check.
+
+**The diagnosis, which these rules answer:**
+- **Question monoculture.** All 7 frontier units that ran tested a volatility-regime classifier's macro-F1. None asked a question
+  whose answer changes an order.
+- **Underpowered by design.** `ff8f-04`'s power block was satisfied on 24,000 rows, behind a 5-fold paired test that needed about
+  70 folds.
+- **Lever rows left standing.** 7 of 14 frontier units have been blocked for up to 17 days.
+- **Thin source coverage.** 3 of the last 4 scans were partial.
+
 ## Step 0 — close the loop on the previous scan (always first)
+
+**Grade the previous scan's calls (Layer 0, required).** Grade each `candidates[]` entry in the last record, kept or dropped,
+`hit | miss | unresolved | void`:
+- **A kept idea** is a hit if its unit ran and was informative. That means PASS, FAIL, or an INDETERMINATE at a powered design. An
+  idea that is still blocked, or came back underpowered by design, counts as a *miss*. The keep call is what is graded, not the model.
+- **A dropped idea** is a miss if later evidence showed the gate was misread.
+
+Write `grades[]` into the run record, and say what you change in this week's triage because of them. A lever row that is still
+`queued`/`blocked` after two scans is raised to the manager as the blocker, with the dollar cost to clear it, in the
+`handoff`. It is not re-filed.
 
 Read the last `comms/ml-plan/*.json` `frontier` block. For each idea it filed: has the unit run? read
 its verdict (research-ops grades them). Append the graded verdict (`PASS`/`FAIL`/`INDETERMINATE`) to
@@ -54,7 +91,7 @@ reason the idea itself is dead -- `scripts/research/family_retirement_policy.yam
 Run `python3 scripts/ops/pipeline.py --due` and take any due item whose `origin.ref` names a roadmap milestone
 scoping question for this scan. Standing now: **`PI-20261022-J9X7ACR3-0001` (M41, production-ready local LLM,
 operator 2026-10-22)** -- what would a local LLM do for us, what does it cost, can it run on our VMs. Answer it
-with the same four gates as Step 3 and record the verdict in the scan doc and the run record; close the item
+with gates 1–4 of Step 3 and record the verdict in the scan doc and the run record; close the item
 `done` (verdict + evidence) or `killed` (no use case clears a gate), and set M41's `next` in
 `docs/roadmap/milestones.yaml` to match.
 
@@ -93,11 +130,16 @@ the TSFM.) Every new plan item names its `family:`.
 | Competitions / write-ups | WebSearch: Kaggle finance & time-series winners, M-competition style reports | what actually beat GBDT, and on what data size |
 | Quant practitioner literature | WebSearch: SSRN / practitioner blogs / open quant repos | strategy mechanisms with an economic reason to exist |
 
+**Source floor (check F3).** The Hugging Face Hub, arXiv, lab releases, and the quant practitioner literature are **required**
+every week. GitHub and competitions are required at least every other week. A scan that skips a required row names it in
+`sources_checked` as `could-not-look` with the reason. Three partial scans in four weeks is the failure that row
+`FRONTIER-SCAN-COMPLETENESS` tracks.
+
 Every claim you carry forward cites a URL and says whether it is **primary** (paper/model card) or
 **secondary** (blog). Benchmark rank from a vendor blog is a rumour, not a finding (the first scan
 found a "TimesFM 3.0" claim it could not confirm — it was dropped, not carried).
 
-## Step 3 — triage each candidate (four gates, all answered in writing)
+## Step 3 — triage each candidate (six gates, all answered in writing)
 
 1. **Data** — do we have the input it needs, point-in-time? (OHLCV yes; order-book/liquidation streams
    mostly no — Binance's liquidation snapshot dump is discontinued; label count is the usual binding
@@ -110,6 +152,16 @@ found a "TimesFM 3.0" claim it could not confirm — it was dropped, not carried
    seen crypto candles — hold out bars **after** its release); label leakage; and the **licence**: a
    non-commercial weight (`cc-by-nc`, Prior Labs TabPFN-2.5/3 `license:other`) may be used for offline
    research evaluation but **serving it live is an operator licence decision**, never a default.
+5. **Business question** — which decision would a PASS change, on which legs and through which consumer? Use the business-use
+   map, `/ml-review` C3. A candidate that only improves a head that gates nothing, or a metric no consumer reads, either names the
+   wiring row that would make it matter or is dropped. Prefer the open questions of the ML programme
+   (`docs/plans/ML-PROGRAMME-2026-10-28.md` § 4.3: trade management, breadth onto real-money legs, teacher data) over another
+   regime-classifier variant.
+6. **Power on the test unit** — can the registered design detect the registered effect? Compute it on the unit the rule tests:
+   folds for a fold-paired interval, trades for a per-trade mean. Use the measured fold sd of the nearest prior result (e.g.
+   `comms/ml-plan/20261025T0000Z-ML-READ-1025.json`: macro-F1 fold sd 0.007–0.03) and the corrected resampled variance where folds
+   overlap (Nadeau & Bengio). A design that cannot reach power is redesigned before filing (more folds, longer history, a pooled
+   population, a larger registered effect), or it is filed as a lever for the data it lacks. It is never filed as a test.
 
 A candidate that fails a gate is dropped with the gate named. A candidate that passes all four and
 whose family is already crowded (Step 1) needs a *genuinely different* hypothesis than the unit it
@@ -117,8 +169,12 @@ would join — "the same head with checkpoint #5" is a variation, not a test.
 
 ## Step 4 — rank and keep ≤ 5
 
-Rank by **expected information per dollar**, not expected P&L: (does it test a family we have never
-tried) × (does it attack the binding constraint — labels, base rate, serve-parity) ÷ (cost to try).
+Rank by **expected value per dollar**, not expected P&L:
+
+(decision value if it passes, from gate 5) × (probability it passes, with a stated reason) × (powered? from gate 6) × (does it
+test a family or question we have never tried) ÷ (cost and time to a verdict, *including* any lever it needs).
+
+Write the probability as a number with a reason, even a rough one. That number is what next week's Step 0 grades.
 Write the shortlist (top ~8; what / licence / fits which problem / why it could beat the current head /
 cost to try / **kill criterion**) into `docs/research/frontier-scan-<date>.md`. Keep the top 3–5.
 
@@ -289,7 +345,13 @@ Add to the ml-review record `comms/ml-plan/<stamp>.json` a `frontier` block:
   "none_because": null}}
 ```
 
-so next week's Step 0 reads exactly what this one found.
+so next week's Step 0 reads exactly what this one found. Two keys are added to the `frontier` block, beside the ones above:
+- `"grades": [{"candidate": "…", "call": "kept|dropped", "grade": "hit|miss|unresolved|void", "evidence": "…"}]` (Step 0);
+- in each `candidates[]` entry: `"business_question": "…"`, `"power": {"unit": "folds|trades|rows", "n": N, "mde": x, "ok": true}` and
+  `"p_pass": 0.x`.
+
+`sources_checked[]` entries carry `"state": "checked|could-not-look"`. The brief section is `MODEL track — frontier: sources
+k/required, kept n (units …), dropped m, last week graded hit/miss h/m`.
 
 ## Hard limits
 

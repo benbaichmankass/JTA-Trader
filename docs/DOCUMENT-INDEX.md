@@ -216,8 +216,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/live-trade-review/REVIEWER-BRIEF.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/macro-research/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/manager/SKILL.md` | instruction | live | — | 2026-09-21 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/frontier-research/SKILL.md` | instruction | live | — | 2026-10-11 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/ml-review/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/frontier-research/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/ml-review/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/model-training/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/new-broker/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/new-strategy/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
@@ -958,6 +958,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/mirror-qty-diverge-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-buildout-strategy-2026-06-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-coverage-audit-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | ML coverage vs the traded roster (5/51 legs, 4/23 symbols) + next-week breadth plan. |
+| `docs/research/ml-review-frontier-diagnosis-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Scored last 4 ml-review + frontier outputs; researched MRM/monitoring practice; basis for the two-layer redesign of both skills. |
 | `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-strategies-deep-review-2026-06-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml2-predictive-bracket-2026-09-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
