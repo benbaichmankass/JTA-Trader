@@ -71,7 +71,7 @@ def _recent_payload(leg: str) -> dict:
     Shaped against `src/runtime/research_results_gate.source_verdict` over the
     last 40 (trades >= 40, `pnlCoverage` above `COVERAGE_FLOOR`, NEGATIVE
     `totalPnlMeasured`, `totalR < 0`) and against MD-DEMOTE-S2-S1's T3 rule:
-    both 20-trade windows at -0.3R/trade (-6R), below the leg's REAL Stage-0
+    both 20-trade windows at -0.4R/trade (-8R), below the leg's REAL Stage-0
     p10 (asserted in `_fixture`, not assumed).
     """
     def row(n, r):
@@ -79,10 +79,10 @@ def _recent_payload(leg: str) -> dict:
                 "totalPnl": -430.0 * n / 40, "pnlCoverage": 0.92,
                 "pnlMeasuredCount": int(n * 0.92), "totalR": r, "rTradeCount": n}
     ent = {"closedAvailable": 55, "nUsed": 40, "complete": True,
-           "last": {"perStrategy": [row(40, -12.0)]},
-           "blocks": [{"perStrategy": [row(20, -6.0)], "closedFrom": "2026-09-01T00:00:00",
+           "last": {"perStrategy": [row(40, -16.0)]},
+           "blocks": [{"perStrategy": [row(20, -8.0)], "closedFrom": "2026-09-01T00:00:00",
                        "closedTo": "2026-09-12T00:00:00"},
-                      {"perStrategy": [row(20, -6.0)], "closedFrom": "2026-09-13T00:00:00",
+                      {"perStrategy": [row(20, -8.0)], "closedFrom": "2026-09-13T00:00:00",
                        "closedTo": "2026-09-27T00:00:00"}]}
     import datetime as dt
     fresh = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
@@ -106,7 +106,7 @@ def _fixture(tmp_path: Path, *, armed: bool) -> Path:
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO / rel, root / rel)
     p10 = mr.stage0_block_p10(LEG, REPO)["p10"]
-    assert p10 is not None and -6.0 < p10, f"{LEG}'s real p10 {p10} no longer sits above -6R"
+    assert p10 is not None and -8.0 < p10, f"{LEG}'s real p10 {p10} no longer sits above -8R"
     # The real store has been ARMED on MD-DEMOTE-S2-S1 since 2026-09-27
     # (operator). Normalise to the requested state either way, so the fixture
     # tests the route rather than whatever the live store happens to hold.
