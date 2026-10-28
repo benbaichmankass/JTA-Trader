@@ -1007,6 +1007,30 @@ pass on the replay at the stated n, **and** the forward-shadow set must not cont
 estimate > 0 once it reaches n ≥ 100). The forward set is not a paper book establishing edge: it is the
 same blind, pre-registered, cost-stacked replay run on packets that were built before their outcomes.
 
+**Active-management test design (operator 2026-10-28 ~06:35Z, paraphrased by the manager, BINDING for every
+in-trade / exit / active-management test: the desk's, exit-refinement's and any ML trade-management model's).**
+*"One check when the trade hits 1R is not how active management works. It is first and foremost HIGH-FREQUENCY
+TIME-BASED check-ins, and on top of that EVENT triggers: R milestones, a volatility change, momentum, etc. ... Design
+tests that give actual information."* So a management test:
+1. treats the **check-in policy as a factor**: time cadence arms (every bar of the trade's timeframe, every k bars),
+   event-trigger arms (R milestones incl. adverse ones, ATR regime change, momentum flip, level/structure break,
+   time in trade), and cadence + events; and reports value **by check-in type and time in trade** (WHEN), not just
+   whether;
+2. manages the **whole trade**: state carries forward (prior actions, current SL/TP), every answer from the closed
+   enum, next-bar fills, the full cost stack; *no action* is recorded as a decision, and the value of acting and of
+   not acting are reported separately;
+3. compares at the SAME check-ins against **hold-to-bracket (M0)** AND a **matched random intervention (M1)**: the same
+   number and type of actions at random check-ins (practice review § A.4 / F.1, `docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md`,
+   after Akepanidtaworn et al. JF 2023); an arm that beats M0 but not M1 shows that acting helps, not that its timing does;
+4. includes the practitioners' volatility-scaled rule baselines (Chandelier k x ATR trail, channel exit, time stop,
+   breakeven, partial + trail) as token-free arms over the full population, and the best of them (leave-one-fold-out)
+   as the bar Claude's judgement must clear;
+5. stratifies by return process (trend vs mean-reversion leg) and volatility at entry, nets every arm of the full
+   cost stack, measures judge cost per check-in in a pilot, and registers an n the plan budget can actually buy.
+A single fixed check-in for every trade (e.g. the +1 R decision of RQ-20261026-bf56-02/-03) tests ONE intervention,
+never "management": cite it that way. First application: `DESK-LIFECYCLE-S0`
+(`docs/research/desk-lifecycle-factorial-2026-10-28.md` § 0, units `RQ-20261028-d1f5-*`).
+
 **Version pinning.** A desk leg is `(model, skill_sha, prompt_sha)` = its `label_version`. A change of
 model family re-runs the entry-generation replay on a confirm set (n ≥ 200, the same rule) before the
 changed desk trades. A skill text edit is recorded and graded; it does not re-run Stage 0.

@@ -1,719 +1,315 @@
 ---
 name: ml-review
-description: Autonomous review of the ICT bot's ML LIFECYCLE — trainer service health, training cycles since the last review, dataset builds, per-model status (latest training metrics + shadow/live track record), promotion/demotion recommendations against the 3-stage ladder (candidate→shadow→advisory), per-model fit within the unified-confidence framework, and AI-experiment proposals to continue expanding ML coverage. Files ML follow-ups to docs/claude/work/PIPELINE.jsonl (AI experiment follow-ups, new manifests to try, new features/feeds to engineer). Use when the operator says "run the ml review", "/ml-review", "how are the models doing", or "what should we train next". NOT for live trading promotion past shadow (Tier-3, operator-gated) — this skill proposes, the operator promotes. NOT for system health (use /health-review) and NOT for strategy trade scoring (use /performance-review).
+description: Weekly review of the ICT bot's ML LIFECYCLE, built on the shared four-layer analyst pattern (docs/reference/llm-analyst-skill-design.md). Layer 0 grades the previous review's calls. A fixed CHECKS layer (scripts and relays with stated populations) covers registry state, data and label freshness, the produced→labelled→trained→scored→changes-an-order chain, serve parity, drift split into score drift vs labelled decay, champion vs challenger on one replay and cost stack, and family concentration. An ANALYSIS layer then reasons over that evidence and a wide context: why each model does or does not add value to the decisions it feeds, which hypotheses were tested, and the next experiments ranked by expected value per cost. Each decision is a call with a pre-registered check. It also covers promotion/demotion proposals against the 3-stage ladder (candidate→shadow→advisory), the ML plan loop and the backlog drain. Files follow-ups to docs/claude/work/pipeline/ and the checklist. Use when the ML-FRONTIER-PREP lane of the Wednesday "Weekly review prep" routine runs, or when the operator says "run the ml review", "/ml-review", "how are the models doing", "is the ML learning", or "what should we train next". NOT for live trading promotion past shadow (Tier-3, operator-gated): this skill proposes and the operator promotes. NOT for system health (use /health-review) and NOT for strategy trade scoring (use /performance-review).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-04` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /ml-review — model/training lifecycle review
 
-> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
+> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`. A principle never overrides a binding rule.
 
+> **Why this shape (operator, 2026-10-28, binding).** This skill follows the shared pattern in
+> [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md): **Layer 0** prior calls ·
+> **Layer 1** CHECKS · **Layer 2** ANALYSIS · **Layer 3** decisions. Point at it; do not restate it. The pattern governs its
+> rules (windows, sequential decay tests, competing hypotheses, neutral framing, no quota, probabilities with pre-registered
+> checks) and the output template. This file only adds what is specific to ML.
+>
+> The ML evidence for the redesign is in
+> [`docs/research/ml-review-frontier-diagnosis-2026-10-28.md`](../../../docs/research/ml-review-frontier-diagnosis-2026-10-28.md):
+> - **too loose:** the trainer relay was skipped in 3 of the last 4 runs, so there was no gate packet and no soak audit;
+> - **too scripted:** 90 of 96 per-model notes were two template phrases;
+> - **wrong metric:** demotion arguments about a head that gates no order;
+> - **not asked:** whether the ML is learning.
 
-> **⚠️ READ FIRST — WHAT THIS SESSION IS.** This is **full end-to-end QA of the
-> ML lifecycle**, NOT a scan-and-sweep-under-the-rug exercise. Your job is to
-> actively **HUNT** for issues (broken/degenerate models, stalled cycles, GIGO
-> datasets, drift, a live head quietly failing), **ROOT-CAUSE** them, **PROPOSE**
-> the exact fix or experiment, decide the Tier-3 promotion/demotion calls **WITH
-> the operator**, and then **drive** them. **Finding a fixable issue and logging
-> it to a backlog as a post-it note instead of driving it is a REVIEW FAILURE** —
-> that is how problems become operational catastrophes. You can ALWAYS weigh in
-> with the operator — but raising the flags is YOUR job; never passively wait for
-> the operator to point at the problem. This framing governs every review session.
+**What this session is.** End-to-end QA of the ML lifecycle. HUNT for broken or degenerate models, stalled cycles, GIGO datasets,
+drift, heads that influence nothing, and data that is recorded but never learned from. ROOT-CAUSE what you find, then FIX it in
+tier or FILE it as a row or unit. Put the Tier-3 calls to the operator with the exact change. Logging a fixable issue as a post-it
+is a review failure. It is one of three reviews (`/health-review`, `/performance-review`); do not do their work.
 
-This is the **ML-lifecycle** session of the three-way review split
-(`/health-review` covers system health, `/performance-review` covers
-trading + strategy scoring). It reviews the trainer VM, every model in
-the registry, and the experiment pipeline — then proposes the next
-promotions/demotions and the next experiments to run.
+**Cadence and coordination.** The review runs weekly, in the `ML-FRONTIER-PREP-<date>` lane of the Wednesday "Weekly review prep" routine (~18:53Z, after
+the usage reset), and it feeds Thursday planning. The same lane runs `frontier-research`, and its kept candidates feed the next-experiments question below. Read your
+checklist row, title it `ML-REVIEW-<YYYYMMDD>` (exempt from the `UNPLANNED` flag), and check the checklist for another lane already
+on the trainer (a cycle or a build) before you pull. Claim the merge slot before landing
+(`scripts/ops/claim_merge_slot.py --branch-claim --branch <b> --held-by <session>`). **Do not re-measure** what a same-week lane
+already measured with a locator (e.g. `ML-COVERAGE-AUDIT`, `ML-PROGRAMME-PLAN`). Cite it, then check only what changed since.
 
-Promoting a model past **`shadow`** (the order-influencing gate) is
-**Tier-3** and requires explicit operator approval. This skill emits
-the recommendation; the operator decides.
+---
 
-If the user asked about *system/pipeline health* — STOP, use
-`/health-review`. If the user asked about *strategy trade
-performance / per-decision scoring* — STOP, use
-`/performance-review`.
+## Layer 0 — PRIOR CALLS (always first)
 
-**Coordination (binding, corrected 2026-10-04):** the coordination board this
-paragraph used to point at (GitHub issue #6927 / `docs/claude/coordination-board.md`)
-is retired and takes no writes (the 2026-09-21 operating reset,
-`docs/plans/OPERATING-PLAN-2026-09-21.md`; CLAUDE.md § "How work is organised").
-The live model is **one manager session plus scoped lanes**: read your lane's
-row in `docs/claude/work/MANAGER-CHECKLIST.json` (or the manager's dispatch
-prompt) before your first trainer-VM pull, and before landing a PR claim this
-branch's merge slot with `scripts/ops/claim_merge_slot.py --branch-claim
---branch <branch> --held-by <session-id>` per `.claude/skills/manager/SKILL.md`.
-This skill still dispatches real trainer-VM diag requests over the unrestricted
-SSH relay and commits pipeline filings, so check the checklist for another lane
-already working the trainer (a training cycle, a dataset build) before you
-duplicate its pulls. (The 2026-07-22 uncoordinated double-session is why this
-paragraph exists; the mechanism changed, the obligation did not.)
+Read the previous `comms/reviews/ml-review-*.json` `calls[]`, and the previous `comms/ml-plan/*.json` `calls[]` / `frontier.grades`.
+Re-run each call's own `check.command` and apply its `check.rule` as written. Grade each call `hit | miss | unresolved | void`,
+and say whether its action happened. If it did not, say why, and re-file or kill it.
+- Older records have no `calls[]`. For those, grade `promotion_recommendations[]`, `next_by_value_per_cost[]` and every
+  "re-read next week" line, and say that you did. Example: P-1014's "BTC moderate drift: re-read next week".
+- Keep the Brier series in `prior_calls_scorecard`. Below 10 resolved calls it is `INDETERMINATE` (pattern § 6).
 
-## Scope (what this skill DOES)
+## Layer 1 — CHECKS (run all of them; fixed order; each prints a state)
 
-1. **Establish the window** — since the last ml-review (§ "The review
-   window").
-2. **Pull trainer-VM state** through the trainer diag relay
-   (§ "Fetching trainer state").
-3. **Pull live-VM ML-mirror state** — the file-based mirror surfaced at
-   `/api/bot/ml/*` (§ "Fetching live-VM ML state").
-4. **Grade trainer-center health** — service, datasets, registry
-   (§ "Trainer center rubric").
-5. **Emit a per-model status line** for every model in `python -m ml
-   list-models` (§ "Per-model status — REQUIRED").
-6. **Identify promotion / demotion candidates** against the 3-stage
-   ladder (§ "Promotion/demotion recommendations").
-7. **Propose AI experiments** — new manifests, new features, new
-   datasets, new model families to try (§ "Experiment proposals").
-8. **Drain the ml-review backlog** (§ "Draining the backlog").
-9. **Run the ML plan loop** — plan vs measured progress, plumbing
-   validation, new ideas, roadmap + work-queue write-back (§ "The ML plan
-   loop"). **Weekly, every run.** This is the step that keeps the ML build
-   from getting a burst of work only when someone remembers. It includes the
-   **frontier scan** (`frontier-research` skill: outside models/methods →
-   pre-registered units, plus `ml_plan_status.py --diversity`; the whole scan → run → read → improve loop is written once in that skill, § "The research → test → improve loop") — operator,
-   2026-10-11: the mandate is *better models*, not variations of the first good one.
-9a. **Run the drift scan** (plan-only) and turn drift that persists across
-   2 consecutive weekly reads into drift-remediation rows (§ "The drift
-   scan"). **Weekly, every run** — it replaced the retired ~8/day
-   `ict-drift-retrain.timer` (operator, 2026-10-25).
-10. **Emit the response JSON** + **post a one-line update to the Claude
-   channel** (§ "Output" + § "Posting to the Claude channel").
+**Pattern rules apply to every row** (pattern § 2):
+- **Windows** are lifetime / 90d / 30d / 7d. The training OOS figure is the lifetime baseline.
+- Each check is measured **against its own expectation**: the registered gate, the training OOS metric, or the incumbent.
+- **Decay is judged by a sequential test, never by one window.** The ML instrument for this is `LIVE-DECAY-MONITOR` (CUSUM,
+  practice principle M10). Until that instrument exists, C7(b) reads `could_not_look: no instrument` and names the row. A cruder
+  substitute is never hand-rolled in the session.
 
-## Out of scope (DO NOT do here)
+**Fire the trainer pull FIRST** (C1 block below). The Actions runner has queued it for 20–30+ minutes (2026-10-11), and C1, C5
+and C6 wait on it. Do everything else meanwhile.
 
-- Pipeline plumbing / DB integrity / service state of the LIVE trader
-  → `/health-review`.
-- Strategy trade scoring / per-decision A–F grades / strategy tweaks
-  → `/performance-review`.
-- **Running a training cycle / promoting a model / building a
-  dataset** — those actions belong to the `model-training` skill (which
-  this skill chains *into* if the operator approves a proposal).
-  /ml-review is the analytical step, not the action step.
-- Editing `ml/configs/*.yaml` manifests — Tier-3. Propose changes;
-  operator decides.
+**The could-not-look rule.** Every check ends in one of three states:
+- `ok`
+- `finding` (with its numbers)
+- `could-not-look` (with the failure)
 
-## The review window
+A required check that cannot look is **chased this session**: retry with backoff, try the alternate route in the table, and
+re-fire the relay once. If it is still blind, the review is published `overall_assessment: investigate`, the gap is filed as a
+row naming the check, and the ANALYSIS layer may not draw any conclusion that depends on it. "Not run this lane" is never a quiet
+footnote again (diagnosis § 2, "Checks actually run").
 
-Window runs from the last ml-review to now. Determine "last review":
+| # | check | how (exact) | population | `finding` when |
+|---|---|---|---|---|
+| **C1** | **Trainer + registry state** | the trainer-vm-diag block below (`ml list-models`, `ml stage-guard`, cycle log, builds) · direct HTTPS `GET /api/bot/ml/{status,registry,cycle,builds}` | every registry row; the last cycle | timer not active, last `cycle_end` > 24h, `overall_rc≠0`, builds failed, a `manifest_oom_red_flag`, a stage change with no recorded decision (`--plumbing` `REGISTRY-STAGES-CHANGED`) |
+| **C2** | **Data and label freshness** | `python3 scripts/ops/ml_plan_status.py --plumbing` (exit 0 clean · 1 findings · **2 = could-not-look, an incident**) · gate-check `labels_accruing` per head (C1 block) | every shadow/advisory head; every dataset family the plan names | a family's newest build > 72h; `TRAINING-STALENESS`; labelled/total < 0.5 on a head (stale candle base, the MES 1,213-of-1,861 class); a shard ending at an exact page multiple (the `ML-SHARD-TRUNCATED` class) |
+| **C3** | **Business-use map: what each model can change** | for every model at shadow/advisory, and any model a consumer reads, map it to its consumer and the legs where it can change an order. Method and consumer list: `docs/research/ml-coverage-audit-2026-10-28.md` § 1b (router `trend_vol` cells in `config/regime_policy.yaml`; exit-head `exit_head_action` in `config/strategies.yaml`; conviction stamps on `GET /api/bot/order-packages?...&include_paper&include_demo`; advisory sizing). Re-parse config each run; **never quote last week's counts** | rostered legs (re-parse `config/accounts.yaml`), and every shadow/advisory model | an advisory head with **0 legs it can change** (the SOL/MES case); a consumer that reads no model (conviction = `c_strat` only); a real-money leg with no ML input. Report `legs_changed / rostered` and `real_money_changed / real_money` |
+| **C4** | **The learning chain (is it learning?)** | ML-PROGRAMME § 7 hops **H1 produced → H2 labelled → H3 in a dataset → H4 trained → H5 scored → H6 promoted → H7 changes an order**, per source (desk decisions, live-review rows, trade closes, paths corpus). Run `scripts/ops/ml_learning_ledger.py` **once it exists** (row `ML-LEARNING-LEDGER`). Until then, compute each hop from the sources in that table, and mark a hop you cannot compute `could-not-look` | each data source in ML-PROGRAMME § 7; the window = since the last review record | any hop at 0 for 14 days while the hop before it is non-zero; a manifest absent from the registry after 2 cycles (the `exit-policy-v1` class); `consumed.jsonl` not growing |
+| **C5** | **Serve parity + soak mechanics** | for each shadow/advisory head, diff the live-logged `feature_row`s (`shadow_predictions.jsonl` via `/api/bot/shadow/predictions`) against its training dataset: present AND non-default AND equal; gate-check `live_parity` | every shadow/advisory head | a feature that is dead on one side and live on the other (the ETH `xa` all-zeros class); parity rows below the gate floor because of the daily-retrain reset (run gate-check about 20h after the cycle). Soak rule: **mechanics, never edge, never a sample size**. Point at [`OPERATING-PLAN § 2`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md); do not restate it |
+| **C6** | **Champion vs challenger, one replay, one cost stack** | `python -m ml gate-check <id> --db data/trade_journal.db --datasets-root datasets-out` (on the trainer) for every shadow head with a challenger relation — its `cost_net` + mechanical `shadow_soak` (1–2 clean scored predictions, no calendar term) gates — and quote each run's `cost_gate.json` (enforced cost-net decision value vs incumbent + take-all / take-none / matched-random on the same rows, PSR and deflated Sharpe over `n_trials`; `promote-stage` refuses a failed or missing one, row `ML-TRAINING-PRINCIPLES-GAPS`); for any `research/results/` record this window that compares a challenger to an incumbent, check that it used **the same fold file, the same rows and the same cost stack** (`execution_costs.resolve_cost_policy()`) | each (champion, challenger) pair: an advisory head and its shadow or offline rivals on the same target | a comparison on different rows/folds/costs (not reported as a result; filed as a re-run); a challenger `ready: true` with no proposal; a champion beaten on the same replay and still advisory |
+| **C7** | **Drift, split** | (a) **score/data drift**: `GET /api/bot/shadow/drift?model_id=X` (KS/PSI), plus the weekly plan-only scan below; (b) **labelled-performance decay**: rolling log-loss/Brier or decision value on *labelled* live rows vs the training OOS figure (`/api/bot/trades/scores`, gate-check `oos_edge`) | every shadow/advisory head | (a) alone is a `watch`. It becomes a remediation row only when **persistent** (the same model drifted in 2 consecutive weekly reads). (b) beyond the head's registered tolerance on any `advisory` head is the urgent case |
+| **C8** | **Concentration (aggregate model risk)** | `python3 scripts/ops/ml_plan_status.py --diversity`, plus from C3: how many advisory heads share one target/family/data source | registry; open family-tagged plan items | `CONCENTRATION` / `FAIL-STREAK`; all advisory heads on one target; a (symbol, target, timeframe) cell with > 3 nightly manifests (ML-PROGRAMME § 3.2 cap) |
+| **C9** | **Research landed + backlog population** | `git log --since=<last record> -- research/results comms/research`, filtered to ML plan refs; per result, the unit's `decision_rule` applied by `research_disposition.py --record` (research-ops grades; you read). Backlog: the pipeline population defined in § "Backlog drain" | results since the last record; the open ML pipeline rows | a result with no disposition; a unit `blocked` across 2 reviews (raise it, do not re-file); `count_untriaged > 0` |
 
-1. The newest `cycle_end` you noted in a prior ml-review JSON
-   (recorded in the Claude-channel ping or, if you persisted them,
-   the prior review files).
-2. Otherwise the cadence of the trainer timer (~24h for the daily
-   timer) — review the last cycle.
-
-## Fetching trainer state (use git-actions + diag-data)
-
-The trainer VM is reached via the `trainer-vm-diag.yml` relay
-(unrestricted SSH bash; label `trainer-vm-diag-request`). One block
-collects everything ml-review needs:
+**The trainer block (one batched trainer-vm-diag issue, label `trainer-vm-diag-request`):**
 
 ```
 cmd: |
-  REPO=/home/ubuntu/ict-trading-bot
-  echo "=== TRAINER SERVICE ==="
-  systemctl is-enabled ict-trainer.service; systemctl is-active ict-trainer.service
-  systemctl is-enabled ict-trainer.timer;   systemctl is-active ict-trainer.timer
+  REPO=/home/ubuntu/ict-trading-bot; cd "$REPO"
+  echo "=== SERVICE ==="; systemctl is-active ict-trainer.service ict-trainer.timer
   systemctl show ict-trainer.service --property=ExecMainStatus,ActiveEnterTimestamp,ActiveExitTimestamp
-  echo "=== TRAINER RECENT LOG ==="
-  journalctl -u ict-trainer.service -n 200 --no-pager
-  echo "=== TRAINER CYCLE LOG ==="
-  tail -n 100 "$REPO/runtime_logs/training_cycle.jsonl"
-  echo "=== TRAINER DATASET BUILDS ==="
-  ls -la "$REPO/datasets-out/" 2>/dev/null; tail -n 40 "$REPO/runtime_logs/trainer/dataset_builds.jsonl"
-  echo "=== TRAINER REGISTRY ==="
-  cd "$REPO" && .venv/bin/python -m ml list-models
-  echo "=== STAGE-GUARD (promote/demote/hold per model) ==="
-  .venv/bin/python -m ml stage-guard --db data/trade_journal.db
-  echo "=== TRAINER RESOURCES ==="
-  df -h /home | tail -1; free -m | head -2
+  echo "=== CYCLE ==="; tail -n 100 runtime_logs/training_cycle.jsonl
+  echo "=== BUILDS ==="; tail -n 40 runtime_logs/trainer/dataset_builds.jsonl
+  echo "=== REGISTRY ==="; .venv/bin/python -m ml list-models
+  echo "=== STAGE-GUARD ==="; .venv/bin/python -m ml stage-guard --db data/trade_journal.db
+  echo "=== GATE-CHECK ==="; for m in <every shadow/advisory model_id>; do .venv/bin/python -m ml gate-check "$m" --db data/trade_journal.db --datasets-root datasets-out; done
+  echo "=== DRIFT SCAN (plan-only) ==="; sudo systemctl start ict-drift-retrain.service; systemctl show ict-drift-retrain.service -p Result,ExecMainStatus
+  python3 -c "import json,datetime as d;c=(d.datetime.utcnow()-d.timedelta(hours=1)).isoformat();R=[json.loads(l) for l in open('runtime_logs/drift_retrain.jsonl') if l.strip()];R=[r for r in R if r['ts']>=c];print(len(R),'rows');[print(r['ts'],r['action'],r['model_id']) for r in R if r['action'] in ('dispatch','skip_no_manifest')]"
+  echo "=== RESOURCES ==="; df -h /home | tail -1; free -m | head -2
 ```
 
-> Use `python -m ml list-models` — there is **no** `python -m ml.registry list`.
-
-If the trainer relay errors, set the relevant findings to `skip` and
-note the failure mode in `anomalies[]`. The trainer is **not** a
-live-trading blocker — escalate trainer issues with lower urgency
-unless an `advisory` model is involved.
-
-## Fetching live-VM ML state (use diag-data)
-
-These endpoints surface the trainer mirror on the live VM (so the
-dashboard / Streamlit / Android can read it). Pull each through the
-diag relay or direct HTTPS:
-
-| Pull | Path | Use |
-|---|---|---|
-| ML status (mirror health) | `GET /api/bot/ml/status` | mirror age, sync state |
-| Latest cycle | `GET /api/bot/ml/cycle` | most-recent trainer cycle the live VM saw |
-| Training sessions | `GET /api/bot/ml/sessions` | per-manifest sessions in the window |
-| Registry mirror | `GET /api/bot/ml/registry` | what the live VM thinks the registry is |
-| Dataset builds | `GET /api/bot/ml/builds` | dataset-build health |
-| Live→trainer DB pulls | `GET /api/bot/ml/db_pulls` | sync log |
-| Per-run metrics | `GET /api/bot/ml/runs/{manifest}/{run_id}` | drill into a specific run |
-| Shadow predictions | `GET /api/bot/shadow/predictions?model_id=X&since=<iso>` | the predictions a shadow model emitted |
-| Shadow stats | `GET /api/bot/shadow/stats?model_id=X` | aggregate prediction stats |
-| Shadow drift | `GET /api/bot/shadow/drift?model_id=X` | KS + PSI score-distribution drift |
-| Trade scores | `GET /api/bot/trades/scores?limit=N` | predictions joined to closed trades — the realized-track-record source |
-
-**Relay reachability note:** only the `shadow/predictions`, `shadow/stats`,
-`shadow/drift`, and `trades/scores` rows above are in the
-`vm-diag-snapshot` relay's `/api/bot/*` allowlist — the `ml/*` rows
-(`ml/status`, `ml/cycle`, `ml/sessions`, `ml/registry`, `ml/builds`,
-`ml/db_pulls`, `ml/runs/*`) are **direct-HTTPS-only** (or the trainer-VM
-relay for the underlying trainer-side data). **Try direct HTTPS first for
-ALL of these** (`https://ict-bot.duckdns.org/api/bot/<path>`, the Caddy
-route, no token): MEASURED 2026-10-04, every row in this table answered 200
-from a web session, including `ml/registry` (6.5 MB) — so the relay is the
-fallback, not the default, and a dropped-webhook relay issue (one of four
-dispatched that day never spawned a run) costs you nothing. **Batch the relay-eligible
-rows into ONE `vm-diag-request` issue** (JSON array or one-per-line body,
-e.g. `["shadow/stats?model_id=X", "shadow/drift?model_id=X",
-"trades/scores?limit=200"]`) rather than a separate issue per path — per
-the `diag-data` skill's default pattern (MB-20260706-CI-MINUTES: this
-repo hit its Actions minutes cap opening 427 issues in 5.5 days). The
-trainer-VM pull below is already correctly batched into a single
-`cmd:` block — keep doing that.
-
-If the trainer-mirror age (`/api/bot/ml/status`) is far older than the
-last trainer cycle, the live VM's view is stale — note that and
-prefer the trainer-VM pull as ground truth.
-
-## Trainer center rubric
-
-Grade three roll-ups (each `ok | watch | concern | skip`; `skip` if
-the trainer relay errored):
-
-- **`trainer_service`** — `ok` if timer enabled+active and the last
-  cycle (`cycle_end` in `training_cycle.jsonl`) is within the cadence
-  window (≤24h for a daily timer) with `overall_rc=0`. `concern` on
-  non-zero `ExecMainStatus`, persistent `FAILED`/`error` lines, or
-  last run >72h.
-  - **Single-manifest OOM red flag — MANDATORY check
-    (BL-20260717-TRAINER-SINGLE-MANIFEST-OOM; quarantine retired under the
-    NO-HALT directive 2026-10-09, "There is no halting.").** Scan the cycle log
-    (`training_cycle.jsonl` / `/api/bot/ml/cycle`) for `manifest_oom_red_flag`,
-    `manifest_oom_retry` and `manifest_oom_recovered` events. A red flag is the
-    trainer's durable escalation that a manifest OOMs/times out *alone* on the
-    6 GB box on 3 consecutive cycles (it can't commit a backlog item itself);
-    it carries the streak and the OOM diagnosis (exit-code meaning, cap,
-    stderr tail). The manifest is NOT skipped — it is retried every cycle — so
-    the flag is a **required disposition**, not a status. You OWN it (Rule 3,
-    `docs/claude/trainer-resource-protocol.md`): (a) shrink its peak RSS
-    (dataset chunking / shorter 5m window — a manifest change, Tier-3 propose),
-    (b) route it to the GPU burst (note LightGBM is CPU-bound, so the burst
-    just gets it off the box — no speedup), or (c) drop/split it. File a
-    `docs/claude/work/PIPELINE.jsonl` row (`scripts/ops/pipeline.py`) naming the
-    manifest and the chosen disposition; `manifest_oom_recovered` closes it.
-    Historical logs may still show the retired `manifest_quarantined` /
-    `manifest_quarantine_tripped` events. Known first case:
-    `btc-regime-5m-lgbm-flow-v1`.
-- **`trainer_datasets`** — `ok` if `datasets-out/` has the expected
-  families built within 72h. `concern` if no datasets dir or all
-  builds error.
-- **`trainer_registry`** — `ok` if ≥1 model at `shadow`+. `concern` if
-  the registry is empty or all models stuck at `candidate` (training
-  runs, nothing passes eval).
-
-Roll up to `trainer_models` (`ok | watch | concern | skip`): `ok` when
-every model retrained in the last cycle with sane metrics; `watch`
-when a model's headline metric degraded run-over-run, or a `shadow`
-model still has zero predictions long after promotion to shadow;
-`concern` (⇒ `operator_attention_required`) only when an `advisory`
-model — one that influences orders — is degrading on live/shadow data.
-A registry of `candidate`/`shadow` models with healthy metrics and zero
-predictions is `ok` (expected pre-activation).
-
-## Per-model status — REQUIRED every run
-
-Emit one entry in `model_status[]` for every model in `python -m ml
-list-models`. Each entry:
-
-```
-{
-  "model_id": "...",
-  "stage": "candidate | shadow | advisory  (canonical 3-stage; normalize legacy names via ml.manifest.canonical_stage)",
-  "registry_status": "candidate | promoted | ...",
-  "last_training": {
-    "run_id": "YYYYMMDDThhmmssZ",
-    "at": "YYYY-MM-DDTHH:MM:SS+00:00",
-    "code_revision": "<sha>",
-    "headline_metric": "macro_f1=0.70 | mae=3.26 | winrate=0.55",
-    "n_eval": 0,
-    "trend_vs_prior_run": "improved | flat | degraded | first_run"
-  },
-  "live_shadow": {
-    "influence": "none(shadow) | advisory | live",
-    "predictions": 0,
-    "score_summary": "score distribution / mean when predictions > 0, else 'no predictions yet'",
-    "drift": "ks=... psi=... verdict=stable|drifting|insufficient",
-    "realized": "win-rate / PnL of closed trades this model scored, when joinable; else 'n/a'"
-  },
-  "note": "<= 160 chars — one-line health verdict"
-}
-```
-
-For the headline metric pick by family:
-- Classification → `macro_f1` + `accuracy`.
-- Regression → `mae` / `mse`.
-- Winrate → the rate.
-
-For the realized track record, join shadow predictions to closed
-trades via `/api/bot/trades/scores`. Distinguish **shadow** (observing,
-no order influence) from **advisory+/live** (influencing orders) —
-a degrading model that *influences orders* is the urgent case.
-
-**No predictions yet** is a valid, honest status — `predictions: 0`
-when a `shadow` model was just promoted and the live trader hasn't
-emitted a matching signal yet. Don't paper over it as a gap.
-
-## Soak integrity audit — REQUIRED every run (operator directive 2026-07-19)
-
-**Why this section exists:** the ETH xa dead-feature bug (BL-20260628-XA-TRAINING-ZERO
-— a head soaking for WEEKS on features that were all-zeros at train time) was only
-caught at the promotion-decision phase, after the soak completed. That class of
-error must be caught at review time, every review. The operating principle is:
-
-> **The soak validates MECHANICS, not edge.** Edge is proven OFFLINE — powered
-> walk-forward + historical signal replay over years of data. A live soak exists
-> to verify serving mechanics (feature parity, labeling, wiring), which is
-> checkable deterministically on live decisions accruing in hours — the
-> promotion gate's own soak term is 1–2 clean scored shadow predictions, never
-> a date (operator 2026-10-28, "Same as trades: 1-2 clean"). A soak that has
-> been running for days without its mechanics verified is not accruing evidence
-> — it is accruing risk of exactly this bug class.
-
-For EVERY head at `shadow` or `advisory`, check and report three things:
-
-1. **Train/serve feature parity.** Diff the head's live-logged `feature_row`s
-   (shadow_predictions.jsonl) against the same features in its training dataset:
-   any feature that is zero-variance/dead on ONE side but live on the other is a
-   parity bug — flag it LOUDLY and file it, do not wait for promotion. (This is
-   the check that catches the xa class in one review instead of one month.)
-2. **Label-accrual coverage.** labeled/total live rows for the head. A large
-   unlabeled fraction (the MES 1,213-of-1,861 class — stale candle base blocking
-   labeling) means the soak is accruing NOTHING gate-relevant; flag it as a
-   data-pipeline bug, not "needs more soak time".
-3. **Evidence progress.** What decision will this soak's evidence feed, and is
-   that evidence actually accruing (power counters moving)? A soak with no
-   destination decision or no accrual is wasted — recommend closing or fixing it.
-
-Report these in a compact `soak_audit[]` block (head, parity ok|BUG, label
-coverage %, evidence destination + accrual verdict). A parity or labeling bug
-found here is a mandatory flag in the review output and a backlog item.
-
-## Promotion/demotion recommendations
-
-For each model, emit a `promotion_recommendations[]` entry **only**
-when the data supports one:
-
-```
-{
-  "model_id": "...",
-  "current_stage": "shadow",
-  "proposed_stage": "advisory",
-  "direction": "promote | demote",
-  "tier": 3,
-  "evidence": "<= 240 chars — N predictions, win-rate on joined trades, drift verdict, training trend",
-  "risk_note": "<= 160 chars — what to watch after applying, kill-switch path"
-}
-```
-
-The **3-stage ladder** (canonical since the 2026-06-16 collapse, low →
-high influence): `candidate → shadow → advisory`. The legacy 7-stage
-names still resolve — `ml.manifest.canonical_stage` maps
-`research_only`/`backtest_approved → candidate` and
-`limited_live`/`live_approved → advisory`, so old registry rows / pasted
-output normalize cleanly; report the **canonical** stage.
-
-Promotion gates (the lifecycle, `docs/claude/trainer-vm-mode.md` § 5):
-- `candidate → shadow` is the autonomous trainer track. /ml-review notes
-  when a model is *ready* for shadow but does not flip it (the
-  `model-training` skill + `promote-stage` action do the flip).
-- `shadow → advisory` is **the** live-trading gate — operator
-  approval required. This is where /ml-review earns its keep:
-  recommend the promotion with evidence, or hold. **Cite the computed
-  gate packet** — run `python -m ml gate-check <model_id> --db <journal>
-  --datasets-root <datasets-out>` on the trainer VM (S-MLOPT-S4) and
-  quote its `ready` verdict + any `blocking[]` gate names in the
-  `evidence` field. The gate is the mechanical, pre-registered
-  go/no-go (min shadow volume, the MECHANICAL `shadow_soak` — 1–2 clean
-  scored shadow predictions, no calendar term — **OOS edge vs
-  baseline under purged WF-CV**, the enforced **`cost_net`** decision
-  value vs incumbent + take-all / take-none / matched-random on the same
-  rows, drift within KS/PSI bounds, live agreement); quote the run's
-  `cost_gate.json` (value, comparators, PSR / deflated Sharpe with its
-  `n_trials`). `promote-stage` itself REFUSES a forward move into shadow /
-  advisory on a failed or missing cost-net evaluation for a family with a
-  net-R value column (`ml/promotion/cost_gate.py`, row
-  `ML-TRAINING-PRINCIPLES-GAPS`). /ml-review should not recommend `promote` while the
-  packet reports `ready: false`, and should quote the cleared gates
-  when it recommends one. Computing the packet is Tier-1; the flip
-  stays Tier-3. `advisory` is now the single influence stage (the old
-  `limited_live`/`live_approved` tiers were collapsed into it).
-
-Demotion: any model influencing orders that degrades on live data is
-a candidate for demotion to `shadow`. Demotion to a lower influence
-stage is *less* risky than promotion, but still Tier-3 — propose, do
-not enact.
-
-If a proposal isn't yet supportable, file it as a backlog item with
-the criteria it would need to meet next time.
-
-## Underperformer refinement lifecycle (2026-06-23) — REQUIRED each run
-
-Underperforming models are **refined, not abandoned.** Full spec:
-[`docs/claude/model-refinement-lifecycle.md`](../../docs/claude/model-refinement-lifecycle.md).
-Every `/ml-review`:
-
-1. **Detect** — run `python -m ml stage-guard --db data/trade_journal.db`
-   (in the trainer pull above). It proposes `promote | demote | hold` per model
-   from the canonical triggers (drift `significant`, live score collapse,
-   `brier_lift < 0`, `AUC < 0.5` for `advisory`; all gates pass for `shadow`).
-2. **On a `demote` (an `advisory` model degrading)** — recommend the soft-off
-   (`advisory → shadow`, Tier-3) in `promotion_recommendations[]` AND open a
-   `[refinement]` row in `docs/claude/work/PIPELINE.jsonl` with the trigger
-   evidence, a concrete refinement hypothesis, and a `resolution_criteria`
-   (re-gate clears → restore; else N=3 attempts → **retire** to `candidate` +
-   deprecate the manifest).
-3. **Drive each open `[refinement]` item one step** — log a refinement attempt
-   (append to `updates[]`), or re-gate, or resolve (`restored` / `retired`).
-4. A `shadow` model stuck failing the gate with no path (e.g. a degenerate
-   `f1=0` baseline) is the same refine-or-retire question — file it `[refinement]`.
-
-"Turn off" = soft-off (demote to `shadow`, still observes) or **retire**
-(demote to `candidate` → shadow factory emits nothing + drop from the training
-rotation). Both flips are Tier-3 (`promote-stage`); this skill proposes, the
-operator approves. The strategy analogue is `/performance-review`'s
-`strategy-refinement-queue.json` + the M7 gate — same detect→refine→restore-or-retire shape.
-
-## Reviewing within the unified-confidence framework (2026-06-16)
-
-The target architecture is `docs/unified-confidence-risk-DESIGN.md`:
-model outputs no longer each carry a bespoke gate — they feed composite
-**confidence lenses** (conviction + sizing/feasibility + exposure), and
-a model's **stage** decides which conviction it feeds (`shadow` → the
-observed/logged conviction; `advisory` → the influencing conviction).
-So every per-model review now also asks **"how good an input is this to
-its lens?"** Concretely, /ml-review must additionally:
-
-1. **Review the conviction meta-model** — `conviction-meta-v1` (family
-   `conviction_meta`, a LightGBM stacker over the calibrated lens
-   inputs) is the **v2 learned conviction**. Treat it like any model in
-   `model_status[]` + the promotion gate, but call out that its
-   `shadow → advisory` promotion is **the** switch that turns the
-   *learned* conviction live (replacing the formulaic blend). It trains
-   on the order-package `(lens inputs → realized win)` rows produced by
-   the live observe-only `meta.conviction` soak — so flag if that soak
-   isn't accruing.
-2. **Check the calibration artifacts** — per-strategy confidence
-   calibrators fit by `scripts/ml/fit_confidence_calibrators.py`
-   (raw→P(win), isotonic/Platt/decile). Report coverage (which
-   strategies are fit; e.g. `ict_scalp_5m` may be pending), staleness,
-   and quality (Brier/ECE raw→calibrated). A missing/stale calibrator
-   means the live conviction stamp falls back to raw normalization for
-   that strategy — note it.
-3. **Tag each model's lens role** — regime heads → `c_reg`,
-   setup-quality → `c_setup`, trade-outcome → `c_wr` (conviction lens);
-   execution-quality / prop-mission → the **sizing** lens. A degenerate
-   head (f1=0 — e.g. the trade-outcome / prop baselines) feeding the
-   conviction is a *weak input*; surface it as a conviction-quality
-   concern, not just a training-metric note.
-4. **Stage = influence** under the framework: an `advisory` model's
-   output is in the influencing conviction; recommend `shadow→advisory`
-   only when the gate packet clears AND the model is a genuinely useful
-   lens input (per the calibration / track-record evidence).
-
-## Experiment proposals
-
-This is the forward-looking output. For each gap in coverage, emit an
-`experiments_proposed[]` entry:
-
-```
-{
-  "kind": "new_manifest | new_feature | new_dataset_family | new_target | hyperparam_sweep",
-  "name": "<short slug>",
-  "rationale": "<= 240 chars — what we'd learn",
-  "input_changes": "<= 200 chars — datasets / features / horizon involved",
-  "expected_metric_signal": "<what would convince us this is worth shadowing>",
-  "tier": 3,
-  "next_step": "PR a new ml/configs/<name>.yaml | extend ml/features/... | new dataset family in src/ml/datasets/..."
-}
-```
-
-Examples of valid experiments: a new dataset family for a symbol the
-trainer hasn't touched, a feature that prior reviews suspected (cite
-the backlog item), an alternative target horizon, a hyperparam sweep
-on a stuck model.
-
-## Draining the backlog — a HARD COMPLETION GATE (not a sample)
-
-**An ml-review is NOT complete until every open ML row in the pipeline
-store has been triaged THIS run.** The store is the directory
-`docs/claude/work/pipeline/` (one immutable JSON record per file, folded by
-`scripts/ops/pipeline.py::load()`; the flat `PIPELINE.jsonl` name is the
-legacy spelling and nothing writes it). **The population this gate is
-measured over** (defined 2026-10-04 so `count_untriaged` means one thing):
-every item whose `state` is not `done`/`killed` AND whose `origin.ref`
-names `ml-review`, OR whose `routed_to` starts with `ML`, OR whose `what`
-starts with `[ml]` or `[refinement]`. Print the count and the ids before
-you start; a row that matches only on an incidental string (e.g. a CI-guard
-row that mentions `ml-review-backlog.json`) is recorded as *not an ML row*
-and left to its own lane. Triaging a sample / "the recent few" is a review
-failure — the pipeline IS the standing open-task list. (Health and
-performance rows are not touched here; each of the three reviews enforces
-this same gate on its own population.)
-
-**Enumerate the FULL open set, then walk it 100%:**
-
-1. **Count first.** Filter to every item in the population above whose
-   `state` is not terminal (`done`/`killed`). Record `open_at_start` — you
-   must touch every one.
-2. **For EACH open item:** re-validate against this cycle's registry /
-   training / drift data; then disposition into exactly one bucket —
-   **resolved** (the new cycle closes it / the experiment landed),
-   **fixed_now** (an in-scope write — a proposal filed, the backlog
-   itself), **invalid/superseded** (stale), or **kept_open** (still
-   needs a training run / more soak / a Tier-3 promotion decision — add
-   an update with this run's re-validation + the blocker, so it never
-   sits stale-and-unlooked).
-3. **Write it back** through `scripts.ops.pipeline.append(item,
-   intent="update")` (a state change keeps `id`, `origin` and the start of
-   `what`; a new finding gets `mint_id()` + `intent="new"`) + record EVERY
-   item's disposition in `backlog_drain[]` (array length == `open_at_start`).
-
-**Coverage assertion (the gate).** Emit `backlog_coverage:
-{open_at_start, triaged, resolved, fixed_now, closed_stale, kept_open,
-count_untriaged}`. **`count_untriaged` MUST be 0.** A review with
-`count_untriaged > 0` is INCOMPLETE — do not post the ping or report it
-done. The ping cites `X/Y backlog items triaged`.
-
-New pipeline items filed here are for **ML/experiment follow-ups only**
-and carry what `scripts/ops/pipeline.py::validate` demands: `id`, `what`,
-`origin{kind,ref,rerun}`, `due_when{kind,clears_when|due_date,check_every_days}`,
-`next_action`, `state` (plus `tier`/`severity`); a `done`/`killed` record
-needs a `terminal_reason`.
-
-## The drift scan — REQUIRED each run (operator, 2026-10-25, binding)
-
-**Why it is here and not on a timer.** The `ict-drift-retrain.timer` (~8 scans/day) was retired
-2026-10-25 (row `DRIFT-SCAN-RETIRE`). MEASURED 2026-10-21 (PI-20261021-WG8OPB7N-0002): the scans
-flagged 9 manifests and retrained 0 (`RETRAIN_PLAN_ONLY=1`), while the daily training cycle
-retrained 67. Transient drift therefore self-corrects on the daily cycle; the scan's only value
-is spotting **persistent** drift, which is a multi-day judgement. Operator: *"we still need to at
-least be measuring drift and using that information on the workplan, but it doesn't need to be 8
-times a day"*, and drift as *"part of the regular ML review"*. **`scripts/ops/run_drift_retrain.sh`
-is kept, plan-only.** Do not re-add a timer and do not set `RETRAIN_PLAN_ONLY=0`.
-
-**1. Run it** (one trainer-vm-diag block, batched with the trainer-state block above; the unit is
-a oneshot so `start` returns when the scan is done, and it queues behind the heavy-job lock):
-
-```
-cmd: |
-  sudo systemctl start ict-drift-retrain.service
-  systemctl show ict-drift-retrain.service -p Result,ExecMainStatus
-  python3 - <<'PY'
-  import json, datetime as d
-  cut = (d.datetime.utcnow() - d.timedelta(hours=1)).isoformat()
-  rows = [json.loads(l) for l in open("/home/ubuntu/ict-trading-bot/runtime_logs/drift_retrain.jsonl") if l.strip()]
-  rows = [r for r in rows if r["ts"] >= cut]
-  print(len(rows), "rows;", sorted({r["action"] for r in rows}))
-  for r in rows:
-      if r["action"] in ("dispatch", "skip_no_manifest"):
-          print(r["ts"], r["action"], r["model_id"], r.get("manifest_path"))
-  PY
-```
-
-**Output lands** in `runtime_logs/drift_retrain.jsonl` on the trainer (one JSONL row per head per
-scan: `ts`, `model_id`, `manifest_path`, `action`) and the unit journal. The review **copies the
-drifted list into the run record** (`comms/ml-plan/<stamp>.json`, key `drift`, below), because the
-trainer log is not in git and the next run needs this one as its baseline.
-*Drifted* = `action` is `dispatch` (drift on a head that resolves to a manifest) or
-`skip_no_manifest` (drift, no manifest to retrain: a finding by itself). `skip_no_drift`,
-`skip_thin_data` and `skip_stale_drift` are not drifted. A nonzero rc other than 11, or a missing
-or empty log, is **could-not-look**, never "no drift": record it as an anomaly and file the fix.
-
-**2. The 2-consecutive-weekly-reads rule.** Read the previous record's `drift.drifted` from the
-latest file in `comms/ml-plan/`. A model_id drifted in **this** read **and** the previous one is
-*persistent*; a first-time one, or any model with no previous record, is *watch* (recorded, no
-row). Each persistent model gets a **drift-remediation row** via `scripts/ops/checklist.py add`
-(title `DRIFT-REMEDIATE-<model_id>`, `roadmap` a milestone id, `note` carrying the two read dates
-and the `shadow-drift` numbers), or a `research/queue/` unit if it needs a measurement first. Then
-apply the **`drift-remediation` skill** (`python -m ml shadow-drift --model-id <id>`; drift-only
-with `drift_clean` now passing → no action; a real capability failure → feature/label fix shipped
-as a new version, operator promotes). If a row for that model already exists, add a note, not a
-duplicate. A model absent from one read is *watch* again.
-
-**3. Record** under the run record's `drift` key: `{"scan_rc": 0|11, "heads_scanned": N,
-"drifted": ["model_id", ...], "persistent": [...], "watch": [...], "rows_filed": [...],
-"could_not_look": false}`, and report the persistent list in the response `recommendations`.
-
-## The ML plan loop — plan vs measured, every run (operator, 2026-10-11, binding)
-
-**Why it exists.** The ML / AI-trader build is a long program (research *and* infra). Without a
-recurring review the plan decays into a memo: units sit blocked on levers nobody filed, heads go
-silent unnoticed, and the roadmap describes a state that no longer exists. Operator, 2026-10-11:
-the ML plan must be *"in the work and research queues"* with *"mechanisms … for manual (Claude)
-review and adjustment of ML research and infra progress … open-ended research for new ideas/builds,
-validating the plumbing, updating the roadmap and work queue from results."* This section is that
-mechanism. It is part of this review, not a second review: **do not duplicate** the lifecycle,
-promotion and soak-integrity work above — the loop *consumes* it (its findings are the plumbing
-and measured-state inputs) and turns it into plan movement.
-
-**The artefacts (all committed; the loop edits only these):**
-`ROADMAP.md` § "AI trader (ML) — build plan" (human plan + measured-state table) ·
-`docs/plans/ml-plan-items.yaml` (every plan item → its checklist row or `research/queue/` unit +
-the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker) ·
-`comms/ml-plan/<YYYYMMDDTHHMMZ>.json` (the run record the next run reads as its baseline).
-
-**Steps — in this order; each ends in a filed row/unit, a write-back, or "none, because":**
-
-1. **Check the plan against the field.** `python3 scripts/ops/ml_plan_status.py --plumbing`
-   (exit 0 clean · 1 findings · 2 *could not look* — a 2 is an incident, never "clean").
-   Every `ORPHAN` / `CLOSED-OPEN` / `OPEN-DONE` / `STALE` / `UNPLANNED` flag is resolved in this
-   run: re-point the item to a live row, close it with the row's terminal reason, or file the
-   missing row. An `UNPLANNED` ML row is either folded into the plan or killed.
-2. **Read the results that landed** since the last record (`git log --since=<last record>
-   -- research/results comms/research`, filtered to plan refs). research-ops grades them; *you*
-   read what they mean for the plan: set the item's state, update the roadmap's measured-state
-   table with the new numbers **and their locators**, and re-check the plan's INFERRED statement
-   ("only the volatility regime earns an order-influencing role") against them. A line is killed
-   only by its registered exhaustion condition, never by one bad pass (operator, 2026-09-27).
-3. **Validate the plumbing** (the `--plumbing` output plus the lifecycle audit above). A silent or
-   constant head with no tracking row is a finding: fix it (in tier), file a row with an
-   observation that closes it, or put the Tier-3 call to the operator via the classified popup path.
-   Add a newly *explained* silence to `plumbing.tracked` **with the owning row** so it stops
-   re-alarming without being forgotten. The weekly question the plumbing section answers:
-   *can a signal go from raw data to a graded, served, logged prediction and back to a label
-   without a hole?* — trainer cycle, dataset builds, registry stage, served-feature parity
-   (present AND non-default AND equal), shadow-log liveness, label coverage, drift reference.
-4. **Generate ideas — the standing quota is at least one new idea or build per run, or a written
-   "none, because".** Sources, in order: (a) what step 2/3 just surfaced (a surprising number, a
-   head pair training to identical metrics, a unit that passed on one stratum), (b) the plan's
-   "what would change this plan" list, (c) a bounded outside-in look (a technique or information
-   class the registry has never tried: label sources, cross-asset or breadth features, consensus
-   across heads, non-price information), and (d) **the frontier scan** — read the previous
-   `frontier` block, run `python3 scripts/ops/ml_plan_status.py --diversity`, and run the weekly
-   scan of outside models/methods per `.claude/skills/frontier-research/SKILL.md` (the manager
-   dispatches it as its own `FRONTIER-SCAN-<date>` lane the same day; if that lane has not run,
-   run Steps 0–5 of the skill here). A `CONCENTRATION` or `FAIL-STREAK` finding is resolved in the
-   run like any plan flag: re-point capacity to an untested family or retire the line by its
-   registered exhaustion rule — never queue another variation of a crowded family. Each idea becomes a `research/queue/` unit with a
-   decision rule registered **before** the run (see `perf-followup` § "Filing a queue unit"), or —
-   if its instrument is missing — a checklist row for the lever plus the unit in
-   `research/queue/blocked/` naming it. A new hand-written unit holds for a human merge (E57);
-   put it in a hold PR with `recorded_decision: {kind: operator_decision, ref: <row>}`.
-5. **Write back and re-prioritise.** Update `ml-plan-items.yaml` (add/close items *only* with
-   their row or unit), the roadmap table's "Measured state" block (date + locators) and its
-   "Order of work" line if the evidence moved it. Close, kill or re-dispatch stale rows with a
-   stated terminal reason. Tell the manager which rows are next by value per cost — the manager
-   dispatches; this review does not spawn lanes or schedule anything.
-6. **Record.** Write `comms/ml-plan/<stamp>.json`:
-   `{"run": "<session>", "finished_at": "...", "plan_items": N, "open": N, "flags": [...],
-   "plumbing_findings": [...], "results_read": [{"unit": "...", "verdict": "...", "plan_item": "..."}],
-   "ideas": [{"id": "RQ-…|row", "source": "a|b|c|d", "rule_registered": true}] or "none: <because>",
-   "frontier": {…the block defined in the frontier-research skill § "The run record"…},
-   "drift": {…the block defined in § "The drift scan" above…},
-   "writebacks": ["ROADMAP.md", "ml-plan-items.yaml", ...], "rows_filed": [], "units_filed": [],
-   "next_by_value_per_cost": ["…"], "handoff": ["…"]}`
-   and cite its path in the response JSON's `sources` and in the ping.
-
-**Cheap daily/between-run touchpoints (no lane, no cost):** the manager's twice-daily review runs
-`python3 scripts/ops/ml_plan_status.py` (no `--plumbing`) and works any flag; research-ops, on
-reading a result whose unit is a plan ref, sets the plan item's state in the same PR
-(`research-ops` § D); `perf-followup` files ML-shaped lessons under the plan's track N.
-
-**First scheduled cycle, corrections (2026-10-11 run, fixed in this text):**
-- Name the lane's own checklist row `ML-REVIEW-<YYYYMMDD>`. Before this run the checker flagged it
-  `UNPLANNED` (only `ML-ROADMAP-LOOP` was exempt); `ml_plan_status.py` now exempts that name pattern (plan item `ML-V2`).
-- Fire the one batched trainer-vm-diag issue FIRST, before the direct-HTTPS pulls and the backlog walk:
-  the Actions runner queued it for 20+ minutes on 2026-10-11, and everything stage-guard/gate-check-shaped
-  waits on it. Direct HTTPS (`/api/bot/ml/{registry,status,cycle}`, `shadow/{stats,drift}`) answered in seconds.
-- `scripts.ops.pipeline.load()` returns a `LoadResult`, not a list: iterate `.items` (dict by id). Record a re-read
-  of a still-open row with `python3 scripts/ops/pipeline.py --redate <id> --observation ... --next-due ...`
-  (or `pipeline.redate()`); close with `append(rec, intent="update", based_on=read_log(STORE).sources[id])`.
-- When a stage decision lands, update `plumbing.expected_registry_stages` in `docs/plans/ml-plan-items.yaml`
-  in the same PR/run that observes the registry change, or the next `--plumbing` run flags it.
-- The cycle-1 record says `plan_items: 28`; the yaml and the checker count 25. Trust the checker.
-
-**Hard limits (unchanged):** the loop never promotes a model past `shadow`, never edits
-`config/strategies.yaml` / `config/accounts.yaml`, never places an order, never creates a
-cron/trigger. A change to cadence is a request to the manager, written in the run record's
-`handoff`.
-
-## Posting to the Claude channel
-
-Every ml-review ends with a one-line update to
-`@claude_ict_comms_bot`. Primary path:
-
-```
-action: send-ping
-target: claude
-priority: normal      # 'high' only if an advisory (order-influencing) model is degrading
-message: /ml-review — <N> models, <K> retrained, <P> proposed promotions, <D> demotions, <E> experiments. trainer=<ok|watch|concern>.
-```
-
-≤200 chars. Cite the trainer-center grade + counts. Point at the
-response JSON for detail. Fallback: append to
-`docs/claude/pending-pings.jsonl`.
-
-## Output
-
-Emit a single JSON object conforming to
-`comms/schema/ml_review_response.template.json`:
-
-- `reviewed_at`, `reviewer: "claude"`, `window_start`, `window_end`.
-- `overall_assessment` ∈ `healthy | caution | investigate`.
-- `trainer_findings`:
-  - `trainer_service`, `trainer_datasets`, `trainer_registry`,
-    `trainer_models` — each `{status, note}`.
-- `model_status[]` — REQUIRED, one entry per model in the registry
-  (§ above); `[]` only when the trainer relay errored (then
-  `trainer_models: skip`).
-- `promotion_recommendations[]` — Tier-3 proposals with evidence;
-  empty when none warranted.
-- `experiments_proposed[]` — forward-looking experiment ideas.
-- `backlog_drain[]` — actions taken on open ML rows in
-  `docs/claude/work/pipeline/` (one entry per row in the population).
-- `anomalies[]` — free-form notable items (datasets failing, runs
-  erroring, predictions silently dropping, etc.).
-- `recommended_action`, `operator_attention_required`.
-
-Each `note`/`evidence` cites specific `model_id`s, `run_id`s, and
-numbers so the operator can verify fast.
-
-## What you DO write (and what you don't)
+There is **no** `python -m ml.registry list`. **Direct HTTPS first** for every `/api/bot/ml/*` and `shadow/*` read
+(`https://ict-bot.duckdns.org/api/bot/<path>`, no token; MEASURED 200 on 2026-10-04 including the 6.5 MB registry). The
+`vm-diag-snapshot` relay is the fallback, and only `shadow/{predictions,stats,drift}` and `trades/scores` are on its allowlist;
+batch them into ONE `vm-diag-request` issue (MB-20260706-CI-MINUTES). If the mirror's age is far older than the last cycle, the
+trainer pull is ground truth.
+
+**C1 detail — single-manifest OOM red flag (mandatory; BL-20260717).** Scan the cycle log for `manifest_oom_red_flag`,
+`manifest_oom_retry` and `manifest_oom_recovered`. A red flag means a manifest OOMs alone on 3 consecutive cycles. Under NO-HALT it
+is still retried every cycle, so the flag is a **required disposition**: (a) shrink peak RSS (Tier-3 manifest proposal),
+(b) route it to the GPU burst, or (c) drop or split it. File a pipeline row naming the disposition; `manifest_oom_recovered`
+closes it.
+
+**C7 detail — the plan-only drift scan (operator, 2026-10-25, binding).** The `ict-drift-retrain.timer` is retired. The scan runs
+here, plan-only. **Do not re-add a timer and do not set `RETRAIN_PLAN_ONLY=0`.**
+- **Drifted** means `action ∈ {dispatch, skip_no_manifest}` in `runtime_logs/drift_retrain.jsonl` within the last hour.
+- An rc other than 0 or 11, or an empty log, is **could-not-look**, never "no drift".
+- **Persistent** means drifted in this read AND in the previous record's `drift.drifted`. Each persistent model gets a
+  `DRIFT-REMEDIATE-<model_id>` checklist row (`scripts/ops/checklist.py add`, with a roadmap ref and both read dates), or a note on
+  the existing row. Then apply the `drift-remediation` skill.
+- A first-time drift is *watch*.
+- Copy the drifted list into the run record, because the trainer log is not in git.
+
+---
+
+## Layer 2 — ANALYSIS (reason; the pattern fixes the method, not the answers)
+
+Read the checks **together with** the wide context:
+- the previous review record and its calls;
+- this week's research results and the frontier scan;
+- the ML plan (`docs/plans/ML-PROGRAMME-2026-10-28.md`, `docs/plans/ml-plan-items.yaml`);
+- the practice principles;
+- what `/performance-review` said about the legs these models feed.
+
+Every claim names its population and its MEASURED / INFERRED status. Every recommendation names the alternative you rejected,
+and why.
+
+The pattern's ten prompts (§ 3) apply; read them first. The questions below are where the ML review usually finds its 3–7
+material ones. They are **candidates, not a quota**: pick by money and decision impact, write ≥ 2 hypotheses per question (one
+is always noise / expected variation), run the discriminating test, and record what was eliminated.
+
+- **Value (start from C3, not from the registry).** For each model that can change an order, what is its *decision value*?
+  That is: what the consumer would do without it, on which legs, net of cost, out of sample (M6, M10). Say whether that value is
+  measured or only implied by a classification metric; a macro-F1 lift is feature lift, not value. For each consumer that reads
+  no model, and each model that feeds none, ask why: wiring, a missing cell, a degenerate head, or a question nobody owns. Every
+  candidate-only model is **one line** (count and families).
+- **What this week's tests mean.** Take each C9 result and each C6/C7 finding. Say what it shows **and does not show**, and
+  whether the test could have answered the question at all. Check power on the **unit of the test**: folds for a fold-paired
+  interval, with the corrected resampled variance (`ff8f-04`: "power" was computed on 24,000 rows, but the test was over 5 folds
+  and needed ~70). Look for patterns no single unit shows: every arm matches LightGBM, every null comes from one data limit,
+  every family was tested on one target.
+- **Is it learning?** Find the first broken C4 hop, and the reason it broke.
+- **Drift and risk.** Use C5/C7. An input shift on a head whose labelled performance holds is a regime-mix question, not a
+  capability failure. Name the mechanism you believe and the observation that would refute it.
+- **Next experiments, ranked by expected value per cost.**
+  - Score each as (decision value if it passes) × p(pass) × (powered at the registered design?) ÷ (cost and time to a verdict).
+  - Combine A-questions with the frontier scan's kept candidates.
+  - Prefer real-money legs, order-changing consumers and the broken C4 hop over another variant in a crowded cell (C8).
+- **Stages.**
+  - Cite the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
+  - A head that changes no order is a wiring-or-retire question, not a promotion question.
+  - Never `promote` on `ready: false`.
+  - `shadow → advisory` and every demotion are Tier-3, or data-backed per canonical § "Data-backed Tier-2/3 decisions".
+
+## Layer 3 — DECISIONS
+
+Every call is a `calls[]` entry with `p`, `tier` and a **pre-registered `check`** (`command`, `rule`, `resolves_when`). Its
+ending is one of:
+- a checklist row;
+- a `research/queue/` unit (rule registered first, power on the test unit);
+- a pipeline item;
+- `no action, because …`.
+
+Premortem each one (pattern § 3.9). Next week's Layer 0 re-runs the check as written.
+
+**Anti-patterns (each one is a review failure; check your draft against them before you publish):**
+- one row per registered model as the body of the review;
+- a metric restated with no "so what";
+- "no change this week" with no C3/C4 numbers behind it;
+- "needs more soak/data" without a power calculation or a filed accrual row;
+- a promotion argument about a head that changes nothing;
+- a comparison on different rows or costs reported as a result;
+- a missing check footnoted instead of chased;
+- a proposal with no rejected alternative;
+- plus the pattern's list (§ 5): week-only windows, restating numbers, predetermined outcomes, amnesia, dead-end endings.
+
+---
+
+## Output — fixed template
+
+**1. The brief.** Markdown in the pattern's § 4 order, headed `MODEL track — /ml-review <date> — <the one sentence that most
+affects money/risk now>`:
+- `0 Prior calls`
+- `1 CHECKS`: C1–C9 tables, each with population + windows, could-not-look listed
+- `2 ANALYSIS`
+- `3 Decisions`
+- `4 Not done`
+
+Under `1 CHECKS`, always print the two headline numbers: ML changes x/rostered legs and y/real-money legs, and the first broken
+C4 hop. Add a `TRADING track` line only where a decision touches a leg's trading; cite the leg and hand it to `/performance-review`.
+
+**2. The response JSON** follows `comms/schema/ml_review_response.template.json`. It carries the pattern's four blocks,
+`prior_calls_scorecard`, `checks{C1..C9}`, `analysis{questions[], surprises[]}` and `calls[]`, plus the ML blocks:
+- `model_status[]`: **only** shadow/advisory models and any model a consumer reads; everything else is one count line in
+  `model_status_summary`;
+- `promotion_recommendations[]`, `experiments_proposed[]`;
+- `backlog_drain[]`, `backlog_coverage`;
+- `anomalies[]`, `recommended_action`, `operator_attention_required`.
+
+Write it to `comms/reviews/ml-review-<YYYYMMDD-HHMMSS>.json`.
+
+**3. The ML plan run record** `comms/ml-plan/<YYYYMMDDTHHMMZ>.json` (§ "The ML plan loop" step 6).
+
+**4. One ping** via the `send-ping` system-action (fallback `docs/claude/pending-pings.jsonl`), ≤ 200 chars:
+`/ml-review — ML changes x/N legs (real-money y); chain: <first broken hop|ok>; <P> proposals; calls hit/miss h/m; trainer=<state>.`
+Priority `high` only if an advisory head is decaying on labelled data.
+
+---
+
+## Lifecycle rules (unchanged in substance; they feed C1/C5/C6 and the stages question)
+
+- **3-stage ladder** `candidate → shadow → advisory`. Normalize legacy names with `ml.manifest.canonical_stage` and report the
+  canonical stage. `candidate → shadow` is the trainer's autonomous track: note readiness, and the `model-training` skill flips it.
+  `shadow → advisory` is the live-trading gate (Tier-3).
+- **Refine, do not abandon** ([`docs/claude/model-refinement-lifecycle.md`](../../../docs/claude/model-refinement-lifecycle.md)):
+  - A stage-guard `demote` on an advisory head becomes a soft-off proposal (advisory → shadow) plus a `[refinement]` pipeline row,
+    with a hypothesis and `resolution_criteria`. The row resolves as re-gate → restore, or 3 attempts → retire to candidate.
+  - Drive each open `[refinement]` row one step every run.
+- **Lens role** (`docs/unified-confidence-risk-DESIGN.md`): tag each model as `c_reg` / `c_setup` / `c_wr` (conviction) or sizing.
+  `conviction-meta-v1`'s `shadow → advisory` is the switch that turns learned conviction live. Report calibrator coverage, staleness
+  and Brier/ECE (`scripts/ml/fit_confidence_calibrators.py`). A degenerate head feeding conviction is a conviction-quality finding.
+
+## Backlog drain — a hard completion gate
+
+- **Population** (fixed 2026-10-04): every record in `docs/claude/work/pipeline/` (folded by `scripts/ops/pipeline.py::load()`;
+  `PIPELINE.jsonl` is the legacy name) whose `state` is not `done`/`killed` AND that matches any of these:
+  - `origin.ref` names `ml-review`;
+  - `routed_to` starts with `ML`;
+  - `what` starts with `[ml]` or `[refinement]`.
+  Print the count and the ids first. A row that matches only on an incidental string is recorded as not-ML.
+- **Triage every one** against this run's checks, into one of: resolved · fixed_now · invalid/superseded · kept_open (with this
+  run's re-validation and the blocker).
+- **Writing back:**
+  - a re-read: `python3 scripts/ops/pipeline.py --redate <id> --observation … --next-due …`;
+  - a state change: `append(rec, intent="update", based_on=read_log(STORE).sources[id])`;
+  - a new finding: `mint_id()` + `intent="new"`, with `origin{kind,ref,rerun}` and `due_when`.
+  `load()` returns a `LoadResult`; iterate `.items`.
+- Emit `backlog_coverage{open_at_start, triaged, resolved, fixed_now, closed_stale, kept_open, count_untriaged}`.
+  **`count_untriaged` must be 0**, or the review is incomplete and does not ping.
+
+## The ML plan loop (operator, 2026-10-11, binding) — consumes the checks; produces plan movement
+
+Artefacts the loop edits:
+- `ROADMAP.md` § "AI trader (ML) — build plan";
+- `docs/plans/ml-plan-items.yaml`;
+- `comms/ml-plan/<stamp>.json`.
+
+The consolidated programme is `docs/plans/ML-PROGRAMME-2026-10-28.md`: its § 4.3 questions are plan track T3, and its § 7 ledger is C4.
+
+1. **Plan vs field.** C2's `--plumbing` flags are resolved in this run:
+   - `ORPHAN` / `CLOSED-OPEN` / `OPEN-DONE` / `STALE`: re-point the item, close it with its terminal reason, or file the row.
+   - `UNPLANNED`: fold it into the plan or kill it.
+   - A stage decision updates `plumbing.expected_registry_stages` in the same run.
+2. **Results read.** From C9, set each plan item's state and update the roadmap's measured-state table with the numbers **and their
+   locators**. A line is killed only by its registered exhaustion condition, never by one pass.
+3. **Plumbing.** C2/C4/C5. A silent or constant head with no owning row is a finding: fix it, file it, or add it to
+   `plumbing.tracked` **with** its owning row.
+4. **Ideas — at least one per run, or "none, because".** Come from the next-experiments question. Each idea becomes:
+   - a `research/queue/` unit with its decision rule registered **before** the run (`perf-followup` § "Filing a queue unit"), with
+     power computed on the test unit; or
+   - a lever row plus a unit in `research/queue/blocked/`.
+   A hand-written unit holds for a human merge (E57). A `CONCENTRATION`/`FAIL-STREAK` finding re-points capacity or opens a
+   family-retirement review. It never queues another variant.
+5. **Write back and re-prioritise.**
+   - Update `ml-plan-items.yaml` (items only with their row or unit), the roadmap measured-state block (date + locators), and the
+     order of work.
+   - Close, kill or re-dispatch stale rows with a terminal reason.
+   - Tell the manager the next rows by value per cost. The review does not spawn lanes.
+6. **Record** `comms/ml-plan/<stamp>.json`:
+
+   ```
+   {run, finished_at, plan_items, open, flags, plumbing_findings,
+    results_read[{unit, verdict, plan_item}], ideas[{id, source, rule_registered, power_unit}] | "none: …",
+    frontier{… frontier-research § "The run record"}, practice{…}, drift{scan_rc, heads_scanned, drifted, persistent, watch, rows_filed, could_not_look},
+    checks{C1..C9 states}, calls[ same shape as the review JSON calls[] ], writebacks, rows_filed, units_filed, next_by_value_per_cost, handoff}
+   ```
+
+   Cite its path in the response JSON's `sources` and in the ping.
+
+Between runs (no lane): the manager's twice-daily read runs `ml_plan_status.py` (without `--plumbing`). research-ops sets the plan
+item's state when it grades a plan-ref result.
+
+## Limits
 
 **Write:**
-- File and close ML rows in `docs/claude/work/PIPELINE.jsonl` via `scripts/ops/pipeline.py` (never hand-edit the JSONL).
-- Post the Claude-channel ping (`send-ping` system-action; fallback
-  `docs/claude/pending-pings.jsonl`).
-- The read-only diag-trigger issues (`vm-diag-request`,
-  `trainer-vm-diag-request`, `vm-web-api-recover`) — they auto-close.
+- pipeline rows via `scripts/ops/pipeline.py`;
+- checklist rows via `scripts/ops/checklist.py`;
+- queue units in a hold PR;
+- the run record and the review JSON;
+- the ping;
+- read-only diag issues.
 
-**Do NOT:**
-- Touch `src/`, `config/`, `ml/configs/`, or any live-path /
-  manifest file. **No exceptions** — manifest/code changes go in
-  `experiments_proposed[]` for operator approval.
-- Run a training cycle / promote a model / build a dataset from this
-  skill — chain into the `model-training` skill if the operator
-  approves a proposal.
-- Close another review's rows in `docs/claude/work/PIPELINE.jsonl`.
-- Append to `comms/claude_strategy_scores.jsonl` — that's
-  `/performance-review`.
-- Ask the operator to paste/download/SSH — autonomy violation.
-- Ask scoping questions — the scope is fixed (this file).
+**Never:**
+- touch `src/`, `config/` or `ml/configs/` (manifest and code changes are proposals);
+- run a training cycle, promote, or build a dataset (chain into `model-training` after approval);
+- promote past `shadow`;
+- edit `config/strategies.yaml` or `config/accounts.yaml`;
+- place an order;
+- create a cron or trigger (a cadence change is a `handoff` request to the manager);
+- close another review's rows;
+- append to `comms/claude_strategy_scores.jsonl`;
+- ask the operator to paste, SSH, or scope the review.
 
-## If the relays are unreachable
-
-If the trainer relay fails, emit a partial review with
-`trainer_service: skip` (and the dependent dimensions `skip`),
-`model_status: []`, and a note in `anomalies[]`. Still drain the
-backlog and still post the Claude-channel ping. Do not synthesize
-model data without evidence.
-
-If only the live-VM relay fails, fall back to the trainer-VM view as
-ground truth and note the stale-mirror situation.
+**Relays down:**
+- If the trainer relay is down after the chase, C1, C5 and C6 are `could-not-look`. The review still runs the backlog drain, the
+  rest of the checks and every analysis question that does not depend on them, and it publishes `investigate`.
+- If only the live relay is down, the trainer view is ground truth, and you note the stale mirror.
+- Never synthesize model data.

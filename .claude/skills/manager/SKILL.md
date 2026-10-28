@@ -445,7 +445,7 @@ current ids via `list_triggers`):
 | when (UTC) | session | what |
 |---|---|---|
 | Wed 08:20 | weekly planning (`trig_01Pm8AMPiigZX9ndobeyT6dE`) | the dialogue above |
-| Wed 18:53 | review prep (`trig_01LE61kLKDFKptEfTfZ7vnYS`, assistant manager) | two Sonnet lanes: `PERF-REVIEW-PREP-<date>` (grading and numbers only) and `ML-FRONTIER-PREP-<date>`; one PR `docs/reviews/<date>-weekly-walkthrough.md` by 05:30Z Thu |
+| Wed 18:53 | review prep (`trig_01LE61kLKDFKptEfTfZ7vnYS`, assistant manager) | two lanes: `PERF-REVIEW-PREP-<date>` (the full two-layer `/performance-review`: CHECKS + ANALYSIS + prior-calls grading, not "numbers only"; an analysis job, so give it a model and ceiling that can carry it — redesign 2026-10-28, `ANALYTIC-SKILL-DESIGN`) and `ML-FRONTIER-PREP-<date>`; one PR `docs/reviews/<date>-weekly-walkthrough.md` by 05:30Z Thu |
 | Thu 06:30 | walk-through WITH the operator (`trig_01CpyqNkhwqEjLAHq1Wrrh1b`) | performance, then ML + frontier as a dialogue; then dispatch `/perf-followup` (Opus) and turn agreed ideas into units/rows |
 | Sat 07:23 | health review (`trig_013GU17584wu4HJYEkTF1KBk`, assistant manager) | one Sonnet lane runs `/health-review`, dispositions every finding, self-lands one PR |
 | Mon 06:07 | weekly audit (`trig_017awLRNy4rmdL57NHKXehet`) | one Opus lane: CORE + rotating deep pass (ISO week mod 4), per `.claude/skills/weekly-audit/SKILL.md` |
