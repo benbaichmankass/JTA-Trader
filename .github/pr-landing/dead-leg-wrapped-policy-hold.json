@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "pr-landing-guard R5 refuses self-land: src/runtime/dead_leg.py is Tier-2 by name. Manager merges.",
+  "why": "Alert/observability classification only (dead_leg._is_declared_policy_skip): strips the journal's 'REJECTED: ' wrapper before the existing is_policy_hold test, so deliberate intent_noop rows stop grading as refusals with cause 'other' in the silent-refusal alert (ib_paper false alarm 2026-10-28, flip_suppressed_hold_policy). No order path, no config, no sizing; real refusals still grade refused (test pins it)."
+}
