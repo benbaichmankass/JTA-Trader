@@ -1,0 +1,113 @@
+id: RQ-20261028-2a2e-01
+title: 'Prop pace squeeze at 4h on the six core perps: break-even floor, stricter compression, wider stop'
+status: queued
+cadence: once
+roadmap:
+- L-PROP
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: Over 2020-06-01..2026-10-27 on 6 cells (BTC,ETH,SOL,XRP,ADA,AVAX) at 4h, does any arm (BE1, WIDE, STOP35) of the squeeze harness pass the pooled Stage-0 rule with breadth AND
+  beat the declared-params baseline B by >= 0.05 R/trade pooled?
+why_this_matters: 'Daily authoring lane 2026-10-28 (DAILY-AUTHORING-20261028; research-queue-health: runnable 42 < floor 61, H1-THEME new_strategy_prop 2 of share 17). GAP CHECKED: no
+  queued, done or blocked harness_stage0 unit pairs family=squeeze x bar=4h x this symbol set (inventory of 80+ harness_stage0 units run 2026-10-28). Squeeze at 1h loses 0.06-0.07 R/trade
+  (small winners, running losers); a slower bar cuts cost drag, and the core six are the symbols the rostered legs and the prop books actually trade (hypothesis, not a finding). Prior
+  work this does NOT repeat: RQ-20261006-006/-010/-022 (squeeze 1h majors, FAIL), RQ-20261022-326f-12 (4h, BNB basket), RQ-20261023-1d5c-14 (4h, AVAX basket). Node: P5 prop-pace squeeze,
+  third basket at 4h. Trial count for this cell: 1 unit, 4 arms (arms fixed now; a lone pass is a LEAD and is confirmed on a disjoint window before any Tier-3 note).'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Pooled floor 88 trades (d = 0.45 at alpha 0.05 / power 0.8) for the daily/weekly cell, 88 (d = 0.3) otherwise: the repo''s standing floors for this unit family; expected_n
+    is an ESTIMATE from comparable runs, not a measurement for these arms; below the floor the unit grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610282A2E01-SQUEEZE4H
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: 'scripts/research/harness_stage0.py --family squeeze --timeframe 4h, arms fixed now: B=; BE1=--be-floor-r=1.0; WIDE=--bb-std=2.5;--kc-mult=1.0; STOP35=--atr-stop-mult=3.5;
+    baseline B; per cell and pooled across 6 cells; --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor 88 --breadth-frac 0.5 --delta-r-per-trade 0.05; cost = the harness venue-aware
+    fee + slippage + funding stack (execution_costs.resolve_cost_policy), recorded per cell.'
+  rule: 'Arms and thresholds are fixed now and are not changed after any result. A candidate PASSES iff it passes the pooled Stage-0 rule (pooled n >= 88, pooled net_r > 0, >= 4 of 6
+    calendar folds net positive, >= half of the powered cells pass)  AND beats B''s pooled net R/trade by >= 0.05 R. PASS IF one or more candidates pass: the best by pooled net R is
+    named and the follow-up is ONE confirmation unit on a disjoint window with the same statistic and bar (a pass on one window is a lead), then the prop/real-money SUPERSET ladder;
+    never a roster edit. FAIL IF every candidate fails (n >= floor) -> this variant is closed on this window and the record names which arm moved closest so the next variant is aimed;
+    the family is NOT retired on one config. INDETERMINATE IF pooled n < 88 or fewer than half the cells measured (a fetch/harness fault is recorded per cell, never dropped).'
+  min_n: '88'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case. A best-of-k arm is a LEAD (programme 03 rung S0-C), never a finding. Candles are Binance
+    USD-M (a PROXY for Bybit linear); the funding term is a directionless magnitude (execution_costs P1); both are stated in the record. Does not pool with any committed record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: structural
+  basis: 'stand-in: a Stage-0 read for the prop/real-money book; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 100
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; none of these symbols sit in metis-market-data (so not kaggle_cpu) and nothing is trainer-resident;
+    CPU only.
+  basis: Estimate from the comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - squeeze
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-27'
+  - --arm
+  - B=
+  - --arm
+  - BE1=--be-floor-r=1.0
+  - --arm
+  - WIDE=--bb-std=2.5;--kc-mult=1.0
+  - --arm
+  - STOP35=--atr-stop-mult=3.5
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ202610282A2E01-SQUEEZE4H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261028-2a2e-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- scripts/research/harness_stage0.py
+- DAILY-AUTHORING-20261028
+last_dispatched_at: null
