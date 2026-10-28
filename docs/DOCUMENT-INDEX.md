@@ -209,7 +209,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/drift-remediation/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/exit-refinement/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/git-actions/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/health-review/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/health-review/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/llm-delegate/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/live-trade-review/AMENDMENTS.md` | instruction | unknown | — | never | `dir:skills-are-binding-workflows / not-assessed` | — |
 | `.claude/skills/live-trade-review/SKILL.md` | instruction | live | — | 2026-10-25 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
@@ -235,7 +235,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/trading-desk/SKILL.md` | instruction | live | — | 2026-10-27 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/vm-migration/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/vm-ops/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/weekly-audit/SKILL.md` | instruction | live | — | 2026-10-15 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/weekly-audit/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `CLAUDE.md` | instruction | live | — | 2026-09-11 | `read:repo-orientation-and-binding-brief / ci:canonical-doc-coherence-ACTIVE_DOCS` | — |
 | `ROADMAP.md` | plan | unknown | — | never | `read:hierarchy-rank-3-milestone-record / not-assessed` | MI-159 (#11241) corrected this file's milestone statuses 2026-09-07; it carries no machine-readable status header, so no status is asserted here |
 | `ROADMAP_MACRO.md` | plan | unknown | — | never | `read:macro-milestone-record / not-assessed` | MI-159 (#11241) corrected this file's milestone statuses 2026-09-07; it carries no machine-readable status header, so no status is asserted here |
