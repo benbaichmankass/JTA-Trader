@@ -2,20 +2,31 @@
   "id": "DESK-1H-HORIZON-MISMATCH",
   "title": "Hourly desk wakes cannot price a <=60 min hold: scan-1h carried only 4/12/48-bar rows",
   "phase": "build",
-  "state": "in_flight",
+  "state": "done",
   "owner": null,
   "lane": "DESK-1H-HORIZON-MISMATCH",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    20803
+  ],
   "blocked_on": [],
-  "note": "Root cause: packet side (DESK-18E fixed the brief, deferred option (ii)). Fix: DEFAULT_HORIZONS (1,4,12,48). Tier 2 hold. Expect priceable, not profitable.",
-  "updated_at": "2026-10-28T03:51:44Z",
-  "updated_by": "session_01AFoLuJEiLttWnLhnbHgpQX",
+  "note": "MERGED 2a985c619, DEPLOYED trader c8e42a2f1 05:57Z, OBSERVED 06:04Z: DP-20261028T0601Z-scan-1h carries horizon_bars counts {1:44, 4:44, 12:44, 48:44}. Expect priceable, not profitable.",
+  "updated_at": "2026-10-28T06:04:33Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "the first scan-1h packet built after deploy carries horizon-1 (60 min) base-rate rows",
+    "how_to_check": "git show origin/desk/decisions:comms/desk/packets/<newest DP-*-scan-1h>.json and look for horizon_bars 1 rows",
+    "due_by": "2026-10-28T12:00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: hourly scan priced at the 60-min hold cap (1-bar row); desk wakes can now propose inside the cap",
+    "arch": "none: packet content only, default horizons gain 1"
+  },
   "_seq": 743
 }
