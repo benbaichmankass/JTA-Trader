@@ -92,3 +92,14 @@ run:
   - '{out_dir}'
   inputs:
     research_unit: RQ-20261026-f50f-01
+grading:
+  attested: RULE-RQ20261026-F50F-01-LTR-TRIGGERS
+  auto: false
+  decision_rule_id: RULE-RQ20261026-F50F-01-LTR-TRIGGERS
+  evidence:
+  - research/results/RQ-20261026-f50f-01/local-20261026.jsonl
+  graded_at: '2026-10-28'
+  grader: session_01AFoLuNHC3Qh6JfMwuW224U (research-ops 08:48Z, hand-applied)
+  reason: 'one measured row (local run, power as_registered), verdict fail under the unit''s own registered rule: no grid candidate beat the default objective by >= 0.01 R per package in >= 3 of 4 folds at both c_R levels, so the rule says KEEP the default LTR triggers. Configuration closed: the modelled-reviewer LTR-0 table on these grids and this corpus; the question stays open (graded live reviews in comms/live_review/outcomes.jsonl are the refinement). No config change.'
+  rows: 1
+  verdict: fail

@@ -1,0 +1,92 @@
+id: RQ-20261028-4dd3-01
+title: 'ADX-max AX50 forward confirmation, trend_donchian_eth_4h: on bars after 2026-10-26 (a window RQ-20261027-3e41-04 never saw), does AX50 still beat the declared leg by >= 1.0 R
+  net of the full cost stack, >= 3 of 4 folds, no worse drawdown?'
+status: queued
+cadence: monthly
+kind: experiment
+theme: regime
+priority: 2
+roadmap:
+- L-REGIME
+programme: P2
+question: 'RQ-20261027-3e41-04 read PASS (a LEAD) for AX50 on trend_donchian_eth_4h over 2019-12 to 2026-10-26: dR +11.07 R, maxDD -1.02 R, 4 of 4 folds; AX40 on the same unit failed
+  (dR -4.07 R, 2 of 4 folds). Same statistic and bar, same arms, on bars from 2026-10-27 onward only -- the one window that PASS did not see. Re-measured monthly; it grades INDETERMINATE
+  (underpowered) until the declared leg has >= 39 trades on the forward window, never FAIL on thin n.'
+why_this_matters: 'Confirmation unit required by 3e41-04''s own rule (PASS -> ONE confirmation on a disjoint window). The history is exhausted (the PASS used all 7300 fetched days),
+  so the disjoint window is forward only. MULTIPLE-TESTING DENOMINATOR: AX50 was run on 3 legs of the 3e41 adx-max sweep (eth 3e41-04, xrp 3e41-05, sol 3e41-06) -- xrp AX50 dR -0.69
+  R and sol AX50 dR -0.45 R both FAILED; eth is the 1 pass of 3 legs x 2 arms = 6 cells. That cross-leg result weakens a transfer argument; this unit tests only whether the eth cell
+  persists forward. Not a Tier-3 case: no config change is proposed from the lead. Research-ops 2026-10-28 08:48Z.'
+power:
+  expected_n: 39
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Needs the repo E35 floor of 39 baseline trades on the forward window. trend_donchian_eth_4h produced ~270 trades over ~6.8 years (ESTIMATE from 3e41-04 by_outcome sum 275, not
+    re-derived), i.e. ~40/yr, so the floor is reached in roughly a year; until then each monthly run is INDETERMINATE (underpowered), which is the intended reading, not a defect.
+  feasibility:
+    source: none
+    accrual_basis: Forward bars after 2026-10-26; the harness replays fetched candles, trade count accrues with calendar time (~40/yr ESTIMATE).
+decision_rule:
+  id: RULE-RQ20261028-4DD3-01-ADX_MAX_FORWARD
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack, never a zero default): total_trades,
+    net_total_r, max_drawdown_r, plus net_r per fold over 4 equal calendar spans (same boundaries every arm). Arms: B = leg as declared; AX50 = --adx-max=50 (AX40 dropped: it failed
+    on 3e41-04). Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B.'
+  rule: 'INDETERMINATE IF n(B) < 39 on the forward window (underpowered: no verdict; never FAIL on thin n). Otherwise AX50 CONFIRMS iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of
+    4 (same bar as RQ-20261027-3e41-04). CONFIRM -> a Tier-3 PROPOSAL note on the owning checklist row for the manager, never a config edit. FAIL IF not confirmed with n(B) >= 39: the
+    AX50 lead is closed on this configuration and the lever family stays open. The bar, fold majority, 39 floor and arm values are not changed after any result.'
+  min_n: '39'
+  what_it_does_not_do: Does not mine values, edit config, place an order or touch a roster; a forward backtest of one lever on one leg is not edge and not a P&L claim.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'stand-in: same stand-in as 3e41-04; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261022-326f-05 and RQ-20261023-a1f3-11 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --arm
+  - AX50=--adx-max=50
+  - --days
+  - '7300'
+  - --start
+  - '2026-10-27'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261028-4dd3-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261027-3e41-04
+- RQ-20261027-3e41-05
+- RQ-20261027-3e41-06
