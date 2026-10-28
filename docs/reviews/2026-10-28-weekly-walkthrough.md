@@ -351,7 +351,7 @@ not run here.
 > Lane `ML-FRONTIER-PREP-20261028` (Tier 1, read-only, Opus). Runs `.claude/skills/ml-review/SKILL.md` and
 > `.claude/skills/frontier-research/SKILL.md` (both two-layer). **Nothing was promoted or queued, and no config, src or manifest was touched.** New units are
 > **proposed** in § 3 (each labelled MODEL or TRADING), as the dispatch asked. Merged / deployed / observed are labelled throughout.
-> Records: `comms/reviews/ml-review-20261028-HHMMSS.json` · `comms/ml-plan/20261028T2000Z-ML-FRONTIER-PREP.json`.
+> Records: `comms/reviews/ml-review-20261028-200000.json` · `comms/ml-plan/20261028T2000Z-ML-FRONTIER-PREP.json`.
 > Practice & methodology refresh: owned this week by the sibling lane `PRACTICE-REFRESH-20261028`, so this section does not repeat it.
 
 **Headline numbers (MEASURED):**
@@ -486,7 +486,7 @@ Ranked by expected value per cost. Each carries `p` and a pre-registered check i
 
 **Stages:** no promote and no demote. No head is gate-ready on a decision value. A head that changes nothing (SOL-15m, MES-5m advisory) is a wiring-or-retire question for the operator once P5 can price it.
 
-{{C6_STAGE}}
+**Gate packets (`ready`/`blocking`):** `stage-guard` (#20982) returns `hold` for every shadow and advisory head, so it proposes no stage change. The per-head `ready`/`blocking` reprint with `--datasets-root` was chased three times. #20982 had a summary-script error, #20991 a heredoc error, and #21005 was still **queued on the runner at publish time** (fired 20:19Z). So the packet flags are **could-not-look**, and no conclusion here depends on them: no promotion is argued. The nearest head, btc-15m yz-v1, is blocked anyway by the dead live `vol_bucket` (C5).
 
 ## 4 · Backlog drain and not done
 
@@ -496,7 +496,7 @@ Ranked by expected value per cost. Each carries `p` and a pre-registered check i
 |---|---|---|
 | resolved (done) | 5 | `PI-20261015-WNBZB5WN-0001` (holdouts evaluated again) · `PI-20261004-AHCVAAF5-0001` (MES rule fired → refinement row) · `PI-20261018-WH81NW96-0002` (1h labels 0.98) · `PI-20261021-WG8OPB7N-0002` (drift timer retired) · `PI-20260929-K85Q64SF-0005` (MES baselines demoted with a stated reason) |
 | killed (superseded) | 2 | `MB-20260613-002` VPIN → Q-TM7 · `MB-20260705-FC-SLTP-GEOMETRY` → Q-TM9 |
-| kept open, re-read this run | 19 | 16 re-dated with a fresh observation (`pipeline.py --redate`). The **MEASURED news**: yz `vol_bucket` dead live (`3WM5HADW-0005`); label provenance still unfixed (`MVBJLVJ3`, 0 grep hits); ETH-1h AUC 0.539 (`MB-20260627-003`); the drift endpoint now reads 5 archives but still has no covered-span field (`BL-…DRIFT-GATE…`). Plus `LFC7HPXG` (power audit done, re-register proposed), {{P3_ITEMS}} |
+| kept open, re-read this run | 19 | 16 re-dated with a fresh observation (`pipeline.py --redate`). The **MEASURED news**: yz `vol_bucket` dead live (`3WM5HADW-0005`); label provenance still unfixed (`MVBJLVJ3`, 0 grep hits); ETH-1h AUC 0.539 (`MB-20260627-003`); the drift endpoint now reads 5 archives but still has no covered-span field (`BL-…DRIFT-GATE…`). Plus `LFC7HPXG` (power audit done, re-register proposed), `PI-20260925-D9FNL9SC-0001` (live_parity now computes on 8 heads, 0 mismatches; its pass/fail status waits on #21005) and `PI-20261018-WH81NW96-0003` (yz blocked by `vol_bucket`; packet waits on #21005) |
 | kept open, not due | 1 | `PI-20261022-5AEVV1RL-0001` (TSFM loaders, due 11-05) |
 
 **Filed this run:**
