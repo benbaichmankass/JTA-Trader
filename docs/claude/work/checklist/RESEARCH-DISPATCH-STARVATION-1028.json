@@ -1,0 +1,19 @@
+{
+  "id": "RESEARCH-DISPATCH-STARVATION-1028",
+  "title": "Research dispatcher starved by repo-queued CI cap (141 min idle, 2026-10-28); starvation floor + receipt-PR wedge fix",
+  "phase": "research-ops",
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-DISPATCH-STARVATION-1028",
+  "lane": "RESEARCH-DISPATCH-STARVATION-1028",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Root cause MEASURED: 06:04Z (41 queued) and 07:10Z (25 queued) dispatch cycles deferred all 56-58 due units on 'N workflow runs queued repo-wide (> 10)'; 0 research in flight, 20/20 hosted-runner slots held by PR/push CI (Guards, pytest-run). Fix: dispatch_queue.starvation_override (limits.starvation_hours 1.5) lifts ONLY the repo-queued block for ONE fire/cycle; infra yield + unreadable gh unchanged. Second wedge fixed: stuck conflicting receipt PR #20788 made the in-flight-receipt check skip every later receipt+utilization landing; skip now only for receipt PRs < 90 min old. CLOSES WHEN: first dispatch cycle after merge that sees repo_queued > 10 logs 'starvation floor' and dispatches exactly 1 unit (or a cycle with queued <= 10 dispatches), and a receipt newer than run 40594257399 is on main. LEFTOVER for manager: #20787/#20788 are superseded (see lane report), close them.",
+  "updated_at": "2026-10-28T07:45:11Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539-lane",
+  "roadmap": "none: pipeline/ops row, no milestone outcome",
+  "_seq": 752
+}
