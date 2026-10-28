@@ -1,6 +1,6 @@
 id: RQ-20261027-4ceb-03
 title: 'PROP exit rung: trend_donchian_eth_prop at TP 3R vs the declared TP 6R on 2023-09-24 .. 2025-09-23 (a window E65 did not see), net of the breakout_1 cost stack'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -91,3 +91,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/claude/work/checklist/P5-PROP-PROGRAMME.json
 last_dispatched_at: '2026-10-28T01:33:57+00:00'
+grading:
+  attested: RULE-RQ202610274CEB03-ETHPROP-T
+  auto: true
+  decision_rule_id: RULE-RQ202610274CEB03-ETHPROP-T
+  evidence:
+  - research/results/RQ-20261027-4ceb-03/40615816756.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
