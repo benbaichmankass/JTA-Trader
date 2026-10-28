@@ -304,6 +304,16 @@ GUARDS: List[Dict[str, Any]] = [
         "steps": [["python3", "scripts/ops/blocker_watch.py", "--self-test"]],
     },
     {
+        # REVIEW-FOLLOWTHROUGH, 2026-10-28: per-review-source follow-through
+        # (filed/done/killed/open, median age, due share, closed-within-N, no
+        # owner) over the pipeline + checklist. Self-test: a positive control
+        # per source pattern and per metric, plus a smoke run on the live stores.
+        "name": "review-followthrough",
+        "when": {"globs": ["scripts/ops/review_followthrough.py", "scripts/ops/pipeline.py",
+                            "src/runtime/checklist_store.py"]},
+        "steps": [["python3", "scripts/ops/review_followthrough.py", "--self-test"]],
+    },
+    {
         # FIX-SA-09, 2026-09-29: the SessionStart hook, three slash commands and
         # four skills told sessions to drain review backlogs archived on
         # 2026-09-21. This is the detector: no live `.claude/` line may name a
