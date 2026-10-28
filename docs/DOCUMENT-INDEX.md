@@ -600,6 +600,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reference/bot-api-reference.md` | lookup | live | — | 2026-09-07 | `dir:reference-is-lookup / ci:canonical-doc-coherence-ACTIVE_DOCS` | — |
 | `docs/reference/data-model.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/diag-access.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
+| `docs/reference/llm-analyst-skill-design.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/env-vars.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/pr-event-wake-policy.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/runtime-notes.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
