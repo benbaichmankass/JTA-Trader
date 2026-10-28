@@ -6,6 +6,11 @@
   },
   "id": "PI-20261028-JFQVEKUK-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1500' | python3 -c \"import sys,json;print([(r['id'],r['strategy_name'],r['symbol'],r['status'],r.get('sl_order_id'),r.get('tp_order_id')) for r in json.load(sys.stdin) if r['account_id']=='ib_paper' and r['symbol'] in ('SPY','QQQ','IWM','TLT','GLD')])\"",
+    "what": "first ib_paper trades row for SPY/QQQ/IWM/TLT/GLD with status open/closed and both sl_order_id and tp_order_id set (clean STK bracket), after the trader runs af0c2cdc6+"
+  },
   "origin": {
     "kind": "deploy",
     "ref": "lane IB-PAPER-SILENT-DROP 2026-10-28, PR #20974",
