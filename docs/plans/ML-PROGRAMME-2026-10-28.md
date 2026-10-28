@@ -2,6 +2,8 @@
 
 > **Doc status:** `unknown` · category `plan` · last verified `2026-10-28` (registry/status read 06:25Z; nobody but this lane has verified it) · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 > **Checklist row:** [`ML-PROGRAMME-PLAN`](../claude/work/checklist/ML-PROGRAMME-PLAN.json) · roadmap `M25`, `L-ATM`, `L-DESK` · lane dispatched by Manager Session 2026-10-27a · Tier 1, planning only.
+> **Track:** this is the **MODEL track's** programme (operator decision 2026-10-28 ~06:45Z: all research is either TRADING research, how to trade better, or MODEL research, how to build a better AI trader model; § 9 maps every programme and theme to one of them).
+> **Interfaces with the TRADING track:** trading research produces the policies (strategy entries, rule exits, management levers), the trade data and the labels these models learn from, and the baselines B0/B1 they must beat. This programme returns models that feed trading decisions (bracket advisor, selection, sizing), each entering through the TRADING track's own ladder (Stage 0 → soak → live).
 > **What this is:** ONE consolidated ML plan. It folds the ML items of `ROADMAP.md` § "AI trader (ML) — build plan", `docs/plans/ml-plan-items.yaml`, research programmes 01/02/06, the desk design's student hand-off (§ 4, 4A–4C) and the checklist into one set of tracks.
 > **What it authorises:** nothing. The § 5 rows are **proposals**. The manager files them with the operator. Every promotion is still the ladder: an offline rule registered before the run, net of the full cost stack, then the existing tier gates.
 > **Fact base:** lane `ML-COVERAGE-AUDIT`, [`docs/research/ml-coverage-audit-2026-10-28.md`](../research/ml-coverage-audit-2026-10-28.md) (branch `claude/ml-coverage-audit-20261028`, draft at 06:45Z). Its measurement is not repeated here, only cited.
@@ -18,7 +20,7 @@
 2. **The outcome is the teacher, and it is free.** For every stop/TP/close action, the counterfactual can be replayed exactly on the real price path. So one replayed trade yields a per-bar table of what each action would have earned. That is unlimited, cheap and leakage-controllable. Claude's desk decisions are a **benchmark policy and an optional extra label source**. A desk label is earned into training only by an ablation that shows it adds value, because plan-session labels are scarce (~$0.34 a packet, MEASURED) and so far the desk has not beaten its baselines.
 3. **Most models have been aimed at the wrong question.** 73 of 97 registered models predict a market regime or direction label (68 regime, 5 direction; target column of each registry row, `/api/bot/ml/registry` 06:25Z). 0 predict an in-trade action. The one in-trade manifest (`exit-policy-v1`, target `should_hold`) is **not in the registry**: it has never trained. The capacity went into BTC 15m volatility depth, not trade management.
 4. **The evidence says the information exists but the decision rule is the gap.** On the six money legs as traded (2,627 trades, 50,926 bar-states): the linear in-trade model PASSES on log-loss (`RQ-20261024-09a6-01`, +0.0023 nats, 6/6 folds), but the one-step exit-now policy FAILS on money (`d6e7-06`). The hindsight oracle leaves **0.756 R/trade** on the table. So the next tests are about **how a decision is formed**: continuation value, a richer action set, cost-aware learning, and a bigger corpus. They are not about yet another feature on the same head.
-5. **One bench decides everything.** `TM-BENCH` holds a frozen corpus, fixed purged folds, one cost stack, one action enum, one replay engine, the baselines and one scorer. Every model family, every rule lever and the desk itself submit a policy file and get scored on the same states.
+5. **One bench decides everything.** `TM-BENCH` holds a frozen corpus, fixed purged folds grouped by trade, one cost stack, one action enum, one replay engine, the baselines (incl. a matched random-intervention control per arm) and one scorer, and it crosses **check-in policy (cadence × event triggers)** as a measured factor (§ 1.4). Every model family, every rule lever and the desk itself submit a policy file and get scored on the same states.
 6. **The tracks** are T0 measurement and bench, T1 data breadth, T2 labels and the teacher pipeline, T3 trade-management models, T4 selection and sizing, T5 regime state as features, T6 frontier, and T7 promotion and serving (§ 4).
 7. **Build order:** TM-BENCH → paths corpus widened to every leg the harnesses can replay → learning ledger (the standing proof) → desk/LTR label join into the bench schema → the audit's data-breadth rows (§ 5).
 8. **This week's milestone, beside the desk:** TM-BENCH v1 scores baselines B0–B4 plus three model families on one corpus, and the first learning-ledger record lands (§ 6).
@@ -33,7 +35,7 @@ A trade-management policy π maps a **point-in-time state** to an **action**:
 
 | decision point | state (all known at the bar close; nothing later) | action enum (closed; mirrors desk schema v2 and the live-review enum) |
 |---|---|---|
-| **in-trade, every closed bar** | open R, peak R, MAE, bars held, bars since peak, distance to stop and to target in R and ATR, the stop/TP in force, the leg's own trail state, momentum/ADX/range features, the vol-regime head output for that symbol (T5), flow where history exists (funding, taker imbalance, OI) | `hold` · `tighten_sl{atr k | r level}` · `tp_pull_in{r level}` · `partial_close{fraction}` · `close` |
+| **in-trade, at each check-in** (the check-in policy = a clock cadence × event triggers, § 1.4) | open R, peak R, MAE, bars held, bars since peak, distance to stop and to target in R and ATR, the stop/TP in force, the leg's own trail state, momentum/ADX/range features, the vol-regime head output for that symbol (T5), flow where history exists (funding, taker imbalance, OI) | `hold` · `tighten_sl{atr k | r level}` · `tp_pull_in{r level}` · `partial_close{fraction}` · `close` |
 | **entry (selection)** | the strategy's signal and confidence, the signals-catalog decision-time features, regime state, the leg's recent record | `take` · `skip` · size bucket {0.5×, 1×} (reductive only; sizing itself stays with each account's `RiskManager`) |
 
 It never widens a stop past entry risk, never sizes up past the leg's risk, and never touches `mode:`, `execution:` or the roster. Those limits are the same as the desk's and the live review's.
@@ -43,20 +45,34 @@ It never widens a stop past entry risk, never sizes up past the leg's risk, and 
 | id | baseline | why it is the bar |
 |---|---|---|
 | **B0** | **the leg as traded**: its own bracket, trail, stale-stop and TP rules, replayed config-exact (`--emit-paths`) | "do nothing new". A model that cannot beat the incumbent rules is not a manager |
-| **B1** | **best static rule per leg**: the best of the confirmed rule levers (ADX trail, momentum-stale stop, measured-move TP), plus the per-leg best `exit_lever_ablation` arm **chosen in-sample, scored out of sample** | a model must beat what a cheap rule already captures (programme 01: *"Two things work today, and both are rules"*) |
+| **B1** | **best static rule per leg**: the best of the confirmed rule levers (ADX trail, momentum-stale stop, measured-move TP), the practitioner forms (Chandelier k ∈ {2, 3} × ATR(22) off the running extreme; channel exit N ∈ {10, 20}), plus the per-leg best `exit_lever_ablation` arm, **chosen without the test folds, scored out of sample** | a model must beat what a cheap rule already captures (programme 01: *"Two things work today, and both are rules"*) |
 | **B2** | **distance-only reference**: a calibrated logit on room-to-stop and room-to-target alone (the A1 reference) | "learned where the trade sits" is not trade management (room-to-stop alone has AUC ~0.81, `EXIT-PATH-METRICS-W43`) |
 | **B3** | **the desk**: Claude's continuous management on the same masked states (`DESK-LIFECYCLE-S0`, `desk_replay_driver.py`) | the operator's benchmark (*"measure the MLs against the Claude trading desk"*, design § 4B) and DESK-19's S-drives bar |
-| **B4** | **matched-rate placebo**: the same number of non-hold actions at random bars of the same trades | catches a policy that "wins" by acting more or less often, not by acting at the right time |
+| **B4** | **matched random intervention, per arm**: the same count and type of actions as the arm under test, at random check-ins of the same trades, under the same check-in policy | the control the exit literature uses (random-sell counterfactual, Akepanidtaworn et al. *JF* 2023, practice review S1); catches a policy that "wins" by acting more or less often, not at the right time |
+| **B5** | **re-score exit**: at each check-in re-run the leg's entry model; exit when its signal flips or falls below the entry threshold (only where the entry model replays point in time) | what continuous systematic managers run (practice review § 0 finding 3) |
+| **B6** | **vol-rescale**: hold the position but scale it to target volatility at each check-in (reductive only) | much of time-series momentum's alpha is volatility scaling (practice review S8) |
 | (ceiling) | hindsight oracle, best single close per trade | scale only: 0.756 R/trade on the 2,627-trade corpus (MEASURED, `research/results/RQ-20261024-09a6-01/40143286436.jsonl`, `census.__pooled__.oracle_best_close_saving_r_per_trade`) |
 
 ### 1.3 Success criteria, registered here so units cannot be tuned to them afterwards
 
-- **S-OFFLINE (a model family earns a place):** on TM-BENCH, policy − max(B0, B1) ≥ **+0.03 R/trade** pooled, 95% CI lower bound > 0, ≥ 5 of 6 folds positive, max drawdown not worse than B0, and net R per capital-day not worse than B0 (`scripts/capital_efficiency.py`, single home). It must also beat B2 and B4. Each unit restates this rule verbatim before its run. A unit may set a stricter bar, never a looser one.
+- **S-OFFLINE (a model family earns a place):** on TM-BENCH, policy − max(B0, B1) ≥ **+0.03 R/trade** pooled, 95% CI lower bound > 0, ≥ 5 of 6 folds positive, max drawdown not worse than B0, and net R per capital-day not worse than B0 (`scripts/capital_efficiency.py`, single home). It must also beat B2, B5 and **its own B4 matched random control under the same check-in policy**, with Holm correction across the arms of its family, and then **re-pass once on a fresh window** (`RESEARCH-CONFIRM-FRESH-WINDOW`). Each unit restates this rule verbatim before its run. A unit may set a stricter bar, never a looser one.
 - **S-CONFIRM:** harness-native confirmation per leg under the exit-refinement P2 gate (Path A or B, 6-fold walk-forward), then the bracket-advisor parity read (`BRACKET-ADVISOR-SHADOW`, 1–2 live trades per leg). Then a Tier-3 proposal with the record (§ T7).
 - **S-STUDENT (replacing a desk role):** DESK-19's criteria, unchanged (design § 4.3). S-shadow → S-advisory at n ≥ 150 OOS decisions, net R per capital-day > 0 and ≥ the role's baseline. S-drives requires ≥ Claude at margin 0 with a 95% CI half-width ≤ 0.02 R, which needs about 1,540 paired decisions per role.
 - **S-LEARNING (the pipeline is learning, § 7):** every hop of the learning ledger is non-zero and moving week over week, and the "best policy vs B0" line on the bench improves or a FAIL is recorded against a named configuration.
 
 **Programme done-condition (first cycle, ~4 weeks):** either at least one policy clears S-OFFLINE on ≥ 2 legs and reaches the bracket advisor, or every T3 question in § 4 is graded, with the configurations tested and not tested written to `families.<f>.history`. The second outcome is a valid end: it closes the price-state trade-management line on the legs as traded, and it says which information class is missing.
+
+### 1.4 The check-in policy is itself a factor (operator design rule, 2026-10-28 ~06:35Z, binding)
+
+Active management is first and foremost **high-frequency time-based check-ins plus event triggers**. A single check at one point (e.g. +1R) is not a meaningful test. So every trade-management evaluation in this programme:
+
+- runs each policy under a **check-in policy** = clock cadence × trigger set, and the check-in policy is a **measured factor**, not a fixed setting:
+  - **clock (C):** every bar of the leg's timeframe · every 4 bars · none (event-only);
+  - **event triggers (T):** R milestones including adverse ones (±0.5R, ±1R, +2R crossings), volatility change (ATR(14)/ATR(100) crossing 1.5 or 0.67), momentum shift (sign flip), level/structure break (a touch or break of a packet level), time in trade (the leg's median winning duration, fixed from training folds);
+- reports **when intervention adds value**: lift by trigger type, by cadence, by bars-in-trade bucket and by stratum, and lift **separately for the "acted" decisions and the "held" majority** (practice review § 0 finding 5: judgment helps when rare, large and information-driven, and hurts as frequent small tweaking);
+- counts **every check-in of every trade as a decision point**, which multiplies n. CV, bootstrap and CIs **cluster by trade**.
+
+The same rule is being written into `docs/plans/claude-trading-desk-DESIGN.md` by lane `DESK-LIFECYCLE-S0` (session_01AFoLuJGUG7n1WDzgCysB32). This plan's bench uses the identical cadence × trigger grid, so a desk arm and a model arm under the same check-in policy are scored on the same decision points.
 
 ---
 
@@ -83,7 +99,7 @@ Each line names its population and where it was read. "Re-run, never quote" appl
 | Stage-0 trade ledgers (all legs) | **14,601 rows in 172 `*__trades.jsonl` files** across 31 runs; the 2026-10-14 census found 54 legs / 5,063 trades in the newest ledger per leg | `find comms/strategy_evidence/runs -name '*__trades.jsonl'` (this lane); `02-AI-TRADER.md` § 2 | per-trade only (no per-bar path). Widening paths to these legs (§ 5, row 2) roughly doubles T3's n |
 | journal closed trades (all accounts incl. paper/demo) | `trade_outcomes` 2,875 rows (incl. backtest), `setup_labels` 2,875, `conviction_meta` 1,545 | audit § 1c | selection (T4) and parity. Real-money R-graded: **466 trades, expectancy −0.3355 R** (`GET /api/bot/performance`, window `all`, 2026-10-28; journalTrust flags `bybit_2` divergent and `alpaca_live` unrecorded) |
 | live per-bar path history | `position_path_history`: one row per (package, bar) with sl/tp in force, peak, MAE, ATR, ADX; observe-only | row `EXIT-PATH-TELEMETRY-LIVE` (`done`) | live parity and validation only; too few trades to train on |
-| **desk decisions** | **59 rows** (2026-10-26 13:50Z → 2026-10-28 05:04Z): 56 `no_trade`, 3 `propose_entry` (2 `basis: mechanics`, excluded from edge replay; 1 SLV with no outcome row yet). `outcomes.jsonl` 58 rows, **all `not_computable`**. `consumed.jsonl` **0 rows** | `comms/desk/*.jsonl` at `main@4329698a1` | **0 edge-sample desk labels with an outcome today.** Entry generation showed no edge vs random (judged-1/-2, e535). One-shot management at +1R failed (#20836: in-trade −0.048 R, CI [−0.143, +0.041]; exit −0.091 R, CI [−0.198, −0.003], n = 176) |
+| **desk decisions** | **59 rows** (2026-10-26 13:50Z → 2026-10-28 05:04Z): 56 `no_trade`, 3 `propose_entry` (2 `basis: mechanics`, excluded from edge replay; 1 SLV with no outcome row yet). `outcomes.jsonl` 58 rows, **all `not_computable`**. `consumed.jsonl` **0 rows** | `comms/desk/*.jsonl` at `main@4329698a1` | **0 edge-sample desk labels with an outcome today.** Entry generation showed no edge vs random (judged-1/-2, e535). A single +1R intervention (#20836: one check on 4 legs, n = 176; in-trade −0.048 R, CI [−0.143, +0.041]; exit −0.091 R, CI [−0.198, −0.003]) failed both roles. That tests one intervention point, not active management |
 | live-trade-review rows | **98 rows on 16 packages**: `no_recommendation` 45, `hold` 32, `flag_mechanics` 20, `close` 1, `tighten_sl` 0 | `comms/live_review/reviews.jsonl` | 16 distinct trades is far below every floor (CJ-4 n ≥ 150 distinct trades) |
 | Claude post-trade grades | 617 blind / 546 revealed | `comms/claude_judgments/*.jsonl` | built nightly into `claude_judgments` (627 rows, audit § 1c); **no manifest trains on it** |
 | market data for features | `market_features` only for BTC, ETH, SOL, MES; ADA/AVAX/XRP raw 15m only; ETFs and metals raw 1d only; the exporter publishes BTC/ETH/SOL × 15m/1h only | audit § 1c and § 3.2 | the vol-regime state feature (T5) exists for 4 of 23 rostered symbols |
@@ -183,6 +199,17 @@ MEASURED at `main@4329698a1` (72 enabled manifests in `ml/configs/*.yaml`): **48
 | **scorer** | `capital_efficiency.py` (net R per capital-day), the A1/d6e7 fold CI code | one `score` entry point: policy file (`state_id → action`) in, verdict-ready JSON out. The desk and every model submit the same file format |
 | **learner kinds** | `ml_bakeoff.py` kinds (prior, numpy_logit, lightgbm, catboost, sklearn_hgb) | policy wrappers (§ 4.3 Q-TM1/2/3) so a learner produces actions, not just probabilities |
 
+**Factors every bench run crosses (the paired factorial of practice review § F.1, applied to models):**
+
+| factor | levels | why |
+|---|---|---|
+| **entry source (E)** | E1 strategy entries (the legs as traded) · E2 matched random entries (same symbol, side, hour-of-day, ATR decile; `desk_grade.py` random machinery) · E3 desk entries as they accrue | separates "management adds value" from "the entry had edge" (random-entry harness, practice review S17) |
+| **management arm (M)** | B0–B6 and every model policy | the thing under test |
+| **check-in policy (C × T)** | § 1.4 grid | the operator's rule: cadence and triggers are measured |
+| **strata (registered)** | trend vs mean-reversion leg (lag-1 autocorrelation / variance ratio on training folds only) × vol tercile at entry × asset class | the sign of a stop's value flips with the return process (Kaminski & Lo 2014; Lo & Remorov 2017) |
+
+Primary statistic: paired dR = net R(arm) − net R(B0) per trade, bootstrapped by trade, plus net R per capital-day. Secondary: capture ratio (realised / MFE), giveback from peak, MAE, action rate. Every arm and parameter is counted in the trial ledger (`RESEARCH-TRIAL-LEDGER`).
+
 **Composition with the desk lifecycle factorial.** `DESK-LIFECYCLE-S0` (lane `session_01AFoLuJGUG7n1WDzgCysB32`) is testing continuous full-trade management by Claude now. When its packets are drawn from TM-BENCH's corpus (same trades, same masked states), the desk's result *is* B3, and every model is compared with it on the same packets at zero extra judging cost. If DESK-LIFECYCLE-S0 lands on a different trade set, the bench imports its states by `(leg, entry_time, bar)` and scores the overlap; it does not re-judge.
 
 **Composition with exit-refinement.** A bench PASS is Stage-0 evidence for a *model* lever. It still goes through the exit-refinement pipeline per leg (P2 gate, grant cap, MIN_OOS_TRADES = 25, TP doctrine) before any Tier-3 flip. The bench never writes `config/strategies.yaml`.
@@ -223,7 +250,7 @@ Four gates per the frontier-research skill: **D**ata, **C**ompute, **L**atency/s
 | offline RL, fitted-Q (tree-based FQI) | our exit/tighten actions have **exact counterfactuals**, so the usual offline-RL coverage problem largely disappears and FQI reduces to Q-TM1/2 with a bootstrap target | ✅ | ✅ | ✅ | ✅ | **folded into Q-TM1/Q-TM2** as an arm |
 | offline RL, deep (CQL/IQL, e.g. `d3rlpy`) | overkill at 2.6k trades; its value is for actions without counterfactuals (entries), which are parked | ⚠️ thin n | Kaggle GPU | ⚠️ torch | ✅ | **dropped (data gate)**: reopen when the corpus passes ~20k trades |
 | contextual bandit over rule arms + doubly-robust OPE | C1's shape | ✅ | ✅ | ✅ | ✅ | **kept: Q-TM6** |
-| imitation learning / behaviour cloning of the desk | needs a teacher that beats the incumbent | ❌ today (0 edge-sample desk outcomes; #20836 FAIL) | ✅ | ✅ | ⚠️ pre_cutoff memory | **gated on Q-TM4(a)** |
+| imitation learning / behaviour cloning of the desk | needs a teacher that beats the incumbent | ❌ today (0 edge-sample desk outcomes; the single +1R intervention, #20836, failed) | ✅ | ✅ | ⚠️ pre_cutoff memory | **gated on Q-TM4(a)** |
 | active learning: query Claude only on high-uncertainty states (DAgger-style) | the cheap way to spend plan sessions on labels | ✅ | plan sessions | n/a | ⚠️ pre_cutoff | **kept as the T2 sampling rule** once Q-TM4(a) passes |
 | sequence models (GRU/TCN/small transformer over the path) | path shape | ✅ | Kaggle GPU | ⚠️ numpy export needed at small size | ✅ | **gated: Q-TM8** |
 | TSFM quantile forecasts (Chronos-2, TimesFM-2.5, TiRex) as a remaining-move feature | B1 failed linearly; a forecaster is a different information source | ✅ OHLCV | Kaggle GPU | ✅ mirror-publish of features | ⚠️ pretraining overlap: hold out bars after each model's release; licences read from the Hub card | **one unit after Q-TM9**, as a feature arm (Chronos-2 zero-shot already FAILED on the vol label; that closed only that configuration) |
@@ -242,13 +269,52 @@ The weekly scan (Sunday, `/ml-review` step 9 → `frontier-research`) re-reads t
 
 ---
 
+### 4.6 Training and evaluation standards (binding on every model this programme trains or scores)
+
+Built on the practice review (`docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md`, branch `practice-research-trade-mgmt-ai`, sections C and F.2; its canonical principles list was still being added at 06:45Z, so where the two differ, the review's list wins and this table is updated in the same week). Each standard cites its source.
+
+| # | standard | source |
+|---|---|---|
+| **ST1** | **Labels come from the actual exit policy's path outcomes.** Every check-in state is labelled with the priced outcome of each action on the real path, net of cost, triple-barrier style from that state, where the barriers are the leg's real stop, target, trail and time exit, not a re-simulated fixed bracket | practice review § F.2.1, § C.1 (triple barrier, AFML); programme 01 (models graded on a bracket no leg trades all failed) |
+| **ST2** | **Purged, embargoed walk-forward CV, grouped by trade.** Folds split by entry time; every check-in of a trade sits in one fold; trades whose holding windows overlap a test block are purged, and an embargo follows each test block. CPCV where a distribution of OOS results is needed | review § C.1, § C.3.3 (S50) |
+| **ST3** | **Leakage controls.** Features ≤ the check-in bar close; no outcome column as a feature; pre-trained models hold out bars after their release date; Claude labels with `pre_cutoff: true` may train and never gate | frontier-research skill gate 4; distillation design § 3.5 |
+| **ST4** | **Pre-registration with a full analysis plan, plus multiple-testing control.** The rule, transforms, windows, exclusions and strata are fixed before the run; every arm is counted in the trial ledger; Holm within a family; DSR/haircut reported; one fresh-window confirmation | review § C.1 (S49 pre-analysis plans; S45 DSR; S46 PBO), `RESEARCH-TRIAL-LEDGER`, `RESEARCH-CONFIRM-FRESH-WINDOW` |
+| **ST5** | **Random and simple-rule baselines at the same decision points**: B0 hold, B4 matched random intervention (same count, type and timing distribution), B1 best static rule chosen without the test folds, B2, B5, B6 | review § C.2.1–3, § C.3.2 (S1, S17, S20) |
+| **ST6** | **Cost-net evaluation**: full cost stack (`execution_costs.resolve_cost_policy()`), headline in net R per capital-day (`scripts/capital_efficiency.py`), never a classification metric alone | CLAUDE.md promotion evidence; review § C.2.5 |
+| **ST7** | **Regime / leg-type stratification**, registered: trend vs mean-reversion leg × vol tercile × asset class; a pooled pass that one stratum carries is reported as that | review § 0 finding 2 (S4, S5, S30) |
+| **ST8** | **Cadence + event-trigger evaluation** for every trade-management model (§ 1.4), reporting when intervention adds value and acted vs held lift separately | operator 2026-10-28 ~06:35Z; review § 0 finding 5 |
+| **ST9** | **Practice precedent per arm**: each arm cites the practitioner or academic source it comes from, or is declared `novel` | review § C.3.1, § F.3.1 (operator ask 2026-10-28) |
+| **ST10** | **Explicit promotion criteria**, set before the run: S-OFFLINE → S-CONFIRM (exit-refinement P2 gate + bracket-advisor parity) → Tier-3; students per DESK-19; live monitoring by CUSUM (`LIVE-DECAY-MONITOR`) after any promotion | § 1.3; review § F.2.6 |
+| **ST11** | **Earned complexity**: linear before GBDT before sequence before RL; RL only initialised from a passing supervised policy, never from scratch | programme 01 plan rule 8.7; review § F.2.3 (S38) |
+| **ST12** | **Claude is never the regression target.** Desk actions enter as candidate features and outcome-filtered demonstrations; their value is measured by an ablation (Q-TM4) | review § F.2.4, § B.6; desk design § 4.1 |
+
+**Where existing models and pipelines fall short** (populations: 72 enabled manifests in `ml/configs/*.yaml` at `main@4329698a1`, split and target read from each manifest's `evaluator_config`; registry and consumers from the audit). A shortfall is a fact about fitness for *trade management*. It is not a claim that a head is useless for what it was built for.
+
+| model / pipeline | falls short of | evidence |
+|---|---|---|
+| **53 of 72 manifests** use `time_aware_holdout` or `live_holdout` with **no embargo**; only 19 use `purged_walk_forward` with an embargo (17 regime, 2 direction) | ST2 | MEASURED, manifest parse this lane |
+| 48 regime-label manifests, incl. the 3 advisory heads | ST1, ST6 (graded on macro-F1 vs a constant baseline; net-of-cost walk-forward only through a separate cell study, and only 3 BTC legs ever got one), ST5 (no matched random control in the cell studies) | audit § 1a, § 3.3; `gate-check` `oos_edge` is a macro-F1 gate (ROADMAP 2026-10-18 update) |
+| `setup-candidates-metalabel*` (10 manifests) | ST1 (synthetic triple barrier on CUSUM-sampled entries, not the leg's real exit), ST2 (`live_holdout`, no embargo) | manifest fields; S-MLOPT-S5/S6 sprint logs |
+| `trade-outcome-lgbm-v1`, `conviction-meta*` (4) | ST6 (label `won` = `pnl > 0`, a sign, not net R per capital-day), ST2 (`time_aware_holdout`, no embargo) | `ml/datasets/families/trade_outcomes.py` docstring; manifest fields |
+| `exit-policy-v1` (the only in-trade manifest) | ST1 (synthetic CUSUM-walked in-trade rows, a +β·risk hold barrier), ST2 (`live_holdout`); and it has never trained (PI-20261028-QFMQD2BK-0001) | manifest header comment; registry diff |
+| `exit-head-donchian-1h-v1` (closes positions on 3 donchian legs) | ST5 and ST8 UNVERIFIED (no matched random control or check-in-policy factor found in its evidence by this lane); ST10 (live with no CUSUM monitor, `LIVE-DECAY-MONITOR` queued) | audit § 1b; INFERRED from the ML-S2 history |
+| the paths-corpus units A1 / d6e7-06 / B1 / C1 / A2 | **closest to the standard** (ST1, ST2, ST4, ST6 met); short of ST5 (no matched random-intervention control), ST7 (pooled, not stratified by return process), ST8 (one cadence: every bar, no triggers), ST9 | the unit YAMLs and result records read this lane |
+| the desk's #20836 test | ST8 (a single +1R check-in), ST5 (no matched random control) | practice review § 0 finding 1 |
+| `claude_judgments` (627 rows nightly) | not yet trained, so not yet testable; CJ-4 must pre-register a net-R label (ST1/ST4) first | audit § 1c; M25 `where` |
+
+Fixes ride the bench (rows 1 and 6 make ST1–ST9 the default for every new unit) and the ledger (row 3 reports the count of manifests meeting ST2). Retraining the regime fleet under ST2 is **not** proposed this cycle; it is a T5 question once the freeze list frees trainer time.
+
+### 4.7 How the plan refreshes: the weekly practice and methodology track
+
+Practice/methodology research becomes a **standing weekly track** under the `frontier-research` skill (being amended by the practice lane), beside the model-family scan. Each Sunday run re-reads this plan's § 1.2 baselines, § 1.4 grid, § 4.4 triage and § 4.6 standards against what it found, and writes the deltas into the run record's `frontier` block. A standard changes only through that record or an operator decision, so units registered against a standard cannot be graded against a moved one.
+
 ## 5. Infra build order (proposed rows: the manager files them with the operator)
 
 Ordered by questions unblocked per dollar. Each row is Tier 1 unless marked. Each would carry the `roadmap` refs shown and the re-entry test that closes it. **None is filed by this lane.**
 
 | # | proposed row | what | unblocks | tier · model · ceiling | roadmap | re-entry test |
 |---|---|---|---|---|---|---|
-| **1** | **TM-BENCH** | `scripts/research/tm_bench.py`: frozen corpus build (hashed `corpus_id`), shared fold file, the action-value labeler, baselines B0–B4 and oracle, one `score` entry point taking a policy file; learner wrappers for logit and LightGBM action-value; `selfcheck` mode (B0 scored against itself = 0 exactly; oracle ≥ every arm) | Q-TM1/2/3/6/9/10, B3 import, DESK-22's desk/student block | 1 · Opus (it defines the numbers every later verdict rests on) · $15 | L-ATM, M25, L-DESK | a runner unit lands `selfcheck` pass, then B0–B4 scored on corpus v1 with B0 − B0 = 0 and the oracle saving reproducing 0.756 R/trade ± 0.005 on the 6-leg population |
+| **1** | **TM-BENCH** | `scripts/research/tm_bench.py`: frozen corpus build (hashed `corpus_id`), shared fold file, the action-value labeler, baselines B0–B6 (B4 a matched random-intervention control generated per arm) and oracle, the § 1.4 check-in-policy grid and the § 4.2 factors (entry source, strata), group-by-trade purged CV, Holm and trial-ledger counting, one `score` entry point taking a policy file; learner wrappers for logit and LightGBM action-value; `selfcheck` mode (B0 scored against itself = 0 exactly; oracle ≥ every arm) | Q-TM1/2/3/6/9/10, B3 import, DESK-22's desk/student block | 1 · Opus (it defines the numbers every later verdict rests on) · $15 | L-ATM, M25, L-DESK | a runner unit lands `selfcheck` pass, then B0–B4 scored on corpus v1 with B0 − B0 = 0 and the oracle saving reproducing 0.756 R/trade ± 0.005 on the 6-leg population |
 | **2** | **PATHS-CORPUS-WIDEN** | emit paths for every rostered leg whose harness supports `--emit-paths` (trend and pullback first, then squeeze/fade/ict_scalp); add the missing emit to a harness where it is a flag-sized change; the bench's corpus v2 | Q-TM5, power for every T3 question; merges ML-LEG-CORPUS | 1 · Sonnet · $12 | L-ATM, L-DATA | corpus v2 census: ≥ 15 legs and ≥ 5,000 trades, every leg's emit reproducing its committed Stage-0 net R within 0.01 R/trade |
 | **3** | **ML-LEARNING-LEDGER** | the § 7 measurement: `scripts/ops/ml_learning_ledger.py` writes `comms/ml-learning/<stamp>.json` weekly (hops H1–H7) and a brief line; folds in DESK-21 (never-trained detector: a decision row older than 14 days in no `consumed.jsonl`; a manifest whose model_id is not in the registry after 2 cycles) and audit row 7 (`ml_plan_status.py --coverage`: tiers A–D per leg, the per-cell manifest cap) | S-LEARNING; makes "merged reported as working" mechanically visible | 1 · Sonnet · $8 | M25, L-DESK, M39 | first record reproduces this doc's § 7 baseline values at its commit, and flags `exit-policy-v1` as never-registered |
 | **4** | **DESK-LABEL-JOIN** (scopes DESK-11 + DESK-20 to the bench schema) | desk decisions, LTR rows and DESK-LIFECYCLE-S0 judged packets mapped to bench `state_id`s with their replayed outcomes; `consumed.jsonl` written by every dataset build or bench run that reads them | Q-TM4, B3, CJ-4's population, DESK-19 | 1 · Sonnet · $10 | L-DESK, M25 | every desk/LTR row older than its horizon has an outcome or a named `not_computable` reason; `consumed.jsonl` > 0 after the first bench run that reads them |
@@ -283,7 +349,7 @@ Not before the reset: row 2 (it overlaps with row 1's corpus code; dispatch afte
 ### 6.2 The week's milestone (week of 2026-11-02, beside the desk)
 
 **"TM-BENCH v1 is the scorer of record":**
-1. B0–B4 scored on corpus v1, and the oracle saving reproduced.
+1. B0–B6 scored on corpus v1 under the § 1.4 check-in grid, and the oracle saving reproduced.
 2. Q-TM1, Q-TM2 and Q-TM6 registered (hold PRs per E57) and run on the runner; research-ops grades them.
 3. Corpus v2 (row 2) built, and Q-TM5 registered on it.
 4. The first `comms/ml-learning/` record, and its line in the brief's "what moved".
@@ -326,3 +392,60 @@ Not before the reset: row 2 (it overlaps with row 1's corpus code; dispatch afte
 - **Taken from the audit, not re-measured:** rostered-leg tiers (5/51, 0/7), trainer cycle minutes, dataset-family row counts, the freeze list and the causes in audit § 3.
 - **INFERRED (arithmetic or reading, not measured):** the paired sd and power figures (§ 2.2), the freed trainer capacity after the drift-timer retirement (§ 2.1), teacher-label cost per role (§ 2.3), and lane ceilings (§ 5).
 - **Not verified:** whether `tm_bench.py` can reuse `desk_replay_driver.py`'s replay function without changes (row 1 establishes this); the DESK-LIFECYCLE-S0 trade population (that lane is running); the exact trainer log line for `exit-policy-v1`. The cause is INFERRED: its dataset family `exit_candidates` exists (`ml/datasets/families/exit_candidates.py`) but `scripts/ops/build_trainer_datasets.sh` never builds it (0 mentions; positive control: `setup_candidates` 9 mentions), so the manifest most likely clean-skips on an empty dataset (exit 78) every night.
+
+---
+
+## 9. Two-track taxonomy (operator decision 2026-10-28 ~06:45Z; proposal, the manager files it at Thursday planning)
+
+**The rule.** All research is exactly one of two tracks, or both with a stated reason:
+- **TRADING** — how to trade better: strategies, entries, exits, active management, sizing, costs, venues.
+- **MODEL** — how to build a better AI trader model: data, labels, features, training, evaluation, model families, infra, desk-as-teacher.
+
+The interface: TRADING produces the policies, trade data and labels MODEL learns from, plus the baselines (B0/B1) a model must beat. MODEL returns models that enter trading decisions only through TRADING's ladder.
+
+### 9.1 Research programmes (`research/programmes/*.yaml`, P1–P7)
+
+| programme | track | reason |
+|---|---|---|
+| P1 Active trade management (`01-active-trade-management.yaml`) | **both** | the rule levers and the desk's management test are TRADING; the merged "AI active trade management" ladder (A1/A2/B1/C1, the in-trade models) is MODEL, and this plan's T3 owns it from now on |
+| P2 AI trader (`02-ai-trader.yaml`) | **MODEL** | the AI-trader programme of record; this plan consolidates it |
+| P3 Strategy improvement | **TRADING** | |
+| P4 Macro sleeve | **TRADING** | |
+| P5 Prop | **TRADING** | |
+| P6 Data infra | **both** | market/derivatives archives and catalogue serve strategy research (TRADING) and every model dataset (MODEL: T1) |
+| P7 Timeframes | **TRADING** | |
+
+### 9.2 Queue themes (`research/THEMES.yaml`)
+
+| theme | track | reason |
+|---|---|---|
+| `live_strategy` | TRADING | |
+| `new_strategy_prop` | TRADING | |
+| `macro` | TRADING | |
+| `timeframes` | TRADING | |
+| `ml_health` | MODEL | |
+| `regime` | **both** | regime cells on a leg are TRADING (selectivity); the regime heads, labels and classifiers are MODEL (T5) |
+| `infra` | **both** | split per unit by what the tooling serves |
+
+**MEASURED imbalance** (population: unit files directly under `research/queue/`, `blocked/` excluded, `theme` and `status` fields, `main@4329698a1`): queued TRADING-only units 106 (`live_strategy` 75, `new_strategy_prop` 15, `macro` 12, `timeframes` 4); queued MODEL-only units **6** (`ml_health`); queued "both" 32 (`regime` 15, `infra` 17). The MODEL track's runnable supply is ~5% of the TRADING track's, which is the structural form of the operator's "ML infra priority" concern.
+
+### 9.3 ROADMAP research items
+
+| milestone | track | reason |
+|---|---|---|
+| M25 ML promotion and consolidation · M23 meta-labelling + signals catalogue · M14 / M9 (dormant) · M41 local LLM | MODEL | |
+| L-DESK | **both** | the desk trading on demo is TRADING; desk-as-teacher (DESK-11/19–25, CJ-*) is MODEL |
+| L-ATM | **both** | as P1 |
+| L-REGIME | **both** | as the `regime` theme |
+| L-DATA | **both** | as P6 |
+| G1/G2 ladders, M18, M20 (closed), M21, M22, M27, M28, M29, M39, M40, L-LADDER, L-PROP, L-TIMEFRAMES | TRADING | strategy, exit-lever, sizing, venue, prop and macro work |
+| L-OPS, M6, L-PROGRAMMES | neither (operations) | infrastructure for both tracks; tagged by the rows under them |
+
+### 9.4 The minimal structural change (proposal)
+
+1. **A `track: trading | model | both` field** on `research/THEMES.yaml` themes, on `research/programmes/*.yaml` and on new queue units (required on units with an id date ≥ the adoption date; older units inherit their theme's track; a `both` unit names its reason). Checklist rows carry it through their `roadmap` milestone's track.
+2. **Per-track runnable floors** in `scripts/ci/check_research_queue_health.py`: the computed floor split by track first (proposed starting split 50/50 of the runnable floor, the manager's call), then by theme weight within a track, so an empty MODEL track reads red instead of hiding behind TRADING's supply.
+3. **Per-track sections** in the research-ops pass (§ D results read, § E intake) and in the daily brief's "what moved" (one line each: units graded, verdicts, next unit), and a `track` column in the trial ledger.
+4. **One check, no new guard:** the learning ledger (§ 7, row 3) prints the per-track queued/graded counts weekly, so the split stays measurable without another register.
+
+Nothing in § 9 is filed by this lane.
