@@ -99,6 +99,7 @@ def apply(conn: sqlite3.Connection, u: Dict[str, Any]) -> int:
 
 def _self_test() -> int:
     c = sqlite3.connect(":memory:")
+    # data-wiring: in-memory self-test fixture mirroring canonical trade_journal.db trades; no persistent table, no backfill
     c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT, is_backtest INT, symbol TEXT, "
               "account_id TEXT, position_size REAL NOT NULL, notes TEXT)")
     c.executemany("INSERT INTO trades VALUES (?,?,?,?,?,?,?)", [
