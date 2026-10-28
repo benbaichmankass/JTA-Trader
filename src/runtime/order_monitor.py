@@ -15490,6 +15490,150 @@ def _sweep_open_row_own_leg_fill(
     return summary
 
 
+#: Closed rows whose `closed_at` was stamped by the reconciler AT DETECTION and
+#: that carry no venue close record (`bybit_closed_pnl`) are the ones whose
+#: close time can lag the fill. json.dumps default-separator shapes, like the
+#: other notes LIKE predicates here.
+_RECONCILER_CLOSED_NOTES_LIKE = '%"closed_by": "monitor_reconciler"%'
+_VENUE_CLOSE_RECORD_NOTES_LIKE = '%"exit_price_source": "bybit_closed_pnl"%'
+_CLOSED_AT_CORRECTED_NOTES_LIKE = '%"closed_at_detected"%'
+
+#: A fill earlier than the recorded close by less than this is the same event
+#: (clock skew + the reconciler's own cadence), not a late detection.
+_CLOSED_AT_CORRECTION_MIN_LAG_MS = 60_000
+
+
+def _sweep_correct_closed_at_from_own_fill(
+    db, *, fills_conn_factory=None,
+) -> Dict[str, int]:
+    """Move a reconciler-detected `closed_at` back to the time the row's OWN
+    stop/target order actually filled.
+
+    CLOSE-LABELS-1214 (PI-20261028-BELS1214-0002). MEASURED 2026-10-28: the SOL
+    stop filled at about 12:14:35Z; the demo accounts have no closed-pnl record,
+    so `_close_trade_from_order_status` took its fallback branch (closed_at =
+    "now", the moment the reconciler observed filled+flat) and trades 6761 and
+    6763 were stamped 12:19:07 / 12:19:13, 4.5 minutes late. The fix cannot live
+    in the reconciler: the exchange fills pull runs hourly at :20
+    (`deploy/ict-exchange-fills-pull.timer`), so at 12:19 the fill was not in
+    the store yet. This sweep runs on every tick instead and acts once the pull
+    has it, like `_sweep_exit_label_from_bracket_order`.
+
+    Rule: a closed, non-backtest row stamped `closed_by=monitor_reconciler`
+    with no venue close record, whose OWN bracket order
+    (`fills_pnl.exit_from_one_order_fills`, `match == own_bracket_order`) filled
+    the whole position at least `_CLOSED_AT_CORRECTION_MIN_LAG_MS` before the
+    recorded close, and not before the row opened. Then `closed_at` (column and
+    `notes.closed_at`) becomes the fill time; the detection time is kept in
+    `notes.closed_at_detected` and `notes.closed_at_source=own_bracket_fill`,
+    which also makes the row ineligible for a second pass. Nothing else on the
+    row changes. LOCAL read of the fills store, never a broker call. Best-effort,
+    never raises.
+    """
+    summary: Dict[str, int] = {
+        "scanned": 0, "corrected": 0, "no_own_fill": 0, "in_sync": 0,
+        "lost_race": 0, "errors": 0,
+    }
+    try:
+        from src.runtime.fills_pnl import exit_from_one_order_fills
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, "
+                "       created_at, closed_at, notes, sl_order_id, tp_order_id "
+                "  FROM trades "
+                " WHERE status = 'closed' "
+                "   AND COALESCE(is_backtest, 0) = 0 "
+                "   AND COALESCE(notes, '') LIKE ? "
+                "   AND COALESCE(notes, '') NOT LIKE ? "
+                "   AND COALESCE(notes, '') NOT LIKE ? "
+                "   AND (COALESCE(sl_order_id, '') != '' "
+                "        OR COALESCE(tp_order_id, '') != '') "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                "   AND datetime(COALESCE(closed_at, created_at)) "
+                "       >= datetime('now', '-3 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
+                " LIMIT 100",
+                (_RECONCILER_CLOSED_NOTES_LIKE, _VENUE_CLOSE_RECORD_NOTES_LIKE,
+                 _CLOSED_AT_CORRECTED_NOTES_LIKE),
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_sweep_correct_closed_at_from_own_fill: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+
+    for row in rows:
+        try:
+            opened_ms = _isoformat_to_ms(row.get("created_at"))
+            closed_ms = _isoformat_to_ms(row.get("closed_at"))
+            qty = _safe_float(row.get("position_size"))
+            if opened_ms is None or closed_ms is None or not qty:
+                summary["no_own_fill"] += 1
+                continue
+            fill = exit_from_one_order_fills(
+                account_id=str(row.get("account_id") or ""),
+                symbol=str(row.get("symbol") or ""),
+                direction=str(row.get("direction") or ""),
+                opened_at_ms=opened_ms,
+                closed_at_ms=closed_ms + 60_000,
+                qty=qty,
+                own_order_ids=(row.get("sl_order_id"), row.get("tp_order_id")),
+                conn_factory=fills_conn_factory,
+            )
+            if not fill or fill.get("match") != "own_bracket_order":
+                summary["no_own_fill"] += 1
+                continue
+            fill_iso = normalize_closed_at_value(fill.get("closed_at"))
+            fill_ms = _isoformat_to_ms(fill_iso)
+            if fill_iso is None or fill_ms is None or fill_ms <= opened_ms:
+                summary["no_own_fill"] += 1
+                continue
+            if closed_ms - fill_ms < _CLOSED_AT_CORRECTION_MIN_LAG_MS:
+                summary["in_sync"] += 1
+                continue
+            prior_closed_at = row.get("closed_at")
+            notes = _decode_notes(row.get("notes"))
+            notes["closed_at_detected"] = notes.get("closed_at") or prior_closed_at
+            notes["closed_at"] = fill_iso
+            notes["closed_at_source"] = "own_bracket_fill"
+            wconn = db.connect()
+            try:
+                cur = wconn.execute(
+                    "UPDATE trades SET closed_at = ?, notes = ? "  # writer-conformance: allow conditional close-time correction; update_trade cannot guard its WHERE on the prior closed_at and must not fire a second close notification
+                    " WHERE id = ? AND status = 'closed' "
+                    "   AND closed_at IS ? "
+                    "   AND COALESCE(notes, '') NOT LIKE ?",
+                    (fill_iso, dump_capped(notes, 500), int(row["id"]),
+                     prior_closed_at, _CLOSED_AT_CORRECTED_NOTES_LIKE),
+                )
+                wconn.commit()
+                changed = cur.rowcount
+            finally:
+                wconn.close()
+            if changed:
+                summary["corrected"] += 1
+                logger.info(
+                    "_sweep_correct_closed_at_from_own_fill: trade %s closed_at "
+                    "%s -> %s (order %s)",
+                    row["id"], prior_closed_at, fill_iso, fill.get("order_id"))
+            else:
+                summary["lost_race"] += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "_sweep_correct_closed_at_from_own_fill: row %s: %s",
+                row.get("id"), exc)
+            summary["errors"] += 1
+    return summary
+
+
 def _options_executor_for(account_cfg: Dict[str, Any]):
     """Build an :class:`AlpacaOptionsExecutor` for an options-expressing account.
 
@@ -16105,6 +16249,18 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: bracket-order label sweep raised: %s", exc,
+        )
+
+    # CLOSE-LABELS-1214: a reconciler-detected close time is moved back to the
+    # row's own bracket fill once the hourly fills pull has it.
+    try:
+        with _phase("sweep_correct_closed_at_from_own_fill"):
+            closed_at_fix = _sweep_correct_closed_at_from_own_fill(db)
+        if closed_at_fix.get("corrected") or closed_at_fix.get("errors"):
+            summaries["__closed_at_correction__"] = closed_at_fix
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: closed-at correction sweep raised: %s", exc,
         )
 
     # Slice-4 options-lifecycle reconciler: close options-expression rows the
