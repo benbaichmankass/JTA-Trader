@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import importlib
 import json
+import math
 import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from ..datasets.parquet_sidecar import dataset_present, load_dataset_rows
 from ..manifest import TrainingManifest
@@ -306,6 +307,28 @@ def _load_jsonl(
     return rows
 
 
+def score_decisions(
+    model_state: Mapping[str, Any],
+    rows: Iterable[Mapping[str, Any]],
+    value_column: str,
+    threshold: float,
+) -> list[tuple[bool, float]]:
+    """``(taken, net_r)`` per row with a numeric value. Uses the evaluator's
+    own predictor resolution so the gate scores exactly what the model serves."""
+    from ..evaluators.base import Evaluator  # noqa: PLC0415
+
+    predictor = Evaluator._resolve_predictor(model_state)
+    out: list[tuple[bool, float]] = []
+    for row in rows:
+        v = row.get(value_column)
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+            continue
+        # provenance: predict — the head's score at this decision point
+        pred = float(predictor.predict(row))
+        out.append((pred >= threshold, float(v)))
+    return out
+
+
 def _count_trials(manifest_path: Path, manifest: TrainingManifest) -> int:
     """Experiment multiplicity for the deflated Sharpe (practice M5): the number
     of manifests under the same configs dir that train on THIS dataset
@@ -363,7 +386,7 @@ def _compute_cost_gate(
     try:
         pairs: list[tuple[bool, float]] = []
         for state, rows in scored:
-            pairs.extend(cg.score_decisions(state, rows, value_col, threshold))
+            pairs.extend(score_decisions(state, rows, value_col, threshold))
         bases: dict[str, int] = {}
         for r in eval_rows_all:
             if isinstance(r.get(value_col), (int, float)):
@@ -380,7 +403,7 @@ def _compute_cost_gate(
                         inc_state = json.loads(
                             Path(inc.model_state_path).read_text(encoding="utf-8")
                         )
-                        champ_pairs = cg.score_decisions(
+                        champ_pairs = score_decisions(
                             inc_state, eval_rows_all, value_col, threshold,
                         )
                         champ_path = inc.model_state_path

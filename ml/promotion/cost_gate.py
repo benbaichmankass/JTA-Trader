@@ -43,7 +43,10 @@ expected maximum Sharpe across ``n_trials`` configurations tried on the same
 dataset. These are written into the evaluation report and metrics; they do not
 gate.
 
-Pure stdlib; never touches the order path.
+Pure stdlib; never touches the order path. Scoring a model's predictions into
+``(taken, net_r)`` pairs lives in ``ml.experiments.runner.score_decisions`` so
+this module (imported by the registry, which the live trader imports) never
+pulls the evaluator/predictor stack into the trader's import closure.
 """
 from __future__ import annotations
 
@@ -51,7 +54,7 @@ import math
 import statistics
 from dataclasses import asdict, dataclass, field
 from statistics import NormalDist
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 # Net-R value column per dataset family (an entry/hold decision with a priced
 # outcome). A manifest may name its own via evaluator_config.cost_value_column.
@@ -86,28 +89,6 @@ def decision_threshold(manifest: Any, value_column: str) -> float:
     if tcfg.get("target_column") == value_column:
         return 0.0
     return float(ecfg.get("threshold", 0.5))
-
-
-def score_decisions(
-    model_state: Mapping[str, Any],
-    rows: Iterable[Mapping[str, Any]],
-    value_column: str,
-    threshold: float,
-) -> list[tuple[bool, float]]:
-    """``(taken, net_r)`` per row with a numeric value. Uses the evaluator's
-    own predictor resolution so the gate scores exactly what the model serves."""
-    from ..evaluators.base import Evaluator  # noqa: PLC0415
-
-    predictor = Evaluator._resolve_predictor(model_state)
-    out: list[tuple[bool, float]] = []
-    for row in rows:
-        v = row.get(value_column)
-        if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
-            continue
-        # provenance: predict — the head's score at this decision point
-        pred = float(predictor.predict(row))
-        out.append((pred >= threshold, float(v)))
-    return out
 
 
 def decision_value(pairs: Sequence[tuple[bool, float]]) -> float | None:

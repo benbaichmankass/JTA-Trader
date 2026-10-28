@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261028-V8KBRR5H-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-TRAINING-PRINCIPLES-GAPS lane session_01AFoLuKS3FoW3zbV8kBRr5H; trainer-vm-diag issues #20864 #20865",
+    "rerun": "trainer-vm-diag: for d in datasets-out/setup_candidates/*/*/*; do python3 -c \"import json,sys;print(sys.argv[1],json.load(open(sys.argv[1]+'/metadata.json'))['label_version'])\" $d; done"
+  },
+  "state": "queued",
+  "what": "COST-NET LABELS DO NOT REACH THE FROZEN setup_candidates DATASETS. MEASURED 2026-10-28 (trainer-vm-diag #20864/#20865): the 7 setup_candidates dirs on the trainer (BTCUSDT/all v001 v002 v011 v012; all/all v001 v020 v021) were built 2026-06-06..2026-08-04, all label_version triple-barrier-v1 (gross), and the daily cycle never rebuilds them (build_trainer_datasets.sh builds setup_candidates only under ICT_BUILD_XSYM=1, unset); 0 exit_candidates datasets exist. The 10 consuming manifests are research_only. Their daily retrains now carry a cost gate that refuses them (eval rows unstamped -> eval_not_cost_net), which is honest but means no cost-net LABEL is trained yet. Rebuild them with the new builder (v020/v021 have build_params in metadata.json; v001/v002/v011/v012 came from scripts/ml/m23_phase*.sh), as NEW versions or in place with the manager's call, and/or wire the rebuild into the cycle. Done = a setup_candidates dataset on the trainer whose rows carry label_cost_basis=net and a training run whose cost_gate.json reports eval_cost_bases without 'unstamped'."
+}

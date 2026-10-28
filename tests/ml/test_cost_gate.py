@@ -146,7 +146,8 @@ def test_losing_retrain_keeps_incumbent_state(tmp_path):
     _, first = _train(tmp_path, m, ds)
     served = first.model_state_path
     m2, _ = _setup(tmp_path, "BadTrainer")
-    import time; time.sleep(1.1)  # distinct run_id
+    import time
+    time.sleep(1.1)  # distinct run_id
     _, second = _train(tmp_path, m2, ds)
     assert second.target_deployment_stage == "shadow"
     assert second.model_state_path == served  # incumbent keeps serving

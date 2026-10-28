@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-11",
+    "kind": "date"
+  },
+  "id": "PI-20261028-V8KBRR5H-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-TRAINING-PRINCIPLES-GAPS lane session_01AFoLuKS3FoW3zbV8kBRr5H, branch claude/ml-training-principles-gaps",
+    "rerun": "python3 -c \"import json;rows=[json.loads(l) for l in open('datasets-out/setup_candidates/BTCUSDT/all/v001/data.jsonl')];print(sum(abs(r['r_multiple'])>50 for r in rows),len(rows))\" (trainer VM)"
+  },
+  "state": "queued",
+  "what": "DEGENERATE R ON NEAR-ZERO VOL (pre-existing, made visible by cost-net labels): setup_candidates/exit_candidates size the stop as sl_mult*vol and only skip vol<=0, so a near-flat past window gives a tiny risk and R in the 1e13 range (seen in tests/ml/test_setup_candidates.py fixtures; gross and net alike). Add a vol floor (e.g. a minimum fraction of median vol or a tick) and count the rows dropped; check how many real-data rows it hits on the trainer before changing labels."
+}

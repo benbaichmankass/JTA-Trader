@@ -117,5 +117,5 @@ def test_built_dataset_records_basis(tmp_path):
         symbol_scope="BTCUSDT", timeframe="1h",
         market_raw_path=ddir, vol_window_n=10, max_holding=8, cusum_threshold_mult=0.5,
     )
-    rows = [json.loads(l) for l in Path(paths.data).read_text().splitlines() if l]
+    rows = [json.loads(line) for line in Path(paths.data).read_text().splitlines() if line]
     assert rows and all(r["label_cost_basis"] == "net" for r in rows)

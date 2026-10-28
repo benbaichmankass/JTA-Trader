@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-V8KBRR5H-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-TRAINING-PRINCIPLES-GAPS lane session_01AFoLuKS3FoW3zbV8kBRr5H, branch claude/ml-training-principles-gaps",
+    "rerun": "python3 -c \"from ml.promotion.cost_gate import VALUE_COLUMNS; print(sorted(VALUE_COLUMNS))\"; grep -l 'family: market_features' ml/configs/*.yaml | wc -l"
+  },
+  "state": "queued",
+  "what": "COST GATE NOT APPLICABLE to regime / direction / execution-quality heads (ml/promotion/cost_gate.py VALUE_COLUMNS covers only setup_candidates, exit_candidates, conviction_meta, setup_labels_audit). 48+ market_features regime manifests and 4 direction manifests promote with cost_net reported not_applicable: they have no priced decision. Build the cost-net decision value for these heads (the net R of the decision each head gates, e.g. regime-cell on/off over the leg's Stage-0 trades, or a cost dead-band on direction_label) so M6/M10 bind them too."
+}

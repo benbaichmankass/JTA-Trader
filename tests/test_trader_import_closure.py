@@ -57,6 +57,12 @@ def test_every_strategy_module_is_in_the_closure(live):
 #    state, "ml.trainers.*" -- ml/ is outside src/ and scripts/, so ANY ml/ .py
 #    change restarts the trader regardless (rule c).
 KNOWN_DYNAMIC_SITES = {
+    # Evaluator._resolve_predictor imports a trainer class by its stored
+    # qualname — the same load runner.py's _resolve_callable makes. Reached
+    # since the cost-net gate (ML-TRAINING-PRINCIPLES-GAPS) scores predictions
+    # in the runner; a training-path call the trader never makes, and any
+    # ml/**.py change restarts the trader regardless (rule (c)).
+    "ml/evaluators/base.py",
     "ml/experiments/runner.py",
     "ml/shadow/factory.py",
     "src/core/coordinator.py",

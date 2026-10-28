@@ -321,9 +321,10 @@ def test_clean_shadow_prediction_count_is_mechanical():
         stage_history=(StageEvent(from_stage="candidate", to_stage="shadow",
                                   by="t", reason="x", at=entered),),
     )
-    mk = lambda **kw: SimpleNamespace(**{"model_id": entry.model_id, "backfill_kind": None,
-                                         "score": 0.6, "predicted_at_utc":
-                                         entered + timedelta(minutes=1), **kw})
+    def mk(**kw):
+        return SimpleNamespace(**{"model_id": entry.model_id, "backfill_kind": None,
+                                  "score": 0.6,
+                                  "predicted_at_utc": entered + timedelta(minutes=1), **kw})
     recs = [mk(), mk(score=float("nan")), mk(backfill_kind="retroactive_decision"),
             mk(predicted_at_utc=entered - timedelta(minutes=1)), mk(model_id="other"), mk()]
     assert count_clean_shadow_predictions(recs, entry) == 2
