@@ -1,0 +1,32 @@
+{
+  "id": "RESEARCH-OPS-20261028-0848",
+  "title": "Research-ops pass 2026-10-28 08:48Z",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261028-0848",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20874
+  ],
+  "blocked_on": [],
+  "note": "[lane] runnable 62 vs floor 57 (fired_24h 72); dispatcher/collector healthy. Read 9 results since 03:00Z: eth adx-max AX50 PASS = lead (confirmation unit RQ-20261028-4dd3-01 authored, 6-cell denominator), xrp/sol adx-max and ada vol-skip FAIL (configs closed, families open). f50f-01 hand-graded KEEP. Node P1-ATM-ed1c07-sl-confirm authored. Not run: needs_review triage (28 left), blocked/ audit. Record comms/research/ops/20261028T0920Z.json. Landing: hold unvouchable_paths (hand-authored queue units, E57). [lane] PR #20874 is a HOLD (unvouchable_paths) awaiting manager merge; once merged set landed_unproven. Observation: queue_replenish --authoring-queue no longer lists P1-ATM-ed1c07-sl-confirm and research/queue has RQ-20261028-4dd3-01.",
+  "updated_at": "2026-10-28T08:59:13Z",
+  "updated_by": "session_01AFoLuNHC3Qh6JfMwuW224U",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "run record on main; RQ-20261028-4dd3-01 queued and would_dispatch; node P1-ATM-ed1c07-sl-confirm emitted as a unit by queue_replenish",
+    "how_to_check": "python3 scripts/research/queue_replenish.py --authoring-queue (node absent) and ls research/queue | grep 4dd3",
+    "due_by": "2026-11-03"
+  },
+  "_seq": 752
+}
