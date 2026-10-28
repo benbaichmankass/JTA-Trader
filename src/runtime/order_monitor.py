@@ -15153,6 +15153,165 @@ def _sweep_exit_label_from_bracket_order(
     return summary
 
 
+#: `exit_price_source` marker (exit_anchor.ANCHOR_SOURCE) selected by the
+#: anchor-to-fill upgrade sweep, in the json.dumps default-separator shape the
+#: other notes LIKE predicates in this module rely on.
+_ANCHORED_EXIT_NOTES_LIKE = '%"exit_price_source": "candle_at_close"%'
+
+
+def _sweep_upgrade_anchored_exit_to_fill(
+    db, *, fills_conn_factory=None,
+) -> Dict[str, int]:
+    """Replace a CANDLE-priced exit with the venue fill of the row's OWN
+    stop/target order once that fill is in the exchange-fills store.
+
+    CLOSE-LABELS-1214 (PI-20261028-BELS1214-0001). MEASURED 2026-10-28: bybit_1
+    trade 6764 (BTCUSDT long, demo) was closed by `_netting_apply_close` at the
+    first divergence observation (12:14:37Z, before the hourly fills pull at :20
+    could hold the fill) and booked at the 1-minute candle close 80999.9
+    (`exit_price_source=candle_at_close`, ESTIMATED) with pnl -851.24, while the
+    package stop was 80961.13. `_sweep_exit_label_from_bracket_order` later fixed
+    the LABEL but never touches `exit_price`/`pnl`, and every pnl sweep selects
+    `pnl IS NULL`, so the estimate stayed forever.
+
+    The rule is the one `_sweep_local_pnl_for_unpriced` already uses for an
+    unpriced row, applied to a row it priced earlier: ONE venue order, the row's
+    own `sl_order_id`/`tp_order_id`, filled the whole position
+    (`fills_pnl.exit_from_one_order_fills`, `match == own_bracket_order` only; a
+    qty-only match is not identity and is left alone). The fill's VWAP becomes
+    `exit_price`, `pnl` is recomputed from it net of the close-side fees (same
+    arithmetic as the local sweep), `exit_price_source` becomes `exchange_fill`
+    (MEASURED), and the replaced numbers are kept in `notes.pre_fill_exit_price`
+    / `pre_fill_pnl`. `exit_reason`, `closed_at` and the package are untouched.
+
+    Guards: the UPDATE re-checks the candle marker AND the exact `exit_price` read
+    above, so a concurrent writer that already repriced the row wins; intent_reduce
+    legs excluded; a missing fill is simply "not yet pulled" and the row is retried
+    for 14 days after its close. LOCAL read of the fills store, never a broker
+    call. Best-effort, never raises.
+    """
+    summary: Dict[str, int] = {
+        "scanned": 0, "upgraded": 0, "no_own_fill": 0,
+        "lost_race": 0, "errors": 0,
+    }
+    try:
+        from src.runtime.fills_pnl import FILL_EXIT_SOURCE, exit_from_one_order_fills
+        from src.runtime.local_pnl import (
+            compute_pnl_percent, compute_realized_pnl, contract_value_usd_for,
+        )
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, "
+                "       entry_price, exit_price, pnl, created_at, closed_at, "
+                "       notes, sl_order_id, tp_order_id "
+                "  FROM trades "
+                " WHERE status = 'closed' "
+                "   AND COALESCE(is_backtest, 0) = 0 "
+                "   AND COALESCE(notes, '') LIKE ? "
+                "   AND (COALESCE(sl_order_id, '') != '' "
+                "        OR COALESCE(tp_order_id, '') != '') "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                "   AND datetime(COALESCE(closed_at, created_at)) "
+                "       >= datetime('now', '-14 days') "
+                " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
+                " LIMIT 100",
+                (_ANCHORED_EXIT_NOTES_LIKE,),
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_sweep_upgrade_anchored_exit_to_fill: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+
+    for row in rows:
+        try:
+            opened_ms = _isoformat_to_ms(row.get("created_at"))
+            closed_ms = _isoformat_to_ms(row.get("closed_at"))
+            qty = _safe_float(row.get("position_size"))
+            entry = _safe_float(row.get("entry_price"))
+            if opened_ms is None or closed_ms is None or not qty or not entry:
+                summary["no_own_fill"] += 1
+                continue
+            fill = exit_from_one_order_fills(
+                account_id=str(row.get("account_id") or ""),
+                symbol=str(row.get("symbol") or ""),
+                direction=str(row.get("direction") or ""),
+                opened_at_ms=opened_ms,
+                # The fill precedes a detection-time close; the +2 min covers a
+                # row whose recorded close lags the fill, like the label sweep.
+                closed_at_ms=closed_ms + 120_000,
+                qty=qty,
+                own_order_ids=(row.get("sl_order_id"), row.get("tp_order_id")),
+                conn_factory=fills_conn_factory,
+            )
+            px = _safe_float((fill or {}).get("avg_exit_price"))
+            if not fill or fill.get("match") != "own_bracket_order" \
+                    or not px or px <= 0:
+                summary["no_own_fill"] += 1
+                continue
+            cvu = contract_value_usd_for(str(row.get("symbol") or ""))
+            pnl = compute_realized_pnl(
+                entry_price=entry, exit_price=px, qty=qty,
+                direction=row.get("direction"), contract_value_usd=cvu,
+            )
+            if pnl is None:
+                summary["no_own_fill"] += 1
+                continue
+            fees = _safe_float(fill.get("fees")) or 0.0
+            notes = _decode_notes(row.get("notes"))
+            if fees > 0:
+                pnl = round(pnl - fees, 4)
+                notes["close_fees_usd"] = fees
+                notes["pnl_net_of_close_fees"] = True
+            pct = compute_pnl_percent(
+                pnl=pnl, entry_price=entry, qty=qty, contract_value_usd=cvu)
+            prior_px = row.get("exit_price")
+            notes["pre_fill_exit_price"] = prior_px
+            notes["pre_fill_pnl"] = row.get("pnl")
+            notes["exit_price_source"] = FILL_EXIT_SOURCE
+            notes["pnl_source"] = "local_compute"
+            notes["exit_fill"] = {"order_id": fill.get("order_id"),
+                                  "match": fill.get("match")}
+            wconn = db.connect()
+            try:
+                cur = wconn.execute(
+                    "UPDATE trades SET exit_price = ?, pnl = ?, pnl_percent = ?, "  # writer-conformance: allow conditional reprice; update_trade cannot guard its WHERE on the candle marker + prior exit_price (same reasoning as the bracket-order relabel)
+                    "                  notes = ? "
+                    " WHERE id = ? AND status = 'closed' "
+                    "   AND COALESCE(notes, '') LIKE ? "
+                    "   AND exit_price IS ?",
+                    (round(px, 10), pnl, pct, dump_capped(notes, 500),
+                     int(row["id"]), _ANCHORED_EXIT_NOTES_LIKE, prior_px),
+                )
+                wconn.commit()
+                changed = cur.rowcount
+            finally:
+                wconn.close()
+            if changed:
+                summary["upgraded"] += 1
+                logger.info(
+                    "_sweep_upgrade_anchored_exit_to_fill: trade %s exit "
+                    "%s -> %s (order %s), pnl %s -> %s",
+                    row["id"], prior_px, px, fill.get("order_id"),
+                    row.get("pnl"), pnl)
+            else:
+                summary["lost_race"] += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "_sweep_upgrade_anchored_exit_to_fill: row %s: %s",
+                row.get("id"), exc)
+            summary["errors"] += 1
+    return summary
+
+
 #: How far back an OPEN row is checked for its own bracket fill. The exchange
 #: fills pullers keep 90 days; a row older than that has no fills to read.
 _OWN_LEG_FILL_LOOKBACK_DAYS = 90
@@ -15920,6 +16079,19 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: own-leg fill sweep raised: %s", exc,
+        )
+
+    # CLOSE-LABELS-1214: a candle-priced exit is replaced by the row's own
+    # bracket-order fill once the hourly fills pull has it (label sweep below
+    # never touches price/pnl).
+    try:
+        with _phase("sweep_upgrade_anchored_exit_to_fill"):
+            anchored_up = _sweep_upgrade_anchored_exit_to_fill(db)
+        if anchored_up.get("upgraded") or anchored_up.get("errors"):
+            summaries["__anchored_exit_upgrade__"] = anchored_up
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: anchored-exit upgrade sweep raised: %s", exc,
         )
 
     # EXIT-CLUSTER: a close whose own stop/target ORDER has a venue fill is an
