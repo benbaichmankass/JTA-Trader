@@ -1,0 +1,32 @@
+{
+  "id": "WEEKLY-AUDIT-2026-10-28",
+  "title": "Weekly audit 2026-10-28 (deep pass 0 OUTCOME+INDEPENDENCE)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "lane": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20975
+  ],
+  "blocked_on": [],
+  "note": "Report + 9 AUD-20261028-* rows + LTR grader join fix in PR #20975 (self-land). Manager reported 19:09Z. Closes (done) when #20975 is merged and the report is on main. Not reached: C13(b), C13(c) beyond page 1.",
+  "updated_at": "2026-10-28T19:51:16Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: an audit report changes no milestone; its findings are rows carrying L-OPS",
+    "arch": "none: no architecture change (read-path grader join + doc lines)"
+  },
+  "observation": {
+    "what": "PR #20975 merged and docs/reviews/2026-10-28-weekly-audit.md plus the 9 AUD-20261028-* rows present on main",
+    "how_to_check": "git cat-file -e origin/main:docs/reviews/2026-10-28-weekly-audit.md && ls docs/claude/work/checklist/AUD-20261028-*.json | wc -l  (expect 9)",
+    "due_by": "2026-10-30"
+  },
+  "_seq": 722
+}

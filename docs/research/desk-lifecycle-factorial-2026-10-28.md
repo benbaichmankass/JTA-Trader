@@ -295,6 +295,71 @@ Every row halves if the judge carries ~5 trades instead of 10 (INFERRED; measure
 reusable in any option (the protocol and packet builder are unchanged since the pilot; the channel 10 / 20 amendment touches
 only the scorer). The rule arms, M0 and M1 cost nothing at any n.
 
+### 7.5 FULL RUN (option C: C4E x 520 pairs) — registered verdict **FAIL: Claude's whole-trade management COSTS R on both entry sources**
+
+Manager GO 2026-10-28 18:15Z (post-reset, hard ceiling $200, plan sessions only). Evidence record:
+`comms/research/desk_lifecycle/full-c4e/` (`verdict.json`, `score.json`, `pairs.jsonl`, `labels.jsonl` = 12,500 per-check-in
+priced labels for F.2, `decisions.jsonl`, `rounds/round-walk-key.jsonl`, `voided-b018-decisions.jsonl`, `batches/`).
+
+**Population and coverage (MEASURED).** 520 registered pairs = 1,040 trades. **938 trades fully walked** (473 Claude entries,
+465 random); the pilot's 40 trades reused (protocol byte-identical, 0 pending). **102 trades not judged**: batches b088–b099
+were stopped to keep inside the $200 ceiling (my orchestration counts against it); every pending trade lies in those batches.
+The 18 other trades in them close before their first check-in. 3,156 check-ins answered, **0 invalid**: hold 2,001,
+tighten_sl 981, close 72, partial_close 57, move_tp 45; 350 trades exited at a moved stop.
+**Isolation:** 89 judge transcripts audited mechanically. One judge (b018) made one stray `sleep 0; true` call and
+disclosed it; its 31 decisions were voided under the registered rule (kept in `voided-b018-decisions.jsonl`) and its 10
+trades were re-judged by a fresh judge. **0 violations in the counted set.**
+
+**Spend (API-equivalent on the plan; no API credits).** Full-run judges **$159.48 MEASURED** from transcript usage
+($0.050–0.055 per check-in); pilot v2 $6.85 MEASURED; orchestration session INFERRED ~$25–35 (not measurable from inside).
+
+**The registered rule (n >= 126 pairs, weekly-cluster 95% CI, Holm over a family of one):**
+
+| contrast (mean [95% CI], trades) | Claude entries (n 473) | random entries (n 465) |
+|---|---|---|
+| HOLD net R / trade | +0.169 [−0.048, +0.385] (n 520) | +0.259 [+0.106, +0.393] (n 520) |
+| Claude-managed net R / trade | +0.014 [−0.131, +0.173] | +0.052 [−0.066, +0.163] |
+| **management dR vs HOLD (M0)** | **−0.159 [−0.261, −0.041] → FAIL** | **−0.124 [−0.197, −0.043] → FAIL** |
+| vs its matched random intervention (M1) | −0.013 [−0.054, +0.031] | −0.046 [−0.072, −0.017] |
+| vs the best fixed rule (B3, leave-one-fold-out) | −0.075 [−0.162, +0.018] | −0.101 [−0.167, −0.026] |
+| entry value under HOLD (Claude − random, n 520 pairs) | −0.090 [−0.277, +0.097] (indeterminate) | |
+| interaction (mgmt value Claude-entry − random-entry, n 419 pairs) | −0.006 [−0.118, +0.109] (indeterminate) | |
+| end to end (Claude entry x Claude mgmt − random entry x HOLD) | −0.288 [−0.426, −0.137] | |
+
+Robustness (added after the result; the registered 50-draw M1 above stays the primary): re-scoring the same 938 managed trades with
+100 matched-random draws per trade gives vs M1 −0.011 [−0.051, +0.034] (claude entries, n 473) and −0.049 [−0.077, −0.019] (random
+entries, n 465), the same reading. File: `comms/research/desk_lifecycle/full-c4e/robustness-m1-100/score.json` (`--m1-draws 100`).
+
+Paired sd of management dR MEASURED 1.01–1.02 R (the pilot's 1.06–1.18 R estimate held); the resolution achieved is about
+±0.10 R per arm, as option C intended.
+
+**WHEN it costs and when it helps (per-check-in ablation; reported, not graded):**
+- **Acting cost R:** all 1,155 non-hold answers −0.083 [−0.129, −0.030]. `tighten_sl` (981, 85 % of all actions) −0.097
+  [−0.140, −0.047]; `move_tp` −0.155 [−0.302, −0.037]; acting at 0–1 R of open profit −0.12 to −0.19 (CIs exclude 0);
+  acting on the regular clock −0.104 and on the first +0.5 R milestone −0.104 (CIs exclude 0).
+- **Not acting earned R:** the 2,001 holds were worth **+0.142 [+0.042, +0.230]** versus closing at that check-in, most of
+  all near entry (−0.5..0 R: +0.21, CI excludes 0).
+- **The only positive pockets (n.s.):** `close` +0.078 [−0.18, +0.28] (n 72); acting below −0.5 R +0.129 (n 56); acting at the
+  −0.5 R milestone +0.185 [−0.05, +0.33] (n 44). This repeats the pilot's sign (cut losers early), but the full run does not
+  confirm it.
+
+**Reading (DECIDED by the registered rule; interpretation marked).**
+1. On the C48 contract, Claude managing a whole trade at every-4-bars-plus-events check-ins **loses about 0.12–0.16 R per
+   trade versus leaving the bracket alone**, on its own entries and on random ones alike. **FAIL. Nothing about it promotes.**
+   The fresh-window confirmation is moot for a FAIL.
+2. INFERRED: the loss is **frequent tightening**. Claude moved a stop on 981 of the 3,156 scored check-ins (31 %), and that is where the R went. It is
+   the failure mode the practice review predicts (judgement hurts as frequent tweaking). On random entries Claude is also
+   significantly worse than the matched random intervention (M1), so its *timing* of those same actions is no better than
+   chance; on its own entries it is indistinguishable from M1.
+3. **Where the value is (the operator's question):** on this contract it is **in neither the entry nor the management**.
+   Entry value is indeterminate (−0.09, CI spans 0; the random partner earned more under HOLD in this short-drift window).
+   Management is negative. The only measured positive is holding. The interaction is zero: Claude does not manage its own
+   entries better than random ones.
+4. **For combining with the strategies:** this run does not support Claude managing the existing legs (the strategy arm is
+   registered, not built, and DESK-MGMT-S0's single +1 R intervention was also negative). It argues for **holding to the
+   bracket as the default**, with at most a narrowly scoped, separately registered *loss-cut* hypothesis (close at ≤ −0.5 R
+   on new information). That hypothesis is the one pocket the pilot and the full run agree on in sign.
+
 ## 8. Not verified / limits
 
 - Six crypto USD-M perps, Binance Vision 1h klines; the desk's venue is Bybit perp; funding charged, not seen.
