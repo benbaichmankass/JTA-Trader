@@ -36,6 +36,33 @@ and is out of scope here; it belongs in the strategy arm. Deviations from F.1, s
 packet (F.1: ATR(22)); the channel is 12 bars (F.1: 10 / 20); the time stop is fixed at 12 / 24 bars (F.1: the leg's
 median winning duration; the desk has no leg history).
 
+### 0.1b Additions from the FINAL practice review (PR #20844, § F.1 / F.2; manager 06:45Z)
+
+- **Channel exit at N = 10 and 20** (replacing v2's 12-bar channel arm before any v2 result is scored; the 12-bar level
+  break stays an EVENT TRIGGER only). Built with the scorer after the pilot's walkers finish (the walk command must not
+  change under a running judge).
+- **Strategy arm** (registered in -02, not built here): adds the **re-score exit (M4)** where a leg's entry model replays
+  point in time, the **trend vs mean-reversion strata** (lag-1 autocorrelation / variance ratio of the leg's Stage-0 returns,
+  training folds only), and a replay-only **"TP far, trail does the work" arm** on the TREND legs (target at the 10 R cap,
+  Chandelier 3 x ATR trail) to MEASURE what the TP doctrine costs there. Evidence only: the doctrine is binding
+  (ARCHITECTURE-CANONICAL § TP doctrine) and any live change would be Tier 3.
+- **Reusable label file (F.2: the ML target is a supervised meta-model over the best rule, labelled with the PRICED outcome of
+  every action; Claude is a feature / hypothesis source, not the imitation target):** the scorer writes
+  `labels.jsonl`, one row per (trade, arm, check-in): entry source, policy, arm, bars held, R state, trigger tags, the action, and
+  its priced marginal value (the trade's net R minus the same trade with that one answer replaced: action -> hold, hold -> close),
+  for Claude, M1 and every rule arm.
+
+### 0.1c Fresh-window confirmation (proposal; decided Thursday)
+
+The DESK-EDGE-PROGRAM HOLDOUT (2025-05-01..2025-10-25) and FULL-RUN (2023-11-01..2025-04-30) windows are reserved for
+entry variants. Two windows nobody has spent:
+1. **Forward window:** cutoffs 2026-09-15..2026-10-20 (after judged-1's window ends; candles MEASURED to 2026-10-26),
+   random entries with geometries drawn from the judged-1 bracket distribution, x the passing Claude arm. About 5 weeks:
+   n is bounded by weeks, so it confirms the sign, not the size.
+2. **Other-symbol window (preferred for n):** the DEV window 2025-11-01..2026-09-15 on USD-M perps NOT in the registered six
+   (e.g. BNB, DOGE, LINK, LTC, DOT, TRX; Binance Vision has them), random entries x the passing arm. Same weeks, fresh paths;
+   a symbol-specific memorisation could not carry over.
+
 ### 0.2 How Claude manages a whole trade: one judge walks one trade
 
 A plan subagent (Sonnet tier, the desk's in-trade tier; no API credits) is given trade tokens and ONE command:

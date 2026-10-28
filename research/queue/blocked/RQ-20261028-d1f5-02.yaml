@@ -44,14 +44,14 @@ decision_rule:
   statistic: >-
     Per trade: net R of the trade walked by scripts/research/desk_lifecycle_driver.run under check-in policy C in {C1E, C4E, E} with Claude's answers (M8/M9), with no intervention (M0), with M1 (Claude's own sequence of non-hold
     action types on that trade fired at random check-ins of the same policy with Claude's per-trade action rate, a level keeping Claude's distance from now_r; mean of 50 seeded draws), and with each rule of the menu (v1 static
-    menu at the v1 check-ins; v2 rules Chandelier 2/3 x ATR(14), channel 12, time stop 12/24 with MFE < 0.5 R, breakeven at +1 R, partial at +1 R + Chandelier 3, at every bar); B3 = the menu rule with the best mean dR on the other
+    menu at the v1 check-ins; v2 rules Chandelier 2/3 x ATR(14), channel 10 and 20 (final practice review F.1, amended before any v2 result), time stop 12/24 with MFE < 0.5 R, breakeven at +1 R, partial at +1 R + Chandelier 3, at every bar); B3 = the menu rule with the best mean dR on the other
     three folds. Every exit piece net of execution_costs.roundtrip_cost_r with fee 11.0 bps round trip (profile_loader.roundtrip_fee_bps_for, Bybit linear taker, after #20783), slippage 3.0 bps round trip and funding 1.0 bps per 8 h
     window (resolve_cost_policy, MEASURED for all six symbols). Paired dR per trade; mean and 95% weekly-cluster bootstrap CI (10,000 draws, seed 20261028, cluster = the Claude entry's ISO week); per-fold means (4 folds). Reported
     alongside: the section-3 factorial contrasts per policy; per-check-in ablations (each Claude action vs that answer replaced by hold; each Claude hold vs that answer replaced by close) by action, trigger tag, bars-held bucket
     and R state; action rate; strata volatility tercile at entry and side.
   rule: >-
     For each Claude arm (policy) and entry source: PASS IF n >= 126 pairs AND dR vs M0 has mean > 0, CI lower > 0 and > 0 in >= 3 of 4 folds (each n >= 20) AND dR vs M1 has CI lower > 0, with Holm across the three policies within the
-    family; label 'judgement' IF dR vs B3 also has CI lower > 0, else 'pass_rule'. A PASS is provisional until it re-passes once on a fresh window the manager allocates (random entries x the same arm; RESEARCH-CONFIRM-FRESH-WINDOW).
+    family; label 'judgement' IF dR vs B3 also has CI lower > 0, else 'pass_rule'. A PASS is provisional until it re-passes once on a fresh window the manager allocates (proposed: design doc section 0.1c) (random entries x the same arm; RESEARCH-CONFIRM-FRESH-WINDOW).
     FAIL IF n >= 126 AND dR vs M0 CI upper < 0. INDETERMINATE otherwise, with the observed paired sd and the n that would resolve +-0.10 R; never a lowered bar. An arm that beats M0 but not M1 is reported 'acting helps, timing
     does not'. VOID (re-judge the affected trades) IF the -01 self-check is not a landed pass, OR > 10% of answers are invalid, OR any judge transcript holds a tool call other than the registered walk command. The registered numbers
     (126, 3 of 4, 20, the policies and their event definitions, the action bounds, the menu, M1's 50 draws, the seeds 20261028 / 20261029 / 20261031) are not changed after any result. Pilot rows (the first 20 pairs) are reused only
@@ -64,7 +64,7 @@ strategy_arm:
   built: false
   definition: >-
     The same chained engine over the committed Stage-0 trades of the four real-money legs (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h; re-parse config/accounts.yaml before running), each on its own
-    timeframe, with the trade's recorded exit as a FORCED exit (the strategy's own exit stays in force; HOLD = the recorded net_r, verified), check-in policies C1E / C4E / E on the leg's own timeframe (events as above), stratified trend vs mean-reversion leg (lag-1 autocorrelation of the leg's Stage-0 returns, training folds), M4 re-score exit where the entry model replays, and the action enum restricted to hold |
+    timeframe, with the trade's recorded exit as a FORCED exit (the strategy's own exit stays in force; HOLD = the recorded net_r, verified), check-in policies C1E / C4E / E on the leg's own timeframe (events as above), stratified trend vs mean-reversion leg (lag-1 autocorrelation of the leg's Stage-0 returns, training folds), M4 re-score exit where the entry model replays, a replay-only 'TP far, trail does the work' arm on trend legs (TP at the 10 R cap + Chandelier 3 x ATR; evidence of what the TP doctrine costs, never a live change: Tier 3), and the action enum restricted to hold |
     tighten_sl | move_tp (lower only) | partial_close | close (an action that would extend the trade past the strategy's own exit cannot be priced). Statistic S_m - S_h with the rule above. The +1 R single-decision slice of
     this arm is RQ-20261026-bf56-02/-03 (lane DESK-MGMT-S0): consumed as a cross-check, NOT re-judged.
 requires_result:
