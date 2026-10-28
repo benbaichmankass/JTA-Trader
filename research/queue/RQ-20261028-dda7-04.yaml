@@ -1,6 +1,6 @@
 id: RQ-20261028-dda7-04
 title: 'Multi-window walk-forward of trend_donchian_sol (SOLUSDT 1h) at the 11.0 bps cost stack (window-drift flip, hand-authored)'
-status: pending
+status: queued
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -34,6 +34,8 @@ routing:
 run:
   workflow: session-local
   note: 'Run SESSION-LOCAL: python3 scripts/ops/build_strategy_evidence.py --strategy trend_donchian_sol --days 1095 --folds 6 --out research/results/RQ-20261028-dda7-04/records --workdir research/results/RQ-20261028-dda7-04/runs. Not a research-script-run.yml unit (that runner executes only scripts/research/ and scripts/backtest*.py).'
+  inputs:
+    research_unit: RQ-20261028-dda7-04
 lands:
   store: research/results/
   assert_field: coverage_state
