@@ -45,7 +45,10 @@ class TestRoundtripFeeBps:
 
     @pytest.mark.parametrize("symbol", FEE_BEARING)
     def test_fee_bearing_venue_keeps_the_default(self, symbol):
-        assert regime_debt_matrix.roundtrip_fee_bps(symbol) == 7.5
+        # Bybit linear perps carry the MEASURED 11.0 bps taker fee
+        # (COST-STACK-BYBIT-TAKER-FEE); venues without a measured fee keep 7.5.
+        expected = 11.0 if symbol.endswith("USDT") else 7.5
+        assert regime_debt_matrix.roundtrip_fee_bps(symbol) == expected
 
     def test_unknown_symbol_is_conservative(self):
         """An unknown symbol must NOT silently resolve to zero — never assume a

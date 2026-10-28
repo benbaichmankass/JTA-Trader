@@ -192,6 +192,27 @@ _COMMISSION_FREE_VENUES: set[tuple[str, str]] = {("alpaca", "spot")}
 _ROUNDTRIP_FEE_BPS_CACHE: dict[str, float] | None = None
 
 
+def _load_venue_roundtrip_fee_bps(path: str | None = None) -> dict[tuple[str, str], float]:
+    """MEASURED round-trip fees per ``(exchange, category)`` from the top-level
+    ``venue_roundtrip_fee_bps`` block of ``config/instruments.yaml`` (keys
+    ``"<exchange>:<category>"``). Absent / malformed → ``{}`` (never raises), so a
+    venue without a measured fee keeps the estimator default."""
+    import yaml
+
+    out: dict[tuple[str, str], float] = {}
+    try:
+        with open(path or _DEFAULT_INSTRUMENTS_PATH, "r") as f:
+            raw = yaml.safe_load(f) or {}
+        for key, val in (raw.get("venue_roundtrip_fee_bps") or {}).items():
+            exch, _, cat = str(key).partition(":")
+            fee = float(val)
+            if exch and cat and fee >= 0:
+                out[(exch, cat)] = fee
+    except Exception:  # noqa: BLE001 — best-effort; {} keeps the estimator default
+        return {}
+    return out
+
+
 def roundtrip_fee_bps_for(symbol: str) -> float | None:
     """Venue-appropriate round-trip fee in basis points for *symbol*, or ``None``.
 
@@ -201,6 +222,10 @@ def roundtrip_fee_bps_for(symbol: str) -> float | None:
     resolver over ``config/instruments.yaml`` (keyed on the instrument's
     ``exchange`` + ``category``); best-effort — an unknown symbol → ``None``
     (conservative: never silently zero an unknown venue's cost), never raises.
+    A venue with a MEASURED fee in ``instruments.yaml::venue_roundtrip_fee_bps``
+    (today ``bybit:linear`` = 11.0, all-taker 5.5 bps/side over 1,411 fills,
+    ``comms/research/desk_edge/levers/bybit-fee-measured-2026-10-27.json``,
+    checklist ``COST-STACK-BYBIT-TAKER-FEE``) resolves to it; commission-free wins.
     Memoized process-wide; reset ``_ROUNDTRIP_FEE_BPS_CACHE`` to force a reload
     (tests only). Sibling of ``contract_value_usd_for`` — the single resolver
     the close-path cost estimate (``database._record_trade_cost_estimate``)
@@ -212,11 +237,14 @@ def roundtrip_fee_bps_for(symbol: str) -> float | None:
     if _ROUNDTRIP_FEE_BPS_CACHE is None:
         try:
             profiles = load_instrument_profiles()
+            measured = _load_venue_roundtrip_fee_bps()
             cache: dict[str, float] = {}
             for sym, p in (profiles or {}).items():
                 venue = (getattr(p, "exchange", None), getattr(p, "category", None))
                 if venue in _COMMISSION_FREE_VENUES:
                     cache[sym] = 0.0
+                elif venue in measured:
+                    cache[sym] = measured[venue]
             _ROUNDTRIP_FEE_BPS_CACHE = cache
         except Exception:  # noqa: BLE001 — best-effort; None keeps the estimator default
             _ROUNDTRIP_FEE_BPS_CACHE = {}

@@ -1,0 +1,387 @@
+{
+ "method": "net_r_new = net_r - sum(cost_fee_r)*(11.0-7.5)/7.5 over each leg's committed per-trade source_run (fee cost is linear in bps; slippage/funding unchanged). Second arm also re-prices slippage 3.0->1.29 bps (R3 record) = informational only, slippage is NOT changed by this PR. Rule RULE-D1-STAGE0-NET-OF-FULL-COST: net_r_oos>0.",
+ "legs": [
+  {
+   "leg": "ada_pullback_2h",
+   "accounts": [
+    "bybit_1",
+    "bybit_2",
+    "bybit_portfolio"
+   ],
+   "n": 61,
+   "net_r_before": 28.1,
+   "net_r_fee11": 27.315,
+   "net_r_fee11_slip1p29": 27.699,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "avax_pullback_2h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 57,
+   "net_r_before": -1.398,
+   "net_r_fee11": -1.987,
+   "net_r_fee11_slip1p29": -1.699,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "eth_pullback_2h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 62,
+   "net_r_before": -1.739,
+   "net_r_fee11": -2.423,
+   "net_r_fee11_slip1p29": -2.089,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "eth_pullback_prop_2h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 70,
+   "net_r_before": -3.523,
+   "net_r_fee11": -4.299,
+   "net_r_fee11_slip1p29": -3.92,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "fade_breakout_4h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 27,
+   "net_r_before": -16.092,
+   "net_r_fee11": -16.778,
+   "net_r_fee11_slip1p29": -16.443,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "fvg_range_15m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 17,
+   "net_r_before": -9.695,
+   "net_r_fee11": -9.695,
+   "net_r_fee11_slip1p29": -9.695,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 17
+  },
+  {
+   "leg": "htf_pullback_trend_2h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 86,
+   "net_r_before": -4.933,
+   "net_r_fee11": -6.11,
+   "net_r_fee11_slip1p29": -5.535,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_5m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 145,
+   "net_r_before": -29.713,
+   "net_r_fee11": -40.618,
+   "net_r_fee11_slip1p29": -35.29,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_avax_5m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 177,
+   "net_r_before": -37.118,
+   "net_r_fee11": -44.891,
+   "net_r_fee11_slip1p29": -41.094,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_eth_15m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 78,
+   "net_r_before": 1.318,
+   "net_r_fee11": -1.005,
+   "net_r_fee11_slip1p29": 0.13,
+   "flips_fee11": true,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_sol_15m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 84,
+   "net_r_before": -5.567,
+   "net_r_fee11": -7.674,
+   "net_r_fee11_slip1p29": -6.645,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_sol_5m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 190,
+   "net_r_before": -22.718,
+   "net_r_fee11": -31.769,
+   "net_r_fee11_slip1p29": -27.347,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_xrp_15m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 76,
+   "net_r_before": 4.071,
+   "net_r_fee11": 1.086,
+   "net_r_fee11_slip1p29": 2.544,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "ict_scalp_xrp_5m",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 169,
+   "net_r_before": -26.996,
+   "net_r_fee11": -36.024,
+   "net_r_fee11_slip1p29": -31.613,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "sol_pullback_2h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 18,
+   "net_r_before": 4.595,
+   "net_r_fee11": 4.445,
+   "net_r_fee11_slip1p29": 4.518,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "squeeze_breakout_4h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 10,
+   "net_r_before": -0.402,
+   "net_r_fee11": -0.551,
+   "net_r_fee11_slip1p29": -0.478,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 73,
+   "net_r_before": 4.602,
+   "net_r_fee11": 1.72,
+   "net_r_fee11_slip1p29": 3.128,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_ada_4h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 46,
+   "net_r_before": -8.608,
+   "net_r_fee11": -8.956,
+   "net_r_fee11_slip1p29": -8.786,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_avax_4h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 50,
+   "net_r_before": -9.141,
+   "net_r_fee11": -9.702,
+   "net_r_fee11_slip1p29": -9.428,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_eth",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 107,
+   "net_r_before": 16.183,
+   "net_r_fee11": 14.353,
+   "net_r_fee11_slip1p29": 15.248,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_eth_4h",
+   "accounts": [
+    "bybit_1",
+    "bybit_2",
+    "bybit_portfolio"
+   ],
+   "n": 208,
+   "net_r_before": 59.399,
+   "net_r_fee11": 56.29,
+   "net_r_fee11_slip1p29": 57.809,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_eth_prop",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 163,
+   "net_r_before": 9.324,
+   "net_r_fee11": 6.149,
+   "net_r_fee11_slip1p29": 7.7,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_sol",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 59,
+   "net_r_before": 4.458,
+   "net_r_fee11": 3.506,
+   "net_r_fee11_slip1p29": 3.971,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_sol_4h",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 116,
+   "net_r_before": 45.287,
+   "net_r_fee11": 44.077,
+   "net_r_fee11_slip1p29": 44.668,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "accounts": [
+    "bybit_1",
+    "bybit_2",
+    "bybit_portfolio"
+   ],
+   "n": 577,
+   "net_r_before": 45.554,
+   "net_r_fee11": 38.768,
+   "net_r_fee11_slip1p29": 42.083,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "accounts": [
+    "bybit_1",
+    "bybit_2",
+    "bybit_portfolio"
+   ],
+   "n": 46,
+   "net_r_before": 8.144,
+   "net_r_fee11": 7.712,
+   "net_r_fee11_slip1p29": 7.923,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "trend_donchian_xrp_adx25",
+   "accounts": [
+    "bybit_1"
+   ],
+   "n": 46,
+   "net_r_before": 10.15,
+   "net_r_fee11": 9.718,
+   "net_r_fee11_slip1p29": 9.929,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  },
+  {
+   "leg": "turtle_soup",
+   "accounts": [
+    "bybit_1"
+   ],
+   "state": "no_harness",
+   "note": "no per-trade source; not re-costed"
+  },
+  {
+   "leg": "xrp_pullback_2h",
+   "accounts": [
+    "bybit_1",
+    "bybit_2",
+    "bybit_portfolio"
+   ],
+   "n": 55,
+   "net_r_before": 7.229,
+   "net_r_fee11": 6.729,
+   "net_r_fee11_slip1p29": 6.973,
+   "flips_fee11": false,
+   "flips_fee11_slip1p29": false,
+   "zero_fee_cost_rows": 0
+  }
+ ]
+}
