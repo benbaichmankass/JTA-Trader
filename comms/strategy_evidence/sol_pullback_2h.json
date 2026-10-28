@@ -8,70 +8,70 @@
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 4.5949,
-  "expectancy_r_oos": 0.2553,
-  "n_trades_oos": 18,
+  "net_r_oos": 6.9287,
+  "expectancy_r_oos": 0.4076,
+  "n_trades_oos": 17,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
       "trades": 4,
-      "net_r": -0.9194,
-      "expectancy_r": -0.2298,
-      "start": "2025-10-11 10:00:00+00:00",
-      "end": "2025-11-05 06:00:00+00:00"
+      "net_r": -1.8394,
+      "expectancy_r": -0.4598,
+      "start": "2025-11-05 06:00:00+00:00",
+      "end": "2025-12-02 04:00:00+00:00"
     },
     {
       "fold": 2,
       "trades": 4,
-      "net_r": 2.259,
-      "expectancy_r": 0.5647,
-      "start": "2025-11-14 16:00:00+00:00",
-      "end": "2026-01-19 20:00:00+00:00"
+      "net_r": 5.2885,
+      "expectancy_r": 1.3221,
+      "start": "2026-01-19 20:00:00+00:00",
+      "end": "2026-03-28 08:00:00+00:00"
     },
     {
       "fold": 3,
       "trades": 4,
-      "net_r": 5.416,
-      "expectancy_r": 1.354,
-      "start": "2026-01-30 16:00:00+00:00",
-      "end": "2026-05-14 16:00:00+00:00"
+      "net_r": 4.1122,
+      "expectancy_r": 1.0281,
+      "start": "2026-05-14 16:00:00+00:00",
+      "end": "2026-06-07 12:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 6,
-      "net_r": -2.1607,
-      "expectancy_r": -0.3601,
-      "start": "2026-05-18 22:00:00+00:00",
-      "end": "2026-09-03 00:00:00+00:00"
+      "trades": 5,
+      "net_r": -0.6326,
+      "expectancy_r": -0.1265,
+      "start": "2026-07-17 18:00:00+00:00",
+      "end": "2026-10-25 02:00:00+00:00"
     }
   ],
   "folds_positive": 2,
   "window_days": 365,
-  "fee_bps_roundtrip": 7.5,
+  "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 18,
-    "max_drawdown_r": 4.1959,
-    "max_drawdown_at_trade": 18,
-    "final_equity_r": 4.5949,
-    "max_equity_r": 8.7908,
-    "worst_trade_r": -1.0707,
-    "best_trade_r": 3.1399,
-    "worst_day_r": -1.0707,
+    "n": 17,
+    "max_drawdown_r": 4.247,
+    "max_drawdown_at_trade": 15,
+    "final_equity_r": 6.9287,
+    "max_equity_r": 8.5935,
+    "worst_trade_r": -1.0905,
+    "best_trade_r": 3.1291,
+    "worst_day_r": -1.0905,
     "worst_day_date": "2026-07-26",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
   },
   "cost_stack": {
-    "fees": 7.5,
+    "fees": 11.0,
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-09-25/sol_pullback_2h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-10-28/sol_pullback_2h__bt.json"
   },
-  "net_r_oos_fee_only": 5.0584,
+  "net_r_oos_fee_only": 7.4988,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,9 +79,29 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-25T10:27:29.598321+00:00",
+  "generated_at": "2026-10-28T18:36:52.256107+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-09-25/sol_pullback_2h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-10-28/sol_pullback_2h__trades.jsonl",
   "error": null,
-  "harness": "pullback"
+  "harness": "pullback",
+  "venue_bracket_arm": null,
+  "rebaseline_history": [
+    {
+      "superseded_at": "2026-10-28",
+      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
+      "net_r_oos": 4.5949,
+      "expectancy_r_oos": 0.2553,
+      "n_trades_oos": 18,
+      "fee_bps_roundtrip": 7.5,
+      "window_days": 365,
+      "window": [
+        "2025-10-11 10:00:00+00:00",
+        "2026-09-03 00:00:00+00:00"
+      ],
+      "generated_at": "2026-09-25T10:27:29.598321+00:00",
+      "source_run": "comms/strategy_evidence/runs/2026-09-25/sol_pullback_2h__trades.jsonl",
+      "decision_rule_verdict": "pass",
+      "folds_positive": 2
+    }
+  ]
 }

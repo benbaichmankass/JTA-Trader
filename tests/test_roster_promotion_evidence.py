@@ -205,20 +205,23 @@ def test_a_compliant_record_clears_the_bar(tmp_path):
     assert G.grade(found, REAL_STRATEGIES, tmp_path) == []
 
 
-def test_research_grading_fail_overrides_a_d1_pass():
+def test_research_grading_fail_overrides_a_d1_pass(tmp_path):
     """A D1 `pass` must not clear the bar over a research unit's own FAIL.
 
-    `ict_scalp_xrp_15m` reads D1 pass at 365d (net +4.07R, n=76) while
+    `ict_scalp_xrp_15m` read D1 pass at 365d (net +4.07R, n=76) while
     RQ-20261002-701 graded it FAIL at its pre-registered 730d escalation
     (-4.60R, 1/4 folds). Re-adding it to `tradeify_1` (prop, risk-bearing)
-    must be refused on C4.
+    must be refused on C4. The 2026-10-28 11.0 bps re-baseline made the real
+    record's own D1 read fail, so the D1 pass is forced onto a tmp copy of the
+    real record: the premise under test is the override, not the real D1.
     """
     leg = "ict_scalp_xrp_15m"
     rec = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
-    assert rec["decision_rule"]["verdict"] == "pass"
+    rec["decision_rule"]["verdict"] = "pass"
     assert rec["research_grading"]["powered_verdict"] == "fail"
+    (tmp_path / f"{leg}.json").write_text(json.dumps(rec), encoding="utf-8")
     found = G.promotions(REAL_ACCOUNTS, _with_leg("tradeify_1", leg))
-    findings = G.grade(found, REAL_STRATEGIES, EVIDENCE)
+    findings = G.grade(found, REAL_STRATEGIES, tmp_path)
     assert len(findings) == 1 and "C4 FAIL" in findings[0] and "research_grading" in findings[0]
 
     # The same record with the block reading pass clears C4; malformed blocks.
