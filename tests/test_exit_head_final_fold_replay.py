@@ -36,7 +36,7 @@ def _bars(open_rs, final_r, t_open=1772323200):
 
 def test_policy_is_the_venue_default_and_positive():
     assert POL["slippage_bps_roundtrip"] > 0 and POL["exit_fee_bps"] == POL["slippage_bps_roundtrip"] / 2
-    assert POL["fee_bps_roundtrip"] == ec.DEFAULT_FEE_BPS_ROUNDTRIP
+    assert POL["fee_bps_roundtrip"] == ec.resolve_fee_bps_roundtrip("SOLUSDT") == 11.0  # Bybit linear, #20783
 
 
 def test_a_truncated_trade_pays_roundtrip_cost_and_exit_fee():
