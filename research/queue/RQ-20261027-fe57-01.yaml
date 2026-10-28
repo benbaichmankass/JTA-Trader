@@ -1,6 +1,6 @@
 id: RQ-20261027-fe57-01
 title: 'Desk edge program, dev batch 1, variant V1 (the judged-1 judge as it is: Sonnet, judged-1 protocol, plus the forced-rank scoring block) on the 100-packet stratified dev sample: does the judge rank (asset, side) cells so that its top 2 beat a random pick in the same packet (SEL), and how does it compare with the fitted models on the same packets?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -106,3 +106,16 @@ related:
 - scripts/research/desk_edge_ceiling.py
 - docs/research/desk-edge-program-2026-10-27.md
 last_dispatched_at: '2026-10-28T09:41:07+00:00'
+grading:
+  attested: RULE-RQ20261027-FE57-01-DEV-V1
+  auto: true
+  decision_rule_id: RULE-RQ20261027-FE57-01-DEV-V1
+  evidence:
+  - research/results/RQ-20261027-fe57-01/40666181462.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
