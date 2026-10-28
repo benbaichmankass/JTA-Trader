@@ -221,6 +221,8 @@ def main(argv=None) -> int:
     ap.add_argument("--base", default=None)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
+    import _dirty_tree  # noqa: PLC0415 -- path shim above; the shared dirty-tree notice
+    _dirty_tree.warn()
     if a.self_test:
         return _self_test()
     failures, c, st = scan(REPO, a.base)
