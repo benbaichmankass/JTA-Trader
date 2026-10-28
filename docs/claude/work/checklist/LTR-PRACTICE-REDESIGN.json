@@ -1,19 +1,21 @@
 {
   "id": "LTR-PRACTICE-REDESIGN",
-  "title": "PROPOSED (Tier 2): LTR trigger redesign per practice: bar-close clock via a near-free pre-screen, adverse-side R / stall / momentum / level triggers, Claude only on flagged checkpoints batched per wake, per-trigger grading vs hold + matched random checkpoint",
+  "title": "LTR trigger redesign per practice: pre-screen triggers adverse_r / stall / momentum_flip / structure_break + per-evaluation log for per-trigger grading (Tier 2, operator OK 2026-10-28)",
   "phase": "build",
-  "state": "queued",
-  "owner": null,
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "state": "in_flight",
+  "owner": "session_01AFoLuLyepCMhuUKD5sQ3jJ",
+  "lane": "LTR-PRACTICE-REDESIGN",
+  "model": "opus",
+  "ceiling_usd": 35,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    20862
+  ],
   "blocked_on": [],
-  "note": "From PRACTICE-RESEARCH-TRADE-MGMT-AI \u00a7 E (docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md). MEASURED gap: config/live_trade_review.yaml + src/runtime/live_review_due.py at 4329698a1 have no clock below 24h (daily_floor), no adverse-side R trigger, no stall/momentum/level trigger; 4 of 10 triggers favourable-only; swing/vol_regime symmetric. Manager-observed 2026-10-28 overnight: hourly passes found nothing due across 11 packages. PROPOSAL ONLY: needs operator OK (Tier 2: config + due gate). FIRST STEP (Tier 1, no behaviour change): add trigger-type + escalation logging and a report-only pre-screen that prices alternatives every closed bar via scripts/research/live_review_outcomes.py, to measure the escalation rate before any config change. Budget arithmetic in \u00a7 E.3 (INFERRED).",
-  "updated_at": "2026-10-28T06:51:48Z",
-  "updated_by": "session_01AFoLuML1AwiQNaDn7uKHXj",
+  "note": "OPERATOR APPROVAL (Tier 2), 2026-10-28 ~07:36Z popup, verbatim: \"Turn wake-ups on today\" (ship the new triggers LIVE once the pre-screen passes its tests). PR #20862 (hold, tier_2_3_needs_approval; manager merges). Built: 4 due events (adverse_r -0.5/-0.75, stall by timeframe, momentum_flip 3 closed bars >=1 ATR, structure_break since-entry extreme +0.1 ATR) evaluated every pass, pure read; every evaluation logged by the VM wake poster to runtime_logs/live_review/prescreen.jsonl (diag log_file?name=ltr_prescreen) with a fixed control_u draw for matched-random grading; pricing recorded as not_priced (state kept for offline pricing by live_review_outcomes.py). Wake-rate MEASURED by replay over live position_path_history 2026-10-21..28 (301 bars, 40 packages): 6.8-8.4 package-reviews/day, ~$1.7-2.9/day plan-usage at $0.25-0.35/review. ROLLBACK: delete the four blocks from config/live_trade_review.yaml. Evidence: 15 new tests + 83 in the live-review suites pass.",
+  "updated_at": "2026-10-28T08:01:14Z",
+  "updated_by": "session_01AFoLuLyepCMhuUKD5sQ3jJ",
   "roadmap": [
     "L-ATM",
     "L-DESK"
