@@ -1,6 +1,6 @@
 id: RQ-20261027-fe57-01
 title: 'Desk edge program, dev batch 1, variant V1 (the judged-1 judge as it is: Sonnet, judged-1 protocol, plus the forced-rank scoring block) on the 100-packet stratified dev sample: does the judge rank (asset, side) cells so that its top 2 beat a random pick in the same packet (SEL), and how does it compare with the fitted models on the same packets?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -55,15 +55,6 @@ decision_rule:
   what_it_does_not_do: >-
     It is a dev SCREEN. It places nothing, changes no brief, packet, config or roster, and no promotion of any kind follows from it; only the holdout and then a full registered run
     (docs/research/desk-edge-program-2026-10-27.md sections 5.4-5.5) can produce Stage-0 evidence. The proposals V1 also writes are recorded but not scored here.
-blocked_on:
-- kind: work_item
-  ref: DESK-EDGE-PROGRAM
-  what: >-
-    The ranks file does not exist on main. The DESK-EDGE-PROGRAM lane judges the 100 dev packets (repo-less plan subagents given only the protocol and the packets) and commits
-    comms/research/desk_edge/dev-1/V1/ranks.jsonl with comms/research/desk_edge/dev-1/sample.json.
-  clears_when: >-
-    comms/research/desk_edge/dev-1/V1/ranks.jsonl and comms/research/desk_edge/dev-1/sample.json are on main. Then: git mv this file to research/queue/, remove blocked_on, set
-    status: queued.
 masked_replay:
   population: >-
     The six crypto USDT perps of the driver's registered universe; Binance Vision USD-M perp 1h klines from 2025-05-01 (the 3,000-bar base-rate look-back before 2025-11-01).
