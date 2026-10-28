@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "The manager records a disposition for each of P1-P6 (registered / declined with reason), and the next week's ML results include >= 1 graded unit on a priced target (Q-SEL1, Q-TM*, or Q-REG1).",
+    "kind": "observation",
+    "last_checked": "2026-10-28"
+  },
+  "id": "PI-20261028-GNVUF1ES-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "scan research/results/*/*.jsonl generated_at >= last review for ml_bakeoff units; count by target column; grep research/queue for Q-TM|Q-SEL|Q-REG|TM-BENCH",
+    "what": "The manager records a disposition for each of P1-P6 (registered / declined with reason), and the next week's ML results include >= 1 graded unit on a priced target (Q-SEL1, Q-TM*, or Q-REG1)."
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-10-28 (ML-REVIEW-20261028, lane ML-FRONTIER-PREP-20261028; docs/reviews/2026-10-28-weekly-walkthrough.md)",
+    "rerun": "scan research/results/*/*.jsonl generated_at >= last review for ml_bakeoff units; count by target column; grep research/queue for Q-TM|Q-SEL|Q-REG|TM-BENCH"
+  },
+  "routed_to": "manager (decision on P1-P6 from the 2026-10-28 ML brief)",
+  "state": "routed",
+  "what": "[ml] Research monoculture + mis-registered power (proposal P6): 50 ML units graded 2026-10-21..28 -- 43 on regime_label, 7 on direction_label, 0 on any target a consumer prices; every alternative learner matches or loses to shipped LightGBM on log-loss. Meanwhile ML-PROGRAMME-2026-10-28 § 4.3's top-5 (Q-TM1, Q-TM2, Q-TM4, Q-TM5, Q-REG1) and Q-SEL1 have 0 units queued. Proposed to the manager: pause new regime/direction learner variants; re-register or retire the 4 queued ML units (power on rows not folds, PI-20261028-LFC7HPXG-0001); register P1 (Q-SEL1 net, MODEL), P2 (Q-TM1, MODEL), P3 (Q-REG1 + TTM/Log-HAR arm, MODEL->TRADING), P4 (desk decision attribution, TRADING). Lane did not queue (dispatch: propose only)."
+}
