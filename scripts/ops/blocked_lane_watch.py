@@ -139,6 +139,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -786,7 +787,7 @@ def main(argv=None) -> int:
     ap.add_argument("--registry", default=str(REGISTRY_PATH))
     ap.add_argument("--pr-state", default=None,
                     help="JSON listing of OPEN pull requests (gh api .../pulls?state=open)")
-    ap.add_argument("--this-repo", default="benbaichmankass/Metis-Insights")
+    ap.add_argument("--this-repo", default=os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights"))
     ap.add_argument("--write-receipt", action="store_true")
     ap.add_argument("--session-id", default=None,
                     help="grade ONLY this session's row (a lane checking itself)")

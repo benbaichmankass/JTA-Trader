@@ -66,7 +66,7 @@ MAX_BODY_CHARS = 60000
 #: packet dropped ``"sd_r":null`` and the mirror refused the row: packet_sha mismatch).
 ROWS_BRANCH = "live-review/rows"
 PACKETS_DIR = "comms/live_review/packets"
-REPO = "benbaichmankass/Metis-Insights"
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")  # tolerant of the JTA Trader repo rename
 API = "https://api.github.com"
 HTTP_TIMEOUT_S = 15
 

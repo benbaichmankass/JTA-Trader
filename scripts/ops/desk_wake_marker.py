@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,7 +44,7 @@ for _p in (ROOT, ROOT / "scripts" / "ops"):
 
 MARKER = "desk-wake"
 NEAR_BARS = (0, 1)
-REPO = "benbaichmankass/Metis-Insights"
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")  # tolerant of the JTA Trader repo rename
 
 
 def _iso(t: datetime) -> str:
