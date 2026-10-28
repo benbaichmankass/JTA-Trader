@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 3,
-  "prs": 21024,
+  "prs": [
+    21024
+  ],
   "blocked_on": [],
   "note": "Operator popup ~20:35Z (manager relay): 'Advice-only tightens (Recommended)'. Built: rows_lib.ADVICE_ONLY_ACTIONS=('tighten_sl',) read by live_review_rows_watch (verdict tighten_advice_only, never dispatched, any route), live_review_dispatch (refused tighten_advice_only, exit 2, no ping, incl. the manual system-action) and desk_intake (not_dispatchable tighten_advice_only); config/mandates.yaml MD-TRADE-DESK in_trade advice_only [tighten_sl]; skill/brief/AMENDMENTS. Other trade actions unchanged. Evidence comms/research/ltr_tighten_optimize/verdict.json (#21003), #20967. REVERT: revert the PR. CLOSES WHEN (after merge + deploy): the first tighten_sl row on live-review/rows appears in diag log_file?name=live_review_rows_watch with verdict tighten_advice_only and no applied.jsonl entry, and a close/other action still dispatches.",
-  "updated_at": "2026-10-28T21:08:30Z",
+  "updated_at": "2026-10-28T21:15:28Z",
   "updated_by": "session_01AFoLuLLDoFfA4BGgKq4MZL",
   "roadmap": [
     "L-ATM",
