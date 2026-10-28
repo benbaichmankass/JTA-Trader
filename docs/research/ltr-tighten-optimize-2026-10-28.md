@@ -150,6 +150,123 @@ A tighten is valid only when it raises the stop and leaves it ≥ 0.10 R from th
 - **The script enforces the order.** `rules --split test|fresh` refuses to run without `--registration` (this file),
   and records its sha256 in the output.
 
-## 3. Q2 results
+## 3. Q2 results (MEASURED; graded against § 2 as committed at fe99c3711, registration sha256 `c979d016…`)
 
-*(appended after the run)*
+Files: `train.json`, `test.json`, `fresh.json` (graded), `test-allgrid.json` and `fresh-allgrid.json` (every rule, reported
+not graded). Populations: TRAIN 696 filled entries, TEST 344, FRESH 420. Together TRAIN + TEST = all 1,040 corpus entries.
+The candle manifest equals S0's `score.json` manifest, and FRESH carries its own manifest.
+
+**TRAIN selection.** `structure(X=1, n=24)` won: once MFE reaches +1 R, the stop trails the 24-bar low (long) or high
+(short). It scored **+0.009 R [−0.015, +0.033]**. Only **4 of the 61 rules** had a mean above HOLD on TRAIN, and none had a CI
+above 0. Every rule that arms early (X ≤ 0.5) or trails tightly (k ≤ 2 ATR, n = 6 bars, giveback f ≥ 0.5) lost on TRAIN.
+The worst lost 0.14–0.25 R.
+
+| graded rule | TEST mean dR [97.5 % CI] (n 344) | FRESH mean dR [97.5 % CI] (n 420) | verdict |
+|---|---|---|---|
+| `structure(X=1, n=24)` (TRAIN-selected) | +0.015 [−0.025, +0.052] | +0.009 [−0.032, +0.040] | **INDETERMINATE** |
+| `losscut(Y=−0.5, T=1)` (pre-specified) | +0.005 [−0.052, +0.061] | −0.013 [−0.105, +0.082] | **INDETERMINATE** |
+
+- Stop-slip sensitivity: neither rule changes sign or verdict.
+- By entry source, on TEST: the structure trail scores +0.042 [−0.024, +0.104] on Claude entries (n 151) and −0.005
+  [−0.047, +0.023] on random entries (n 193).
+- Max drawdown, on TEST: 14.1 R under the structure trail vs 14.5 R under HOLD. On FRESH: 47.9 R vs 48.0 R.
+
+**Reported, not graded (all 61 rules).**
+- 0 rules have a CI above 0 on TEST or on FRESH.
+- 16 rules have a CI below 0 on FRESH. All are tight trails or giveback locks armed at 1–2 R, or a breakeven at
+  1–1.5 R. Examples: `giveback(X=1, f=0.5)` −0.12, `atr_trail(X=1, k=1.5)` −0.11, `atr_trail(X=1, k=2)` −0.06.
+- **`breakeven(X=1)`, i.e. stop to breakeven at +1 R,** scores −0.046 [−0.092, +0.002] on TRAIN, −0.008 on TEST and
+  **−0.041 [−0.087, −0.005] on FRESH**. This is the mechanical form of a tighten at open ≥ +1 R to a stop ≥ breakeven.
+- Only very late or very wide arms sit at about 0 on all three splits: `breakeven(X=2)`, `atr_trail(X=2, k=5)`,
+  `structure(X=1, n=24)`. Each lands within ±0.02 R.
+
+**Read.**
+- **No tighten rule beats hold-to-bracket out of sample.** The best mechanical rule is indistinguishable from hold
+  (±0.03 R at this n), and the S0 driver's fixed arms gave the same picture in-sample.
+- The rules show the same shape as Claude's tightens in § 1: **early or tight tightening costs R, and late, wide
+  tightening is free but earns nothing.**
+- The pre-registered loss-cut pocket does not replicate as a rule: +0.005 on TEST, −0.013 on FRESH.
+
+## 4. Q3: what do the live LTR tightens look like? (MEASURED)
+
+**Population.** 125 unique review rows, 2026-10-25T16:30Z .. 2026-10-28T17:15Z. They are main's
+`comms/live_review/reviews.jsonl` (124 rows) together with `origin/live-review/rows` (its `reviews.jsonl` plus `rows/*.json`).
+
+- **Tighten recommendations: 0. Tighten applies recorded in rows: 0.**
+  - Rows by recommendation: hold 53, no_recommendation 47, flag_mechanics 23, close 2.
+  - Positive control: the same probe finds the 2 closes and the 53 holds.
+  - Not read: the VM's `runtime_logs/live_review/applied.jsonl`. The apply acts only on a row's recommendation, so
+    0 tighten recommendations implies 0 LTR tighten applies (INFERRED).
+- **Why there are none.** LTR-PRACTICE-REDESIGN's audit of the same file (MEASURED there, 98 rows) found 14 of 26 hold
+  reasons citing the 1-ATR noise floor (`config/live_trade_review.yaml::min_buffer_atr: 1.0`) or `invalid_level`.
+- **The 5 rows that priced a tighten** from the leg's own Stage-0 history (`live_review_outcomes.py`) cover 3 packages.
+  **All 5 sit in the BLOCK cell** (open < +1 R, peak ≤ 0.38 R), and in **4 of 5 the tighten priced below hold:**
+  - `xrp_pullback_2h`: hold +0.97 R vs tighten +0.42 R (n 21).
+  - `avax_pullback_2h`, 3 rows: hold +0.51 R vs tighten +0.20 R (n 31).
+  - `htf_pullback_trend_2h`: tighten +0.04 R vs hold −0.01 R (n 34).
+  - The reviewer held all five.
+- **So the live system has so far stayed out of the losing cell**, by guardrail and by the reviewer's own call. Nothing
+  live has landed in a winning cell either, because no tighten cell wins.
+- **The guardrail that holds it there is the wrong one.** The 1-ATR buffer does not separate losers from free
+  tightens. Tightens ≥ 1 ATR from price lose **−0.102 R [−0.170, −0.028]** (n 581, S0). The open-R and stop-level
+  conditions are what separate them (§ 5).
+- **Not this lane's question.** The weekly audit's live hold-vs-close at review (−0.80 R, n 27, #20975) is about
+  HOLDS, not tightens. It conflicts with S0's +0.142 R and is owned by row AUD-20261028-HOLD-VS-CLOSE-CONFLICT.
+
+## 5. Recommendation (Tier-3 proposal for the operator; nothing changed here)
+
+**ADVICE-ONLY for `tighten_sl`.** The live reviewer may still recommend a tighten, and the operator or desk acts on it.
+The apply path stops auto-applying tightens on any account. Expressed as a change: under MD-TRADE-DESK, a `tighten_sl`
+row is dispatched as `recommend`, not `apply`; every other action class is untouched.
+
+| evidence (net of the full cost stack) | n | mean dR | 95 % CI |
+|---|---|---|---|
+| Claude tightens, all (S0) | 981 | −0.097 | [−0.140, −0.047] |
+| today's live gate alone, ≥ 1 ATR from price (S0) | 581 | **−0.102** | [−0.170, −0.028] |
+| BLOCK: open < +1 R or new stop below BE (S0) | 580 | **−0.142** | [−0.221, −0.064] |
+| ALLOW: open ≥ +1 R and new stop ≥ BE (S0, *post hoc*) | 401 | −0.031 | [−0.103, +0.037] |
+| ALLOW and ≥ 1 ATR from price (S0, *post hoc*) | 191 | −0.008 | [−0.126, +0.105] |
+| mechanical breakeven at +1 R, FRESH window | 420 | **−0.041** | [−0.087, −0.005] |
+| best rule, TRAIN-selected `structure(X=1, n=24)`, TEST / FRESH | 344 / 420 | +0.015 / +0.009 | both span 0 |
+
+**Why advice-only and not the other two.**
+1. **Keep is refuted.** Today's gate (tighten-only, ≥ 1 ATR) admits a cell that loses −0.10 R per tighten.
+2. **Restrict buys nothing measurable.**
+   - It would block the losing cells (BLOCK, −0.14 R).
+   - But the cell it keeps (ALLOW) is at best ≈ 0 for Claude (−0.03 R). Its mechanical form, breakeven at +1 R, loses
+     out of sample (−0.04 R on FRESH, CI below 0).
+   - The only arms that are free on every split are very late or very wide (MFE ≥ 2 R, or ≥ 5 ATR / a 24-bar
+     structure trail). They change almost nothing against the bracket.
+   - No cell or rule anywhere earns R: 0 of 79 tighten cells, and 0 of 61 rules on TEST or FRESH, have a CI above 0.
+3. **An automatic tighten has value only if tightening has value, and it has none here.** Advice-only keeps the
+   reviewer's judgement in the loop for the live-only risks a backtest cannot see (a venue outage, an event gap)
+   without paying ~0.03–0.10 R per tighten on average.
+
+**Fallback, if the operator wants automatic protection kept.** Restrict auto-apply to open ≥ +1.0 R AND new stop ≥
+breakeven AND ≥ 1 ATR from price (−0.008 R, n 191, CI spans 0). Expect a small cost, not a gain.
+
+**Caveats, stated.**
+- The ALLOW/BLOCK boundary was chosen after seeing the slices.
+- The corpus is crypto 1h desk/random entries, not the strategy legs.
+- RQ-20261028-e1a7-01 (strategy legs) and RQ-20261028-e1a7-02 (fresh Claude-judged window) test the split. A
+  `CONFIRM_ALLOW` there is the evidence that would justify re-enabling a restricted auto-tighten.
+- This is a de-risking change: it removes an automatic action and adds none, so it carries no promotion-evidence block.
+
+**Immediate effect: none measurable.** There are 0 live tighten recommendations to date (§ 4), so the change only stops
+future auto-applies. Revert: re-allow `apply` for `tighten_sl`.
+
+## 6. Follow-ups filed (queue units, both `research/queue/blocked/`)
+
+- **RQ-20261028-e1a7-01**: the same cells on the STRATEGY legs (leg family × timeframe), from a multi-year config-exact
+  corpus per real-money leg. Today's committed Stage-0 records are too thin for this: 8–19 comparable trades per side at
+  peak 1 R, against an n floor of 20. Blocked on a wrapper script.
+- **RQ-20261028-e1a7-02**: a fresh-window test of the split on CLAUDE-judged trades (the 420 FRESH entries walked under C4E).
+  It costs about $140 of plan judging and needs a manager GO.
+
+## 7. Not verified / limits
+
+- The corpus is six crypto perps on 1h bars (contract C48), not the live legs and timeframes. The desk venue is Bybit;
+  the corpus is Binance klines.
+- A moved stop fills at its price in the engine (it flatters tightening), bounded by the +0.05 R sensitivity.
+- Q1's cells are many, and correlated within a trade. They are descriptive; Q2 is the registered test.
+- The VM `applied.jsonl` was not read (§ 4).

@@ -268,6 +268,20 @@ def fresh_entries(mkt: dict[str, g.Series], corpus: list[dl.Entry]) -> list[dl.E
     return out
 
 
+def fresh_manifest(mkt: dict[str, g.Series]) -> list[str]:
+    """candle_manifest covers only the S0 replay window; this names the FRESH window's bars the same way."""
+    lo, hi = int(FRESH_START.timestamp()), int(FRESH_END.timestamp()) + 3 * 86400
+    out = []
+    for sym, s in sorted(mkt.items()):
+        m = (s.t >= lo) & (s.t <= hi)
+        h = hashlib.sha256()
+        for arr in (s.t[m], s.o[m], s.h[m], s.l[m], s.c[m]):
+            h.update(np.ascontiguousarray(arr).tobytes())
+        out.append(f"binance_vision:{sym}:1h:rows={int(m.sum())}:first={datetime.fromtimestamp(int(s.t[m][0]), tz=timezone.utc):%Y-%m-%dT%H}"
+                   f":last={datetime.fromtimestamp(int(s.t[m][-1]), tz=timezone.utc):%Y-%m-%dT%H}:sha256={h.hexdigest()[:16]}")
+    return out
+
+
 def evaluate_rules(mkt, entries, rules) -> dict[str, dict[str, dict]]:
     """{rule: {entry_id: {dR, dR_slip, week, src}}} -- dR = rule net R - HOLD net R on the same entry."""
     pol = dl.POLICIES["C1"]
@@ -374,6 +388,7 @@ def cmd_rules(a: argparse.Namespace) -> int:
     doc = {"split": a.split, "registration_sha256": reg_sha, "selected": sel, "secondary": rule_name(*secondary),
            "population": f"{len(next(iter(res.values())))} filled entries ({a.split})", "table": table,
            "graded": [sel, rule_name(*secondary)], "candles": src,
+           **({"candles_fresh_window": fresh_manifest(mkt)} if a.split == "fresh" else {}),
            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     if a.split == "fresh" and not a.all_grid and (out / "test.json").exists():
         tt = json.loads((out / "test.json").read_text())["table"]
