@@ -43,16 +43,18 @@ except ImportError as exc:  # pragma: no cover
     sys.exit(2)
 
 #: Non-retired legs on no book, BY NAME, each with why and the row that owns the decision. Adding a
-#: name here is a roster decision, not a test edit. Measured 2026-10-28 on main (strategy_status.py).
-_CUT = "cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548); not retired. "
+#: name here is a roster decision, not a test edit. Operator 2026-10-28 (Q4, verbatim "Retire gld, re-home 3
+#: later (Recommended)"): gld_pullback_1h retired by record; these three go back on alpaca_paper once it has slices.
 UNHOMED: Dict[str, str] = {
-    **{leg: _CUT + ("Kept off at the 2026-10-27 demo-floor restore: same symbol as a 1d leg on alpaca_paper, "
-                    "which has no slice support (OPERATING-PLAN § 2 named exception 'blocked by a guard'). "
-                    "Owner: row STRATEGY-STATUS-MODEL (operator question 4)")
-       for leg in ("spy_pullback_1h", "qqq_pullback_1h", "tlt_pullback_1h")},
-    "gld_pullback_1h": _CUT + ("Not restored 2026-10-27; no reason found in config/accounts.yaml (GLD's 1d leg moved to ib_paper "
-                               "2026-10-25). Owner: row STRATEGY-STATUS-MODEL (operator question 4)"),
+    leg: ("cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548); not retired. Off until "
+          "alpaca_paper takes slices (same symbol as a 1d leg there). Owner: row ALPACA-SLICES-REHOME-1H")
+    for leg in ("spy_pullback_1h", "qqq_pullback_1h", "tlt_pullback_1h")
 }
+
+#: Production legs that ALSO stay on general paper, BY NAME. Operator 2026-10-28 (Q2, verbatim "Keep on
+#: alpaca_paper as exception (Recommended)"): the alpaca mirror excludes the affordability proxy, so it keeps a
+#: paper record beside real money until it has a mirror. Leg -> the general paper account it may stay on.
+DUAL_BOOK_EXCEPTIONS: Dict[str, str] = {"iaum_pullback_1d": "alpaca_paper"}
 
 
 def findings(accounts: Dict[str, Any], strategies: Dict[str, Any]) -> List[str]:
@@ -63,13 +65,20 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any]) -> List[str]:
         if legs and mirror is None:
             out.append(f"R-NO-MIRROR {real} carries {legs} and has no paper-portfolio mirror account")
         for leg in legs:
-            dual = [a for a in st.GENERAL_PAPER if leg in ros.get(a, [])]
+            dual = [a for a in st.GENERAL_PAPER if leg in ros.get(a, []) and DUAL_BOOK_EXCEPTIONS.get(leg) != a]
             if dual:
                 out.append(f"R-DUAL-BOOK {leg} is production ({real}) and also on general paper {dual}: "
                            f"remove it from {dual} (promotion MOVES a leg; OPERATING-PLAN § 2)")
             if mirror and leg not in ros.get(mirror, []) and leg not in st.MIRROR_CARVE_OUT.get(mirror, ()):
                 out.append(f"R-NO-MIRROR {leg} is on {real} but not on its mirror {mirror}")
+    for leg, acct in sorted(DUAL_BOOK_EXCEPTIONS.items()):
+        if not (leg in ros.get(acct, []) and any(leg in ros.get(r, []) for r in st.REAL_MONEY_MIRROR)):
+            out.append(f"R-STALE-EXCEPTION {leg} is named in DUAL_BOOK_EXCEPTIONS but is not on both {acct} and "
+                       "real money: drop the entry")
     on_book = {leg for a in (*st.GENERAL_PAPER, *st.REAL_MONEY_MIRROR) for leg in ros.get(a, [])}
+    for leg in sorted(UNHOMED):
+        if leg in on_book or st.retired(strategies, leg):
+            out.append(f"R-STALE-EXCEPTION {leg} is named in UNHOMED but is homed or retired: drop the entry")
     for leg in sorted(strategies):
         if not isinstance(strategies.get(leg), dict):
             continue
@@ -95,7 +104,7 @@ def self_test() -> int:
     strat = {"a": {}, "p": {}, "r": {"enabled": False}, "iaum_pullback_1d": {}}
     clean = {"bybit_1": {"strategies": ["a"]}, "bybit_2": {"strategies": ["p"]},
              "bybit_portfolio": {"strategies": ["p"]}, "alpaca_live": {"strategies": ["iaum_pullback_1d"]},
-             "alpaca_portfolio": {"strategies": []}}
+             "alpaca_portfolio": {"strategies": []}, "alpaca_paper": {"strategies": ["iaum_pullback_1d"]}}
     ck("a clean tree passes (positive control)", findings(clean, strat) == [])
     dual = {**clean, "bybit_1": {"strategies": ["a", "p"]}}
     ck("a production leg left on general paper is refused (R-DUAL-BOOK)",
@@ -114,7 +123,16 @@ def self_test() -> int:
     ck("a non-retired leg dropped from every book is refused (R-UNHOMED)",
        any(f.startswith("R-UNHOMED a") for f in findings(drop, strat)))
     ck("a named UNHOMED leg is not refused",
-       findings(clean, {**strat, "gld_pullback_1h": {}}) == [])
+       findings(clean, {**strat, "spy_pullback_1h": {}}) == [])
+    ck("the named dual-book exception is accepted", not any("iaum" in f for f in findings(clean, strat)))
+    ck("the exception is per account: iaum on another general paper account is still R-DUAL-BOOK",
+       any(f.startswith("R-DUAL-BOOK iaum") for f in findings({**clean, "ib_paper": {"strategies": ["iaum_pullback_1d"]}}, strat)))
+    ck("a stale dual-book exception is refused (R-STALE-EXCEPTION)",
+       any(f.startswith("R-STALE-EXCEPTION iaum") for f in findings(
+           {**clean, "alpaca_live": {"strategies": []}}, strat)))
+    ck("a stale UNHOMED entry is refused (R-STALE-EXCEPTION)",
+       any(f.startswith("R-STALE-EXCEPTION spy_pullback_1h") for f in findings(
+           {**clean, "alpaca_paper": {"strategies": ["spy_pullback_1h"]}}, {**strat, "spy_pullback_1h": {}})))
     ck("prop rosters are not judged", findings({**clean, "breakout_2": {"strategies": ["a", "p"]}}, strat) == [])
     print(f"strategy-status self-test: {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1

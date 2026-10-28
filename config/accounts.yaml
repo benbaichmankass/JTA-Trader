@@ -1267,7 +1267,10 @@ accounts:
       - tqqq_trend_long_1d             # leveraged Nasdaq-100 ETF trend: TQQQ (3x)
       - qld_trend_long_1d              # + QLD (2x) — paper soak, added 2026-06-30 (Tier-3)
       - splg_trend_long_1d             # sub-$100 proxy cells (2026-07-07, Tier-3): SPLG
-      # iaum_pullback_1d REMOVED 2026-10-28 (STRATEGY-STATUS-MODEL, Tier-3 HELD): production on alpaca_live
+      - iaum_pullback_1d               # NAMED EXCEPTION 2026-10-28 (operator: "Keep on alpaca_paper as exception
+                                       # (Recommended)"): production on alpaca_live, but the mirror excludes this
+                                       # affordability proxy, so it keeps a paper record here until it has a mirror
+                                       # (strategy-status-guard DUAL_BOOK_EXCEPTIONS).
                                        # (~$84, S&P 500 proxy for SPY) + IAUM (~$41, gold
       - scha_trend_long_1d             # proxy for GLD) + SCHA (~$35, small-cap proxy for
                                        # IWM, marginal/observe). PAPER SOAK only — so the

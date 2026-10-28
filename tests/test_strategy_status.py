@@ -38,7 +38,8 @@ def test_no_production_leg_is_on_general_paper():
     prod = {leg: row["books"] for leg, row in t.items() if row["status"] == st.PRODUCTION}
     assert prod, "no production leg found — the probe must find a positive before a clean read means anything"
     for leg, books in prod.items():
-        assert not set(books) & set(st.GENERAL_PAPER), f"{leg} is production and on general paper: {books}"
+        allowed = {guard.DUAL_BOOK_EXCEPTIONS[leg]} if leg in guard.DUAL_BOOK_EXCEPTIONS else set()
+        assert not (set(books) & set(st.GENERAL_PAPER)) - allowed, f"{leg} is production and on general paper: {books}"
 
 
 def test_status_derivation():

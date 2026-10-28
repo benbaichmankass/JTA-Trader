@@ -133,7 +133,7 @@ help by cleaning up duplicate trades in the books and creating a more integrated
   (unchanged: `_delta` already adds the soak account). **Demotion still stops at the floor:** a leg leaves the books only by a retirement
   record (`R-DEMO-FLOOR` stands for S1 -> OFF).
 - **Inactive = several rounds of research say stop.** Retirement is a decision on a committed research record, never a demotion's side
-  effect. **Inactive legs do NOT run in shadow** (recommendation, see "Open" below for the operator's say): the retirement already
+  effect. **Inactive legs do NOT run in shadow** (operator, 2026-10-28, Q5 below): the retirement already
   concluded the question, the leg's inputs (candles, funding, news) keep being collected for the live legs on the same symbols, and any
   re-test regenerates the leg's signals offline from that data at zero runtime cost. A shadow leg would cost a tick slot, and would add
   journal rows with no decision attached. The off-trade-path rule (canonical § "Off the trade path is not off the data path") binds
@@ -145,23 +145,24 @@ help by cleaning up duplicate trades in the books and creating a more integrated
   minus the declared affordability carve-out; or real money with no mirror account) · `R-INACTIVE-ROSTERED` (retired leg on any roster) ·
   `R-UNHOMED` (non-retired leg on neither book, unless named with its reason).
 - **Measured effect** (`docs/research/strategy-status-model-2026-10-28.md`, journal `trades` table via the diag relay, 28 days to
-  2026-10-28 21:00Z): 23 duplicate production-leg trades on general paper (≈ 5.75/week, all on `bybit_1` + one on `alpaca_paper`);
-  2 of the 23 had no real-money sibling in their order package (the data the move would lose).
+  2026-10-28 21:00Z): 23 duplicate production-leg trades on general paper (22 on `bybit_1`, 1 on `alpaca_paper`). The move removes the
+  22 (≈ 5.5/week); the `alpaca_paper` one stays by the Q2 exception. 2 of the 22 had no real-money sibling in their order package (the
+  data the move loses).
 
-**Open — operator questions** (the lane's recommendation first):
-1. **Prop legs.** A leg on a prop roster and on real money is production (`trend_donchian_sol_prop`). A leg on prop only
-   (`trend_donchian_eth_prop`) has no paper-portfolio mirror. Recommendation: **prop membership does not set a status**, so a prop-only
-   leg stays testing on `bybit_1`, which is the only paper read of its trades. The alternative is a `prop_portfolio` mirror.
-2. **`alpaca_live` affordability proxies.** `iaum_pullback_1d` is production on `alpaca_live`, but the mirror deliberately excludes it
-   (proxy carve-out). Once it leaves `alpaca_paper`, its only record is real money. That book traded it more often than paper did over the
-   window. Recommendation: accept that. The alternative is to keep proxies on general paper as a named exception.
-3. **`ib_live` has no mirror account.** It is `dry_run` with an empty roster today. Recommendation: no `ib_portfolio` until `ib_live`
-   gets a leg. The guard refuses a leg there without a mirror, so the question returns the day it matters.
-4. **Four unhomed legs.** `gld_pullback_1h`, `spy_pullback_1h`, `qqq_pullback_1h` and `tlt_pullback_1h` were cut 2026-10-05 and are
-   not retired. `spy`, `qqq` and `tlt` stayed off at the floor restore because a 1d leg already trades the same symbol on `alpaca_paper`,
-   which has no slice support. I found no reason for `gld_pullback_1h` in `config/accounts.yaml`. All four are named in the guard. Recommendation: `gld_pullback_1h`
-   back on `alpaca_paper` as testing now; the other three once `alpaca_paper` takes slices, or retire them by record.
-5. **Inactive in shadow or not:** the recommendation above is "not".
+**Decided — operator popup answers, 2026-10-28 ~22:35Z, relayed by the manager (verbatim option labels):**
+1. **Prop legs** — *"Stay 'testing' on bybit_1 (Recommended)"*. Prop membership sets no status. A prop-only leg
+   (`trend_donchian_eth_prop`) stays testing on `bybit_1`, its only paper read. A leg on prop and real money is production.
+2. **`alpaca_live` affordability proxy** — *"Keep on alpaca_paper as exception (Recommended)"*. The mirror excludes `iaum_pullback_1d`
+   by the proxy carve-out, so the leg keeps a paper record on `alpaca_paper` beside real money until it has a mirror. It is the one named
+   exception (`DUAL_BOOK_EXCEPTIONS` in the guard, per account). The guard refuses the entry once it no longer applies.
+3. **`ib_live`** — *"Yes, mirror when it gets a leg (Recommended)"*. An `ib_portfolio` mirror arrives in the same PR as `ib_live`'s
+   first leg. The guard refuses an `ib_live` leg without one.
+4. **Unhomed legs** — *"Retire gld, re-home 3 later (Recommended)"*. `gld_pullback_1h` is retired by record (`enabled: false`; the record
+   and its re-entry test are in its `config/strategies.yaml` comment). `spy_pullback_1h`, `qqq_pullback_1h` and `tlt_pullback_1h` go back
+   on `alpaca_paper` once it takes slices for them (a 1d leg trades the same symbols there). Until then they are named in the guard's
+   `UNHOMED` and owned by row `ALPACA-SLICES-REHOME-1H`, so none is silently unhomed.
+5. **Inactive legs** — *"No shadow logging (Recommended)"*. Market-data collection continues under "Off the trade path is not off the
+   data path".
 
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
 

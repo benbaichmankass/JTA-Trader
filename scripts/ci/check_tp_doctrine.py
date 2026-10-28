@@ -271,6 +271,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
     # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
+    "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_1/trend_donchian_eth_prop": ER,
     # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
     # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.

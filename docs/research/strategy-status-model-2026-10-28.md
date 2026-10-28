@@ -26,6 +26,9 @@ removes going forward.
 | alpaca_paper | iaum_pullback_1d | 1 |
 | **total** | | **23 ≈ 5.75 / week** |
 
+**After the operator's Q2 answer (2026-10-28 ~22:35Z), `iaum_pullback_1d` stays on `alpaca_paper` as a named exception.** The move
+therefore removes **22 ≈ 5.5 / week** (all on `bybit_1`), and the 1 `alpaca_paper` trade is kept on purpose.
+
 Cross-check: 7+5+5+4+1+1 = 23. These 23 are 23 of the 349 general-paper trades in the window (bybit_1 250, ib_paper 65,
 alpaca_paper 34), about 6.6%. The same legs made 22 trades on `bybit_2` and 22 on `bybit_portfolio` over the window, plus 3 on
 `alpaca_live`.
@@ -48,7 +51,7 @@ it. The reverse happened 4 times: 2 `bybit_2` `xrp_pullback_2h` trades and 2 `al
 general-paper sibling. Once `bybit_2` + `bybit_portfolio` move to slices (row `NETTED-SLICES`), the gap closes.
 
 `iaum_pullback_1d`: `alpaca_live` traded it 3 times and `alpaca_paper` once. The mirror excludes it by the affordability carve-out, so
-after the move its only record is real money (operator question 2 in the plan).
+the operator kept it on `alpaca_paper` as a named exception (Q2), so it keeps its paper record.
 
 ## Method (reproducible)
 

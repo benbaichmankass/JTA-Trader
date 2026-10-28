@@ -1,0 +1,21 @@
+{
+  "id": "ALPACA-SLICES-REHOME-1H",
+  "title": "Re-home spy/qqq/tlt_pullback_1h on alpaca_paper once it takes slices for same-symbol legs",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-28 ~22:35Z (Q4, verbatim 'Retire gld, re-home 3 later (Recommended)', relayed by the manager): spy_pullback_1h, qqq_pullback_1h, tlt_pullback_1h are testing legs off every book because alpaca_paper has no slice support and a 1d leg trades the same symbol there. Named in strategy-status-guard UNHOMED (which refuses the entry once a leg is homed or retired). DONE WHEN: alpaca_paper carries position_model: slices (as bybit_1 does, 2026-10-15) and the three legs are on its roster; drop them from UNHOMED in the same PR.",
+  "updated_at": "2026-10-28T22:43:21Z",
+  "updated_by": "session_01AFoLuMuLPLAveAwJS7eqad",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 765
+}
