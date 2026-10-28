@@ -751,6 +751,9 @@ def cmd_walk(a: argparse.Namespace) -> int:
     """The judge's ONLY interface: prints the trade's next check-in packet, or {"closed": true}. --decision records
     the answer to the CURRENT packet first (refused if its packet_id is not the one pending)."""
     out = Path(a.out)
+    if a.trade == "PROTOCOL":                       # the judge reads its protocol through the one allowed command
+        print((out / "WALK-PROTOCOL.md").read_text())
+        return 0
     entries = {trade_token(SEED, e.entry_id): e for e in read_entries(out / "entries.jsonl")}
     e = entries.get(a.trade)
     if e is None:
