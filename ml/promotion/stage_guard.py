@@ -31,6 +31,7 @@ from .attribution import compute_attribution
 from .gates import (
     GateReport,
     GateThresholds,
+    count_clean_shadow_predictions,
     evaluate_gates,
     is_regime_classifier,
     thresholds_for,
@@ -153,6 +154,7 @@ def propose_for_model(
     live_parity: Any = None,
     labels_accruing: Any = None,
     thresholds: GateThresholds | None = None,
+    shadow_clean_count: int | None = None,
 ) -> Proposal:
     """Pure proposal decision for one model (no I/O)."""
     # Auto-select the classifier profile for a regime head when no explicit
@@ -178,7 +180,7 @@ def propose_for_model(
             attribution=attribution, drift=drift, oos_edge=oos_edge,
             live_regime_auc=live_regime_auc,
             live_parity=live_parity, labels_accruing=labels_accruing,
-            thresholds=th,
+            thresholds=th, shadow_clean_count=shadow_clean_count,
         )
         if report.ready:
             return Proposal(
@@ -426,5 +428,8 @@ def run_stage_guard(
             live_parity=None,
             labels_accruing=None,
             thresholds=thresholds,
+            # Mechanical soak (operator 2026-10-28, "Same as trades: 1-2
+            # clean"): clean scored shadow predictions at the current stage.
+            shadow_clean_count=count_clean_shadow_predictions(records, entry),
         ))
     return proposals

@@ -37,6 +37,15 @@ in-trade bar ``t`` emit:
    ``ml.datasets.labeling.label_event`` — the SAME labeler ``setup_candidates``
    uses, applied from the *in-trade* bar instead of the entry bar.
 
+   **Cost-net** (ML-TRAINING-PRINCIPLES-GAPS, default ON via
+   ``config/ml_training.yaml::cost_net_labels``): the hold label is charged the
+   cost of HOLDING — perp funding over the forward window, venue-correct via
+   ``ml.datasets.labeling.cost_policy`` (scope ``"hold"``). The exit's own fee
+   and slippage are paid whether the position closes now or later, so they
+   cancel out of a hold-vs-exit decision and are not charged (pass explicit
+   ``fee_bps_roundtrip`` / ``slippage_bps_roundtrip`` to charge them anyway).
+   ``label_cost_basis`` / ``label_cost_r`` record the basis per row.
+
 ## Leakage discipline (PASSED by construction)
 
 An in-trade row at bar ``t`` carries features from the inclusive **past** window
@@ -92,6 +101,7 @@ from typing import Any, ClassVar, Iterator, Mapping
 
 from ..builder import DatasetBuilder
 from ..labeling import BarrierConfig, cusum_events, label_event
+from ..labeling.cost_policy import apply_cost_policy
 from ..labeling.triple_barrier import log_prices
 from ..metadata import LeakageStatus
 from ..volatility_estimators import (
@@ -109,6 +119,8 @@ from .setup_candidates import (
     _bar_index_at_or_before,
     _bucket_for,
     _load_market_raw_rows,
+    _opt_bool,
+    _opt_float,
     _parse_ts_hour_dow,
     _quantile_buckets,
     _resolve_market_raw_paths,
@@ -195,7 +207,9 @@ class ExitCandidatesBuilder(DatasetBuilder):
     # future-only) makes leakage impossible by construction — the same
     # guarantee market_features / setup_candidates stamp.
     leakage_test_status: ClassVar[LeakageStatus] = LeakageStatus.PASSED
-    label_version: ClassVar[str] = "exit-hold-triple-barrier-v1"
+    # v2 (ML-TRAINING-PRINCIPLES-GAPS, 2026-10-28): hold labels net of the
+    # holding cost (perp funding) by default; see label_cost_basis per row.
+    label_version: ClassVar[str] = "exit-hold-triple-barrier-v2-costnet"
     schema: ClassVar[Mapping[str, type]] = {
         # identity / context
         "ts": str,
@@ -230,6 +244,8 @@ class ExitCandidatesBuilder(DatasetBuilder):
         "fwd_r_multiple": float,     # forward outcome ret / stop-dist (R units)
         "fwd_ret": float,            # direction-signed forward net return
         "hold_bars": int,            # bars to the forward barrier resolution
+        "label_cost_basis": str,     # 'net' (holding cost charged) | 'gross'
+        "label_cost_r": float,       # holding-cost charge in R in fwd_r_multiple
         # --- domain-shift split flag + sampler tag ---
         "is_live_trade": bool,
         "event_source": str,         # 'synthetic' | 'live'
@@ -256,6 +272,10 @@ class ExitCandidatesBuilder(DatasetBuilder):
         include_synthetic: bool = True,
         live_trades_db: Path | str | None = None,
         seed: int = 42,
+        cost_net: bool | str | None = None,
+        fee_bps_roundtrip: float | str | None = None,
+        slippage_bps_roundtrip: float | str | None = None,
+        funding_bps_per_window: float | str | None = None,
         **_: Any,
     ) -> Iterator[Mapping[str, Any]]:
         """Build in-trade exit-candidate rows for one OR several symbols.
@@ -312,10 +332,17 @@ class ExitCandidatesBuilder(DatasetBuilder):
             max_holding=hold_horizon, slippage=slippage,
         )
 
+        cost_kwargs = {
+            "cost_net": _opt_bool(cost_net),
+            "fee_bps_roundtrip": _opt_float(fee_bps_roundtrip),
+            "slippage_bps_roundtrip": _opt_float(slippage_bps_roundtrip),
+            "funding_bps_per_window": _opt_float(funding_bps_per_window),
+        }
         paths = _resolve_market_raw_paths(market_raw_path, market_raw_paths)
         for path in paths:
             yield from self._iter_one_symbol(
                 path,
+                cost_kwargs=cost_kwargs,
                 vol_window_n=vol_window_n,
                 momentum_window=momentum_window,
                 cusum_threshold_mult=cusum_threshold_mult,
@@ -336,6 +363,7 @@ class ExitCandidatesBuilder(DatasetBuilder):
         self,
         market_raw_path: Path | str,
         *,
+        cost_kwargs: Mapping[str, Any] | None = None,
         vol_window_n: int,
         momentum_window: int,
         cusum_threshold_mult: float,
@@ -359,6 +387,15 @@ class ExitCandidatesBuilder(DatasetBuilder):
         highs = [float(r["high"]) for r in rows]
         lows = [float(r["low"]) for r in rows]
         opens = [float(r["open"]) for r in rows]
+
+        # Holding cost for THIS symbol's venue (perp funding; 0 for non-perps).
+        hold_config, cost_basis = apply_cost_policy(
+            hold_config,
+            str(rows[0].get("symbol", "")),
+            str(rows[0].get("timeframe", "")),
+            scope="hold",
+            **dict(cost_kwargs or {}),
+        )
 
         log_returns: list[float | None] = [None] * n
         for i in range(1, n):
@@ -388,6 +425,7 @@ class ExitCandidatesBuilder(DatasetBuilder):
             sl_mult=sl_mult, hold_config=hold_config,
             max_trade_bars=max_trade_bars,
             in_trade_sample_step=in_trade_sample_step,
+            cost_basis=cost_basis,
         )
 
         # --- Synthetic arm: CUSUM entries → walk in-trade bars ---
@@ -591,6 +629,8 @@ class ExitCandidatesBuilder(DatasetBuilder):
                 "fwd_r_multiple": float(outcome.r_multiple),
                 "fwd_ret": float(outcome.ret),
                 "hold_bars": int(outcome.holding_bars),
+                "label_cost_basis": ctx.cost_basis,
+                "label_cost_r": float(outcome.cost_r),
                 # split flag + tag
                 "is_live_trade": bool(is_live),
                 "event_source": event_source,
@@ -654,7 +694,7 @@ class _SymbolContext:
         "rows", "n", "opens", "highs", "lows", "closes",
         "log_returns", "past_vols", "boundaries", "bucket_labels",
         "vol_window_n", "momentum_window", "sl_mult", "hold_config",
-        "max_trade_bars", "in_trade_sample_step",
+        "max_trade_bars", "in_trade_sample_step", "cost_basis",
     )
 
     def __init__(
@@ -676,6 +716,7 @@ class _SymbolContext:
         hold_config: BarrierConfig,
         max_trade_bars: int,
         in_trade_sample_step: int,
+        cost_basis: str = "gross",
     ) -> None:
         self.rows = rows
         self.n = n
@@ -693,6 +734,7 @@ class _SymbolContext:
         self.hold_config = hold_config
         self.max_trade_bars = max_trade_bars
         self.in_trade_sample_step = in_trade_sample_step
+        self.cost_basis = cost_basis
 
 
 # Re-exported for symmetry with setup_candidates' importable helpers / tests.

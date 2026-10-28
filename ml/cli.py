@@ -53,7 +53,7 @@ from .experiments.runner import (
     run_experiment,
 )
 from .promotion import gates_for
-from .registry.model_registry import ModelRegistry, RegistryError
+from .registry.model_registry import CostGateRefused, ModelRegistry, RegistryError
 from .shadow.inspector import (
     aggregate,
     filter_records,
@@ -107,6 +107,19 @@ def _cmd_promote(args: argparse.Namespace) -> int:
             f"{gates}; pass --gates-acknowledged once they are documented in --reason.\n"
         )
         return 2
+    # The cost-net gate is enforced, not acknowledged: a status move into a
+    # live-influence status refuses a failed / missing cost-net evaluation
+    # whatever --gates-acknowledged says (ML-TRAINING-PRINCIPLES-GAPS).
+    if args.new_status in ("advisory", "live-approved", "champion"):
+        from .registry.model_registry import _cost_gate_refusal
+
+        refusal = _cost_gate_refusal(current, "advisory")
+        if refusal:
+            sys.stderr.write(
+                f"cost gate refuses {args.model_id} {current.status!r} -> "
+                f"{args.new_status!r}: {refusal}\n"
+            )
+            return 2
     updated = registry.promote(
         args.model_id, args.new_status, by=args.by, reason=args.reason,
     )
@@ -147,9 +160,17 @@ def _cmd_promote_stage(args: argparse.Namespace) -> int:
                     "current_stage": entry.target_deployment_stage,
                 })
                 continue
-            updated = registry.promote_stage(
-                entry.model_id, "shadow", by=args.by, reason=args.reason,
-            )
+            try:
+                updated = registry.promote_stage(
+                    entry.model_id, "shadow", by=args.by, reason=args.reason,
+                )
+            except CostGateRefused as exc:
+                skipped.append({
+                    "model_id": entry.model_id,
+                    "current_stage": entry.target_deployment_stage,
+                    "refused": str(exc),
+                })
+                continue
             transitioned.append({
                 "model_id": updated.model_id,
                 "from_stage": entry.target_deployment_stage,
@@ -386,6 +407,7 @@ def _cmd_gate_check(args: argparse.Namespace) -> int:
     from .promotion.attribution import compute_attribution
     from .promotion.gates import (
         GateThresholds,
+        count_clean_shadow_predictions,
         evaluate_gates,
         is_regime_classifier,
         regime_classifier_thresholds,
@@ -505,6 +527,8 @@ def _cmd_gate_check(args: argparse.Namespace) -> int:
         drift=drift, oos_edge=oos_edge, live_regime_auc=live_regime_auc,
         live_parity=live_parity, labels_accruing=labels_accruing,
         thresholds=thresholds,
+        # Mechanical soak: clean scored shadow predictions at this stage.
+        shadow_clean_count=count_clean_shadow_predictions(records, entry),
     )
     sys.stderr.write(
         f"gate-check live_regime_discrimination AUC (advisory): "

@@ -449,7 +449,7 @@ current ids via `list_triggers`):
 | Thu 06:30 | walk-through WITH the operator (`trig_01CpyqNkhwqEjLAHq1Wrrh1b`) | performance, then ML + frontier as a dialogue; then dispatch `/perf-followup` (Opus) and turn agreed ideas into units/rows |
 | Sat 07:23 | health review (`trig_013GU17584wu4HJYEkTF1KBk`, assistant manager) | one Sonnet lane runs `/health-review`, dispositions every finding, self-lands one PR |
 | Mon 06:07 | weekly audit (`trig_017awLRNy4rmdL57NHKXehet`) | one Opus lane: CORE + rotating deep pass (ISO week mod 4), per `.claude/skills/weekly-audit/SKILL.md` |
-| Tue 09:53 | research programme review (`trig_01GuB9kH3CM4WJCJUgAb1s8Q`) | one Opus lane updates the research map and five programme plans (`docs/research/programmes/`); the queue is fed ONLY from these; one self-landing PR |
+| Wed 19:29 (per the manager's 2026-10-28 dispatch; trigger time not re-read by that lane) | research programme review (`trig_01GuB9kH3CM4WJCJUgAb1s8Q`) | one Opus lane runs `.claude/skills/programme-review/SKILL.md` (CHECKS packet + per-programme, per-track ANALYSIS) and updates the research map and programme plans (`docs/research/programmes/`, `research/programmes/`); the queue is fed ONLY from these; one HELD PR (programme trees are landing machinery) |
 
 Unchanged: research-ops 4×/day, daily reviews 05:52Z/17:52Z, lane check-ins. **Retired (operator 2026-10-14):** the Monday research-planning
 session and `ROADMAP-PASS-<week>` rows; file the roadmap outcome on `WEEKLY-PLANNING`.

@@ -48,17 +48,20 @@ class GateThresholds:
     min_eval: int = 1000
     stability_metric_max_std: float = 0.05
     stability_min_runs: int = 3
-    shadow_soak_days: float = 7.0
-    # Whether the fixed `shadow_soak_days` calendar gate is *required*. Default
-    # True for a trade-outcome decision model. For a regime CLASSIFIER head the
-    # regime profile turns this OFF (WS-1 de-soak, 2026-07-26, operator-approved
-    # — docs/research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md): the
-    # M25 reframe already established that a regime head's EDGE is proven OFFLINE
-    # (`oos_edge`, purged WF-CV) and its serving MECHANICS by `live_parity` +
-    # `labels_accruing` + `drift_clean`. A fixed 7-day calendar wait on top of
-    # those adds no evidence — it only delays a head that has already cleared
-    # every quality/safety/mechanics gate. Still computed + reported (advisory),
-    # just non-blocking, mirroring how `live_regime_discrimination` was demoted.
+    # The shadow soak is MECHANICAL (operator, 2026-10-28 popup, verbatim:
+    # "Same as trades: 1-2 clean" — replacing the legacy 7-day calendar gate;
+    # docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "The soak is MECHANICAL"):
+    # the model must have logged this many CLEAN scored real-time shadow
+    # predictions since it entered its current stage. Never a date, never > 2.
+    # Promotion itself is decided on the offline cost-net evidence
+    # (`oos_edge` + the enforced ml.promotion.cost_gate).
+    shadow_clean_predictions_needed: int = 1
+    # Whether the mechanical shadow-soak gate is *required*. Default True for a
+    # trade-outcome decision model. For a regime CLASSIFIER head the regime
+    # profile keeps it advisory (WS-1 de-soak, 2026-07-26, operator-approved —
+    # docs/research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md): its
+    # serving MECHANICS are already proven by `live_parity` + `labels_accruing`
+    # + `drift_clean`, which are stricter than a clean-prediction count.
     require_shadow_soak: bool = True
     min_auc: float = 0.55
     min_brier_lift: float = 0.0
@@ -148,7 +151,7 @@ class GateThresholds:
 # far too slowly to ever clear the 200-trade `min_trades` bar that's right
 # for a trade-outcome decision model. The regime profile keeps every quality
 # + safety gate (`oos_edge`, `non_degenerate`, `cross_run_stability`,
-# `shadow_soak` 7d, `drift_clean`) and (a) lowers the live sample floor to a
+# `shadow_soak` (mechanical, 1-2 clean predictions), `drift_clean`) and (a) lowers the live sample floor to a
 # small sanity count, (b) drops the degenerate live `beats_baseline`
 # requirement, and (c) swaps the live track-record gate — a vol-regime head
 # predicts the regime, not trade win/loss, so `live_agreement` (rank-AUC vs
@@ -178,10 +181,10 @@ def regime_classifier_thresholds(base: GateThresholds | None = None) -> GateThre
         require_live_regime_discrimination=False,
         require_live_parity=True,
         require_labels_accruing=True,
-        # WS-1 de-soak 2026-07-26: the fixed 7-day shadow-soak calendar gate is
-        # demoted to advisory for a regime head (edge = oos_edge offline;
-        # mechanics = live_parity + labels_accruing + drift_clean). It never
-        # loosens oos_edge / drift_clean — those stay required.
+        # WS-1 de-soak 2026-07-26: the shadow-soak gate is advisory for a
+        # regime head (edge = oos_edge offline; mechanics = live_parity +
+        # labels_accruing + drift_clean). It never loosens oos_edge /
+        # drift_clean — those stay required.
         require_shadow_soak=False,
     )
 
@@ -519,27 +522,88 @@ def _stage_entered_at(entry: Any) -> datetime | None:
     return getattr(entry, "created_at", None)
 
 
-def _gate_shadow_soak(entry: Any, th: GateThresholds) -> GateResult:
+def count_clean_shadow_predictions(records: Any, entry: Any) -> int:
+    """Clean scored REAL-TIME shadow predictions for ``entry`` since it entered
+    its current stage: matching ``model_id``, not a backfill replay, a finite
+    numeric score, predicted at/after the stage entry. ``records`` are
+    ``ml.shadow.inspector.ShadowRecord``s (validated at parse time)."""
+    import math  # noqa: PLC0415
+
     entered = _stage_entered_at(entry)
-    if entered is None:
+    if entered is not None and entered.tzinfo is None:
+        entered = entered.replace(tzinfo=timezone.utc)
+    n = 0
+    for r in records or ():
+        if getattr(r, "model_id", None) != entry.model_id:
+            continue
+        if getattr(r, "backfill_kind", None) is not None:
+            continue
+        score = getattr(r, "score", None)
+        if not isinstance(score, (int, float)) or not math.isfinite(float(score)):
+            continue
+        at = getattr(r, "predicted_at_utc", None)
+        if entered is not None and at is not None and at < entered:
+            continue
+        n += 1
+    return n
+
+
+def _gate_shadow_soak(
+    entry: Any, th: GateThresholds, shadow_clean_count: int | None = None,
+) -> GateResult:
+    """MECHANICAL shadow soak (operator 2026-10-28, "Same as trades: 1-2
+    clean"): passes once ``shadow_clean_predictions_needed`` (1, never > 2)
+    clean scored real-time shadow predictions have been logged at the current
+    stage. No calendar term. ``None`` = the shadow log was not read
+    (``insufficient_data``, never a silent pass)."""
+    needed = max(1, min(2, int(th.shadow_clean_predictions_needed)))
+    advisory = ("" if th.require_shadow_soak
+                else " — advisory for a regime classifier (mechanics = live_parity)")
+    if shadow_clean_count is None:
         return GateResult(
             "shadow_soak", "insufficient_data",
-            "cannot determine when the model entered shadow",
-            required=th.require_shadow_soak,
+            "shadow log not read — cannot count clean scored predictions" + advisory,
+            threshold=float(needed), required=th.require_shadow_soak,
         )
-    if entered.tzinfo is None:
-        entered = entered.replace(tzinfo=timezone.utc)
-    days = (_now_utc() - entered).total_seconds() / 86400.0
-    ok = days >= th.shadow_soak_days
+    ok = shadow_clean_count >= needed
     return GateResult(
         "shadow_soak",
         "pass" if ok else "fail",
-        f"{days:.1f} days at '{entry.target_deployment_stage}' "
-        f"(since {entered.isoformat(timespec='seconds')})"
-        + ("" if th.require_shadow_soak
-           else " — advisory for a regime classifier (WS-1 de-soak; edge=oos_edge)"),
-        value=days, threshold=th.shadow_soak_days,
+        f"{shadow_clean_count} clean scored shadow prediction(s) at "
+        f"'{entry.target_deployment_stage}' (mechanical soak needs {needed}; "
+        f"no calendar term)" + advisory,
+        value=float(shadow_clean_count), threshold=float(needed),
         required=th.require_shadow_soak,
+    )
+
+
+def _gate_cost_net(entry: Any) -> GateResult:
+    """The enforced cost-net decision-value gate (ml.promotion.cost_gate),
+    read from the served run's metrics. Required for a family with a net-R
+    value column; not required (and reported as such) for one without — the
+    registry's promote_stage enforces the same rule."""
+    from .cost_gate import VALUE_COLUMNS, gate_from_entry  # noqa: PLC0415
+
+    rec = gate_from_entry(entry)
+    ds = dict((dict(getattr(entry, "manifest", {}) or {})).get("dataset") or {})
+    has_value_col = str(ds.get("family") or "") in VALUE_COLUMNS
+    if rec is None:
+        return GateResult(
+            "cost_net", "insufficient_data",
+            "no cost-net evaluation on record for the served run"
+            + ("" if has_value_col else " — family has no net-R decision value yet"),
+            required=has_value_col,
+        )
+    if not rec["applicable"]:
+        return GateResult(
+            "cost_net", "insufficient_data",
+            "cost-net gate not applicable (no net-R value column)", required=False,
+        )
+    return GateResult(
+        "cost_net", "pass" if rec["passed"] else "fail",
+        f"cost-net decision value {rec.get('value_r')} R/opportunity vs incumbent "
+        "and take-all/take-none/matched-random baselines (see cost_gate.json)",
+        value=rec.get("value_r"), required=True,
     )
 
 
@@ -824,6 +888,7 @@ def evaluate_gates(
     live_parity: Any = None,
     labels_accruing: Any = None,
     thresholds: GateThresholds | None = None,
+    shadow_clean_count: int | None = None,
 ) -> GateReport:
     """Evaluate the shadow→advisory promotion gates for one model.
 
@@ -841,6 +906,8 @@ def evaluate_gates(
     profile since the M25 reframe (soak = mechanics, not edge; the edge is
     proven offline by ``oos_edge``). Non-regime profiles leave both
     non-required (unchanged behaviour) unless they opt in.
+    ``shadow_clean_count`` is :func:`count_clean_shadow_predictions` over the
+    shadow log (the mechanical soak; ``None`` when the log was not read).
 
     ``report.ready`` is ``True`` only when every *required* gate clears its
     pre-registered threshold. A required gate with no evidence reports
@@ -853,7 +920,8 @@ def evaluate_gates(
         _gate_oos_edge(oos_edge, th),
         _gate_sample_sufficiency(entry, attribution, th),
         _gate_cross_run_stability(entry, th),
-        _gate_shadow_soak(entry, th),
+        _gate_shadow_soak(entry, th, shadow_clean_count),
+        _gate_cost_net(entry),
         _gate_live_agreement(attribution, th),
         _gate_live_regime_discrimination(live_regime_auc, th),
         _gate_live_parity(live_parity, th),

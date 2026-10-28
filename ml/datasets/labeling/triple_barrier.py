@@ -27,6 +27,18 @@ keep synthetic-barrier labels from being systematically optimistic vs live
 fills — but they are still synthetic, so a model trained on them must be
 **evaluated on real live trades** (enforced by the ``setup_candidates`` family's
 ``is_live_trade`` split column).
+
+**Cost-net labels** (ML-TRAINING-PRINCIPLES-GAPS / practice principle M1,
+operator Tier-2 approval 2026-10-28 "Yes, ship it today (Recommended)"): the
+``fee_bps_roundtrip`` / ``slippage_bps_roundtrip`` / ``funding_bps_per_window``
+terms charge the FULL cost stack through the one shared cost model
+(``src.runtime.execution_costs.roundtrip_cost_r``), so ``r_multiple`` is the
+gross barrier R minus exactly that cost in R, and a take-profit that does not
+cover its cost labels ``-1``. All three default to ``0.0`` here (a bare
+``BarrierConfig`` stays the legacy gross labeler); the dataset families resolve
+the venue-correct values per symbol via ``ml.datasets.labeling.cost_policy``,
+which is ON by default and reverted by ONE value
+(``config/ml_training.yaml::cost_net_labels``).
 """
 from __future__ import annotations
 
@@ -43,12 +55,23 @@ class BarrierConfig:
     take-profit / stop-loss distances (in return space). ``max_holding`` is the
     vertical-barrier horizon in bars. ``slippage`` is a fractional cost charged
     against every fill (entry + exit), so a round trip pays ``2 * slippage``.
+
+    The bps terms are the full cost stack in the units of
+    ``src.runtime.execution_costs`` (round-trip fee bps, round-trip slippage
+    bps, funding bps per 8h window). ``bar_hours`` converts the holding bars to
+    a hold duration for the funding term; the hold is counted from the entry
+    bar's open through the exit bar's close (``holding_bars + 1`` bars), the
+    conservative upper bound for an in-bar barrier touch.
     """
 
     pt_mult: float = 1.0
     sl_mult: float = 1.0
     max_holding: int = 10
     slippage: float = 0.0
+    fee_bps_roundtrip: float = 0.0
+    slippage_bps_roundtrip: float = 0.0
+    funding_bps_per_window: float = 0.0
+    bar_hours: float = 0.0
 
     def __post_init__(self) -> None:
         if self.pt_mult <= 0:
@@ -59,6 +82,16 @@ class BarrierConfig:
             raise ValueError(f"max_holding must be >= 1; got {self.max_holding}")
         if self.slippage < 0:
             raise ValueError(f"slippage must be >= 0; got {self.slippage}")
+        for name in ("fee_bps_roundtrip", "slippage_bps_roundtrip",
+                     "funding_bps_per_window", "bar_hours"):
+            if getattr(self, name) < 0:
+                raise ValueError(f"{name} must be >= 0; got {getattr(self, name)}")
+
+    @property
+    def charges_cost_stack(self) -> bool:
+        """True when any full-cost-stack term is non-zero (a cost-net labeler)."""
+        return (self.fee_bps_roundtrip > 0 or self.slippage_bps_roundtrip > 0
+                or (self.funding_bps_per_window > 0 and self.bar_hours > 0))
 
 
 @dataclass(frozen=True)
@@ -71,7 +104,8 @@ class BarrierOutcome:
     return net of slippage (positive = the trade made money). ``r_multiple`` is
     ``ret`` normalised by the stop distance (``sl_mult * vol``) — risk units,
     so ``+1`` ≈ "made one R". ``holding_bars`` is how many bars the trade was
-    open (entry bar inclusive → exit bar).
+    open (entry bar inclusive → exit bar). ``cost_r`` is the full-cost-stack
+    charge already subtracted from ``r_multiple`` (``0.0`` for a gross config).
     """
 
     barrier: str
@@ -83,6 +117,7 @@ class BarrierOutcome:
     ret: float
     r_multiple: float
     holding_bars: int
+    cost_r: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -95,6 +130,7 @@ class BarrierOutcome:
             "ret": self.ret,
             "r_multiple": self.r_multiple,
             "holding_bars": self.holding_bars,
+            "cost_r": self.cost_r,
         }
 
 
@@ -195,7 +231,9 @@ def label_event(
     # Vertical barrier: exit at the horizon close.
     exit_price = float(closes[horizon])
     gross = direction * (exit_price / entry_price - 1.0)
-    net = gross - 2.0 * config.slippage
+    holding = horizon - entry_idx
+    cost_r = _cost_stack_r(entry_price, exit_price, sl_ret, holding, config)
+    net = gross - 2.0 * config.slippage - cost_r * sl_ret
     label = 1 if net > 0 else (-1 if net < 0 else 0)
     return BarrierOutcome(
         barrier="timeout",
@@ -206,8 +244,37 @@ def label_event(
         exit_price=exit_price,
         ret=net,
         r_multiple=net / sl_ret if sl_ret > 0 else 0.0,
-        holding_bars=horizon - entry_idx,
+        holding_bars=holding,
+        cost_r=cost_r,
     )
+
+
+def _cost_stack_r(
+    entry_price: float,
+    exit_price: float,
+    sl_ret: float,
+    holding_bars: int,
+    config: BarrierConfig,
+) -> float:
+    """Full-cost-stack charge in R for one labeled trade, from the ONE shared
+    cost model (``src.runtime.execution_costs.roundtrip_cost_r``). ``0.0`` for a
+    gross config, so the legacy labeler is byte-identical. The per-unit risk is
+    the stop distance in price, ``entry_price * sl_ret``."""
+    if not config.charges_cost_stack or sl_ret <= 0:
+        return 0.0
+    from src.runtime.execution_costs import roundtrip_cost_r  # noqa: PLC0415
+
+    hold_hours = (holding_bars + 1) * config.bar_hours
+    cost = roundtrip_cost_r(
+        entry=entry_price,
+        exit_price=exit_price,
+        risk=entry_price * sl_ret,
+        hold_hours=hold_hours if hold_hours > 0 else None,
+        fee_bps_roundtrip=config.fee_bps_roundtrip,
+        slippage_bps_roundtrip=config.slippage_bps_roundtrip,
+        funding_bps_per_window=config.funding_bps_per_window,
+    )
+    return float(cost["total_cost_r"])
 
 
 def _resolve(
@@ -221,9 +288,15 @@ def _resolve(
     sl_ret: float,
     config: BarrierConfig,
 ) -> BarrierOutcome:
-    """Build a BarrierOutcome for a touched (tp/sl) barrier, charging slippage."""
+    """Build a BarrierOutcome for a touched (tp/sl) barrier, charging slippage
+    and the full cost stack. A take-profit whose net return is not positive
+    (the cost ate the barrier) labels ``-1``: the label is the cost-net outcome."""
     gross = direction * (barrier_price / entry_price - 1.0)
-    net = gross - 2.0 * config.slippage
+    holding = exit_idx - entry_idx
+    cost_r = _cost_stack_r(entry_price, barrier_price, sl_ret, holding, config)
+    net = gross - 2.0 * config.slippage - cost_r * sl_ret
+    if label > 0 and config.charges_cost_stack and net <= 0:
+        label = -1
     return BarrierOutcome(
         barrier=barrier,
         label=label,
@@ -233,7 +306,8 @@ def _resolve(
         exit_price=barrier_price,
         ret=net,
         r_multiple=net / sl_ret if sl_ret > 0 else 0.0,
-        holding_bars=exit_idx - entry_idx,
+        holding_bars=holding,
+        cost_r=cost_r,
     )
 
 

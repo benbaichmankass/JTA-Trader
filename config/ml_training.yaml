@@ -1,0 +1,22 @@
+# ML training cost policy — ONE switch (row ML-TRAINING-PRINCIPLES-GAPS).
+#
+# Operator Tier-2 approval 2026-10-28 ~07:36Z (popup, verbatim): "Yes, ship it
+# today (Recommended)" for: labels net of the full cost stack, plus an enforced
+# cost gate on model promotion, effective from the next training cycle; revert
+# is one config value.
+#
+# cost_net_labels: true  (default, the shipped policy)
+#   - triple-barrier labels (setup_candidates, exit_candidates) charge the full
+#     venue-correct cost stack — fee + slippage + perp funding — through
+#     src/runtime/execution_costs.py (ml/datasets/labeling/cost_policy.py);
+#   - every training run computes a cost-net decision value on its evaluation
+#     rows and the registry REFUSES to land a model in shadow/advisory (or to
+#     swap a shadow/advisory model's state on retrain) unless it beats the
+#     incumbent and the take-all / take-none / matched-random baselines on the
+#     same rows (ml/promotion/cost_gate.py).
+#
+# REVERT: set cost_net_labels: false. Labels go back to gross, the gate goes
+# back to report-only (it is still computed and written, never enforced).
+# Datasets already built keep the basis they were built with (each row carries
+# label_cost_basis); rebuild to change it.
+cost_net_labels: true

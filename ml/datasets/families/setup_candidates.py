@@ -20,7 +20,12 @@ that collapse them to a baseline (gap G4).
    signal-bar look-ahead), a take-profit / stop-loss sized to the signal bar's
    local volatility, and a vertical timeout barrier. Fills are modeled
    conservatively (high/low touch detection, adverse-first on a straddling bar,
-   optional slippage).
+   optional slippage) and **net of the full cost stack** (fee + slippage + perp
+   funding, venue-correct per symbol, via ``ml.datasets.labeling.cost_policy``
+   over ``src.runtime.execution_costs``) — ON by default, reverted by the one
+   value ``config/ml_training.yaml::cost_net_labels``. Each row records the
+   basis in ``label_cost_basis`` (``net`` / ``gross`` synthetic, ``realized``
+   live, ``harness`` backtest) and the charge in ``label_cost_r``.
 4. Emit one row per candidate: **signal-time features only** + the barrier
    outcome as the label.
 
@@ -132,6 +137,7 @@ from typing import Any, ClassVar, Iterator, Mapping
 
 from ..builder import DatasetBuilder
 from ..labeling import BarrierConfig, cusum_events, label_event
+from ..labeling.cost_policy import apply_cost_policy
 from ..labeling.triple_barrier import log_prices
 from ..metadata import LeakageStatus
 from ..volatility_estimators import (
@@ -528,6 +534,19 @@ def _load_signal_log_events(
     return out
 
 
+def _opt_bool(value: Any) -> bool | None:
+    """``None`` stays ``None`` (the config switch decides); the build CLI's
+    ``key=value`` strings (``false``/``0``/``no``/``off``) parse to ``False``."""
+    if value is None or isinstance(value, bool):
+        return value
+    return str(value).strip().lower() not in ("false", "0", "no", "off", "")
+
+
+def _opt_float(value: Any) -> float | None:
+    """``None`` stays ``None`` (venue default); anything else is a float."""
+    return None if value is None else float(value)
+
+
 def _resolve_market_raw_paths(
     market_raw_path: Path | str | None,
     market_raw_paths: list[Path | str] | str | None,
@@ -643,7 +662,10 @@ class SetupCandidatesBuilder(DatasetBuilder):
     # Window separation (features past-only, label future-only) makes leakage
     # impossible by construction — same guarantee market_features stamps.
     leakage_test_status: ClassVar[LeakageStatus] = LeakageStatus.PASSED
-    label_version: ClassVar[str] = "triple-barrier-v1"
+    # v2 (ML-TRAINING-PRINCIPLES-GAPS, 2026-10-28): synthetic labels are net of
+    # the full cost stack by default; the per-row `label_cost_basis` says which
+    # basis a given build used (the config switch can revert it to gross).
+    label_version: ClassVar[str] = "triple-barrier-v2-costnet"
     schema: ClassVar[Mapping[str, type]] = {
         # identity / context
         "ts": str,
@@ -686,6 +708,14 @@ class SetupCandidatesBuilder(DatasetBuilder):
         "won_r": int,
         "ret": float,                # direction-signed net return
         "holding_bars": int,
+        # cost basis of THIS row's outcome (outcome metadata, never a feature):
+        # 'net' = synthetic triple-barrier net of fee+slippage+funding,
+        # 'gross' = synthetic with the cost policy switched off,
+        # 'realized' = a real trade's journal pnl, 'harness' = a backtest R.
+        "label_cost_basis": str,
+        # full-cost-stack charge in R already subtracted from r_multiple
+        # (synthetic rows only; 0.0 on a gross build).
+        "label_cost_r": float,
         # real-vs-synthetic split flag (domain-shift discipline)
         "is_live_trade": bool,
         # which sampler emitted this row: 'cusum' / 'signal_log' / 'backtest' /
@@ -730,9 +760,18 @@ class SetupCandidatesBuilder(DatasetBuilder):
         backtest_strategies: tuple[str, ...] | list[str] | str | None = None,
         r_label_threshold: float | None = None,
         backtest_r_haircut: float | None = None,
+        cost_net: bool | str | None = None,
+        fee_bps_roundtrip: float | str | None = None,
+        slippage_bps_roundtrip: float | str | None = None,
+        funding_bps_per_window: float | str | None = None,
         **_: Any,
     ) -> Iterator[Mapping[str, Any]]:
         """Build candidate rows for one OR several symbols (S-MLOPT-S8).
+
+        ``cost_net`` (ML-TRAINING-PRINCIPLES-GAPS) — ``None`` (default) lets
+        ``config/ml_training.yaml::cost_net_labels`` decide (shipped ON);
+        ``false`` builds the gross arm. The three bps kwargs override the
+        venue-correct defaults from ``src.runtime.execution_costs``.
 
         Pass a single `market_raw_path`, or `market_raw_paths` (a list, or a
         comma-separated string from the build CLI) to build a **joint
@@ -819,10 +858,17 @@ class SetupCandidatesBuilder(DatasetBuilder):
         # optimistic harness R. Live (eval) rows are NEVER haircut — their real R
         # stays the ground truth. Only meaningful together with r_label_threshold.
         haircut = float(backtest_r_haircut) if backtest_r_haircut else None
+        cost_kwargs = {
+            "cost_net": _opt_bool(cost_net),
+            "fee_bps_roundtrip": _opt_float(fee_bps_roundtrip),
+            "slippage_bps_roundtrip": _opt_float(slippage_bps_roundtrip),
+            "funding_bps_per_window": _opt_float(funding_bps_per_window),
+        }
         paths = _resolve_market_raw_paths(market_raw_path, market_raw_paths)
         for path in paths:
             for row in self._iter_one_symbol(
-                path, config=config, vol_window_n=vol_window_n,
+                path, config=config, cost_kwargs=cost_kwargs,
+                vol_window_n=vol_window_n,
                 momentum_window=momentum_window,
                 cusum_threshold_mult=cusum_threshold_mult,
                 n_vol_buckets=n_vol_buckets, include_cusum=emit_cusum,
@@ -850,6 +896,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
         market_raw_path: Path | str,
         *,
         config: BarrierConfig,
+        cost_kwargs: Mapping[str, Any] | None = None,
         vol_window_n: int,
         momentum_window: int,
         cusum_threshold_mult: float,
@@ -874,6 +921,16 @@ class SetupCandidatesBuilder(DatasetBuilder):
         highs = [float(r["high"]) for r in rows]
         lows = [float(r["low"]) for r in rows]
         opens = [float(r["open"]) for r in rows]
+
+        # Full cost stack for THIS symbol's venue (fee + slippage + funding),
+        # resolved once per symbol — BTC perp and MES futures pay differently.
+        config, cost_basis = apply_cost_policy(
+            config,
+            str(rows[0].get("symbol", "")),
+            str(rows[0].get("timeframe", "")),
+            scope="roundtrip",
+            **dict(cost_kwargs or {}),
+        )
 
         # Past-only log returns + rolling vol.
         log_returns: list[float | None] = [None] * n
@@ -928,6 +985,8 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "r_multiple": float(outcome.r_multiple),
                     "ret": float(outcome.ret),
                     "holding_bars": int(outcome.holding_bars),
+                    "label_cost_basis": cost_basis,
+                    "label_cost_r": float(outcome.cost_r),
                     "is_live_trade": False,
                     "event_source": "cusum",
                 }
@@ -981,6 +1040,8 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "r_multiple": float(outcome.r_multiple),
                     "ret": float(outcome.ret),
                     "holding_bars": int(outcome.holding_bars),
+                    "label_cost_basis": cost_basis,
+                    "label_cost_r": float(outcome.cost_r),
                     "is_live_trade": False,
                     "event_source": "signal_log",
                 }
@@ -1032,6 +1093,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "r_multiple": r_multiple,
                     "ret": ret,
                     "holding_bars": 0,
+                    "label_cost_basis": "harness",
                     "is_live_trade": False,
                     "event_source": "backtest",
                 }
@@ -1085,6 +1147,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                     "r_multiple_source": r_source,
                     "ret": ret,
                     "holding_bars": 0,
+                    "label_cost_basis": "realized",
                     "is_live_trade": not is_paper,
                     "event_source": "live_paper" if is_paper else "live",
                 }
