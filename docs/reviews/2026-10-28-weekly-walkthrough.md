@@ -1,6 +1,6 @@
 # Weekly walkthrough 2026-10-28
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
 One brief, three sections, each written by its own lane: **ML + frontier** (`ML-FRONTIER-PREP-20261028`),
 **performance** (`PERF-REVIEW-PREP-20261028`) and **practice refresh** (`PRACTICE-REFRESH-20261028`).
