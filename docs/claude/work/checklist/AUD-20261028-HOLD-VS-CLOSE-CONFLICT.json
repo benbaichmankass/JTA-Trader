@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-HOLD-VS-CLOSE-CONFLICT",
+  "title": "Live grader says closing at review beat holding 26 of 27 times; the S0 lifecycle run says holds beat closing by +0.142 R",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 deep pass 0. MEASURED (live_review_grade.py --live after the join fix): hold vs close-at-review n=27, mean dR -0.80, hit 0.037 (ESTIMATED, close side charged no cost). DESK-LIFECYCLE-S0 (hold PR #20967, n=938 trades): holds worth +0.142 R vs closing. Hypotheses: H0 noise/selection -- the window is SL-dominated (31 of 40 closes sl), and on a trade that later hits SL any earlier mark beats SL, so the live comparison is biased toward closing; H1 the live reviewer's holds are genuinely worse than S0's. Discriminating test: price the same 27 reviews against a random-time close baseline from the same trades (the S0 design) instead of 'close at review'. Owner: perf-followup Track 2. check: the baseline-adjusted mean dR with its CI; rule registered here: H1 only if the baseline-adjusted mean < 0 with CI excluding 0 at n>=20.",
+  "updated_at": "2026-10-28T19:04:06Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 762
+}
