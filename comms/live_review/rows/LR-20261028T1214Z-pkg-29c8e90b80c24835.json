@@ -1,0 +1,108 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261028T1214Z-pkg-29c8e90b80c24835",
+ "reviewed_at": "2026-10-28T12:16:00Z",
+ "order_package_id": "pkg-29c8e90b80c24835",
+ "trade_id": null,
+ "leg": "trend_donchian",
+ "accounts": [
+  "bybit_1"
+ ],
+ "trigger": {
+  "event": "adverse_r",
+  "level": -0.75,
+  "l0_snapshot_at": null
+ },
+ "info_cutoff_at": "2026-10-28T12:14:17Z",
+ "state": {
+  "atr_now_over_entry": 0.948,
+  "bars_held": 4,
+  "giveback_r": 1.3727,
+  "open_r": -0.826,
+  "peak_provenance": "fabricated",
+  "peak_r": 6.0842,
+  "regime_cell_entry": "trending/calm",
+  "regime_cell_now": null,
+  "sl": 80961.12857143,
+  "tp": 89588.282
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.948,
+  "bars_since_peak": 3,
+  "giveback_r": 1.3727,
+  "open_r": -0.826,
+  "peak_r": 6.0842,
+  "r_to_stop": 0.174,
+  "r_to_target": 15.3182
+ },
+ "mechanics": {
+  "evidence": "package sl 80961.12857143 / tp 89588.282 agree with every readable account",
+  "verdict": "match"
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 4,
+   "mean_r": null,
+   "sd_r": null,
+   "worst_r": null,
+   "net": null
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261028T1214Z-pkg-29c8e90b80c24835.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "-0.83R with stop 0.17R away does not change the call: closing saves at most 0.17R before slippage vs a designed stop, and forfeits recovery on a trend leg (ADX 38.6 trending, ATR ratio 0.95, no cell flip evidence) whose TP is 15R away; hold cell n=4 thin; FOMC 18:30Z is 6h out, revisit if still open"
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "fabricated_telemetry: peak_r 6.0842 and giveback_r 1.3727 are the pre-entry peak (PR #20872); ignored",
+  "judgement: hold n=4 < floor 20 (thin, not measured); every tighten option state invalid_level (stop already inside 1x ATR)",
+  "calendar: FOMC 2026-10-28T18:30Z impact 1.0, about 6.2h out",
+  "correlated_exposure: long SOLUSDT, SPY also open",
+  "delta_vs_prior: holds at open_r -0.39 (12:03Z) and -0.52 (12:09Z); now -0.83 with r_to_stop 0.174; ATR ratio 0.95 unchanged, ADX 38.6 trending, no structure change",
+  "stop_proximity: next review expected at the stop; a stop-out at -1.0R on demo is bounded and is the leg's own designed exit",
+  "missing_input: regime.vol_now, funding, live_vs_backtest"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_1",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold changes nothing"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo lane)",
+ "session": "session_01AFoLuMH1qZ9AseXP5jFMXT",
+ "prompt_sha": null,
+ "skill_sha": "104db11ae2168e7de7c9ac1ab2e48e4794a8dbe6",
+ "packet_sha": "6669a8b1d62824c6481ccddbbae0b6356dce93d57ac37f965a7692038a6550bd"
+}
