@@ -545,6 +545,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/design/strategy-demote-and-tune-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/design/strategy-leg-offline-edge-basis-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
 | `docs/design/tp-sentinel-cap-venue-scope-PROPOSAL.md` | architecture | unknown | — | never | `dir:design-declares-contracts / not-assessed` | — |
+| `docs/design/virtual-leg-positions-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/exit-coverage-architecture.md` | architecture | unknown | — | never | `name:declares-a-contract / not-assessed` | — |
 | `docs/github-actions-workflows.md` | unknown | live | — | 2026-09-07 | `not-assessed / ci:canonical-doc-coherence-ACTIVE_DOCS` | — |
 | `docs/hf_claude_patch.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
@@ -1099,6 +1100,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-10-15-weekly-walkthrough-ml.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-15-weekly-walkthrough-perf.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-19-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/reviews/2026-10-28-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-10-21-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-22-weekly-planning-preread.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-28-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
