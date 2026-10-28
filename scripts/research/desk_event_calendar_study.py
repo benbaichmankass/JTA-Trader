@@ -150,8 +150,10 @@ class Sym:
                 near |= np.abs(ev[kk] - self.t) < 86400
             ok &= ~near
         cell = self.dec * 24 + self.hour
-        sums = np.zeros(240); cnt = np.zeros(240)
-        np.add.at(sums, cell[ok], r[ok]); np.add.at(cnt, cell[ok], 1)
+        sums = np.zeros(240)
+        cnt = np.zeros(240)
+        np.add.at(sums, cell[ok], r[ok])
+        np.add.at(cnt, cell[ok], 1)
         out = (sums, cnt)
         self.cache[key] = out
         return out
@@ -167,7 +169,8 @@ class Sym:
 def boot_ci(vals, days, alpha):
     ud = np.unique(days)
     grp = {u: vals[days == u] for u in ud}
-    sums = np.array([grp[u].sum() for u in ud]); ns = np.array([len(grp[u]) for u in ud])
+    sums = np.array([grp[u].sum() for u in ud])
+    ns = np.array([len(grp[u]) for u in ud])
     k = len(ud)
     idx = RNG.integers(0, k, size=(BOOT, k))
     m = sums[idx].sum(1) / ns[idx].sum(1)
@@ -206,17 +209,25 @@ def evaluate(syms, events, planted=0.0):
             ba = S.base(ix, ev_times[s], h, d)
             if np.isnan(ba):
                 continue
-            g.append(gr + (planted if (planted and hn == "4h") else 0.0)); b.append(ba)
-            days.append(int(k // 86400)); ks.append(k)
-        g = np.array(g); b = np.array(b); days = np.array(days); ks = np.array(ks)
+            g.append(gr + (planted if (planted and hn == "4h") else 0.0))
+            b.append(ba)
+            days.append(int(k // 86400))
+            ks.append(k)
+        g = np.array(g)
+        b = np.array(b)
+        days = np.array(days)
+        ks = np.array(ks)
         if len(g) == 0:
             out[hn] = {"n_rows": 0, "n_events": 0, "n_day_clusters": 0, "verdict": "insufficient_n"}
             continue
-        net = g - COST; ex = g - b
+        net = g - COST
+        ex = g - b
         ncl = len(np.unique(days))
         a1, a2 = 0.05, 0.05 / FAMILY
-        net_ci95 = boot_ci(net, days, a1); ex_ci95 = boot_ci(ex, days, a1)
-        net_ciC = boot_ci(net, days, a2); ex_ciC = boot_ci(ex, days, a2)
+        net_ci95 = boot_ci(net, days, a1)
+        ex_ci95 = boot_ci(ex, days, a1)
+        net_ciC = boot_ci(net, days, a2)
+        ex_ciC = boot_ci(ex, days, a2)
         med = np.median(ks)
         halves_ok = bool(net[ks <= med].mean() > 0 and net[ks > med].mean() > 0)
         span_y = max((ks.max() - ks.min()) / (365.25 * 86400), 1e-9)
@@ -239,7 +250,8 @@ def build_events(root):
     adir = Path(__file__).resolve().parents[2] / "comms/research/desk_event_calendar"
     ann = {c: json.loads((adir / f"ann_{c}.json").read_text()) for c in (48, 161)}
     ev = {k: [] for k in ("C1", "C2", "C3", "C4", "C5")}
-    start1 = dt.datetime(2020, 10, 1, tzinfo=dt.UTC).timestamp(); start2 = dt.datetime(2022, 2, 17, tzinfo=dt.UTC).timestamp()
+    start1 = dt.datetime(2020, 10, 1, tzinfo=dt.UTC).timestamp()
+    start2 = dt.datetime(2022, 2, 17, tzinfo=dt.UTC).timestamp()
     end = END.timestamp()
     for cat, key, d, st in ((48, "C1", 1, start1), (161, "C2", -1, start2)):
         for k in sorted({int(r["ts"] // 1000) for r in ann[cat]}):
@@ -248,9 +260,11 @@ def build_events(root):
     for s in SYMS:
         fr = [(int(r[0]) // 1000, float(r[2])) for r in _dir_rows(root / "fr" / s)]
         fr.sort()
-        ft = np.array([x[0] for x in fr]); fv = np.array([x[1] for x in fr])
+        ft = np.array([x[0] for x in fr])
+        fv = np.array([x[1] for x in fr])
         for i in range(90, len(fv)):
-            w = fv[i - 90:i]; sd = w.std()
+            w = fv[i - 90:i]
+            sd = w.std()
             if sd > 0 and abs(fv[i] - w.mean()) / sd >= 2 and ft[i] <= end:
                 ev["C3"].append((s, int(ft[i]), -1 if fv[i] > 0 else 1))
         # C4
@@ -258,21 +272,26 @@ def build_events(root):
                 for r in _dir_rows(root / "oi" / s)]
         if rows:
             rows.sort()
-            t = np.array([r[0] for r in rows]); oi = np.array([r[1] for r in rows])
+            t = np.array([r[0] for r in rows])
+            oi = np.array([r[1] for r in rows])
             # require contiguous 5m grid
-            ch = np.zeros(len(oi)); okv = np.zeros(len(oi), bool)
+            ch = np.zeros(len(oi))
+            okv = np.zeros(len(oi), bool)
             good = (oi[12:] > 0) & (oi[:-12] > 0)
             ch[12:][good] = oi[12:][good] / oi[:-12][good] - 1
             okv[12:] = good
-            ok12 = np.zeros(len(oi), bool); ok12[12:] = good & ((t[12:] - t[:-12]) == 3600)
+            ok12 = np.zeros(len(oi), bool)
+            ok12[12:] = good & ((t[12:] - t[:-12]) == 3600)
             W = 2016
             S = Sym(root, s)
             last = -1e18
-            cs = np.cumsum(ch); cs2 = np.cumsum(ch ** 2)
+            cs = np.cumsum(ch)
+            cs2 = np.cumsum(ch ** 2)
             for i in range(W + 12, len(oi)):
                 if not ok12[i] or t[i] - t[i - W] > 7.5 * 86400:
                     continue
-                m = (cs[i - 1] - cs[i - W - 1]) / W; v = (cs2[i - 1] - cs2[i - W - 1]) / W - m * m
+                m = (cs[i - 1] - cs[i - W - 1]) / W
+                v = (cs2[i - 1] - cs2[i - W - 1]) / W - m * m
                 if v <= 0:
                     continue
                 z = (ch[i] - m) / np.sqrt(v)
@@ -282,7 +301,8 @@ def build_events(root):
                     if j > 14 and j < len(S.t):
                         pr = S.c[j - 1] / S.c[j - 13] - 1
                         if pr != 0:
-                            ev["C4"].append((s, int(known), 1 if pr > 0 else -1)); last = known
+                            ev["C4"].append((s, int(known), 1 if pr > 0 else -1))
+                            last = known
     for y, m in _months((2020, 10), (2026, 9)):
         ev["C5"].append(("XRPUSDT", int(dt.datetime(y, m, 1, tzinfo=dt.UTC).timestamp()), -1))
     return ev
@@ -301,7 +321,8 @@ def run(root, out):
     rr = np.random.default_rng(7)
     ctl = []
     for _ in range(200):
-        s = SYMS[rr.integers(6)]; S = syms[s]
+        s = SYMS[rr.integers(6)]
+        S = syms[s]
         i = int(rr.integers(S.dec.size // 10, S.dec.size - 400))
         ctl.append((s, int(S.t[i]), 1))
     res["controls"]["null"] = evaluate(syms, ctl)
