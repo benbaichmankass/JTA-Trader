@@ -98,6 +98,7 @@ on:
           - revert-backfill-monitor-closed-pnl
           - mark-reconciler-incomplete
           - mark-operator-flattened
+          - set-journal-trade-qty
           - rebuild-pnl-from-bybit
           - backfill-shadow-predictions
           - backfill-account-class
@@ -714,6 +715,15 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*side[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Ss]ide[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # set-journal-trade-qty: the venue's quantity to write, and the journal quantity the caller read.
+            new_qty=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*new_qty[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Nn]ew_qty[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            expect_qty=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*expect_qty[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Ee]xpect_qty[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # cap-vm-logs: journald | runtime_logs.
             cap_target=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*target[[:space:]]*:' \
@@ -833,6 +843,8 @@ jobs:
           echo "ACTION_EXIT_KIND=${exit_kind:-}" >>"$GITHUB_ENV"
           echo "ACTION_NEW_SL=${new_sl:-}" >>"$GITHUB_ENV"
           echo "ACTION_TARGET=${cap_target:-}" >>"$GITHUB_ENV"
+          echo "ACTION_NEW_QTY=${new_qty:-}" >>"$GITHUB_ENV"
+          echo "ACTION_EXPECT_QTY=${expect_qty:-}" >>"$GITHUB_ENV"
           echo "ACTION_SIDE=${side:-}" >>"$GITHUB_ENV"
           echo "ACTION_ALLOW_IMMEDIATE=${allow_immediate:-}" >>"$GITHUB_ENV"
           echo "ACTION_REVIEW_ID=${review_id:-}" >>"$GITHUB_ENV"
@@ -849,7 +861,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code|live-review-dry-run)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|cap-vm-logs|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply|run-desk-judge)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|cap-vm-logs|set-journal-trade-qty|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|rearm-ib-protective|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl|live-review-apply|run-desk-judge)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1831,6 +1843,7 @@ jobs:
             backfill-closed-null-pnl)           SCRIPT="backfill_closed_null_pnl_action.sh" ;;
             mark-reconciler-incomplete)         SCRIPT="mark_reconciler_incomplete_action.sh" ;;
             mark-operator-flattened)            SCRIPT="mark_operator_flattened_action.sh" ;;
+            set-journal-trade-qty)              SCRIPT="set_journal_trade_qty_action.sh" ;;
             backfill-monitor-closed-pnl)        SCRIPT="backfill_monitor_closed_pnl_action.sh" ;;
             revert-backfill-monitor-closed-pnl) SCRIPT="revert_backfill_monitor_closed_pnl_action.sh" ;;
             rebuild-pnl-from-bybit)             SCRIPT="rebuild_pnl_from_bybit_action.sh" ;;
@@ -1991,6 +2004,24 @@ jobs:
               exit 1
             fi
             REMOTE_CMD="ACTION_TRADE_ID=$(printf '%q' "${TRADE_ID}") ACTION_REASON=$(printf '%q' "${REASON}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "set-journal-trade-qty" ]; then
+            # Shape-check only; set_journal_trade_qty.py owns every guard (open row, account/symbol match,
+            # expect_qty == the row's current size). Dry-run unless apply: true.
+            for _kv in "trade_id:${TRADE_ID:-}:^[0-9]+$" "account:${ACCOUNT_ID:-}:^[A-Za-z0-9_-]+$" \
+                       "symbol:${ACTION_SYMBOL:-}:^[A-Za-z0-9_]+$" "new_qty:${ACTION_NEW_QTY:-}:^[0-9]+(\.[0-9]+)?$" \
+                       "expect_qty:${ACTION_EXPECT_QTY:-}:^[0-9]+(\.[0-9]+)?$"; do
+              _k="${_kv%%:*}"; _rest="${_kv#*:}"; _v="${_rest%%:*}"; _re="${_rest#*:}"
+              if ! printf '%s' "${_v}" | grep -Eq "${_re}"; then
+                echo "::error::set-journal-trade-qty requires a valid '${_k}:' line (got '${_v}')."
+                exit 1
+              fi
+            done
+            case "${ACTION_APPLY:-}" in
+              ""|true|false|True|False) ;;
+              *) echo "::error::set-journal-trade-qty apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
+            esac
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_TRADE_ID=$(printf '%q' "${TRADE_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_NEW_QTY=$(printf '%q' "${ACTION_NEW_QTY}") ACTION_EXPECT_QTY=$(printf '%q' "${ACTION_EXPECT_QTY}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "cap-vm-logs" ]; then
             REMOTE_CMD="ACTION_TARGET=$(printf '%q' "${ACTION_TARGET:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"

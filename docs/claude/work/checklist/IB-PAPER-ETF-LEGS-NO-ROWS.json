@@ -1,0 +1,21 @@
+{
+  "id": "IB-PAPER-ETF-LEGS-NO-ROWS",
+  "title": "ib_paper: the 4 rostered equity-ETF legs (spy/qqq/iwm_trend_long_1d, tlt_pullback_1d) have NEVER journaled an ib_paper row (no fill, no rejection) while the same strategies journal on alpaca_paper/live/portfolio; config is clean, so the drop is in runtime",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-28 ~19:10Z by lane PRACTICE-REFRESH (session_01AFoLuJpe2bJTErX7QGAmaS): /api/diag/journal?table=trades paged 3x1000 rows (ids 3767..6766, created 2026-07-21..2026-10-28). Population: ib_paper 303 rows, all MGC/MHG/MES (mgc_trend_1h 228, ict_scalp_mgc_15m 41, mgc_pullback_1d 20, mhg_pullback_1d 6, mes_trend_long_1d 4, squeeze_breakout_4h 4); 0 rows for spy/qqq/iwm_trend_long_1d or tlt_pullback_1d. The same 4 strategies produced 34 rows on alpaca_paper/alpaca_live/alpaca_portfolio in that window, e.g. spy/qqq_trend_long_1d filled on alpaca_paper 2026-10-06 ~13:32Z. config/accounts.yaml ib_paper lists them in strategies: and symbols: [.. SPY, QQQ, IWM, TLT, GLD]; strategies.yaml has them enabled + execution: live. No rejected row means the order path never reached the ib_paper account write (a silent drop, not a refusal). journalctl for 2026-10-06T13:31-13:34Z returned '-- No entries --' (retention), so root cause is OPEN. gld_pullback_1d (moved to ib_paper 2026-10-25, GLD-SOAK-REPLACE) has not signalled since, so it cannot yet show the same drop. FIRST STEP: on the next daily ETF signal (US open), pull journalctl?unit=ict-trader-live around the bar and grep ib_paper / multi_account_execute for the skip reason; check Coordinator.multi_account_execute's per-account filter (exchange/market_type/session gate for STK on IB). Demo-floor rule: OPERATING-PLAN \u00a7 2 'Stage 1 is the DEMO FLOOR'. Closes when: an ib_paper row (fill or explicit refusal) exists for one of the 4 legs.",
+  "updated_at": "2026-10-28T19:06:57Z",
+  "updated_by": "session_01AFoLuJpe2bJTErX7QGAmaS",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 755
+}

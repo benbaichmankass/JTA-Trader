@@ -1,0 +1,22 @@
+# Orders the VENUE has wedged (accepted a cancel, never performed it). OPERATOR-DECISIONS-20261028 item 4, Tier-2.
+#
+# An entry here is read ONLY by account_alpaca_open_orders (src/units/accounts/clients.py), the single "what rests
+# NOW" read that /api/diag/alpaca_open_orders and the boot audit consume. It moves a listed order from `orders`
+# to `orders_excluded_venue_wedged` (still visible, never dropped silently) AND ONLY WHEN the order's symbol is
+# CONFIRMED FLAT on the account (positions read, no non-zero row). A held position, an unreadable positions
+# read, or an unlisted order all leave `orders` byte-identical. It does not touch the cancel / re-arm / close
+# paths, so a wedged order that still holds shares keeps being flagged until the position is gone.
+#
+# Entry shape: {order_id (full id), symbol, reason, evidence, added}. Remove an entry to put the order back.
+venue_wedged_orders:
+  alpaca_paper:
+    - order_id: 2e843e04-5487-470c-a702-70e796fbd05e
+      symbol: GLD
+      reason: OCO parent wedged at pending_cancel since 2026-08-27 (canceled_at null); Alpaca accepted our DELETE and never performed it.
+      evidence: src/runtime/close_wedge_standing.py header; tests/test_resting_stop_not_executing.py (share_hold=cancel_accepted_ineffective).
+      added: 2026-10-28
+    - order_id: 891ddff0-b24d-4039-9322-8492bcd51e66
+      symbol: GLD
+      reason: OCO stop leg listed `held` while DELETE answers 422 "order pending cancel" (src/units/accounts/alpaca_client.py classify_share_hold).
+      evidence: src/units/accounts/alpaca_client.py (2026-09-08 measurement); tests/test_resting_stop_not_executing.py.
+      added: 2026-10-28

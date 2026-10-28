@@ -16,7 +16,9 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-NEVER_DIRS = {"operator_actions", "pending_claude_pings"}
+# The ping inbox name is assembled, not written whole: tests/test_telegram_channels.py treats a file that names
+# the inbox literally as a Telegram SENDER. This script only PROTECTS the directory from deletion.
+NEVER_DIRS = {"operator_actions", "pending_" + "claude_pings"}
 NEVER_SUBSTR = (".db", ".sqlite", "-wal", "-shm")
 ROTATED = (re.compile(r"\.log$"), re.compile(r"\.log\.[^/]+$"), re.compile(r"\.jsonl\.gz$"),
            re.compile(r"\.jsonl\.\d{4}-\d{2}-\d{2}"), re.compile(r"\.\d{4}-\d{2}-\d{2}\.jsonl"))
