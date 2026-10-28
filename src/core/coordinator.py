@@ -193,6 +193,15 @@ def _instrument_exchange_for(symbol: str) -> Optional[str]:
     return _INSTRUMENT_EXCHANGE_CACHE.get(symbol) or None
 
 
+def _is_ib_stk(symbol: str) -> bool:
+    """True when IBKR resolves *symbol* to a STK contract (fail-safe False)."""
+    try:
+        from src.units.accounts.ib_instruments import is_ib_equity_symbol
+        return bool(is_ib_equity_symbol(symbol))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 _LEG_SCOPE_CACHE: Optional[tuple] = None  # (strategies.yaml mtime, {leg: {account: [symbols]}})
 
 
@@ -1275,7 +1284,20 @@ class Coordinator:
                 inst_exchange == "interactive_brokers"
                 or acct_exchange == "interactive_brokers"
             )
-            if ib_involved and inst_exchange and acct_exchange and inst_exchange != acct_exchange:
+            # IB-PAPER-SILENT-DROP: an IB account may trade an equity/ETF the
+            # instrument profile homes on alpaca when ib_instruments resolves
+            # it to an IBKR STK contract (SPY/QQQ/IWM/TLT/GLD on ib_paper).
+            # Only the IB-account side is relaxed; the strategies roster check
+            # below still decides, and MES/MGC/MHG still never reach a
+            # non-IB account.
+            _ib_stk_on_ib_acct = (
+                acct_exchange == "interactive_brokers"
+                and inst_exchange != "interactive_brokers"
+                and _is_ib_stk(getattr(pkg, "symbol", "") or "")
+            )
+            if (ib_involved and inst_exchange and acct_exchange
+                    and inst_exchange != acct_exchange
+                    and not _ib_stk_on_ib_acct):
                 return (
                     f"symbol_exchange_routing: {pkg.symbol} routes to "
                     f"{inst_exchange}, account is {acct_exchange}"
@@ -1336,6 +1358,18 @@ class Coordinator:
                     stage="pre_loop_eligibility",
                 )
         accounts = _eligible
+        # IB-PAPER-SILENT-DROP: a non-routine pre-sizing drop used to leave
+        # only a log line while sibling accounts sized, so an elected account
+        # was absent from sized_qty_by_account with no recorded cause. Stamp
+        # the cause beside the maps; routine drops stay out (anti-noise).
+        _non_routine = {
+            a: r for a, r in excluded_by_account.items()
+            if not r.startswith(_DISPATCH_DROP_ROUTINE_REASONS)
+        }
+        if _non_routine:
+            if pkg.meta is None:
+                pkg.meta = {}
+            pkg.meta["dispatch_exclusions_by_account"] = _non_routine
         # MIRROR-QTY-DIVERGE: a Stage-2 mirror dispatches AFTER its real-money
         # primary so the mirror gate below can follow the primary's outcome.
         from src.runtime import mirror_pairs as _mirror_pairs
