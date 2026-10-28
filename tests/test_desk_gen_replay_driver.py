@@ -693,3 +693,27 @@ class TestRoundTrip:
         assert all(g["mean_cost_r"] > 0 for g in m["geometries"].values())
         assert m["n_required_at_pooled_sd"]["+0.10R"] > m["n_required_at_pooled_sd"]["+0.20R"] > 0
         assert v["data_inputs"] and v["read_state"] == "measured"
+
+
+# ----------------------------------------------------------------------------- DESK-S3-VOL-MATCHED-BASELINE (driver form)
+class TestVolMatchedCompanions:
+    def test_matched_pool_is_same_symbol_fold_and_decile_and_never_wider_than_the_fold(self, market):
+        ser = market["ETHUSDT"]
+        pool = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END, 2)
+        ap = drv.atr_pct_of(ser)
+        i = int(pool[len(pool) // 2])
+        mp = drv.vol_matched_pool(ser, pool, i)
+        assert 0 < len(mp) < len(pool) and set(mp.tolist()) <= set(pool.tolist())
+        allc = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END)
+        edges = np.quantile(ap[allc], np.linspace(0, 1, 11)[1:-1])
+        assert len({int(np.searchsorted(edges, ap[j])) for j in mp}) == 1 == len({int(np.searchsorted(edges, ap[i]))})
+        # a pool from another fold yields only that fold's members: matching cannot draw across folds
+        other = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END, 3)
+        assert not set(drv.vol_matched_pool(ser, other, i).tolist()) & set(pool.tolist())
+
+    def test_random_baseline_reports_gross_and_keeps_the_registered_net_mean(self, market):
+        ser = market["BTCUSDT"]
+        g = {"side": 1.0, "etype": "market", "offset_atr": 0.0, "sl_atr": 1.5, "tp_atr": 3.0, "good_till": 1, "horizon": 24}
+        pool = drv.eligible_cutoffs(ser, drv.WINDOW_START, drv.WINDOW_END, 2)
+        r = drv.random_baseline(ser, g, pool, np.random.default_rng(1), 100)
+        assert r["gross_mean"] > r["mean"]                                           # gross = net + a positive cost
