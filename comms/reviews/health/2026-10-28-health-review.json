@@ -287,7 +287,7 @@
   {
    "id": "H12",
    "status": "concern",
-   "value": "live VM root 22.5% free (10.1 GB) at 19:05Z vs 26.7% (12.0 GB) 10-24 08:00Z: -0.42 GB/day; at that rate 10% free (~4.5 GB of ~45 GB) is crossed ~2026-11-11 (13 d); CPU 50%, memory 13.3%",
+   "value": "live VM root 22.5% free (10.1 GB) at 19:05Z vs 26.7% (12.0 GB) 10-24 08:00Z: -0.42 GB/day; at that rate 10% free (~4.5 GB of ~45 GB) is crossed ~2026-11-11 (13 d); CPU 50%, memory 13.3% Composition (#20981): runtime_logs 11 GB, 2 unpruned 10-17 journal backups 4 GB, journald 4.1 GB.",
    "population": "trader VM root fs; 4 readings 10-17 (post-prune ~15 GB), 10-24, 10-28",
    "window": "10-17..10-28",
    "evidence": "diag status vm_health; health/latest disk ctx; 10-24 review",
@@ -401,7 +401,7 @@
     ],
     "test": "4 readings over 11 days",
     "result": "monotonic, ~0.42 GB/day after the 10-17 prune",
-    "survivor": "H-a (composition pending disk-usage-report #20981)",
+    "survivor": "H-a: runtime_logs/*.jsonl growth + unpruned 10-17 backups (4 GB) + journald 4.1 GB (#20981)",
     "p": 0.9,
     "impact": "trader VM write path; DB writes fail at full disk"
    },
@@ -482,8 +482,8 @@
    "evidence": "status vm_health; health/latest disk",
    "population": "trader VM root fs",
    "trend": "-0.42 GB/day",
-   "cause": "pending #20981 composition",
-   "p": 0.75,
+   "cause": "runtime_logs 11 GB growing (signal_audit.jsonl 1.45 GB), 2x2.0 GB journal backups from 10-17 never pruned (4 GB reclaimable), journald 4.1 GB (#20981)",
+   "p": 0.85,
    "blast_radius": "real money (write path)",
    "tier": 2,
    "check": {

@@ -58,7 +58,7 @@ The 10-24 record had 8 graded items: 5 hit · 0 miss · 2 unresolved · 1 void. 
 
 **Q3. Disk.**
 - The growth is monotonic across 4 readings, so the noise hypothesis is eliminated (p 0.9).
-- The composition is pending the disk-usage-report (#20981). The prevention item is due 10-31.
+- Composition (disk-usage-report #20981): `runtime_logs` is 11 GB (`signal_audit.jsonl` alone is 1.45 GB), and **two 2.0 GB journal backups from 10-17 were never pruned**, which is 4 GB reclaimable now. journald holds 4.1 GB. The prevention item is due 10-31.
 
 **Q4. Open set.**
 - H-no-owner: the research-ops record lists "routing of due pipeline items … not routed by this pass".
@@ -76,7 +76,7 @@ The 10-24 record had 8 graded items: 5 hit · 0 miss · 2 unresolved · 1 void. 
 
 | call | decision | tier | pre-registered check | ending |
 |---|---|---|---|---|
-| C3 disk < 10% ~11-11 | ship the prevention by 10-31; composition from #20981 | 2 | `status .vm_health.disk` ≤ 85% used on 11-04 | PI-20261017-VMDGITZI-0002 |
+| C3 disk < 10% ~11-11 | apply prune-db-backups (+4 GB), then cap `runtime_logs` and journald, by 10-31 | 2 | `status .vm_health.disk` ≤ 85% used on 11-04 | PI-20261017-VMDGITZI-0002 |
 | C5 TP doctrine 0/77 | manager: assign an owning build lane or re-scope it to real_money first | 3 | `check_tp_doctrine.py` real_money compliant ≥ 1 | PI-20261006-5FUGHVX8-0001 (stalled; decision in report) |
 | C1 GLD wedge | **operator**: open an Alpaca ticket to cancel the 2 order ids, or kill the item and record a venue-wedged exclusion | venue | alpaca_open_orders shows no GLD legs or no position | PI-20260930-ZPDIPMDA-0001 → ask_operator |
 | C2 SPLG delisted | move the leg's symbol SPLG → SPYM; keep the leg id | 3 (data-backed) | an _eval of splg_trend_long_1d on SPYM bars | row HEALTH-20261028-SPLG-DELISTED |
@@ -97,7 +97,6 @@ C3 ranks above C1 because a full disk stops real-money journal writes, while GLD
 
 ## 4. Not done
 
-- **Disk.** The composition is not read yet; #20981 was still running when this page was written.
 - **Security.**
   - Secret scanning could not run (GHAS is off).
   - Deploy keys and Actions secrets were not enumerated.
