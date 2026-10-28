@@ -137,7 +137,7 @@ class TestVolTargetFullCostStack:
         c = vt.resolve_overlay_costs()
         assert c["is_perp"] is True
         # default symbol is a Bybit linear perp -> measured venue fee (COST-STACK-BYBIT-TAKER-FEE)
-        assert c["fee_bps_roundtrip"] == 11.0 > 0
+        assert c["fee_bps_roundtrip"] == 11.0
         assert c["slippage_bps_roundtrip"] == ec.PERP_SLIPPAGE_BPS_ROUNDTRIP > 0
         assert c["funding_bps_per_window"] == ec.DEFAULT_FUNDING_BPS_PER_WINDOW > 0
         assert c["turnover_bps_charged"] == pytest.approx(14.0)
