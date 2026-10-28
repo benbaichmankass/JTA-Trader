@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-BELS1214-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CLOSE-LABELS-1214 session_01AFoLuLF5yKmAbNFyKq4KfV (dispatched by session_01AFoLuJi1vLTnYv9LbP6539)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=60'  # trades 6761,6763,6764: notes.exit_price_source, exit_reason_source, closed_at"
+  },
+  "state": "queued",
+  "what": "[exit-time] Demo/portfolio Bybit stop closes are recorded 4.5 min late with closed_at = DETECTION time and a NULL exit price until the hourly fills pull heals them. MEASURED 2026-10-28: SOLUSDT stop fired ~12:14:3x (bybit_2 closed_pnl closed_at 12:14:39.9; journal divergence ERROR for all four accounts at 12:14:37-12:17:04); order_monitor per-package loop logged verdict=None (no action) for pkg-11c1100f6cbb4667 every 30s until 12:19; _reconcile_open_trades logged pending_close=4 at 12:16:47 (2-read confirm) and closed=3 at 12:19:14. Trades 6761 (bybit_1) and 6763 (bybit_portfolio) got closed_at 12:19:07/12:19:13, exit_reason reconciler_filled, exit_price NULL (no closed-pnl record on demo); journal now reads sl / 101.85 exit_price_source=exchange_fill, exit_reason_source=venue_bracket_order (healed by the order-identity relabel sweep + local pnl sweep, INFERRED to ride the hourly fills pull; heal time not measured). Residuals: closed_at stays 12:19 (hold-time and any close-time analytics wrong by 4.5 min), packages stay status=open until 12:19:14. No code gap in the label (a regression test pinning reconciler_filled+venue stop fill -> sl would be Tier-1). FIX (Tier-2, propose): when the reconciler finalises a row and the fills store holds the row's own bracket-leg fill, take closed_at from that fill's exec_time and exit_price from its VWAP at the close itself instead of waiting for the sweep; consider cutting the 2-read confirm to one read when the venue reports the row's own sl/tp order id as Filled. Extends BL-20260822-EXIT-REASON-FROZEN-WHEN-PRICE-ARRIVES-LATE."
+}
