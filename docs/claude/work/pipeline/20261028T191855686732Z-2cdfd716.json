@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_review_grade.py --live --json hold_vs_close at n >= 20 graded: mean dR > -0.25 -> hit (kill); <= -0.5 -> miss -> /perf-followup Track 2 REVIEWER-BRIEF amendment with the evidence.",
+    "kind": "event"
+  },
+  "id": "PI-20261028-PVRNY2JI-0004",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "rerun": "python3 scripts/ops/live_review_grade.py --live --since 2026-10-21 --json | python3 -c \"import json,sys;print(json.load(sys.stdin).get('hold_vs_close'))\""
+  },
+  "state": "queued",
+  "what": "[performance][claude-grade] D5: the live reviewer's holds graded against closing at the review mark: n=8, mean dR -1.00, 0/8 better (ESTIMATED; live_review_grade.py --live --since 2026-10-21). 53 holds recorded, 8 graded. CALL (p 0.55): this is selection (stopped trades close first), not a skill gap."
+}

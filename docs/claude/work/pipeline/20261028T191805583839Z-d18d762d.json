@@ -1,0 +1,19 @@
+{
+  "based_on": "20261024T060333858372Z-38e63554.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "MGC paper pnl is valued from contract multiplier with provenance, and the unverified zeros are backfilled or marked null; or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-10-28"
+  },
+  "id": "PI-20261021-4ZLRFEV1-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "PERF-REVIEW-PREP-20261021:mgc-paper-valuation",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/trades/closed?since=2026-09-21&limit=200&include_paper=true' | python3 -c \"import sys,json;[print(r['id'],r['qty'],r['realizedPnl'],r['pnlProvenance']) for r in json.load(sys.stdin) if r['pattern']=='ict_scalp_mgc_15m']\""
+  },
+  "routed_to": "MGC-VALUATION-FIX (REGISTER-SWEEP-W43 2026-10-24: row names this item)",
+  "state": "routed",
+  "what": "[performance] ib_paper ict_scalp_mgc_15m paper $ looks mis-sized or mis-valued: trades 6610/6603 post -22,368/-18,300 ESTIMATED on 96/150 contracts vs R -0.53; seven earlier closed MGC trades (6450,6389,6345,6170,6058,6022,5995) carry realizedPnl 0.0 with pnlProvenance unverified (a 0 meaning 'could not value'). Carried from the 10-14 brief; still open 2026-10-21. See docs/reviews/2026-10-21-weekly-walkthrough.md (PR #19362). || [2026-10-28 performance-review PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji] Re-run 2026-10-28: 6610/6603 still ESTIMATED (-22,368/-18,300). The new MGC trade 6740 is 1 contract, -398 ESTIMATED (-1.06 R with the x10 multiplier), so sizing looks sane on the one new trade but valuation is still not MEASURED (pnl coverage 0.00 for the leg, C1)."
+}

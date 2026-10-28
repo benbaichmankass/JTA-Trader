@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "live_vs_backtest on bybit_2 xrp_pullback_2h restricted to closes whose package created_at >= 2026-10-22T11:51Z reaches n >= 10: pct >= 5 -> hit (close done); pct < 5 -> miss, and file the regime/decay unit (as_traded_stage0 latest-25% fold).",
+    "kind": "event"
+  },
+  "id": "PI-20261028-PVRNY2JI-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h   # then restrict to post-2026-10-22T11:51Z packages (journal?table=order_packages meta.entry_time)"
+  },
+  "state": "queued",
+  "what": "[performance] D1: bybit_2 xrp_pullback_2h reads BELOW_BACKTEST (live_vs_backtest.py 2026-10-28: n=19, -11.98R, pct 1.2; mirror n=15 pct 4.1). The cause named on 10-18 (forming-bar decisions) was fixed by DECISION-BAR-MATCH, deployed 10-22 and OBSERVED 2026-10-28: post-switch packages decide on the prior CLOSED bar (xrp 10-25T06:00:36 -> entry_time 04:00; control trend_donchian_eth_4h still forming). The pre-switch 17 trades were made by a different arm. CALL (p 0.55): post-switch, xrp trades inside its band. No demote."
+}
