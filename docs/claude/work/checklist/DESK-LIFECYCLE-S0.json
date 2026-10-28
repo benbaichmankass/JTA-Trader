@@ -13,12 +13,16 @@
     20842
   ],
   "blocked_on": [],
-  "note": "2026-10-28 18:20Z lane: manager GO (post-reset) on the FULL RUN, option C: C4E x 520 pairs, hard ceiling $200, plan subagents only (no API credits). #20842 merged (7465c99e). Full-run dir comms/research/desk_lifecycle/full-c4e: 1,040 trades, pilot's 20 pairs reused (protocol byte-identical, 0 pending), 1,000 trades to walk. Running; WIP pushed as it goes.",
+  "note": "2026-10-28 ~20:30Z lane: FULL RUN (option C, C4E x 520 pairs) DONE, registered verdict FAIL. Claude whole-trade management dR vs HOLD: Claude entries -0.159 R [-0.261,-0.041] (n 473 trades), random entries -0.124 R [-0.197,-0.043] (n 465); vs matched random intervention -0.013 / -0.046 (sig.); vs best rule -0.075 / -0.101. Loss = frequent tightening (981 of 1,155 actions, -0.097 each); holds worth +0.142 vs closing; only positive pocket (n.s.) = closes at <= -0.5 R. Entry value indeterminate (-0.09), interaction 0. Coverage 938/1,040 trades (b088-b099 stopped at the $200 ceiling); 3,156 check-ins, 0 invalid; isolation 0 violations after voiding + re-judging b018. Spend: judges $159.48 MEASURED + pilot $6.85; session INFERRED ~$25-35. Evidence comms/research/desk_lifecycle/full-c4e/, doc s7.5; RQ-20261028-d1f5-02 graded fail. PR pending manager merge (hold).",
   "priority_rank": 1,
-  "updated_at": "2026-10-28T18:17:30Z",
+  "updated_at": "2026-10-28T18:52:31Z",
   "updated_by": "session_01AFoLuJGUG7n1WDzgCysB32",
   "roadmap": [
     "L-DESK"
   ],
+  "writeback": {
+    "roadmap": "L-DESK where: DESK-LIFECYCLE-S0 outcome (C48 full-lifecycle factorial, option C: Claude whole-trade management FAILS vs hold on both entry sources; hold is the default; loss-cut pocket only)",
+    "arch": "none: research harness and evidence only"
+  },
   "_seq": 746
 }
