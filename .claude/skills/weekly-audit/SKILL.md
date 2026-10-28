@@ -1,374 +1,284 @@
 ---
 name: weekly-audit
-description: The WEEKLY system audit, run Mondays 06:07Z by one Opus lane (trigger "Weekly audit (Monday): core + rotating deep pass"). A COMPLETION TEST, not a memo — a CORE pass every week (behaviour invariants on live data, TP-doctrine compliance, live = mirror, full cost stack on promotable results, stated populations, overdue items, spend vs plan, health review #2, RECURRENCE) plus a ROTATING deep pass chosen by ISO week mod 4 (0 OUTCOME+INDEPENDENCE, 1 CONSISTENCY+LIVENESS, 2 MODULARITY, 3 DESIGN CRITICISM). Ends in a one-page report in a self-landing PR, and every finding becomes a checklist row or pipeline item with a permanent detector. Use when the manager dispatches a WEEKLY-AUDIT-<date> lane, or the operator says "/weekly-audit", "run the weekly audit", "audit the system". It is the compact successor to the retired full-system-audit program. NOT a health review (Saturday, /health-review), NOT a performance review (Wednesday/Thursday), NOT a code review.
+description: The WEEKLY system audit (Wednesday 18:31Z after the weekly reset, one Opus lane, feeding Thursday planning). Four layers per docs/reference/llm-analyst-skill-design.md: PRIOR CALLS grades the last audit's findings first; CHECKS is a fixed core of script-computed control tests, each with its population, a read-state and a positive control. They cover protection and reconciliation recomputed from rows, TP doctrine, live = mirror, the full cost stack, stated populations, follow-through, spend and lane utilisation, the research SLOs, shadowed features, consumed-input freshness, the grading loop, AS-DESIGNED (the demo floor actually trades, recorded data actually trains models, the mandated loops actually ran) and an independent re-test of the last health review. ANALYSIS reads the trend across audits, root-causes why findings recur or stall, and runs one rotating deep pass (ISO week mod 4: 0 OUTCOME+INDEPENDENCE, 1 CONSISTENCY+LIVENESS, 2 MODULARITY, 3 DESIGN CRITICISM). Every finding becomes a fix, a row, a unit or a pipeline item with a detector and a pre-registered check. Use when the manager dispatches a WEEKLY-AUDIT-<date> lane, or the operator says "/weekly-audit", "run the weekly audit". NOT the health review (/health-review, same night 19:11Z), NOT a performance review, NOT a code review.
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-15` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
-# /weekly-audit — a completion test, not a memo
+# /weekly-audit — do the controls work, and does the system run as designed?
 
-> **Operator, 2026-10-14 (weekly planning) and 2026-10-15 06:20Z ("Weekly audit skill (Rec.)").** The
-> archived `full-system-audit` program (7 axes + axis 0, multi-session, 694 lines) is merged with the
-> operator's weekly checks into **one weekly lane**: a core that runs every week and a deep pass that
-> rotates, so every axis is covered once a month without any single run being a program. Row
-> `WEEKLY-AUDIT-SKILL`. Source axes:
-> [`docs/archive/2026-09-21-operating-reset/skills/full-system-audit/SKILL.md`](../../../docs/archive/2026-09-21-operating-reset/skills/full-system-audit/SKILL.md)
-> (read § "READ THIS FIRST" once — it is the design input).
+> **Redesigned 2026-10-28** (lane `SKILL-DESIGN-SYSTEM`, operator directive ~07:15Z). It follows the shared
+> two-layer pattern in [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md).
+> The predecessor (2026-10-15) is kept verbatim at
+> [`docs/archive/2026-10-28-skill-redesign/weekly-audit-SKILL.md.pre-redesign`](../../../docs/archive/2026-10-28-skill-redesign/weekly-audit-SKILL.md.pre-redesign).
+> Its core checks are kept. What changed: a grade of last week's findings, trend across audits, AS-DESIGNED,
+> and an independent re-test of the health review, which replaces "health review #2". See § Design basis.
 
-## Why this audit exists in this shape
+**Split with `/health-review`** (it runs 40 min after you, on the same night):
+- **health** asks *is the machine running, and is it getting worse?*
+- **this audit** asks ***do the controls that are supposed to catch problems actually catch them, does what we built
+  deliver, and does the system run the way its design says?***
 
-The old audit returned clean on a system that was broken, because it asked the system to **describe
-itself** (`/api/diag/services` says `active`; `protection_coverage` said `covered` for a stop-only
-position — MGC sat 122.74 points past its target for 11 days across two clean audits). So:
+Audit outcomes, not descriptions. The old audit returned clean on a broken system because it asked the system to
+describe itself: MGC sat 122.74 points past its target for 11 days across two clean audits, because
+`protection_coverage` said `covered`. Recompute the verdict from the least-reduced rows. A verdict that nothing
+outside its producer can falsify is itself the finding.
 
-1. **Audit outcomes, not descriptions.** Use the least-reduced surface (order ROWS, position ROWS,
-   journal rows) and recompute the verdict yourself. A verdict nothing outside its producer can falsify
-   is the finding.
-2. **A fix without a detector is a fix that will be found again.** Every finding closes with a permanent
-   detector or an explicit "no detector possible because X".
-3. **It is a completion test.** The audit is not done when you have written prose; it is done when
-   `§ Completion test` below passes. Prose that no row points at is a memo, and this repo has 404.
-
-## Mechanics
+## Mechanics and budget
 
 | | |
 |---|---|
-| Who | one Opus lane, ceiling ~$8 (the dispatching row states the ceiling) |
-| When | Monday 06:07Z; row `WEEKLY-AUDIT-<YYYY-MM-DD>` (create it at start, state `in_flight`, owner = your session) |
-| Branch / slug | `claude/weekly-audit-<YYYY-MM-DD>` |
-| Output | **one** file, `docs/reviews/<date>-weekly-audit.md`, **one page** (§ Report), landed in **one self-landing PR** |
-| Reads | live data through `diag-data` relays (never ask the operator for a snapshot); `credentials`/VM mutation are out of scope — this audit is **read-only on the fleet** |
-| Writes | checklist rows (`scripts/ops/checklist.py add|set|note`), pipeline items (`scripts/ops/pipeline.py` API), research units, the report. **No config, no order path, no Tier-2/3 change** — those are filed as proposals |
+| Who / when | one Opus lane; Wednesday 18:31Z (trigger "Weekly audit (Wed after reset)"); row `WEEKLY-AUDIT-<YYYY-MM-DD>` created `in_flight` at start, owner = your session |
+| Branch | `claude/weekly-audit-<YYYY-MM-DD>` |
+| Output | `docs/reviews/<date>-weekly-audit.md`, one page, in one self-landing PR |
+| Scope | **read-only on the fleet**. Writes go to rows, pipeline items, units, the report, and Tier-1 fixes and detectors. No config, no order path, no Tier-2/3 |
+| Shape | the [shared pattern](../../../docs/reference/llm-analyst-skill-design.md): **0 prior calls** (~10 %) → **1 CHECKS** (≤ 35 %) → **2 ANALYSIS** incl. the deep pass (≥ 35 %) → **3 decisions** + close-out (~20 %, reserved first). If short, report a check as `not_reached` and file it; never drop Layer 0 or the deep pass silently |
 
-**Pick the deep pass first:** `python3 -c "import datetime as d;print(d.date.today().isocalendar()[1] % 4)"`
-(use the Monday's date). `0` OUTCOME + INDEPENDENCE · `1` CONSISTENCY + LIVENESS · `2` MODULARITY ·
-`3` DESIGN CRITICISM. (2026-10-19 = ISO week 43 → `3`; then 10-26 → 0, 11-02 → 1, 11-09 → 2.) If the
-operator or the manager names a different deep pass in the dispatch, use theirs and say so in the report.
+**Deep pass:** `python3 -c "import datetime as d;print(d.date.today().isocalendar()[1] % 4)"`.
+2026-10-28 is ISO week 44, so `0`; then 11-04 → 1, 11-11 → 2, 11-18 → 3. If the dispatch names another pass,
+use it and say so.
 
-**Budget the close-out first** (`close-out` skill): reserve enough to land the PR. Running out
-mid-audit is a HANDOFF — say so in the report and file what you did not reach (§ Coverage).
+## Step 0 — trustworthy instruments, last audit loaded
 
-## Step 0 — make the instruments trustworthy (always first, ~10% of the run)
+- `git fetch --deepen=2000 origin` if the clone is shallow.
+- Self-tests first:
+  - `python3 scripts/ops/system_invariants.py --self-test`
+  - `python3 scripts/ci/guard_selftests.py --all`
+  - `python3 scripts/ops/checklist.py --self-test`
+  - `python3 scripts/ops/pipeline.py --self-test`
+  - `python3 scripts/research/research_slo.py --self-test`
+  - `python3 scripts/ci/check_shadowed_features.py --self-test`
+  - `python3 scripts/ops/check_claude_grade_loop.py --self-test`
 
-- `git fetch --deepen=2000 origin` if the clone is shallow (the SessionStart hook says so) — the
-  history rule does not hold on a truncated clone.
-- Run the instruments' own self-tests before trusting a green from them:
-  `python3 scripts/ops/system_invariants.py --self-test`, `python3 scripts/ci/guard_selftests.py --all`,
-  `python3 scripts/ops/checklist.py --self-test`, `python3 scripts/ops/pipeline.py --self-test`.
-  A failing self-test is finding #1 and the reading it would have produced is **not_measured**.
-- **Positive control on every negative.** Before reporting "0 violations", show the same probe returns a
-  known positive (a planted fixture, or a prior-week finding that should still reproduce).
-- **Last audit.** Read the previous `docs/reviews/*-weekly-audit.md` and its rows: which are still open?
-  That list is the first thing the RECURRENCE step below must disposition.
+  A failing self-test is finding #1, and the reading that instrument would have produced is `could_not_look`.
+- **Load the last 4 `docs/reviews/*-weekly-audit.md`** and every row and item they filed (ids from their findings
+  tables), each with its current `state` and `updated_at`. That is the input to Layer 0 and 2a.
 
-## CORE — every week, in this order (blast radius, not convenience)
+## Layer 0 — PRIOR CALLS (first, never skipped)
 
-Never spend the first half of the run on the cheap checks. A naked live position and a doc-drift
-finding are not the same finding.
+**Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source weekly-audit --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file. (The script lands in #20871, REVIEW-FOLLOWTHROUGH. If it is not on main, record `could_not_look: no instrument`.)
 
-### C1. Behaviour invariants on live data (the money-at-risk pass)
+For every finding in the last audit, and every one still open from earlier audits:
+1. re-run the check it named (or the closest check that answers it);
+2. grade the call `hit` / `miss` / `unresolved` / `void`, per the [shared pattern](../../../docs/reference/llm-analyst-skill-design.md) § 6;
+3. grade its action: `closed+detector` · `closed-no-detector` · `moving` · **`stalled`** (no state change ≥ 7 d).
 
-Assert on rows, not on summaries. Pull the payloads through the diag relays and feed
-`scripts/ops/system_invariants.py --payloads <dir>` (stems: `ib_open_orders`, `bybit_open_orders`,
-`exchange_positions`, `positions`, `journal_trades`, `exit_loop_health`). Standing invariants (extend,
-never shrink):
+Report the counts, the closure ratio (closed+detector ÷ filed) and a Brier score (`INDETERMINATE` below 10
+resolved calls).
 
-| invariant | fail means |
-|---|---|
-| **Two-sided protection sized right** on every open position: resting stop qty ≥ position qty **and** ≤ position qty (over-cover is its own hazard); a declared `take_profit_1` has a resting target or a recorded reason | naked / over-covered / target-less position |
-| **Journal ⇄ exchange quantity reconcile**, netting-aware, per account + symbol | orphaned or phantom position |
-| **Signal accounting closes**: every actionable signal in the window has an order package **or** a logged refusal with a cause | silent drop |
-| **Every declared-live account placed or refused** in the window | silent-refusal class |
-| **No aggregate mixes MEASURED with FABRICATED/ESTIMATED** without stating coverage (`src/runtime/provenance.py`) | fiction in a headline number |
-| Any close that is not TP / SL / strategy-close (reconciler-driven, orphan) | bug to root-cause this week |
+A call `stalled` across ≥ 2 audits is now a **follow-through finding**. Say *why* it is not closing (no owner? a
+decision nobody asked for? too big to close? nobody reads the row?), then decide in Layer 3: fix it now (Tier 1),
+put the exact decision to the operator, re-scope it into something closable, or kill it with a reason. Never
+re-file it. Re-run the check; do not re-argue the call.
 
-`not_measured` is not a pass: a payload you could not pull is reported as **could-not-look**, with the
-reason, and filed (it is a liveness finding about the relay). One **full pipeline trace** per week
-(rotating account × venue × strategy; at least one refused, one orphaned/prop, one paper, one
-real-money over a month): walk signal → intent → sizing → placement → journal → protective legs →
-monitor/exit → reconcile → close + P&L provenance → analytics, assert at each hop, and record **which
-hop each trace died at**.
+## Layer 1 — CHECKS (fixed; every one runs and is recorded)
 
-### C2. TP-doctrine compliance
+**Every check produces one Verdict line:** status (`pass | fail | watch | could_not_look | not_reached`), the
+value, the **population with n**, the evidence path, and **last audit's value beside it**.
 
-`python3 scripts/ci/check_tp_doctrine.py` — **re-run, never quote last week's counts**. Report
-compliant / non-compliant by money at stake (real-money & prop → mirrors → paper) with the denominator.
-New non-compliant legs go to the exit-refinement queue as rows/units, ordered by money at stake.
+- **Positive control.** Every "0 violations" names its positive control: the same probe returning a known
+  positive (a planted fixture, a self-test case, or last week's finding that should still reproduce).
+- **Read-state.** `could_not_look` carries the reason, is never a pass, and is a liveness finding about the
+  instrument or relay.
+- **Re-run, never quote.** Last week's number appears only in the "prior" column.
 
-### C3. Live = mirror (Stage 2 is one stage)
+| id | control under test | instrument (exact) | population | fail means |
+|---|---|---|---|---|
+| C1 | **Protection + reconciliation, recomputed from rows** (money at risk, first) | live payloads via `diag-data` (stems `ib_open_orders`, `bybit_open_orders`, `exchange_positions`, `positions`, `journal_trades`, `exit_loop_health`) → `python3 scripts/ops/system_invariants.py --payloads <dir>`. Prop accounts are read by their own route; one without a probe is `could_not_look` (AUD-20261019-PROP-INVARIANT-BLIND). Plus **one full pipeline trace** per week, rotating real-money / prop / demo / refused: signal → intent → sizing → placement → journal → protective legs → exit → reconcile → close + P&L provenance. Record the hop where it died | open positions; (account, symbol) pairs; package legs; one trace | a naked / over-covered / target-less position; journal ⇄ venue mismatch; a close that is not TP / SL / strategy-close; an aggregate mixing MEASURED with FABRICATED (`src/runtime/provenance.py`) |
+| C2 | TP doctrine | `python3 scripts/ci/check_tp_doctrine.py --strict --json` | routings by class: real-money → prop → mirror → paper | new non-compliant routings, or debt not shrinking. Each one maps to an exit-refinement row/unit by money at stake |
+| C3 | Live = mirror | `pytest tests/test_paper_portfolio_accounts.py` (roster equality + `test_mirror_trade_shaping_fields_equal_live`); positive control = drop one leg locally and see it fail; plus trade-level twins over the week from the journal | roster legs; mirror trades in the window | a divergence. A Tier-3 proposal; never edit the roster |
+| C4 | Full cost stack on promotable results | every Stage-0 evidence record or mandate fire since the last audit; `python3 scripts/ci/check_cost_model_single_owner.py` | records changed in the window | a fee-only record on a promotion path; `scripts/backtest_orb.py` / `src/backtest/backtester.py` in a corpus; a rule not registered before the run |
+| C5 | Populations stated | `python3 scripts/ci/check_stated_population.py <diff of the week's docs>`, plus your read of this week's brief and reports | quantitative claims read | a number with no population, window or cost basis; a sign that flips on a filter |
+| C6 | Follow-through | `python3 scripts/ops/pipeline.py --due` / `--stats` / `--gate`; `python3 scripts/ops/owner_liveness.py`; checklist rows `in_flight` with no live lane, `landed_unproven` past `due_by`, `blocked_on` cleared | due items; unrouted; laned rows | unrouted rising, oldest-unrouted > 7 d, stale `in_flight`, unpulled observations. Disposition what you were handed; the class goes to 2a/2b |
+| C7 | Spend and lane utilisation | `python3 scripts/ops/spend_meter.py` and `--capacity`; `list_sessions(mine=true)` | lanes dispatched; ceilings vs `spend_usd` | over-ceiling lanes, ceilings with no spend recorded, hours below the KEEP-N target while `checklist.py queue` was non-empty (`not_observed` if lane timing cannot be read). Never report session length |
+| C8 | **The health review, tested independently** (replaces "health review #2") | take 2 of last week's health-review `ok` verdicts on money or deploy checks (H2 / H3 / H4 / H6 in `comms/reviews/health/<newest>.json`) and re-derive each from raw rows yourself | 2 verdicts | your re-derivation disagrees: the health check reads a reducer, not the outcome. Also grade the health review's own `prior_calls` honesty |
+| C9 | Research pipeline SLOs | last 7 `comms/research/health/<date>.json` (`scripts/research/research_slo.yaml`) | days × SLOs; runs | a red SLO with no same-day disposition; a missing day; a run gap > 4 h |
+| C10 | Off the trade path is not off the data path | `python3 scripts/ci/check_shadowed_features.py`; `git log -p config/strategies.yaml config/accounts.yaml` since the last audit | registry entries; `execution: shadow` legs | a turned-off feature with no registry entry, a stale **consumed** artifact, or no owner row with a re-entry test |
+| C11 | Consumed-input freshness | `python3 scripts/macro/check_producer_liveness.py` (extend it, never a parallel checker); enumerate readers in `src/` | readers found (and how) vs readers with a consumer-side check | a consumed file with no consumer-side check |
+| C12 | The Claude grading loop ran | `python3 scripts/ops/check_claude_grade_loop.py --live` (exit 2 = `could_not_look`: deepen or fix the relay, then re-run) | the 4 checks' populations | a `missing_outcome`, an unlogged SKILL/BRIEF version, or `role_grade.json` older than 2 d |
+| C13 | **AS-DESIGNED: does the system run the way its design says?** | (a) **demo floor** (OPERATING-PLAN § 2 "Stage 1 is the DEMO FLOOR"): re-parse the `strategies:` rosters of `bybit_1` / `alpaca_paper` / `ib_paper` in `config/accounts.yaml`; per rostered leg, trades + packages + logged refusals over 7 d from diag `journal` (page past 1000 rows); count `execution: shadow` on non-retired legs. (b) **learning**: rows produced → datasets built → models trained → models scored, per family, from the trainer registry via `trainer-vm-diag-request` (`python -m ml list-models`, `dataset_builds.jsonl`, `training_cycle.jsonl`). (c) **mandated loops**: research-ops 4×/day, the hourly live review, the desk wake, the daily report and the weekly routines each have a run record in the window (`list_triggers` `last_run`, plus their output files) | (a) rostered legs × floor accounts; (b) model families; (c) scheduled routines | a non-retired leg that neither traded nor logged a refusal (state quiet-by-design vs blocked, with the cause); a shadow non-retired leg; data recorded but never trained; a loop with no run. **Merged ≠ deployed ≠ observed:** a design is "running" only when its output is observed |
 
-`tests/test_paper_portfolio_accounts.py` (roster equality: `test_bybit_portfolio_mirrors_bybit_2_exactly`,
-`test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies`) **and**
-`test_mirror_trade_shaping_fields_equal_live` (every trade-shaping field). Run them; do not recall them.
-A divergence is a Tier-3 finding: file the exact proposed change, do not edit the roster.
+## Layer 2 — ANALYSIS
 
-### C4. Full cost stack on every promotable result
+Never paraphrase the Verdict lines; write what they *together* imply. Follow the shared prompts (pattern § 3):
+- read wide before forming a view, and search the repo before calling a finding new;
+- choose 3–7 material questions by money and risk;
+- for each, write ≥ 2 hypotheses, one of them always *noise or expected variation*, and run the test that
+  discriminates between them;
+- hunt surprises, and count your comparisons.
 
-For every Stage-0 evidence record or mandate fire since the last audit: the harness resolved slippage and
-funding through `execution_costs.resolve_cost_policy()` (not a silent `0.0`; `scripts/backtest_orb.py` and
-`src/backtest/backtester.py` are still out of corpus); the record names harness, n, and a rule registered
-**before** the run. `python3 scripts/ci/check_cost_model_single_owner.py`. A fee-only record on a promotion
-path is a finding.
+There is no quota of findings. "Nothing material" stands only with the falsification attempt shown.
 
-### C5. Numbers that state no population
+**2a. Trend across audits.** Put each C-check's value beside the last 4 audits (lifetime where its series
+exists). Name every series moving the wrong way for ≥ 2 audits, say what drives it, and what it predicts if
+nothing changes.
 
-`python3 scripts/ci/check_stated_population.py` over the week's merged docs, plus your own read of the
-last week's brief/reports: any quantitative claim with no population, window or cost basis is listed.
-A figure whose sign flips on a filter choice is not a figure. Fix in place if Tier 1; otherwise a row.
+**2b. Recurrence: the class, not the instance.** For every finding closed in the last 7 days:
+1. Is there a detector that fails if it returns? If not, open a row `DETECT-<finding>`, or add it in this PR if
+   it is small.
+2. **Sweep the class**: grep for it and report the remaining population with its denominator.
 
-### C6. Overdue items
+**2c. Root cause of the top questions.** Name the cause at file / line / key / job level, give a probability,
+and say what would change your mind. Remove what the environment did (regime, the instrument, a shared upstream)
+before blaming the subject. Blameless: name the mechanism that let it through, and whether a control *should*
+have caught it and why it did not.
 
-`python3 scripts/ops/pipeline.py --due` (and `--stats`): every due item gets a disposition now — redate
-**with an observation you actually read** (`--redate ID --observation … --next-due … --evidence …`),
-done, or killed **with a stated reason**. Then the checklist: rows `in_flight` with no live lane (stale
-`in_flight` routes the next session around free work), `landed_unproven` past its observation `due_by`,
-`blocked_on` rows whose blocker has cleared. Report the unrouted count and its trend (`JC-SA-06`).
+**2d. The deep pass (ISO week mod 4) — exactly one per week.** Each is a bounded question with an instrument. If
+the instrument is missing, building it is the finding.
+- **0 OUTCOME + INDEPENDENCE.**
+  - Outcome: for each subsystem shipped since this pass last ran, quote its *promise* (ROADMAP row, design doc,
+    the gating A/B). Measure the outcome on the population the promise was about, with n and provenance
+    coverage. Grade it `delivered` · `no measurable effect` (a finding; removal is a valid outcome) · `harmed` ·
+    `not yet measurable` (what settles it, by when). "The gate enforces" is not "the gate helps".
+  - Independence: for each load-bearing published verdict, what would falsify it, and does that evidence live
+    where its producer cannot touch it? Hunt **reducers**: a boolean or scalar standing in for a structured state
+    (`covered`, `active`, `[]` meaning both empty and failed).
+- **1 CONSISTENCY + LIVENESS.**
+  - Consistency: rules ↔ code ↔ config ↔ data (`canonical-doc-coherence`, `doc-freshness`, the API table vs the
+    router). Field beats comment.
+  - Liveness (the zombie hunt): brokers (`integrator.py::EXCHANGE_MAP`), units/timers (`deploy/*`,
+    `_CANONICAL_UNITS`), workflows, every `*_ENABLED`/`*_MODE`, transports. For each, probe reachability (call
+    sites, not definitions), runtime use and provenance. A present-but-unreached artifact is a corpse to remove
+    or justify.
+- **2 MODULARITY.** Count the edit sites of the last two ≥ 4-file changes. Count **definitions per concept**
+  (cost constants, symbol maps, risk units, provenance predicates). Each duplicate becomes a row to consolidate
+  behind one owner, plus a guard on the second definition (`check_cost_model_single_owner.py`, `src.utils.paths`
+  and `provenance.py` are the pattern).
+- **3 DESIGN CRITICISM.** One or two subsystems, chosen by spend or incidents (name them and why). Should it
+  exist? Is it the right mechanism? Where does one concept have two implementations, and where has
+  "observe first" become fail-silent? What would we build today? What are we not measuring at all? What should
+  be deleted? Findings are proposals (row, tier, `next_action: ask_operator` for Tier 3).
 
-### C7. Spend vs plan
+## Layer 3 — DECISIONS (every call ends somewhere)
 
-`python3 scripts/ops/spend_meter.py` against the weekly workplan on `WEEKLY-PLANNING` and each lane's
-`ceiling_usd` / `spend_usd`. Name lanes over ceiling and ceilings with no spend recorded. Spend is
-reported; **session length is never a metric.**
+One `calls` list, ranked by money at risk:
+1. real money;
+2. prop;
+3. the demo floor;
+4. learning and research;
+5. observability;
+6. docs.
 
-### C12. Lane utilisation vs target (operator, 2026-10-26)
-The manager's REFILL step (manager SKILL.md § The operating loop) says running build lanes should
-track the meter's *"KEEP N LANES RUNNING"* target while the queue is non-empty. Measure it over the
-week: from `list_sessions(mine=true)` (lane start/end) and `spend_meter.py --capacity` readings, state
-the population (lanes dispatched, queued rows at each reading) and the **hours below target while
-`checklist.py queue` was non-empty**. Under-target hours with a non-empty queue and no recorded
-operator preference is a finding (checklist row against the manager loop). If lane timing cannot be
-read, say `not_observed` — never report full utilisation by default.
-
-### C8. Health review #2
-
-The Saturday `/health-review` is review #1. This is the Monday second look at the same plumbing after the
-weekend: services, heartbeats, alert delivery, DB integrity, relay health — through the diag relays, using
-`health-review` § checks as the list. Anything it found Saturday that is still open and unrowed is a finding
-here; anything fixed is verified fixed (read the field, not the PR).
-
-### C8b. Research pipeline health (operator, 2026-10-16)
-
-Read the last 7 days of `comms/research/health/<date>.json` (written every 2 h by `research-slo.yml`; SLOs and
-thresholds in `scripts/research/research_slo.yaml`). Report, per SLO: days red / 7, current value, and whether a
-lane was dispatched the same day it went red (manager § "Research SLO escalation"). **Every breach and every
-`could_not_look` in the window needs a disposition** — a fix merged, a checklist row or pipeline item with a near
-`due_when`, or a reasoned threshold change in a PR. A missing day's file, or `runs` with gaps > 4 h, is itself a
-finding (the monitor is a pipeline too). Positive control: `python3 scripts/research/research_slo.py --self-test`
-(a planted starved queue must alert) — paste its line beside a "no breaches" verdict.
-
-### C10. Off the trade path is not off the data path (operator, 2026-10-26)
-
-`python3 scripts/ci/check_shadowed_features.py` - **re-run, never quote**; report entries scanned and the
-`execution: shadow` leg count it prints. Then, beyond what CI can see: for every feature, model or signal
-turned off or annotate-only since the last audit (`git log -p config/strategies.yaml config/accounts.yaml`,
-`*_MODE`/`*_ENABLED` defaults, advisory heads demoted), confirm it has a registry entry, its **consumed**
-artifact is fresh (read the file's newest timestamp, not the producer's log), and an owner row with a
-re-entry test exists. Each `gap` / `could_not_verify` entry and each shadow leg without its own owner row
-becomes a row. Positive control: `python3 scripts/ci/check_shadowed_features.py --self-test`.
-
-### C11. Consumed-input freshness (operator, 2026-10-26: "Yes, add it to the weekly audit core checks")
-
-Every file or feed the live trader or web-api **reads at runtime** must have a freshness check on the
-**consumed** artifact, not on its producer's output. Enumerate by measuring the code: the readers in `src/`
-and the paths they open (`config/*.yaml` data files such as `economic_calendar.yaml`, `comms/*` stores read
-by `src/`, news / funding / candle sources). State the **population** (readers found, how found) and the
-**denominator** (how many have a consumer-side check). List every one without a consumer-side check and
-file each as a checklist row or pipeline item. Checks live in `scripts/macro/check_producer_liveness.py`
-(being extended with the consumer-side calendar and news checks by the DATA-FEEDS lane) - extend that
-checker, **do not build a parallel mechanism**. Positive control: show the probe flags a known-stale
-consumed file. Worked example: 2026-10-26, that checker watched `comms/macro/econ_calendar_snapshots.jsonl`
-(fresh) while `config/economic_calendar.yaml` (consumed) sat stale from 2026-07-30. Related: C10.
-
-### C13. The Claude grading loop ran (CLAUDE-GRADE-LOOP, operator 2026-10-26)
-
-`python3 scripts/ops/check_claude_grade_loop.py --live` - **re-run, never quote**; report each check's
-population line. Four checks: (4) `comms/desk/role_grade.json` (DESK-9-GRADING, written hourly by `desk-decisions-mirror`) exists and is
-no older than 2 days - a stale snapshot means the scheduled grade step is not landing, find out why; every live-trade-review row on a trade closed > 1 day ago has an
-`outcomes.jsonl` row; every desk decision past its grading window has an outcome row (a `not_computable`
-row with its reason counts); every version of live-trade-review `SKILL.md` / `REVIEWER-BRIEF.md` and
-`DESK-BRIEF.md` committed since 2026-10-27 has an `AMENDMENTS.md` line with a graded basis stating `n=`.
-Exit 2 (`could_not_look`: no journal, or a shallow clone younger than the window) is not a pass: deepen
-(`git fetch --deepen=2000 origin`) or fix the relay, and re-run. Each `missing_outcome` id or unlogged
-version becomes a row (the fix for a missing outcome is `live_review_grade.py --live --write-outcomes` /
-`desk_outcomes.py`, then find why the review did not run it). Positive control:
-`python3 scripts/ops/check_claude_grade_loop.py --self-test`.
-
-### C9. RECURRENCE — the anti-treadmill step (never skipped)
-
-For every finding that **closed in the last 7 days** (checklist rows moved to `done`, pipeline `done`):
-
-1. **Is there a test, guard or alert that fails if it returns?** No detector ⇒ open a row
-   `DETECT-<finding>` (or add the detector in this PR if it is Tier-1 and small).
-2. **Sweep the class, not the instance.** Grep the class and report the remaining population **with its
-   denominator** (the pairs fix corrected the pairs tests and left the same fictional column in 20
-   other fixtures).
-3. For every instrument you leaned on this week: does it have a failure-path self-test? Name the ones
-   that do not (`guard_selftests.py` coverage is the denominator).
-
-## ROTATING deep pass — ISO week mod 4
-
-Run **exactly one** per week (the others rotate in). Each is a bounded question with an instrument; if
-the instrument is missing, building it is the finding (a row).
-
-### 0 — OUTCOME + INDEPENDENCE
-
-- **OUTCOME — did it deliver what the design promised?** For each subsystem shipped since the last time
-  this pass ran, quote the *promise* (ROADMAP row, design doc, the A/B that gated it: "cuts maxDD",
-  "removes flip-churn"), measure the outcome over history **on the population the promise was about, stating
-  n and provenance coverage**, and grade: `delivered` · `no measurable effect` · `harmed` · `not yet
-  measurable (what settles it, by when)`. `no measurable effect` is a finding, not a null result — removal
-  is a legitimate, high-value outcome. Do not confuse "the gate is enforcing" with "the gate is helping".
-- **INDEPENDENCE — can the claim be contradicted?** For each load-bearing verdict the system publishes,
-  what evidence would falsify it, and does that evidence exist where its producer does not control it?
-  Hunt **reducers**: a boolean or scalar standing in for a structured state (`covered`, `active`,
-  `present`, `[]` for both "empty" and "failed"). If nothing can contradict it, build the read surface
-  (a row), then re-audit through it.
-
-### 1 — CONSISTENCY + LIVENESS
-
-- **CONSISTENCY**: rules ↔ code ↔ config ↔ data. `canonical-doc-coherence`, `doc-freshness`; the
-  API table in `docs/reference/bot-api-reference.md` against the router. **Field beats comment.**
-- **LIVENESS — the zombie hunt**: inventory brokers (`integrator.py::EXCHANGE_MAP`), services/timers
-  (`deploy/*`, `diag.py::_CANONICAL_UNITS`), workflows, every `*_ENABLED`/`*_MODE` gate, external
-  transports. Three probes each — reachability (grep *call sites*, not the definition), runtime usage
-  (pull it), provenance (`git log`, retirement notes). An artifact present but unreached/unrun is a
-  **corpse to remove or justify in writing**, not an inventory gap to document.
-
-### 2 — MODULARITY
-
-How many files must change to make ONE system change, and can a change be half-applied? Pick the last
-two changes that touched ≥ 4 files (add a strategy, add an account, add a guard) and count the edit
-sites. Also count **definitions per concept** (the sharper probe — a duplicated definition produces no
-diff and no error, it quietly disagrees): cost constants, symbol/instrument maps, risk units,
-provenance predicates. The single-owner pattern already exists (`check_cost_model_single_owner.py`,
-`src.utils.paths`, `src/runtime/provenance.py`); each new duplicate found is a row to consolidate
-behind one owner plus a guard that fails on the second definition.
-
-### 3 — DESIGN CRITICISM
-
-*Should this exist at all, and is this the right mechanism?* A finding of the form "built exactly as
-specified and the specification is wrong" outranks a conformance finding of the same severity.
-Bounded to **one or two** subsystems per run (pick the ones with the most spend or the most incidents
-since the last design pass; name them and why):
-
-- **Cohesion**: where does one concept have two implementations that can disagree? where does a
-  decision need facts from three places with no join? which seams have no owner?
-- **Philosophy**: where has "observe first, gate later" produced a soak nobody reads, and fail-permissive
-  become fail-silent? Does the tier system make *removal* harder than adding? Which guard now costs more
-  attention than the defect it catches?
-- **Mechanism**: what would we build if we started today? Answer in writing even if it is "the same".
-- **What are we not measuring at all?** **What should be deleted?**
-
-Design findings are **proposals**: row with the reasoning and trade-off, `tier` stated, `next_action:
-ask_operator` where Tier 3. Never a unilateral change.
-
-## Findings — schema and routing (binding)
-
-Every finding, from any step, is recorded with:
+Each call has:
 
 | field | rule |
 |---|---|
 | `claim` | one sentence, falsifiable |
-| `evidence` | the exact command/query **and** its output (or path to it). Not a description of one |
-| `expected` vs `actual` | the two must differ or it is not a finding |
-| `population` | what was measured over, with n |
-| `blast_radius` | money-at-risk / accounting / observability / docs |
-| `tier` | 1 / 2 / 3 |
-| `detector` | the permanent check that fails if this recurs — **or** "no detector possible because X" |
-| `disposition` | **fixed** (merged or in this PR) · **row** (checklist id) · **pipeline** (`PI-…`) · **unit** (`research/queue/…`) · **verified non-issue** (with the probe) |
+| `evidence` | the exact command or query **and** its output path |
+| `expected` vs `actual` | they differ, or it is not a finding |
+| `population` | n and window |
+| `p` | a probability, MEASURED / INFERRED |
+| `blast_radius` · `tier` | |
+| `detector` | the permanent check that fails on recurrence, or "no detector possible because X" |
+| `check` | pre-registered `{command, rule, resolves_when}`: what next week's Layer 0 re-runs |
+| `ending` | **fixed** (in this PR; state merged/deployed/observed) · **row** `AUD-<YYYYMMDD>-<slug>` via `scripts/ops/checklist.py add … --tier N --owner manager` + `set <ID> roadmap='["L-OPS"]'` · **unit** `research/queue/<id>.yaml` (rule registered before the run) · **pipeline** via `scripts/ops/pipeline.py` (`due_when`, `origin.rerun`) · **no action, because …** (with the probe) |
 
-**Routing — exactly one of these, chosen by what the finding is:**
+Premortem each Tier-2/3 call: assume it made things worse in three months and say why. Tier-2/3 calls carry the
+exact proposed change and `next_action: ask_operator`. An audit finding is a claim, not the evidence record that
+would let the data-backed authorization fire. "Not my task", "noted", "monitor" and "it was already like that"
+are not endings.
 
-- *A build* (fix a bug, add a detector, consolidate a definition, wire a read surface) → **checklist row**
-  via `scripts/ops/checklist.py add <ID> --title … --tier N --owner manager --note "<claim; evidence;
-  detector>"`, with a `roadmap` ref (`set <ID> roadmap='["L-OPS"]'`). Row ids: `AUD-<YYYYMMDD>-<slug>`.
-- *A question* (does X still hold? is Y worth keeping?) → **`research/queue/<id>.yaml`** with the decision
-  rule registered before any run.
-- *A thing that needs picking up later* (recheck in N days, awaiting data, awaiting an observation) →
-  **pipeline item** via `scripts/ops/pipeline.append(item, intent="new")` with `due_when`, `origin.rerun`
-  (the command that re-asks the question), and — to close — `terminal_reason`.
-- *Tier-1, small, in scope* → **fix it in this PR** and list it as `fixed`.
-- *Tier-2/3* → a row or pipeline item with `next_action: ask_operator` and the **exact proposed change**;
-  the report's "for the operator" line points at it. Data-backed Tier-2/3 decisions follow the standing
-  authorization (decide, ship, notify) only when a committed evidence record settles it — an audit
-  finding is a claim, not that record.
+## Report — one page (≈ 60 lines), `docs/reviews/<date>-weekly-audit.md`, in the shared order
 
-**"Not my task" and "it was already like that" are not dispositions.** A finding in a chat message, a PR
-comment or a new memo is not filed.
-
-## Report — one page, `docs/reviews/<date>-weekly-audit.md`
-
-One page means ≈ 60 lines. Detail lives in the rows and in the evidence paths they cite, not in the report.
-Header: doc-status line (`live`, lane id, window), deep pass chosen and why. Then, in this order:
-
-1. **Verdict** — one line each: *invariants* (pass n / fail n / could-not-look n, with populations),
-   *TP doctrine* (compliant x of y), *live = mirror* (pass/fail), *cost stack* (n records, n fee-only),
-   *overdue* (n dispositioned / n found), *spend* (vs plan).
-2. **Findings table** — `id · axis · blast radius · tier · disposition (row/PI/unit/fixed) · detector`.
-   Every row of this table resolves to something that exists (check with `checklist.py` / `pipeline.py`).
-3. **Deep pass** — what was asked, what was measured, the grade/answer. Three to ten lines.
-4. **Closed since last audit and whether they have a detector** (C9).
-5. **Coverage** — what was **not** reached and why, each as a filed row. Both numbers: behavioural
-   (invariants + traces run) and reading (what was only read). Never imply the whole system was audited.
-6. **For the operator** — Tier-3 proposals and genuine preference calls only; one line each, pointing at
-   the row. If empty, say "none".
-
-State **merged ≠ deployed ≠ observed** for every item you call fixed.
-
-## Completion test — the audit is done only when ALL of these pass
-
-Run this before you open the PR; paste its output in the PR body.
-
-```bash
-python3 scripts/ops/checklist.py --check                       # store consistent
-python3 scripts/ops/pipeline.py --check                        # no NEW violations (4 collisions are GRANDFATHERED; "NOT clean" with only those is the baseline, rc=0)
-python3 scripts/ops/pipeline.py --due | head -40               # nothing you were handed is still due-and-untouched
-git diff origin/main -- docs/reviews > "$TMPDIR/d.patch"; python3 scripts/ci/check_stated_population.py "$TMPDIR/d.patch"  # the report states its populations
-wc -l docs/reviews/$(date +%F)-weekly-audit.md                 # ≈ one page
+```
+# Weekly audit <date> — <one sentence: what most affects money/risk now>
+(doc-status line · lane · window · deep pass and why)
+## 0. Prior calls  — graded counts, closure ratio, Brier; every stalled call by name + the decision taken
+## 1. CHECKS       — one line per C-id: status · value · population · prior · positive control; could_not_look listed
+## 2. ANALYSIS     — trend (3–6 lines); per question: hypotheses · test · survivor · p; recurrence; the deep pass (3–10 lines); surprises
+## 3. Decisions    — ranked: id · money/risk · tier · p · detector · check · ending (every id resolves via checklist.py / pipeline.py)
+## 4. Not done     — what was not reached or only read, each filed; behavioural vs reading counts; never imply the whole system was audited
+For the operator: Tier-3 proposals and genuine preference calls, one line each with the row, or "none".
 ```
 
-And by hand, each answered yes/no in the PR body:
+## Completion test (paste the output in the PR body)
 
-1. Every finding in the report's table resolves to a row, a PI id, a unit, or a merged/in-PR fix — no
-   finding is prose-only.
-2. Every finding has a `detector` or an explicit "no detector possible because …".
-3. C1–C13 each have a result in the Verdict or in Coverage as a filed "not reached" row. None silently skipped.
-4. Every "0 violations" has a positive control stated beside it.
-5. The deep pass for this ISO week ran, or the report names why not and the row that carries it.
-6. Every row you touched has a TRUE state (`landed_unproven` ≠ `done`, and names the closing observation).
-7. `close-out` skill run: working tree clean, branch pushed, PR open, row `WEEKLY-AUDIT-<date>` updated.
+```bash
+python3 scripts/ops/checklist.py --check
+python3 scripts/ops/pipeline.py --check          # grandfathered collisions only = baseline, rc 0
+python3 scripts/ops/pipeline.py --due | head -40
+git diff origin/main -- docs/reviews > "$TMPDIR/d.patch"; python3 scripts/ci/check_stated_population.py "$TMPDIR/d.patch"
+wc -l docs/reviews/$(date +%F)-weekly-audit.md
+python3 scripts/ci/run_guards.py --base-ref origin/main
+```
 
-## Landing — a self-landing PR
+Answer each yes/no in the PR body:
+1. every finding resolves to a fix, row, item or unit;
+2. every finding has a detector or a stated reason why none is possible;
+3. C1–C13 each have a result, or a filed `not_reached`;
+4. every "0" has a positive control;
+5. Layer 0 graded every prior finding;
+6. the deep pass ran;
+7. every touched row has a TRUE state (`landed_unproven` ≠ `done`, with its observation);
+8. `close-out` was run.
 
-1. Commit the report plus any Tier-1 fixes/rows (they ride the same PR).
-2. `python3 scripts/ops/land_pr.py --held-by <your session id> --why "<tier judgement in your own words>" --verify`
-   — it writes the three landing files from the guard's own derivation (`.github/pr-landing/<slug>.json`,
-   `.github/pr-automerge-requests/<slug>.txt`, `.github/merge-slots/<slug>.json`). Commit them in the same push.
-   If the diff touches a Tier-2/3 path or a path outside `TIER1_SURFACE`, the script computes a **hold**; then the
-   manager merges — say so in the report's operator line, do not route around the guard.
-3. Push, open the PR as a **draft is the default; mark it ready only through the landing route the script armed**,
-   subscribe to its activity, and drive it green (red CI on your PR is yours until proven otherwise).
-4. Update the row: `checklist.py set WEEKLY-AUDIT-<date> state=landed_unproven prs='[<n>]'` with the
-   observation that closes it ("PR merged to main and the findings' rows are visible on the Workflow page"),
-   then `done` once merged and observed. Report to the manager in **one line**: PR, verdict, n findings by
-   disposition, anything for the operator.
+## Landing
 
-## What this audit does not do
+1. Commit the report and the rows/fixes.
+2. Run `python3 scripts/ops/land_pr.py --held-by <session id> --why "<tier judgement>" --verify`. It writes the
+   three landing files; commit them in the same push. A computed **hold** means the manager merges; say so.
+3. Push, open the PR, subscribe, and drive it green.
+4. `checklist.py set WEEKLY-AUDIT-<date> state=landed_unproven prs='[<n>]'` with the observation that closes it, then
+   `done` once merged and observed.
+5. Report to the manager once, in 1–5 lines: PR, verdict, the Layer-0 closure ratio, findings by disposition, anything for
+   the operator.
 
-- It does not edit `config/`, any order path, strategy params, risk caps, or account modes. Proposals only.
-- It does not resurrect the retired registers (backlogs, `SESSIONS.json`, the board). Rows and pipeline items only.
-- It does not re-run `/performance-review` or `/ml-review` (Wed/Thu walk-through) or replace `/health-review`
-  (Saturday); C8 is a second look, not a second review.
-- It does not report how long it took.
+## Never
 
-## Honesty
+Edit `config/`, an order path, strategy params, risk caps or account modes (proposals only). Resurrect retired
+registers. Re-run `/performance-review` / `/ml-review` / `/health-review`. Report how long it took.
 
-Say "I did not look" rather than imply a clean pass. A negative needs a denominator and a positive
-control. Verify your own output hardest where it confirms what you expected. If you did not check it this
-session, say so plainly.
+## Design basis (2026-10-28) — why this shape
 
-## Composes with
+**Diagnosis.** One audit has run under this skill (`docs/reviews/2026-10-19-weekly-audit.md`, run 10-21). Its
+predecessors were the archived full-system audits (`docs/audits/system-audit-2026-09-29.md`, `-10-04.md`).
 
-`diag-data` (reads) · `health-review` (C8) · `exit-refinement` (C2 follow-ups) · `backtesting` (C4) ·
-`manager` § "Weekly planning (Wednesday) and the weekly cycle" · `close-out` (completion) ·
-`doc-freshness` (consistency pass) · `research-ops` (units filed here are graded there).
+- **The checks were done well.**
+  - 9 invariants recomputed from live payloads, with positive controls.
+  - One real-money trace.
+  - An instrument bug found and fixed in-PR (F1).
+  - Every check had a population.
+- **The deep pass was real reasoning.** D1 found that liveness is spread over three unjoined layers, and
+  proposed what to build.
+- **Follow-through failed.** At 2026-10-28, 7 of its 10 finding rows are still `queued` and 1 is
+  `landed_unproven`. Nothing in the skill graded them, so the next run would have re-measured the same 253 due
+  items and re-filed them: findings became post-it notes at the next step down.
+- **The window was this week only.** "63 due as of 10-14" appeared once, as an aside, not as a series.
+- **"Health review #2" (C8) duplicated the health review.** Since 2026-10-28 the two run 40 min apart on the same
+  night. It is replaced by an independent re-test of the health review's verdicts (C8), which tests the control
+  rather than repeating it.
+- **"Does it run as designed" was not asked.** Nothing checked that demo-floor legs trade or that recorded data
+  trains anything. That is now C13.
+- The Monday run was skipped for the usage wind-down (10-19 ran 10-21). The schedule moved to Wednesday after the
+  reset (operator 2026-10-19/-21).
+
+**Practice adopted** (ACAD academic · PRAC practitioner · VEND vendor):
+
+- **Annual and regular review of control *effectiveness*, documented with an inventory of the controls,
+  thresholds and systems reviewed** — SEC Rule 15c3-5
+  ([SEC](https://www.sec.gov/rules/final/2010/34-63241-secg.htm)) and FINRA's 2026 oversight report, which lists
+  a missing inventory as a deficiency
+  ([FINRA](https://finra.org/rules-guidance/guidance/reports/2026-finra-annual-regulatory-oversight-report/market-access-rule))
+  — PRAC/regulatory. Basis for the CHECKS layer as an inventory with populations.
+- **Self-assessments omitted required elements; good practice is action-tracked recommendations and independent
+  review of the self-assessment** — FCA multi-firm review of algorithmic trading controls, 2025
+  ([FCA](https://www.fca.org.uk/publications/multi-firm-reviews/algorithmic-trading-controls-high-level-observations))
+  — PRAC/regulatory. Basis for Layer 0 and C8.
+- **Risk assessment that inventoried existing controls instead of examining risks; earlier incidents fixed
+  narrowly without root cause; alerts nobody acted on** — Knight Capital, SEC 2013
+  ([SEC 2013-222](https://www.sec.gov/news/press-release/2013-222)) — PRAC/regulatory. Basis for 2b, 2c, deep pass 0 and
+  the positive controls.
+- **Risk-based audit planning, with continuous risk assessment so a fixed rotation does not miss a changed risk
+  profile** — IIA practice guide
+  ([IIA](https://www.theiia.org/en/content/guidance/recommended/supplemental/practice-guides/developing-a-risk-based-internal-audit-plan/))
+  — PRAC. Eulerich, Georgi & Schmidt (survey of 264 CAEs) — ACAD. Basis for keeping the rotation to ONE deep
+  pass while the core runs weekly, and for choosing DESIGN-CRITICISM subjects by spend and incidents.
+- **Untracked action items are forgotten; failures that mirror earlier incidents need a deeper review** — SRE
+  Workbook ch. 10 ([sre.google](https://sre.google/workbook/postmortem-culture/)) — PRAC. Basis for Layer 0 and
+  the pre-registered `check`.
+- **Toil: measure it, and bound the share of time it takes** — SRE Workbook ch. 6
+  ([sre.google](https://sre.google/workbook/eliminating-toil/)) — PRAC. Basis for treating a check that costs
+  more than its catch as a DESIGN-CRITICISM subject.
+- **Compare metrics to their history at a weekly cadence** — AWS Well-Architected OPS11-BP07
+  ([AWS](https://docs.aws.amazon.com/wellarchitected/2024-06-27/framework/ops_evolve_ops_metrics_review.html))
+  — VEND. Basis for 2a.

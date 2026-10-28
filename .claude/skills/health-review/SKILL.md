@@ -1,923 +1,289 @@
 ---
 name: health-review
-description: Autonomous layer-2 review of the LIVE ICT TRADING BOT's TECHNICAL runtime health — pipeline plumbing, DB integrity, data validity, service state, alert delivery, sprint-doc drift. Reviews the cron health-snapshot report and reconstructs the same view from the diag relays since the last review. Drives its open items to a disposition (system bugs / wiring gaps / minor doc drift) off docs/claude/work/PIPELINE.jsonl + docs/claude/work/MANAGER-CHECKLIST.json. Does NOT score trades and does NOT review model performance — those moved to /performance-review and /ml-review respectively (2026-05-26 split). Use when the operator says "run the health review", "/health-review", or "do the layer-2 system review". NOT a code review or security audit.
+description: The WEEKLY technical health review of the LIVE ICT trading system (Wednesday 19:11Z after the weekly reset, feeding Thursday planning). Four layers per docs/reference/llm-analyst-skill-design.md. PRIOR CALLS re-runs and grades the last review's calls first. CHECKS is a fixed list of script/diag-route must-checks, each with its population and a read-state, so nothing is skipped and a null never reads as 0. ANALYSIS is LLM reasoning over wide context: the trend across the last 4 reviews, cross-signal correlation and competing-hypothesis root cause. DECISIONS ranks calls by money and risk, each with a probability and a pre-registered check. Covers services, deploy state (merged ≠ deployed ≠ observed), broker reachability, signal→order→fill→close plumbing, close reasons and orphans, DB validity, consumed-input freshness, alert delivery, research and learning pipeline liveness, saturation, security and new-work compliance. Every call is fixed, or becomes a row, unit or pipeline item. Use when the manager dispatches a HEALTH-REVIEW lane, or the operator says "/health-review", "run the health review". NOT trade scoring (/performance-review), NOT model quality (/ml-review), NOT control testing or design criticism (/weekly-audit), NOT a code or security review.
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
-# /health-review — technical/pipeline/data-health review of the live ICT bot
+# /health-review — is the machine running, and is it getting better or worse?
 
-> **⚠️ READ FIRST — WHAT THIS SESSION IS.** This is **full end-to-end QA of the
-> live system**, NOT a scan-and-sweep-under-the-rug exercise. Your job is to
-> actively **HUNT** for issues (bugs, correctness gaps, money-at-risk conditions,
-> silent regressions), **ROOT-CAUSE** them, **PROPOSE** the exact fix, decide the
-> Tier-2/3 calls **WITH the operator**, and then **FIX** them — this session.
-> **Finding a fixable bug and logging it to a backlog as a post-it note instead of
-> driving it to a fix is a REVIEW FAILURE** — that is exactly how bugs become
-> operational catastrophes. You can ALWAYS weigh in with the operator (the session
-> need not run fully autonomously) — but raising the flags is YOUR job, not
-> theirs; never passively wait for the operator to point at the problem. This
-> framing governs every review session, sub-reviews included.
+> **Redesigned 2026-10-28** (lane `SKILL-DESIGN-SYSTEM`, operator directive ~07:15Z: every weekly review is rebuilt
+> on researched practice, avoiding both *too loose* and *too scripted*). It follows the shared two-layer pattern
+> in [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md)
+> (lane ANALYTIC-SKILL-DESIGN). If that file is not on main yet, this skill is self-contained.
+> The 923-line predecessor is kept verbatim at
+> [`docs/archive/2026-10-28-skill-redesign/health-review-SKILL.md.pre-redesign`](../../../docs/archive/2026-10-28-skill-redesign/health-review-SKILL.md.pre-redesign).
+> Its transport notes are carried below. Its retired parts (the coordination board, sprint-log review, the
+> weekday rotation, the sibling-skills essay) were dropped on purpose; see § Design basis.
 
-This is the **system-health** session of the three-way review split (the
-others are `/performance-review` for trading + strategy scoring and
-`/ml-review` for the training center + model lifecycle). It reviews the
-**live trading system's runtime state**, not the codebase. Fully
-autonomous: Claude fetches state itself through the diag relays, grades
-plumbing + integrity, drains its backlog, and emits the response JSON.
-The operator pastes nothing, downloads nothing, SSHes nowhere.
+**This is QA of the live system, not a report.** You hunt for what is broken or getting worse, root-cause it,
+and fix what is Tier 1 this session. Tier 2/3 goes to the operator with the exact change. A finding you log
+without a root cause and a closing observation is a post-it note, and that is a review failure. Pull live state
+yourself through the diag relays. Never ask the operator for a snapshot, and never ask scoping questions: the
+scope is this file.
 
-If the user asked for a *code* review, *codebase audit*, *security
-review*, or *dependency check* — STOP, wrong skill. Point them at
-`review` or `security-review`.
+## The shape — four layers, never merged ([shared pattern](../../../docs/reference/llm-analyst-skill-design.md) § 1)
 
-If the user asked about *strategy/trade performance*, *trade scoring*, or
-*tweaks to consider* — STOP, wrong skill. Use `/performance-review`.
-
-If the user asked about *model performance*, *training sessions*, or
-*promote/demote a model* — STOP, wrong skill. Use `/ml-review`.
-
-**Coordination (binding):** before your first diag pull, read + post to the
-**live coordination board** (GitHub issue #6927,
-`docs/claude/coordination-board.md`) — this skill dispatches real live-VM
-diag/system-action requests and commits backlog drains, so other concurrent
-sessions need to see your `▶️ START` before you touch anything.
-
-## Scope (what this skill DOES)
-
-1. **Establish the window** — review everything *since the last
-   health-review*, not a fixed slice (§ "The review window").
-2. **Pull live runtime state** via the diag relays (§ "Fetching runtime
-   state").
-3. **Read the cron health report** — the artifacts surfaced by
-   `/api/bot/health/{latest,history,services}` and the live VM's
-   `artifacts/health/` snapshots (§ "The health report").
-4. **Grade full-pipeline plumbing** — signal→order→trade wiring, monitor
-   cadence, strategy silence, alert delivery, state consistency
-   (§ "Pipeline rubric").
-5. **Validate DB integrity + data validity** (§ "DB integrity &
-   validity").
-6. **Grade trainer-VM service health only** — is the timer running, is
-   the unit healthy. Model/dataset/registry detail is **out of scope** —
-   that's `/ml-review` (§ "Trainer service touch").
-7. **Audit broker-account reachability (MANDATORY)** — confirm EVERY
-   declared-live broker account is reachable (§ "Broker-account
-   reachability"). A down live account is a can't-miss flag, never a
-   line in the body.
-8. **Review recent sprint logs** for doc correctness (§ "Sprint-doc
-   review").
-9. **Ingest the orphan-events log** (§ "Orphan-events ingest") — every
-   NEW orphan trade row since the last review MUST be tracked + driven to
-   reconciliation. Orphan is a problem to solve, never a resting status.
-10. **Run the security-breach check (MANDATORY)** — actively look for any
-    detected breach / intrusion signal since the last review across the
-    surfaces this skill can reach (§ "Security-breach check"). "No breach
-    detected" must be a stated verification, never an omission.
-11. **Surface soak promotion/demotion decisions that are DUE** — flag any
-    shadow model or strategy whose soak has reached its gate and now needs
-    a promote/demote call, so it can't sit un-actioned (§ "Soak decisions
-    due"). This skill SURFACES the decision; the recommendation itself is
-    made by `/ml-review` (models) or `/performance-review` (strategies).
-12. **Audit new work since the last review for rule compliance (MANDATORY)**
-    — every PR merged + commit landed on `main` (and any live-VM / workflow /
-    config change) in the window, checked against the canonical ruleset
-    (§ "New-work compliance audit"). This is CHANGE-driven and distinct from
-    the static weekday rotation (§ "Compliance audit rotation").
-13. **Drive the open items to a disposition** — every item in the computed
-    open set, fix what you can (§ "Driving the open items").
-14. **Emit the response JSON** + **post a one-line update to the Claude
-    channel** (§ "Output" + § "Posting to the Claude channel").
-
-## Out of scope (DO NOT do here)
-
-- **Per-order-package trade scoring** — moved to `/performance-review`.
-  `comms/claude_strategy_scores.jsonl` is no longer written by this
-  skill.
-- **Model status reports** — moved to `/ml-review`. No `model_status[]`
-  in this skill's output.
-- **Strategy tweak proposals** — `/performance-review`.
-- **Promotion / demotion RECOMMENDATIONS** — `/ml-review` (models) /
-  `/performance-review` (strategies). This skill still **SURFACES** that a
-  soak has hit its gate and a decision is *due* (§ "Soak decisions due") —
-  raising the flag is health's job; making the call is not. Surface + route;
-  never write the recommendation or the rubric here.
-
-## The review window — "since the last review"
-
-The window runs from the last health-review to now. Determine "last
-review" in this order:
-
-1. The newest `reviewed_at` recorded in a prior health-review JSON —
-   **the newest file under [`comms/reviews/health/`](../../../comms/reviews/health/)**,
-   which is where this skill's own output lands. That directory is the
-   anchor because it is written by this review and by nothing else.
-2. Failing that, the newest health-review entry in the Claude channel ping.
-3. If neither is available, fall back to the last 24h.
-
-> ⚠️ **This anchor was `docs/claude/health-review-backlog.json` until
-> 2026-09-22 and that file does not exist** — the 2026-09-21 operating reset
-> archived it. Anchoring a review window on an archived file does not fail
-> loudly; it silently yields no anchor, and the 2026-09-22 review had to open
-> its window at the reset and say so. `git log` of the archive is history, not
-> an anchor: it stopped moving when the file was archived, so it would pin the
-> window open forever.
-
-Cap practical pulls at the diag limits (audit `limit=600` ≈ 6h at full
-cadence). If the gap exceeds one pull, page back with
-`since`/`until` on `journalctl` and note in the response that older
-events were summarized, not enumerated. **Cover the whole gap.**
-
-## Fetching runtime state (use the diag-data skill)
-
-This skill is a **consumer** of `diag-data` and `git-actions`. Follow
-those skills for the transport mechanics; this section lists the
-specific pulls health-review needs.
-
-**Required pulls (live VM, via `vm-diag-request` issue or direct HTTP):**
-
-| Pull | Path | Use |
+| layer | what | budget |
 |---|---|---|
-| Audit tail | `audit?limit=600` | ticks / `*_eval` signals / monitor events; filter to the window |
-| Order packages | `journal?table=order_packages&limit=100` | signal→order plumbing only (NOT scoring) |
-| Trades | `journal?table=trades&limit=100` | order→trade plumbing only (NOT scoring) |
-| Status | `status` | heartbeat + status.json + `vm_health` (cpu/mem/disk) |
-| Services | `services` | `systemctl is-active` per allowlisted unit |
-| Older windows | `journalctl?unit=ict-trader-live.service&since=<iso>&until=<iso>` | page back across a long gap |
-| Health snapshot — latest | (HTTP) `GET /api/bot/health/latest` via the `vm-health-snapshot-fetch` flavour of the diag relay, OR ride a direct call to `/api/bot/health/latest` when configured | the most-recent cron health snapshot the trader wrote |
-| Health snapshot — history | `GET /api/bot/health/history?hours=N` | newest-first list of snapshots in the window |
-| Health services | `GET /api/bot/health/services` | systemd state of `ict-trader-live` + `ict-web-api` |
-
-> ⚠️ **BEFORE YOU CONCLUDE ANYTHING FROM A FIELD IN THESE PULLS, read
-> `docs/CLAUDE-RULES-CANONICAL.md` § "The row you are reading outranks the
-> label in it".** Every pull above returns STORED fields, and a stored field's
-> name is a claim about what wrote it, not a measurement. One session produced
-> **four** wrong conclusions about a live real-money strategy from exactly these
-> rows — `pnl` read as the account's money, a portfolio total quoted without
-> `position_size`, `exit_reason` read as the exit mechanism without
-> `exit_price`, netting mode asserted from prose over the venue's own
-> `positionIdx` — and in **three of the four the settling field was in the row
-> already being read**. The drafted outputs were a real-money demotion and a
-> Tier-3 entry-gate change. **"Always verify" was in force and prevented none of
-> them**, because a journal query IS a measurement — of the journal.
-> Cheap mechanical answers: `journalTrust` rides in the `/api/bot/trades/closed`
-> response already (⚠️ `no_record` is NOT "trusted"); `scripts/ops/column_provenance.py
-> trades.<column>` names every writer; `scripts/ops/strategy_liveness.py <strategy>`
-> answers whether a rate you are about to quote is still happening or belongs in
-> the past tense.
-
-**Batch these into ONE `vm-diag-request` issue, not nine.** Per the
-`diag-data` skill's default pattern (MB-20260706-CI-MINUTES — every
-relay issue is its own billed Actions job, and this repo hit its 2,000
-min/month cap opening 427 issues in 5.5 days), open a single issue with
-the body as a JSON array (or one path per line) covering every row of
-this table you actually need this run, e.g.:
-```json
-["audit?limit=600", "journal?table=order_packages&limit=100",
- "journal?table=trades&limit=100", "status", "services",
- "api/bot/health/latest", "api/bot/health/history?hours=24", "api/bot/health/services"]
-```
-(The health-snapshot endpoints live under `/api/bot/…`, so their relay
-paths MUST carry the `api/bot/` prefix — the bare `health/latest` form
-returns `{"error":"fetch_failed"}` because the relay only resolves
-un-prefixed paths under `/api/diag/*`. Root-caused 2026-07-13,
-BL-20260712-HEALTH-RELAY-FETCH-FAILED.)
-
-The `vm-diag-snapshot` workflow fetches all of them over one ssh session
-and posts one combined comment (`## <path>` per result). Only fall back
-to separate single-path issues for a path you need to re-fetch later in
-the review (e.g. a follow-up `journalctl` window after seeing the first
-batch's results).
-
-**Trainer VM (light touch only — service health):**
-
-Open a `trainer-vm-diag-request` issue with:
-
-```
-cmd: |
-  systemctl is-enabled ict-trainer.service; systemctl is-active ict-trainer.service
-  systemctl is-enabled ict-trainer.timer;   systemctl is-active ict-trainer.timer
-  systemctl show ict-trainer.service --property=ExecMainStatus,ActiveEnterTimestamp,ActiveExitTimestamp
-```
-
-That's all health-review needs. **Do not** also pull
-`training_cycle.jsonl`, `python -m ml list-models`, `dataset_builds.jsonl`,
-or registry data — those belong to `/ml-review`. Pulling them here just
-inflates the issue comment.
-
-**On relay failure:** if the live relay returns curl exit 7, fire
-`vm-web-api-recover` and retry once. If it still fails, downgrade
-gracefully — emit the review with `api_errors` = concern,
-`operator_attention_required: true`, and a note that the live pull
-couldn't be performed. **Never fabricate findings.**
-
-## The health report
-
-The cron `health-snapshot.yml` writes per-run snapshots to
-`artifacts/health/health_check_<TS>.json` on the live VM and surfaces
-them through the `/api/bot/health/*` endpoints. Read both the
-**latest** snapshot (current state) and the **history** for the window
-(trend), then:
-
-- Cross-check the snapshot's findings against your own diag pulls — if
-  the snapshot says `heartbeat: ok` but your `status` pull shows a
-  stale `heartbeat.txt`, the snapshot is lying and that's itself a
-  `concern` (snapshot generator broken).
-- For every `concern` in the snapshot history that has NOT recovered by
-  the latest snapshot, surface it as an open anomaly.
-- For repeating-and-recovering issues (e.g. transient API errors every
-  few hours), grade `watch` not `concern` and note the cadence.
-
-If `/api/bot/health/latest` returns `{present: false}`, the cron
-generator hasn't run since this artifact dir was last cleared — note
-it as `health_snapshot: watch` (not concern; the live diag pull is
-the canonical view, the snapshot is a convenience).
-
-## Pipeline rubric
-
-Beyond freshness counts, judge **plumbing quality** across the window:
-
-- **Signal → order plumbing.** Every actionable signal in the audit
-  tail should produce an `order_packages` row within seconds. Gaps →
-  `orders` concern.
-- **Order → trade plumbing.** Every filled order should have a
-  `trades` row. Orphans (filled order, no trade; trade, no parent
-  order) → `trades` concern.
-- **Side / size sanity.** Spot-check 3–5 orders: side matches signal
-  direction; qty within the per-account `pos_size` cap in
-  `config/accounts.yaml`; no absurd leverage. (This is a plumbing
-  check, not a strategy-quality check — strategy quality is
-  `/performance-review`.)
-- **SL/TP wiring.** Each order should carry SL+TP metadata. Missing →
-  `watch`; systematic absence → `concern`.
-- **Repeated rejections.** Consecutive `failed_exchange` /
-  `failed_risk_gate` / `borrow_unavailable` on one symbol → `orders`
-  concern (something upstream wedged).
-- **Monitoring cadence.** `run_monitor_tick` events on the documented
-  cadence; long gaps → `monitoring` concern.
-- **Strategy silence.** Every strategy enabled in
-  `config/strategies.yaml` should emit per-tick `*_eval` events. An
-  enabled strategy with **zero `*_eval`** for > 1h of an active session
-  → `strategy_silence` concern. **`execution: shadow` strategies still
-  run and still emit `*_eval`** — the silence check applies to them
-  but trade-row checks do not.
-- **State consistency.** For each account, YAML `mode` vs runtime
-  `live` field in `runtime_status.json`. Drift → `state_consistency`
-  concern.
-- **Alert delivery.** Confirm the `AlertsQueue` is drained — known-trip
-  events with no accompanying drain log → `alert_delivery` concern
-  ("alerts queued, drainer silent — operator unnotified").
-
-Status grades: `ok` (nothing to flag) / `watch` (bounded anomaly) /
-`concern` (operator should look ⇒ `operator_attention_required: true`).
-Overall: `healthy` (all ok) / `caution` (≥1 watch, no concern) /
-`investigate` (any concern).
-
-## Research pipeline health (MANDATORY — 2026-10-16)
-
-The research pipeline is graded like the trading pipeline (operator, 2026-10-16: *"It's a pipeline like the other
-pipelines and needs the same infra setup as the trading pipeline."*). Grade one dimension `research_pipeline` ∈
-`ok | watch | concern`:
-
-1. Read every `comms/research/health/<date>.json` since the last review (`latest`, `runs`, `alert_state`; SLOs in
-   `scripts/research/research_slo.yaml`). No file for a day, or a `runs` gap > 4 h, means the monitor itself was
-   down — that is a `concern` and a finding on its own.
-2. For **every** SLO that was `breach` or `could_not_look` in the window: name the value, the threshold, how long it
-   was red, and its disposition — fixed (commit), a checklist row / pipeline item that moves it (with a near
-   `due_when`), or a reasoned threshold change in a PR. "Noted" is not a disposition (manager § "Research SLO
-   escalation").
-3. Check the alert actually reached the operator: each `change` / `reminder` run should carry
-   `delivered.telegram: true`; a false is an alert-delivery finding, same class as an undelivered trade ping.
-4. Positive control before reporting "all ok": `python3 scripts/research/research_slo.py --self-test`.
-
-`ok` = no red SLO in the window. `watch` = red SLOs, each with a dispatched lane. `concern` = a red SLO with no
-disposition, a missing status day, or an undelivered alert.
-
-## Trainer service touch
-
-Grade exactly one dimension: `trainer_service` ∈
-`ok | watch | concern | skip`. `ok` when the timer is enabled+active
-and the unit has not died with non-zero `ExecMainStatus`. Everything
-else about the trainer (models, datasets, registry, training metrics)
-is **`/ml-review`**'s job — do not duplicate it here.
-
-The trainer is not a live-trading blocker. Don't set
-`operator_attention_required` on a trainer-only issue unless an
-`advisory`+/`live_approved` model is involved (and even then, that
-finding belongs to `/ml-review` — this skill just notes "trainer
-service stale, see /ml-review").
-
-## Broker-account reachability (MANDATORY — 2026-06-29)
-
-A supposed-to-be-live broker account reading **unreachable** (IB gateway
-logged out, exchange API 401-ing, creds rotated out) is a money-at-risk
-condition that must surface as a **loud, standalone flag** — not a line
-buried in the report body. This section exists because the IB gateway was
-in fact dark across one or more reviews and went unflagged.
-
-**Scope — all declared-live, non-shelved accounts.** Check every account
-with `mode: live` on a probeable exchange (`bybit` / `interactive_brokers`
-/ `alpaca` / `oanda`). This excludes the intentionally-shelved dry accounts
-(`ib_live` 2FA-blocked, `oanda_practice`) and the API-less `breakout_1`
-prop bridge — the same set the in-process latch checks.
-
-**How to read reachability** (any one is sufficient evidence of down):
-
-- `GET /api/diag/exchange_positions` — per-account `positions: null` ⇒
-  could-not-read (down); `[]` or a list ⇒ reachable.
-- the in-process latch state file
-  `runtime_logs/account_reachability_alert_state.json` (pull via
-  `/api/diag/log_file` or read `account_reachability_alert.down_accounts()`)
-  — any account with `down: true` is currently latched down.
-- `GET /api/bot/accounts/balances` — `api_ok: false` for a live account.
-
-**What to do when an account is down:**
-
-1. It is a **MANDATORY** entry in the response's flags / a standalone
-   high-priority Claude-channel ping (the in-process latch already pings
-   Telegram on the cross-into-down; the review must ALSO surface it so a
-   review run is never the thing that quietly skips it).
-2. Recommend the fix inline: IB → `vm-ib-gateway-recover`; otherwise →
-   check broker API/creds. If the down state is sustained, this is exactly
-   the trigger to open/continue a remediation pass in THIS session.
-3. Drive it — don't just note it. A live account dark for the whole window
-   is a `concern`-grade finding with `operator_attention_required` set.
-
-If all live accounts are reachable, say so explicitly ("all N live
-accounts reachable") — an empty reachability finding must be a stated
-verification, never an omission.
-
-## DB integrity & validity
-
-- **`db_integrity`** — the diag relay can't run `PRAGMA
-  integrity_check`, so grade from journal recency + counts:
-  `age_seconds` of the newest `trades`/`order_packages` row should be
-  small during active sessions (hours-stale while signals fire →
-  `concern`); table totals non-decreasing run-over-run (a drop →
-  truncation/restore `concern`); large `-wal` with a small main DB →
-  `watch`. Note "integrity_check not fetched (relay can't run PRAGMA)".
-- **`data_validity`** — values are *sane*, not just present: no
-  negative `position_size`/`pnl` where impossible, no null in required
-  columns, timestamps monotonic (`opened_at ≤ closed_at`), closed
-  trades carry an `exit_reason` + `pnl`, and net positions reconcile
-  with open rows. Bad values → `watch`; systemic corruption signals →
-  `concern` with `operator_attention_required: true`. Use the
-  `db-wiring` skill's checks as the reference.
-- **`db_write_path_integrity`** (Phase-4 guardrail) — run
-  `scripts/check_db_integrity.py` (read-only, `mode=ro`) for the INV-1..5
-  write-path invariants from
-  `docs/audits/dashboard-truth-and-persistence-2026-06-16.md`. It separates a
-  RECENT regression (`recent_count > 0` ⇒ `alert` ⇒ a live write-path bug, e.g.
-  a row that just closed without `closed_at`/`pnl`/`account_class` or with a
-  broken package link) from the LEGACY pre-backfill backlog (`total_count` only
-  ⇒ informational, the P1-E backfill clears it). Grade any `recent_count > 0`
-  as `concern`; legacy-only as `watch`/note. The hourly `ict-db-integrity.timer`
-  already pings `[WARN] DB integrity: …` on a recent regression — cross-check
-  that the alert fired. (Pull it via the diag relay or, when configured, run
-  the checker directly against the live DB.)
-
-## Sprint-doc review
-
-Read the sprint logs under `docs/sprint-logs/` created since the last
-review (newest few). For each, sanity-check: does it follow the
-canonical template (`sprint-format` skill), does it report verified
-reality rather than intent, and does any claim contradict a canonical
-doc or the live state you just pulled? Record issues in
-`sprint_doc_review[]` with severity `nit | drift | contradiction`. A
-`contradiction` against a canonical doc is fixed in-place (Tier-1) or
-logged to the backlog — never walked past.
-
-## Compliance audit rotation (2026-06-02)
-
-One repo section per review, rotated by day-of-week so the full repo is
-audited against the **current** canonical rules
-(`docs/CLAUDE-RULES-CANONICAL.md` § Generation Discipline) over a week.
-This is the enforcement loop for Rule 2 (precedents-not-authoritative):
-artifacts drift as rules evolve, and this rotation is how the drift
-gets surfaced and queued for fix.
-
-Pick the section by `weekday`:
-
-| Weekday | Section |
-|---|---|
-| Mon | `docs/runbooks/` |
-| Tue | `.github/workflows/` + `scripts/ops/` |
-| Wed | `.claude/skills/` |
-| Thu | `config/` |
-| Fri | `src/units/accounts/` (broker integrations) |
-| Sat | `src/runtime/` + `src/core/` |
-| Sun | `src/units/strategies/` + `ml/` |
-
-For each artifact in the day's section:
-
-1. Run the bright-line scan from `before-asking-the-operator` (operator
-   instructions that should be runner-dispatched) and
-   `credentials-and-vm-mutations` (operator-attributed VM/credential
-   work that should route through `sync-vm-secrets` or
-   `system-actions`).
-2. Cross-check against any rule in `docs/CLAUDE-RULES-CANONICAL.md`
-   that the artifact category is subject to (tier, autonomy mandate,
-   prime directive, generation discipline, ship-autonomously rule).
-3. Per Rule 2 of Generation Discipline:
-   - **Compliant** → no action.
-   - **Non-compliant + the review session is shipping a fix for the
-     containing system** → fix in the same PR.
-   - **Non-compliant + non-blocking** → log to
-     `docs/claude/work/PIPELINE.jsonl` (via `scripts/ops/pipeline.py`) with the artifact path,
-     the specific rule it violates, the bright-line phrase or pattern
-     observed, and a one-line suggested fix.
-
-The audit findings appear in `compliance_audit` in the response JSON:
-
-```json
-"compliance_audit": {
-  "section": "docs/runbooks/",
-  "artifacts_scanned": 16,
-  "findings": [
-    {
-      "artifact": "docs/runbooks/ib-integration.md",
-      "rule": "before-asking-the-operator",
-      "pattern": "operator-attributed systemd edit at line 87",
-      "severity": "drift",
-      "logged_to_backlog": "BL-20260603-001"
-    }
-  ]
-}
-```
-
-This rotation does NOT touch artifacts outside the day's section — the
-weekly cycle is the coverage guarantee, not a per-session full sweep.
-
-**Standing measurement on EVERY rotation day (operator directive 2026-10-06
-— the TP doctrine, `docs/ARCHITECTURE-CANONICAL.md` § "TP doctrine"):** run
-
-```bash
-python3 scripts/ci/check_tp_doctrine.py --strict --json
-```
-
-and put its `summary.by_class` block into `compliance_audit` as a finding
-named `tp-doctrine` (`rule: "ARCHITECTURE-CANONICAL § TP doctrine"`), with the
-per-class `entry_tp` / `tp_revision` FAIL counts beside their denominators.
-`--strict` exits 1 while ANY baselined debt remains — that is the audit shape,
-because the audit asks whether the debt SHRANK, not whether it grew (the PR
-guard asks the latter). Three dispositions, by class, real-money and prop
-first: a routing that became compliant → remove its `BASELINE_2026_10_06` line
-in the same PR (the guard fails on a stale line); a routing still failing →
-confirm it is carried by `PI-20261006-5FUGHVX8-0001` or a successor pipeline
-row / `research/queue/` unit; a routing that is NEW and failing → the guard
-already failed its PR, so the finding is how it got in. Exit 2 is *could not
-look* and is reported as such, never as clean.
-
-
-## New-work compliance audit (MANDATORY — 2026-07-19)
-
-Operator directive: **everything built since the last review gets audited
-for compliance with the repo's rules.** The static rotation above catches
-drift in *unchanged* artifacts as the rules evolve (a coverage guarantee
-over a week); this sweep is its complement — it catches non-compliance in
-*new* work **at the moment it lands**, so a rule-breaking change can't sit
-merged-and-unreviewed until its file's rotation day comes around. Both run
-every review; they are not substitutes.
-
-**What to audit — the delta since the last review:**
-
-1. **Every PR merged to `main` in the window** — enumerate via
-   `mcp__github__list_pull_requests` (state `closed`, newest-first, filter
-   to `merged_at` inside the window) or `git log --merges --since=<window>`.
-2. **Every commit landed on `main`** not covered by a PR (direct Tier-1
-   commits) — `git log origin/main --since=<window>`.
-3. **Any live-VM / workflow / config mutation** in the window — new or
-   edited `.github/workflows/**`, `system-actions` allowlist changes,
-   systemd unit/timer additions, `.env`/cgroup changes applied via the
-   relays (cross-check the `system-action` issues you saw this run).
-
-**Audit each change against the canonical ruleset** (`CLAUDE.md` +
-`docs/CLAUDE-RULES-CANONICAL.md`) — the bright lines:
-
-- **Permission tiers.** Classify the change's tier from its diff. A **Tier-2**
-  change (runtime / deploy / order-path / service / timer / DB-writeback /
-  data-mutation) must show an **operator OK in chat** before it shipped; a
-  **Tier-3** change (strategy logic/params, risk caps/sizing, account-mode flip,
-  live promotion, or any edit to `config/strategies.yaml` / `config/accounts.yaml`
-  / `config/risk_caps.yaml` / `src/runtime/orders.py` / `src/runtime/risk_counters.py`
-  / a live-consumed unit file) must show **explicit operator approval** on the PR
-  before merge. A Tier-2/3 change merged **without** the required approval is a
-  `concern` + `operator_attention_required`.
-- **Prime Directive.** No new **auto-flip / breaker that toggles `mode:`**, no
-  **"safety" default that goes dry on boot**, and — the recurring one — **no new
-  default-off `*_ENABLED` flag in front of a *required* capability** (the pattern
-  that stranded MES and regressed the netting guard). A new capability gate must
-  be a declared, default-**permissive** switch (or a `*_MODE` observe→apply
-  ladder), never a default-off enable. Account-mode writes only via
-  `set-account-mode`.
-- **Generation Discipline (Rule 1 + 2).** Did the change derive from the matching
-  **skill** (skill-first) rather than copy a precedent? Did it replicate a
-  non-compliant precedent's shape? A new operator-facing runbook / workflow /
-  instruction that attributes work to the operator which a runner could do
-  (bright-line phrases from `before-asking-the-operator` /
-  `credentials-and-vm-mutations`) is a violation.
-- **Honesty.** Does the PR/commit claim work **verified** that the diff or the
-  live state contradicts (e.g. "verified live" with no evidence, a green-CI
-  claim that didn't run, a "resolved" that didn't land)? Cross-check load-bearing
-  "verified/deployed/live" claims against the runtime state you already pulled.
-- **Field-beats-comment + canonical-doc-coherence.** Did a change flip a
-  YAML field/config constant on inference against a surrounding note, or leave a
-  canonical doc contradicting the new reality?
-
-**What to do with a finding:**
-
-- **Compliant** → no action (still counted in `audited` so the coverage is
-  legible).
-- **Non-compliant, still live / unmerged-reversible** → a `concern`-grade,
-  can't-miss finding: set `operator_attention_required`, name the PR + the exact
-  rule, and recommend the concrete remediation (revert, add the missing approval
-  gate, convert the `*_ENABLED` to permissive, fix the stale doc). If it's a
-  Tier-1 doc/backlog fix you can make, make it.
-- **Non-compliant but low-risk / already-past** → log to
-  `docs/claude/work/PIPELINE.jsonl` (via `scripts/ops/pipeline.py`) with the PR, the rule, and a
-  one-line fix, and note it in the output.
-
-Record the result in `new_work_compliance` in the response JSON: the window's
-`prs_audited` / `commits_audited` count and one `findings[]` entry per
-non-compliant change (`{ref, tier, rule, severity, disposition}`). **A clean
-sweep is a stated negative** — `findings: []` + an explicit note ("N PRs / M
-commits audited since <window>, all tier-appropriate + rule-compliant"), never
-an omission. This is compliance auditing of *what was built*, NOT a code-quality
-review (that stays with `review` / `security-review`).
-
-## Orphan-events ingest (orphan is NEVER a resting status)
-
-Operator directive (2026-06-24): an orphan trade row is a **red flag to be
-reconciled**, not a status to accept. The trader writes one JSON line per
-orphan-row creation to `runtime_logs/orphan_events.jsonl`
-(`execution_diagnostics.enqueue_orphan_created_flag`: `account`, `symbol`,
-`side`, `trade_id`, `origin`, `ts`) and fires a CRITICAL "initiate a
-/system-review" Telegram red-flag at the same time.
-
-Every health-review (and the master /system-review) MUST:
-
-1. **Pull the tail** since the last review — `diag log_file?name=orphan_events`
-   (relay) or the live VM file. Also cross-check the DB: any `trades` row still
-   carrying an orphan marker (`setup_type='adopted_orphan'` /
-   `strategy_name='orphan_adopt'`, or `status='orphaned'`) — query via the Data
-   Explorer (`/api/bot/db/table/trades?filter_col=setup_type&filter_op=eq&filter_val=adopted_orphan`).
-2. **For each orphan not already tracked**, append a `BL-…` item to
-   `docs/claude/work/PIPELINE.jsonl` via `scripts/ops/pipeline.py` (origin, account/symbol, trade_id,
-   the reconcile target if recoverable) so it is durably tracked — and **drive it
-   to resolution**: reconcile to its real trade/order package, or, only after
-   exhausting that, mark it explicitly `unreconciled` (never leave it resting as
-   `adopted_orphan`).
-3. **Flag loudly** in the review output if any orphan persisted unreconciled
-   across the window — that is a standing failure of the no-resting-orphan
-   invariant, not a routine item.
-
-## Security-breach check (MANDATORY)
-
-A live trading system is a money-at-risk target. Every review MUST actively
-look for a **detected breach / intrusion signal since the last review** and
-state the result — a clean check is a *stated verification*, never an
-omission. This is **breach DETECTION on the surfaces this skill reaches**,
-NOT a code-vulnerability audit — deep code/dependency security review stays
-with the `/security-review` skill (route there if a signal points at code).
-
-**Sweep these sources for the window:**
-
-- **GitHub secret scanning** — `mcp__github__run_secret_scanning` (or the
-  secret-scanning alerts list). Any NEW exposed-credential alert is a breach
-  signal (a leaked key can be used against the brokers/VMs).
-- **External / non-collaborator activity** — the repo is **public** with the
-  "limit to repository collaborators" interaction limit + the
-  `external-comment-alert.yml` auto-hide/alert workflow. Check for any
-  comment / issue / PR / fork-push from a non-owner, non-collaborator actor,
-  and confirm `external-comment-alert.yml` actually fired if one appeared.
-- **Repo/supply-chain mutations** — unexpected new collaborators or deploy
-  keys, changed/added repo **Actions secrets**, force-pushes to `main`, new
-  branches/tags you can't attribute, and especially **edits to
-  `.github/workflows/**`** (a workflow edit is a code-execution + secret-exfil
-  vector). Cross-check against the session's own known changes.
-- **Actions anomalies** — workflow runs triggered by an unexpected actor, or
-  a spike/burst that doesn't match Claude-session or scheduled activity.
-- **VM host signals (via the diag relay)** — `journalctl?unit=ssh.service`
-  for sshd/auth (failed-then-succeeded logins, new sessions/users), unexpected
-  new systemd units / timers / cron, unexpected listening ports or processes,
-  and host-agent tampering of the `/dev/null` clobber class. The 2026-06-28
-  intrusion audit (`BL-20260628-SEC-HARDENING-FOLLOWUPS`) and the `/dev/null`
-  investigation are the standing precedents — reconcile any new signal against
-  them before calling it novel.
-  ⚠️ The unit is **`ssh.service`**, not `sshd.service` — measured 2026-09-22
-  on ict-bot-arm, `sshd.service` is a systemd *alias* and `journalctl -u
-  sshd.service` returns **`-- No entries --`**, so that spelling would report
-  the auth log CLEAN having read nothing. Until 2026-09-22 (E27) no spelling
-  worked at all: the unit was absent from `_CANONICAL_UNITS` and every attempt
-  returned HTTP 400 `unknown_unit`, so this source was unsatisfiable — if the
-  probe 400s, the sweep is `could_not_look`, never `clean`.
-  ⚠️ **One pull covers ~1.5 h, not the window** (the relay returns the last
-  2000 lines; the trainer logs ~400 accepts/h — measured 2026-10-24). Sweep the
-  whole window with `python3 scripts/ops/ssh_auth_sweep.py --since <ISO> --until
-  <ISO> --trainer-ip <trainer>` (pages in 20-min windows, splits full ones, prints
-  only non-trainer accepts with a hashed source class + key last4, exits 2 if any
-  window was unreadable = `could_not_look`). A Health Snapshot run (every ~6 h)
-  legitimately produces 2 non-trainer accepts with the shared deploy key; match
-  each by time to a workflow run (SSH-LOGIN-ATTRIB-1024).
-
-**What to do:**
-
-1. **Any confirmed breach signal is a can't-miss, standalone finding** —
-   `security` = `concern`, `operator_attention_required: true`, and a
-   **high-priority** Claude-channel ping. Never bury it in the body.
-2. **Drive containment** where you can (hide an external comment, open the
-   fix issue, route a code-vuln to `/security-review`), and tell the operator
-   the exact credential/action they must own (rotate key X, revoke deploy key).
-3. **If nothing is found, say so explicitly** — e.g. "no breach detected
-   since <window>: 0 secret-scanning alerts, 0 external actors, no workflow /
-   secret / collaborator changes, auth log clean." That stated negative is
-   the deliverable; an empty `security` finding is a review failure.
-
-Grade `security` ∈ `ok | watch | concern`. `watch` for an unconfirmed /
-low-signal anomaly worth a second look; `concern` (⇒ operator attention) for a
-confirmed breach or exposed credential.
-
-## Soak decisions due — surface, don't decide
-
-Operator directive: **anything whose soak has reached a promotion/demotion
-gate must be SURFACED here** so a met gate never sits un-actioned between the
-deeper reviews. This skill **flags the decision as due and routes it** — it
-does **not** compute the recommendation (that rubric lives in `/ml-review`
-for models and `/performance-review` for strategies; see Out of scope).
-
-**Check each soak's gate state for the window:**
-
-- **Shadow models** — `/api/bot/shadow/stats` (+ `/drift`): days-in-shadow,
-  prediction volume, the "wired" check, drift verdict. A model whose serving
-  mechanics are confirmed (wired, labels accruing, stable drift) and whose edge
-  is proven offline is a **promotion decision due** — calendar time is never
-  the gate (CLAUDE-RULES-CANONICAL § "Promotion evidence"); one drifting or degenerate (e.g. all-zero scores) is a **demotion /
-  hold decision due**.
-- **Strategies** — `/api/bot/strategies/{name}/review` M7 packets: any packet
-  whose action badge is `PROMOTE` / `DEMOTE_SHADOW` / `KILL` is a decision
-  due (especially with a Tier-3 SLA due-by that has passed).
-- **Observe-only soaks that graduate on a gate** — exit-ladder, fc-geometry,
-  allocator, conviction-sizing/arbitration, exit-lever, news-influence. If one
-  has hit the row-count / evidence bar its design names for graduation, flag
-  that its Tier-3 graduation call is due.
-
-**For each gate met:** surface `{what, gate_met, owner_skill, sla_state}` in
-`soak_decisions_due[]` — do NOT write the promote/demote recommendation.
-**Escalate loudly** if a gate has been met and sat un-actioned across ≥2
-reviews (a stalled decision is exactly what this section exists to catch).
-**If nothing has reached a gate, state "no soak decisions due."**
-
-## Driving the open items — a HARD COMPLETION GATE (not a sample)
-
-> ### ⚠️ REPOINTED 2026-09-22 (checklist row E23). READ THIS BEFORE THE GATE.
->
-> **This section named `docs/claude/health-review-backlog.json` in five places
-> and that file does not exist** — the 2026-09-21 operating reset archived it
-> under `docs/archive/2026-09-21-operating-reset/`. So from the reset until this
-> repoint, **every health-review was either incomplete by its own contract or
-> quietly ignoring it**, and an output contract demanding
-> `backlog_coverage.count_untriaged == 0` over an absent file was unsatisfiable
-> by construction. A binding skill at instruction-hierarchy level 5 instructing
-> something that cannot be done is the same defect class the canonical rules
-> already record at *"THIS RULE NAMED FIVE OTHER WORDS UNTIL 2026-09-12 AND NOT
-> ONE OF THEM WAS A LEGAL `status`"*.
->
-> **The gate is KEPT, not removed** — a review that leaves open items
-> unlooked-at has still not done its job, and that reasoning did not expire with
-> the file. What changed is only WHERE the open set lives.
->
-> ⚠️ **DO NOT RESURRECT THE ARCHIVED BACKLOG.** `CLAUDE.md` says so in terms,
-> and the pipeline is its deliberate replacement. The archived rows are ALSO not
-> imported (that is row `A8`, and most of them should be killed explicitly
-> rather than carried) — so the denominator below is the LIVE open set, not the
-> historical one, and saying that is part of satisfying the gate.
-
-**A health-review is NOT complete until every item in THIS REVIEW'S OPEN SET has
-been driven to a disposition THIS run.** Triaging "the recent few", "the ones I
-touched", or a sample is a **review failure**.
-
-**The open set is the union of two live surfaces, and it is COMPUTED, not
-declared:**
-
-| surface | what to take from it | how |
-|---|---|---|
-| [`docs/claude/work/PIPELINE.jsonl`](../../../docs/claude/work/PIPELINE.jsonl) | the **gate set** — due items that are unrouted, whose owner row has closed, or high-severity (§ "The narrowed gate" below) | `python3 scripts/ops/pipeline.py --gate` (and `--stats` for the due total) |
-| [`docs/claude/work/MANAGER-CHECKLIST.json`](../../../docs/claude/work/MANAGER-CHECKLIST.json) | every row this review OWNS — `state` not in `done`/`dropped` **and** whose subject is technical/pipeline/data health | read the file; a row owned by another lane is context, not yours |
-
-⚠️ **The narrowed gate (operator, 2026-10-24, "Narrow the gate (Recommended)"; row
-`HEALTH-GATE-NARROW`).** The per-item walk covers ONLY the gate set, computed by
-`pipeline.gate_set()` / `pipeline.py --gate`: (1) **unrouted** due items (state not
-`routed`, or an owner that resolves to no checklist row, research unit or PR);
-(2) due items whose **owner checklist row has closed** (`done`/`dropped`);
-(3) **high-severity** due items. Owner-routed items whose owner is live are the
-owner's job; the `UNPROVEN_OVERDUE` sweep (`scripts/ops/blocker_watch.py`) tracks
-them. **Why:** due went 110 → 256 → 369 over three reviews, which walked 5/110 and
-0/256; 349 of the 369 route to a live owner and 158 of those rows are
-`landed_unproven` — a gate counting every due item could not be met, and bulk
-re-dating is the failure BACKLOG-BURNDOWN-2 already showed. **The denominator is
-never silent:** `--gate` prints `due`, `gate`, the per-class counts and
-`excluded` by reason; record all of them in `backlog_coverage`. No other
-threshold changes.
-
-⚠️ **`due` is COMPUTED and that is the point** — an item becomes due because the
-clock or its condition says so, whether or not anybody chose to look. Do not
-hand-pick the set.
-
-⚠️ **A pipeline item is appended with `scripts/ops/pipeline.py`, never by hand.**
-It refuses a row without `due_when` and `origin.rerun`, requires an explicit
-`intent=`, and the file is **append-only JSONL, never a JSON array** — a shared
-array is what produced the archived registers' merge conflicts. If a concurrent
-lane has touched it, resolve as a **counted union** with record counts printed
-and asserted, never `--ours`/`--theirs`.
-
-(`/performance-review` and `/ml-review` enforce this same gate. ⚠️ **As measured
-2026-09-22 their own named files — `performance-review-backlog.json`,
-`research-review-backlog.json`, `ml-review-backlog.json` — are ALSO absent, so
-their gates are broken in exactly this way and are NOT fixed by this edit.** See
-§ "The sibling skills" below.)
-
-**The procedure — enumerate the FULL open set, then walk it 100%:**
-
-1. **Count first.** Compute the open set from both surfaces above (pipeline =
-   the gate set), dedupe by id, and record `open_at_start`; record `due_total` and
-   `excluded` from `--gate` beside it. This is your denominator — you must touch
-   every one, and you **state the population**: which surfaces, and what the
-   count was on each.
-2. **For EACH open item** (all of them, oldest to newest):
-   - **Re-validate against current live state.** Does its trigger still
-     apply? Cross-check it against the diag pulls / DB / services you
-     already fetched this run (e.g. a "gateway wedge at 06:00Z" item
-     against the `ib_state` you pulled; a "devnull clobbered" item
-     against whether this session's operator-actions actually ran; a
-     "trainer stale" item against the trainer relay). **Drive a
-     verification pull if one cheap check resolves it** — don't leave an
-     item "unverified" when a single relay call would settle it.
-   - **Disposition it into exactly one bucket:**
-     - **resolved** — this session verified it fixed / no longer
-       reproduces. Mark `resolved` + a verification note.
-     - **fixed-now** — an in-scope Tier-1 fix (a doc this skill may
-       write, a workflow/relay-allowlist edit, the backlog file itself,
-       a CLAUDE.md correctness fix). Make the fix, mark `resolved`.
-       (A change to `src/`, `config/`, or any Tier-2/3 file is NOT
-       fixed here — it goes to `kept-open` + `recommended_action`, even
-       for a comment-only edit to a Tier-3 file.)
-     - **stale/invalid** — the condition is gone or the item was wrong.
-       Mark `invalid`/`superseded` with the reason.
-     - **kept-open** — genuinely still open (needs a Tier-2/3 code
-       change, an operator decision, a soak to mature, or future work).
-       Keep it, but **add an update** with this run's re-validation
-       result + the current blocker, so it never sits stale-and-unlooked.
-3. **Write it back, to the surface the item came from.** A pipeline item is
-   updated through `scripts/ops/pipeline.py` (a close needs a
-   `terminal_reason`; `killed` is a first-class outcome and closing a dead row
-   WITH a stated reason is worth more than carrying it). A checklist row is
-   updated in place — its `state` and its `note`. Record EVERY item's
-   disposition in the response's `backlog_drain[]` (one entry per open item —
-   the array length equals `open_at_start`).
-
-   ⚠️ **Touch only rows this review owns.** Other lanes are live in the same
-   files concurrently.
-
-**Coverage assertion (the gate).** Emit
-`backlog_coverage: {open_at_start, triaged, resolved, fixed_now,
-closed_stale, kept_open, count_untriaged}` in the response.
-**`count_untriaged` MUST be 0** and `triaged` MUST equal `open_at_start`.
-If they don't, the review is INCOMPLETE — do not post the completion
-ping or call the review done; finish the drive first. The Claude-channel
-ping MUST cite `X/Y items triaged, Z resolved`.
-
-⚠️ **`backlog_coverage` MUST also name the surfaces its denominator came
-from** (`sources: ["pipeline", "checklist"]` plus the per-surface counts).
-`open_at_start: 0` over an unstated population is the collapsed state this
-whole section exists to stop: *"there was nothing open"* and *"I could not
-read the open set"* are opposite findings. If a surface could not be read,
-say `could_not_look` for that surface and DO NOT silently shrink the
-denominator — a source that could not be swept does not drop out of it.
-
-## The sibling skills — the same gate, the same break, NOT fixed here
-
-**MEASURED 2026-09-22** (`ls docs/claude/*-review-backlog.json`): **all four
-named backlog files are absent** — `health-review-backlog.json`,
-`performance-review-backlog.json`, `research-review-backlog.json` and
-`ml-review-backlog.json`. So this is not a health-review problem that happened
-to be found first; it is one break with four instances.
-
-| skill | file(s) it names | exists? | its gate |
-|---|---|---|---|
-| `/health-review` | `health-review-backlog.json` | **no** | **repointed above** |
-| `/performance-review` | `performance-review-backlog.json`, `research-review-backlog.json` | **no**, **no** | **still broken** — its own § "Draining the backlog" demands the same `count_untriaged == 0` |
-| `/ml-review` | `ml-review-backlog.json` (archived) | **no** | **still broken** — same |
-
-> **Update 2026-09-29 (FIX-SA-09):** the live instruction lines in `/ml-review`, `sprint-format` and `doc-freshness` now point at `docs/claude/work/PIPELINE.jsonl`; the `retired-backlog-paths` guard fails any new live reference under `.claude/`.
-
-Both siblings carry the identical *"HARD COMPLETION GATE (not a sample)"*
-heading and the identical `backlog_coverage.count_untriaged` output contract
-over a file that is not there. **Recorded rather than fixed**, deliberately:
-each is its own skill with its own output template and its own owned
-surfaces, and repointing all three in one pass would be one PR to three
-concerns. The fix for each is mechanically this same edit. Tracked on
-checklist row **E23**.
-
-## Posting to the Claude channel
-
-Every health-review run ends with a **one-line update to the Claude
-channel** (`@claude_ict_comms_bot`), per
-[`docs/claude/telegram-pings.md`](../../docs/claude/telegram-pings.md).
-
-**Primary path — `send-ping` system-action (use this).** Open a
-`system-action`-labelled GitHub issue:
-
-```
-action: send-ping
-target: claude
-priority: normal      # or 'high' if operator_attention_required
-message: /health-review — <overall_assessment>: <one-line summary>. <N> concerns, <M> watches. <recommended_action or "no action">.
-```
-
-The `system-actions` workflow SSHes to the VM and runs
-`scripts/ops/send_ping_action.sh`; the bridge drains within ~5s.
-Latency: ~30–60s, no git push needed. Full contract:
-`docs/claude/system-actions.md` § `send-ping`.
-
-**Fallback path — `pending-pings.jsonl`.** Only if the issue path is
-unavailable: append a line to `docs/claude/pending-pings.jsonl` and
-commit. The VM git-sync timer picks it up within ≤5 min. Hash-based
-dedup prevents re-fires.
-
-The ping is a status beacon, not the review itself — keep it ≤200
-chars, cite the overall grade + concern count, and point the operator
-at the response JSON (in chat) for detail.
+| **0. Prior calls** | re-run the check each of last review's calls named; grade it | ~10 % |
+| **1. CHECKS** | the fixed H1–H16 list below: scripts and diag routes, each with population, window and read-state | ≤ 35 % |
+| **2. ANALYSIS** | material questions, competing hypotheses, discriminating tests, cross-signal causes, the hunt | ≥ 35 % |
+| **3. Decisions** | each call is a fix, row, unit or pipeline item with a pre-registered check; plus the bounded open-set walk | ~ 20 % incl. close-out (reserve it first) |
+
+If the budget runs short, cut the open-set walk (§ 3c) and state how many items were left. Never thin Layers 0 or 2.
+A run that executed every check and analysed nothing has failed the *too scripted* way. A run that analysed without
+the checks has failed the *too loose* way.
+
+## Step 0 — window, history, instruments
+
+1. **Windows, every run.**
+   - *This window*: from `reviewed_at` of the newest file in [`comms/reviews/health/`](../../../comms/reviews/health/)
+     to now (7 d if there is none; say so).
+   - *Medium*: the last 4 review JSONs.
+   - *Lifetime*: wherever a check's series exists (snapshot history, `comms/research/health/`, `pipeline.py
+     --stats`).
+
+   Cover the whole window. A pull that reaches only part of it is recorded as partial, with the covered span.
+2. Read the newest `docs/reviews/*-weekly-audit.md` (it runs 40 min before you; its C8 may have re-tested your
+   last verdicts).
+3. `git fetch --deepen=2000 origin` if the clone is shallow.
+4. Self-test before trusting a green: `python3 scripts/ops/pipeline.py --self-test`,
+   `python3 scripts/research/research_slo.py --self-test`, `python3 scripts/ops/system_invariants.py --self-test`.
+   A failing self-test makes its checks `could_not_look`, and the failure is a finding.
+
+## Layer 0 — PRIOR CALLS (first, before you form any view)
+
+**Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source health-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file. (The script lands in #20871, REVIEW-FOLLOWTHROUGH. If it is not on main, record `could_not_look: no instrument`.)
+
+For every call and every `concern`/`watch` in the previous review, re-run the check it named (or the closest check
+that answers it) and grade it:
+- `hit` / `miss` / `unresolved` / `void`, per the shared pattern (`result`, plus `action_happened`);
+- plus the state of its action: `closed+detector` · `closed-no-detector` · `moving` · **`stalled`** (no state change
+  ≥ 7 d).
+
+A call `stalled` across **≥ 2 reviews** is a follow-through bug. Say why it is not closing (no owner? tier-blocked?
+too big? nobody reads the row?) and decide in Layer 3: fix now, put the exact decision to the operator, re-scope,
+or kill with a reason. Re-filing it is not an option. Re-run the check; do not re-argue the call. Record
+`prior_calls_scorecard`, with counts and a Brier score once ≥ 10 calls have resolved (`INDETERMINATE` below that).
+
+## Layer 1 — CHECKS (fixed; every one runs, every one is recorded)
+
+Each check writes one `checks[]` entry:
+`{id, status: ok|watch|concern|could_not_look, value, population, window, evidence, prior: [last 4 values], coverage}`.
+
+- **Read-state rule.** `could_not_look` means we did not see it. It carries the reason, it is never an
+  all-clear, and it is itself a finding about the instrument. A count of `0` must name its denominator and,
+  for the money checks (H3, H4, H6), a positive control: show the probe finds a known positive. Render a
+  missing field as `—`, never `0`.
+- **Read the row, not the label** (canonical § "The row you are reading outranks the label in it"). `pnl` is not
+  the account's money, and `exit_reason` is not the exit mechanism without `exit_price`. `journalTrust:
+  no_record` is not "trusted". Check what wrote a column with `scripts/ops/column_provenance.py trades.<col>`.
+- **Never quote a previous run's number as this run's.** Re-run.
+
+| id | question | instrument (exact) | population / denominator | concern when |
+|---|---|---|---|---|
+| H1 | Are the services up and the heartbeat fresh? | diag `status`, `services`; `api/bot/health/latest`, `api/bot/health/history?hours=168` | the canonical units in `src/web/api/routers/diag.py::_CANONICAL_UNITS` | a unit is not active, the heartbeat is stale during a session, or the snapshot disagrees with your own pull (that means the generator is broken) |
+| H2 | **Merged ≠ deployed ≠ observed.** Is the VM running what main says? | running SHA from `status` vs `git rev-parse origin/main`; `git diff --name-only <running>..origin/main -- src config`; `python3 scripts/ops/verify_running_roster.py` (layer 4 vs 5) | files under `src/` + `config/` changed since the running SHA | src/config drift with no pending restart, roster disagreement, or two surfaces disagreeing on the SHA |
+| H3 | Is every declared-live broker account reachable? | diag `exchange_positions` (`positions: null` = could-not-read); `runtime_logs/account_reachability_alert_state.json` via `log_file`; `api/bot/accounts/balances` `api_ok` | accounts with `mode: live` in **re-parsed** `config/accounts.yaml` on a probeable venue, plus the prop accounts by their own route (state the ones with no probe as `could_not_look`) | any live account down. This is a standalone flag and a `high` ping, never a body line |
+| H4 | Is every open position protected and reconciled? | `python3 scripts/ops/system_invariants.py --payloads <dir>` (stems `ib_open_orders`, `bybit_open_orders`, `exchange_positions`, `positions`, `journal_trades`, `exit_loop_health`) | open positions × accounts; (account, symbol) pairs journal⇄venue | a naked, over-covered or target-less position; journal⇄venue qty mismatch |
+| H5 | Does signal → package → order → fill → close flow? | diag `audit?limit=600` (page with `journalctl?unit=ict-trader-live.service&since=&until=` to cover the window), `journal?table=order_packages`, `journal?table=trades` (page past 100) | actionable signals in the window; enabled strategies in `config/strategies.yaml` (shadow legs still emit `*_eval`) | a signal with no package or logged refusal; an enabled strategy silent > 1 h of its session; repeated `failed_exchange`/`failed_risk_gate` on one symbol; monitor-tick gaps |
+| H6 | Did every close end in TP / SL / strategy-close, and is no orphan resting? | the trades pull from H5: `exit_reason` + `exit_price`; `log_file?name=orphan_events`; Data Explorer `trades` with `setup_type=adopted_orphan` | closed rows in the window, by account class | any reconciler-driven, watchdog or orphan close (a bug to root-cause this session), or an orphan unreconciled across the window |
+| H7 | Are DB values valid and the write path intact? | `scripts/check_db_integrity.py` (INV-1..5, `recent_count` vs `total_count`); recency + monotonic totals from the journal pulls | rows written in the window | `recent_count > 0`, a table total that dropped, `closed_at < opened_at`, a closed row missing `pnl`/`exit_reason` |
+| H8 | Are the inputs the trader **consumes** fresh, not just their producers? | `python3 scripts/macro/check_producer_liveness.py` (the consumer-side checks) | readers in `src/` and the files they open (state how you found them) | a consumed artifact stale past its cadence |
+| H9 | Did alerts reach a human? | AlertsQueue drain in the audit tail; `delivered.telegram` in `comms/research/health/<date>.json` runs | trip events and alert runs in the window | an alert queued but not drained, or `delivered.telegram: false` |
+| H10 | Is the research pipeline flowing? | every `comms/research/health/<date>.json` in the window (SLOs in `scripts/research/research_slo.yaml`) | days × SLOs; runs (gap > 4 h means the monitor was down) | a red SLO with no disposition, a missing day, a run gap |
+| H11 | Is the learning pipeline alive? (service + flow, not model quality) | `trainer-vm-diag-request`: `systemctl is-active/is-enabled ict-trainer.service ict-trainer.timer`, `systemctl show ict-trainer.service --property=ExecMainStatus,ActiveEnterTimestamp`; newest cycle, newest dataset build and newest trained model timestamps | cycles scheduled vs ran in the window | the timer is dead, a non-zero exit, or no dataset built / model trained in the window. **"Rows recorded but never trained" is a red flag**; hand the detail to `/ml-review` |
+| H12 | Saturation: disk, memory, CPU, WAL — and the trend | `status` `vm_health`; snapshot history | both VMs | free disk on a trend to cross 10 % within 14 d (project it from the last 4 values), memory pressure, a WAL ≫ main DB |
+| H13 | Any breach signal since the last review? | `mcp__github__run_secret_scanning` (it now needs a `files` argument; if it cannot run, `could_not_look`); collaborators and deploy keys; `.github/workflows/**` changes by actor; `python3 scripts/ops/ssh_auth_sweep.py --since <ISO> --until <ISO> --trainer-ip <trainer>` (unit `ssh.service`, never `sshd.service`; one plain pull covers only ~1.5 h) | sources swept × the window covered | a confirmed breach or exposed credential (standalone flag, `high` ping). Match each non-trainer accept to a workflow run (Health Snapshot produces 2 every ~6 h) |
+| H14 | Did new work respect the tiers? (risk-based, not every commit) | `git log origin/main --since=<window> --format='%h %s' -- config/ src/runtime/ src/core/ src/units/accounts/ deploy/ .github/workflows/ scripts/ops/*.sh` and the PR of each | the commits touching Tier-2/3 paths (state the total commit count beside it) | a Tier-2/3 change merged with no recorded operator OK, a new default-off `*_ENABLED` gate on a required capability, a mode auto-flip, or a "verified/deployed" claim your H1/H2 pulls contradict |
+| H15 | Is the open set being driven? | `python3 scripts/ops/pipeline.py --gate` and `--stats`; checklist rows this review owns | the gate set (unrouted ∪ closed-owner ∪ high-severity due items), with `due`, `excluded` by reason | gate items untouched; unrouted count or oldest-unrouted age rising |
+| H16 | Is a soak at its gate? (surface, don't decide) | `api/bot/shadow/stats`, `api/bot/strategies/{name}/review`, `docs/claude/work/SOAKS.json` | soaks in flight | a met gate unactioned across ≥ 2 reviews. Route it to `/ml-review` or `/performance-review`. A soak is 1–2 clean trades (OPERATING-PLAN § 2), never a date |
+
+## Layer 2 — ANALYSIS (reasoning, not restatement)
+
+The checks say *what*. The analysis says **why, how bad, and whether it is getting worse**. Never paraphrase the
+check table; write what the checks *together* imply. Follow the shared prompts (pattern § 3). For this review:
+
+**2a. Read wide first.** Before forming a view, read:
+- every check's series across the windows;
+- the `journalctl` errors of the window;
+- the open rows and items that name a failing subject (**search before you call a finding new**);
+- the last runs' *checks and calls*, not their conclusions.
+
+**2b. Trend, not snapshot.** Name every series moving the wrong way for ≥ 2 consecutive reviews, even while it is
+under its threshold, and project it (*at this rate it crosses X on <date>*). A slow drift is the incident you can
+still prevent.
+
+**2c. Choose 3–7 material questions by money and risk, not recency**, and for each:
+1. write ≥ 2 hypotheses, one of them always *noise or expected variation*;
+2. say what each predicts that the others do not;
+3. run the discriminating query now, or file it with its rule written first;
+4. record what was eliminated and by what evidence;
+5. name the surviving cause at the level of a file, line, config key, unit or job, with a probability.
+
+Blameless: name the mechanism, not who.
+
+**2d. Correlate across signals.** Separate symptoms (what is broken) from causes (why). A cause at one layer is a
+symptom one layer down. Line up the timestamps of the window's anomalies, and ask whether one cause explains
+several. One mechanism behind N symptoms is **one** structural call, not N.
+
+**2e. Hunt one thing no check covers.** Look at one of these:
+- new error signatures in `journalctl` vs last week, by count;
+- a surface that reports `ok` with no input that could falsify it;
+- a declared capability with zero call sites.
+
+Write down what you looked at. If nothing surprised you, say what you checked. Count comparisons: scanning 30 series
+flags ~1.5 by chance.
+
+**Neutral framing.** There is no quota of findings. "Nothing material changed" is a valid conclusion only when the
+falsification attempt behind it is shown.
+
+## Layer 3 — DECISIONS (every call ends somewhere)
+
+**3a. Rank by money at risk.** One `calls[]` list:
+1. real money;
+2. prop;
+3. the demo floor (`bybit_1` / `alpaca_paper` / `ib_paper`);
+4. research and learning liveness;
+5. observability;
+6. docs.
+
+Each call carries:
+- `claim` (falsifiable);
+- `evidence` (the command and its output path);
+- `population`, `trend`, `cause`, and `p` (a probability, MEASURED or INFERRED);
+- `blast_radius` and `tier`;
+- **`check {command, rule, resolves_when}`**: pre-registered, so next week's Layer 0 can grade it;
+- **`ending`**, exactly one of:
+  - **fixed**, in this PR (state merged / deployed / observed);
+  - **row**: `checklist.py add HEALTH-<YYYYMMDD>-<slug> … --tier N`, with a `roadmap` ref;
+  - **unit**: `research/queue/`;
+  - **pipeline**: `PI-…` via `scripts/ops/pipeline.py`, with `due_when` + `origin.rerun`;
+  - **no action, because …**, with the probe.
+
+"Noted", "monitor" and "investigate" with no owner, n or check are not endings. A finding filed twice is one call
+with a `stalled` grade.
+
+**3b. Premortem each Tier-2/3 call.** Assume it made things worse in three months and say why. Tier-2/3 calls carry
+the exact change and go to the operator. Fix Tier 1 now.
+
+**3c. Drive the open set (bounded).** Walk the H15 gate set. For each item:
+- re-validate it against what you already pulled;
+- disposition it `resolved` / `fixed_now` / `invalid` / `kept_open` (with this run's observation and the blocker);
+- write it back with `scripts/ops/pipeline.py`: never by hand, append-only, `terminal_reason` to close.
+
+Record `backlog_coverage`: `open_at_start` = the gate set, `due_total`, `excluded`, the sources, `count_untriaged`. If
+the budget ends the walk, stop there and state the count. Never bulk-redate.
 
 ## Output
 
-Emit a single JSON object conforming to
-`comms/schema/health_review_response.template.json`. The narrowed
-shape (post-2026-05-26 split):
+1. **`comms/reviews/health/<YYYY-MM-DD>-health-review.json`** per
+   [`comms/schema/health_review_response.template.json`](../../../comms/schema/health_review_response.template.json).
+   It carries the four blocks:
+   - `prior_calls_scorecard`
+   - `checks[]`
+   - `analysis{trend, questions[], correlations[], hunt, surprises}`
+   - `calls[]`
 
-- `findings.*` — pipeline + DB + service dimensions only (no
-  `trainer_models`), **including the mandatory `security` dimension**
-  (§ "Security-breach check").
-- `security_check` — the breach-sweep result: `{status, sources_checked[],
-  signals[], note}`. `signals` empty + an explicit clean `note` is the
-  required stated-negative when nothing is found.
-- `soak_decisions_due[]` — soaks that hit their gate this window
-  (`{what, gate_met, owner_skill, sla_state}`), SURFACED not decided
-  (§ "Soak decisions due"). Empty ⇒ state "no soak decisions due".
-- `new_work_compliance` — `{prs_audited, commits_audited, findings[], note}`
-  from the MANDATORY new-work audit (§ "New-work compliance audit"). Each
-  finding `{ref, tier, rule, severity, disposition}`. `findings: []` + an
-  explicit clean `note` is the required stated-negative.
-- `sprint_doc_review[]`.
-- `backlog_drain[]` — one entry per OPEN item (array length ==
-  `open_at_start`); the full-triage record (§ "Driving the open items").
-- `backlog_coverage` — `{open_at_start, triaged, resolved, fixed_now,
-  closed_stale, kept_open, count_untriaged, due_total, excluded}` (`due_total` and
-  `excluded` come from `pipeline.py --gate`; `open_at_start` counts the gate set). The completion gate:
-  `count_untriaged` MUST be 0. A review with `count_untriaged > 0` is
-  incomplete and must not be reported as done.
-- `anomalies[]` — free-form notable items.
-- `recommended_action` + `operator_attention_required`.
+   plus `backlog_coverage`, `security_check`, `new_work_compliance`, `soak_decisions_due[]`, `overall_assessment`,
+   `recommended_action` and `operator_attention_required`. `overall_assessment` is `healthy` (all ok), `caution`
+   (≥ 1 watch) or `investigate` (any concern). The newest `reviewed_at` anchors next week's window.
+2. **`docs/reviews/<YYYY-MM-DD>-health-review.md`**, **one page (≈ 60 lines), the Thursday-planning read**, in the
+   shared order:
+   - `# Health review <date> — <one sentence: what most affects money/risk now>`;
+   - `## 0. Prior calls`: graded, with every `stalled` named;
+   - `## 1. CHECKS`: one line per H-id (status · value · population · prior), with `could_not_look` listed;
+   - `## 2. ANALYSIS`: trend lines, then per question: hypotheses · test · survivor · p; then surprises;
+   - `## 3. Decisions`: ranked, with tier, check and ending id;
+   - `## 4. Not done`: what was not run or read, and why.
 
-`trade_decision_grades[]` and `model_status[]` are **removed** from
-this skill's output — they live in `/performance-review` and
-`/ml-review` respectively.
+   Doc-status line on top. Register the page in `docs/DOCUMENT-INDEX.md` the way
+   `docs/reviews/2026-10-19-weekly-audit.md` is.
+3. **One self-landing PR** (§ Landing). Then a **ping**: open a `system-action` issue with the lines
+   `action: send-ping`, `target: claude`, `priority: normal|high`, `message: /health-review — <grade>: <n> concerns,
+   <m> watches, <k> stalled calls; <top action>`. Only the **first line** of `message:` is sent, ≤ 200 chars. Open
+   the next system-action issue only after the previous one closes.
+4. **Report to the manager once**, in 5 lines, via `create_trigger(persistent_session_id=<manager>)` +
+   `fire_trigger`, no `run_once_at`.
 
-Set `reviewed_at` to now (UTC ISO-8601), `reviewer` to `claude`. Each
-`note` ≤120 chars, citing specifics (counts, ages, symbols/qtys) so
-the operator can verify fast.
+## Transport (carried from the predecessor; read `diag-data` and `git-actions` for the mechanics)
 
-## What you DO write (and what you don't)
+- Try `scripts/ops/diag_fetch.sh '<path>'` first; on exit 3, use the relay.
+- **Batch every live-VM path into ONE `vm-diag-request` issue** (a JSON array body). Each relay issue is a billed
+  Actions job. Paths under `/api/bot/…` need the `api/bot/` prefix; the bare `health/latest` returns
+  `fetch_failed`.
+- `audit?limit=600` covers ≈ 6 h. Page the rest of the window with `journalctl … since/until`, and say what was
+  summarised rather than enumerated.
+- The trainer VM is reached only by `trainer-vm-diag-request` with a `cmd: |` block.
+- On curl exit 7, fire `vm-web-api-recover` and retry once. If the relay is still down, every live check is
+  `could_not_look`, `operator_attention_required: true`. Still do Layer 0, the open-set walk (3c) and H14 (they are repo-local), and still
+  land and ping. Never synthesise a live finding without evidence.
 
-**Write:**
-- Append to / update `docs/claude/work/PIPELINE.jsonl` **through
-  `scripts/ops/pipeline.py`** (never by hand — it is append-only JSONL and the
-  script enforces `due_when`, `origin.rerun` and an explicit `intent=`), and
-  update the `state`/`note` of the `docs/claude/work/MANAGER-CHECKLIST.json`
-  rows this review owns.
-- Fix Tier-1 doc contradictions surfaced by the sprint-doc / backlog
-  pass.
-- Append the Claude-channel ping (via `send-ping` system-action, or
-  fallback `docs/claude/pending-pings.jsonl`).
-- The read-only diag-trigger issues (`vm-diag-request`,
-  `trainer-vm-diag-request`, `vm-web-api-recover`) — they auto-close.
+## Landing
 
-**Do NOT:**
-- Touch `src/`, `config/`, or any live-path file. Reviews don't trade.
-- Append to `comms/claude_strategy_scores.jsonl` (that belongs to
-  `/performance-review` now).
-- Close the performance or ML rows in `docs/claude/work/PIPELINE.jsonl` (those belong to their
-  respective skills).
-- Modify `comms/follow_ups.json` (deferred until the comms cleanup
-  session).
-- Ask the operator to paste/download/SSH a snapshot — autonomy-mandate
-  failure. Pull it yourself.
-- Ask scoping questions — the scope is fixed (this file).
+1. Commit the JSON, the page, the DOCUMENT-INDEX line, the rows/items and any Tier-1 fixes.
+2. Run `python3 scripts/ops/land_pr.py --held-by <your session id> --why "<tier judgement>" --verify`. It writes
+   `.github/pr-landing/<slug>.json`, `.github/pr-automerge-requests/<slug>.txt` and the merge-slot claim. If it
+   computes a **hold**, the manager merges; say so.
+3. Run the guards locally: `python3 scripts/ci/run_guards.py --base-ref origin/main`.
+4. Push, open the PR, and drive it green.
+5. Row `HEALTH-REVIEW-<YYYYMMDD>`: `landed_unproven` with the closing observation, then `done` once merged and
+   observed.
 
-## If the relays are unreachable
+## Never
 
-The only legitimate stop condition. If the live diag relay fails even
-after a `vm-web-api-recover` retry, emit the partial review with
-`api_errors` = concern, `operator_attention_required: true`, and a note
-that the live pull couldn't be performed — and still drain the backlog
-+ do the sprint-doc review + post the Claude-channel ping (those are
-repo-local and don't need the VM). Do not synthesize live findings
-without evidence.
+Edit `src/`, `config/` or any live path; write `comms/claude_strategy_scores.jsonl`; close another review's
+rows; ask the operator to paste, SSH or download; report session length; resurrect a retired register.
+
+## Design basis (2026-10-28) — why this shape
+
+**Diagnosis of the last 4 runs** (`comms/reviews/health/2026-10-{09,17,21,24}-health-review.json`):
+
+- **The gate was never met.** Items re-validated: 4/76, 5/110, 0/256 and 8/369. The skill demanded a full walk
+  that no $6 lane could do, so every run spent its budget on the walk or abandoned it. The 10-17 note:
+  *"A $6 lane cannot re-validate 110 items against live state."*
+- **Checks were skipped silently, or sampled.**
+  - 10-17: `research_pipeline: could_not_look — not read this run`; `trainer_service: skip — not pulled`.
+  - 10-21: no security sweep and no orphan check.
+  - 10-24: the security sweep covered ~3.5 h of a 3-day window; `run_secret_scanning` did not run.
+- **The window was this week only.** No run compared itself to the previous one, so a slow trend was read as
+  a new event each week: disk 93 % (10-17), then 26.7 % free (10-24), each graded on its own.
+- **Findings became post-it notes.** Most stayed `routed` 7–11 days later:
+  - `PI-20261017-VSMHZYHF-0001` and `PI-20261017-VMDGITZI-0002` (disk);
+  - `PI-20261021-20261021-0001` (false URGENT liveness);
+  - `PI-20261021-41BO5V65-0001` (SHA disagreement).
+
+  The disposition was correct (filed) but nothing graded whether they closed.
+- **What went well.** 10-21 root-caused two real bugs to a code line (a `safe_place_order` with 0 production
+  callers; the watchdog counting side-filtered SELLs). That is the depth 2c asks for every week.
+- **Dead weight.**
+  - The coordination board (retired 2026-09-21; 10-24 flagged it).
+  - Sprint-log review: 0 sprint logs since 2026-05-19.
+  - A weekday rotation that now always lands on Wednesday.
+  - 923 lines of instructions on a $6 budget.
+
+**Practice adopted** (tags: ACAD academic · PRAC practitioner · VEND vendor):
+
+- **Symptoms vs causes, the four golden signals, alert on symptoms** — Google SRE book ch. 6
+  ([sre.google](https://sre.google/sre-book/monitoring-distributed-systems/)) — PRAC. Basis for 2d and H12.
+- **Trend over snapshot; compare each metric to its history on a weekly cadence** — AWS Well-Architected
+  OPS11-BP07 / REL06-BP06 and AWS's weekly operational review
+  ([docs.aws.amazon.com](https://docs.aws.amazon.com/wellarchitected/2024-06-27/framework/ops_evolve_ops_metrics_review.html)) — VEND. Basis for 2b.
+- **Untracked postmortem action items get forgotten; deeper review when failures mirror earlier incidents** —
+  SRE Workbook ch. 10 ([sre.google](https://sre.google/workbook/postmortem-culture/)) — PRAC. Basis for Layer 0
+  and the pre-registered `check`.
+- **Error budgets / SLOs decide when reliability work preempts features** — SRE Workbook "Implementing SLOs"
+  ([InfoQ summary](https://www.infoq.com/news/2018/07/google-explains-sre)) — PRAC. Basis for H10's SLO
+  reading.
+- **Knight Capital (SEC 2013): 97 automated emails flagged the error pre-open and nobody acted; reliance on
+  human monitoring; no pre-market-access check; earlier incidents fixed narrowly without root cause** —
+  [SEC press release 2013-222](https://www.sec.gov/news/press-release/2013-222) — PRAC/regulatory. Basis for
+  H9, H2, H4 and 2c.
+- **Market Access Rule 15c3-5: a documented, regular review of control effectiveness, with an inventory of the
+  controls reviewed** — [FINRA 2026 oversight report](https://finra.org/rules-guidance/guidance/reports/2026-finra-annual-regulatory-oversight-report/market-access-rule) — PRAC/regulatory.
+  Basis for `checks[]` being an inventory with populations.
+- **BCBS 239 accuracy / completeness / timeliness of risk data** —
+  [summary](https://en.wikipedia.org/wiki/BCBS_239) — PRAC/regulatory. Basis for H7 and H8.
+
+Pattern and anti-patterns: [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md).

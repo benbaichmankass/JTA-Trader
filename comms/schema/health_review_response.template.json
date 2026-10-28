@@ -7,31 +7,183 @@
   "window_start": "YYYY-MM-DDTHH:MM:SS+00:00",
   "window_end": "YYYY-MM-DDTHH:MM:SS+00:00",
   "overall_assessment": "healthy | caution | investigate",
+  "_comment_layers": "ADDED 2026-10-28 (row SKILL-DESIGN-SYSTEM): the skill follows docs/reference/llm-analyst-skill-design.md — four blocks, never merged: prior_calls_scorecard (Layer 0), checks[] (Layer 1, H1..H16 in .claude/skills/health-review/SKILL.md, one entry per check, never omitted), analysis{} (Layer 2), calls[] (Layer 3). The legacy findings{} dimensions below stay for the review_journal dataset family; fill them from checks[].",
+  "checks": [
+    {
+      "id": "H1..H16",
+      "status": "ok | watch | concern | could_not_look",
+      "value": "<measured value, or null when could_not_look>",
+      "population": "<what was measured over, with n>",
+      "window": "<covered span; partial if less than the review window>",
+      "evidence": "<command / diag path / output file>",
+      "prior": [
+        "<value from each of the last 4 reviews, newest first; null if that review did not measure it>"
+      ]
+    }
+  ],
+  "prior_calls_scorecard": {
+    "_comment": "Layer 0: the previous health review's calls[] graded by re-running each call's own check (shape mirrors comms/schema/performance_review_response.template.json, PR #20854). Older records without calls[] grade their findings{} concern/watch items and say so. brier is INDETERMINATE below 10 resolved calls. action_state adds the follow-through grade; stalled across >= 2 reviews must be decided (fix / operator / re-scope / kill), never re-filed.",
+    "source_record": "comms/reviews/health/<date>-health-review.json",
+    "n_calls": 0,
+    "hit": 0,
+    "miss": 0,
+    "unresolved": 0,
+    "void": 0,
+    "brier": "0.0 | INDETERMINATE",
+    "calls": [
+      {
+        "id": "HR-<date>-1",
+        "result": "hit | miss | unresolved | void",
+        "check_rerun": "<command + output summary>",
+        "action_happened": "yes | no — <why, and decided as>",
+        "action_state": "closed+detector | closed-no-detector | moving | stalled",
+        "reviews_open": 1
+      }
+    ],
+    "series": [
+      {
+        "review": "<date>",
+        "n_resolved": 0,
+        "brier": null
+      }
+    ]
+  },
+  "analysis": {
+    "trend": [
+      "<series moving the wrong way for >= 2 reviews, with its projection>"
+    ],
+    "questions": [
+      {
+        "question": "<material, by money/risk>",
+        "hypotheses": [
+          {
+            "name": "noise | capacity | deploy | upstream | instrument | config | <other>",
+            "predicts": "<what it predicts that the others do not>",
+            "test": "<command / pull run>",
+            "result": "survived | eliminated | untested"
+          }
+        ],
+        "p": 0.0,
+        "impact": "...",
+        "conclusion": "<cause at file/line/key/unit/job level, <= 240 chars>"
+      }
+    ],
+    "correlations": [
+      "<one cause explaining several symptoms, with the timestamps that join them>"
+    ],
+    "hunt": "<what was looked at outside the checks, and what it found (or 'nothing, over <population>')>",
+    "surprises": [
+      "..."
+    ]
+  },
+  "calls": [
+    {
+      "id": "HR-<YYYYMMDD>-<n>",
+      "rank": 1,
+      "claim": "<falsifiable>",
+      "evidence": "<command + output path>",
+      "population": "...",
+      "trend": "...",
+      "cause": "...",
+      "p": 0.0,
+      "basis": "MEASURED | INFERRED",
+      "blast_radius": "real_money | prop | demo_floor | research_learning | observability | docs",
+      "tier": "1 | 2 | 3",
+      "check": {
+        "command": "...",
+        "rule": "...",
+        "resolves_when": "..."
+      },
+      "ending": "fixed (merged/deployed/observed) | row <id> | unit <path> | pipeline <PI-id> | no action, because <probe>"
+    }
+  ],
   "findings": {
-    "heartbeat":           {"status": "ok | watch | concern | could_not_look", "note": "..."},
-    "ticks":               {"status": "ok | watch | concern | could_not_look", "note": "..."},
-    "signals":             {"status": "ok | watch | concern | could_not_look", "note": "..."},
-    "orders":              {"status": "ok | watch | concern | could_not_look", "note": "signal->order plumbing only (NOT scoring)"},
-    "trades":              {"status": "ok | watch | concern | could_not_look", "note": "order->trade plumbing only (NOT scoring)"},
-    "monitoring":          {"status": "ok | watch | concern | could_not_look", "note": "monitor-tick cadence"},
-    "sizing":              {"status": "ok | watch | concern | could_not_look", "note": "qty within per-account pos_size cap; no absurd leverage"},
-    "api_errors":          {"status": "ok | watch | concern | could_not_look", "note": "..."},
-    "state_consistency":   {"status": "ok | watch | concern | could_not_look", "note": "YAML mode vs runtime_status.json"},
-    "alert_delivery":      {"status": "ok | watch | concern | could_not_look", "note": "AlertsQueue drained"},
-    "strategy_silence":    {"status": "ok | watch | concern | could_not_look", "note": "enabled strategies emitting per-tick *_eval"},
-    "db_integrity":        {"status": "ok | watch | concern | could_not_look", "note": "integrity_check not fetched (relay can't run PRAGMA); graded from journal recency + counts"},
-    "data_validity":       {"status": "ok | watch | concern | could_not_look", "note": "values sane: no negative sizes, no null required fields, monotonic timestamps, pnl reconciles"},
-    "audit_log_freshness": {"status": "ok | watch | concern | could_not_look", "note": "..."},
-    "trainer_service":     {"status": "ok | watch | concern | skip", "note": "service health only; model/dataset detail in /ml-review"},
-    "health_snapshot":     {"status": "ok | watch | concern | could_not_look", "note": "cron health-snapshot generator state; cross-checked against own diag pulls"},
-    "security":            {"status": "ok | watch | concern | could_not_look", "note": "MANDATORY breach-detection sweep since last review; concern => operator_attention_required. Detail in security_check."}
+    "heartbeat": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "..."
+    },
+    "ticks": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "..."
+    },
+    "signals": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "..."
+    },
+    "orders": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "signal->order plumbing only (NOT scoring)"
+    },
+    "trades": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "order->trade plumbing only (NOT scoring)"
+    },
+    "monitoring": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "monitor-tick cadence"
+    },
+    "sizing": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "qty within per-account pos_size cap; no absurd leverage"
+    },
+    "api_errors": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "..."
+    },
+    "state_consistency": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "YAML mode vs runtime_status.json"
+    },
+    "alert_delivery": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "AlertsQueue drained"
+    },
+    "strategy_silence": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "enabled strategies emitting per-tick *_eval"
+    },
+    "db_integrity": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "integrity_check not fetched (relay can't run PRAGMA); graded from journal recency + counts"
+    },
+    "data_validity": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "values sane: no negative sizes, no null required fields, monotonic timestamps, pnl reconciles"
+    },
+    "audit_log_freshness": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "..."
+    },
+    "trainer_service": {
+      "status": "ok | watch | concern | skip",
+      "note": "service health only; model/dataset detail in /ml-review"
+    },
+    "health_snapshot": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "cron health-snapshot generator state; cross-checked against own diag pulls"
+    },
+    "security": {
+      "status": "ok | watch | concern | could_not_look",
+      "note": "MANDATORY breach-detection sweep since last review; concern => operator_attention_required. Detail in security_check."
+    }
   },
   "security_check": {
     "_comment": "MANDATORY breach-detection result (§ Security-breach check). status mirrors findings.security. A clean sweep MUST be a stated negative, not an omission: signals empty + an explicit clean note. Deep code/dependency review is /security-review, not here.",
     "status": "ok | watch | concern | could_not_look",
-    "sources_checked": ["github_secret_scanning", "external_actors", "workflow_secret_collaborator_changes", "actions_anomalies", "vm_auth_journal"],
+    "sources_checked": [
+      "github_secret_scanning",
+      "external_actors",
+      "workflow_secret_collaborator_changes",
+      "actions_anomalies",
+      "vm_auth_journal"
+    ],
     "signals": [
-      {"source": "github_secret_scanning | external_actors | supply_chain | actions | vm_host", "detail": "<= 200 chars", "severity": "watch | concern", "action_taken": "<what you did / routed>"}
+      {
+        "source": "github_secret_scanning | external_actors | supply_chain | actions | vm_host",
+        "detail": "<= 200 chars",
+        "severity": "watch | concern",
+        "action_taken": "<what you did / routed>"
+      }
     ],
     "note": "e.g. 'no breach detected since <window>: 0 secret-scanning alerts, 0 external actors, no workflow/secret/collaborator changes, auth log clean'"
   },
@@ -49,7 +201,13 @@
     "prs_audited": 0,
     "commits_audited": 0,
     "findings": [
-      {"ref": "PR #NNNN | <sha> | <workflow/unit>", "tier": "1 | 2 | 3", "rule": "permission-tier | prime-directive | generation-discipline | honesty | field-beats-comment", "severity": "watch | concern", "disposition": "<revert / add-approval-gate / convert-to-permissive / doc-fix / logged-to-backlog BL-...>"}
+      {
+        "ref": "PR #NNNN | <sha> | <workflow/unit>",
+        "tier": "1 | 2 | 3",
+        "rule": "permission-tier | prime-directive | generation-discipline | honesty | field-beats-comment",
+        "severity": "watch | concern",
+        "disposition": "<revert / add-approval-gate / convert-to-permissive / doc-fix / logged-to-backlog BL-...>"
+      }
     ],
     "note": "e.g. '9 PRs + 0 direct commits audited since <window>, all tier-appropriate + rule-compliant'"
   },
@@ -74,7 +232,12 @@
     "kept_open": 0,
     "count_untriaged": 0,
     "due_total": 0,
-    "excluded": {"owner_row_live": 0, "owner_unit": 0, "owner_pr": 0, "_comment": "from `pipeline.py --gate`: due items left out of open_at_start because a live owner holds them (HEALTH-GATE-NARROW). open_at_start = the gate set; due_total = gate + sum(excluded)."}
+    "excluded": {
+      "owner_row_live": 0,
+      "owner_unit": 0,
+      "owner_pr": 0,
+      "_comment": "from `pipeline.py --gate`: due items left out of open_at_start because a live owner holds them (HEALTH-GATE-NARROW). open_at_start = the gate set; due_total = gate + sum(excluded)."
+    }
   },
   "sprint_doc_review": [
     {
