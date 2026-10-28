@@ -1,6 +1,7 @@
 {
   "tier": 2,
   "landing": "hold",
-  "hold_reason": "Tier-2, needs operator OK",
-  "why": "Runtime change in src/runtime/order_monitor.py: new monitor-tick sweep that reprices candle_at_close exits to the row's own bracket-order fill (journal exit_price/pnl writeback). Revert: git revert the merge commit; rows already upgraded keep notes.pre_fill_exit_price / pre_fill_pnl for per-row restore."
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Runtime change in src/runtime/order_monitor.py: new monitor-tick sweep that reprices candle_at_close exits to the row's own bracket-order fill (journal exit_price/pnl writeback). Revert: git revert the merge commit; rows already upgraded keep notes.pre_fill_exit_price / pre_fill_pnl for per-row restore.",
+  "hold_text": "Tier-2, needs operator OK (manager to obtain); runtime change to the monitor tick, built to hold per the manager's CLOSE-LABELS-1214 build request."
 }
