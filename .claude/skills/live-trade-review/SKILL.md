@@ -31,6 +31,7 @@ Design of record: [`docs/plans/live-trade-review-DESIGN.md`](../../../docs/plans
 - **Do not file `live-review-apply` for a tighten.** The dispatcher refuses it as `tighten_advice_only` (exit 2, no ping).
 - **Every other trade action under `MD-TRADE-DESK` is unchanged.** That covers close, partial_close, move_tp, widen_sl, change_size and add_entry.
 - The tighten-apply text below (§ 3 Step 5 "Under apply_mode apply", Step 7) is kept for the record and for a revert. It does not run.
+- **Narrow, by design:** the evidence covers TIGHTENING only. It says nothing against widening, moving a stop to structure, moving or extending a TP, or closing. Judge those on their merits (the § 3 principle); this rule must not tilt a call toward hold.
 
 ### 0.1 The reviewer never acts by hand
 
@@ -137,6 +138,13 @@ The operator, relayed by the manager on 2026-10-25 at about 16:20Z: the **repo**
 ---
 
 ## 3. The procedure (in order; do not skip or reorder)
+
+> **Active management is the WHOLE action space, not tightening** (operator 2026-10-28 ~21:08Z, relayed by the manager, verbatim: *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"* ... *"SL tightening is just one lever"*). Judge every lever against what the live market has done since entry: structure (a level broken or reclaimed), volatility / ATR, momentum, regime, events, and liquidity levels. The levers are:
+> - **SL**: tighten, widen, or move to structure;
+> - **TP**: extend, pull in, or revise (`move_tp`);
+> - **partial close** or **full close**.
+>
+> Both brackets always stay. The advice-only rule (§ 0.0) covers `tighten_sl` ONLY: its evidence is about tightening and nothing else. **Do not read it as "prefer hold".** Every other lever keeps its route and mandate and is judged on its own merits.
 
 ### Step 1. Mechanics first
 
