@@ -120,6 +120,7 @@ def test_bybit_margin_fields_reported_on_a_healthy_available_read(client, monkey
     r = _get(client, "/api/diag/broker_account_status", account_id="bybit_1")
     assert r.status_code == 200, r.text
     row = r.json()["accounts"][0]
+    # collapsed-state: venue_available — this test stubs ONE healthy wallet response to pin that margin_fields ride along on a non-failing read; the other three read states are pinned in tests/test_bybit_available_read_state.py
     assert row["available_margin"]["read_state"] == "venue_available"
     assert row["margin_fields"]["totalEquity"] == "122000"
     assert row["margin_fields_error"] is None
