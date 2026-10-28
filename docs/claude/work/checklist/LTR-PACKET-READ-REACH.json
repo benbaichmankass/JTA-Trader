@@ -1,0 +1,24 @@
+{
+  "id": "LTR-PACKET-READ-REACH",
+  "title": "Live-review packet builder: order reads (bybit/alpaca_open_orders) intermittently 'unreachable' -> mechanics could_not_look",
+  "phase": "LTR",
+  "state": "queued",
+  "owner": "build lane (Tier-2 runtime change, NOT shipped)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-28 (population: 16 packets comms/live_review/packets/LR-20261028* on origin/main @ 11:46Z): read:alpaca_orders missing in 1/16 (0832Z); read:bybit_orders 0/16; read:ib_orders 0/16. The two failing packets the manager cites (LR-20261028T1203Z-pkg-29c8e90b80c24835 bybit+alpaca; ~08:3x alpaca) are not all on main, so the committed rate UNDERSTATES; the true rate needs the 1203Z+ packets/wake logs (not established here). ROOT CAUSE FROM CODE (not VM-verified; no VM read in this lane): live_review_packet.py::_diag shells scripts/ops/diag_fetch.sh, whose only candidate base is https://ict-bot.duckdns.org (DIAG_BASE_URL unset -> canonical) with curl --max-time 10, ONE attempt, no retry, no loopback. Exit 3 'unreachable' = curl http_code 000 = DNS/egress/TIMEOUT, indistinguishable. bybit_open_orders / alpaca_open_orders are venue-calling routes (slower than DB-backed ones), so a >10s answer reads as 'unreachable'. Evidence for timeout over hairpin/DNS: in the same collect(), the _public reads (positions, prop_tickets, news; urllib timeout=60, same hostname) did NOT land in errors in the 0832Z packet while alpaca_orders did; telemetry (diag, DB-backed) also succeeded. A hairpin/DNS fault would hit every read to that host. No loopback route exists in the builder (public base only; env override LIVE_REVIEW_PUBLIC_BASE covers _public only). Precedent for loopback on the VM: prop_silence.py API_BASE=http://127.0.0.1:8001, reattach_stranded_package_legs_action.sh DIAG_URL=http://127.0.0.1:8001/api/diag/*. PROPOSED FIX (Tier-2, do not ship without operator OK): (1) diag_fetch.sh: honour DIAG_BASE_URL=http://127.0.0.1:8001 first when set and add a --max-time override env (DIAG_FETCH_MAX_TIME, default 10) ; (2) live_review_packet.py::_diag: on the VM prefer loopback base (env LIVE_REVIEW_DIAG_BASE, default http://127.0.0.1:8001 when /api/health on loopback answers) with the public host as fallback, and set max-time 30 for *_open_orders reads; (3) one retry on exit 3; (4) record curl rc/http_code in missing_inputs reason so timeout vs DNS is visible (diag_fetch already prints rc to stderr; _diag keeps only the last 200 chars of stderr, which drops it). Check first on the VM: time curl of /api/diag/bybit_open_orders and alpaca_open_orders (expect >10s if timeout is the cause). Loopback fix is correct either way: it removes DNS/hairpin/Caddy from the path.",
+  "updated_at": "2026-10-28T12:22:48Z",
+  "updated_by": "session_01AFoLuKJWL3syNKJmwmigqD",
+  "observation": {
+    "what": "next live-review packets built on the VM carry no read:bybit_orders/read:alpaca_orders missing_input over a window of >=20 packets",
+    "how_to_check": "count read:* in missing_inputs across comms/live_review/packets/LR-* for the days after deploy; compare with 1/16 baseline",
+    "due_by": "2026-11-04T00:00Z"
+  },
+  "roadmap": "L-DESK",
+  "_seq": 753
+}
