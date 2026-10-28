@@ -9,11 +9,13 @@
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    20783
+  ],
   "blocked_on": [],
-  "note": "MEASURED 2026-10-27 by lane DESK-EDGE-PROGRAM (manager decision 16:58Z: settle with data). Population: GET /api/bot/pnl/exchange/fills?days=90 for bybit_1 (1,000 fills, truncated, 2026-09-13..10-27), bybit_2 (257, 2026-07-31..10-25), bybit_portfolio (154): 1,411 fills, ALL is_maker=false, fee/notional = 5.50 bps per side in every fill (p10=p90=5.5). Record: comms/research/desk_edge/levers/bybit-fee-measured-2026-10-27.json. The stack charges execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP 7.5 + PERP_SLIPPAGE_BPS_ROUNDTRIP 3.0 = 10.5 bps; measured = 11.0 fee + 1.29 slippage (R3 2026-10-25 bybit_perps|market, n 74, CI [-0.88,+3.56]) = 12.3 bps: fee -3.5 bps, slippage +1.7 bps, net about -1.8 bps a round trip. Impact: about 0.003 R at 48h holds, 0.04 R at a 1-sd 30-min bracket. Also MEASURED: zero maker fills, so the maker lever has never been exercised live. Fix: venue fee per instrument (config/instruments.yaml -> profile_loader.roundtrip_fee_bps_for returns None for crypto today) = 11.0 for Bybit linear taker; changes every Stage-0 corpus' cost, so it is Tier 2 (cost-model single owner guard). Until then DESK-EDGE-PROGRAM tables use the measured 12.3 bps.",
+  "note": "MEASURED 2026-10-27 by lane DESK-EDGE-PROGRAM (manager decision 16:58Z: settle with data). Population: GET /api/bot/pnl/exchange/fills?days=90 for bybit_1 (1,000 fills, truncated, 2026-09-13..10-27), bybit_2 (257, 2026-07-31..10-25), bybit_portfolio (154): 1,411 fills, ALL is_maker=false, fee/notional = 5.50 bps per side in every fill (p10=p90=5.5). Record: comms/research/desk_edge/levers/bybit-fee-measured-2026-10-27.json. The stack charges execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP 7.5 + PERP_SLIPPAGE_BPS_ROUNDTRIP 3.0 = 10.5 bps; measured = 11.0 fee + 1.29 slippage (R3 2026-10-25 bybit_perps|market, n 74, CI [-0.88,+3.56]) = 12.3 bps: fee -3.5 bps, slippage +1.7 bps, net about -1.8 bps a round trip. Impact: about 0.003 R at 48h holds, 0.04 R at a 1-sd 30-min bracket. Also MEASURED: zero maker fills, so the maker lever has never been exercised live. Fix: venue fee per instrument (config/instruments.yaml -> profile_loader.roundtrip_fee_bps_for returns None for crypto today) = 11.0 for Bybit linear taker; changes every Stage-0 corpus' cost, so it is Tier 2 (cost-model single owner guard). Until then DESK-EDGE-PROGRAM tables use the measured 12.3 bps. 2026-10-28 PR #20783 green (head 8671e0d), landing hold tier_2_3_needs_approval. Resolver now returns 11.0 for bybit:linear. OPEN FOLLOW-UP: main Stage-0 harnesses (backtest_trend, pullback/ICT-scalp runners, build_strategy_evidence) read DEFAULT_FEE_BPS_ROUNDTRIP directly and still charge 7.5 for crypto; route them through the resolver. Also fvg_range_15m evidence rows carry no cost_fee_r. One flip on re-cost: ict_scalp_eth_15m +1.318 -> -1.005 (n=78). Impact: comms/research/desk_edge/levers/bybit-fee-recost-impact-2026-10-28.json",
   "priority_rank": 2,
-  "updated_at": "2026-10-28T01:39:15Z",
+  "updated_at": "2026-10-28T02:47:02Z",
   "updated_by": "session_01AFoLuMcBGfVrxBvpvBWnHW",
   "roadmap": [
     "L-DESK"
