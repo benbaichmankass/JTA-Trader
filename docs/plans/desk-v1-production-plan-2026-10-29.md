@@ -35,7 +35,7 @@ same direction: a single +1 R intervention on the 4 real-money 2h/4h legs did no
 
 **So V1 is built on these four decisions:**
 
-1. **Management default = hold to the bracket, plus a mechanical time exit.** No Claude in-trade action is *applied* on any desk or strategy
+1. **Management default = hold to the bracket, plus a mechanical time exit.** The action space is every bracket move, not only tightening (operator 2026-10-28 ~21:08Z; § 5b). Each class graduates to executed separately, on its own test. No Claude in-trade action is *applied* on any desk or strategy
    trade until that action class clears its own registered OOS test against hold AND a matched random intervention, net of cost (T1, T8,
    M6, M10). `tighten_sl` → advice-only was decided by the operator tonight. The data-backed extension to every other in-trade class is item
    **Thu-1**. The desk keeps *recording* in-trade advice, because every recorded call is a priced label (M1), but nothing applies.
@@ -222,6 +222,59 @@ V1 needs no other ask. Real-money entries stay behind DESK-13 and are not reques
 | parked | the LIFECYCLE strategy arm (Claude managing existing legs) | parked, not killed: two negatives (S0, DESK-MGMT-S0). Re-entry = E1 or E3 passes | R5 (more backtests per idea widens the live gap) |
 
 ---
+
+## 5b. The full bracket action space: one graduation test per class
+
+**Operator principle, ~21:08Z 2026-10-28 (relayed by the manager), verbatim:** *"active management isn't only tightening - it can be any
+movement in either bracket triggered by developments in the live market data"* … *"SL tightening is just one lever"*.
+
+**The action space.** Any move of either bracket, or a reduction, triggered by a live-market development: structure (swing level,
+break/sweep), volatility/ATR change, momentum, regime, a scheduled event, or a liquidity level. Both brackets stay in place after
+every action (`MD-TRADE-DESK` `never` list). A1 is applied **per class**. Every class starts advice-only: recorded, priced and graded.
+A class is **executed** only after its own test passes. The gate is the manager's PR flipping that class alone, which needs per-class
+`apply_mode` (build note below).
+
+**What S0 priced** (MEASURED, `comms/research/desk_lifecycle/full-c4e/score.json`; Claude-judged check-ins, C48 contract):
+- `tighten_sl`: n 981, −0.097 [−0.140, −0.047].
+- `move_tp`: n 45, −0.155 [−0.302, −0.037]. The direction is not split.
+- `partial_close`: n 57, −0.001 [−0.112, +0.121].
+- `close`: n 72, +0.078 [−0.18, +0.28].
+- `widen_sl`: not in the S0 enum, n 0.
+- The static `partial_at_1r` rule: −0.018 [−0.045, +0.012] on Claude entries.
+
+`labels.jsonl` (12,500 rows) prices only hold vs close at each check-in. TP extend, TP pull-in, widen and stop-to-structure are
+**unpriced**.
+
+**The graduation test (the same template for every class; registered before its run; M4, M5, T1, T3).** A class graduates when all of these hold:
+- the action's dR is above BOTH hold AND a matched random intervention of the same class (same count, same direction, random check-in);
+- it is net of the full cost stack, with both brackets present after the action;
+- it is measured on a fresh window not used to choose the trigger (OOS);
+- there are n ≥ 126 trades with the action, the weekly-cluster 95 % CI lower bound is > 0 against both comparators, and Holm runs over the classes tested together;
+- it is stratified by leg and regime (T2, M7): a class can graduate for a leg/regime cell only, never pooled across one where it hurts;
+- the live advice-only record for that class (`live_review_grade.py` use_rules, ≥ 20 priced calls) does not contradict it.
+
+| class (direction) | trigger families to test | S0 status | Stage A: cheap test, no judging cost | Stage B: Claude-judged confirm |
+|---|---|---|---|---|
+| `tighten_sl` (incl. to structure) | structure break with the trade, ATR contraction, momentum fade | **negative** (n 981) | done: LTR-TIGHTEN-OPTIMIZE #21003 (61-rule grid; best rule indeterminate on TEST/FRESH) | `RQ-20261028-e1a7-02` (registered, needs GO, ~$140) |
+| `widen_sl` (to structure) | liquidity sweep beyond the stop, ATR expansion with the thesis intact | **unpriced** | rule replay on the 1,040 S0 trade paths: widen to the next swing/ATR level on a sweep, with the size cut so risk stays the same (T4). Hindsight-oracle headroom first; stop if the oracle bound is ≤ 0 | only if Stage A's rule beats hold and random |
+| `move_tp` **extend** | momentum with the trade, a regime trending, a level broken in favour | **unpriced** (S0 did not split direction) | rule replay: extend to the next structure/ATR target on momentum-with tags (T9: trend legs) | as above |
+| `move_tp` **pull in** | momentum against, approaching opposite liquidity, an event inside the hold | **unpriced** | rule replay: pull the TP to the nearest opposing level on momentum-against tags (T9: mean-reversion legs) | as above |
+| `partial_close` | at a structure level, an event ahead | ≈ 0 (n 57), the rule ≈ 0 | none new: T10 says partials reshape the distribution and do not add expectancy, so this is lowest priority | E-class only if the operator wants it |
+| `close` (loss-cut, thesis invalidated) | ≤ −0.5 R plus new information, a structure break against | n.s. positive pocket | done by § 5 E1 | E1 |
+
+**Why Stage A is cheap.** It replays fixed rules over paths we already have (`comms/research/desk_lifecycle/full-c4e/` pairs plus the
+1h candles). That costs plan compute only, with no judge calls. The hindsight oracle bounds the headroom: if even the oracle cannot
+beat hold, the class is retired for that leg/regime without paying for judging. That is how 8b01-01 was read (DESK-MGMT-S0). A rule that
+beats both comparators then earns a Claude-judged Stage B, at ~$0.05/check-in MEASURED.
+
+**Build note (Tier 3, follows A1).** `apply_mode` today is per account, not per class (`src/runtime/live_review_intent.apply_mode_for`).
+Graduating ONE class needs a per-class `apply_mode` map in `config/live_trade_review.yaml`, read in `live_review_apply.run()`. This is
+a small change filed on row `DESK-V1-CLASS-GATES`. It is needed only when the first class passes, and nothing graduates this week.
+
+**Coordination.** Lanes `ACTIVE-MGMT-REAL-MONEY-PLAN` and `ML-LIVE-PROMOTION-PLAN` were given the same instruction. This table is the
+proposed **single per-class registry**. Those lanes should cite and extend it (real-money legs, model-driven management) rather than
+register parallel per-class tests. The manager reconciles the three plans. One unit per class and direction is authored by
+research-ops (row `DESK-V1-EXPERIMENTS`).
 
 ## 6. Not verified here
 
