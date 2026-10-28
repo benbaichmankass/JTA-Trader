@@ -1,0 +1,48 @@
+id: RQ-20261028-dda7-02
+title: 'Multi-window walk-forward of trend_donchian (BTCUSDT 1h) at the 11.0 bps cost stack (window-drift flip, hand-authored)'
+status: pending
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+question: 'Is trend_donchian net-positive across a long multi-window walk-forward (1095d, 6 contiguous time folds) of its live config at the full cost stack (fee 11.0 bps round trip + venue slippage + funding), or was its 365d D1 pass a single-window artifact?'
+why_this_matters: 'COST-STACK-RECOST-SWEEP (PR #20966, 2026-10-28) re-baselined the Bybit-linear evidence records at 11.0 bps and the 365d window rolled 4-5 weeks. net_r_oos +4.60 -> -16.23 (n 73 -> 71) on the re-measure; -13.39 at 7.5 bps on the SAME new window, and fee alone leaves the old window at +1.72. The sign flip is window drift. The leg trades only on bybit_1 (Stage-1 demo floor), so nothing is removed or demoted either way; the question is whether it is eligible for Stage-2 and whether one 365d window tells us anything. Operator approved the walk-forward 2026-10-28 ("Merge; walk-forward the 4 drift flips").'
+power:
+  expected_n: 213
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.3 needs ~88 observations at alpha 0.05 / power 0.8 (the floor RQ-20260928-011/-012 registered). expected_n=213 is ~3x the leg''s committed 365d trade count (an estimate, not measured). Below 88 the unit grades UNDERPOWERED, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Historical candles from data.binance.vision; nothing accrues. n is bounded by --days, not the calendar, so a thin run is escalated rather than the floor lowered.
+decision_rule:
+  id: RULE-WF-RECOST-trend_donchian
+  registered_at: '2026-10-28T19:55:00Z'
+  registered_before_run: true
+  statistic: 'On the record scripts/ops/build_strategy_evidence.py writes at --days 1095 --folds 6 with the leg''s live config (no --ignore-yaml), fee resolved by regime_debt_matrix.roundtrip_fee_bps (11.0 bps, asserted in the run output): n_trades_oos, net_r_oos (pooled, net of fee + slippage + funding), folds_positive of 6, and net_r_oos_ex_max_fold = net_r_oos minus the single best fold net_r from fold_detail.'
+  rule: 'PASS iff coverage_state=measured AND n_trades_oos >= 88 AND net_r_oos > 0 AND net_r_oos_ex_max_fold > 0 AND 2*folds_positive > 6 (at least 4 of 6 folds positive). UNDERPOWERED (indeterminate) iff n_trades_oos < 88. FAIL iff n >= 88 and any other clause fails. NOT_APPLICABLE iff the feed or harness fails. Thresholds are NOT changed after seeing any result. A PASS is a Tier-3 Stage-2 eligibility proposal only. A FAIL keeps the leg on bybit_1 (Stage-1 floor); it is not a retirement.'
+  what_it_does_not_do: 'Does not touch config/strategies.yaml, config/accounts.yaml or any roster, does not overwrite the committed comms/strategy_evidence record (output goes under research/results/), and is not a live-parity check.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.5
+  est_minutes: 45
+  basis: one data.binance.vision fetch of 1095d + one harness run for one leg, session-local (the 5m/15m ict_scalp legs took ~15 min at 365d on this sandbox; 1095d of 15m is ~3x).
+run:
+  workflow: session-local
+  note: 'Run SESSION-LOCAL: python3 scripts/ops/build_strategy_evidence.py --strategy trend_donchian --days 1095 --folds 6 --out research/results/RQ-20261028-dda7-02/records --workdir research/results/RQ-20261028-dda7-02/runs. Not a research-script-run.yml unit (that runner executes only scripts/research/ and scripts/backtest*.py).'
+lands:
+  store: research/results/
+  assert_field: coverage_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261002-701.yaml
+- comms/research/desk_edge/levers/bybit-fee-recost-sweep-result-2026-10-28.json
+- comms/strategy_evidence/trend_donchian.json
+last_dispatched_at: null
+roadmap:
+- L-LADDER
+practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (walk-forward across several windows; judge the edge ex its single best fold); skill: .claude/skills/backtesting/SKILL.md, Is n enough, and is the edge concentrated in one fold'
