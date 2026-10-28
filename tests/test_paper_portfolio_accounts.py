@@ -9,7 +9,7 @@ These tests turn the ``ROSTER-SYNC`` comments in ``config/accounts.yaml`` into
 an ENFORCED invariant: if the real-money roster changes and the mirror is not
 kept in step, CI fails here (guard structure, not judgment — sanctioned by the
 canonical rules). ``alpaca_portfolio`` carries ONE operator-approved divergence:
-it drops the affordability-only proxies SPLG/IAUM so a big-balance paper book
+it drops the affordability-only proxies SPYM/IAUM so a big-balance paper book
 doesn't double S&P/gold exposure.
 
 BOTH mirrors are now STRICT EQUALITY (DECIDED 2026-09-21, operator, checklist
@@ -33,7 +33,7 @@ _ACCOUNTS_YAML = _REPO_ROOT / "config" / "accounts.yaml"
 # ROSTER-SYNC comment on the account) — the ONE sanctioned divergence from
 # an otherwise-exact alpaca_live mirror.
 _ALPACA_PROXY_STRATEGIES = {"splg_trend_long_1d", "iaum_pullback_1d"}
-_ALPACA_PROXY_SYMBOLS = {"SPLG", "IAUM"}
+_ALPACA_PROXY_SYMBOLS = {"SPYM", "IAUM"}
 
 
 def _accounts() -> dict:
@@ -145,7 +145,7 @@ def test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies():
     ``gld_pullback_1d`` fires directly, so mirroring the proxy would DOUBLE
     gold exposure and pollute the very read this test exists to protect. It
     would also contradict the strict ``symbols`` equality below, which
-    excludes SPLG/IAUM by construction. "Exactly" here means exactly
+    excludes SPYM/IAUM by construction. "Exactly" here means exactly
     ``alpaca_live`` minus the two declared affordability proxies, and that is
     why the name still says ``minus_proxies``.
 
@@ -190,7 +190,7 @@ def test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies():
     expected_syms = [s for s in real.get("symbols") or []
                      if s not in _ALPACA_PROXY_SYMBOLS]
     assert portfolio.get("symbols") == expected_syms, (
-        "alpaca_portfolio symbols must be alpaca_live's minus SPLG/IAUM."
+        "alpaca_portfolio symbols must be alpaca_live's minus SPYM/IAUM."
     )
 
 

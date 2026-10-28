@@ -199,7 +199,7 @@ def test_the_rung_only_ever_adds_legs():
     """THE LOAD-BEARING ONE. Every symbol Dukascopy already maps must keep the
     feed it had, or the committed corpus stops being comparable and recorded
     verdicts are silently re-based onto a new source."""
-    for sym in ("SPY", "GLD", "QQQ", "SPLG", "GDX", "IWM",
+    for sym in ("SPY", "GLD", "QQQ", "SPYM", "GDX", "IWM",
                 "SLV", "TLT", "IEF", "IAUM", "SCHA", "USO"):
         assert plan.resolve_feed_source(sym, "D") == "dukascopy"
 

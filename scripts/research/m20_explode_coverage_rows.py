@@ -67,7 +67,7 @@ BUNDLES = {
  "equities 1d fleet (spy/qqq/tqqq/qld/iwm/splg/scha trend; gld/tlt/ief/slv/gdx/iaum pullback)": (
    [("spy_trend_1d","SPY","1d","live"),("qqq_trend_1d","QQQ","1d","live"),
     ("tqqq_trend_1d","TQQQ","1d","live"),("qld_trend_1d","QLD","1d","live"),
-    ("iwm_trend_1d","IWM","1d","live"),("splg_trend_1d","SPLG","1d","live"),
+    ("iwm_trend_1d","IWM","1d","live"),("splg_trend_1d","SPYM","1d","live"),
     ("scha_trend_1d","SCHA","1d","live"),("gld_pullback_1d","GLD","1d","live"),
     ("tlt_pullback_1d","TLT","1d","live"),("ief_pullback_1d","IEF","1d","live"),
     ("slv_pullback_1d","SLV","1d","live"),("gdx_pullback_1d","GDX","1d","live"),
