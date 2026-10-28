@@ -221,10 +221,10 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/model-training/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/new-broker/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/new-strategy/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
-| `.claude/skills/perf-followup/SKILL.md` | instruction | live | — | 2026-10-10 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/perf-followup/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/performance-review/BLIND-GRADE-BRIEF.md` | instruction | live | — | 2026-10-26 | `dir:skills-are-binding-workflows / read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade` | blind pass grader contract; its git blob sha is the blind grade's prompt_sha |
 | `.claude/skills/performance-review/REVEAL-GRADE-BRIEF.md` | instruction | live | — | 2026-10-26 | `dir:skills-are-binding-workflows / read:CJ-3-lane-authored-it-2026-10-26-rows-validated-by-blind_grade` | reveal pass grader contract; its git blob sha is the revealed grade's prompt_sha |
-| `.claude/skills/performance-review/SKILL.md` | instruction | live | — | 2026-09-24 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/performance-review/SKILL.md` | instruction | live | — | 2026-10-28 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/regime-selectivity/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/research-ops/SKILL.md` | instruction | live | — | 2026-10-10 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/sprint-format/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
@@ -816,6 +816,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/cross-signal-exits-2026-10-07.md` | evidence | unknown | — | 2026-10-07 | `dir:research-is-measurement / not-assessed` | Operator idea 2026-10-07 (entry from one signal family, stop/exit from another): entry x exit-dimension feasibility matrix over the harness lever surface (12 harness-ready / 9 needs-a-lever / 7 infeasible), units RQ-20261007-040/041 (queued, m20 vol_trail confirm + sibling control) and blocked/RQ-20261007-042..044 (ADX-conditioned trail, momentum-keyed time stop, pullback trend-flip exit), lever specs § 4, falsifiers § 6. Research only, no config touched. |
 | `docs/research/crypto-edge-audit-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/crypto-finetune-proposals-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/analytic-skill-design-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d1-cost-stack-verification-2026-09-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/exit-giveback-predictor-gate-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ada-live-exit-review-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Live ADA short (ada_pullback_2h, 2026-10-24): trail 3.33 R behind extreme, hold-vs-tighten history, profit-lock step + trail-width units 4ef5-01/02. |
