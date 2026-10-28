@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261028-KD5SQ3JJ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "LR-20261028T1025Z-pkg-ad78ede426c245db (live-review/rows 3553fb73); row LTR-PRACTICE-REDESIGN",
+    "rerun": "python3 -c \"import json;from src.runtime import live_review_due as l;rows=[json.loads(x) for x in open('comms/live_review/reviews.jsonl') if x.strip()];idx=l._review_index(rows);print([(r['order_package_id'],a) for r in rows for a in (r.get('trigger') or {}).get('also') or [] if (a['event'],l._lvl(a['level'])) not in idx[r['order_package_id']]['fired']])\"  # non-empty = bug present"
+  },
+  "state": "queued",
+  "what": "LTR due gate dedupes only the PRIMARY trigger (event, level): events a review answers in trigger.also (LR-20261028T1025Z-pkg-ad78ede426c245db answered adverse_r -0.5 + also stall 8) are not added to the dedupe set, so the same state can re-open and wake (and pay for) a second review. Fix (Tier 2, small): _review_index in src/runtime/live_review_due.py adds every trigger.also (event, level) to prior['fired'], plus a test that an also-answered event is not due again."
+}
