@@ -31,7 +31,7 @@ intervention"**, never as "management fails".
 | **C: check-in policy** (the Claude arms; M1 inherits it) | **C1E** every 1h bar + event tags · **C4E** every 4 bars + event triggers · **E** event triggers only. Events: first close beyond each R milestone −0.5 / +0.5 / +1 / +1.5 / +2 R; ATR(now)/ATR(entry) crossing 1.5 or 1/1.5 (and back); 3-bar momentum sign flip (with / against the trade); a close beyond the prior 12-bar high/low (level break, with / against). Every check-in carries its trigger tags (`why_now`). |
 
 Rule arms M2–M7 run token-free on the WHOLE population at every bar (C1E); B3 = the best rule of the combined menu
-chosen leave-one-fold-out. M4 (re-score with the entry model) is not replayable for a Claude entry (no entry model)
+chosen leave-one-fold-out. M4 (re-score with the entry model) is not replayable for a Claude entry (no entry model; checked: `scripts/research/desk_gen_replay_driver.py` — a judged-1 entry is a proposal row, not a model with a re-scorable signal)
 and is out of scope here; it belongs in the strategy arm. Deviations from F.1, stated: ATR is the 14-bar ATR of the
 packet (F.1: ATR(22)); the channel is 12 bars (F.1: 10 / 20; amended to 10 / 20 in § 0.1b); the time stop is fixed at 12 / 24 bars (F.1: the leg's
 median winning duration; the desk has no leg history).
