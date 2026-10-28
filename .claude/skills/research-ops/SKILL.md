@@ -1,9 +1,9 @@
 ---
 name: research-ops
-description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded Sonnet lane. Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), keeps the runnable floor of queue units topped up, audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
+description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded lane, in two layers (2026-10-28) -- a script-computed CHECKS packet (scripts/research/research_ops_checks.py) and an ANALYSIS the session writes per track (TRADING / MODEL: what results mean, failed-test diagnoses, value-ranked next tests, cross-track feeds, a self-grade of the previous pass's calls). Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), keeps the runnable floor of queue units topped up, audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-16` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /research-ops — keep the research pipeline flowing
 
@@ -27,6 +27,85 @@ the routine half of Stage 3 (read what landed); `research/queue/PLANNING.md` § 
 and 5 (throughput, grade landed results, retire stale). Weights (§ 4 step 3) and drafting
 from `IDEAS.md` (step 4) stay in PLANNING.md and are used here only as the top-up source.
 Do not duplicate those docs — read them, link them, follow them.
+
+## How a pass runs: CHECKS, then ANALYSIS (redesign 2026-10-28, lane SKILL-DESIGN-RESEARCH; binding)
+
+> **Operator, 2026-10-28 (paraphrased by the manager, binding):** a recurring review must be neither **too loose** (skims,
+> no deep analysis) nor **too scripted** (restates the statistics it was fed, predetermined outcomes). Use the model's
+> reasoning over wide context **and** a fixed format that guarantees the checks. Research is **two tracks: TRADING** (how
+> to trade better) and **MODEL** (how to build a better AI trader model). Diagnosis and sources:
+> [`docs/research/research-ops-redesign-2026-10-28.md`](../../../docs/research/research-ops-redesign-2026-10-28.md);
+> shared pattern `docs/reference/llm-analyst-skill-design.md`.
+
+MEASURED before the redesign (four passes 2026-10-27..28): FAILs read "at the unit-title level", 167 of 301 FAILs in a
+week with nothing naming a next test, `needs_review` 28 → 28 → 28 → 28, PASS-confirmation nodes filed and re-handed-off.
+The steps A–F below stay the **mechanics** (what to run, how to unlock, how to author). This section is **how the pass is
+spent**: the machine counts, you think.
+
+**1. CHECKS — run, do not recompute, do not restate.**
+```bash
+python3 scripts/research/research_ops_checks.py --out /tmp/checks.json   # --since defaults to the newest record's finished_at
+```
+One packet: `pipeline` (throughput + floor), `runnable_by_track` (TRADING / MODEL / INFRA), `results` (verdict, grader,
+power label per unit), `batches` (k pass of n per authoring batch), `fails_without_next`, `followups` (what the last four
+records filed, traced to authored → fired → graded), `needs_review`, `stale`, `previous_calls`. Then the step A mechanism
+checks the packet cannot see (workflow runs, stranded stamp PRs, watchdog incidents). Copy the packet's headline numbers
+into the record's `checks` block; that is the only place they are repeated.
+
+**2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** Budget at least half the pass here.
+0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source research-ops --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
+1. **Grade the previous record's `calls`** (`previous_calls` in the packet; Layer 0 of the shared pattern): hit / miss / not yet, one line each,
+   and what the miss teaches. First, before anything else.
+2. **Open the rows, not the titles.** For every PASS and at least the 5 largest FAIL clusters in the window, open the
+   result rows (arms, folds, n, cost basis). A verdict you did not open is "not read", whatever the grader wrote.
+   The power label `accruing` is a near-default (345 of 368 pass/fail verdicts in the week to 2026-10-28) and tells you
+   nothing: check realised n against the unit's `power.expected_n` yourself and say so when you could not.
+3. **What the results MEAN** — by cluster (lever × leg family, model family × target), not by unit: what moved our belief,
+   in which direction, by how much. Every PASS you forward carries its **batch denominator** (`batches`: "3 of 26 in
+   ed1c") and is a discovery until its confirmation unit passes.
+4. **Diagnose the failed first tests.** For each FAIL cluster (start with `fails_without_next`): the most likely cause
+   among {test design, power / n, cost drag, regime / window, harness defect, the idea is wrong} and the evidence for it;
+   then the ONE variant that tests the diagnosis (a node or unit, step E rules). "Configuration closed; family stays open"
+   is the disposition, not the diagnosis.
+5. **What to test next, value-ranked.** Each proposal names the decision it would change, what we do on PASS and on FAIL,
+   and the cost. If both branches lead to the same action the test is worth ~0 — do not author it (value of information).
+   Prefer the track with the thinner `runnable_by_track`.
+6. **Cross-track feeds.** TRADING results → MODEL labels / features (a lever that works is a label; a leg that fails is a
+   negative class); MODEL results → TRADING decisions (a head that cannot beat the prior is not a gate). Name each feed's
+   destination node or unit.
+7. **Calls for next time.** 2–5 falsifiable predictions, each with a probability and a pre-registered check
+   (`command`, `rule`, `resolves_when`) the next pass re-runs.
+
+The shared pattern's ANALYSIS prompts (compete hypotheses with *noise* always one of them, count comparisons, hunt
+surprises, premortem, neutral framing) apply to every step above: `docs/reference/llm-analyst-skill-design.md` § 3.
+
+**3. ACT** — steps B–E mechanics: author what step 2.4–2.5 decided (follow-ups the packet shows as `needs_authoring` first),
+triage `needs_review`, unlock / retire. A follow-up re-handed-off twice is authored by this pass or retired with a reason.
+
+**4. RECORD** — step F's record gains the shared pattern's four top-level blocks (the old fields stay), shape as in
+`docs/reference/llm-analyst-skill-design.md` § 4 and `comms/schema/performance_review_response.template.json`:
+```json
+"prior_calls_scorecard": [{"call": "...", "p": 0.35, "check_rerun": "<command>", "outcome": "hit|miss|unresolved|void",
+                           "action_happened": true}],
+"checks":   {"packet_as_of": "...", "since": "...", "runnable_by_track": {"TRADING": 46, "MODEL": 12, "INFRA": 3},
+             "graded_by_window": {"7d": {}, "30d": {}}, "fails_without_next": 9,
+             "followups": {"needs_authoring": 7, "fired": 13}, "needs_review": 28, "could_not_look": []},
+"analysis": {"rows_opened": ["RQ-..."],
+             "trading": {"meaning": ["cluster: what moved, by how much, batch denominator, so ..."],
+                         "fail_diagnoses": [{"cluster": "...", "hypotheses": ["noise", "..."], "test": "...",
+                                             "survivor": "design|power|cost|regime|harness|idea", "next": "node/unit id"}],
+                         "next_tests": [{"id_or_node": "...", "decision_changed": "...", "on_pass": "...", "on_fail": "...",
+                                         "premortem": "..."}]},
+             "model": {"meaning": [], "fail_diagnoses": [], "next_tests": []},
+             "cross_track": [{"from": "TRADING|MODEL", "finding": "...", "feeds": "node/unit/row"}],
+             "surprises": []},
+"calls": [{"call": "ed1c-07's confirmation unit PASSes", "p": 0.35,
+           "check": {"command": "python3 scripts/research/research_ops_checks.py --since 7d", "rule": "...",
+                     "resolves_when": "2026-10-30"}}]
+```
+**Quality bar** (the manager checks it): every `meaning` line has a "so" — a sentence that only repeats a packet number is
+deleted; every FAIL cluster in the packet has a diagnosis or is named in `not_run`; every `next_tests` row names a decision.
+An empty `analysis` with full `checks` is a **too-scripted** pass and is reported as such in the one-line report.
 
 ## What changed on 2026-10-15 (RESEARCH-LOOP-AUDIT, `docs/research/research-loop-audit-2026-10-15.md`)
 
@@ -95,7 +174,9 @@ author units there that carry an honest `value:` block (money at stake, confiden
 
 - **Model Sonnet, dollar ceiling ~$5 per run** (manager hard cap $6). One question per
   lane: *is research operations working, and what is stuck?*
-- **Done =** (1) every step below ran, or the step names what blocked it; (2) every finding
+- **The ANALYSIS layer comes before breadth** (2026-10-28): when budget is short, cut step B/E authoring volume, never
+  the self-grade, the rows opened or the FAIL diagnoses. A pass that cannot fit them says so in `not_run`.
+- **Done =** (0) the `checks` and `analysis` blocks of "How a pass runs" are written; (1) every step below ran, or the step names what blocked it; (2) every finding
   ended in exactly one of: a fix landed, a queue unit id, a `PI-…` pipeline id, a checklist
   row id, a retirement with a reason, or `"no action, because <reason>"`; (3) the run record
   (step F) is committed; (4) the one-line report was sent. A run that found nothing is done
@@ -249,9 +330,10 @@ python3 scripts/research/research_disposition.py --report
 ```
 
 For every result: read the verdict fields **and the unit's own pre-registered
-`decision_rule`**, check `power_state`/n first (an `underpowered` / `accruing` read says
-"cannot answer yet", never a verdict), then apply the rule **verbatim** — never a rule
-written after seeing the number:
+`decision_rule`**, check power first (an `underpowered` / `insufficient_n` read says
+"cannot answer yet", never a verdict; `accruing` is a near-default label that says nothing
+-- compare realised n with the unit's `power.expected_n`, see "How a pass runs" 2.2), then
+apply the rule **verbatim** — never a rule written after seeing the number:
 
 - **pass →** the follow-up the rule names: another queue unit, or — if it implies a
   strategy/params/risk/roster change — a **Tier-3 proposal written as a note on the owning
