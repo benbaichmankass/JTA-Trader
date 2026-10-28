@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "research"))
-import desk_event_calendar_study as m  # noqa: E402
+import desk_event_calendar_study as m
 
 
 def test_verdict_branches():

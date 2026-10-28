@@ -47,17 +47,18 @@ Protocol upgrades and token unlocks are **surveyed only** (§ 2); the study does
 | Funding | Binance Vision `data/futures/um/monthly/fundingRate` | yes | `calc_time, interval, rate` | per-symbol start (2020-09..) | The settled rate is known at `calc_time`; the earlier predicted rate is not in the archive | PIT-safe as a derived signal; NOT a calendar |
 | OI / positioning | Binance Vision `daily/metrics` (5-minute) | yes (6,030 files for 2024-01..2026-09) | `sum_open_interest`, value, long/short ratios | from 2021-12 per the program doc | Rows describe the window AFTER their stamp (`desk-edge-program` § 4.7); this lane adds 5 minutes | PIT-safe with the lag; NOT a calendar |
 | Bybit-native funding/OI/announcements | `api.bybit.com/v5/...` | **no: 403 from the agent proxy** | — | — | — | needs a VM/runner-side fetch (`ict-bot-arm` is the Bybit venue) |
-| Token unlocks | Tokenomist (`tokenomist.ai/<token>`) | page yes (200, 540 kB HTML) | next unlock, amount, "±1 day window" | **forward-looking only; event charts and claim history are Pro-gated** (page text: "Premium Feature … Upgrade to access detailed unlock event charts") | A schedule fetched today is NOT evidence of what was known then; vesting schedules are revised. Unlock history cannot be backfilled honestly | **Not PIT-backfillable.** Forward capture only |
+| Token unlocks | Tokenomist (`tokenomist.ai/<token>`) | page yes (200, 540 kB HTML) | next unlock, amount, "±1 day window" | **forward-looking only; event charts and claim history are Pro-gated** (page text: "Premium Feature … Upgrade to access detailed unlock event charts") | A schedule fetched today is NOT evidence of what was known then; vesting schedules are revised. Unlock history cannot be backfilled honestly | **Not PIT-backfillable.** Forward capture only (checked: docs/research/RESEARCH-CAPABILITY-INDEX.md, 0 index hits for tokenomist/unlock schedule; scripts/research has no unlock tool) |
 | Unlocks (aggregators) | DefiLlama emissions | `pro-api.llama.fi/emissions` 500, `api.llama.fi/emissions` 402 | — | — | — | paid |
 | XRP escrow | deterministic, announced 2017-12 | n/a (a rule) | 00:00 UTC on the 1st | 2017.. | **Yes** (schedule predates the whole sample) | The one PIT-safe unlock class; covered by C5 |
 | Protocol upgrades | GitHub releases / EIP pages | `api.github.com` repos **denied by this session's repo scope**; `raw.githubusercontent.com` EIP text 200; Wayback timed out | release tag/date; fork dates in EIPs | per chain, years | Fork dates are announced weeks ahead, but the ANNOUNCEMENT date must come from a blog/forum post, which has no common free API | **Needs a runner-side fetch and hand curation**; n is tiny (a handful of dated forks per chain per year) |
 
 Not verified here (stated, not assumed): per-asset unlock schedules for ADA, AVAX, BTC, ETH and SOL (Tokenomist's per-token pages were not parsed; only the structure was inspected), Bybit's own listing notices, and any announcement-time revision history.
 
-## 3. Amendments after registration (stated before the verdicts were read)
+## 3. Amendments after registration (1 and 2 were made before the verdicts were read; 3 after, and changed no verdict)
 
 1. **Controls.** The registered planted control (200 events, +30 bps net at 4h) read `inconclusive`, not `candidate`: the corrected 4h CI of 200 random events is [-50, +171] bps (real 2021 crash bars: 2021-05-19 and 2021-04-18 moves of 12-33% in 5 minutes are in the data, MEASURED). So the registered control was **under-powered**, not the classes. A +100 bps planting was added and reads `candidate` [+62, +278]; the null reads `inconclusive`. **Instrument valid for effects of about 100 bps at n = 200; the classes with ~1,000 clusters resolve about 25-35 bps (C1 4h corrected half-width).** No class rule was changed.
 2. **C4 first run.** The first OI run produced 378 events because a zero-OI row overflowed the rolling z (a code bug, caught by the event count against the 2,319 of the re-run). Fixed; the rule is as registered.
+3. **Cache bug, found while fixing CI.** The matched-baseline pool was cached by `id(ev_times)`, which Python can reuse across event sets; an identical re-run differed in the second decimal of some excess figures (C4 24h: 16.77 vs 17.69). The cache is now cleared per event set and the run is deterministic (two runs identical). No verdict changed; the tables above are the corrected run.
 
 ## 4. Results (MEASURED; `comms/research/desk_event_calendar/study.json`, `scripts/research/desk_event_calendar_study.py`)
 
@@ -69,22 +70,22 @@ Population: Binance USD-M perp 5-minute bars, six symbols, cost 12.3 bps round t
 | C1 | 4h | 1749 / 1029 | -2.5 | -14.8 [-23, -7] | -10.5 [-19, -2] | [-23, +1] | no_edge |
 | C1 | 24h | 1747 / 1028 | -7.6 | -19.9 [-45, +6] | -37.5 [-64, -12] | [-76, -0] | no_edge |
 | C2 | 1h | 438 / 368 | -1.1 | -13.4 [-21, -4] | -0.1 [-8, +9] | [-12, +15] | inconclusive |
-| C2 | 4h | 438 / 368 | -2.3 | -14.6 [-32, +2] | +1.2 [-15, +18] | [-24, +27] | inconclusive |
-| C2 | 24h | 438 / 368 | -41.1 | -53.4 [-95, -13] | -23.9 [-65, +16] | [-84, +36] | inconclusive |
-| C3 | 1h | 1610 / 965 | +9.8 | -2.5 [-11, +8] | +9.6 [+1, +20] | [-3, +25] | inconclusive |
-| C3 | 4h | 1610 / 965 | +7.8 | -4.5 [-19, +11] | +7.3 [-7, +23] | [-14, +31] | inconclusive |
-| C3 | 24h | 1610 / 965 | -3.3 | -15.6 [-58, +28] | -9.1 [-51, +34] | [-75, +56] | inconclusive |
+| C2 | 4h | 438 / 368 | -2.3 | -14.6 [-32, +2] | +0.7 [-16, +18] | [-24, +26] | inconclusive |
+| C2 | 24h | 438 / 368 | -41.1 | -53.4 [-95, -13] | -25.6 [-66, +14] | [-85, +35] | inconclusive |
+| C3 | 1h | 1610 / 965 | +9.8 | -2.5 [-11, +8] | +9.5 [+1, +19] | [-3, +25] | inconclusive |
+| C3 | 4h | 1610 / 965 | +7.8 | -4.5 [-19, +11] | +7.0 [-8, +22] | [-14, +31] | inconclusive |
+| C3 | 24h | 1610 / 965 | -3.3 | -15.6 [-58, +28] | -9.2 [-51, +34] | [-75, +55] | inconclusive |
 | C4 | 1h | 2273 / 837 | +9.4 | -2.9 [-10, +6] | +9.3 [+2, +18] | [-1, +22] | inconclusive |
 | C4 | 4h | 2273 / 837 | +13.7 | +1.4 [-9, +13] | +13.6 [+3, +25] | [-2, +32] | inconclusive |
-| C4 | 24h | 2269 / 836 | +17.0 | +4.7 [-19, +29] | +16.8 [-7, +40] | [-18, +51] | inconclusive |
+| C4 | 24h | 2269 / 836 | +17.0 | +4.7 [-19, +29] | +17.7 [-6, +41] | [-17, +52] | inconclusive |
 | C5 | 1h | 71 / 71 | +14.7 | +2.4 [-20, +27] | +12.0 [-11, +37] | [-21, +49] | insufficient_n |
 | C5 | 4h | 71 / 71 | -0.3 | -12.6 [-72, +36] | -1.6 [-60, +46] | [-98, +67] | insufficient_n |
 | C5 | 24h | 71 / 71 | +20.3 | +8.0 [-111, +129] | +45.6 [-73, +169] | [-131, +232] | insufficient_n |
 
 - **C1 (listing, long) is `no_edge` at all three horizons** (excess -4 / -10 / -37 bps against a cost of 12.3). **C2 (delisting, short)** nets -13 / -15 / -53 bps; excess spans 0. As expected, an announcement about ANOTHER token carries no news for the six majors.
 - **No class is a `candidate`.** No corrected net CI lower bound is above 0 anywhere.
-- **C3 funding fade** has excess +9.6 bps at 1h whose uncorrected 95% CI excludes 0 ([+0.9, +19.6]) but not after the family correction, and its net is negative (-2.5) after 12.3 bps; the time halves disagree.
-- **C4 OI-shock continuation** is the only class with a consistently positive excess: +9.3 / +13.6 / +16.8 bps; the 1h and 4h uncorrected CIs exclude 0 ([+1.8, +17.9], [+2.7, +24.6]) and the corrected ones do not ([-1.0, +21.9], [-2.2, +31.8]). Net of the taker cost it is -2.9 / **+1.4** / +4.7 bps with CIs of +-10 to +-25. A gross edge of about 14 bps against 12.3 bps of cost is not a trade; a maker entry (PR #20760's measured +2.0 bps on entry, not yet merged and with an unchecked 2.0 bps fee) would move it to about +3 bps net. It is a hypothesis for a forward holdout, not a finding (filed below).
+- **C3 funding fade** has excess +9.5 bps at 1h whose uncorrected 95% CI excludes 0 ([+0.7, +19.4]) but not after the family correction, and its net is negative (-2.5) after 12.3 bps; the time halves disagree.
+- **C4 OI-shock continuation** is the only class with a consistently positive excess: +9.3 / +13.6 / +17.7 bps; the 1h and 4h uncorrected CIs exclude 0 ([+1.8, +17.9], [+2.8, +24.5]) and the corrected ones do not ([-1.0, +21.9], [-2.1, +31.7]). Net of the taker cost it is -2.9 / **+1.4** / +4.7 bps with CIs of +-10 to +-25. A gross edge of about 14 bps against 12.3 bps of cost is not a trade; a maker entry (PR #20760's measured +2.0 bps on entry, not yet merged and with an unchecked 2.0 bps fee) would move it to about +3 bps net. It is a hypothesis for a forward holdout, not a finding (filed below).
 - **C5 XRP escrow short is `insufficient_n`** (71 months): 24h excess +45.6 bps with a 95% CI of [-73, +169]. **Time-to-n: 2.42 years to reach 100 clusters** (12 events a year), and even then the 24h CI half-width (about 120 bps at n = 71) shrinks only by about 15%.
 - **What bounds n (macro-research invariant 4).** The listing/delisting and funding/OI sources take an arbitrary date range, so n is bounded by the market's event rate and not by forward accrual: the classes with enough n are already measured; the two that lack it (C5 and upgrades) are bounded by their event rate (12 and a few per year), not by the source.
 
@@ -92,7 +93,7 @@ Population: Binance USD-M perp 5-minute bars, six symbols, cost 12.3 bps round t
 
 1. **The only point-in-time-safe, fetchable, deep-history class is exchange listings/delistings, and it is about other tokens.** On the six desk perps it is `no_edge` (C1) or null (C2). A store for it would cost almost nothing (one keyless endpoint, 2,735 rows) and would hold no desk edge. If it is wanted for a universe lever it is already fetched (`comms/research/desk_event_calendar/ann_*.json`).
 2. **Funding and OI shocks are derived signals, not calendar events.** They need no store; the edge program's P+ tier already contains funding (S3 +0.025/+0.042), and the OI-continuation excess here is below the cost.
-3. **Unlocks cannot be backfilled honestly** (forward-only free data, Pro-gated history, revised schedules). A forward capture would take years to reach n and the six majors have few cliff unlocks (not verified per asset). XRP escrow is the one clean PIT class and it is `insufficient_n`.
+3. **Unlocks cannot be backfilled honestly** (checked: docs/research/RESEARCH-CAPABILITY-INDEX.md, no unlock tool; forward-only free data, Pro-gated history, revised schedules). A forward capture would take years to reach n and the six majors have few cliff unlocks (not verified per asset). XRP escrow is the one clean PIT class and it is `insufficient_n`.
 4. **Upgrades** need runner-side fetch plus hand curation and have a tiny n.
 5. **Cost and risk of building anyway:** a forward-only store for unlocks and upgrades is about a runner-day to build and 2+ years to reach n = 100; the data risks are re-stamped announcements (listing), revised vesting (unlocks), and Binance-as-Bybit proxy. None of these is worth it against measured effects of 0 to +14 bps gross.
 

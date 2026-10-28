@@ -1,12 +1,21 @@
-#!/usr/bin/env python3
 """DESK-EVENT-CALENDAR event study (Tier 1, research only). Rule registered in
 docs/research/desk-event-calendar-scope-2026-10-28.md § 1 BEFORE this ran.
 Subcommands: fetch (Binance Vision klines 5m / fundingRate / metrics) and run.
 Off-VM only; never imported by the trader."""
+# wiring: manual-only - off-VM research study run by hand; its result is committed to comms/research/desk_event_calendar/study.json
 from __future__ import annotations
-import argparse, datetime as dt, io, json, sys, time, urllib.request, zipfile
+
+import argparse
+import datetime as dt
+import io
+import json
+import time
+import urllib.error
+import urllib.request
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
 import numpy as np
 
 SYMS = ["ADAUSDT", "AVAXUSDT", "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
@@ -25,9 +34,11 @@ def _get(url):
     for i in range(3):
         try:
             return urllib.request.urlopen(url, timeout=60).read()
-        except Exception as e:
-            if "404" in str(e):
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
                 return None
+            time.sleep(1 + i)
+        except OSError:
             time.sleep(1 + i)
     return None
 
@@ -70,20 +81,26 @@ def fetch(root: Path, oi_from=dt.date(2024, 1, 1)):
 
 def _read_csv(p):
     txt = p.read_text().splitlines()
-    return [l.split(",") for l in txt if l and not l[0].isalpha()]
+    return [ln.split(",") for ln in txt if ln and not ln[0].isalpha()]
+
+
+def _dir_rows(d):
+    """Every data row of every monthly/daily CSV in directory d, files in name order."""
+    out = []
+    for p in sorted(d.glob("*.csv")):
+        out += _read_csv(p)
+    return out
 
 
 def load_k5(root, s):
-    rows = []
-    for p in sorted((root / "k5" / s).glob("*.csv")):
-        rows += [(int(r[0]), float(r[1]), float(r[4])) for r in _read_csv(p)]
+    rows = [(int(r[0]), float(r[1]), float(r[4])) for r in _dir_rows(root / "k5" / s)]
     a = np.array(rows, dtype=float)
     t = (a[:, 0] // 300000).astype(np.int64) * 300  # sec, 5m aligned
     _, ix = np.unique(t, return_index=True)
     return t[ix], a[ix, 1], a[ix, 2]
 
 
-def vol_dec(t, o, c):
+def vol_dec(c):
     lr = np.diff(np.log(c), prepend=np.log(c[0]))
     cs = np.cumsum(lr ** 2)
     n = 288
@@ -111,7 +128,7 @@ class Sym:
     def __init__(self, root, s):
         self.s = s
         self.t, self.o, self.c = load_k5(root, s)
-        self.dec = vol_dec(self.t, self.o, self.c)
+        self.dec = vol_dec(self.c)
         self.hour = ((self.t // 3600) % 24).astype(int)
         self.cache = {}
 
@@ -174,6 +191,8 @@ def evaluate(syms, events, planted=0.0):
         ev_times.setdefault(s, []).append(k)
     ev_times = {s: np.array(v) for s, v in ev_times.items()}
     out = {}
+    for S in syms.values():
+        S.cache.clear()  # the pool cache is keyed by id(ev_times): never reuse it across event sets
     for hn, h in HORIZ.items():
         g, b, days, ks = [], [], [], []
         for s, k, d in events:
@@ -202,7 +221,7 @@ def evaluate(syms, events, planted=0.0):
         halves_ok = bool(net[ks <= med].mean() > 0 and net[ks > med].mean() > 0)
         span_y = max((ks.max() - ks.min()) / (365.25 * 86400), 1e-9)
         out[hn] = {
-            "n_rows": int(len(g)), "n_events": int(len(np.unique(ks))), "n_day_clusters": int(ncl),
+            "n_rows": len(g), "n_events": len(np.unique(ks)), "n_day_clusters": int(ncl),
             "gross_bps": round(float(g.mean()), 2), "baseline_bps": round(float(b.mean()), 2),
             "net_bps": round(float(net.mean()), 2), "excess_bps": round(float(ex.mean()), 2),
             "net_ci95": [round(x, 2) for x in net_ci95], "excess_ci95": [round(x, 2) for x in ex_ci95],
@@ -217,7 +236,8 @@ def evaluate(syms, events, planted=0.0):
 
 
 def build_events(root):
-    ann = {c: json.load(open(Path(__file__).resolve().parents[2] / "comms/research/desk_event_calendar" / f"ann_{c}.json")) for c in (48, 161)}
+    adir = Path(__file__).resolve().parents[2] / "comms/research/desk_event_calendar"
+    ann = {c: json.loads((adir / f"ann_{c}.json").read_text()) for c in (48, 161)}
     ev = {k: [] for k in ("C1", "C2", "C3", "C4", "C5")}
     start1 = dt.datetime(2020, 10, 1, tzinfo=dt.UTC).timestamp(); start2 = dt.datetime(2022, 2, 17, tzinfo=dt.UTC).timestamp()
     end = END.timestamp()
@@ -226,9 +246,7 @@ def build_events(root):
             if st <= k <= end:
                 ev[key] += [(s, k, d) for s in SYMS]
     for s in SYMS:
-        fr = []
-        for p in sorted((root / "fr" / s).glob("*.csv")):
-            fr += [(int(r[0]) // 1000, float(r[2])) for r in _read_csv(p)]
+        fr = [(int(r[0]) // 1000, float(r[2])) for r in _dir_rows(root / "fr" / s)]
         fr.sort()
         ft = np.array([x[0] for x in fr]); fv = np.array([x[1] for x in fr])
         for i in range(90, len(fv)):
@@ -236,10 +254,8 @@ def build_events(root):
             if sd > 0 and abs(fv[i] - w.mean()) / sd >= 2 and ft[i] <= end:
                 ev["C3"].append((s, int(ft[i]), -1 if fv[i] > 0 else 1))
         # C4
-        rows = []
-        for p in sorted((root / "oi" / s).glob("*.csv")):
-            for r in _read_csv(p):
-                rows.append((dt.datetime.strptime(r[0], "%Y-%m-%d %H:%M:%S").replace(tzinfo=dt.UTC).timestamp(), float(r[2])))
+        rows = [(dt.datetime.strptime(r[0], "%Y-%m-%d %H:%M:%S").replace(tzinfo=dt.UTC).timestamp(), float(r[2]))
+                for r in _dir_rows(root / "oi" / s)]
         if rows:
             rows.sort()
             t = np.array([r[0] for r in rows]); oi = np.array([r[1] for r in rows])
@@ -291,7 +307,7 @@ def run(root, out):
     res["controls"]["null"] = evaluate(syms, ctl)
     for pl in (30.0, 100.0):  # AMENDED 2026-10-28: the registered 30 bps planting is under-powered at n=200 (see doc 4.1); 100 bps added
         res["controls"][f"planted_{int(pl)}bps_4h"] = evaluate(syms, ctl, planted=pl + COST)  # bps NET of cost over the null mean
-    json.dump(res, open(out, "w"), indent=1)
+    Path(out).write_text(json.dumps(res, indent=1))
     print("controls 4h:", {k: (v["4h"]["verdict"], v["4h"].get("net_ci_corrected")) for k, v in res["controls"].items()})
 
 
