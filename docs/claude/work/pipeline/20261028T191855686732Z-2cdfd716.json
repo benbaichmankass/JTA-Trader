@@ -6,9 +6,14 @@
   },
   "id": "PI-20261028-PVRNY2JI-0004",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-11",
+    "how_to_check": "python3 scripts/ops/live_review_grade.py --live --since 2026-10-21 --json -> hold_vs_close",
+    "what": "hold_vs_close mean dR at n >= 20 graded holds"
+  },
   "origin": {
     "kind": "session",
-    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE \u00a73",
     "rerun": "python3 scripts/ops/live_review_grade.py --live --since 2026-10-21 --json | python3 -c \"import json,sys;print(json.load(sys.stdin).get('hold_vs_close'))\""
   },
   "state": "queued",

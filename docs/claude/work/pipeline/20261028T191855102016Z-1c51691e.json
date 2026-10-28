@@ -8,9 +8,9 @@
   "next_action": "dispatch_lane",
   "origin": {
     "kind": "session",
-    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE \u00a73",
     "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/bot/order-packages?strategy=ict_scalp_avax_5m&limit=200&include_paper=true&since=2026-09-01T00:00:00Z' | python3 -c \"import json,sys,collections;r=json.load(sys.stdin)['rows'];print(sorted(collections.Counter((x['createdAt'][:7],x['status']) for x in r).items()))\""
   },
   "state": "queued",
-  "what": "[performance] D3: the ict_scalp 5m family nearly stopped trading in October while still configured live. Closes Sep -> Oct: ict_scalp_5m 23->1, avax_5m 53->1, sol_5m 32->0, xrp_5m 17->4. Packages: avax 86->14, sol 64->2. Evaluators run every bar (audit ict_scalp_*_eval) and return 'no FVG / no sweep / no displacement'. The shallow clone hides config history before 10-26. avax_5m was the only measured positive leg at the 10-21 brief (+7.3R over 19 in W30). CALL (p 0.5): it is market structure, not a live-side change."
+  "what": "[performance] D3: the ict_scalp 5m family nearly stopped trading in October while still configured live. Closes Sep -> Oct: ict_scalp_5m 23->1, avax_5m 53->1, sol_5m 32->0, xrp_5m 17->4. Packages: avax 86->14, sol 64->2. Evaluators run every bar (audit ict_scalp_*_eval) and return 'no FVG / no sweep / no displacement'. The shallow clone hides config history before 10-26. avax_5m was the only measured positive leg at the 10-21 brief: population = its 19 R-graded paper+mirror closes with closed_at >= 2026-09-21 (W30), sum +7.3R. CALL (p 0.5): it is market structure, not a live-side change."
 }

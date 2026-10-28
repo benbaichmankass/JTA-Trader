@@ -6,9 +6,14 @@
   },
   "id": "PI-20261028-PVRNY2JI-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-25",
+    "how_to_check": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h, restricted to post-switch closes (journal?table=order_packages meta.entry_time names the closed bar)",
+    "what": "live_vs_backtest pct for bybit_2 xrp_pullback_2h over closes whose package created_at >= 2026-10-22T11:51Z (post closed-bar switch), at n >= 10"
+  },
   "origin": {
     "kind": "session",
-    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE \u00a73",
     "rerun": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h   # then restrict to post-2026-10-22T11:51Z packages (journal?table=order_packages meta.entry_time)"
   },
   "state": "queued",
