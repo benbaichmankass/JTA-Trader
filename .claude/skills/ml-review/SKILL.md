@@ -38,6 +38,8 @@ already measured with a locator (e.g. `ML-COVERAGE-AUDIT`, `ML-PROGRAMME-PLAN`).
 
 ## Layer 0 — PRIOR CALLS (always first)
 
+**Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source ml-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
+
 Read the previous `comms/reviews/ml-review-*.json` `calls[]`, and the previous `comms/ml-plan/*.json` `calls[]` / `frontier.grades`.
 Re-run each call's own `check.command` and apply its `check.rule` as written. Grade each call `hit | miss | unresolved | void`,
 and say whether its action happened. If it did not, say why, and re-file or kill it.
