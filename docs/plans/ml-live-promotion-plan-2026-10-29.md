@@ -20,6 +20,7 @@
 8. **Forecast, stated honestly:** p(pass) is P1 ≈ 0.35, P2 ≈ 0.40, P3-extension ≈ 0.30, P4 ≈ 0.10. P5 is a validation, not a promotion. **Expected new promotions by Monday ≈ 1.2, and 0 is a real outcome.** The plan still delivers a graded verdict on every candidate by Sunday. A FAIL closes the candidate with its configuration recorded, which is a result, not a slip.
 9. **Operator decisions** (§ 5): one Tier-2 OK (deploy the serve feature builder, Friday), and up to three Tier-3 packets (Saturday). Each comes with its evidence record and a one-line revert.
 10. **Infra/ops** (§ 6): eight MODEL rows prove the chain *data → labels → train → score → serve → changes an order → graded* end to end, plus the trainer timer, drift alerts, registry hygiene and the missing learning ledger.
+11. **P6, added 21:05Z at the operator's request:** a **conservative, hold-biased exit/management model** for this week's "every real-money strategy has basic active management" milestone (§ 2a). MEASURED: the desk labels price `close`/`hold`/`tighten`/`partial` but barely `move_tp` (45 rows) and not `widen`/`structure` at all (0 rows). On the 2,001 hold-vs-close check-ins, closing at ≤ −0.5 R **did not** beat holding (hold − close +0.089 R, CI [−0.08, +0.28]). So the model is expected to say HOLD almost always, and its edge cases have to earn their place on held-out data. Split agreed (proposed) with lane `ACTIVE-MGMT-REAL-MONEY-PLAN`: this plan owns the model, that lane owns the LTR apply-path wiring and the per-leg rollout.
 
 ---
 
@@ -66,6 +67,55 @@ All five act **only** on legs rostered on `bybit_1` alone, so no real-money acco
 - **Promoting any of the 20 shadow regime heads with no consumer cell:** a promotion with no consumer changes no order. That is the "promotion argument about a head that changes nothing" anti-pattern (ml-review).
 - **A trade-management policy model (TM-BENCH, desk labels):** no family has passed S-OFFLINE yet (ML-PROGRAMME § 1.3). It is not promotable this week.
 - **The other 8 setup meta-label heads:** they are BTC-only or degenerate. Their take rate is 0 or the value is 0 on the same read (registry `cost_net_*`). Only p2pool shows a positive point estimate.
+
+---
+
+## 2a. P6: the conservative hold-biased exit/management model (operator request, 2026-10-28 ~21:05Z)
+
+**Operator, verbatim (relayed by the manager):** *"regarding the active management milestone - I'll settle for a conservative production ML that will mostly recommend holding outside of edge cases"* and *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"*.
+
+**Ownership (to avoid planning it twice):** this plan owns the **model**: action space, labels, gate and the two build rows below. Lane `ACTIVE-MGMT-REAL-MONEY-PLAN` (session_01AFoLuMfbQGw8MoevpjjwwW) owns the **milestone and the wiring**: the LTR apply-path integration (`scripts/ops/live_review_apply.py` under MD-TRADE-DESK, tightens advice-only), the per-real-money-leg rollout, and demo first. I proposed this split to that lane at 21:09Z (trigger `trig_012G5fKXhmvFHY2aPs1C7vjY`); the manager arbitrates any disagreement.
+
+**Action space** (closed enum; both brackets always stay in place; default HOLD):
+`hold` · SL {`tighten` k, `widen` k (never below −2.0 R, never past entry risk on real money), `to_structure` (prior 12-bar swing)} · TP {`extend` k, `pull_in` k, `revise` to structure} · `partial_close` 50 % · `close`.
+
+### What the 12,500 desk labels can price (MEASURED, `comms/research/desk_lifecycle/full-c4e/labels.jsonl`)
+
+**Population:** 507 trades (pairs) on 6 crypto symbols, 1h, candles 2025-05-01 → 2026-09-25. The entries are Claude's or random (`src`). Each `value` is a **one-step ablation**: the managed path's net R minus the same path with that one check-in's action swapped (`desk_lifecycle_driver.py:1100-1118`). For the `claude` arm, `hold` is swapped to `close` and any other action to `hold`. For the rule arms (`v2:*`, policy C1E), the action is swapped to `hold`.
+
+| action | rows | priced how | usable for P6? |
+|---|---:|---|---|
+| `tighten_sl` | 9,545 | at ONE level per check-in (the rule's or the decider's), vs hold | partly. One level, not a grid. Rule-arm levels dominate (8,331 rows from chandelier/breakeven/partial rules) |
+| `hold` vs `close` | 2,001 | the value of holding vs closing at that check-in | **yes**, the core of the close-or-hold decision (456 trades) |
+| `close` | 430 | vs hold | yes (with the row above) |
+| `partial_close` | 479 | 50 %, vs hold | yes, thin |
+| `move_tp` | 45 | one level, vs hold; extend and pull-in not separated | **no**. Too thin |
+| `widen_sl` | 0 | — | **no** |
+| SL/TP to structure | 0 | — | **no** |
+
+**The extra labels needed, and how fast:** the replay engine prices **any** action exactly on the real path at $0 in model usage, so the gap is a build, not a data wall.
+- **`ML-EXIT-ACTIONGRID-LABELS`** (Tier 1, Sonnet, $8, about 1 day). Add an `--action-grid` mode to `scripts/research/desk_lifecycle_driver.py`: at **every** check-in of every trade, under the same C×T check-in policy, price the whole enum against hold. That means close, partial, tighten k ∈ {0.25, 0.5, 1.0} R, widen k ∈ {0.25, 0.5} R, SL to structure, TP pull-in k ∈ {0.5, 1.0} R, TP extend k ∈ {1, 2} R and TP to structure, each with the rest of the path = hold-to-bracket.
+  - **Corpus A:** the same 507 desk trades. About 12.5k check-ins × 13 actions ≈ 160k labels, one runner job.
+  - **Corpus B (the one that matters for real money):** the legs' own Stage-0 paths (`--emit-paths`). The six-money-leg corpus has 2,627 trades and 50,926 bar-states (`RQ-20261024-09a6-01`), widened to the 7 real-money legs' configs: `xrp_pullback_2h`, `ada_pullback_2h`, `trend_donchian_eth_4h`, `trend_donchian_xrp_4h`, `trend_donchian_eth_prop`, `trend_donchian_sol_prop`, `iaum_pullback_1d`. `iaum_pullback_1d` needs the equity harness's path emit; if it is absent, IAUM is out of scope this week and that is stated.
+  - Runner time estimate (INFERRED): 2–6 h per corpus.
+
+### P6 gate (pre-registered here, before any training run)
+
+- **Model:** `exit-holdbias-v1`. One GBDT action-value head per action class (LightGBM, the house family), trained on corpus A ∪ B. State = the packet features (now_r, mfe/mae, bars held, distance to SL/TP in R and ATR, trigger tags, ATR ratio, momentum). Folds are purged walk-forward **by trade, by time** (4 folds), with an embargo of the longest trade.
+- **Decision rule (conservative by construction):** act only if the predicted value of the best non-hold action exceeds hold by **≥ τ = 0.15 R** (fixed now, not tuned on test folds) AND the action is allowed for the leg. Otherwise HOLD. On real money, `tighten` / `to_structure` / `pull_in` are **advice-only** (the operator's wiring rule); `close`, `partial`, `widen` and `extend` go through the LTR apply path's existing gates. That is ACTIVE-MGMT's wiring.
+- **PROMOTE (to demo apply on `bybit_1`) iff ALL of**, on held-out folds of **corpus B** (the real-money legs' own paths), net of the full cost stack:
+  (a) policy − hold-to-bracket (B0) **≥ 0** pooled, with the trade-clustered 95% bootstrap LB **> −0.01 R/trade**: "at least as good as hold-to-bracket";
+  (b) policy − **matched random intervention** (B4: the same count and type of actions at random check-ins of the same trades) **> 0**, with LB > 0. This catches a model that "wins" by acting rarely rather than at the right time;
+  (c) the act rate is **≤ 15 %** of check-ins ("mostly holds");
+  (d) no leg is worse than B0 by more than 0.05 R/trade (the per-leg floor);
+  (e) max drawdown is not worse than B0's.
+- **FAIL** = (a) fails. **PASS-NEUTRAL** = (a) holds but (b) does not: the model ships as **annotate-only** (it records advice, changes nothing), which satisfies "basic active management" only as monitoring. That is said plainly, not dressed up.
+- **Demotion:** on demo, after ≥ 30 acted check-ins, if the acted-vs-counterfactual-hold realized Δ < 0 with a one-sided bootstrap p < 0.10 → annotate-only. Real money also demotes on any mechanics fault (a bracket left absent, an unpriced action applied).
+- **What real money needs on top:** a PASS on that leg's own corpus-B folds (not pooled only), Stage-1 mechanics of 1–2 clean applied actions on `bybit_1`, and for the prop legs the prop survival superset. ACTIVE-MGMT owns that rollout.
+
+**P6 forecast:** p(PASS) ≈ 0.25, p(PASS-NEUTRAL) ≈ 0.45, p(FAIL) ≈ 0.30 (INFERRED from the hold-vs-close table above and the ML-PROGRAMME evidence: A1 passes on log-loss, d6e7-06's one-step exit FAILS on money). The likely week-end state is an **annotate-only hold-biased model on demo**, with acting on the legs where (a)–(e) pass.
+
+**P6 timeline:** Thu 10-29 labels (`ML-EXIT-ACTIONGRID-LABELS`) → Fri 10-30 train + gate (`ML-HOLDBIAS-EXIT-MODEL`, Sonnet, $10, Tier 1) → Sat 10-31 verdict + Tier-3 packet (demo apply) → Sun/Mon ACTIVE-MGMT wires it via LTR, demo first.
 
 ---
 
