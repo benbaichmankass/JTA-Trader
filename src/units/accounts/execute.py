@@ -1687,6 +1687,10 @@ def _submit_order(client: Any, order: dict, account_cfg: dict,
             _pidx = bybit_position_mode.apply_position_idx(
                 kwargs, account_cfg.get("account_id"), order["symbol"], _pos_side,
             )
+            # The maker probe's stored Market fallback must target the same book.
+            _mk_notes = (order.get("maker_probe_notes") or {}).get("maker_probe")
+            if _mk_notes is not None and "positionIdx" in kwargs:
+                _mk_notes["fallback_kwargs"]["positionIdx"] = kwargs["positionIdx"]
             if observed is not None:
                 # The value that went ON THE WIRE, beside the state that explains
                 # it: `idx is None` means one_way (absent kwarg is CORRECT) OR

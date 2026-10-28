@@ -21,7 +21,8 @@ What it decides
   near touch (Buy at ``bid1Price``, Sell at ``ask1Price``); the attached ``stopLoss`` / ``takeProfit`` (and the
   Partial-mode fields) are kept. The Market kwargs it replaces are kept verbatim as the fallback.
 * :func:`sweep_maker_entries` -- runs in the monitor's reconciliation tick, BEFORE the forward reconciler, over
-  open journal rows whose ``notes.maker_probe.state`` is ``resting``:
+  journal rows whose ``notes.maker_probe.state`` is ``resting`` (a row closed while its limit rests has the
+  limit cancelled, so a late fill cannot open an untracked position):
     - filled (fully) -> records ``is_maker`` / ``exec_fee`` / ``fee_rate`` from the venue's executions;
     - post-only reject (terminal, zero fill) -> sends the stored Market kwargs at once;
     - still resting after ``FALLBACK_SECONDS`` with zero fill -> cancel, then the Market kwargs;
@@ -178,6 +179,24 @@ def resolve_row(row: Dict[str, Any], notes: Dict[str, Any], *, client: Any, cfg:
     symbol = str(row.get("symbol") or "")
     stamp = now.isoformat()
 
+    if str(row.get("status") or "open") != "open":
+        # The journal row was closed (e.g. by the exit loop) while the limit still rested: cancel it so a
+        # late fill cannot open a position no row tracks. A fill that already happened is left to the
+        # reverse reconciler (adopt/alert) and recorded loudly here.
+        if status in _LIVE:
+            try:
+                client.cancel_order(category=category, symbol=symbol, orderId=tid)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("maker_entry: cancel of %s on a closed row failed: %s (retry)", tid, exc)
+                return None
+            probe.update(state="cancelled_row_not_open", resolved_at=stamp)
+        else:
+            probe.update(state="row_not_open_order_terminal", resolved_at=stamp, filled_qty=filled)
+            if filled > 0:
+                logger.error("maker_entry: %s %s limit %s filled after its row closed (qty %s)",
+                             row.get("account_id"), symbol, tid, filled)
+        notes[NOTES_KEY] = probe
+        return {"notes": json.dumps(notes)}
     if status not in _LIVE and filled > 0:           # filled (or partially filled then cancelled by the venue)
         probe.update(state="filled_maker", resolved_at=stamp, filled_qty=filled,
                      **_executions(client, category, symbol, tid))
@@ -229,8 +248,8 @@ def sweep_maker_entries(db: Any, *, build_client: Callable[[str], Tuple[Any, Opt
         try:
             conn.row_factory = __import__("sqlite3").Row
             rows = [dict(r) for r in conn.execute(
-                "SELECT id, account_id, symbol, notes, created_at, position_size FROM trades "
-                "WHERE status='open' AND COALESCE(is_backtest,0)=0 AND notes LIKE ?",
+                "SELECT id, account_id, symbol, notes, created_at, position_size, status FROM trades "
+                "WHERE COALESCE(is_backtest,0)=0 AND notes LIKE ?",
                 ('%"maker_probe"%',)).fetchall()]
         finally:
             conn.close()

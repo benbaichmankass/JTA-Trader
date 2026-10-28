@@ -278,3 +278,30 @@ def test_sweep_only_touches_resting_probe_rows():
                                now=T0 + timedelta(seconds=10))
     assert s == {"resting": 1, "resolved": 1, "errors": 0}
     assert [u[0] for u in db.updates] == [7]
+
+
+def test_closed_row_with_resting_limit_is_cancelled_not_filled_into_an_untracked_position():
+    row, notes = _row()
+    row["status"] = "closed"
+    c = _Client()
+    upd = me.resolve_row(row, notes, client=c, cfg=DEMO, order_status=_status([{"status": "New", "filled_qty": 0}]),
+                         category="linear", now=T0 + timedelta(seconds=30))
+    assert c.cancelled and c.cancelled[0]["orderId"] == "lim-1" and not c.placed
+    assert json.loads(upd["notes"])["maker_probe"]["state"] == "cancelled_row_not_open"
+
+
+def test_fallback_targets_the_same_position_book(monkeypatch):
+    from src.runtime import bybit_position_mode
+
+    def fake_idx(kwargs, account_id, symbol, side):
+        kwargs["positionIdx"] = 1
+
+        class R:
+            idx, state, reason = 1, "hedge", None
+        return R()
+    monkeypatch.setattr(bybit_position_mode, "apply_position_idx", fake_idx)
+    c = _Client()
+    order = _order()
+    _submit_order(c, order, DEMO)
+    assert c.placed[-1]["positionIdx"] == 1
+    assert order["maker_probe_notes"]["maker_probe"]["fallback_kwargs"]["positionIdx"] == 1
