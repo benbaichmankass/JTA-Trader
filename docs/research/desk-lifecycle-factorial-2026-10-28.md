@@ -326,6 +326,10 @@ trades were re-judged by a fresh judge. **0 violations in the counted set.**
 | interaction (mgmt value Claude-entry − random-entry, n 419 pairs) | −0.006 [−0.118, +0.109] (indeterminate) | |
 | end to end (Claude entry x Claude mgmt − random entry x HOLD) | −0.288 [−0.426, −0.137] | |
 
+Robustness (added after the result; the registered 50-draw M1 above stays the primary): re-scoring the same 938 managed trades with
+100 matched-random draws per trade gives vs M1 −0.011 [−0.051, +0.034] (claude entries, n 473) and −0.049 [−0.077, −0.019] (random
+entries, n 465), the same reading. File: `comms/research/desk_lifecycle/full-c4e/robustness-m1-100/score.json` (`--m1-draws 100`).
+
 Paired sd of management dR MEASURED 1.01–1.02 R (the pilot's 1.06–1.18 R estimate held); the resolution achieved is about
 ±0.10 R per arm, as option C intended.
 
@@ -343,7 +347,7 @@ Paired sd of management dR MEASURED 1.01–1.02 R (the pilot's 1.06–1.18 R est
 1. On the C48 contract, Claude managing a whole trade at every-4-bars-plus-events check-ins **loses about 0.12–0.16 R per
    trade versus leaving the bracket alone**, on its own entries and on random ones alike. **FAIL. Nothing about it promotes.**
    The fresh-window confirmation is moot for a FAIL.
-2. INFERRED: the loss is **frequent tightening**. Claude moved a stop on 31 % of check-ins, and that is where the R went. It is
+2. INFERRED: the loss is **frequent tightening**. Claude moved a stop on 981 of the 3,156 scored check-ins (31 %), and that is where the R went. It is
    the failure mode the practice review predicts (judgement hurts as frequent tweaking). On random entries Claude is also
    significantly worse than the matched random intervention (M1), so its *timing* of those same actions is no better than
    chance; on its own entries it is indistinguishable from M1.

@@ -8,6 +8,15 @@ roadmap:
 - L-DESK
 - L-ATM
 kind: experiment
+practice_precedent: 'S1, T1 (docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md F.1; docs/reference/trading-and-model-practice-principles.md)'
+intervention_controls:
+  hold_to_bracket: true
+  # registered + primary verdict: 50 draws (frozen, see decision_rule). The 100-draw control below is the robustness
+  # re-score added after the result (comms/research/desk_lifecycle/full-c4e/robustness-m1-100/score.json); same decisions,
+  # same verdict (vs M1: -0.011 / -0.049 R vs registered -0.013 / -0.046 R).
+  matched_random: {draws: 100, registered_draws: 50}
+  best_static: {grid: [chandelier_2atr, chandelier_3atr, channel_10, channel_20, timestop_12, timestop_24, breakeven_1r, partial1r_chandelier3], excludes_test_folds: true}
+  bootstrap_group: week
 question: >-
   On 200 of the 732 committed judged-1 Claude entries (seeded) and one matched random partner each (same symbol, fold, side, ATR-unit bracket; 1h; 48-bar time stop), each trade walked bar by bar from fill to close by a judge
   that sees only the check-ins its policy triggers (C1E every bar; C4E every 4 bars + events; E events only: R milestones -0.5/+0.5/+1/+1.5/+2, ATR regime change, momentum flip, 12-bar level break), deciding hold |
