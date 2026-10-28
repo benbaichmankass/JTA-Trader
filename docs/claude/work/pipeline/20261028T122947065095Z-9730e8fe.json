@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-BELS1214-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CLOSE-LABELS-1214 session_01AFoLuLF5yKmAbNFyKq4KfV (dispatched by session_01AFoLuJi1vLTnYv9LbP6539)",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=60'  # trades 6761,6763,6764: notes.exit_price_source, exit_reason_source, closed_at"
+  },
+  "state": "queued",
+  "what": "[exit-price] Netting-attribution closes are priced off the 1-min candle at first-divergence and never upgraded to the venue stop fill. MEASURED trade 6764 (bybit_1 DEMO BTCUSDT trend_donchian, pkg-29c8e90b80c24835, 2026-10-28): exit_price 80999.9 with notes.exit_price_source=candle_at_close, package sl 80961.13, pnl -851.24 (local_compute). The label was healed to `sl` (exit_reason_source=venue_bracket_order, pre_label netting_attributed) by _sweep_exit_label_from_bracket_order, but price/pnl were left (that sweep never touches them), and _sweep_local_pnl_for_unpriced selects pnl IS NULL so it never revisits: _netting_apply_close (order_monitor.py ~L12937-12955) writes exit_price+pnl at once. INFERRED: a stop fill near 80961 would put pnl near -915 (about 63 USD worse); the fill row itself was not read (no diag route to exchange_fills). The 'tolerance' theory is NOT the cause: _classify_broker_exit is not on this path (0.05% above stop is irrelevant). FIX (Tier-2 runtime, propose): (1) new sweep or extension of _sweep_local_pnl_for_unpriced that, for closed rows with exit_price_source=candle_at_close AND a full own-leg fill in exchange_fills (exit_from_one_order_fills with own_order_ids), rewrites exit_price/pnl (net of close fees) with exit_price_source=exchange_fill and keeps the old values in notes.pre_fill_exit_price; (2) one-time data back-fill of 6764 via the same path (Tier-2 DB writeback). Also: package pkg-29c8e90b80c24835 closed with close_reason stuck_cascade_recovered (known gap BL-20260822-SEVEN-OF-EIGHT-TRADE-CLOSE-SITES-DO-NOT-CASCADE-THEIR-PACKAGE). Extends PI-20260929-WL2HIWVS-0002 (label half, done)."
+}

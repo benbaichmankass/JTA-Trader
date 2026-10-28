@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-BELS1214-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CLOSE-LABELS-1214 session_01AFoLuLF5yKmAbNFyKq4KfV (dispatched by session_01AFoLuJi1vLTnYv9LbP6539)",
+    "rerun": "git show origin/live-review/rows:comms/live_review/rows/LR-20261028T1214Z-pkg-29c8e90b80c24835.json | python3 -c \"import json,sys;r=json.load(sys.stdin);print(r['info_cutoff_at'],r['reviewed_at'],r['applied'])\""
+  },
+  "state": "queued",
+  "what": "[live-review] LTR reviewers write and 'apply' against packages whose position already closed at the venue, because package status stays open until the reconciler runs. MEASURED: rows LR-20261028T1214Z-pkg-29c8e90b80c24835 (BTC) and ...-pkg-11c1100f6cbb4667 (SOL) carry info_cutoff_at 12:14:17Z, state.open_r -0.826 with the stop 0.17R away, recommendation hold, applied=false, committed to live-review/rows at 12:18:25/12:18:37; the stops had already filled at ~12:14:35 (journal divergence 12:14:37, closed trades 6762/6764). live_review_apply.py L896 refuses only when order_packages.status != 'open', and that flipped at 12:19:14-12:19:21, so for ~4.5 min a tighten/close would have been attempted against a flat position (this time the action was hold, so no harm). FIX (Tier-1 for the brief/skill, Tier-2 for apply): (a) REVIEWER-BRIEF step 0: re-read position_telemetry for the package immediately before writing the row; if flat/absent, write disposition position_closed with recommendation null and applied=false; (b) live_review_apply.py: besides pkg.status, refuse (EXIT_REFUSED, detail 'position closed at venue') when position_telemetry shows no open qty for any account carrying the package, and have the rows watcher skip a row whose package closed after info_cutoff_at; (c) grader: exclude position_closed rows from decision grading (they are not decisions). Test: a fixture package status=open with telemetry flat -> apply refuses."
+}
