@@ -1,0 +1,18 @@
+{
+  "id": "LTR-ROWS-BRANCH-STALE-VALIDATOR",
+  "title": "Rows branch carries stale validator+schema (level: number|null); reviewers' gate fails on rows 19-22",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "LTR-VALIDATOR-STALE",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Diagnosis 2026-10-28: (b) branch tooling stale, rows 19-22 are VALID. origin/live-review/rows tree has old live_review.schema.json (trigger.level number|null) + old checker; main allows string. Main's checker+schema on the branch's 27 rows: only row 17 (LR-20261026T2311Z-pkg-6a8e3fb325464be3: id/package mismatch + real-money insufficient_n, malformed legacy) fails; mirror runs main's rules so rows 19-22 are already on main and row 17 is skipped permanently as schema: (soft, exit 0). Blocks nothing real. Fix: live-trade-review SKILL.md step 6.2 must say validate with main's copies (git show origin/main:scripts/ci/check_live_review_records.py + comms/schema/live_review.schema.json) when the checkout is the rows branch; never rewrite the branch.",
+  "updated_at": "2026-10-28T12:17:28Z",
+  "updated_by": "session_01AFoLuNJrWGDW4ymRLM7WDy",
+  "_seq": 753
+}
