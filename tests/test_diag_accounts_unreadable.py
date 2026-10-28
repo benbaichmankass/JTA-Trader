@@ -95,3 +95,32 @@ def test_unknown_account_id_is_404(client, monkeypatch, route):
     body = r.json()["detail"]
     assert body["error"] == "unknown_account_id"
     assert body["account_id"] == "bybit_typo"
+
+
+def test_bybit_margin_fields_reported_on_a_healthy_available_read(client, monkeypatch):
+    """BYBIT1-AVAILABLE-USD-ZERO: margin_fields used to appear only when the
+    available read FAILED, so a valid venue_available 0.00 beside ~122k equity
+    could not be explained. They are now on every bybit row."""
+    from src.units.accounts import clients
+    from src.units.ui import data_loaders
+
+    monkeypatch.setattr(data_loaders, "list_accounts",
+                        lambda: [{"account_id": "bybit_1", "exchange": "bybit"}])
+
+    class _C:
+        def get_wallet_balance(self, accountType):
+            return {"retCode": 0, "result": {"list": [{
+                "accountType": "UNIFIED", "totalEquity": "122000",
+                "totalAvailableBalance": "0", "totalInitialMargin": "12000",
+                "coin": [{"coin": "USDT"}]}]}}
+
+    monkeypatch.setattr(clients, "bybit_client_for", lambda acc: _C())
+    monkeypatch.setattr("src.web.api.routers.diag._bybit_identity",
+                        lambda c: {"read_state": "identity_read", "user_id": "u"})
+    r = _get(client, "/api/diag/broker_account_status", account_id="bybit_1")
+    assert r.status_code == 200, r.text
+    row = r.json()["accounts"][0]
+    # collapsed-state: venue_available — this test stubs ONE healthy wallet response to pin that margin_fields ride along on a non-failing read; the other three read states are pinned in tests/test_bybit_available_read_state.py
+    assert row["available_margin"]["read_state"] == "venue_available"
+    assert row["margin_fields"]["totalEquity"] == "122000"
+    assert row["margin_fields_error"] is None

@@ -8,70 +8,70 @@
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 28.1001,
-  "expectancy_r_oos": 0.4607,
+  "net_r_oos": 31.4579,
+  "expectancy_r_oos": 0.5157,
   "n_trades_oos": 61,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
       "trades": 15,
-      "net_r": 5.883,
-      "expectancy_r": 0.3922,
-      "start": "2025-10-27 10:00:00+00:00",
-      "end": "2026-01-16 22:00:00+00:00"
+      "net_r": 10.3945,
+      "expectancy_r": 0.693,
+      "start": "2025-11-01 16:00:00+00:00",
+      "end": "2026-01-19 04:00:00+00:00"
     },
     {
       "fold": 2,
       "trades": 15,
-      "net_r": 15.9404,
-      "expectancy_r": 1.0627,
-      "start": "2026-01-19 04:00:00+00:00",
-      "end": "2026-05-18 22:00:00+00:00"
+      "net_r": 16.4554,
+      "expectancy_r": 1.097,
+      "start": "2026-01-30 20:00:00+00:00",
+      "end": "2026-05-28 18:00:00+00:00"
     },
     {
       "fold": 3,
       "trades": 15,
-      "net_r": -2.0684,
-      "expectancy_r": -0.1379,
-      "start": "2026-05-28 18:00:00+00:00",
-      "end": "2026-07-30 00:00:00+00:00"
+      "net_r": -2.7315,
+      "expectancy_r": -0.1821,
+      "start": "2026-06-06 08:00:00+00:00",
+      "end": "2026-08-03 08:00:00+00:00"
     },
     {
       "fold": 4,
       "trades": 16,
-      "net_r": 8.3451,
-      "expectancy_r": 0.5216,
-      "start": "2026-08-03 08:00:00+00:00",
-      "end": "2026-10-15 20:00:00+00:00"
+      "net_r": 7.3395,
+      "expectancy_r": 0.4587,
+      "start": "2026-08-07 18:00:00+00:00",
+      "end": "2026-10-24 02:00:00+00:00"
     }
   ],
   "folds_positive": 3,
   "window_days": 365,
-  "fee_bps_roundtrip": 7.5,
+  "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
     "n": 61,
-    "max_drawdown_r": 9.4736,
-    "max_drawdown_at_trade": 44,
-    "final_equity_r": 28.1001,
-    "max_equity_r": 28.1001,
-    "worst_trade_r": -1.0914,
-    "best_trade_r": 3.9206,
-    "worst_day_r": -2.0583,
+    "max_drawdown_r": 9.6399,
+    "max_drawdown_at_trade": 43,
+    "final_equity_r": 31.4579,
+    "max_equity_r": 31.4579,
+    "worst_trade_r": -1.1026,
+    "best_trade_r": 3.9046,
+    "worst_day_r": -2.075,
     "worst_day_date": "2026-06-07",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
   },
   "cost_stack": {
-    "fees": 7.5,
+    "fees": 11.0,
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-18/ada_pullback_2h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__bt.json"
   },
-  "net_r_oos_fee_only": 30.054,
+  "net_r_oos_fee_only": 33.4891,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,12 +79,31 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-18T16:00:03.977885+00:00",
+  "generated_at": "2026-10-28T18:22:01.719657+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-18/ada_pullback_2h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl",
   "error": null,
   "harness": "pullback",
   "venue_bracket_arm": null,
-  "decision_bar": "closed",
-  "decision_bar_note": "The Stage-0 harness scores the CLOSED bar, and since 2026-10-22 the leg trades it (config decision_bar: closed, operator \"Split: 3 to closed, 2 stay\", checklist DECISION-BAR-MATCH; evidence docs/research/evidence/decision-bar-match-2026-10-22.json). Measured fields unchanged; config_fingerprint re-stamped (inert, tests/test_decision_bar_closed_fingerprint_inert.py)."
+  "rebaseline_history": [
+    {
+      "superseded_at": "2026-10-28",
+      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
+      "net_r_oos": 28.1001,
+      "expectancy_r_oos": 0.4607,
+      "n_trades_oos": 61,
+      "fee_bps_roundtrip": 7.5,
+      "window_days": 365,
+      "window": [
+        "2025-10-27 10:00:00+00:00",
+        "2026-10-15 20:00:00+00:00"
+      ],
+      "generated_at": "2026-10-18T16:00:03.977885+00:00",
+      "source_run": "comms/strategy_evidence/runs/2026-10-18/ada_pullback_2h__trades.jsonl",
+      "decision_rule_verdict": "pass",
+      "folds_positive": 3
+    }
+  ],
+  "decision_bar_note": "The Stage-0 harness scores the CLOSED bar, and since 2026-10-22 the leg trades it (config decision_bar: closed, operator \"Split: 3 to closed, 2 stay\", checklist DECISION-BAR-MATCH; evidence docs/research/evidence/decision-bar-match-2026-10-22.json). Measured fields unchanged; config_fingerprint re-stamped (inert, tests/test_decision_bar_closed_fingerprint_inert.py).",
+  "decision_bar": "closed"
 }

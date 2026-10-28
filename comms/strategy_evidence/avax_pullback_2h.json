@@ -12,70 +12,70 @@
     "trail_decay_stall_bars",
     "trail_decay_tight_mult"
   ],
-  "net_r_oos": -1.3981,
-  "expectancy_r_oos": -0.0245,
-  "n_trades_oos": 57,
+  "net_r_oos": -8.2515,
+  "expectancy_r_oos": -0.1587,
+  "n_trades_oos": 52,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 14,
-      "net_r": 8.3931,
-      "expectancy_r": 0.5995,
-      "start": "2025-10-08 14:00:00+00:00",
-      "end": "2025-11-21 18:00:00+00:00"
+      "trades": 13,
+      "net_r": 2.165,
+      "expectancy_r": 0.1665,
+      "start": "2025-11-01 16:00:00+00:00",
+      "end": "2026-01-03 16:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 14,
-      "net_r": 0.1576,
-      "expectancy_r": 0.0113,
-      "start": "2025-11-28 18:00:00+00:00",
-      "end": "2026-02-07 08:00:00+00:00"
+      "trades": 13,
+      "net_r": 1.3936,
+      "expectancy_r": 0.1072,
+      "start": "2026-01-17 02:00:00+00:00",
+      "end": "2026-03-28 08:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 14,
-      "net_r": -1.7364,
-      "expectancy_r": -0.124,
-      "start": "2026-02-15 14:00:00+00:00",
-      "end": "2026-06-06 10:00:00+00:00"
+      "trades": 13,
+      "net_r": -5.5047,
+      "expectancy_r": -0.4234,
+      "start": "2026-04-08 20:00:00+00:00",
+      "end": "2026-07-26 14:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 15,
-      "net_r": -8.2124,
-      "expectancy_r": -0.5475,
-      "start": "2026-06-20 10:00:00+00:00",
-      "end": "2026-09-21 18:00:00+00:00"
+      "trades": 13,
+      "net_r": -6.3054,
+      "expectancy_r": -0.485,
+      "start": "2026-07-27 18:00:00+00:00",
+      "end": "2026-10-24 20:00:00+00:00"
     }
   ],
   "folds_positive": 2,
   "window_days": 365,
-  "fee_bps_roundtrip": 7.5,
+  "fee_bps_roundtrip": 11.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 57,
-    "max_drawdown_r": 11.1477,
-    "max_drawdown_at_trade": 55,
-    "final_equity_r": -1.3981,
-    "max_equity_r": 9.5918,
-    "worst_trade_r": -1.093,
-    "best_trade_r": 3.8939,
-    "worst_day_r": -2.0922,
+    "n": 52,
+    "max_drawdown_r": 14.8215,
+    "max_drawdown_at_trade": 52,
+    "final_equity_r": -8.2515,
+    "max_equity_r": 6.57,
+    "worst_trade_r": -1.1058,
+    "best_trade_r": 3.8806,
+    "worst_day_r": -2.1197,
     "worst_day_date": "2026-07-27",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
   },
   "cost_stack": {
-    "fees": 7.5,
+    "fees": 11.0,
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-09-25/avax_pullback_2h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-10-28/avax_pullback_2h__bt.json"
   },
-  "net_r_oos_fee_only": 0.3589,
+  "net_r_oos_fee_only": -6.5667,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -83,9 +83,29 @@
     "verdict": "fail"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-25T09:57:24.836096+00:00",
+  "generated_at": "2026-10-28T18:22:01.752436+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-09-25/avax_pullback_2h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-10-28/avax_pullback_2h__trades.jsonl",
   "error": null,
-  "harness": "pullback"
+  "harness": "pullback",
+  "venue_bracket_arm": null,
+  "rebaseline_history": [
+    {
+      "superseded_at": "2026-10-28",
+      "reason": "COST-STACK-RECOST-SWEEP: Bybit-linear fee 7.5 -> 11.0 bps round-trip",
+      "net_r_oos": -1.3981,
+      "expectancy_r_oos": -0.0245,
+      "n_trades_oos": 57,
+      "fee_bps_roundtrip": 7.5,
+      "window_days": 365,
+      "window": [
+        "2025-10-08 14:00:00+00:00",
+        "2026-09-21 18:00:00+00:00"
+      ],
+      "generated_at": "2026-09-25T09:57:24.836096+00:00",
+      "source_run": "comms/strategy_evidence/runs/2026-09-25/avax_pullback_2h__trades.jsonl",
+      "decision_rule_verdict": "fail",
+      "folds_positive": 2
+    }
+  ]
 }

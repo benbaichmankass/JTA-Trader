@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "giveback_census.py on a 30d closed_at-filtered dump: deep_then_loss >= 0.20 with n_deep >= 40 -> hit (real; the exit unit's result decides the lever); < 0.15 -> miss (noise; kill).",
+    "kind": "event"
+  },
+  "id": "PI-20261028-PVRNY2JI-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "performance-review 2026-10-28 (lane PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji); docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE §3",
+    "rerun": "python3 scripts/research/giveback_census.py --telemetry-file <position_telemetry?limit=5000 dump> --trades-file <journal trades dump filtered to closed_at>=now-30d> --min-n 10"
+  },
+  "owner": "perf-followup",
+  "routed_to": "/perf-followup Track 2 -> exit-refinement unit, dispatched by the manager after the 2026-10-28 review PR merges",
+  "state": "routed",
+  "what": "[performance][exit] D2: giveback is rising. Paper+mirror share of peak R given back: 91% (90d, n=351) -> 107% (30d, n=73) -> 133% (7d, n=24). Deep-then-loss (peak >= 1R, closed <= 0): 12% of 126 in the prior 60d vs 31% of 32 in the last 30d (Fisher p=0.013, about 4 comparisons). Hypotheses: regime chop with a non-adapting exit path (p 0.5), measurement/coverage (0.25), noise (0.25). One exit-refinement unit split by regime cell and family; it must separate exits at the declared stop from exits at an amended (trailed) stop, and retain its --emit-trades artifact."
+}

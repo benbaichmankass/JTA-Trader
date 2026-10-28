@@ -1,0 +1,256 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "option C: 520 pairs (judged-1 Claude entries + matched random), policy C4E, 938 of 1,040 trades fully walked by 89 Sonnet plan judges; 1h Binance Vision USD-M perps; cost stack fee 11.0 + slippage 3.0 bps RT, funding 1.0 bps/8h",
+  "n": 938,
+  "measurement": {
+    "verdict": "fail",
+    "read_state": "measured",
+    "rule": "RULE-RQ20261028-D1F5-02-LIFECYCLE (v2, option C)",
+    "labels": {
+      "mgmt_value|claude_entry": [
+        "fail",
+        "CI upper < 0: it costs R"
+      ],
+      "mgmt_value|random_entry": [
+        "fail",
+        "CI upper < 0: it costs R"
+      ],
+      "entry_value|hold": [
+        "indeterminate",
+        "CI straddles 0 or < 3 folds positive"
+      ],
+      "entry_value|claude_mgmt": [
+        "indeterminate",
+        "CI straddles 0 or < 3 folds positive"
+      ],
+      "interaction": [
+        "indeterminate",
+        "CI straddles 0 or < 3 folds positive"
+      ]
+    },
+    "accounting": {
+      "pairs": 520,
+      "pending_claude_mgmt": 102,
+      "decisions": 3156,
+      "invalid": 0,
+      "actions": {
+        "hold": 2001,
+        "partial_close": 57,
+        "tighten_sl": 981,
+        "close": 72,
+        "move_tp": 45
+      },
+      "moved_stop_exits": 350,
+      "policy": "C4E"
+    },
+    "primary": {
+      "mgmt_value|claude_entry": {
+        "n": 473,
+        "weeks": 32,
+        "mean": -0.15888444669562102,
+        "sd": 1.0231744478621574,
+        "ci95": [
+          -0.26127332768134776,
+          -0.04060282389067377
+        ],
+        "folds_positive": 1,
+        "folds": {
+          "1": {
+            "n": 148,
+            "mean": -0.09552164518951468
+          },
+          "2": {
+            "n": 287,
+            "mean": -0.22785513046731845
+          },
+          "3": {
+            "n": 30,
+            "mean": 0.0641769009526672
+          },
+          "4": {
+            "n": 8,
+            "mean": 0.3067469520699773
+          }
+        },
+        "n_to_resolve_0.10R": 821
+      },
+      "mgmt_value|random_entry": {
+        "n": 465,
+        "weeks": 32,
+        "mean": -0.12367424015514326,
+        "sd": 1.009963294985699,
+        "ci95": [
+          -0.19745189354212822,
+          -0.04252847098691262
+        ],
+        "folds_positive": 1,
+        "folds": {
+          "1": {
+            "n": 137,
+            "mean": -0.12492523553277213
+          },
+          "2": {
+            "n": 288,
+            "mean": -0.1478123963525172
+          },
+          "3": {
+            "n": 31,
+            "mean": 0.0932701112402316
+          },
+          "4": {
+            "n": 9,
+            "mean": -0.07946307811934063
+          }
+        },
+        "n_to_resolve_0.10R": 800
+      },
+      "vs_m1|claude_entry": {
+        "n": 473,
+        "weeks": 32,
+        "mean": -0.013255012303212159,
+        "sd": 0.45491975424564834,
+        "ci95": [
+          -0.05358778771899854,
+          0.031425630038536385
+        ],
+        "folds_positive": 1,
+        "folds": {
+          "1": {
+            "n": 148,
+            "mean": -0.009890920644019459
+          },
+          "2": {
+            "n": 287,
+            "mean": -0.03802900594423106
+          },
+          "3": {
+            "n": 30,
+            "mean": 0.1650951117675539
+          },
+          "4": {
+            "n": 8,
+            "mean": 0.1444633486079033
+          }
+        },
+        "n_to_resolve_0.10R": 163
+      },
+      "vs_m1|random_entry": {
+        "n": 465,
+        "weeks": 32,
+        "mean": -0.046325297852522554,
+        "sd": 0.4433837529082329,
+        "ci95": [
+          -0.07237618239443536,
+          -0.01661412180710555
+        ],
+        "folds_positive": 1,
+        "folds": {
+          "1": {
+            "n": 137,
+            "mean": -0.06719873992438778
+          },
+          "2": {
+            "n": 288,
+            "mean": -0.052670618164527144
+          },
+          "3": {
+            "n": 31,
+            "mean": 0.07141145592909366
+          },
+          "4": {
+            "n": 9,
+            "mean": 0.06892741842222833
+          }
+        },
+        "n_to_resolve_0.10R": 155
+      },
+      "vs_b3|claude_entry": {
+        "n": 473,
+        "weeks": 32,
+        "mean": -0.0748671777990738,
+        "sd": 0.8770987940374609,
+        "ci95": [
+          -0.16223948124858745,
+          0.017595204823669882
+        ],
+        "folds_positive": 1,
+        "folds": {
+          "1": {
+            "n": 148,
+            "mean": -0.07867340762384886
+          },
+          "2": {
+            "n": 287,
+            "mean": -0.09807593524659275
+          },
+          "3": {
+            "n": 30,
+            "mean": 0.0641769009526672
+          },
+          "4": {
+            "n": 8,
+            "mean": 0.3067469520699773
+          }
+        },
+        "n_to_resolve_0.10R": 604
+      },
+      "vs_b3|random_entry": {
+        "n": 465,
+        "weeks": 32,
+        "mean": -0.10085210455639822,
+        "sd": 0.8923288617426427,
+        "ci95": [
+          -0.1672533789499476,
+          -0.026066560123866003
+        ],
+        "folds_positive": 1,
+        "folds": {
+          "1": {
+            "n": 137,
+            "mean": -0.07073520499766649
+          },
+          "2": {
+            "n": 288,
+            "mean": -0.13674205305353462
+          },
+          "3": {
+            "n": 31,
+            "mean": 0.0932701112402316
+          },
+          "4": {
+            "n": 9,
+            "mean": -0.07946307811934063
+          }
+        },
+        "n_to_resolve_0.10R": 625
+      }
+    },
+    "coverage": {
+      "registered_pairs": 520,
+      "trades": 1040,
+      "trades_fully_managed": 938,
+      "trades_pending_unjudged": 102,
+      "unjudged_batches": "b088-b099 (budget stop at the $200 ceiling)"
+    },
+    "spend_usd_api_equivalent": {
+      "full_run_judges_measured": 159.48,
+      "pilot_v2_judges_measured": 6.85,
+      "orchestration_session": "INFERRED ~$25-35, not measurable from inside the session"
+    },
+    "isolation": {
+      "judge_transcripts": 89,
+      "violations": 1,
+      "voided": "b018 (one stray `sleep 0; true`), decisions voided and re-judged by a fresh judge; 0 violations in the counted set"
+    }
+  },
+  "note": "Claude management FAILS vs HOLD on both entry sources (CI upper < 0); see design doc 7.5",
+  "data_inputs": [
+    "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+    "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+    "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+    "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+    "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+    "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+  ]
+}
