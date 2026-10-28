@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "first ib_paper row for SPY/QQQ/IWM/TLT/GLD with status open or closed and both sl_order_id and tp_order_id set",
+    "kind": "observation"
+  },
+  "id": "PI-20261028-JFQVEKUK-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "deploy",
+    "ref": "lane IB-PAPER-SILENT-DROP 2026-10-28, PR #20974",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1500' | python3 -c \"import sys,json;print([(r['id'],r['strategy_name'],r['symbol'],r['status'],r.get('sl_order_id'),r.get('tp_order_id')) for r in json.load(sys.stdin) if r['account_id']=='ib_paper' and r['symbol'] in ('SPY','QQQ','IWM','TLT','GLD')])\""
+  },
+  "state": "queued",
+  "what": "CLOSING OBSERVATION for IB-PAPER-SILENT-DROP (#20974, merged 2026-10-28T20:12Z as 6e5418667; supersedes PI-20261027-IVY3AC88-0001's diagnosis). Merged != deployed != observed: at 20:15Z the VM ran 87d4dc63e, one commit BEFORE the merge, so the trader does not yet run the fix and needs the allowlisted restart after ict-git-sync pulls. Closes when the first ETF leg signal (spy_trend_long_1d, qqq_trend_long_1d, iwm_trend_long_1d, tlt_pullback_1d or gld_pullback_1d) after deploy yields an ib_paper trades row that is status open/closed with a SL and TP order id (clean bracket). Until then check each ETF package's meta: ib_paper must appear in sized_qty_by_account or in dispatch_exclusions_by_account, never in neither. The IB STK order path (IBClient._build_contract, whole-share sizing) has NEVER run live, so a failed/rejected first row is a finding to root-cause, not noise. Daily legs fire rarely, so this may take days."
+}
