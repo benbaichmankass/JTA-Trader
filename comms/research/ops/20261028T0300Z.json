@@ -1,0 +1,61 @@
+{
+  "run": "RESEARCH-OPS-2026-10-28-0248",
+  "finished_at": "2026-10-28T03:00:00Z",
+  "by": "session_01AFoLuN6rBSpmMQfBZVu972",
+  "floor": 62,
+  "floor_basis": "computed_floor(fired_24h 78)",
+  "authoring_queue_depth": 36,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "throughput": {"runnable_before": 46, "runnable_after": 46, "queued": 140, "fired_24h": 78, "results_landed_24h": 94, "hours_since_last_dispatch": 1.3, "idle_alarm": false,
+                 "after_basis": "no queue units authored; H1-REFILL says templates hold 66 unclaimed points for a deficit of 16, so research-queue-replenish.yml is the refill (not run by this pass)"},
+  "mechanism": {"dispatch_receipt": "ok (last dispatch 1.3 h ago)", "collector": "ok (0 unreadable result files)", "stranded_stamp_prs": "not listed this pass (GitHub Actions MCP did not connect)", "incident": null,
+                "watchdog": "watchdog_incidents.jsonl not re-read this pass"},
+  "results_read": {
+    "pass": 3, "fail": 15, "indeterminate": 5,
+    "units": [
+      "25 result files landed since 21:10Z, read at verdict + power_state level plus the rule text of 5 units; per-arm tables were not opened. Population: git log --since over research/results.",
+      "RQ-20261026-e535-02 PASS (desk D-S0 random-entry baseline; infra/baseline, not an edge claim); 0142-19 PASS (command resolvability, infra)",
+      "RQ-20261027-3e41-15 / -16 INDETERMINATE (15m direction vs class prior: lgbm_reg beats prior by +0.0007/+0.0006/+0.0004 nats on BTC/ETH/SOL, below the +0.002 pass bar and above the 0 fail floor, SOL not sign-consistent): extend/redesign; direction line stays open",
+      "RQ-20261026-47a9-01 INDETERMINATE (alpaca_live Donchian-30 ETF confirmation): accruing power, not a verdict",
+      "RQ-20261026-e535-04 INDETERMINATE: 732 valid proposals, filled 0, 457 unclassifiable novelty, stopping rule not respected (judged 1498 packets, not a schedule prefix) -> scorer/stopping-rule defect, not a result; filed as handoff",
+      "FAIL: configuration closed: michigan_sentiment/continuing_claims/durable_goods/adp surprise books (ed1c-23..26), zero-weight study; the news layer and WEPE are NOT retired",
+      "FAIL: configuration closed: logistic regression regime head at 1h (ed1c-34); model family stays open",
+      "FAIL: configuration closed: xrp_4h basket C transfer (1b57-06), eth_pullback_prop_2h R-armed trail (90d3-08), Donchian-55 trail 6.0 prop pace (f679-02); families stay open",
+      "FAIL: configuration closed: skip-hours SA/SU on sol_prop and eth_prop (3e41-09/-10), vol-skip VL20/VL30 on sol_prop (3e41-11); trend_donchian prop family stays open; next test = 3e41-12..14 (eth vol-skip, adx-max) and 4ceb-01..03 (120-bar time-close, TP 3R)",
+      "3e41-01 (sol_4h vol-skip) and 4ceb-01 landed FAIL at the verdict.json level (no_reachable_lever_beats_removed); the grader will close them against their own registered rules",
+      "RQ-20261005-010 wiring_only (generated weekly re-run): not a verdict"
+    ],
+    "note": "Counts are the verdict field of the first row of each of the 25 landed files; 3e41-12/-13/-14 and 4ceb-02/-03 were not individually opened and are counted in the fail/indeterminate tallies only via that field. The grader (research-queue-grade.yml) closes units whose rows attest their own rule; ungraded now: 0142-20, 0142-21, f50f-01 (RESULTS-UNDISPOSITIONED 3)."
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": [],
+  "followups_filed": [],
+  "authoring": {
+    "queue_depth": 36,
+    "nodes_drafted": 0,
+    "nodes": [],
+    "theme_shortfall": {"regime": "14 vs share 15", "ml_health": "0 vs share 9", "new_strategy_prop": "2 vs share 17", "infra": "7+1 vs share 6 (met)"},
+    "note": "Step E.0 not done this pass: the results read produced no verdict whose next question is missing from the programme tree, and the budget went on reading the 25 landed results. OPS-AUTHOR-SKIPPED may warn; ml_health 0 runnable is the largest shortfall."
+  },
+  "not_run": [
+    "A: stranded automation PR list and dispatch/collector/grader workflow runs (GitHub Actions MCP did not connect); watchdog incidents file not re-read",
+    "B: no top-up: runnable 46 < floor 62; refill is research-queue-replenish.yml (templates hold 66 unclaimed points for a deficit of 16)",
+    "C: needs_review triage not done (28 left, 25 owned); blocked/ audit not done",
+    "D: per-arm tables not opened; ML plan write-back and programme write-back not checked",
+    "E: no hand units and no programme nodes authored; ml_health / new_strategy_prop / regime shortfalls stand",
+    "routing of due pipeline items: 504 due, all soak items already routed to AUD-20261019-SOAK-ITEMS-LONG-EXIT; none re-routed this pass",
+    "pytest and the guards were not run beyond check_pr_landing"
+  ],
+  "handoff": [
+    "ml_health has 0 runnable units against a share of 9 and new_strategy_prop 2 against 17: author toward these first (step E.0, authoring queue 36 deep, top ask P3-Q1-live-bt-stage-b is blocked on row LIVE-BT-STAGE-B).",
+    "RQ-20261026-e535-04: desk novelty-subset unit filled 0 of 732 proposals and broke its own stopping rule; look at the scorer's novelty classifier (457 unclassifiable) before re-running.",
+    "3e41-15/-16 (15m direction, INDETERMINATE between bars): redesign or extend, one unit each.",
+    "The 4 P1-ATM confirmation nodes from the previous pass: check queue_replenish.py --authoring-queue for P1-ATM once the grader closes ed1c-07/-10/-17 and 1b57-08.",
+    "Open rows with overdue observations that this pass did not re-check: TP-DOCTRINE-W43 (bea9-01/-02 landed PASS; whether their TP proposals were dispositioned was not verified), PATHSTATE-TRAIL-GATE (b7e1-04/-07 landed FAIL).",
+    "Tier-3 candidates carried from the previous record (SL arm ed1c-07, C75 ed1c-10, BE ed1c-17) still need a disjoint-window confirmation first; none is a config change."
+  ]
+}

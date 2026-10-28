@@ -516,12 +516,18 @@ class LegList:
     ext: List[int] = field(default_factory=list)       # exit epochs
 
 
+# The arm under test is not part of "the strategies' book" it is compared with: it has no Stage-0 list (it is a
+# proposal-queue leg, not a candle strategy), and left in it makes every non-duplicate cell `unclassifiable`.
+DESK_OWN_LEGS = frozenset({"claude_desk"})
+
+
 def rostered_legs(symbols: Iterable[str]) -> Dict[str, set]:
     """{symbol: {strategy names on ANY account roster whose strategies.yaml entry trades that symbol and is not
     `enabled: false`}}: the system's book, by config (RULE ONE: the roster is read, not assumed). A shadow leg
     stays in (it builds and logs packages); a disabled one produces none."""
     acc, strat = dsp._load_cfg()
     names = {s for a in acc.values() if isinstance(a, dict) and a.get("configured") is not False for s in (a.get("strategies") or [])}
+    names -= DESK_OWN_LEGS
     out: Dict[str, set] = {s: set() for s in symbols}
     for n in names:
         cfg = strat.get(n) or {}
@@ -736,13 +742,28 @@ def grade_arm(st: Dict[str, Any], *, n_min: int, selfcheck: Optional[bool], labe
     return "pass", why
 
 
+def stopping_design(judged_idx: List[int], key_idx: Iterable[int], valid_index: List[int]) -> Dict[str, Any]:
+    """The registered stopping rule's accounting. The schedule is the mask key's index set, NOT range(n): a packet
+    withheld at build time (mask leak) has no key and was never offered to a judge, so its hole is not a skipped
+    packet. Judged packets are a PREFIX when they are exactly the keyed indices up to the last judged one."""
+    idx = sorted(judged_idx)
+    keyed = sorted(set(int(k) for k in key_idx))
+    prefix_ok = bool(idx) and idx == [k for k in keyed if k <= idx[-1]]
+    last_start = ((idx[-1]) // BATCH) * BATCH if idx else 0
+    n_before_last = sum(1 for j in valid_index if j < last_start)
+    return {"packets_judged": len(idx), "is_schedule_prefix": prefix_ok, "batch": BATCH, "stop_proposals": STOP_PROPOSALS,
+            "valid_proposals_before_last_batch": n_before_last, "valid_proposals_total": len(valid_index),
+            "schedule_exhausted": bool(idx) and idx[-1] >= SCHEDULE_LEN - 1,
+            "stopping_rule_respected": bool(prefix_ok and (n_before_last < STOP_PROPOSALS))}
+
+
 def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict]],
           legs: List[LegList], rostered: Dict[str, set], *, subset: str, cutoff: Optional[datetime],
           selfcheck: Optional[bool], seed: int = SEED, draws: int = B_R_DRAWS) -> Dict[str, Any]:
     rng = np.random.default_rng(seed + 7)
     rng_vm = np.random.default_rng(seed + 11)       # companions draw from their OWN stream: the registered S3 draws are unchanged
     recs: List[dict] = []
-    counts = {"proposals_valid": 0, "filled": 0, "unfilled": 0, "refused": 0, "unresolved": 0,
+    counts = {"proposals_valid": 0, "filled": 0, "filled_in_subset": 0, "unfilled": 0, "refused": 0, "unresolved": 0,
               "novelty": {}, "excluded_by_subset": 0}
     pools: Dict[Tuple[str, int], np.ndarray] = {}
     valid_index: List[int] = []                      # packet index of EVERY valid proposal, whatever its fate
@@ -768,10 +789,11 @@ def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict
             if t.state != "filled":
                 counts[t.state] = counts.get(t.state, 0) + 1
                 continue
+            counts["filled"] += 1                                   # every fill, whatever its novelty
             if subset == "new" and nov not in ("new", "new_no_leg"):
                 counts["excluded_by_subset"] += 1
                 continue
-            counts["filled"] += 1
+            counts["filled_in_subset"] += 1
             g = geometry_of(s, i, side, pr["entry"]["type"], lvl, stp, tpl, pr["entry"]["good_till_bars"], pr["horizon_bars"])
             br = None
             if g is not None:
@@ -794,14 +816,7 @@ def score(mkt: Dict[str, Series], keys: Dict[str, dict], by: Dict[str, List[dict
     # the registered stopping rule: judged packets are a schedule PREFIX, taken in whole batches, and the run stopped
     # as soon as the count of VALID proposals (a count taken before any replay, so it cannot depend on a result)
     # reached STOP_PROPOSALS
-    idx = sorted(int(keys[pid]["index"]) for pid in by)
-    prefix_ok = idx == list(range(len(idx)))
-    last_start = ((len(idx) - 1) // BATCH) * BATCH if idx else 0
-    n_before_last = sum(1 for j in valid_index if j < last_start)
-    design = {"packets_judged": len(idx), "is_schedule_prefix": prefix_ok, "batch": BATCH, "stop_proposals": STOP_PROPOSALS,
-              "valid_proposals_before_last_batch": n_before_last, "valid_proposals_total": len(valid_index),
-              "schedule_exhausted": len(idx) >= SCHEDULE_LEN,
-              "stopping_rule_respected": bool(prefix_ok and (n_before_last < STOP_PROPOSALS))}
+    design = stopping_design([int(keys[pid]["index"]) for pid in by], [k["index"] for k in keys.values()], valid_index)
     st = cluster_stats(recs, seed)
     st["n"] = len(recs)
     st["companions"] = s3_companions(recs, seed)
@@ -1251,14 +1266,10 @@ def cmd_intake(a: argparse.Namespace) -> int:
         print(json.dumps(err))
         return 2
     keys, packets, by, intake = got
-    idx = sorted(int(keys[pid]["index"]) for pid in by)
-    valid = sum(len(v) for v in by.values())
-    last_start = ((len(idx) - 1) // BATCH) * BATCH if idx else 0
-    before = sum(len(v) for pid, v in by.items() if int(keys[pid]["index"]) < last_start)
-    print(json.dumps({"packets_judged": len(idx), "is_schedule_prefix": idx == list(range(len(idx))), "batch": BATCH,
-                      "valid_proposals_total": valid, "valid_proposals_before_last_batch": before, "stop_proposals": STOP_PROPOSALS,
-                      "next_batch_allowed": idx == list(range(len(idx))) and valid < STOP_PROPOSALS and len(idx) < SCHEDULE_LEN,
-                      "intake": intake}))
+    valid_index = [int(keys[pid]["index"]) for pid, v in by.items() for _ in v]
+    d = stopping_design([int(keys[pid]["index"]) for pid in by], [k["index"] for k in keys.values()], valid_index)
+    print(json.dumps({**d, "next_batch_allowed": d["is_schedule_prefix"] and d["valid_proposals_total"] < STOP_PROPOSALS
+                      and not d["schedule_exhausted"], "intake": intake}))
     return 0
 
 

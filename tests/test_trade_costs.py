@@ -25,8 +25,23 @@ class TestVenueAwareFeeBps:
 
     def test_other_venues_defer_to_estimator_default(self):
         r = self._resolver()
-        for sym in ("BTCUSDT", "MES", "MGC", "EURUSD"):
+        for sym in ("MES", "MGC", "EURUSD", "NOT_A_SYMBOL"):
             assert r(sym) is None, sym
+
+    def test_bybit_linear_resolves_to_measured_taker_fee(self):
+        # 2 x 5.5 bps/side, 1,411 fills all taker (COST-STACK-BYBIT-TAKER-FEE)
+        r = self._resolver()
+        for sym in ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT", "BNBUSDT"):
+            assert r(sym) == 11.0, sym
+
+    def test_commission_free_still_wins_and_missing_block_keeps_default(self, tmp_path, monkeypatch):
+        import src.core.profile_loader as pl
+        f = tmp_path / "i.yaml"
+        f.write_text("instruments: {}\n")
+        assert pl._load_venue_roundtrip_fee_bps(str(f)) == {}
+        f.write_text("venue_roundtrip_fee_bps: {'bybit:linear': 11.0, 'bad': 3}\ninstruments: {}\n")
+        assert pl._load_venue_roundtrip_fee_bps(str(f)) == {("bybit", "linear"): 11.0}
+        assert self._resolver()("SPY") == 0.0
 
     def test_unknown_and_empty_defer(self):
         r = self._resolver()
@@ -105,7 +120,7 @@ class TestMigrationAndCloseWriter:
         ).fetchone()
         conn.close()
         assert src == "estimate"
-        assert abs(fee - 0.15) < 1e-6  # (7.5/1e4)*100*2*1 (BTCUSDT cvu=1)
+        assert abs(fee - 0.22) < 1e-6  # (11.0/1e4)*100*2*1 (BTCUSDT bybit:linear measured fee, cvu=1)
 
     def test_close_stamps_zero_for_commission_free_equity(self, db):
         # SPY (alpaca spot) is commission-free → estimate fee is $0, still

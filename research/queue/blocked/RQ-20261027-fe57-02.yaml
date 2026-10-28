@@ -56,11 +56,12 @@ blocked_on:
 - kind: work_item
   ref: DESK-EDGE-PROGRAM
   what: >-
-    BUILT on PR #20672: scripts/research/desk_edge_1m.py (1m d.Series through the driver's own transplant/random_baseline with d.SEC = 60; features from 1m perp
-    klines incl. taker-buy volume; aggTrades not yet used). The runner needs the `build` step first (1m klines for 2025-10..2026-09 from Binance Vision into
-    --klines, then `desk_edge_1m.py build --klines DIR --out /tmp/desk_edge_1m`); run.command is the scoring step.
+    run.command calls `desk_edge_1m.py run`, which needs a prior `build` directory (1m klines -> /tmp/desk_edge_1m). A runner starts empty, so
+    the unit cannot run as written. The lane's own run of this registered rule is committed at comms/research/desk_edge/ceiling-1m/verdict.json
+    (inconclusive; S1 < 0 at every hold; the large S3 is cost selection: doc section 4.6).
   clears_when: >-
-    scripts/research/desk_edge_1m.py and its tests are on main and the runner can run its build step. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
+    desk_edge_1m.py gains a single mode that fetches the 1m klines, builds and runs (or the unit's command chains them through a wrapper), with a
+    test; then git mv this file to research/queue/, remove blocked_on, set status: queued.
 compute: cpu_long
 value:
   usd_at_stake_per_month: 500

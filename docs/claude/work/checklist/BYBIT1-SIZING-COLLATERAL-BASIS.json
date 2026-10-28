@@ -1,0 +1,21 @@
+{
+  "id": "BYBIT1-SIZING-COLLATERAL-BASIS",
+  "title": "bybit_1: RiskManager sizes on ~122k equity while the UTA margin balance is ~38k (non-USDT collateral not counted); tight-stop legs take ~2x-equity notional and re-starve margin",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-27 22:25Z and 23:49Z (/api/diag/bybit_raw_positions?account_id=bybit_1 wallet block): total_equity ~122k, total_margin_balance ~38.5k. 1 BTC (~80.8k), 50k USDC and 1 ETH are not counted toward margin. After the leverage fix (BYBIT1-MARGIN-STARVED, done), one ict_scalp_5m BTCUSDT long (trade 6757, stop 0.29% from entry) took IM 23.4k at 10x (~234k notional) and left available at +6.3k (n=1 entry). QUESTIONS: (a) should RiskManager.position_size use the margin balance (or USDT wallet) instead of total equity as the risk basis on UTA accounts; (b) should demo-floor legs carry a notional or leverage cap so one tight-stop leg cannot take most of the margin; (c) or enable the BTC/USDC/ETH collateral on the demo account (a venue setting). Tier 3 (sizing). Decide with the operator; evidence: these two diag reads plus the daily risk_refused count for bybit_1.",
+  "updated_at": "2026-10-27T23:50:28Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 741
+}

@@ -76,7 +76,8 @@ PACKETS_DIR = REPO / "comms" / "desk" / "packets"
 TF_SECONDS = {"1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400}
 ATR_PERIOD = 14
 SWING_BARS = 20
-DEFAULT_HORIZONS = (4, 12, 48)
+# 1 bar of 1h = 60 min = the claude_desk hold cap (DESK-1H-HORIZON-MISMATCH): without it no 1h row prices a live hold
+DEFAULT_HORIZONS = (1, 4, 12, 48)
 DEFAULT_LOOKBACK = 3000       # bars of history behind the base rates
 N_FLOOR = 100                 # stated on the packet; below it a row is thin, not hidden
 MASK_ANCHOR = datetime(2000, 1, 1, tzinfo=timezone.utc)
