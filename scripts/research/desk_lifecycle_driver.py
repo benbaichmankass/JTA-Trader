@@ -754,6 +754,9 @@ def cmd_walk(a: argparse.Namespace) -> int:
     if a.trade == "PROTOCOL":                       # the judge reads its protocol through the one allowed command
         print((out / "WALK-PROTOCOL.md").read_text())
         return 0
+    if a.trade.startswith("BATCH-"):                # ... and its batch of trade tokens
+        print((out / "batches" / f"{a.trade[6:]}.txt").read_text())
+        return 0
     entries = {trade_token(SEED, e.entry_id): e for e in read_entries(out / "entries.jsonl")}
     e = entries.get(a.trade)
     if e is None:
