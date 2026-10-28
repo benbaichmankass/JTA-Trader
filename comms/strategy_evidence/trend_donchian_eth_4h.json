@@ -101,7 +101,16 @@
       "generated_at": "2026-10-22T10:44:46.903160+00:00",
       "source_run": "comms/strategy_evidence/runs/2026-10-22-forming/trend_donchian_eth_4h__trades.jsonl",
       "decision_rule_verdict": "pass",
-      "folds_positive": 3
+      "folds_positive": 3,
+      "superseded_measurement_annotations": {
+        "fold_basis": "equal_count (build_strategy_evidence.time_folds)",
+        "data_start": "2023-10-19 00:00:00+00:00",
+        "data_end": "2026-10-17 20:00:00+00:00",
+        "research_unit": "RQ-20261022-4de5-01",
+        "supersedes": "git:comms/strategy_evidence/trend_donchian_eth_4h.json@2026-10-18T16:30:21.431661+00:00"
+      }
     }
-  ]
+  ],
+  "decision_bar_note": "Evidence measured on the bar the leg TRADES (forming), per the operator's 2026-10-22 'match the bar' decision (checklist DECISION-BAR-MATCH). Trades are the forming arm of RQ-20261022-4de5-01 (forming_bar_pooled_regrade.leg_run, Binance USD-M 1m proxy, full cost stack) restricted to the superseded record's own window.",
+  "decision_bar": "forming"
 }
