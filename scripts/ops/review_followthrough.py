@@ -85,7 +85,7 @@ SOURCES: list[tuple[str, str]] = [
 ]
 REVIEW_SOURCES = [n for n, _ in SOURCES if n not in ("soak-watch", "code-audit", "system-audit")]
 OTHER = "other"
-_COMPILED = [(n, re.compile(r, re.I)) for n, r in SOURCES]
+_COMPILED = [(n, re.compile(r, re.IGNORECASE)) for n, r in SOURCES]
 _ROW_OPEN = ("queued", "in_flight", "blocked", "landed_unproven")
 _ROW_CLOSED = ("done", "dropped")
 #: Owner text that names nobody (MEASURED 2026-10-28: 4 open rows read "unassigned").
@@ -112,7 +112,7 @@ def _d(s) -> date | None:
 
 def _stamp_date(fname: str) -> date | None:
     m = _STAMP.match(fname or "")
-    return datetime.strptime(m.group(1), "%Y%m%d").date() if m else None
+    return date(int(m.group(1)[:4]), int(m.group(1)[4:6]), int(m.group(1)[6:])) if m else None
 
 
 # ── normalise both stores to one record shape ────────────────────────────────
@@ -127,7 +127,9 @@ def pipeline_records(store: Path = pipeline.STORE, rows: dict | None = None,
         for path in sorted(store.glob(f"*{pipeline.RECORD_SUFFIX}")):
             try:
                 rec = json.loads(path.read_text(encoding="utf-8"))
-            except Exception:  # noqa: BLE001 — counted by read_log as unreadable
+            except (OSError, ValueError):
+                rec = None  # counted by read_log as unreadable
+            if not isinstance(rec, dict):
                 continue
             iid, d = rec.get("id"), _stamp_date(path.name)
             if not isinstance(iid, str) or d is None:
@@ -248,9 +250,9 @@ def _fmt(x, pct: bool = False) -> str:
 def render(g: dict, meta: dict, sources: list[str]) -> str:
     w, n = meta["window_days"], meta["closed_within_days"]
     lines = [f"REVIEW FOLLOW-THROUGH  as of {meta['today']}  window {w} d  closed-within {n} d",
-             f"POPULATION: {meta['pipeline_items']} pipeline items (store {meta['pipeline_state']}, "
-             f"{meta['pipeline_unreadable']} unreadable) + {meta['checklist_rows']} checklist rows; "
-             f"source classified from id/origin/title text (see SOURCES)",
+             (f"POPULATION: {meta['pipeline_items']} pipeline items (store {meta['pipeline_state']}, "
+              f"{meta['pipeline_unreadable']} unreadable) + {meta['checklist_rows']} checklist rows; "
+              f"source classified from id/origin/title text (see SOURCES)"),
              "",
              f"{'source':<19}| cohort(filed {w}d): filed done kill open ≤{n}d | backlog(now): open due% med-age no-owner",
              "-" * 104]
@@ -324,7 +326,8 @@ def _selftest() -> int:
         return {"store": "pipeline", "id": f"X-{src}-{state}-{filed}", "source": src, "state": state,
                 "open": o, "filed": filed, "closed": closed, "due": due, "owned": owned, "what": "w"}
 
-    d = lambda n: today - timedelta(days=n)  # noqa: E731
+    def d(n):
+        return today - timedelta(days=n)
     recs = [rec("health-review", "done", d(3), d(2)),            # cohort, closed in 1 d
             rec("health-review", "killed", d(5), d(5)),          # cohort, closed in 0 d
             rec("health-review", "done", d(6), d(6) + timedelta(days=10)),  # cohort, slow (future ok)
@@ -361,7 +364,7 @@ def _selftest() -> int:
 
     # Smoke run against the live stores: must read, and sources must sum to total.
     try:
-        live, meta = run(today, 7, 7, 3, None)
+        _, meta = run(today, 7, 7, 3, None)
         check(meta["pipeline_state"] == "read", "live pipeline store unreadable")
         check(meta["pipeline_items"] > 0 and meta["checklist_rows"] > 0,
               "live smoke run read zero records — the probe cannot see the store")
