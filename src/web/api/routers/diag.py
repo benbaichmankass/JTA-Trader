@@ -3336,10 +3336,19 @@ def get_broker_account_status(
                         "is_substitute": read_state == AVAILABLE_STATE_DEPRECATED,
                         "could_not_look": read_state == AVAILABLE_STATE_UNAVAILABLE,
                     }
+                    # Margin fields + the per-coin block are reported on EVERY
+                    # read, not only when the available read failed
+                    # (BYBIT1-AVAILABLE-USD-ZERO, 2026-10-28): bybit_1 reads a
+                    # valid venue_available figure of 0.00 while equity is ~122k
+                    # and positionIM is ~12k, and with the fields shown only on
+                    # failure nothing could say where the other ~100k went.
+                    # Read-only; the sizer still does not consume them.
+                    fields, ferr = read_linear_margin_fields(client)
+                    row["margin_fields"] = fields
+                    row["margin_fields_error"] = ferr
                     if read_state == AVAILABLE_STATE_UNAVAILABLE:
                         row["error"] = "available_margin_unreadable"
-                        # Only when the read FAILED: surface Bybit's own
-                        # account-level margin fields verbatim. bybit_2's
+                        # On a FAILED read these matter most: bybit_2's
                         # response carries totalAvailableBalance PRESENT-but-
                         # EMPTY next to a populated totalEquity and
                         # totalInitialMargin — so the inputs for a derived
@@ -3348,9 +3357,6 @@ def get_broker_account_status(
                         # independently-reconstructed journal figure before
                         # any code is built on it. Nothing computes from these
                         # yet; interpreting them is an order-path change.
-                        fields, ferr = read_linear_margin_fields(client)
-                        row["margin_fields"] = fields
-                        row["margin_fields_error"] = ferr
             except Exception as exc:  # noqa: BLE001  # allow-silent: per-account error surfaced in the row; one account must not fail the call
                 row["error"] = f"{type(exc).__name__}: {exc}"
                 logger.warning("get_broker_account_status: %s raised %s", aid, exc)

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "clears_when": "GET /api/diag/broker_account_status?account_id=bybit_1 returns margin_fields with the per-coin block",
+    "event": "the HOLD PR lane/bybit1-available-usd-zero (diag margin_fields on every bybit read) is merged and deployed",
+    "kind": "event"
+  },
+  "id": "PI-20261028-EUSDZERO-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "BYBIT1-AVAILABLE-USD-ZERO lane (session_01AFoLuLMibKbG1UTfMLjpnY, dispatched by manager session_01AFoLuJi1vLTnYv9LbP6539)",
+    "rerun": "scripts/ops/diag_fetch.sh 'broker_account_status?account_id=bybit_1' | python3 -c \"import json,sys;r=json.load(sys.stdin)['accounts'][0];print(r['available_margin'],r.get('margin_fields'))\""
+  },
+  "state": "queued",
+  "what": "bybit_1 (Bybit demo, UTA): venue totalAvailableBalance reads 0.00 (read_state venue_available, NOT a read failure) while totalEquity ~122k and sum(positionIM) ~12k (venue leverage 10x vs sizer's configured 3x). 8 risk_refused rows since 2026-09-14, 5 in the last 8 days (10-20 x2, 10-27 x3; legs trend_donchian_eth_prop, trend_donchian_sol_prop, ict_scalp_5m, trend_donchian_eth, claude_desk). Available swings 0..24k with equity flat, so ~86-110k of equity is unavailable for a reason not yet read: candidates are non-USDT demo coins without collateral, haircut collateral, or resting-order reserve. NEXT: after the diag PR deploys, read margin_fields (totalEquity/totalMarginBalance/totalInitialMargin/totalAvailableBalance + full coin block) and attribute the gap. If it is non-collateral coin balance, the fix is a demo-account action (convert/fund USDT) not a code change; if it is the sizer assuming 3x vs 10x venue leverage, that is a Tier-2/3 sizing question for the manager. Also consider an alarm when venue_available==0 with equity>0 (collapsed-state class)."
+}

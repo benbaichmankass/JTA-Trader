@@ -304,3 +304,15 @@ def test_every_new_class_gets_its_own_use_rule_and_calibration():
     assert set(g["use_rules"]) >= {"close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry"}
     assert g["use_rules"]["close"]["n"] == 1 and g["use_rules"]["close"]["verdict"].startswith("HOLD_SCOPE")
     assert "close/judgement" in g["calibration"] and "move_tp/judgement" in g["calibration"]
+
+
+def test_price_all_joins_a_null_trade_id_through_the_package_link():
+    """WEEKLY-AUDIT-2026-10-28: both applied closes carried trade_id=null and read no_trade_row while the
+    journal held the closed rows; the package's linked_trade_id is the join."""
+    rv = review(action="close", level=None, applied=True, trade_id=None)
+    p = pkg(linked_trade_id=1)
+    out = cf.price_all([rv], {"pkg-t": p}, {1: trade(1.0)}, lambda s, i: bars((100, 100, 100, 100)))
+    assert out[0]["reason"] != "no_trade_row" and out[0]["trade_id"] == 1, out[0]
+    # no link and no trade_id stays a named reason, never a silent guess
+    out = cf.price_all([rv], {"pkg-t": pkg()}, {1: trade(1.0)}, lambda s, i: bars((100, 100, 100, 100)))
+    assert out[0]["reason"] == "no_trade_row"
