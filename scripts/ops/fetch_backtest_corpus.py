@@ -82,7 +82,7 @@ PAIRS: dict[tuple[str, str], tuple[str, str, int]] = {
     ("QLD", "1d"): (EQUITY, "D", 3650), ("QQQ", "1d"): (EQUITY, "D", 3650),
     ("QQQ", "1h"): (EQUITY, "60", 720), ("SCHA", "1d"): (EQUITY, "D", 3650),
     ("SLV", "1d"): (EQUITY, "D", 3650), ("SLV", "1h"): (EQUITY, "60", 720),
-    ("SPLG", "1d"): (EQUITY, "D", 3650), ("SPY", "1d"): (EQUITY, "D", 3650),
+    ("SPYM", "1d"): (EQUITY, "D", 3650), ("SPY", "1d"): (EQUITY, "D", 3650),
     ("SPY", "1h"): (EQUITY, "60", 720), ("TLT", "1d"): (EQUITY, "D", 3650),
     ("TLT", "1h"): (EQUITY, "60", 720), ("TQQQ", "1d"): (EQUITY, "D", 3650),
     ("USO", "1h"): (EQUITY, "60", 720),
