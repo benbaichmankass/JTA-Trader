@@ -44,7 +44,7 @@ for _p in (ROOT, ROOT / "scripts" / "ops"):
 
 MARKER = "desk-wake"
 NEAR_BARS = (0, 1)
-REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")  # tolerant of the JTA Trader repo rename
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")  # tolerant of the JTA Trader repo rename
 
 
 def _iso(t: datetime) -> str:

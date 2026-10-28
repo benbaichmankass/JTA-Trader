@@ -158,7 +158,7 @@ def alert(path: Path, now: datetime, max_age_days: int = MAX_AGE_DAYS,
     print(annotate(code, msg))
     kind = "STALE" if code == STALE else "UNREADABLE"
     text = (f"Grading {kind}: {msg} Check the grade-closed-trades.yml runs: "
-            "https://github.com/" + os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")
+            "https://github.com/" + os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")
             + "/actions/workflows/grade-closed-trades.yml")
     cmd = ["gh", "workflow", "run", "system-actions.yml", "-f", "action=send-ping",
            "-f", f"message={text}", "-f", "priority=high", "-f", "target=claude"]
