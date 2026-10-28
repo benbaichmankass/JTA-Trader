@@ -751,6 +751,12 @@ def cmd_walk(a: argparse.Namespace) -> int:
     """The judge's ONLY interface: prints the trade's next check-in packet, or {"closed": true}. --decision records
     the answer to the CURRENT packet first (refused if its packet_id is not the one pending)."""
     out = Path(a.out)
+    if a.trade == "PROTOCOL":                       # the judge reads its protocol through the one allowed command
+        print((out / "WALK-PROTOCOL.md").read_text())
+        return 0
+    if a.trade.startswith("BATCH-"):                # ... and its batch of trade tokens
+        print((out / "batches" / f"{a.trade[6:]}.txt").read_text())
+        return 0
     entries = {trade_token(SEED, e.entry_id): e for e in read_entries(out / "entries.jsonl")}
     e = entries.get(a.trade)
     if e is None:
@@ -1049,9 +1055,9 @@ def _ablate(dec: Dict[Tuple[str, int], dict], eid: str, k: int, to: dict) -> Dec
 
 
 def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str, int], dict],
-             policy: str = "FIXED") -> Dict[str, Any]:
+             policy: str = "FIXED", m1_draws: int = M1_DRAWS) -> Dict[str, Any]:
     """Every cell under check-in policy `policy`: HOLD (M0), Claude (M8/M9), its matched random intervention (M1,
-    mean of M1_DRAWS draws), the v1 static menu and the v2 practitioner rules (B3 = best of both menus, leave-one-fold-
+    mean of `m1_draws` draws; registered M1_DRAWS), the v1 static menu and the v2 practitioner rules (B3 = best of both menus, leave-one-fold-
     out), and per-check-in ablations: each Claude action vs the same trade with that one answer replaced by hold, and
     each Claude hold vs the same trade with that one answer replaced by close (the value of acting and of NOT acting)."""
     pol = POLICIES[policy]
@@ -1089,7 +1095,7 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
                 acct["moved_stop_exits"] += int(res.moved_stop_exit)
                 m1 = [run(s, e, matched_random(res.checkins, int(hashlib.sha256(f"m1|{e.entry_id}|{q}".encode())
                                                                   .hexdigest()[:8], 16)), pol())[0].net_r
-                      for q in range(M1_DRAWS)]
+                      for q in range(m1_draws)]
                 row[f"{tag}_m1"] = float(np.mean(m1))
                 for c in res.checkins:
                     to = {"action": "hold"} if c["action"] != "hold" else {"action": "close"}
@@ -1157,7 +1163,8 @@ def cmd_score(a: argparse.Namespace) -> int:
     out = Path(a.out)
     entries = read_entries(Path(a.entries))
     dec = read_decisions(out, Path(a.decisions) if a.decisions else None)
-    res = evaluate(mkt, entries, dec, a.policy)
+    res = evaluate(mkt, entries, dec, a.policy, a.m1_draws)
+    res["m1_draws"] = a.m1_draws
     res["label"] = a.label
     res["candles"] = src
     res["limits"] = [x.strip() for x in __doc__.split("STATED LIMITS (printed into every verdict)")[1].strip().split("*") if x.strip()]
@@ -1320,6 +1327,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         if name == "score":
             s.add_argument("--label", default="pilot", help="pilot | registered")
             s.add_argument("--policy", default="FIXED", choices=sorted(POLICIES), help="the check-in policy the decisions were made under")
+            s.add_argument("--m1-draws", type=int, default=M1_DRAWS,
+                           help=f"matched-random draws per trade (registered {M1_DRAWS}; larger = a robustness re-score)")
     a = ap.parse_args(argv)
     return a.fn(a)
 

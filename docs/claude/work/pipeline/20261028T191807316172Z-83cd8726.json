@@ -1,0 +1,17 @@
+{
+  "based_on": "20261026T114557355896Z-916927cc.json",
+  "due_when": {
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261026-4A80398B-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01HAysMLfF9dYpi92YMqYxEq, operator 2026-10-26 ~11:45Z verbatim: 'Add the Alpaca proxy-only leg to the performance review'",
+    "rerun": "python3 -c \"import yaml;a=yaml.safe_load(open('config/accounts.yaml'))['accounts'] if 'accounts' in yaml.safe_load(open('config/accounts.yaml')) else yaml.safe_load(open('config/accounts.yaml'));print(a['alpaca_live'].get('strategies'),a['alpaca_portfolio'].get('strategies'))\""
+  },
+  "state": "done",
+  "terminal_reason": "[2026-10-28 performance-review PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji] Answered in docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE Q7: alpaca_live=[iaum_pullback_1d], alpaca_portfolio=[]. IAUM Stage-0 n_oos=8 with folds +5.47/+1.89/+0.52/-0.72 and fidelity approximate. Live n=1 at -1.47 R (worse than every backtest trade). Its GLD primary is on no roster, so it is a standalone leg with no demotion signal. Proposal D6 (Tier-3 to the operator): re-evidence at declared power and keep as-is until then, filed as PI-20261028-PVRNY2JI-0005.",
+  "what": "FOR THE NEXT /performance-review (Wed/Thu 2026-10-28/29): grade the Alpaca proxy-only real-money book. MEASURED 2026-10-26 at main 75535c87b (desk lane, config/accounts.yaml): alpaca_live carries 1 leg, iaum_pullback_1d. That leg is one of the two DECLARED affordability proxies, and its primary is not on the roster. After the sanctioned proxy carve-out, alpaca_portfolio therefore carries 0 legs, so the Alpaca Gate-2 demotion signal does not exist right now. That is the operator-decided empty case of 2026-09-21 ('equality wins, no exception'). Review asks: (1) iaum_pullback_1d's live record and cost on alpaca_live; (2) does it still serve as a proxy when its primary is gone, or is it now a standalone real-money leg that needs its own Stage-0 evidence and a mirror; (3) what the empty mirror costs; (4) a proposal (Tier 3, operator) on the Alpaca real-money roster. Outcome belongs in the review's report and a checklist row. || [2026-10-28 performance-review PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji] Answered in docs/reviews/2026-10-28-weekly-walkthrough.md PERFORMANCE Q7: alpaca_live=[iaum_pullback_1d], alpaca_portfolio=[]. IAUM Stage-0 n_oos=8 with folds +5.47/+1.89/+0.52/-0.72 and fidelity approximate. Live n=1 at -1.47 R (worse than every backtest trade). Its GLD primary is on no roster, so it is a standalone leg with no demotion signal. Proposal D6 (Tier-3 to the operator): re-evidence at declared power and keep as-is until then, filed as PI-20261028-PVRNY2JI-0005."
+}

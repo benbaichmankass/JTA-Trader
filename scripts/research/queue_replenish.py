@@ -1104,10 +1104,27 @@ def _self_test() -> int:
     return 0
 
 
+def _default_target() -> int:
+    """The refill aims at the SAME floor the health check grades against, not the fixed 25.
+
+    RESEARCH-SLO-ROOTCAUSE 2026-10-28: the daily cron and the health-triggered dispatch both passed 25 while
+    `computed_floor` was 57-63 (fired_24h 72-78), so every refill stopped 30+ units short of the floor and the
+    runnable SLO sat in breach between refills. Unreadable throughput falls back to DEFAULT_TARGET (never lower).
+    """
+    try:
+        from scripts.research.queue_throughput import computed_floor, throughput  # noqa: PLC0415
+        return max(DEFAULT_TARGET, computed_floor(throughput(_REPO).get("fired_24h")))
+    except Exception as e:  # allow-silent: a refill must still run when the measurement cannot; the warning below logs it and DEFAULT_TARGET holds
+        print(f"::warning::queue_replenish: fired_24h unread ({e!r}); target falls back to {DEFAULT_TARGET}")
+        return DEFAULT_TARGET
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--self-test", action="store_true")
-    ap.add_argument("--target", type=int, default=DEFAULT_TARGET, help="runnable units to keep queued")
+    ap.add_argument("--target", type=int, default=None,
+                    help="runnable units to keep queued; default = the computed floor "
+                         "(queue_throughput.computed_floor(fired_24h), never below DEFAULT_TARGET)")
     ap.add_argument("--date", default=None, help="YYYY-MM-DD for the new ids (default: today UTC)")
     ap.add_argument("--write", action="store_true", help="write the new unit files (default: plan only)")
     ap.add_argument("--verify", action="store_true", help="re-derive every unit this branch adds")
@@ -1140,7 +1157,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
     day = args.date or datetime.now(timezone.utc).date().isoformat()
     date.fromisoformat(day)
-    pl = plan(_REPO, day=day, target=args.target)
+    target = args.target if args.target is not None else _default_target()
+    pl = plan(_REPO, day=day, target=target)
     if args.write:
         for u in pl["new_units"]:
             (_REPO / QUEUE / f"{u['id']}.yaml").write_text(u["text"], encoding="utf-8")

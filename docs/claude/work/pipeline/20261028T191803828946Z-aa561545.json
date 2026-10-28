@@ -1,0 +1,31 @@
+{
+  "based_on": "20261024T055728718106Z-1b2752de.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "A venue-side read (or the executor's own record) states whether a position was opened on 2026-10-08 for prop-manual-df6e8938ab89, its protection, and its close; the answer is written on this row.",
+    "kind": "event",
+    "last_checked": "2026-10-28"
+  },
+  "id": "PI-20261010-WQAPZD8B-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-16",
+    "how_to_check": "curl -s https://ict-bot.duckdns.org/api/bot/prop/fills | python3 -c \"import json,sys; [print(x['id'],x['ticket_id'],x['status'],x['qty'],x['entry_price'],x['reason']) for x in json.load(sys.stdin)['fills'] if x['account_id']=='velotrade_1']\"",
+    "what": "A venue-side read (or the executor's own record) states whether a position was opened on 2026-10-08 for prop-manual-df6e8938ab89, its protection, and its close; the answer is written on this row."
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "PERF-REVIEW-W41 (session_01LZL3YVtBKGpvYKwqApZd8b), comms/reviews/performance-review-20261010-*.json",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/prop/fills | python3 -c \"import json,sys; [print(x['id'],x['ticket_id'],x['status'],x['qty'],x['entry_price'],x['reason']) for x in json.load(sys.stdin)['fills'] if x['account_id']=='velotrade_1']\""
+  },
+  "redate": {
+    "evidence": "curl https://ict-bot.duckdns.org/api/bot/prop/fills",
+    "observation": "Read 2026-10-13: GET /api/bot/prop/fills for velotrade_1 still shows fill 90 (prop-manual-df6e8938ab89) status=skipped reason=unconfirmed_submit qty 0.82 entry 2471.31 and fill 91 skipped (executor halted AUTO-REVERT partial_no_sl_tp, 2026-10-08T15:28Z). No venue-side statement of whether the 0.82 ETH short existed, was protected or closed. NOT cleared; owner is VELO-UNCONFIRMED-1008.",
+    "observed_at": "2026-10-13"
+  },
+  "routed_to": "ROUTE-PROP-TRACKING (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target VELO-UNCONFIRMED-1008 is done; item still open) | was: VELO-UNCONFIRMED-1008",
+  "severity": "high",
+  "state": "routed",
+  "tier": "1",
+  "what": "[performance][prop] velotrade_1 executor on 2026-10-08: ticket prop-manual-df6e8938ab89 (ETH short) -> fill row 90 status=skipped reason=unconfirmed_submit WITH qty 0.82 and entry 2471.31, then the executor latched `halted: AUTO-REVERT partial_no_sl_tp` (15:28Z) and ticket prop-manual-2ac3f6d3f6ff was skipped. The latch has since been removed (operator 2026-10-09) but nobody has recorded whether the 0.82 ETH short ever existed on the venue, was flattened, or was left unprotected. velotrade_1 also has no account-status record from the review's reads. || [2026-10-28 performance-review PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji] Re-run 2026-10-28: the velotrade_1 fills list shows tickets through prop-manual-352368257478. The 10-08 ticket df6e8938ab89 is not in the returned page. Not resolved this session."
+}
