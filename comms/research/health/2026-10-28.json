@@ -1,23 +1,23 @@
 {
  "schema": 1,
- "as_of": "2026-10-28T15:24:05Z",
+ "as_of": "2026-10-28T16:51:26Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 14,
-  "breach": 2,
+  "ok": 13,
+  "breach": 3,
   "could_not_look": 0
  },
  "latest": [
   {
    "slo": "runnable_floor",
    "state": "breach",
-   "value": 54,
+   "value": 48,
    "op": ">=",
-   "threshold": 56,
+   "threshold": 54,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 70,
+    "fired_24h_stamps": 68,
     "queued": 146,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
@@ -26,12 +26,12 @@
   {
    "slo": "fires_24h",
    "state": "ok",
-   "value": 73,
+   "value": 68,
    "op": ">=",
    "threshold": 24,
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "evidence": {
-    "dispatch_runs_24h": 21,
+    "dispatch_runs_24h": 20,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -39,7 +39,7 @@
   {
    "slo": "lands_24h",
    "state": "ok",
-   "value": 86,
+   "value": 80,
    "op": ">=",
    "threshold": 12,
    "what": "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)",
@@ -60,8 +60,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 1.0,
-    "n": 433,
-    "ungraded_fresh": 14,
+    "n": 430,
+    "ungraded_fresh": 15,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -76,8 +76,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 1.0,
-    "n": 433,
-    "ungraded_fresh": 14,
+    "n": 430,
+    "ungraded_fresh": 15,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -92,13 +92,13 @@
    "evidence": {
     "counts": {
      "graded": 1123,
-     "in_grace": 14,
+     "in_grace": 15,
      "legacy_prose": 125,
      "needs_review": 25,
      "non_verdict_only": 1,
      "retired": 2
     },
-    "with_results": 1290,
+    "with_results": 1291,
     "sample": [],
     "basis": "result_disposition_check.census findings (ungraded + needs_review_unowned; 24 h grace)",
     "read_state": "measured"
@@ -106,14 +106,14 @@
   },
   {
    "slo": "authoring_supply_ratio_7d",
-   "state": "ok",
-   "value": 1.01,
+   "state": "breach",
+   "value": 0.99,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "evidence": {
     "authored_7d": 395,
-    "consumed_7d": 393,
+    "consumed_7d": 398,
     "authored_since_yesterday": 52,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -145,7 +145,7 @@
   {
    "slo": "theme_share_min_ratio",
    "state": "ok",
-   "value": 0.52,
+   "value": 0.54,
    "op": ">=",
    "threshold": 0.5,
    "what": "worst theme's (fire share over 7 d) / (weight share in research/THEMES.yaml)",
@@ -158,10 +158,10 @@
       "ratio": 0.72
      },
      "live_strategy": {
-      "fires": 163,
-      "share": 0.306,
+      "fires": 164,
+      "share": 0.308,
       "weight_share": 0.182,
-      "ratio": 1.68
+      "ratio": 1.69
      },
      "ml_health": {
       "fires": 78,
@@ -170,10 +170,10 @@
       "ratio": 1.07
      },
      "new_strategy_prop": {
-      "fires": 76,
-      "share": 0.143,
+      "fires": 78,
+      "share": 0.146,
       "weight_share": 0.273,
-      "ratio": 0.52
+      "ratio": 0.54
      },
      "macro": {
       "fires": 34,
@@ -182,10 +182,10 @@
       "ratio": 1.4
      },
      "infra": {
-      "fires": 81,
-      "share": 0.152,
+      "fires": 78,
+      "share": 0.146,
       "weight_share": 0.091,
-      "ratio": 1.67
+      "ratio": 1.61
      },
      "timeframes": {
       "fires": 14,
@@ -228,12 +228,12 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.49,
+   "value": 0.9,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
    "evidence": {
-    "newest": "2026-10-28T14:54:52.976885+00:00",
+    "newest": "2026-10-28T15:57:25.330911+00:00",
     "basis": "newest utilization record generated_at",
     "read_state": "measured"
    }
@@ -241,12 +241,12 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.04,
+   "value": 0.63,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
    "evidence": {
-    "newest": "2026-10-28T15:21:40+00:00",
+    "newest": "2026-10-28T16:13:44+00:00",
     "basis": "git log -1 -- research/results (commit time)",
     "read_state": "measured"
    }
@@ -254,7 +254,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 1.63,
+   "value": 3.08,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -267,13 +267,13 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 6.07,
+   "value": 1.36,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
    "evidence": {
-    "newest": "20261028T0920Z.json",
-    "finished_at": "2026-10-28T09:20:00+00:00",
+    "newest": "20261028T1530Z.json",
+    "finished_at": "2026-10-28T15:30:00+00:00",
     "basis": "newest comms/research/ops record",
     "read_state": "measured"
    }
@@ -281,18 +281,19 @@
   {
    "slo": "research_ops_not_run",
    "state": "breach",
-   "value": 5,
+   "value": 6,
    "op": "<=",
    "threshold": 2,
    "what": "steps the newest research-ops pass declared not_run",
    "evidence": {
-    "record": "20261028T0920Z.json",
+    "record": "20261028T1530Z.json",
     "not_run": [
-     "C: needs_review triage (28 left, 25 owned) and blocked/ audit not done; blocker_watch printed only UNPROVEN_OVERDUE rows, not acted on",
-     "D: ML plan write-back and programme write-back (queue_replenish --programme-state) only checked for the authored node",
-     "E: 2 units authored, not ~6; ml_health / new_strategy_prop not authored toward",
-     "grader/replenish/dispatch workflow run list (GitHub Actions MCP unavailable); tests not run (pytest not installed in this sandbox)",
-     "routing of due pipeline items"
+     "C: needs_review triage (28 left, 25 owned) not done; blocked/ (75 files) audit read only through blocker_watch (STALE_BLOCK 2: DESK-18D-JUDGE-2, DESK-23-COVERAG",
+     "A: workflow run list and stranded stamp PR list (GitHub Actions MCP github-actions failed to connect)",
+     "D: ML plan write-back and programme write-back not re-checked beyond the results listed",
+     "E: 0 nodes and 0 units authored (reason in authoring.note)",
+     "routing of due pipeline items: 509 due, 58 unrouted, routing alarm oldest 94 d; not routed by this pass",
+     "pytest and the guard suite not run on this clone (only pipeline --check, checklist)"
     ],
     "basis": "not_run of the newest research-ops record",
     "read_state": "measured"
@@ -318,12 +319,16 @@
     "since": "2026-10-28T11:20:42Z",
     "state": "breach"
    },
+   "authoring_supply_ratio_7d": {
+    "since": "2026-10-28T16:51:26Z",
+    "state": "breach"
+   },
    "research_ops_not_run": {
     "since": "2026-10-26T23:17:43Z",
     "state": "breach"
    }
   },
-  "last_alert": "2026-10-28T11:20:42Z",
+  "last_alert": "2026-10-28T16:51:26Z",
   "suppressed_by_watchdog": []
  },
  "runs": [
@@ -451,6 +456,25 @@
    ],
    "alert": null,
    "delivered": null
+  },
+  {
+   "at": "2026-10-28T16:51:26Z",
+   "counts": {
+    "ok": 13,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "authoring_supply_ratio_7d",
+    "research_ops_not_run"
+   ],
+   "alert": "change",
+   "delivered": {
+    "telegram": true,
+    "ops_flags_comment": true,
+    "ops_flags_pr": 17895
+   }
   }
  ]
 }
