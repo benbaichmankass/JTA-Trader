@@ -1,0 +1,21 @@
+{
+  "id": "FVG-RANGE-15M-NO-FEE",
+  "title": "fvg_range_15m per-trade rows carry no cost_fee_r: RESOLVED, the fee IS charged (aggregate only)",
+  "phase": null,
+  "state": "done",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Investigated 2026-10-28 (lane COST-STACK-BYBIT-TAKER-FEE). Corpus comms/strategy_evidence/runs/2026-09-25/fvg_range_15m__trades.jsonl, n=17 (BTCUSDT 15m, bybit_1 demo only). Rows have gross_r/net_r but no cost_fee_r field; the harness bt.json (fvg_range_15m__bt.json) reports fee_bps_roundtrip 7.5, slippage 3.0, funding 1.0, total_fee_r 3.0171, net_total_r -9.6953 (fee-only -8.7933), so the fee IS charged, only the per-row breakdown is not written. My first read (PR #20783 body) that the leg was fee-free was WRONG. Re-cost at 11.0: net R -9.695 -> about -11.10 (3.0171*3.5/7.5 = 1.408 added), no verdict flip. Residual: per-row cost columns missing from this harness output, cosmetic.",
+  "updated_at": "2026-10-28T02:47:53Z",
+  "updated_by": "session_01AFoLuMcBGfVrxBvpvBWnHW",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 743
+}
