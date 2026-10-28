@@ -95,8 +95,9 @@ def test_unreadable_leg_is_market(monkeypatch):
 
 
 def test_live_claude_desk_leg_declares_post_only_and_nothing_else_does():
-    import yaml
     from pathlib import Path
+
+    import yaml
     doc = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "strategies.yaml").read_text())
     legs = doc.get("strategies", doc)
     declared = {k for k, v in legs.items() if isinstance(v, dict) and v.get("entry_order")}

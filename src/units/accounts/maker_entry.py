@@ -64,7 +64,7 @@ def leg_entry_order(strategy: Optional[str], *, cfg_loader: Optional[Callable[[s
         return MARKET
     try:
         if cfg_loader is None:
-            from src.strategy_registry import _strategy_cfg as cfg_loader  # noqa: N813
+            from src.strategy_registry import _strategy_cfg as cfg_loader
         cfg = cfg_loader(str(strategy)) or {}
     except Exception:  # noqa: BLE001 -- an unreadable leg config keeps today's Market path
         return MARKET
