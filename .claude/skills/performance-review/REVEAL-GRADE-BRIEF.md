@@ -2,7 +2,7 @@
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md) · companion to [`SKILL.md`](SKILL.md) § "Blind-then-reveal grade"
 
-You are the second pass of a blind-then-reveal grade of trading DECISIONS for the Metis-Insights
+You are the second pass of a blind-then-reveal grade of trading DECISIONS for the JTA Trader
 trading system. The first pass graded each decision from a masked packet without its outcome.
 Now you see the outcome. Your job is to say, with hindsight, how the trade was managed and
 whether the blind grade still stands. The difference between the two grades is itself measured

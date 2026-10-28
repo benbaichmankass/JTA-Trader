@@ -1,4 +1,4 @@
-# Metis Insights — CLAUDE.md
+# JTA Trader — CLAUDE.md
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-27` · registered in [`docs/DOCUMENT-INDEX.md`](docs/DOCUMENT-INDEX.md)
 
@@ -243,6 +243,9 @@ catalog; precedents are example outputs, not authority. **The manager contract i
 
 ## Repo identity
 
-Renamed to **`benbaichmankass/Metis-Insights`** 2026-07-23; the old name still redirects — **do not chase a rename sweep.** The MCP repo
-name is whatever THIS session's scope says (a denial is a scope mismatch, not an outage). VM clone dirs stay `/home/ubuntu/ict-trading-bot`
-and `/opt/ict-trading-bot`.
+The project is named **JTA Trader** (operator, 2026-10-28; previously "Metis Insights", 2026-07-23, and "ICT bot"). The GitHub repo is renamed by
+the operator in GitHub Settings (steps: [`docs/runbooks/jta-trader-rename.md`](docs/runbooks/jta-trader-rename.md)); until then and after, the old
+names redirect — **do not chase a rename sweep.** The MCP repo name is whatever THIS session's scope says (a denial is a scope mismatch, not an
+outage). **Runtime identifiers deliberately keep their old names:** VM dirs `/home/ubuntu/ict-trading-bot` and `/opt/ict-trading-bot`, systemd
+unit names, Python package/module names, the `ict-bot.duckdns.org` domain, bot names, the `Manager Session` title convention, Kaggle slugs,
+`~/.cache/metis-*` dirs and `data-metis-*` selectors. Tooling reads the repo slug from `GITHUB_REPOSITORY` / `git remote`, never a literal.
