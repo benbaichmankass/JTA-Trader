@@ -1,6 +1,6 @@
 id: RQ-20261011-9da8-05
 title: 'Frontier strategy: time-series momentum with volatility targeting on the liquid crypto perps (Stage-0, full cost stack)'
-status: blocked
+status: queued
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -16,14 +16,14 @@ power:
   expected_n: 40
   min_detectable_effect: 0.45
   effect_units: sd
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (repo E35 floor). Daily TSMOM yields tens of re-balances per symbol
-    over 3y; if n < 39 the verdict is INDETERMINATE.
+  basis: >-
+    DESIGN RE-DECLARED paired -> one_sample 2026-10-28, before any run (lane FRONTIER-LEVER-XSEC-RUNNER; same precedent as RQ-20261011-9da8-01, 2026-10-22): the dispatcher's power gate does not know design paired and refuses to route it. Effect size, alpha, power and expected_n are unchanged, so the 39-trade floor is unchanged. Original basis: d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (repo E35 floor). Daily TSMOM yields tens of re-balances per symbol over 3y; if n < 39 the verdict is INDETERMINATE.
   feasibility:
     source: none
-    accrual_basis: ''
+    accrual_basis: 'Fixed history, nothing accrues: the window is the trailing 1095 daily bars plus the settled funding series from the public archive. expected_n is a design estimate of trades (legs opened or flipped), not an observed count; the first run replaces it with the measured n_trades.'
 decision_rule:
   id: RULE-RQ1011-9DA8-05-TSMOM-VOLTARGET
   registered_at: '2026-10-11'
@@ -34,12 +34,6 @@ decision_rule:
     on two or more (one pass -> re-queue a confirmatory run before reading as a kill); INDETERMINATE IF n < 39.
   what_it_does_not_do: Does not touch config/strategies.yaml or accounts.yaml and proposes no leg. A PASS is Stage-0 evidence
     for a build row.
-blocked_on:
-- kind: work_item
-  ref: FRONTIER-LEVER-HARNESS-COSTS
-  what: vol_target harness has no fee/slippage/funding split (turnover-bps drag only) and xsec_momentum has no funding term.
-  clears_when: Both harnesses read costs via execution_costs.resolve_cost_policy including funding for held perp legs, a test
-    pins non-zero cost on a fixture, and CLAUDE.md's harness-gap list is edited to remove them.
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -47,8 +41,30 @@ routing:
   est_minutes: 15
   basis: Estimate from the sibling fc / harness runs; the first run replaces it.
 run:
-  workflow: null
-  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the lever row closes.'
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/frontier_momentum_runner.py
+  - --mode
+  - tsmom
+  - --n-floor
+  - '39'
+  - --days
+  - '1095'
+  - --lookbacks
+  - '28,56,112'
+  - --target-vol
+  - '0.20'
+  - --max-leverage
+  - '2.0'
+  - --rebalance-days
+  - '7'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261011-9da8-05
+  timeout_minutes: 45
+  note: "UNBLOCKED by FRONTIER-LEVER-XSEC-RUNNER. scripts/backtest_tsmom.py is the TSMOM entry-signal instrument (sign of trailing return, mean over the lookback set, vol-targeted, per symbol, execution_costs full stack, signed settled funding). OPERATOR/MANAGER TO CONFIRM BEFORE DISPATCH: this unit's text says 'a registered lookback set' but none was ever registered; the command proposes lookbacks 28,56,112 days, 20% target vol, 2x leverage cap, weekly re-weight, BTC/ETH/SOL (default symbols) -- all CLI flags, so changing them is a one-line edit here before the first run. net_total_r is the sum of daily FRACTIONAL returns of each sleeve (no stop distance exists); n_trades = legs opened or flipped. Rule graded verbatim: PASS if >=2 symbols net>0 with n>=39; FAIL if >=2 net<=0 with n>=39; else INDETERMINATE."
 lands:
   store: research/results/
   assert_field: read_state
