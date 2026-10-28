@@ -5,6 +5,11 @@
   },
   "id": "PI-20261028-OOTCAUSE-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-02",
+    "how_to_check": "python3 scripts/ci/check_research_queue_health.py | head -3; python3 scripts/research/research_slo.py (research_ops_not_run fact)",
+    "what": "runnable >= floor on 3 reads >=6 h apart after #20970 merges, and newest research-ops record has len(not_run) <= 2"
+  },
   "origin": {
     "kind": "session",
     "ref": "RESEARCH-SLO-ROOTCAUSE (PR #20970)",

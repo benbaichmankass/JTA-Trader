@@ -1114,7 +1114,7 @@ def _default_target() -> int:
     try:
         from scripts.research.queue_throughput import computed_floor, throughput  # noqa: PLC0415
         return max(DEFAULT_TARGET, computed_floor(throughput(_REPO).get("fired_24h")))
-    except Exception as e:  # noqa: BLE001 -- a refill must still run when the measurement cannot
+    except Exception as e:  # allow-silent: a refill must still run when the measurement cannot; the warning below logs it and DEFAULT_TARGET holds
         print(f"::warning::queue_replenish: fired_24h unread ({e!r}); target falls back to {DEFAULT_TARGET}")
         return DEFAULT_TARGET
 
