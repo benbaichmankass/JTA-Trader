@@ -1,0 +1,34 @@
+{
+  "id": "ML-PROGRAMME-PLAN",
+  "title": "ONE consolidated ML programme: models that MANAGE TRADES (policy over hold/tighten/TP/partial/close, scored vs leg-as-traded, best static rule, distance-only, desk, placebo); TM-BENCH as the common harness; 8 tracks; 10 proposed infra rows; learning ledger",
+  "phase": "W44",
+  "state": "landed_unproven",
+  "owner": "lane ML-PROGRAMME-PLAN",
+  "lane": "ML-PROGRAMME-PLAN",
+  "model": "opus",
+  "ceiling_usd": 30,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20845
+  ],
+  "blocked_on": [],
+  "note": "Deliverable: docs/plans/ML-PROGRAMME-2026-10-28.md (operator 2026-10-28 ~06:30Z via manager: ML infra priority; ONE plan for models that manage trades). Fact base: ML-COVERAGE-AUDIT draft. MEASURED this lane: /api/bot/ml/status+registry 06:25Z (97 models; 73 predict regime/direction labels (68 regime, 5 direction); 0 in-trade; exit-policy-v1 never registered, family exit_candidates never built -> PI-20261028-QFMQD2BK-0001); paths corpus 2,627 trades/50,926 states (A1 PASS log-loss, d6e7-06 FAIL policy, B1 FAIL, C1/A2 INDETERMINATE; oracle 0.756 R/trade); desk 59 rows, 0 edge-sample outcomes, consumed.jsonl 0; LTR 98 rows/16 packages. Proposed rows (manager files with the operator; NOT filed here): TM-BENCH (Opus $15), PATHS-CORPUS-WIDEN ($12), ML-LEARNING-LEDGER ($8, folds DESK-21 + audit ML-COV-DETECTOR), DESK-LABEL-JOIN ($10, scopes DESK-11/20), audit data-breadth rows, TM-LEARNERS-2 ($8), C1-JOIN-FIX ($5), REGIME-STATE-EXPORT ($6). Top questions: Q-TM1 GBDT action-value, Q-TM2 optimal stopping (LSM), Q-TM4 desk-as-benchmark + label-value ablation, Q-TM5 generalist vs specialist, Q-REG1 pooled crypto vol head. Before-reset list in \u00a7 6.1. [2026-10-28 ~07:00Z lane] Amended per three manager relays (06:25/06:40/06:41Z): \u00a7 1.4 check-in policy (clock cadence x event triggers) is a measured factor in every trade-management evaluation and TM-BENCH (B4 = matched random intervention per arm; B5 re-score, B6 vol-rescale; entry-source factor; strata; acted vs held lift; #20836 cited only as a single +1R intervention); \u00a7 4.6 training/evaluation standards ST1-ST12 from the practice review with a violations table (MEASURED: 53 of 72 manifests use holdouts with no embargo, 19 purged WF + embargo); \u00a7 4.7 weekly practice/methodology track under frontier-research as the refresh mechanism; \u00a7 9 two-track taxonomy (this plan = MODEL track; P1/P6/regime/infra/L-DESK/L-ATM/L-DATA = both; queued TRADING-only 106 vs MODEL-only 6) + proposed track field, per-track floors and brief sections (manager files Thursday).",
+  "updated_at": "2026-10-28T06:49:02Z",
+  "updated_by": "session_01AFoLuMW7djezsBqFMqd2Bk",
+  "roadmap": [
+    "M25",
+    "L-ATM",
+    "L-DESK"
+  ],
+  "observation": {
+    "what": "The manager files (or kills with a stated reason) the \u00a7 5 proposed rows with the operator, and the next Sunday /ml-review adds the \u00a7 4.3 questions as track T3 items in docs/plans/ml-plan-items.yaml",
+    "how_to_check": "ls docs/claude/work/checklist/{TM-BENCH,PATHS-CORPUS-WIDEN,ML-LEARNING-LEDGER,DESK-LABEL-JOIN}.json; grep -c Q-TM docs/plans/ml-plan-items.yaml",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "pending: ROADMAP.md AI-trader build plan gets a pointer to docs/plans/ML-PROGRAMME-2026-10-28.md as the consolidated programme when the manager files the rows (manager owns the ROADMAP edit; milestones.yaml M25/L-ATM next fields updated then)",
+    "arch": "none: planning only, no architecture change"
+  },
+  "_seq": 746
+}
