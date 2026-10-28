@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "Operator popup ~20:35Z (manager relay): 'Advice-only tightens (Recommended)'. Built: rows_lib.ADVICE_ONLY_ACTIONS=('tighten_sl',) read by live_review_rows_watch (verdict tighten_advice_only, never dispatched, any route), live_review_dispatch (refused tighten_advice_only, exit 2, no ping, incl. the manual system-action) and desk_intake (not_dispatchable tighten_advice_only); config/mandates.yaml MD-TRADE-DESK in_trade advice_only [tighten_sl]; skill/brief/AMENDMENTS. Other trade actions unchanged. Evidence comms/research/ltr_tighten_optimize/verdict.json (#21003), #20967. REVERT: revert the PR. CLOSES WHEN (after merge + deploy): the first tighten_sl row on live-review/rows appears in diag log_file?name=live_review_rows_watch with verdict tighten_advice_only and no applied.jsonl entry, and a close/other action still dispatches. MERGED 2026-10-28 23:08Z (PR #21024, head 0bf8e9658e, CI green on all 5 checks). DEPLOYED: not established by this lane (ict-git-sync pull + ict-trader-live restart is the manager's step). OBSERVED: no. landed_unproven until the observation above is read on the VM.",
-  "updated_at": "2026-10-28T23:35:23Z",
+  "updated_at": "2026-10-28T23:39:14Z",
   "updated_by": "session_01AFoLuLLDoFfA4BGgKq4MZL",
   "roadmap": [
     "L-ATM",
@@ -24,6 +24,10 @@
     "what": "the first tighten_sl row on live-review/rows after deploy is logged tighten_advice_only by the VM rows watcher, with no applied.jsonl entry, while a non-tighten trade action still dispatches",
     "how_to_check": "diag log_file?name=live_review_rows_watch (verdict tighten_advice_only for a tighten_sl review_id) and log_file?name=live_review_applied (no entry for that review_id); VM git_sha_running contains the #21024 merge",
     "due_by": "2026-11-04"
+  },
+  "writeback": {
+    "roadmap": "L-ATM: tighten_sl is advice only on every automatic path (operator 2026-10-28 \"Advice-only tightens (Recommended)\"; #21024 merged 23:08Z); other trade actions unchanged",
+    "arch": "none: one action class refused inside the existing rows watcher / dispatcher / desk intake; no contract change"
   },
   "_seq": 755
 }
