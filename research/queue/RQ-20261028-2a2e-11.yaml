@@ -1,0 +1,131 @@
+id: RQ-20261028-2a2e-11
+title: 'Regime-head health monitor (weekly): does LightGBM still beat the class prior on 1h regime LOG-LOSS on BTC, ETH and SOL on the latest 40,000 bars?'
+status: queued
+cadence: weekly
+roadmap:
+- M25
+theme: ml_health
+priority: 1
+kind: experiment
+question: On the latest 40,000 1h bars of each shard, does LightGBM beat the class prior by >= 0.005 nats of regime log-loss on the CV mean on ALL of BTCUSDT, ETHUSDT and SOLUSDT?
+why_this_matters: 'The advisory regime heads decay silently (drift flags on 9 heads, ml-review). 65cc-10 passed this exact statistic once on BTC/ETH; a weekly re-ask on the nightly-rebuilt
+  shard turns one answer into a trend, so a head whose log-loss lift falls below the prior is caught by the queue before a drift-remediation lane is needed. FAIL here is a drift signal
+  for /ml-review (drift-remediation skill), NOT a demotion. Daily authoring lane 2026-10-28 (DAILY-AUTHORING-20261028; research-queue-health H1-THEME ml_health: runnable 0 of share 9;
+  kaggle_cpu idle with nothing due). Published data only (metis-market-data), so it lands on the idle Kaggle CPU backend.'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 40000 with min_train_frac 0.4 leaves ~24000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; bars are autocorrelated so effective n is lower:
+    the rule requires the same-direction CV mean on EVERY symbol. expected_n is an ESTIMATE, not a measurement.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up is a larger
+      or different dataset, not a re-run.'
+decision_rule:
+  id: RULE-RQ202610282A2E11-ML
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: Paired per-fold difference in multiclass log-loss (baseline minus learner, positive = learner better) on identical purged folds (5, embargo 24 rows), mean over folds, per
+    symbol.
+  rule: 'PASS IF lgbm beats the class prior by >= +0.005 nats on the CV mean on ALL of BTCUSDT_1h, ETHUSDT_1h, SOLUSDT_1h (the lift persists on the latest shard). FAIL IF lgbm does not
+    beat the prior by >= 0 on the CV mean on ANY symbol: a drift signal handed to /ml-review (drift-remediation skill), never an automatic demotion. INDETERMINATE otherwise, or if folds
+    < 3 or a shard is stale/unavailable.'
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure, and the head's advisory stage is
+    unchanged.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'stand-in: gates whether a model-family/health lever is worth building on the 1h heads; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 20
+  basis: 'Estimate, NOT measured: CPU bake-off on the published 1h v002 shards the 4591/65cc units read; compute: auto routes it to the Kaggle CPU kernel.'
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261028-2a2e-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P2
+related:
+- scripts/research/ml_bakeoff.py
+- scripts/research/market_data_export.py
+- DAILY-AUTHORING-20261028
+last_dispatched_at: null
+ml_bakeoff:
+  baseline: prior
+  candidates:
+  - lgbm
+  controls: []
+  cv:
+    embargo_rows: 24
+    folds: 5
+    min_train_frac: 0.4
+  dataset:
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    kind: jsonl
+    tail_rows: 40000
+    target: regime_label
+    ts_col: ts
+  higher_is_better: false
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        learning_rate: 0.05
+        min_child_samples: 50
+        n_estimators: 200
+        num_leaves: 31
+  metric: logloss
+  rule:
+    fail_if_no_candidate_reaches:
+    - group: any
+      op: '>='
+      value: 0.0
+      vs: baseline
+      window: cv
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      op: '>='
+      value: 0.005
+      vs: baseline
+      window: cv
+  task: classification
