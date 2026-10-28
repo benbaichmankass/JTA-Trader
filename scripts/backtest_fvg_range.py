@@ -721,7 +721,7 @@ def main(argv: List[str]) -> int:
     p.add_argument("--timeout-bars", type=int, default=48,
                    help="Time-decay backstop: close at market after N bars.")
     p.add_argument("--cooldown-bars", type=int, default=1)
-    p.add_argument("--fee-bps-roundtrip", type=float, default=FEE_BPS_ROUNDTRIP)
+    p.add_argument("--fee-bps-roundtrip", type=float, default=None)
     p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
                    help="Execution-realism: round-trip slippage bps; DEFAULT (unset) = "
                         "venue-aware (execution_costs.slippage_bps_roundtrip_for, ~5 bps). "
@@ -773,7 +773,7 @@ def main(argv: List[str]) -> int:
     args.data = _src.path
     args.symbol = args.symbol or "BTCUSDT"
     print(_src.provenance_line(), file=sys.stderr)
-    FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
+    FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(args.symbol, args.fee_bps_roundtrip)
     # Mandatory venue-aware cost policy: unset flags resolve to the venue-aware
     # defaults (funding is perp-only → 0 for non-perps); an explicit value
     # (incl. 0 for the fee-only comparison arm) always wins.
