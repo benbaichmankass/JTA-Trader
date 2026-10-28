@@ -73,7 +73,7 @@ def companions(rows: List[dict], picks: Sequence[int], cluster_stats: Callable[.
     and weekly-cluster 95% CI. `rows` must be annotate()d. gross_excess = pick gross minus the whole-population gross (the
     brief's definition: S3 with cost removed); gross_excess_matched = pick gross minus its cell's gross (g_vm).
     """
-    def stat(key: str, fn: Callable[[dict], Optional[float]]) -> Dict[str, Any]:
+    def stat(fn: Callable[[dict], Optional[float]]) -> Dict[str, Any]:
         sr = [{"week": rows[j]["week"], "net_r": rows[j]["net_r"], "days": rows[j]["days"], "diff": fn(rows[j])} for j in picks]
         sr = [x for x in sr if x["diff"] is not None]
         if not sr:
@@ -85,8 +85,8 @@ def companions(rows: List[dict], picks: Sequence[int], cluster_stats: Callable[.
         return out
 
     allg = float(np.mean([r["net_r"] + r["cost_r"] for r in rows])) if rows else float("nan")
-    return {"S3": stat("y", lambda r: r.get("y")),
-            "gross_excess": stat("g", lambda r: r["net_r"] + r["cost_r"] - allg),
-            "gross_excess_matched": stat("g_vm", lambda r: r.get("g_vm")),
-            "S3_matched": stat("y_vm", lambda r: r.get("y_vm")),
+    return {"S3": stat(lambda r: r.get("y")),
+            "gross_excess": stat(lambda r: r["net_r"] + r["cost_r"] - allg),
+            "gross_excess_matched": stat(lambda r: r.get("g_vm")),
+            "S3_matched": stat(lambda r: r.get("y_vm")),
             "population_rows": len(rows), "picks": len(picks)}
