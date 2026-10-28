@@ -1,7 +1,7 @@
 {
- "bar": "2026-10-28T09:00:00Z",
- "bar_close": "2026-10-28T09:05:00Z",
- "built_at": "2026-10-28T09:06:22Z",
+ "bar": "2026-10-28T09:05:00Z",
+ "bar_close": "2026-10-28T09:10:00Z",
+ "built_at": "2026-10-28T09:11:13Z",
  "closed": false,
  "order_package_id": "pkg-5277d9b977994968",
  "packet": {
@@ -9,10 +9,10 @@
    {
     "account_class": "paper",
     "account_id": "bybit_1",
-    "evidence": "bybit_orders: SL 1.3233 / TP 1.3407, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+    "evidence": "bybit_orders read failed: diag bybit_open_orders: exit 3 ('bybit_open_orders' \u2014 https://ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' means the web-api is UP ",
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "would_apply"
+    "read_if_amend": "unknown"
    }
   ],
   "assembled_by": "generator scripts/ops/live_review_packet.py",
@@ -60,19 +60,23 @@
   "features_at_review": {
    "atr_now_over_entry": 1.3354,
    "bars_since_peak": 2,
-   "giveback_r": 1.1207,
-   "open_r": 0.2586,
+   "giveback_r": 1.1782,
+   "open_r": 0.2011,
    "peak_r": 1.3793,
-   "r_to_stop": 1.2586,
-   "r_to_target": 1.2414
+   "r_to_stop": 1.2011,
+   "r_to_target": 1.2989
   },
-  "info_cutoff_at": "2026-10-28T09:06:38Z",
+  "info_cutoff_at": "2026-10-28T09:11:36Z",
   "leg": "ict_scalp_xrp_15m",
   "mechanics": {
-   "evidence": "package sl 1.32334 / tp 1.34074 agree with every readable account",
-   "verdict": "match"
+   "evidence": "1 account(s) could not be read",
+   "verdict": "could_not_look"
   },
   "missing_inputs": [
+   {
+    "field": "read:bybit_orders",
+    "reason": "diag bybit_open_orders: exit 3 ('bybit_open_orders' \u2014 https://ict-bot.duckdns.org -> unreachable. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' means the web-api is UP "
+   },
    {
     "field": "regime.vol_now",
     "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
@@ -104,25 +108,18 @@
    "cell_now": null,
    "trend_now": "chop"
   },
-  "review_id": "LR-20261028T0906Z-pkg-5277d9b977994968",
+  "review_id": "LR-20261028T0911Z-pkg-5277d9b977994968",
   "short_hold": {
-   "atr": 0.0024428571428571117,
-   "bar": "2026-10-28T09:00:00Z",
-   "bar_close": "2026-10-28T09:05:00Z",
+   "atr": 0.002392857142857117,
+   "bar": "2026-10-28T09:05:00Z",
+   "bar_close": "2026-10-28T09:10:00Z",
    "entry": 1.3303,
-   "mark": 1.3316,
-   "minutes_held": 63.5,
-   "open_r_at_mark": 0.1868,
+   "mark": 1.3317,
+   "minutes_held": 68.4,
+   "open_r_at_mark": 0.2011,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1.3312,
-     "high": 1.3312,
-     "low": 1.3301,
-     "open": 1.3306,
-     "t": "2026-10-28T08:05:00Z"
-    },
     {
      "close": 1.33,
      "high": 1.3314,
@@ -199,6 +196,13 @@
      "low": 1.3298,
      "open": 1.3315,
      "t": "2026-10-28T09:00:00Z"
+    },
+    {
+     "close": 1.3317,
+     "high": 1.3321,
+     "low": 1.3308,
+     "open": 1.3316,
+     "t": "2026-10-28T09:05:00Z"
     }
    ],
    "risk_per_unit": 0.00696,
@@ -207,8 +211,8 @@
   "state": {
    "atr_now_over_entry": 1.3354,
    "bars_held": 5,
-   "giveback_r": 1.1207,
-   "open_r": 0.2586,
+   "giveback_r": 1.1782,
+   "open_r": 0.2011,
    "peak_provenance": "estimated",
    "peak_r": 1.3793,
    "regime_cell_entry": null,
@@ -217,25 +221,18 @@
    "tp": 1.34074
   }
  },
- "packet_sha": "f4d09c126cd16daa72b851f38a6d5081a2d21f9f75649ae96d2d3c4490974fc4",
+ "packet_sha": "d29a5fe14abc2ba615197732faed099cd2924dc97761b56f5ae5781644efaee4",
  "short_hold": {
-  "atr": 0.0024428571428571117,
-  "bar": "2026-10-28T09:00:00Z",
-  "bar_close": "2026-10-28T09:05:00Z",
+  "atr": 0.002392857142857117,
+  "bar": "2026-10-28T09:05:00Z",
+  "bar_close": "2026-10-28T09:10:00Z",
   "entry": 1.3303,
-  "mark": 1.3316,
-  "minutes_held": 63.5,
-  "open_r_at_mark": 0.1868,
+  "mark": 1.3317,
+  "minutes_held": 68.4,
+  "open_r_at_mark": 0.2011,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1.3312,
-    "high": 1.3312,
-    "low": 1.3301,
-    "open": 1.3306,
-    "t": "2026-10-28T08:05:00Z"
-   },
    {
     "close": 1.33,
     "high": 1.3314,
@@ -312,6 +309,13 @@
     "low": 1.3298,
     "open": 1.3315,
     "t": "2026-10-28T09:00:00Z"
+   },
+   {
+    "close": 1.3317,
+    "high": 1.3321,
+    "low": 1.3308,
+    "open": 1.3316,
+    "t": "2026-10-28T09:05:00Z"
    }
   ],
   "risk_per_unit": 0.00696,
