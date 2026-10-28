@@ -9,11 +9,13 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    21028
+  ],
   "blocked_on": [],
-  "note": "Gap G4/G5/G6: 0 desk fills ever; 10-27 AVAX rejected opposite_slice_one_way_book, BTC risk_refused available_usd=0 (fixed BYBIT1-MARGIN-STARVED); 0 leg-symbol proposals in ~27h since (DESK-18E: <=60min contract prices negative). ib_paper Sun 11-01 >=23:00Z, alpaca_paper Mon 11-02. Plan docs/plans/desk-v1-production-plan-2026-10-29.md.",
+  "note": "Gap G4/G5/G6: 0 desk fills ever; 10-27 AVAX rejected opposite_slice_one_way_book, BTC risk_refused available_usd=0 (fixed BYBIT1-MARGIN-STARVED); 0 leg-symbol proposals in ~27h since (DESK-18E: <=60min contract prices negative). ib_paper Sun 11-01 >=23:00Z, alpaca_paper Mon 11-02. Plan docs/plans/desk-v1-production-plan-2026-10-29.md. [2026-10-28 ~21:07Z OPERATOR ANSWER, popup relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539] A2 verbatim 'Yes, one probe on bybit_1': ONE minimal-size demo mechanics probe, both brackets, proposal->order->fill->bracket->close->grade. Existing path REFUSES it: desk_write.PROBE_MAX=2, both used 10-27 (unfilled). PR #21028 (Tier 3, hold) raises the cap to 3. 'Minimal size' NOT supported: no size field by design; bybit_1 RiskManager sizes it at risk_pct 0.0075 (confidence_sizing off). STEPS after merge: manager spawns one desk wake per SKILL \u00a7 6b args with the prompt prefixed 'mechanics probe wake' (DESK-BRIEF \u00a7 3a) on the next hourly packet; observe desk_intake accepted -> trades row claude_desk bybit_1 with venue order id + both brackets -> close -> outcomes row.",
   "priority_rank": 6,
-  "updated_at": "2026-10-28T21:03:40Z",
+  "updated_at": "2026-10-28T21:13:12Z",
   "updated_by": "session_01AFoLuKietgEgZagdrtFF18",
   "roadmap": [
     "L-DESK"

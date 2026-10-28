@@ -204,6 +204,12 @@ Cost = dollar ceiling on the lane's row (plan usage, no API credits). Tier per C
 
 V1 needs no other ask. Real-money entries stay behind DESK-13 and are not requested.
 
+**ANSWERED 2026-10-28 ~21:07Z** (operator popups, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539):
+- **A1:** *"Advice-only until tested"*. Built as PR #21026 (Tier 3, hold): global `apply_mode: recommend`.
+- **A2:** *"Yes, one probe on bybit_1"*. PR #21028 (Tier 3, hold) raises `desk_write.PROBE_MAX` from 2 to 3, because both 10-27 probes used the cap
+  without filling. "Minimal size" is not supported (no size field by design), so `bybit_1`'s RiskManager sizes the probe like any entry.
+- **A3:** *"Hourly + ≤12 triggers/day"*.
+
 ---
 
 ## 5. Experiments running in parallel (offline; never on the trade path)
