@@ -53,6 +53,7 @@ checks the packet cannot see (workflow runs, stranded stamp PRs, watchdog incide
 into the record's `checks` block; that is the only place they are repeated.
 
 **2. ANALYSIS — the pass's real work, in this order, per track (TRADING, MODEL).** Budget at least half the pass here.
+0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source research-ops --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
 1. **Grade the previous record's `calls`** (`previous_calls` in the packet; Layer 0 of the shared pattern): hit / miss / not yet, one line each,
    and what the miss teaches. First, before anything else.
 2. **Open the rows, not the titles.** For every PASS and at least the 5 largest FAIL clusters in the window, open the

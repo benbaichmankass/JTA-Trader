@@ -48,6 +48,7 @@ unprogrammed cluster to a programme** in its analysis, by what it asks, not by t
 
 Fixed questions, open answers. Do them in this order.
 
+0. **Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source programme-review --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file.
 1. **Grade last week's calls** (`previous_calls`): each prediction → hit / miss / not yet, with why. Then one line: what
    did last week's ranking get wrong (a top-ranked test that turned out uninformative, a low-ranked one that mattered)?
 2. **Per programme, then per track — what was learned.** Read result rows for every PASS and for the largest FAIL
