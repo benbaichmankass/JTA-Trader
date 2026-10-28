@@ -1,0 +1,32 @@
+{
+  "id": "DESK-MAKER-PROBE",
+  "title": "Maker probe (b) on claude_desk, bybit_1 DEMO: post-only at touch + 5-min Market fallback; first fills prove mechanics, realized feeRate replaces inferred 2.0 bps",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    20770
+  ],
+  "blocked_on": [],
+  "note": "MERGED 31a932d35 (operator popup 2026-10-28 ~05:55Z: \"Yes, demo only\"). Evidence RQ-20261027-a3f1-01 (#20760): +2.03 bps/entry CI [1.69,2.33] n=10,560. Fence: paper+demo+Bybit linear+opening only; bybit_2 cannot receive PostOnly. ROLLBACK: delete entry_order: post_only_touch on claude_desk in config/strategies.yaml. Representativeness rule (>=100 post-only orders, +-10pp fill rate, >=90% print-through) is a research read, not a soak.",
+  "updated_at": "2026-10-28T05:56:36Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "observation": {
+    "what": "first claude_desk bybit_1 entry after deploy rests as Limit/PostOnly at the touch with bracket, and its trades row notes.maker_probe moves resting -> filled_maker (with feeRate) or fallback_market within ~6.5 min, not orphaned; no bybit_2 PostOnly",
+    "how_to_check": "diag /api/diag/bybit_open_orders?account_id=bybit_1 and the trades row notes.maker_probe for the first claude_desk entry",
+    "due_by": "2026-11-04"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: desk entries on demo go maker-first",
+    "arch": "execute._submit_order post-only path + order_monitor.sweep_maker_entries"
+  },
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 746
+}

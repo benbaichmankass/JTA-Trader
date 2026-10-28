@@ -2,7 +2,7 @@
   "id": "DESK-E535-04-SCORER-DEFECT",
   "title": "Fix the RQ-20261026-e535-04 scorer/driver defects (desk_gen_replay_driver): claude_desk in the strategies' book, leak-withheld indices read as a skipped prefix, filled count taken after the subset filter",
   "phase": "build",
-  "state": "blocked",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01AFoLuLbyLcHuTAD693tELF",
   "model": null,
@@ -12,14 +12,21 @@
   "prs": [
     20811
   ],
-  "blocked_on": [
-    "merge of hold PR #20811 (manager/human), then the re-dispatched e535-04 run lands a result"
-  ],
+  "blocked_on": [],
   "note": "Fix + tests done (PR #20811, hold: touches research/queue). Local re-run n441 INDETERMINATE (mean +0.073, S3 -0.091). Closes when the re-dispatched RQ-20261026-e535-04 result lands under research/results/RQ-20261026-e535-04/ with counts.filled_in_subset ~441 and stopping_rule_respected true.",
-  "updated_at": "2026-10-28T04:17:27Z",
-  "updated_by": "session_01AFoLuLbyLcHuTAD693tELF",
+  "updated_at": "2026-10-28T05:56:29Z",
+  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "re-dispatched RQ-20261026-e535-04 result lands with counts.filled_in_subset ~441 and stopping_rule_respected true",
+    "how_to_check": "ls research/results/RQ-20261026-e535-04/ and read verdict.json",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: scorer plumbing fix; verdict pending re-run",
+    "arch": "none"
+  },
   "_seq": 745
 }
