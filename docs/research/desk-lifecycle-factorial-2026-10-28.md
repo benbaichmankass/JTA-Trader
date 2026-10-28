@@ -8,6 +8,105 @@ Lane `DESK-LIFECYCLE-S0` (Tier 1 research), dispatched by Manager Session 2026-1
 
 **Sections 1–6 were committed before any management decision was judged and before any static-rule or managed outcome was computed** (the only numbers computed before this commit are the instrument's own: the judged-1 reproduction, the self-check clauses and the checkpoint count under HOLD, all path-only). Results are appended in § 7 afterwards and labelled.
 
+## 0. DESIGN v2 (2026-10-28 ~07:15Z) — the management factor is the CHECK-IN POLICY. Supersedes §§ 1–6's management factor.
+
+**Why v2.** Manager -> lane, 06:25Z, relaying the operator (~06:35Z, paraphrased, binding; now recorded in
+`docs/plans/claude-trading-desk-DESIGN.md` § 8.1 "Active-management test design"): *"One check when the trade hits
+1R is not how active management works. It is first and foremost HIGH-FREQUENCY TIME-BASED check-ins, and on top of
+that EVENT triggers ... Design tests that give actual information."* And 06:33Z: design FROM the practice review
+(`docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md` § A.4 and § F.1, branch
+`practice-research-trade-mgmt-ai`). v1 (§§ 1–6) checked in at four FIXED points (bars held 4/12/24/36), the same
+for every trade: that is the shape the rule forbids. **v1 is superseded.** Its 78 judged check-ins (rounds 1–2 of the
+v1 pilot, judged before the redesign reached the lane; § 7.2) are kept as a record and for the cost measurement,
+never scored as a result. **RQ-20261026-bf56-02/-03** (lane DESK-MGMT-S0, #20836: one decision per trade at +1 R,
+n = 176; in-trade −0.048 R [−0.143, +0.041], exit −0.091 R [−0.198, −0.003]) is cited only as **"a single +1 R
+intervention"**, never as "management fails".
+
+### 0.1 The factors
+
+| factor | levels |
+|---|---|
+| **E: entry** (held fixed across every management arm) | **claude** = the 732 committed judged-1 fills (C48 contract); **random** = one matched partner each (same symbol, fold, side, ATR-unit bracket); **strategy** = the four real-money legs' committed trades (registered in -02 § strategy arm, not built here) |
+| **M: management** | **M0** hold to bracket · **M1** matched random intervention for EACH Claude arm (Claude's own count and sequence of action types, at random check-ins of the same policy, 50 draws) · **M2** Chandelier trail 2 / 3 x ATR off the running extreme · **M3** channel exit (a close beyond the prior 12-bar extreme against the trade) · **M5** time stop (bars held >= 12 or 24 with MFE < +0.5 R) · **M6** breakeven at +1 R · **M7** 50 % partial at +1 R, Chandelier 3 x ATR on the rest · v1's menu (close at first check-in, breakeven at +0.5 R, 1 R trail, partial at +1 R, cut below −0.5 R) · **M8/M9 Claude** |
+| **C: check-in policy** (the Claude arms; M1 inherits it) | **C1E** every 1h bar + event tags · **C4E** every 4 bars + event triggers · **E** event triggers only. Events: first close beyond each R milestone −0.5 / +0.5 / +1 / +1.5 / +2 R; ATR(now)/ATR(entry) crossing 1.5 or 1/1.5 (and back); 3-bar momentum sign flip (with / against the trade); a close beyond the prior 12-bar high/low (level break, with / against). Every check-in carries its trigger tags (`why_now`). |
+
+Rule arms M2–M7 run token-free on the WHOLE population at every bar (C1E); B3 = the best rule of the combined menu
+chosen leave-one-fold-out. M4 (re-score with the entry model) is not replayable for a Claude entry (no entry model)
+and is out of scope here; it belongs in the strategy arm. Deviations from F.1, stated: ATR is the 14-bar ATR of the
+packet (F.1: ATR(22)); the channel is 12 bars (F.1: 10 / 20); the time stop is fixed at 12 / 24 bars (F.1: the leg's
+median winning duration; the desk has no leg history).
+
+### 0.2 How Claude manages a whole trade: one judge walks one trade
+
+A plan subagent (Sonnet tier, the desk's in-trade tier; no API credits) is given trade tokens and ONE command:
+`python3 scripts/research/desk_lifecycle_driver.py walk --out DIR --candles-dir C --trade T [--decision JSON]`.
+It prints the trade's next check-in packet (prices rebased once per trade, fill = 100; the first packet carries the last
+48 closed 1h bars, later ones only the bars since the previous check-in; the trigger tags; the actions taken so far;
+the current brackets in price and R; cost if closed now) or `{"closed": true}`. `--decision` records the answer to the
+CURRENT packet only (refused otherwise), then the engine replays the trade with every answer so far and reveals the
+next check-in. The judge never sees a bar after its check-in. **Isolation is audited mechanically**: every tool call
+in every judge transcript must be exactly that command (regex); one other call voids that judge's trades, which are
+re-judged. Sources (claude / random) interleave in token order and are not labelled.
+
+### 0.3 Statistics and the registered rule (RULE-RQ20261028-D1F5-02-LIFECYCLE, v2)
+
+Per trade, paired dR = net R(arm) − net R(M0), net of the full cost stack (§ 2), weekly-cluster bootstrap
+(10,000 draws). For each Claude arm (policy C) and entry source: **PASS** iff n >= 126 pairs AND dR vs M0 has mean
+> 0, CI lower > 0, > 0 in >= 3 of 4 folds AND **dR vs its own M1 has CI lower > 0** (else "acting helps, timing does
+not"); Holm across the three Claude arms within the family; labelled `judgement` only if it also beats B3 (CI lower
+> 0), else `pass_rule`. FAIL iff CI upper < 0 vs M0. Otherwise INDETERMINATE with the observed paired sd and the n
+that would resolve ±0.10 R. A PASS on this window is provisional until it **re-passes once on a fresh window**
+(`RESEARCH-CONFIRM-FRESH-WINDOW`): random entries x the same Claude arm on a window the manager allocates (the
+DESK-EDGE-PROGRAM holdout and full-run windows are reserved for entry variants; a decision for the manager).
+**Reported, not graded:** the factorial contrasts of § 3 (entry value, main effects, interaction) per policy; the
+**value of acting vs not acting** (per check-in ablation: each Claude action vs that one answer replaced by hold;
+each Claude hold vs that one answer replaced by close), by action type, trigger tag, time in trade and R state;
+capture ratio and action rate; strata: volatility tercile at entry and side (the desk has no trend / mean-reversion
+leg label; the strategy arm stratifies by leg type per F.1). Every arm and parameter is counted in the trial ledger.
+
+### 0.4 n, power and spend (the n the plan can buy)
+
+- **Check-in load, MEASURED on the HOLD path over all 1,464 trades** (`comms/research/desk_lifecycle/explore/explore.json`):
+  C1 every bar **16,176** (11.05 / trade), C4 every 4 bars 3,521 (2.41), E events only **7,141** (4.88), C4E **9,111** (6.22).
+  Claude's actions change the path (a close ends it), so a judged arm is at or below these.
+- **Paired sd, MEASURED on the token-free rule arms** (Claude entries): 0.51–0.96 R for active rules (Chandelier 3 x ATR
+  0.71, breakeven 0.63, channel 0.52); design effect of week clustering ≈ 1.1 (Chandelier 3 x ATR: cluster half-width
+  0.053 vs iid 0.051). At sd 0.7, ±0.10 R needs about (2.8 x 0.7 / 0.1)^2 x 1.1 ≈ **420 trades = ~200 pairs per Claude arm**.
+- **Judge cost per check-in:** MEASURED in v1's batched mode at ~8.0k subagent tokens per check-in (6 judges,
+  624k tokens, 78 check-ins); the walker's multi-turn cost is NOT yet measured (INFERRED $0.01–0.025 per check-in at
+  Sonnet list prices, mostly cached context). The pilot measures it.
+- **Registered full run:** the same **200 pairs** (the first 200 of one seeded order of the 732, seed 20261031; the pilot is its first 20) under each of **C4E (M8, primary)**,
+  **E (M9)** and **C1E** (the cadence factor). Check-ins ≈ 200 x 2 x (6.2 + 4.9 + 11.0) = **8,860** -> **~$90–220**
+  API-equivalent on the plan (INFERRED until the pilot measures $/check-in). The rule arms, M0 and M1 cost nothing.
+  Cheaper registered fallback (the manager's call): C4E and E only, 126 pairs (the floor): ~2,800 check-ins, **~$30–70**.
+- **Pilot (not yet run; waits for the manager):** 20 pairs (40 trades) under C4E, walker mode, ~250 check-ins,
+  **~$3–6**; labelled pilot; measures $/check-in, paired sd, invalid rate, isolation audit, action mix by trigger.
+
+### 0.5 Token-free results already in hand (rules, not Claude; computed 2026-10-28 before this v2 registration)
+
+Disclosure: these were computed while v2 was being designed (they set the power numbers above). The rule menu
+itself was fixed by practice review F.1 before they were seen; nothing in the Claude-arm rule depends on them.
+Population: 732 Claude entries and 732 matched random entries, current cost stack (11 / 3 / 1 bps).
+
+| rule arm (dR vs HOLD, mean [95% cluster CI]) | Claude entries | random entries |
+|---|---|---|
+| HOLD itself (net R / trade) | +0.132 [−0.086, +0.331] | +0.184 [+0.038, +0.310] |
+| Chandelier 2 x ATR | **−0.128 [−0.226, −0.017]** | **−0.091 [−0.153, −0.019]** |
+| Chandelier 3 x ATR | **−0.093 [−0.144, −0.038]** | **−0.043 [−0.084, −0.001]** |
+| channel 12 | −0.027 [−0.072, +0.017] | −0.012 [−0.045, +0.021] |
+| time stop 12 / 24 | −0.018 / −0.003 | −0.016 / −0.004 |
+| breakeven at +1 R | −0.050 [−0.097, +0.003] | −0.008 [−0.046, +0.029] |
+| partial at +1 R + Chandelier 3 | −0.051 [−0.098, +0.003] | −0.052 [−0.103, +0.005] |
+
+**Hindsight map (bounds, reads the future on purpose):** at every C1E check-in of the HOLD path, closing now minus
+holding is NEGATIVE in every time bucket (−0.27 to −0.36 R), every R state (−0.14 to −0.41 R) and every trigger tag
+with n >= 100; the hindsight-oracle upper bound is +0.2 to +0.6 R per check-in. At −0.5 R and below, closing is better
+in 77–82 % of check-ins yet worse on average (holding has positive skew). Reading: in this window (723 of 732 entries
+short, a falling market) **no state rule captures management value and every trail costs R**; whatever value exists
+must come from information in the path, which is exactly what the Claude arms vs M1 test. Not a verdict on Claude.
+
+> **§§ 1–6 below are DESIGN v1, SUPERSEDED by § 0 for the management factor** (kept as registered; the engine, cost stack, entries and factorial arithmetic carry over).
+
 ## 1. The design: a factorial over one real path per trade
 
 Every trade is replayed bar by bar from its fill to its close on the real 1h candle path, under the full cost stack. Two factors:
@@ -97,7 +196,19 @@ For each management contrast (C_m − C_h and R_m − R_h) and each entry contra
 
 ## 7. Results
 
-*(appended after the pilot; see below)*
+### 7.1 Instrument (MEASURED)
+Self-check PASS 6 / 6 (local, `RULE-RQ20261028-D1F5-01`, plus clause a3 added with v2: HOLD under C1E / C4E / E equals
+the bracket engine on all 1,464 trades, max |diff| 0.0). judged-1 reproduced exactly (732 fills, +0.158866 R at
+e535-03's 7.5 bps fee; **+0.1315 R at the current 11 bps**).
+
+### 7.2 v1 pilot (SUPERSEDED, not scored)
+40 pairs drawn; v1 rounds 1–2 judged before the redesign reached the lane: 78 check-ins (62 hold, 16 tighten_sl,
+0 invalid), 6 Sonnet plan subagents, 624k subagent tokens, every transcript audited (Read of its own two files only).
+Rounds 3–4 were not judged. Kept in `comms/research/desk_lifecycle/pilot/` as a record and as the batched-mode cost
+anchor; not reused by v2 (different packets, different policy).
+
+### 7.3 v2 pilot
+*(after the manager's go; not run)*
 
 ## 8. Not verified / limits
 

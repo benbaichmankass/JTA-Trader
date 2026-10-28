@@ -213,3 +213,69 @@ def test_read_decisions_joins_round_keys(tmp_path):
     d.write_text(json.dumps({"packet_id": "LC-zz", "action": "hold"}) + "\n")
     with pytest.raises(ValueError):
         lc.read_decisions(tmp_path, d)
+
+
+# ----------------------------------------------------------------------------- v2: check-in policies, rule arms, M1, walker packet
+def _trend_down(n=80):
+    rows, px = [], 100.0
+    for i in range(n):
+        o = px
+        px = px - 0.15
+        rows.append((o, o + 0.1, px - 0.1, px))
+    return rows
+
+
+def test_policies_select_checkins_and_hold_is_unchanged():
+    s = _series(_trend_down())
+    e = _entry(side=-1.0, stop=101.0, tp=90.0)
+    hold, _ = lc.run(s, e)
+    for name in ("C1", "C4", "E", "C4E", "C1E"):
+        r, p = lc.run(s, e, lambda k, j, st: {"action": "hold"}, lc.POLICIES[name]())
+        assert p is None and r.net_r == pytest.approx(hold.net_r)
+    c1, _ = lc.run(s, e, lambda k, j, st: {"action": "hold"}, lc.POLICIES["C1"]())
+    c4, _ = lc.run(s, e, lambda k, j, st: {"action": "hold"}, lc.POLICIES["C4"]())
+    assert [c["bars_held"] for c in c4.checkins] == [b for b in [c["bars_held"] for c in c1.checkins] if b % 4 == 0]
+    ev, _ = lc.run(s, e, lambda k, j, st: {"action": "hold"}, lc.POLICIES["E"]())
+    tags = [t for c in ev.checkins for t in c["tags"]]
+    assert "r+0.5" in tags and "r+1.0" in tags and tags.count("r+0.5") == 1      # each milestone fires once
+
+
+def test_chandelier_only_tightens_and_rules_run():
+    s = _series(_trend_down())
+    e = _entry(side=-1.0, stop=101.0, tp=90.0)
+    r, _ = lc.run(s, e, lc._rule2("chandelier_2atr"), lc.POLICIES["C1E"]())
+    stops = [c["level_r"] for c in r.checkins if c["action"] == "tighten_sl"]
+    assert stops and stops == sorted(stops)
+    for rn in lc.RULES2:
+        rr, p = lc.run(s, e, lc._rule2(rn), lc.POLICIES["C1E"]())
+        assert p is None and rr.state == "filled"
+
+
+def test_matched_random_fires_same_action_types():
+    cks = [{"k": 0, "action": "hold", "level_r": None, "now_r": 0.1, "tags": [], "bars_held": 1},
+           {"k": 1, "action": "tighten_sl", "level_r": 0.2, "now_r": 1.0, "tags": [], "bars_held": 2},
+           {"k": 2, "action": "close", "level_r": None, "now_r": 1.2, "tags": [], "bars_held": 3}]
+    s = _series(_trend_down())
+    e = _entry(side=-1.0, stop=101.0, tp=90.0)
+    seen = set()
+    for seed in range(20):
+        r, _ = lc.run(s, e, lc.matched_random(cks, seed), lc.POLICIES["C1"]())
+        acts = [a for a in r.actions if a != "hold"]
+        assert acts == ["tighten_sl", "close"][:len(acts)]              # same types, same order, never more
+        seen.add(len(acts))
+    assert 2 in seen
+
+
+def test_walker_packet_masked_and_incremental():
+    s = _walk(seed=5)
+    c = float(s.c[60])
+    e = _entry(i=60, level=c, stop=c - 2.0, tp=c + 8.0)
+    pol = lc.POLICIES["C1"]
+    _r, p0 = lc.run(s, e, lambda k, j, st: None, pol())
+    pk0, key0 = lc.build_packet_v2(s, e, p0, None)
+    assert pk0["trade"]["entry_px"] == 100.0 and len(pk0["new_bars"]) == lc.WALK_FIRST_BARS
+    assert lc.leak_scan(json.dumps(pk0), key0, ["ETHUSDT"]) == []
+    _r, p1 = lc.run(s, e, lambda k, j, st: {"action": "hold"} if k == 0 else None, pol())
+    pk1, _ = lc.build_packet_v2(s, e, p1, p0.j)
+    assert [b[0] for b in pk1["new_bars"]] == [p1.j - (e.i + 1)]           # only the bar since the last check-in
+    assert pk1["trade"]["actions_so_far"] == ["hold"] and pk1["packet_id"] != pk0["packet_id"]

@@ -212,6 +212,7 @@ class Result:
     invalid: int = 0
     moved_stop_exit: bool = False
     actions: List[str] = field(default_factory=list)
+    checkins: List[dict] = field(default_factory=list)
 
 
 def _state(s: g.Series, e: Entry, fill: float, fi: int, risk: float, kk: int, stop: float, tp: float,
@@ -247,15 +248,86 @@ def validate(act: Optional[dict], st: Dict[str, Any]) -> Tuple[str, Optional[flo
 Decider = Callable[[int, int, Dict[str, Any]], Optional[dict]]
 
 
-def run(s: g.Series, e: Entry, decide: Optional[Decider] = None) -> Tuple[Result, Optional[Pending]]:
-    """Replay `e` bar by bar. `decide(k, j, state)` returns the decision at checkpoint k (bar j), or None when it is
-    not yet known -> (partial Result, Pending). decide=None is HOLD at every checkpoint (== g.simulate)."""
+# ----------------------------------------------------------------------------- check-in policies (v2 factor C)
+Policy = Callable[[g.Series, "Entry", int, int, Dict[str, Any], Dict[str, Any]], List[str]]
+R_LEVELS = (-0.5, 0.5, 1.0, 1.5, 2.0)                 # R milestones (first close beyond each since the fill)
+ATR_RATIO = (1.5, 1 / 1.5)                            # ATR now / ATR at entry crossing either
+CHANNEL_N = 12                                        # a close beyond the prior 12-bar extreme ("level break")
+MOM_N = 3                                             # momentum sign flip of the 3-bar close change
+
+
+def fixed_policy() -> Policy:
+    def p(s, e, fi, kk, st, mem):
+        return ["fixed"] if (kk - fi + 1) in checkpoints(e.horizon) else []
+    return p
+
+
+def _events(s: g.Series, e: "Entry", fi: int, kk: int, st: Dict[str, Any], mem: Dict[str, Any]) -> List[str]:
+    tags: List[str] = []
+    hit = mem.setdefault("r_hit", set())
+    for lv in R_LEVELS:
+        if lv not in hit and ((lv > 0 and st["close_r"] >= lv) or (lv < 0 and st["close_r"] <= lv)):
+            hit.add(lv)
+            tags.append(f"r{lv:+.1f}")
+    a0 = float(s.atr[fi - 1]) if fi >= 1 and np.isfinite(s.atr[fi - 1]) else float("nan")
+    a1 = float(s.atr[kk])
+    if np.isfinite(a0) and a0 > 0 and np.isfinite(a1):
+        reg = 1 if a1 / a0 >= ATR_RATIO[0] else (-1 if a1 / a0 <= ATR_RATIO[1] else 0)
+        if reg != mem.get("atr_reg", 0):
+            tags.append("atr_up" if reg > 0 else ("atr_down" if reg < 0 else "atr_norm"))
+        mem["atr_reg"] = reg
+    if kk - MOM_N - 1 >= 0:
+        m1, m0 = np.sign(s.c[kk] - s.c[kk - MOM_N]), np.sign(s.c[kk - 1] - s.c[kk - 1 - MOM_N])
+        if m1 != 0 and m0 != 0 and m1 != m0:
+            tags.append("mom_with" if m1 == np.sign(e.side) else "mom_against")
+    lo = max(0, kk - CHANNEL_N)
+    if kk > lo:
+        if s.c[kk] > s.h[lo:kk].max():
+            tags.append("break_up_with" if e.side > 0 else "break_up_against")
+        elif s.c[kk] < s.l[lo:kk].min():
+            tags.append("break_down_with" if e.side < 0 else "break_down_against")
+    return tags
+
+
+def clock_policy(every: int, events: bool) -> Policy:
+    def p(s, e, fi, kk, st, mem):
+        tags = ["clock"] if every and (kk - fi + 1) % every == 0 else []
+        ev = _events(s, e, fi, kk, st, mem) if events else []
+        return tags + ev
+    return p
+
+
+def event_policy() -> Policy:
+    return clock_policy(0, True)
+
+
+POLICIES: Dict[str, Callable[[], Policy]] = {
+    "C1": lambda: clock_policy(1, False),       # every bar of the trade's timeframe (1h)
+    "C1E": lambda: clock_policy(1, True),       # every bar + events (tags only; same check-ins as C1)
+    "C4": lambda: clock_policy(4, False),       # every 4 bars
+    "C4E": lambda: clock_policy(4, True),       # every 4 bars + event triggers
+    "E": event_policy,                          # event triggers only
+    "FIXED": fixed_policy,                      # v1: bars held 4 / 12 / 24 / 36 (superseded)
+}
+
+
+
+
+def run(s: g.Series, e: Entry, decide: Optional[Decider] = None, policy: Optional["Policy"] = None
+        ) -> Tuple[Result, Optional[Pending]]:
+    """Replay `e` bar by bar. At every bar the check-in `policy` selects (default: the v1 fixed fractions),
+    `decide(k, j, state)` returns the decision at check-in k (bar j), or None when it is not yet known ->
+    (partial Result, Pending). decide=None is HOLD everywhere (== g.simulate). state carries the trigger tags,
+    the running extreme, the ATR now and the actions taken so far, so a manager's state carries forward."""
     t0 = g.simulate(s, e.i, e.side, e.etype, e.level, e.stop, e.tp, e.good_till, e.horizon)
     if t0.state != "filled":
         return Result(t0.state, exit_reason=t0.reason), None
     side, fill, fi, risk = e.side, t0.fill_px, t0.fill_i, t0.risk
     end = fi + e.horizon - 1
-    ck = {fi + c - 1: k for k, c in enumerate(checkpoints(e.horizon))}
+    pol = policy or fixed_policy()
+    mem: Dict[str, Any] = {}
+    kord = 0
+    taken: List[str] = []
     stop, tp, size, partial = e.stop, e.tp, 1.0, False
     stop_moved = False
     res = Result("filled")
@@ -293,9 +365,18 @@ def run(s: g.Series, e: Entry, decide: Optional[Decider] = None) -> Tuple[Result
             pieces.append((size, px, kk, why))
             size = 0.0
             break
-        if kk in ck and kk < end:
-            k = ck[kk]
-            st = _state(s, e, fill, fi, risk, kk, stop, tp, partial, end)
+        if kk >= end:
+            continue
+        st = _state(s, e, fill, fi, risk, kk, stop, tp, partial, end)
+        tags = pol(s, e, fi, kk, st, mem)
+        if tags:
+            k = kord
+            kord += 1
+            st["tags"] = tags
+            st["prior_actions"] = list(taken)
+            st["ext_px"] = fill + side * st["mfe_r"] * risk
+            st["atr_px"] = float(s.atr[kk])
+            st["risk_px"] = risk
             act = None if decide is None else decide(k, kk, st)
             if decide is not None and act is None:
                 return res, Pending(e.entry_id, k, kk, st)
@@ -304,6 +385,9 @@ def run(s: g.Series, e: Entry, decide: Optional[Decider] = None) -> Tuple[Result
                 res.decided += 1
                 res.invalid += 0 if ok else 1
                 res.actions.append(a)
+                res.checkins.append({"k": k, "bars_held": st["bars_held"], "now_r": st["close_r"], "tags": tags,
+                                     "action": a, "level_r": x})
+                taken.append(a if x is None else f"{a}@{x:+.2f}R")
                 if a != "hold":
                     nxt = (a, x)
     if size > 0:
@@ -400,12 +484,12 @@ def leak_scan(text: str, key: dict, symbols: Sequence[str]) -> List[str]:
     obj = json.loads(text)
     tr = obj.get("trade") or {}
     levels = [tr[f] for f in PRICE_LEVEL_FIELDS if isinstance(tr.get(f), (int, float))]
-    levels += [x for b in obj.get("bars_ohlc") or [] for x in b[1:]]
+    levels += [x for b in (obj.get("bars_ohlc") or []) + (obj.get("new_bars") or []) for x in b[1:]]
     ref = float(key["price_ref"])
     for v in levels:
         if ref > 0 and abs(ref - 100.0) > 0.5 and abs(float(v) - ref) <= 1e-6 * ref:
             out.append(f"real price {v}")
-    for m in re.finditer(r"(?<![\w.])(\d+\.\d+)", json.dumps({k: v for k, v in obj.items() if k not in ("trade", "bars_ohlc")})):
+    for m in re.finditer(r"(?<![\w.])(\d+\.\d+)", json.dumps({k: v for k, v in obj.items() if k not in ("trade", "bars_ohlc", "new_bars")})):
         if ref > 0 and abs(ref - 100.0) > 0.5 and abs(float(m.group(1)) - ref) <= 1e-6 * ref:
             out.append(f"real price {m.group(1)}")       # free text outside the numeric fields (the positive control)
     return sorted(set(out))
@@ -466,6 +550,247 @@ def _static(name: str) -> Decider:
 STATIC_RULES = ("hold", "close_at_ckpt1", "breakeven_at_0.5r", "trail_1r", "partial_at_1r", "cut_below_-0.5r")
 
 
+# ----------------------------------------------------------------------------- v2 practitioner rule arms (M2-M7; no judging)
+def _rule2(name: str) -> Decider:
+    """Practice-review F.1 rule arms, evaluated at every check-in of the policy they run under (C1E = every bar + tags).
+    Chandelier uses the series ATR (14-bar, the packet's), not ATR(22): stated."""
+    def chandelier(k_atr: float, st):
+        x = st["mfe_r"] - k_atr * st["atr_px"] / st["risk_px"]
+        return {"action": "tighten_sl", "level_r": x} if x > st["stop_r"] + 1e-9 and x <= st["close_r"] - MIN_GAP_R \
+            else {"action": "hold"}
+
+    def d(k, j, st):
+        if name in ("chandelier_2atr", "chandelier_3atr"):
+            return chandelier(2.0 if name.endswith("2atr") else 3.0, st)
+        if name == "channel_12":
+            return {"action": "close"} if any(t.endswith("_against") and t.startswith("break") for t in st.get("tags", [])) \
+                else {"action": "hold"}
+        if name in ("timestop_12", "timestop_24"):
+            T = int(name.split("_")[1])
+            return {"action": "close"} if st["bars_held"] >= T and st["mfe_r"] < 0.5 else {"action": "hold"}
+        if name == "breakeven_at_1r":
+            return {"action": "tighten_sl", "level_r": 0.0} if st["close_r"] >= 1.0 and st["stop_r"] < 0 else {"action": "hold"}
+        if name == "partial1r_chandelier3":
+            if st["close_r"] >= 1.0 and not st["partial_taken"]:
+                return {"action": "partial_close"}
+            return chandelier(3.0, st) if st["partial_taken"] else {"action": "hold"}
+        raise KeyError(name)
+    return d
+
+
+RULES2 = ("chandelier_2atr", "chandelier_3atr", "channel_12", "timestop_12", "timestop_24", "breakeven_at_1r",
+          "partial1r_chandelier3")
+
+
+def matched_random(claude_checkins: List[dict], seed: int) -> Decider:
+    """M1: the SAME number and sequence of non-hold action types as Claude's on this trade, fired at random check-ins of
+    the same policy (probability = Claude's action rate on the trade); a level keeps Claude's distance from now_r."""
+    acts = [c for c in claude_checkins if c["action"] != "hold"]
+    n = len(claude_checkins)
+    q = len(acts) / n if n else 0.0
+    rng = np.random.default_rng(seed)
+    queue = list(acts)
+
+    def d(k, j, st):
+        if not queue or rng.random() >= q:
+            return {"action": "hold"}
+        c = queue.pop(0)
+        if c["level_r"] is None:
+            return {"action": c["action"]}
+        return {"action": c["action"], "level_r": st["close_r"] - (c["now_r"] - c["level_r"])}
+    return d
+
+
+def _bucket(x: float, edges: Sequence[float], labels: Sequence[str]) -> str:
+    for ed, lb in zip(edges, labels):
+        if x < ed:
+            return lb
+    return labels[-1]
+
+
+HELD_EDGES, HELD_LABELS = (4, 12, 24, 10**9), ("1-3", "4-11", "12-23", "24-47")
+NOWR_EDGES, NOWR_LABELS = (-0.5, 0.0, 0.5, 1.0, 2.0, 10**9), ("<-0.5", "-0.5..0", "0..0.5", "0.5..1", "1..2", ">=2")
+
+
+def explore(mkt: Dict[str, g.Series], entries: List["Entry"], seed: int = SEED) -> Dict[str, Any]:
+    """Token-free half of v2: (1) check-ins per trade under each policy on the HOLD path (the judging load),
+    (2) every rule arm's paired dR vs HOLD per entry source, (3) the hindsight map: at each C1E check-in of the HOLD
+    path, close-now minus hold (whole-trade net R) by time in trade, R state and trigger tag -- WHEN could
+    intervening matter at all. (3) reads the future on purpose; it bounds, it does not test."""
+    out: Dict[str, Any] = {"population": {"trades": len(entries)}}
+    loads: Dict[str, List[int]] = {}
+    for name in ("C1", "C4", "E", "C4E"):
+        loads[name] = [run(mkt[e.symbol], e, lambda k, j, st: {"action": "hold"}, POLICIES[name]())[0].decided
+                       for e in entries]
+    out["checkins_per_trade_under_hold"] = {n: {"total": int(sum(v)), "mean": float(np.mean(v)), "max": int(max(v))}
+                                           for n, v in loads.items()}
+    rules: Dict[str, Any] = {}
+    for src in ("claude", "random"):
+        es = [e for e in entries if e.source == src]
+        hold = [run(mkt[e.symbol], e)[0].net_r for e in es]
+        wk = [e.week for e in es]
+        rules[f"hold|{src}"] = cluster_mean_ci(hold, wk, seed)
+        for rn in RULES2:
+            v = [run(mkt[e.symbol], e, _rule2(rn), POLICIES["C1E"]())[0].net_r - h for e, h in zip(es, hold)]
+            st = cluster_mean_ci(v, wk, seed)
+            st["folds_positive"], st["folds"] = folds_positive(v, [e.fold for e in es])
+            rules[f"{rn}|{src}"] = st
+    out["rule_arms_dR_vs_hold"] = rules
+    cells: Dict[str, List[Tuple[float, str]]] = {}
+    for e in entries:
+        s = mkt[e.symbol]
+        hold = run(s, e)[0].net_r
+        base, _ = run(s, e, lambda k, j, st: {"action": "hold"}, POLICIES["C1E"]())
+        for c in base.checkins:
+            closed = run(s, e, lambda k, j, st, kk=c["k"]: {"action": "close"} if k == kk else {"action": "hold"},
+                         POLICIES["C1E"]())[0].net_r
+            d = closed - hold
+            keys = [f"held:{_bucket(c['bars_held'], HELD_EDGES, HELD_LABELS)}",
+                    f"now_r:{_bucket(c['now_r'], NOWR_EDGES, NOWR_LABELS)}"] + [f"tag:{t}" for t in c["tags"] if t != "clock"]
+            for kname in keys:
+                cells.setdefault(kname, []).append((d, e.week))
+    hm = {}
+    for kname, v in sorted(cells.items()):
+        st = cluster_mean_ci([x for x, _ in v], [w for _, w in v], seed, draws=2000)
+        hm[kname] = {"n_checkins": st["n"], "close_minus_hold_mean": st["mean"], "ci95": st["ci95"],
+                     "oracle_upper_bound": float(np.mean([max(0.0, x) for x, _ in v])),
+                     "share_close_better": float(np.mean([x > 0 for x, _ in v]))}
+    out["hindsight_close_now_vs_hold"] = hm
+    return out
+
+
+def cmd_explore(a: argparse.Namespace) -> int:
+    mkt, missing, classes, src = _prepare_market(a)
+    claude = load_claude_entries(mkt, classes)
+    pools: Dict[Tuple[str, int], np.ndarray] = {}
+    ents = [x for e in claude for x in (e, random_partner(mkt, e, SEED + 1, pools)) if x is not None]
+    res = explore(mkt, ents, a.seed)
+    res["candles"] = src
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "explore.json").write_text(json.dumps(res, indent=1, default=str))
+    print(json.dumps(res["checkins_per_trade_under_hold"]))
+    return 0
+
+
+WALK_PROTOCOL = """# Desk in-trade management -- WALK protocol (v2; one judge walks whole trades; no lookahead)
+
+You manage OPEN trades from fill to close. You will be given trade tokens and exactly ONE command:
+
+  python3 scripts/research/desk_lifecycle_driver.py walk --out <DIR> --candles-dir <C> --trade <T> [--decision '<JSON>']
+
+Run it WITHOUT --decision to get the trade's next check-in packet. Answer that packet by running it again WITH
+--decision '<one JSON object>'; it records your answer and prints the NEXT check-in, or {"closed": true} when the trade
+is over. Then go to the next token. Running any other command, reading any file, or using any other tool voids your
+work (it is audited mechanically). Do not compute with code; judge each packet yourself.
+
+A packet: `why_now` = what triggered this check-in ("clock" = the regular check-in; r+1.0 = price first closed beyond
++1 R; atr_up / atr_down = volatility regime change; mom_with / mom_against = short-term momentum flipped with / against
+the trade; break_*_with / *_against = a close beyond the prior 12-bar high / low). `trade` = side; entry (= 100) / stop /
+target prices; the same in R from entry (1 R = the initial risk); now_r; mfe_r / mae_r; bars held; bars left to the time
+stop (the trade closes at market there); partial_taken; actions_so_far; atr_now_px; cost_r_if_closed_now (every
+outcome is net of costs). `new_bars` = closed 1h bars [t since fill, open, high, low, close]: the first packet shows
+the last 48, later ones only the bars since your previous check-in. Asset and date are hidden; do not guess them.
+
+Decide what maximises the trade's expected net R from here to its close. Holding is a decision, not a default.
+  hold | tighten_sl level_r=x (above the current stop_r, >= 0.10 R below now_r) | widen_sl level_r=x (below the
+  current stop_r, not below -2.0 R) | move_tp level_r=y (>= 0.10 R beyond now_r, <= 10 R) | partial_close (50 %, once) |
+  close (all, at the next bar's open). A moved level applies from the next bar. Both brackets always exist.
+Decision JSON: {"packet_id": "<from the packet>", "action": "...", "level_r": <number, only for tighten_sl / widen_sl /
+move_tp>, "confidence": <0..1>, "reason": "<= 15 words"}
+When every token is closed, reply with one line per token: <token> closed <number of check-ins answered>.
+"""
+
+
+# ----------------------------------------------------------------------------- v2 walker (one judge walks one trade)
+WALK_FIRST_BARS = 48
+
+
+def trade_token(seed: int, entry_id: str) -> str:
+    return "T-" + hashlib.sha256(f"walk|{seed}|{entry_id}".encode()).hexdigest()[:10]
+
+
+def build_packet_v2(s: g.Series, e: Entry, p: Pending, prev_j: Optional[int], seed: int = SEED) -> Tuple[dict, dict]:
+    """v2 check-in packet. Prices rebased ONCE per trade (fill = 100), so successive packets share one scale; the first
+    packet carries the last 48 closed bars, later ones only the bars since the previous check-in. Carries the trigger
+    tags, the actions already taken and the current brackets, so the manager's state carries forward."""
+    t0 = g.simulate(s, e.i, e.side, e.etype, e.level, e.stop, e.tp, e.good_till, e.horizon)
+    fill, risk, j = t0.fill_px, t0.risk, p.j
+    sc = 100.0 / fill
+    lo = max(0, j - WALK_FIRST_BARS + 1) if prev_j is None else prev_j + 1
+    st = p.state
+    bars = [[j2 - t0.fill_i, round(float(s.o[j2]) * sc, 4), round(float(s.h[j2]) * sc, 4), round(float(s.l[j2]) * sc, 4),
+             round(float(s.c[j2]) * sc, 4)] for j2 in range(lo, j + 1)]
+    xcost = xc.roundtrip_cost_r(entry=fill, exit_price=float(s.c[j]), risk=risk,
+                                entry_time=datetime.fromtimestamp(int(s.t[t0.fill_i]), tz=timezone.utc).isoformat(),
+                                exit_time=datetime.fromtimestamp(int(s.t[j]) + g.SEC, tz=timezone.utc).isoformat(),
+                                fee_bps_roundtrip=s.fee_bps, slippage_bps_roundtrip=s.slip_bps,
+                                funding_bps_per_window=s.fund_bps)["total_cost_r"]
+    pid = "LC2-" + hashlib.sha256(f"v2|{seed}|{e.entry_id}|{p.k}".encode()).hexdigest()[:12]
+    pk = {"packet_id": pid, "checkin": p.k + 1, "why_now": st.get("tags", []),
+          "trade": {"side": "long" if e.side > 0 else "short", "entry_px": 100.0,
+                    "stop_px": round((fill + e.side * st["stop_r"] * risk) * sc, 4),
+                    "tp_px": round((fill + e.side * st["tp_r"] * risk) * sc, 4), "one_r_px": round(risk * sc, 4),
+                    "now_r": round(st["close_r"], 3), "stop_r": round(st["stop_r"], 3), "tp_r": round(st["tp_r"], 3),
+                    "mfe_r": round(st["mfe_r"], 3), "mae_r": round(st["mae_r"], 3), "bars_held": st["bars_held"],
+                    "bars_left_to_time_stop": st["bars_left"], "partial_taken": st["partial_taken"],
+                    "actions_so_far": st.get("prior_actions", []),
+                    "atr_now_px": round(float(s.atr[j]) * sc, 4) if np.isfinite(s.atr[j]) else None,
+                    "cost_r_if_closed_now": round(float(xcost), 3)},
+          "new_bars": bars}
+    key = {"packet_id": pid, "entry_id": e.entry_id, "k": p.k, "j": j, "symbol": e.symbol, "price_ref": fill,
+           "checkpoint_epoch": int(s.t[j]) + g.SEC}
+    return pk, key
+
+
+def cmd_walk(a: argparse.Namespace) -> int:
+    """The judge's ONLY interface: prints the trade's next check-in packet, or {"closed": true}. --decision records
+    the answer to the CURRENT packet first (refused if its packet_id is not the one pending)."""
+    out = Path(a.out)
+    entries = {trade_token(SEED, e.entry_id): e for e in read_entries(out / "entries.jsonl")}
+    e = entries.get(a.trade)
+    if e is None:
+        print(json.dumps({"error": f"unknown trade {a.trade}"}))
+        return 2
+    mkt, missing = g.load_market(Path(a.candles_dir), [e.symbol])
+    s = mkt[e.symbol]
+    pol = POLICIES[(out / "POLICY").read_text().strip()]
+    rd = out / "rounds"
+    rd.mkdir(parents=True, exist_ok=True)
+    keyf, decf = rd / "round-walk-key.jsonl", out / "decisions.jsonl"
+    dec = read_decisions(out, decf if decf.exists() else None)
+    res, p = run(s, e, _decider(e.entry_id, dec), pol())
+    if a.decision:
+        d = json.loads(a.decision)
+        if p is None or not isinstance(d, dict):
+            print(json.dumps({"error": "no check-in is pending for this trade, or the decision is not a JSON object"}))
+            return 2
+        pk, _key = build_packet_v2(s, e, p, None)
+        if d.get("packet_id") != pk["packet_id"]:
+            print(json.dumps({"error": f"decision is for {d.get('packet_id')!r}; the pending check-in is {pk['packet_id']}"}))
+            return 2
+        with decf.open("a") as fh:
+            fh.write(json.dumps({**d, "_trade": a.trade}) + "\n")
+        dec = read_decisions(out, decf)
+        res, p = run(s, e, _decider(e.entry_id, dec), pol())
+    if p is None:
+        print(json.dumps({"trade": a.trade, "closed": True}))
+        return 0
+    prev = [c["j"] for c in [json.loads(x) for x in keyf.read_text().splitlines()] if c["entry_id"] == e.entry_id
+            and c["k"] == p.k - 1] if keyf.exists() else []
+    prev_j = prev[0] if prev else None              # None at the first check-in: the packet carries 48 bars
+    pk, key = build_packet_v2(s, e, p, prev_j)
+    leaks = leak_scan(json.dumps(pk), key, [e.symbol])
+    if leaks:
+        raise AssertionError(f"leak in {pk['packet_id']}: {leaks}")
+    known = {json.loads(x)["packet_id"] for x in keyf.read_text().splitlines()} if keyf.exists() else set()
+    if pk["packet_id"] not in known:
+        with keyf.open("a") as fh:
+            fh.write(json.dumps(key) + "\n")
+    print(json.dumps(pk))
+    return 0
+
+
 # ----------------------------------------------------------------------------- statistics
 def cluster_mean_ci(vals: Sequence[float], weeks: Sequence[str], seed: int = SEED, draws: int = BOOT_DRAWS) -> Dict[str, Any]:
     v = np.asarray(vals, dtype=float)
@@ -520,7 +845,7 @@ def factorial(rows: List[Dict[str, Any]], seed: int = SEED) -> Dict[str, Any]:
         return [r for r in rows if r.get(k) is not None]
 
     out: Dict[str, Any] = {"cells": {}, "contrasts": {}}
-    for k in ("C_h", "C_m", "R_h", "R_m", "C_b3", "R_b3"):
+    for k in ("C_h", "C_m", "R_h", "R_m", "C_b3", "R_b3", "C_m1", "R_m1"):
         rr = col(k)
         out["cells"][k] = cluster_mean_ci([r[k] for r in rr], [r["week"] for r in rr], seed)
 
@@ -544,6 +869,8 @@ def factorial(rows: List[Dict[str, Any]], seed: int = SEED) -> Dict[str, Any]:
     contrast("interaction", lambda r: (r["C_m"] - r["C_h"]) - (r["R_m"] - r["R_h"]), full)
     contrast("claude_mgmt_vs_b3|claude_entry", lambda r: r["C_m"] - r["C_b3"], ("C_m", "C_b3"))
     contrast("claude_mgmt_vs_b3|random_entry", lambda r: r["R_m"] - r["R_b3"], ("R_m", "R_b3"))
+    contrast("claude_mgmt_vs_m1|claude_entry", lambda r: r["C_m"] - r["C_m1"], ("C_m", "C_m1"))
+    contrast("claude_mgmt_vs_m1|random_entry", lambda r: r["R_m"] - r["R_m1"], ("R_m", "R_m1"))
     contrast("end_to_end|claude_x_claude_vs_random_x_hold", lambda r: r["C_m"] - r["R_h"], ("C_m", "R_h"))
     return out
 
@@ -647,13 +974,13 @@ def cmd_entries(a: argparse.Namespace) -> int:
     repro["matches_e535_03"] = repro["n"] == E535_03_N and abs(repro["mean_hold_net_r_at_e535_fee"] - E535_03_MEAN) < 1e-9
     if a.pilot_n:
         rng = np.random.default_rng(a.seed)
-        pick = sorted(rng.choice(len(claude), size=min(a.pilot_n, len(claude)), replace=False).tolist())
+        pick = sorted(rng.permutation(len(claude))[:a.pilot_n].tolist())     # nested: the first n of one seeded order
         claude = [claude[n] for n in pick]
     pools: Dict[Tuple[str, int], np.ndarray] = {}
     out_rows: List[Entry] = []
     unmatched = 0
     for e in claude:
-        r = random_partner(mkt, e, a.seed + 1, pools)
+        r = random_partner(mkt, e, SEED + 1, pools)                     # partners fixed per pair, whatever the sample seed
         if r is None:
             unmatched += 1
             continue
@@ -664,6 +991,11 @@ def cmd_entries(a: argparse.Namespace) -> int:
     meta = {"judged1_reproduction": repro, "pilot_n": a.pilot_n, "seed": a.seed, "pairs": len(out_rows) // 2,
             "unmatched": unmatched, "candles": src}
     (out / "entries-meta.json").write_text(json.dumps(meta, indent=1))
+    if a.policy:
+        (out / "POLICY").write_text(a.policy + "\n")
+        (out / "WALK-PROTOCOL.md").write_text(WALK_PROTOCOL)
+        (out / "trades.txt").write_text("".join(trade_token(SEED, e.entry_id) + "\n"
+                                                for e in sorted(out_rows, key=lambda x: trade_token(SEED, x.entry_id))))
     print(json.dumps({k: v for k, v in meta.items() if k != "candles"}))
     return 0
 
@@ -698,14 +1030,29 @@ def cmd_step(a: argparse.Namespace) -> int:
     return 0
 
 
-def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str, int], dict]) -> Dict[str, Any]:
+M1_DRAWS = 50
+
+
+def _ablate(dec: Dict[Tuple[str, int], dict], eid: str, k: int, to: dict) -> Decider:
+    return lambda kk, j, st: to if kk == k else dec.get((eid, kk))
+
+
+def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str, int], dict],
+             policy: str = "FIXED") -> Dict[str, Any]:
+    """Every cell under check-in policy `policy`: HOLD (M0), Claude (M8/M9), its matched random intervention (M1,
+    mean of M1_DRAWS draws), the v1 static menu and the v2 practitioner rules (B3 = best of both menus, leave-one-fold-
+    out), and per-check-in ablations: each Claude action vs the same trade with that one answer replaced by hold, and
+    each Claude hold vs the same trade with that one answer replaced by close (the value of acting and of NOT acting)."""
+    pol = POLICIES[policy]
     by_pair: Dict[str, Dict[str, Entry]] = {}
     for e in entries:
         by_pair.setdefault(e.pair_id, {})[e.source] = e
-    static: Dict[str, Dict[str, Dict[str, float]]] = {"claude": {r: {} for r in STATIC_RULES},
-                                                      "random": {r: {} for r in STATIC_RULES}}
+    menu = {**{f"v1:{r}": (lambda r=r: (_static(r), fixed_policy())) for r in STATIC_RULES},
+            **{f"v2:{r}": (lambda r=r: (_rule2(r), POLICIES["C1E"]())) for r in RULES2}}
+    static: Dict[str, Dict[str, Dict[str, float]]] = {"claude": {r: {} for r in menu}, "random": {r: {} for r in menu}}
     rows, acct = [], {"pairs": 0, "pending_claude_mgmt": 0, "decisions": 0, "invalid": 0, "actions": {},
-                      "moved_stop_exits": 0, "slip_sens_r": 0.0}
+                      "moved_stop_exits": 0, "policy": policy}
+    abl: List[dict] = []
     fold_of_pair: Dict[str, int] = {}
     for pid, d in sorted(by_pair.items()):
         if "claude" not in d or "random" not in d:
@@ -717,9 +1064,9 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
             e = d[src]
             s = mkt[e.symbol]
             row[f"{tag}_h"] = run(s, e)[0].net_r
-            res, p = run(s, e, _decider(e.entry_id, dec))
+            res, p = run(s, e, _decider(e.entry_id, dec), pol())
+            row[f"{tag}_m"] = row[f"{tag}_m1"] = None
             if p is not None:
-                row[f"{tag}_m"] = None
                 acct["pending_claude_mgmt"] += 1
             else:
                 row[f"{tag}_m"] = res.net_r
@@ -727,10 +1074,21 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
                 acct["invalid"] += res.invalid
                 for x in res.actions:
                     acct["actions"][x] = acct["actions"].get(x, 0) + 1
-                if res.moved_stop_exit:
-                    acct["moved_stop_exits"] += 1
-            for rule in STATIC_RULES:
-                static[src][rule][pid] = run(s, e, _static(rule))[0].net_r
+                acct["moved_stop_exits"] += int(res.moved_stop_exit)
+                m1 = [run(s, e, matched_random(res.checkins, int(hashlib.sha256(f"m1|{e.entry_id}|{q}".encode())
+                                                                  .hexdigest()[:8], 16)), pol())[0].net_r
+                      for q in range(M1_DRAWS)]
+                row[f"{tag}_m1"] = float(np.mean(m1))
+                for c in res.checkins:
+                    to = {"action": "hold"} if c["action"] != "hold" else {"action": "close"}
+                    alt = run(s, e, _ablate(dec, e.entry_id, c["k"], to), pol())[0]
+                    if alt.state == "filled":
+                        abl.append({"src": src, "week": e.week, "action": c["action"], "tags": c["tags"],
+                                    "held": _bucket(c["bars_held"], HELD_EDGES, HELD_LABELS),
+                                    "now_r": _bucket(c["now_r"], NOWR_EDGES, NOWR_LABELS), "value": res.net_r - alt.net_r})
+            for rule, mk in menu.items():
+                dd, pp = mk()
+                static[src][rule][pid] = run(s, e, dd, pp)[0].net_r
         rows.append(row)
     for src, tag in (("claude", "C"), ("random", "R")):
         hold = {r["pair_id"]: r[f"{tag}_h"] for r in rows}
@@ -740,20 +1098,34 @@ def evaluate(mkt: Dict[str, g.Series], entries: List[Entry], dec: Dict[Tuple[str
     fx = factorial(rows)
     static_table = {}
     for src, tag in (("claude", "C"), ("random", "R")):
-        for rule in STATIC_RULES:
+        for rule in menu:
             vals = [static[src][rule][r["pair_id"]] - r[f"{tag}_h"] for r in rows]
             st = cluster_mean_ci(vals, [r["week"] for r in rows])
             static_table[f"{rule}|{src}_entry"] = {"mean_dR": st["mean"], "ci95": st["ci95"], "n": st["n"]}
+    groups: Dict[str, List[dict]] = {}
+    for a_ in abl:
+        kind = "acted" if a_["action"] != "hold" else "held"
+        for key in [f"{kind}|all", f"{kind}|action:{a_['action']}", f"{kind}|held:{a_['held']}", f"{kind}|now_r:{a_['now_r']}"] + \
+                [f"{kind}|tag:{t}" for t in a_["tags"]]:
+            groups.setdefault(key, []).append(a_)
+    ablation = {k: {**{x: y for x, y in cluster_mean_ci([v["value"] for v in vs], [v["week"] for v in vs], draws=2000).items()
+                       if x in ("n", "mean", "ci95")}} for k, vs in sorted(groups.items())}
     labels = {}
-    for name, b3k in (("mgmt_value|claude_entry", "claude_mgmt_vs_b3|claude_entry"),
-                      ("mgmt_value|random_entry", "claude_mgmt_vs_b3|random_entry")):
-        st, b3 = fx["contrasts"][name], fx["contrasts"][b3k]
-        beats = None if b3["n"] == 0 else bool(b3["ci95"][0] is not None and b3["ci95"][0] > 0)
-        labels[name] = grade_contrast(st, st["folds_positive"], beats) if st["n"] else ("indeterminate", "not judged")
+    for name, b3k, m1k in (("mgmt_value|claude_entry", "claude_mgmt_vs_b3|claude_entry", "claude_mgmt_vs_m1|claude_entry"),
+                           ("mgmt_value|random_entry", "claude_mgmt_vs_b3|random_entry", "claude_mgmt_vs_m1|random_entry")):
+        st, b3, m1 = fx["contrasts"][name], fx["contrasts"][b3k], fx["contrasts"][m1k]
+        if not st["n"]:
+            labels[name] = ("indeterminate", "not judged")
+            continue
+        lab = grade_contrast(st, st["folds_positive"], None if not b3["n"] else bool(b3["ci95"][0] > 0))
+        if lab[0] in ("pass", "pass_rule") and not (m1["n"] and m1["ci95"][0] > 0):
+            lab = ("indeterminate", "beats HOLD but not its matched random intervention (M1): acting, not timing")
+        labels[name] = lab
     for name in ("entry_value|hold", "entry_value|claude_mgmt", "interaction"):
         st = fx["contrasts"][name]
         labels[name] = grade_contrast(st, st["folds_positive"], None) if st["n"] else ("indeterminate", "not judged")
-    return {"factorial": fx, "static_rules_dR": static_table, "labels": labels, "accounting": acct, "rows": rows}
+    return {"factorial": fx, "static_rules_dR": static_table, "ablation": ablation, "labels": labels,
+            "accounting": acct, "rows": rows}
 
 
 def cmd_score(a: argparse.Namespace) -> int:
@@ -764,7 +1136,7 @@ def cmd_score(a: argparse.Namespace) -> int:
     out = Path(a.out)
     entries = read_entries(Path(a.entries))
     dec = read_decisions(out, Path(a.decisions) if a.decisions else None)
-    res = evaluate(mkt, entries, dec)
+    res = evaluate(mkt, entries, dec, a.policy)
     res["label"] = a.label
     res["candles"] = src
     res["limits"] = [l.strip() for l in __doc__.split("STATED LIMITS (printed into every verdict)")[1].strip().split("*") if l.strip()]
@@ -827,6 +1199,12 @@ def selfcheck(mkt: Dict[str, g.Series], classes: Dict[str, List[str]], seed: int
         worst = max(worst, abs(t.net_r - r1.net_r), abs(t.net_r - r2.net_r))
     mean_c = fee_repro(mkt, claude, E535_03_FEE_BPS)
     cl["a_hold_equals_simulate"] = {"ok": worst <= 1e-9, "max_abs_diff_r": worst, "n_trades": len(ents)}
+    worst3 = 0.0
+    for e in ents:
+        h = run(mkt[e.symbol], e)[0].net_r
+        for pn in ("C1E", "C4E", "E"):
+            worst3 = max(worst3, abs(run(mkt[e.symbol], e, lambda k, j, st: {"action": "hold"}, POLICIES[pn]())[0].net_r - h))
+    cl["a3_hold_under_every_policy"] = {"ok": worst3 <= 1e-9, "max_abs_diff_r": worst3, "policies": ["C1E", "C4E", "E"]}
     cl["a2_judged1_reproduced"] = {"ok": len(claude) == E535_03_N and abs(mean_c - E535_03_MEAN) < 1e-9,
                                    "n": len(claude), "mean_net_r_at_e535_fee": mean_c,
                                    "landed": [E535_03_N, E535_03_MEAN, E535_03_FEE_BPS]}
@@ -900,20 +1278,26 @@ def cmd_selfcheck(a: argparse.Namespace) -> int:
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="mode", required=True)
-    for name, fn in (("entries", cmd_entries), ("step", cmd_step), ("score", cmd_score), ("selfcheck", cmd_selfcheck)):
+    for name, fn in (("entries", cmd_entries), ("step", cmd_step), ("score", cmd_score), ("selfcheck", cmd_selfcheck),
+                     ("explore", cmd_explore), ("walk", cmd_walk)):
         s = sub.add_parser(name)
         s.add_argument("--out", required=True)
         s.add_argument("--fetch", action="store_true", help="fetch candles from Binance Vision (the queue runner)")
         s.add_argument("--candles-dir", help="default: a scratch dir outside --out")
         s.add_argument("--seed", type=int, default=SEED)
         s.set_defaults(fn=fn)
+        if name == "walk":
+            s.add_argument("--trade", required=True)
+            s.add_argument("--decision", help="JSON answer to the pending check-in")
         if name == "entries":
-            s.add_argument("--pilot-n", type=int, default=0, help="0 = every judged-1 fill (the full run)")
+            s.add_argument("--pilot-n", type=int, default=0, help="0 = every judged-1 fill; n = the first n of the seeded order")
+            s.add_argument("--policy", choices=sorted(POLICIES), help="v2: the check-in policy a walk directory runs under")
         if name in ("step", "score"):
             s.add_argument("--entries", required=True)
             s.add_argument("--decisions", help="judge rows, one per packet: {packet_id, action, level_r?, confidence, reason}")
         if name == "score":
             s.add_argument("--label", default="pilot", help="pilot | registered")
+            s.add_argument("--policy", default="FIXED", choices=sorted(POLICIES), help="the check-in policy the decisions were made under")
     a = ap.parse_args(argv)
     return a.fn(a)
 

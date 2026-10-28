@@ -9,7 +9,7 @@ roadmap:
 kind: experiment
 question: >-
   The C48 factorial (RQ-20261028-d1f5-02) replays the contract the committed Claude entries were judged under (48 x 1h). The live claude_desk leg caps a hold at 60 minutes; on 1h bars that is one bar with no interior
-  checkpoint. On a 5-minute path (Binance Vision USD-M 1m klines resampled), with FRESH Claude entries judged under the 60-minute brief, random entries matched to them, and Claude management at bars held 3 / 6 / 9 (15 / 30 / 45
+  checkpoint. On a 5-minute path (Binance Vision USD-M 1m klines resampled), with FRESH Claude entries judged under the 60-minute brief, random entries matched to them, and Claude walking each trade under the v2 check-in policies (every 5-minute bar, every 15 minutes + events, events only; cf. 15 / 30 / 45
   minutes), what are the same cells, contrasts and interaction as -02?
 why_this_matters: >-
   Operator 2026-10-28 (via the manager): the full-run test must show how the desk combines with the strategies AS IT TRADES. The manager's frame names the 60-minute live cap; -02 cannot answer it (stated in its what_it_does_not_do).
@@ -18,7 +18,7 @@ decision_rule:
   id: RULE-RQ20261028-D1F5-03-LIFECYCLE-C60
   registered_at: '2026-10-28'
   registered_before_run: true
-  statistic: As RULE-RQ20261028-D1F5-02-LIFECYCLE, with the 60-minute time stop, checkpoints at 15 / 30 / 45 minutes, 5-minute bars, and the same cost stack.
+  statistic: As RULE-RQ20261028-D1F5-02-LIFECYCLE, with the 60-minute time stop, the v2 check-in policies on 5-minute bars (every bar; every 3 bars + events; events only), M0 / M1 / rule baselines, and the same cost stack.
   rule: As RULE-RQ20261028-D1F5-02-LIFECYCLE (n >= 126 pairs, CI lower > 0, >= 3 of 4 folds, judgement vs B3). The entry-judging protocol and n are registered by the lane that builds it, before any entry is judged.
   what_it_does_not_do: Nothing until built; it is registered so the live-contract question is visible and owned.
 blocked_on:

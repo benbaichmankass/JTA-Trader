@@ -13,9 +13,9 @@
     20842
   ],
   "blocked_on": [],
-  "note": "OPERATOR 2026-10-28 ~06:10Z (paraphrased by the manager, binding): the desk's edge test must be a FULL RUN of each trade from entry to close, so we learn WHERE the value is (entry vs management vs exit) and HOW to combine the desk with existing strategies. Dispatched by Manager Session 2026-10-27a (session_01AFoLuJi1vLTnYv9LbP6539). Ceiling $45 TOTAL incl. judging; judging via plan subagents only, packet only; nothing spends API credits. 2026-10-28 lane: pre-registration committed BEFORE judging: docs/research/desk-lifecycle-factorial-2026-10-28.md s1-6; units RQ-20261028-d1f5-01 (self-check, queued; local run PASS 5/5), -02 (C48 factorial, blocked on judging spend), -03 (live 60-min contract C60, blocked on build + spend). Driver scripts/research/desk_lifecycle_driver.py + tests. MEASURED: judged-1 reproduced exactly (732 fills, +0.158866 R at e535-03's 7.5 bps fee; +0.1315 R at the current 11 bps); full-run path load 1,757 checkpoints under HOLD.",
+  "note": "2026-10-28 ~07:30Z lane: DESIGN v2 registered BEFORE any v2 judging, per manager 06:25Z/06:33Z (operator active-management rule; practice review A.4/F.1). Management factor = CHECK-IN POLICY (C1E every bar / C4E every 4 bars + events / E events: R -0.5..+2, ATR regime, momentum flip, 12-bar break); one judge walks one trade via the audited walk CLI; controls M0 hold + M1 matched random intervention; practitioner rule arms M2-M7 token-free; Holm; fresh-window confirm. Rule recorded in docs/plans/claude-trading-desk-DESIGN.md s8.1. v1 (fixed 4/12/24/36) SUPERSEDED: its 78 judged check-ins (judged before the redesign arrived) kept unscored. MEASURED token-free: every rule arm <= 0 vs HOLD (Chandelier 3ATR -0.093 R CI [-0.144,-0.038] on Claude entries); blanket close negative at every state; paired sd 0.5-0.96 R -> ~200 pairs/arm. Full run 3 policies x 200 pairs ~8,860 check-ins ~$90-220 INFERRED (fallback C4E+E x 126 pairs ~$30-70); pilot 20 pairs C4E ~$3-6 awaits the manager's go. Lane spend so far ~$25 (INFERRED; judges ~$2).",
   "priority_rank": 1,
-  "updated_at": "2026-10-28T06:40:14Z",
+  "updated_at": "2026-10-28T06:52:34Z",
   "updated_by": "session_01AFoLuJGUG7n1WDzgCysB32",
   "roadmap": [
     "L-DESK"
