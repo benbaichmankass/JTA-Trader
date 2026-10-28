@@ -1,0 +1,21 @@
+{
+  "id": "RM-AM-PROP-TRAIL-OBSERVE",
+  "title": "Prove the declared chandelier trail amends the resting SL on every prop account (tradeify_1, velotrade_1 VM executors; breakout_2 phone) - the mechanic the prop legs' Stage-0 evidence assumes",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (Sonnet)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-28 (lane ACTIVE-MGMT-REAL-MONEY-PLAN): /api/bot/prop/tickets limit 200 (2026-08-03..2026-10-28): closed tickets breakout_2 13, tradeify_1 12, velotrade_1 11; 0 carry a phone_trail amend; close reasons sl_cross 14, prop_ticket_emitted 16, reconciler_filled 4, stuck_* 2 -- a trailed stop and an initial stop are not distinguishable from the ticket. journalctl ict-prop-executor@tradeify_1 / @velotrade_1 (2,000-line cap, window 2026-10-22T17:38..10-23T06:23Z): the per-tick line reads {trail: {deps: importable, mode: live}} 143 / 154 times; 0 trail_amend / trail_skip lines in that window (positions held in the window NOT read). Ticket message to the human says 'Do NOT manage the exit yourself - the bracket is the exit'. So the trail is ARMED but has never been OBSERVED amending on a prop account in what I could read; the phone path (PROP-TRAIL-PHONE landed_unproven since 2026-10-08) still waits on its first amend. TASK (Tier 1, read-only): for every prop position opened since 2026-10-01 read entry, initial SL, MFE in R from 1h candles, and every executor journal line (paged by since/until around the position) to classify: trail should have moved (MFE >= activation 0.4R + one bar) vs did/did not. Output: per account x position table + verdict OK / BROKEN / NEVER-REACHED. If BROKEN: root-cause and file the Tier-2 fix row. Cost ~$4 Sonnet.",
+  "updated_at": "2026-10-28T21:11:48Z",
+  "updated_by": "session_01AFoLuMfbQGw8MoevpjjwwW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 765
+}

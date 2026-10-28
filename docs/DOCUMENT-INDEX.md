@@ -585,6 +585,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/RESEARCH-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/SYSTEM-AUDIT-PROPOSAL-2026-09-27.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/plans/real-money-active-mgmt-plan-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Week milestone: basic active management on every real-money leg; per-leg table, infra checklist, day-by-day plan. |
 | `docs/plans/claude-trading-desk-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/live-trade-review-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-claude-distillation-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
