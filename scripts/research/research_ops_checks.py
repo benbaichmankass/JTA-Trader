@@ -198,14 +198,18 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
                 fails_without_next.append({"unit": uid, "track": item["track"], "title": str(u.get("title", ""))[:140]})
 
     # follow-ups the last k ops records said they filed
+    import yaml
     nodes_by_id: Dict[str, Dict[str, Any]] = {}
+    trees_unreadable: List[str] = []
     for p in (root / "research" / "programmes").glob("*.yaml"):
         try:
-            import yaml
-            for n in (yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("nodes") or []:
-                nodes_by_id[str(n.get("id"))] = n
-        except Exception:  # noqa: BLE001 -- an unreadable tree is reported below, never silent
-            nodes_by_id[f"_unreadable:{p.name}"] = {}
+            tree = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as e:
+            # reported in the packet (`programme_trees_unreadable`), never skipped silently
+            trees_unreadable.append(f"{p.name}: {type(e).__name__}")
+            continue
+        for n in tree.get("nodes") or []:
+            nodes_by_id[str(n.get("id"))] = n
     emitted = defaultdict(list)
     for uid, u in units.items():
         node = (u.get("programme_node") or {}).get("node")
@@ -278,7 +282,8 @@ def build(root: Path, since: datetime, now: datetime, k: int, stale_days: int, k
         "graded_by_window": windows,
         "batches": {b: {"n": sum(c.values()), **dict(c)} for b, c in sorted(batches.items()) if sum(c.values()) >= 3},
         "fails_without_next": fails_without_next,
-        "followups": {"summary": dict(fu_summary), "items": followups},
+        "followups": {"summary": dict(fu_summary), "items": followups,
+                      "programme_trees_unreadable": trees_unreadable},
         "needs_review": {"count": len(nr), "owners": dict(Counter(str((u.get("grading") or {}).get("owner")) for u in nr.values())),
                          "trend_from_records": [r.get("needs_review_left") for r in recs]},
         "ops_trend": [{"file": r["_file"], "nodes_drafted": (r.get("authoring") or {}).get("nodes_drafted"),
