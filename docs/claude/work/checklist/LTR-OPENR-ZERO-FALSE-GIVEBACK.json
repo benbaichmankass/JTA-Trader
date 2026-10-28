@@ -1,0 +1,18 @@
+{
+  "id": "LTR-OPENR-ZERO-FALSE-GIVEBACK",
+  "title": "Telemetry fabricates peak/giveback/bars_held for a package younger than one closed bar (false giveback wakes)",
+  "phase": "now",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "LIVE-REVIEW",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found 2026-10-28 08:50Z, review LR-20261028T0837Z-pkg-29c8e90b80c24835 (trend_donchian BTCUSDT bybit_1) and SOL pkg-11c1100f6cbb4667. NOT an open_r-collapsed-to-0 bug: open_r 0.0 is a stale last_price==entry at fill (venue uPnL implies ~+0.24R). The fabricated field is the PEAK. Population: 10 open telemetry rows at 08:39Z; the 2 trend_donchian-family rows (trades opened 08:35:34Z BTC, 08:30:17Z SOL, minutes old) both show bars_held 199, peak 6.08R/4.68R, BTC mae_r -4.13 (beyond the -1R stop, impossible); the other 8 rows show plausible bars_held (3..61). Root cause: src/runtime/exit_levers.py::since_entry returns the FULL frame (limit=200 minus forming bar) when no closed bar is at/after entry_time (filtered empty -> candles_df), and position_telemetry.build_record marks anchored=True because meta.entry_time exists, so since_entry_peak reports peak_state=measured over pre-entry bars. live_review_due giveback then fires (gave back 6.08R of 6.08R) and wakes a reviewer. Affects every leg using since_entry (trend_donchian, trend_donchian_sol_prop, htf_pullback_trend_2h, fade_breakout_4h) for about the first closed bar after entry; also any exit lever reading that window. PROPOSED FIX (not shipped): build_record treats the window as unanchored (peak_state unanchored/thin_window; peak_r, giveback_r, bars_held, bars_since_peak null) unless window first timestamp >= entry_time; since_entry returns an empty frame for telemetry rather than the full frame; live_review_due never fires giveback/new_peak/r_milestone on a null peak (could_not_look). Test: package created 5 min ago on 1h bars -> peak_state not measured, no giveback event. Gates wake spend. Closes on observation: next young donchian package shows null peak until its first closed bar.",
+  "updated_at": "2026-10-28T08:44:58Z",
+  "updated_by": "session_01AFoLuLcTbbyZEPnquZdVAf",
+  "_seq": 722
+}
