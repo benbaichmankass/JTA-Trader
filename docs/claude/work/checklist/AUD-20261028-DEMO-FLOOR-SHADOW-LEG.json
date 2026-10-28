@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-DEMO-FLOOR-SHADOW-LEG",
+  "title": "trend_donchian_1h is on bybit_1's roster with enabled:false + execution:shadow (demo-floor rule: shadow is not a holding stage)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 C13a. MEASURED: config/accounts.yaml bybit_1 strategies includes trend_donchian_1h; config/strategies.yaml trend_donchian_1h enabled: false, execution: shadow; 0 trades, 0 packages, 0 audit rows in 7d. OPERATING-PLAN 2 'Stage 1 is the DEMO FLOOR': every non-retired leg trades; only a retirement record removes one. Exact proposal (Tier 3): EITHER set trend_donchian_1h enabled: true, execution: live (it trades on bybit_1 only, the floor) OR write its retirement record and drop it from the roster. Also seen by the PRACTICE-REFRESH lane 19:00Z (same finding; one row). Premortem: un-shadowing a 1h donchian with tp_r 50 sentinel adds one more TP-doctrine debt routing; retiring loses the only 1h donchian data. next_action: ask_operator. check: re-parse roster; rule: no rostered floor leg with execution: shadow.",
+  "updated_at": "2026-10-28T19:04:05Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 758
+}

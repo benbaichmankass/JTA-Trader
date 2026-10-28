@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261028-DUE-DOUBLED",
+  "title": "Due pipeline items 253 -> 510 and unrouted 23 -> 59 (oldest 24 d -> 94 d) in 9 days; nobody owns routing",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "WEEKLY-AUDIT-2026-10-28 C6 + 2a. MEASURED: pipeline.py --stats/--gate 2026-10-28: due 510, unrouted 59, oldest unrouted 94 d (BL-20260726-BRANCH-PROTECTION-DOC-STALE-4-CHECKS); 2026-10-21 audit read 253 due, 23 unrouted, oldest 24 d. Wrong direction 2 audits running. Cause (INFERRED, p~0.7): routing is in no skill's steps -- research-ops passes declare it not_run every pass (comms/research/ops/20261028T1530Z.json) and RESEARCH-SLO-ROOTCAUSE (#20970) proposes it is the manager's. Decision needed from the manager (not a new register): EITHER the Thursday planning step routes or kills the 59 unrouted with a stated reason, OR one Tier-1 lane drains them. Detector: pipeline.py unrouted_alarm (exists, has fired for weeks with no owner -- the alarm exists, the reader does not). check: pipeline.py --stats; rule: unrouted <= 10 and oldest <= 7 d by 2026-11-04.",
+  "updated_at": "2026-10-28T19:05:02Z",
+  "updated_by": "session_01AFoLuNJQxJiQDru41ZvLWg",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 763
+}
