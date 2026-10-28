@@ -514,6 +514,26 @@ Ranked by expected value per cost. Each carries `p` and a pre-registered check i
 - Practice refresh (sibling lane).
 - No send-ping. The manager relays the brief, and the lane's report goes to the manager.
 
+### Addendum (~21:30Z): gate packets from trainer pull #21005
+
+The C6 packet flags that were could-not-look at publish time have now been read:
+
+| head | stage | ready | blocking | live AUC | note |
+|---|---|---|---|---|---|
+| btc-regime-15m-lgbm-fc-pcv-v2 | advisory | true | — | 0.721 | parity 42/42 |
+| mes-regime-5m-lgbm-v2 | advisory | true | — | 0.755 | changes 0 legs |
+| sol-regime-15m-lgbm-fc-pcv-v2 | advisory | false | sample_sufficiency (2 trades) | 0.695 | changes 0 legs |
+| **btc-regime-15m-lgbm-fc-pcv-v1** | shadow | **true** | — | 0.651 | shadow sibling of the advisory fc-pcv-v2 |
+| **btc-regime-1h-lgbm-v2** | shadow | **true** | — | 0.599 | no 1h router cell, so it changes 0 legs |
+| btc-regime-15m-lgbm-yz-v1 | shadow | false | live_parity (`vol_bucket` dead live) | 0.709 | |
+
+On every head, `cost_net` reads `insufficient_data`.
+
+**Disposition: no promotion recommended.** Two shadow heads are `ready: true`, but every gate they pass is a classification gate.
+- fc-pcv-v1 would duplicate an advisory head that is already better on live AUC.
+- 1h-v2 has no consumer.
+
+Either becomes a promotion question only after P5 (`PI-20261028-GNVUF1ES-0002`) prices a decision value. Recorded on `PI-20261018-WH81NW96-0003` (done); `PI-20260925-D9FNL9SC-0001` (done) records that live_parity now computes.
 <!-- ML-FRONTIER-PREP:END -->
 
 <!-- PRACTICE-REFRESH:BEGIN -->
