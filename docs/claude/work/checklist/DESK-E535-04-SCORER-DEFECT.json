@@ -14,10 +14,19 @@
   ],
   "blocked_on": [],
   "note": "MERGED (PR #20811). Not yet observed: closes when the re-dispatched RQ-20261026-e535-04 lands a result under research/results/RQ-20261026-e535-04/ with counts.filled_in_subset about 441 and design.stopping_rule_respected true (local re-run: n 441, mean +0.073, S3 -0.091, INDETERMINATE).",
-  "updated_at": "2026-10-28T05:53:51Z",
+  "updated_at": "2026-10-28T06:10:23Z",
   "updated_by": "session_01AFoLuLbyLcHuTAD693tELF",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "the re-dispatched RQ-20261026-e535-04 lands a result with counts.filled_in_subset about 441 (not 0) and design.stopping_rule_respected true",
+    "how_to_check": "read research/results/RQ-20261026-e535-04/*.jsonl newest row: measurement.counts and measurement.design",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: no L-DESK milestone moves; a scorer plumbing fix that re-arms an existing unit with its decision rule untouched",
+    "arch": "none: research driver plumbing, no architecture change"
+  },
   "_seq": 745
 }
