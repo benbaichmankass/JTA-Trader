@@ -1,6 +1,6 @@
 # Strategy status model — measured effect of moving production legs off general paper (2026-10-28)
 
-> **Doc status:** `live` · category `evidence` · lane `STRATEGY-STATUS-MODEL` · rule: [`OPERATING-PLAN` § 2 "Three strategy statuses"](../plans/OPERATING-PLAN-2026-09-21.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `STRATEGY-STATUS-MODEL` (self-measured 2026-10-28; nobody else has verified it) · rule: [`OPERATING-PLAN` § 2 "Three strategy statuses"](../plans/OPERATING-PLAN-2026-09-21.md)
 
 ## What was measured
 
