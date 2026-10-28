@@ -280,7 +280,9 @@ error must be caught at review time, every review. The operating principle is:
 > **The soak validates MECHANICS, not edge.** Edge is proven OFFLINE — powered
 > walk-forward + historical signal replay over years of data. A live soak exists
 > to verify serving mechanics (feature parity, labeling, wiring), which is
-> checkable deterministically with a few dozen live decisions. A soak that has
+> checkable deterministically on live decisions accruing in hours — the
+> promotion gate's own soak term is 1–2 clean scored shadow predictions, never
+> a date (operator 2026-10-28, "Same as trades: 1-2 clean"). A soak that has
 > been running for days without its mechanics verified is not accruing evidence
 > — it is accruing risk of exactly this bug class.
 
@@ -338,9 +340,16 @@ Promotion gates (the lifecycle, `docs/claude/trainer-vm-mode.md` § 5):
   --datasets-root <datasets-out>` on the trainer VM (S-MLOPT-S4) and
   quote its `ready` verdict + any `blocking[]` gate names in the
   `evidence` field. The gate is the mechanical, pre-registered
-  go/no-go (min shadow volume, min days in shadow, **OOS edge vs
-  baseline under purged WF-CV**, drift within KS/PSI bounds, live
-  agreement); /ml-review should not recommend `promote` while the
+  go/no-go (min shadow volume, the MECHANICAL `shadow_soak` — 1–2 clean
+  scored shadow predictions, no calendar term — **OOS edge vs
+  baseline under purged WF-CV**, the enforced **`cost_net`** decision
+  value vs incumbent + take-all / take-none / matched-random on the same
+  rows, drift within KS/PSI bounds, live agreement); quote the run's
+  `cost_gate.json` (value, comparators, PSR / deflated Sharpe with its
+  `n_trials`). `promote-stage` itself REFUSES a forward move into shadow /
+  advisory on a failed or missing cost-net evaluation for a family with a
+  net-R value column (`ml/promotion/cost_gate.py`, row
+  `ML-TRAINING-PRINCIPLES-GAPS`). /ml-review should not recommend `promote` while the
   packet reports `ready: false`, and should quote the cleared gates
   when it recommends one. Computing the packet is Tier-1; the flip
   stays Tier-3. `advisory` is now the single influence stage (the old

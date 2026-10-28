@@ -72,7 +72,7 @@ def test_healthy_model_is_ready():
     )
     report = evaluate_gates(
         entry, attribution=_good_attr(), drift={"overall_verdict": "no_change"},
-        oos_edge=_good_oos_edge(),
+        oos_edge=_good_oos_edge(), shadow_clean_count=1,
     )
     assert report.ready, report.to_dict()["blocking"]
 
@@ -285,8 +285,11 @@ def test_missing_attribution_blocks_on_insufficient_data():
     assert statuses["drift_clean"] == "insufficient_data"
 
 
-def test_soak_fails_when_recently_entered_shadow():
-    recent = datetime.now(timezone.utc) - timedelta(days=1)
+def test_soak_fails_with_no_clean_shadow_prediction():
+    # Mechanical soak (operator 2026-10-28, "Same as trades: 1-2 clean"):
+    # zero clean scored predictions fails; the shadow log unread is
+    # insufficient_data; one clean prediction passes the SAME day.
+    recent = datetime.now(timezone.utc) - timedelta(minutes=5)
     entry = _entry(
         metrics={"macro_f1": 0.70, "f1_a": 0.73, "f1_b": 0.68, "n_eval": 5000},
         runs=_runs("macro_f1", [0.70, 0.71, 0.69]),
@@ -297,11 +300,37 @@ def test_soak_fails_when_recently_entered_shadow():
             ),
         ),
     )
-    report = evaluate_gates(
-        entry, attribution=_good_attr(), drift={"overall_verdict": "no_change"},
+    def _soak(count):
+        report = evaluate_gates(
+            entry, attribution=_good_attr(), drift={"overall_verdict": "no_change"},
+            shadow_clean_count=count,
+        )
+        return next(r for r in report.results if r.name == "shadow_soak")
+    assert _soak(0).status == "fail"
+    assert _soak(None).status == "insufficient_data"
+    assert _soak(1).status == "pass"  # minutes after entering shadow — no calendar term
+
+
+def test_clean_shadow_prediction_count_is_mechanical():
+    from types import SimpleNamespace
+
+    from ml.promotion.gates import count_clean_shadow_predictions
+    entered = datetime.now(timezone.utc) - timedelta(hours=1)
+    entry = _entry(
+        metrics={"macro_f1": 0.7},
+        stage_history=(StageEvent(from_stage="candidate", to_stage="shadow",
+                                  by="t", reason="x", at=entered),),
     )
-    soak = next(r for r in report.results if r.name == "shadow_soak")
-    assert soak.status == "fail"
+    mk = lambda **kw: SimpleNamespace(**{"model_id": entry.model_id, "backfill_kind": None,
+                                         "score": 0.6, "predicted_at_utc":
+                                         entered + timedelta(minutes=1), **kw})
+    recs = [mk(), mk(score=float("nan")), mk(backfill_kind="retroactive_decision"),
+            mk(predicted_at_utc=entered - timedelta(minutes=1)), mk(model_id="other"), mk()]
+    assert count_clean_shadow_predictions(recs, entry) == 2
+    # the doctrine caps the requirement at 2 whatever the threshold says
+    from ml.promotion.gates import _gate_shadow_soak
+    th = GateThresholds(shadow_clean_predictions_needed=10)
+    assert _gate_shadow_soak(entry, th, 2).status == "pass"
 
 
 def test_low_auc_fails_live_agreement():
@@ -365,8 +394,9 @@ def test_regime_profile_threshold_values():
     # advisory for a regime head (default profile keeps it required).
     assert th.require_shadow_soak is False
     assert GateThresholds().require_shadow_soak is True
-    # safety gates are untouched
-    assert th.shadow_soak_days == 7.0
+    # safety gates are untouched; the soak is mechanical (1 clean prediction)
+    assert th.shadow_clean_predictions_needed == 1
+    assert not hasattr(th, "shadow_soak_days")
     assert th.min_oos_edge == 0.0
     assert th.min_auc == 0.55
     assert th.max_ks == 0.2 and th.max_psi == 0.25
@@ -442,11 +472,10 @@ def test_regime_profile_ready_on_small_live_floor():
 
 
 def test_regime_recent_shadow_entry_still_ready_soak_advisory():
-    # WS-1 de-soak (2026-07-26): a regime head that entered shadow only 1 day
-    # ago FAILS the 7-day shadow-soak calendar gate, but because that gate is
+    # WS-1 de-soak (2026-07-26): a regime head with no clean shadow-prediction
+    # count FAILS the mechanical shadow-soak gate, but because that gate is
     # advisory under the regime profile (edge=oos_edge; mechanics=live_parity +
-    # labels_accruing + drift_clean), the head is STILL ready — the calendar
-    # wait no longer blocks a head that has cleared every other gate.
+    # labels_accruing + drift_clean), the head is STILL ready.
     recent = datetime.now(timezone.utc) - timedelta(days=1)
     entry = _entry(
         metrics={"macro_f1": 0.66, "f1_range": 0.73, "f1_volatile": 0.48, "n_eval": 8760},
@@ -465,17 +494,17 @@ def test_regime_recent_shadow_entry_still_ready_soak_advisory():
         oos_edge=_good_oos_edge(),
         live_regime_auc=0.72,
         live_parity=_good_parity(), labels_accruing=_good_labels(),
-        thresholds=regime_classifier_thresholds(),
+        thresholds=regime_classifier_thresholds(), shadow_clean_count=0,
     )
     soak = next(r for r in report.results if r.name == "shadow_soak")
-    assert soak.status == "fail"  # 1 day < 7-day threshold — still computed
+    assert soak.status == "fail"  # 0 clean predictions — still computed
     assert soak.required is False  # but advisory, so non-blocking
     assert report.ready, report.to_dict()["blocking"]
 
 
 def test_default_profile_recent_shadow_entry_blocks():
-    # The same recent-shadow-entry model IS blocked under the decision-model
-    # profile: shadow_soak stays required there.
+    # The same model with no clean scored shadow prediction IS blocked under
+    # the decision-model profile: shadow_soak stays required there.
     recent = datetime.now(timezone.utc) - timedelta(days=1)
     entry = _entry(
         metrics={"macro_f1": 0.70, "f1_a": 0.73, "f1_b": 0.68, "n_eval": 5000},
@@ -489,6 +518,7 @@ def test_default_profile_recent_shadow_entry_blocks():
     )
     report = evaluate_gates(
         entry, attribution=_good_attr(), drift={"overall_verdict": "no_change"},
+        shadow_clean_count=0,
     )
     soak = next(r for r in report.results if r.name == "shadow_soak")
     assert soak.status == "fail" and soak.required is True
@@ -828,7 +858,7 @@ def test_default_profile_reports_mechanics_gates_unrequired():
     )
     report = evaluate_gates(
         entry, attribution=_good_attr(), drift={"overall_verdict": "no_change"},
-        oos_edge=_good_oos_edge(),
+        oos_edge=_good_oos_edge(), shadow_clean_count=1,
     )
     assert report.ready, report.to_dict()["blocking"]
     lp = next(r for r in report.results if r.name == "live_parity")
@@ -902,3 +932,20 @@ def test_dead_features_excludes_target_column():
     ]
     dead_live, _ = dead_features(live, train, exclude={"regime_label"})
     assert dead_live == ()
+
+
+def test_cost_net_gate_required_for_value_family_only():
+    from ml.promotion.gates import _gate_cost_net
+    meta = _entry(metrics={"macro_f1": 0.7})
+    object.__setattr__(meta, "manifest", {"dataset": {"family": "setup_candidates"}})
+    g = _gate_cost_net(meta)
+    assert g.status == "insufficient_data" and g.required is True
+    object.__setattr__(meta, "metrics", {"cost_gate_applicable": 1.0,
+                                         "cost_gate_passed": 0.0, "cost_net_value_r": -0.1})
+    assert _gate_cost_net(meta).status == "fail"
+    object.__setattr__(meta, "metrics", {"cost_gate_applicable": 1.0,
+                                         "cost_gate_passed": 1.0, "cost_net_value_r": 0.2})
+    assert _gate_cost_net(meta).status == "pass"
+    regime = _entry(metrics={"macro_f1": 0.7})
+    object.__setattr__(regime, "manifest", {"dataset": {"family": "market_features"}})
+    assert _gate_cost_net(regime).required is False

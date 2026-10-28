@@ -234,6 +234,9 @@ _PROJECTION_SAFETY_COLUMNS = frozenset({
     "seq_window", "values", "strategy_name",
     # default target columns across the trainer fleet
     "regime_label", "r_multiple", "should_hold", "won",
+    # cost-net promotion gate (ml.promotion.cost_gate): the net-R value
+    # columns + the per-row cost basis it must verify
+    "fwd_r_multiple", "label_cost_basis",
 })
 
 _ENV_LOAD_ALL_COLUMNS = "TRAINING_LOAD_ALL_COLUMNS"
@@ -303,6 +306,105 @@ def _load_jsonl(
     return rows
 
 
+def _count_trials(manifest_path: Path, manifest: TrainingManifest) -> int:
+    """Experiment multiplicity for the deflated Sharpe (practice M5): the number
+    of manifests under the same configs dir that train on THIS dataset
+    (family / scope / timeframe / version). Each is a configuration tried on
+    the same data. Floor 1; unreadable siblings are skipped."""
+    try:
+        import yaml  # noqa: PLC0415
+    except ImportError:
+        return 1
+    want = manifest.dataset.to_dict()
+    want.pop("build_params", None)
+    n = 0
+    for sib in sorted(Path(manifest_path).parent.glob("*.yaml")):
+        try:
+            ds = (yaml.safe_load(sib.read_text(encoding="utf-8")) or {}).get("dataset") or {}
+        except Exception:  # noqa: BLE001 — a malformed sibling is not a trial
+            continue
+        if all(str(ds.get(k)) == str(v) for k, v in want.items()):
+            n += 1
+    return max(1, n)
+
+
+def _compute_cost_gate(
+    *,
+    manifest: TrainingManifest,
+    manifest_path: Path,
+    scored: list[tuple[Mapping[str, Any], list[dict[str, Any]]]],
+    registry_root: Path,
+    champion_allowed: bool,
+):
+    """Cost-net decision-value gate for this run (ml.promotion.cost_gate).
+
+    ``scored`` is ``[(model_state, eval_rows), ...]`` — one pair for a holdout
+    run, one per fold for CV (each fold's OWN out-of-sample block). The
+    incumbent is scored on the same rows only for a holdout run: under CV the
+    incumbent was refit on the full history, so the fold blocks are in-sample
+    for it. Never raises: an internal error yields an applicable, failed gate
+    (fail-closed for promotion; training itself carries on)."""
+    from ..datasets.labeling.cost_policy import cost_net_enabled  # noqa: PLC0415
+    from ..promotion import cost_gate as cg  # noqa: PLC0415
+
+    enforced = cost_net_enabled()
+    value_col = cg.value_column_for(manifest)
+    if value_col is None:
+        return cg.not_applicable(
+            f"no net-R value column for family {manifest.dataset.family!r}",
+            enforced=enforced,
+        )
+    eval_rows_all = [r for _, rows in scored for r in rows]
+    if not any(isinstance(r.get(value_col), (int, float)) for r in eval_rows_all):
+        return cg.not_applicable(
+            f"eval rows carry no {value_col!r} column", enforced=enforced,
+        )
+    threshold = cg.decision_threshold(manifest, value_col)
+    try:
+        pairs: list[tuple[bool, float]] = []
+        for state, rows in scored:
+            pairs.extend(cg.score_decisions(state, rows, value_col, threshold))
+        bases: dict[str, int] = {}
+        for r in eval_rows_all:
+            if isinstance(r.get(value_col), (int, float)):
+                b = str(r.get("label_cost_basis") or "unstamped")
+                bases[b] = bases.get(b, 0) + 1
+        champ_pairs = None
+        champ_path = None
+        if champion_allowed:
+            registry = ModelRegistry(registry_root)
+            if registry.exists(manifest.model_id):
+                inc = registry.get(manifest.model_id)
+                if inc.target_deployment_stage in cg.GATED_STAGES and inc.model_state_path:
+                    try:
+                        inc_state = json.loads(
+                            Path(inc.model_state_path).read_text(encoding="utf-8")
+                        )
+                        champ_pairs = cg.score_decisions(
+                            inc_state, eval_rows_all, value_col, threshold,
+                        )
+                        champ_path = inc.model_state_path
+                    except Exception as exc:  # noqa: BLE001
+                        sys.stderr.write(
+                            f"cost_gate: incumbent {manifest.model_id} state not "
+                            f"scorable ({exc}); baselines only\n"
+                        )
+        return cg.evaluate_cost_gate(
+            pairs,
+            eval_cost_bases=bases,
+            value_column=value_col,
+            threshold=threshold,
+            enforced=enforced,
+            champion_pairs=champ_pairs,
+            champion_model_state_path=champ_path,
+            n_trials=_count_trials(manifest_path, manifest),
+        )
+    except Exception as exc:  # noqa: BLE001
+        res = cg.not_applicable(f"gate_error: {type(exc).__name__}: {exc}", enforced=enforced)
+        res.applicable = True
+        return res
+
+
 def run_experiment(
     *,
     manifest_path: Path,
@@ -345,12 +447,14 @@ def run_experiment(
         folds = iter_folds(rows, manifest.evaluator_config)
         fold_metrics: list[Mapping[str, float]] = []
         cv_folds = []
+        scored: list[tuple[Mapping[str, Any], list[dict[str, Any]]]] = []
         for idx, (train_f, eval_f) in enumerate(folds):
             fold_state = dict(trainer.fit(train_f, manifest.trainer_config))
             fold_score = dict(
                 evaluator.score(fold_state, eval_f, manifest.evaluator_config)
             )
             fold_metrics.append(fold_score)
+            scored.append((fold_state, eval_f))
             cv_folds.append(
                 {
                     "fold": idx,
@@ -368,6 +472,19 @@ def run_experiment(
         metrics = dict(
             evaluator.score(model_state, eval_rows, manifest.evaluator_config)
         )
+        scored = [(model_state, eval_rows)]
+
+    # Cost-net decision-value gate (ML-TRAINING-PRINCIPLES-GAPS; operator
+    # Tier-2 2026-10-28). Its flat metrics ride the registry row, and the
+    # registry enforces it on the stage the model lands in.
+    cost_gate = _compute_cost_gate(
+        manifest=manifest,
+        manifest_path=manifest_path,
+        scored=scored,
+        registry_root=registry_root,
+        champion_allowed=strategy not in MULTI_FOLD_STRATEGIES,
+    )
+    metrics.update(cost_gate.metrics())
 
     started_at = _now_utc()
     run_id = started_at.strftime("%Y%m%dT%H%M%SZ")
@@ -387,6 +504,11 @@ def run_experiment(
     metrics_path = experiment_dir / "metrics.json"
     metrics_path.write_text(
         json.dumps(metrics, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    (experiment_dir / "cost_gate.json").write_text(
+        json.dumps(cost_gate.to_dict(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -428,6 +550,7 @@ def run_experiment(
             run_id=run_id,
             notes=manifest.notes,
             by=by,
+            cost_gate=cost_gate.to_dict(),
         )
 
     return artifacts, entry

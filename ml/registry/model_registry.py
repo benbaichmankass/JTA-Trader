@@ -49,6 +49,8 @@ _ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
 # Legacy alias stages (research_only / backtest_approved / limited_live /
 # live_approved) never appear here as keys — incoming and stored stages are
 # normalized to canonical via `canonical_stage` before any transition check.
+_STAGE_ORDER: tuple[str, ...] = ("candidate", "shadow", "advisory")
+
 _STAGE_TRANSITIONS: dict[str, frozenset[str]] = {
     "candidate": frozenset({"shadow"}),
     "shadow": frozenset({"advisory", "candidate"}),
@@ -67,6 +69,56 @@ _DEFAULT_STAGE = "shadow"
 
 class RegistryError(ValueError):
     """Registry-level failure (unknown id, illegal transition, etc.)."""
+
+
+class CostGateRefused(RegistryError):
+    """A promotion into shadow/advisory refused by the cost-net gate
+    (ml.promotion.cost_gate; ML-TRAINING-PRINCIPLES-GAPS)."""
+
+
+# Stages a model only reaches by clearing the cost-net gate.
+_COST_GATED_STAGES = frozenset({"shadow", "advisory"})
+
+
+def _cost_gate_refusal(entry: "RegistryEntry", new_stage: str) -> str | None:
+    """Why ``entry`` may not move FORWARD into ``new_stage`` under the cost-net
+    gate, or ``None`` when it may.
+
+    Enforced only while ``config/ml_training.yaml::cost_net_labels`` is on (the
+    one revert value). Refuses when the served run's recorded gate is
+    applicable and failed, or when the family has a net-R value column but the
+    served run predates the gate (no evaluation on record). Families with no
+    value column (regime / direction / execution-quality heads) have no
+    cost-net decision value yet and are not gated here."""
+    if new_stage not in _COST_GATED_STAGES:
+        return None
+    from ..datasets.labeling.cost_policy import cost_net_enabled  # noqa: PLC0415
+    from ..promotion import cost_gate as cg  # noqa: PLC0415
+
+    if not cost_net_enabled():
+        return None
+    recorded = cg.gate_from_entry(entry)
+    if recorded is None:
+        try:
+            from ..manifest import TrainingManifest  # noqa: PLC0415
+
+            value_col = cg.value_column_for(TrainingManifest.from_dict(dict(entry.manifest)))
+        except Exception:  # noqa: BLE001 — unparseable stored manifest
+            ds = dict((entry.manifest or {}).get("dataset") or {})
+            value_col = cg.VALUE_COLUMNS.get(str(ds.get("family") or ""))
+        if value_col is None:
+            return None
+        return (
+            "no cost-net evaluation on record for the served run "
+            f"(family has value column {value_col!r}); retrain under the "
+            "cost-net policy first"
+        )
+    if recorded["applicable"] and not recorded["passed"]:
+        return (
+            "served run failed the cost-net gate "
+            f"(value_r={recorded.get('value_r')}); see the run's cost_gate.json"
+        )
+    return None
 
 
 def _now_utc() -> datetime:
@@ -298,8 +350,16 @@ class ModelRegistry:
         run_id: str | None = None,
         notes: str = "",
         by: str = "experiments-runner",
+        cost_gate: Mapping[str, Any] | None = None,
     ) -> RegistryEntry:
         """Register a training run for ``model_id``.
+
+        ``cost_gate`` (``ml.promotion.cost_gate.CostGateResult.to_dict()``):
+        when it ``refuses`` (enforced, applicable, failed), a NEW model lands
+        at ``candidate`` instead of its manifest's shadow/advisory stage, and a
+        retrain of a shadow/advisory model is recorded as a run but does NOT
+        replace the served state, metrics or manifest — the incumbent keeps
+        serving. A candidate-stage model refreshes as before.
 
         Append-on-duplicate semantics: re-registering the same ``model_id``
         appends a new :class:`RunRecord` to the existing entry's ``runs``
@@ -340,6 +400,35 @@ class ModelRegistry:
             # don't duplicate — return the existing entry untouched.
             if any(r.run_id == run_id for r in existing.runs):
                 return existing
+            refuses = bool(cost_gate and cost_gate.get("refuses"))
+            if refuses and existing.target_deployment_stage in _COST_GATED_STAGES:
+                event = StatusEvent(
+                    from_status=existing.status,
+                    to_status=existing.status,
+                    by=by,
+                    reason=(
+                        f"re-trained (run_id={run_id}); cost gate REFUSED the "
+                        f"state swap at stage {existing.target_deployment_stage!r}: "
+                        f"{cost_gate.get('reason')}; incumbent keeps serving"
+                    ),
+                    at=now,
+                )
+                entry = RegistryEntry(
+                    model_id=existing.model_id,
+                    status=existing.status,
+                    manifest=existing.manifest,
+                    model_state_path=existing.model_state_path,
+                    metrics=existing.metrics,
+                    code_revision=existing.code_revision,
+                    created_at=existing.created_at,
+                    history=existing.history + (event,),
+                    notes=existing.notes,
+                    target_deployment_stage=existing.target_deployment_stage,
+                    stage_history=existing.stage_history,
+                    runs=existing.runs + (new_run,),
+                )
+                self._write(entry)
+                return entry
             event = StatusEvent(
                 from_status=existing.status,
                 to_status=existing.status,
@@ -371,6 +460,17 @@ class ModelRegistry:
             reason="initial registration",
             at=now,
         )
+        stage_history: tuple[StageEvent, ...] = ()
+        if (cost_gate and cost_gate.get("refuses")
+                and stage in _COST_GATED_STAGES):
+            stage_history = (StageEvent(
+                from_stage=stage,
+                to_stage="candidate",
+                by=by,
+                reason=f"cost gate refused initial stage {stage!r}: {cost_gate.get('reason')}",
+                at=now,
+            ),)
+            stage = "candidate"
         entry = RegistryEntry(
             model_id=model_id,
             status="candidate",
@@ -382,7 +482,7 @@ class ModelRegistry:
             history=(event,),
             notes=notes,
             target_deployment_stage=stage,
-            stage_history=(),
+            stage_history=stage_history,
             runs=(new_run,),
         )
         self._write(entry)
@@ -458,6 +558,10 @@ class ModelRegistry:
 
         Refuses no-op transitions explicitly so audit-log entries
         always represent real state changes.
+
+        Raises :class:`CostGateRefused` for a forward move into shadow or
+        advisory that the cost-net gate refuses (``_cost_gate_refusal``).
+        Rollbacks (advisory→shadow, shadow→candidate) are never gated.
         """
         # Normalize the requested stage through the alias map: a caller may
         # still pass an old name (e.g. `live_approved`); store the canonical.
@@ -481,6 +585,15 @@ class ModelRegistry:
             raise RegistryError(
                 f"stage transition {current.target_deployment_stage!r} -> "
                 f"{new_stage!r} not allowed; allowed: {sorted(allowed)}"
+            )
+        forward = _STAGE_ORDER.index(new_stage) > _STAGE_ORDER.index(
+            current.target_deployment_stage
+        )
+        refusal = _cost_gate_refusal(current, new_stage) if forward else None
+        if refusal:
+            raise CostGateRefused(
+                f"cost gate refuses {model_id} {current.target_deployment_stage!r} "
+                f"-> {new_stage!r}: {refusal}"
             )
         event = StageEvent(
             from_stage=current.target_deployment_stage,
