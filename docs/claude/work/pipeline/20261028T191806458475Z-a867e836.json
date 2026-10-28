@@ -1,0 +1,23 @@
+{
+  "based_on": "20261024T060334519979Z-447249f9.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "the census honours --since-days on dump input and closed_at is ISO on every closed trades row, or both are killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-10-28"
+  },
+  "id": "PI-20261021-4ZLRFEV1-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "PERF-REVIEW-PREP-20261021:tooling",
+    "rerun": "python3 scripts/research/giveback_census.py --telemetry-file <tele.json> --trades-file <trades.json> --since-days 7 --min-n 10 --unit X --out /tmp/x  # n_graded must differ from --since-days 90"
+  },
+  "redate": {
+    "observation": "origin.rerun / re-validation read 2026-10-28 by the performance review: Re-run 2026-10-28: giveback_census.py --since-days 7 on the 30d dump returns n_graded 76, the same as the 30d count, so the flag is still ignored. Still unowned. A small Tier-1 script fix.",
+    "observed_at": "2026-10-28"
+  },
+  "routed_to": "ROUTE-RESEARCH-HARNESS-FIXES (REGISTER-SWEEP-W43 2026-10-24: giveback_census tooling defects)",
+  "state": "routed",
+  "what": "[performance] Two small tooling defects found while running the 10-21 census: (1) scripts/research/giveback_census.py ignores --since-days on the --trades-file/--telemetry-file path (identical n for 7/30/90); (2) trades.id 6131 has closed_at stored as epoch-ms string '1790835474843' while 1,544 other non-null values are ISO, so a lexical date filter drops it. See docs/reviews/2026-10-21-weekly-walkthrough.md (PR #19362). || [2026-10-28 performance-review PERF-REVIEW-PREP-20261028, session_01AFoLuJSayY1PiJPvRnY2ji] Re-run 2026-10-28: giveback_census.py --since-days 7 on the 30d dump returns n_graded 76, the same as the 30d count, so the flag is still ignored. Still unowned. A small Tier-1 script fix."
+}
