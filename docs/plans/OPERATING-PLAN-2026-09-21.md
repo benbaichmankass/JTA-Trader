@@ -157,7 +157,8 @@ help by cleaning up duplicate trades in the books and creating a more integrated
    exception (`DUAL_BOOK_EXCEPTIONS` in the guard, per account). The guard refuses the entry once it no longer applies.
 3. **`ib_live`** — *"Yes, mirror when it gets a leg (Recommended)"*. An `ib_portfolio` mirror arrives in the same PR as `ib_live`'s
    first leg. The guard refuses an `ib_live` leg without one.
-4. **Unhomed legs** — *"Retire gld, re-home 3 later (Recommended)"*. `gld_pullback_1h` is retired by record (`enabled: false`; the record
+4. **Unhomed legs** — *"Retire gld, re-home 3 later (Recommended)"*, consistent with the same day's GLD decision *"GLD: kill and
+   exclude"* (commit `75fa182dd`, #21009). `gld_pullback_1h` is retired by record (`enabled: false`; the record
    and its re-entry test are in its `config/strategies.yaml` comment). `spy_pullback_1h`, `qqq_pullback_1h` and `tlt_pullback_1h` go back
    on `alpaca_paper` once it takes slices for them (a 1d leg trades the same symbols there). Until then they are named in the guard's
    `UNHOMED` and owned by row `ALPACA-SLICES-REHOME-1H`, so none is silently unhomed.
