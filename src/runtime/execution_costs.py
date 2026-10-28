@@ -172,6 +172,25 @@ def resolve_cost_policy(
     return slip, fund
 
 
+def resolve_fee_bps_roundtrip(symbol: Any, fee_bps_roundtrip: Optional[float] = None) -> float:
+    """Fee sibling of :func:`resolve_cost_policy`: *unset => venue fee, explicit wins*.
+
+    ``None`` resolves to ``profile_loader.roundtrip_fee_bps_for(symbol)`` (the
+    MEASURED venue fee, e.g. ``bybit:linear`` 11.0, or 0.0 for a commission-free
+    venue) and falls back to ``DEFAULT_FEE_BPS_ROUNDTRIP`` when the venue has no
+    measured fee, the symbol is unknown, or the lookup fails. An explicit value
+    (including ``0.0``, the fee-only comparison arm) always wins. The owner of the
+    constant stays here; harnesses call this instead of reading it directly."""
+    if fee_bps_roundtrip is not None:
+        return float(fee_bps_roundtrip)
+    try:
+        from src.core.profile_loader import roundtrip_fee_bps_for
+        venue_fee = roundtrip_fee_bps_for(str(symbol)) if symbol else None
+    except Exception:  # noqa: BLE001 - best-effort; the default is the safe fallback
+        venue_fee = None
+    return DEFAULT_FEE_BPS_ROUNDTRIP if venue_fee is None else float(venue_fee)
+
+
 def _f(x: Any) -> Optional[float]:
     try:
         v = float(x)

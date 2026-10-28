@@ -1030,9 +1030,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--fee-bps-roundtrip",
         type=float,
-        default=FEE_BPS_ROUNDTRIP,
-        help="Round-trip taker fee in bps for net-of-fee R (default 7.5, "
-             "Bybit linear). Set 0 to reproduce gross-only results.",
+        default=None,
+        help="Round-trip taker fee in bps for net-of-fee R (default unset = "
+             "the venue fee, Bybit linear 11.0). Set 0 to reproduce gross-only results.",
     )
     parser.add_argument(
         "--slippage-bps-roundtrip",
@@ -1223,7 +1223,7 @@ def main(argv: list[str]) -> int:
     # signature change (mirrors the ENTRY_STD_THRESHOLD monkey-patch pattern).
     # ``global`` is declared at the top of main() (the argparse default reads
     # the module value, which counts as a use).
-    FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
+    FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(SYMBOL, args.fee_bps_roundtrip)
     # Mandatory venue-aware cost policy (checklist E3): unset flags resolve to
     # the venue-aware defaults (funding is perp-only — 0 for a non-perp); an
     # explicit value (including 0 for the fee-only comparison arm) always wins.

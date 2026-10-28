@@ -1,0 +1,21 @@
+{
+  "id": "COST-STACK-RECOST-SWEEP",
+  "title": "Operator choice: re-cost committed crypto Stage-0 evidence records at the measured 11.0 bps Bybit fee",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Blocked on operator choice and on #20783 + #20813 merging. 28 Bybit-linear records in comms/strategy_evidence shift -0.008..-0.083 R/trade (table: comms/research/desk_edge/levers/bybit-fee-recost-impact-2026-10-28.json); one verdict flips: ict_scalp_eth_15m net_r 1.318 -> -1.005 (xrp_15m stays +1.09). mes/mgc/mhg unchanged. Sweep = re-run build_strategy_evidence for those legs after merge and compare net_r_oos to the impact table. Closes when the operator chooses sweep or no-sweep and, if sweep, records are re-baselined. Basis: n=28 legs re-costed of 29 listed in the impact table (turtle_soup has no harness), per-trade fee shift measured over each leg's committed source_run trades; operator approved the sweep 2026-10-28 (manager dispatches it after #20813 merges).",
+  "updated_at": "2026-10-28T06:24:33Z",
+  "updated_by": "session_01AFoLuL3GLCAL6NDYe9K2Nw",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 746
+}
