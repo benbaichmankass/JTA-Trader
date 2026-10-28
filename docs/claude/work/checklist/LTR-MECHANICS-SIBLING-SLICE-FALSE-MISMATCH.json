@@ -12,7 +12,10 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-28 session_01AFoLuLzRwsR8HQJehXk9iJ] FALSE-POSITIVE mechanics mismatch in scripts/ops/live_review_packet.py::_venue_exit_prices. Evidence (review LR-20261028T0827Z-pkg-c45677aa2d574a52, ict_scalp_xrp_5m long, bybit_1): packet verdict mismatch, venue SL 1.3233 / TP 1.3407 vs package SL 1.32979 / TP 1.33412. Journal order_packages: the venue levels equal the SIBLING open XRPUSDT package pkg-5277d9b977994968 (ict_scalp_xrp_15m, sl 1.32334 tp 1.34074) on the same bybit_1 shared symbol position. Trader journal 08:26:38Z: BE modify {sl:1.3297917} amended THIS package's tracked sl leg in place, retCode 0, so the venue followed the package (by design: ict_scalp.monitor break-even +be_offset_bps 15 -> order_monitor._send_modify_to_exchange -> modify_open_order with trades.sl_order_id). Root cause: _venue_exit_prices loops every order for the symbol and keeps the last StopLoss/TakeProfit trigger (falls back to position-level stop_loss/take_profit), ignoring trades.sl_order_id/tp_order_id, so with 2+ slices on one symbol it reads a sibling's legs. Effect: a flag_mechanics operator_ask on a healthy trade; every co-open same-symbol package pair can read mismatch. Package in fact closed tp_cross 08:27:39Z. FIX (Tier-1, not done here): match orders by the trade row's sl_order_id/tp_order_id when present, fall back to symbol-wide only when absent; add a two-slice fixture test. Side finding: comms/schema/live_review.schema.json basis enum lacks could_not_look though REVIEWER-BRIEF.md allows it; validator refused it. Observation: next 2-slice same-symbol review should read match.",
-  "updated_at": "2026-10-28T08:34:00Z",
+  "updated_at": "2026-10-28T08:50:39Z",
   "updated_by": "session_01AFoLuLzRwsR8HQJehXk9iJ",
+  "roadmap": [
+    "L-ATM"
+  ],
   "_seq": 752
 }
