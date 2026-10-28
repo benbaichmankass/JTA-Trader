@@ -15,6 +15,8 @@ Operator decision 2026-10-28: the project is **JTA Trader** (scope: docs + UI + 
 
 ## Operator steps (one GitHub Settings action)
 
+**Status 2026-10-28:** step 1 DONE — repo is now `benbaichmankass/JTA-Trader`; the old URL still fetches via the redirect. In-repo slug defaults were updated (Tier 1). Step 5 (VM remotes) is deferred; the VMs stay on the redirect.
+
 1. GitHub → `benbaichmankass/Metis-Insights` → Settings → General → Repository name → `JTA-Trader` (or the chosen slug) → Rename.
 2. GitHub redirects the old web, git and API URLs. Verify: Actions secrets (`VM_SSH_KEY`, `DIAG_READ_TOKEN`) are carried over (Settings → Secrets);
    webhooks still deliver (Settings → Webhooks → Recent Deliveries); Pages/branch protection intact; GitHub App installation (Claude) still covers the repo.

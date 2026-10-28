@@ -243,8 +243,8 @@ catalog; precedents are example outputs, not authority. **The manager contract i
 
 ## Repo identity
 
-The project is named **JTA Trader** (operator, 2026-10-28; previously "Metis Insights", 2026-07-23, and "ICT bot"). The GitHub repo is renamed by
-the operator in GitHub Settings (steps: [`docs/runbooks/jta-trader-rename.md`](docs/runbooks/jta-trader-rename.md)); until then and after, the old
+The project is named **JTA Trader** (operator, 2026-10-28; previously "Metis Insights", 2026-07-23, and "ICT bot"). The GitHub repo was renamed by
+the operator in GitHub Settings to **`benbaichmankass/JTA-Trader`** (2026-10-28; record: [`docs/runbooks/jta-trader-rename.md`](docs/runbooks/jta-trader-rename.md)); the old
 names redirect — **do not chase a rename sweep.** The MCP repo name is whatever THIS session's scope says (a denial is a scope mismatch, not an
 outage). **Runtime identifiers deliberately keep their old names:** VM dirs `/home/ubuntu/ict-trading-bot` and `/opt/ict-trading-bot`, systemd
 unit names, Python package/module names, the `ict-bot.duckdns.org` domain, bot names, the `Manager Session` title convention, Kaggle slugs,
