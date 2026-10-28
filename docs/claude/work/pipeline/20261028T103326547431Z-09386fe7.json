@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-KD5SQ3JJ-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-PRACTICE-REDESIGN lane session_01AFoLuLyepCMhuUKD5sQ3jJ, PR #20897",
+    "rerun": "python3 scripts/ops/check_claude_grade_loop.py | python3 -c \"import json,sys;d=json.load(sys.stdin);print({k:v.get('findings') for k,v in d.items() if isinstance(v,dict) and k.startswith('amendments') and v.get('state')=='fail'})\""
+  },
+  "state": "queued",
+  "what": "Grade-loop amendments check FAILS (weekly-audit C13): brief/skill versions since 2026-10-27 with NO AMENDMENTS.md entry, so the grader cannot attribute outcomes to a contract version. As of 2026-10-28 10:32Z: live-trade-review/SKILL.md 4f87ccdf 602a132f 76044d3f 96b794bf 98b636b4; live-trade-review/REVIEWER-BRIEF.md 01736a9d 42649d05 a38cb404 fe47add9; trading-desk/DESK-BRIEF.md 093350af 1691f61f 16b49587 41f8557a d3caba51 d60bca34 e7652732 eb03c1d5 f07d1541. Fix: backfill one AMENDMENTS.md line per version (git log of the file names the PR + basis), and make the PRs that edit these files add the line (a CI hook on the edit). Not covered by CLAUDE-GRADE-LOOP / DESK-9-GRADING (their closes do not name the amendment backlog)."
+}

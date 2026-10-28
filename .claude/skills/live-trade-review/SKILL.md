@@ -172,6 +172,8 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 
 ### Step 5. Separate EV from preference, and set the route
 
+> ⚠️ **`route: recommended` is DISPATCHED, not advice** (manager, 2026-10-28, after LR-20261028T1018Z-pkg-5277d9b977994968's `recommended` close executed on bybit_1). Under `apply_mode: apply` the VM rows watcher (`src/runtime/live_review_rows_watch.py::DISPATCHABLE_ROUTES` = `recommended`, `auto_applied`) EXECUTES every `recommended` row under `MD-TRADE-DESK` / `MD-LIVE-TIGHTEN-SL` on EVERY account carrying the package, real money and prop included; each account's own risk manager still decides. **Advice only = `route: none` or `route: operator_ask`.** The enum value is not renamed in code (a schema change; proposed on row `LTR-PRACTICE-REDESIGN`).
+
 - **Apply bound (operator Q1):** a tighten whose EV cost is ≤ **0.25 R**, with the worst case improving, is `within_bound` on `apply_policy`. Record the **shadow 0.5 R arm** on `shadow_policy` on **every** review, so the two policies can be compared.
 - **Under apply_mode apply:** a `tighten_sl` with mechanics `match` that is table-backed within the bound, or judgement-backed with a confidence and reason, is applied by `live_review_apply.py --apply --mandate MD-LIVE-TIGHTEN-SL --mechanics match --basis table|judgement` (`--expected-cost-r` / `--worst-case-delta-r` for table; `--confidence` / `--reason` for judgement); its row is `route: auto_applied`, `applied: true`, with the per-account reads from the apply output. Anything else follows the recommend routes below.
 - **While apply_mode is recommend:**
