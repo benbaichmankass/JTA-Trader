@@ -1,0 +1,25 @@
+{
+  "based_on": "20261028T073901417625Z-3e8156a3.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261028-LFC7HPXG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "SKILL-DESIGN-MODEL / docs/research/ml-review-frontier-diagnosis-2026-10-28.md § 2 (Power row)",
+    "rerun": "grep -l 'ml_bakeoff:' research/queue/*.yaml research/queue/blocked/*.yaml | xargs grep -A6 '^power:' — compare expected_n/effect_units against the decision_rule's test unit (folds vs rows)"
+  },
+  "redate": {
+    "evidence": "research/queue/*.yaml power blocks + research/results 3947-22, ed1c-29, 2a2e-11 ci95",
+    "observation": "ML-REVIEW-20261028 audit DONE over 6 open ML units (4 queued: RQ-20261025-3947-23, RQ-20261026-90d3-01, RQ-20261028-2a2e-10, -2a2e-11; blocked: RQ-20261025-7ee1-01, RQ-20261011-9da8-02). 5 of 6 register power on OOS ROWS (24k-78k, d=0.1 one_sample) while the rule is a paired interval over 5-8 folds (mismatch); 9da8-02 is on labelled setups (unit OK). Measured fold sd of the paired LOG-LOSS delta ~0.003 (CI half-width 0.0035-0.0042 over 5 folds), so a +0.005 log-loss bar at 5 folds is borderline (~60% power) and +0.002 (2a2e-10) needs ~19 folds; macro-F1 bars need 17-70 folds. Re-register-or-retire proposed to the manager as P6 in docs/reviews/2026-10-28-weekly-walkthrough.md (no unit edited: dispatch forbids queueing). Stays open until the 5 are re-registered on folds or retired.",
+    "observed_at": "2026-10-28"
+  },
+  "routed_to": "ML-REVIEW",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 1,
+  "what": "[ml] Audit every queued/blocked ML research unit's power block for unit-of-analysis mismatch: RQ-20261018-ff8f-04 registers power on 24,000 OOS rows (d=0.1 needs ~785 rows) while its decision rule is a paired t-interval over 5 folds; measured fold sd ~0.03 implies ~70 folds for +0.010 (ML-READ-1025). Re-register power on the test unit (folds, Nadeau-Bengio corrected variance) or redesign before the unit runs. ml-review A2 / frontier gate 6 are the standing check."
+}
