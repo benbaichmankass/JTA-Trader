@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20836
+  ],
   "blocked_on": [],
   "note": "Lane 2026-10-28 (dispatched by Manager Session 2026-10-27a; operator 06:10Z: test ACTIVE MANAGEMENT, not entries). (1) RQ-20261026-bf56-02/-03 unblocked per clears_when (DESK-7B done; bf56-01 verdict pass run 40387359527); registration unchanged. Population re-parsed = the registered 4 legs; 176 of 176 decision points (27+31+103+15). (2) Judging: 176/176 per role, 8 isolated batches x 22 per role (16 plan subagents, Read-only, packet+protocol only, no repo, no answers); intake comms/research/desk_replay/judged-1/. $0 API. Plan-equivalent spend ESTIMATED ~$9 (16 x ~117k subagent tokens). (3) VERDICTS (registered cost stack fee 7.5 + slip 3.0 + funding 1.0, stop-fill 0.05 R; lane-local MEASURED, comms/research/desk_replay/judged-1/verdict-*-lane.json): IN-TRADE FAIL n=176 mean dR -0.048 R CI95 [-0.143, +0.041] (FAIL clause: mean <= 0; CI straddles 0), B2 -0.008, B3 -0.120, folds + 1/4, post-cutoff n=25 +0.146, observed sd 0.640. EXIT FAIL n=176 mean dR -0.091 R CI95 [-0.198, -0.003] (CI excludes 0 on the losing side), B2 -0.057, B3 -0.245, folds + 0/4, post-cutoff n=25 -0.313, sd 0.666, action mix 136 hold / 36 partial / 4 close. COST: merged Bybit taker 11.0 bps (#20783) differs from the registered 7.5; both recorded; at 11.0 (hold and action repriced) in-trade -0.0484 [-0.143, +0.041], exit -0.0906 [-0.198, -0.003]: no change (fee-sensitivity.json). The judge does not beat holding to the strategy exit on these legs; both beat the best static rule but not random timing. (4) RQ-20261027-8b01-01 FAIL cause: clause (c1) only ((a),(b),(c2) pass), pooled over both 15m legs: the hindsight breakeven oracle helps at 2 of 45 decision points (ict_scalp_eth_15m 2 of 22, sum +0.809 R; ict_scalp_xrp_15m 0 of 23), so the bootstrap lower bound is exactly 0.0 (mean +0.018, CI [0.0, 0.0499]); the dev run disclosed in the unit already showed this. NOT a plumbing bug: no breakeven headroom on 15m legs. FIX (manager/research-ops act, per the unit own wording): retire 8b01-02 with the measured oracle bound; 8b01-03 (exit) is gated on a breakeven oracle that does not test exit headroom: either retire it too or re-register an exit-specific harness check, and replace its clears_when API judging route with plan-subagent judging (this lane protocol). Minor driver defect seen: verdict note always prints the re-parsed 2h/4h population even under --legs (8b01-01 note names ada/eth/xrp 2h/4h legs while measuring the 15m pair). CLOSES WHEN: research/results/RQ-20261026-bf56-02 and -03 land from research-script-run with the same verdicts.",
-  "updated_at": "2026-10-28T06:17:29Z",
+  "updated_at": "2026-10-28T06:18:22Z",
   "updated_by": "session_01AFoLuMG43ZucUrKoTWvg9L",
   "roadmap": [
     "L-DESK"
