@@ -1,0 +1,100 @@
+id: RQ-20261028-2a2e-17
+title: 'vol-skip lever, avax_pullback_2h: does an arm (VH80/VH90/VL20) beat the declared leg net of the full cost stack (dR >= 1.0 R, >= 3 of 4 calendar folds, no worse drawdown)?'
+status: queued
+cadence: once
+roadmap:
+- L-REGIME
+theme: regime
+priority: 2
+kind: experiment
+question: On history up to 2026-10-27, with the harness's venue-aware fee + slippage + funding stack (the same argv builder as the evidence builder), does any pre-registered arm (VH80,
+  VH90, VL20) of --vol-skip-pctl on avax_pullback_2h beat the leg as declared (B) by >= 1.0 R net, with no worse max drawdown, in >= 3 of 4 calendar folds? Arm values are fixed here
+  before any run; offline Stage-0 re-measurement, never a book decision.
+why_this_matters: 'Daily authoring lane 2026-10-28 (DAILY-AUTHORING-20261028; research-queue-health H1-THEME regime: runnable 10 < share 14). avax_pullback_2h has no vol-skip cell on
+  record; its siblings all ran the vol-skip family. The pre-registered arms are the upper/lower percentile cuts the sibling units used. GAP CHECKED by a leg x lever inventory of every
+  exit_lever_ablation unit in research/queue (queued, done, blocked): none pairs avax_pullback_2h with --vol-skip-pctl. A lone pass is a LEAD; the cell was chosen by the gap in the leg
+  x lever matrix, not by a prior result. Trial count for this cell: 1 unit, 3 arms (a PASS is confirmed on a disjoint window before any Tier-3 proposal).'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n is an ESTIMATE, not a measurement: the baseline count for this leg over the window
+    is not re-measured here; below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance
+    test; the calendar-fold majority refuses a one-period artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles (avax_pullback_2h); the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ202610282A2E17-__VOL_SKIP_PCTL
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  min_n: '39'
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack, never a zero default): total_trades,
+    net_total_r, max_drawdown_r, plus net_r per fold over 4 equal calendar spans (same boundaries every arm). Arms: B = leg as declared; VH80=--vol-skip-above-pctl=0.8; VH90=--vol-skip-above-pctl=0.9;
+    VL20=--vol-skip-below-pctl=0.2. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B.'
+  rule: 'INDETERMINATE IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate
+    passes (best = highest dR): a LEAD, followed by ONE confirmation unit on a disjoint window with the same statistic and bar; only a confirmed pass becomes a Tier-3 PROPOSAL note on
+    the owning checklist row for the manager, never a config edit. FAIL IF none passes with n(B) >= 39: this configuration is closed on this window and the record names the arm that
+    moved closest (the lever family stays open; a family retirement needs a review record per family_retirement_policy.yaml). The bar, the drawdown clause, the fold majority, the 39
+    floor and the arm values are not changed after any result.'
+  what_it_does_not_do: 'Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config, place an order or touch a roster; a single-leg
+    backtest lever is not edge and not a P&L claim, and a PASS is a lead, not a promotion.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a lever on a Stage-1 floor / real-money leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data and no published shard.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261027-3e41-06 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - avax_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - VH80=--vol-skip-above-pctl=0.8
+  - --arm
+  - VH90=--vol-skip-above-pctl=0.9
+  - --arm
+  - VL20=--vol-skip-below-pctl=0.2
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-27'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261028-2a2e-17
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P2
+related:
+- scripts/research/exit_lever_ablation.py
+- RQ-20261027-3e41-06
+- DAILY-AUTHORING-20261028
+last_dispatched_at: null
