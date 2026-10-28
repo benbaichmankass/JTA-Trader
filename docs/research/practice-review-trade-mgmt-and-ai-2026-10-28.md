@@ -20,8 +20,8 @@ time-based check-ins plus event triggers (R milestones, a change in volatility, 
 - **[PRAC]** a named practitioner writing about their own process (a book, a blog, a firm's own publication). Medium weight. It describes what people *do*, which is not proof that it works.
 - **[VEND]** a vendor, educator or marketing page, trade press, or a secondary summary. Lowest weight. Used only where nothing better was found, and labelled.
 
-Where this lane read only an abstract or a secondary summary, not the full paper, the entry says so. Section numbers
-in the sources list (§ 9) match the bracketed tags `[S#]` used in the text.
+Where this lane read only an abstract or a secondary summary, not the full paper, the entry says so. The numbered sources list
+(§ 9) matches the bracketed tags `[S#]` used in the text.
 
 ---
 
@@ -91,16 +91,23 @@ in the sources list (§ 9) match the bracketed tags `[S#]` used in the text.
    bet sizing, execution, and risk. It is rarely used end to end.** López de Prado: every successful quant firm he
    knows applies the "meta-strategy paradigm", a research assembly line with specialised stations, rather than lone
    researchers building whole strategies [S18, PRAC/ACAD]. Meta-labelling separates direction (the primary model) from
-   sizing and filtering (the ML layer) [S19, ACAD/PRAC]. *(Section B expands this; draft.)*
+   sizing and filtering (the ML layer) [S19, ACAD/PRAC]. Documented production ML sits in execution, hedging and routing
+   (Man AHL's ML execution router, JPMorgan LOXM and deep hedging) [S31, S34, S35]. LLMs are documented in *research*
+   (Man's AlphaGPT, held to the same thresholds and committee as human signals), not in live trade decisions [S32, S37].
+   **For us:** the ML trade-management programme should be a meta-model over the best rule, trained on the *priced
+   outcome of every action* on the real path, not on imitation of Claude (§ B.6).
 
 9. **Research operations at serious shops are protocol-driven.** Arnott, Harvey & Markowitz (*JFDS* 2019): treat
    history as having no true out-of-sample set, do not tweak a model on live results, keep models simple, and reward
-   process over results [S20, ACAD]. *(Section C expands this: deflated Sharpe, multiple testing, purged CV, kill
-   criteria; draft.)*
+   process over results [S20, ACAD]. Backtest Sharpe explained less than 2.5% of out-of-sample Sharpe across 888
+   strategies, and the gap grew with the number of backtests (Wiecki et al. 2016) [S42, ACAD]. Pre-registration cuts
+   p-hacking only when it includes a full analysis plan [S49, ACAD]. **For us:** our guard-enforced pre-registration,
+   trial ledger and holdout already match or exceed documented practice (our 2026-10-16 benchmark). The gap is a
+   standard *control set* for intervention tests, plus a declared practice precedent for each arm (§ C.3, § F.3).
 
 10. **The published evidence that LLM agents can trade is thin, and the best of it is negative to mixed.** Alpha Arena
-    Season 1 (real money, $10k per model, crypto perps on Hyperliquid, Oct–Nov 2025): 4 of 6 frontier models lost money,
-    GPT-5 by more than 60%. The organiser called it exploratory, with no statistical controls [S21, VEND/trade press].
+    Season 1 (real money, $10k per model, crypto perps on Hyperliquid, Oct–Nov 2025): 4 of 6 frontier models lost money
+    (GPT-5 ended at $4,126 of $10,000). The organiser called it exploratory, with no statistical controls [S21, VEND/trade press].
     FINSABER (arXiv 2505.07078) re-tested published LLM strategies over 20 years and 100+ symbols and found that the
     reported edge "deteriorates significantly": the strategies were too cautious in bull markets and too aggressive in
     bear markets [S22, ACAD]. **For us:** the desk is right to treat Claude as a *teacher whose labels are graded on
@@ -201,20 +208,288 @@ analogue with a real sample.
 
 ## B. AI/ML in the trading pipeline at real firms
 
-*Draft in progress. This section, and sections C, D, the comparison table, the recommended designs and the full
-sources list follow in the next push.*
+### B.1 Where firms say they actually use ML (public record only)
 
-## C. Research operations and evaluation methodology
+Public disclosure is selective, and firms talk about what is safe to talk about. Read this table as "documented uses",
+not "all uses".
 
-*Draft in progress.*
+| Firm / source | Use | Human role | Evidence weight |
+|---|---|---|---|
+| **Man AHL**: ML listed as a 2014 milestone; a 2018 ML **execution router** that picks between internal algos, dealer algos and the human desk, and shifts flow toward routes that execute better [S31, PRAC/trade press] | Execution (a contextual-bandit-like router), plus "investment" uses that are not specified | The risk chief says ML models get the same daily checks as conventional ones. Humans intervene "mainly when a model's assumptions broke down during unusual events" [S31] | Trade press (Risk.net) quoting the firm. Savings not quantified ("too early") |
+| **Man Group AlphaGPT** (2025): an agentic LLM research pipeline with an Idea Person, an Implementer and an Evaluator [S32, PRAC] | **Signal research**, not trading. Most successful so far in systematic equities | Every AI signal must pass "identical thresholds" to human research and have an economic rationale. Then the Investment Committee, code review, unit and integration tests, and full logging. The firm says "substantial human oversight" is still required [S32]. Press reports several dozen signals approved for live trading [S33, VEND] | Firm's own article (marketing-adjacent) plus press |
+| **JPMorgan LOXM** (2017): deep RL equity **execution**, trained on billions of real and simulated trades [S34, VEND/trade press] | Execution (slicing large orders) | Kept inside the bank's electronic risk framework while learning [S34] | Bank's own claims. No independent verification |
+| **JPMorgan deep hedging** (Buehler, Gonon, Teichmann & Wood, *Quant. Finance* 2019) [S35, ACAD]; production use on part of the Eurostoxx vanilla book reported in a Risk.net interview [S35, PRAC] | **Hedging / position management under frictions** | Not described | The method is peer-reviewed. Production use rests on one interview |
+| **Bridgewater AIA Labs** (2024): an ML-driven fund, ~$2bn reported [S36, VEND/trade press] | Idea generation through to execution | Humans keep risk management, with a manual "kill switch". Accounts of the human role conflict [S36] | Trade press, inconsistent |
+| **Balyasny, Man (ManGPT)**: firm-wide LLM assistants [S37, VEND/trade press] | Research productivity (for example, central-bank previews in 30 minutes instead of two days) | The analyst decides | Trade press |
+| **Citadel (Griffin, Oct 2025)**: "for uncovering alpha it just falls short" [S37, trade press] | GenAI used for productivity, not alpha | — | A named practitioner's public statement |
 
-## D. LLM and agentic trading: published results
+**Pattern (INFERRED from the table, not a measured census):** documented production ML at large firms sits in
+**execution, hedging and routing** (dense feedback, a short horizon, a clear cost metric) and in **research tooling**
+(LLMs generating hypotheses that then face the same statistical gates as human ideas). This lane found **no public
+record of a major firm letting an LLM make or manage live trade decisions**. Bridgewater's ML fund is the closest, and
+it is not an LLM and keeps a human kill switch.
 
-*Draft in progress. See finding 10.*
+### B.2 Meta-labelling, bet sizing, and "ML as a second layer"
+
+López de Prado's meta-labelling separates *direction* (a primary model or rule) from *whether and how much to bet*
+(an ML classifier trained on the primary model's outcomes). It trades recall for precision and turns the classifier's
+probability into a position size [S19, ACAD/PRAC]. A JFDS paper in the meta-labelling series reports that calibrating
+the probabilities significantly improves fixed sizing functions [S19, ACAD; abstract via secondary]. The point for
+trade management is that **an exit or management model is naturally a meta-model.** It sits on top of an existing
+management rule (for example, "the Chandelier trail fires now; should we honour it?"), rather than learning management
+from scratch. Our repo already has `src/research/meta_label.py` and `docs/research/M23-meta-labeling-DESIGN.md`.
+
+### B.3 RL and imitation for exits: the academic state
+
+- **Optimal-stopping theory** gives analytic exits for stylised processes: trailing stops [S24] and OU spreads with a
+  stop-loss [S25]. These are good *baselines* and feature generators, not production policies.
+- **Deep RL for exit timing**, one recent example (Wang, Ślepaczuk & Sakowski, arXiv 2610.13126, SPX short straddles):
+  a supervised model trained on *ex-post optimal hold/exit labels* beat passive holding and fixed time and P&L exits
+  out of sample. RL fine-tuning initialised from that supervised model added a little. **RL from scratch earned about
+  0%** (0.18% vs ~37%) [S38, ACAD preprint; excerpt read; cost treatment not confirmed]. That is one preprint, but it
+  matches a widely known pattern: supervised labels from priced alternatives first, RL (if ever) as fine-tuning.
+- **Imitation learning (behaviour cloning)** suffers from compounding errors once the policy reaches states the
+  expert never visited. DAgger fixes this by having the expert relabel the learner's own states, at the cost of many
+  expert queries [S39, ACAD survey]. This lane found no peer-reviewed finance paper showing behaviour cloning of a
+  trader working out of sample (a negative result: one search; the probe found the general literature). Combined with
+  § A.3 (experts' exits underperform random ones), **pure imitation of a teacher's exits is the weakest design
+  available.**
+
+### B.4 How firms structure research → production (documented)
+
+Idea → research under a protocol → evaluation against fixed thresholds → committee and code review → paper or house
+capital → live at small size → scale, with live monitoring and the ability to roll back. Sources: Man AlphaGPT's gates
+[S32]; the Arnott/Harvey/Markowitz protocol [S20]; Man AHL's academic board on running new models on house capital to
+catch *broken* models rather than to test significance [S40, PRAC; via our 2026-10-16 benchmark]. Forward or paper
+trading confirms the plumbing but "usually cannot distinguish a modest edge from luck" [S41, VEND].
+
+### B.5 Known failure modes
+
+- **Backtest overfitting and selection:** backtest Sharpe explains less than 2.5% of out-of-sample Sharpe across 888
+  Quantopian strategies, and the gap grows with the number of backtests run (Wiecki et al. 2016) [S42, ACAD].
+- **Decay:** published predictors earn 26% less out of sample and 58% less after publication (McLean & Pontiff,
+  *JF* 2016) [S43, ACAD].
+- **Look-ahead and memorisation in LLM-based research** (§ D).
+- **Herding:** the Bank of England warns that AI used in trading may lead participants "inadvertently to take actions
+  collectively" [S44, regulator via press].
+- **The lone-quant "Sisyphus" pattern** instead of a research assembly line [S18].
+
+### B.6 Design implications for us (section B)
+
+1. **The ML trade-management programme should learn from *priced alternatives*, not from Claude's choices.** Our
+   replay can price every action (hold, close, tighten, partial) on the real path, net of cost, at every check-in.
+   Those counterfactual outcomes are better labels than any teacher's pick, and they are free of the teacher's biases
+   (§ A.3). Claude's decisions are still valuable as *features and hypotheses*: what did it see that the rule did not?
+   They should not be the target.
+2. **Start as a meta-model on top of the best rule baseline** from the desk test (§ B.2), not as an end-to-end
+   policy. Supervised first. RL only as fine-tuning, only after the supervised head clears its bar [S38].
+3. **If any distillation of Claude is kept, filter it by outcome.** Distil only the decisions that beat the matched
+   random intervention, and relabel the student's own visited states with priced alternatives (DAgger-style, at zero
+   teacher cost) [S39].
+4. **Our desk is ahead of documented industry practice.** No major firm is documented letting an LLM manage live
+   positions. That is not a reason to stop. It is a reason to hold the desk to the strictest controls and to treat
+   its live role as a label generator under the 1–2-trade mechanical soak doctrine, not as an established edge.
 
 ---
 
-## 9. Sources (draft; full list in the next push)
+## C. Research operations and evaluation methodology
+
+**Most of this was benchmarked on 2026-10-16** in
+[`docs/research/research-ops-benchmark-2026-10-16.md`](research-ops-benchmark-2026-10-16.md) (23 sources: López de
+Prado, DSR, PBO, Harvey–Liu–Zhu, the Arnott et al. protocol, the Man AHL board, Winton's "Blinded by optimism",
+WorldQuant, McLean–Pontiff, Quantopian, SPC/CUSUM, Stage-Gate, online FDR). This lane re-verified the headline
+sources (S18, S20, S42, S43, S45–S48) and does not repeat that table. What it found since:
+
+| benchmark gap (2026-10-16) | row | state (read 2026-10-28 from `docs/claude/work/checklist/`) |
+|---|---|---|
+| Multiple testing at programme level | `RESEARCH-TRIAL-LEDGER` | done (report-only ledger, DSR / haircut) |
+| Should the promotion bar see N? | `PROMOTION-BAR-MULTIPLICITY` | done (promotion needs a holdout pass, R-HOLDOUT, #18626) |
+| Confirmation on fresh data | `RESEARCH-CONFIRM-FRESH-WINDOW` | landed_unproven |
+| Live decay monitor (CUSUM) | `LIVE-DECAY-MONITOR` | queued |
+| Correlation with the existing book | `PROMOTION-CORRELATION-CHECK` | queued |
+| Research outcome metrics | `RESEARCH-OUTCOME-METRICS` | queued |
+
+### C.1 Core methodology, re-verified
+
+- **Deflated Sharpe ratio**: corrects for selection under multiple testing and for non-normal returns (Bailey & López
+  de Prado, *JPM* 2014) [S45, ACAD]. **PBO via CSCV**: the probability that the in-sample best ranks below the median
+  out of sample (Bailey, Borwein, López de Prado & Zhu, *J. Comp. Finance* 2017) [S46, ACAD].
+- **t > 3 hurdle** for new factors given the history of data mining (Harvey, Liu & Zhu, *RFS* 2016) [S47, ACAD]. Even
+  t > 3 can give many false positives when true effects are rare, so report a Bayesianised p-value with prior odds
+  (Harvey, AFA presidential address, *JF* 2017) [S48, ACAD].
+- **Pre-registration works when it includes a full analysis plan.** Across 15,992 test statistics from economics
+  RCTs, pre-registration *alone* did not reduce p-hacking. Pre-registration with a complete pre-analysis plan did
+  (Brodeur, Cook, Hartley & Heyes) [S49, ACAD]. *Our units register a decision rule. Whether each also fixes the
+  transforms, windows and exclusions is the "forking paths" residue the benchmark already noted.*
+- **Purged k-fold, embargo and combinatorial purged CV**: remove training observations whose label windows overlap
+  the test labels, embargo a buffer after each test block, and assemble many paths into a *distribution* of OOS Sharpe
+  [S50, ACAD/PRAC]. **Triple-barrier labels**: profit barrier, stop barrier and time barrier, the first one touched sets
+  the label [S50; primary source AFML 2018, not re-read here]. *For trade management, every check-in inside the same
+  trade shares one price path. CV must group by trade, and purge across trades whose holding windows overlap.*
+- **Kill criteria for a running strategy**: the triple-penance rule. Under IID returns, recovery from a drawdown takes
+  on average about 3× as long as the drawdown took to accumulate, independent of Sharpe. Firms give higher-Sharpe PMs
+  looser stop-outs, and positive autocorrelation changes the multiple (Bailey & López de Prado, *J. Risk* 2015) [S51,
+  ACAD; secondary for the autocorrelation caveat].
+
+### C.2 How firms evaluate exit and management policies specifically (the thin part of the literature)
+
+This lane found **no published firm methodology dedicated to evaluating exit policies** (a negative result: four
+searches across academic, practitioner and vendor sources; the probe did find entry and backtest methodology, so it
+could find positives). What the sources *do* give, assembled:
+
+1. **Hold the entries fixed and vary only the management.** This is the random-entry harness of Tharp and Basso
+   [S17], and the logic of the counterfactual in Akepanidtaworn et al. [S1].
+2. **Benchmark against a random counterfactual with the same action rate and timing distribution**: the random-sell
+   benchmark [S1]. Our unit `RQ-20261027-8b01-03` already registers a "frequency-matched random-timing baseline". That
+   is the right control.
+3. **Benchmark against simple static rules chosen without seeing the test folds** [S20; RQ-20261027-8b01-03 does
+   this].
+4. **Count every management variant tried** (the trial ledger), deflate, and confirm on a fresh window [S45, S46;
+   benchmark rows].
+5. **Measure per unit of risk-time, not only per trade.** An early exit frees capital and risk budget. Per-trade R
+   understates it, and holding to the bracket overstates it. *INFERRED from the CTA practice of continuous position
+   targets [S7]. No source states it as a rule for exits.*
+6. **Stratify by return process** (trend vs mean reversion), because the sign of a stop's value flips [S4, S30].
+
+### C.3 Design implications for us (section C)
+
+1. **Add a "practice precedent" field to every new test design** (operator ask, 2026-10-28): each arm cites the
+   practitioner or academic source it comes from, or is labelled `novel`. A `novel` arm is allowed, but it is
+   declared, so it cannot pass as "how it is done".
+2. **Make the three controls standard for any intervention test**: hold-to-recorded-exit, matched random
+   intervention, and best static rule selected without the test folds. We have all three in one unit. Make them the
+   template.
+3. **Group-by-trade CV with purging and embargo** for any model trained on check-in panels (§ B).
+4. **Prioritise the three queued benchmark rows.** `LIVE-DECAY-MONITOR` matters most for a desk that trades live.
+
+---
+
+## D. LLM and agentic trading: published results
+
+### D.1 Results, with an honest grade of the evidence
+
+| Study | Setting | Result | Evidence quality |
+|---|---|---|---|
+| **Alpha Arena Season 1** (nof1, Oct–Nov 2025) [S21] | Real money: $10k each, 6 frontier LLMs, crypto perps on Hyperliquid, same prompt and data, about 2–3 weeks | Final balances from $10,000 (one outlet): Qwen3-Max $12,231, DeepSeek $10,489, Claude Sonnet 4.5 $5,799, Gemini 2.5 Pro $5,445, Grok 4 $4,208, GPT-5 $4,126. **4 of 6 lost.** Outlets disagree on the exact percentages. Frequent reversals and "prompt-induced hesitation" | **Weak**: one short window, one market regime, n=6, no controls. The organiser calls it exploratory. Its value is as an *existence proof of failure modes*, not a ranking |
+| **FINSABER** (Li, Kim, Cucuringu & Ma; arXiv 2505.07078, listed for KDD 2026) [S22] | Re-tested published LLM timing strategies over 20 years and 100+ symbols | The reported edge "deteriorates significantly" under the broader test. Too conservative in bull markets, too aggressive in bear markets. The authors recommend regime-aware risk control over framework complexity | **Strongest available**: academic, broad, long, code public. Backtest, so exposed to look-ahead (below) |
+| **TradingAgents** (Xiao et al., arXiv 2412.20138) [S52] | Multi-agent LLM "trading firm" (analysts, researchers, a risk team) | Beat buy-and-hold and rule baselines on 5 tech stocks, **Jan–Mar 2024 (3 months)**. Apple Sharpe above 8, which the authors partly attribute to the short window | **Weak**: 3 months, 5 stocks, inside model training windows |
+| **LiveTradeBench** (UIUC, arXiv 2511.03628) [S53]; **StockBench** (arXiv 2510.02209); **AI-Trader** (arXiv 2512.10971) | *Live* or contamination-free streaming evaluation | 21 LLMs compared: top general-benchmark models were not necessarily the best traders, and models showed distinct risk styles (LiveTradeBench). Other tables not read | **Methodologically better** (no leakage). Results not yet decision-grade (short windows) |
+| **Lopez-Lira & Tang**, "Can ChatGPT forecast stock price movements?" (arXiv 2304.07619 v6) [S54] | LLM news-headline sentiment → next-day returns | About 90% hit rate on the *non-tradable* initial reaction. Predicts subsequent drift for small stocks and negative news. **v6 (Oct 2025): strategy returns decline as LLM adoption rises.** An earlier draft's 400% (Oct 2021–Dec 2022) was gross of costs | **Moderate**: academic, post-cutoff headlines. The decay result is itself a warning |
+| **Look-ahead and memorisation**: Glasserman & Lin (arXiv 2309.17322) [S55]; Look-Ahead-Bench (arXiv 2601.13770); Gao, Jiang & Yan (arXiv 2512.23847) | Do LLM backtests leak future information? | Glasserman & Lin: in-sample, a "distraction" effect (company knowledge) mattered more than look-ahead, and anonymising names helped. Later work finds clear in-sample vs out-of-sample gaps for commercial LLMs | **Strong methodological warning**: any LLM backtest inside the model's training window is suspect |
+| **Industry use** [S32, S37] | Man AlphaGPT (research), BAM ChatGPT, ManGPT (productivity) | Griffin: GenAI "falls short" for alpha | Practitioner statements |
+
+### D.2 Design implications for us (section D)
+
+1. **Our masked, point-in-time replay packets (no symbol, date or absolute price, as in RQ-20261027-8b01-03) are the
+   right defence against memorisation.** Practice and the academic warnings [S55] support them. Keep them mandatory
+   for any D-S0 desk test whose window lies inside Claude's training data.
+2. **Expect regime asymmetry.** FINSABER's "too cautious in bulls, too aggressive in bears" [S22] says the desk test
+   must report results by trend regime, not pooled.
+3. **Expect hesitation and churn.** Alpha Arena's failure mode (reversals, inactivity) [S21] maps directly onto
+   in-trade management. The matched random-intervention control (§ A.4) is what detects it.
+4. **Live, contamination-free evaluation is the credible frontier** [S53]. Our live shadow-proposal stream is a
+   contamination-free evaluation by construction, so grade it as one.
+
+---
+
+## E. What we are doing differently from practice, and is that justified
+
+| # | What we do | What practice and evidence say | Justified? |
+|---|---|---|---|
+| 1 | Tested management as **one check-in at +1R** (n=176, 4 legs) | No practitioner source uses a fixed R milestone as *the* policy. Trend practice is a vol-scaled trail or continuous re-evaluation [S7, S9, S10, S11]. Prop practice is event-triggered [S15] | **No.** Replace with the § F.1 factorial. The +1R FAIL closes only that configuration |
+| 2 | Entry-only test with **fixed brackets** | Exits can dominate outcomes. The random-entry harness exists precisely to separate them [S17] | **Partly.** Valid as an entry test. It says nothing about management |
+| 3 | **TP doctrine**: a real predictive TP at entry on every leg, moved with the prediction | Trend practitioners use no fixed target and let the trail work. Targets are for mean reversion [S9]. OU theory derives optimal targets for mean-reverting spreads [S25] | **Justified for mean-reversion legs. Unproven for trend legs.** A replay arm "TP far, trail does the work" should measure the cost of the doctrine on trend legs. Any live change is Tier 3 and operator-owned; this lane proposes a *measurement* only |
+| 4 | **An LLM (Claude) makes in-trade decisions** on live demo books | No documented major firm lets an LLM manage live positions. LLMs are used for research and productivity [S32, S37]. Live LLM trading evidence is negative to mixed [S21, S22] | **Justified only as designed**: a teacher-label generator, graded on outcomes, with a matched random control, at demo size. **Not justified** as a presumed source of edge |
+| 5 | **1–2-trade mechanical soak**, edge decided offline | House capital catches broken models, not significance [S40]. Short paper trading cannot separate a modest edge from luck [S41]. Treat history as having no true OOS and do not tweak on live results [S20] | **Yes.** Consistent with practice |
+| 6 | **Teacher agreement never gates the student**; gate on OOS net R | Grade on outcomes, not on imitation [S1, S39] | **Yes.** Go further: label from priced alternatives (§ B.6) |
+| 7 | **Pre-registered decision rules** enforced by a guard; trial ledger; holdout before promotion | Arnott et al., Man AHL board, Harvey [S20, S40, S48]. Pre-analysis plans beat bare registration [S49] | **Yes, and stronger than most firms.** Residue: fix transforms and windows in the plan |
+| 8 | **No self-halting**; an account-level daily DD switch (keep open, block new), armed per account | Prop desks stop a trader for the day at a 25–30% give-back [S16]. Bridgewater keeps a human kill switch [S36]. Market makers flatten into the close [S23] | **Yes.** The DD switch *is* the stop-for-the-day practice, applied per account. The difference (no pipeline halts) is an operator decision |
+| 9 | **Partial close at a fixed 50%** in the desk's action enum | No evidence that partials add expectancy. They reshape the distribution [S26] | **Unproven.** Keep it as an arm, not a default |
+| 10 | Desk check-in **hourly plus event triggers** | CTAs: a fixed daily clock. Prop: continuous watching with event-triggered action. MMs: continuous [A.1] | **Reasonable for 15m–1h legs**, if the clock is the trade's own bar and the action rate is measured (§ A.4.4) |
+| 11 | ML capacity **78% GBDT** (2026-10-11 measurement, frontier skill) | Documented firm ML is diverse: bandit routing, deep RL hedging, meta-labelling [S31, S35, S19] | **Partly.** The diversity check exists. Exit and management models are where sequence and RL methods have documented use |
+
+---
+
+## F. Recommended designs
+
+### F.1 The desk's first management test (for lane `DESK-LIFECYCLE-S0`)
+
+A **paired factorial on fixed entries**, D-S0 masked blind replay, net of the full cost stack, pre-registered.
+
+- **Entries (factor E), held fixed across all management arms:** E1 strategy entries (committed trades of the
+  replayable legs); E2 matched random entries (same symbol, side, hour-of-day and ATR decile; the existing
+  `desk_grade.py` random-baseline machinery); E3 desk entries as they accrue. *Precedent: random-entry harness [S17].*
+- **Management (factor M), each applied to every entry:**
+
+| arm | rule | precedent |
+|---|---|---|
+| M0 | hold to the recorded bracket (control) | — |
+| M1 | **matched random intervention** for each active arm: same count and type of actions, at random check-ins | random-sell counterfactual [S1] |
+| M2 | Chandelier trail, k ∈ {2, 3} × ATR(22) off the running extreme | [S10] |
+| M3 | channel exit, N ∈ {10, 20} bars | Turtles [S11] |
+| M4 | **re-score exit**: re-run the leg's entry model at each check-in; exit when the signal flips or falls below the entry threshold (only where the entry model is replayable point in time) | continuous CTA [S7] |
+| M5 | time stop: exit at T bars if MFE < +0.5R; T = the leg's median winning duration, fixed from the training folds | [S27, S28]; contested |
+| M6 | breakeven at +1R (known-weak; replicates the earlier result inside the new frame) | [S9] says it is "nothing special" |
+| M7 | 50% partial at +1R, Chandelier on the rest | [S26]; unproven |
+| M8 | Claude at **clock C** (every bar close of the trade's timeframe) **plus event triggers**: ±0.5R / ±1R / +2R crossings, ATR(14)/ATR(100) ratio crossing 1.5 or 0.67, a touch of a packet level, momentum sign flip | prop practice [S15]; `novel` as an LLM |
+| M9 | Claude, event triggers only | [S15]; `novel` as an LLM |
+
+- **Cadence (factor C) for M8 and its M1 control:** every bar vs every 4 bars vs event-only. That is the
+  "check-in policy as a factor" the dispatch asked for.
+- **Strata, registered:** trend vs mean-reversion leg (from the leg's Stage-0 lag-1 return autocorrelation or variance
+  ratio, computed on training folds only) × volatility tercile at entry. *Precedent: [S4, S5, S30].*
+- **Primary statistic:** paired dR = net R(arm) − net R(M0) per trade, net of the full cost stack, bootstrapped by
+  trade. Also net R per capital-day (§ C.2.5). **Secondary:** capture ratio (realised / MFE), giveback from peak, MAE,
+  and action rate. **Report lift separately for "acted" and "held" decisions** (finding 5).
+- **Pass:** an arm passes only if it beats **both M0 and its M1 matched random control**, with Holm across arms
+  within the family, on the training window, and then **re-passes once on a fresh window** (`RESEARCH-CONFIRM-FRESH-WINDOW`).
+  Count every arm and parameter in the trial ledger.
+- **Power:** compute the MDE from the measured sd of *paired dR*, not of raw R (paired differences are usually far
+  less variable). The 8b-03 unit's honest limit (n=45 decision points, MDE 0.267R) shows that the number of decision
+  points binds. Every check-in of every trade is a decision point for M8, which multiplies n. CV and the bootstrap must
+  cluster by trade.
+- **Cost of Claude arms:** on-plan only (no API credits). Size the M8/M9 sample to the plan budget and run the rule
+  arms on the full population (they are free).
+
+### F.2 The ML trade-management programme (for lane `ML-PROGRAMME-PLAN`)
+
+1. **Panel:** one row per (trade, check-in), with point-in-time features (R so far, MFE/MAE, bars held, ATR ratio,
+   distance to levels, momentum, regime, time of day) and **the priced outcome of every action** (hold, close,
+   tighten to k·ATR, partial) on the real path, net of cost. This is a triple-barrier-style label from each check-in
+   state [S50].
+2. **Stage A, supervised meta-model over the best F.1 rule arm:** predict dR(action) − dR(rule) and act only where the
+   predicted gain clears the cost-adjusted threshold. GBDT baseline plus one sequence model (family diversity).
+   Calibrate the probabilities [S19].
+3. **Stage B (only if A passes):** an RL policy *initialised from A* [S38]. Never RL from scratch.
+4. **Claude's role:** a source of hypotheses and features (what it saw that the rule did not), plus outcome-filtered
+   demonstrations. Never the regression target (§ B.6). Measure "does adding Claude's action as a feature improve A
+   out of sample?" That question decides whether the teacher carries information.
+5. **Validation:** group-by-trade purged CV with an embargo, CPCV for a distribution of OOS results, DSR via the
+   trial ledger, a fresh-window confirmation [S45, S46, S50].
+6. **Ladder:** student shadow → advisory → drives (desk design § 4.2), each step gated on paired dR vs M0 **and** vs
+   the best rule arm **and** vs the matched random control, OOS, net of cost. Then live monitoring with a CUSUM
+   (`LIVE-DECAY-MONITOR`).
+
+### F.3 Our research-ops process
+
+1. **A "practice precedent" field on every new unit and design arm** (`source:` URL + tag, or `novel`). This answers
+   the operator's ask mechanically. A guard can come later; the field comes first.
+2. **A standard control set for intervention tests**: M0 hold, M1 matched random, best static rule selected without
+   the test folds. Templated from RQ-20261027-8b01-03.
+3. **Pre-analysis plans, not only rules**: transforms, windows, exclusions and strata fixed at registration [S49].
+4. **Finish the queued benchmark rows**: `LIVE-DECAY-MONITOR` first, then `PROMOTION-CORRELATION-CHECK` and
+   `RESEARCH-OUTCOME-METRICS`.
+5. **A standing quarterly practice scan** under `frontier-research`. This document is the first; the strategy half of
+   that skill is the natural owner.
+
+---
+
+## 9. Sources
+
+Tag key: **[ACAD]** peer-reviewed or a working paper with a stated sample · **[PRAC]** a named practitioner or the
+firm's own publication · **[VEND]** a vendor, educator, trade press or secondary summary. "Read:" says what this lane
+actually read.
+
 
 - [S1] Akepanidtaworn, Di Mascio, Imas & Schmidt, "Selling Fast and Buying Slow", *JF* 78(6) 2023. https://www.nber.org/papers/w29076 · https://papers.ssrn.com/abstract=3301277 · summary: https://www.institutionalinvestor.com/article/b1cnb33z8ml9rr/Portfolio-Managers-Are-Good-at-Buying-but-Stink-at-Selling [ACAD; read: abstract + secondary]
 - [S2] Garvey & Murphy, "Are Professional Traders Too Slow to Realize Their Losses?", *FAJ* 2004. https://rpc.cfainstitute.org/research/financial-analysts-journal/2004/are-professional-traders-too-slow-to-realize-their-losses [ACAD; abstract]
@@ -246,3 +521,28 @@ sources list follow in the next push.*
 - [S28] Time exit vs channel exit backtest. https://setup4alpha.substack.com/p/trailing-stop-vs-fixed-stop-tested [VEND]
 - [S29] Locke & Mann, *JFE* 2005 (CME floor traders), via secondary. https://efmaefm.org/0EFMAMEETINGS/EFMA%20ANNUAL%20MEETINGS/2009-Milan/papers/EFMA2009_0560_fullpaper.pdf [ACAD; secondary]
 - [S30] Guenther & Lordan, "When the disposition effect proves to be rational", *Frontiers in Psychology* 2023. https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2023.1091922/full [ACAD]
+- [S31] Man AHL ML execution router and risk oversight. https://www.risk.net/awards/5368836/quant-hedge-fund-of-the-year-man-ahl · https://www.risk.net/asset-management/6532696/robo-traders-not-so-different-from-us-says-man-ahl-risk-chief · https://www.man.com/ahl [PRAC via trade press; read: search excerpts]
+- [S32] Man Group, "What AI can do for alpha" (AlphaGPT). https://www.man.com/insights/what-ai-can-do-for-alpha [PRAC; read in full]
+- [S33] Hedgeweek on AlphaGPT signals approved for live trading. https://hedgeweek.com/news/man-group-deploys-agentic-ai-for-quant-signal-discovery · https://aistreet.beehiiv.com/p/inside-man-group-s-alphagpt [VEND]
+- [S34] JPMorgan LOXM. https://marketsmedia.com/j-p-morgan-ai-trading-global/ · https://www.bestpractice.ai/ai-case-study-best-practice/jpmorgan's_new_ai_program_for_automatically_executing_equity_trades_in_real-time_out-performed_current_manual_and_automated_methods_in_trial [VEND / trade press]
+- [S35] Buehler, Gonon, Teichmann & Wood, "Deep Hedging", *Quant. Finance* 19(8) 2019. https://arxiv.org/abs/1802.03042 · production use: https://www.risk.net/node/7936936 [ACAD; PRAC interview]
+- [S36] Bridgewater AIA Labs ML fund. https://www.thewealthadvisor.com/article/bridgewater-assc-looks-future-new-automated-ai-fund · https://www.hedgeco.net/news/03/2026/bridgewater-dalios-principles-to-algorithmic-intelligence-the-road-to-5billion.html [VEND / trade press; accounts conflict]
+- [S37] Hedge-fund LLM use and Griffin's statement. https://www.bloomberg.com/news/articles/2024-08-14/hedge-funds-battle-to-turn-chatgpt-from-intern-to-analyst · https://news.bgov.com/new-york-brief/griffin-says-genai-fails-to-help-hedge-funds-beat-markets-1 · https://resonanzcapital.com/insights/ai-use-by-hedge-funds-made-tangible-from-lego-bots-to-alpha-assistants [trade press]
+- [S38] Wang, Ślepaczuk & Sakowski, deep RL exit timing for SPX short straddles, arXiv 2610.13126. https://papers.cool/arxiv/2610.13126 [ACAD preprint; read: excerpt]
+- [S39] Imitation-learning survey (behaviour cloning, DAgger), arXiv 2309.02473. https://arxiv.org/pdf/2309.02473 · https://web.stanford.edu/~srliu/homepage/notes/cs224r/02-imitation-learning/ [ACAD]
+- [S40] Man AHL Academic Advisory Board, "Overfitting and its impact on the investor" (2015), as summarised in our benchmark. docs/research/research-ops-benchmark-2026-10-16.md § 1 S9 [PRAC; not re-read by this lane]
+- [S41] Forward / paper-trading confirmation. https://www.luxalgo.com/library/concept/forward-paper-trading-confirmation.md [VEND]
+- [S42] Wiecki, Campbell, Lent & Stauth, "All that Glitters Is Not Gold" (Quantopian, 2016; SSRN 2745220). https://quantpedia.com/quantopians-academic-paper-about-in-vs-out-of-sample-performance-of-trading-alg/ · https://www.cxoadvisory.com/big-ideas/in-sample-vs-out-of-sample-performance-of-888-trading-strategies [ACAD; secondary summaries]
+- [S43] McLean & Pontiff, "Does Academic Research Destroy Stock Return Predictability?", *JF* 2016. https://ivey.uwo.ca/media/3775549/pontiff.pdf [ACAD; abstract]
+- [S44] Bank of England on AI and herding in trading. https://www.pymnts.com/news/artificial-intelligence/2025/bank-england-warns-higher-market-volatility-from-ai-driven-trading/ · https://BNNBloomberg.ca/ai-risks-amplifying-herd-like-behavior-in-trading-boe-says-1.2069897 [regulator via press]
+- [S45] Bailey & López de Prado, "The Deflated Sharpe Ratio", *JPM* 40(5) 2014. https://papers.ssrn.com/abstract=2460551 [ACAD]
+- [S46] Bailey, Borwein, López de Prado & Zhu, "The Probability of Backtest Overfitting", *J. Comp. Finance* 20(4). https://papers.ssrn.com/abstract=2326253 [ACAD]
+- [S47] Harvey, Liu & Zhu, "… and the Cross-Section of Expected Returns", *RFS* 29(1) 2016. https://www.nber.org/papers/w20592 [ACAD]
+- [S48] Harvey, "The Scientific Outlook in Financial Economics", *JF* 72(4) 2017. https://people.duke.edu/~charvey/Research/Published_Papers/P131_The_scientific_outlook.pdf [ACAD]
+- [S49] Brodeur, Cook, Hartley & Heyes, "Do Pre-Registration and Pre-Analysis Plans Reduce p-Hacking and Publication Bias?" https://siepr.stanford.edu/publications/working-paper/do-pre-registration-and-pre-analysis-plans-reduce-p-hacking-and [ACAD; abstract]
+- [S50] Purged CV, embargo and CPCV (López de Prado, *Advances in Financial Machine Learning*, 2018). https://en.wikipedia.org/wiki/Purged_cross-validation · https://fynance.readthedocs.io/en/latest/generated/fynance.data.combinatorial_purged_cv.html [ACAD/PRAC via secondary; AFML itself not re-read]
+- [S51] Bailey & López de Prado, "Stop-outs under serial correlation and the triple penance rule", *J. Risk* 2015. https://www.risk.net/journal-of-risk/2435335/stop-outs-under-serial-correlation-and-the-triple-penance-rule · https://escholarship.org/content/qt758637dr/qt758637dr.pdf [ACAD; abstract + secondary]
+- [S52] Xiao, Sun, Luo & Wang, "TradingAgents", arXiv 2412.20138. https://arxiv.org/abs/2412.20138 [ACAD preprint]
+- [S53] LiveTradeBench, arXiv 2511.03628. https://arxiv.org/abs/2511.03628 · StockBench https://arxiv.org/abs/2510.02209 · AI-Trader https://arxiv.org/abs/2512.10971 [ACAD preprints]
+- [S54] Lopez-Lira & Tang, "Can ChatGPT Forecast Stock Price Movements?", arXiv 2304.07619 (v6). https://arxiv.org/abs/2304.07619v6 [ACAD; abstract]
+- [S55] Glasserman & Lin, "Assessing Look-Ahead Bias in Stock Return Predictions Generated by GPT Sentiment Analysis", arXiv 2309.17322. https://arxiv.org/abs/2309.17322 · Look-Ahead-Bench https://arxiv.org/abs/2601.13770 · Gao, Jiang & Yan https://arxiv.org/abs/2512.23847 [ACAD]
