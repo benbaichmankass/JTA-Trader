@@ -20,7 +20,7 @@
 8. **Forecast, stated honestly:** p(pass) is P1 ≈ 0.35, P2 ≈ 0.40, P3-extension ≈ 0.30, P4 ≈ 0.10. P5 is a validation, not a promotion. **Expected new promotions by Monday ≈ 1.2, and 0 is a real outcome.** The plan still delivers a graded verdict on every candidate by Sunday. A FAIL closes the candidate with its configuration recorded, which is a result, not a slip.
 9. **Operator decisions** (§ 5): one Tier-2 OK (deploy the serve feature builder, Friday), and up to three Tier-3 packets (Saturday). Each comes with its evidence record and a one-line revert.
 10. **Infra/ops** (§ 6): eight MODEL rows prove the chain *data → labels → train → score → serve → changes an order → graded* end to end, plus the trainer timer, drift alerts, registry hygiene and the missing learning ledger.
-11. **P6, added 21:05Z at the operator's request:** a **conservative, hold-biased exit/management model** for this week's "every real-money strategy has basic active management" milestone (§ 2a). MEASURED: the desk labels price `close`/`hold`/`tighten`/`partial` but barely `move_tp` (45 rows) and not `widen`/`structure` at all (0 rows). On the 2,001 hold-vs-close check-ins, closing at ≤ −0.5 R **did not** beat holding (hold − close +0.089 R, CI [−0.08, +0.28]). So the model is expected to say HOLD almost always, and its edge cases have to earn their place on held-out data. Split agreed (proposed) with lane `ACTIVE-MGMT-REAL-MONEY-PLAN`: this plan owns the model, that lane owns the LTR apply-path wiring and the per-leg rollout.
+11. **P6, added 21:05Z at the operator's request:** a **conservative, hold-biased exit/management model** for this week's "every real-money strategy has basic active management" milestone (§ 2a). MEASURED: the desk labels price `close`/`hold`/`tighten`/`partial` but barely `move_tp` (45 rows) and not `widen`/`structure` at all (0 rows). On the 2,001 hold-vs-close check-ins, closing at ≤ −0.5 R **did not** beat holding (hold − close +0.089 R, CI [−0.08, +0.28]). So the model is expected to say HOLD almost always, and its edge cases have to earn their place on held-out data. Split proposed with lane `ACTIVE-MGMT-REAL-MONEY-PLAN`: this plan owns the model, that lane owns the LTR wiring and the rollout. Per-class graduation is DESK-V1 § 5b (cited, no parallel gate); no non-hold class is expected to graduate this week.
 
 ---
 
@@ -99,23 +99,37 @@ All five act **only** on legs rostered on `bybit_1` alone, so no real-money acco
   - **Corpus B (the one that matters for real money):** the legs' own Stage-0 paths (`--emit-paths`). The six-money-leg corpus has 2,627 trades and 50,926 bar-states (`RQ-20261024-09a6-01`), widened to the 7 real-money legs' configs: `xrp_pullback_2h`, `ada_pullback_2h`, `trend_donchian_eth_4h`, `trend_donchian_xrp_4h`, `trend_donchian_eth_prop`, `trend_donchian_sol_prop`, `iaum_pullback_1d`. `iaum_pullback_1d` needs the equity harness's path emit; if it is absent, IAUM is out of scope this week and that is stated.
   - Runner time estimate (INFERRED): 2–6 h per corpus.
 
-### P6 gate (pre-registered here, before any training run)
+### P6 gate: per-class graduation is DESK-V1 § 5b (cited, not duplicated)
 
-- **Model:** `exit-holdbias-v1`. One GBDT action-value head per action class (LightGBM, the house family), trained on corpus A ∪ B. State = the packet features (now_r, mfe/mae, bars held, distance to SL/TP in R and ATR, trigger tags, ATR ratio, momentum). Folds are purged walk-forward **by trade, by time** (4 folds), with an embargo of the longest trade.
-- **Decision rule (conservative by construction):** act only if the predicted value of the best non-hold action exceeds hold by **≥ τ = 0.15 R** (fixed now, not tuned on test folds) AND the action is allowed for the leg. Otherwise HOLD. On real money, `tighten` / `to_structure` / `pull_in` are **advice-only** (the operator's wiring rule); `close`, `partial`, `widen` and `extend` go through the LTR apply path's existing gates. That is ACTIVE-MGMT's wiring.
-- **PROMOTE (to demo apply on `bybit_1`) iff ALL of**, on held-out folds of **corpus B** (the real-money legs' own paths), net of the full cost stack:
-  (a) policy − hold-to-bracket (B0) **≥ 0** pooled, with the trade-clustered 95% bootstrap LB **> −0.01 R/trade**: "at least as good as hold-to-bracket";
-  (b) policy − **matched random intervention** (B4: the same count and type of actions at random check-ins of the same trades) **> 0**, with LB > 0. This catches a model that "wins" by acting rarely rather than at the right time;
-  (c) the act rate is **≤ 15 %** of check-ins ("mostly holds");
-  (d) no leg is worse than B0 by more than 0.05 R/trade (the per-leg floor);
-  (e) max drawdown is not worse than B0's.
-- **FAIL** = (a) fails. **PASS-NEUTRAL** = (a) holds but (b) does not: the model ships as **annotate-only** (it records advice, changes nothing), which satisfies "basic active management" only as monitoring. That is said plainly, not dressed up.
-- **Demotion:** on demo, after ≥ 30 acted check-ins, if the acted-vs-counterfactual-hold realized Δ < 0 with a one-sided bootstrap p < 0.10 → annotate-only. Real money also demotes on any mechanics fault (a bracket left absent, an unpriced action applied).
-- **What real money needs on top:** a PASS on that leg's own corpus-B folds (not pooled only), Stage-1 mechanics of 1–2 clean applied actions on `bybit_1`, and for the prop legs the prop survival superset. ACTIVE-MGMT owns that rollout.
+**Reconciled 2026-10-28 ~21:20Z, at the manager's instruction (trigger `trig_01N6LxSoeQ2BNK6W5kG9PYiP`).** The single per-class registry is [`desk-v1-production-plan-2026-10-29.md`](desk-v1-production-plan-2026-10-29.md) § 5b (PR #21023). This plan builds **no parallel gate**.
+- **`hold` needs no graduation.** It is the default.
+- **Every non-hold class the model emits stays advice-only** (recorded, priced, graded, changes nothing) until that class passes § 5b's template **for that leg × regime cell**:
+  - dR above BOTH hold AND a matched random intervention of the same class;
+  - net of the full cost stack, both brackets present;
+  - a fresh OOS window;
+  - n ≥ 126 trades with the action;
+  - weekly-cluster 95 % CI lower bound > 0 against both;
+  - Holm over the classes tested together;
+  - the live advice-only record (≥ 20 priced calls) does not contradict it.
+- Applying a graduated class needs § 5b's per-class `apply_mode` map (row `DESK-V1-CLASS-GATES`, Tier 3).
 
-**P6 forecast:** p(PASS) ≈ 0.25, p(PASS-NEUTRAL) ≈ 0.45, p(FAIL) ≈ 0.30 (INFERRED from the hold-vs-close table above and the ML-PROGRAMME evidence: A1 passes on log-loss, d6e7-06's one-step exit FAILS on money). The likely week-end state is an **annotate-only hold-biased model on demo**, with acting on the legs where (a)–(e) pass.
+**What this plan adds on top (an extension, model-level only, not a class gate):**
+- **Model:** `exit-holdbias-v1`. One LightGBM action-value head per class, trained on corpus A ∪ B. State = the packet features (now_r, mfe/mae, bars held, distance to SL/TP in R and ATR, trigger tags, ATR ratio, momentum). Purged walk-forward folds by trade and by time, embargo = the longest trade.
+- **Decision rule, fixed now:** emit a non-hold class only if its predicted value beats hold by **≥ τ = 0.15 R**; otherwise HOLD.
+- **"Mostly hold" sanity, on held-out corpus-B folds, net of cost.** The model may ship as an **advice producer** (`ML-HOLDBIAS-EXIT-MODEL` done) only if:
+  (a) its *as-if-applied* policy is ≥ hold-to-bracket pooled, with trade-clustered LB > −0.01 R/trade;
+  (b) its advice rate is ≤ 15 % of check-ins;
+  (c) no leg is worse than −0.05 R/trade.
+  Failing (a)–(c) means the model is retrained or retired. Its advice is not fed to the LTR record.
+- **Label contribution to § 5b:** `ML-EXIT-ACTIONGRID-LABELS` is offered as the **shared Stage-A label source** for § 5b's unpriced classes (widen, TP extend, TP pull-in, to-structure), so the rule replays and the model train on one priced table.
+  - One measured correction to § 5b's text: `labels.jsonl` prices more than hold-vs-close. Its `tighten_sl` (9,545), `partial_close` (479) and `close` (430) rows are one-step ablations, mostly of the rule arms (`v2:*`, 8,331 tighten rows) at one level per check-in. `move_tp` has 45 rows; widen and structure have 0.
 
-**P6 timeline:** Thu 10-29 labels (`ML-EXIT-ACTIONGRID-LABELS`) → Fri 10-30 train + gate (`ML-HOLDBIAS-EXIT-MODEL`, Sonnet, $10, Tier 1) → Sat 10-31 verdict + Tier-3 packet (demo apply) → Sun/Mon ACTIVE-MGMT wires it via LTR, demo first.
+**P6 forecast (revised under § 5b):**
+- p(the model ships as an advice producer this week) ≈ 0.6.
+- p(any non-hold class graduates to *applied* this week) ≈ 0.05. n ≥ 126 trades per class on a fresh window per leg × regime is not reachable by Monday, which matches DESK-V1's "nothing graduates this week".
+- So the honest end-of-week state for the milestone is: **every real-money leg gets hold-to-bracket plus model advice recorded and graded (monitoring), with no ML-applied bracket move.** ACTIVE-MGMT owns how that is presented against the milestone.
+
+**P6 timeline:** Thu 10-29 labels (`ML-EXIT-ACTIONGRID-LABELS`, shared with § 5b Stage A) → Fri 10-30 train + the model-level sanity check (`ML-HOLDBIAS-EXIT-MODEL`, Sonnet, $10, Tier 1) → Sat 10-31 the advice producer goes live as advice-only on the demo floor via ACTIVE-MGMT's LTR wiring → each class applies only after § 5b.
 
 ---
 
