@@ -7,6 +7,9 @@ description: The binding procedure for reviewing OPEN order packages against the
 
 # /live-trade-review — review open packages against the market
 
+> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
+
+
 > **The question is the BEST TRADING DECISION NOW** (operator 2026-10-27 ~07:05Z, relayed by the manager; supersedes "price every option from the leg's own Stage-0 history" as the frame): keep holding, let go, change the brackets, partial close, add quantity? In-trade management is **not** judged by fidelity to the strategy. The leg's outcome tables (`live_review_outcomes.py`) stay as EVIDENCE, quoted with their n, never as a constraint on the call. Rows `LTR-BEST-DECISION-FRAMING`, `DESK-SHORT-HOLD-LANE`.
 
 > **Operator, 2026-10-25 (verbatim, row `LIVE-TRADE-REVIEW-DESIGN`):** *"I want a routine that checks live trades to check the strategies real time performance against market conditions so that we can improve performance - it seems like we're somewhat limited in that we only review results and not real-time performance, which could be a strong lever for improving strategy and ml performance."*

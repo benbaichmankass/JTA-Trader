@@ -7,6 +7,9 @@ description: The binding, repeatable pipeline for building, validating, and ship
 
 # /exit-refinement — the exit-improvement pipeline (M20 system)
 
+> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
+
+
 Codified from the M20 sprint (operator directive 2026-07-12: "we need a
 system for how we build new exit refinement strategies and how we test
 them"). Evidence anchors: `docs/research/M20-exit-refinement-2026-07-12.md`
