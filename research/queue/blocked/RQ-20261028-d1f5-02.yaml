@@ -1,0 +1,113 @@
+id: RQ-20261028-d1f5-02
+title: 'Desk lifecycle factorial (contract C48): run every trade bar by bar from entry to close; is the value in the ENTRY, in Claude''s MANAGEMENT through the trade, or in their combination, net of the full cost stack, and does a fixed rule do as well?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+- L-ATM
+kind: experiment
+question: >-
+  Over the 732 committed judged-1 Claude entries and one matched random partner each (same symbol, fold, side and ATR-unit bracket; 1h, 48-bar time stop), each trade replayed bar by bar from fill to close on the real path:
+  with management = HOLD (bracket + time stop) vs management = CLAUDE (a decision on a masked packet at every registered checkpoint the trade is still open at, bars held 4 / 12 / 24 / 36: hold | tighten_sl | widen_sl |
+  move_tp | partial_close | close) vs management = B3 (the best fixed rule, leave-one-fold-out), what is each cell's net R per trade, what are the management value (paired, per entry source), the entry value (paired, per
+  management), the two main effects and the interaction, and does Claude's management beat B3?
+why_this_matters: >-
+  Operator 2026-10-28 ~06:10Z (via the manager, binding for DESK-LIFECYCLE-S0): the desk's edge test must be a FULL RUN of each trade from entry to close, so we learn WHERE the value is and HOW to combine the desk with the
+  existing strategies. Entry-only evidence exists (RQ-20261026-e535-03: S3 +0.006 R, CI -0.19..+0.19, indeterminate) and the information ceiling found no 1h-packet entry edge (docs/research/desk-edge-program-2026-10-27.md).
+  This unit asks the question entry-only tests cannot: whether the desk's value is in management. Design: docs/research/desk-lifecycle-factorial-2026-10-28.md (sections 1-6 committed before any judging).
+power:
+  expected_n: 732
+  min_detectable_effect: 0.10
+  effect_units: R
+  sd: 0.5
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    expected_n is a count of committed pairs (MEASURED: 732 judged-1 fills, 732 matched partners, 0 unmatched), so nothing accrues. sd 0.5 R is INFERRED (no paired management dR exists yet; the planted hindsight manager's paired sd
+    is 0.58 R, MEASURED in -01's development run, and a real manager's dR should be no wider). At sd 0.5, n = (2.8 x 0.5 / 0.10)^2 = 196 <= 732 before the week-cluster design effect; the pilot (section 7 of the design doc)
+    MEASURES the paired sd and the run grades on the OBSERVED cluster CI, never on this assumption.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical population; no accrual. The judging is a bounded plan-session spend (section 5 of the design doc), not a wait.
+decision_rule:
+  id: RULE-RQ20261028-D1F5-02-LIFECYCLE
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: >-
+    Per matched pair p: C_h, C_m, C_b3 (the Claude entry under HOLD, under Claude management, under B3) and R_h, R_m, R_b3 (its random partner), each the net R of the trade replayed by scripts/research/desk_lifecycle_driver.run
+    on Binance Vision USD-M 1h klines, every exit piece charged execution_costs.roundtrip_cost_r with the venue fee of profile_loader.roundtrip_fee_bps_for (11.0 bps round trip, Bybit linear taker, after #20783) and
+    resolve_cost_policy slippage 3.0 bps round trip and funding 1.0 bps per 8-hour window (MEASURED 2026-10-28 for all six symbols). Contrasts: management value C_m - C_h and R_m - R_h; entry value C_h - R_h and C_m - R_m;
+    main effects (averages of the two); interaction (C_m - C_h) - (R_m - R_h); judgement vs rule C_m - C_b3 and R_m - R_b3. Each: mean, 95% weekly-cluster bootstrap CI (10,000 draws, seed 20261028, cluster = the Claude
+    entry's ISO week), per-fold means (the driver's 4 folds). B3 menu fixed in code before the run: hold, close_at_ckpt1, breakeven_at_0.5r, trail_1r, partial_at_1r, cut_below_-0.5r; per pair the rule with the best mean dR on the
+    other three folds. A missing or invalid answer is HOLD and counted; a moved-stop exit's +0.05 R charge is a reported sensitivity.
+  rule: >-
+    Per contrast: PASS IF n >= 126 pairs AND mean > 0 AND CI lower > 0 AND > 0 in >= 3 of 4 folds (each n >= 20); a management PASS is labelled 'judgement' only if the matching judgement-vs-rule contrast has CI lower > 0,
+    otherwise 'pass_rule' (the value is there; a fixed rule captures it). FAIL IF n >= 126 AND CI upper < 0. INDETERMINATE otherwise: the record states the observed paired sd and the n that would resolve +-0.10 R; never a lowered bar.
+    The run is VOID (re-judge) IF the -01 self-check is not a landed pass, OR more than 10% of answers are invalid, OR any judging transcript read a file other than its own batch. The registered numbers (126, 3 of 4, 20, the checkpoint
+    fractions 1/12 1/4 1/2 3/4, the action bounds, the B3 menu, the seeds) are not changed after any result. Pilot rows (design doc section 6) are reused only if the protocol text and the packet builder are byte-identical.
+  what_it_does_not_do: >-
+    Applies nothing and edits no config. A management 'judgement' PASS on C48 is Stage-0 evidence for the desk managing ITS OWN 48-bar trades; it is not evidence for the live 60-minute contract (RQ-20261028-d1f5-03) and not for
+    the strategy legs (strategy arm below; RQ-20261026-bf56-02/-03 for the +1 R slice). Any apply path stays under MD-TRADE-DESK with its own gate.
+strategy_arm:
+  registered: true
+  built: false
+  definition: >-
+    The same chained engine over the committed Stage-0 trades of the four real-money legs (ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h; re-parse config/accounts.yaml before running), each on its own
+    timeframe, with the trade's recorded exit as a FORCED exit (the strategy's own exit stays in force; HOLD = the recorded net_r, verified), checkpoints at bars held 2 / 6 / 12 / 24, and the action enum restricted to hold |
+    tighten_sl | move_tp (lower only) | partial_close | close (an action that would extend the trade past the strategy's own exit cannot be priced). Statistic S_m - S_h with the rule above. The +1 R single-decision slice of
+    this arm is RQ-20261026-bf56-02/-03 (lane DESK-MGMT-S0): consumed as a cross-check, NOT re-judged.
+requires_result:
+  unit: RQ-20261028-d1f5-01
+  verdict: pass
+blocked_on:
+- kind: work_item
+  ref: DESK-LIFECYCLE-S0
+  what: >-
+    Judging is a plan-session lane task (no API credits; the token-free dispatcher cannot judge): ~1,757 checkpoint packets in rounds (MEASURED under HOLD) at the pilot's measured $/packet. Needs the manager's spend decision.
+    The strategy arm needs its loader (forced-exit entries from comms/strategy_evidence) built on the same engine.
+  clears_when: >-
+    -01 has landed with verdict pass AND the manager approves the spend AND a judging lane has written decisions for every pending packet (step reports pending 0). Then: git mv to research/queue/, fill run.command with the
+    score step over the committed entries + decisions, remove blocked_on, status: queued.
+masked_replay:
+  population: >-
+    judged-1 (comms/research/desk_gen_replay/judged-1: 1,498 masked scan packets, 732 propose_entry rows, all valid and all filled per the landed intake of RQ-20261026-e535-03), six crypto USDT perps ADA AVAX BTC ETH SOL XRP,
+    cutoffs 2025-11-01 .. 2026-09-15.
+  construction: >-
+    Checkpoint packet: the open trade's side, entry / stop / target as prices rebased to 100 at the checkpoint close and in R, now_r, MFE / MAE in R, bars held, bars left, partial taken, ATR, cost if closed now, and the last 48 closed
+    bars offset-indexed. No symbol, date, epoch, real price, source or entry id; salted packet ids; sources interleaved.
+  unmask_key: rounds/round-NN-key.jsonl, never shown to a judge.
+  leak_controls: -01 clauses (b) and (c); every packet scanned again when written (step raises on a finding).
+  action_vocabulary: 'hold | tighten_sl r | widen_sl r (floor -2 R) | move_tp r (cap 10 R) | partial_close (50%, once) | close. Levels in R from entry. Closed enum.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  bucket: ai_trader
+  basis: 'stand-in: decides whether the desk earns its seat through management (of its own trades and of the legs) rather than entries; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: null
+  basis: 'est_minutes null: the scoring step is seconds of CPU; the judging step is plan sessions.'
+run:
+  workflow: null
+  inputs:
+    research_unit: RQ-20261028-d1f5-02
+  note: Null until judged (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261028-d1f5-01
+- RQ-20261028-d1f5-03
+- RQ-20261026-e535-03
+- RQ-20261026-bf56-02
+- RQ-20261026-bf56-03
+- scripts/research/desk_lifecycle_driver.py
+- docs/research/desk-lifecycle-factorial-2026-10-28.md
+last_dispatched_at: null

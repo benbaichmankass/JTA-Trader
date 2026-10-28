@@ -1,0 +1,68 @@
+id: RQ-20261028-d1f5-01
+title: 'Desk lifecycle factorial, harness self-check: does the chained bar-by-bar engine equal the bracket engine under HOLD, reproduce judged-1 exactly, keep the future out of every checkpoint packet and every source/asset label out of it, and tell a planted hindsight manager from a planted null?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-DESK
+kind: deterministic
+question: >-
+  Before any management decision is scored: over the 732 committed judged-1 Claude fills and one matched random partner each (1,464 trades, six crypto USDT perps, 1h),
+  (a) is the chained engine's HOLD outcome identical to desk_gen_replay_driver.simulate on every trade, and does it reproduce RQ-20261026-e535-03's landed mean (732, +0.158866 R at that run's 7.5 bps fee);
+  (b) is a checkpoint packet byte-identical when every bar after the checkpoint is replaced; (c) does any first-checkpoint packet carry a symbol, date, epoch, real price level or source token, and does the scanner
+  find a planted leak of each kind; (d) does the scorer rank a planted hindsight manager above HOLD, a planted anti-manager below it, and two random managers as equal at a bounded false-positive rate?
+why_this_matters: >-
+  DESK-LIFECYCLE-S0 (operator 2026-10-28 ~06:10Z via the manager: the desk's edge test is a FULL RUN of each trade, entry to close). An instrument that leaks, mis-chains or cannot tell a known answer
+  measures itself, not Claude. Prerequisite (requires_result) of RQ-20261028-d1f5-02. Driver scripts/research/desk_lifecycle_driver.py, tests tests/test_desk_lifecycle_driver.py, design docs/research/desk-lifecycle-factorial-2026-10-28.md.
+why_not_inferential: >-
+  A reproduction and invariance check over fixed, complete populations; the one statistical clause (d) is graded on PLANTED known answers against registered tolerances.
+decision_rule:
+  id: RULE-RQ20261028-D1F5-01-LIFECYCLE-SELFCHECK
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: >-
+    (a) max over the 1,464 trades of |net_r(run, no decider) - net_r(simulate)| and of |net_r(run, static hold) - net_r(simulate)|; the count of judged-1 fills and their mean HOLD net R with the venue fee set to 7.5 bps;
+    (b) of up to 50 sampled trades (seed 20261030) that reach checkpoint 1, the count whose packet sha is unchanged when every bar after the checkpoint bar is multiplied by 3; (c) over every first-checkpoint packet, the count with any
+    leak_scan finding, and the findings on one planted packet carrying a symbol, a source word, a date, an epoch and the real price; (d) on the 732 Claude fills: mean dR and weekly-cluster 95% CI of a hindsight manager that closes at
+    checkpoint 1 exactly when closing beats holding (ORACLE) and of its reverse (ANTI); and, over 20 replications, the number whose paired difference between two random-action managers has a CI (2,000 draws) excluding 0.
+  rule: >-
+    PASS IF (a) max diff <= 1e-9 AND 732 fills with mean within 1e-9 of 0.15886636006268712 AND (b) every tried packet identical with >= 1 tried AND (c) 0 packets with a finding AND the planted packet yields >= 5 findings
+    AND (d) ORACLE mean > 0 with CI lower > 0, ANTI mean < 0 with CI upper < 0, and null false positives <= 3 of 20. FAIL IF any clause is violated with every symbol's candles read (the record names it; DESK-LIFECYCLE-S0 reopens).
+    INDETERMINATE (not a verdict) IF candles for any symbol could not be fetched. DEVELOPMENT NOTE (stated, not hidden): the lane ran these clauses on the same public candles on 2026-10-28 while building the driver; clause (c)'s
+    scanner was corrected twice for FALSE positives found that way (a hex packet id containing 'ada'; an R value equal to ADA's price), both before this unit was written. No Claude judgement exists that such a run could contaminate.
+  what_it_does_not_do: Says nothing about Claude's judgement or any leg. A PASS certifies the instrument and unlocks the scoring of -02.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: ai_trader
+  basis: 'stand-in, not a measurement: gates the only offline evidence of where the desk adds value (entry vs management) before it manages real-money trades.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: 'MEASURED 2026-10-28 in a local run: ~7 s of compute after the candles are read; the Binance Vision fetch of six symbols took ~3 min.'
+run:
+  command:
+  - python3
+  - scripts/research/desk_lifecycle_driver.py
+  - selfcheck
+  - --out
+  - '{out_dir}'
+  - --fetch
+  inputs:
+    research_unit: RQ-20261028-d1f5-01
+  timeout_minutes: 30
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261028-d1f5-02
+- RQ-20261028-d1f5-03
+- RQ-20261026-e535-03
+- scripts/research/desk_lifecycle_driver.py
+- docs/research/desk-lifecycle-factorial-2026-10-28.md
+last_dispatched_at: null

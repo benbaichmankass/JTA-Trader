@@ -1,0 +1,56 @@
+id: RQ-20261028-d1f5-03
+title: 'Desk lifecycle factorial on the LIVE contract (C60): with the 60-minute hold cap, on a 5-minute path, is the value in Claude''s entry, its management, or neither, net of the full cost stack?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-DESK
+kind: experiment
+question: >-
+  The C48 factorial (RQ-20261028-d1f5-02) replays the contract the committed Claude entries were judged under (48 x 1h). The live claude_desk leg caps a hold at 60 minutes; on 1h bars that is one bar with no interior
+  checkpoint. On a 5-minute path (Binance Vision USD-M 1m klines resampled), with FRESH Claude entries judged under the 60-minute brief, random entries matched to them, and Claude management at bars held 3 / 6 / 9 (15 / 30 / 45
+  minutes), what are the same cells, contrasts and interaction as -02?
+why_this_matters: >-
+  Operator 2026-10-28 (via the manager): the full-run test must show how the desk combines with the strategies AS IT TRADES. The manager's frame names the 60-minute live cap; -02 cannot answer it (stated in its what_it_does_not_do).
+  The 1-minute ceiling (desk-edge-program section 4.5) measured a taker round trip of ~0.28 R at 60 minutes, so management has to clear a large cost per trade at this contract.
+decision_rule:
+  id: RULE-RQ20261028-D1F5-03-LIFECYCLE-C60
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: As RULE-RQ20261028-D1F5-02-LIFECYCLE, with the 60-minute time stop, checkpoints at 15 / 30 / 45 minutes, 5-minute bars, and the same cost stack.
+  rule: As RULE-RQ20261028-D1F5-02-LIFECYCLE (n >= 126 pairs, CI lower > 0, >= 3 of 4 folds, judgement vs B3). The entry-judging protocol and n are registered by the lane that builds it, before any entry is judged.
+  what_it_does_not_do: Nothing until built; it is registered so the live-contract question is visible and owned.
+blocked_on:
+- kind: work_item
+  ref: DESK-LIFECYCLE-S0
+  what: >-
+    Needs (1) a 5-minute Series in desk_lifecycle_driver (the 1m fetch route of scripts/research/desk_edge_1m.py), (2) a 60-minute scan-packet entry-judging run (no Claude entries exist under that contract; ~N packets x
+    $0.05-0.07), (3) the manager's spend decision, weighed against -02's pilot result.
+  clears_when: The manager decides to fund it after -02's pilot; then the lane builds (1)-(2), registers the entry n, and moves this unit to research/queue/.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  bucket: ai_trader
+  basis: 'stand-in: the live contract''s version of -02.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: null
+  basis: not built.
+run:
+  workflow: null
+  inputs:
+    research_unit: RQ-20261028-d1f5-03
+  note: Null until built.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261028-d1f5-02
+- scripts/research/desk_lifecycle_driver.py
+- docs/research/desk-lifecycle-factorial-2026-10-28.md
+last_dispatched_at: null
