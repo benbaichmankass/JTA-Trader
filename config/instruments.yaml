@@ -54,6 +54,13 @@
 #   3. Add the symbol to the relevant strategy's config/strategies.yaml entry.
 #   4. Run tests/test_s2_profile_wiring.py to validate the new entry loads cleanly.
 
+# MEASURED round-trip taker fee (bps of notional) per "<exchange>:<category>", read by
+# profile_loader.roundtrip_fee_bps_for. A venue absent here keeps
+# execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP. bybit:linear = 2 x 5.5 bps/side, every one of
+# 1,411 fills taker (comms/research/desk_edge/levers/bybit-fee-measured-2026-10-27.json).
+venue_roundtrip_fee_bps:
+  "bybit:linear": 11.0
+
 instruments:
 
   # ------------------------------------------------------------------
