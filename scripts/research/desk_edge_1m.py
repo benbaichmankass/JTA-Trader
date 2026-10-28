@@ -43,6 +43,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 from scripts.research import desk_gen_replay_driver as d  # noqa: E402
 from scripts.research import desk_edge_ceiling as ce  # noqa: E402
+from scripts.research import desk_vm_baseline as vm  # noqa: E402
 from src.runtime import execution_costs as xc  # noqa: E402
 import desk_scan_packet as dsp  # noqa: E402
 
@@ -258,14 +259,19 @@ def scored(rows: List[dict], idx, cost: str) -> List[dict]:
     return [{"week": rows[j]["week"], "net_r": rows[j][nk], "days": rows[j]["days"], "diff": rows[j][yk]} for j in idx]
 
 
-def per_hold(rows: List[dict], preds: Dict[str, np.ndarray], alpha: float) -> Dict[str, Any]:
+def per_hold(rows: List[dict], preds: Dict[str, np.ndarray], alpha: float, atr_pct=None) -> Dict[str, Any]:
+    """`atr_pct(row) -> ATR%` (optional) adds, per learner at TAKER cost, `companions`: the registered S3 beside
+    gross_excess and S3_matched (DESK-S3-VOL-MATCHED-BASELINE; desk_vm_baseline). Companions never enter `verdict`."""
     out = {}
+    comp_ok = atr_pct is not None
     hold = np.array([r["hold"] for r in rows])
     for h in HOLDS_MIN:
         m = np.nonzero(hold == h)[0]
         if not len(m):
             continue
         hr = [rows[j] for j in m]
+        if comp_ok:
+            vm.annotate(hr, atr_pct)
         ent: Dict[str, Any] = {"actions": len(hr), "mean_cost_r_taker": float(np.mean([r["cost_r"] for r in hr])) if hr else None,
                                "unselected_gross_R": float(np.mean([r["net_r"] + r["cost_r"] for r in hr])) if hr else None,
                                "unselected_S1_taker": float(np.mean([r["net_r"] for r in hr])) if hr else None,
@@ -285,6 +291,8 @@ def per_hold(rows: List[dict], preds: Dict[str, np.ndarray], alpha: float) -> Di
                             # from picking low-cost-in-R moments (high volatility), which is not timing
                             "gross_R_picks": float(np.mean(gross)) if gross else None,
                             "taker_cost_R_picks": float(np.mean([hr[j]["cost_r"] for j in picks])) if picks else None}
+                if cost == "taker" and comp_ok:
+                    ent[key]["companions"] = vm.companions(hr, picks, d.cluster_stats)
                 best_hi = max(best_hi, hi)
                 if st.get("paired_diff_vs_random", -9) >= TARGET_S3 and lo > 0 and st["mean_net_r"] > 0:
                     cands.append(key)
@@ -333,7 +341,7 @@ def cmd_run(a: argparse.Namespace) -> int:
     for lr in LEARNERS:
         preds[lr] = ce.walk_forward(acts, X, lr)[te]
         print(json.dumps({"learner": lr, "done": True}), flush=True)
-    ph = per_hold(rows, preds, alpha)
+    ph = per_hold(rows, preds, alpha, atr_pct=lambda r: ex[r["cutoff"]][r["symbol"]]["atr_pct"])
     hr = hold_rule(ph, alpha) if str(HARD_CAP_MIN) in ph and all(str(h) in ph for h in (120, 240, 480)) else {}
     # controls on GBDT and ridge (taker): a planted signal must reach `candidate` somewhere; shuffled labels must not
     y = np.array([r["y"] for r in acts])
@@ -379,6 +387,8 @@ def cmd_mechanism(a: argparse.Namespace) -> int:
                        "cost_all": float(np.mean([r["cost_r"] for r in rows])), "cost_picks": float(np.mean([rows[j]["cost_r"] for j in picks])),
                        "gross_picks": float(np.mean([rows[j]["net_r"] + rows[j]["cost_r"] for j in picks])),
                        "gross_all": float(np.mean([r["net_r"] + r["cost_r"] for r in rows]))}
+        # companions: the vol rule's S3 under the volatility-matched baseline (should vanish) and its gross excess
+        res[str(h)]["companions"] = vm.companions(vm.annotate(rows, lambda r: ex[r["cutoff"]][r["symbol"]]["atr_pct"]), picks, d.cluster_stats)
     Path(a.evidence).mkdir(parents=True, exist_ok=True)
     (Path(a.evidence) / "vol-rule-mechanism.json").write_text(json.dumps(res, indent=1) + "\n")
     print(json.dumps({h: round(v["vol_rule_S3"], 3) for h, v in res.items()}))

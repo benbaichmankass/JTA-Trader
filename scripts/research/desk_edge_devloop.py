@@ -146,7 +146,10 @@ def cell_labels(mkt: Dict[str, d.Series], keys: Dict[str, dict], pids: Sequence[
     """{(packet_id, real_symbol+side): {y, net_r, days, week, fold}} for the dev bracket, via the driver's engine and
     random baseline (same symbol, side, fold; the ceiling's construction)."""
     rng = np.random.default_rng(seed)
+    rng_vm = np.random.default_rng(seed + 11)       # companion draws use their own stream: `y` is unchanged
     base: Dict[Tuple, Optional[float]] = {}
+    base_g: Dict[Tuple, Optional[float]] = {}
+    base_vm: Dict[Tuple, Tuple[Optional[float], Optional[float]]] = {}
     out: Dict[Tuple[str, str], dict] = {}
     _, sl, tp_r, h = geom
     for pid in pids:
@@ -162,10 +165,21 @@ def cell_labels(mkt: Dict[str, d.Series], keys: Dict[str, dict], pids: Sequence[
                 bk = (sym, fold, side)
                 if bk not in base:
                     pool = ce_pool(s, window, fold)
-                    base[bk] = d.random_baseline(s, g, pool, rng, ce.BASELINE_DRAWS)["mean"]
+                    br = d.random_baseline(s, g, pool, rng, ce.BASELINE_DRAWS)
+                    base[bk], base_g[bk] = br["mean"], br["gross_mean"]
                 if base[bk] is None:
                     continue
-                out[(pid, f"{sym}:{side}")] = {"y": t.net_r - base[bk], "net_r": t.net_r, "days": t.days, "week": d.iso_week(c), "fold": fold}
+                # DESK-S3-VOL-MATCHED-BASELINE companions: same symbol, side, fold AND ATR%-decile of this cutoff
+                mp = d.vol_matched_pool(s, ce_pool(s, window, fold), i, window=window)
+                mk = (sym, fold, side, len(mp), int(mp[0]) if len(mp) else -1)          # one baseline per decile pool
+                if mk not in base_vm:
+                    bm = d.random_baseline(s, g, mp, rng_vm, ce.BASELINE_DRAWS)
+                    base_vm[mk] = (bm["mean"], bm["gross_mean"])
+                bmn, bmg = base_vm[mk]
+                out[(pid, f"{sym}:{side}")] = {"y": t.net_r - base[bk], "net_r": t.net_r, "days": t.days, "week": d.iso_week(c), "fold": fold,
+                                               "y_gross": None if base_g[bk] is None else t.gross_r - base_g[bk],
+                                               "y_matched": None if bmn is None else t.net_r - bmn,
+                                               "y_gross_matched": None if bmg is None else t.gross_r - bmg}
     return out
 
 
@@ -259,7 +273,19 @@ def top_pick_rows(rows: List[dict]) -> List[dict]:
     for r in rows:
         if r["packet_id"] not in by or r["cell_score"] > by[r["packet_id"]]["cell_score"]:
             by[r["packet_id"]] = r
-    return [{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["y"]} for r in by.values() if r["cell_score"] > 0]
+    return [{"week": r["week"], "net_r": r["net_r"], "days": r["days"], "diff": r["y"], "y_gross": r.get("y_gross"),
+             "y_matched": r.get("y_matched"), "y_gross_matched": r.get("y_gross_matched")} for r in by.values() if r["cell_score"] > 0]
+
+
+def pick_companions(picks: List[dict]) -> Dict[str, Any]:
+    """DESK-S3-VOL-MATCHED-BASELINE: the top-pick S3 beside gross_excess and S3_matched (companions; no rule reads them),
+    each with its own n (a pick whose baseline was empty drops out of that statistic only)."""
+    out: Dict[str, Any] = {}
+    for name, key in (("S3", "diff"), ("gross_excess", "y_gross"), ("S3_matched", "y_matched"), ("gross_excess_matched", "y_gross_matched")):
+        rows = [dict(r, diff=r[key]) for r in picks if r.get(key) is not None]
+        st = d.cluster_stats(rows) if rows else {}
+        out[name] = {"n": len(rows), "mean": st.get("paired_diff_vs_random"), "ci95": st.get("paired_diff_ci95")}
+    return out
 
 
 def sequential_decision(weeks_at_looks: List[List[float]], looks: Sequence[int] = DEV_LOOKS, useful: float = SEL_USEFUL) -> Tuple[str, List[str]]:
