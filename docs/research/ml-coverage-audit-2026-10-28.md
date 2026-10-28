@@ -4,6 +4,8 @@
 > **Checklist row:** [`docs/claude/work/checklist/ML-COVERAGE-AUDIT.json`](../claude/work/checklist/ML-COVERAGE-AUDIT.json) · roadmap `M25`, `L-DATA`
 > **Operator question (2026-10-28 ~06:20Z, paraphrased):** *"We've been building MLs for a while. If they only cover ~4 symbols we've seriously gone wrong with the roadmap. Find exactly what we have, why it is that way, and use it to plan next week's builds and infra."*
 
+> ⚠️ **DRAFT 2026-10-28 ~06:45Z.** Inventory (§ 1), infra (§ 1c), coverage (§ 2) and why (§ 3) are in. Still to come: the ground-truth table per strategy leg × floor account (§ 6) and the "how did we report done" section (§ 7). Auto-merge is disarmed until those land.
+
 ## Answer in four lines
 
 1. **Per-symbol models cover 4 of 23 rostered symbols** (BTC, ETH, SOL, MES). The manager's first look was right.
@@ -60,6 +62,35 @@
 | Conviction stamp → sizing | `strategy_signal_builders.py:327-411`; `coordinator.py:2152`; `conviction_sizing.py` | **shadow-stage** models, auto-wired by symbol scope. A leg with `shadow_model_ids: []` opts out | scope = the leg's symbol, or `all` | resizes qty in `apply` mode (reductive) and on the slice allocator (`position_model: slices`, `bybit_1` only) | `CONVICTION_SIZING_MODE` (default `off`; VM UNMEASURED). The useful slots need trade-outcome or setup heads at shadow (there are none) or a regime-alignment calibrator (not established), so INFERRED: mostly falls back to `c_strat` |
 | Advisory downsize (WS7) | `advisory_sizing.py:105-149` | advisory, non-regime models | — | **inert**: all 3 advisory models are regime heads, so `no_scores` and factor 1.0 | stage |
 | Entry-head p_win | `entry_head_pwin.py`; `trend_donchian.py:505` | mirror artifacts | artifact symbol list | log only | — |
+
+### 1c. Infra: what exists, what it builds, and what is recorded but never trained (MEASURED unless marked)
+
+Sources: `GET /api/bot/ml/{status,builds,cycle}` read 2026-10-28 ~06:35Z (mirror age 39 s); `scripts/ops/build_trainer_datasets.sh`, `ml/datasets/families/*`, `ml/configs/*` and `comms/` at `main`.
+
+| layer | what exists | scope (symbols × timeframes) | last good run / state |
+|---|---|---|---|
+| **Market data → `market_raw`** | Bybit kline (`bybit_v5_offvm`), IBKR/yfinance for MES, yfinance daily for equities/metals | BTC 1h/5m/15m · ETH 1h/5m/15m · SOL 1h/5m/15m · MES 5m/15m/1d · **ADA/AVAX/XRP 15m only** · 11 ETFs + MGC/MHG **1d only** | builds 2026-10-28 00:36–00:53Z, `overall_rc 0`. 24 h: 110 ok / 2 skipped / 0 failed (`ml/status.dataset_builds_24h`) |
+| **Features → `market_features`** (what the regime heads train on) | vol/trend labels plus ~130 cols; `fc_*` forecast side-stream (Chronos-Bolt) for BTC/SOL 15m; cross-asset side-stream for ETH 1h | **BTC, ETH, SOL, MES only.** None for ADA/AVAX/XRP, equities or metals (builder comment ~l.944: "no head trains on these yet") | same build. ⚠️ The build log omits `symbol`/`timeframe` on most `market_raw`/`market_features` rows, so `ml/builds` cannot show **which** shard built (finding F-INFRA-1). Truncation history: `ML-SHARD-TRUNCATED` (#18891, `landed_unproven`) |
+| **Our-data families** (`trade_journal.db`, pulled from the live VM; last pull ok 2026-10-28 04:17Z) | `trade_outcomes` 2,875 rows (pooled incl. backtest) + 34 (MES); `setup_labels` 2,875; `setup_labels_audit` 1,144; `conviction_meta` 1,545; `execution_quality` 1,760; `account_context` 45; `backtest_results`; `review_journal` (0 rows) | all closed trades, **every account incl. paper/demo** (no account filter in `trade_outcomes.py`; `is_backtest` is the only split) | built nightly |
+| **Teacher (Claude) family `claude_judgments`** | live-review rows (`comms/live_review/reviews.jsonl`, 98), desk decisions (`comms/desk/decisions.jsonl`, 59, newest 2026-10-28 05:04Z), blind/revealed grades (617/546) | — | **built nightly, 627 rows — and NO manifest trains on it** (grep of `ml/configs/*.yaml` for `family: claude_judgments`: 0; positive control: the same grep finds 17 manifests on the other our-data families) |
+| **Trainer** | `ict-trainer.timer` → `run_training_cycle.sh`: pull → build → train **every** manifest → publish mirror | 1 OCPU · 6 GB; **0.0 spare OCPU, 0.649 GB spare** (p95, 7 d, `comms/cloud/compute_spare.json` 2026-10-27) | nightly cycle **~31 min** of training (00:53→01:24Z, 66 trained, 3 audit refusals, rc 0) after ~17 min of builds. A second ~08:4xZ slot trains 0. Peak RSS of a 5m head 4.7 GB vs MemoryMax 4.5 GiB |
+| **Registry** | append-only `ml/registry-store`, mirrored to the live VM | 97 models: advisory 3 · shadow 20 · candidate 73 · research_only 1 | `setup-quality-baseline-v0` (last trained 10-21) and `mes-setup-quality`/`mes-trade-outcome` (10-11) are **no longer trained**: their manifests are gone from `ml/configs`, but the registry rows still read `candidate` |
+| **Live consumers** | § 1b | 3 advisory regime heads (only BTC gates anything) + exit head (3 donchian legs) + shadow conviction stamp | VM flags UNMEASURED (§ 0) |
+| **Off-trainer research path** | `market_data_export.py` → private Kaggle dataset; `ml_bakeoff` units | **BTC/ETH/SOL × 15m/1h** only | runner download 404 (`ML-DATA-RUNNER-FETCH`) |
+
+**Label pipelines: does each source of trade or decision data reach a dataset, and does anything train on it?**
+
+| source | reaches a dataset? | trained on? | consumed live? |
+|---|---|---|---|
+| live + paper/demo closed trades (journal) | yes: `trade_outcomes`, `setup_labels`, `conviction_meta`, `execution_quality` | yes, but only by candidate manifests (`trade-outcome-lgbm-v1`, `conviction-meta-*`, `setup-candidates-*`, execution-quality baseline at shadow) | **no**. No trade-outcome/setup head sits at shadow, so conviction `c_wr`/`c_setup` are empty (INFERRED from § 1b), and `execution_quality` is explicitly ignored |
+| desk decisions (`desk/decisions` → `comms/desk/decisions.jsonl`) | yes: `claude_judgments` (`kind: desk_*`) | **no** | no. Outcome join `DESK-20-OUTCOME-JOIN` and students `DESK-19-STUDENT-HANDOFF` are `blocked` (later phase) |
+| live-trade-review rows | yes: `claude_judgments` (`ltr_review`) | **no** | no |
+| blind/revealed post-trade grades | yes: `claude_judgments` | **no** | no |
+| judged replays (DESK-18*) | not established (no family names them; UNMEASURED) | no | no |
+| signal audit (4.56 M lines pulled) | `setup_labels_audit` 1,144 rows | baseline audit manifest (candidate) | no |
+| backtest corpora | `backtest_results`, pooled-augment | metalabel/conviction candidates | no |
+
+**The never-trained gap (as asked):** every teacher-side record the desk and live review produce is **recorded → built into a dataset → never trained**. The trade records are **trained → never promoted**, so nothing that learns from paper or demo trades reaches a decision. The detector for this, `DESK-21-NEVER-TRAINED-DETECTOR`, is `blocked`.
 
 ### 2. Coverage matrix against the roster (P-ROSTER, P-SYM, P-REAL)
 
@@ -119,7 +150,7 @@
 
 **Not a cause:** compute spend. Nothing here is blocked on money; every block is a builder, exporter or cell that was never written.
 
-## 4. Plan for next week (post-reset). Proposed rows; the manager files them at Thursday planning
+## 4. Gap list and fixes (input to `ML-PROGRAMME-PLAN`, which owns the programme design and sequencing)
 
 Ordered by value to real-money and desk legs, then cost. All builds use the **existing recipe** (LightGBM vol-regime head on `market_features`, which is the one family that has earned advisory) applied across symbols. They add no new variants. Every new head enters as `candidate`. Shadow is autonomous, advisory is Tier-3, and a router cell is Tier-3 with walk-forward evidence. Ceilings are per row.
 
