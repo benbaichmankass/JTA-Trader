@@ -1,5 +1,7 @@
 # Weekly walkthrough 2026-10-28
 
+> **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
 > Three lanes write this one brief: **PERFORMANCE** (lane `PERF-REVIEW-PREP-20261028`, below), **ML + FRONTIER**
 > (lane `ML-FRONTIER-PREP`) and **PRACTICE REFRESH** (lane `PRACTICE-REFRESH`). A section another lane has not
 > landed yet is simply absent; on a collision, the later lane merges `main` first.
