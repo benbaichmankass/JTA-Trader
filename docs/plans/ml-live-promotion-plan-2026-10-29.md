@@ -79,6 +79,17 @@ All five act **only** on legs rostered on `bybit_1` alone, so no real-money acco
 **Rejected alternatives (and why):**
 - **SOL router cells:** regime-selectivity Rule 1. The SOL book is healthy and its negative cells failed the walk-forward (`A-vol-gating-ETH-SOL-OFFcell-evidence-2026-07-06.md`). Observer with no cell is the correct state. It is reopened only by a retrained head plus a fresh walk-forward, and that is not this week.
 - **MES 5m head on the MES daily leg:** axis fidelity (Rule 3). A 5m vol label gating a 1d leg is the wrong axis.
+- **The two `ready: true` shadow heads** (ML-FRONTIER-PREP addendum, PR #21032, from trainer pull #21005). Both are ready on classification gates only, and their `cost_net` is `insufficient_data`.
+  - `btc-regime-15m-lgbm-fc-pcv-v1` duplicates the advisory `fc-pcv-v2` at a lower live AUC (0.651 vs 0.721).
+  - `btc-regime-1h-lgbm-v2` has 0 consumers.
+  - Neither is in the slate.
+- **`btc-regime-15m-lgbm-yz-v1`:** blocked on `live_parity` because `vol_bucket` is dead in live. It is not in the slate.
+- **The SOL-15m advisory head:** only 2 scored trades (addendum). That is one more reason it stays an observer.
+- **The addendum's recommendation, "no promotion until P5 prices a decision value", is adopted.** Every promotion in this slate is conditional on a priced decision value:
+  - P1: the cost gate plus the bootstrap.
+  - P2/P3: the 2-D cell walk-forward, net of cost, which is the decision-value column R-P5 asks for, for router cells.
+  - P5: the exit-head pricing itself.
+  - A classification `ready: true` is never sufficient on its own.
 - **Promoting any of the 20 shadow regime heads with no consumer cell:** a promotion with no consumer changes no order. That is the "promotion argument about a head that changes nothing" anti-pattern (ml-review).
 - **A trade-management policy model (TM-BENCH, desk labels):** no family has passed S-OFFLINE yet (ML-PROGRAMME § 1.3). It is not promotable this week.
 - **The other 8 setup meta-label heads:** they are BTC-only or degenerate. Their take rate is 0 or the value is 0 on the same read (registry `cost_net_*`). Only p2pool shows a positive point estimate.
