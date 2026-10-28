@@ -617,6 +617,10 @@ _DESK_LEG_LEDGER = Path(repo_root()) / "runtime_logs" / "desk" / "desk_leg.jsonl
 # when, the latency from the previous stage. Same anchor as the writer
 # (src.runtime.ltr_first_proof.state_path).
 _LTR_FIRST_PROOF = Path(repo_root()) / "runtime_logs" / "ltr_first_proof.json"
+# LTR-PRACTICE-REDESIGN (2026-10-28): every pre-screen evaluation (flagged or not),
+# one line per package per closed bar, for per-trigger grading. Same anchor as the
+# writer (src.runtime.live_review_wake_post.prescreen_log_path).
+_LTR_PRESCREEN_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "prescreen.jsonl"
 
 # TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
 # former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
@@ -656,6 +660,7 @@ _LOG_FILES: dict[str, Path] = {
     "desk_trigger_labels": _DESK_TRIGGER_LABELS,
     # LTR C1: did the VM apply a rows-branch row, with what verdict and latency.
     "live_review_rows_watch": _LTR_ROWS_WATCH_LOG,
+    "ltr_prescreen": _LTR_PRESCREEN_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
     # DESK-4-INTAKE: what happened to each desk decision row on the VM, and why.
     "desk_intake": _DESK_INTAKE_LOG,

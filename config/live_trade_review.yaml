@@ -88,6 +88,43 @@ due:
       # stopped refreshing is not evidence about the venue now).
       venue_sl_tolerance_atr: 0.25
       venue_snapshot_max_age_minutes: 60
+    # -- pre-screen triggers (LTR-PRACTICE-REDESIGN, 2026-10-28) ----------------
+    # Operator Tier-2 OK 2026-10-28 ~07:36Z popup: "Turn wake-ups on today".
+    # Basis: docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md § E.2
+    # (adverse -0.5R / -0.75R, stall, momentum flip, level/structure break).
+    # Registered here BEFORE the first run. Evaluated on every due pass for every
+    # open package; every evaluation (flagged or not) is logged by the VM wake
+    # poster to runtime_logs/live_review/prescreen.jsonl so each trigger type is
+    # graded vs hold and a matched random checkpoint (§ E.4). The thresholds are
+    # proposed defaults, NOT tuned: the grading decides which survive.
+    # ROLLBACK: delete these four blocks; an absent block is not evaluated.
+    adverse_r:
+      # First crossing of each level by open_r (the live telemetry value). A
+      # reviewed deeper level covers the shallower one.
+      levels: [-0.5, -0.75]
+    stall:
+      # bars_held >= the leg's threshold while peak_r < max_peak_r (no +0.5R
+      # progress); fires again every further threshold. The practice anchor is
+      # the leg's median winning duration; until that is measured per leg the
+      # threshold is derived from the leg's timeframe (about a session of bars
+      # for intraday legs, a few bars for 4h/1d).
+      max_peak_r: 0.5
+      bars_by_timeframe: {5m: 24, 15m: 16, 30m: 12, 1h: 12, 2h: 8, 4h: 6, 1d: 5}
+      default_bars: 8
+    momentum_flip:
+      # The last `bars` CLOSED path-history bars each closed against the position
+      # and their net move against it is >= min_atr x ATR. Edge-triggered: one
+      # level per episode, a new episode no sooner than cooldown_bars later.
+      bars: 3
+      min_atr: 1.0
+      cooldown_bars: 3
+    structure_break:
+      # A CLOSED bar's close beyond the since-entry extreme close against the
+      # position (the trade's own structure) by more than buffer_atr x ATR,
+      # after min_bars closed bars. Edge-triggered with cooldown_bars.
+      min_bars: 3
+      buffer_atr: 0.1
+      cooldown_bars: 3
   # Design clauses whose inputs the due computation does not read yet.
   # Surfaced as `events_not_evaluated` so "not checked" is never read as
   # "did not fire".
@@ -98,8 +135,9 @@ due:
   #   vol_regime_cell  -- the (trend, vol) cell change since entry.
   not_evaluated: [mechanics_venue_tp, vol_regime_cell]
   # Per-package cooldown: at most one review per closed bar of the leg's
-  # timeframe, except for these events.
-  cooldown_exempt: [giveback, mechanics]
+  # timeframe, except for these events. adverse_r (2026-10-28): a slide from
+  # -0.5R to -0.75R inside one bar is reviewed, not held for the next bar.
+  cooldown_exempt: [giveback, mechanics, adverse_r]
 
 # -- attention watch (LTR-1B-ATTENTION-PROBE, 2026-10-27) ----------------------
 # Read by scripts/ops/attention_watch.py::probe_live_review_due_stale ONLY; the due
