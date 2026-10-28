@@ -68,6 +68,8 @@ container costs the work.
   it is `landed_unproven`, **and the row must name the specific observation that
   would close it** — not "verify later". Name the endpoint, the command, the
   file, the date.
+  If that observation can be produced on demand and cheaply, produce it now
+  (canonical § "Validate early when it is cheap").
 - `killed` needs a reason. So does `dropped`.
 
 ### 4. Every finding is fixed, filed, or flagged — and *filed* means the pipeline

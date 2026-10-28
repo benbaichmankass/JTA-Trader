@@ -60,6 +60,8 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
    finished lane it lists — only this project's, after checking it owns no open PR — then
    `checklist.py archive-lane <ROW>`.
+   A `landed_unproven` row whose closing observation can be produced on demand and cheaply is triggered now, not left for the next
+   schedule (canonical § "Validate early when it is cheap").
 **REFILL (operator, 2026-10-26, binding) — runs at every check-in AND every lane close, after step 5.** Operator, verbatim excerpt: *"I
 shouldn't need to push you like this either - this is what we have a weekly workplan for, to make sure that the manager always knows what to
 do next … as long as we have headroom, lanes should be running."* (a) Compute the target from a fresh meter: `spend_meter.py --capacity
