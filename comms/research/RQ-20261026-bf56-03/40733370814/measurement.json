@@ -1,0 +1,174 @@
+{
+  "verdict": "fail",
+  "reasons": [
+    "mean dR -0.0906 <= 0 or CI upper bound -0.0030 < 0"
+  ],
+  "role": "exit",
+  "n_obs": 176,
+  "n_packets": 176,
+  "n_unjudged": 0,
+  "n_invalid_actions_scored_as_hold": 0,
+  "mean_dR": -0.0906,
+  "ci95": [
+    -0.1984,
+    -0.003
+  ],
+  "observed_paired_sd": 0.6656,
+  "n_to_resolve": {
+    "+0.20R": 87
+  },
+  "sensitivity_mean_dR_by_stop_fill_slip_r": {
+    "0.05": -0.0906,
+    "0.0": -0.0906,
+    "0.1": -0.0906
+  },
+  "b1_hold_mean_dR": 0.0,
+  "b2_random_timing": {
+    "mean_dR": -0.0568,
+    "draws": 1000,
+    "paired_diff_mean": -0.0338,
+    "paired_diff_ci95": [
+      -0.1306,
+      0.0457
+    ]
+  },
+  "b3_best_static": {
+    "mean_dR": -0.245,
+    "rule_by_held_out_fold": {
+      "1": [
+        "partial_close"
+      ],
+      "2": [
+        "partial_close"
+      ],
+      "3": [
+        "partial_close"
+      ],
+      "4": [
+        "partial_close"
+      ]
+    }
+  },
+  "folds": {
+    "1": {
+      "n": 45,
+      "mean_dR": -0.0874
+    },
+    "2": {
+      "n": 44,
+      "mean_dR": -0.1294
+    },
+    "3": {
+      "n": 47,
+      "mean_dR": -0.011
+    },
+    "4": {
+      "n": 40,
+      "mean_dR": -0.145
+    }
+  },
+  "folds_positive": 0,
+  "post_cutoff": {
+    "state": "measured",
+    "n": 25,
+    "mean": -0.3125
+  },
+  "per_leg": [
+    {
+      "leg": "ada_pullback_2h",
+      "n_obs": 31,
+      "state": "measured",
+      "mean_dR": -0.1875,
+      "ci": [
+        -0.3742,
+        0.0025
+      ]
+    },
+    {
+      "leg": "trend_donchian_eth_4h",
+      "n_obs": 103,
+      "state": "measured",
+      "mean_dR": -0.093,
+      "ci": [
+        -0.2555,
+        0.0291
+      ]
+    },
+    {
+      "leg": "trend_donchian_xrp_4h",
+      "n_obs": 15,
+      "state": "insufficient_n",
+      "mean_dR": null,
+      "ci": null
+    },
+    {
+      "leg": "xrp_pullback_2h",
+      "n_obs": 27,
+      "state": "measured",
+      "mean_dR": 0.0692,
+      "ci": [
+        -0.1149,
+        0.2581
+      ]
+    }
+  ],
+  "action_mix": {
+    "('hold',)": 136,
+    "('partial_close',)": 36,
+    "('close',)": 4
+  },
+  "seed": 20261026,
+  "bootstrap_draws": 10000,
+  "candle_sources": [
+    "comms/research/RQ-20261026-bf56-03/40733370814/candles/ADAUSDT_2h_396d.csv",
+    "comms/research/RQ-20261026-bf56-03/40733370814/candles/ETHUSDT_4h_1134d.csv",
+    "comms/research/RQ-20261026-bf56-03/40733370814/candles/XRPUSDT_4h_1480d.csv",
+    "comms/research/RQ-20261026-bf56-03/40733370814/candles/XRPUSDT_2h_409d.csv"
+  ],
+  "decision_point_population": {
+    "ada_pullback_2h": {
+      "trades": 61,
+      "no_candles": 0,
+      "never_reached_peak_on_candles": 30,
+      "closed_on_decision_bar": 0,
+      "zero_bar_trades": 0,
+      "no_atr": 0,
+      "decision_points": 31,
+      "recorded_mfe_ge_peak": 31,
+      "mfe_replay_mismatch": 16
+    },
+    "trend_donchian_eth_4h": {
+      "trades": 208,
+      "no_candles": 0,
+      "never_reached_peak_on_candles": 90,
+      "closed_on_decision_bar": 5,
+      "zero_bar_trades": 10,
+      "no_atr": 0,
+      "decision_points": 103,
+      "recorded_mfe_ge_peak": 103,
+      "mfe_replay_mismatch": 12
+    },
+    "trend_donchian_xrp_4h": {
+      "trades": 46,
+      "no_candles": 0,
+      "never_reached_peak_on_candles": 27,
+      "closed_on_decision_bar": 4,
+      "zero_bar_trades": 0,
+      "no_atr": 0,
+      "decision_points": 15,
+      "recorded_mfe_ge_peak": 15,
+      "mfe_replay_mismatch": 7
+    },
+    "xrp_pullback_2h": {
+      "trades": 55,
+      "no_candles": 0,
+      "never_reached_peak_on_candles": 26,
+      "closed_on_decision_bar": 2,
+      "zero_bar_trades": 0,
+      "no_atr": 0,
+      "decision_points": 27,
+      "recorded_mfe_ge_peak": 27,
+      "mfe_replay_mismatch": 13
+    }
+  }
+}
