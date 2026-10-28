@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "Every shadow/advisory head and the exit head carry a cost_net gate status of pass|fail (not insufficient_data/not_applicable) on gate-check, and exit-head-donchian-1h-v1 appears in /api/bot/ml/registry; OR the operator records that classifier heads promote without a decision-value gate.",
+    "kind": "observation",
+    "last_checked": "2026-10-28"
+  },
+  "id": "PI-20261028-GNVUF1ES-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "GET /api/bot/ml/registry (grep exit-head -> 0 rows) + trainer gate-check <advisory id> cost_net gate status; config/strategies.yaml exit_head_action",
+    "what": "Every shadow/advisory head and the exit head carry a cost_net gate status of pass|fail (not insufficient_data/not_applicable) on gate-check, and exit-head-donchian-1h-v1 appears in /api/bot/ml/registry; OR the operator records that classifier heads promote without a decision-value gate."
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-10-28 (ML-REVIEW-20261028, lane ML-FRONTIER-PREP-20261028; docs/reviews/2026-10-28-weekly-walkthrough.md)",
+    "rerun": "GET /api/bot/ml/registry (grep exit-head -> 0 rows) + trainer gate-check <advisory id> cost_net gate status; config/strategies.yaml exit_head_action"
+  },
+  "routed_to": "ML-PROGRAMME-PLAN (proposal P5; manager to dispatch)",
+  "state": "routed",
+  "what": "[ml] The cost gate (#20869) is not_applicable to EVERY head that can be promoted or that changes an order: all 23 shadow/advisory registry heads are regime/execution classifiers with no value column (gate-check cost_net insufficient_data, 'family has no net-R decision value yet'), and the one model that CLOSES trades -- exit-head-donchian-1h-v1, exit_head_action close on trend_donchian/_sol/_eth (config/strategies.yaml) -- is not in the registry at all (0 of 97 rows), so neither stage-guard nor the cost gate sees it. Build (proposal P5): a net-R decision-value column for router trend_vol cells (intents blocked vs allowed) and for the exit head (closes vs hold-to-rule), and register the exit head."
+}

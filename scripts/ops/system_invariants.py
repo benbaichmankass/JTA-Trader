@@ -51,7 +51,10 @@ the invariants read, and the route each comes from:
     ib_open_orders.json      /api/diag/ib_open_orders
     bybit_open_orders.json   /api/diag/bybit_open_orders
     exchange_positions.json  /api/diag/exchange_positions
-    positions.json           /api/bot/positions
+    positions.json           /api/bot/positions?include_paper=true  (WITHOUT the flag the route
+                             returns real-money rows only, and INV-JOURNAL-EXCHANGE then grades
+                             n=2 and passes while the paper/demo books sit unread -- measured
+                             WEEKLY-AUDIT-2026-10-28; /api/bot/* needs no bearer: curl it directly)
     journal_trades.json      /api/diag/journal?table=trades
     exit_loop_health.json    /api/diag/log_file?name=exit_loop_health
     prop_status.json         /api/bot/prop/status?account_id=<id>  (one response, a list of
