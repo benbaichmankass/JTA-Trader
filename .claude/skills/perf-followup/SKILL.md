@@ -3,7 +3,7 @@ name: perf-followup
 description: The routine that runs after every /performance-review lands — turns the review's findings into research. Four tracks: (1) TUNE underperforming legs (diagnose, pre-register, re-test), (2) LESSONS — a deep, wider-context post-mortem of the window's trades and strategies (not grading) naming the system's strengths and weak points, (3) EXTRAPOLATE each lesson to other legs and new strategy hypotheses, (4) PORTFOLIO research tied to overall net P&L (overlap, concentration, sizing vs contribution, drawdown clustering, add/remove). Every output is a research/queue unit or a checklist/pipeline row — never a memo. Closes the loop by reading what the previous run's units produced. Use when the manager dispatches a PERF-FOLLOWUP-<week> lane, or the operator says "/perf-followup", "follow up the performance review", or "what research comes out of the review". NOT for grading (that is /performance-review) and NOT for changing config (Tier-3 proposals only).
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-10` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /perf-followup — from a performance review to research
 
@@ -12,6 +12,15 @@ description: The routine that runs after every /performance-review lands — tur
 `/performance-review` grades and reports. This skill is what happens **next**: it asks
 *why*, asks *where else it applies*, and files the questions that would change a
 decision. It runs once per review, as one lane, on Sonnet.
+
+> **Its place in the two-layer design (2026-10-28, `ANALYTIC-SKILL-DESIGN`; pattern in
+> `docs/reference/llm-analyst-skill-design.md`).** `/performance-review` now runs CHECKS and a first
+> ANALYSIS pass and ends in `calls[]`. This skill is the **testing** half: it takes the calls and
+> hypotheses the review could not settle in-session and turns them into tested answers. It also
+> carries its own Layer 0: Step 0 grades the previous run's units **and lessons**. Audit basis (3 runs,
+> W41–W43): 8 of 8 units ran and were read, and one finding became a Tier-3 change (#19513). The gaps
+> fixed here are that confidence had no `p`, lessons had no check, and noise was not a candidate cause.
+> Serves the **TRADING** track, with MODEL hooks.
 
 ## The one hard rule
 
@@ -71,7 +80,9 @@ The previous run's units are this run's first input. For each entry in the newes
    (`scripts/ops/pipeline.py --due`); re-run each `origin.rerun`; `done`/`killed` with a
    `terminal_reason`, or an `update` carrying fresh evidence.
 4. **Write the result into this run's record** as `previous_run: {record, units_total,
-   ran_and_read, ran_unread, not_run, underpowered, killed}` plus the actions taken. A run
+   ran_and_read, ran_unread, not_run, underpowered, killed}` plus the actions taken. Also grade each previous **lesson** whose `check` resolved:
+   `held | refuted | unresolved`, with a Brier score over resolved lessons (counts only below 10), so the
+   lessons are graded, not only the units. A run
    whose `previous_run` shows `ran_unread > 0` after Step 0 is **not done.**
 5. **First-ever run:** `previous_run: null` with the note `"first run"`.
 
@@ -97,8 +108,10 @@ the expensive one (see § Cost).
    threshold is NOT changed by this. Limits (i.i.d., ~10% false flags across many legs) are
    in the script's docstring.
 1. **Run `.claude/skills/performance-review/SKILL.md` § "Underperformance → diagnose, don't
-   demote"** (binding; do not restate or shorten it here). Output: `cause ∈ regime | cost |
-   execution | overfit` with the robust-retest reference. A demote is the last resort.
+   demote"** (binding; do not restate or shorten it here). Output: `cause ∈ noise | regime | cost |
+   execution | overfit`, the causes you rejected and the evidence that rejected each (noise is
+   always a candidate; `live_vs_backtest.py`'s percentile is its test), and the robust-retest
+   reference. A demote is the last resort.
 2. **Turn the diagnosis into a research unit** — one question per unit:
    - *regime* → regime-selectivity skill harness (`regime_cell_walkforward.py`); the unit
      asks whether a vol/trend off-cell survives walk-forward (no-cosmetic-cell rule).
@@ -165,7 +178,8 @@ fails any contract version that has no `AMENDMENTS.md` line with an `n=`.
 **Output: a strengths/weaknesses list of the SYSTEM**, not of individual trades. Each
 lesson is one row with: `id` (`L1…`), `kind: strength | weakness`, `claim` (one sentence),
 `evidence` (**trade ids / order_package_ids / record paths** — a lesson with no cited id
-is dropped), `population`, `confidence ∈ measured | suggestive | anecdote`, and its
+is dropped), `population`, `confidence ∈ measured | suggestive | anecdote`, `p` (probability the claim is
+true, 0–1), a pre-registered `check` (`command`, `rule`, `resolves_when`) the next run grades, and its
 **ending** (queue unit / pipeline id / checklist row / `no action, because …`).
 
 - A *weakness* normally ends in a queue unit (is it real, does a fix beat the pre-registered
@@ -276,7 +290,8 @@ file per run; never rewrite earlier ones):
                    "ran_unread": 0, "not_run": 0, "underpowered": 0, "killed": 0, "actions": []},
   "tune":        [{"leg": "", "cause": "regime|cost|execution|overfit", "retest_ref": "", "ends_in": "RQ-…|PI-…|row|no action, because …"}],
   "lessons":     [{"id": "L1", "kind": "strength|weakness", "claim": "", "evidence": ["trade:…","op:…"],
-                   "population": "", "confidence": "measured|suggestive|anecdote", "ends_in": "…"}],
+                   "population": "", "confidence": "measured|suggestive|anecdote", "p": 0.0,
+                   "check": {"command": "", "rule": "", "resolves_when": ""}, "ends_in": "…"}],
   "extrapolate": [{"lesson": "L1", "applies_to": ["leg…"], "new_hypothesis": "", "ends_in": "…"}],
   "portfolio":   [{"question": "", "finding": "", "ends_in": "RQ-…|PI-… (tier-3 proposal)|no action, because …"}],
   "queue_units": ["RQ-…"], "pipeline_items": ["PI-…"], "checklist_rows": ["…"],
@@ -302,9 +317,11 @@ PY
 
 ## Bounded cost
 
-- **Model: Sonnet** (`claude-sonnet-5`). Opus only if the manager says a Track 4 proposal
-  touches a real-money order-path judgment call. Never Fable here.
-- **Ceiling: $6 per run**, recorded on the lane's checklist row (`ceiling_usd`). At ~$4.50
+- **Model: Opus-class** — this is an analysis job (2026-10-28 audit: the run that produced the
+  forming-bar finding, `PERF-FOLLOWUP-2026W43`, ran on `claude-opus-5-5` at a $15 ceiling, spend
+  $14.28; the skill's earlier "Sonnet, $6" did not match the field). The manager sets model and
+  ceiling on the lane's checklist row. Never Fable here.
+- **Ceiling: as the row states** (`ceiling_usd`). At ~75% of it
   stop opening new analyses: finish the record, file what you have as units/pipeline items,
   and run `close-out`. Stopping early is a handoff, not a failure — but a silent stop is a
   drop; list what is unfinished as a pipeline item with `due_when` and `origin.rerun`.
