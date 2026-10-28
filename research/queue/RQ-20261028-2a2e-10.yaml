@@ -68,7 +68,7 @@ related:
 - scripts/research/ml_bakeoff.py
 - scripts/research/market_data_export.py
 - DAILY-AUTHORING-20261028
-last_dispatched_at: '2026-10-28T11:08:09+00:00'
+last_dispatched_at: null
 ml_bakeoff:
   baseline: prior
   candidates:
@@ -140,3 +140,17 @@ ml_bakeoff:
       vs: baseline
       window: cv
   task: classification
+grading:
+  attested: RULE-RQ202610282A2E10-ML
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ202610282A2E10-ML
+  evidence:
+  - research/results/RQ-20261028-2a2e-10/40677601251.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -4,7 +4,7 @@
 id: RQ-20261028-001
 title: 'Programme 01 ATM, trend_donchian: does the EMA-slope direction filter (SL), which beat the declared
   exit in 6 of 6 folds on 2020-07..2026-10, still beat it on the disjoint earlier partition 2017-09..2020-06?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -128,3 +128,13 @@ generated:
   params:
     node: P1-ATM-ed1c07-sl-confirm
 last_dispatched_at: '2026-10-28T11:08:09+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-ATM-ED1C07-SL-DISJOINT
+  evidence:
+  - research/results/RQ-20261028-001/40677592955.jsonl
+  graded_at: '2026-10-28'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
