@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "[2026-10-26 lane DESK-15-ENTRY-GENERATION] Design v1 (docs/plans/claude-trading-desk-DESIGN.md \u00a7 10): RE-SCOPED: add per-account close/partial_close for desk-leg (claude_desk) trades, close reason strategy_close. [2026-10-27 lane DESK-3 session_01M8k8r5SY82JPghjLyErpKU] PR #20487 (draft, Tier 3, landing hold). BUILT: (1) a claude_desk close/partial_close on bybit and alpaca writes exit_reason/close_reason strategy_close; (2) a new Alpaca move_tp cell, read back, refused unless the trade's stop leg rests; (3) widen_sl and size adds on a desk leg are refused desk_leg_never before any read. NOT BUILT, with the measured reasons on LTR-ACTION-EXECUTOR-GAPS: prop widen (the phone APK and the DXtrade adapter are tighten-only), prop add, Alpaca partial. landed_unproven on merge. Closes when the first claude_desk close on bybit_1/alpaca_paper shows exit_reason=strategy_close in the journal (diag pull). [2026-10-28 ~21:15Z lane DESK-V1-PRODUCTION-PLAN, session_01AFoLuKietgEgZagdrtFF18] STATE CORRECTED from PR evidence: #20487 MERGED 2026-10-27 06:07:52Z by benbaichmankass (head 54002dca7, base a8e9d0ef1). DEPLOYED: trader git sha 08998b899 at 2026-10-27 23:48Z (row BYBIT1-MARGIN-STARVED) is later on main than the merge (INFERRED contains it; not re-checked here). OBSERVED: no -- 0 claude_desk closes exist (both 10-27 desk packages rejected, no fill). in_flight -> landed_unproven; closes on the first claude_desk close on bybit_1 with exit_reason strategy_close (the DESK-V1-SOAK probe, if it exits by time/close) -- a bracket exit (take_profit/stop_loss) does not exercise this path.",
   "priority_rank": 8,
-  "updated_at": "2026-10-28T21:13:12Z",
+  "updated_at": "2026-10-28T23:06:18Z",
   "updated_by": "session_01AFoLuKietgEgZagdrtFF18",
   "roadmap": [
     "L-DESK",
@@ -25,6 +25,10 @@
     "what": "first claude_desk close/partial_close on bybit_1 or alpaca_paper journals exit_reason strategy_close (#20487)",
     "how_to_check": "scripts/ops/diag_fetch.sh journal?table=trades&limit=100 -> strategy_name=claude_desk rows with exit_reason; a TP/SL bracket exit does not exercise this path",
     "due_by": "2026-11-02T23:59:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: state correction of PR #20487 merged 2026-10-27; L-DESK milestone text unchanged",
+    "arch": "none: executor cells are described in PR #20487 and scripts/ops/live_review_apply.py; no ARCHITECTURE section changed"
   },
   "_seq": 683
 }
