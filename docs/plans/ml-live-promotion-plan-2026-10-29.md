@@ -256,6 +256,28 @@ Already owned elsewhere, not duplicated: `LIVE-DECAY-MONITOR` (CUSUM per leg), `
 - **Walk-forward harness fidelity.** The pullback/trend harness `tp_r` assertion bug class (`regime_debt_matrix.py` docstring). B3 reads each harness's fidelity flag and refuses an unfaithful leg.
 - **Trainer capacity.** 0 spare OCPU p95 (ML-PROGRAMME § 2.1). B1 runs one build plus one train after the 00:52Z cycle. The walk-forwards run on runners where possible.
 
-## 8. Relay results (filled at landing)
+## 8. Relay results
 
-_See § 8 below; updated when #21020 / #21021 return._
+### trainer-vm-diag #21020 (run 40767883478, read 2026-10-28 ~21:45Z)
+- **The nightly retrain works.** The cycle at 2026-10-28 00:53 → 01:24Z reports `trained: 66`, `skipped: 6` (3 enforced), `failed: 0`, rc 0. The `trained: 0` cycle at 08:22Z is a same-day re-run (`already_done: 72`), as is 2026-10-27 08:46Z. `manifest_oom_red_flag` count: 0. Timer `active` (service `inactive` between runs), next elapse 2026-10-29 00:52:54Z. **This refutes the premise of I3 as first written:** the row is narrowed to an invariant that alerts if the first cycle of a UTC day trains 0.
+- **Stage-guard:** `hold_count 97`, `promote []`, `demote []`, over all 97 models.
+- **Gate-check, run without `--datasets-root`.** That is my omission, so `live_parity` reads `insufficient_data` on every head; B6 reruns it with the datasets root.
+
+| model | live AUC (RG4) | labels_accruing | drift_clean |
+|---|---|---|---|
+| `btc-regime-15m-lgbm-fc-pcv-v2` | 0.721 (pass) | 0.99 (6,322 / 6,381 rows) | KS 0.145, PSI 0.008 (pass) |
+| `sol-regime-15m-lgbm-fc-pcv-v2` | 0.695 | 0.97 (6,155 / 6,348) | KS 0.106, PSI 0.042 |
+| `mes-regime-5m-lgbm-v2` | 0.755 | 0.92 (10,809 / 11,746) | KS 0.100, PSI 0.039 |
+| `eth-regime-1h-lgbm-xasset-v1` | **0.439 (FAIL)** | 0.99 (3,646 / 3,696) | KS 0.074, PSI 0.087 |
+| `setup-candidates-metalabel-p2pool-v1` | — | — | `insufficient_data` (never at shadow) |
+| `conviction-meta-v1` | — | — | parity refused to load: the model is at `candidate` |
+
+  ⚠️ The relay gate-checked the ETH **1h** head, not P2's ETH **15m** candidates (my command named the wrong one). The 1h head fails live discrimination, which confirms it is not a P2 candidate. **B3 must gate-check `eth-regime-15m-lgbm-xasset-v1` and `-selfonly-v901ctrl` before any P2 packet.**
+- **The setup_candidates label basis is confirmed gross.** All 7 dirs (`BTCUSDT/all` v001/v002/v011/v012; `all/all` v001/v020/v021) are `triple-barrier-v1`. 0 `exit_candidates` datasets exist.
+- **p2pool `cost_gate.json`:** `eval_cost_bases {unstamped: 324}`, `n_taken 42`, value +0.0407, take-all −0.492, matched random −0.064, PSR 0.794, `passed: false`, reason `eval_not_cost_net`. This matches the registry read in § 1.
+- **Exit-head artifact:** the `find` did not return a file named `exit-head-donchian-1h-v1` within its first 20 hits. It did return `datasets-out/exit_head/1h/donchian/e1_report.json` and `/tmp/exit_head_replay_trend_donchian.json`. **Where the live artifact sits is not established here**; B4 locates it from `src/runtime/exit_head_shadow.py`'s resolver.
+
+### system-action get-env #21021
+_Not returned by the time this PR landed (the system-actions queue was still `queued`)._ So `REGIME_ML_VERDICT_MODE`, `CONVICTION_SIZING_MODE` and `CONVICTION_SIZING_ACCOUNTS` stay **UNMEASURED**. Two things follow:
+- the "5 / 51 legs" count is conditional on the router mode being `use`;
+- I7 (`ML-SHADOW-NEVER-ORDERS`) **blocks B5** until it is read. The rerun is the same issue body; row I7 owns it.
