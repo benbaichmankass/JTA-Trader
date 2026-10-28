@@ -56,6 +56,8 @@ use it and say so.
 
 ## Layer 0 — PRIOR CALLS (first, never skipped)
 
+**Follow-through first (2026-10-28):** run `python3 scripts/ops/review_followthrough.py --source weekly-audit --window-days 7` and record its cohort and backlog line before grading calls; an open item older than 14 d with no owner is a call to schedule or kill, not to re-file. (The script lands in #20871, REVIEW-FOLLOWTHROUGH. If it is not on main, record `could_not_look: no instrument`.)
+
 For every finding in the last audit, and every one still open from earlier audits:
 1. re-run the check it named (or the closest check that answers it);
 2. grade the call `hit` / `miss` / `unresolved` / `void`, per the [shared pattern](../../../docs/reference/llm-analyst-skill-design.md) § 6;
