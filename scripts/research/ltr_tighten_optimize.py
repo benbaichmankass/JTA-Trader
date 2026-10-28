@@ -38,8 +38,8 @@ for _p in (REPO, REPO / "scripts" / "ops"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from scripts.research import desk_gen_replay_driver as g
-from scripts.research import desk_lifecycle_driver as dl
+from scripts.research import desk_gen_replay_driver as g  # noqa: E402
+from scripts.research import desk_lifecycle_driver as dl  # noqa: E402
 
 # ----------------------------------------------------------------------------- registered numbers (see the doc § 2)
 SEED = 20261028

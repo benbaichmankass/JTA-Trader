@@ -14,7 +14,7 @@ def _st(**kw):
 
 
 class _S:
-    l = np.array([95.0, 97.0, 99.0, 100.5])
+    l = np.array([95.0, 97.0, 99.0, 100.5])  # noqa: E741  (the Series field name)
     h = np.array([101.0, 102.0, 103.0, 103.0])
 
 
