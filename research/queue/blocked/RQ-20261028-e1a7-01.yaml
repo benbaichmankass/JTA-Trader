@@ -8,6 +8,12 @@ roadmap:
 - L-ATM
 kind: experiment
 practice_precedent: 'T2, T4, T8 (docs/reference/trading-and-model-practice-principles.md): evaluate a stop per leg and per regime, size it from volatility, isolate the exit with fixed entries.'
+intervention_controls:
+  hold_to_bracket: true
+  # per-tighten ablation is already paired against hold; matched-random = the same tighten count and level offset at random check-ins of the same trade
+  matched_random: {draws: 100}
+  best_static: {grid: [breakeven, atr_trail, structure, giveback, losscut], excludes_test_folds: true}
+  bootstrap_group: week
 question: >-
   For each leg on bybit_2's strategies roster (re-parse config/accounts.yaml at run time; on 2026-10-28 that roster is ada_pullback_2h, xrp_pullback_2h,
   trend_donchian_eth_4h, trend_donchian_xrp_4h and trend_donchian_sol_prop), using a config-exact Stage-0 corpus on its own timeframe over 2020-01-01..2026-10-27
