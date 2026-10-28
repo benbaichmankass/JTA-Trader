@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-BELS1214-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane CLOSE-LABELS-1214 session_01AFoLuLF5yKmAbNFyKq4KfV, PR #20962 post-deploy check",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=300'  # trades 6761/6763: notes._truncated true, closed_at_detected absent"
+  },
+  "state": "queued",
+  "what": "[audit-trail] Fix B (PR #20962) loses its own revert note on truncated rows. MEASURED 2026-10-28 ~20:15Z after deploy (running sha 87d4dc63e, contains 4c280dd70): trades 6761 and 6763 (bybit_1 / bybit_portfolio SOL stop) now carry closed_at 12:14:39.898 / 12:14:39.897, previously 12:19:07.537524 / 12:19:13.801596 (read from the journal before the deploy). Their notes are `_truncated: true` (dump_capped 500 chars) and carry NEITHER `closed_at_detected` NOR `closed_at_source`, so the per-row revert the PR promised (`notes.closed_at_detected`) does not exist on exactly the rows it was built for. Fix A's `pre_fill_exit_price`/`pre_fill_pnl` survived on 6764/6706/6704 (kept before the cap). Population: the latest 300 journal rows, ids 6470-6769. FIX (Tier-2, small): write the originals into a protected key the cap keeps, or put `closed_at_detected` ahead of the long keys / drop `closed_reason` text when over budget; add a test with a >500-char notes blob. Until then the originals for 6761/6763 are recorded in this item: 2026-10-28T12:19:07.537524+00:00 and 2026-10-28T12:19:13.801596+00:00."
+}
