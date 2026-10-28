@@ -35,6 +35,11 @@ rows-branch commit of its packet + table, LTR-PACKET-ECHO) · ``could_not_post``
 ``http_code`` or ``reason``; ``evidence_commit_failed`` posts nothing and leaves the wake to the
 Actions poller) · ``evidence_backoff`` (inside ``EVIDENCE_BACKOFF_S`` after such a failure) · ``due_could_not_look`` (the due computation
 itself could not look; the poller owns that flag).
+
+Pre-screen log (LTR-PRACTICE-REDESIGN): each pass appends the due computation's
+``prescreen`` records to ``runtime_logs/live_review/prescreen.jsonl`` (read via
+``/api/diag/log_file?name=ltr_prescreen``), once per package per closed bar and
+again when its flagged set changes; the receipt's ``prescreen_logged`` counts them.
 """
 from __future__ import annotations
 
@@ -166,12 +171,60 @@ def write_receipt(rec: Dict[str, Any], path: Optional[Path] = None) -> None:
         logger.warning("ltr-wake-post: receipt write failed", exc_info=True)
 
 
+PRESCREEN_LOG_REL = Path("runtime_logs") / "live_review" / "prescreen.jsonl"
+#: Rotate the pre-screen log (one ``.1`` generation kept) past this size.
+PRESCREEN_LOG_MAX_BYTES = 64 * 1024 * 1024
+#: Per package: the (closed bar, flagged set) last logged, so a record is written
+#: once per closed bar and again only when what is flagged changes inside it.
+_prescreen_seen: Dict[str, Tuple[Any, Tuple[str, ...]]] = {}
+
+
+def prescreen_log_path() -> Path:
+    from src.utils.paths import repo_root
+    return Path(repo_root()) / PRESCREEN_LOG_REL
+
+
+def log_prescreen(doc: Any, path: Optional[Path] = None) -> int:
+    """Append the due computation's ``prescreen`` records (LTR-PRACTICE-REDESIGN § E.4).
+
+    Every evaluation, flagged or not, so each trigger type can be graded against
+    hold and a matched random checkpoint (``control_u``). Runs on the wake
+    poster's daemon thread, never the exit loop. Returns the number written;
+    never raises.
+    """
+    try:
+        recs = (doc or {}).get("prescreen") if isinstance(doc, dict) else None
+        if not recs:
+            return 0
+        p = path or prescreen_log_path()
+        lines = []
+        for r in recs:
+            key = (r.get("closed_bar_ts"), tuple(r.get("flagged") or ()))
+            pkg = str(r.get("order_package_id"))
+            if _prescreen_seen.get(pkg) == key:
+                continue
+            _prescreen_seen[pkg] = key
+            lines.append(json.dumps(r, sort_keys=True, default=str))
+        if not lines:
+            return 0
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if p.exists() and p.stat().st_size > PRESCREEN_LOG_MAX_BYTES:
+            os.replace(p, p.with_suffix(".jsonl.1"))
+        with open(p, "a", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+        return len(lines)
+    except Exception:  # noqa: BLE001 — a log write failure never reaches the wake or the exit loop
+        logger.warning("ltr-wake-post: prescreen log write failed", exc_info=True)
+        return 0
+
+
 def run_once(due_fn: Optional[Callable[[], Any]] = None,
              auth_fn: Callable[[], Optional[str]] = read_auth_header,
              http: Http = _http,
              now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
              receipt: Optional[Path] = None,
-             build_bundle: Optional[Callable[[str], Dict[str, Any]]] = None) -> Dict[str, Any]:
+             build_bundle: Optional[Callable[[str], Dict[str, Any]]] = None,
+             prescreen_log: Optional[Path] = None) -> Dict[str, Any]:
     """One due computation -> at most one comment. Returns (and writes) the receipt."""
     global _cached_markers, _evidence_backoff_until
     computed_at = now_fn()
@@ -186,6 +239,7 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         write_receipt(rec, receipt)
         return rec
     rec["due_count"] = doc.get("due_count")
+    rec["prescreen_logged"] = log_prescreen(doc, prescreen_log)
     cfg = wake.load_cfg()
     if wake.plan(doc, [], cfg, computed_at)["kind"] != "wake":
         rec["state"] = "nothing_due"

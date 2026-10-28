@@ -79,6 +79,12 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 | `calendar` | a high-impact event within the next bar, from the feed the news veto already reads (verify the source at build) | Known volatility ahead of an open trade. |
 | `mechanics` | live SL or TP differs from what the leg's code would place, or venue and journal disagree | ADA's first check. This is a **bug**, so it routes to the order-path owner, not to exit judgment. |
 | `daily_floor` | no review of this package in 24 h | The floor above. |
+| `adverse_r` | `open_r` first crosses −0.5 R, then −0.75 R (a reviewed deeper level covers the shallower) | Added 2026-10-28 (row `LTR-PRACTICE-REDESIGN`, practice review § E): the adverse side had no trigger. Cooldown-exempt. |
+| `stall` | `bars_held` ≥ the leg's timeframe threshold (`stall.bars_by_timeframe`) with `peak_r` < 0.5 R; again every further threshold | Added 2026-10-28: a trade going nowhere was never reviewed below the 24 h floor. |
+| `momentum_flip` | the last 3 CLOSED bars each closed against the position, net ≥ 1 × ATR; one level per episode, `cooldown_bars` 3 | Added 2026-10-28: a slow bleed toward the stop. |
+| `structure_break` | a CLOSED bar's close beyond the since-entry extreme close against the position by > 0.1 × ATR (after 3 closed bars); one level per episode, `cooldown_bars` 3 | Added 2026-10-28: the trade's own structure broke. |
+
+The four 2026-10-28 events are the **pre-screen**: evaluated every pass for every open package, each evaluation (flagged or not) logged to `runtime_logs/live_review/prescreen.jsonl` (diag `log_file?name=ltr_prescreen`) with a fixed `control_u` draw, so each trigger type is graded against hold and a matched random checkpoint (practice review § E.4). Rollback: delete their blocks from `config/live_trade_review.yaml`.
 
 **Dedupe:** key each event on `(order_package_id, event, level)`. One `r_milestone` fires once per level, and a `giveback` fires again only after a new peak. **Cooldown:** one closed bar per package, except `giveback` and `mechanics`. **Batching:** everything due in one L1 tick goes to one reviewer session.
 

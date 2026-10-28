@@ -37,6 +37,16 @@ HTTP read), and every package outside telemetry is listed in
 ``telemetry_less`` with ``telemetry_state: telemetry_absent`` and the four
 telemetry events in ``events_could_not_look``. ``daily_floor`` and the market
 events need no telemetry and still evaluate for them.
+
+Pre-screen (LTR-PRACTICE-REDESIGN, operator Tier-2 OK 2026-10-28): ``adverse_r``
+(first crossing of each registered negative R level), ``stall`` (bars held past
+the leg's timeframe threshold with no +0.5R progress), ``momentum_flip`` (k
+closed bars against the position, net >= m x ATR) and ``structure_break`` (a
+close beyond the since-entry extreme against the position). Each is evaluated on
+every pass for every open package, only when configured; the history checks are
+edge-triggered episodes with their own ``cooldown_bars``. Every evaluation is
+returned in ``prescreen`` (one record per package, flagged or not) for the VM
+wake poster to log; this module still writes nothing.
 """
 from __future__ import annotations
 
@@ -58,6 +68,9 @@ TELEMETRY_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target")
 
 #: Events computed from market inputs (history / funding / calendar).
 MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
+
+#: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
+PRESCREEN_EVENTS = ("adverse_r", "stall", "momentum_flip", "structure_break")
 
 _TF_RE = re.compile(r"_(\d+)(m|h|d)$")
 _TF_SECONDS = {"m": 60, "h": 3600, "d": 86400}
@@ -505,6 +518,184 @@ def venue_events(row: Dict[str, Any], ctx: Optional[Dict[str, Any]], cfg: Dict[s
     return out, cnl
 
 
+# ---------------------------------------------------------------------------
+# Pre-screen (LTR-PRACTICE-REDESIGN, practice review § E.2-E.4). Four cheap
+# deterministic checks evaluated on every pass for every open package, from the
+# telemetry row and the closed bars of position_path_history. A check that holds
+# FLAGS the package (a due event, so a wake); every evaluation, flagged or not,
+# is returned as a ``prescreen`` record so each trigger type can be graded later
+# against hold and a matched random checkpoint. An event absent from the config
+# is not evaluated at all (rollback = delete it from the YAML).
+# ---------------------------------------------------------------------------
+
+def _side(direction: Any) -> Optional[int]:
+    d = str(direction or "").lower()
+    return 1 if d in ("long", "buy") else -1 if d in ("short", "sell") else None
+
+
+def stall_bars(cfg_stall: Dict[str, Any], tf_seconds: int) -> int:
+    """Stall threshold in bars for a leg of this timeframe (registered map, else default)."""
+    by = cfg_stall.get("bars_by_timeframe") or {}
+    for key, bars in by.items():
+        m = _TF_RE.search("_" + str(key))
+        if m and int(m.group(1)) * _TF_SECONDS[m.group(2)] == tf_seconds:
+            return int(bars)
+    return int(cfg_stall.get("default_bars", 6))
+
+
+def _episode(conds: List[bool], cooldown: int) -> Optional[int]:
+    """Index of the bar that opened the episode still holding on the last bar.
+
+    An episode opens on a bar where the condition turns true, at least ``cooldown``
+    bars after the previous opened episode; ``None`` when the last bar is not in one.
+    Edge-triggered, so a condition that stays true keeps ONE level (one wake).
+    """
+    start: Optional[int] = None
+    last_open: Optional[int] = None
+    for i, c in enumerate(conds):
+        if not c:
+            start = None
+            continue
+        if start is None and (i == 0 or not conds[i - 1]):
+            if last_open is None or i - last_open >= cooldown:
+                start = last_open = i
+    return start if conds and conds[-1] else None
+
+
+def _control_u(pkg: str, bar_ts: Any) -> float:
+    """A uniform draw in [0, 1) fixed by (package, bar) -- the matched random
+    checkpoint is chosen by this number, so it is registered before any outcome."""
+    import hashlib
+    h = hashlib.sha256(f"{pkg}|{bar_ts}".encode()).hexdigest()
+    return int(h[:12], 16) / float(16 ** 12)
+
+
+def prescreen(row: Dict[str, Any], prior: Dict[str, Any], ctx: Optional[Dict[str, Any]],
+              cfg: Dict[str, Any], now: datetime, tf_seconds: int
+              ) -> Tuple[List[Tuple[str, Any, str]], List[Dict[str, str]], Optional[Dict[str, Any]]]:
+    """``(events, could_not_look, record)`` for adverse_r / stall / momentum_flip /
+    structure_break. ``record`` is ``None`` when no pre-screen event is configured."""
+    ev = cfg["events"]
+    names = [n for n in PRESCREEN_EVENTS if isinstance(ev.get(n), dict)]
+    if not names:
+        return [], [], None
+    out: List[Tuple[str, Any, str]] = []
+    cnl: List[Dict[str, str]] = []
+    checks: Dict[str, Dict[str, Any]] = {}
+
+    def miss(name: str, reason: str) -> None:
+        cnl.append({"event": name, "reason": reason})
+        checks[name] = {"read": "could_not_look", "flagged": None, "reason": reason}
+
+    def looked(name: str, holds: bool, level: Any = None, why: Optional[str] = None,
+               emit: bool = True, **vals: Any) -> None:
+        # ``flagged`` = the check holds on this pass; whether it is newly DUE (not yet
+        # answered by a review) is the due list's dedupe, applied in compute_due.
+        checks[name] = {"read": "looked", "flagged": holds, "level": level, "why": why, **vals}
+        if holds and emit:
+            out.append((name, level, why))
+
+    open_r, peak_r, held = _f(row.get("open_r")), _f(row.get("peak_r")), _f(row.get("bars_held"))
+    tel_reason = "telemetry_absent" if row.get("telemetry_absent") else None
+
+    if "adverse_r" in names:
+        levels = sorted((float(x) for x in (ev["adverse_r"].get("levels") or [])), reverse=True)
+        if open_r is None:
+            miss("adverse_r", tel_reason or "open_r unknown")
+        else:
+            crossed = [lv for lv in levels if open_r <= lv]
+            deepest = crossed[-1] if crossed else None
+            done = [float(lv) for e, lv in prior["fired"] if e == "adverse_r" and _f(lv) is not None]
+            # A reviewed deeper level covers the shallower one (first crossing of each).
+            covered = deepest is not None and any(d <= deepest + 1e-9 for d in done)
+            looked("adverse_r", deepest is not None, deepest,
+                   f"open_r {open_r:.2f} crossed {deepest:g}R" if deepest is not None else None,
+                   emit=not covered, value=open_r)
+
+    if "stall" in names:
+        sc = ev["stall"]
+        need = stall_bars(sc, tf_seconds)
+        max_peak = float(sc.get("max_peak_r", 0.5))
+        if held is None or peak_r is None:
+            miss("stall", tel_reason or "bars_held / peak_r unknown")
+        else:
+            hit = held >= need and peak_r < max_peak
+            lvl = int(held // need) * need if hit else None
+            looked("stall", hit, lvl,
+                   f"{held:g} bars held (>= {need}) with peak_r {peak_r:.2f} < {max_peak:g}"
+                   if hit else None, value=held, threshold_bars=need)
+
+    hist = (ctx or {}).get("history")
+    side = _side(row.get("direction"))
+    closed = [h for h in (hist or [])[:-1] if _f(h.get("last_price")) is not None]
+    bar_ts = closed[-1].get("bar_ts") if closed else None
+    hist_names = [n for n in ("momentum_flip", "structure_break") if n in names]
+    for name in hist_names:
+        c = ev[name]
+        if hist is None:
+            miss(name, f"history_unavailable: {(ctx or {}).get('history_reason') or 'not read'}")
+        elif side is None:
+            miss(name, f"direction unknown ({row.get('direction')!r})")
+        elif name == "momentum_flip":
+            k, min_atr = int(c.get("bars", 3)), float(c.get("min_atr", 1.0))
+            if len(closed) < k + 1:
+                miss(name, f"{len(closed)} closed history bar(s); need {k + 1}")
+                continue
+            px = [_f(h["last_price"]) for h in closed]
+            conds = [False] * len(px)
+            for i in range(k, len(px)):
+                atr = _f(closed[i].get("atr"))
+                steps = [side * (px[j] - px[j - 1]) for j in range(i - k + 1, i + 1)]
+                conds[i] = bool(atr and atr > 0 and all(s < 0 for s in steps)
+                                and -sum(steps) >= min_atr * atr)
+            st = _episode(conds, int(c.get("cooldown_bars", 3)))
+            lvl = str(closed[st].get("bar_ts")) if st is not None else None
+            looked(name, st is not None, lvl,
+                   f"{k} closed bars against the position, net >= {min_atr:g} x ATR (since {lvl})"
+                   if st is not None else None)
+        else:  # structure_break
+            mb, buf = int(c.get("min_bars", 3)), float(c.get("buffer_atr", 0.1))
+            if len(closed) < mb + 1:
+                miss(name, f"{len(closed)} closed history bar(s); need {mb + 1}")
+                continue
+            px = [_f(h["last_price"]) for h in closed]
+            conds = [False] * len(px)
+            ext = side * px[0]  # the since-entry extreme against the position, in side terms
+            for i in range(1, len(px)):
+                atr = _f(closed[i].get("atr"))
+                conds[i] = bool(i >= mb and atr and atr > 0 and side * px[i] < ext - buf * atr)
+                ext = min(ext, side * px[i])
+            st = _episode(conds, int(c.get("cooldown_bars", 3)))
+            lvl = str(closed[st].get("bar_ts")) if st is not None else None
+            looked(name, st is not None, lvl,
+                   f"close broke the since-entry {'low' if side > 0 else 'high'} close by > "
+                   f"{buf:g} x ATR (since {lvl})" if st is not None else None)
+
+    pkg = str(row.get("order_package_id"))
+    last = (hist or [None])[-1] if hist else None
+    record = {
+        "evaluated_at": now.isoformat(), "order_package_id": pkg, "trade_id": row.get("trade_id"),
+        "leg": row.get("strategy"), "account_id": row.get("account_id"), "symbol": row.get("symbol"),
+        "direction": row.get("direction"), "timeframe_seconds": tf_seconds,
+        "closed_bar_ts": bar_ts,
+        "state": {"open_r": open_r, "peak_r": peak_r, "bars_held": held,
+                  "giveback_r": _f(row.get("giveback_r")), "r_to_stop": _f(row.get("r_to_stop")),
+                  "r_to_target": _f(row.get("r_to_target")),
+                  "mae_r": _f((last or {}).get("mae_r")), "atr": _f((last or {}).get("atr")),
+                  "last_price": _f(row.get("last_price")) or _f((last or {}).get("last_price"))},
+        "telemetry_state": "telemetry_absent" if row.get("telemetry_absent") else "present",
+        "checks": checks,
+        "flagged": sorted(n for n, c in checks.items() if c.get("flagged")),
+        # Pricing the alternatives per bar needs the leg's committed candles replayed
+        # (live_review_outcomes.py): not cheap enough for every pass. The record keeps
+        # the state that tool takes (open_r, peak_r, bars_held, side), so a grader
+        # prices each checkpoint offline.
+        "pricing": {"state": "not_priced", "reason": "state recorded; priced offline by the grader"},
+        "control_u": round(_control_u(pkg, bar_ts), 6),
+    }
+    return out, cnl, record
+
+
 _DIGITS_RE = re.compile(r"\d+(?:\.\d+)?")
 
 
@@ -517,7 +708,8 @@ def _reason_kind(reason: Any) -> str:
 
 
 def _coverage_entry(row: Dict[str, Any], tf_seconds: int,
-                    cnl: List[Dict[str, str]]) -> Dict[str, Any]:
+                    cnl: List[Dict[str, str]],
+                    prescreen_names: Iterable[str] = ()) -> Dict[str, Any]:
     """One open package's evaluation coverage, due or not.
 
     ``events_looked`` names the events that WERE evaluated (a quiet one means
@@ -526,7 +718,7 @@ def _coverage_entry(row: Dict[str, Any], tf_seconds: int,
     package from a blind one. ``funding`` only counts for perps (n/a otherwise).
     """
     missed = {c["event"] for c in cnl}
-    universe = list(MARKET_EVENTS) + ["mechanics"]
+    universe = list(MARKET_EVENTS) + ["mechanics"] + list(prescreen_names)
     if not row.get("telemetry_absent"):
         universe = list(TELEMETRY_EVENTS) + universe
     if not _is_perp(row.get("symbol")):
@@ -580,6 +772,8 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     cooled = 0
     cnl_total = 0
     coverage: List[Dict[str, Any]] = []
+    screened: List[Dict[str, Any]] = []
+    ps_names = [n for n in PRESCREEN_EVENTS if isinstance(cfg["events"].get(n), dict)]
     for row in rows:
         pkg = str(row.get("order_package_id"))
         prior = idx.get(pkg, {"fired": set(), "last": None, "peak": None, "mech": None})
@@ -589,12 +783,15 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         mk, cnl = market_events(row, (market or {}).get(pkg), cfg, now, tf)
         venue_sig: List[float] = []
         vk, vcnl = venue_events(row, (market or {}).get(pkg), cfg, now, sig_out=venue_sig)
-        mk, cnl = mk + vk, cnl + vcnl
+        pk, pcnl, prec = prescreen(row, prior, (market or {}).get(pkg), cfg, now, tf)
+        if prec is not None:
+            screened.append(prec)
+        mk, cnl = mk + vk + pk, cnl + vcnl + pcnl
         if row.get("telemetry_absent"):
             cnl = [{"event": n, "reason": "telemetry_absent"} for n in TELEMETRY_EVENTS] + cnl
         if cnl:
             cnl_total += 1
-        coverage.append(_coverage_entry(row, tf, cnl))
+        coverage.append(_coverage_entry(row, tf, cnl, ps_names))
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
             if name == "mechanics" and level == VENUE_LEVEL:
                 # Not the plain fired-set: a repeat of the SAME divergence is quiet, a
@@ -659,7 +856,8 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
     return {"due": due, "due_count": len(due), "suppressed_by_cooldown": cooled,
             "packages_with_events_could_not_look": cnl_total,
             "event_coverage": coverage,
-            "could_not_look_summary": summarize_could_not_look(coverage)}
+            "could_not_look_summary": summarize_could_not_look(coverage),
+            "prescreen": screened}
 
 
 def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:
