@@ -50,7 +50,7 @@ DESK_LEG = "claude_desk"
 # entry_generation propose_entry; scripts/ci/check_desk_records.py and desk intake import these.
 PROBE_BASIS = "mechanics"
 PROBE_REASON = "mechanics_probe"
-PROBE_MAX = 2
+PROBE_MAX = 3  # 2 -> 3 2026-10-28 ~21:07Z: operator A2 popup, verbatim "Yes, one probe on bybit_1" (row DESK-V1-SOAK); both 10-27 probes were risk-rejected unfilled
 PROBE_ACCOUNTS = ("bybit_1", "alpaca_paper", "ib_paper")  # intake refuses a probe while any other account rosters the leg
 
 
