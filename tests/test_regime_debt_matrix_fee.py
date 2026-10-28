@@ -56,12 +56,13 @@ class TestRoundtripFeeBps:
         assert regime_debt_matrix.roundtrip_fee_bps("NOT_A_REAL_SYMBOL_XYZ") == 7.5
 
     def test_default_is_not_duplicated_locally(self):
-        """The 7.5 default must come from trade_costs, so there is one owner."""
+        """The 7.5 default must come from trade_costs, so there is one owner. Checked on
+        a venue with no measured fee (a Bybit perp resolves to its measured 11.0)."""
         if REPO not in sys.path:
             sys.path.insert(0, REPO)
         from src.runtime.trade_costs import DEFAULT_FEE_BPS_ROUNDTRIP
 
-        assert regime_debt_matrix.roundtrip_fee_bps("BTCUSDT") == float(
+        assert regime_debt_matrix.roundtrip_fee_bps("MES") == float(
             DEFAULT_FEE_BPS_ROUNDTRIP
         )
 
@@ -82,8 +83,8 @@ class TestHarnessArgv:
     def test_equity_etf_argv_carries_zero_fee(self):
         assert self._fee_in_argv("GLD") == 0.0
 
-    def test_crypto_argv_carries_the_default_fee(self):
-        assert self._fee_in_argv("BTCUSDT") == 7.5
+    def test_crypto_argv_carries_the_venue_fee(self):
+        assert self._fee_in_argv("BTCUSDT") == 11.0  # bybit:linear measured taker fee
 
     def test_fee_flag_is_passed_exactly_once(self):
         """Duplicate flags would make the effective fee depend on argparse order."""
