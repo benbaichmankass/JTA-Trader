@@ -209,6 +209,10 @@ V1 needs no other ask. Real-money entries stay behind DESK-13 and are not reques
 - **A2:** *"Yes, one probe on bybit_1"*. PR #21028 (Tier 3, hold) raises `desk_write.PROBE_MAX` from 2 to 3, because both 10-27 probes used the cap
   without filling. "Minimal size" is not supported (no size field by design), so `bybit_1`'s RiskManager sizes the probe like any entry.
 - **A3:** *"Hourly + ≤12 triggers/day"*.
+- **Scope confirmed ~21:45Z:** the operator answered *"All paths, all actions (Recommended)"*. Every in-trade action is advice-only on every
+  automatic path, desk and live reviewer alike. A class comes off the list only through a PR citing its passed § 5b test.
+- **Milestone dates kept:** ML-LIVE 11-01, DESK-V1 **11-04**, AM-STANDARD 11-04. The Sun 11-01 acceptance record (Sun-1) is the V1 check,
+  and the milestone's due date is 11-04. That window also covers the first `alpaca_paper` desk trade on Mon 11-02.
 
 ---
 
