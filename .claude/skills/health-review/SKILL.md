@@ -56,7 +56,7 @@ the checks has failed the *too loose* way.
 
 For every call and every `concern`/`watch` in the previous review, re-run the check it named (or the closest check
 that answers it) and grade it:
-- `hit` / `miss` / `unresolved` / `void`, per the shared pattern;
+- `hit` / `miss` / `unresolved` / `void`, per the shared pattern (`result`, plus `action_happened`);
 - plus the state of its action: `closed+detector` · `closed-no-detector` · `moving` · **`stalled`** (no state change
   ≥ 7 d).
 

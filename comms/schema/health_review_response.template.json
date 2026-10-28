@@ -22,28 +22,29 @@
     }
   ],
   "prior_calls_scorecard": {
-    "counts": {
-      "hit": 0,
-      "miss": 0,
-      "unresolved": 0,
-      "void": 0,
-      "closed+detector": 0,
-      "closed-no-detector": 0,
-      "moving": 0,
-      "stalled": 0
-    },
-    "brier": "<number, or INDETERMINATE below 10 resolved calls>",
-    "series": [
-      "<brier per past review, newest first>"
-    ],
+    "_comment": "Layer 0: the previous health review's calls[] graded by re-running each call's own check (shape mirrors comms/schema/performance_review_response.template.json, PR #20854). Older records without calls[] grade their findings{} concern/watch items and say so. brier is INDETERMINATE below 10 resolved calls. action_state adds the follow-through grade; stalled across >= 2 reviews must be decided (fix / operator / re-scope / kill), never re-filed.",
+    "source_record": "comms/reviews/health/<date>-health-review.json",
+    "n_calls": 0,
+    "hit": 0,
+    "miss": 0,
+    "unresolved": 0,
+    "void": 0,
+    "brier": "0.0 | INDETERMINATE",
     "calls": [
       {
-        "ref": "<call id / PI / row from the previous review>",
-        "check_rerun": "<command re-run this time>",
-        "grade": "hit | miss | unresolved | void",
+        "id": "HR-<date>-1",
+        "result": "hit | miss | unresolved | void",
+        "check_rerun": "<command + output summary>",
+        "action_happened": "yes | no — <why, and decided as>",
         "action_state": "closed+detector | closed-no-detector | moving | stalled",
-        "reviews_open": 1,
-        "note": "<= 160 chars; for stalled: why it is not closing and the Layer-3 decision (fix / operator / re-scope / kill)"
+        "reviews_open": 1
+      }
+    ],
+    "series": [
+      {
+        "review": "<date>",
+        "n_resolved": 0,
+        "brier": null
       }
     ]
   },
@@ -55,14 +56,16 @@
       {
         "question": "<material, by money/risk>",
         "hypotheses": [
-          "<H1>",
-          "<noise / expected variation>"
+          {
+            "name": "noise | capacity | deploy | upstream | instrument | config | <other>",
+            "predicts": "<what it predicts that the others do not>",
+            "test": "<command / pull run>",
+            "result": "survived | eliminated | untested"
+          }
         ],
-        "test": "<the discriminating query run>",
-        "result": "...",
-        "survivor": "<cause at file/line/key/unit/job level>",
         "p": 0.0,
-        "impact": "..."
+        "impact": "...",
+        "conclusion": "<cause at file/line/key/unit/job level, <= 240 chars>"
       }
     ],
     "correlations": [
