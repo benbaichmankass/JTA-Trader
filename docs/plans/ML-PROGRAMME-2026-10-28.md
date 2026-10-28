@@ -1,6 +1,6 @@
 # ML programme: models that manage trades (2026-10-28)
 
-> **Doc status:** `live` · category `plan` · last verified `2026-10-28` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `plan` · last verified `2026-10-28` (registry/status read 06:25Z; nobody but this lane has verified it) · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
 > **Checklist row:** [`ML-PROGRAMME-PLAN`](../claude/work/checklist/ML-PROGRAMME-PLAN.json) · roadmap `M25`, `L-ATM`, `L-DESK` · lane dispatched by Manager Session 2026-10-27a · Tier 1, planning only.
 > **What this is:** ONE consolidated ML plan. It folds the ML items of `ROADMAP.md` § "AI trader (ML) — build plan", `docs/plans/ml-plan-items.yaml`, research programmes 01/02/06, the desk design's student hand-off (§ 4, 4A–4C) and the checklist into one set of tracks.
 > **What it authorises:** nothing. The § 5 rows are **proposals**. The manager files them with the operator. Every promotion is still the ladder: an offline rule registered before the run, net of the full cost stack, then the existing tier gates.
