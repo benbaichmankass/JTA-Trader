@@ -7,7 +7,8 @@ description: Autonomous review of the ICT trading bot's TRADING PERFORMANCE, in 
 
 # /performance-review — CHECKS, then ANALYSIS
 
-> Also answers to **`/research-review`**. Serves the **TRADING** research track
+> Also answers to **`/research-review`**. Follows the shared pattern in
+> [`docs/reference/llm-analyst-skill-design.md`](../../../docs/reference/llm-analyst-skill-design.md). Serves the **TRADING** research track
 > ([`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md)).
 
 > **Why it has this shape (redesign 2026-10-28, lane `ANALYTIC-SKILL-DESIGN`).** The operator asked

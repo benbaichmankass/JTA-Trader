@@ -146,7 +146,7 @@ at abstract or publisher level. **[2nd]** marks a claim taken from secondary mat
 15. **Rank by money at stake, not by recency.** This is the operator's priority and the measured gap in § 1. It is our
     own design choice, and no source above prescribes it.
 
-## 4. The performance-review redesign (PR 1 of this lane)
+## 4. The performance-review redesign (PR #20854)
 
 `.claude/skills/performance-review/SKILL.md` now opens with four layers:
 
@@ -185,4 +185,27 @@ Other changes in the same PR:
 
 ## 5. Per-skill audit
 
-Lands in this lane's second PR (same day).
+**Scope** (manager, 2026-10-28 07:15Z): this lane owns performance-review, perf-followup and the shared pattern
+([`docs/reference/llm-analyst-skill-design.md`](../reference/llm-analyst-skill-design.md), PR #20855). The other skills
+were split to parallel lanes:
+- `SKILL-DESIGN-SYSTEM`: weekly-audit and health-review.
+- `SKILL-DESIGN-MODEL`: ml-review and frontier-research.
+- `SKILL-DESIGN-RESEARCH`: research-ops and the programme review.
+
+This lane had also measured live-trade-review and research-ops before the split. Those findings are recorded below
+for whoever owns them.
+
+| Skill | Track | Measured failure mode | Basis | Disposition |
+|---|---|---|---|---|
+| performance-review | TRADING | **both**: a scripted rubric core, plus week-only, hypothesis-free, memory-less analysis (§ 1) | § 2–3 | **redesigned here** (§ 4) |
+| perf-followup | TRADING (+MODEL hooks) | **mostly sound; loose on calibration and memory.** Measured over all 3 runs (W41–W43): 8 of 8 units ran and were read, 1 Tier-3 change (#19513). But confidence was ordinal only, lessons had no check, Track 1's cause set lacked *noise*, 0 hypothesis / surprise / premortem keys appeared across the 3 records, and the skill said Sonnet/$6 while the productive W43 run was Opus/$15 (spent $14.28) | P30, P31, P33, P34 | **redesigned here**: it is the testing half; noise added as a cause; each lesson gets `p` and a check; Step 0 grades lessons; model and ceiling aligned |
+| live-trade-review | TRADING + MODEL | **too scripted.** Guardrails plus an empty table decide most calls: last 50 rows hold 26 / flag 12 / none 11 / close 1, 0 tighten or move_tp; a priced option on 1 of 98 rows; confidences all in {0.50, 0.55, 0.60}; the prompt contradicts itself (":16 a tool answers it" vs ":10 best decision now"; :143 restricts thin-cell calls to hold/tighten); no hold-vs-random baseline | T1, T5, T6; P18, P19, P23, P27, P34; practice review § E | **not edited (no owner in the split)**. Evidence and proposed fixes are on row `LTR-PRACTICE-REDESIGN` (note 2026-10-28). Proposed text: :16 → "a decision, priced where pricing exists … name the strongest alternative to holding"; :143 → allow the § 3b actions with `p` defined for hold; :157 → an overlay may raise or lower confidence |
+| research-ops | ops (both) | **appropriately mostly CHECKS; loose in one place: handoffs never close.** `needs_review_left` = 28 on 15 consecutive records with 0 triaged on the last 4; the `ml_health` shortfall sits in the handoff of 24 of 66 records; Tier-3 candidates are carried in 27 of 66; there is no surprises slot | P35, P37, P39; R6 | **for `SKILL-DESIGN-RESEARCH`**: a Layer 0 that ages handoffs (3 consecutive records → one owner); a `surprises[]` field in the run record; a dedicated triage lane for the 28 `needs_review` units |
+| health-review, weekly-audit | ops | not measured by this lane | — | `SKILL-DESIGN-SYSTEM` |
+| ml-review, frontier-research | MODEL | not measured by this lane | — | `SKILL-DESIGN-MODEL` |
+| close-out | ops | not measured; a completion checklist (do-confirm) is the right shape for it | P37 | no change proposed |
+
+**Rows:**
+- `ANALYTIC-SKILL-DESIGN` is this lane.
+- `PERF-CHECKS-SCORECARD` is the missing C1+C3 instrument.
+- `LTR-PRACTICE-REDESIGN` holds the LTR audit note.
