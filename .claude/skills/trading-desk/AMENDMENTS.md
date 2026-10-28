@@ -13,3 +13,4 @@
 <!-- one line per amendment, newest last:
 - YYYY-MM-DD · new_skill_sha: `<8+ hex>` · prior: `<8 hex>` · basis: <grader + window>, n=<k> <stratum> · change: <one line> · PR #<n>
 -->
+- 2026-10-28 · new_skill_sha: `5ddff669` · prior: `b46cd76d` · basis: operator decision on research evidence, not a graded lesson (popup to ask A1 "Advice-only until tested" ~21:07Z; DESK-LIFECYCLE-S0 #20967 whole-trade mgmt -0.159/-0.124 R vs hold), n=0 graded live calls of the extended classes · change: SKILL.md (not the brief) § 2, desk/LTR in-trade classes are advice only until each passes its own test; graduation rule (one class per PR, code list + mandate list, cites the passed test) · PR #21026

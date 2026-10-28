@@ -26,8 +26,14 @@ ROWS_DIR = "comms/live_review/rows"
 #: LTR-TIGHTEN-OPTIMIZE (comms/research/ltr_tighten_optimize/verdict.json; DESK-LIFECYCLE-S0, PR #20967):
 #: no stop-tighten cell or rule beat hold-to-bracket net of cost. Read by live_review_rows_watch,
 #: live_review_dispatch and desk_intake; each logs the row as ADVICE_ONLY_VERDICT so it stays graded.
-ADVICE_ONLY_ACTIONS = ("tighten_sl",)
-ADVICE_ONLY_VERDICT = "tighten_advice_only"
+#: 2026-10-28 ~21:07Z EXTENDED to every in-trade class (operator popup to ask A1, verbatim "Advice-only until
+#: tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY): each class is
+#: recorded and graded but not executed until its OWN registered test passes (OOS, vs hold AND a matched random
+#: intervention of the same class, net of cost; docs/plans/desk-v1-production-plan-2026-10-29.md § 5b).
+#: GRADUATION = removing ONE class from this tuple AND from MD-TRADE-DESK functions.in_trade.advice_only in the
+#: same PR, citing that class's committed passed-test record (tests/test_tighten_advice_only.py pins equality).
+ADVICE_ONLY_ACTIONS = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
+ADVICE_ONLY_VERDICT = "advice_only"
 
 #: ``git(*args) -> (returncode, stdout-or-stderr)``, the live_review_rows_watch seam.
 Git = Callable[..., Tuple[int, str]]
