@@ -1,0 +1,13 @@
+{
+ "_comment": "Rows on the append-only live-review/rows branch dispositioned as KILLED: never mirrored to main's reviews.jsonl, reported by scripts/ops/live_review_rows_mirror.py under `killed` with this reason instead of being schema-refused on every run. The branch cannot take a row back, so this list is the disposition record. Add an entry only with a stated reason and what supersedes it.",
+ "killed": [
+  {
+   "review_id": "LR-20261026T2311Z-pkg-6a8e3fb325464be3",
+   "reason": "lane error: the review_id names gld_pullback_1h package pkg-6a8e3fb325464be3 but the body is ada_pullback_2h package pkg-465a5d7d27644027 built from the wrong template (no_recommendation / insufficient_n on a real-money row, outcome_table_source of an 08:15Z table). Not repairable without fabricating a review; the same reviewer recorded it as a lane error in the superseding row's context_flags ('must not be mirrored to main').",
+   "superseded_by": "LR-20261026T2312Z-pkg-6a8e3fb325464be3",
+   "rows_branch_commit": "8fa3a811e",
+   "killed_at": "2026-10-27T19:50:00Z",
+   "killed_by": "lane LTR-PACKET-ECHO (session_01AFoLuHcvJ6f3ifA6ntjmVF), dispatched by Manager Session 2026-10-27a"
+  }
+ ]
+}

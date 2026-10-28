@@ -22,6 +22,9 @@ name: live-review-rows-mirror
 # the apply, which reads the pinned rows-branch commit directly.
 # A rows-branch row the checker's rules refuse is skipped as `schema: ...` (visible in the run summary)
 # and does not fail the run: the branch is append-only, so it would stay red forever.
+# LTR-PACKET-ECHO (2026-10-27): a packet_sha mismatch is `packet_sha: ...`: ::error plus ONE ops-flags
+# comment per review_id (Prime Directive rule 7: refuse, keep running, one flag). Rows listed in
+# comms/live_review/killed_rows.json on main are reported as `killed` with their reason, never mirrored.
 # LTR-5 / DESK-9-GRADING: after the mirror, every review whose trade has CLOSED is priced against its
 # counterfactual (scripts/ops/live_review_grade.py --live --write-outcomes -> comms/live_review/outcomes.jsonl,
 # idempotent by review_id) so grading runs on this schedule instead of whenever a session remembers (the
@@ -64,12 +67,19 @@ jobs:
 
       - name: Mirror new rows by review_id
         id: mirror
+        env:
+          # LTR-PACKET-ECHO: a packet_sha refusal (or a missing/differing cited file) raises ONE ops-flags
+          # comment per review_id (deduped by hidden markers) instead of a quiet ::warning.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -o pipefail
           pip install --quiet pyyaml
           git fetch --no-tags origin live-review/rows
           rc=0
-          python3 scripts/ops/live_review_rows_mirror.py --rows-ref origin/live-review/rows \
+          FLAG_PR=$(python3 -c 'import yaml;print(yaml.safe_load(open("scripts/research/research_watchdog.yaml"))["ops_flags"]["pr_number"])')
+          python3 scripts/ops/live_review_rows_mirror.py --rows-ref origin/live-review/rows --flag-pr "$FLAG_PR" \
             | tee mirror.json | tee -a "$GITHUB_STEP_SUMMARY" || rc=$?
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           echo "mirrored=$(python3 -c 'import json;print(json.load(open("mirror.json")).get("mirrored",0))')" >> "$GITHUB_OUTPUT"

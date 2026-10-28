@@ -1,6 +1,6 @@
 id: RQ-20261026-e535-03
 title: 'Desk D-S0 entry generation (arm 1): on masked point-in-time scan packets, do Claude''s proposed entries earn a positive net R per capital-day, beat a random entry with the same bracket geometry at random times on the same symbols, and hold in >= 3 of 4 folds, net of the full cost stack?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -16,15 +16,15 @@ why_this_matters: >-
   DESK-18-GEN-REPLAY-S0 / design section 8.1, entry generation: the desk's first role and the one that decides whether a Claude-driven desk is worth running. A live or paper book never establishes edge; this is Stage 0 for the role. It
   isolates timing (the baseline keeps the desk's own bracket) from bracket choice, and the subset unit -04 isolates novelty (not a re-labelling of the strategies). Operator 2026-10-26 ~13:25Z: get the trading desk running this week.
 power:
-  expected_n: 375
-  min_detectable_effect: 0.21
+  expected_n: 732
+  min_detectable_effect: 0.15
   effect_units: R
   sd: 1.4
   design: one_sample
   alpha: 0.05
   power: 0.8
   basis: >-
-    sd 1.4 is INFERRED from a MEASURED null: a local preview run of this driver's `baselines` mode on 2026-10-26 (the unit RQ-20261026-e535-02 reproduces it) gave a pooled sd of 1.378 R over 36,000 random market entries, six brackets, six symbols, both
+    RE-DECLARED 2026-10-27 (research-ops 19:30Z, a power edit; the decision_rule is untouched) from the MEASURED judged-1 run: 732 filled proposals in subset all (DESK-18C scratch scoring, PR #20594), replacing the 0.25 proposals-per-packet assumption. MDE = 2.8 x 1.4 / sqrt(732) = 0.145 R, declared 0.15. Earlier text follows. sd 1.4 is INFERRED from a MEASURED null: a local preview run of this driver's `baselines` mode on 2026-10-26 (the unit RQ-20261026-e535-02 reproduces it) gave a pooled sd of 1.378 R over 36,000 random market entries, six brackets, six symbols, both
     sides, net of the cost stack (per-bracket sd 0.93 .. 1.72; mean net R -0.06 .. -0.16, i.e. a random entry pays about its cost). It is a stand-in for the desk's unknown bracket mix, not the desk's sd; the first run records the OBSERVED sd.
     The design's n of about 780 (section 8.1) assumed sd 1.0: at the measured 1.378 the +0.10 R requirement is 1,490 and the +0.20 R requirement 373 (iid arithmetic (2.8 sd / effect)^2). expected_n 375 is
     1,500 scheduled packets x 0.25 filled proposals per packet, and the 0.25 is an ASSUMPTION, UNMEASURED: scenarios 0.10 -> 150, 0.25 -> 375, 0.50 -> 750; the schedule caps at 3,000 proposals (1,500 packets x 2), so +0.10 R is reachable only if the desk
@@ -59,14 +59,6 @@ decision_rule:
 requires_result:
   unit: RQ-20261026-e535-01
   verdict: pass
-blocked_on:
-- kind: work_item
-  ref: DESK-18B-JUDGE-RUN
-  what: >-
-    There are no Claude proposals to score. Nothing in the repo runs the judging step: the `packets` mode of the driver builds the masked packets and the judge protocol (JUDGE-PROTOCOL.md), but a bounded set of repo-less judging sessions must each read one packet and write one JSON row, and a lane must
-    run them, collect proposals.jsonl and commit it with mask-key.json. That is the only thing standing between this unit and a run, and it spends Claude tokens, so it is a manager dispatch with a stated ceiling and a pilot first.
-  clears_when: >-
-    comms/research/desk_gen_replay/judged-1/{mask-key.json,proposals.jsonl} are on main, the pilot has measured the proposals-per-packet rate and re-declared the power block from it, and RQ-20261026-e535-01 has landed with verdict pass. Then: git mv this file to research/queue/, remove blocked_on, set status: queued.
 masked_replay:
   population: >-
     As RQ-20261026-e535-01 (MEASURED 2026-10-26: six crypto USDT perps ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT; enabled rostered legs ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_eth_prop, trend_donchian_sol_prop, trend_donchian_xrp_4h, trend_donchian_xrp_adx25, xrp_pullback_2h). Re-parse before running.
@@ -125,4 +117,4 @@ related:
 - scripts/ops/desk_scan_packet.py
 - scripts/ci/check_desk_records.py
 - docs/plans/claude-trading-desk-DESIGN.md
-last_dispatched_at: null
+last_dispatched_at: '2026-10-27T23:40:48+00:00'
