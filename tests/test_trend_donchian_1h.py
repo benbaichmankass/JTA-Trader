@@ -48,11 +48,13 @@ def test_intent_priority_registered_below_established_roster():
     assert DEFAULT_PRIORITIES["trend_donchian_1h"] < DEFAULT_PRIORITIES["fade_breakout_4h"]
 
 
-def test_routed_to_demo_only():
+def test_retired_so_routed_nowhere():
+    # STRATEGY-STATUS-MODEL (2026-10-28): trend_donchian_1h is retired by record (enabled: false), so it is
+    # INACTIVE and on no roster (strategy-status-guard R-INACTIVE-ROSTERED). It sat on bybit_1 until then.
     import yaml
     accounts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
     bybit_1 = accounts["bybit_1"]["strategies"]
     bybit_2 = accounts["bybit_2"]["strategies"]
-    assert "trend_donchian_1h" in bybit_1, "must run on bybit_1 (demo)"
+    assert "trend_donchian_1h" not in bybit_1, "retired: not on bybit_1"
     assert "trend_donchian_1h" not in bybit_2, \
         "must NOT be on bybit_2 (real money) until promoted (Tier-3)"

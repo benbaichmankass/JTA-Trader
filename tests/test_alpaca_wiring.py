@@ -772,7 +772,8 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         "slv_pullback_1d", "gdx_pullback_1d",
         "tqqq_trend_long_1d", "qld_trend_long_1d",
         # sub-$100 proxy cells (2026-07-07, Tier-3) — SPLG/IAUM/SCHA paper soak.
-        "splg_trend_long_1d", "iaum_pullback_1d", "scha_trend_long_1d",
+        # iaum_pullback_1d left 2026-10-28 (STRATEGY-STATUS-MODEL): production on alpaca_live, not general paper.
+        "splg_trend_long_1d", "scha_trend_long_1d",
         # DEMO-FLOOR RULE 2026-10-27 (operator rule relayed by the manager; Tier-3, held PR): uso_trend_1h returns to its demo floor.
         # (qqq/spy/tlt_pullback_1h stay off: same symbol as a 1d leg, no slice support here.)
         "uso_trend_1h",

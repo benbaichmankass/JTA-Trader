@@ -44,11 +44,14 @@ except ImportError as exc:  # pragma: no cover
 
 #: Non-retired legs on no book, BY NAME, each with why and the row that owns the decision. Adding a
 #: name here is a roster decision, not a test edit. Measured 2026-10-28 on main (strategy_status.py).
+_CUT = "cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548); not retired. "
 UNHOMED: Dict[str, str] = {
-    leg: ("cut from alpaca_paper 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548), before the "
-          "2026-10-27 demo-floor rule; never restored and never retired. Testing (back on alpaca_paper) "
-          "or inactive (enabled: false) is an operator question — row STRATEGY-STATUS-MODEL")
-    for leg in ("gld_pullback_1h", "spy_pullback_1h", "qqq_pullback_1h", "tlt_pullback_1h")
+    **{leg: _CUT + ("Kept off at the 2026-10-27 demo-floor restore: same symbol as a 1d leg on alpaca_paper, "
+                    "which has no slice support (OPERATING-PLAN § 2 named exception 'blocked by a guard'). "
+                    "Owner: row STRATEGY-STATUS-MODEL (operator question 4)")
+       for leg in ("spy_pullback_1h", "qqq_pullback_1h", "tlt_pullback_1h")},
+    "gld_pullback_1h": _CUT + ("Not restored 2026-10-27; no reason found in config/accounts.yaml (GLD's 1d leg moved to ib_paper "
+                               "2026-10-25). Owner: row STRATEGY-STATUS-MODEL (operator question 4)"),
 }
 
 

@@ -44,8 +44,10 @@ docs/plans/OPERATING-PLAN-2026-09-21.md: "R4 becomes a DEMOTION gate, not a
 promotion gate. A mirror that carries identical strategies only ever holds data
 for legs already live, so it cannot gate entry. It gates exit." So this gate
 looks ONLY at legs already on a Stage-2 real-money roster (``bybit_2``,
-``alpaca_live``; ``ib_live`` has an empty roster) and can only ever REMOVE one.
-It has no code path that adds a leg anywhere.
+``alpaca_live``; ``ib_live`` has an empty roster) and can only ever REMOVE one
+from real money. Since STRATEGY-STATUS-MODEL (operator 2026-10-28) a production
+leg is not on general paper, so the cut MOVES it back onto its general paper
+account; that paper add is the only addition ``apply_proposal`` makes.
 
 WHAT R4 SAYS, AND WHAT THIS GATE ADDS TO IT
 -------------------------------------------
@@ -419,19 +421,78 @@ def remove_from_roster(text: str, account: str, leg: str) -> str:
     return "".join(lines)
 
 
+def add_to_roster(text: str, account: str, leg: str) -> str:
+    """Append ``leg`` to ``account``'s ``strategies:`` roster in accounts.yaml TEXT, preserving every other byte.
+
+    Single-line flow form (``strategies: [a, b]``) and block form (``- a`` lines) only. Anything else -- a
+    multi-line flow list, an absent roster, the leg already present -- raises ValueError: an edit it cannot
+    make exactly is an edit it does not make (the same contract as ``remove_from_roster``)."""
+    lines = text.splitlines(keepends=True)
+    start = end = None
+    for i, ln in enumerate(lines):
+        m = _ACCT_RE.match(ln.rstrip("\n"))
+        if m and start is None and m.group(1) == account:
+            start = i
+        elif m and start is not None:
+            end = i
+            break
+    if start is None:
+        raise ValueError(f"account {account!r} not found")
+    end = end if end is not None else len(lines)
+    for i in range(start, end):
+        raw = lines[i].rstrip("\n")
+        if not re.match(r"^\s+strategies:", raw):
+            continue
+        nl = "\n" if lines[i].endswith("\n") else ""
+        flow = re.match(r"^(\s+strategies:\s*)\[([^\]]*)\](.*)$", raw)
+        if flow:
+            items = [x.strip() for x in flow.group(2).split(",") if x.strip()]
+            if leg in items:
+                raise ValueError(f"{leg!r} is already on {account}'s roster")
+            lines[i] = f"{flow.group(1)}[{', '.join(items + [leg])}]{flow.group(3)}{nl}"
+            return "".join(lines)
+        if re.match(r"^\s+strategies:\s*(#.*)?$", raw):
+            last = indent = None
+            for j in range(i + 1, end):
+                item = re.match(r"^(\s+)-\s+([A-Za-z0-9_]+)\s*(#.*)?$", lines[j].rstrip("\n"))
+                if item:
+                    if item.group(2) == leg:
+                        raise ValueError(f"{leg!r} is already on {account}'s roster")
+                    last, indent = j, item.group(1)
+                elif lines[j].strip() and not lines[j].lstrip().startswith("#"):
+                    break
+            if last is None:
+                raise ValueError(f"{account}'s block roster has no item to append after")
+            lines.insert(last + 1, f"{indent}- {leg}\n")
+            return "".join(lines)
+        raise ValueError(f"{account}'s roster is not a single-line flow or block list; not editing it")
+    raise ValueError(f"{account} has no strategies: roster")
+
+
 def apply_proposal(root: Path, proposal: Dict[str, Any], leg: str) -> List[str]:
-    """Apply a resolver FIRE proposal: removals only. Verifies by re-parsing."""
-    if proposal.get("roster_add"):
-        raise ValueError(f"refusing a proposal that ADDS: {proposal['roster_add']}")
+    """Apply a resolver FIRE proposal: the removals, plus the ONE addition a demotion carries.
+
+    STRATEGY-STATUS-MODEL (operator 2026-10-28): a production leg is not on general paper, so S2 -> S1 MOVES it
+    back there (paper money). That add, to a general paper account, is the only one allowed; any other add is
+    refused. Verifies by re-parsing. Returns the accounts REMOVED from (the caller records the add)."""
+    adds = proposal.get("roster_add") or {}
+    bad = sorted(a for a in adds if a not in mr.DEMO_FLOOR_ACCOUNTS)
+    if bad:
+        raise ValueError(f"refusing a proposal that ADDS to a non-general-paper account: {adds}")
     path = root / mr.ACCOUNTS_REL
     text = path.read_text(encoding="utf-8")
     accounts = sorted(proposal.get("roster_remove") or {})
     for acct in accounts:
         text = remove_from_roster(text, acct, leg)
+    for acct in sorted(adds):
+        text = add_to_roster(text, acct, leg)
     parsed = (yaml.safe_load(text) or {}).get("accounts") or {}
     for acct in accounts:
         if leg in ((parsed.get(acct) or {}).get("strategies") or []):
             raise ValueError(f"post-edit parse still shows {leg} on {acct}")
+    for acct in adds:
+        if leg not in ((parsed.get(acct) or {}).get("strategies") or []):
+            raise ValueError(f"post-edit parse does not show {leg} on {acct}")
     path.write_text(text, encoding="utf-8")
     return accounts
 
@@ -520,11 +581,13 @@ def run(recent: Dict[str, Any], *, root: Path = REPO, window: str = WINDOW_LABEL
         firing_rel = f"{mr.FIRINGS_DIR_REL}/{stamp}-{d['leg']}-demote.json"
         _write_json(work / firing_rel, {
             "mandate": MANDATE_ID, "action": "remove", "leg": d["leg"], "accounts": removed,
+            "moved_back_to": sorted((res["proposal"].get("roster_add") or {})),
             "fired_at": now.isoformat(), "evidence": f"{mr.MIRROR_DIR_REL}/{d['leg']}.json",
             "source_run": run_rel, "rule": mr.T3_RULE_ID, "then": res["proposal"].get("then"),
         })
         written.append(firing_rel)
-        out["demoted"].append({"leg": d["leg"], "accounts": removed})
+        out["demoted"].append({"leg": d["leg"], "accounts": removed,
+                               "moved_back_to": sorted((res["proposal"].get("roster_add") or {}))})
     if apply:
         _git_add(work, written + [mr.ACCOUNTS_REL])
     else:

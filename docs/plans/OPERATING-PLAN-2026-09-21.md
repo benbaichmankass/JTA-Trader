@@ -157,9 +157,10 @@ help by cleaning up duplicate trades in the books and creating a more integrated
    window. Recommendation: accept that. The alternative is to keep proxies on general paper as a named exception.
 3. **`ib_live` has no mirror account.** It is `dry_run` with an empty roster today. Recommendation: no `ib_portfolio` until `ib_live`
    gets a leg. The guard refuses a leg there without a mirror, so the question returns the day it matters.
-4. **Four unhomed legs.** `gld_pullback_1h`, `spy_pullback_1h`, `qqq_pullback_1h` and `tlt_pullback_1h` were cut 2026-10-05 before the
-   floor rule. They are neither on a book nor retired, and are named in the guard. Recommendation: put them back on `alpaca_paper` as
-   testing ("even poor strategies are generating data"), or retire them by record.
+4. **Four unhomed legs.** `gld_pullback_1h`, `spy_pullback_1h`, `qqq_pullback_1h` and `tlt_pullback_1h` were cut 2026-10-05 and are
+   not retired. `spy`, `qqq` and `tlt` stayed off at the floor restore because a 1d leg already trades the same symbol on `alpaca_paper`,
+   which has no slice support. I found no reason for `gld_pullback_1h` in `config/accounts.yaml`. All four are named in the guard. Recommendation: `gld_pullback_1h`
+   back on `alpaca_paper` as testing now; the other three once `alpaca_paper` takes slices, or retire them by record.
 5. **Inactive in shadow or not:** the recommendation above is "not".
 
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)

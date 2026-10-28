@@ -53,3 +53,12 @@ def test_status_derivation():
 
 def test_guard_self_test_passes():
     assert guard.self_test() == 0
+
+
+def test_autoland_admits_only_the_move_back_to_general_paper():
+    import check_mandate_autoland as al
+    removals = {"bybit_2": ["x"], "bybit_portfolio": ["x"]}
+    assert al.moved_back(removals, {"bybit_1": ["x"]}) == {"bybit_1": ["x"]}
+    assert al.moved_back(removals, {"bybit_1": ["x", "y"]}) == {}      # an unrelated leg rides along: refused
+    assert al.moved_back(removals, {"bybit_2": ["x"]}) == {}           # real money is never an admitted add
+    assert al.moved_back({"bybit_portfolio": ["x"]}, {"bybit_1": ["x"]}) == {}  # mirror-only cut is not a demotion
