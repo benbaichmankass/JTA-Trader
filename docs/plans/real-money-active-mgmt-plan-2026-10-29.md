@@ -26,11 +26,42 @@ that we can start implementing it as a standard for real money strategies".*
    a TP that revises with the thesis, runs on 1 of 7 legs (`trend_donchian_eth_4h`).
 4. **The milestone is reached by:** (a) proving the declared trail on every account class; (b) adding a detector so it
    cannot stop silently; (c) a CI standard so every future real-money leg carries one; (d) TP-revision declares where a
-   pre-registered unit shows them cost-neutral. Four units are registered tonight, each about 25–35 minutes of runner
-   CPU.
+   pre-registered unit shows them cost-neutral. Six units are registered tonight, each about 25–35 minutes of runner
+   CPU. **Primary path since the operator's ~21:05Z message: a conservative hold-biased exit model (§ 0b).**
 5. **One leg has no measurable candidate:** `iaum_pullback_1d`, with n 35 on its own history. Its basic mechanic is the
    declared trail plus trail decay. That is cost-neutral by construction (it *is* the Stage-0 book). The operator chooses
    between keeping it as is and a GLD-proxy unit.
+
+## 0b. The PRIMARY path: a conservative, hold-biased exit model (operator, 2026-10-28 ~21:05Z)
+
+**Operator, verbatim (relayed by the manager):**
+- *"regarding the active management milestone - I'll settle for a conservative production ML that will mostly recommend
+  holding outside of edge cases"*.
+- And ~21:06Z: *"active management isn't only tightening - it can be any movement in either bracket triggered by
+  developments in the live market data"*.
+
+**How the work is split (agreed with lane `ML-LIVE-PROMOTION-PLAN`, session_01AFoLuNJWA5pu5sGQqcm5s3, ~21:10Z).**
+- **That lane owns the MODEL.** Its spec is P6 in `docs/plans/ml-live-promotion-plan-2026-10-29.md`: the action space,
+  the label pricing table and the pre-registered gate. Its build rows are `ML-EXIT-ACTIONGRID-LABELS` and
+  `ML-HOLDBIAS-EXIT-MODEL`. This plan cites P6 and does not re-specify it.
+- **This plan owns the MILESTONE and the WIRING** (row `RM-AM-EXIT-ML-WIRING`). The model's output is hold by default,
+  or one action from the full bracket action space. It becomes a `LiveReviewIntent` row and goes through
+  `live_review_apply.py` under `MD-TRADE-DESK`, then each account's own `RiskManager`. Both brackets are always present.
+- **Rollout order:**
+  1. shadow and advice-only on the demo floor (`bybit_1`, `alpaca_paper`), recording advice plus the priced outcome;
+  2. a class is executed only after it passes DESK plan § 5b's graduation test (PR #21023), with per-class `apply_mode`
+     on row `DESK-V1-CLASS-GATES`;
+  3. real money only on the operator's OK.
+- `tighten_sl` stays advice-only (operator popup ~20:35Z, *"Advice-only tightens"*).
+
+**A measured caution from the model lane (labels.jsonl, 12,500 rows).** At `now_r ≤ −0.5`, hold beat close by +0.089 R
+[−0.08, +0.28] (n 160). The loss-cut "edge case" is not shown to pay. The model must earn every non-hold action on its
+own gate.
+
+**What the primary path changes about § 0.** The declared trail (§ 1) stays every leg's floor mechanic: it is what the
+backtests measured. The hold-biased model sits on top of it as the live, market-triggered layer. The declared-rule units
+(§ 1, § 1b) remain the cheap way to give each leg a TP-revision mechanic this week, whether or not the model passes its
+gate in time.
 
 ## 1. Per-leg table (real money: `bybit_2`, `alpaca_live`; prop: `breakout_2`, `tradeify_1`, `velotrade_1`)
 
@@ -86,6 +117,35 @@ that we can start implementing it as a standard for real money strategies".*
   ETH 1h leg.
 - **Direction filter.** An entry gate, not active management. It goes to the owning row per the programme review.
 
+## 1b. The full bracket action space on the real-money legs, mapped to DESK plan § 5b classes
+
+DESK plan § 5b (PR #21023) is **the single per-class registry**, and this section extends it to the real-money legs
+rather than defining a parallel one. Two kinds of evidence answer two different questions:
+- **A declared rule.** This is a leg's YAML exit param, which changes the Stage-0 book itself. It is gated by the
+  `exit-refinement` gate on the leg's own config-exact history: Path A/B plus walk-forward, or, for TP-doctrine
+  compliance, the zero-materiality bar. It is Tier 3.
+- **A live, market-triggered intervention** on top of that book (LTR, desk, or the P6 model). It is gated by § 5b's
+  template: fresh OOS, n ≥ 126, a CI lower bound > 0 vs hold AND vs a matched random intervention, net of cost, per leg ×
+  regime.
+
+**Where § 5b's bar is stricter than this plan's TP units.** The TP units here use the doctrine's compliance
+(non-inferiority) bar. That is deliberate: the TP doctrine is binding, and it makes a P&L-neutral prediction the
+required answer. It is raised here, not resolved by editing either side (principles doc "What this is not").
+
+**Population.** Graded units per class are counted over the 7 real-money legs, from `research/queue` grading blocks on
+2026-10-28, with the keyword classification of § 1.
+
+| § 5b class | mechanic on the real-money legs | what is measured (Stage 0, declared rule) | gap → cheap test (1–2 days) |
+|---|---|---|---|
+| `tighten_sl` (rule) | declared ATR trail with X-R activation (all 7 legs); `trail_decay` (eth_4h, xrp_4h, iaum, eth_prop) | The trail IS the Stage-0 book. Tighter variants: gated-trail units 7 of 58 graded pass, some of them label studies rather than levers, the rest thin or uncorroborated; BE floor fails once per leg. | none: tighten is lowest priority (§ 0); the live class stays advice-only |
+| `widen_sl` (static) | a looser trail | eth_prop trail 4.5: 122.04 vs 76.02 R, 6 of 6 folds, prop EV ×3 PASS; xrp_pb trail6 wf_fail; most m20 trail_geometry cells honest_negative | Tier-3 packet `RM-AM-ETHPROP-TRAIL45` |
+| `widen_sl` (conditional: ATR expansion / sweep) | none | **No harness lever exists** (`trail_vol` takes `min`, so it can only tighten); S0 enum has no widen | build `RM-AM-WIDEN-HARNESS` (~1 day), then one unit per family |
+| `move_tp` extend | `donchian_measured_move` (eth_4h, declared and live); `tp_extend` (producer merged, undeclared) | eth_4h MM 115.95 vs 99.23 R; tp_extend X6 family read 3 of 3 | units **a7c3-01** (ada), **-02** (xrp_4h), **-04** (eth_4h entry TP); `TPX-XRP-DECLARE` |
+| `move_tp` pull in | none live; `stall_pull_in` is harness-only | xrp_4h R1 16.55 vs 14.30 R (n 68) PASS; `tp_retarget` pending on the other legs | units **a7c3-05** (xrp_pb), **-06** (ada); producer `RM-AM-TP-PULLIN-PRODUCER` |
+| `move_tp` to a level (entry target) | `tp_r` per leg | sol_prop K* 2.5R screen PASS_NONINFERIOR; eth_prop K* 2.5R INDETERMINATE | unit **a7c3-03** (sol_prop) |
+| `partial_close` | none | 0 graded passes on the 5 legs with partial units (§ 1) | none (T10; § 5b lowest priority) |
+| `close` (time / loss-cut) | xrp_4h stale exit 8 bars below 0 R (shipped) | the loss-cut is not shown (labels: hold beats close at ≤ −0.5 R by +0.089 R); time-stop holdouts not replicated | `P1-Q4-desk-losscut-ada-pb` (#20994); § 5b E1 |
+
 ## 2. Infra maturity checklist for active management (measured 2026-10-28 ~21:05Z)
 
 | area | item | read | state | row |
@@ -121,12 +181,14 @@ spends API credits. Units run on GitHub runners.
 |---|---|---|---|---|
 | **Wed 10-28 (tonight)** | This PR lands: 4 units, 11 rows. The research dispatcher can fire a7c3-01..04 (cpu_light, ~25–35 min each). | this lane → dispatcher | ~$10 (this lane); runner time | none |
 | **Thu 10-29** | Thursday planning adopts the milestone (§ 0). Dispatch `RM-AM-PROP-TRAIL-OBSERVE` (Sonnet) and `RM-AM-DUE-COULDNOTLOOK` (Sonnet). Read a7c3 results as they land. Merge the advice-only tighten PR. | manager; 2 lanes | ~$8 | **(1)** milestone scope as stated in § 0 (popup). **(2)** iaum option (a) vs (b). |
+| **Thu–Fri** | **Primary path:** `ML-LIVE-PROMOTION-PLAN` builds P6 (labels, then the hold-biased model and its gate). This plan's `RM-AM-EXIT-ML-WIRING` (Opus) builds the intent → LTR apply wiring against a constant-hold stub, in shadow on `bybit_1` / `alpaca_paper`. `RM-AM-WIDEN-HARNESS` (Opus, ~1 day) and `RM-AM-TP-PULLIN-PRODUCER` (Opus, Tier 2, inert) build. Units a7c3-05/-06 run. | model lane; 3 build lanes | ~$30 | **(10)** Tier-2 merge of the pull-in producer (inert by config). |
 | **Fri 10-30** | `RM-AM-TRAIL-EXPECTED-DETECTOR` (Opus) and `RM-AM-STANDARD-GUARD` (Opus) build. For each a7c3 PASS (doctrine read clean), draft the one-line declare PR (HOLD). If the prop trail reads BROKEN, file the Tier-2 fix. | 2 lanes; manager | ~$16 | **(3)** each data-backed declare: the manager may ship and notify under § Data-backed Tier-2/3; a popup only if the read is ambiguous. **(4)** Tier-2 prop trail fix, if needed. |
 | **Sat–Sun 10-31..11-01** | Declares deploy (git-sync), with a deployed-SHA check. The first live TP amend per newly declared leg is the mechanical soak (1–2 trades). xrp_pb: the second closed trade unlocks `TPX-XRP-DECLARE`. | manager | ~$3 | **(5)** `TPX-XRP-DECLARE` (operator's own condition). |
 | **Mon 11-02** | eth_prop trail 4.5 packet once the prop trail is observed; sol_prop prop EV re-run at TP 2.5 if a7c3-03 passed. Alpaca read-back (`AMEND-PARITY-ALPACA-TRAIL-READBACK`). | lane; manager | ~$6 | **(6)** eth_prop trail 3.5 → 4.5. **(7)** sol_prop TP 6 → 2.5 (prop superset). **(8)** the Alpaca read-back (T3, queued). |
+| **Mon–Tue** | If P6 passes its gate: shadow model advice on the demo floor shows ≥ 1 priced non-hold call per class it emits; ask the operator about real-money advice-only. If P6 has not passed: the milestone stands on the declared mechanics (trail + TP revision), and the model carries into next week. | manager | ~$3 | **(11)** model advice on real money (advice-only; execution per class only after § 5b). |
 | **Tue 11-03** | Milestone readout: per leg, mechanic declared / observed / evidence ref, detector and guard live. The standard guard baselines any remaining debt as visible lines (adding a real-money line is the operator's act). | manager | ~$3 | **(9)** the guard's baseline lines for real-money and prop debt. |
 
-Total ≈ $46 plan spend over the week, plus runner time.
+Total ≈ $79 plan spend over the week, plus runner time and the model lane's own budget.
 
 **Done when (row `RM-ACTIVE-MGMT-MILESTONE`):**
 - every real-money leg has its trail OBSERVED amending on every account class that carries it, or a filed break;
