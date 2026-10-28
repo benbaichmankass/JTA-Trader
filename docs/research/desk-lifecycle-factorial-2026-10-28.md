@@ -284,6 +284,13 @@ Check-ins per trade = the HOLD-path load x the pilot's managed / hold ratio 0.47
 | C. C4E only, powered for ±0.10 R | 520 | ~3,170 | ~$178 | ±0.10 R |
 | D. C4E only, all 732 pairs | 732 | ~4,470 | ~$250 | ±0.085 R |
 
+**DECIDED — option C** (operator 2026-10-28 07:05Z, popup verbatim *"C: 520 pairs, after reset (Recommended)"*, relayed by
+the manager): **policy C4E x 520 pairs** (the first 520 of the seeded order, seed 20261031; the pilot's 20 pairs are its first 20),
+resolving about ±0.10 R, ~$178 at $0.056 per check-in. **Why:** the pilot measured Claude's paired management dR sd at 1.06–1.18 R,
+so 200 pairs per arm would resolve only ±0.16 R. C1E and E are not run in RQ-20261028-d1f5-02 (registered for a later unit if funded).
+The registration was amended to option C before any full-run data existed; the full run starts after the ~18:00Z reset on the manager's GO,
+with walkers batched to minimise cache cost (fewer trades per judge, § 7.3).
+
 Every row halves if the judge carries ~5 trades instead of 10 (INFERRED; measure on the first batch). The pilot's 20 pairs are
 reusable in any option (the protocol and packet builder are unchanged since the pilot; the channel 10 / 20 amendment touches
 only the scorer). The rule arms, M0 and M1 cost nothing at any n.

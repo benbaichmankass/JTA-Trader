@@ -19,7 +19,7 @@ why_this_matters: >-
   existing strategies. Entry-only evidence exists (RQ-20261026-e535-03: S3 +0.006 R, CI -0.19..+0.19, indeterminate) and the information ceiling found no 1h-packet entry edge (docs/research/desk-edge-program-2026-10-27.md).
   This unit asks the question entry-only tests cannot: whether the desk's value is in management. Design: docs/research/desk-lifecycle-factorial-2026-10-28.md (sections 1-6 committed before any judging).
 power:
-  expected_n: 200
+  expected_n: 520
   min_detectable_effect: 0.10
   effect_units: R
   sd: 0.7
@@ -27,7 +27,7 @@ power:
   alpha: 0.05
   power: 0.8
   basis: >-
-    n = pairs per Claude arm (400 trades). sd 0.7 R MEASURED 2026-10-28 as the paired dR sd of the token-free active rule arms on the 732 Claude entries (Chandelier 3 x ATR 0.708; range 0.52-0.96;
+    OPTION C (operator 07:05Z): n = 520 pairs (1,040 trades), one Claude arm (C4E); at the MEASURED paired sd ~1.1 R, (2.8 x 1.1 / 0.10)^2 x 1.1 ~ 1,040 trades. (Superseded basis: n = 200 pairs per arm, 400 trades.) sd 0.7 R MEASURED 2026-10-28 as the paired dR sd of the token-free active rule arms on the 732 Claude entries (Chandelier 3 x ATR 0.708; range 0.52-0.96;
     comms/research/desk_lifecycle/explore/explore.json); week-cluster design effect ~1.1 MEASURED on the same arm. (2.8 x 0.7 / 0.10)^2 x 1.1 = 422 trades ~ 211 pairs; 200 pairs resolves about +-0.10 R. The run grades on
     the OBSERVED cluster CI. PILOT UPDATE 2026-10-28 (design doc 7.3, n = 20 pairs): Claude's paired management dR sd MEASURED 1.06-1.18 R, so 200 pairs resolves ~+-0.16 R and +-0.10 R needs ~520 pairs;
     full-run options with the MEASURED $0.056 per check-in in design doc 7.4 (decided Thursday). Check-in load MEASURED on the HOLD path: C1E 11.05, C4E 6.22, E 4.88 per trade -> ~8,860 check-ins for the three arms.
@@ -40,6 +40,9 @@ decision_rule:
   registered_before_run: true
   version: 2
   reregistered_note: >-
+    OPERATOR DECISION 2026-10-28 07:05Z (popup, verbatim "C: 520 pairs, after reset (Recommended)", relayed by the manager): the full run is option C, policy C4E (every 4 bars +
+    events) x 520 pairs (the first 520 of the seeded order, seed 20261031; the 20 pilot pairs are its first 20), resolving about +-0.10 R (~$178 at the MEASURED $0.056 per check-in). Reason: the pilot MEASURED Claude's paired
+    management dR sd at 1.06-1.18 R, so 200 pairs per arm would resolve only +-0.16 R. Policies C1E and E are NOT run in this unit (registered for a later unit if funded); Holm is over a family of one. Amended before any full-run data.
     v1 (fixed check-ins at bars held 4/12/24/36) was registered 2026-10-28 ~06:20Z and is SUPERSEDED, before any v1 result was scored, by the operator's active-management rule relayed at 06:25Z (docs/plans/claude-trading-desk-DESIGN.md
     section 8.1). v1's 78 judged check-ins are kept as a record (design doc section 7.2) and not reused.
   statistic: >-
@@ -51,8 +54,7 @@ decision_rule:
     alongside: the section-3 factorial contrasts per policy; per-check-in ablations (each Claude action vs that answer replaced by hold; each Claude hold vs that answer replaced by close) by action, trigger tag, bars-held bucket
     and R state; action rate; strata volatility tercile at entry and side.
   rule: >-
-    For each Claude arm (policy) and entry source: PASS IF n >= 126 pairs AND dR vs M0 has mean > 0, CI lower > 0 and > 0 in >= 3 of 4 folds (each n >= 20) AND dR vs M1 has CI lower > 0, with Holm across the three policies within the
-    family; label 'judgement' IF dR vs B3 also has CI lower > 0, else 'pass_rule'. A PASS is provisional until it re-passes once on a fresh window the manager allocates (proposed: design doc section 0.1c) (random entries x the same arm; RESEARCH-CONFIRM-FRESH-WINDOW).
+    For the Claude arm under C4E (option C; C1E and E not run here) and each entry source: PASS IF n >= 126 pairs AND dR vs M0 has mean > 0, CI lower > 0 and > 0 in >= 3 of 4 folds (each n >= 20) AND dR vs M1 has CI lower > 0, with Holm over the family (one arm under option C); label 'judgement' IF dR vs B3 also has CI lower > 0, else 'pass_rule'. A PASS is provisional until it re-passes once on a fresh window the manager allocates (proposed: design doc section 0.1c) (random entries x the same arm; RESEARCH-CONFIRM-FRESH-WINDOW).
     FAIL IF n >= 126 AND dR vs M0 CI upper < 0. INDETERMINATE otherwise, with the observed paired sd and the n that would resolve +-0.10 R; never a lowered bar. An arm that beats M0 but not M1 is reported 'acting helps, timing
     does not'. VOID (re-judge the affected trades) IF the -01 self-check is not a landed pass, OR > 10% of answers are invalid, OR any judge transcript holds a tool call other than the registered walk command. The registered numbers
     (126, 3 of 4, 20, the policies and their event definitions, the action bounds, the menu, M1's 50 draws, the seeds 20261028 / 20261029 / 20261031) are not changed after any result. Pilot rows (the first 20 pairs) are reused only
@@ -75,7 +77,7 @@ blocked_on:
 - kind: work_item
   ref: DESK-LIFECYCLE-S0
   what: >-
-    Judging is a plan-session lane task (no API credits; the token-free dispatcher cannot judge): ~8,860 walked check-ins for the three policies on 200 pairs (MEASURED load under HOLD; design doc section 0.4: ~$90-220 INFERRED, fallback C4E + E on 126 pairs ~$30-70), after a 20-pair C4E pilot (~$3-6). Needs the manager's spend decision.
+    Judging is a plan-session lane task (no API credits; the token-free dispatcher cannot judge): OPTION C (operator 07:05Z): C4E x 520 pairs, ~3,170 walked check-ins, ~$178 at the MEASURED $0.056 per check-in (design doc 7.4); runs after the ~18:00Z reset on the manager's GO, walkers batched with few trades per judge to cut cache cost. The 20-pair pilot is done (design doc 7.3).
     The strategy arm needs its loader (forced-exit entries from comms/strategy_evidence) built on the same engine.
   clears_when: >-
     -01 has landed with verdict pass AND the manager approves the spend AND a judging lane has written decisions for every pending packet (step reports pending 0). Then: git mv to research/queue/, fill run.command with the
