@@ -1,0 +1,87 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "732 judged-1 Claude fills (comms/research/desk_gen_replay/judged-1) and one matched random partner each, ADAUSDT, AVAXUSDT, BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT 1h Binance Vision USD-M perp klines",
+  "n": 732,
+  "measurement": {
+    "verdict": "pass",
+    "read_state": "measured",
+    "clauses": {
+      "a_hold_equals_simulate": {
+        "ok": true,
+        "max_abs_diff_r": 0.0,
+        "n_trades": 1464
+      },
+      "a3_hold_under_every_policy": {
+        "ok": true,
+        "max_abs_diff_r": 0.0,
+        "policies": [
+          "C1E",
+          "C4E",
+          "E"
+        ]
+      },
+      "a2_judged1_reproduced": {
+        "ok": true,
+        "n": 732,
+        "mean_net_r_at_e535_fee": 0.15886636006268712,
+        "landed": [
+          732,
+          0.15886636006268712,
+          7.5
+        ]
+      },
+      "b_no_lookahead": {
+        "ok": true,
+        "identical": 38,
+        "tried": 38
+      },
+      "c_leak_scan": {
+        "ok": true,
+        "packets": 964,
+        "with_finding": 0,
+        "positive_control_findings": [
+          "date string '2026-01-05'",
+          "epoch-seconds number 1770958800",
+          "real price 0.2595",
+          "source token 'random'",
+          "symbol token 'adausdt'"
+        ]
+      },
+      "d_planted": {
+        "ok": true,
+        "oracle": {
+          "n": 732,
+          "weeks": 33,
+          "mean": 0.34171218016801885,
+          "sd": 0.5777264068550899,
+          "ci95": [
+            0.30321684920729974,
+            0.38725472327083593
+          ]
+        },
+        "anti_oracle": {
+          "n": 732,
+          "weeks": 33,
+          "mean": -0.5515802970196516,
+          "sd": 0.8922586841154027,
+          "ci95": [
+            -0.6654579617114315,
+            -0.4295423369097426
+          ]
+        },
+        "null_false_positives_of_20": 1
+      }
+    },
+    "pairs": 732
+  },
+  "note": "lifecycle harness self-check (RULE-RQ20261028-D1F5-01-LIFECYCLE-SELFCHECK)",
+  "data_inputs": [
+    "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+    "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+    "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+    "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+    "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+    "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+  ]
+}
