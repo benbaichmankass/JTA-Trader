@@ -11,8 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "08:50Z manager follow-up on SOL trail-not-ratcheting: NOT confirmed. SOL trades 6761-6763 opened 08:30:17Z on a 1h leg, so no closed bar exists since entry and the trail has had nothing to ratchet on; the telemetry peak 4.68R and '157 bars since peak' (157h) cannot belong to a ~16 min old trade (same since_entry full-frame fallback as BTC). Venue SL still initial -1R is EXPECTED. Other trailing legs show stops moved off -1R (iaum -0.20R, gdx -0.46R, spy -0.40R, mgc -0.85R, mhg -0.41R at 08:46Z), so the ratchet works where a closed bar exists. Closing observation: after SOL's first closed bar since entry, check its SL moved only if a real since-entry high warrants it.",
-  "updated_at": "2026-10-28T08:46:45Z",
+  "note": "Basis for the figures above: n=10 open position_telemetry rows read 2026-10-28T08:46Z (diag position_telemetry?limit=300, 300 rows); stop_at_R = open_r - r_to_stop per row; the 2 flagged rows are trend_donchian BTCUSDT bybit_1 and trend_donchian_sol_prop SOLUSDT bybit_2.",
+  "updated_at": "2026-10-28T08:59:18Z",
   "updated_by": "session_01AFoLuLcTbbyZEPnquZdVAf",
+  "roadmap": "L-ATM",
   "_seq": 722
 }
