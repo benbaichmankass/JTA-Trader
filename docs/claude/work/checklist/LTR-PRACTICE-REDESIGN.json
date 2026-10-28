@@ -1,0 +1,22 @@
+{
+  "id": "LTR-PRACTICE-REDESIGN",
+  "title": "PROPOSED (Tier 2): LTR trigger redesign per practice: bar-close clock via a near-free pre-screen, adverse-side R / stall / momentum / level triggers, Claude only on flagged checkpoints batched per wake, per-trigger grading vs hold + matched random checkpoint",
+  "phase": "build",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From PRACTICE-RESEARCH-TRADE-MGMT-AI \u00a7 E (docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md). MEASURED gap: config/live_trade_review.yaml + src/runtime/live_review_due.py at 4329698a1 have no clock below 24h (daily_floor), no adverse-side R trigger, no stall/momentum/level trigger; 4 of 10 triggers favourable-only; swing/vol_regime symmetric. Manager-observed 2026-10-28 overnight: hourly passes found nothing due across 11 packages. PROPOSAL ONLY: needs operator OK (Tier 2: config + due gate). FIRST STEP (Tier 1, no behaviour change): add trigger-type + escalation logging and a report-only pre-screen that prices alternatives every closed bar via scripts/research/live_review_outcomes.py, to measure the escalation rate before any config change. Budget arithmetic in \u00a7 E.3 (INFERRED).",
+  "updated_at": "2026-10-28T06:51:48Z",
+  "updated_by": "session_01AFoLuML1AwiQNaDn7uKHXj",
+  "roadmap": [
+    "L-ATM",
+    "L-DESK"
+  ],
+  "_seq": 749
+}
