@@ -122,8 +122,10 @@ def test_committed_ada_corpus_stage0_trades_are_found_and_replay():
     assert cpath, "committed ADAUSDT 2h candles"
     res = lro.build_table(trades, lro.load_candles(cpath), side=None, open_r=3.44, peak_r=3.4,
                           bars_held=17, atr_stop_mult=1.5, tighten=["atr:1.5"])
-    assert res["population"]["comparable"] == 7 and res["population"]["mfe_replay_mismatch"] == 0
-    assert res["read_state"] == "insufficient_n"             # n=7 < 20: never a number from 7 trades
+    # comparable is 8 on the 2026-10-28 re-baselined record (#20966 moved source_run to runs/2026-10-28;
+    # it was 7 on runs/2026-10-18). The count follows the committed record, so re-read it on a re-baseline.
+    assert res["population"]["comparable"] == 8 and res["population"]["mfe_replay_mismatch"] == 0
+    assert res["read_state"] == "insufficient_n"             # n=8 < 20: never a number from 8 trades
     assert all(o["mean_r"] is None for o in res["options"])
     floor5 = lro.build_table(trades, lro.load_candles(cpath), side=None, open_r=3.44, peak_r=3.4,
                              bars_held=17, atr_stop_mult=1.5, tighten=["atr:1.5"], n_floor=5)
