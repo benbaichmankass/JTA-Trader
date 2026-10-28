@@ -31,7 +31,7 @@ repo has 404 of them. So:
 
 | Input | How |
 |---|---|
-| The review | `comms/reviews/performance-review-<stamp>.json` — the one that triggered this run (named in your dispatch). Use `strategy_performance`, `proposed_tweaks`, `anomalies`, `paper_book_tracker`, `real_money_allocation_benchmark`, `research_pipeline`, `prop_trade_quality`. |
+| The review | `comms/reviews/performance-review-<stamp>.json` — the one that triggered this run (named in your dispatch). **Start from its `calls[]` and `analysis.questions[]`** (two-layer reviews, 2026-10-28): your job is to TEST the hypotheses the review left `untested` or could not settle in-session, not to redo its checks or analysis. Also use `checks{}`, `strategy_performance`, `proposed_tweaks`, `anomalies`, `paper_book_tracker`, `real_money_allocation_benchmark`, `research_pipeline`, `prop_trade_quality`. |
 | Grades | `comms/claude_strategy_scores.jsonl` — rows with `reviewed_at` in the window. Grade ≠ outcome; the disagreement cells are where lessons live. |
 | Live trades | `diag-data` skill. Pull the window's closed trades and order packages per the same table as `.claude/skills/performance-review/SKILL.md` § "Fetching trade data" (batch diag paths into ONE issue; `limit` caps at 200, page with `&strategy=`). Run the artifact pre-filter (`scripts/analysis/classify_paper_records.py`, JOURNAL-shaped rows) — **bucket-A rows drive every statistic**; bucket-C only flagged as reconstructed. |
 | Provenance | Read `docs/CLAUDE-RULES-CANONICAL.md` § "The row you are reading outranks the label in it" before concluding anything from a stored field. `strategy_liveness.py <strategy>` before quoting a rate as current. |
@@ -115,7 +115,7 @@ the expensive one (see § Cost).
 
 ### Track 2 — LESSONS: the wider-context post-mortem (not grading)
 
-*Operator point 2.* Grading already happened. Here you read the window's bucket-A trades
+*Operator point 2.* Grading already happened, and a two-layer review (2026-10-28) has already asked its 3–7 material questions: skip any cut below that its `analysis.questions[]` already answered with a test, and cite it. Here you read the window's bucket-A trades
 **as a population** and ask what the system is good and bad at. Cover every cut below;
 state the population (n, window, accounts, bucket) beside every number, and mark
 estimated/unmeasured P&L as such (`journalTrust`, `provenance.classify_pnl`):
