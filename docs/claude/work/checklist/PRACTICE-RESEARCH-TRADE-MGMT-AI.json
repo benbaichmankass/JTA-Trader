@@ -6,26 +6,26 @@
   "owner": null,
   "lane": "session_01AFoLuML1AwiQNaDn7uKHXj",
   "model": null,
-  "ceiling_usd": 20,
+  "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 1,
   "prs": [
     20844
   ],
   "blocked_on": [],
-  "note": "Lane PRACTICE-RESEARCH-TRADE-MGMT-AI dispatched by Manager Session 2026-10-27a (session_01AFoLuJi1vLTnYv9LbP6539). Ceiling 20 USD. Research only (web + repo). Doc docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md (55 sources, tagged ACAD/PRAC/VEND). Feeds DESK-LIFECYCLE-S0 (F.1) and ML-PROGRAMME-PLAN (F.2). First draft pushed and manager woken 2026-10-28 06:33Z. 2026-10-28: full doc landed via PR #20844 (self-land Tier 1). Follow-ups filed: RESEARCH-PRACTICE-PRECEDENT-FIELD, RESEARCH-INTERVENTION-CONTROL-SET (queued). Spend: web search/fetch only, on-plan, well under the 20 USD ceiling; no Anthropic API credits. HANDOFF to DESK-LIFECYCLE-S0 (no checklist row of its own found 2026-10-28): doc \u00a7 E row 3 recommends a replay-only arm 'TP far, Chandelier trail does the work' on trend legs to MEASURE the TP doctrine's cost there (any live change is Tier 3, operator-owned). Not run by this lane.",
-  "updated_at": "2026-10-28T06:42:56Z",
+  "note": "Lane PRACTICE-RESEARCH-TRADE-MGMT-AI dispatched by Manager Session 2026-10-27a (session_01AFoLuJi1vLTnYv9LbP6539). Ceiling 20 USD. Research only (web + repo). Doc docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md (55 sources, tagged ACAD/PRAC/VEND). Feeds DESK-LIFECYCLE-S0 (F.1) and ML-PROGRAMME-PLAN (F.2). First draft pushed and manager woken 2026-10-28 06:33Z. 2026-10-28: full doc landed via PR #20844 (self-land Tier 1). Follow-ups filed: RESEARCH-PRACTICE-PRECEDENT-FIELD, RESEARCH-INTERVENTION-CONTROL-SET (queued). Spend: web search/fetch only, on-plan, well under the 20 USD ceiling; no Anthropic API credits. HANDOFF to DESK-LIFECYCLE-S0 (no checklist row of its own found 2026-10-28): doc \u00a7 E row 3 recommends a replay-only arm 'TP far, Chandelier trail does the work' on trend legs to MEASURE the TP doctrine's cost there (any live change is Tier 3, operator-owned). Not run by this lane. 2026-10-28 ~07:10Z scope additions (manager relays of operator 06:40-06:45Z, ceiling raised to 30 USD): \u00a7 E live trade review vs practice (proposal, row LTR-PRACTICE-REDESIGN, Tier 2); \u00a7 C.4 model training principles + current-pipeline check (row ML-TRAINING-PRINCIPLES-GAPS); two-track structure (TRADING/MODEL); canonical list docs/reference/trading-and-model-practice-principles.md with pointers in ml-review, model-training, exit-refinement, trading-desk, live-trade-review skills; frontier-research skill gains the weekly Practice & methodology refresh, timing moved Sunday -> Wednesday after reset (ML-FRONTIER-PREP lane); scan-completeness gap row FRONTIER-SCAN-COMPLETENESS. Section renumbering: old E (differences table) is now F; old F (designs) is now G; the TP-far handoff is \u00a7 F row 3.",
+  "updated_at": "2026-10-28T06:51:58Z",
   "updated_by": "session_01AFoLuML1AwiQNaDn7uKHXj",
   "roadmap": [
     "L-DESK"
   ],
   "observation": {
-    "what": "PR #20844 merged to main with the practice-review doc readable there",
-    "how_to_check": "git cat-file -e origin/main:docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md",
+    "what": "PR #20844 merged to main with the practice-review doc, the canonical principles file and the frontier-research skill amendment readable there",
+    "how_to_check": "git cat-file -e origin/main:docs/reference/trading-and-model-practice-principles.md && git grep -q \"Practice & methodology refresh\" origin/main -- .claude/skills/frontier-research/SKILL.md",
     "due_by": "2026-10-30"
   },
   "writeback": {
-    "roadmap": "none: research-only lane, no milestone line changes (L-DESK ref carried)",
+    "roadmap": "none: research + skill text; no milestone line changes (L-DESK ref carried)",
     "arch": "none: no architecture change"
   },
   "_seq": 746

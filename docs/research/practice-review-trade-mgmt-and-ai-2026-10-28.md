@@ -25,6 +25,26 @@ Where this lane read only an abstract or a secondary summary, not the full paper
 
 ---
 
+## Two research tracks (operator decision 2026-10-28, binding): how this review is organised
+
+All research is one of two tracks. **TRADING** is how to trade better: strategies, entries, exits, active management,
+sizing, costs, venues. **MODEL** is how to build a better AI trader: data, labels, features, training, evaluation,
+model families, infra, the desk-as-teacher pipeline. Research-ops methodology applies to both.
+
+| track | sections | canonical principles |
+|---|---|---|
+| **TRADING** | A (trade management practice), E (our live trade review vs practice), G.1 (the desk management test) | T1–T10 |
+| **MODEL** | B (ML at real firms), C.4 (our model training and evaluation), D (LLM / agentic trading), G.2 (the ML trade-management programme) | M1–M10 |
+| **RESEARCH-OPS (both)** | C.1–C.3, F (where we differ from practice), G.3 | R1–R6 |
+
+The numbered canonical list that skills point at is
+[`docs/reference/trading-and-model-practice-principles.md`](../reference/trading-and-model-practice-principles.md).
+The weekly refresh is owned by `.claude/skills/frontier-research/SKILL.md` § "Practice & methodology refresh". It runs
+on Wednesday after the weekly reset, in the ML-FRONTIER-PREP lane of the "Weekly review prep" routine, and each run
+has one output section per track.
+
+---
+
 ## 0. Executive summary: the 10 findings that matter most for our decisions
 
 1. **Exits are where professionals are measurably worst, and the standard test is a random counterfactual.**
@@ -103,7 +123,7 @@ Where this lane read only an abstract or a secondary summary, not the full paper
    strategies, and the gap grew with the number of backtests (Wiecki et al. 2016) [S42, ACAD]. Pre-registration cuts
    p-hacking only when it includes a full analysis plan [S49, ACAD]. **For us:** our guard-enforced pre-registration,
    trial ledger and holdout already match or exceed documented practice (our 2026-10-16 benchmark). The gap is a
-   standard *control set* for intervention tests, plus a declared practice precedent for each arm (§ C.3, § F.3).
+   standard *control set* for intervention tests, plus a declared practice precedent for each arm (§ C.3, § G.3).
 
 10. **The published evidence that LLM agents can trade is thin, and the best of it is negative to mixed.** Alpha Arena
     Season 1 (real money, $10k per model, crypto perps on Hyperliquid, Oct–Nov 2025): 4 of 6 frontier models lost money
@@ -116,7 +136,7 @@ Where this lane read only an abstract or a secondary summary, not the full paper
 
 ---
 
-## A. Active trade management in practice
+## A. Active trade management in practice [TRADING]
 
 ### A.1 What different kinds of firm actually do
 
@@ -206,7 +226,7 @@ analogue with a real sample.
 
 ---
 
-## B. AI/ML in the trading pipeline at real firms
+## B. AI/ML in the trading pipeline at real firms [MODEL]
 
 ### B.1 Where firms say they actually use ML (public record only)
 
@@ -292,7 +312,7 @@ trading confirms the plumbing but "usually cannot distinguish a modest edge from
 
 ---
 
-## C. Research operations and evaluation methodology
+## C. Research operations and evaluation methodology [RESEARCH-OPS, both tracks; C.4 is MODEL]
 
 **Most of this was benchmarked on 2026-10-16** in
 [`docs/research/research-ops-benchmark-2026-10-16.md`](research-ops-benchmark-2026-10-16.md) (23 sources: López de
@@ -362,9 +382,41 @@ could find positives). What the sources *do* give, assembled:
 3. **Group-by-trade CV with purging and embargo** for any model trained on check-in panels (§ B).
 4. **Prioritise the three queued benchmark rows.** `LIVE-DECAY-MONITOR` matters most for a desk that trades live.
 
+### C.4 Principles for our model training and evaluation [MODEL]
+
+*Operator, 2026-10-28 (via the manager): "so that we're also building our own models correctly". The numbered,
+one-line canonical form is
+[`docs/reference/trading-and-model-practice-principles.md`](../reference/trading-and-model-practice-principles.md)
+§ MODEL (M1–M10). This section gives the reasoning and checks our current pipeline against each principle.*
+
+**How the "current pipeline" column was established.** This lane READ the code at `origin/main` 4329698a1 (MEASURED
+by reading, not by running). It reads `ml/promotion/__init__.py` (documented WS4 gates), `ml/promotion/oos_edge.py`
+(purged WF-CV vs a constant baseline), `ml/promotion/attribution.py` (win = pnl > 0, AUC / Brier vs the base rate),
+`ml/datasets/labeling/triple_barrier.py`, and `ml/datasets/families/{setup,exit}_candidates.py`. Facts about coverage,
+the data chain and what is or is not trained come from lane `ML-COVERAGE-AUDIT`
+(`docs/research/ml-coverage-audit-2026-10-28.md` on branch `claude/ml-coverage-audit-20261028`, not yet on `main`
+when read). They are cited, not re-measured.
+
+| # | principle (sources) | current pipeline | verdict |
+|---|---|---|---|
+| M1 | Labels = the path-dependent, cost-net outcome of the exit policy actually traded [S50, S38] | Triple-barrier labelling exists (`setup_candidates`, `exit_candidates`, CUSUM-sampled). **`BarrierConfig.slippage` defaults to 0.0**, and no manifest under `ml/configs/` sets it (grep, 2026-10-28), so these labels are **gross**. The family's own docstring warns that candle barriers assume optimistic fills. The live-attribution label is binary win = pnl > 0, which ignores magnitude and cost | **Violation (partial):** labels are gross of cost, and the attribution label is binary |
+| M2 | Purged, embargoed WF / CPCV, grouped by trade [S50] | **Have:** `ml.experiments.splitters.iter_folds` (purged and embargoed WF-CV) used by `oos_edge.py`; `ml_bakeoff.py` uses purged walk-forward folds with an embargo. Grouping by trade for multi-checkpoint panels is not verified (no exit-management panel model exists yet) | **Compliant**, with a watch item for future check-in panels |
+| M3 | Leakage controls [S55, S53] | `leakage_test_passed` is a documented gate *string* in `PROMOTION_GATES` (evidence by reference). The frontier skill holds out bars after a pretrained model's release. Masked LLM packets are used in desk D-S0 units | **Partial:** the WS4 leakage gate is documentary, not computed |
+| M4 | Pre-registered rule plus analysis plan [S20, S49] | **Have** for research units (`check_research_queue_decision_rule.py`; `ml_bakeoff` blocks registered before the run). The registry's training cycles (daily retrains) are not pre-registered experiments, and need not be | **Compliant** for experiments |
+| M5 | Deflate for selection; fresh-window confirmation [S45–S48] | The `trial_ledger.py` counts configurations over the m20 corpus and E5 records that carry a backtest statistic. ML bake-off metrics (AUC, log-loss) are probably not counted (INFERRED from its population statement; not verified). There is no DSR or PBO in `ml/` (grep: 0 files) | **Gap:** ML experiment multiplicity is not deflated |
+| M6 | Beat random and simple-rule baselines at the same decision points, net of cost [S1, S20, S42] | `oos_edge.py` baseline = a **constant per-group mean**. Attribution compares Brier with the constant base rate. The `paper → advisory` gate "transaction_cost_evaluation_complete" is a documented string. No random-action or simple-rule decision baseline exists in `ml/` (grep for random/shuffle baselines: 0 files) | **Violation:** the bar is a constant predictor on a predictive metric, not decision value vs rules and random, net of cost |
+| M7 | Stratify by regime [S22, S4] | Regime features and regime cells exist (110 files mention regime). Stratified *evaluation* in the promotion gates is not verified | **Unverified** |
+| M8 | Cadence and trigger set as factors for trade-management models [S12, S1] | No trade-management model exists yet. The desk and ML programme lanes are designing them (§ G.1, § G.2) | **Not yet applicable**; build it in from the start |
+| M9 | Meta-model over the best rule; RL only as fine-tuning; no pure imitation [S19, S38, S39] | Meta-label manifests exist (`setup-candidates-metalabel-*`; `src/research/meta_label.py`). ML-COVERAGE-AUDIT reports that teacher-side desk and LTR records are "recorded → built into a dataset → never trained" (§ 1c of that audit). So nothing imitates the teacher yet, and nothing learns from it either | **Compliant by absence.** The risk is that the first desk student is built as imitation. § G.2 says how to avoid it |
+| M10 | Promote on OOS decision value net of cost vs incumbent, rule and random; teacher agreement never gates; CUSUM after promotion [S1, S43] | The `live_agreement` gate uses win = pnl > 0 agreement. The legacy WS4 `advisory → live-approved` gate lists "shadow_mode_clean_soak_at_least_7d", a **calendar** soak in a documented gate string. That may conflict with the soak doctrine (1–2 mechanical trades, never a date); INFERRED, not ruled on here. `LIVE-DECAY-MONITOR` (CUSUM) is queued | **Violation (partial)** plus **possible doctrine conflict** to raise |
+
+**Filed:** row `ML-TRAINING-PRINCIPLES-GAPS` (M1 gross labels, M5 ML multiplicity, M6 baselines and cost, M10 the
+calendar-soak string). It composes with, and does not duplicate, `ML-COVERAGE-AUDIT`'s gap list (data chain, coverage,
+the never-trained teacher records).
+
 ---
 
-## D. LLM and agentic trading: published results
+## D. LLM and agentic trading: published results [MODEL]
 
 ### D.1 Results, with an honest grade of the evidence
 
@@ -392,11 +444,89 @@ could find positives). What the sources *do* give, assembled:
 
 ---
 
-## E. What we are doing differently from practice, and is that justified
+## E. Our live trade review vs practice [TRADING]
+
+*Scope addition from the operator via the manager, 2026-10-28 ~06:45Z. The LTR is live and applying actions
+(`apply_mode: apply`, under MD-TRADE-DESK). **Every recommendation below is a PROPOSED change.** It would be Tier 2
+(`config/live_trade_review.yaml` plus the due gate in `src/runtime/live_review_due.py`). None of it is applied by this
+lane. Filed as row `LTR-PRACTICE-REDESIGN`.*
+
+### E.1 What the LTR does today (MEASURED by this lane, reading `config/live_trade_review.yaml` and `src/runtime/live_review_due.py` at `origin/main` 4329698a1; it agrees with the manager's read)
+
+| trigger | fires when | side |
+|---|---|---|
+| `r_milestone` | open R first reaches +1.0R, then every +1.0R | favourable only |
+| `new_peak` | peak R is at least 0.5R above the last reviewed peak | favourable only |
+| `giveback` | peak ≥ 1R and giveback ≥ max(0.5R, 30% of peak) | adverse, but only after a ≥1R peak |
+| `near_target` | 0.5R or less to the TP | favourable only |
+| `daily_floor` | 24h since the last review (all 12 listed accounts) | time, 24h |
+| `swing` | \|close(t) − close(t−1)\| ≥ 2.0 × ATR(t−1) | **either side** (absolute value) |
+| `vol_regime` | ATR now / ATR at entry ≥ 1.5 or ≤ 0.67 | either side |
+| `funding` | a paid settlement ≥ 3× the backtest's assumption within 9h | cost |
+| `calendar` | a scheduled event with impact ≥ 0.8 inside the next bar | event |
+| `mechanics` | the journal trade is absent; the venue SL differs from the package by more than 0.25 ATR | plumbing |
+
+Cooldown: at most one review per closed bar of the leg's timeframe (default 2h). `giveback` and `mechanics` are
+exempt. Not evaluated: `mechanics_venue_tp`, `vol_regime_cell`.
+
+**What is missing, against practice:**
+1. **No time-based clock below 24h.** A trade sitting between −1R and +1R with no market event is never reviewed. The
+   manager observed overnight on 2026-10-28 that hourly LTR passes found "nothing due" across 11 open packages every
+   hour (manager-measured; not re-observed here). That is what an event-only, favourable-side trigger set produces when
+   trades are in the dead zone.
+2. **No adverse-side R trigger** (−0.5R, −0.75R), **no stall or time trigger**, and **no momentum or level trigger**.
+   `swing` and `vol_regime` are symmetric and can catch a sharp adverse bar. A slow bleed toward the stop is not caught.
+3. **The favourable side is over-weighted.** Four of the ten triggers fire only in profit. Yet the disposition-effect
+   evidence says the costly human error is *holding losers and cutting winners* [S1, S2]. And whether cutting losers
+   helps depends on the return process [S4, S30]. So adverse-side reviews are where both the risk and the information
+   are. They must also be graded, because practice says intervention can destroy value (§ A.3).
+
+### E.2 What practice uses for our holding times
+
+| leg timeframe | practice anchor | proposed clock | proposed triggers |
+|---|---|---|---|
+| **5m–15m** (scalps) | Automated, MM-like inventory control. Humans handle exceptions only [S23, S13]. Event-triggered prop action [S15] | A **deterministic or ML pre-screen every closed bar**. Claude only on flagged exceptions, via the per-trade short-hold lane (DESK-SHORT-HOLD-LANE, ~$0.14 per decision measured by the manager; PRs #20559/#20560 held) | adverse −0.5R; stall (bars_held ≥ the leg's median winning duration with MFE < +0.5R); momentum flip; swing |
+| **1h–4h** | A fixed clock at the position's bar close plus event action. CTA practice re-evaluates on a fixed clock [S7]; prop acts on events [S15] | **Pre-screen every closed bar of the leg.** Claude on flagged bars, batched per wake | current set **plus** adverse −0.5R and −0.75R (first crossing each); stall; momentum flip (close crosses the leg's own trend reference against the position, or the entry model re-scores below threshold); level touch (a packet level such as a prior swing or VWAP); vol_regime |
+| **1d** | A CTA daily clock [S7, S8] | **Daily pre-screen at the bar close.** The existing 24h floor becomes the clock | current set plus adverse and stall |
+
+### E.3 Keep cost bounded: three tiers (proposed)
+
+- **Tier 0, due gate (exists, free).** The deterministic triggers, extended with the adverse, stall, momentum and level
+  triggers above.
+- **Tier 1, pre-screen (new, near-free).** On every closed bar of every open package, price the alternatives (hold,
+  tighten to k·ATR, close, partial) from the leg's own Stage-0 history. `scripts/research/live_review_outcomes.py`
+  already prices options this way for the review. Escalate to Claude only when (a) a Tier-0 trigger fires, or (b) the
+  best alternative beats hold by more than a registered threshold net of cost. Later, an ML student replaces the
+  pricing rule (ML programme § G.2).
+- **Tier 2, Claude (exists).** **Batch** every escalated package into one session per wake, and review each package
+  once for all the accounts carrying it (already the skill's package-level rule).
+- **Budget arithmetic (INFERRED from the manager's numbers):** 11 open packages × 24 hourly bars = 264 checkpoints a
+  day. At $0.25–0.35 per Claude review, reviewing every bar would cost ~$66–92 a day, and practice says most of those
+  reviews should end in "no action" (T5). At a 5–10% escalation rate, it is ~$3–9 a day. Batching cuts it further. The
+  escalation rate is a registered parameter, measured weekly.
+
+### E.4 Grade each trigger type, so we learn which ones add value (proposed)
+
+- **Record the trigger type on every review row**, including Tier-1 escalations and reviews that took no action.
+- **Per trigger type, report:** action rate; mean paired dR of the actions taken vs hold-to-bracket, net of the full
+  cost stack; and the same statistic for a **matched random checkpoint control**. For each fired trigger, price the
+  same action rule at a random non-trigger checkpoint of a comparable open package [T1].
+- **Rule (registered before the first read):** a trigger type whose actions do not beat both hold and its random
+  control after a registered n (computed from the measured sd of paired dR, as in RQ-20261027-8b01-03) is demoted to
+  pre-screen-only. It is not deleted: the data is kept (off the trade path is not off the data path). A trigger that
+  beats both is kept, and its threshold becomes a candidate for tuning.
+- **Separate the reviewer's value from the trigger's value.** Compare Claude's action to the Tier-1 pricing rule's
+  recommendation at the same checkpoint. If Claude never beats the rule, the rule should act alone (T1, M9).
+- **Cadence:** weekly, in the ML-FRONTIER-PREP lane's practice refresh (frontier-research § "Practice & methodology
+  refresh") and in `/performance-review`'s desk section.
+
+---
+
+## F. What we are doing differently from practice, and is that justified
 
 | # | What we do | What practice and evidence say | Justified? |
 |---|---|---|---|
-| 1 | Tested management as **one check-in at +1R** (n=176, 4 legs) | No practitioner source uses a fixed R milestone as *the* policy. Trend practice is a vol-scaled trail or continuous re-evaluation [S7, S9, S10, S11]. Prop practice is event-triggered [S15] | **No.** Replace with the § F.1 factorial. The +1R FAIL closes only that configuration |
+| 1 | Tested management as **one check-in at +1R** (n=176, 4 legs) | No practitioner source uses a fixed R milestone as *the* policy. Trend practice is a vol-scaled trail or continuous re-evaluation [S7, S9, S10, S11]. Prop practice is event-triggered [S15] | **No.** Replace with the § G.1 factorial. The +1R FAIL closes only that configuration |
 | 2 | Entry-only test with **fixed brackets** | Exits can dominate outcomes. The random-entry harness exists precisely to separate them [S17] | **Partly.** Valid as an entry test. It says nothing about management |
 | 3 | **TP doctrine**: a real predictive TP at entry on every leg, moved with the prediction | Trend practitioners use no fixed target and let the trail work. Targets are for mean reversion [S9]. OU theory derives optimal targets for mean-reverting spreads [S25] | **Justified for mean-reversion legs. Unproven for trend legs.** A replay arm "TP far, trail does the work" should measure the cost of the doctrine on trend legs. Any live change is Tier 3 and operator-owned; this lane proposes a *measurement* only |
 | 4 | **An LLM (Claude) makes in-trade decisions** on live demo books | No documented major firm lets an LLM manage live positions. LLMs are used for research and productivity [S32, S37]. Live LLM trading evidence is negative to mixed [S21, S22] | **Justified only as designed**: a teacher-label generator, graded on outcomes, with a matched random control, at demo size. **Not justified** as a presumed source of edge |
@@ -407,12 +537,15 @@ could find positives). What the sources *do* give, assembled:
 | 9 | **Partial close at a fixed 50%** in the desk's action enum | No evidence that partials add expectancy. They reshape the distribution [S26] | **Unproven.** Keep it as an arm, not a default |
 | 10 | Desk check-in **hourly plus event triggers** | CTAs: a fixed daily clock. Prop: continuous watching with event-triggered action. MMs: continuous [A.1] | **Reasonable for 15m–1h legs**, if the clock is the trade's own bar and the action rate is measured (§ A.4.4) |
 | 11 | ML capacity **78% GBDT** (2026-10-11 measurement, frontier skill) | Documented firm ML is diverse: bandit routing, deep RL hedging, meta-labelling [S31, S35, S19] | **Partly.** The diversity check exists. Exit and management models are where sequence and RL methods have documented use |
+| 12 | **The LTR reviews on favourable-side and market events only.** No clock below 24h, no adverse R or stall trigger (§ E.1) | Fixed clock at the position's bar plus event-triggered action [S7, S15]. Losers are where the human error and the information are [S1, S2] | **No.** Proposed redesign in § E (Tier 2, row `LTR-PRACTICE-REDESIGN`) |
+| 13 | **Model promotion measures predictive lift over a constant, with gross labels** (§ C.4) | Decision value net of cost vs rules and random, deflated for selection [S1, S20, S45] | **No.** Row `ML-TRAINING-PRINCIPLES-GAPS` |
+| 14 | **Weekly frontier scan:** one full run in three weeks, the rest partial, the strategy half never run, and practice and methodology never covered (§ G.3) | Weekly outside-evidence refresh [R6] | **No.** Skill amended (Practice & methodology refresh). Row `FRONTIER-SCAN-COMPLETENESS` |
 
 ---
 
-## F. Recommended designs
+## G. Recommended designs [TRADING · MODEL · RESEARCH-OPS]
 
-### F.1 The desk's first management test (for lane `DESK-LIFECYCLE-S0`)
+### G.1 The desk's first management test (for lane `DESK-LIFECYCLE-S0`)
 
 A **paired factorial on fixed entries**, D-S0 masked blind replay, net of the full cost stack, pre-registered.
 
@@ -451,13 +584,13 @@ A **paired factorial on fixed entries**, D-S0 masked blind replay, net of the fu
 - **Cost of Claude arms:** on-plan only (no API credits). Size the M8/M9 sample to the plan budget and run the rule
   arms on the full population (they are free).
 
-### F.2 The ML trade-management programme (for lane `ML-PROGRAMME-PLAN`)
+### G.2 The ML trade-management programme (for lane `ML-PROGRAMME-PLAN`)
 
 1. **Panel:** one row per (trade, check-in), with point-in-time features (R so far, MFE/MAE, bars held, ATR ratio,
    distance to levels, momentum, regime, time of day) and **the priced outcome of every action** (hold, close,
    tighten to k·ATR, partial) on the real path, net of cost. This is a triple-barrier-style label from each check-in
    state [S50].
-2. **Stage A, supervised meta-model over the best F.1 rule arm:** predict dR(action) − dR(rule) and act only where the
+2. **Stage A, supervised meta-model over the best G.1 rule arm:** predict dR(action) − dR(rule) and act only where the
    predicted gain clears the cost-adjusted threshold. GBDT baseline plus one sequence model (family diversity).
    Calibrate the probabilities [S19].
 3. **Stage B (only if A passes):** an RL policy *initialised from A* [S38]. Never RL from scratch.
@@ -470,7 +603,7 @@ A **paired factorial on fixed entries**, D-S0 masked blind replay, net of the fu
    the best rule arm **and** vs the matched random control, OOS, net of cost. Then live monitoring with a CUSUM
    (`LIVE-DECAY-MONITOR`).
 
-### F.3 Our research-ops process
+### G.3 Our research-ops process
 
 1. **A "practice precedent" field on every new unit and design arm** (`source:` URL + tag, or `novel`). This answers
    the operator's ask mechanically. A guard can come later; the field comes first.
@@ -479,8 +612,21 @@ A **paired factorial on fixed entries**, D-S0 masked blind replay, net of the fu
 3. **Pre-analysis plans, not only rules**: transforms, windows, exclusions and strata fixed at registration [S49].
 4. **Finish the queued benchmark rows**: `LIVE-DECAY-MONITOR` first, then `PROMOTION-CORRELATION-CHECK` and
    `RESEARCH-OUTCOME-METRICS`.
-5. **A standing quarterly practice scan** under `frontier-research`. This document is the first; the strategy half of
-   that skill is the natural owner.
+5. **A standing WEEKLY practice and methodology refresh** (operator, 2026-10-28: "not one-off … at least once a
+   week"). It is now a track in `.claude/skills/frontier-research/SKILL.md`, run on Wednesday after the weekly reset
+   in the ML-FRONTIER-PREP lane of the "Weekly review prep" routine (no new cron). It has two output sections,
+   TRADING and MODEL. It refreshes a dated `docs/research/practice-review-*.md`, revises the canonical list in
+   `docs/reference/trading-and-model-practice-principles.md`, re-checks the desk tests, the LTR triggers and the ML
+   training and evaluation design against it, and files every gap as a row or unit.
+6. **Has the weekly frontier scan actually been running?** Not fully (MEASURED from the repo, 2026-10-28):
+   - 2026-10-11: a full scan (`docs/research/frontier-scan-2026-10-11.md`; `comms/ml-plan/20261011T1900Z.json` has a `frontier` block).
+   - 2026-10-14: partial. Brief § 3 says HF Hub plus web search; GitHub, Kaggle and SSRN not checked (`docs/reviews/2026-10-15-weekly-walkthrough-ml.md`).
+   - 2026-10-18: partial. `comms/ml-plan/20261018T0700Z.json` frontier block, "not a full scan", 1 source.
+   - 2026-10-21: partial. About 3 sources, "No strategy-frontier ideas … no pass on the strategy half was scoped" (`docs/reviews/2026-10-21-weekly-walkthrough.md` § 4).
+   - Sunday 2026-10-25 (the old `/ml-review` step-9 slot): no frontier record found (`comms/ml-plan/20261025T0000Z-ML-READ-1025.json` has no `frontier` block; the probe found the block in the 10-11 and 10-18 records, so it can find positives). The next run is due Wednesday 2026-10-28 ~18:53Z. (10-11 and 10-18 were Sundays; 10-14 and 10-21 were the Wednesday prep lanes.)
+
+   So: one full scan in about three weeks; the strategy half never ran; practice and methodology were never in scope.
+   Filed as row `FRONTIER-SCAN-COMPLETENESS`.
 
 ---
 

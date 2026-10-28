@@ -7,6 +7,9 @@ description: Trigger, monitor, and analyze ML model training for the ICT bot. Th
 
 # /model-training — drive the ICT bot's ML training lifecycle
 
+> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
+
+
 Training is **autonomous trainer-VM territory** (CLAUDE.md § VM authority
 split). Claude provisions, kicks cycles, reads the registry, and analyzes
 results without operator-in-the-loop — up to `advisory` in the registry

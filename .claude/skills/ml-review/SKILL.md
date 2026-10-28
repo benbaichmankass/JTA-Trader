@@ -7,6 +7,9 @@ description: Autonomous review of the ICT bot's ML LIFECYCLE — trainer service
 
 # /ml-review — model/training lifecycle review
 
+> **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
+
+
 > **⚠️ READ FIRST — WHAT THIS SESSION IS.** This is **full end-to-end QA of the
 > ML lifecycle**, NOT a scan-and-sweep-under-the-rug exercise. Your job is to
 > actively **HUNT** for issues (broken/degenerate models, stalled cycles, GIGO

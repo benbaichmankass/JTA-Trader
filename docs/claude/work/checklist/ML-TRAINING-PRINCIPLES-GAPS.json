@@ -1,0 +1,21 @@
+{
+  "id": "ML-TRAINING-PRINCIPLES-GAPS",
+  "title": "ML training/evaluation vs practice principles M1-M10: gross triple-barrier labels (slippage default 0), promotion bar = constant baseline on predictive metric (no rule/random decision baseline, cost gate documentary), ML experiment multiplicity not deflated, calendar 7d soak string in legacy WS4 gates",
+  "phase": "build",
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From PRACTICE-RESEARCH-TRADE-MGMT-AI \u00a7 C.4 (docs/research/practice-review-trade-mgmt-and-ai-2026-10-28.md); canonical list docs/reference/trading-and-model-practice-principles.md \u00a7 MODEL. MEASURED by reading origin/main 4329698a1: ml/datasets/labeling/triple_barrier.py BarrierConfig.slippage=0.0 default, no ml/configs manifest sets it; ml/promotion/oos_edge.py baseline = constant per-group mean; ml/promotion/__init__.py gates are strings ('transaction_cost_evaluation_complete', 'shadow_mode_clean_soak_at_least_7d'); no DSR/PBO in ml/. Composes with ML-COVERAGE-AUDIT (data chain / teacher records never trained), does not re-measure it. The 7d-soak string vs soak doctrine is a QUESTION for the manager (INFERRED conflict). FIRST STEP: cost-net label option wired through execution_costs.resolve_cost_policy for the setup/exit candidate families (Tier 1 research path), and a decision-value baseline (best rule + matched random) in ml_bakeoff.",
+  "updated_at": "2026-10-28T06:51:48Z",
+  "updated_by": "session_01AFoLuML1AwiQNaDn7uKHXj",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 750
+}
