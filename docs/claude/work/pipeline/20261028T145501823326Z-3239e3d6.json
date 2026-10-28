@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-9LBP6539-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261028-1449 (session_01AFoLuJi1vLTnYv9LbP6539-ro1449)",
+    "rerun": "python3 - <<'X'\nimport json,glob\nm=json.loads(open(glob.glob('research/results/RQ-20261028-001/*.jsonl')[0]).readline())['measurement']\nA,S=m['arms']['A'],m['arms']['SL']\nprint(sum(1 for a,b in zip(A['folds'],S['folds']) if b['net_r']>a['net_r']),'strict fold wins;',sum(1 for a,b in zip(A['folds'],S['folds']) if b['net_r']>=a['net_r']),'wins counting ties')\nX"
+  },
+  "state": "queued",
+  "what": "[research-grader] exit_lever_ablation.py counts a fold as a WIN when net_r(C) >= net_r(A) (wins = sum(... >= ...), L~420), so a lever that never fires in a fold earns a win by TIE. MEASURED on RQ-20261028-001 (P1-ATM-ed1c07-sl-confirm, EMA-slope filter SL vs A, BTC 1h trend_donchian): folds_ge_incumbent=5 of 6 but only 1 fold is strictly better (fold 6, +2.30 R), 4 folds are exact ties (SL took the same trades) and fold 4 is worse (-0.97 R); SL took 37 trades vs 39, so the +1.34 R delta that cleared the 0.78 R bar is the effect of removing 2 trades. The unit's confirmation window is also only 2019-12-31..2020-06-30 (feed start), not the registered 2017-09 start. Same >= logic in the vs_controls branch and regrade_vs_control.py L79. FIX (Tier-1 tooling, changes how past PASSes read, so do it as a flagged re-grade not a silent edit): report strict_wins and tied_folds beside folds_ge_incumbent, and for NEW pre-registrations require strict wins >= fold_majority among folds where the lever fired; then re-grade every PASS in the last 30 d with a lever_fired fold count and list those that flip. Until then a PASS from this harness is a lead that must show strict-win folds before any Tier-3 note. No Tier-3 proposal was made from 001."
+}
