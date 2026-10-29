@@ -962,3 +962,55 @@ def test_include_paper_false_emits_no_paper_rows(tmp_path: Path):
     ))
     real_with = [r for r in with_paper if r["event_source"] == "live"]
     assert real_default == real_with  # byte-for-byte unchanged real-money eval
+
+
+def _seed_trades_with_package(db: Path, entries) -> None:
+    """entries = [(iso_ts, direction, pnl, entry, stop, size, meta_json_or_None)].
+
+    `stop` models the TRAIL-OVERWRITTEN exit-time stop; the entry-time risk is
+    only in `order_packages.meta.risk_per_unit` (PI-20261014-MVBJLVJ3-0001)."""
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        "CREATE TABLE trades (id INTEGER PRIMARY KEY, symbol TEXT, direction TEXT, "
+        "timestamp TEXT, status TEXT, pnl REAL, pnl_percent REAL, "
+        "entry_price REAL, stop_loss REAL, position_size REAL, "
+        "is_backtest INT, is_demo INT, order_package_id TEXT)"
+    )
+    conn.execute("CREATE TABLE order_packages (order_package_id TEXT PRIMARY KEY, meta TEXT)")
+    for i, (ts, direction, pnl, entry, stop, size, meta) in enumerate(entries):
+        pid = f"p{i}" if meta is not None else None
+        conn.execute(
+            "INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (i, "BTCUSDT", direction, ts, "closed", pnl, pnl / 100.0,
+             entry, stop, size, 0, 0, pid),
+        )
+        if pid:
+            conn.execute("INSERT INTO order_packages VALUES (?,?)", (pid, meta))
+    conn.commit()
+    conn.close()
+
+
+def test_live_r_uses_declared_initial_risk_not_trailed_stop(tmp_path: Path):
+    """A trailed winner: stop moved to 99.5 (risk 0.5/unit) but the trade was ENTERED
+    with risk 2/unit. pnl +12 on size 3 -> +2.0R on initial risk, not +8.0R."""
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "pkg.db"
+    _seed_trades_with_package(db, [
+        ((base + timedelta(hours=50)).isoformat(), "buy", 12.0, 100.0, 99.5, 3.0,
+         '{"risk_per_unit": 2.0}'),
+        # No package record: stored-stop R, tagged so initial_only can drop it.
+        ((base + timedelta(hours=120)).isoformat(), "sell", -5.0, 100.0, 101.0, 5.0, None),
+    ])
+    kw = dict(market_raw_path=ddir, vol_window_n=10, max_holding=8,
+              cusum_threshold_mult=0.5, live_trades_db=db)
+    live = [r for r in SetupCandidatesBuilder().iter_rows(**kw) if r["is_live_trade"]]
+    won_row = next(r for r in live if r["direction"] == 1)
+    lost_row = next(r for r in live if r["direction"] == -1)
+    assert math.isclose(won_row["r_multiple"], 2.0, rel_tol=1e-9)
+    assert won_row["r_multiple_source"] == "initial_risk"
+    assert lost_row["r_multiple_source"] == "stop_distance"
+    only = [r for r in SetupCandidatesBuilder().iter_rows(live_r_basis="initial_only", **kw)
+            if r["is_live_trade"]]
+    assert [r["r_multiple_source"] for r in only] == ["initial_risk"]

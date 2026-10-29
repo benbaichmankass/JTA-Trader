@@ -277,6 +277,23 @@ def _load_live_trades(
             )
         if judge_provenance:
             select_cols.append("notes")
+        # Initial-risk record (PI-20261014-MVBJLVJ3-0001): `trades.stop_loss`
+        # holds the EXIT-time stop (a trail overwrites it), so R off it is
+        # inflated on trailed winners. The entry-time `risk_per_unit` lives in
+        # `order_packages.meta`, which no trailing amend reaches. Joined by a
+        # correlated subquery so a journal without the table/column degrades
+        # to NULL (-> stored-stop / unit R) instead of raising.
+        try:
+            has_pkg = bool(conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='order_packages'").fetchone())
+        except sqlite3.OperationalError:
+            has_pkg = False
+        if has_pkg and "order_package_id" in have:
+            select_cols.append(
+                "(SELECT p.meta FROM order_packages p "
+                "WHERE p.order_package_id = trades.order_package_id) "
+                "AS package_meta")
         # account_class-authoritative real filter (mirrors build_research_panel.py):
         # a row is real only if account_class isn't 'paper' AND is_demo is 0.
         # Guarded on column presence so an old-schema journal (no account_class)
@@ -346,6 +363,10 @@ def _load_live_trades(
                 "position_size": (
                     r["position_size"] if "position_size" in keys else None
                 ),
+                "package_meta": (
+                    r["package_meta"] if "package_meta" in keys else None
+                ),
+                "symbol": symbol,
                 "is_paper": is_paper,
             })
     total_excluded = sum(excluded_untrusted.values())
@@ -366,31 +387,45 @@ def _load_live_trades(
 def _live_realized_r(tr: dict[str, Any], won: int) -> tuple[float, str]:
     """Realized R-multiple for a REAL closed trade + which source produced it.
 
-    Prefer the **net, cost-aware** R = ``pnl / (|entry − stop| × size)``: the
-    trade's realized dollar pnl (already net of fees) over its dollar risk at
-    entry. For a linear instrument (this dataset is BTCUSDT-only, 1:1 contract
-    value) the ``size`` cancels the dollar units, so this is exactly the
-    realized R the EV gate needs — a losing trade that hit its stop reads ≈ −1R,
-    a 2R winner reads ≈ +2R. Falls back to a coarse signed unit-R (±1 by the
-    win/loss bit) when the risk columns are missing/zero (a pre-schema journal
-    or a trade the writer didn't stop-populate), so the column is never a
-    silent 0.0 that the EV scorer would treat as a real 0R outcome.
+    The net, cost-aware R = ``pnl / initial_risk_usd``: the trade's realized
+    dollar pnl (already net of fees) over its dollar risk AT ENTRY. The risk
+    comes from :func:`src.runtime.r_provenance.initial_risk_usd`:
 
-    Returns ``(r_multiple, source)`` where source ∈ {"stop_distance",
-    "unit_fallback"}.
+    * ``initial_risk`` — the signal's own declared ``risk_per_unit`` from
+      ``order_packages.meta``. Entry-time by construction; a trail cannot
+      reach it (PI-20261014-MVBJLVJ3-0001).
+    * ``stop_distance`` — ``|entry - stop|`` from ``trades.stop_loss`` when no
+      declared record exists. That column is overwritten by a trail, so this R
+      is INFLATED on a trailed winner; it is tagged so a consumer can exclude
+      it (``live_r_basis=initial_only``).
+    * ``unit_fallback`` — a coarse signed ±1 when neither basis exists (or the
+      stop is proven wrong-side), so the column is never a silent 0.0.
+
+    Returns ``(r_multiple, source)``.
     """
-    pnl = tr.get("pnl")
-    entry = tr.get("entry_price")
-    stop = tr.get("stop_loss")
-    size = tr.get("position_size")
-    if (pnl is not None and entry is not None and stop is not None
-            and size is not None):
-        try:
-            risk = abs(float(entry) - float(stop)) * float(size)
-            if risk > 0:
-                return float(pnl) / risk, "stop_distance"
-        except (TypeError, ValueError):
-            pass
+    from src.runtime.r_provenance import (  # noqa: PLC0415
+        R_BASIS_DECLARED, R_BASIS_STORED_STOP, r_multiple_provenanced,
+    )
+    try:
+        from src.runtime.local_pnl import contract_value_usd_for  # noqa: PLC0415
+        cv = contract_value_usd_for(tr.get("symbol")) or 1.0
+    except Exception:  # noqa: BLE001 — a linear 1:1 contract is the safe default
+        cv = 1.0
+    r, basis = r_multiple_provenanced(
+        {
+            "pnl": tr.get("pnl"),
+            "entry_price": tr.get("entry_price"),
+            "stop_loss": tr.get("stop_loss"),
+            "qty": tr.get("position_size"),
+            "direction": "short" if tr.get("direction") == -1 else "long",
+            "package_meta": tr.get("package_meta"),
+        },
+        cv,
+    )
+    if r is not None and basis == R_BASIS_DECLARED:
+        return float(r), "initial_risk"
+    if r is not None and basis == R_BASIS_STORED_STOP:
+        return float(r), "stop_distance"
     return (1.0 if won else -1.0), "unit_fallback"
 
 
@@ -752,6 +787,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
         include_cusum: bool | None = None,
         live_trades_db: Path | str | None = None,
         include_paper: bool = False,
+        live_r_basis: str = "any",
         signal_log_db: Path | str | None = None,
         signal_log_strategies: tuple[str, ...] | list[str] | str | None = None,
         signal_log_sides: tuple[str, ...] | list[str] | str | None = None,
@@ -874,6 +910,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 n_vol_buckets=n_vol_buckets, include_cusum=emit_cusum,
                 live_trades_db=live_trades_db,
                 include_paper=include_paper,
+                live_r_basis=str(live_r_basis or "any"),
                 signal_log_db=signal_log_db,
                 signal_log_strategies=strat_tuple,
                 signal_log_sides=sides_tuple,
@@ -904,6 +941,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
         include_cusum: bool,
         live_trades_db: Path | str | None,
         include_paper: bool = False,
+        live_r_basis: str = "any",
         signal_log_db: Path | str | None = None,
         signal_log_strategies: tuple[str, ...] | None = None,
         signal_log_sides: tuple[str, ...] = ("buy", "sell"),
@@ -1126,6 +1164,11 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 # (MB-20260717-M23-LIVEROW-REALIZED-R). Falls back to signed
                 # unit-R when the risk columns are absent.
                 r_multiple, r_source = _live_realized_r(tr, won)
+                # live_r_basis=initial_only (P1 rule (e)): a row whose R is not
+                # on the entry-time initial risk is NOT an eval row; it is
+                # dropped here and counted by the grader from the journal.
+                if live_r_basis == "initial_only" and r_source != "initial_risk":
+                    continue
                 # L3 paper-book eval population: a PAPER trade is a DISTINCT,
                 # TAGGED population — event_source="live_paper" +
                 # is_live_trade=FALSE so it can NEVER land on the real-money
