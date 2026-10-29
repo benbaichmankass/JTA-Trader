@@ -2,7 +2,7 @@
   "id": "MD-LTR-ADA-AUTO",
   "title": "Operator-granted standing mandate: the live reviewer's recommendations on pkg-465a5d7d27644027 (ADA short) are applied AUTOMATICALLY by the VM rows watcher, every action class; scoped to that one package, expires when it closes. Build: mandates.yaml grant + per-package advice-only exception + watch reviewer row-write fix",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuLbY3ViuCFwrJbmcyV",
   "model": "claude-opus-5-5",
@@ -13,9 +13,9 @@
     21203
   ],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~08:12Z Tier-2 OK (popup answer, verbatim): \"Merge + deploy when green (Recommended)\". Grant = the operator's approval of PR #21203's config/mandates.yaml MD-LTR-ADA-AUTO entry (scoped pkg-465a5d7d27644027, every in-trade class, expires on close). Manager lands on green, deploys, verifies runtime-config git_sha, then disables LTR-ADA-WATCH trigger trig_01TZSKJHHaThgpcGiosMHqPk.",
+  "note": "#21203 MERGED cfb15c25 by manager 09:18Z (mandates.yaml diff verified: only MD-LTR-ADA-AUTO added). Deploy filed #21221 (pull-and-deploy); verification = runtime-config git_sha contains cfb15c25. Latency (lane-measured, PR comment 6491447764): median round trip ~7-8 min (due detection ~1 min, packet+marker 24.6 s, manager dispatch + reviewer 342 s, apply 9-14 s); no hop added. Closing observation: the first auto-applied ADA action with verified venue read-back (rows_watch receipt). After deploy: disable LTR-ADA-WATCH trigger trig_01TZSKJHHaThgpcGiosMHqPk.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T08:09:40Z",
+  "updated_at": "2026-10-29T09:16:58Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-AM-STANDARD"
