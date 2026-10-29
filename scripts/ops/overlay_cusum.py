@@ -21,6 +21,7 @@ each closed trade joined to its realised net R. Only rows with multiplier < 1.0 
     python3 scripts/ops/overlay_cusum.py --decisions <joined.jsonl> [--account bybit_portfolio] [--json]
     python3 scripts/ops/overlay_cusum.py --self-test
 """
+# wiring: manual-only - the weekly run needs the live shadow-log -> closed-trade join first (PI-20261029-XME2GXW7-0001); until then the manager runs it by hand on a relay pull
 from __future__ import annotations
 
 import argparse
