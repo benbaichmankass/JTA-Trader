@@ -56,6 +56,12 @@ SCHEMA of ``comms/research/counterfactual_grades/<order_package_id>.json``  (``s
               delta_vs_replayed_actual_usd{acct}, provenance}]
   random_control  {n, class, mean_r, p10_r, p50_r, p90_r, p_random_ge_replayed_actual}
   fidelity  {replayed_actual_net_r, actual_net_r, abs_gap_r}
+  post_exit {horizon{seconds, hours, source, timeframe, end}, horizon_reached, mfe_r, mae_r, tp_reach{reached, bars, seconds},
+             wider_sl_arms[{arm_id, sl_mult, tp_r, survived, resolved, net_r, exit_reason, delta_vs_actual_r}],
+             verdict{verdict: exit_saved_r|exited_early|neutral|null, r_diff, resolved, n_held_arms, n_unresolved, basis_arm, provenance}}
+            Bars stop at the horizon end (t_close + horizon); an arm still open there is ``resolved: false`` and never
+            counted in a verdict number. ``mfe_r`` / ``mae_r`` are price excursions after the exit in units of the initial
+            risk (not P&L); every arm net_r is net of the full cost stack.
   biases    [str]
 Provenance values: MEASURED | ESTIMATED (src/runtime/provenance.py vocabulary). ``null`` = could not look, never 0.
 """
@@ -77,11 +83,18 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
 import live_review_counterfactual as lrc  # noqa: E402  (extend, do not duplicate: _num/_ts/_iso/initial_stop/_meta/fetch_diag)
+from src.runtime import provenance as prov  # noqa: E402
 from src.runtime.execution_costs import DEFAULT_FEE_BPS_ROUNDTRIP, resolve_cost_policy  # noqa: E402
 
 OUT_DIR = REPO / "comms" / "research" / "counterfactual_grades"
 ACTIONS_DIR = OUT_DIR / "actions"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+# POST-EXIT HORIZON (GRADER-POST-EXIT-HORIZON): how long after the real close an arm may keep running before it is
+# marked unresolved. The leg's own config max-hold (max_hold_hours / max_hold_bars / max_hold_min) wins; else this
+# explicit per-timeframe default, recorded in every record as ``post_exit.horizon``.
+DEFAULT_HORIZON_H = {"1m": 6.0, "5m": 24.0, "15m": 48.0, "30m": 72.0, "1h": 96.0, "2h": 144.0, "4h": 240.0}
+FALLBACK_HORIZON_H = 48.0
+VERDICT_TOL_R = 0.25      # |R difference| below this is "neutral" (stated here, not tuned per trade)
 N_RANDOM = 300
 SL_MULTS = (0.75, 1.0, 1.25, 1.5)
 TP_RS = (2.0, 3.0, 4.0, 5.0, 6.0)
@@ -94,6 +107,8 @@ BIASES = [
     "path stitched from the finest candles served (1m ~16h, 5m ~3.5d, 15m ~10d); older parts use coarser bars",
     "entry is the actual fill, shared by every arm; R unit = INITIAL risk (exit_plan.stop)",
     "an unresolved arm is marked at the last close and costed as closed there (resolved=false)",
+    "post-exit bars end at t_close + horizon (leg max-hold, else a per-timeframe default); an arm open there is unresolved and never in a verdict",
+    "post-exit excursions start at the first bar opening after the close; the bar containing the exit is excluded",
     "funding = policy default x windows held (ESTIMATED); account % = current equity less actual P&L (ESTIMATED)",
     "alt-bracket arms hold the risk budget constant (wider stop => smaller size); margin and lot size not modelled",
 ]
@@ -235,6 +250,86 @@ def net_of(sim: dict, *, side: str, entry_fill: float, r_dist: float, t_entry: f
     return {"gross_r": gross, "cost_r": {"fee": fee, "slip": slip, "funding": fund}, "net_r": gross - fee - slip - fund}
 
 
+
+# --------------------------------------------------------------------------- post-exit horizon
+
+def resolve_horizon(pkg: dict, strategy_cfg: Optional[dict] = None) -> dict:
+    """Seconds an arm may run past the real close. The leg's own max-hold wins, else the per-timeframe default."""
+    cfg = strategy_cfg or {}
+    tf = str(cfg.get("timeframe") or pkg.get("timeframe") or "")
+    for key, mult in (("max_hold_hours", 3600.0), ("max_hold_min", 60.0)):
+        v = lrc._num(cfg.get(key))
+        if v and v > 0:
+            return {"seconds": v * mult, "hours": round(v * mult / 3600.0, 3), "source": f"config.{key}", "timeframe": tf or None}
+    v = lrc._num(cfg.get("max_hold_bars"))
+    if v and v > 0 and tf in TF_SEC:
+        return {"seconds": v * TF_SEC[tf], "hours": round(v * TF_SEC[tf] / 3600.0, 3), "source": "config.max_hold_bars", "timeframe": tf}
+    if tf in DEFAULT_HORIZON_H:
+        h = DEFAULT_HORIZON_H[tf]
+        return {"seconds": h * 3600.0, "hours": h, "source": "default_by_timeframe", "timeframe": tf}
+    return {"seconds": FALLBACK_HORIZON_H * 3600.0, "hours": FALLBACK_HORIZON_H, "source": "default_unknown_timeframe", "timeframe": tf or None}
+
+
+def strategy_config(name: Optional[str]) -> dict:
+    import yaml
+    try:
+        d = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text()) or {}
+        return dict((d.get("strategies") or d).get(name) or {})
+    except (OSError, yaml.YAMLError, AttributeError, TypeError) as exc:
+        print(f"counterfactual_grader: strategies.yaml unreadable ({exc!r}); using the default horizon", file=sys.stderr)
+        return {}
+
+
+def post_exit_block(arms: List[dict], bars: Sequence[dict], *, side: str, exit_px: Optional[float], tp0: Optional[float],
+                    r_dist: float, t_close: float, horizon: dict, actual_r: Optional[float]) -> dict:
+    """Pure: what happened AFTER the real exit, all from the committed replayed arms and the post-close path."""
+    sign = 1.0 if side == "long" else -1.0
+    h_end = t_close + horizon["seconds"]
+    after = [b for b in bars if b["time"] >= t_close]
+    reached = bool(bars) and (bars[-1]["time"] + bars[-1]["dur"]) >= h_end - 1e-6
+    mfe = mae = None
+    tp_reach = {"reached": None, "bars": None, "seconds": None}
+    if after and exit_px is not None:
+        mfe = round(max(sign * ((b["high"] if sign > 0 else b["low"]) - exit_px) for b in after) / r_dist, 4)
+        mae = round(min(sign * ((b["low"] if sign > 0 else b["high"]) - exit_px) for b in after) / r_dist, 4)
+    if tp0 is not None and after:
+        hit = next((i for i, b in enumerate(after) if ((b["high"] > tp0) if sign > 0 else (b["low"] < tp0))), None)
+        if hit is not None:
+            tp_reach = {"reached": True, "bars": hit + 1, "seconds": round(after[hit]["time"] - t_close, 1)}
+        else:      # "never" is only a finding when the whole horizon was observed; otherwise we could not look
+            tp_reach = {"reached": False if reached else None, "bars": None, "seconds": None}
+    wider = []
+    held: List[dict] = []
+    for a in arms:
+        if a["family"] not in ("alt_brackets", "entry_brackets") or not a.get("exit"):
+            continue
+        last = a["exit"]
+        ex_ts = lrc._ts(last["ts"])
+        if ex_ts is None or ex_ts <= t_close:
+            continue                                  # decided before the real exit: not a post-exit question
+        held.append(a)
+        mult = (a.get("params") or {}).get("sl_mult")
+        if mult and mult > 1.0:
+            wider.append({"arm_id": a["arm_id"], "sl_mult": mult, "tp_r": a["params"].get("tp_r"),
+                          "survived": None if not a["resolved"] and last["reason"] == "open_at_data_end" else last["reason"] != "stop",
+                          "resolved": a["resolved"], "net_r": a["net_r"] if a["resolved"] else None,
+                          "marked_net_r_unresolved": None if a["resolved"] else a["net_r"], "exit_reason": last["reason"],
+                          "delta_vs_actual_r": None if (actual_r is None or not a["resolved"]) else round(a["net_r"] - actual_r, 4),
+                          "provenance": prov.ESTIMATED if a["resolved"] else prov.UNVERIFIED})
+    res = [a for a in held if a["resolved"]]
+    unres = [a for a in held if not a["resolved"]]
+    verdict = {"verdict": None, "r_diff": None, "resolved": False, "n_held_arms": len(held), "n_unresolved": len(unres),
+               "basis_arm": None, "provenance": prov.UNVERIFIED}
+    if actual_r is not None and res:
+        best = max(res, key=lambda a: a["net_r"])
+        diff = round(best["net_r"] - actual_r, 4)
+        v = "exited_early" if diff >= VERDICT_TOL_R else ("exit_saved_r" if diff <= -VERDICT_TOL_R else "neutral")
+        # exited_early is established by a resolved arm alone; the other two need every held arm resolved
+        verdict.update(verdict=v, r_diff=diff, basis_arm=best["arm_id"], provenance=prov.ESTIMATED,
+                       resolved=(v == "exited_early") or not unres)
+    return {"horizon": dict(horizon, end=lrc._iso(h_end)), "horizon_reached": reached, "mfe_r": mfe, "mae_r": mae,
+            "tp_reach": tp_reach, "wider_sl_arms": wider, "verdict": verdict}
+
 # --------------------------------------------------------------------------- the grader
 
 def _arm(arm_id: str, family: str, label: str, params: dict, sim: dict, legs: List[dict], cm_fn, side: str,
@@ -262,7 +357,7 @@ def _delta(arm: dict, base: Optional[dict], key: str) -> None:
 
 def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: List[dict], actions: List[dict],
                   equity_now: Dict[str, Optional[float]], venue: Dict[str, dict],
-                  graded_at: Optional[str] = None, n_random: int = N_RANDOM) -> dict:
+                  graded_at: Optional[str] = None, n_random: int = N_RANDOM, horizon: Optional[dict] = None) -> dict:
     """Pure: one graded record for one closed package. See the module docstring for the schema."""
     base = {"schema_version": SCHEMA_VERSION, "order_package_id": pkg["order_package_id"],
             "strategy": pkg.get("strategy_name"), "symbol": pkg.get("symbol"), "side": str(pkg.get("direction") or "").lower(),
@@ -290,6 +385,10 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     t_entry = lrc._ts(lead.get("timestamp"))
     t_close = max(lrc._ts(t.get("closed_at")) for t in legs_in)
     if not bars or t_entry is None:
+        return no("no_candles")
+    horizon = horizon or resolve_horizon(pkg)
+    bars = [b for b in bars if b["time"] < t_close + horizon["seconds"]]       # the path ends at the post-exit horizon
+    if not bars:
         return no("no_candles")
     symbol = str(pkg.get("symbol"))
     cm_lead = cost_model(lead, symbol, entry_fill, lrc._num(lead.get("position_size")) or 0.0)
@@ -438,6 +537,8 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     fid = {"replayed_exit": {"ts": rx.get("ts"), "px": rx.get("px")}, "actual_exit": {"ts": legs[0].get("closed_at"), "px": legs[0]["exit_price"]},
            "replayed_actual_net_r": rep["net_r"], "actual_net_r": None if actual_r is None else round(actual_r, 4),
            "abs_gap_r": None if actual_r is None else round(abs(rep["net_r"] - actual_r), 4)}
+    po = post_exit_block(arms, bars, side=side, exit_px=legs[0]["exit_price"], tp0=tp0, r_dist=r_dist, t_close=t_close,
+                         horizon=horizon, actual_r=actual_r)
     n_b = {tf: len([b for b in bars if b["dur"] == s]) for tf, s in TF_SEC.items()}
     return dict(base, status="graded", reason=None,
                 bracket={"entry_pkg": entry_ref, "stop0": stop0, "stop0_source": "exit_plan.stop|risk_per_unit",
@@ -447,7 +548,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
                 path={"bars": len(bars), "bars_by_tf": n_b, "first_bar": lrc._iso(bars[0]["time"]),
                       "last_bar": lrc._iso(bars[-1]["time"] + bars[-1]["dur"]), "t_entry": lrc._iso(t_entry), "t_close": lrc._iso(t_close)},
                 actions=[{k: v for k, v in a.items() if k != "ts_epoch"} | {"ts": lrc._iso(a["ts_epoch"])} for a in actions],
-                arms=arms, random_control=rc, fidelity=fid)
+                arms=arms, random_control=rc, fidelity=fid, post_exit=po)
 
 
 # --------------------------------------------------------------------------- inputs
@@ -547,7 +648,7 @@ def grade_live(pkg_id: str, packages: Dict[str, dict], trades: Dict[int, dict], 
             if v:
                 venue[t["account_id"]] = v
     rvs = [r for r in reviews if r.get("order_package_id") == pkg_id]
-    return grade_package(pkg, legs, bars, rvs, actions, equity, venue)
+    return grade_package(pkg, legs, bars, rvs, actions, equity, venue, horizon=resolve_horizon(pkg, strategy_config(pkg.get("strategy_name"))))
 
 
 def load_sources() -> Tuple[Dict[str, dict], Dict[int, dict]]:
@@ -563,11 +664,29 @@ def load_sources() -> Tuple[Dict[str, dict], Dict[int, dict]]:
     return {p["order_package_id"]: p for p in pk}, trades
 
 
+def due_for_grading(rec_path: Path, pkg: dict, legs: List[dict], now: float) -> bool:
+    """A closed package is graded once its post-exit horizon has passed (grading earlier leaves every arm that holds
+    past the real exit unresolved), and re-graded when its record predates the horizon or the current schema."""
+    t_close = max((lrc._ts(t.get("closed_at")) or 0.0) for t in legs)
+    h_end = t_close + resolve_horizon(pkg, strategy_config(pkg.get("strategy_name")))["seconds"]
+    if now < h_end:
+        return False
+    if not rec_path.exists():
+        return True
+    try:
+        rec = json.loads(rec_path.read_text())
+    except ValueError:
+        return True
+    if int(rec.get("schema_version") or 0) < SCHEMA_VERSION:
+        return True
+    return (lrc._ts(rec.get("graded_at")) or 0.0) < h_end
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--live", action="store_true", required=True)
     ap.add_argument("--package", help="grade one order_package_id (re-grades if a record exists)")
-    ap.add_argument("--all-closed", action="store_true", help="grade every closed package that has no record yet")
+    ap.add_argument("--all-closed", action="store_true", help="grade every closed package whose horizon has passed and that has no (current) record")
     ap.add_argument("--max", type=int, default=20, help="cap per run for --all-closed")
     ap.add_argument("--write", action="store_true")
     a = ap.parse_args(argv)
@@ -579,10 +698,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         ids = [a.package]
     else:
         ids = []
+        now = datetime.now(timezone.utc).timestamp()
         for pid, p in packages.items():
             legs = [t for t in trades.values() if t.get("order_package_id") == pid]
             if (str(p.get("status")).lower() == "closed" and legs and all(str(t.get("status")).lower() == "closed" and t.get("closed_at") for t in legs)
-                    and not (OUT_DIR / f"{pid}.json").exists()):
+                    and due_for_grading(OUT_DIR / f"{pid}.json", p, legs, now)):
                 ids.append(pid)
         ids = sorted(ids)[: a.max]
     n_ok = 0

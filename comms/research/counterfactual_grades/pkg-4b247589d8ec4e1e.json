@@ -1,0 +1,1501 @@
+{
+ "schema_version": 2,
+ "order_package_id": "pkg-4b247589d8ec4e1e",
+ "strategy": "ict_scalp_mgc_15m",
+ "symbol": "MGC",
+ "side": "short",
+ "graded_at": "2026-10-29T21:16:05Z",
+ "biases": [
+  "stop fills at its price (+ half round-trip slippage); a gap fills at the open",
+  "a touch is not a fill: stop / TP need price to trade THROUGH the level (calibrated on one stop fill, n=1)",
+  "intrabar order unknown: stop checked before TP; rule triggers and trails take effect from the next bar",
+  "path stitched from the finest candles served (1m ~16h, 5m ~3.5d, 15m ~10d); older parts use coarser bars",
+  "entry is the actual fill, shared by every arm; R unit = INITIAL risk (exit_plan.stop)",
+  "an unresolved arm is marked at the last close and costed as closed there (resolved=false)",
+  "post-exit bars end at t_close + horizon (leg max-hold, else a per-timeframe default); an arm open there is unresolved and never in a verdict",
+  "post-exit excursions start at the first bar opening after the close; the bar containing the exit is excluded",
+  "funding = policy default x windows held (ESTIMATED); account % = current equity less actual P&L (ESTIMATED)",
+  "alt-bracket arms hold the risk budget constant (wider stop => smaller size); margin and lot size not modelled"
+ ],
+ "status": "graded",
+ "reason": null,
+ "bracket": {
+  "entry_pkg": 4003.2,
+  "stop0": 4040.80571429,
+  "stop0_source": "exit_plan.stop|risk_per_unit",
+  "tp": 3946.79142857,
+  "tp_r": 1.5,
+  "r_dist": 37.60571429000038,
+  "atr": 7.0285714285714675,
+  "trail_mult": null
+ },
+ "legs": [
+  {
+   "account_id": "ib_paper",
+   "trade_id": 6740,
+   "account_class": "paper",
+   "qty": 1.0,
+   "entry_fill": 4003.2,
+   "exit_price": 4043.0,
+   "exit_reason": "sl_cross",
+   "risk_usd": 37.605714,
+   "pnl_usd_journal": -398.0,
+   "pnl_usd_venue": null,
+   "closed_at": "2026-10-26T17:24:08.434895+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": null
+  }
+ ],
+ "path": {
+  "bars": 592,
+  "bars_by_tf": {
+   "1m": 0,
+   "5m": 592,
+   "15m": 0
+  },
+  "first_bar": "2026-10-26T14:05:00Z",
+  "last_bar": "2026-10-28T17:25:00Z",
+  "t_entry": "2026-10-26T14:09:10Z",
+  "t_close": "2026-10-26T17:24:08Z"
+ },
+ "actions": [],
+ "arms": [
+  {
+   "arm_id": "actual",
+   "family": "actual",
+   "label": "ACTUAL (journal / venue closed-pnl)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T17:24:08.434895+00:00",
+    "px": 4043.0,
+    "reason": "sl_cross"
+   },
+   "gross_r": null,
+   "cost_r": null,
+   "net_r": -10.5835,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -398.0,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "note": "venue closed_pnl is booked net of the OPEN fee only; the simulated arms use the full recorded round trip",
+   "delta_vs_replayed_actual_r": -8.7585,
+   "delta_vs_actual_r": 0.0
+  },
+  {
+   "arm_id": "replayed_actual",
+   "family": "baseline",
+   "label": "Actual management replayed (like-for-like baseline)",
+   "params": {
+    "actions": 0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "original_brackets",
+   "family": "entry_brackets",
+   "label": "Original SL/TP, no in-trade action (own trail only)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 2R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:35:00Z",
+    "px": 4031.40428572,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4031.40428572,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 1.0645,
+    "slip": 0.0355,
+    "funding": 0.0
+   },
+   "net_r": -2.1,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -78.9721,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.275,
+   "delta_vs_actual_r": 8.4835,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": -10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 3R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:35:00Z",
+    "px": 4031.40428572,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4031.40428572,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 1.0645,
+    "slip": 0.0355,
+    "funding": 0.0
+   },
+   "net_r": -2.1,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -78.9721,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.275,
+   "delta_vs_actual_r": 8.4835,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": -10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 4R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:35:00Z",
+    "px": 4031.40428572,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4031.40428572,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 1.0645,
+    "slip": 0.0355,
+    "funding": 0.0
+   },
+   "net_r": -2.1,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -78.9721,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.275,
+   "delta_vs_actual_r": 8.4835,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": -10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 5R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:35:00Z",
+    "px": 4031.40428572,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4031.40428572,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 1.0645,
+    "slip": 0.0355,
+    "funding": 0.0
+   },
+   "net_r": -2.1,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -78.9721,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.275,
+   "delta_vs_actual_r": 8.4835,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": -10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 6R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:35:00Z",
+    "px": 4031.40428572,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4031.40428572,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 1.0645,
+    "slip": 0.0355,
+    "funding": 0.0
+   },
+   "net_r": -2.1,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -78.9721,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.275,
+   "delta_vs_actual_r": 8.4835,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": -10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:00:00Z",
+    "px": 4050.20714286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4050.20714286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.6387,
+    "slip": 0.0213,
+    "funding": 0.0
+   },
+   "net_r": -1.66,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -62.4256,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.165,
+   "delta_vs_actual_r": 8.9235,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 6.2049
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:00:00Z",
+    "px": 4050.20714286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4050.20714286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.6387,
+    "slip": 0.0213,
+    "funding": 0.0
+   },
+   "net_r": -1.66,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -62.4256,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.165,
+   "delta_vs_actual_r": 8.9235,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 6.2049
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:00:00Z",
+    "px": 4050.20714286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4050.20714286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.6387,
+    "slip": 0.0213,
+    "funding": 0.0
+   },
+   "net_r": -1.66,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -62.4256,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.165,
+   "delta_vs_actual_r": 8.9235,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 6.2049
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:00:00Z",
+    "px": 4050.20714286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4050.20714286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.6387,
+    "slip": 0.0213,
+    "funding": 0.0
+   },
+   "net_r": -1.66,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -62.4256,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.165,
+   "delta_vs_actual_r": 8.9235,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 6.2049
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:00:00Z",
+    "px": 4050.20714286,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4050.20714286,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.6387,
+    "slip": 0.0213,
+    "funding": 0.0
+   },
+   "net_r": -1.66,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -62.4256,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.165,
+   "delta_vs_actual_r": 8.9235,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 6.2049
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 4059.60857144,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4059.60857144,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.5323,
+    "slip": 0.0177,
+    "funding": 0.0
+   },
+   "net_r": -1.55,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -58.2889,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.275,
+   "delta_vs_actual_r": 9.0335,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 4059.60857144,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4059.60857144,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.5323,
+    "slip": 0.0177,
+    "funding": 0.0
+   },
+   "net_r": -1.55,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -58.2889,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.275,
+   "delta_vs_actual_r": 9.0335,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 4059.60857144,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4059.60857144,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.5323,
+    "slip": 0.0177,
+    "funding": 0.0
+   },
+   "net_r": -1.55,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -58.2889,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.275,
+   "delta_vs_actual_r": 9.0335,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 4059.60857144,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4059.60857144,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.5323,
+    "slip": 0.0177,
+    "funding": 0.0
+   },
+   "net_r": -1.55,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -58.2889,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.275,
+   "delta_vs_actual_r": 9.0335,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 10.3416
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 4059.60857144,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4059.60857144,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.5323,
+    "slip": 0.0177,
+    "funding": 0.0
+   },
+   "net_r": -1.55,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -58.2889,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.275,
+   "delta_vs_actual_r": 9.0335,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 10.3416
+   }
+  },
+  {
+   "arm_id": "more_rule_1R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1R",
+   "params": {
+    "trigger_r": 1.0,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_1.5R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1.5R",
+   "params": {
+    "trigger_r": 1.5,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_2R_to_1R",
+   "family": "more_management",
+   "label": "lock +1R at +2R",
+   "params": {
+    "trigger_r": 2.0,
+    "level_r": 1.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_ladder_be1_lock2",
+   "family": "more_management",
+   "label": "ladder: BE at +1R, then lock +1R at +2R",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:55:00Z",
+    "px": 4040.80571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4040.80571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.825,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -68.6305,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 8.7585,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 0.0
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_1.5x",
+   "family": "more_management",
+   "label": "ATR trail 1.5 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 1.5
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:15:00Z",
+    "px": 4019.0,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4019.0,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.4201,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.2452,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -46.8248,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.5798,
+   "delta_vs_actual_r": 9.3383,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 21.8057
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_2x",
+   "family": "more_management",
+   "label": "ATR trail 2 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:15:00Z",
+    "px": 4019.0,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4019.0,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.4201,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.2452,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -46.8248,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.5798,
+   "delta_vs_actual_r": 9.3383,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 21.8057
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_3x",
+   "family": "more_management",
+   "label": "ATR trail 3 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:15:00Z",
+    "px": 4024.28571429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4024.28571429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.5607,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.3857,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -52.1105,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.4393,
+   "delta_vs_actual_r": 9.1978,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 16.52
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_4x",
+   "family": "more_management",
+   "label": "ATR trail 4 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-26T14:35:00Z",
+    "px": 4031.31428571,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 4031.31428571,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.7476,
+   "cost_r": {
+    "fee": 0.7984,
+    "slip": 0.0266,
+    "funding": 0.0
+   },
+   "net_r": -1.5726,
+   "per_account": {
+    "ib_paper": {
+     "pnl_usd": -59.1391,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.2524,
+   "delta_vs_actual_r": 9.0109,
+   "delta_vs_replayed_actual_usd": {
+    "ib_paper": 9.4914
+   }
+  }
+ ],
+ "random_control": null,
+ "fidelity": {
+  "replayed_exit": {
+   "ts": "2026-10-26T14:55:00Z",
+   "px": 4040.80571429
+  },
+  "actual_exit": {
+   "ts": "2026-10-26T17:24:08.434895+00:00",
+   "px": 4043.0
+  },
+  "replayed_actual_net_r": -1.825,
+  "actual_net_r": -10.5835,
+  "abs_gap_r": 8.7585
+ },
+ "post_exit": {
+  "horizon": {
+   "seconds": 172800.0,
+   "hours": 48.0,
+   "source": "default_by_timeframe",
+   "timeframe": "15m",
+   "end": "2026-10-28T17:24:08Z"
+  },
+  "horizon_reached": true,
+  "mfe_r": 1.1009,
+  "mae_r": -1.0982,
+  "tp_reach": {
+   "reached": false,
+   "bars": null,
+   "seconds": null
+  },
+  "wider_sl_arms": [
+   {
+    "arm_id": "alt_sl1.25x_tp2R",
+    "sl_mult": 1.25,
+    "tp_r": 2.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.66,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 8.9235,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp3R",
+    "sl_mult": 1.25,
+    "tp_r": 3.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.66,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 8.9235,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp4R",
+    "sl_mult": 1.25,
+    "tp_r": 4.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.66,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 8.9235,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp5R",
+    "sl_mult": 1.25,
+    "tp_r": 5.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.66,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 8.9235,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp6R",
+    "sl_mult": 1.25,
+    "tp_r": 6.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.66,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 8.9235,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp2R",
+    "sl_mult": 1.5,
+    "tp_r": 2.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.55,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 9.0335,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp3R",
+    "sl_mult": 1.5,
+    "tp_r": 3.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.55,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 9.0335,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp4R",
+    "sl_mult": 1.5,
+    "tp_r": 4.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.55,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 9.0335,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp5R",
+    "sl_mult": 1.5,
+    "tp_r": 5.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.55,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 9.0335,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp6R",
+    "sl_mult": 1.5,
+    "tp_r": 6.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.55,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 9.0335,
+    "provenance": "estimated"
+   }
+  ],
+  "verdict": {
+   "verdict": "exited_early",
+   "r_diff": 9.0335,
+   "resolved": true,
+   "n_held_arms": 10,
+   "n_unresolved": 0,
+   "basis_arm": "alt_sl1.5x_tp2R",
+   "provenance": "estimated"
+  }
+ }
+}

@@ -1,0 +1,102 @@
+{
+  "kind": "eia_crude_stocks",
+  "symbol": "USO",
+  "snapshot_files": [
+    "comms/macro/econ_calendar_snapshots.jsonl",
+    "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+  ],
+  "releases": 588,
+  "releases_with_value": 588,
+  "price_bars": 5172,
+  "first_release": "2015-01-07",
+  "last_release": "2026-10-28",
+  "release_start": null,
+  "release_end": null,
+  "anchor_shift_td": 0,
+  "releases_after_window": 588,
+  "rows": [
+    {
+      "horizon_days": 1,
+      "n": 588,
+      "ic": 0.006561,
+      "ic_t": 0.159,
+      "overlap_factor": 1.0,
+      "n_eff": 588.0,
+      "ic_t_eff": 0.159,
+      "pearson": 0.020645,
+      "sign_hit_rate": 0.521515,
+      "mean_fwd_return": 0.001624
+    }
+  ],
+  "summary": {
+    "max_n": 588,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": false,
+    "any_flagged_horizon_overlap_corrected": false,
+    "strongest_ic_horizon_days": 1,
+    "strongest_ic": 0.006561,
+    "strongest_ic_t": 0.159,
+    "strongest_ic_t_eff": 0.159,
+    "t_flag": 2.0,
+    "verdict": "no_edge_at_tested_horizons"
+  },
+  "rule": {
+    "primary": [
+      1
+    ],
+    "min_n": 100,
+    "t_bar": 2.4,
+    "expected_sign": "negative"
+  },
+  "per_horizon": [
+    {
+      "horizon_days": 1,
+      "n": 588,
+      "ic": 0.006561,
+      "ic_t_eff": 0.159,
+      "n_ok": true,
+      "t_reached": false,
+      "sign_ok": false
+    }
+  ],
+  "sign_book": {
+    "horizon_days": 1,
+    "cost_frac_roundtrip": 0.0005,
+    "book_net": {
+      "n": 588,
+      "mean": -0.00086853,
+      "t": -0.889
+    },
+    "floor_all_long_net": {
+      "n": 588,
+      "mean": 0.00112445,
+      "t": 1.153
+    },
+    "book_minus_floor": {
+      "n": 588,
+      "mean": -0.00199299,
+      "t": -1.306
+    },
+    "book_hit_rate": 0.466,
+    "cost_stack": {
+      "cost_symbol": "USO",
+      "fee_bps_roundtrip": 0.0,
+      "fee_source": "profile_loader.roundtrip_fee_bps_for",
+      "slippage_bps_roundtrip": 5.0,
+      "funding_bps_per_window": 0.0,
+      "funding_applied": false,
+      "total_bps_roundtrip": 5.0,
+      "cost_frac": 0.0005
+    }
+  },
+  "ic_grade": {
+    "verdict": "fail",
+    "note": "no pre-registered horizon reached the t-bar in the expected sign"
+  },
+  "trade_rule": {
+    "horizon": 1,
+    "min_n": 100,
+    "t_bar": 2.0
+  }
+}
