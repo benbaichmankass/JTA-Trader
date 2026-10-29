@@ -1,6 +1,6 @@
 id: RQ-20260928-ae17-01
 title: Offline parity re-check of the three volatile-keyed trend_vol regime cells against historical volatile windows
-status: blocked
+status: retired
 cadence: once
 theme: regime
 priority: 2
@@ -204,3 +204,8 @@ related:
   - scripts/research/regime_cell_walkforward.py (the engine)
   - .claude/skills/regime-selectivity/SKILL.md (rule "walk-forward-before-Tier-3")
 last_dispatched_at: null
+retired_reason: >-
+  2026-10-29 RESEARCH-OPS-20261029-1450: lever dropped. This unit waits on committed vol-label streams (checklist REGIME-VOL-LABELS-EXPORT), which
+  the operator-directed BACKLOG-RESET-20261029 set to `dropped` ("value unknown"), so blocked_on can no longer clear. The registered rule stays in
+  this file; the config-level question (do the three volatile-keyed trend_vol cells hold on historical volatile windows) is NOT closed and no family
+  is retired. Re-open: set REGIME-VOL-LABELS-EXPORT back to queued and `git mv` this file to research/queue/ with status queued.
