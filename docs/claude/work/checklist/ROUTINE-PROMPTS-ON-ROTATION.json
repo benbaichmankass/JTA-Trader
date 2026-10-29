@@ -1,6 +1,6 @@
 {
   "id": "ROUTINE-PROMPTS-ON-ROTATION",
-  "title": "Routine prompts must name the CURRENT manager session, repo slug and cadence: (1) the assistant manager rewrites every routine bound to its session now; (2) the manager handover procedure adds a step: on every rotation or rename, every routine prompt that names the outgoing manager or an old repo name is updated (by the session each routine posts into), with a check that lists stale references",
+  "title": "Routines resolve the CURRENT manager at run time (never a hard-coded session id): STEP 0 of every routine prompt = list_sessions -> the non-archived 'Manager Session YYYY-MM-DD<letter>' with the latest date then letter; the register pointer / recent manager tag is only the second line of defense and is reported when used. Also: repo slug and cadence wording correct; a check that lists any routine prompt naming a specific manager session id or an old repo name",
   "phase": null,
   "state": "in_flight",
   "owner": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~12:05Z verbatim: \"we still need the assistant manager to make those edits. Like we can, even if there's a good fallback, we don't want to rely on the fallback. We want to rely on the prompts being written correctly, and that means updating them when the name changes, then we need to do that.\" Found stale: research-ops trig_01UnRpzN513KbMjvJWFAf911, daily authoring trig_01PHFNiKyeRUMLJj1DgYzmuy, LTR backstop trig_01Bchsugftspk4uZhHR1ncK8 name manager session_01AFoLuJi1vLTnYv9LbP6539 and repo Metis-Insights; update_trigger refuses prompt edits from a session other than the one the routine posts into. Step 1 asked of the assistant (trig_01N2YErk5hQdADuCUrA7QrVE, fired 12:00Z). Step 2 (handover rule + stale-reference check) is a follow-up build for the manager skill.",
+  "note": "Operator 2026-10-29 ~12:10Z verbatim: \"none of the routines reference a specific manager session, because the manager sessions are always rolling over, right? So we need to make sure that it's ordered correctly, that it knows to look for the current manager session, not use a fallback ... the fallback is important, but that shouldn't be our, should be our second line of defense, not our plan A.\" Correction sent to the assistant (trig_01QvsFPkZfQUr22Jg5MRAAqu, 12:02Z): no hard-coded manager id; STEP 0 dynamic resolution. The manager's own routines (bound to the manager session) are rebound at handover; their prompts must also resolve the manager rather than name an id \u2014 fold into the manager-skill handover step.",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T12:00:27Z",
+  "updated_at": "2026-10-29T12:02:46Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-LADDER"
