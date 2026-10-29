@@ -12,15 +12,15 @@ question: On sol_pullback_2h over 2020-07-01..2026-10-15 23:59, does atr_stop_mu
 why_this_matters: sol_pullback_2h is a short-only demo-floor leg whose stop was never varied (adx_min and direction were). The result informs
   the leg's Stage-1 soak read and the stop-width family across the pullback legs.
 power:
-  expected_n: 120
-  min_detectable_effect: 0.02
-  effect_units: r_per_trade
-  sd: 0.9
-  design: paired
+  expected_n: 80
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
   alpha: 0.05
-  power: 0.5
-  basis: Declared leg n >= 39 is the unit floor; at sd ~0.9 R per trade a 0.02 R/trade bar is NOT powered for n ~ 120 (ESTIMATE), so a PASS is
-    a discovery lead and a FAIL closes the configuration only; folds 6.
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs (1.96+0.8416)^2/0.45^2 = 38.8 -> 39 trades (the repo standing E35 floor). expected_n=80 is an
+    ESTIMATE from sibling units on this leg family, NOT a measurement; below 39 the unit grades INDETERMINATE, never FAIL. The 0.02 R x n bar
+    is a materiality bar, not a powered effect: a PASS is a discovery lead and a FAIL closes the configuration only.'
   feasibility:
     source: none
     accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.

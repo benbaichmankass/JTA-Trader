@@ -27,14 +27,14 @@ why_this_matters: The daily horizon has Donchian leads only. The pullback family
   daily pullback signals are sparse.
 power:
   expected_n: 100
-  min_detectable_effect: 0.1
-  effect_units: r_per_trade
+  min_detectable_effect: 0.45
+  effect_units: sd
   design: one_sample
   alpha: 0.05
-  power: 0.5
-  sd: 1.0
-  basis: Pooled n floor 39, 6 folds, cell floor 20; sd ~1 R per trade (ESTIMATE) so a 0.10 R/trade delta is a LEAD, not powered; indeterminate
-    when pooled n is below the floor.
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing floor) = the pooled floor 39; expected_n is an ESTIMATE from comparable
+    runs, NOT a measurement for these arms; below the floor the unit grades indeterminate, never FAIL. The 0.10 R/trade delta over the baseline
+    is a materiality bar, so a PASS is a LEAD.
   feasibility:
     source: none
     accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
