@@ -1,0 +1,22 @@
+{
+  "id": "LTR-ADA-WATCH",
+  "title": "Dedicated live-review watch on the open ADA short (pkg-465a5d7d27644027, bybit_2 + mirror + bybit_1): every 2h after the 2h bar close, one Sonnet reviewer looks for a tighten opportunity, priced on the FULL-history corpus; advice only, the operator decides any move (amend-position-sl); ends when the package closes",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 1,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-29 ~07:35Z, verbatim: \"I also want a ltr lane regularly checking the Ada trade for opportunities to tighten\". State at 06:38Z: stop at break-even 0.2062 (operator-directed, #21153), TP 0.18739 (4R), open +1.62R. Constraints: tighten_sl is advice_only under MD-TRADE-DESK, so a reviewer recommendation goes to the manager and the operator decides; the manager executes via system-action amend-position-sl (tighten-only, dry-run then apply). Pricing: the full-history corpus from #21159 (comms/strategy_evidence/ltr_corpus/ada_pullback_2h, 426 trades) when merged, else the PR branch. Cadence: every 2h at :12 (2h bars close at even hours). Cost estimate: ~$0.3-0.6 per pass (LTR rows measured $0.29-0.84), about 12/day. Stop: disable the scheduled task once the package closes.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T07:22:45Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 792
+}
