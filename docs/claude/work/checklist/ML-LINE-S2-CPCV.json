@@ -1,0 +1,22 @@
+{
+  "id": "ML-LINE-S2-CPCV",
+  "title": "[MODEL] ML line S2: combinatorial purged CV (purge + embargo, grouped by trade) in ml/experiments/splitters.py and an automatic per-dataset configuration counter feeding n_trials (DSR/PBO)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 S2). MEASURED: split_purged_walk_forward + purge_and_embargo_indices exist; 0 hits for cpcv/combinatorial in ml/; CostGateResult.n_trials defaults to 1 and nothing counts configurations, so DSR is undeflated in practice. Practice M2/M4/M5, [LdP-2018-AFML-ch7/12], [BBLZ-2017-PBO], [BLdP-2014-DSR]. Owner: trainer cycle. Station metrics: planted look-ahead feature must FAIL (self-test), folds achieved vs declared, n_trials recorded. CLOSES WHEN: the CPCV splitter's planted-leak self-test fails as it should and a trained manifest's eval report carries n_trials > 1 from the counter.",
+  "priority_rank": 4,
+  "updated_at": "2026-10-29T07:08:47Z",
+  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 784
+}
