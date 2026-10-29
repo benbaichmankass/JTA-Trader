@@ -11,9 +11,9 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Root cause: tp_revision donchian_measured_move anchors on the last closed bar when the entry bar is still forming (entry_bar_closed=false); fix = no closed entry bar => could-not-look. Closes when merged+deployed and next forming-bar ETH 4h entry keeps its resting TP. roadmap L-OPS.",
+  "note": "Root cause: tp_revision donchian_measured_move anchors on the last closed bar when the entry bar is still forming (entry_bar_closed=false); fix = no closed entry bar => could-not-look. Closes when merged+deployed and next forming-bar ETH 4h entry keeps its resting TP. roadmap L-OPS. [2026-10-29 mirror 6787] pnl NULL at ~12 min is the PENDING state, not a defect: bybit_portfolio is a Bybit-reader account, so its exit price comes from the hourly ict-exchange-fills-pull + fills resolver (exchange_fill), and the local fallback only fills after close+6h (_LOCAL_PNL_BROKER_DEFER_MS). Its 12 sibling mirror closes since 10-15 all resolved (exchange_fill / local_compute). CLOSES: 6787 pnl non-null with exit_price_source exchange_fill; if still NULL at 2026-10-30T02:50Z (close+6h+grace) it is a real bug -> reopen. Not the same root cause as the 0.26R TP; the restart race cannot be established (journal window starts 20:50:35Z).",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T20:56:09Z",
+  "updated_at": "2026-10-29T21:00:55Z",
   "updated_by": "session_01AFoLuLfcrxLfKwo8fDd9mB",
   "roadmap": [
     "L-OPS"
