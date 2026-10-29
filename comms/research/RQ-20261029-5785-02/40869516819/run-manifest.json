@@ -1,0 +1,44 @@
+{
+  "unit": "RQ-20261029-5785-02",
+  "run_id": "40869516819",
+  "commit_sha": "13f860dae3e6eeeffaca5eaa9aa2aedac9429dae",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40869516819",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_overlay_noninferior.py",
+        "--family",
+        "PB2H:ada_pullback_2h+,xrp_pullback_2h+,eth_pullback_2h,sol_pullback_2h,avax_pullback_2h",
+        "--family",
+        "TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--days",
+        "2330",
+        "--reference-corpus",
+        "comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b",
+        "--parity-basis",
+        "trade",
+        "--holdout-start",
+        "2017-09-01",
+        "--holdout-end",
+        "2020-06-30 23:59",
+        "--holdout-days",
+        "3500",
+        "--export-dir",
+        "comms/research/RQ-20261029-5785-02/40869516819/artifacts",
+        "--out",
+        "comms/research/RQ-20261029-5785-02/40869516819"
+      ],
+      "log": "comms/research/RQ-20261029-5785-02/40869516819/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 3107.2
+    }
+  ],
+  "all_ok": true
+}

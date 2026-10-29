@@ -33,3 +33,18 @@ def test_ambiguous_time_window_match_is_dropped_not_guessed():
          "direction": "long", "pnl": 1.0, "timestamp": "2026-10-30T12:02:00+00:00", "order_package_id": "p"}
     j = J.join([s, dict(s)], [t])
     assert j["n_joined"] == 0 and j["n_ambiguous_dropped"] == 1
+
+
+def test_a_truncated_relay_block_reads_incomplete_never_zero(tmp_path):
+    """Relay #21272 (2026-10-29): a batched comment cut the trades block mid-JSON; the loader read 0 rows and the
+    join said `no_closed_trades`. A cut block must read `incomplete_read` and exit 2 (could not look)."""
+    cut = ("## `journal?table=trades&limit=30`\n```json\n[\n  {\"id\": 1, \"order_package_id\": \"p\", \"pnl\": 1.0,\n"
+           "    \"status\": \"clo\n```\n_(`rows`: ONLY THE FIRST 1 of 30 element(s) are shown; the LAST 29 are NOT. "
+           "Re-request with a smaller `lines`/`limit` to see the tail.)_\n")
+    assert J.relay_completeness(cut) == {"unparsed_blocks": 1, "truncated": True, "complete": False}
+    sh, tr = tmp_path / "s.md", tmp_path / "t.md"
+    sh.write_text("```json\n{\"name\": \"overlay_shadow\", \"present\": false, \"lines\": []}\n```\n")
+    tr.write_text(cut)
+    assert J.main(["--shadow", str(sh), "--trades", str(tr), "--cusum"]) == 2
+    good = "```json\n" + json.dumps([{"id": 2, "order_package_id": "q", "pnl": 1.0, "status": "closed"}]) + "\n```\n"
+    assert J.relay_completeness(good)["complete"] is True

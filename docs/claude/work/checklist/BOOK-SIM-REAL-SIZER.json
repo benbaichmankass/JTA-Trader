@@ -1,24 +1,22 @@
 {
   "id": "BOOK-SIM-REAL-SIZER",
-  "title": "Book-level $ simulation per account at its real size with the PRODUCTION position sizer and risk caps (concurrency, per-account caps, daily_dd_switch where armed), multi-symbol across the account's whole strategies: roster, with in-trade levers (break-even after peak first) applied in the simulated monitor path; the measurement of record for RULE-AM-RISK-ADJUSTED-V1 (delta net $ and % return of the book; drawdown / CVaR in $ and %)",
+  "title": "Book-level $ simulation with the production sizer: replay a corpus through each account's real sizing, caps and costs and report $/% P&L, max drawdown and worst-5% outcomes per account and per book (the measurement of record for RULE-AM-RISK-ADJUSTED-V1)",
   "phase": null,
   "state": "queued",
-  "owner": "manager",
+  "owner": null,
   "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 1,
-  "prs": [
-    21283
-  ],
+  "prs": [],
   "blocked_on": [],
-  "note": "Filed by lane AM-RISK-ADJUSTED-RULE 2026-10-29 on the operator's ~07:20Z requirement (verbatim on row AM-RISK-ADJUSTED-RULE): grade on a book-level $ simulation per account so three effects that a per-trade R test cannot see are counted: (1) freed risk budget admits trades the caps would refuse; (2) compounding under %-of-equity sizing; (3) prop survival vs daily DD limits. MEASURED gap, 2026-10-29: scripts/backtest_system.py simulates ONE shared netted book on ONE symbol, and its sizing MIRRORS RiskManager.position_size (re-implemented, _risk_qty) rather than importing it. scripts/research/nbook_portfolio.py runs N books over one tick stream with the same mirrored sizer. Neither models daily_dd_switch or a multi-symbol account roster (bybit_2 is 5 legs on 4 symbols), and neither applies a harness exit lever: --be-floor-r lives only in the per-strategy harnesses, and the live monitor() does not model be_floor_r (src/runtime/bracket_advisor.py _UNMODELLED_SL_KEYS). Done when: a simulator replays an account's roster with the production sizer and caps imported (not copied), passes a parity test against backtest_system at N=1 / one symbol, takes an in-trade lever arm plus matched random-control arms, and emits per-account books ($ and %) that am_risk_adjusted.grade_risk_adjusted can grade (net $ in place of net R; R per trade reported beside). Until then the R-unit grade is a SCREEN, never a graduation. Blocks RQ-20261029-1f39-01 together with HARNESS-BE-RANDOM-CONTROL.",
+  "note": "Created 2026-10-29 by manager: the 2026-10-29 conformance audit (docs/reviews/2026-10-29-system-conformance-audit.md finding 1.1, row table 1.1) names this row as owner and 'in flight', but NO row existed on the register (checked docs/claude/work/checklist/ on main and the register branch). Operator 2026-10-29 ~13:00Z: do not wait for it to decide; queue a retest once it is ready (row AM-REGRADE-BOOKSIM).",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T13:22:46Z",
-  "updated_by": "session_01AFoLuMV1Qgi2fjJegsxr3r",
+  "updated_at": "2026-10-29T12:58:34Z",
+  "updated_by": "Manager Session 2026-10-29c",
   "roadmap": [
     "L-AM-STANDARD"
   ],
-  "_seq": 790
+  "_seq": 816
 }

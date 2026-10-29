@@ -204,7 +204,15 @@ jobs:
           EMIT=/tmp/exit_head_replay_${STRATEGY}.jsonl
           # Feed: reuse the matrix's own fetch so the candles match every other
           # harness run rather than being a bespoke pull for this leg.
-          "$PY" - <<'PYFETCH'
+          # ⚠️ FAIL CLOSED (2026-10-29, ML-AM-NEXT-LIVE, issue #21270): the data CSV
+          # and the meta file are PER STRATEGY and cleared before the fetch, and a
+          # failed fetch exits 4. Before this, a REFUSED SOLUSDT fetch fell through
+          # to the previous run's BTCUSDT csv + meta, and the job reported
+          # "replay ran" for trend_donchian_sol on BTC candles.
+          export DATA=/tmp/exit_head_replay_data_${STRATEGY}.csv
+          export META=/tmp/exit_head_replay_meta_${STRATEGY}
+          rm -f "$DATA" "$META"
+          "$PY" - <<'PYFETCH' || { echo "FETCH_FAILED (the fetch exited non-zero; nothing was replayed)"; exit 4; }
           import os, sys
           sys.path.insert(0, os.getcwd())
           from scripts.research.regime_debt_matrix import resolve_feed, _fetch_csv
@@ -215,17 +223,17 @@ jobs:
           sym = os.environ.get("SYMBOL") or (cfg.get("symbols") or [None])[0]
           tf = os.environ.get("TIMEFRAME") or cfg.get("timeframe")
           feed = resolve_feed(sym, tf)
-          _fetch_csv(feed, int(os.environ["DAYS"]), "/tmp/exit_head_replay_data.csv")
+          _fetch_csv(feed, int(os.environ["DAYS"]), os.environ["DATA"])
           print(f"FEED_OK symbol={sym} tf={tf} resample={feed['resample']}")
-          open("/tmp/exit_head_replay_meta", "w").write(f"{sym}\n{tf}\n{feed['resample']}\n")
+          open(os.environ["META"], "w").write(f"{sym}\n{tf}\n{feed['resample']}\n")
           PYFETCH
-          [ -s /tmp/exit_head_replay_meta ] || { echo "FETCH_FAILED"; exit 4; }
-          SYM=$(sed -n 1p /tmp/exit_head_replay_meta)
-          TF=$(sed -n 2p /tmp/exit_head_replay_meta)
-          RS=$(sed -n 3p /tmp/exit_head_replay_meta)
+          [ -s "$META" ] && [ -s "$DATA" ] || { echo "FETCH_FAILED"; exit 4; }
+          SYM=$(sed -n 1p "$META")
+          TF=$(sed -n 2p "$META")
+          RS=$(sed -n 3p "$META")
           echo "== replaying $STRATEGY $SYM $TF (resample $RS)"
           "$PY" scripts/ml/exit_head_replay.py \
-            --data /tmp/exit_head_replay_data.csv --resample "$RS" \
+            --data "$DATA" --resample "$RS" \
             --symbol "$SYM" --timeframe "$TF" --strategy "$STRATEGY" \
             --emit-trades "$EMIT" --json "$OUT"
           RC=$?
