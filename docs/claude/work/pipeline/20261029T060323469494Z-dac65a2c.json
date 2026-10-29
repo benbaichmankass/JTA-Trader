@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "scripts/research/ pooled-paired-read over harness_stage0 result rows; then replace the node's needs_authoring",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261029-IHFQDB3W-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Daily research authoring lane 2026-10-29",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep P5-RG1025-trend-pooled"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-authoring] P5-RG1025-trend-pooled needs a cross-timeframe pooled paired read: harness_stage0 grades one bar per run, so D55 vs B pooled across 1h+2h+4h (n_B >= 18k) needs a pooling reader over the three committed results (4b82-05, f679-02, f679-03) before the node's unit can be authored."
+}

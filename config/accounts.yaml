@@ -2105,7 +2105,7 @@ accounts:
     account_size_usd: 5000
     strategies:                        # breakout_1's legs, each kept only if its Turbo fit did not FAIL
       - trend_donchian_eth_prop        # Turbo fit RQ-20261005-851 / -853: NULL (ev > 0 every seed), kept
-      - trend_donchian_sol_prop        # Turbo fit RQ-20261005-852 / -854: NULL (ev > 0 every seed), kept
+      # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
     symbols: [ETHUSDT, SOLUSDT]
     risk:
       max_dd_pct: 0.03                 # Turbo STATIC 3% = $150 (floor $4,850).
@@ -2169,7 +2169,7 @@ accounts:
                                        # symbol, so the no-hedging rule cannot be
                                        # tripped by two of our own legs.
       - trend_donchian_eth_prop        # ETH 1h (n=169, net R +13.03 after Tradeify costs)
-      - trend_donchian_sol_prop        # SOL 1h. RE-ADDED 2026-10-05 ~18:00Z as the second leg
+      # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
                                        # of the ETH+SOL book (Tier-3, data-backed under the
                                        # operator's standing authorization of 2026-09-27; decided
                                        # by manager session_01MM8o5js6TcDFeNAPBY4Ntv, lane
@@ -2274,7 +2274,7 @@ accounts:
                                        # worst realised day -$78 vs the $160 line, max entry gap 6.6d, EV/life +$167..+$188.
                                        # Operator 2026-10-06 06:40Z: risk-qualified legs go live; 5-qualifying-days tuned after.
       - trend_donchian_eth_prop        # evidence: comms/strategy_evidence/trend_donchian_eth_prop.json
-      - trend_donchian_sol_prop        # evidence: comms/strategy_evidence/trend_donchian_sol_prop.json
+      # REMOVED 2026-10-29 (Tier-3, operator: "1, but we also need to send it for refinement/improvment"): trend_donchian_sol_prop. Evidence: comms/prop_survival/v2/trend_donchian_sol_prop.v2.json (PR #21204). REVERT: re-add `- trend_donchian_sol_prop` here.
     symbols: [ETHUSDT, SOLUSDT]
     risk:
       max_dd_pct: 0.07                 # 7% STATIC = $350, floor $4,650 for the life of the account.

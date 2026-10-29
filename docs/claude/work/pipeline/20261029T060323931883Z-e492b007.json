@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "scripts/ wrapper for backtest_ict_scalp.py (ON/OFF HTF arms, window flags, verdict.json); then author the confirmation",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261029-IHFQDB3W-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Daily research authoring lane 2026-10-29",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep P3-M27-htf-pass"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-authoring] P3-M27-htf-pass disjoint-window confirmation of the ict_scalp HTF filter cannot be queued: RQ-20260928-001 ran as a session-local scripts/backtest_ict_scalp.py loop (no run.workflow/harness_stage0 route), and the ICT-SCALP-EVIDENCE regrade (xrp_15m 54.6 R cost trade) is a build row. Needs a runner-dispatchable harness wrapper with a --start/--end window."
+}

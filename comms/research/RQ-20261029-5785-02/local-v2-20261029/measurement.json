@@ -1,0 +1,688 @@
+{
+ "runs": {},
+ "families": [
+  {
+   "family": "PB2H",
+   "legs_all": [
+    "ada_pullback_2h",
+    "xrp_pullback_2h",
+    "eth_pullback_2h",
+    "sol_pullback_2h",
+    "avax_pullback_2h"
+   ],
+   "legs_gate": [
+    "ada_pullback_2h",
+    "xrp_pullback_2h"
+   ],
+   "n_pool_scored": 1729,
+   "verdict": "FAIL",
+   "reasons": [],
+   "primary": {
+    "C": 0.1,
+    "q": 0.2
+   },
+   "primary_eval": {
+    "n_gate": 796,
+    "take_all_mean_r": 0.1436,
+    "delta_mean_r": -0.0271,
+    "delta_lb95_r": -0.0499,
+    "delta_lb_bonferroni_r": -0.0589,
+    "maxdd_take_r": 25.614,
+    "maxdd_overlay_r": 24.021,
+    "cvar5_take_r": -1.112,
+    "cvar5_overlay_r": -1.0957,
+    "random_delta_mean_r": -0.0146,
+    "random_delta_p90_r": -0.0018,
+    "random_p_value": 0.8965,
+    "reduce_rate": 0.1812,
+    "reduced_mean_r": 0.2996,
+    "net_total_r_take": 114.33,
+    "net_total_r_overlay": 92.73,
+    "paths_delta_mean_r": [
+     -0.0235,
+     -0.0313,
+     -0.0294,
+     -0.0156,
+     -0.036
+    ],
+    "calibration": {
+     "brier": 0.237,
+     "brier_const": 0.2345,
+     "ece": 0.038,
+     "base_rate": 0.3756
+    },
+    "folds": [
+     {
+      "group": 0,
+      "n": 175,
+      "delta": 0.0155,
+      "random_mean": 0.0005,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 1,
+      "n": 131,
+      "delta": -0.0411,
+      "random_mean": -0.0196,
+      "a": false,
+      "b": true,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 2,
+      "n": 120,
+      "delta": -0.0267,
+      "random_mean": -0.0074,
+      "a": false,
+      "b": true,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 3,
+      "n": 119,
+      "delta": -0.0667,
+      "random_mean": -0.0215,
+      "a": false,
+      "b": false,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 4,
+      "n": 127,
+      "delta": -0.0299,
+      "random_mean": -0.0105,
+      "a": false,
+      "b": true,
+      "c": false,
+      "pass": false
+     },
+     {
+      "group": 5,
+      "n": 124,
+      "delta": -0.0322,
+      "random_mean": -0.0355,
+      "a": false,
+      "b": true,
+      "c": true,
+      "pass": false
+     }
+    ],
+    "folds_passing": 1,
+    "checks": {
+     "a_noninferior": false,
+     "b_risk": true,
+     "c_beats_random": false,
+     "d_not_vacuous": false,
+     "e_folds": false
+    },
+    "pass": false
+   },
+   "pool_eval_primary": {
+    "n_gate": 1729,
+    "delta_mean_r": -0.0132,
+    "delta_lb95_r": -0.0301,
+    "reduce_rate": 0.2088,
+    "reduced_mean_r": 0.1262,
+    "take_all_mean_r": 0.0851,
+    "folds_passing": 2
+   },
+   "trials": [
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0163,
+     "delta_lb95_r": -0.0326,
+     "reduce_rate": 0.0972,
+     "folds_passing": 1
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.2
+     },
+     "primary": true,
+     "pass": false,
+     "delta_mean_r": -0.0271,
+     "delta_lb95_r": -0.0499,
+     "reduce_rate": 0.1812,
+     "folds_passing": 1
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0387,
+     "delta_lb95_r": -0.0645,
+     "reduce_rate": 0.2716,
+     "folds_passing": 1
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0152,
+     "delta_lb95_r": -0.0305,
+     "reduce_rate": 0.098,
+     "folds_passing": 1
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.2
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0267,
+     "delta_lb95_r": -0.0477,
+     "reduce_rate": 0.1817,
+     "folds_passing": 1
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": false,
+     "delta_mean_r": -0.0394,
+     "delta_lb95_r": -0.065,
+     "reduce_rate": 0.2709,
+     "folds_passing": 1
+    }
+   ],
+   "n_trials": 6,
+   "pbo": 0.0,
+   "legs": {
+    "ada_pullback_2h": {
+     "n_trades": 402,
+     "n_scored": 402,
+     "n_aligned": 402,
+     "gate_leg": true,
+     "net_expectancy_r": 0.2177,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 402,
+      "n_ours_in_ref_span": 402,
+      "n_same_trade": 402,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": -0.01134
+     }
+    },
+    "xrp_pullback_2h": {
+     "n_trades": 394,
+     "n_scored": 394,
+     "n_aligned": 394,
+     "gate_leg": true,
+     "net_expectancy_r": 0.068,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 394,
+      "n_ours_in_ref_span": 394,
+      "n_same_trade": 394,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": -0.00723
+     }
+    },
+    "eth_pullback_2h": {
+     "n_trades": 371,
+     "n_scored": 371,
+     "n_aligned": 371,
+     "gate_leg": false,
+     "net_expectancy_r": -0.0062,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "sol_pullback_2h": {
+     "n_trades": 147,
+     "n_scored": 147,
+     "n_aligned": 147,
+     "gate_leg": false,
+     "net_expectancy_r": 0.049,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "avax_pullback_2h": {
+     "n_trades": 417,
+     "n_scored": 415,
+     "n_aligned": 417,
+     "gate_leg": false,
+     "net_expectancy_r": 0.0668,
+     "parity": {
+      "state": "training_only"
+     }
+    }
+   },
+   "parity_basis": "trade",
+   "holdout": {
+    "state": "INDETERMINATE",
+    "reasons": [
+     "n 43 < 100"
+    ],
+    "n": 43,
+    "runs": {}
+   }
+  },
+  {
+   "family": "TD",
+   "legs_all": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop",
+    "trend_donchian_sol_4h",
+    "trend_donchian_ada_4h",
+    "trend_donchian_avax_4h",
+    "trend_donchian_xrp_adx25"
+   ],
+   "legs_gate": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop"
+   ],
+   "n_pool_scored": 2678,
+   "verdict": "PASS",
+   "reasons": [],
+   "primary": {
+    "C": 0.1,
+    "q": 0.2
+   },
+   "primary_eval": {
+    "n_gate": 1830,
+    "take_all_mean_r": 0.1266,
+    "delta_mean_r": 0.0079,
+    "delta_lb95_r": -0.0035,
+    "delta_lb_bonferroni_r": -0.0087,
+    "maxdd_take_r": 27.777,
+    "maxdd_overlay_r": 24.77,
+    "cvar5_take_r": -1.1287,
+    "cvar5_overlay_r": -1.0915,
+    "random_delta_mean_r": -0.0152,
+    "random_delta_p90_r": -0.0068,
+    "random_p_value": 0.0,
+    "reduce_rate": 0.2543,
+    "reduced_mean_r": -0.0619,
+    "net_total_r_take": 231.6,
+    "net_total_r_overlay": 246.01,
+    "paths_delta_mean_r": [
+     0.0081,
+     0.0045,
+     0.0076,
+     0.0116,
+     0.0075
+    ],
+    "calibration": {
+     "brier": 0.2346,
+     "brier_const": 0.2352,
+     "ece": 0.0249,
+     "base_rate": 0.3781
+    },
+    "folds": [
+     {
+      "group": 0,
+      "n": 290,
+      "delta": -0.013,
+      "random_mean": -0.0186,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 1,
+      "n": 297,
+      "delta": -0.0011,
+      "random_mean": -0.0129,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 2,
+      "n": 317,
+      "delta": 0.0575,
+      "random_mean": -0.0082,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 3,
+      "n": 299,
+      "delta": -0.0119,
+      "random_mean": -0.0275,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 4,
+      "n": 311,
+      "delta": 0.0096,
+      "random_mean": -0.0157,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     },
+     {
+      "group": 5,
+      "n": 316,
+      "delta": 0.0027,
+      "random_mean": -0.0069,
+      "a": true,
+      "b": true,
+      "c": true,
+      "pass": true
+     }
+    ],
+    "folds_passing": 6,
+    "checks": {
+     "a_noninferior": true,
+     "b_risk": true,
+     "c_beats_random": true,
+     "d_not_vacuous": true,
+     "e_folds": true
+    },
+    "pass": true
+   },
+   "pool_eval_primary": {
+    "n_gate": 2678,
+    "delta_mean_r": 0.0034,
+    "delta_lb95_r": -0.0054,
+    "reduce_rate": 0.2111,
+    "reduced_mean_r": -0.0319,
+    "take_all_mean_r": 0.1499,
+    "folds_passing": 6
+   },
+   "trials": [
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0055,
+     "delta_lb95_r": -0.0027,
+     "reduce_rate": 0.1337,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.2
+     },
+     "primary": true,
+     "pass": true,
+     "delta_mean_r": 0.0079,
+     "delta_lb95_r": -0.0035,
+     "reduce_rate": 0.2543,
+     "folds_passing": 6
+    },
+    {
+     "config": {
+      "C": 0.1,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0047,
+     "delta_lb95_r": -0.0105,
+     "reduce_rate": 0.3752,
+     "folds_passing": 4
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.1
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0052,
+     "delta_lb95_r": -0.0031,
+     "reduce_rate": 0.1332,
+     "folds_passing": 5
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.2
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0082,
+     "delta_lb95_r": -0.0037,
+     "reduce_rate": 0.2548,
+     "folds_passing": 6
+    },
+    {
+     "config": {
+      "C": 1.0,
+      "q": 0.3
+     },
+     "primary": false,
+     "pass": true,
+     "delta_mean_r": 0.0045,
+     "delta_lb95_r": -0.0105,
+     "reduce_rate": 0.3762,
+     "folds_passing": 4
+    }
+   ],
+   "n_trials": 6,
+   "pbo": 0.75,
+   "legs": {
+    "trend_donchian_eth_4h": {
+     "n_trades": 275,
+     "n_scored": 275,
+     "n_aligned": 275,
+     "gate_leg": true,
+     "net_expectancy_r": 0.4083,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 275,
+      "n_ours_in_ref_span": 275,
+      "n_same_trade": 275,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": -0.01337
+     }
+    },
+    "trend_donchian_xrp_4h": {
+     "n_trades": 68,
+     "n_scored": 68,
+     "n_aligned": 68,
+     "gate_leg": true,
+     "net_expectancy_r": 0.2019,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 68,
+      "n_ours_in_ref_span": 68,
+      "n_same_trade": 68,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": -0.00843
+     }
+    },
+    "trend_donchian_eth_prop": {
+     "n_trades": 1085,
+     "n_scored": 1085,
+     "n_aligned": 1085,
+     "gate_leg": true,
+     "net_expectancy_r": 0.0519,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 1085,
+      "n_ours_in_ref_span": 1085,
+      "n_same_trade": 1085,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": -0.01658
+     }
+    },
+    "trend_donchian_sol_prop": {
+     "n_trades": 403,
+     "n_scored": 402,
+     "n_aligned": 403,
+     "gate_leg": true,
+     "net_expectancy_r": 0.1211,
+     "parity": {
+      "state": "checked",
+      "basis": "trade",
+      "n_ref": 403,
+      "n_ours_in_ref_span": 403,
+      "n_same_trade": 403,
+      "parity_share": 1.0,
+      "cost_stack_net_r_shift_mean": -0.01158
+     }
+    },
+    "trend_donchian_sol_4h": {
+     "n_trades": 267,
+     "n_scored": 264,
+     "n_aligned": 267,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2485,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_ada_4h": {
+     "n_trades": 259,
+     "n_scored": 257,
+     "n_aligned": 259,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2245,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_avax_4h": {
+     "n_trades": 263,
+     "n_scored": 259,
+     "n_aligned": 263,
+     "gate_leg": false,
+     "net_expectancy_r": 0.126,
+     "parity": {
+      "state": "training_only"
+     }
+    },
+    "trend_donchian_xrp_adx25": {
+     "n_trades": 68,
+     "n_scored": 68,
+     "n_aligned": 68,
+     "gate_leg": false,
+     "net_expectancy_r": 0.2427,
+     "parity": {
+      "state": "training_only"
+     }
+    }
+   },
+   "parity_basis": "trade",
+   "holdout": {
+    "state": "CONFIRMS",
+    "reasons": [],
+    "window": [
+     "2017-09-01",
+     "2020-06-24 00:00:00+00:00"
+    ],
+    "n": 105,
+    "n_by_leg": {
+     "trend_donchian_eth_prop": 82,
+     "trend_donchian_eth_4h": 19,
+     "trend_donchian_xrp_4h": 4
+    },
+    "checks": {
+     "a_noninferior": true,
+     "b_risk": true,
+     "c_beats_random": true,
+     "d_not_vacuous": true
+    },
+    "eval": {
+     "n_gate": 105,
+     "take_all_mean_r": 0.2747,
+     "delta_mean_r": 0.0327,
+     "delta_lb95_r": 0.0119,
+     "delta_lb_bonferroni_r": 0.0071,
+     "maxdd_take_r": 6.439,
+     "maxdd_overlay_r": 5.961,
+     "cvar5_take_r": -1.0827,
+     "cvar5_overlay_r": -1.0743,
+     "random_delta_mean_r": -0.0343,
+     "random_delta_p90_r": 0.0056,
+     "random_p_value": 0.009,
+     "reduce_rate": 0.2381,
+     "reduced_mean_r": -0.2744,
+     "net_total_r_take": 28.85,
+     "net_total_r_overlay": 32.28,
+     "paths_delta_mean_r": [
+      0.0327
+     ],
+     "calibration": {
+      "brier": 0.2472,
+      "brier_const": 0.2462,
+      "ece": 0.0758,
+      "base_rate": 0.4381
+     },
+     "folds": [
+      {
+       "group": 0,
+       "n": 32,
+       "delta": 0.0385,
+       "random_mean": -0.0554,
+       "a": true,
+       "b": true,
+       "c": true,
+       "pass": true
+      },
+      {
+       "group": 1,
+       "n": 39,
+       "delta": 0.0493,
+       "random_mean": -0.0305,
+       "a": true,
+       "b": true,
+       "c": true,
+       "pass": true
+      },
+      {
+       "group": 2,
+       "n": 34,
+       "delta": 0.0082,
+       "random_mean": -0.0176,
+       "a": true,
+       "b": true,
+       "c": true,
+       "pass": true
+      }
+     ],
+     "folds_passing": 3
+    },
+    "runs": {}
+   },
+   "exported": "/tmp/claude-0/-home-user-JTA-Trader/be65f813-ce4a-541a-8dfd-19a75bbab8f2/scratchpad/ovl2b/artifacts/overlay_td.json"
+  }
+ ]
+}
