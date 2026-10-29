@@ -752,10 +752,77 @@ own RiskManager). Guard: `scripts/ci/check_no_action_rate_cap.py`.
    regime, a scheduled event, or a liquidity level. It is never the trade's P&L alone, and never the clock alone.
 3. **Both brackets always exist.** No action removes the SL or the TP. A widen, a pull-in or a partial close leaves a live,
    predictive SL and TP on what remains (TP doctrine clause 1).
-4. **Each action class graduates on its OWN test.** An action class is advice-only until a test registered before the run, net of
-   the full cost stack, judged against hold (and a matched random intervention, practice principle T1), passes for that class.
-   Then it may be executed, through the usual Tier-3 / mandate path. One class failing says nothing about another: each is
-   judged on its own merits.
+4. **Each action class graduates on its OWN test, under a RISK-ADJUSTED rule** (operator decision 2026-10-29, below). An action
+   class is advice-only until a test registered before the run, net of the full cost stack, passes for that class under
+   **`RULE-AM-RISK-ADJUSTED-V1`**. Then it may be executed, through the usual Tier-3 / mandate path. One class failing says nothing
+   about another: each is judged on its own merits. **The measurement of record is a book-level $ simulation per account at its
+   real size**, using the production position sizer and risk caps: concurrency, per-account caps, and `daily_dd_switch` where it is
+   armed. That counts three book effects a per-trade R test cannot see: freed risk budget admitting trades the caps would refuse,
+   compounding under %-of-equity sizing, and prop survival against daily DD limits. The class passes when, on each arm's whole book:
+   - **R1 — small P&L cost.** The change in the book's **net $ and % return** gives up at most a pre-stated amount. V1 states it
+     as **0.05 R per baseline trade**, with R per trade reported beside the $ and % figures as the unit.
+   - **R2 — material risk cut.** It cuts the book's **max drawdown** or its **worst-5% weekly outcome**, in $ and %, by at least
+     **15%** in V1.
+   - **R3 — it holds across time.** A majority of calendar folds (V1: 4 of 6) each satisfy the R1 bar without making that fold's
+     risk worse.
+   - **R4 — it beats chance.** It beats a **matched random-intervention control** of the same class (practice principle T1) on
+     both net R and the risk cut. Without a declared control, the class cannot pass.
+
+   A class that clears R1-R4 is better than hold under the objective below, even when its mean net R is a little lower. The
+   mechanical form, parameters and verdict states are in `scripts/research/am_risk_adjusted.py` (wired as
+   `exit_lever_ablation.py --grade risk_adjusted`). A unit registers the rule id and any changed parameter before its run, and a
+   re-grade of an older record is a reading, never a graduation. **Known limitation of V1: no harness yet simulates an
+   account's book at real size with the production sizer and caps** (row `BOOK-SIM-REAL-SIZER`). Until one does, the grader's
+   per-trade-R reading is a **screen** that ranks candidates, and it never graduates a class. Its % column is a per-trade
+   translation (R × `risk.risk_pct`), never the book result.
+   **Dated exception:** 2026-10-29 operator decision (row AM-RISK-ADJUSTED-RULE): classes passing the RULE-AM-RISK-ADJUSTED-V1
+   re-grade on DESK-LIFECYCLE-S0 graduate on that record; BOOK-SIM-REAL-SIZER, when built, re-grades them and a fail there demotes
+   the class back to advice-only. (That re-grade, RQ-20261029-1f39-02, passed no class.)
+   **Reported with every verdict, never a pass clause** (operator 2026-10-29 ~12:40Z: *"we need to make sure we're also
+   measuring R giveback and overall PNL"*). For the action, hold and the random control, per class, per account and for the
+   book, the verdict reports:
+   - **R giveback:** peak MFE in R minus realised net R per trade, as a mean and a p95.
+   - **Overall net P&L:** in % per account and per book, net of the full cost stack.
+   - **Net P&L in $:** only from the book simulation. Balances are never committed to this public repo.
+
+### The rule's record and the objective it serves (operator, 2026-10-29)
+
+The operator, verbatim, 2026-10-29 ~06:25Z (popup answer, relayed by Manager Session 2026-10-29c; row `AM-RISK-ADJUSTED-RULE`):
+
+> *"Small R cost for big risk cut (Recommended)"* — the option shown: *"Passes if it gives up at most a set amount of R per trade
+> (I'd propose 0.05R, fixed before the run) while cutting the book's max drawdown or worst 5% of outcomes materially (e.g. 15%+). <!-- population-ok: verbatim operator quote stating the rule's own pre-registered thresholds, not a measurement -->
+> Must hold across time periods and beat a random-intervention control, measured on the whole book."*
+>
+> *"if we've gotten to a place where we can still find ourselves getting reward while zeroing out the risk of the trade, then that
+> seems to me like it's a better trading decision overall than to keep on time and time again just giving back all of the gains."*
+
+And on the objective, ~06:35Z: *"This is an issue of metrics, not an issue of the trade itself ... If nothing else, reducing risk is
+always the second most important thing. So if everything else is even, then reducing risk is the right decision to make. And
+reducing lots of risk for a small cost in R is also the right decision to make ... the long-term P&L isn't just one trade. It's our
+ability to manage risk over time."*
+
+And, sharpening it, ~07:10Z: *"We've been measuring R, which is a good measure, and we need to continue that. But the main goal
+isn't most R as much as it's most overall P&L, right? We need to measure P&L and percentage on an absolute numbers because we're
+working with small accounts and different accounts of different sizes. But the what we care about is return, not necessarily just
+return for risk. We do care about R, which is why we also want to reduce risk when reducing risk will have a small impact on reward.
+But what we care about here is the overall amount of money that we make, not the overall amount of money we make necessarily in
+relation to the amount of risk that was taken."*
+
+And on how it is measured, ~07:20Z: *"if we're optimizing for R, then that also matters how much risk we're taking. But like,
+this is why banking makes sense, because it might not be the best R trade-off, but it will make the most money overall and for
+each trade."* At fixed risk per trade, $ = R × risk. Banking can make more money overall only through the book effects named in
+clause 4. That is why the rule is graded on the book-level $ simulation.
+
+**The system's trading objective, stated once here; other docs point at it.**
+1. **Primary: absolute net P&L**, reported in **$ and as % return per account and per book**. The accounts are small and of
+   different sizes. **R stays the per-trade unit of measure.**
+2. **Risk reduction is the tie-breaker.** When net P&L is even, the lower-risk choice wins. A large risk cut **for a small,
+   pre-stated cost in net P&L** also wins.
+3. **Risk-adjusted ratios (Sharpe, return / drawdown) are NOT the objective.** They may be reported, but no rule ranks on them.
+
+`RULE-AM-RISK-ADJUSTED-V1` is this objective's form for in-trade action classes. Its cost leg (R1) is net P&L given up, in R per
+trade, and the verdict also reports it as % return per account, from each account's `risk.risk_pct`. It is never a ratio. Other decision rules that grade on mean net R alone are being audited against it
+(row `RISK-OBJECTIVE-AUDIT`). Each change to one of them is its own Tier-3 proposal.
    **The one exception is per package and the operator's own act** (2026-10-29, MD-LTR-ADA-AUTO, verbatim *"I want to put a
    standing mandate for ltr lanes recommendations on this trade to be applied automatically"*; popups "Every action", "VM applies
    it directly"): a granted `kind: ltr_auto_apply` entry in `config/mandates.yaml` lets the VM execute the reviewer's call on the
@@ -765,14 +832,29 @@ own RiskManager). Guard: `scripts/ci/check_no_action_rate_cap.py`.
 
 ### What the evidence says today (re-read, never quote forward)
 
-- **Tightening is tested, and it loses.** The DESK-LIFECYCLE-S0 full run (#20967, merged 2026-10-28) found that Claude's whole-trade
-  management fails against hold on both entry sources, and that the loss is in frequent tightening. LTR-TIGHTEN-OPTIMIZE (#21003,
-  held on 2026-10-28) found that no tighten cell or rule out of 61 registered rules beats hold out of sample, and proposed
-  `tighten_sl` as advice-only. Numbers live in those records.
-- Leg-specific harness levers that move a stop (for example, the break-even arms on `trend_donchian_eth`, RQ-20261026-ed1c-17) are
-  separate per-leg records under their own registered rules. They are not evidence about the class in general.
-- **Widen, move-to-structure, TP extend / pull-in / revise, and partial / full close are UNTESTED as action classes** under this
-  rule. Programme 01 (`docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md`, question Q15) holds their ladders.
+**No action class passes `RULE-AM-RISK-ADJUSTED-V1`'s per-trade-R screen on any landed record.** The book-level $ measurement
+does not exist yet. This is a re-grade of committed records, done without re-running anything. It lives at `comms/research/am_risk_adjusted/regrade-2026-10-29.json` and is a reading, not a graduation. Every
+class stays advice-only. Numbers live in that record.
+
+- **Tightening fails the new rule as it failed the old one.** DESK-LIFECYCLE-S0 (#20967): Claude's whole-trade management costs far
+  more than the R1 bar on both entry sources. The R-armed and predictor-gated tight trails (RQ-20261024-f08c-01, -9a7e-01) cut the
+  book's drawdown too little, and the gated arm cut less than its own matched random control. LTR-TIGHTEN-OPTIMIZE (#21003) holds
+  aggregates only: some rules clear R1 and the drawdown bar on its test split, and none do on its fresh split.
+- **The desk corpus, one class at a time** (RQ-20261029-1f39-02, operator decision 2026-10-29 ~12:40Z "Re-grade, then
+  auto-unlock"): Claude's recorded calls on the DESK-LIFECYCLE-S0 corpus were replayed one class at a time, against hold and 100
+  matched random draws of that class, on both entry sources. **No class passes.**
+  - **Tightening** cuts the worst-5% weekly outcome by about a fifth to a third, but costs far more than R1 allows.
+  - **TP moves, partials and closes** cost little but barely move the drawdown.
+  - **Widen** never acted.
+
+  So no class is unlocked. Record: `comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json`.
+- **Partial close at +2R** (RQ-20261022-b7e1-08) cuts neither drawdown nor the worst-5% outcome on `ada_pullback_2h`.
+- **The break-even stop comes closest.** On `trend_donchian_eth` (RQ-20261026-ed1c-17), arming break-even at a peak of +0.75 or
+  +1.0 R gains R and cuts the book's max drawdown by about a fifth. It holds in only half the folds and had no random control, so
+  it does not pass. Its test on the real-money legs is registered as RQ-20261029-1f39-01, blocked on the random-control build (row
+  `HARNESS-BE-RANDOM-CONTROL`) and the book-level $ simulator (row `BOOK-SIM-REAL-SIZER`).
+- **Widen, move-to-structure, and TP extend / pull-in / revise are UNTESTED as action classes.** Programme 01
+  (`docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md`, question Q15) holds their ladders, now graded under this rule.
 
 ### What production looks like
 
@@ -782,8 +864,8 @@ active-management **mechanics** (the live review, the apply path, readback, reco
 has yet graduated (roadmap milestone `L-AM-STANDARD`).
 
 **What this does NOT change.** The two execution gates are unchanged, and so is the TP doctrine. Moving any leg from advice-only
-to executed is still Tier-3 / mandate work on a committed evidence record. This section names the action space and the
-graduation rule; it does not license an action class. The live in-trade procedure is `.claude/skills/live-trade-review/SKILL.md`,
+to executed is still Tier-3 / mandate work on a committed evidence record. This section names the action space, the objective and
+the graduation rule; it does not license an action class. The live in-trade procedure is `.claude/skills/live-trade-review/SKILL.md`,
 and exit design is `.claude/skills/exit-refinement/SKILL.md`.
 
 ## Prop ticket flow — one state machine per executor type (operator directive 2026-10-07, binding)
@@ -1603,6 +1685,7 @@ filtered to architecture-level deltas only.
 | 2026-10-29 | MD-LTR-ADA-AUTO (lane, Tier-2, held) | **A per-package exception to advice-only, keyed on the mandate file.** Operator 2026-10-29, verbatim: "I want to put a standing mandate for ltr lanes recommendations on this trade to be applied automatically" (popups "Every action", "VM applies it directly"). A `kind: ltr_auto_apply` entry under `mandates:` (first: MD-LTR-ADA-AUTO, pkg-465a5d7d27644027) lets the VM rows watcher and `live_review_dispatch` execute that ONE package's `recommended` row of any in-trade class; `live_review_apply` re-reads the grant and enforces its bounds (both brackets, a widen within -1R, a live TP, one action per package per bar [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP], venue read-back, one ping per action). The due computation emits `mandate_cadence` for the scoped open package so the VM wake poster commits the packet before waking a reviewer (closes the manager-timer `evidence_missing` gap). No new order path, no flag, no third gate; every other package stays advice-only. | `src/runtime/ltr_auto_mandate.py`, `src/runtime/{live_review_rows_watch,live_review_due}.py`, `scripts/ops/{live_review_dispatch,live_review_apply,live_review_wake}.py`, `scripts/ci/check_live_review_records.py`, `config/mandates.yaml`, the live-trade-review + manager skills, this file, + tests | Tier-2 (order path); held for the operator's OK via the manager. |
 | 2026-10-29 | TRADE-ACTION-FAST-PATH (lane, Tier-2, held) | **A fast path for operator-directed trade actions, no PR and no Actions job.** Operator 2026-10-29 verbatim: "It looks like we also need a fast track for trade updates - not really sure why these require a PR at all, but the action needs to be immediate" (MEASURED: #21186/#21193 ~13 min issue->result; #21201 25+ min queued). `scripts/ops/directed_action.py submit` pushes ONE record file (`comms/directed_actions/<id>.json`: directed_by, operator_quote verbatim, order_package_id, scope package / account / trade, action tighten_sl / move_sl / move_tp / close / partial_close, level / fraction, dry_run) to the `directed/actions` branch; the live trader's watcher polls it every 20 s on its own thread and hands each new record to `live_review_apply.run()` with `directed_by` set: the operator's quote replaces the mandate (refused without one), each account's own RiskManager and executor decide and read back, a scoped record touches only its account/trade and never moves the shared package stop, the reviewer's one-action-per-bar guard does not bind. Idempotent per id, stale after 15 min, one receipt (diag `directed_actions`) and one ping per record. No new order path, no flag, no third gate. | `src/runtime/directed_actions.py`, `scripts/ops/directed_action.py`, `src/runtime/{live_review_intent,live_review_rows_watch}.py`, `scripts/ops/live_review_apply.py`, `src/web/api/routers/diag.py`, this file, + tests | Tier-2 (order path); held for the operator's OK via the manager. |
 | 2026-10-29 | REMOVE-PER-BAR-CAP (lane, Tier-2, held) | **The per-bar in-trade action cap is removed everywhere.** Operator 2026-10-29 ~10:45Z, verbatim: "Why is there a cap for the reviewer? What's the point of having active management and then specifically limiting how active that management can be? When was a cap even approved?". `live_review_intent.R_RATE` (decide_amend / decide_action, i.e. `RiskManager.approve_amend` / `approve_action` and the prop gate on top) and the auto-mandate bound `one_action_per_bar` (`live_review_apply.auto_bound_refusal`, `apply_state.auto_bar`) are replaced by idempotency per review_id / directed record id (`R_DUPLICATE`; bound `idempotent_per_review_id`). Every other guard unchanged; the `min_buffer_atr` noise floor stays (a distance, not a count). `scripts/ci/check_no_action_rate_cap.py` refuses a re-introduction. | `src/runtime/live_review_intent.py`, `scripts/ops/live_review_apply.py`, `src/runtime/ltr_auto_mandate.py`, `scripts/ops/directed_action.py`, `config/mandates.yaml`, skills, docs | Two different reviews on one bar now both act, each through every account's own gates. Revert: revert the PR. |
+| 2026-10-29 | AM-RISK-ADJUSTED-RULE (lane, Tier-3 doctrine the operator decided; landing hold) | **Active management graduates on a RISK-ADJUSTED rule.** Operator decision 2026-10-29 (verbatim in § "Active management"): clause 4's "judged against hold" (mean net R) becomes `RULE-AM-RISK-ADJUSTED-V1`, measured on the whole book. A class passes if R1 it gives up <= 0.05 R per baseline trade, R2 it cuts book max drawdown or the worst-5% weekly outcome by >= 15%, R3 it holds in a fold majority, and R4 it beats a matched random-intervention control. Each class is still judged on its own test, registered before the run and net of the full cost stack. The system's trading objective is stated once: absolute net P&L ($ and % return per account and book) first; risk reduction is the tie-breaker, and it wins when it costs little P&L; ratios are not the objective. Measurement of record: a book-level $ simulation per account with the production sizer and caps. No harness has that yet (row `BOOK-SIM-REAL-SIZER`), so the per-trade-R grader `scripts/research/am_risk_adjusted.py` (also `exit_lever_ablation.py --grade risk_adjusted`) is a screen until one does. Re-grade of landed records: no class passes. Unit RQ-20261029-1f39-01 (break-even after peak, real-money legs) is registered and blocked on rows `HARNESS-BE-RANDOM-CONTROL` and `BOOK-SIM-REAL-SIZER`. | `docs/ARCHITECTURE-CANONICAL.md`, `scripts/research/am_risk_adjusted.py`, `scripts/research/exit_lever_ablation.py`, `tests/test_am_risk_adjusted.py`, `comms/research/am_risk_adjusted/`, `research/queue/blocked/RQ-20261029-1f39-01.yaml`, skills `exit-refinement` / `live-trade-review` / `trading-desk`, `docs/reference/trading-and-model-practice-principles.md`, `docs/plans/OPERATING-PLAN-2026-09-21.md`, `config/mandates.yaml` (comment only) | None to what trades today. Every in-trade class stays advice-only; no order path, config field, mandate or param changes. Graduating a class is still a Tier-3 / mandate change on its own passed record. |
 
 ## Known gaps
 

@@ -1247,9 +1247,9 @@ mandates:
         # EXTENDED 2026-10-28 ~21:07Z to EVERY in-trade class (operator popup to ask A1, verbatim "Advice-only
         # until tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY;
         # evidence DESK-LIFECYCLE-S0 #20967: Claude whole-trade management -0.159 / -0.124 R vs hold). Each
-        # class is recorded and graded, never executed, until its OWN registered test passes (OOS, vs hold AND a
-        # matched random intervention of the same class, net of cost; docs/plans/desk-v1-production-plan-2026-10-29.md
-        # § 5b). GRADUATION = remove ONE class here AND from rows_lib.ADVICE_ONLY_ACTIONS in one PR citing its
+        # class is recorded and graded, never executed, until its OWN registered test passes under the risk-adjusted
+        # rule RULE-AM-RISK-ADJUSTED-V1 (operator 2026-10-29; docs/ARCHITECTURE-CANONICAL.md § "Active management"
+        # clause 4; scripts/research/am_risk_adjusted.py). GRADUATION = remove ONE class here AND from rows_lib.ADVICE_ONLY_ACTIONS in one PR citing its
         # passed-test record (tests/test_tighten_advice_only.py pins equality). Entries, the claude_desk
         # max-hold exit and venue brackets are not in_trade actions and are unaffected.
         advice_only: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
