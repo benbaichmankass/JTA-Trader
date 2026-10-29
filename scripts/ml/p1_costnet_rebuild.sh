@@ -9,8 +9,10 @@
 set -uo pipefail
 
 REPO="${REPO:-/home/ubuntu/ict-trading-bot}"
+# MAIN holds the shared stores (datasets-out, registry, experiments, journal); REPO may be an isolated worktree.
+MAIN="${MAIN:-/home/ubuntu/ict-trading-bot}"
 cd "$REPO"
-LIVE_JOURNAL="${LIVE_JOURNAL:-data/trade_journal.db}"
+LIVE_JOURNAL="${LIVE_JOURNAL:-$MAIN/data/trade_journal.db}"
 BT_DB="${BT_DB:-/tmp/p1_costnet_backtest.db}"
 SC_V_WON="${SC_V_WON:-v022}"
 SC_V_C1="${SC_V_C1:-v021}"
@@ -40,7 +42,7 @@ fi
 log "STEP 1: per-symbol market_raw -> 1h/2h/4h CSVs"
 declare -A CSV  # "SYM|tf" -> path
 for sym in "${SYMBOLS[@]}"; do
-  src="datasets-out/market_raw/${sym}/1h/${MR_VER}/data.jsonl"
+  src="$MAIN/datasets-out/market_raw/${sym}/1h/${MR_VER}/data.jsonl"
   if [ ! -f "$src" ]; then log "  WARN: $src missing — $sym dropped from the pool"; continue; fi
   c1="/tmp/m23p2_${sym}_1h.csv"; c2="/tmp/m23p2_${sym}_2h.csv"; c4="/tmp/m23p2_${sym}_4h.csv"
   python3 - "$src" "$c1" "$c2" "$c4" <<'PY' 2>>"$RESULT"
@@ -153,7 +155,7 @@ declare -a MR_PATH_LIST=()
 declare -a MR_SKIPPED=()
 for entry in "${EVAL_SHARDS[@]}"; do
   IFS='|' read -r esym etf <<< "$entry"
-  epath="datasets-out/market_raw/${esym}/${etf}/${MR_VER}"
+  epath="$MAIN/datasets-out/market_raw/${esym}/${etf}/${MR_VER}"
   if [ -f "${epath}/data.jsonl" ]; then
     MR_PATH_LIST+=("$epath")
   else
@@ -171,12 +173,12 @@ log "  eval-book shards present (${#MR_PATH_LIST[@]}): ${MR_PATH_LIST[*]##*marke
 build_pool() {
   # build_pool <version> [extra build params...]
   local ver="$1"; shift
-  python3 -m ml.datasets build setup_candidates --output-dir datasets-out \
+  python3 -m ml.datasets build setup_candidates --output-dir "$MAIN/datasets-out" \
     --version "$ver" --source market_raw --symbol-scope all --timeframe all --overwrite -- \
     "market_raw_paths=$MR_PATHS" "backtest_trades_db=$BT_DB" \
     "live_trades_db=$LIVE_JOURNAL" "include_cusum=false" \
     "include_paper=$INCLUDE_PAPER" "live_r_basis=initial_only" "$@" >>"$RESULT" 2>&1
-  python3 - "datasets-out/setup_candidates/all/all/$ver/data.jsonl" <<'PY' 2>&1 | tee -a "$RESULT"
+  python3 - "$MAIN/datasets-out/setup_candidates/all/all/$ver/data.jsonl" <<'PY' 2>&1 | tee -a "$RESULT"
 import json, sys, collections
 try:
     es = collections.Counter(); lv = collections.Counter(); sym = collections.Counter()
@@ -199,22 +201,22 @@ PY
 }
 
 log "STEP 3: build $SC_V_WON (v020 params + initial-risk live R)"
-[ -e "datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" ] && log "  NOTE: $SC_V_WON exists; --overwrite rebuilds it"
+[ -e "$MAIN/datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" ] && log "  NOTE: $SC_V_WON exists; --overwrite rebuilds it"
 build_pool "$SC_V_WON"
 
 log "STEP 4: train setup-candidates-metalabel-p2pool-v2 (research_only, registered)"
 python3 -m ml train ml/configs/setup-candidates-metalabel-p2pool-v2.yaml \
-  --datasets-root datasets-out --experiments-root ml/experiments-runs --registry-root ml/registry-store \
+  --datasets-root "$MAIN/datasets-out" --experiments-root "$MAIN/ml/experiments-runs" --registry-root "$MAIN/ml/registry-store" \
   > /tmp/p1_costnet_train.out 2>>"$RESULT" || log "WARN: train returned nonzero"
 tail -c 1500 /tmp/p1_costnet_train.out | tee -a "$RESULT"
-EXP="$(ls -dt ml/experiments-runs/setup-candidates-metalabel-p2pool-v2/*/ 2>/dev/null | head -1)"
+EXP="$(ls -dt "$MAIN"/ml/experiments-runs/setup-candidates-metalabel-p2pool-v2/*/ 2>/dev/null | head -1)"
 log "  experiment dir: ${EXP:-NONE}"
 if [ -n "$EXP" ] && [ -f "${EXP}cost_gate.json" ]; then
   mkdir -p comms/ml
   python3 -m scripts.ml.p1_costnet_grade \
     --manifest ml/configs/setup-candidates-metalabel-p2pool-v2.yaml \
     --model-state "${EXP}model_state.json" \
-    --dataset "datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" \
+    --dataset "$MAIN/datasets-out/setup_candidates/all/all/$SC_V_WON/data.jsonl" \
     --cost-gate "${EXP}cost_gate.json" --journal "$LIVE_JOURNAL" \
     --out /tmp/p1_costnet_verdict.json 2>>"$RESULT" | tee -a "$RESULT"
   cp "${EXP}cost_gate.json" /tmp/p1_costnet_cost_gate.json

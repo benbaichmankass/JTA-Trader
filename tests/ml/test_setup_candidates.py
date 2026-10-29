@@ -386,12 +386,30 @@ def test_include_synthetic_false_emits_only_live(tmp_path: Path):
     ddir = _write_market_raw(tmp_path, closes)
     base = datetime(2026, 1, 1, tzinfo=timezone.utc)
     db = tmp_path / "trade_journal.db"
-    _seed_trades(db, [((base + timedelta(hours=60)).isoformat(), "buy", 5.0)])
+    # hour 61 -> the last CLOSED bar is hour 60 (hour 59 sits in a zero-variance run).
+    _seed_trades(db, [((base + timedelta(hours=61)).isoformat(), "buy", 5.0)])
     rows = list(SetupCandidatesBuilder().iter_rows(
         market_raw_path=ddir, vol_window_n=10, max_holding=8,
         include_synthetic=False, live_trades_db=db,
     ))
     assert rows and all(r["is_live_trade"] for r in rows)
+
+
+def test_live_row_uses_last_closed_bar_not_the_forming_bar(tmp_path: Path):
+    """PI-20261029-Q17QWHDZ-0001: market_raw ts is the bar OPEN. A trade filled at 61:30
+    sits inside bar 61 (still forming); the row must carry bar 60's features and close."""
+    closes = _trending_closes()
+    ddir = _write_market_raw(tmp_path, closes)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db = tmp_path / "trade_journal.db"
+    _seed_trades(db, [((base + timedelta(hours=61, minutes=30)).isoformat(), "buy", 5.0)])
+    rows = list(SetupCandidatesBuilder().iter_rows(
+        market_raw_path=ddir, vol_window_n=10, max_holding=8,
+        include_synthetic=False, live_trades_db=db,
+    ))
+    assert len(rows) == 1
+    assert rows[0]["ts"] == (base + timedelta(hours=60)).isoformat()
+    assert math.isclose(rows[0]["entry_price"], closes[60])
 
 
 # -----------------------------------------------------------------------------

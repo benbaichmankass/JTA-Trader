@@ -1151,6 +1151,16 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 e = _bar_index_at_or_before(bar_ts, tr["entry_ts"])
                 if e is None:
                     continue
+                # market_raw `ts` is the bar OPEN time, so the bar found above is
+                # the one still FORMING at the fill: its close/high/low are
+                # future information (MEASURED 2026-10-29, PI-20261029-Q17QWHDZ-0001:
+                # close[e-1] == open[e] and entry_ts is inside bar e on every probed
+                # live trade). Synthetic rows signal at the CLOSE of bar e and enter
+                # at the next open, so the matching live location is the last bar
+                # that had CLOSED by the fill: e-1.
+                e -= 1
+                if e < 0:
+                    continue
                 vol = past_vols[e]
                 if vol is None or vol <= 0:
                     continue
