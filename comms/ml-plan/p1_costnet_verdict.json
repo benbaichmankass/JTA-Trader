@@ -1,0 +1,32 @@
+{
+  "lane": "ML-P1-COSTNET-REBUILD",
+  "step": "B1",
+  "rule": "docs/plans/ml-live-promotion-plan-2026-10-29.md section 3 P1 (registered 2026-10-28, graded unchanged)",
+  "verdict": "INDETERMINATE",
+  "verdict_reasons": [
+    "n_eval 144 < 200 (rule: INDETERMINATE if eval rows < 200)",
+    "rule (e): 72.4% of the 3-symbol live closed book (262 of 362) has no declared initial risk and is excluded (limit 20%)"
+  ],
+  "model": "setup-candidates-metalabel-p2pool-v2",
+  "stage": "research_only",
+  "experiment_dir": "ml/experiments-runs/setup-candidates-metalabel-p2pool-v2/20261029T073828Z",
+  "dataset": "setup_candidates/all/all/v022 (v020 build params, include_paper=true, current cost-net builder, live_r_basis=initial_only, live rows on the last CLOSED bar)",
+  "code": "lane/ml-p1-costnet-rebuild-b2merge @ 62bb510e1 (this PR's builder + PR #21176 serve_spec code); model_state carries serve_spec",
+  "population": "144 real closed trades with declared initial risk (is_live_trade, label_cost_basis=realized, r_multiple_source=initial_risk 144/144): BTCUSDT 62, ETHUSDT 35, SOLUSDT 3, ADAUSDT 17, XRPUSDT 23, equities/metals 4",
+  "rows": {"total": 6117, "backtest_train": 5166, "live_eval": 144, "live_paper_tagged_not_eval": 807},
+  "a_cost_gate": {"passed": true, "value_r_per_opp": 0.21221862971955038, "take_all_r": -0.048186553127358894, "take_none_r": 0.0, "matched_random_r": -0.009704236393704222, "champion": null, "n_taken": 29, "take_rate": 0.2013888888888889, "psr": 0.9999851284725394, "dsr": 0.9999851284725394, "n_trials": 1, "eval_cost_bases": {"realized": 144}},
+  "b_bootstrap_value_minus_matched_random": {"point": 0.22192286611325454, "lb95": 0.12809184401132792, "ub95": 0.315794409832751, "n_resamples": 10000, "seed": 42, "ok": true},
+  "c_take_rate_in_0.05_0.60": true,
+  "d_per_symbol": {
+    "BTCUSDT": {"n": 62, "n_taken": 11, "value_r": 0.18784806980214036, "take_all_r": 0.1477815226992443},
+    "ETHUSDT": {"n": 35, "n_taken": 6, "value_r": 0.22442780367891066, "take_all_r": 0.10656858327566406},
+    "SOLUSDT": {"n": 3, "n_taken": 0, "value_r": 0.0, "note": "n<30, not counted"}
+  },
+  "d_positive_symbols_with_n_ge_30": ["BTCUSDT", "ETHUSDT"],
+  "e_journal_basis_counts_3_symbols": {"BTCUSDT": {"initial_risk": 62, "stop_distance": 245, "unit_fallback": 17}, "ETHUSDT": {"initial_risk": 35, "stop_distance": 0, "unit_fallback": 0}, "SOLUSDT": {"initial_risk": 3, "stop_distance": 0, "unit_fallback": 0}},
+  "e_excluded_share": 0.7237569060773481,
+  "unit_fallback_share_pre_exclusion": 0.04696132596685083,
+  "lookahead_probe": {"holds": true, "evidence": "market_raw ts is the bar OPEN (close[e-1]==open[e]); entry_ts inside bar e on ETH 35/35 and SOL 3/3 probed live trades; live rows used the still-forming bar. Fixed for live rows in this PR; the pre-fix run is kept below.", "relay": "#21179"},
+  "pre_lookahead_fix_run_for_the_record": {"experiment_dir": "ml/experiments-runs/setup-candidates-metalabel-p2pool-v2/20261029T071408Z", "value_r_per_opp": 0.13531465898904588, "take_rate": 0.18055555555555555, "boot_lb95": 0.054014001349299214, "verdict": "INDETERMINATE", "serve_spec": false},
+  "per_leg": "NOT computed: live dataset rows carry no strategy name, so the book pools every strategy on its symbol. Only the 3 trend_donchian 1h legs are served faithfully by B2 (squeeze_breakout_4h / htf_pullback_trend_2h serve timeframe_mismatch, PI-20261029-Q17QWHDZ-0002)."
+}

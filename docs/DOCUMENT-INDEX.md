@@ -966,6 +966,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/mirror-qty-diverge-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-buildout-strategy-2026-06-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-coverage-audit-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | ML coverage vs the traded roster (5/51 legs, 4/23 symbols) + next-week breadth plan. |
+| `docs/research/ml-p1-costnet-rebuild-2026-10-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-review-frontier-diagnosis-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Scored last 4 ml-review + frontier outputs; researched MRM/monitoring practice; basis for the two-layer redesign of both skills. |
 | `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-strategies-deep-review-2026-06-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

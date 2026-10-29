@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "the same bar-open probe (scripts/ml/p1_lookahead_probe.py) is run for the harness backtest rows and the signal-log rows, and each block is either fixed or shown clean",
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261029-MLP1-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-P1-COSTNET-REBUILD (B1), 2026-10-29",
+    "rerun": "python3 scripts/ml/p1_lookahead_probe.py --datasets-out datasets-out --journal data/trade_journal.db --out /tmp/x.json"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[ML-P1] The live-row lookahead (PI-20261029-Q17QWHDZ-0001) is CONFIRMED and fixed for LIVE rows only (bar ts is the bar OPEN; close[e-1]==open[e]; entry inside bar e on 35/35 ETH and 3/3 SOL trades probed). setup_candidates._iter_one_symbol locates the harness-backtest rows (event_source=backtest) and the signal-log rows with the same _bar_index_at_or_before call. Whether those use the forming bar depends on what entry_ts/event_ts the harness recorder and signal log store (signal bar vs fill bar); NOT measured. Train-side leakage would inflate in-sample fit, not the live-row eval, but it changes what the model learns."
+}
