@@ -9,11 +9,14 @@
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21204,
+    21207
+  ],
   "blocked_on": [],
-  "note": "08:09Z result (RULE-P5-GATE-BRK-PER-LEG-V2, registered 07:42Z before the run, RQ-20261029-pg2a-01): ETH prop PASS on breakout_2/tradeify_1/velotrade_1 (3y EV +0.66..+2.07% acct, B 0.20-0.43 vs ceilings 0.73-0.89); breakout_2 365d ~zero edge (marginal, watch). SOL prop FAIL all three (3y n=203, EV -0.09..-0.59% acct, both cost stacks; EV failure not breach). Operator ~08:15Z Tier-3 popup, verbatim: \"1, but we also need to send it for refinement/improvment\" (1 = pull sol_prop from all 3 prop firms). Second popup on bybit_2 sol_prop real-money check: \"Queue it normally\". Pull dispatched to this lane (trig_01GBNiwyCLQDm16ZioPVr6qL): evidence PR + separate Tier-3 accounts.yaml PR, landing hold.",
+  "note": "08:20Z: evidence PR #21204 (self-land), Tier-3 roster PR #21207 (hold; each prop account [eth_prop, sol_prop] -> [eth_prop]; bybit_2/bybit_portfolio unchanged). Manager open-position read, MEASURED 08:20Z /api/bot/prop/tickets (latest 100): zero non-terminal trend_donchian_sol_prop tickets on breakout_2/tradeify_1/velotrade_1 (only old phone_test tickets non-terminal); /api/bot/prop/status breakout_2 positions_state read, positions [] (08:10Z). tradeify_1/velotrade_1 status rows carry no positions field -> those two rest on the ticket read only. Refinement is row SOL-PROP-REFINE (no unit needed from this lane).",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T08:12:43Z",
+  "updated_at": "2026-10-29T08:19:51Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-PROP"
