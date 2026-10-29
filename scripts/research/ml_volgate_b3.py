@@ -85,7 +85,8 @@ def _write(path: str, rows: list[dict]) -> None:
             fh.write(json.dumps(r, default=str) + "\n")
 
 
-def run(strategy: str, labels: str, head: str, workdir: str, days: int, cache: str | None) -> dict:
+def run(strategy: str, labels: str, head: str, workdir: str, days: int, cache: str | None,
+        labels_end: str | None = None) -> dict:
     cfg = rdm.resolve_strategy(strategy)
     out: dict = {"strategy": strategy, "head": head, "labels": os.path.basename(labels), "days": days}
     if cfg is None:
@@ -128,6 +129,15 @@ def run(strategy: str, labels: str, head: str, workdir: str, days: int, cache: s
                     "--emit-tagged", tagged, "--vol-labels", labels, "--json"],
                    check=True, cwd=REPO, capture_output=True)
     trades = _load_jsonl(tagged)
+    # The as-of lookup carries the LAST label forward forever, so a labels file that ends
+    # before the candles do would silently label every later trade with a stale state.
+    # Trades after the labels' last bar are therefore excluded and counted, never graded.
+    out["labels_end"] = labels_end
+    if labels_end:
+        end = datetime.fromisoformat(labels_end.replace("Z", "+00:00"))
+        kept = [r for r in trades if _t(r) <= end]
+        out["trades_excluded_after_labels_end"] = len(trades) - len(kept)
+        trades = kept
     out["n_trades_all"] = len(trades)
     out["vol_unknown_trades"] = sum(1 for r in trades if r.get("vol_regime") not in VOLS)
     # cost-stack attestation: every trade carries the three terms and the slippage/funding are live.
@@ -205,10 +215,11 @@ def main() -> int:
     ap.add_argument("--workdir", default="/tmp/ml_volgate_b3")
     ap.add_argument("--days", type=int, default=1460)
     ap.add_argument("--cache", default=None, help="dir to cache fetched candle CSVs between strategies")
+    ap.add_argument("--labels-end", default=None, help="ISO ts of the labels' last bar; later trades are excluded")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     try:
-        res = run(a.strategy, a.labels, a.head, os.path.join(a.workdir, a.strategy), a.days, a.cache)
+        res = run(a.strategy, a.labels, a.head, os.path.join(a.workdir, a.strategy), a.days, a.cache, a.labels_end)
     except Exception as e:  # noqa: BLE001  # named in the record, never swallowed
         res = {"strategy": a.strategy, "head": a.head, "error": f"{type(e).__name__}: {e}"}
     with open(a.out, "w", encoding="utf-8") as fh:
