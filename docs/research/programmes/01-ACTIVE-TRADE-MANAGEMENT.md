@@ -12,7 +12,7 @@ The binding statement is [`docs/ARCHITECTURE-CANONICAL.md`](../../ARCHITECTURE-C
 
 **What changes for this programme.**
 - Every question here is asked per **action class**, not only for "the stop".
-- Each class has its **own** ladder and its **own** registered, net-of-cost graduation test. The test is against hold and against a matched random intervention (principle T1).
+- Each class has its **own** ladder and its **own** registered, net-of-cost graduation test, under the risk-adjusted rule `RULE-AM-RISK-ADJUSTED-V1` (operator 2026-10-29; stated in `docs/ARCHITECTURE-CANONICAL.md` § "Active management" clause 4, which includes the matched random intervention of principle T1).
 - A class is advice-only until that test passes.
 - A FAIL on one class is evidence about that class only.
 

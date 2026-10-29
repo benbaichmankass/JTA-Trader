@@ -9,7 +9,7 @@ description: The binding, repeatable pipeline for building, validating, and ship
 
 > **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
 
-> **Active management (pointer):** in-trade action is any evidence-backed move of either bracket — SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, or hold — triggered by live market data. Each action class stays advice-only until its own registered, net-of-cost test against hold passes (operator 2026-10-28). See [`docs/ARCHITECTURE-CANONICAL.md`](../../../docs/ARCHITECTURE-CANONICAL.md) § "Active management".
+> **Active management (pointer):** in-trade action is any evidence-backed move of either bracket — SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, or hold — triggered by live market data. Each action class stays advice-only until its own registered, net-of-cost test passes under the risk-adjusted graduation rule `RULE-AM-RISK-ADJUSTED-V1` (operator 2026-10-28; rule 2026-10-29). See [`docs/ARCHITECTURE-CANONICAL.md`](../../../docs/ARCHITECTURE-CANONICAL.md) § "Active management" clause 4 for the rule and the objective (net P&L first, risk second).
 
 
 Codified from the M20 sprint (operator directive 2026-07-12: "we need a

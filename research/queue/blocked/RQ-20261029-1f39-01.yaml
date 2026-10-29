@@ -1,0 +1,146 @@
+id: RQ-20261029-1f39-01
+title: 'Break-even stop once peak >= X R (X in 1.5 / 2.0 / 2.5) on every real-money leg, pooled and per leg, graded under RULE-AM-RISK-ADJUSTED-V1:
+  does it give up <= 0.05 R per trade while cutting the book''s max drawdown or worst-5% weekly outcome by >= 15%, across folds, against a matched
+  random break-even control?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T2, T3, T4, T8 (docs/reference/trading-and-model-practice-principles.md): judge the intervention against hold AND a matched
+  random intervention, per leg as well as pooled, net of the full cost stack, with the entries fixed (the declared leg''s own signals in every arm).'
+intervention_controls:
+  hold_to_bracket: true
+  # matched random = the SAME stop move (stop to entry, binding from the next bar) on the same NUMBER of trades the X arm arms, at a seeded random
+  # bar of each drawn trade while it is open; 100 seeded draws per X. The trend / pullback harnesses have no such action yet: row HARNESS-BE-RANDOM-CONTROL.
+  matched_random: {draws: 100}
+  # the three X arms ARE the static grid; the leave-one-fold-out best-of-grid is reported beside the pooled verdict (built with the control, same row)
+  best_static: {grid: [be_peak_1.5, be_peak_2.0, be_peak_2.5], excludes_test_folds: true}
+  bootstrap_group: week
+question: >-
+  For every leg on the real-money accounts' strategies rosters (bybit_2 and alpaca_live, RE-PARSED from config/accounts.yaml at run time by
+  am_risk_adjusted.py run-legs --accounts; never a quoted list), run each leg's own Stage-0 harness (regime_debt_matrix.build_harness_cmd via
+  exit_lever_ablation.py, the same argv build_strategy_evidence.py uses) over a pinned window with arms A (the leg as declared = hold),
+  BE15 / BE20 / BE25 (--be-floor-r 1.5 / 2.0 / 2.5: once the trade's since-entry peak reaches X R the stop may never again sit beyond entry,
+  binding from the next bar) and, per X, 100 matched random break-even draws. Grade each leg, and the pooled book of all legs, under
+  RULE-AM-RISK-ADJUSTED-V1.
+why_this_matters: >-
+  Operator 2026-10-29 (row AM-RISK-ADJUSTED-RULE, verbatim there): active management graduates on a risk-adjusted rule, and the motivating case
+  is the open bybit_2 ADA short (row ADA-AM-CASE: a break-even stop cost 0.01-0.03 R of EV and cut the worst outcome from -1.04 R to -0.17 R, on a
+  sub-floor n=19). The re-grade of the landed records (comms/research/am_risk_adjusted/regrade-2026-10-29.json) found the break-even arm the
+  CLOSEST class to passing: on trend_donchian_eth (RQ-20261026-ed1c-17) break-even at peak 0.75 / 1.0 R gained R and cut the book's max
+  drawdown about a fifth, but held 3 of 6 folds and had no random control. This unit asks the same class, at the later arming levels the
+  operator named, on the legs that trade real money.
+power:
+  expected_n: 1200
+  min_detectable_effect: 0.15
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Per-leg floor 39 baseline trades (the repo's standing floor; below it a leg grades INDETERMINATE, never FAIL). expected_n is the POOLED
+    baseline n, an ESTIMATE: the 2020-07..2026-10 runs of ada_pullback_2h (402 trades) and trend_donchian_eth (742) on the same harness, scaled
+    to six legs with the 4h legs thinner; the first run replaces it. The rule is a materiality rule (R1 0.05 R/trade, R2 15% cut), not a
+    significance test: the fold majority (R3) and the 95%-of-100-random-draws control (R4) carry the inference.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues. The control build is the blocker, not the data.
+decision_rule:
+  id: RULE-AM-RISK-ADJUSTED-V1
+  unit_rule_id: RULE-RQ20261029-1F39-01-BE-PEAK
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/am_risk_adjusted.py run-legs --accounts bybit_2,alpaca_live: per leg, exit_lever_ablation.py --grade risk_adjusted (6 equal
+    calendar folds of the pinned window by entry time; net of the full cost stack the harness resolves per venue, recorded per arm as cost_stack),
+    then the POOLED book (every leg's trades per arm merged; maxDD in exit-time order; CVaR5 over calendar-week book net R). Per arm and per leg:
+    n, net R, max drawdown R, weekly CVaR5, per-fold R cost and cuts, and the 100 random draws' books. Parameters are V1's, unchanged:
+    max_r_cost_per_trade 0.05, min_dd_cut_pct 0.15, min_cvar5_cut_pct 0.15, fold_majority 4 of 6, fold_min_risk_cut_pct 0.0,
+    min_control_beat_frac 0.95, n_floor 39 (am_risk_adjusted.RULE_V1).
+  rule: >-
+    Each X is a candidate; its 100 random draws are its controls. Per candidate, per leg and pooled, the verdict is RULE-AM-RISK-ADJUSTED-V1's
+    (R1 cost, R2 risk cut, R3 folds, R4 random control; floors n >= 39 and the lever fired). THE CLASS VERDICT IS THE POOLED ONE. PASS if
+    one or more X pass pooled; the passing X with the largest pooled max-drawdown cut is named (ties: the lower R cost), and the multiplicity
+    denominator is 3. A pooled PASS is a DISCOVERY: the follow-up is ONE confirmation run on data after this window. Graduation (removing the
+    stop-move class from advice-only for break-even moves only) is then a Tier-3 / mandate PROPOSAL, scoped to the legs whose own per-leg verdict
+    is not FAIL (T2: a leg that fails on its own is excluded even when the pool passes). FAIL if no X passes pooled with every floor met: the
+    break-even-after-peak cells at these X are closed on these legs for this window; the class (stop moves) and other arming levels stay open.
+    INDETERMINATE if the pooled baseline is below the floor, no X arm ever fires, the controls are missing, or any leg's producer fails
+    (pooled_incomplete). Thresholds, X grid, seeds and window are not changed after any result.
+  what_it_does_not_do: >-
+    Edits no config, roster, mandate or live-review policy and places no order. A PASS is not a graduation and not a promotion. The harness
+    fills a stop AT the stop price (no gap), which flatters a moved stop equally in the X arm and in its random draws; R4 contrasts them so the
+    artifact cancels, but a gap-adjusted re-run belongs to the confirmation.
+blocked_on:
+- kind: work_item
+  ref: HARNESS-BE-RANDOM-CONTROL
+  what: >-
+    The peak-armed break-even lever exists in both harness families this roster uses (--be-floor-r in scripts/backtest_trend.py and
+    scripts/backtest_pullback.py, MI-165). A MATCHED RANDOM break-even control does not: --trigger-action takes only bank / tight, and no
+    producer draws a matched-rate random trigger set from an arm's armed count. The leave-one-fold-out best-of-grid report is not built either.
+  clears_when: >-
+    Both harnesses accept a break-even trigger action (stop to entry, binding from the bar after the trigger bar; default off, byte-identical),
+    exit_lever_ablation (or am_risk_adjusted run-legs) writes 100 seeded matched-rate random trigger files per X and runs them as declared
+    control arms, the best-static LOFO report is emitted, with tests. Then git mv this file to research/queue/, add the control arms to
+    run.command, remove blocked_on and set status: queued.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: governs whether a break-even move may execute on the real-money legs (giveback on open winners, ADA-AM-CASE); an estimate,
+    not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 180
+  why_runner: Fetches keyless public candles (Binance Vision; dukascopy for the US ETF leg) for a pinned window; reads no trainer data; CPU only.
+  basis: 'Estimate: six legs x (4 arms + 300 random-control arms); one 2h-leg arm over 2020-07..2026-10 took about 20 s on the runner
+    (ed1c-17 / 9a7e-01 run logs). The first run replaces it.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/am_risk_adjusted.py
+  - run-legs
+  - --accounts
+  - bybit_2,alpaca_live
+  - --arm
+  - A=
+  - --arm
+  - BE15=--be-floor-r=1.5
+  - --arm
+  - BE20=--be-floor-r=2.0
+  - --arm
+  - BE25=--be-floor-r=2.5
+  - --common=--days=2330;--start=2020-07-01;--end=2026-10-15 23:59
+  - --leg-args=iaum_pullback_1d=--non-crypto-source=dukascopy;--start=2021-07-01
+  - --baseline
+  - A
+  - --candidate
+  - BE15
+  - --candidate
+  - BE20
+  - --candidate
+  - BE25
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261029-1f39-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- scripts/research/am_risk_adjusted.py
+- scripts/research/exit_lever_ablation.py
+- research/queue/RQ-20261026-ed1c-17.yaml
+- comms/research/am_risk_adjusted/regrade-2026-10-29.json
+- AM-RISK-ADJUSTED-RULE
+- ADA-AM-CASE
