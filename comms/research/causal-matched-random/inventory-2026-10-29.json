@@ -1,0 +1,112 @@
+{
+ "what": "Inventory of every committed unit and record that uses a matched-random intervention control, and whether its verdict could change now that the control is causal (PI-20261029-IFMPNGJK-0003; scripts/research/intervention_controls.py mode='causal').",
+ "generated_at": "2026-10-29",
+ "by": "lane ML-AM-NEXT-LIVE (session_01AFoLuN7GVCEJnGiFMpNGJK)",
+ "probe": "grep -rl matched_random research/queue (6 files: 5 units + PLANNING.md); git grep for b2/matched_random/random_timing keys in research/results, comms/research, docs/research (7 files); plus the two lane units of this session (open PRs). The probe finds a positive: it found both done units below.",
+ "defect": "The legacy draws pick the random action's bar offset uniformly over the trade's OWN remaining check-ins, so the chance of acting at offset j is 1/(remaining life), known only at the trade's exit. Test: tests/test_intervention_controls.py::test_legacy_draw_leaks_the_trades_final_length_and_causal_does_not.",
+ "units_declaring_matched_random": {
+  "count": 5,
+  "rows": [
+   {
+    "unit": "RQ-20261028-d1f5-02",
+    "status": "done",
+    "verdict": "fail",
+    "control_impl": "desk_lifecycle_driver.matched_random (M1: per-check-in rate q = Claude actions / Claude check-ins ON THIS TRADE; a milder own-length dependence, see PI-20261029-IFMPNGJK-0005)",
+    "verdict_rests_on_random": false,
+    "why": "FAIL is dR vs M0 (hold) CI upper < 0 on both entry sources (Claude -0.159 R [-0.261,-0.041], n 473; random entries -0.124 R [-0.197,-0.043], n 465); M1 is a PASS-only clause",
+    "could_flip": false
+   },
+   {
+    "unit": "RQ-20261029-1f39-02",
+    "status": "done",
+    "verdict": "fail",
+    "control_impl": "am_class_regrade -> desk_lifecycle_driver.matched_random",
+    "verdict_rests_on_random": false,
+    "why": "every class fails R1, R2 or R3 (or never acted) on both sources before R4 is read: tighten_sl fails_R1_R3; move_tp, partial_close, close fails_R2_R3; widen_sl never acted",
+    "could_flip": false
+   },
+   {
+    "unit": "RQ-20261028-e1a7-01",
+    "status": "blocked",
+    "verdict": null,
+    "control_impl": "not built yet (scripts/research/leg_tighten_cells.py has no random arm)",
+    "verdict_rests_on_random": null,
+    "why": "not run; must use intervention_controls mode='causal' when built",
+    "could_flip": null
+   },
+   {
+    "unit": "RQ-20261028-e1a7-02",
+    "status": "blocked",
+    "verdict": null,
+    "control_impl": "not built yet (ltr_tighten_optimize.py uses rng only for its bootstrap)",
+    "verdict_rests_on_random": null,
+    "why": "not run; must use the causal draw",
+    "could_flip": null
+   },
+   {
+    "unit": "RQ-20261029-1f39-01",
+    "status": "blocked",
+    "verdict": null,
+    "control_impl": "row HARNESS-BE-RANDOM-CONTROL (queued, on PR #21283): matched-rate random trigger draws in the harness",
+    "verdict_rests_on_random": null,
+    "why": "not run; the harness control must draw causally (a per-bar hazard at the candidate's firing rate, never a bar uniform over the trade's own life)",
+    "could_flip": null
+   }
+  ]
+ },
+ "records_carrying_a_b2_result": {
+  "count": 7,
+  "rows": [
+   {
+    "path": "comms/research/RQ-20261026-bf56-02/40710666532/{verdict,measurement}.json",
+    "verdict": "fail",
+    "basis": "mean dR -0.0483 vs hold, CI upper +0.0414 (dR <= 0)",
+    "rests_on_b2": false
+   },
+   {
+    "path": "comms/research/RQ-20261026-bf56-03/40733370814/{verdict,measurement}.json",
+    "verdict": "fail",
+    "basis": "mean dR -0.0906 vs hold, CI upper -0.0030",
+    "rests_on_b2": false
+   },
+   {
+    "path": "comms/research/desk_replay/judged-1/verdict-exit-lane.json",
+    "verdict": "fail",
+    "basis": "mean dR -0.0906 vs hold",
+    "rests_on_b2": false
+   },
+   {
+    "path": "comms/research/desk_replay/judged-1/verdict-in_trade-lane.json",
+    "verdict": "fail",
+    "basis": "mean dR -0.0483 vs hold",
+    "rests_on_b2": false
+   },
+   {
+    "path": "comms/research/desk_replay/judged-1/fee-sensitivity.json",
+    "verdict": null,
+    "basis": "sensitivity table, no verdict",
+    "rests_on_b2": false
+   }
+  ],
+  "count_basis": "7 files in 5 rows (bf56-02 and bf56-03 each carry verdict.json + measurement.json)"
+ },
+ "this_session_units": [
+  {
+   "unit": "RQ-20261029-a7e1-01",
+   "pr": 21299,
+   "verdict": "fail",
+   "rests_on_random": false,
+   "why": "both families also fail non-inferiority (a), folds (f) and best static (h)"
+  },
+  {
+   "unit": "RQ-20261029-a7e1-02",
+   "pr": 21310,
+   "verdict": "fail",
+   "rests_on_random": false,
+   "why": "TD k=12 fails non-inferiority; every other cell fails R1, R2 or R3; PB2H fails R3 everywhere"
+  }
+ ],
+ "verdicts_that_could_flip": 0,
+ "re_runs_needed": 0,
+ "what_changes_going_forward": "Every new unit using intervention_controls B2 (desk_replay_driver b2_random_timing, control_set) gets the causal draw by default; the legacy draw remains only as mode='legacy_own_length' to reproduce landed records. The three blocked units and HARNESS-BE-RANDOM-CONTROL must draw causally. desk_lifecycle_driver.matched_random keeps its per-trade rate (PI-20261029-IFMPNGJK-0005)."
+}

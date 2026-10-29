@@ -65,20 +65,42 @@ def boot_ci_by_group(x: Sequence[float], groups: Optional[Sequence[Hashable]], r
     return float(a.mean()), float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))
 
 
-def matched_random_intervention(table: Sequence[Mapping[Tuple, np.ndarray]], freq: Mapping[Tuple, float],
-                                seed: int, draws: int = DEFAULT_DRAWS) -> np.ndarray:
-    """B2. Per-trade mean dR over `draws` draws of the intervention's own action mix at random check-ins.
+#: B2 timing modes. ``causal`` (default since 2026-10-29) draws the random action's bar offset from ONE fixed
+#: horizon shared by every point, so the chance of acting at offset j never depends on how long that trade went on
+#: to live. ``legacy_own_length`` is the pre-2026-10-29 draw (uniform over the point's own valid check-ins), kept only
+#: to reproduce records landed under it.
+B2_MODES = ("causal", "legacy_own_length")
 
-    table[i][action] = dR of applying `action` at each valid check-in of trade i (already net of cost).
-    freq = the intervention's action frequencies per decision point, INCLUDING HOLD (`("hold",)`); the
-    count and type of non-hold actions therefore match in expectation. A drawn non-hold action with no
-    valid check-in on that trade scores 0 (it could not be applied); it is not redrawn or hidden."""
+
+def matched_random_intervention(table: Sequence[Mapping[Tuple, np.ndarray]], freq: Mapping[Tuple, float],
+                                seed: int, draws: int = DEFAULT_DRAWS, *, mode: str = "causal",
+                                horizon: Optional[int] = None) -> np.ndarray:
+    """B2. Per-point mean dR over `draws` draws of the intervention's own action mix at random check-ins.
+
+    table[i][action] = dR of applying `action` at each bar offset j = 0, 1, ... from point i to the trade's exit
+    (already net of cost; NaN where the action cannot be applied at that bar). freq = the intervention's action
+    frequencies per decision point, INCLUDING HOLD (`("hold",)`); the count and type of non-hold actions therefore
+    match in expectation. A drawn non-hold action that cannot be applied scores 0; it is not redrawn or hidden.
+
+    ⚠️ CAUSALITY (PI-20261029-IFMPNGJK-0003, 2026-10-29). The legacy draw picked the offset uniformly among the
+    point's OWN valid check-ins. The number of those is the trade's remaining life, known only at its exit, so the
+    chance of acting at offset 0 was 1/(remaining life): the control read the future and was not a policy anyone
+    could trade (measured: in RQ-20261029-a7e1-02 a uniform-own-length random partial close beat every fixed-bar
+    variant in 100% of 2,000 draws). ``mode="causal"`` draws j uniformly from ``range(horizon)``, one horizon for
+    every point (default: the median array length over the whole table, a single population constant); a draw that
+    lands after the trade has closed, or on a bar where the action cannot apply, scores 0 -- a trader acting at a
+    random time does not get to act once the trade is gone."""
+    if mode not in B2_MODES:
+        raise ValueError(f"mode must be one of {B2_MODES}, got {mode!r}")
     rng = np.random.default_rng(seed)
     kinds = [s for s in freq if s != HOLD]
     probs = np.array([freq.get(HOLD, 0.0)] + [freq[s] for s in kinds], dtype=float)
     if probs.sum() <= 0:
         return np.zeros(len(table))
     probs = probs / probs.sum()
+    if mode == "causal" and horizon is None:
+        lens = [len(tb[s]) for tb in table for s in kinds if tb.get(s) is not None]
+        horizon = max(1, int(np.median(lens))) if lens else 1
     per_point = np.zeros(len(table))
     for i, tb in enumerate(table):
         choice = rng.choice(len(probs), size=draws, p=probs)
@@ -87,8 +109,16 @@ def matched_random_intervention(table: Sequence[Mapping[Tuple, np.ndarray]], fre
             if c == 0:
                 continue
             arr = tb.get(kinds[c - 1])
-            if arr is not None and len(arr):
-                tot += arr[rng.integers(0, len(arr))]
+            if mode == "legacy_own_length":
+                if arr is not None:
+                    arr = np.asarray(arr, dtype=float)
+                    arr = arr[np.isfinite(arr)]
+                if arr is not None and len(arr):
+                    tot += arr[rng.integers(0, len(arr))]
+                continue
+            j = int(rng.integers(0, horizon))
+            if arr is not None and j < len(arr) and np.isfinite(arr[j]):
+                tot += float(arr[j])
         per_point[i] = tot / draws
     return per_point
 
@@ -140,6 +170,7 @@ def control_set(claude_dR: Sequence[float], *, table: Sequence[Mapping[Tuple, np
 
     return {
         "n_points": int(len(x)),
+        "b2_mode": "causal",
         "n_groups": int(len(set(groups))) if groups is not None else int(len(x)),
         "intervention": arm(x),
         "b1_hold_to_bracket": arm(b1),
