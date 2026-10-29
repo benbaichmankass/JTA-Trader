@@ -1,6 +1,6 @@
 id: RQ-20261011-9da8-06
 title: 'Frontier strategy: cross-sectional momentum on the crypto perp basket with funding charged on held legs (Stage-0)'
-status: blocked
+status: queued
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -15,13 +15,14 @@ power:
   expected_n: 40
   min_detectable_effect: 0.45
   effect_units: sd
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Same E35 floor; the basket rebalances ~weekly, giving ~150 rebalances over 3y.
+  basis: >-
+    DESIGN RE-DECLARED paired -> one_sample 2026-10-28, before any run (lane FRONTIER-LEVER-XSEC-RUNNER; same precedent as RQ-20261011-9da8-01, 2026-10-22): the dispatcher's power gate does not know design paired and refuses to route it. Effect size, alpha, power and expected_n are unchanged, so the 39-trade floor is unchanged. Original basis: Same E35 floor; the basket rebalances ~weekly, giving ~150 rebalances over 3y.
   feasibility:
     source: none
-    accrual_basis: ''
+    accrual_basis: 'Fixed history, nothing accrues: the window is the trailing 1095 daily bars plus the settled funding series from the public archive. expected_n is a design estimate of trades (legs opened or flipped), not an observed count; the first run replaces it with the measured n_trades.'
 decision_rule:
   id: RULE-RQ1011-9DA8-06-XSEC-MOM-FUNDING
   registered_at: '2026-10-11'
@@ -32,12 +33,7 @@ decision_rule:
     the headline.
   what_it_does_not_do: No roster or config change; no live leg proposed. Does not apply to prop venues (props pay no funding
     and charge swap).
-blocked_on:
-- kind: work_item
-  ref: FRONTIER-LEVER-HARNESS-COSTS
-  what: xsec_momentum has no funding term; the funding history fetcher is also tracked under RQ-20261007-018 / PI-20261007-X9UFEF4U-0001.
-  clears_when: Same lever as RQ-20261011-9da8-05 plus a runner-reachable funding series (Binance Vision fundingRate) wired
-    to the harness.
+practice_precedent: 'none: Stage-0 cost-stack check of a documented factor (docs/research/P7-xsec-momentum-firstpass-2026-06-26.md; docs/research/frontier-scan-2026-10-11.md S1); it makes no trade-management or AI-method claim to cite a principle for'
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -45,8 +41,22 @@ routing:
   est_minutes: 15
   basis: Estimate from the sibling fc / harness runs; the first run replaces it.
 run:
-  workflow: null
-  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the lever row closes.'
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/frontier_momentum_runner.py
+  - --mode
+  - xsec
+  - --n-floor
+  - '39'
+  - --days
+  - '1095'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261011-9da8-06
+  timeout_minutes: 45
+  note: "UNBLOCKED by FRONTIER-LEVER-XSEC-RUNNER. scripts/research/frontier_momentum_runner.py fetches the 1d Binance-vision basket (the P7 first-pass universe ETH SOL ADA AVAX BNB LINK, last 1095 days) and the SETTLED fundingRate series per symbol, runs scripts/backtest_xsec_momentum.run_backtest (fee + slippage via execution_costs; funding signed per held leg from the series) and grades this unit's decision_rule verbatim (--n-floor 39). The panel is trimmed to the last day every symbol has settled funding for. net_total_r is a sum of daily FRACTIONAL book returns (no stop distance exists in this engine)."
 lands:
   store: research/results/
   assert_field: read_state
