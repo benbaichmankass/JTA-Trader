@@ -19,7 +19,7 @@ features, training, evaluation, model families, infra, desk-as-teacher). **RESEA
 
 Last revised: 2026-10-28 (lane `PRACTICE-RESEARCH-TRADE-MGMT-AI`); weekly refresh 2026-10-28 (lane `PRACTICE-REFRESH`,
 session_01AFoLuJpe2bJTErX7QGAmaS): added T11–T12 and M11; strengthened T2, T3 and M6; noted a tension on R3. Evidence in
-§ 10 of the practice review (`[S56]`–`[S63]`).
+§ 10 of the practice review (`[S56]`–`[S63]`). T13 added by lane `ROADMAP-PRIORITIES-AM-PRINCIPLE` (2026-10-28, operator rule).
 
 ## TRADING
 
@@ -35,6 +35,7 @@ session_01AFoLuJpe2bJTErX7QGAmaS): added T11–T12 and M11; strengthened T2, T3 
 - **T10.** Partials and scaling out **reshape the distribution** of outcomes; the evidence does not show they add expectancy. Test them as arms, never as defaults. [S26]
 - **T11.** *(added 2026-10-28 refresh)* **Size by forecast volatility, and expect its benefit to differ by asset.** Volatility targeting cut extreme returns and vol-of-vol in all 60+ assets tested. It raised Sharpe only for risk assets with a leverage effect (equities, credit) and was negligible for bonds, FX and commodities. Judge a vol-scaled sizing arm **per asset class**, on tails as well as Sharpe. [S56 ACAD/PRAC]
 - **T12.** *(added 2026-10-28 refresh)* **Trade only when the target leaves a no-trade buffer.** Choose the buffer width on after-cost results, then widen it, because a backtest-optimal buffer is too narrow. The same logic caps how often in-trade management may act (T5). [S57 PRAC/VEND; S64 ACAD, secondary]
+- **T13.** **Active management is the whole bracket, one action class at a time** (operator, binding, 2026-10-28: *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"*). The classes are SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, and hold. Each is triggered by live market data and leaves both brackets in place. Each graduates from advice-only to executed on its own registered, net-of-cost test against hold and a matched random intervention (T1). Tightening is tested and loses (#20967, #21003); the rest are untested. This is a binding rule, and the canonical text is [`docs/ARCHITECTURE-CANONICAL.md`](../ARCHITECTURE-CANONICAL.md) § "Active management". Evidence for the hold baseline: [S1, S2, S3]
 
 ## MODEL
 

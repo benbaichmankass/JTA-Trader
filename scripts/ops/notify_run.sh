@@ -360,6 +360,18 @@ case "${action}" in
             *) result="FAILED/refused (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    set-bybit-collateral-switch)
+        # 2026-10-28 (lane BYBIT1-AVAILABLE-USD-ZERO): read, or with apply SET, a
+        # coin's collateral switch on a Bybit DEMO account. Exit codes are distinct.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run, no-op, or VERIFIED switch)"; priority="normal" ;;
+            2) result="REFUSED — not a bybit demo/paper account, bad input, or unconfirmed; nothing changed"; priority="high" ;;
+            3) result="REFUSED — wallet unreadable; nothing changed"; priority="high" ;;
+            5) result="SWITCH UNVERIFIED — the re-read does not show the requested switch"; priority="urgent" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     flatten-ib-position|flatten-bybit-position|flatten-alpaca-position)
         # 2026-06-19/2026-06-29/2026-07-15: one-shot guarded flatten of one
         # IB/Bybit/Alpaca position (dry-run unless apply:true).

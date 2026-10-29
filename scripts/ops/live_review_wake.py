@@ -66,7 +66,7 @@ MAX_BODY_CHARS = 60000
 #: packet dropped ``"sd_r":null`` and the mirror refused the row: packet_sha mismatch).
 ROWS_BRANCH = "live-review/rows"
 PACKETS_DIR = "comms/live_review/packets"
-REPO = "benbaichmankass/Metis-Insights"
+REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")  # tolerant of the JTA Trader repo rename
 API = "https://api.github.com"
 HTTP_TIMEOUT_S = 15
 
@@ -409,7 +409,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = ap.parse_args(argv)
     args.pr = args.pr or ops_flags_pr()
     now = datetime.now(timezone.utc)
-    repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")
+    repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")
     doc = json.loads(Path(args.from_file).read_text()) if args.from_file else fetch_due()
     posted = read_posted(repo, args.pr) if args.live else []
     if posted is None:

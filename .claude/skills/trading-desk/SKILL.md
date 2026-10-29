@@ -9,6 +9,8 @@ description: The Claude trading desk's operating procedure. The desk DRIVES the 
 
 > **Practice principles (pointer):** the design and evaluation choices this skill makes follow [`docs/reference/trading-and-model-practice-principles.md`](../../../docs/reference/trading-and-model-practice-principles.md) (TRADING T1–T10 · MODEL M1–M10 · RESEARCH-OPS R1–R6), refreshed weekly by `frontier-research`; a principle never overrides a binding rule.
 
+> **Active management (pointer):** in-trade action is any evidence-backed move of either bracket — SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, or hold — triggered by live market data. Each action class stays advice-only until its own registered, net-of-cost test against hold passes (operator 2026-10-28). See [`docs/ARCHITECTURE-CANONICAL.md`](../../../docs/ARCHITECTURE-CANONICAL.md) § "Active management".
+
 
 > **Operator, 2026-10-26 ~06:55Z (verbatim, row `DESK-15-ENTRY-GENERATION`):** *"the Claude trading desk is driving the trading, and the MLs, the systems MLs that we're building are learning from that Claude decision-making how to do it themselves so that we can eventually remove Claude from the flow and have only our own AIs doing the trading."*
 
@@ -121,7 +123,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
   title: desk-wake <the marker's bar, YYYY-MM-DDTHH:MMZ>
   tags: ["manager:session_01HAysMLfF9dYpi92YMqYxEq", "desk-wake", "DESK-6-SHADOW-PILOT"]
   permission_mode: auto
-  source_url: https://github.com/benbaichmankass/Metis-Insights
+  source_url: https://github.com/benbaichmankass/JTA-Trader
   source_revision: desk/decisions
   outcome_branch: desk/decisions
   clone_depth: 1
@@ -130,7 +132,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 WAKE PROMPT:
 You are one wake of the Claude trading desk (a proposal on a desk-leg symbol trades on the bybit_1 DEMO; every other row is a shadow label; see SKILL § 0 rule 1), started by the Metis-Insights manager's routine. The manager acts with the operator's authority. Your session's branch IS desk/decisions, the desk's append-only record branch: writing ONE row there is your whole job.
-1. Read your whole contract: get_file_contents on repo benbaichmankass/Metis-Insights, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. skill_sha = the blob sha it returns.
+1. Read your whole contract: get_file_contents on repo benbaichmankass/JTA-Trader, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. skill_sha = the blob sha it returns.
 2. Follow that brief EXACTLY and only it. Read nothing else in the repo, no diag, no web.
 3. You never write the row by hand: write the brief's § 4 draft and run the brief's § 5 command (`desk_write.py`). It validates and does the compare-and-swap; a refused draft is fixed and re-run, never pushed another way.
 4. End with the brief's § 6 report block. Do not open a PR or an issue, and do not message anyone.
