@@ -2,9 +2,9 @@
   "id": "LIVE-NUMBERS-STREAMING",
   "title": "Live trade count and live P&L must be live on the dashboard (no refresh, no 10 s+ waits): measure where the delay is (SPA polling interval vs REST latency vs uPnL write cadence in the DB vs /ws/market positions frames), then push positions + uPnL + counts over the existing WebSocket and render them as they arrive; publish a measured latency (venue mark -> screen)",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": null,
-  "lane": null,
+  "lane": "session_01AFoLuM288vnTL4FB79j7gR",
   "model": "sonnet",
   "ceiling_usd": 8,
   "spend_usd": null,
@@ -13,7 +13,7 @@
   "blocked_on": [],
   "note": "Operator 2026-10-29 ~11:20Z (chat, verbatim excerpts): \"it still seems like the data is updating way too slow. I still have to wait like at least 10 seconds, if not more, every time I just want to update like what the live number of trades are and what the live P&L is ... those should be live and I shouldn't have to refresh. Those should just always be live numbers ... It's not up to our standard. We can definitely do better than this. We need to just figure out what needs to happen.\" Known: /ws/market already pushes positions every tick (src/web/api/routers/market_ws.py); UI-UPGRADE-1 API half measured positions 0.56 s on 2026-10-25; SPA patch ict-trader-dashboard#230 applied (landed_unproven). So root-cause first, with measurements.",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T11:37:12Z",
+  "updated_at": "2026-10-29T11:37:45Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-UI"
