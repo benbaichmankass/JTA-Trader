@@ -102,6 +102,45 @@
   },
   {
    "head": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "strategy": "ict_scalp_5m",
+   "fidelity": "faithful",
+   "leg_verdict": "LEG_PASS",
+   "informational_pass_cells_not_a_basis": [],
+   "passing": [
+    "trending:long",
+    "trending:short",
+    "transitional:long",
+    "transitional:short",
+    "chop:long",
+    "chop:short"
+   ],
+   "book": {
+    "ungated_fold_net_r": [
+     -38.718,
+     -65.2599,
+     -45.544,
+     -40.5575
+    ],
+    "gated_fold_net_r": [
+     4.9261,
+     0.5341,
+     -8.964,
+     2.8921
+    ],
+    "folds_populated": 4,
+    "folds_gated_ge_ungated": 4,
+    "ungated_max_dd_r": 192.2063,
+    "gated_max_dd_r": 12.7694,
+    "rule_net": true,
+    "rule_maxdd": true,
+    "rule1_ungated_all_folds_profitable": false
+   },
+   "n": 528,
+   "excluded_after_labels_end": 0,
+   "error": null
+  },
+  {
+   "head": "btc-regime-15m-lgbm-fc-pcv-v2",
    "strategy": "squeeze_breakout_4h",
    "fidelity": "faithful",
    "leg_verdict": "BOOK_RULE_FAIL",
@@ -325,6 +364,50 @@
   }
  ],
  "reverify_authored_cells": [
+  {
+   "head": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "strategy": "ict_scalp_5m",
+   "cell": "trending/volatile",
+   "gated_direction": "long",
+   "verdict": "FAIL_NOT_STABLE_DRAG",
+   "would_be_if_not_refused": "FAIL_NOT_STABLE_DRAG",
+   "n_dir": 13,
+   "pooled_dir_r": 3.4358,
+   "removal_candidate": true
+  },
+  {
+   "head": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "strategy": "ict_scalp_5m",
+   "cell": "trending/volatile",
+   "gated_direction": "short",
+   "verdict": "FAIL_FOLD_SENSITIVE",
+   "would_be_if_not_refused": "FAIL_FOLD_SENSITIVE",
+   "n_dir": 16,
+   "pooled_dir_r": -0.2593,
+   "removal_candidate": true
+  },
+  {
+   "head": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "strategy": "ict_scalp_5m",
+   "cell": "chop/volatile",
+   "gated_direction": "long",
+   "verdict": "FAIL_FOLD_SENSITIVE",
+   "would_be_if_not_refused": "FAIL_FOLD_SENSITIVE",
+   "n_dir": 10,
+   "pooled_dir_r": -2.9707,
+   "removal_candidate": true
+  },
+  {
+   "head": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "strategy": "ict_scalp_5m",
+   "cell": "chop/volatile",
+   "gated_direction": "short",
+   "verdict": "FAIL_FOLD_SENSITIVE",
+   "would_be_if_not_refused": "FAIL_FOLD_SENSITIVE",
+   "n_dir": 15,
+   "pooled_dir_r": -0.8069,
+   "removal_candidate": true
+  },
   {
    "head": "btc-regime-15m-lgbm-fc-pcv-v2",
    "strategy": "squeeze_breakout_4h",
