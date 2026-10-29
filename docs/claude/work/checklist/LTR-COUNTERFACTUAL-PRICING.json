@@ -1,0 +1,22 @@
+{
+  "id": "LTR-COUNTERFACTUAL-PRICING",
+  "title": "Price every non-hold live-review option (tighten, BE, partial, tp_extend, close) offline against the leg's own Stage-0 corpus at each review, so each action class accrues a priced graduation count independent of live applies",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a71.2 / top-10 #5. MEASURED: comms/live_review/reviews.jsonl 152 rows (10-25..29), applied=false on 152; outcomes.jsonl 52 rows, all hold/no_recommendation/flag_mechanics with cf_method no_path_change -> 0 priced non-hold calls; graduation needs n>=20 priced per class (mandates ~1138). Done when: every review row carries a priced counterfactual per option class from scripts/research/live_review_outcomes.py, outcomes.jsonl grades them, and a per-class count is reported. Check overlap with RM-AM-EXIT-ML-WIRING first. Depends on LTR-CORPUS-REAL-MONEY-LEGS for n.",
+  "priority_rank": 3,
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "updated_at": "2026-10-29T07:33:15Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 784
+}
