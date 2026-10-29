@@ -2,19 +2,21 @@
   "id": "NO-NEW-GATES-RULE",
   "title": "Write the operator's rule into docs/CLAUDE-RULES-CANONICAL.md and .claude/skills/manager/SKILL.md: adding ANY gate (approval step, hold, readiness condition, cap, flag, review step) needs the operator's explicit permission; an instruction that can be read as more or less friction is read as less; deploys of green Tier-1/2 work are automatic. Then audit live docs, skills and routines for gates added without his permission and list them for him",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01AFoLuKGDfEyEYDzqtg1BG5",
   "model": "sonnet",
   "ceiling_usd": 4,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21339
+  ],
   "blocked_on": [],
-  "note": "ADD, operator ~12:25Z verbatim: \"in any design doc, when a gate is created, that needs to be highlighted when it's being presented to me before I approve, so that I understand where the gates are. They keep on getting hidden in design docs, and I'm not aware of them until they're causing problems, and that's not okay.\" -> rule (e): every design doc / spec / PR body / approval packet that creates or changes a gate carries a top-of-document 'Gates this adds or changes' block (what it blocks, where, why, how to remove), the approval popup names those gates, and a doc with none says 'Gates: none'; templates updated; a guard if cheap. Sent to the lane (trig_01X6BWqcDCsSobJKLQFTGesT).",
+  "note": "PR #21339 open; closes when merged and CI green. No CI guard added (would itself be a gate; needs operator permission).",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T12:16:46Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "updated_at": "2026-10-29T16:28:16Z",
+  "updated_by": "session_01AFoLuKZu3ZxrvFhVkeYB3F",
   "roadmap": [
     "L-LADDER"
   ],
