@@ -2,7 +2,7 @@
   "id": "LIVE-NUMBERS-STREAMING",
   "title": "Live trade count and live P&L must be live on the dashboard (no refresh, no 10 s+ waits): measure where the delay is (SPA polling interval vs REST latency vs uPnL write cadence in the DB vs /ws/market positions frames), then push positions + uPnL + counts over the existing WebSocket and render them as they arrive; publish a measured latency (venue mark -> screen)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01AFoLuM288vnTL4FB79j7gR",
   "model": "sonnet",
@@ -11,12 +11,21 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~11:20Z (chat, verbatim excerpts): \"it still seems like the data is updating way too slow. I still have to wait like at least 10 seconds, if not more, every time I just want to update like what the live number of trades are and what the live P&L is ... those should be live and I shouldn't have to refresh. Those should just always be live numbers ... It's not up to our standard. We can definitely do better than this. We need to just figure out what needs to happen.\" Known: /ws/market already pushes positions every tick (src/web/api/routers/market_ws.py); UI-UPGRADE-1 API half measured positions 0.56 s on 2026-10-25; SPA patch ict-trader-dashboard#230 applied (landed_unproven). So root-cause first, with measurements.",
+  "note": "2026-10-29: bot #21261 merged 8f59271f, DEPLOYED 8f59271fb CURRENT 14:34:48Z; SPA ict-trader-dashboard#231 merged 01fd2cd0 15:04Z, live bundle assets/index-DEdb_LaC.js contains scope:\"all\" at 15:05:37Z (negative control 0 hits). Browser render is the remaining observation (operator).",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T12:55:25Z",
+  "updated_at": "2026-10-29T15:05:51Z",
   "updated_by": "Manager Session 2026-10-29c",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "Overview open-positions uPnL visibly updates every 1-2 s in a real browser",
+    "how_to_check": "operator loads https://benbaichmankass.github.io/ict-trader-dashboard/ Overview and watches uPnL",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: UI/observability",
+    "arch": "none: /ws/market contract unchanged (additive scope=all)"
+  },
   "_seq": 809
 }
