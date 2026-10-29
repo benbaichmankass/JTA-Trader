@@ -11,9 +11,9 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "Measured 07:45Z /api/bot/positions?include_paper=true: the only production leg open on a testing book is 6734 (ada_pullback_2h, bybit_1). Deployed sha 615d38034 contains #21038, so no NEW production-leg entries reach bybit_1. No allowlisted system-action closes a position at market (docs/claude/system-actions.md); 6734 rides to its brackets and takes the same stop as the real-money legs via #21193.",
-  "priority_rank": 2,
-  "updated_at": "2026-10-29T07:44:29Z",
+  "note": "Operator 2026-10-29 ~07:55Z (popup answer, voice-transcribed, verbatim): \"Building should like. I understand that we don't need to go vigest to clear this one tray that's not worth it, but the system should be able to crochet because that's one of the actions that the desk isn't supposed to be able to do and we're working on building those out ... It's not the most urgent thing right now but it doesn't need to get done as part of the invert build out for for all of us like there's ml also\". Manager reading: let 6734 ride; build the close capability as part of the system-first infrastructure build-out, for the desk, LTR and ML alike; not urgent. SCOPE CORRECTION (manager mis-stated 'no close capability'): scripts/ops/live_review_apply.py already has --action close (bybit reduce-only per-leg, via each account's RiskManager.approve_action, venue read-back), reached only through the LTR rows watcher (route recommended); closes stay advice-only per the operator's 2026-10-28 ~21:07Z rule. GAPS to build: (1) an operator/manager-callable system-action that dispatches a close or partial_close through that SAME executor (no new order path), with account targeting for a book-structure cleanup; (2) a single trade-action interface the desk, LTR and ML exit heads all call; (3) on a status move, open positions on the old book are listed and dispositioned (default: ride to their brackets, record it). Done = a dry-run then apply of a close on a bybit_1 paper leg, read back from the venue.",
+  "priority_rank": 5,
+  "updated_at": "2026-10-29T07:46:18Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-LADDER"
