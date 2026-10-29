@@ -579,6 +579,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/ML-PROGRAMME-2026-10-28.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | ONE consolidated ML programme: models that manage trades, TM-BENCH, 8 tracks, proposed infra rows, learning ledger. |
 | `docs/plans/ml-live-promotion-plan-2026-10-29.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | Short path to put 3-5 ML models into live decision loops by 2026-11-02 on existing consumers: pre-registered gates, day-by-day build steps, Tier map, 8 MODEL infra rows. |
+| `docs/plans/ml-pipeline-design-2026-10-29.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | The ML assembly line from the money roster backward: six stations (dataset, CPCV, gate, shadow, canary, CUSUM/retrain) with owner, cadence and own quality metric; measured gap per station; ranked build rows; ML intake rule. |
 | `docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/OCI-STATE-CHECK-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
@@ -1112,6 +1113,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-10-28-health-review.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-10-28-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-29-followthrough-triage.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-10-29-system-conformance-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

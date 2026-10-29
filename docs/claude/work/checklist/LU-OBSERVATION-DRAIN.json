@@ -1,0 +1,22 @@
+{
+  "id": "LU-OBSERVATION-DRAIN",
+  "title": "Close the 36 landed_unproven rows past due_by: each closed on its observation or handed to a lane with VM diag access, instead of being redated by lanes that cannot take the read",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a76.5. MEASURED: 330 landed_unproven rows; 36 past due_by (before 2026-10-29); 36 untouched >14d; oldest CI-TRAINING-TRIGGER (10-09), M20-EXITS-4 (10-11); DAILY-DD-SWITCH redated 10-23 -> 10-31 because the observation needs a VM read. Done when: each of the 36 is done, re-observed with a diag pull, or carries a lane with VM egress and a due_by it can meet.",
+  "priority_rank": 5,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-10-29T07:33:16Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 795
+}
