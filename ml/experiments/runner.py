@@ -428,6 +428,46 @@ def _compute_cost_gate(
         return res
 
 
+def _attach_serve_spec(
+    model_state: dict[str, Any],
+    manifest: TrainingManifest,
+    rows: list[Mapping[str, Any]],
+    dataset_dir: Path,
+) -> None:
+    """Freeze the live serve spec of a ``setup_candidates`` head into its state.
+
+    The decision-time row the head trains on carries ``vol_bucket``, a per-symbol
+    quantile bucket whose edges live in the build, not in any bar. Without them
+    the live serve path cannot rebuild the feature (the PI-20260927-3WM5HADW-0005
+    ``vol_bucket``-dead class), so they ride the model state as ``serve_spec``
+    (``ml.datasets.families.setup_candidates.serve_spec_from_rows``), with the
+    build's ``vol_window_n`` / ``momentum_window`` from ``metadata.json``. Other
+    families, and heads that do not select ``vol_bucket``, are untouched.
+    """
+    if manifest.dataset.family != "setup_candidates":
+        return
+    if "vol_bucket" not in (manifest.trainer_config.get("feature_columns") or []):
+        return
+    from ..datasets.families.setup_candidates import serve_spec_from_rows
+
+    params: Mapping[str, Any] = {}
+    meta_path = dataset_dir / "metadata.json"
+    if meta_path.is_file():
+        try:
+            params = json.loads(meta_path.read_text(encoding="utf-8")).get(
+                "build_params"
+            ) or {}
+        except (OSError, ValueError):
+            params = {}
+    spec = serve_spec_from_rows(
+        rows,
+        vol_window_n=int(params.get("vol_window_n", 20)),
+        momentum_window=int(params.get("momentum_window", 10)),
+    )
+    if spec is not None:
+        model_state["serve_spec"] = spec
+
+
 def run_experiment(
     *,
     manifest_path: Path,
@@ -496,6 +536,8 @@ def run_experiment(
             evaluator.score(model_state, eval_rows, manifest.evaluator_config)
         )
         scored = [(model_state, eval_rows)]
+
+    _attach_serve_spec(model_state, manifest, rows, dataset_dir)
 
     # Cost-net decision-value gate (ML-TRAINING-PRINCIPLES-GAPS; operator
     # Tier-2 2026-10-28). Its flat metrics ride the registry row, and the

@@ -297,6 +297,46 @@ def _resolve_shadow_predictors(strategy_name: str, strat_cfg: dict) -> list:
         return []
 
 
+def conviction_stamp(
+    strategy_name: str,
+    confidence: float,
+    captured: Dict[str, Any],
+    *,
+    direction: str,
+    calibrators: Any = None,
+    regime_alignment: Any = None,
+) -> Dict[str, Any]:
+    """The ``meta["conviction"]`` block stamped at signal time.
+
+    ``conviction`` blends every captured score, SHADOW-stage included: it is the
+    observe-only soak number. ``influencing`` is the same blend over advisory+
+    models only (I7, ML-SHADOW-NEVER-ORDERS, plan
+    docs/plans/ml-live-promotion-plan-2026-10-29.md § 6): the order-changing
+    apply path (``conviction_sizing.apply_conviction_sizing``) reads it, so a
+    shadow promotion can never resize an order through conviction.
+    """
+    from src.runtime.conviction import compute_conviction
+    from src.runtime.conviction_inputs import build_conviction_inputs
+
+    conv_inputs, conv_prov = build_conviction_inputs(
+        strategy_name, confidence, captured,
+        calibrators=calibrators, direction=direction,
+        regime_alignment=regime_alignment,
+    )
+    infl_inputs, infl_prov = build_conviction_inputs(
+        strategy_name, confidence, captured,
+        calibrators=calibrators, direction=direction,
+        regime_alignment=regime_alignment, influencing_only=True,
+    )
+    conv = compute_conviction(conv_inputs)
+    infl = compute_conviction(infl_inputs)
+    return {
+        **conv.to_dict(), "provenance": conv_prov,
+        "influencing": infl.conviction,
+        "influencing_provenance": infl_prov,
+    }
+
+
 def _emit_shadow_preds(
     strategy_name: str,
     sig: dict,
@@ -323,6 +363,30 @@ def _emit_shadow_preds(
     else is scored on the base trade-signal row exactly as before. See
     ``src/runtime/regime_shadow.py``.
     """
+    # Setup-candidates decision-time features (B2, plan
+    # docs/plans/ml-live-promotion-plan-2026-10-29.md § 4): computed once from the
+    # leg's CLOSED candles by the dataset family's own functions and stashed on
+    # the signal meta, so the execution-time advisory path
+    # (src.runtime.advisory_sizing) reads the same numbers the shadow path does.
+    # Stamped before the predictor check: an advisory-stage head scores at
+    # execution even when no shadow model is resolved here.
+    try:
+        from src.runtime.closed_bars import drop_forming_bar
+        from src.runtime.setup_features import stash_decision_features
+
+        if sig.get("side") in ("buy", "sell"):
+            sig_meta0 = sig.get("meta")
+            if not isinstance(sig_meta0, dict):
+                sig_meta0 = {}
+                sig["meta"] = sig_meta0
+            stash_decision_features(
+                sig_meta0,
+                drop_forming_bar(candles_df, str(timeframe or "")),
+                str(sig.get("symbol") or symbol),
+                str(timeframe or ""),
+            )
+    except Exception:  # noqa: BLE001 — observe-only, never strand a signal
+        pass
     try:
         predictors = _resolve_shadow_predictors(strategy_name, strat_cfg)
         if not predictors:
@@ -332,6 +396,7 @@ def _emit_shadow_preds(
             closes_from_candles,
             feature_row_for_predictor,
         )
+        from src.runtime.setup_features import META_KEY, row_for_predictor
         meta = sig.get("meta") or {}
         sig_symbol = str(sig.get("symbol") or symbol)
         base_row = {
@@ -362,6 +427,9 @@ def _emit_shadow_preds(
             )
             if row is None:
                 continue  # mismatched regime model — skip (don't log a constant)
+            # A setup_candidates head (frozen serve_spec) gets its training row;
+            # every other head gets ``row`` unchanged.
+            row, _setup_state = row_for_predictor(predictor, row, meta.get(META_KEY))
             # One predictor per call preserves the per-model try/except
             # isolation + ShadowPredictor type-check. capture_shadow_preds
             # runs the same single predict() (so the audit log is unchanged)
@@ -388,27 +456,23 @@ def _emit_shadow_preds(
         # OBSERVE-ONLY unified conviction (design doc § 3 / § 4a, P1). Blends the
         # strategy's calibrated signal confidence with the captured model scores
         # (each gated by its own stage) into a single conviction, stamped on meta
-        # alongside model_scores. NEVER read back into the order — pure logging,
-        # so the score can soak before any sizing/arbitration influence (P2+).
+        # alongside model_scores. The observed blend is never read back into an
+        # order; only its advisory+-only ``influencing`` view feeds the
+        # CONVICTION_SIZING_MODE=apply path (I7, ``conviction_stamp``).
         try:
-            from src.runtime.conviction import compute_conviction
             from src.runtime.conviction_inputs import (
-                build_conviction_inputs,
                 load_calibrators_cached,
                 load_regime_alignment_cached,
             )
 
-            cal = load_calibrators_cached()
-            ra = load_regime_alignment_cached()
-            conv_inputs, conv_prov = build_conviction_inputs(
-                strategy_name, base_row["confidence"], captured,
-                calibrators=cal, direction=base_row["direction"],
-                regime_alignment=ra,
-            )
-            conv = compute_conviction(conv_inputs)
             sig_meta2 = sig.get("meta")
             if isinstance(sig_meta2, dict):
-                sig_meta2["conviction"] = {**conv.to_dict(), "provenance": conv_prov}
+                sig_meta2["conviction"] = conviction_stamp(
+                    strategy_name, base_row["confidence"], captured,
+                    direction=base_row["direction"],
+                    calibrators=load_calibrators_cached(),
+                    regime_alignment=load_regime_alignment_cached(),
+                )
         except Exception:  # noqa: BLE001 — observe-only, never strand a signal
             pass
     except Exception:  # noqa: BLE001
