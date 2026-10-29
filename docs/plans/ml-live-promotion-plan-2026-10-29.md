@@ -33,7 +33,7 @@
 | what the 3 advisory heads are | `btc-regime-15m-lgbm-fc-pcv-v2`, `sol-regime-15m-lgbm-fc-pcv-v2`, `mes-regime-5m-lgbm-v2`: all vol-regime heads | same read |
 | family mix | market_features 72 (regime) · setup_candidates 9 · conviction_meta 4 · trade_outcomes 4 · setup_labels 3 · 5 others 1 each | 97 rows, `dataset_ref.family` |
 | rostered legs | **51** unique legs on `mode: live` accounts; **7** on real-money/prop accounts (`ada_pullback_2h`, `iaum_pullback_1d`, `trend_donchian_eth_4h`, `trend_donchian_eth_prop`, `trend_donchian_sol_prop`, `trend_donchian_xrp_4h`, `xrp_pullback_2h`) | `config/accounts.yaml` re-parsed at `main@71ead79f` (`bybit_2`, `bybit_portfolio`, `alpaca_live`, `alpaca_portfolio`, `breakout_2`, `tradeify_1`, `velotrade_1`) |
-| legs ML changes | 5 / 51; real money 0 / 7 | union of the `trend_vol` cell strategies (3, `config/regime_policy.yaml`) and the `exit_head_action: close` legs (3, `config/strategies.yaml`), overlap `trend_donchian`. **Conditional on `REGIME_ML_VERDICT_MODE=use` on the VM** (relay #21021) |
+| legs ML changes | 5 / 51; real money 0 / 7 | union of the `trend_vol` cell strategies (3, `config/regime_policy.yaml`) and the `exit_head_action: close` legs (3, `config/strategies.yaml`), overlap `trend_donchian`. `REGIME_ML_VERDICT_MODE=use` confirmed on the VM (get-env run 40775326133, § 8) |
 | setup meta-label heads, cost gate | 9 of 9 `cost_gate_passed: 0` | the 9 `setup_candidates` rows, registry `metrics.cost_*` |
 | `setup-candidates-metalabel-p2pool-v1` (as it was evaluated) | `cost_net_value_r` **+0.0407 R/opp**; take-all **−0.492**; matched random **−0.064**; take-none 0; take rate 0.130 (≈ 42 of 324 taken); PSR 0.794; n_trials 1 | `n_eval` 324 = the real closed BTC/ETH/SOL trades of the 3 harness strategies in the `live_holdout` split of dataset v020 (built 2026-08-04). **Gross/unstamped basis**: the gate refused on `eval_not_cost_net`, not on a measured loss |
 | why the eval is unstamped | the 7 `setup_candidates` dirs on the trainer were built 2026-06-06 → 08-04, `label_version` triple-barrier-v1; the daily cycle never rebuilds them | PI-20261028-V8KBRR5H-0004 (trainer-vm-diag #20864/#20865); the current builder stamps real-trade rows `label_cost_basis: realized` (`ml/datasets/families/setup_candidates.py:1150`) |
@@ -252,7 +252,7 @@ Already owned elsewhere, not duplicated: `LIVE-DECAY-MONITOR` (CUSUM per leg), `
 - **The rebuild changes the eval book.** v022 adds the real trades closed since 2026-08-04, so the +0.041 point estimate will move. That is the point. The rule was registered before the rebuild.
 - **Small taken-n.** About 42 taken trades at n = 324. Rule (b) is a bootstrap on the difference, so a lucky 42 cannot pass on a point estimate alone.
 - **`unit_fallback` R.** Real trades with no stop/size in the journal get ±1R. The ≤ 10% assertion catches a book that is mostly proxy.
-- **Shadow is not inert today** (I7). Check `CONVICTION_SIZING_MODE` before B5.
+- **Shadow would stop being inert under a later `CONVICTION_SIZING_MODE=apply` flip** (I7). Today it is `annotate` (§ 8), so B5 is not blocked.
 - **Walk-forward harness fidelity.** The pullback/trend harness `tp_r` assertion bug class (`regime_debt_matrix.py` docstring). B3 reads each harness's fidelity flag and refuses an unfaithful leg.
 - **Trainer capacity.** 0 spare OCPU p95 (ML-PROGRAMME § 2.1). B1 runs one build plus one train after the 00:52Z cycle. The walk-forwards run on runners where possible.
 
@@ -277,7 +277,18 @@ Already owned elsewhere, not duplicated: `LIVE-DECAY-MONITOR` (CUSUM per leg), `
 - **p2pool `cost_gate.json`:** `eval_cost_bases {unstamped: 324}`, `n_taken 42`, value +0.0407, take-all −0.492, matched random −0.064, PSR 0.794, `passed: false`, reason `eval_not_cost_net`. This matches the registry read in § 1.
 - **Exit-head artifact:** the `find` did not return a file named `exit-head-donchian-1h-v1` within its first 20 hits. It did return `datasets-out/exit_head/1h/donchian/e1_report.json` and `/tmp/exit_head_replay_trend_donchian.json`. **Where the live artifact sits is not established here**; B4 locates it from `src/runtime/exit_head_shadow.py`'s resolver.
 
-### system-action get-env #21021
-_Not returned by the time this PR landed (the system-actions queue was still `queued`)._ So `REGIME_ML_VERDICT_MODE`, `CONVICTION_SIZING_MODE` and `CONVICTION_SIZING_ACCOUNTS` stay **UNMEASURED**. Two things follow:
-- the "5 / 51 legs" count is conditional on the router mode being `use`;
-- I7 (`ML-SHADOW-NEVER-ORDERS`) **blocks B5** until it is read. The rerun is the same issue body; row I7 owns it.
+### system-action get-env (run 40775326133, 2026-10-28 21:51Z; relayed by the manager 2026-10-29 00:14Z)
+
+Run 40767973940 (issue #21021) read the VM but failed to post its comment to the old repo slug. Run **40775326133** read `--key ALL` from the same unit. These are the process env of `ict-trader-live.service`, and process and declared values agree (MEASURED from that run's log, as relayed; I did not read the log myself):
+
+| key | value | what it means for this plan |
+|---|---|---|
+| `REGIME_ML_VERDICT_MODE` | `use` | **the router consumer is live.** The advisory vol heads drop intents in authored `trend_vol` cells, so the "5 / 51 legs" count holds unconditionally. P2/P3 cells act as soon as they are authored |
+| `ML_VOL_VERDICT_THRESHOLD` | unset (code default) | B3's vol-label replay must use the same default. Read it from `src/runtime/regime/ml_vol_verdict.py`; never hand-pick it |
+| `CONVICTION_SIZING_MODE` | `annotate` (accounts `bybit_1`, reductive) | **shadow-stage models change no order today.** The conviction stamp only logs. So I7 (`ML-SHADOW-NEVER-ORDERS`) **no longer blocks B5**. I7 stays as a guard test, so that a later flip to `apply` cannot silently turn shadow promotions into order changes. P4 would need `apply` on `bybit_1`, which is a Tier-3 env change and part of its packet |
+| `REGIME_ROUTER_DISABLED` | unset | the router is on |
+| `REGIME_BAR_SCORING_DISABLED` | `0` | bar scoring is on |
+| `MULTI_STRATEGY_INTENT_LAYER` | `true` | — |
+| `FLIP_POLICY` / `FLIP_CONFIDENCE_THRESHOLD` / `FLIP_MIN_POSITION_AGE_HOURS` | unset / `0.0` / `4.0` | not used by this plan |
+| `NEWS_INFLUENCE_MODE` / `NEWS_VETO_ENABLED` | unset / unset | the news reducer is inert, so P1's advisory factor is the only reducer in that step |
+| `INSIGHTS_MODEL_MODE` | `template` | not used by this plan |
