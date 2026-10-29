@@ -116,6 +116,7 @@ def main() -> int:
         leg_cells = []
         cell_verdicts_for_leg = []
         passing_dirs = []
+        informational_pass = []
         for slug, cell in (r.get("cells") or {}).items():
             reg, vol = slug.split("/")
             per_dir = {}
@@ -128,6 +129,8 @@ def main() -> int:
                               "authored_trend_vol_cell": bool(authored.get((strat, reg, vol, d)))}
                 if v == "CELL_PASS":
                     passing_dirs.append((reg, d, red))
+                elif v.startswith("REFUSED") and raw == "CELL_PASS":
+                    informational_pass.append(f"{reg}/{vol}:{d}")
                 cell_verdicts_for_leg.append(v)
             rec = {"record": "ml-volgate-wf-cell", "lane": "ML-VOLGATE-WF-ETH-BTC", "plan_step": "B3",
                    "head": head, "strategy": strat, "cell": slug, "symbol": r.get("symbol"),
@@ -151,6 +154,7 @@ def main() -> int:
         lv = leg_verdict(r, cell_verdicts_for_leg, redundant_all)
         b = r.get("book") or {}
         summary.append({"head": head, "strategy": strat, "fidelity": r.get("fidelity"), "leg_verdict": lv,
+                        "informational_pass_cells_not_a_basis": informational_pass,
                         "passing": [f"{reg}:{d}" + (" (1D already off)" if red else "") for reg, d, red in passing_dirs],
                         "book": {k: b.get(k) for k in ("ungated_fold_net_r", "gated_fold_net_r", "folds_populated",
                                                       "folds_gated_ge_ungated", "ungated_max_dd_r", "gated_max_dd_r",
