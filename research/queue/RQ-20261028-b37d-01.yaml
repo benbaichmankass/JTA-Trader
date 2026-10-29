@@ -1,0 +1,102 @@
+id: RQ-20261028-b37d-01
+title: 'PLATEAU check of the 3e41-03 lead: do the neighbours VL25 and VL35 of vol-skip-below-pctl=0.3 on trend_donchian_avax_4h BOTH also beat the declared leg (dR >= 1.0 R, >= 3 of 4 folds, no worse drawdown)?'
+status: queued
+cadence: once
+kind: experiment
+theme: regime
+priority: 2
+roadmap:
+- L-REGIME
+programme: P2
+question: RQ-20261027-3e41-03 read PASS (VL30 +22.66 R over B on AVAX 4h, 4 of 4 folds, maxDD 7.4 vs 16.9; VL20 +16.37 R also passed) but it was 1 of 5 vol-skip cells in its batch
+  (SOL, ADA, sol_prop and eth_prop failed the same lever) and 2 of 14 units in batch 3e41. On the same window (history up to 2026-10-26, harness cost stack) do the untested neighbours
+  VL25 (--vol-skip-below-pctl=0.25) and VL35 (--vol-skip-below-pctl=0.35) BOTH beat B by >= 1.0 R with no worse drawdown in >= 3 of 4 folds? Arm values are fixed here before any run.
+why_this_matters: 'Research-ops 2026-10-28 20:48Z, ANALYSIS step 2.3-2.5. A disjoint-window confirmation of 3e41-03 is impossible today (AVAX history starts 2020-09 and the PASS used all of it; a forward window
+  needs ~90 days). The cheap test that CAN separate a real plateau from a single-point optimum is the neighbours: two isolated passes at 0.2 and 0.3 are consistent with both an effect and a
+  noisy parameter surface. Decision changed: PLATEAU -> the AVAX lever goes to the manager as a Tier-3 proposal note (conditional on the forward confirmation, pipeline item filed); NOT PLATEAU ->
+  3e41-03 is recorded as a one-cell discovery and nothing is proposed. Trial count: 1 unit, 2 new arms; the PASS parent was chosen from 5 vol-skip cells (denominator 5).'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing E35 floor). expected_n is an ESTIMATE, not a measurement: the baseline count for this leg over the window
+    is not re-measured here; below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance
+    test; the calendar-fold majority refuses a one-period artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles (trend_donchian_avax_4h); the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ20261028B37D01-VOLSKIP_PLATEAU
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack, never a zero default): total_trades,
+    net_total_r, max_drawdown_r, plus net_r per fold over 4 equal calendar spans (same boundaries every arm). Arms: B = leg as declared; VL25 = --vol-skip-below-pctl=0.25 / VL35 = --vol-skip-below-pctl=0.35.
+    Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B.'
+  rule: 'INDETERMINATE IF n(B) < 39. PLATEAU (read as pass) iff BOTH VL25 and VL35 each have dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4 (grade.candidates.<arm>.passes true for both; the mechanical
+    sweep verdict passes on ANY single candidate, so this unit is graded by the session from grade.candidates, grading.auto false). NOT PLATEAU (read as fail) if either neighbour fails: 3e41-03 is then
+    a one-cell discovery, nothing is proposed, the lever family stays open. A PLATEAU is still not a confirmation: the forward-window re-run is filed as a pipeline item. The bar, the drawdown
+    clause, the fold majority, the 39 floor and the arm values are not changed after any result.'
+  min_n: '39'
+  what_it_does_not_do: 'Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config, place an order or touch a roster; a single-leg
+    backtest lever is not edge and not a P&L claim, and a PASS is a lead, not a promotion.'
+practice_precedent: 'parameter-plateau check before trusting a single-point optimum (docs/reference/trading-and-model-practice-principles.md; docs/research/research-ops-benchmark-2026-10-16.md section 2, multiple-testing denominator)'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  basis: 'stand-in: a lever on a money/prop leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: One keyless candle fetch of the window and one harness pass per arm; same shape as RQ-20261022-326f-05 and RQ-20261023-a1f3-11 (estimate, not measured).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_avax_4h
+  - --arm
+  - B=
+  - --arm
+  - VL25=--vol-skip-below-pctl=0.25
+  - --arm
+  - VL35=--vol-skip-below-pctl=0.35
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-26'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261028-b37d-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+grading:
+  auto: false
+  owner: RESEARCH-OPS-20261028-2048
+  owner_reason: both-neighbour clause is not what the mechanical sweep grader reads (it passes on any one candidate); the next research-ops pass grades from grade.candidates.
+related:
+- RQ-20261027-3e41-03
+- scripts/research/exit_lever_ablation.py
+- RQ-20261022-326f-05
+- RQ-20261023-a1f3-11

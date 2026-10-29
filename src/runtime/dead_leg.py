@@ -159,8 +159,15 @@ def _is_declared_policy_skip(reason: Any) -> bool:
         from src.runtime.execution_diagnostics import is_policy_hold
     except Exception:  # noqa: BLE001
         return False
+    # ``trades.entry_reason`` is journalled WRAPPED ("REJECTED: intent_noop:..."),
+    # but ``is_policy_hold`` prefix-tests the bare reason, so every deliberate
+    # intent no-op graded as a real refusal with cause ``other`` (ib_paper
+    # "placing NOTHING" alert, 2026-10-28: flip_suppressed_hold_policy rows).
+    text = str(reason or "").strip()
+    if text.upper().startswith("REJECTED:"):
+        text = text[len("REJECTED:"):].lstrip()
     try:
-        return bool(is_policy_hold(reason))
+        return bool(is_policy_hold(text))
     except Exception:  # noqa: BLE001
         return False
 

@@ -1,0 +1,26 @@
+{
+  "based_on": "20261018T145330154860Z-54633112.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a gate-check packet with ready: true on any of the three AND research/results/RQ-20261018-ff8f-01/ holds a measured record -> a Tier-3 proposal note on ML-UNBLOCK-1018 for the ml-review; or two consecutive re-checks still not ready -> record the blocking gate and stop re-checking",
+    "kind": "observation"
+  },
+  "id": "PI-20261018-WH81NW96-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-25",
+    "how_to_check": "origin.rerun (trainer-vm-diag gate-check loop at ~20:00Z, grep ready|live_parity|drift_clean|cross_run)",
+    "what": "one gate-check packet per head (btc-regime-15m-lgbm-yz-v1, sol-regime-5m-lgbm-v1, eth-regime-5m-lgbm-v1) run ~20 h after a trainer cycle, recorded as ready true/false with the failing gate named; two re-checks at most"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / trainer-vm-diag #18887 #18888",
+    "rerun": "trainer-vm-diag cmd at ~20:00Z: cd /home/ubuntu/ict-trading-bot && for m in btc-regime-15m-lgbm-yz-v1 sol-regime-5m-lgbm-v1 eth-regime-5m-lgbm-v1; do timeout 900 .venv/bin/python -m ml gate-check $m --db data/trade_journal.db --datasets-root datasets-out --shadow-log runtime_logs/shadow_predictions.jsonl 2>&1 | grep -E 'ready|live_parity|drift_clean|cross_run'; done"
+  },
+  "routed_to": "ML-UNBLOCK-1018",
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "ML-REVIEW-20261028, trainer-vm-diag #21005 gate packets: btc-regime-15m-lgbm-fc-pcv-v1 ready:true blocking [] and btc-regime-1h-lgbm-v2 ready:true blocking []; btc-regime-15m-lgbm-yz-v1 ready:false blocking [live_parity] (vol_bucket dead live). RQ-20261018-ff8f-01 holds a measured record (indeterminate). Disposition recorded as the proposal note this item asked for (no promotion recommended): every ready gate is classification (macro-F1 oos_edge, live AUC); cost_net is insufficient_data for the family; fc-pcv-v1 is the shadow sibling of the already-advisory fc-pcv-v2 (same features, AUC 0.651 vs 0.721) so promoting it changes no decision; btc-1h-v2 has no consumer (no 1h trend_vol cell) so it changes 0 legs. Re-open as a promotion question only after PI-20261028-GNVUF1ES-0002 (P5) prices a decision value. See docs/reviews/2026-10-28-weekly-walkthrough.md addendum.",
+  "tier": 3,
+  "what": "[ml] shadow->advisory re-check for the two closest heads: btc-regime-15m-lgbm-yz-v1 (everything passes except live_parity insufficient_data: only 12 rows scored since the 00:29Z retrain, needs >= 20 -- the daily retrain resets the parity window, so run gate-check ~20 h after the cycle) and the sol/eth 5m heads (drift_clean KS 0.202 / 0.208 vs 0.200; sol cross_run_stability 0.054 vs 0.05). A clean packet on yz-v1 is still NOT a proposal until RQ-20261018-ff8f-01 (yz vs the advisory fc feature set, identical folds) and the net-of-cost regime-cell walk-forward have run"
+}
