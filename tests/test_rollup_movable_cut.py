@@ -232,7 +232,9 @@ def test_measured_state_2026_08_17():
     # trend_donchian_xrp_adx25 (bybit_1 only) mirrors the incumbent trend_donchian_xrp_4h row,
     # whose one movable cell is tp_extend `pending`; the alias therefore adds exactly one, in a
     # column already pinned above.
-    assert len(movable) == 108   # 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE); 102 -> 108 on 2026-10-28 (trend_donchian_1h row: 6 pending cells)
+    # 108 -> 106 on 2026-10-28: gld_pullback_1h retired by record (STRATEGY-STATUS-MODEL, operator Q4); its two
+    # pending tp cells (tp_extend, tp_retarget) left the live population.
+    assert len(movable) == 106   # 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE); 102 -> 108 on 2026-10-28 (trend_donchian_1h row: 6 pending cells)
     #
     # E65 (2026-09-24, PR #12868): 4 -> 2. The `exit_ladder` cells on
     # trend_donchian_eth_prop and trend_donchian_sol_prop RESOLVED to
@@ -277,7 +279,7 @@ def test_internal_keys_are_not_printed_as_buckets():
     # ...while the measured count IS rendered (0 since the 2026-09-29
     # out_of_scope_family correction, 1 since the 2026-09-29
     # regime_flip_exit resolution; see test_measured_state_2026_08_17 above).
-    assert "MOVABLE BY A SESSION: 108" in text   # 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
+    assert "MOVABLE BY A SESSION: 106" in text   # 108 -> 106 on 2026-10-28 (gld_pullback_1h retired); 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
     assert "NO SWEEP PATH AT ALL: 4" in text
 
 

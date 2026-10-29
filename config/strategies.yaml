@@ -2285,9 +2285,19 @@ strategies:
     # 0.3). Runs on alpaca_paper (PAPER money) with bracket orders (broker-side
     # SL/TP); the builder gates on the US cash session (market_hours us_equity).
     # execution: live per the paper-accounts-execute operator policy.
+    #
+    # RETIRED 2026-10-28 — INACTIVE (STRATEGY-STATUS-MODEL; operator popup answer relayed by the manager,
+    # verbatim "Retire gld, re-home 3 later (Recommended)"), consistent with the operator's GLD decision of the
+    # same day, popup verbatim "GLD: kill and exclude" (commit 75fa182dd, #21009). RETIREMENT RECORD: cut from alpaca_paper
+    # 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548, R-CUT-AFFORD: alpaca_live sizes none of its setups),
+    # never re-homed, and its GLD exposure is carried by gld_pullback_1d on ib_paper (GLD-SOAK-REPLACE,
+    # 2026-10-25). Inactive legs run no shadow logging (operator, same popup set); GLD candles keep being
+    # pulled for gld_pullback_1d. RE-ENTRY TEST: a fresh Stage-0 record at
+    # comms/strategy_evidence/gld_pullback_1h.json, net of the full cost stack, clearing a rule registered
+    # before the run, AND a real-money book that can size it. ROLLBACK: enabled: true + re-roster.
     model: null
     signal_prefixes: [gld_pullback_1h]
-    enabled: true
+    enabled: false
     execution: live
     timeframe: "1h"
     symbols:

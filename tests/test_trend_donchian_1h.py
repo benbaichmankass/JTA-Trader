@@ -55,6 +55,7 @@ def test_intent_priority_registered_below_established_roster():
 
 
 def test_routed_to_demo_only():
+    # #21007 (2026-10-28, Tier-3, operator) re-enabled it on bybit_1; under STRATEGY-STATUS-MODEL it is a TESTING leg.
     import yaml
     accounts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
     bybit_1 = accounts["bybit_1"]["strategies"]
