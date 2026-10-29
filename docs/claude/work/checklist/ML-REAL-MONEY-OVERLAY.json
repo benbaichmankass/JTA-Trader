@@ -15,9 +15,9 @@
     21213
   ],
   "blocked_on": [],
-  "note": "09:40Z: #21195 MERGED 17e450d9 (shadow, annotate-only; hook body try/except-wrapped, verified); deploy #21225 filed. Post-deploy check: /api/diag/log_file?name=overlay_shadow \u2014 rows for the 4 TD legs, action annotate, same would_be_multiplier across every account per trace_id, sized qty unchanged; present:false before the first TD signal is expected. #21215 merged (V2 record on main). Refine units (PR #21217, held): 5785-03 calibration -> TD NOT_CALIBRATED (isotonic worsens Brier; p_win stays a rank score); 5785-04 nested selection -> TD PASS (dR +0.0024, LB -0.0088, 5/6, random p 0.001; configs interchangeable, which is what PBO 0.75 measured); 5785-05 larger spot holdout BLOCKED on PI-20261029-XME2GXW7-0003 (archive fetcher lacks spot). Canary packet #21213 ready for Saturday; CUSUM manual-only until PI-...-0001.",
+  "note": "DEPLOYED 09:44:37Z: runtime-config git_sha 17e450d9c, verdict CURRENT, trader booted 09:43:49Z, ticking. Not yet observed: the shadow log needs the diag token (public route missing_token); lane asked to run the relay check now and after the first TD signal.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T09:40:37Z",
+  "updated_at": "2026-10-29T09:45:14Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-ML-LIVE"
