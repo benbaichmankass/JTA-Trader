@@ -87,6 +87,12 @@ RULE_V1: dict[str, Any] = {
     # (production sizer + caps + daily_dd_switch). Until that simulator exists (row BOOK-SIM-REAL-SIZER) a grade over
     # per-trade-R books is a SCREEN: it ranks candidates and never graduates a class.
     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+    # REPORTED, never pass clauses (operator 2026-10-29 ~12:40Z: "we need to make sure we're also measuring R giveback
+    # and overall PNL"; no new gate without asking). Every verdict carries them for baseline, candidate and controls.
+    "reported_measurements": ["giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+                              "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+                              "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a "
+                              "per-trade translation, and balances are never committed to this public repo)"],
 }
 
 
@@ -126,11 +132,29 @@ def weekly_book(trades: list[dict[str, Any]]) -> dict[str, float]:
     return out
 
 
+def _pctl(xs: list[float], q: float) -> float | None:
+    if not xs:
+        return None
+    s = sorted(xs)
+    k = min(len(s) - 1, max(0, math.ceil(q * len(s)) - 1))
+    return round(s[k], 6)
+
+
+def giveback(trades: list[dict[str, Any]]) -> dict[str, Any]:
+    """REPORTED measurement (operator 2026-10-29 ~12:40Z, "we need to make sure we're also measuring R giveback"):
+    per trade, peak MFE in R minus realised net R. Never a pass clause. Trades without ``mfe_r`` are counted out and
+    the count is stated, so a missing field reads as "not measured", never as zero giveback."""
+    g = [float(t["mfe_r"]) - float(t["net_r"]) for t in trades if t.get("mfe_r") is not None]
+    return {"n_measured": len(g), "n_missing_mfe": len(trades) - len(g),
+            "mean_r": round(sum(g) / len(g), 6) if g else None, "p95_r": _pctl(g, 0.95)}
+
+
 def book_metrics(trades: list[dict[str, Any]], tail: float = 0.05) -> dict[str, Any]:
     rs = [float(t["net_r"]) for t in trades]
     return {"n": len(rs), "net_r": round(sum(rs), 6), "max_drawdown_r": max_drawdown(trades) if trades else 0.0,
             "cvar5_week_r": _tail_mean(list(weekly_book(trades).values()), tail),
-            "cvar5_trade_r": _tail_mean(rs, tail), "weeks": len(weekly_book(trades))}
+            "cvar5_trade_r": _tail_mean(rs, tail), "weeks": len(weekly_book(trades)),
+            "giveback": giveback(trades)}
 
 
 def _cut_dd(a: dict[str, Any], c: dict[str, Any]) -> float | None:
@@ -250,7 +274,9 @@ def grade_risk_adjusted(books: dict[str, list[dict[str, Any]]], *, baseline: str
                 kc = k_cuts[m] if k_cuts[m] is not None else float("-inf")
                 if C["net_r"] >= K["net_r"] and c_cuts[m] >= kc and (C["net_r"] > K["net_r"] or c_cuts[m] > kc):
                     beats = True
-            ctl_rows[k] = {"book": K, "cuts": k_cuts, "beats": beats}
+            ctl_rows[k] = {"book": K, "cuts": k_cuts, "beats": beats,
+                           "pnl_by_account": pnl_view(A, K, round((A["net_r"] - K["net_r"]) / A["n"], 6),
+                                                      risk_pct_by_account)}
         row.update({"lever_fired": fired, "r_cost_per_trade": r_cost, "dd_cut_pct": dd_cut, "cvar5_cut_pct": cv_cut,
                     "pnl_by_account": pnl_view(A, C, r_cost, risk_pct_by_account),
                     "risk_metrics_passing": passing, "folds": folds, "folds_held": held, "n_folds": nf,

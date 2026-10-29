@@ -230,3 +230,22 @@ def test_r_books_are_a_screen_not_a_graduation():
                                basis="book_usd_sim")
     assert g["graduation_eligible"] is True
     assert "BOOK-SIM-REAL-SIZER" in am.RULE_V1["measurement_of_record"]
+
+
+def test_giveback_is_reported_for_every_arm_and_never_gates():
+    """Operator ~12:40Z: R giveback (peak MFE R - realised R) and net P&L are MEASURED and REPORTED, not pass clauses."""
+    hold, be, rnd = _books()
+    for i, t in enumerate(hold):
+        t["mfe_r"] = 2.0 if i % 4 == 0 else max(t["net_r"], 0.0) + 0.1
+    for i, t in enumerate(be):
+        t["mfe_r"] = hold[i]["mfe_r"]
+    g = am.grade_risk_adjusted({"A": hold, "BE": be, "RND": rnd}, baseline="A", candidates=["BE"],
+                               controls={"BE": ["RND"]}, risk_pct_by_account={"x": 0.01})
+    ga, gc = g["baseline_book"]["giveback"], g["candidates"]["BE"]["book"]["giveback"]
+    assert ga["n_measured"] == 400 and gc["mean_r"] < ga["mean_r"]
+    assert gc["p95_r"] is not None
+    # the random control carries no mfe_r: reported as not measured, never as zero
+    gk = g["candidates"]["BE"]["controls"]["RND"]["book"]["giveback"]
+    assert gk["mean_r"] is None and gk["n_missing_mfe"] == 400
+    assert g["candidates"]["BE"]["controls"]["RND"]["pnl_by_account"]["x"]["basis"] == "per_trade_translation_not_book_result"
+    assert "giveback" not in str(g["candidates"]["BE"]["clauses"])

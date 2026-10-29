@@ -57,7 +57,9 @@ decision_rule:
     scripts/research/am_risk_adjusted.py run-legs --accounts bybit_2,alpaca_live: per leg, exit_lever_ablation.py --grade risk_adjusted (6 equal
     calendar folds of the pinned window by entry time; net of the full cost stack the harness resolves per venue, recorded per arm as cost_stack),
     then the POOLED book (every leg's trades per arm merged; maxDD in exit-time order; CVaR5 over calendar-week book net R). Per arm and per leg:
-    n, net R, max drawdown R, weekly CVaR5, per-fold R cost and cuts, and the 100 random draws' books. Parameters are V1's, unchanged:
+    n, net R, max drawdown R, weekly CVaR5, per-fold R cost and cuts, and the 100 random draws' books. REPORTED (never pass
+    clauses, operator 2026-10-29 ~12:40Z): R giveback (peak MFE R - realised net R) mean and p95, and net P&L in % per account
+    and per book (in $ only from the book simulation), for action, hold and random. Parameters are V1's, unchanged:
     max_r_cost_per_trade 0.05, min_dd_cut_pct 0.15, min_cvar5_cut_pct 0.15, fold_majority 4 of 6, fold_min_risk_cut_pct 0.0,
     min_control_beat_frac 0.95, n_floor 39 (am_risk_adjusted.RULE_V1).
   rule: >-
