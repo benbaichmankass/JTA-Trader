@@ -98,7 +98,7 @@ run:
   inputs:
     research_unit: RQ-20261028-a7c3-06
   timeout_minutes: 120
-status: queued
+status: done
 theme: live_strategy
 title: 'TP pull-in, real money: does a stall-pull-in TP retarget (10 stalled bars) on ada_pullback_2h stay no worse than
   its static 4R target in 5 of 6 folds, net of cost?'
@@ -114,3 +114,16 @@ why_this_matters: 'Operator 2026-10-28 ~21:06Z: active management is any movemen
   to DESK plan § 5b class `move_tp pull in` (PR #21023); this is a Stage-0 declared-rule test on the leg''s own config-exact
   history, not a live-intervention graduation.'
 last_dispatched_at: '2026-10-29T05:55:35+00:00'
+grading:
+  attested: RULE-RQ20261028a7c306-PULLIN-COMPLIANCE
+  auto: true
+  decision_rule_id: RULE-RQ20261028a7c306-PULLIN-COMPLIANCE
+  evidence:
+  - research/results/RQ-20261028-a7c3-06/40826184083.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
