@@ -183,7 +183,7 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     rec = review.get("recommendation") or {}
     action = rec.get("action")
     if action in NO_PATH_CHANGE:
-        sl0 = _num((pkg or {}).get("sl"))
+        sl0 = initial_stop(pkg) if pkg else None
         lab = net_r_for_trade(dict(trade, stop_loss=sl0)) if (trade and sl0 is not None) else None
         out = _outcome_row(review, trade, delta=0.0, rec_r=None, cf_r=None, cf_shadow=None,
                            method="no_path_change", fidelity=None, stack=None, computed_at=computed_at,
@@ -206,7 +206,7 @@ def price_review(review: dict, pkg: Optional[dict], trade: Optional[dict], bars:
     if not bars:
         return _result(review, state="could_not_price", reason="no_candles")
     side = str(pkg.get("direction") or "").lower()
-    entry, sl0 = _num(pkg.get("entry")), _num(pkg.get("sl"))
+    entry, sl0 = _num(pkg.get("entry")), initial_stop(pkg)
     if side not in ("long", "short") or entry is None or sl0 is None or abs(entry - sl0) <= 0:
         return _result(review, state="could_not_price", reason="package_geometry_missing")
     r_dist = abs(entry - sl0)
@@ -386,6 +386,48 @@ def _meta(pkg: dict) -> dict:
     return m if isinstance(m, dict) else {}
 
 
+def initial_stop(pkg: dict) -> Optional[float]:
+    """The package's INITIAL stop. ``order_packages.sl`` is the CURRENT stop: a break-even / lock / tighten
+    rewrites it, so using it as the R basis shrinks (or zeroes) R for every managed trade
+    (AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH). Order: ``exit_plan.stop.price`` (written at entry, never
+    amended), else ``entry -/+ meta.risk_per_unit``, else ``sl``."""
+    ep = pkg.get("exit_plan")
+    if isinstance(ep, str):
+        try:
+            ep = json.loads(ep)
+        except ValueError:
+            ep = None
+    px = _num(((ep or {}).get("stop") or {}).get("price")) if isinstance(ep, dict) else None
+    if px is not None:
+        return px
+    entry, rpu = _num(pkg.get("entry")), _num(_meta(pkg).get("risk_per_unit"))
+    side = str(pkg.get("direction") or "").lower()
+    if entry is not None and rpu and side in ("long", "short"):
+        return entry - rpu if side == "long" else entry + rpu
+    return _num(pkg.get("sl"))
+
+
+#: seconds after ``reviewed_at`` within which a ``live_review_close`` exit is attributed to that review's close
+CLOSE_ATTRIBUTION_S = 900
+
+
+def applied_by_outcome(review: dict, trade: Optional[dict]) -> bool:
+    """True when the review's ``close`` call is evidenced as EXECUTED by the trade's own exit.
+
+    ``reviews.jsonl`` rows carry ``applied: false`` for a close that ran (the apply log is
+    ``runtime_logs/live_review/applied.jsonl``, not stamped back), so the grader read the realised close as the
+    HOLD path and the hold replay could not reproduce it (``replay_mismatch``). The journal is the truth:
+    ``exit_reason == live_review_close`` within ``CLOSE_ATTRIBUTION_S`` of the review."""
+    if review.get("applied") or trade is None:
+        return bool(review.get("applied"))
+    if (review.get("recommendation") or {}).get("action") != "close":
+        return False
+    if str(trade.get("exit_reason") or "") != "live_review_close":
+        return False
+    t_rev, t_close = _ts(review.get("reviewed_at")), _ts(trade.get("closed_at"))
+    return t_rev is not None and t_close is not None and 0 <= t_close - t_rev <= CLOSE_ATTRIBUTION_S
+
+
 def _outcome_row(review: dict, trade: Optional[dict], *, delta: Optional[float], rec_r: Optional[float],
                  cf_r: Optional[float], cf_shadow: Optional[float], method: str, fidelity: Optional[str],
                  stack: Optional[str], computed_at: Optional[str], net_r: Optional[float] = None) -> Optional[dict]:
@@ -435,6 +477,8 @@ def price_all(reviews: Iterable[dict], packages: Dict[str, dict], trades: Dict[i
         tr = trades.get(int(tid)) if tid is not None else None
         if tid is not None and rv.get("trade_id") is None:
             rv = dict(rv, trade_id=tid)
+        if not rv.get("applied") and applied_by_outcome(rv, tr):
+            rv = dict(rv, applied=True, applied_inferred="exit_reason=live_review_close")
         bars = None
         if pkg is not None and (rv.get("recommendation") or {}).get("action") in ALTERING:
             tf = _meta(pkg).get("timeframe") or "1h"

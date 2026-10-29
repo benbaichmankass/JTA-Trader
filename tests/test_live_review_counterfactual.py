@@ -316,3 +316,27 @@ def test_price_all_joins_a_null_trade_id_through_the_package_link():
     # no link and no trade_id stays a named reason, never a silent guess
     out = cf.price_all([rv], {"pkg-t": pkg()}, {1: trade(1.0)}, lambda s, i: bars((100, 100, 100, 100)))
     assert out[0]["reason"] == "no_trade_row"
+
+
+def test_initial_stop_ignores_a_stop_the_operator_moved():
+    """AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH: order_packages.sl is the CURRENT stop; a break-even move rewrote it
+    to the entry and the R basis collapsed. The initial stop comes from the entry-time exit_plan / risk_per_unit."""
+    moved = pkg(sl=100.0, exit_plan='{"stop": {"price": 101.0}}')
+    assert cf.initial_stop(moved) == 101.0
+    assert cf.initial_stop(pkg(sl=100.0, meta={"risk_per_unit": 1.0})) == 101.0          # short: entry + rpu
+    assert cf.initial_stop(pkg(sl=100.0, direction="long", meta={"risk_per_unit": 1.0})) == 99.0
+    assert cf.initial_stop(pkg(sl=100.5)) == 100.5                                         # nothing better: sl
+
+
+def test_a_close_the_journal_shows_executed_is_priced_as_applied_not_as_a_hold_mismatch():
+    """The close reviews are stamped applied=false but the trade exited live_review_close right after: the realised
+    trade IS the call, so the hold replay is the counterfactual (fidelity unvalidated), not a replay_mismatch."""
+    rv = review(action="close", level=None, applied=False)
+    tr = trade(-0.2, exit_reason="live_review_close", closed_at=cf._iso(T0 + 600))
+    assert cf.applied_by_outcome(rv, tr) is True
+    assert cf.applied_by_outcome(rv, dict(tr, exit_reason="sl")) is False                 # a stop is not the close
+    assert cf.applied_by_outcome(rv, dict(tr, closed_at=cf._iso(T0 + 5 * H))) is False    # too long after the call
+    assert cf.applied_by_outcome(dict(rv, recommendation={"action": "hold"}), tr) is False
+    out = cf.price_all([rv], {"pkg-t": pkg()}, {1: tr}, lambda s, i: bars((100, 100, 100, 100)) + bars(
+        (100, 100, 100, 100), (100, 100, 100, 100), (100, 100, 100, 100), (100, 100, 96, 96)))
+    assert out[0]["reason"] != "replay_mismatch", out[0]
