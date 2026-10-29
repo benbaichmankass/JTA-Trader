@@ -1734,7 +1734,7 @@ def main(argv: List[str]) -> int:
                        be_floor_lock_r=args.be_floor_lock_r,
                        timeout_bars=args.timeout_bars,
                        cooldown_bars=args.cooldown_bars,
-                       timeframe=args.timeframe,
+                       timeframe=args.resample or args.timeframe,
                        symbol=args.symbol,
                        emit_path=args.emit_trades, strategy_name=args.strategy_name,
                        emit_paths_path=args.emit_paths,

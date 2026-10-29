@@ -1,0 +1,127 @@
+id: RQ-20261029-5785-01
+title: 'ML-REAL-MONEY-OVERLAY: is a reduce-only meta-label overlay (TAKE 1.0 / REDUCE 0.5), trained on the
+  real-money legs'' own Stage-0 trade corpora, NON-INFERIOR to take-all net of the full cost stack, per family
+  (PB2H 2h pullback; TD trend_donchian 4h + prop), out of sample under combinatorial purged CV?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml
+priority: 1
+kind: experiment
+question: 'For each family, does an L2-logistic meta-label model on 9 point-in-time candle features
+  (src/runtime/overlay_features.FEATURES), which halves the size of the entries it scores lowest, leave
+  the family''s REAL-MONEY legs no worse off than taking every trade -- one-sided 95% lower bound of
+  delta net R/trade > -0.02 R, max drawdown and CVaR5 not worse, better than a same-rate random reduce,
+  acting on >= 5% of trades and reducing below-average ones, in >= 4 of 6 calendar folds? The bar is
+  NO NEGATIVE EDGE (operator 2026-10-29), not large edge. Offline Stage-0 measurement only.'
+why_this_matters: 'Operator 2026-10-29 (row ML-REAL-MONEY-OVERLAY): a conservative, mostly-hold ML model
+  acting on REAL MONEY this week, whose bar is that it proves no negative edge. ML changes orders on 0 of the
+  real-money legs today (docs/plans/ml-live-promotion-plan-2026-10-29.md section 1). This unit is the
+  committed Gate-2 evidence record a reduce-only advisory_policy on those legs needs.'
+power:
+  expected_n: 2600
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  design: non_inferiority
+  alpha: 0.05
+  power: 0.8
+  basis: 'Gate population = the real-money legs'' OOS trades: RQ-20261024-09a6-01 measured ada 402 + xrp 394
+    (PB2H, 796) and eth_4h 275 + xrp_4h 68 + eth_prop 1085 + sol_prop 403 (TD, 1831) over 2020-07..2026-10.
+    A reduce of 20% of trades at 0.5x moves delta by at most 0.1 x |mean R of reduced|, so the margin
+    -0.02 R is about 0.2 x a reduced-set mean of 1 R; per-trade R sd ~1.5 gives a LB half-width of
+    ~0.3 x 1.5 x 1.645 / sqrt(n) ~ 0.02-0.03 on n 800-1800 (an ESTIMATE). Below 200 gate trades ->
+    INDETERMINATE, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+decision_rule:
+  id: RULE-ML-OVERLAY-NONINFERIOR-V1
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_overlay_noninferior.py (this commit). CORPUS: config-exact harness runs
+    with --emit-paths (path_metric_giveback.run_leg_paths, the RQ-20261024-09a6-01 argv builder) over
+    2020-07-01..2026-10-15 23:59; label net_r = cost-net (fee + slippage + funding, the harness cost
+    policy recorded per leg), the exit actually traded, R of initial risk (practice M1). FEATURES:
+    src/runtime/overlay_features.decision_features on the leg''s own candles up to and including the
+    decision bar (entry == that bar''s close on 2,627/2,627 reference trades). MODEL: L2 logistic (IRLS) on
+    standardised features predicting P(net_r > 0); tau = q-quantile of the training scores; REDUCE (x0.5)
+    iff P < tau. VALIDATION: CPCV, 6 calendar groups by entry time, 2 test groups (15 splits, 5 paths),
+    purge any training trade whose [entry, exit] overlaps a test block, embargo 7 days after each block
+    (M2). Trades in a test block from ALL family legs are excluded from training (no cross-leg
+    contemporaneous leakage). Each trade''s multiplier = the mean of its 5 OOS decisions. PRIMARY config
+    fixed now: C = 0.1, q = 0.20, multiplier 0.5. TRIAL GRID, all run and counted (M4/M5): C in {0.1,
+    1.0} x q in {0.10, 0.20, 0.30} = 6 per family, 12 in total; PBO by CSCV over the 6 groups and a
+    Bonferroni (alpha/6) lower bound are REPORTED. Families (+ = real-money gate leg; others train only):
+    PB2H = ada_pullback_2h+, xrp_pullback_2h+, eth_pullback_2h, sol_pullback_2h, avax_pullback_2h; TD =
+    trend_donchian_eth_4h+, trend_donchian_xrp_4h+, trend_donchian_eth_prop+, trend_donchian_sol_prop+,
+    trend_donchian_sol_4h, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_xrp_adx25.'
+  rule: 'Per family, on the gate legs'' OOS trades, PRIMARY config only. INDETERMINATE IF a gate leg''s
+    corpus fails to build, OR its trade-for-trade parity with the committed reference corpus
+    (comms/research/RQ-20261024-09a6-01/40143286436) is < 0.98, OR a gate trade does not align to a
+    decision bar, OR n_gate < 200. PASS iff ALL of: (a) one-sided 95% lower bound of mean delta net
+    R/trade vs take-all > -0.02 R (calendar-month block bootstrap, 5000 draws); (b) max drawdown (R,
+    exit-ordered) <= take-all AND CVaR5 of per-trade R >= take-all; (c) mean delta > the 90th percentile
+    of 2000 same-rate random reduces (the overlay''s multipliers permuted within each calendar group); (d)
+    reduce rate >= 5% AND the reduce-weighted mean R of reduced trades <= the take-all mean; (e) in >= 4
+    of the 6 calendar groups: group delta > -0.02 R, (b) holds within the group, and group delta > the
+    group''s random-reduce mean. FAIL otherwise: the family does not ship, and the result says which
+    check failed. PASS -> the family ships REDUCE-ONLY at the primary tau (multiplier 0.5, never a veto:
+    no veto arm was tested) as a Tier-3 packet for exactly its gate legs, bybit_2 and bybit_portfolio
+    identical, with a CUSUM demotion trigger on the mirror. Thresholds, features, grid and families are
+    not changed after any result; a change is a new rule version.'
+  what_it_does_not_do: 'Edits no config, no roster and no stage; places no order. Never upsizes, never
+    opens a trade, never moves a bracket. A PASS is offline evidence for a Tier-3 packet, not a promotion.
+    iaum_pullback_1d (alpaca_live) is out of scope: no Stage-0 path corpus exists for it in
+    RQ-20261024-09a6-01.'
+intervention_controls:
+  not_applicable: 'an entry-size meta-label, not an in-trade action; the matched random control is check (c)
+    and the take-all baseline is the hold-equivalent.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the real-money book''s losing-trade tail; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 13 harness legs (~4 min for 6 in RQ-20261024-09a6-01) plus 14 CPCV evaluations (estimate).
+run:
+  command:
+  - python3
+  - scripts/research/ml_overlay_noninferior.py
+  - --family
+  - PB2H:ada_pullback_2h+,xrp_pullback_2h+,eth_pullback_2h,sol_pullback_2h,avax_pullback_2h
+  - --family
+  - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --days
+  - '2330'
+  - --reference-corpus
+  - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+  - --export-dir
+  - '{out_dir}/artifacts'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261029-5785-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261024-09a6-01
+- scripts/research/ml_overlay_noninferior.py
+- src/runtime/overlay_features.py
+- docs/plans/ml-live-promotion-plan-2026-10-29.md
+practice_precedent: 'M1, M2, M4, M5, M6, M9, M10 (docs/reference/trading-and-model-practice-principles.md):
+  a supervised meta-label secondary model over the leg''s own rule, cost-net path labels, CPCV with purge
+  and embargo, every configuration counted, graded against take-all and a same-rate random control'

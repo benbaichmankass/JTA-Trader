@@ -1937,7 +1937,9 @@ def main(argv: List[str]) -> int:
     bt_kwargs = dict(donchian=args.donchian, atr_period=args.atr_period,
                      atr_stop_mult=args.atr_stop_mult, trail_mult=args.trail_mult,
                      timeout_bars=args.timeout_bars, cooldown_bars=args.cooldown_bars,
-                     timeframe=args.timeframe, symbol=args.symbol,
+                     # the bar the run actually traded: --resample wins over the --timeframe resolver hint
+                     # (FP-TF-LABEL: an eth_4h corpus run on 4h bars was labelled the 1h default).
+                     timeframe=args.resample or args.timeframe, symbol=args.symbol,
                      long_only=args.long_only,
                      side_filter=args.side_filter,
                      adx_min=args.adx_min, adx_max=args.adx_max,
