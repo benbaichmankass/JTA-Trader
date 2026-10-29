@@ -1185,11 +1185,213 @@ nodes:
   value:
     usd_at_stake_per_month: 100
     confidence: 0.2
-  needs_authoring: 'M22''s small-timeframe question has been dormant since 2026-07-16 (E53). Register ONE scoping
-    unit whose data is in metis-market-data (BTC/ETH/SOL 15m market_raw; declare `published_data: metis-market-data`,
-    `compute: auto`, so it lands on the idle Kaggle-CPU backend per PLANNING § 1b RC5): which existing harness family
-    (Donchian, pullback) at 15m clears Stage 0 net of the full cost stack at n >= 39, at fixed family params. NOTE
-    BTC/SOL 15m shards were cut short (ML-SHARD-TRUNCATED, 2026-10-13): check published-data.json before reading.'
+  theme: new_strategy_prop
+  unit:
+    theme: new_strategy_prop
+    priority: 3
+    kind: experiment
+    cadence: once
+    title: 'M22 small-timeframe SCOPING (15m, Donchian-20 breakout): at the harness default family parameters and the full cost stack, does a plain
+      15m Donchian breakout clear the pooled Stage-0 rule on BTC, ETH, XRP and BNB (liquid perps NOT covered by the 15m ADA/AVAX/SOL reads)?'
+    question: 'On Binance USD-M 15m candles for BTCUSDT/ETHUSDT/XRPUSDT/BNBUSDT over 2022-01-01..2026-10-25 with a single arm B (harness_stage0.py
+      --family trend at its default parameters, default fee + slippage stack), does the pooled arm pass: n >= 88, net R > 0, >= 4 of 6 pooled folds
+      net-positive, >= half the powered cells passing?'
+    why_this_matters: 'Node P3-M22-small-tf-scoping: M22''s small-timeframe question has been dormant since 2026-07-16 (E53). This is a SCOPING
+      unit (which family at 15m is worth a tuned test), not a promotion case. Look-before-you-retest: the 15m breakout was read on ADA/AVAX/SOL
+      by RQ-20261021-7c2b-05 (cost-gated arm) and RQ-20261026-f679-04 (maker-cost upper bound); this unit uses disjoint symbols and an UNGATED plain
+      breakout, so it answers the baseline those units were gated against, and its sibling for the pullback family is node P3-M22-small-tf-pullback.
+      DENOMINATOR: first read of a plain 15m trend arm on these four symbols; no earlier trial on this cell set.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: ESTIMATE from the sibling harness_stage0 records named in the question; the realised pooled n replaces it.
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-M22-SMALL-TF-TREND-15M
+      registered_at: '2026-10-29'
+      registered_before_run: true
+      statistic: 'harness_stage0.py --family trend --timeframe 15m, one arm B (default parameters: donchian 20, ATR stop, default cost stack), four
+        cells; per cell n, net_r, max_drawdown_r, 6 calendar folds (majority 4); pooled across cells.'
+      rule: 'PASS iff arm B passes the pooled rule -> the family is worth ONE tuned-parameter test at 15m (a pre-registered grid on a disjoint window),
+        never a roster change. FAIL iff pooled n >= 88 and the pooled net R <= 0 or folds < 4 -> a plain 15m Donchian breakout does not clear the
+        full cost stack on liquid perps: configuration closed (default parameters, these symbols, this window); the 15m cost-gated and maker arms
+        (7c2b-05, f679-04) remain the family''s open levers. INDETERMINATE otherwise. Verdicts are the script''s own (scripts/research/harness_stage0.py,
+        grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff
+        n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >=
+        fold_majority AND >= breadth_frac of the POWERED cells pass, indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half
+        the declared cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values
+        are REPORTED, not graded. Thresholds are not changed after any result.'
+      min_n: cell n >= 39; pooled n >= 88
+      what_it_does_not_do: Does not tune any parameter; does not edit config; does not use the metis-market-data shards (so the ML-SHARD-TRUNCATED
+        defect on BTC/SOL 15m is not in scope); is a scoping read, not a promotion case; does not claim anything about 5m or 30m.
+    compute: cpu_long
+    value:
+      bucket: frontier
+      usd_at_stake_per_month: 100
+      confidence: 0.15
+      basis: 'stand-in (03 node P3-M22-small-tf-scoping): the cheapest read on whether M22 deserves tuning capacity; an estimate.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 180
+      basis: Estimate from comparable harness_stage0 runs (RQ-20261021-7c2b-07, RQ-20261026-f679-04) scaled by cells x arms x bars; the first run
+        replaces it.
+      why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+        allowlist (BTC/ETH/SOL 15m+1h only, and the harness does not read it), so no idle published-data backend can hold it; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/harness_stage0.py
+      - --family
+      - trend
+      - --symbols
+      - BTCUSDT,ETHUSDT,XRPUSDT,BNBUSDT
+      - --timeframe
+      - 15m
+      - --days
+      - '2500'
+      - --start
+      - '2022-01-01'
+      - --end
+      - '2026-10-25'
+      - --arm
+      - B=
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '39'
+      - --pooled-n-floor
+      - '88'
+      - --breadth-frac
+      - '0.5'
+      - --rule-id
+      - RULE-P3-M22-SMALL-TF-TREND-15M
+      - --data-dir
+      - '{out_dir}/data'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 330
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+- id: P3-M22-small-tf-pullback
+  goal: G1
+  theme: new_strategy_prop
+  roadmap:
+  - M22
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.15
+  after: []
+  unit:
+    theme: new_strategy_prop
+    priority: 3
+    kind: experiment
+    cadence: once
+    title: 'M22 small-timeframe SCOPING (15m, pullback): at the harness default family parameters and the full cost stack, does the pullback family
+      clear the pooled Stage-0 rule on BTC, ETH, XRP and BNB 15m?'
+    question: 'On Binance USD-M 15m candles for BTCUSDT/ETHUSDT/XRPUSDT/BNBUSDT over 2022-01-01..2026-10-25 with a single arm B (harness_stage0.py
+      --family pullback at its default parameters, default fee + slippage stack), does the pooled arm pass: n >= 88, net R > 0, >= 4 of 6 pooled
+      folds net-positive, >= half the powered cells passing?'
+    why_this_matters: 'Node P3-M22-small-tf-pullback (sibling of P3-M22-small-tf-scoping, same cells and window, the other harness family named
+      in the node ask): M22''s small-timeframe question has been dormant since 2026-07-16 (E53). This is a SCOPING unit (which family at 15m is
+      worth a tuned test), not a promotion case. Look-before-you-retest: the 15m breakout was read on ADA/AVAX/SOL by RQ-20261021-7c2b-05 (cost-gated
+      arm) and RQ-20261026-f679-04 (maker-cost upper bound); this unit uses disjoint symbols and the pullback family (no earlier 15m read exists),
+      so it answers the baseline those units were gated against, and the sibling for the breakout family is node P3-M22-small-tf-scoping. DENOMINATOR:
+      first read of a plain 15m trend arm on these four symbols; no earlier trial on this cell set.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: ESTIMATE from the sibling harness_stage0 records named in the question; the realised pooled n replaces it.
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-M22-SMALL-TF-PULLBACK-15M
+      registered_at: '2026-10-29'
+      registered_before_run: true
+      statistic: 'harness_stage0.py --family pullback --timeframe 15m, one arm B (default parameters: donchian 20, ATR stop, default cost stack),
+        four cells; per cell n, net_r, max_drawdown_r, 6 calendar folds (majority 4); pooled across cells.'
+      rule: 'PASS iff arm B passes the pooled rule -> the family is worth ONE tuned-parameter test at 15m (a pre-registered grid on a disjoint window),
+        never a roster change. FAIL iff pooled n >= 88 and the pooled net R <= 0 or folds < 4 -> the default pullback does not clear the full cost
+        stack on liquid perps: configuration closed (default parameters, these symbols, this window); the family stays open on other bars and symbols.
+        INDETERMINATE otherwise. Verdicts are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass
+        iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n <
+        n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED
+        cells pass, indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault
+        is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds are not changed
+        after any result.'
+      min_n: cell n >= 39; pooled n >= 88
+      what_it_does_not_do: Does not tune any parameter; does not edit config; does not use the metis-market-data shards (so the ML-SHARD-TRUNCATED
+        defect on BTC/SOL 15m is not in scope); is a scoping read, not a promotion case; does not claim anything about 5m or 30m.
+    compute: cpu_long
+    value:
+      bucket: frontier
+      usd_at_stake_per_month: 100
+      confidence: 0.15
+      basis: 'stand-in (03 node P3-M22-small-tf-scoping): the cheapest read on whether M22 deserves tuning capacity; an estimate.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 180
+      basis: Estimate from comparable harness_stage0 runs (RQ-20261021-7c2b-07, RQ-20261026-f679-04) scaled by cells x arms x bars; the first run
+        replaces it.
+      why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+        allowlist (BTC/ETH/SOL 15m+1h only, and the harness does not read it), so no idle published-data backend can hold it; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/harness_stage0.py
+      - --family
+      - pullback
+      - --symbols
+      - BTCUSDT,ETHUSDT,XRPUSDT,BNBUSDT
+      - --timeframe
+      - 15m
+      - --days
+      - '2500'
+      - --start
+      - '2022-01-01'
+      - --end
+      - '2026-10-25'
+      - --arm
+      - B=
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '39'
+      - --pooled-n-floor
+      - '88'
+      - --breadth-frac
+      - '0.5'
+      - --rule-id
+      - RULE-P3-M22-SMALL-TF-PULLBACK-15M
+      - --data-dir
+      - '{out_dir}/data'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 330
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
 - id: P3-M27-htf-pass
   goal: G1
   roadmap:
@@ -1241,7 +1443,7 @@ nodes:
 # ── RESULTS-GRADE-1025 (2026-10-25) ──
 - id: P3-RG1025-q8-breadth-diagnosis
   goal: G1
-  theme: live_strategy
+  theme: new_strategy_prop
   roadmap:
   - L-LADDER
   value:
@@ -1250,11 +1452,122 @@ nodes:
   after:
   - unit: RQ-20261021-7c2b-07
     verdict: any
-  needs_authoring: 'Q8 breadth, as-declared legs on six new perps (MEASURED from the landed cells): eth_4h PASS (+443R, 6/6 folds) and eth_prop PASS (+336R, 6/6 folds)
-    transfer. xrp_4h (7c2b-07) is POSITIVE on all six cells (+73R pooled, n 434) and failed only the fold-majority clause (3 of 6 folds positive, need 4):
-    a test-design/regime-time miss, not an absent edge. xrp_pullback_2h (-21R), ada_pullback_2h (-188R) and sol_prop (-8R) are negative pooled: no transfer
-    on these symbols. Author ONE unit for xrp_4h: the same six-perp pool with fold edges re-cut at the leg''s own regime boundaries (registered before the run, 8 folds,
-    >= 5 positive), plus the pooled-sign clause unchanged. For the three negative legs file no variant: record the negative transfer on the roster-add decision.'
+  unit:
+    theme: new_strategy_prop
+    priority: 2
+    kind: experiment
+    cadence: once
+    title: 'Q8 breadth, 8-fold re-cut: does trend_donchian_xrp_4h AS DECLARED clear the pooled Stage-0 rule on the six new perps (BNB, DOGE, LINK,
+      LTC, BCH, DOT) when the fold clause is read at 8 calendar folds (>= 5) instead of 6 (>= 4)?'
+    question: 'Same window (2020-06-01..2026-10-20), symbols, bars and arm B as RQ-20261021-7c2b-07, which read FAIL only because 3 of 6 pooled
+      folds were net-positive (need 4) while the pool was net-positive (+73 R, n 434, positive on all six cells). Is the failed fold clause a test-design
+      miss (6 coarse folds, each ~13 months, straddling regimes) or an absent edge? Registered change: 8 folds (~9 months each), majority 5 (62.5
+      % vs the original 66.7 %; the original threshold is not lowered in kind). Pooled-sign, cell-floor and breadth clauses unchanged.'
+    why_this_matters: 'Node P3-RG1025-q8-breadth-diagnosis (programme 03, goal G1). The real-money book carries 4h Donchian only on ETH/XRP/ADA/SOL;
+      breadth is the cheapest path to more real-money legs. DENOMINATOR AND OVERLAP DISCLOSURE: this is the SECOND read of the same trades on the
+      same window (7c2b-07 was the first; only the fold cut changes), so a PASS here is a discovery that selects the fold cut, not a confirmation:
+      it can only license a disjoint-symbol or forward check, never a roster add. Prior units on the family: 7c2b-07 (this window, FAIL on folds),
+      c56e-13 (xrp_4h alone, INDETERMINATE at 4 y, n < 39), RQ-20261016-015 (n 68 on XRP). A FAIL here closes the CONFIGURATION on these six perps
+      for the fold cut; the 4h Donchian family stays open on other symbols and legs.'
+    power:
+      expected_n: 150
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: ESTIMATE from the sibling harness_stage0 records named in the question; the realised pooled n replaces it.
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-RG1025-Q8-XRP4H-8FOLD
+      registered_at: '2026-10-29'
+      registered_before_run: true
+      statistic: harness_stage0.py --family trend --timeframe 4h, one arm B = trend_donchian_xrp_4h as declared (arm and params byte-identical to
+        RQ-20261021-7c2b-07), six cells; per cell n, net_r, max_drawdown_r, 8 calendar folds (majority 5), net_r_per_capital_day; pooled across
+        cells.
+      rule: 'PASS iff arm B passes the pooled rule with 8 folds (pooled n >= 88, pooled net_r > 0, >= 5 of 8 pooled folds net-positive, >= 0.5 of
+        POWERED cells pass) -> a discovery (second read of one window): author ONE disjoint-symbol check (symbols outside these six, same arm, no
+        re-cut) before any Stage-1 case. FAIL iff the pool is net <= 0 or fewer than 5 of 8 folds are positive with pooled n >= 88 -> the declared
+        xrp_4h configuration is a symbol/regime fit on these six perps; recorded on P3-Q8; no symbol is added; the family stays open. INDETERMINATE
+        otherwise (cells under the floor are named; never lower it). Verdicts are the script''s own (scripts/research/harness_stage0.py, grades
+        fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor
+        and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority
+        AND >= breadth_frac of the POWERED cells pass, indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells
+        measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED,
+        not graded. Thresholds are not changed after any result.'
+      min_n: cell n >= 39; pooled n >= 88
+      what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune any lever (arm B is fixed); does
+        not pool with any committed record; is not a promotion case; does not test the three negative-transfer legs (xrp_pullback_2h, ada_pullback_2h,
+        sol_prop), whose negative transfer is recorded on the roster-add decision, not re-run.
+    compute: cpu_long
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+      basis: 'stand-in (03 node P3-RG1025-q8-breadth-diagnosis, value 150 x the real-money multiplier): new real-money legs from a family that already
+        cleared Stage 0 and a soak; an estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 4.0
+      est_minutes: 120
+      basis: Estimate from comparable harness_stage0 runs (RQ-20261021-7c2b-07, RQ-20261026-f679-04) scaled by cells x arms x bars; the first run
+        replaces it.
+      why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+        allowlist (BTC/ETH/SOL 15m+1h only, and the harness does not read it), so no idle published-data backend can hold it; CPU only.
+    run:
+      command:
+      - python3
+      - scripts/research/harness_stage0.py
+      - --family
+      - trend
+      - --symbols
+      - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+      - --timeframe
+      - 4h
+      - --days
+      - '2400'
+      - --start
+      - '2020-06-01'
+      - --end
+      - '2026-10-20'
+      - --param
+      - donchian=20
+      - --param
+      - atr_period=14
+      - --param
+      - atr_stop_mult=2
+      - --param
+      - trail_mult=5.0
+      - --param
+      - min_confidence=0.8
+      - --param
+      - decision_bar=closed
+      - --arm
+      - B=--side-filter=short;--stale-exit-bars=8;--stale-exit-below-r=0.0;--tp-r=3;--skip-hours=0;--vol-skip-above-pctl=0.9;--trail-decay-arm-r=2.0;--trail-decay-tight-mult=2.5
+      - --folds
+      - '8'
+      - --fold-majority
+      - '5'
+      - --n-floor
+      - '39'
+      - --pooled-n-floor
+      - '88'
+      - --breadth-frac
+      - '0.5'
+      - --rule-id
+      - RULE-P3-RG1025-Q8-XRP4H-8FOLD
+      - --data-dir
+      - '{out_dir}/data'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 330
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
 - id: P3-RG1025-lever-pooled
   goal: G1
   theme: live_strategy

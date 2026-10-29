@@ -608,6 +608,131 @@ def _resolve_market_raw_paths(
     return out
 
 
+def past_log_returns(closes: list[float]) -> list[float | None]:
+    """``ln(close[i] / close[i-1])`` per bar; ``None`` for the first bar and any
+    non-positive pair. The ONE definition the build and the live serve path
+    (``src.runtime.setup_features``) both call, so they cannot drift."""
+    out: list[float | None] = [None] * len(closes)
+    for i in range(1, len(closes)):
+        if closes[i - 1] > 0 and closes[i] > 0:
+            out[i] = math.log(closes[i] / closes[i - 1])
+    return out
+
+
+def past_vol_at(
+    log_returns: list[float | None], i: int, vol_window_n: int,
+) -> float | None:
+    """Population stdev of the log returns in the inclusive past window
+    ``[i - vol_window_n + 1 .. i]`` (``None`` below two usable returns): the
+    ``rolling_log_return_vol`` / ``signal_vol`` of bar ``i``."""
+    window = [v for v in log_returns[max(0, i - vol_window_n + 1): i + 1]
+              if v is not None]
+    return statistics.pstdev(window) if len(window) >= 2 else None
+
+
+def decision_time_features(
+    rows: list[dict[str, Any]],
+    *,
+    vol_window_n: int = 20,
+    momentum_window: int = 10,
+) -> dict[str, Any] | None:
+    """The signal-time feature fields for the LAST bar of ``rows`` — the exact
+    ``_feature_fields`` output a build emits for a candidate located at that bar,
+    minus ``vol_bucket`` (its quantile edges belong to the trained model, not to
+    the bar; ``bucket_vol`` applies them).
+
+    ``rows`` are closed OHLC bars, oldest first, each ``{ts, open, high, low,
+    close, symbol, timeframe}`` (``ts`` ISO-8601, as ``market_raw`` writes it).
+    Returns ``None`` when the last bar has no complete past window or no log
+    return: the build's skip condition, so serve never scores a bar the build
+    would not have emitted. B2 of docs/plans/ml-live-promotion-plan-2026-10-29.md.
+    """
+    n = len(rows)
+    if n < 2:
+        return None
+    closes = [float(r["close"]) for r in rows]
+    log_returns = past_log_returns(closes)
+    e = n - 1
+    vol = past_vol_at(log_returns, e, vol_window_n)
+    if vol is None or vol <= 0 or log_returns[e] is None:
+        return None
+    out = _feature_fields(
+        rows, e, log_returns, vol, [], ["_unbucketed"], momentum_window,
+        opens=[float(r["open"]) for r in rows],
+        highs=[float(r["high"]) for r in rows],
+        lows=[float(r["low"]) for r in rows],
+        closes=closes, vol_window_n=vol_window_n,
+    )
+    out.pop("vol_bucket", None)
+    return out
+
+
+def bucket_vol(value: float, edges: list[float], labels: list[str]) -> str:
+    """The build's ``_bucket_for``, exported for the serve path."""
+    return _bucket_for(value, edges, labels)
+
+
+def serve_spec_from_rows(
+    rows: list[Mapping[str, Any]],
+    *,
+    vol_window_n: int = 20,
+    momentum_window: int = 10,
+) -> dict[str, Any] | None:
+    """Freeze what the live serve path needs to rebuild a training row.
+
+    ``vol_bucket`` is a per-symbol quantile bucket of ``rolling_log_return_vol``
+    over the whole market_raw history (``_quantile_buckets`` in
+    ``_iter_one_symbol``), so the edges are a property of the build, not of any
+    bar. They are recovered from the rows the same way
+    ``ml.trainers.regime_classifier._reconstruct_vol_bucket_edges`` does: the
+    largest vol seen in bucket ``i`` is the cut. That reproduces the trained
+    bucket on EVERY dataset bar exactly (a bar in bucket ``i`` has vol above the
+    largest bucket ``i-1`` sample and at most the largest bucket ``i`` sample). A
+    never-seen bar whose vol falls between the largest bucket-``i`` sample and the
+    build's true cut lands one bucket higher; the rows hold no tighter bound.
+
+    Returns ``None`` when no symbol carries two or more populated buckets.
+    """
+    by_sym: dict[str, dict[str, list[float]]] = {}
+    tf_by_sym: dict[str, set[str]] = {}
+    for r in rows:
+        sym = str(r.get("symbol") or "")
+        b = r.get("vol_bucket")
+        v = r.get("rolling_log_return_vol")
+        if not sym or not isinstance(b, str) or not isinstance(v, (int, float)):
+            continue
+        by_sym.setdefault(sym, {}).setdefault(b, []).append(float(v))
+        tf = str(r.get("timeframe") or "")
+        if tf:
+            tf_by_sym.setdefault(sym, set()).add(tf)
+
+    def _key(label: str) -> tuple[int, str]:
+        tail = label[5:] if label.startswith("vol_b") else ""
+        return (int(tail), label) if tail.isdigit() else (1_000_000, label)
+
+    edges: dict[str, list[float]] = {}
+    labels_by_sym: dict[str, list[str]] = {}
+    for sym, buckets in by_sym.items():
+        labels = sorted(buckets, key=_key)
+        if len(labels) < 2:
+            continue
+        edges[sym] = [max(buckets[labels[i]]) for i in range(len(labels) - 1)]
+        labels_by_sym[sym] = labels
+    if not edges:
+        return None
+    return {
+        "family": _FAMILY,
+        "vol_window_n": int(vol_window_n),
+        "momentum_window": int(momentum_window),
+        "vol_bucket_edges_by_symbol": edges,
+        "vol_bucket_labels_by_symbol": labels_by_sym,
+        # One timeframe per symbol is the only servable shape; a symbol built
+        # from several timeframes is recorded as-is and the serve path refuses it.
+        "timeframe_by_symbol": {s: sorted(t) for s, t in tf_by_sym.items()
+                                if s in edges},
+    }
+
+
 def _bar_index_at_or_before(sorted_ts: list[str], target_ts: str) -> int | None:
     """Index of the last bar whose ts is ≤ ``target_ts`` (None if none / blank)."""
     if not target_ts:
@@ -970,17 +1095,9 @@ class SetupCandidatesBuilder(DatasetBuilder):
             **dict(cost_kwargs or {}),
         )
 
-        # Past-only log returns + rolling vol.
-        log_returns: list[float | None] = [None] * n
-        for i in range(1, n):
-            if closes[i - 1] > 0 and closes[i] > 0:
-                log_returns[i] = math.log(closes[i] / closes[i - 1])
-        past_vols: list[float | None] = [None] * n
-        for i in range(n):
-            window = [v for v in log_returns[max(0, i - vol_window_n + 1): i + 1]
-                      if v is not None]
-            if len(window) >= 2:
-                past_vols[i] = statistics.pstdev(window)
+        # Past-only log returns + rolling vol (shared with the serve path).
+        log_returns = past_log_returns(closes)
+        past_vols = [past_vol_at(log_returns, i, vol_window_n) for i in range(n)]
 
         complete_vols = [v for v in past_vols if v is not None]
         if not complete_vols:

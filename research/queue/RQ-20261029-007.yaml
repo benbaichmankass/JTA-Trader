@@ -4,7 +4,7 @@
 id: RQ-20261029-007
 title: 'Programme 01 ATM, trend_donchian_eth: does the break-even floor (BE075 / BE10 / BE15), which beat
   the declared exit on 2020-07..2026-10, still beat it on the disjoint earlier partition 2017-09..2020-06?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -130,3 +130,13 @@ generated:
   params:
     node: P1-ATM-ed1c17-be-confirm
 last_dispatched_at: '2026-10-29T01:53:55+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-ATM-ED1C17-BE-DISJOINT
+  evidence:
+  - research/results/RQ-20261029-007/40803169587.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

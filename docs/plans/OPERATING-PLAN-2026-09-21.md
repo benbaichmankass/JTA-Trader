@@ -105,7 +105,7 @@ one question, and a leg moves only when that question is answered on evidence.
             declared window.
 ```
 
-### Three strategy statuses: testing, production, inactive (operator, 2026-10-28, binding once merged)
+### Three strategy statuses: testing, production, inactive (operator, 2026-10-28, binding; merged 97dde7e5 #21038)
 
 <!-- STRATEGY-STATUS-CANONICAL: the ONE statement of the status model. Other docs point here. -->
 
