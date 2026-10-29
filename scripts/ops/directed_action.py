@@ -153,7 +153,8 @@ def _apply_record(record: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _ping(record: Dict[str, Any], res: Dict[str, Any], verdict: str) -> None:
-    """ONE trade-update ping per non-dry record (TRADES channel via execution_diagnostics)."""
+    """ONE trade-update ping per non-dry record. ``enqueue_trade_update`` routes it to the TRADES channel through
+    ``src.runtime.telegram_channels``."""
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
 
