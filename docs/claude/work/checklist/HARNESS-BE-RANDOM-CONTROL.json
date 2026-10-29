@@ -9,11 +9,13 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21169
+  ],
   "blocked_on": [],
   "note": "Filed by lane AM-RISK-ADJUSTED-RULE 2026-10-29. MEASURED: scripts/backtest_trend.py and scripts/backtest_pullback.py have the peak-armed break-even lever (--be-floor-r, MI-165) but --trigger-action accepts only bank/tight, and no producer draws a matched-rate random trigger set from an arm's armed count (path_metric_giveback.shuffle_triggers needs a trigger model run). RULE-AM-RISK-ADJUSTED-V1 R4 needs that control, so the break-even unit RQ-20261029-1f39-01 (research/queue/blocked/) cannot be read without it. Done when: both harnesses take a 'be' trigger action with tests (default byte-identical), the matched draws (count = the X arm's armed trades, seeded random bar while open, 100 draws per X) run as control arms through am_risk_adjusted run-legs, best_static LOFO is reported, and the unit is moved to research/queue/ with the control arms added to run.command. Tier 1 research tooling (harness flag default off).",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T06:36:22Z",
+  "updated_at": "2026-10-29T06:58:49Z",
   "updated_by": "session_01AFoLuMV1Qgi2fjJegsxr3r",
   "roadmap": [
     "L-AM-STANDARD"
