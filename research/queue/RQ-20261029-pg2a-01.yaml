@@ -1,6 +1,6 @@
 id: RQ-20261029-pg2a-01
 title: 'Prop survival gate V2 re-run (lane PROP-GATE-RERUN-20261029): trend_donchian_eth_prop and trend_donchian_sol_prop x breakout_2 / tradeify_1 / velotrade_1, at the current cost stack, 3y and 365d windows, a real per-firm breach ceiling (median AND worst seed)'
-status: in_progress
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -51,3 +51,4 @@ related:
 - scripts/ci/check_prop_roster_gate.py
 - docs/claude/work/checklist/PROP-GATE-RERUN-20261029.json
 what_it_does_not_do: 'Changes no roster, risk, sizing, switch or config. Does not read live book P&L. Prices each leg ALONE (the gate''s population), not the two-leg account book. The old comms/prop_survival records are left in place; V2 records sit beside them.'
+result: 'GRADED 2026-10-29 against RULE-P5-GATE-BRK-PER-LEG-V2 (primary = current-stack arm, 3y window). eth_prop PASS on breakout_2/tradeify_1/velotrade_1 (breakout_2 365d EV ~0, worst seed +$0.32: marginal). sol_prop FAIL on all three (EV < 0 at median and worst seed on both cost arms; 365d INDETERMINATE n=65). Proposal to operator: keep eth_prop; PULL sol_prop from the three prop rosters (Tier-3, not applied). Table: research/results/RQ-20261029-pg2a-01/summary.json; records comms/prop_survival/v2/.'
