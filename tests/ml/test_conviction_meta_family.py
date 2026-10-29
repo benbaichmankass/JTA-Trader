@@ -113,6 +113,7 @@ def test_only_closed_filled_live_rows(tmp_path: Path):
     # winner + loser only; backtest / open / unlinked all excluded.
     assert op_ids == {"op_live_win", "op_live_loss"}
     assert all(r["source"] == "live" for r in rows)
+    assert all(r["label_cost_basis"] == "realized" for r in rows)  # PI-20261028-V8KBRR5H-0002
 
 
 def test_won_and_r_multiple_labels(tmp_path: Path):

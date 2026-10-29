@@ -1,0 +1,69 @@
+{
+ "runs": {},
+ "families": [
+  {
+   "family": "PB2H",
+   "mode": "calibration",
+   "legs_gate": [
+    "ada_pullback_2h",
+    "xrp_pullback_2h"
+   ],
+   "n_pool_scored": 1729,
+   "n_gate": 796,
+   "verdict": "INDETERMINATE",
+   "main": {
+    "n_gate": 796,
+    "base_rate": 0.3756,
+    "brier_raw": 0.23749,
+    "brier_cal": 0.24343,
+    "brier_const": 0.23539,
+    "bss_raw": -0.00892,
+    "bss_cal": -0.03415,
+    "cal_gain_lb95": -0.013751,
+    "ece_raw": 0.0372,
+    "ece_cal": 0.0354
+   },
+   "holdout_calibration": {},
+   "holdout_n": 43,
+   "checks": {
+    "main_cal_gain_lb95_gt_0": false,
+    "holdout_brier_cal_lt_const": false
+   }
+  },
+  {
+   "family": "TD",
+   "mode": "calibration",
+   "legs_gate": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_xrp_4h",
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop"
+   ],
+   "n_pool_scored": 2678,
+   "n_gate": 1830,
+   "verdict": "NOT_CALIBRATED",
+   "main": {
+    "n_gate": 1830,
+    "base_rate": 0.3781,
+    "brier_raw": 0.23441,
+    "brier_cal": 0.24057,
+    "brier_const": 0.23618,
+    "bss_raw": 0.00751,
+    "bss_cal": -0.01859,
+    "cal_gain_lb95": -0.007497,
+    "ece_raw": 0.02,
+    "ece_cal": 0.0603
+   },
+   "holdout_calibration": {
+    "brier_raw": 0.2407,
+    "brier_cal": 0.2546,
+    "brier_const_train_base": 0.2488
+   },
+   "holdout_n": 105,
+   "checks": {
+    "main_cal_gain_lb95_gt_0": false,
+    "holdout_brier_cal_lt_const": false
+   }
+  }
+ ]
+}

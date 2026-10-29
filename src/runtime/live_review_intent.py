@@ -133,6 +133,11 @@ class LiveReviewIntent:
     new_tp: Optional[float] = None            # move_tp: the new take-profit price
     size_fraction: Optional[float] = None     # partial_close: fraction to close; add_entry: fraction to add
     size_multiplier: Optional[float] = None   # change_size: new size / open size
+    # -- TRADE-ACTION-FAST-PATH: an operator/manager-DIRECTED action (src/runtime/directed_actions.py) --
+    directed_by: Optional[str] = None         # set = directed: authority is operator_quote, not a mandate
+    operator_quote: Optional[str] = None      # the operator's words, verbatim (refused without them)
+    target_account_id: Optional[str] = None   # scope: only this account's legs (None = every account)
+    target_trade_id: Optional[str] = None     # scope: only this trade / prop ticket (needs target_account_id)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

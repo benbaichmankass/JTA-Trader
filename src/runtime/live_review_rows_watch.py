@@ -64,6 +64,15 @@ hands an in-trade action to ``live_review_apply.run()``; a ``propose_entry`` is
 refused, named, while ``MD-TRADE-DESK``'s entry_generation is blocked. Its
 receipts: ``desk_intake`` (``runtime_logs/desk/intake.jsonl``),
 ``desk_intake_status`` and ``desk_watch_status`` (this loop's fetch state).
+
+TRADE-ACTION-FAST-PATH (2026-10-29): a SECOND daemon thread, ``directed-actions-watch``, fetches
+``directed/actions`` into ``refs/live-review/directed/actions`` every ``directed_actions.POLL_S`` s (its own
+thread, so a long rows dispatch never delays an operator-directed action) and, when the tip moved or the
+last pass left a record pending, runs ``scripts/ops/directed_action.py vm-pass --ref <tip>`` as a
+subprocess. That pass validates each operator/manager-directed record (refused without the operator's
+verbatim quote) and hands it to ``live_review_apply.run()``. Receipts: ``directed_actions``
+(``runtime_logs/directed_actions/receipts.jsonl``), ``directed_actions_status`` and
+``directed_actions_watch_status`` (this thread's fetch state).
 """
 from __future__ import annotations
 
@@ -78,6 +87,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
+from src.runtime import directed_actions
 from src.runtime import live_review_rows as rows_lib
 from src.runtime import ltr_auto_mandate
 
@@ -96,6 +106,9 @@ DISPATCH_TIMEOUT_S = 600
 DESK_BRANCH = "desk/decisions"
 DESK_LOCAL_REF = f"refs/live-review/{DESK_BRANCH}"
 DESK_INTAKE = ROOT / "scripts" / "ops" / "desk_intake.py"
+DIRECTED_BRANCH = directed_actions.BRANCH
+DIRECTED_LOCAL_REF = f"refs/live-review/{DIRECTED_BRANCH}"
+DIRECTED = ROOT / "scripts" / "ops" / "directed_action.py"
 
 _started = False
 _start_lock = threading.Lock()
@@ -382,6 +395,70 @@ def run_desk_pass(git: Git = _git, intake: Callable[[str], Dict[str, Any]] = _de
     return status
 
 
+def _directed_vm_pass(tip: str) -> Dict[str, Any]:
+    """Run the directed-action pass at the pinned tip. Never raises."""
+    try:
+        r = subprocess.run([sys.executable, str(DIRECTED), "vm-pass", "--ref", tip],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "detail": f"directed pass did not run: {type(exc).__name__}"}
+    summary: Dict[str, Any] = {}
+    for ln in (r.stdout or "").splitlines():
+        if ln.startswith("{"):
+            try:
+                summary = json.loads(ln)
+            except ValueError:
+                pass
+    return {"exit": r.returncode, "handled": summary.get("handled"), "pending": summary.get("pending"),
+            "detail": summary.get("detail") or (r.stderr or "").strip()[-200:] or None}
+
+
+def directed_log_dir() -> Path:
+    from src.utils.paths import repo_root
+    return Path(repo_root()) / "runtime_logs" / "directed_actions"
+
+
+def run_directed_pass(git: Git = _git, vm_pass: Callable[[str], Dict[str, Any]] = _directed_vm_pass,
+                      now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
+    """One fetch of directed/actions -> the directed pass, only when the tip moved or the last pass could
+    not finish (exit 3: a record is pending a retry). Idempotency per record id lives in the pass."""
+    d = logs or directed_log_dir()
+    status_path = d / "watch_status.json"
+    prev = _load(status_path) or {}
+    status: Dict[str, Any] = {"pass_at": now_fn().isoformat()}
+    rc, out = git("fetch", "--quiet", "--no-write-fetch-head", "origin",
+                  f"+refs/heads/{DIRECTED_BRANCH}:{DIRECTED_LOCAL_REF}")
+    if rc != 0:
+        absent = "couldn't find remote ref" in out
+        status.update(fetch_state="branch_absent" if absent else "could_not_fetch", detail=out[-200:],
+                      tip=prev.get("tip"), pass_exit=prev.get("pass_exit"))
+        _write_json(status_path, status)
+        return status
+    rc, tip = git("rev-parse", DIRECTED_LOCAL_REF)
+    if rc != 0:
+        status.update(fetch_state="could_not_read", detail=tip[-200:])
+        _write_json(status_path, status)
+        return status
+    status.update(fetch_state="fetched", tip=tip)
+    if tip == prev.get("tip") and prev.get("pass_exit") in (0, 1, 2):
+        status.update(directed_pass="unchanged", pass_exit=prev.get("pass_exit"))
+    else:
+        res = vm_pass(tip)
+        status.update(directed_pass="ran", pass_exit=res.get("exit"), handled=res.get("handled"),
+                      pending=res.get("pending"), detail=res.get("detail"))
+    _write_json(status_path, status)
+    return status
+
+
+def _directed_loop() -> None:
+    while True:
+        try:
+            run_directed_pass()
+        except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
+            logger.warning("rows-watch: run_directed_pass failed", exc_info=True)
+        time.sleep(directed_actions.POLL_S)
+
+
 def _loop() -> None:
     _proof(lambda fp: fp.ensure_seeded())
     while True:
@@ -405,6 +482,7 @@ def ensure_started(force: bool = False) -> bool:
             if _started:
                 return False
             threading.Thread(target=_loop, name="ltr-rows-watch", daemon=True).start()
+            threading.Thread(target=_directed_loop, name="directed-actions-watch", daemon=True).start()
             _started = True
             return True
         finally:

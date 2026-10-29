@@ -65,11 +65,25 @@ def discover_advisory_stage_model_ids(registry: Any) -> list[str]:
     )
 
 
-def _feature_row_from_pkg(pkg: Any) -> dict[str, Any]:
-    """Signal-time feature row from an OrderPackage — same surface the
-    shadow trade-outcome models see at signal-build time."""
+def _feature_row_from_pkg(
+    pkg: Any, predictor: Any = None,
+) -> tuple[dict[str, Any], str | None]:
+    """``(row, setup_read_state)`` an advisory head is scored on.
+
+    The base is the signal-time trade-context row — the same surface the shadow
+    trade-outcome models see at signal-build time. For a ``setup_candidates``
+    head (one exposing a frozen ``serve_spec``) the setup-candidates
+    decision-time row is merged in: the candle features + ``direction`` (±1),
+    ``symbol`` and ``vol_bucket``, computed at signal time from the leg's closed
+    candles by the dataset family's own functions and carried here on
+    ``pkg.meta["setup_features"]`` (``src.runtime.setup_features``; B2 of
+    docs/plans/ml-live-promotion-plan-2026-10-29.md). A head without a spec gets
+    the base row and ``None``; a spec'd head whose row cannot be built
+    faithfully gets the base row and the named refusal, which the decision
+    record carries so a dead feature is visible, never served as a default.
+    """
     meta = getattr(pkg, "meta", None) or {}
-    return {
+    base = {
         "strategy_name": str(getattr(pkg, "strategy", "") or ""),
         "symbol": str(getattr(pkg, "symbol", "") or ""),
         "direction": str(getattr(pkg, "direction", "") or ""),
@@ -77,6 +91,12 @@ def _feature_row_from_pkg(pkg: Any) -> dict[str, Any]:
         "setup_type": str(meta.get("setup_type") or ""),
         "killzone": str(meta.get("killzone") or ""),
     }
+    if predictor is None:
+        return base, None
+    from src.runtime.setup_features import META_KEY, row_for_predictor
+
+    row, state = row_for_predictor(predictor, base, meta.get(META_KEY))
+    return dict(row), state
 
 
 def compute_advisory_factor(
@@ -133,10 +153,13 @@ def compute_advisory_factor(
                 "advisory: excluded regime heads from downsize quorum: %s",
                 ",".join(sorted(excluded_regime)),
             )
-        row = _feature_row_from_pkg(pkg)
         scores: dict[str, float] = {}
+        setup_rows: dict[str, str] = {}
         for p in directional:
             try:
+                row, setup_state = _feature_row_from_pkg(pkg, p)
+                if setup_state is not None:
+                    setup_rows[p.model_id] = setup_state
                 scores[p.model_id] = float(p.predict(row))
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
@@ -146,6 +169,7 @@ def compute_advisory_factor(
             return 1.0, {
                 "action": "no_scores",
                 "excluded_regime": sorted(excluded_regime),
+                "setup_rows": setup_rows,
             }
         # The quorum/floor math is mode-agnostic; compute the would-be factor
         # once, then apply it (downsize) or only log it (annotate).
@@ -155,6 +179,7 @@ def compute_advisory_factor(
         record = {
             "scores": scores,
             "excluded_regime": sorted(excluded_regime),
+            "setup_rows": setup_rows,
             "mode": policy.mode,
             "size_floor": policy.size_floor,
             "bearish_threshold": policy.bearish_threshold,

@@ -277,6 +277,23 @@ def _load_live_trades(
             )
         if judge_provenance:
             select_cols.append("notes")
+        # Initial-risk record (PI-20261014-MVBJLVJ3-0001): `trades.stop_loss`
+        # holds the EXIT-time stop (a trail overwrites it), so R off it is
+        # inflated on trailed winners. The entry-time `risk_per_unit` lives in
+        # `order_packages.meta`, which no trailing amend reaches. Joined by a
+        # correlated subquery so a journal without the table/column degrades
+        # to NULL (-> stored-stop / unit R) instead of raising.
+        try:
+            has_pkg = bool(conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='order_packages'").fetchone())
+        except sqlite3.OperationalError:
+            has_pkg = False
+        if has_pkg and "order_package_id" in have:
+            select_cols.append(
+                "(SELECT p.meta FROM order_packages p "
+                "WHERE p.order_package_id = trades.order_package_id) "
+                "AS package_meta")
         # account_class-authoritative real filter (mirrors build_research_panel.py):
         # a row is real only if account_class isn't 'paper' AND is_demo is 0.
         # Guarded on column presence so an old-schema journal (no account_class)
@@ -346,6 +363,10 @@ def _load_live_trades(
                 "position_size": (
                     r["position_size"] if "position_size" in keys else None
                 ),
+                "package_meta": (
+                    r["package_meta"] if "package_meta" in keys else None
+                ),
+                "symbol": symbol,
                 "is_paper": is_paper,
             })
     total_excluded = sum(excluded_untrusted.values())
@@ -366,31 +387,45 @@ def _load_live_trades(
 def _live_realized_r(tr: dict[str, Any], won: int) -> tuple[float, str]:
     """Realized R-multiple for a REAL closed trade + which source produced it.
 
-    Prefer the **net, cost-aware** R = ``pnl / (|entry − stop| × size)``: the
-    trade's realized dollar pnl (already net of fees) over its dollar risk at
-    entry. For a linear instrument (this dataset is BTCUSDT-only, 1:1 contract
-    value) the ``size`` cancels the dollar units, so this is exactly the
-    realized R the EV gate needs — a losing trade that hit its stop reads ≈ −1R,
-    a 2R winner reads ≈ +2R. Falls back to a coarse signed unit-R (±1 by the
-    win/loss bit) when the risk columns are missing/zero (a pre-schema journal
-    or a trade the writer didn't stop-populate), so the column is never a
-    silent 0.0 that the EV scorer would treat as a real 0R outcome.
+    The net, cost-aware R = ``pnl / initial_risk_usd``: the trade's realized
+    dollar pnl (already net of fees) over its dollar risk AT ENTRY. The risk
+    comes from :func:`src.runtime.r_provenance.initial_risk_usd`:
 
-    Returns ``(r_multiple, source)`` where source ∈ {"stop_distance",
-    "unit_fallback"}.
+    * ``initial_risk`` — the signal's own declared ``risk_per_unit`` from
+      ``order_packages.meta``. Entry-time by construction; a trail cannot
+      reach it (PI-20261014-MVBJLVJ3-0001).
+    * ``stop_distance`` — ``|entry - stop|`` from ``trades.stop_loss`` when no
+      declared record exists. That column is overwritten by a trail, so this R
+      is INFLATED on a trailed winner; it is tagged so a consumer can exclude
+      it (``live_r_basis=initial_only``).
+    * ``unit_fallback`` — a coarse signed ±1 when neither basis exists (or the
+      stop is proven wrong-side), so the column is never a silent 0.0.
+
+    Returns ``(r_multiple, source)``.
     """
-    pnl = tr.get("pnl")
-    entry = tr.get("entry_price")
-    stop = tr.get("stop_loss")
-    size = tr.get("position_size")
-    if (pnl is not None and entry is not None and stop is not None
-            and size is not None):
-        try:
-            risk = abs(float(entry) - float(stop)) * float(size)
-            if risk > 0:
-                return float(pnl) / risk, "stop_distance"
-        except (TypeError, ValueError):
-            pass
+    from src.runtime.r_provenance import (  # noqa: PLC0415
+        R_BASIS_DECLARED, R_BASIS_STORED_STOP, r_multiple_provenanced,
+    )
+    try:
+        from src.runtime.local_pnl import contract_value_usd_for  # noqa: PLC0415
+        cv = contract_value_usd_for(tr.get("symbol")) or 1.0
+    except Exception:  # noqa: BLE001 — a linear 1:1 contract is the safe default
+        cv = 1.0
+    r, basis = r_multiple_provenanced(
+        {
+            "pnl": tr.get("pnl"),
+            "entry_price": tr.get("entry_price"),
+            "stop_loss": tr.get("stop_loss"),
+            "qty": tr.get("position_size"),
+            "direction": "short" if tr.get("direction") == -1 else "long",
+            "package_meta": tr.get("package_meta"),
+        },
+        cv,
+    )
+    if r is not None and basis == R_BASIS_DECLARED:
+        return float(r), "initial_risk"
+    if r is not None and basis == R_BASIS_STORED_STOP:
+        return float(r), "stop_distance"
     return (1.0 if won else -1.0), "unit_fallback"
 
 
@@ -573,6 +608,131 @@ def _resolve_market_raw_paths(
     return out
 
 
+def past_log_returns(closes: list[float]) -> list[float | None]:
+    """``ln(close[i] / close[i-1])`` per bar; ``None`` for the first bar and any
+    non-positive pair. The ONE definition the build and the live serve path
+    (``src.runtime.setup_features``) both call, so they cannot drift."""
+    out: list[float | None] = [None] * len(closes)
+    for i in range(1, len(closes)):
+        if closes[i - 1] > 0 and closes[i] > 0:
+            out[i] = math.log(closes[i] / closes[i - 1])
+    return out
+
+
+def past_vol_at(
+    log_returns: list[float | None], i: int, vol_window_n: int,
+) -> float | None:
+    """Population stdev of the log returns in the inclusive past window
+    ``[i - vol_window_n + 1 .. i]`` (``None`` below two usable returns): the
+    ``rolling_log_return_vol`` / ``signal_vol`` of bar ``i``."""
+    window = [v for v in log_returns[max(0, i - vol_window_n + 1): i + 1]
+              if v is not None]
+    return statistics.pstdev(window) if len(window) >= 2 else None
+
+
+def decision_time_features(
+    rows: list[dict[str, Any]],
+    *,
+    vol_window_n: int = 20,
+    momentum_window: int = 10,
+) -> dict[str, Any] | None:
+    """The signal-time feature fields for the LAST bar of ``rows`` — the exact
+    ``_feature_fields`` output a build emits for a candidate located at that bar,
+    minus ``vol_bucket`` (its quantile edges belong to the trained model, not to
+    the bar; ``bucket_vol`` applies them).
+
+    ``rows`` are closed OHLC bars, oldest first, each ``{ts, open, high, low,
+    close, symbol, timeframe}`` (``ts`` ISO-8601, as ``market_raw`` writes it).
+    Returns ``None`` when the last bar has no complete past window or no log
+    return: the build's skip condition, so serve never scores a bar the build
+    would not have emitted. B2 of docs/plans/ml-live-promotion-plan-2026-10-29.md.
+    """
+    n = len(rows)
+    if n < 2:
+        return None
+    closes = [float(r["close"]) for r in rows]
+    log_returns = past_log_returns(closes)
+    e = n - 1
+    vol = past_vol_at(log_returns, e, vol_window_n)
+    if vol is None or vol <= 0 or log_returns[e] is None:
+        return None
+    out = _feature_fields(
+        rows, e, log_returns, vol, [], ["_unbucketed"], momentum_window,
+        opens=[float(r["open"]) for r in rows],
+        highs=[float(r["high"]) for r in rows],
+        lows=[float(r["low"]) for r in rows],
+        closes=closes, vol_window_n=vol_window_n,
+    )
+    out.pop("vol_bucket", None)
+    return out
+
+
+def bucket_vol(value: float, edges: list[float], labels: list[str]) -> str:
+    """The build's ``_bucket_for``, exported for the serve path."""
+    return _bucket_for(value, edges, labels)
+
+
+def serve_spec_from_rows(
+    rows: list[Mapping[str, Any]],
+    *,
+    vol_window_n: int = 20,
+    momentum_window: int = 10,
+) -> dict[str, Any] | None:
+    """Freeze what the live serve path needs to rebuild a training row.
+
+    ``vol_bucket`` is a per-symbol quantile bucket of ``rolling_log_return_vol``
+    over the whole market_raw history (``_quantile_buckets`` in
+    ``_iter_one_symbol``), so the edges are a property of the build, not of any
+    bar. They are recovered from the rows the same way
+    ``ml.trainers.regime_classifier._reconstruct_vol_bucket_edges`` does: the
+    largest vol seen in bucket ``i`` is the cut. That reproduces the trained
+    bucket on EVERY dataset bar exactly (a bar in bucket ``i`` has vol above the
+    largest bucket ``i-1`` sample and at most the largest bucket ``i`` sample). A
+    never-seen bar whose vol falls between the largest bucket-``i`` sample and the
+    build's true cut lands one bucket higher; the rows hold no tighter bound.
+
+    Returns ``None`` when no symbol carries two or more populated buckets.
+    """
+    by_sym: dict[str, dict[str, list[float]]] = {}
+    tf_by_sym: dict[str, set[str]] = {}
+    for r in rows:
+        sym = str(r.get("symbol") or "")
+        b = r.get("vol_bucket")
+        v = r.get("rolling_log_return_vol")
+        if not sym or not isinstance(b, str) or not isinstance(v, (int, float)):
+            continue
+        by_sym.setdefault(sym, {}).setdefault(b, []).append(float(v))
+        tf = str(r.get("timeframe") or "")
+        if tf:
+            tf_by_sym.setdefault(sym, set()).add(tf)
+
+    def _key(label: str) -> tuple[int, str]:
+        tail = label[5:] if label.startswith("vol_b") else ""
+        return (int(tail), label) if tail.isdigit() else (1_000_000, label)
+
+    edges: dict[str, list[float]] = {}
+    labels_by_sym: dict[str, list[str]] = {}
+    for sym, buckets in by_sym.items():
+        labels = sorted(buckets, key=_key)
+        if len(labels) < 2:
+            continue
+        edges[sym] = [max(buckets[labels[i]]) for i in range(len(labels) - 1)]
+        labels_by_sym[sym] = labels
+    if not edges:
+        return None
+    return {
+        "family": _FAMILY,
+        "vol_window_n": int(vol_window_n),
+        "momentum_window": int(momentum_window),
+        "vol_bucket_edges_by_symbol": edges,
+        "vol_bucket_labels_by_symbol": labels_by_sym,
+        # One timeframe per symbol is the only servable shape; a symbol built
+        # from several timeframes is recorded as-is and the serve path refuses it.
+        "timeframe_by_symbol": {s: sorted(t) for s, t in tf_by_sym.items()
+                                if s in edges},
+    }
+
+
 def _bar_index_at_or_before(sorted_ts: list[str], target_ts: str) -> int | None:
     """Index of the last bar whose ts is ≤ ``target_ts`` (None if none / blank)."""
     if not target_ts:
@@ -752,6 +912,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
         include_cusum: bool | None = None,
         live_trades_db: Path | str | None = None,
         include_paper: bool = False,
+        live_r_basis: str = "any",
         signal_log_db: Path | str | None = None,
         signal_log_strategies: tuple[str, ...] | list[str] | str | None = None,
         signal_log_sides: tuple[str, ...] | list[str] | str | None = None,
@@ -874,6 +1035,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 n_vol_buckets=n_vol_buckets, include_cusum=emit_cusum,
                 live_trades_db=live_trades_db,
                 include_paper=include_paper,
+                live_r_basis=str(live_r_basis or "any"),
                 signal_log_db=signal_log_db,
                 signal_log_strategies=strat_tuple,
                 signal_log_sides=sides_tuple,
@@ -904,6 +1066,7 @@ class SetupCandidatesBuilder(DatasetBuilder):
         include_cusum: bool,
         live_trades_db: Path | str | None,
         include_paper: bool = False,
+        live_r_basis: str = "any",
         signal_log_db: Path | str | None = None,
         signal_log_strategies: tuple[str, ...] | None = None,
         signal_log_sides: tuple[str, ...] = ("buy", "sell"),
@@ -932,17 +1095,9 @@ class SetupCandidatesBuilder(DatasetBuilder):
             **dict(cost_kwargs or {}),
         )
 
-        # Past-only log returns + rolling vol.
-        log_returns: list[float | None] = [None] * n
-        for i in range(1, n):
-            if closes[i - 1] > 0 and closes[i] > 0:
-                log_returns[i] = math.log(closes[i] / closes[i - 1])
-        past_vols: list[float | None] = [None] * n
-        for i in range(n):
-            window = [v for v in log_returns[max(0, i - vol_window_n + 1): i + 1]
-                      if v is not None]
-            if len(window) >= 2:
-                past_vols[i] = statistics.pstdev(window)
+        # Past-only log returns + rolling vol (shared with the serve path).
+        log_returns = past_log_returns(closes)
+        past_vols = [past_vol_at(log_returns, i, vol_window_n) for i in range(n)]
 
         complete_vols = [v for v in past_vols if v is not None]
         if not complete_vols:
@@ -1113,6 +1268,16 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 e = _bar_index_at_or_before(bar_ts, tr["entry_ts"])
                 if e is None:
                     continue
+                # market_raw `ts` is the bar OPEN time, so the bar found above is
+                # the one still FORMING at the fill: its close/high/low are
+                # future information (MEASURED 2026-10-29, PI-20261029-Q17QWHDZ-0001:
+                # close[e-1] == open[e] and entry_ts is inside bar e on every probed
+                # live trade). Synthetic rows signal at the CLOSE of bar e and enter
+                # at the next open, so the matching live location is the last bar
+                # that had CLOSED by the fill: e-1.
+                e -= 1
+                if e < 0:
+                    continue
                 vol = past_vols[e]
                 if vol is None or vol <= 0:
                     continue
@@ -1126,6 +1291,11 @@ class SetupCandidatesBuilder(DatasetBuilder):
                 # (MB-20260717-M23-LIVEROW-REALIZED-R). Falls back to signed
                 # unit-R when the risk columns are absent.
                 r_multiple, r_source = _live_realized_r(tr, won)
+                # live_r_basis=initial_only (P1 rule (e)): a row whose R is not
+                # on the entry-time initial risk is NOT an eval row; it is
+                # dropped here and counted by the grader from the journal.
+                if live_r_basis == "initial_only" and r_source != "initial_risk":
+                    continue
                 # L3 paper-book eval population: a PAPER trade is a DISTINCT,
                 # TAGGED population — event_source="live_paper" +
                 # is_live_trade=FALSE so it can NEVER land on the real-money

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "the option exists with a self-test that fetches one spot month, and research/queue/blocked/RQ-20261029-5785-05.yaml moves to research/queue/ as queued -- or kill with a reason if the manager judges a spot proxy not worth building",
+    "kind": "event"
+  },
+  "id": "PI-20261029-XME2GXW7-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7) / RQ-20261029-5785-05",
+    "rerun": "grep -n 'futures/um' scripts/ops/fetch_backtest_candles.py"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "ML-REAL-MONEY-OVERLAY: add a SPOT market option to scripts/ops/fetch_backtest_candles.py --source binance_vision (today it reads only data.binance.vision/data/futures/um) and plumb it through path_metric_giveback.run_leg_paths / ml_overlay_noninferior.py, so RQ-20261029-5785-05 can build its 2017-09..2019-11 spot holdout corpus (the perp archive starts 2019-12, capping the V2 holdout at n 105). Spot is a proxy for the perp, and the unit labels it as one."
+}
