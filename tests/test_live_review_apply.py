@@ -93,10 +93,18 @@ def test_dry_run_account_and_non_tighten_actions_refuse():
     assert _decide(_intent(action="no_action")).reason == lri.R_NOT_TIGHTEN
 
 
-def test_one_amend_per_package_per_closed_bar():
-    v = _decide(view=_view(last_amend_bar="2026-10-25T18:00:00Z"))
-    assert (v.verdict, v.reason) == ("refuse", lri.R_RATE)
-    assert _decide(view=_view(last_amend_bar="2026-10-25T16:00:00Z")).verdict == "approve"
+def test_no_per_bar_cap_two_different_reviews_in_one_bar_both_pass():
+    """REMOVE-PER-BAR-CAP (operator 2026-10-29): a review that already acted on this leg in THIS bar does not
+    stop a different one; only the same review_id is refused (idempotency)."""
+    first = _decide(_intent(review_id="LR-20261025T1805Z-P", new_sl=0.2060))
+    second = _decide(_intent(review_id="LR-20261025T1830Z-P", new_sl=0.2050),
+                     _view(leg_sl=0.2060, applied_review_ids=("LR-20261025T1805Z-P",)))
+    assert first.verdict == "approve" and second.verdict == "approve"
+
+
+def test_a_duplicate_review_id_is_refused():
+    v = _decide(view=_view(applied_review_ids=("LR-20261025T2000Z-P",)))
+    assert (v.verdict, v.reason) == ("refuse", lri.R_DUPLICATE)
 
 
 def test_wrong_side_of_mark_refuses_and_already_tighter_is_no_action():

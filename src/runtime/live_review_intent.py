@@ -28,7 +28,7 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 ACTIONS = ("tighten_sl", "flag", "no_action")
 #: LTR-ALL-ACTIONS (operator 2026-10-26, mandate ``MD-TRADE-DESK``, verbatim "we also need to
@@ -75,7 +75,11 @@ R_WRONG_SIDE = "wrong_side_of_mark"
 R_LOOSENS = "would_loosen"
 R_ALREADY = "already_at_or_tighter"
 R_NOISE_FLOOR = "inside_noise_floor"
-R_RATE = "one_amend_per_package_per_bar"
+#: Idempotency, the ONLY duplicate guard (operator 2026-10-29, row REMOVE-PER-BAR-CAP, verbatim "What's the
+#: point of having active management and then specifically limiting how active that management can be?"):
+#: THIS review_id / directed record id already acted on THIS leg, so an identical recommendation never applies
+#: twice. There is no per-bar or time-window cap on how many DIFFERENT actions a package may take.
+R_DUPLICATE = "duplicate_review_id"
 R_DRY = "account_mode_dry_run"
 R_SHADOW = "strategy_execution_shadow"
 R_NO_PATH = "no_amend_path"
@@ -153,7 +157,8 @@ class AmendAccountView:
     strategy_execution: str = "live"      # config/strategies.yaml::execution for this leg
     leg_sl: Optional[float] = None        # the leg's current stop (journal / ticket)
     venue_sl: Optional[float] = None      # the resting stop at the venue, when read
-    last_amend_bar: Optional[str] = None  # bar_ts of this account's last review amend on the package
+    #: every review_id / directed record id that already acted on THIS leg (idempotency; never a count cap)
+    applied_review_ids: Tuple[str, ...] = ()
     extra: Dict[str, Any] = field(default_factory=dict)
     # -- LTR-ALL-ACTIONS: account-owned facts for decide_action. None = could not look, never 0. --
     entry: Optional[float] = None         # the leg's entry price
@@ -198,6 +203,13 @@ def is_looser(direction: str, new_sl: float, current: float, tol: float = 1e-9) 
 
 def is_tighter(direction: str, new_sl: float, current: float, tol: float = 1e-9) -> bool:
     return new_sl < current - tol if direction == "short" else new_sl > current + tol
+
+
+def is_duplicate(intent: "LiveReviewIntent", view: AmendAccountView) -> bool:
+    """True when THIS intent's review_id (or directed record id) already acted on THIS leg. Pure. The one
+    duplicate guard: two DIFFERENT reviews in one bar both pass (row REMOVE-PER-BAR-CAP)."""
+    rid = str(intent.review_id or "").strip()
+    return bool(rid) and rid in {str(x) for x in (view.applied_review_ids or ())}
 
 
 def floor_level(direction: str, mark: float, atr: float, buffer_atr: float) -> float:
@@ -250,9 +262,8 @@ def decide_amend(intent: LiveReviewIntent, view: AmendAccountView, *,
     if mark is None or atr is None or cur is None:
         missing = [n for n, v in (("mark", mark), ("atr", atr), ("leg_sl", cur)) if v is None]
         return could_not_look(f"{R_COULD_NOT_LOOK}:{','.join(missing)}")
-    # At most one amend per package per closed bar, per account.
-    if intent.bar_ts and view.last_amend_bar and str(view.last_amend_bar) == str(intent.bar_ts):
-        return refuse(R_RATE)
+    if is_duplicate(intent, view):
+        return refuse(R_DUPLICATE)
     # A short's stop at/below the mark (a long's at/above) fires at once.
     if (direction == "short" and new_sl <= mark) or (direction == "long" and new_sl >= mark):
         return refuse(R_WRONG_SIDE)
@@ -297,8 +308,8 @@ def size_delta(intent: LiveReviewIntent) -> Optional[float]:
 def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: bool) -> AmendVerdict:
     """The per-account decision for a TRADE ACTION (LTR-ALL-ACTIONS). Pure.
 
-    Common: the strategy's ``execution: shadow`` and the account mode refuse; one action per package per
-    closed bar. Per action:
+    Common: the strategy's ``execution: shadow`` and the account mode refuse; a review_id that already
+    acted on this leg refuses (idempotency; no per-bar cap). Per action:
 
     * ``close`` / a reduce (``partial_close``, ``change_size`` < 1): reduces risk, so the daily-DD
       switch never refuses it (``evaluate(..., opening=False)`` semantics). ``qty`` = the size to close;
@@ -329,8 +340,8 @@ def decide_action(intent: LiveReviewIntent, view: AmendAccountView, *, dry_run: 
         return refuse(R_SHADOW)
     if dry_run:
         return refuse(R_DRY)
-    if intent.bar_ts and view.last_amend_bar and str(view.last_amend_bar) == str(intent.bar_ts):
-        return refuse(R_RATE)
+    if is_duplicate(intent, view):
+        return refuse(R_DUPLICATE)
     long_ = direction == "long"
     mark, entry, leg_sl, leg_tp = _f(intent.mark), _f(view.entry), _f(view.leg_sl), _f(view.leg_tp)
     pos = _f(view.position_size)
@@ -437,8 +448,8 @@ def mandate_precondition(intent: LiveReviewIntent) -> Optional[str]:
     """The package-level clauses of ``MD-LIVE-TIGHTEN-SL`` that no account's
     risk manager can see. Pure. Returns None when they hold, else a refusal
     reason ``mandate_precondition:<clause>``. Checked only before an EXECUTE;
-    the per-account guardrails (tighten-only, noise floor, one amend per bar,
-    could_not_look) stay in :func:`decide_amend`, unchanged.
+    the per-account guardrails (tighten-only, noise floor, idempotency per
+    review_id, could_not_look) stay in :func:`decide_amend`, unchanged.
 
     * ``mechanics_verdict`` must be ``match`` -- no exit judgment on a broken trade;
     * ``basis: table`` -- ``expected_cost_r`` >= -0.25 R and ``worst_case_delta_r`` > 0;

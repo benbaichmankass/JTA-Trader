@@ -335,8 +335,8 @@ which is still tighter than its current stop. `could_not_look` is this design's 
 
 1. **Tighten only.** The new stop is strictly inside the account's current stop, compared against the
    **venue** stop read. Otherwise `refuse(widen)`.
-2. **Noise floor.** At least `min_buffer_atr` × ATR beyond the mark, and at most one amend per package
-   per closed bar (LTR § 3 guardrails, now in code).
+2. **Noise floor.** At least `min_buffer_atr` × ATR beyond the mark (LTR § 3 guardrails, now in code).
+   The former "one amend per package per closed bar" cap is gone [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]; a review_id applies once.
 3. **The account's own state.** If `mode: dry_run`, refuse with `account_mode_dry_run`, as `evaluate()`
    does today. The daily-DD switch **does not refuse a tighten**: a tighten reduces risk, the same as
    `evaluate(..., opening=False)` today (operator: *"keep open, block new"*).
