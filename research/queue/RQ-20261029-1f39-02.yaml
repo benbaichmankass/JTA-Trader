@@ -1,0 +1,121 @@
+id: RQ-20261029-1f39-02
+title: 'Per-class re-grade of the DESK-LIFECYCLE-S0 corpus (#20967) under RULE-AM-RISK-ADJUSTED-V1: does any single in-trade action class
+  (tighten_sl, widen_sl, move_tp, partial_close, close), replayed alone from Claude''s recorded calls, give up <= 0.05 R per trade while
+  cutting book max drawdown or worst-5% weekly outcome >= 15%, in 3 of 4 folds, beating >= 95% of 100 matched random draws of the class?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-AM-STANDARD
+kind: experiment
+practice_precedent: 'T1, T3, T8 (docs/reference/trading-and-model-practice-principles.md): an intervention is judged against hold AND a
+  matched random intervention of the same class, net of the full cost stack, with entries fixed (Claude entries and random entries both).'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random: {draws: 100}
+  # the corpus's own best-static leave-one-fold-out menu (desk_lifecycle_driver.best_static_lofo, B3) is already in the committed
+  # score.json of #20967; it is reported beside, not re-graded here
+  best_static: {grid: [v1_static_menu, v2_practitioner_rules], excludes_test_folds: true}
+  bootstrap_group: week
+question: >-
+  Operator decision 2026-10-29 ~12:40Z (popup, relayed by Manager Session 2026-10-29c, verbatim on row AM-RISK-ADJUSTED-RULE): "Re-grade,
+  then auto-unlock (Recommended)", plus "1, but we need to make sure we're also measuring R giveback and overall PNL". On the committed
+  DESK-LIFECYCLE-S0 corpus (comms/research/desk_lifecycle/full-c4e: entries, decisions, round key, policy C4E), for each action class X,
+  replay every trade three ways with the corpus's own harness (desk_lifecycle_driver.run, full cost stack): hold; X only (Claude's recorded
+  calls of class X, every other call replaced by hold); and 100 matched random draws of X (desk_lifecycle_driver.matched_random over the
+  X-only check-ins). Grade X vs hold on each entry source's book under RULE-AM-RISK-ADJUSTED-V1.
+why_this_matters: >-
+  #20967 graded WHOLE-TRADE management (all classes at once: -0.159 R/trade on Claude entries) and the re-grade of 2026-10-29
+  (comms/research/am_risk_adjusted/regrade-2026-10-29.json) read it as a whole. Clause 4 grades each class on its OWN test. This unit
+  is that per-class reading on the corpus the advice-only decision rests on.
+power:
+  expected_n: 473
+  min_detectable_effect: 0.05
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    MEASURED before the run by a positive-control-only pass (am_class_regrade.py --control-only, 2026-10-29): 473 Claude-entry and 465
+    random-entry pairs reproduce the committed pairs.jsonl exactly. The rule is a materiality rule (R1 0.05 R/trade, R2 15% cut), not a
+    significance test; the fold majority (R3) and the 95%-of-100-draws random control (R4) carry the inference. n_floor 39 per source.
+  feasibility:
+    source: none
+    accrual_basis: Replays the committed corpus on public Binance Vision candles; nothing accrues.
+decision_rule:
+  id: RULE-AM-RISK-ADJUSTED-V1
+  unit_rule_id: RULE-RQ20261029-1F39-02-DESK-CLASS-REGRADE
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/am_class_regrade.py: per entry source (claude / random) and per class, the books {entry_time, exit_time, net_r,
+    mfe_r} of hold, X-only and 100 random-X draws; am_risk_adjusted.grade_risk_adjusted with V1's parameters except folds 4 and
+    fold_majority 3 (the corpus's own fold convention, RULE-RQ20261028-D1F5-02: 3 of 4), basis per_trade_r_screen. REPORTED, never pass
+    clauses: R giveback (peak MFE R - realised net R) mean and p95, net P&L in R and in % per account (bybit_1 / bybit_2 / bybit_portfolio,
+    R x risk.risk_pct, uncompounded) for hold, X and the random-draw mean; mean net R per trade vs hold; max-DD and weekly CVaR5 change.
+  rule: >-
+    POSITIVE CONTROL FIRST: the hold and all-classes arms must reproduce pairs.jsonl C_h/C_m/R_h/R_m to 1e-9, else INDETERMINATE
+    (control_failed) and no class is read. A class X PASSES iff RULE-AM-RISK-ADJUSTED-V1 reads pass for X on BOTH entry sources (Claude
+    entries and random entries). FAIL for X if it fails on either source. INDETERMINATE for X if it never acted, or is indeterminate on a
+    source without failing on the other. A class never acted on is reported, not graded. This is a per-trade-R SCREEN
+    (measurement_basis per_trade_r_screen): what a PASS licenses is the manager's / operator's call under the 12:40Z decision and
+    ARCHITECTURE-CANONICAL § Active management clause 4 (a screen never graduates a class unless that clause is amended for it).
+    Thresholds, draws, seed (20261029) and folds are not changed after any result.
+    AMENDMENT 2026-10-29, registered BEFORE any class outcome was read: the first graded run aborted on its 2nd pair, before any
+    grade was computed, because masking a recorded close / partial keeps the trade open into check-ins Claude was never asked.
+    Such an UNJUDGED check-in reads as HOLD (the bracket as placed) in both the X-only arm and its random draws; the count per class
+    is reported as unjudged_checkins_read_as_hold. Nothing else changes.
+  what_it_does_not_do: >-
+    Re-judges nothing (Claude's recorded calls only), edits no config or mandate, places no order. A graduation is a separate PR per
+    class (MD-TRADE-DESK advice_only + ADVICE_ONLY_ACTIONS, pinned equal by tests/test_tighten_advice_only.py).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  bucket: structural
+  basis: 'stand-in: decides whether any in-trade class may execute on every account; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Public Binance Vision candles plus the committed corpus; CPU only.
+  basis: 'Estimate: about 938 trades x 5 classes x 101 replays of a 48-bar path; the control-only pass took about 2 minutes, mostly fetch.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/am_class_regrade.py
+  - --fetch
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261029-1f39-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- scripts/research/am_class_regrade.py
+- scripts/research/am_risk_adjusted.py
+- comms/research/desk_lifecycle/full-c4e/
+- AM-RISK-ADJUSTED-RULE
+last_dispatched_at: null
+grading:
+  verdict: fail
+  graded_at: '2026-10-29'
+  grader: hand (lane AM-RISK-ADJUSTED-RULE) -- the unit's own rule applied to its committed verdict.json
+  decision_rule_id: RULE-RQ20261029-1F39-02-DESK-CLASS-REGRADE
+  evidence:
+  - comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json
+  registration_provenance: >-
+    Rule committed at 803d2996 and amended at 26c2a269 (both before the graded run). Both commits remain on branch
+    claude/am-class-regrade; #21169 was rebuilt as one commit on main after #21147's squash merge.
+  reason: >-
+    Positive control held (473 Claude-entry and 465 random-entry pairs reproduce pairs.jsonl exactly; the all-classes arm costs
+    0.159 / 0.124 R per trade, = #20967). No class passes on either entry source. tighten_sl fails R1 (costs 0.17 / 0.11 R per trade)
+    and R3 although it cuts the worst-5% weekly outcome 19% / 33%; move_tp, partial_close and close cost little or gain (close +0.0096
+    R/trade on Claude entries) but cut max drawdown <= 4.4% (R2) and hold no fold; widen_sl never acted. Every class stays advice-only.
+    Per-trade-R screen (no book simulation exists: row BOOK-SIM-REAL-SIZER).

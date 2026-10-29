@@ -2,21 +2,32 @@
   "id": "AM-RISK-ADJUSTED-RULE",
   "title": "Active management graduation rule becomes risk-adjusted: an in-trade action class passes if it gives up <= a pre-stated R/trade (0.05R proposed) while cutting book max drawdown or worst-5% outcome materially (>=15%), across folds, vs a random-intervention control, measured on the whole book; then pre-register the break-even-stop-after-peak test on the real-money legs under it",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuMV1Qgi2fjJegsxr3r",
   "model": "claude-opus-5-5",
   "ceiling_usd": 30,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    21169
+  ],
   "blocked_on": [],
-  "note": "Basis: 5% and 15% are pre-registered thresholds, not measurements; the test population is DESK-LIFECYCLE-S0 (#20967), n=981 tightens.",
+  "note": "Basis: 5% and 15% are pre-registered thresholds, not measurements; the test population is DESK-LIFECYCLE-S0 (#20967), n=981 tightens. [2026-10-29 ~13:20Z lane close, landing in #21169] Delivered in one held PR:\n- RULE-AM-RISK-ADJUSTED-V1 in ARCH clause 4. The measurement of record is the book-level $ simulation (row BOOK-SIM-REAL-SIZER), with a dated exception for the DESK-LIFECYCLE-S0 re-grade (manager option i).\n- The trading objective, stated once.\n- The grader scripts/research/am_risk_adjusted.py, with R giveback and net P&L (% per account) REPORTED but never gating.\n- The re-grade of landed records, where no class passes.\n- RQ-20261029-1f39-01, the break-even test on the real-money legs, registered and blocked on HARNESS-BE-RANDOM-CONTROL and BOOK-SIM-REAL-SIZER.\n- RQ-20261029-1f39-02, the per-class re-grade of the desk corpus, run and graded FAIL: no class passes on either entry source (record comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json). Every class stays advice-only and there are no graduation PRs.\nThe retest on the book simulation is row AM-REGRADE-BOOKSIM (operator 13:00Z).",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T12:55:26Z",
-  "updated_by": "Manager Session 2026-10-29c",
+  "updated_at": "2026-10-29T13:15:07Z",
+  "updated_by": "session_01AFoLuMV1Qgi2fjJegsxr3r",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "observation": {
+    "what": "The first research/queue unit graded under RULE-AM-RISK-ADJUSTED-V1 on the book-level $ simulation per account (grade_risk_adjusted basis=book_usd_sim, graduation_eligible=true), expected RQ-20261029-1f39-01 once BOOK-SIM-REAL-SIZER and HARNESS-BE-RANDOM-CONTROL land",
+    "how_to_check": "grep -l RULE-AM-RISK-ADJUSTED-V1 research/results/*/*.jsonl | xargs grep -l book_usd_sim",
+    "due_by": "2026-11-12"
+  },
+  "writeback": {
+    "roadmap": "L-AM-STANDARD: graduation rule for every in-trade action class is now RULE-AM-RISK-ADJUSTED-V1, measured on a book-level $ simulation per account (not yet built: BOOK-SIM-REAL-SIZER); the per-trade-R screen over landed records passes no class; first test RQ-20261029-1f39-01 registered, blocked on HARNESS-BE-RANDOM-CONTROL + BOOK-SIM-REAL-SIZER",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management: clause 4 rewritten (book-level $ measurement of record, R per trade beside), the system trading objective stated once with the 06:25/06:35/07:10/07:20Z quotes, What the evidence says today rewritten; change-log row 2026-10-29"
+  },
   "_seq": 782
 }
