@@ -58,11 +58,31 @@ def _clip01(v: float) -> float:
     return 0.0 if v < 0.0 else 1.0 if v > 1.0 else v
 
 
-def _conviction_from_pkg(pkg: Any) -> float | None:
+def _shadow_fed(provenance: Any) -> bool:
+    """True when the stamp's provenance names a model below the influence stage."""
+    from src.runtime.conviction_inputs import INFLUENCE_STAGES
+
+    if not isinstance(provenance, dict):
+        return False
+    for slot in provenance.values():
+        for rec in (slot if isinstance(slot, list) else []):
+            if isinstance(rec, dict) and rec.get("model_id") \
+                    and rec.get("stage") not in INFLUENCE_STAGES:
+                return True
+    return False
+
+
+def _conviction_from_pkg(pkg: Any, *, influencing_only: bool = False) -> float | None:
     """Read the observe-only calibrated conviction stamped at signal time.
 
     ``pkg.meta['conviction']['conviction']`` is the calibrated v1 blend; ``None``
     / absent → no would-be size (returns ``None``).
+
+    ``influencing_only`` (I7, ML-SHADOW-NEVER-ORDERS): the blend includes
+    shadow-stage model scores, so the order-changing apply path reads
+    ``['influencing']`` — the advisory+-only blend stamped beside it. A stamp
+    without that key is used only when its provenance shows no below-advisory
+    model fed it; otherwise ``None`` (fail-inert: the order is not resized).
     """
     meta = getattr(pkg, "meta", None)
     if not isinstance(meta, dict):
@@ -70,7 +90,12 @@ def _conviction_from_pkg(pkg: Any) -> float | None:
     block = meta.get("conviction")
     if not isinstance(block, dict):
         return None
-    val = block.get("conviction")
+    if influencing_only and "influencing" in block:
+        val = block.get("influencing")
+    elif influencing_only and _shadow_fed(block.get("provenance")):
+        return None
+    else:
+        val = block.get("conviction")
     if val is None:
         return None
     try:
@@ -90,6 +115,7 @@ def compute_conviction_sizing(
     market_type: str = "spot",
     min_qty: float = 0.0,
     qty_precision: int = 3,
+    influencing_only: bool = False,
 ) -> tuple[float | None, dict]:
     """Resolve the would-be conviction-sized qty (``desired`` clamped to
     feasibility).
@@ -100,7 +126,7 @@ def compute_conviction_sizing(
     """
     from src.units.accounts.risk import _floor_to_step, contract_value_usd_for
 
-    conviction = _conviction_from_pkg(pkg)
+    conviction = _conviction_from_pkg(pkg, influencing_only=influencing_only)
     if conviction is None:
         return None, {"action": "no_conviction"}
     conviction = _clip01(conviction)
@@ -320,6 +346,10 @@ def apply_conviction_sizing(
             market_type=market_type,
             min_qty=min_qty,
             qty_precision=qty_precision,
+            # I7: only advisory+ models may change an order; shadow scores in
+            # the observed blend never reach this path (annotate here shows the
+            # number apply WOULD use, so it reads the same view).
+            influencing_only=True,
         )
         # No would-be size to act on (missing conviction / un-computable inputs)
         # → fail-inert, return the RiskManager qty unchanged.
