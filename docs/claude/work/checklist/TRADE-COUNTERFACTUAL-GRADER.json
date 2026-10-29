@@ -1,0 +1,22 @@
+{
+  "id": "TRADE-COUNTERFACTUAL-GRADER",
+  "title": "Standing counterfactual grader for every closed order package (one decision = one trade): replay the actual price path and grade, in $ and % per account and in R, net of the full cost stack, the ACTUAL outcome against (a) the original entry brackets untouched, (b) alternative entry brackets (TP/SL grid around the declared ones), (c) no active management, (d) less / more active management (each in-trade action skipped, earlier, later; break-even/trail variants), (e) every reviewer or desk recommendation that was NOT applied, (f) a matched random intervention; book-level $ with the real sizer where BOOK-SIM-REAL-SIZER exists. Runs on every close, writes one graded record per package, feeds /performance-review and the AM graduation rule (RULE-AM-RISK-ADJUSTED-V1)",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~11:00Z verbatim: \"We also need a mechanism for grading both entry brackets and active managment against different counterfactuals, e.g., we need to comeback this trade to see how much better/worse it would have been using the original brackets, more/less active managment, etc.\". Build on, do not duplicate: scripts/research/live_review_counterfactual.py (LTR-5-GRADING: replays applied/recommended review actions, 0.25R vs 0.5R), live_review_outcomes.py (option pricing from a leg corpus), exit_lever_ablation.py (lever arms), DESK-9-GRADING, LTR-COUNTERFACTUAL-PRICING (prices options AT each review: the ex-ante half; this row is the ex-post half), BOOK-SIM-REAL-SIZER (book $ layer, on PR #21169), AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH (replay join defect to fix first). FIRST WORKED EXAMPLE: ADA pkg-465a5d7d27644027 (bybit_2 6735 stopped 0.2016 at 10:47:53Z after operator moves to BE ~06:30Z and +1R 07:35Z; peak 2.27R; original stop atr 1.5x, TP 0.18739): grade actual vs original brackets, vs BE-only, vs +1R-only, vs the reviewers' holds, vs no management. Done = the ADA record committed with every arm in $ and R plus a per-close job that writes one record for each newly closed package.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T11:00:02Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 808
+}
