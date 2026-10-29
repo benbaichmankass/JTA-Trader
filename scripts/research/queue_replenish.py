@@ -290,6 +290,9 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
         unit["why_not_inferential"] = _fill(tpl["why_not_inferential"], p)
     if tpl.get("practice_precedent"):
         unit["practice_precedent"] = _fill(tpl["practice_precedent"], p)
+    if tpl.get("ml_consumer"):
+        # research-queue-ml-consumer-guard (PLANNING.md § 1c): an ML template names its consumer
+        unit["ml_consumer"] = _fill(tpl["ml_consumer"], p)
     unit["question"] = _fill(tpl["question"], p)
     unit["why_this_matters"] = _fill(tpl.get("why_this_matters", ""), p)
     power = _fill(tpl["power"], p)

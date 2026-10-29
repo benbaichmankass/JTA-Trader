@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261028-FFTW4JNY-0002",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane WF-RECOST-DDA7 session_01AFoLuNAvm4Xfk9FftW4jnY, unit RQ-20261028-dda7-04",
+    "rerun": "python3 scripts/ops/build_strategy_evidence.py --strategy trend_donchian_sol --days 1095 --folds 6 --out /tmp/wf/records --workdir /tmp/wf/runs  # then compare to docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-04/trend_donchian_sol.json"
+  },
+  "state": "queued",
+  "what": "[Tier-3 PROPOSAL, operator decides] trend_donchian_sol PASSED its pre-registered walk-forward RQ-20261028-dda7-04 (RULE-WF-RECOST-trend_donchian_sol): 1095d, 6 folds, fee 11.0 bps + slippage + funding, n=183, net_r_oos +17.70R, net_r_oos_ex_max_fold +9.38R, folds_positive 4/6. Proposal: treat the leg as Stage-2 ELIGIBLE (Gate 2). Not enacted: no config/strategies.yaml, config/accounts.yaml or comms/strategy_evidence change was made. Caveats to weigh: this is ONE 1095d window re-measure of an already-tested leg, and the 365d re-measure of the same leg was negative (window dependence); prop-bound legs must also clear the prop EV/survival gate (comms/prop_survival/<leg>.json), which this unit did not test. Record: docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-04/."
+}

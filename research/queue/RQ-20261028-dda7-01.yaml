@@ -1,6 +1,6 @@
 id: RQ-20261028-dda7-01
 title: 'Multi-window walk-forward of ict_scalp_xrp_15m (XRPUSDT 15m) at the 11.0 bps cost stack (window-drift flip, hand-authored)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -48,3 +48,4 @@ last_dispatched_at: null
 roadmap:
 - L-LADDER
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (walk-forward across several windows; judge the edge ex its single best fold); skill: .claude/skills/backtesting/SKILL.md, Is n enough, and is the edge concentrated in one fold'
+result: "GRADED 2026-10-28 against RULE-WF-RECOST-ict_scalp_xrp_15m, run session-local (lane WF-RECOST-DDA7). Verdict FAIL: n=197, net_r_oos -8.51R, best fold +3.68R, net_r_oos_ex_max_fold -12.19R, folds_positive 2/6 (folds [3.681, -4.0789, -3.3642, -3.001, 2.0284, -3.7791]), fee 11.0 bps asserted in record and bt.json, fidelity faithful. Leg stays on its Stage-1 floor (bybit_1); not a retirement. Row: research/results/RQ-20261028-dda7-01/session_01AFoLuNAvm4Xfk9FftW4jnY.jsonl; raw record + trades: docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-01/."
