@@ -140,13 +140,12 @@ practice_precedent: 'M1, M2, M4, M5, M6, M9, M10 (docs/reference/trading-and-mod
 last_dispatched_at: '2026-10-29T11:58:26+00:00'
 grading:
   attested: RULE-ML-OVERLAY-NONINFERIOR-V2
-  auto: true
+  auto: false
   decision_rule_id: RULE-ML-OVERLAY-NONINFERIOR-V2
   evidence:
   - research/results/RQ-20261029-5785-02/40869516819.jsonl
   graded_at: '2026-10-29'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''pass'']'
+  grader: RESEARCH-OPS-20261029-1450 (session)
+  reason: 'rule applied verbatim per family (the rows carry the per-family split): TD PASS (main window + blind holdout 2017-09..2020-06 confirm), PB2H FAIL. Only a PASS family ships, so the unit reads PASS for TD only; this is 1 family of 2 tested, offline evidence for a Tier-3 packet, not a promotion. Config-level close: PB2H overlay configuration closed, family stays open.'
   rows: 2
-  verdict: null
+  verdict: pass

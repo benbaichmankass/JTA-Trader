@@ -1,0 +1,323 @@
+{
+ "run": "RESEARCH-OPS-2026-10-29-1450",
+ "finished_at": "2026-10-29T15:40:00Z",
+ "by": "research-ops-1450 (dispatched by session_01AFoLuKwNMzjtn2CH2kVd86)",
+ "floor": 41,
+ "floor_basis": "packet pipeline.floor (computed from fired_24h 51)",
+ "authoring_queue_depth": null,
+ "needs_review_triaged": 1,
+ "needs_review_left": 30,
+ "throughput": {
+  "runnable_before": 51,
+  "runnable_after": 52,
+  "queued": 142,
+  "fired_24h": 51,
+  "results_landed_24h": 63,
+  "hours_since_last_dispatch": 1.9,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (packet: last dispatch 1.9 h)",
+  "collector": "ok (63 landed 24h)",
+  "stranded_stamp_prs": [],
+  "incident": null,
+  "read_state": "tree_only"
+ },
+ "results_read": {
+  "pass": 9,
+  "fail": 7,
+  "indeterminate": 2,
+  "window": "since 2026-10-29T03:25Z, graded units in packet",
+  "units": [
+   "RQ-20261028-a7c3-02",
+   "RQ-20261028-a7c3-03",
+   "RQ-20261028-a7c3-04",
+   "RQ-20261028-a7c3-05",
+   "RQ-20261028-a7c3-06",
+   "RQ-20261029-5121-01",
+   "RQ-20261029-5785-02",
+   "RQ-20261029-001",
+   "RQ-20261011-9da8-06"
+  ],
+  "fail_lines": [
+   "configuration closed: Donchian measured-move TP (width 0.5) on trend_donchian_xrp_4h vs static 3R (a7c3-02, -3.63 R, 3/6 folds); family TP-revision stays open; next test = none (see analysis)",
+   "configuration closed: predictive 2.5R entry target on trend_donchian_sol_prop vs 6R (a7c3-03, -4.73 R, 2/6 folds); family stays open; next test = forward accrual only",
+   "configuration closed: 10-bar stall pull-in on xrp_pullback_2h vs static 3R (a7c3-05, -35.61 R, 2/6); family stall_pull_in stays open (passed on trend_donchian_xrp_4h); next test = RQ-20261029-00f0-01",
+   "configuration closed: 10-bar stall pull-in on ada_pullback_2h vs static 4R (a7c3-06, -20.12 R, 2/6); family stays open; next test = RQ-20261029-00f0-01 covers xrp only, ada deferred until its outcome",
+   "configuration closed: ATR-expansion-gated bank 25/33/50 % at +2R on ada_pullback_2h (5121-01, -0.50/-0.66/-1.00 R, 5/6 folds); family partial-bank stays open; next test = none, grading bar may change under RULE-AM-RISK-ADJUSTED-V1 (#21283)",
+   "configuration closed: TS-momentum basket with funding charged (9da8-06 book net -1.20 R over 215 trades, Sharpe -0.76); family cross-sectional momentum stays open; next test = none this pass (not a rostered-leg question)"
+  ]
+ },
+ "unlocked": [],
+ "retired": [
+  {
+   "unit": "RQ-20260928-ae17-01",
+   "reason": "lever dropped: vol-label export row REGIME-VOL-LABELS-EXPORT set dropped by BACKLOG-RESET-20261029; config-level close only, the regime-cell question stays open, re-openable"
+  }
+ ],
+ "levers_filed": [],
+ "units_authored": [
+  "RQ-20261029-00f0-01"
+ ],
+ "followups_filed": [
+  "RQ-20261029-00f0-01"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "nodes": [],
+  "units_drafted": 1,
+  "skipped_on_purpose": false,
+  "note": "1 hand unit (pull-in dose test); no programme node: authoring queue head P3-Q1-live-bt-stage-b needs the LIVE-BT-STAGE-B build"
+ },
+ "not_run": [
+  "E: programme-node authoring (head node blocked on a build row)"
+ ],
+ "limits": [
+  "pytest not installed on this runner; guards run via run_guards.py",
+  "workflow runs read from tree only (dispatch receipt, git log), GitHub Actions list not queried",
+  "pipeline due items not routed (manager)"
+ ],
+ "blocked_audit": {
+  "blocked_over_age_before": 7,
+  "after": 6,
+  "max": 10,
+  "units": {
+   "RQ-20260922-006": "kept: owner RQ-EVIDENCE-006-KEYSET (queued, unassigned)",
+   "RQ-20260928-ae17-01": "retired",
+   "RQ-20261007-018": "kept: lever PI-20261007-X9UFEF4U-0001 -> ROUTE-RESEARCH-DATA-ROUTES (queued)",
+   "RQ-20261007-019": "kept: same lever/owner as 018",
+   "RQ-20261007-031": "kept: needs velotrade_1 roster + closed trades (Tier-3 manager call) and CLI cost args; COSTS still in-script",
+   "RQ-20261007-033": "kept: PI-20261004-APBY4NTV-0001, harness-dispatch window input still absent",
+   "RQ-20261007-044": "kept: flip cell not in m20-exit-lever-sweep.yml (0 grep hits) though a flip_replay sweep script exists; build row needed (handoff)"
+  }
+ },
+ "disposition": {
+  "unowned_needs_review": 0,
+  "ungraded": 1,
+  "ungraded_unit": "RQ-20261027-b376-02 (daily INFRA, two measured passes n_missing 0; grader has not stamped it, not hand-written)",
+  "graded_by_session": [
+   "RQ-20261029-5785-02: per-family split, TD PASS / PB2H FAIL, closed with a session grading block"
+  ]
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "blocked_over_age on the next research-slo run reads 16",
+   "p": 0.85,
+   "check_rerun": "infra_selftest.blocked_over_age()",
+   "outcome": "miss",
+   "action_happened": true,
+   "note": "reads 7 now (before my retire), not 16: the 2026-10-29 backlog reset retired/dropped many blocked units. The call mis-modelled the cause: the count fell on its own and the prediction assumed no reset. Teaches: check recent bulk operator actions before predicting a count."
+  },
+  {
+   "call": "next 4 dispatch cycles include >=1 with fired_this_cycle 0 due to infra yield",
+   "p": 0.5,
+   "check_rerun": "grep deferred every fire",
+   "outcome": "unresolved",
+   "action_happened": false,
+   "note": "dispatch logs not read this pass (tree_only); resolves 2026-10-30"
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-10-29T14:52:37.312264+00:00",
+  "since": "2026-10-29T03:25:00+00:00",
+  "runnable_by_track": {
+   "TRADING": 45,
+   "MODEL": 6,
+   "INFRA": 0,
+   "total": 51
+  },
+  "graded_by_window": {
+   "7d": {
+    "INFRA": {
+     "pass": 6,
+     "fail": 1
+    },
+    "MODEL": {
+     "fail": 33,
+     "indeterminate": 27,
+     "pass": 15
+    },
+    "TRADING": {
+     "pass": 69,
+     "indeterminate": 31,
+     "no_action_warranted": 14,
+     "fail": 278
+    }
+   },
+   "30d": {
+    "INFRA": {
+     "pass": 9,
+     "indeterminate": 1,
+     "fail": 2
+    },
+    "MODEL": {
+     "fail": 49,
+     "pass": 31,
+     "indeterminate": 59
+    },
+    "TRADING": {
+     "pass": 233,
+     "indeterminate": 151,
+     "no_action_warranted": 34,
+     "fail": 613
+    }
+   },
+   "lifetime": {
+    "INFRA": {
+     "pass": 9,
+     "indeterminate": 1,
+     "fail": 2
+    },
+    "MODEL": {
+     "fail": 49,
+     "pass": 31,
+     "indeterminate": 59
+    },
+    "TRADING": {
+     "pass": 233,
+     "indeterminate": 151,
+     "no_action_warranted": 34,
+     "fail": 613
+    }
+   }
+  },
+  "fails_without_next": 7,
+  "followups": {
+   "emitted": 1,
+   "graded:indeterminate": 1,
+   "not_fired:queued": 1
+  },
+  "needs_review": 31,
+  "could_not_look": [
+   "dispatch cycle logs",
+   "GitHub Actions run list"
+  ]
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261028-a7c3-02",
+   "RQ-20261028-a7c3-03",
+   "RQ-20261028-a7c3-04",
+   "RQ-20261028-a7c3-05",
+   "RQ-20261028-a7c3-06",
+   "RQ-20261029-5121-01",
+   "RQ-20261029-5785-02",
+   "RQ-20261011-9da8-06",
+   "RQ-20261029-001 (partial)"
+  ],
+  "trading": {
+   "meaning": [
+    "TP compliance, 4 of 5 revisions lose net R: measured-move on xrp_4h -3.63 R, entry 2.5R on sol_prop -4.73 R, pull-in on xrp_pullback_2h -35.61 R and ada_pullback_2h -20.12 R; only eth_4h entry-4R passes (+0.78 R on ~110 R, 6/6 folds). So making a TP 'real' is not free: compliance costs P&L on most legs and the doctrine's cost needs a number per leg before any Tier-3 declare.",
+    "a7c3-04 PASS is a discovery: candidates T3/T4 (1 of 2 passed), +0.78 R is 0.7 % of net, whole available history already used, so no disjoint window exists. So confirmation can only be forward live accrual, not another backtest unit; I authored none on purpose.",
+    "pull-in is leg-type dependent: passed on trail-exit trend_donchian_xrp_4h, loses 20-36 R on TP-hit-driven pullback legs (248 of 472 exits were take_profit on xrp). So a single 'stall_pull_in' producer should not be built for pullback legs until the dose test reads.",
+    "5121-01 bank: all three sizes lose 0.5-1.0 R with 5/6 folds >= incumbent. So the lever is neutral-to-slightly-negative on ada, not harmful; under a risk-adjusted bar (#21283) it may read differently, which is a grading question for the manager, not a new test."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "pull-in on pullback legs (a7c3-05/06)",
+     "hypotheses": [
+      "noise",
+      "design (stall window too short)",
+      "cost drag",
+      "regime",
+      "idea wrong for TP-driven legs"
+     ],
+     "test": "dose: 20 and 30 stalled bars on xrp_pullback_2h",
+     "survivor": "design",
+     "next": "RQ-20261029-00f0-01"
+    },
+    {
+     "cluster": "TP revisions on donchian legs (a7c3-02/03)",
+     "hypotheses": [
+      "noise",
+      "power",
+      "cost drag",
+      "idea wrong"
+     ],
+     "test": "none: both candidates fired, deltas -3.6/-4.7 R, 3 and 2 of 6 folds",
+     "survivor": "idea",
+     "next": "no action, because both branches (more variants of the same revision) lead to keeping the incumbent TP and the doctrine cost is already priced"
+    },
+    {
+     "cluster": "9da8-06 / ae17-43",
+     "hypotheses": [
+      "noise",
+      "idea wrong"
+     ],
+     "test": "none",
+     "survivor": "idea",
+     "next": "no action, because 9da8-06 is a frontier basket not a rostered leg and ae17-43 is the disposition census now at UNOWNED 0 / UNGRADED 1"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261029-00f0-01",
+     "decision_changed": "whether a stall_pull_in producer (RM-AM-TP-PULLIN-PRODUCER) is built for pullback legs",
+     "on_pass": "one forward-accrual confirmation, then Tier-3 declare packet",
+     "on_fail": "producer scoped to trail-exit legs only",
+     "premortem": "fails if the loss is structural (pulled-in TP simply exits before the 3R hit) rather than window-length driven; then R20/R30 both stay below S3 and the read is 'idea wrong for this leg'"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "ML overlay V2 (5785-02): TD family PASS on main window and blind holdout, PB2H FAIL. So the reduce-only overlay is a candidate only for the TD gate legs; 1 of 2 families passed, and a Tier-3 packet needs the manager, not a new unit."
+   ],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [
+   {
+    "from": "TRADING",
+    "finding": "stall-pull-in works on trail-exit legs, fails on TP-hit-driven legs",
+    "feeds": "RQ-20261029-00f0-01; exit-type is a candidate feature for the overlay"
+   },
+   {
+    "from": "MODEL",
+    "finding": "overlay gate passes only on the TD family",
+    "feeds": "ML-REAL-MONEY-OVERLAY checklist row"
+   }
+  ],
+  "surprises": [
+   "xrp_pullback_2h net with static 3R target is +26.6 R while the 10-bar pull-in is -9.0 R: a 36 R swing from one lever, larger than any other cell this pass"
+  ]
+ },
+ "calls": [
+  {
+   "call": "RQ-20261029-00f0-01: neither R20 nor R30 passes the 5-of-6 fold bar",
+   "p": 0.7,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 2026-10-29",
+    "rule": "verdict fail on RQ-20261029-00f0-01",
+    "resolves_when": "2026-10-31"
+   }
+  },
+  {
+   "call": "If it fails, net_r(R30) > net_r(R10) (dose-response direction holds even without a pass)",
+   "p": 0.55,
+   "check": {
+    "command": "read research/results/RQ-20261029-00f0-01/*.jsonl grade.candidates",
+    "rule": "R30.net_r > -8.97",
+    "resolves_when": "2026-10-31"
+   }
+  },
+  {
+   "call": "blocked_over_age reads 6 on the next research-slo run",
+   "p": 0.8,
+   "check": {
+    "command": "python3 -c \"import sys;sys.path.insert(0,'.');from scripts.research import infra_selftest as t;print(t.blocked_over_age()['measurement']['over_age'])\"",
+    "rule": "== 6 unless a build row closes or new units age in",
+    "resolves_when": "2026-10-30"
+   }
+  }
+ ],
+ "handoff": [
+  "Manager: RQ-20261029-00f0-01 and the ae17-01 retirement edit research/queue (E57 hold); merge needs the manager",
+  "Manager: 5785-02 reads PASS for the TD family only; a Tier-3 overlay packet is yours to decide (no config touched)",
+  "Manager: RQ-20261007-044 needs a build row for the flip cell in m20-exit-lever-sweep.yml; RQ-20260922-006 owner row RQ-EVIDENCE-006-KEYSET is unassigned",
+  "Grading bar: whether RULE-AM-RISK-ADJUSTED-V1 (#21283) should re-grade 5121-01 (-0.5 R, 5/6 folds)",
+  "Ungraded: RQ-20261027-b376-02 (two measured passes; grader has not stamped it)",
+  "Due pipeline items unrouted: 433 shown by python3 scripts/ops/pipeline.py --due (25 shown + 408 more)"
+ ]
+}
