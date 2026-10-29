@@ -550,6 +550,8 @@ Verbatim: *"No API: plan sessions only,"* clarified the same day: *"I'm not oppo
 
 **Scope, stated plainly:** this rule removes only per-call **Claude** API paths that need Anthropic console credits (the `anthropic` SDK calls). Non-Claude APIs (Gemini, broker, data and similar) and plan-based Claude (cloud sessions, plan-authenticated Claude Code) are unaffected. The three SDK paths closed in #21008 (`scripts/research/desk_judge_api.py`, `src/prop/screenshot_parse.py`, `src/runtime/insights/generator.py`) are exactly that class, so their hard refusals stand.
 
+**Do not raise the claude.ai "Usage credits" toggle (operator, 2026-10-29 ~15:36Z, after a manager raised it twice in one day):** the toggle on the operator's Usage screen and its credit balance (0) are **not** what this rule is about and are **not** an alert, a risk or a question for the operator. This rule covers only the VM's per-call Claude API path above. A manager reading a usage screenshot reports the weekly % and pace, nothing about the toggle.
+
 ## Validate early when it is cheap (operator directive 2026-10-28, binding)
 
 Verbatim gist: *"when we can validate something easily and cheaply earlier, we should try and validate it earlier and not wait unnecessarily long for answers."*
