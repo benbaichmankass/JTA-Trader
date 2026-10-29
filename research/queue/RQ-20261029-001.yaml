@@ -5,7 +5,7 @@ id: RQ-20261029-001
 title: 'Programme 03 Q8 RE-COST: does trend_donchian_eth_4h AS DECLARED still clear Stage 0 on the six
   breadth perps (BNB, DOGE, LINK, LTC, BCH, DOT) when the fee is the measured Bybit-linear 11.0 bps instead
   of the 7.5 bps default the PASS ran at?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -135,3 +135,13 @@ generated:
   params:
     node: P3-Q8-recost-11bps-eth4h
 last_dispatched_at: '2026-10-29T10:56:49+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q8-RECOST-11BPS-ETH4H-BREADTH
+  evidence:
+  - research/results/RQ-20261029-001/40861547522.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
