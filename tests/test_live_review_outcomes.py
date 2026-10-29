@@ -161,3 +161,54 @@ def test_ada_case_parity_hold_n32_319():
     "flips red if the tool ever produces 2.96 here."))
 def test_ada_case_parity_tighten_296():
     assert round(_parity_table()["options"][1]["mean_r"], 2) == 2.96
+
+
+# ---- ADA-AM-CASE: pullback conditioning, partial_close, move_tp, full-history corpus -------------------
+
+def _pb(**kw):
+    """peak 4R reached on bar 1, retraced to the 2R mark on bar 2 (the review bar), exit on bar 3."""
+    return lro.build_table([_short(-0.5, 3, 4.0, **kw.pop("trade", {}))], _candles(BARS), side="short",
+                           open_r=2.0, peak_r=4.0, bars_held=None, atr_stop_mult=2.0, n_floor=1,
+                           tighten=[], condition="pullback", **kw)
+
+
+def test_pullback_condition_picks_first_retrace_bar_and_counts_misses():
+    res = _pb(partial=[0.5])
+    assert res["population"]["comparable"] == 1 and res["population"]["no_pullback_after_peak"] == 0
+    # a state that never retraces that far with a bar left to act on is excluded, not zero
+    out = lro.build_table([_short(-0.5, 3, 4.0)], _candles(BARS), side="short", open_r=0.5, peak_r=4.0,
+                          bars_held=None, atr_stop_mult=2.0, n_floor=1, tighten=[], condition="pullback")
+    assert out["population"]["comparable"] == 0 and out["population"]["no_pullback_after_peak"] == 1
+
+
+def test_partial_banks_at_open_r_with_costs_and_rest_keeps_recorded_exit():
+    res = _pb(partial=[0.5])
+    hold, part = res["options"]
+    banked = 2.0 - 0.03 - 0.01 - 0.04 * (2 / 3)          # review bar 2 of 3 -> 2/3 of the funding
+    assert part["mean_r"] == pytest.approx(0.5 * banked + 0.5 * -0.5, abs=1e-3)
+    assert part["ev_cost_r"] == pytest.approx(hold["mean_r"] - part["mean_r"], abs=1e-3)
+
+
+def test_move_tp_fills_at_level_when_reached_and_is_sl_first_on_a_stop_exit_bar():
+    hit = _pb(move_tp=[2.05], trade={"exit_reason": "take_profit"})["options"][1]
+    assert hit["mean_r"] == pytest.approx(2.05 - 0.03 - 0.01 - 0.04, abs=1e-3)
+    stop = _pb(move_tp=[2.05], trade={"exit_reason": "stop"})["options"][1]
+    assert stop["mean_r"] == pytest.approx(-0.5)           # recorded exit bar was a stop: SL-first
+    assert _pb(move_tp=[1.5])["options"][1]["state"] == "invalid_level"   # below the mark: not a TP
+
+
+def test_corpus_auto_prefers_committed_full_history_and_needs_both_files(tmp_path):
+    (tmp_path / "comms/strategy_evidence/ltr_corpus").mkdir(parents=True)
+    d = tmp_path / "comms/strategy_evidence/ltr_corpus"
+    (d / "x__trades.jsonl").write_text('{"net_r": 1.0}\n')
+    assert lro.resolve_corpus("x", tmp_path) is None            # trades file alone is not a corpus
+    (d / "x__corpus.json").write_text("{}")
+    assert lro.resolve_corpus("x", tmp_path) == "comms/strategy_evidence/ltr_corpus/x__trades.jsonl"
+    rows, src = lro.load_trades("x", tmp_path, corpus="auto")
+    assert rows == [{"net_r": 1.0}] and src.endswith("x__trades.jsonl")
+
+
+def test_committed_ada_corpus_is_the_full_history_harness_run():
+    rows, src = lro.load_trades("ada_pullback_2h", corpus="auto")
+    assert src.endswith("ltr_corpus/ada_pullback_2h__trades.jsonl") and len(rows) >= 400
+    assert all("net_r" in r and "mfe_r" in r and "cost_funding_r" in r for r in rows)   # full cost stack
