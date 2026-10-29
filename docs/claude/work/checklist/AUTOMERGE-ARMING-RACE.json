@@ -15,8 +15,8 @@
   "blocked_on": [],
   "note": "[2026-10-23T23:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] CLAIM: the self-land relay never lands a PR it opens. EVIDENCE (job logs of .github/workflows/claude-pr-automerge.yml, 3 of 3 sampled): #19748 (mgr/review-1023-pm), #19781 (mgr/dispatch-1023-2332), #19783 (mgr/usage-1023-2334) each log 'opened PR #N (opener: pat)' then within the same job 'arming gate: none_attached ... signature of a PR opened under GITHUB_TOKEN' and 'NOT ARMING'. The opener is the PAT, so pull_request DOES fire and the required checks attach ~1 min later (#19781: 5/5 green, mergeable_state clean, still unmerged 20 min on). The gate's inference 'nothing attached => GITHUB_TOKEN open' is wrong for a PAT open; it samples too early. EFFECT: every Tier-1 self-land PR the relay opens waits for a manual merge, and the manager's own merge is refused by the auto-mode classifier ('Merge Without Review'), so register PRs need the operator to toggle auto mode. FIX (sketch): after a PAT open, poll for the required checks to attach (bounded, e.g. 3 min) before grading arming; or arm on opener==pat regardless. Keep the GITHUB_TOKEN branch of the gate. DETECTOR: the workflow's own self-test, plus a planted PAT-open fixture that must ARM. POPULATION: claude-pr-automerge runs that opened a PR themselves. [2026-10-24T01:20Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Dispatched lane session_01CaXPYt (Sonnet, fresh, $6): CI/tooling fix, no order path. Lands as landing:hold (landing machinery); manager merges. [2026-10-24 REGISTER-SWEEP-W43] Lane session_01CaXPYt is SESSION_STATUS_ARCHIVED (get_session; cost_usd 0.92). PR #19798 is OPEN (not merged), landing:hold, awaiting manager merge -> in_flight was stale; state queued until merged, then landed_unproven (observation: next relay-opened PR logs a waiting notice then arms). [2026-10-24T07:00Z manager session_01UETC6mFiwMgXk6URsuWzZb] Correcting the sweep: the work is delivered as #19798 (open, landing:hold), so the row stays in_flight until #19798 merges, then goes to landed_unproven. The lane session is archived; lane is kept as the record of who delivered it. 2026-10-29 review WR-20261029-0544Z (Manager 2026-10-29b): #19798 is MERGED (read 05:58Z), so in_flight -> landed_unproven. Closes when a relay-opened PR is seen arming only after its checks attach.",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T05:54:24Z",
-  "updated_by": "session_01AFoLuKnKedoAhJU1x4MZDp",
+  "updated_at": "2026-10-29T06:12:43Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-OPS"
   ],
@@ -33,6 +33,11 @@
   "writeback": {
     "roadmap": "none: landing-relay hardening, no milestone moved",
     "arch": "none: workflow-internal change"
+  },
+  "observation": {
+    "what": "a PR opened by claude-pr-automerge itself (PAT open) is armed and auto-merges once its required checks pass, with no manual merge",
+    "how_to_check": "next relay-opened register PR (e.g. #21142 or the ADA-AM-CASE branch): its claude-pr-automerge job log shows arming, and the PR merges with merged_by = the automation, not a manager merge",
+    "due_by": "2026-11-01T00:00Z"
   },
   "_seq": 619
 }
