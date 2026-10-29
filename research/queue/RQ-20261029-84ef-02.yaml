@@ -1,0 +1,121 @@
+id: RQ-20261029-84ef-02
+title: 'Bar transfer of the LONG filter: does long-only Donchian-20 at the 4h bar (the live legs'' bar) beat the two-sided 4h breakout on the
+  six core perps?'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- L-REGIME
+theme: timeframes
+priority: 2
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On Binance USD-M 4h candles for BTC/ETH/SOL/XRP/ADA/AVAX over 2020-06-01..2026-10-25 (donchian 20, trail_mult 5.0), does LONG (--long-only)
+  pass the pooled Stage-0 rule AND beat unfiltered B by >= 0.05 R per trade?
+why_this_matters: The long-only filter won on 1d. The live bybit_2 trend legs (trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_sol_prop)
+  run the same family two-sided at 4h, so whether the filter transfers across BARS is the question that connects the timeframes lead to a live
+  leg. Arms fixed now, one filter, no parameter search; the 4h bar is also where the break-even frontier (ef5d-01) put the shortest viable long-arm
+  bar. A PASS is a lead for the live-leg overlap read (P7-Q6), not a roster case; a FAIL says the daily result is a horizon effect.
+power:
+  expected_n: 600
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Trade count at 4h is ~4-6x the daily count on the same six perps (ef5d-03 daily n~110 per arm); folds 6; floor 30 per cell, 88 pooled.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, selection-deflated across the timeframes
+  tried'
+decision_rule:
+  id: RULE-RQ20261029-84EF-02-LONG-4H
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 4h on BTC/ETH/SOL/XRP/ADA/AVAX; arms fixed now: B=; LONG=--long-only; baseline B.'
+  rule: 'PASS iff LONG passes the pooled Stage-0 rule (pooled n >= 88, pooled folds >= 4 of 6, breadth >= half the powered cells) AND beats B
+    by >= 0.05 R/trade -> the long-only filter transfers from 1d to 4h on the perps; next unit is the same-symbol overlap read against the live
+    4h Donchian legs (P7-Q6 shape); no roster edit. FAIL iff LONG fails with pooled n >= 88 -> the long-only edge is a daily-horizon effect; recorded
+    on P7-Q5. INDETERMINATE otherwise; cells under the floor are named, the floor is never lowered. Verdicts are the script''s own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n
+    >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority
+    AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline''s pooled net R/trade by >= delta), indeterminate
+    iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell, never
+    dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; is
+    not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear) with the harness's own venue-aware fee + slippage + funding cost
+    stack (execution_costs.resolve_cost_policy), so every R is net of cost; the funding term is a directionless magnitude (execution_costs P1).
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.3
+  bucket: frontier
+  basis: 'stand-in (07 node P7-Q5/Q6 weight): bar transfer toward the live 4h Donchian legs; an estimate.'
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 4h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-25'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - B=
+  - --arm
+  - LONG=--long-only
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '30'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261029-84EF-02-LONG-4H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261029-84ef-02
+programme: P7
+related:
+- RQ-20261026-f679-05
+- RQ-20261018-ef5d-01
+- RQ-20261018-ef5d-06
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P7
+  node: P7-Q5-confirm
+  goal: G1
+  after: []
