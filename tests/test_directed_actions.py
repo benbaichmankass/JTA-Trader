@@ -10,9 +10,7 @@ decides, nothing executes, no ping), and the watcher's directed pass. The apply 
 from __future__ import annotations
 
 import json
-from dataclasses import replace
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any, Dict, List
 
 import pytest
@@ -22,7 +20,8 @@ from scripts.ops import live_review_apply as lra
 from src.runtime import directed_actions as da
 from src.runtime import live_review_intent as lri
 from src.runtime import live_review_rows_watch as watch
-from tests.test_live_review_apply import ACCOUNTS, PKG, STRATS, _ApplyDB, _intent, _trade, wired  # noqa: F401
+from tests.test_live_review_apply import ACCOUNTS, PKG, STRATS, _ApplyDB, _intent, _trade
+from tests.test_live_review_apply import wired as wired  # noqa: F401  (fixture reuse)
 
 NOW = datetime(2026, 10, 29, 8, 30, 0, tzinfo=timezone.utc)
 QUOTE = "move the ADA stop to 0.21 now"
