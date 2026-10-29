@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 sizing change on real-money legs (reduce-only overlay on the 4 TD legs): explicit operator approval via the manager before merge; stacked on #21168 and #21195.",
+  "why": "Applies the RULE-ML-OVERLAY-NONINFERIOR-V2 TD PASS: config/overlay_policy.yaml lists trend_donchian_eth_4h/xrp_4h/eth_prop/sol_prop at mode reduce (x0.5 when the committed artifact scores the entry below tau). Reduce-only, per strategy so bybit_2 == bybit_portfolio. Demotion: scripts/ops/overlay_cusum.py. Rollback: delete the leg's line."
+}

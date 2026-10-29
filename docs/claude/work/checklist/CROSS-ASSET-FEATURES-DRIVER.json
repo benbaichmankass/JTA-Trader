@@ -2,7 +2,7 @@
   "id": "CROSS-ASSET-FEATURES-DRIVER",
   "title": "Driver for P2-Q4 cross-asset / cross-symbol correlation regime features (ES/DXY/gold via metis-market-data)",
   "phase": "research",
-  "state": "queued",
+  "state": "dropped",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[research-ops 2026-10-26 08:47Z] Missing driver for programme node P2-Q4-cross-asset-features (operator idea IDEAS.md 2026-10-21): ml_bakeoff has no cross-asset feature source, and the node's prerequisite is checking that metis-market-data publishes ES/DXY/gold (and BTC<->alt rolling correlation columns) at 1h. Build = (1) verify which of those series the published shards carry (read-only), (2) add the feature columns to the market_features dataset builder or a df_columns block so ml_bakeoff can use them, (3) then author the node's pre-registered unit. FRONTIER-LEVER-LEADLAG covers only BTC->alt 5m lead-lag. Research-ops authors the unit the pass after this lands.",
-  "updated_at": "2026-10-26T08:55:41Z",
-  "updated_by": "research-ops-0847",
+  "note": "[research-ops 2026-10-26 08:47Z] Missing driver for programme node P2-Q4-cross-asset-features (operator idea IDEAS.md 2026-10-21): ml_bakeoff has no cross-asset feature source, and the node's prerequisite is checking that metis-market-data publishes ES/DXY/gold (and BTC<->alt rolling correlation columns) at 1h. Build = (1) verify which of those series the published shards carry (read-only), (2) add the feature columns to the market_features dataset builder or a df_columns block so ml_bakeoff can use them, (3) then author the node's pre-registered unit. FRONTIER-LEVER-LEADLAG covers only BTC->alt 5m lead-lag. Research-ops authors the unit the pass after this lands. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:34Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-REGIME"
   ],

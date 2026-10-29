@@ -163,12 +163,18 @@ def test_directed_keeps_every_existing_guard(wired):
     assert clip["verdict"] == "clip" and clip["level"] == pytest.approx(0.2040)
 
 
-def test_directed_is_not_bound_by_the_reviewers_one_action_per_bar_guard(wired):
+def test_no_per_bar_cap_but_the_same_record_id_never_applies_twice(wired):
+    """REMOVE-PER-BAR-CAP (operator 2026-10-29): an earlier action on the SAME bar refuses nothing; only the
+    same record id that already acted on this leg is refused (idempotency)."""
     db = _ApplyDB([_trade(1, "bybit_2")], PKG)
-    db.trades[0]["notes"] = json.dumps({"sl_amends": [{"source": lri.PROVENANCE, "bar": "2026-10-29T08:00:00Z"}]})
-    reviewer = _run(db, _intent(bar_ts="2026-10-29T08:00:00Z"), granted={lri.MANDATE_ID})
-    assert reviewer["accounts"][0]["reason"] == lri.R_RATE
-    assert _run(db, _directed())["accounts"][0]["executed"] is True
+    rid = "DA-20261029T082900Z-tighten_sl-a1b2c3"
+    db.trades[0]["notes"] = json.dumps({"sl_amends": [{"source": lri.PROVENANCE, "bar": "2026-10-29T08:00:00Z",
+                                                       "review_id": "LR-20261029T0805Z-other"}]})
+    assert _run(db, _directed(bar_ts="2026-10-29T08:00:00Z"))["accounts"][0]["executed"] is True
+    db.trades[0]["notes"] = json.dumps({"sl_amends": [{"source": lri.PROVENANCE, "bar": "2026-10-29T08:00:00Z",
+                                                       "review_id": rid}]})
+    again = _run(db, _directed(review_id=rid))["accounts"][0]
+    assert again["verdict"] == "refuse" and again["reason"] == lri.R_DUPLICATE and not again.get("executed")
 
 
 def test_account_scope_touches_only_that_accounts_leg_and_never_the_package_stop(wired):
@@ -304,7 +310,7 @@ def test_partially_applied_and_not_applied_verdicts():
     assert cli.verdict_of(rec, {"accounts": []}) == "not_applied"
 
 
-def test_apply_record_builds_a_directed_scoped_intent_without_a_bar(monkeypatch):
+def test_apply_record_builds_a_directed_scoped_intent_keeping_its_bar_as_provenance(monkeypatch):
     seen: Dict[str, Any] = {}
     pkg = dict(PKG, order_package_id="pkg-465a5d7d27644027")
     monkeypatch.setattr(lra, "_open_db", lambda: object())
@@ -318,7 +324,7 @@ def test_apply_record_builds_a_directed_scoped_intent_without_a_bar(monkeypatch)
                                     dry_run=True))
     it = seen["intent"]
     assert out["resolved_action"] == "widen_sl" and it.action == "widen_sl" and it.new_sl == 0.23
-    assert it.bar_ts is None and it.directed_by and it.operator_quote == QUOTE and it.mandate is None
+    assert it.bar_ts == "B" and it.directed_by and it.operator_quote == QUOTE and it.mandate is None
     assert (it.target_account_id, it.target_trade_id) == ("bybit_2", "4") and seen["apply"] is False
     assert it.review_id == _record()["id"]
 

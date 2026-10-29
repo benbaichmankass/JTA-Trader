@@ -129,3 +129,33 @@ def test_committed_artifacts_are_reduce_only_and_carry_their_evidence():
         assert art["rule"].startswith("RULE-ML-OVERLAY-NONINFERIOR-"), p.name
         assert set(art["legs_gate"]) <= roster, p.name
         assert len(art["coef"]) == len(art["features"]) == len(FEATURES) and art["features"] == list(FEATURES)
+
+
+def test_apply_path_is_reduce_only_and_inert_by_default(monkeypatch, tmp_path):
+    """Tier-3 apply path: default (no overlay_policy) leaves qty unchanged even when the shadow record would
+    cut; mode reduce applies exactly the artifact multiplier; nothing ever upsizes."""
+    pkg = _pkg()
+    pkg.meta["_overlay_shadow"] = {"action": "annotate", "would_be_multiplier": 0.5}
+    pol = tmp_path / "overlay_policy.yaml"
+    pol.write_text("strategies: {other_leg: {mode: reduce}}\n")
+    monkeypatch.setattr(ovs, "POLICY_PATH", pol)
+    monkeypatch.setattr(ovs.overlay_policy_mode, "__defaults__", (pol,))
+    assert ovs.apply_overlay_reduce(pkg, 10.0) == 10.0
+    pol.write_text("strategies: {leg_a: {mode: reduce}}\n")
+    assert ovs.apply_overlay_reduce(pkg, 10.0) == 5.0
+    pkg.meta["_overlay_shadow"] = {"action": "annotate", "would_be_multiplier": 3.0}
+    assert ovs.apply_overlay_reduce(pkg, 10.0) == 10.0
+    for bad in ({"action": "unscored", "would_be_multiplier": 1.0}, {"action": "error"}, None):
+        pkg.meta["_overlay_shadow"] = bad
+        assert ovs.apply_overlay_reduce(pkg, 10.0) == 10.0
+
+
+def test_reduce_policy_only_on_artifact_gate_legs():
+    """a `reduce` entry in config/overlay_policy.yaml may only name a leg its committed artifact covers (otherwise the policy
+    reads no score and is silently inert -- a config that claims an effect it cannot have)."""
+    import yaml
+    pol = yaml.safe_load((REPO / "config/overlay_policy.yaml").read_text())["strategies"]
+    arts = {p.name: set(json.loads(p.read_text())["legs_gate"]) for p in (REPO / "ml/overlay").glob("overlay_*.json")}
+    for leg, v in pol.items():
+        if str(v.get("mode", "")).lower() == "reduce":
+            assert leg in arts.get(v.get("artifact"), set()), (leg, v)

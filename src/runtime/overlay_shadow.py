@@ -129,9 +129,53 @@ def record_overlay_shadow(pkg: Any, account_name: str = "") -> None:
                    "symbol": str(getattr(pkg, "symbol", "") or ""),
                    "direction": str(getattr(pkg, "direction", "") or ""),
                    "trace_id": str(getattr(pkg, "trace_id", "") or ""),
+                   # The trade <-> package key the demotion join reads (scripts/ops/overlay_cusum_join.py):
+                   # trades.order_package_id is stamped from the same pkg.meta value before sizing.
+                   "order_package_id": (meta.get("order_package_id") if isinstance(meta, dict) else None),
                    "account": account_name, **rec}
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(payload, default=str) + "\n")
     except Exception as exc:  # noqa: BLE001
         logger.warning("overlay_shadow: record failed: %s", exc)
     return None
+
+
+POLICY_PATH = Path(__file__).resolve().parents[2] / "config" / "overlay_policy.yaml"
+
+
+def overlay_policy_mode(strategy: str, path: Path = POLICY_PATH) -> str:
+    """``config/overlay_policy.yaml::strategies.<leg>.mode``: ``reduce`` applies the artifact's fixed multiplier;
+    anything else (absent leg, absent file, unreadable YAML) is ``annotate``. Permissive policy like
+    ``regime_policy.yaml``, not a third execution gate: it never stops a trade, it can only shrink one.
+    Read on every call (a small file) so a rollback edit takes effect without a cache to invalidate."""
+    try:
+        import yaml
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        pol = (doc.get("strategies") or {}).get(strategy) or {}
+        return "reduce" if str(pol.get("mode", "")).lower() == "reduce" else "annotate"
+    except Exception:  # noqa: BLE001 — unreadable policy never enables a reduce
+        return "annotate"
+
+
+def apply_overlay_reduce(pkg: Any, sized_qty: float, account_name: str = "") -> float:
+    """REDUCE-ONLY application of the overlay (ML-REAL-MONEY-OVERLAY Tier-3 packet). Returns ``sized_qty``
+    unchanged unless the strategy declares ``overlay_policy: {mode: reduce}`` AND the cached shadow record
+    scored a would-be multiplier < 1.0; then ``sized_qty * multiplier``. Never > ``sized_qty``; any failure
+    returns ``sized_qty``. Must run AFTER ``record_overlay_shadow`` (it reads that record, scoring once)."""
+    try:
+        if sized_qty is None or sized_qty <= 0:
+            return sized_qty
+        if overlay_policy_mode(str(getattr(pkg, "strategy", "") or "")) != "reduce":
+            return sized_qty
+        rec = (getattr(pkg, "meta", None) or {}).get("_overlay_shadow") or {}
+        if rec.get("action") != "annotate":
+            return sized_qty
+        mult = min(max(float(rec.get("would_be_multiplier", 1.0)), 0.0), 1.0)
+        if mult >= 1.0:
+            return sized_qty
+        logger.info("overlay_reduce strategy=%s account=%s mult=%.3f qty %.8f -> %.8f",
+                    getattr(pkg, "strategy", "?"), account_name, mult, sized_qty, sized_qty * mult)
+        return sized_qty * mult
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("apply_overlay_reduce failed (qty unchanged): %s", exc)
+        return sized_qty

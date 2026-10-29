@@ -39,7 +39,9 @@ KIND = "ltr_auto_apply"
 CADENCE_EVENT = "mandate_cadence"
 #: Bounds that bind on every action applied under an auto mandate, enforced in live_review_apply.py
 #: (each named in the entry's ``bounds:``; tests/test_ltr_auto_mandate.py pins the two lists equal).
-BOUNDS = ("both_brackets", "widen_within_1r", "tp_live_target", "one_action_per_bar", "venue_readback",
+#: ``idempotent_per_review_id`` replaced ``one_action_per_bar`` (operator 2026-10-29, row REMOVE-PER-BAR-CAP):
+#: there is no per-bar / time-window cap on how active management may be; a row applies at most once.
+BOUNDS = ("both_brackets", "widen_within_1r", "tp_live_target", "idempotent_per_review_id", "venue_readback",
           "one_ping_per_action")
 
 

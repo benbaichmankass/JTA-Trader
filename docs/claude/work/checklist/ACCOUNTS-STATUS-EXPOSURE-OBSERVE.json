@@ -2,7 +2,7 @@
   "id": "ACCOUNTS-STATUS-EXPOSURE-OBSERVE",
   "title": "Observe the /accounts_status Telegram 'Gross exposure' line rendering a measured value for a live account (PI-20260928-C4KXTCUS-0001)",
   "phase": "ops",
-  "state": "queued",
+  "state": "dropped",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns PI-20260928-C4KXTCUS-0001. FIELD STATE on main: the plumbing exists and is unit-tested (src/bot/menu.py:247 _exposure_str, :309 renders ('Gross exposure', _exposure_str(acc.get('exposure'))); src/bot/telegram_query_bot.py::_accounts_view_data passes the exposure block through; tests/test_menu.py, tests/test_telegram_query_bot.py). NOT observed against a live account: no live Telegram call has confirmed a non-'--' value for bybit_1 or bybit_2. Check: send /accounts_status through the bot or call _accounts_view_data against the live exposure source via the diag relay and confirm a measured $ amount/multiple. Closes the item; a '--' on a live account is the bug to root-cause.",
-  "updated_at": "2026-10-18T00:03:34Z",
-  "updated_by": "research-pipeline-route-1018-fork",
+  "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns PI-20260928-C4KXTCUS-0001. FIELD STATE on main: the plumbing exists and is unit-tested (src/bot/menu.py:247 _exposure_str, :309 renders ('Gross exposure', _exposure_str(acc.get('exposure'))); src/bot/telegram_query_bot.py::_accounts_view_data passes the exposure block through; tests/test_menu.py, tests/test_telegram_query_bot.py). NOT observed against a live account: no live Telegram call has confirmed a non-'--' value for bybit_1 or bybit_2. Check: send /accounts_status through the bot or call _accounts_view_data against the live exposure source via the diag relay and confirm a measured $ amount/multiple. Closes the item; a '--' on a live account is the bug to root-cause. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:45Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-OPS"
   ],
