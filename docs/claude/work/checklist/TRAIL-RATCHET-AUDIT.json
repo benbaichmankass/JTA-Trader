@@ -6,14 +6,14 @@
   "owner": null,
   "lane": null,
   "model": "sonnet",
-  "ceiling_usd": 3,
+  "ceiling_usd": 5,
   "spend_usd": null,
-  "tier": 1,
+  "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~11:45Z verbatim: \"even if we're using like an ATR-based moving trail, stop loss, that it would still only tighten and not loosen ... we need to make sure that they're actually being implemented correctly. Again, I don't want to waste a huge amount of compute on this.\" Manager pre-check (code, origin/main): fade_breakout_4h L470-476, trend_donchian L958/964, squeeze_breakout_4h L359/364 all ratchet (long: candidate > sl and < price; short: candidate < sl and > price); order_monitor L1700-1716 refuses a trail candidate looser than a leg's live-review sl_floor; prop phone_trail is tighten-only (L532/849); dxtrade rollout guard tighten-only (L5207-5238). NOT yet checked: the pullback legs (ada/xrp/eth/sol/avax_pullback_2h, htf_pullback_trend_2h), ict_scalp, equities/futures legs, the vol/momentum trail resolvers, and live data. Small budget: grep + one diag query; related row RM-AM-PROP-TRAIL-OBSERVE.",
+  "note": "SCOPE ADD, operator 2026-10-29 ~11:50Z verbatim: \"If the strategy wants to move the stop loss to above the current price on a long or below the current price on a short, then the implication there is that we should be getting out of the trade, right? Like, that means we should close it ... maybe that should be the flow here, instead of ignoring those movements.\" Manager agrees in principle: a trail candidate beyond price means the strategy's own exit has been hit; ignoring it leaves the live leg on a looser stop than the Stage-0 harness (which exits on that bar or the next open). ADD: (a) per leg, what the Stage-0 harness does when the trail candidate crosses price (exit at bar close vs next open) \u2014 live must match; (b) MEASURE how often live ignored such a candidate (the 'candidate < current_price' / 'candidate > current_price' branch in fade_breakout_4h, trend_donchian, squeeze_breakout_4h and any other trail), population stated; (c) the exact Tier-3 change: when the candidate crosses price, close at market via the trade-action path with close_reason strategy_close (not a stop amend), harness-matched timing. Bring (a)-(c) to the manager; the change goes to the operator for a yes/no. Ceiling raised to $5.",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T11:41:32Z",
+  "updated_at": "2026-10-29T11:50:17Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-LADDER"
