@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "every leg on a real-money/prop live account has comms/strategy_evidence/ltr_corpus/<leg>__corpus.json AND live_review_packet._price passes --corpus auto (the ada packet table shows corpus ltr_corpus/..., population.corpus_trades >= 400)",
+    "kind": "observation"
+  },
+  "id": "PI-20261029-KXR1VUPP-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ADA-AM-CASE / checklist ADA-AM-CASE 2026-10-29",
+    "rerun": "python3 scripts/research/live_review_outcomes.py --leg <leg> --corpus auto --open-r 1.5 --peak-r 2.0 --atr-stop-mult 1.5 --condition pullback  # population.comparable vs n_floor 20"
+  },
+  "routed_to": "ADA-AM-CASE",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 2,
+  "what": "[ltr] Live-review outcome tables read a 12-month corpus (build_strategy_evidence.DEFAULT_DAYS=365): of the 7 legs on real-money/prop live accounts, 4 have <20 trades that reached 1R on either side and 6 of 7 at 2R (upper bound: mfe_r only, before any retrace condition). DONE in the ADA-AM-CASE PR: opt-in `--corpus auto` + comms/strategy_evidence/ltr_corpus/ada_pullback_2h (426 trades, 2020-10..2026-10). REMAINING (a) TIER 2, landing: hold: scripts/ops/live_review_packet.py::_price must pass `--corpus auto --partial 0.25 --partial 0.33 --partial 0.5 --move-tp 2.0 --move-tp 2.5 --move-tp 3.0` so the VM ltr-wake bundle (live_review_wake.build_bundle) prices from the long corpus; (b) produce ltr_corpus/<leg>__trades.jsonl + __corpus.json for xrp_pullback_2h, iaum_pullback_1d, trend_donchian_eth_prop, trend_donchian_xrp_4h (build_strategy_evidence.py --strategy <leg> --days 2240 --out <tmp> --workdir comms/strategy_evidence/ltr_corpus; needs a runner with Binance Vision egress, this cloud sandbox is geo-blocked); (c) widest-span candles for those legs (find_candles widest_span reads comms/research/*/*/data/<SYM>_<tf>.csv)."
+}

@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261029-KXR1VUPP-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "research",
+    "ref": "RQ-20260928-007 / RQ-20261007-040 / RQ-20260928-019 / RQ-20260930-901; lane ADA-AM-CASE 2026-10-29",
+    "rerun": "grep vt_hot90_t2.5 docs/research/m20-sweep-corpus.jsonl | grep ada_pullback_2h ; python3 scripts/research/m20_sweep_result.py --help ; python3 -c \"import yaml;print(yaml.safe_load(open('research/queue/RQ-20260930-901.yaml'))['status'])\""
+  },
+  "routed_to": "ADA-AM-CASE",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 3,
+  "what": "[Tier-3 PROPOSAL, pending since 2026-09-28] Declare vol_trail vt_hot90_t2.5 on ada_pullback_2h (bybit_2 real money + bybit_portfolio + bybit_1). EXACT CHANGE: config/strategies.yaml ada_pullback_2h add trail_vol_above_pctl: 0.9, trail_vol_tight_mult: 2.5, vol_pctl_window: 200 (the live monitor re-reads strategies.yaml by mtime); revert = delete the three keys. EVIDENCE (research/results/RQ-20260928-007/36434144288.jsonl, RQ-20261007-040/37729696957.jsonl, RQ-20260928-019/36505251734.jsonl; corpus rows in docs/research/m20-sweep-corpus.jsonl): verdict path_b_wf_pass from the M20 sweep on ada_pullback_2h; IS (n 200-208) d_net_r +7.35..+7.71 R and maxDD 4.52 R better; OOS split 2025-07-01 (n 33-42) d_net_r +0.91..+3.08 R but maxDD 0.371 R WORSE -> gate_reason_OOS=maxdd_worse, is_oos_pass FALSE; it clears Path B only (net R per capital-day up in IS and OOS, walk-forward folds usable). PATH_B CAVEAT: Path B trades a drawdown tolerance for capital efficiency; the OOS maxDD worsening is small (0.37 R on a 6.0 R base) but it is a miss on the strict Path A bar, OOS n (33-42) is near the 25 floor, and the cell was picked from 10-17 swept cells on this window (selection not undone). FRESH-HOLDOUT UNIT RQ-20260930-901 (trades opened after 2026-09-29; PASS iff base_trades_OOS>=25 AND d_net_r>0 AND d_max_dd<0) is still queued and unrun and needs ~25 accrued trades (this leg ~60/yr), so it cannot settle by Thursday. LIVE RELEVANCE (ADA-AM-CASE 2026-10-29): the cell fires only at ATR percentile >= 0.90; the open short sat at 0.76, so declaring it would NOT have banked anything on pkg-465a5d7d27644027. DECISION ASKED: declare now on the Path B evidence, or wait for RQ-20260930-901, or kill the cell and close #14053."
+}
