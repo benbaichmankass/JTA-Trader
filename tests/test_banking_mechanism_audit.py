@@ -48,7 +48,8 @@ def test_population_is_enabled_and_live(mod):
     # enabled+live population. The banking-half FINDING was measured on 39 and is NOT re-measured here.
     # 53 -> 54 on 2026-10-27: claude_desk shadow -> live on the bybit_1 demo (operator popup "Yes, live on bybit_1 demo
     # now (Recommended)", PR #20585, row DESK-SHORT-HOLD-LANE).
-    assert len(legs) == 54, f"population drifted from the 2026-10-27 denominator: {len(legs)}"
+    # 54 -> 55 on 2026-10-28: trend_donchian_1h re-enabled live on the bybit_1 demo (OPERATOR-DECISIONS-20261028 item 2).
+    assert len(legs) == 55, f"population drifted from the 2026-10-28 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
