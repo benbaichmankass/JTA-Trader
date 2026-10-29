@@ -28,7 +28,7 @@ One JSON record per `(head, strategy, regime/vol cell)` sits beside this file (`
 |---|---|---|---|---|
 | ETH xasset-v1 | `eth_pullback_2h` | faithful | **NO_CANDIDATE_CELL** | the leg only trades in the trending trend regime; no vol cell is a stable drag; book rule not triggered |
 | ETH selfonly-v901ctrl | `eth_pullback_2h` | faithful | **NO_CANDIDATE_CELL** | same |
-| ETH xasset-v1 | `trend_donchian_eth` | **approximate** (exit head not replayable) | **REFUSED_UNFAITHFUL** | informational: `transitional/volatile` long −11.48 R / 53 trades, stable drag; book rule would pass (3/4 folds, maxDD 33.3 → 28.4 R) |
+| ETH xasset-v1 | `trend_donchian_eth` | **approximate** (the harness does not apply the live exit head; its separate replay pass was not run here) | **REFUSED_UNFAITHFUL** | informational: `transitional/volatile` long −11.48 R / 53 trades, stable drag; book rule would pass (3/4 folds, maxDD 33.3 → 28.4 R) |
 | ETH selfonly-v901ctrl | `trend_donchian_eth` | **approximate** | **REFUSED_UNFAITHFUL** | informational: `transitional/volatile` long −10.80 R / 53, and `trending/calm` long −3.63 R / 15; book rule would pass (3/4, 33.3 → 26.5 R) |
 | BTC fc-pcv-v2 | `htf_pullback_trend_2h` | faithful | **REDUNDANT_WITH_1D_CELL** | three short cells are stable drags, but the existing 1-D table already has `short: off` for trending, transitional and chop, so authoring them removes no further order |
 | BTC fc-pcv-v2 | `squeeze_breakout_4h` | faithful | **BOOK_RULE_FAIL** | the authored `trending/calm` short cell is still a stable drag (−2.45 R / 13), but gating it raises pooled maxDD 6.07 → 7.58 R |
