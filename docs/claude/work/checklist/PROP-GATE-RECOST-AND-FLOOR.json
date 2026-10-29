@@ -1,0 +1,22 @@
+{
+  "id": "PROP-GATE-RECOST-AND-FLOOR",
+  "title": "Prop survival gate re-run at the 11.0 bps cost stack for trend_donchian_eth_prop and trend_donchian_sol_prop, plus a registered p_breach ceiling / EV floor enforced in check_prop_roster_gate.record_problems; eth_prop pull-or-keep proposal before its grandfather lapses 2026-11-07",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.2 / top-10 #1. MEASURED: record_problems (scripts/ci/check_prop_roster_gate.py ~140-175) checks fields exist and verdict=='pass', never thresholds p_breach; RULE-P5-GATE-BRK-PER-LEG ran --p-floor 0.0 (research/queue/RQ-20261016-026.yaml:47). comms/prop_survival: eth_prop p_breach 0.934 pass, sol_prop 0.5952, eth_4h 0.63, sol_4h 0.4823, all 'pass'. eth_prop Stage-0 flipped +9.32R (n=163, 7.5bps) -> -0.2512R (n=165, 11.0bps) on 10-28 (rebaseline_history); prop gate not re-run. Live on breakout_2/tradeify_1/velotrade_1. GRANDFATHERED due 2026-11-07 (eth_prop), 2026-12-11 (sol_prop). Done when: both survival records regenerated at 11.0bps; a p_breach/EV rule registered with the operator and enforced in the guard with tests; eth_prop keep/pull Tier-3 proposal filed before 11-07. Relates SOL-PROP-GATE-FIX, PROP-GATE-ADA-XRP, PROP-GATE-PARITY.",
+  "priority_rank": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
+  "updated_at": "2026-10-29T07:33:15Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 782
+}

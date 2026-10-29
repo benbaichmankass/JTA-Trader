@@ -1,0 +1,22 @@
+{
+  "id": "STAGE2-OFFLINE-DEMOTION-SIGNAL",
+  "title": "A demotion signal for Stage-2 legs that does not need 40 live closed trades: scheduled per-leg rolling Stage-0 re-measure at the full cost stack plus a risk-aware early-warning (cumulative net $ and R vs the leg's Stage-0 band, derisk-only), feeding MD-DEMOTE-S2-S1; registered before its first run",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.1 / top-10 #2. MEASURED: MD-DEMOTE-S2-S1 reads the last 40 closed trades (config/mandates.yaml ~566-576); at Stage-0 OOS trade rates 40 trades = ~13 weeks (eth_prop) to ~261 weeks (iaum); r4-demotion-gate 2026-10-28: demote 0, abstain_thin 6 of 6; measured USD on those rows negative on 5 of 6 legs, net ~-$62; comms/mandate_firings absent (no firing ever). Done when: the signal runs on cron, writes a dated comms record per Stage-2 leg, its rule (with a risk term per the objective in ARCH \u00a7 Active management) is registered and operator-approved, and a dry run on the 6 production legs is committed. Relates DEMOTE-T3 (done), AM-RISK-ADJUSTED-RULE, RISK-OBJECTIVE-AUDIT.",
+  "priority_rank": 2,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "updated_at": "2026-10-29T07:33:15Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 783
+}

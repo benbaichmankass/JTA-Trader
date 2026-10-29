@@ -1,0 +1,22 @@
+{
+  "id": "RED-FLAG-HELPER",
+  "title": "One shared persistent-failure helper (same failure N times -> ONE red flag, keep trying) used by the training, prop executor, data and backup ticks, per Prime Directive rule 7; first measure which pipelines already implement it",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a76.4. MEASURED: red-flag Telegram kind exists (src/runtime/telegram_channels.py:97); the one Python sender found is src/runtime/telegram_split.py:162; shell ticks (prop_executor_tick.sh, prop_feed_tick.sh, run_training_cycle.sh, journal_offvm_backup.sh) mention red flags but were not all read, so the gap's size is UNMEASURED. Done when: an inventory of every pipeline's failure-to-flag path is committed, and those without one use the shared helper with a test.",
+  "priority_rank": 5,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-10-29T07:33:16Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 796
+}

@@ -1,0 +1,22 @@
+{
+  "id": "MANDATE-EVIDENCE-SNAPSHOT-CRON",
+  "title": "Put the mandate-resolver evidence snapshot scripts (soak state, mirror window) on a scheduled workflow so the resolver never reads past soak_snapshot_max_age_days",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a74.7. MEASURED: comms/soak_state/2026-10-04.json is 25 days old vs mandate_resolver soak_snapshot_max_age_days 7 (~line 1325); bybit_2 snapshot 13 days old; the snapshot scripts are referenced only under scripts/ops, by no .github/workflows file. Done when: a workflow commits fresh snapshots daily and the resolver reads a snapshot <= 7 days old.",
+  "priority_rank": 4,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "updated_at": "2026-10-29T07:33:15Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 787
+}

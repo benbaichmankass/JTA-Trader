@@ -1,0 +1,22 @@
+{
+  "id": "PIPELINE-DUE-TRIAGE-SWEEP",
+  "title": "Drain the follow-through pipeline to a pull: unrouted <= 20, every open item over 60 days disposed (routed to a live row or killed with a reason), BL-/OI- carry-overs from retired registers closed",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a76.1. MEASURED (scripts/ops/pipeline.py --stats / --due --all): 1021 open items, 649 due (64%), 101 unrouted (bound 100, ROUTING ALARM), oldest unrouted 95d (BL-20260726-BRANCH-PROTECTION-DOC-STALE-4-CHECKS), oldest open 157d (BL-20260525-005), 214 open >60d; due set includes 103 BL- and 9 OI- items. Done when: pipeline.py --stats shows unrouted <= 20 and no open item >60d without a route.",
+  "priority_rank": 5,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "updated_at": "2026-10-29T07:33:16Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 794
+}
