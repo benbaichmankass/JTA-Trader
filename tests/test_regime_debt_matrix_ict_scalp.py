@@ -165,7 +165,8 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     # correctly UNROUTED: it reads no candles and carries no harness-family params --
     # its bracket is each desk proposal's own, so no regime-cell harness can replay it
     # (its offline Stage 0 is the desk replay, DESK-18, not this matrix).
-    assert len(legs) == 54
+    # 54 -> 55 on 2026-10-28: trend_donchian_1h re-enabled live on the bybit_1 demo (OPERATOR-DECISIONS-20261028 item 2); it routes like trend_donchian.
+    assert len(legs) == 55
     assert unrouted == ["claude_desk", "turtle_soup"]
 
 

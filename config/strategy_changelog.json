@@ -191,6 +191,11 @@
  ],
  "trend_donchian_1h": [
   {
+   "date": "2026-10-28",
+   "ref": "OPERATOR-DECISIONS-20261028 item 2 - re-enabled on the bybit_1 demo floor, Tier-3 (hold PR)",
+   "summary": "enabled:true, execution:live (was enabled:false, execution:shadow). bybit_1 demo only (already on its roster; not bybit_2/bybit_portfolio), per the DEMO-FLOOR RULE. Same symbol/params as the live trend_donchian, so the two legs fire together and share the symbol budget through slice_allocation. Rollback: enabled:false."
+  },
+  {
    "date": "2026-06-01",
    "ref": "Retired (enabled:false) — A/B config adopted into live (this PR) - Tier-3",
    "summary": "trend_donchian_1h disabled (enabled:false). Its sole purpose was to validate 1h/trail5.0 against the live 2h flagship; that validation is now ADOPTED — the live trend_donchian was re-tuned to exactly this config (1h/donchian20/trail5.0) in the same PR. Keeping it enabled would double-fire identical 1h breakouts on bybit_1 (demo runs both). Block retained as the A/B record; the live strategy now collects 1h/5.0 data directly on both demo + real."

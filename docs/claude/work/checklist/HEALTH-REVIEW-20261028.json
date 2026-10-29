@@ -1,0 +1,30 @@
+{
+  "id": "HEALTH-REVIEW-20261028",
+  "title": "/health-review 2026-10-28: investigate \u2014 GLD venue wedge to operator, SPLG delisted (SPYM), live disk <10% ~11-11, unrouted 59; invariant journal-sizing fixed",
+  "phase": "floor",
+  "state": "landed_unproven",
+  "owner": "lane HEALTH-REVIEW-20261028",
+  "lane": "session_01AFoLuK9sfam8pmqP2UuRgz",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    20984
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-28 lane, ceiling $12] Record comms/reviews/health/2026-10-28-health-review.json + docs/reviews/2026-10-28-health-review.md. Fixed: scripts/ops/system_invariants.py protection invariants size on broker qty (self-test 66/66). Filed: rows HEALTH-20261028-SPLG-DELISTED (Tier 3), HEALTH-20261028-PIPELINE-ROUTING-OWNER; escalated PI-20260930-ZPDIPMDA-0001 to ask_operator; redated PI-20261018-WH81NW96-0001; closed HEALTH-REVIEW-20261024. [19:55Z] PR #20984 open (self-land), ping #20985, manager report fired (trig_015w5onYUDbYHxyTCp6mYkHJ). Disk composition #20981 recorded on VMDGITZI-0002. NEXT SESSION FIRST: if #20984 is not merged, read its CI; then the operator's GLD decision (PI-20260930-ZPDIPMDA-0001). Not done: secret scanning (GHAS off), per-run ssh attribution, 82 gate items untriaged.",
+  "updated_at": "2026-10-28T19:52:31Z",
+  "updated_by": "session_01AFoLuK9sfam8pmqP2UuRgz",
+  "roadmap": "L-OPS",
+  "observation": {
+    "what": "PR #20984 merged to main and system_invariants.py --self-test reads 66/66 on main",
+    "how_to_check": "git log origin/main --oneline -- comms/reviews/health/2026-10-28-health-review.json; python3 scripts/ops/system_invariants.py --self-test",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: review run, no milestone outcome",
+    "arch": "none: no architecture change"
+  },
+  "_seq": 757
+}

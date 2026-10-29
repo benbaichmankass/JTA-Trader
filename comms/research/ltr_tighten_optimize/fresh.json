@@ -1,0 +1,115 @@
+{
+ "split": "fresh",
+ "registration_sha256": "c979d0168836c03a5092583268ffe5b1c4f47d476719d05b9fb57f1cef219a28",
+ "selected": "structure(X=1,n=24)",
+ "secondary": "losscut(Y=-0.5,T=1)",
+ "population": "420 filled entries (fresh)",
+ "table": {
+  "structure(X=1,n=24)": {
+   "n": 420,
+   "weeks": 7,
+   "mean_dR": 0.009186873600479145,
+   "ci95": [
+    -0.026500508149658427,
+    0.03718377794452472
+   ],
+   "ci975": [
+    -0.03231282152440997,
+    0.040089208461282395
+   ],
+   "net_r_rule": -0.005781455303210106,
+   "net_r_hold": -0.014968328903689244,
+   "maxdd_rule": 47.91938969216308,
+   "maxdd_hold": 48.02344701818962,
+   "with_stop_slip": [
+    -0.03041176719313601,
+    0.03276937392751465
+   ],
+   "by_src": {
+    "fresh": {
+     "n": 420,
+     "weeks": 7,
+     "mean_dR": 0.009186873600479145,
+     "ci95": [
+      -0.026500508149658427,
+      0.03718377794452472
+     ],
+     "ci975": [
+      -0.03231282152440997,
+      0.040089208461282395
+     ],
+     "net_r_rule": -0.005781455303210106,
+     "net_r_hold": -0.014968328903689244,
+     "maxdd_rule": 47.91938969216308,
+     "maxdd_hold": 48.02344701818962
+    }
+   }
+  },
+  "losscut(Y=-0.5,T=1)": {
+   "n": 420,
+   "weeks": 7,
+   "mean_dR": -0.013388248455259105,
+   "ci95": [
+    -0.09986135434019869,
+    0.07306669840546177
+   ],
+   "ci975": [
+    -0.10500936099909738,
+    0.08237203417952871
+   ],
+   "net_r_rule": -0.028356577358948358,
+   "net_r_hold": -0.014968328903689244,
+   "maxdd_rule": 47.66365118417338,
+   "maxdd_hold": 48.02344701818962,
+   "with_stop_slip": [
+    -0.09986135434019869,
+    0.07306669840546177
+   ],
+   "by_src": {
+    "fresh": {
+     "n": 420,
+     "weeks": 7,
+     "mean_dR": -0.013388248455259105,
+     "ci95": [
+      -0.09986135434019869,
+      0.07306669840546177
+     ],
+     "ci975": [
+      -0.10500936099909738,
+      0.08237203417952871
+     ],
+     "net_r_rule": -0.028356577358948358,
+     "net_r_hold": -0.014968328903689244,
+     "maxdd_rule": 47.66365118417338,
+     "maxdd_hold": 48.02344701818962
+    }
+   }
+  }
+ },
+ "graded": [
+  "structure(X=1,n=24)",
+  "losscut(Y=-0.5,T=1)"
+ ],
+ "candles": [
+  "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+  "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+  "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+  "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+  "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+  "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+ ],
+ "candles_fresh_window": [
+  "binance_vision:ADAUSDT:1h:rows=1201:first=2026-09-07T00:last=2026-10-27T00:sha256=3f4725f28203a3f1",
+  "binance_vision:AVAXUSDT:1h:rows=1201:first=2026-09-07T00:last=2026-10-27T00:sha256=9bfc80af37816f98",
+  "binance_vision:BTCUSDT:1h:rows=1201:first=2026-09-07T00:last=2026-10-27T00:sha256=5a35271479613292",
+  "binance_vision:ETHUSDT:1h:rows=1201:first=2026-09-07T00:last=2026-10-27T00:sha256=ca3df8528e425f8f",
+  "binance_vision:SOLUSDT:1h:rows=1201:first=2026-09-07T00:last=2026-10-27T00:sha256=87a66a403a12b608",
+  "binance_vision:XRPUSDT:1h:rows=1201:first=2026-09-07T00:last=2026-10-27T00:sha256=6ceb43e3eaf84463"
+ ],
+ "generated_at": "2026-10-28T20:11:30+00:00",
+ "verdicts": {
+  "structure(X=1,n=24)": "indeterminate",
+  "losscut(Y=-0.5,T=1)": "indeterminate"
+ },
+ "verdict_rule": "per graded rule (Bonferroni over 2): PASS = test 97.5% weekly-cluster CI lower > 0 AND fresh mean > 0; FAIL = test 97.5% CI upper < 0; else indeterminate. HOLD selected => the primary reads 'no_rule'."
+}

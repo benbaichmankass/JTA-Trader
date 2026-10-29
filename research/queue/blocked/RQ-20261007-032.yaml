@@ -52,7 +52,7 @@ blocked_on:
 - what: 'trend_donchian_1h and vwap are enabled: false in config/strategies.yaml and build_strategy_evidence.py refuses disabled
     legs (''unknown or disabled leg(s)''). Building their record needs either a builder flag that accepts a disabled leg (Tier-1
     tooling change) or the leg enabled (Tier-3 flip). trend_donchian_1h is additionally on bybit_1''s strategies: roster while
-    disabled -- a roster slot that runs nothing.'
+    disabled -- a roster slot that runs nothing. RE-SCOPED 2026-10-29: trend_donchian_1h is now enabled (build_strategy_evidence.py --dry-run no longer refuses it); only vwap (enabled: false) and turtle_soup (no_harness) remain.'
   ref: PI-20261005-OAKGATE1-0002
   clears_when: build_strategy_evidence.py --dry-run --strategy trend_donchian_1h --strategy vwap lists both with a harness
     and a fidelity grade instead of refusing.
