@@ -1,0 +1,22 @@
+{
+  "id": "CAP-VM-LOGS-ROOT-FIX",
+  "title": "cap-vm-logs runtime_logs target scans the repo runtime_logs (26 MB), not /data/bot-data/runtime_logs (11 GB): cap_vm_logs_action.sh never calls load_runtime_env, so RUNTIME_LOGS_DIR is unset and src.utils.paths falls back to the repo path",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-29T04:08Z, #21113 dry-run: 'runtime_logs root: /home/ubuntu/ict-trading-bot/runtime_logs', 0 candidates; #21107 shows the 11G at /data/bot-data/runtime_logs. Fix: call load_runtime_env in scripts/ops/cap_vm_logs_action.sh before cap_runtime_logs.py (as the other *_action.sh wrappers do), and add a test pinning the resolved root. Then dry-run again (target runtime_logs, days 30). Out of scope (writer-side caps needed): signal_audit.jsonl 1.46 GB and position_read_state_soak.jsonl 315 MB are live files. Operator decision: 2 journal DB backups trade_journal.db.bak-own-fill-exits-20261017T07* (4.0 GB). Filed by Manager Session 2026-10-29b.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-29T04:32:28Z",
+  "updated_by": "session_01AFoLuKnKedoAhJU1x4MZDp",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 780
+}
