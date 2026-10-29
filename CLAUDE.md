@@ -28,7 +28,7 @@ Broken, degraded or suspicious infrastructure is either **fixed** (in tier and s
 act without re-deriving it, or **flagged to the operator** when tier-gated. "Not my task" / "it was already like that" are not dispositions.
 **Filing is not a parking lot**: if it matters it becomes a checklist row or queue unit; if not, say so.
 
-**Nothing spends Anthropic API credits; Claude runs only on the plan** (operator, 2026-10-27, binding) — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits".
+**Nothing spends Anthropic API credits; Claude runs only on the plan** (operator, 2026-10-27, binding) — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits". It covers ONLY the VM's per-call Claude API path; the claude.ai Usage-screen "usage credits" toggle is not a concern — never raise it (operator, 2026-10-29).
 
 ## No new gates (operator, 2026-10-29, binding)
 
