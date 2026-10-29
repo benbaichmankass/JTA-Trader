@@ -2,7 +2,7 @@
   "id": "DESK-V1-MGMT-ADVICE-ONLY",
   "title": "V1 Thu-1: every in-trade class except close -> recommend-only (config/live_trade_review.yaml); close per operator ask A1",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuKietgEgZagdrtFF18",
   "model": null,
@@ -13,12 +13,21 @@
     21026
   ],
   "blocked_on": [],
-  "note": "Evidence: DESK-LIFECYCLE-S0 FAIL #20967 (mgmt vs hold -0.159/-0.124 R; tighten -0.097/action, move_tp -0.155, CIs exclude 0). tighten advice-only = operator decision 2026-10-28; other classes data-backed (decide, ship, notify, revert line). A1 = close apply vs advice-only (recommended advice-only until E1 loss-cut passes). Proof: VM live_review_rows_watch next non-close row not dispatched. Plan docs/plans/desk-v1-production-plan-2026-10-29.md \u00a7 3. [2026-10-28 ~21:07Z OPERATOR ANSWER, popup relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539] A1 verbatim 'Advice-only until tested': desk/LTR in-trade actions incl. closes recorded + graded, not executed, until each class passes its own registered test. BUILT PR #21026 (Tier 3, hold, manager merges): config/live_trade_review.yaml apply_mode apply -> recommend (global; subsumes LTR-TIGHTEN-OPTIMIZE #21003's tighten proposal, which changes no config). 96 tests pass. Entries / max-hold exit / brackets unaffected. [2026-10-28 ~21:45Z] OPERATOR CONFIRMED SCOPE (popup relayed by manager, verbatim 'All paths, all actions (Recommended)'): every in-trade action advice-only on all automatic paths (desk + live reviewer); each comes off the list only via a PR citing its passed \u00a7 5b test. PR #21026 reworked onto #21024's per-class list (apply_mode stays apply); rebase onto main after #21024 lands; manager merges.",
+  "note": "Evidence: DESK-LIFECYCLE-S0 FAIL #20967 (mgmt vs hold -0.159/-0.124 R; tighten -0.097/action, move_tp -0.155, CIs exclude 0). tighten advice-only = operator decision 2026-10-28; other classes data-backed (decide, ship, notify, revert line). A1 = close apply vs advice-only (recommended advice-only until E1 loss-cut passes). Proof: VM live_review_rows_watch next non-close row not dispatched. Plan docs/plans/desk-v1-production-plan-2026-10-29.md \u00a7 3. [2026-10-28 ~21:07Z OPERATOR ANSWER, popup relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539] A1 verbatim 'Advice-only until tested': desk/LTR in-trade actions incl. closes recorded + graded, not executed, until each class passes its own registered test. BUILT PR #21026 (Tier 3, hold, manager merges): config/live_trade_review.yaml apply_mode apply -> recommend (global; subsumes LTR-TIGHTEN-OPTIMIZE #21003's tighten proposal, which changes no config). 96 tests pass. Entries / max-hold exit / brackets unaffected. [2026-10-28 ~21:45Z] OPERATOR CONFIRMED SCOPE (popup relayed by manager, verbatim 'All paths, all actions (Recommended)'): every in-trade action advice-only on all automatic paths (desk + live reviewer); each comes off the list only via a PR citing its passed \u00a7 5b test. PR #21026 reworked onto #21024's per-class list (apply_mode stays apply); rebase onto main after #21024 lands; manager merges. [2026-10-29 03:30Z lane] MERGED #21026 as a8578bc96 (02:30Z, operator approval in the merge commit). DEPLOYED: /api/diag/version 03:27Z trader_git_sha 65b66ae5f contains a8578bc96, restart_pending false. OBSERVED: not yet -- rows_watch since deploy shows only hold/flag_mechanics rows (not_dispatchable); closes on the first non-hold in-trade row logged verdict advice_only with nothing sent.",
   "priority_rank": 3,
-  "updated_at": "2026-10-28T21:49:58Z",
+  "updated_at": "2026-10-29T03:28:44Z",
   "updated_by": "session_01AFoLuKietgEgZagdrtFF18",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "first non-hold in-trade row (live review or desk) after deploy is logged advice_only and nothing is sent",
+    "how_to_check": "scripts/ops/diag_fetch.sh log_file?name=live_review_rows_watch (verdict advice_only) and log_file?name=desk_intake (detail advice_only)",
+    "due_by": "2026-11-04T23:59:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: L-DESK milestone writeback is owed by row DESK-V1 at acceptance",
+    "arch": "none: per-class advice-only list documented in live-trade-review SKILL \u00a7 0.0 and MD-TRADE-DESK; no ARCHITECTURE section changed"
+  },
   "_seq": 757
 }
