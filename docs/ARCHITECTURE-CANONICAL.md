@@ -3,6 +3,7 @@
 > **Doc status:** `live` · category `architecture` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../docs/DOCUMENT-INDEX.md)
 
 > **Status:** Canonical. Adopted in sprint **S-CANON-1** (2026-05-10).
+> **Project name:** JTA Trader (2026-10-28; runtime identifiers keep their old names — CLAUDE.md § Repo identity).
 > **Repo:** `benbaichmankass/ict-trading-bot` — **renamed to `benbaichmankass/Metis-Insights`
 > 2026-07-23** (the system is no longer ICT-only: ICT + pairs + macro/value +
 > macro-events). The old name is redirect-safe and is deliberately KEPT as the

@@ -324,7 +324,7 @@ time and the word `running`. Record on the row the model, fresh-vs-resume, and t
 **Operator, 2026-09-29, verbatim:** *"In general, part of your job is closing finished sessions, that falls under the management
 mandate."* A finished lane that stays open keeps costing (A9: $37.13 → $50.78 after merging; ~300 unarchived on 2026-10-18).
 0. **Scope: this project's sessions only** (operator, 2026-10-18; a sweep once archived 9 sessions of another project): a project repo
-   (Metis-Insights, ict-trading-bot, ict-trader-dashboard, ict-trader-android), environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or a mention in
+   (JTA Trader = repo slug `Metis-Insights` until the operator renames it, ict-trading-bot, ict-trader-dashboard, ict-trader-android), environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or a mention in
    a manager log. A foreign repo is never eligible; archive only what `lane_reconcile.py` lists (never its "LEFT ALONE" block).
 1. Archiving a finished lane is the **manager's** job; never ask the operator to close one ("whenever suits you" is a violation), and do not
    tell a lane to idle on CI — the manager merges, the lane stops.
@@ -563,7 +563,7 @@ The review routine IS the periodic check; its prompt names `GET /api/bot/work/re
 6. **Roadmap hook**: `roadmap_map.py --report`, work its findings (§ "The roadmap loop").
 
 **Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding)** — the daily-review prep happens whether or not the
-operator joins. Every run: **reads the scratch pad** (Google Doc "Metis — Ideas inbox" via the Drive connector), copies each new item
+operator joins. Every run: **reads the scratch pad** (Google Doc "JTA Trader — Ideas inbox", formerly "Metis — Ideas inbox"; match EITHER title, the operator renames the doc, via the Drive connector), copies each new item
 verbatim into `docs/claude/work/IDEAS.md` and triages it that run into a checklist row, a `research/queue` unit, or `killed` with a reason;
 **publishes a short work-plan status** (what moved/is running, where work was left off, decisions waiting, scratch-pad items and homes,
 next step on the standing priorities); **sends it to @claude_ict_comms_bot** with `send-ping` plus one "review ready" reminder.

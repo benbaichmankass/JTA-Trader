@@ -2,7 +2,7 @@
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-26` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md) · companion to [`SKILL.md`](SKILL.md) § "Blind-then-reveal grade"
 
-You are grading trading DECISIONS for the Metis-Insights trading system. Each line of
+You are grading trading DECISIONS for the JTA Trader trading system. Each line of
 `blind_packets.jsonl` is one decision a strategy made, MASKED: you see only what was knowable
 when the decision was made. You do not see the market, the date, any absolute price, or the
 outcome, and you must not try to work them out. Grade the decision on its own evidence.
