@@ -481,6 +481,30 @@ def _journal_below_floor_refusal(pkg: Any, account_name: str, record: dict) -> N
         )
 
 
+def _conviction_components(pkg: Any) -> dict:
+    """Component view of the stamped conviction for the soak log (never raises).
+
+    The soak log used to carry only the blended ``conviction``, so a ``c_reg``
+    silently absent from the blend was indistinguishable from one that worked
+    (MB-20260618-XA-D2B). ``inputs_used`` is ``None`` (read-state: no stamp),
+    never ``{}``, when the package carries no conviction block.
+    """
+    try:
+        block = (getattr(pkg, "meta", None) or {}).get("conviction")
+        if not isinstance(block, dict):
+            return {"inputs_used": None, "weights_used": None,
+                    "blend_note": None, "provenance": None}
+        return {
+            "inputs_used": block.get("inputs_used"),
+            "weights_used": block.get("weights_used"),
+            "blend_note": block.get("note"),
+            "provenance": block.get("provenance"),
+        }
+    except Exception:  # noqa: BLE001 — logging only
+        return {"inputs_used": None, "weights_used": None,
+                "blend_note": None, "provenance": None}
+
+
 def _log_conviction_apply(
     pkg: Any,
     account_name: str,
@@ -517,6 +541,7 @@ def _log_conviction_apply(
             "final_qty": final_qty,
             "daily_loss_clamp": clamp_note,
             "decision": record,
+            **_conviction_components(pkg),
         }
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(payload, default=str) + "\n")
@@ -546,6 +571,7 @@ def _log_conviction_sizing(
             "risk_based_qty": risk_based_qty,
             "would_be_qty": would_be_qty,
             "decision": record,
+            **_conviction_components(pkg),
         }
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(payload, default=str) + "\n")
