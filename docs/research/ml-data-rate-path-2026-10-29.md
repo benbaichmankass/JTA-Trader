@@ -72,6 +72,14 @@ Every unit is multi-fold (6 calendar folds by entry, purged by `[entry, exit + h
 * The closed live-package count (VM not read).
 * Runner billing (repo plan UNKNOWN). The core runs are a few runner-hours.
 
-## 4. Dispatch dry run
+## 4. Dispatch dry run (`scripts/research/dispatch_queue.py`, 2026-10-29)
 
-See the PR body for the `dispatch_queue.py` dry-run lines for the three units: blocked, not fired. A blocked unit is not dispatched by design. It moves to `research/queue/` when its `blocked_on.clears_when` holds.
+* **As committed** (`--queue-dir research/queue/blocked --only <id>`): all three units parse as valid and read `not_due status=blocked`. This is correct: a blocked unit does not fire.
+* **Probe as if unblocked** (copies in a scratch directory with `status: queued`, `blocked_on` and `requires_result` removed, and a placeholder `run.command`):
+  * `RQ-20261029-7294-01`: `would_dispatch route=runner backend=github_runner`, score 43.8.
+  * `RQ-20261029-7294-02`: `would_dispatch route=runner backend=github_runner`, score 42.9.
+  * `RQ-20261029-7294-03`: `would_dispatch route=runner backend=github_runner`, score 45.0.
+* **Two defects the dry run caught, both fixed before push:**
+  1. A bare `requires_result` string is `invalid`. It must be `{unit: ...}`.
+  2. `power.power` other than the 0.8 design target made the router answer `blocked_power`. The units now declare 0.8 and give the achieved power in `power.basis`.
+* A blocked unit moves to `research/queue/` when its `blocked_on.clears_when` holds, and its real `run.command` is written then.
