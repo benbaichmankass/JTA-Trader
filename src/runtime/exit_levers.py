@@ -100,15 +100,80 @@ def closed_frame(candles_df: Any, meta: Dict[str, Any], cfg_dict: Dict[str, Any]
         return candles_df
 
 
+#: ``DataFrame.attrs`` key ``since_entry`` stamps on what it returns: ``True``
+#: when the frame really is restricted to the trade (entry time and timestamps
+#: both readable), ``False`` on the full-frame fallback. Telemetry reads it so
+#: a fallback frame reports ``unanchored`` instead of a measured pre-entry peak.
+SINCE_ENTRY_ANCHORED_ATTR = "since_entry_anchored"
+
+
+def _bar_seconds(candles_df: Any, ts: Any, meta: Dict[str, Any]) -> Optional[float]:
+    """Bar length in seconds: the leg's declared ``timeframe`` first, else the
+    median spacing of the frame's timestamps. ``None`` when neither is readable."""
+    try:
+        from src.runtime.closed_bars import TF_SECONDS
+
+        tf = str((meta or {}).get("timeframe") or "")
+        if tf in TF_SECONDS:
+            return float(TF_SECONDS[tf])
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        diffs = ts.dropna().diff().dropna().dt.total_seconds()
+        diffs = diffs[diffs > 0]
+        if len(diffs) == 0:
+            return None
+        return float(diffs.median())
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _stamp(frame: Any, anchored: bool) -> Any:
+    """Return ``frame`` carrying the anchored flag in ``attrs`` — on a shallow
+    copy with its own attrs dict, so the caller's frame is never mutated."""
+    try:
+        out = frame.copy(deep=False)
+        out.attrs = {**dict(getattr(frame, "attrs", {}) or {}),
+                     SINCE_ENTRY_ANCHORED_ATTR: bool(anchored)}
+        return out
+    except Exception:  # noqa: BLE001
+        return frame
+
+
+def since_entry_is_anchored(window: Any) -> bool:
+    """False only when ``window`` is a ``since_entry`` full-frame fallback.
+    A frame ``since_entry`` never touched reads True (the caller's own claim
+    stands)."""
+    try:
+        return getattr(window, "attrs", {}).get(SINCE_ENTRY_ANCHORED_ATTR, True) is not False
+    except Exception:  # noqa: BLE001
+        return True
+
+
 def since_entry(candles_df: pd.DataFrame, open_pkg: Dict[str, Any]) -> pd.DataFrame:
-    """Restrict the candle window to bars at/after the package entry time.
+    """Restrict the candle window to the bars of the trade: the bar that
+    CONTAINS the entry (``bar_open <= entry_time < bar_open + tf``) and every
+    bar after it.
 
     The Chandelier trail tracks the extreme SINCE ENTRY; the fetched
-    window (limit=200) can include pre-entry bars whose extreme would
-    move the trail too far. Falls back to the full frame when the entry
-    time or a timestamp column is unavailable — the caller's
-    correct-side-of-price guard still prevents an instant stop-out in
-    that case.
+    window (limit=200) includes pre-entry bars whose extreme would
+    move the trail too far.
+
+    SINCE-ENTRY-WINDOW-FIX (2026-10-29): when the entry time and the
+    timestamps are readable the result is ALWAYS the filtered frame — possibly
+    0 or 1 rows in the first bar of a trade. It used to fall back to the FULL
+    frame whenever the filter came back empty, which is exactly the first bar
+    after every entry (no CLOSED bar yet opens at/after the entry): every
+    caller then measured ~200 PRE-ENTRY bars as the trade (SLV pkg-3df9800b:
+    bars_held 199, a pre-entry peak_r, and a false STALL wake two minutes
+    after the fill). Callers degrade a 0/1-row window to "no trail move /
+    thin_window".
+
+    The full-frame fallback remains ONLY when the entry time or the timestamp
+    column is genuinely unavailable; that frame carries
+    ``attrs[SINCE_ENTRY_ANCHORED_ATTR] = False`` so telemetry reports it
+    ``unanchored`` (``since_entry_is_anchored``). The caller's
+    correct-side-of-price guard still prevents an instant stop-out there.
     """
     meta = open_pkg.get("meta") or {}
     if isinstance(meta, str):
@@ -116,19 +181,24 @@ def since_entry(candles_df: pd.DataFrame, open_pkg: Dict[str, Any]) -> pd.DataFr
             meta = json.loads(meta) if meta else {}
         except Exception:  # noqa: BLE001
             meta = {}
-    entry_ts = (meta.get("entry_time") if isinstance(meta, dict) else None) or \
-        open_pkg.get("created_at")
+    if not isinstance(meta, dict):
+        meta = {}
+    entry_ts = meta.get("entry_time") or open_pkg.get("created_at")
     if entry_ts is None or "timestamp" not in getattr(candles_df, "columns", []):
-        return candles_df
+        return _stamp(candles_df, False)
     try:
         ts = pd.to_datetime(candles_df["timestamp"], utc=True, errors="coerce")
         cutoff = pd.to_datetime(entry_ts, utc=True, errors="coerce")
-        if pd.isna(cutoff):
-            return candles_df
-        filtered = candles_df[ts >= cutoff]
-        return filtered if len(filtered) > 0 else candles_df
+        if pd.isna(cutoff) or ts.isna().all():
+            return _stamp(candles_df, False)
+        bar_s = _bar_seconds(candles_df, ts, meta)
+        if bar_s and bar_s > 0:
+            mask = ts > cutoff - pd.Timedelta(seconds=bar_s)
+        else:
+            mask = ts >= cutoff
+        return _stamp(candles_df[mask], True)
     except Exception:  # noqa: BLE001
-        return candles_df
+        return _stamp(candles_df, False)
 
 
 def stale_stop_verdict(
@@ -179,9 +249,10 @@ def stale_stop_verdict(
         # declared timeframe passes through unchanged (the pre-fix behaviour).
         closed = closed_frame(candles_df, meta, cfg_dict)
         window = since_entry(closed, open_pkg)
-        # _since_entry falls back to the FULL frame when the entry time can't
-        # be matched; that would fake a huge age, so require a real restriction
-        # (or a genuinely long-lived trade spanning the whole fetch window).
+        # since_entry falls back to the FULL frame only when the entry time or
+        # timestamps are unreadable (since SINCE-ENTRY-WINDOW-FIX it returns a
+        # 0/1-row frame in a trade's first bar, which reads age 0 below); a
+        # full frame would fake a huge age, so require a real restriction.
         if len(window) >= len(closed) and len(closed) > 0:
             # Ambiguous: either fallback or a trade older than the fetch
             # window (limit≈200 bars ≫ any sane stale_exit_bars). Treat a
@@ -277,6 +348,12 @@ def giveback_verdict(
         # "restriction" means _since_entry fell back, and a pre-entry
         # extreme would fake a peak the trade never actually saw.
         if len(window) >= len(candles_df) and len(candles_df) > 0:
+            return None
+        if len(window) < 2:
+            # First bar of the trade (SINCE-ENTRY-WINDOW-FIX): 0 rows, or only
+            # the bar CONTAINING the entry, whose extreme can predate the fill.
+            # No measurable peak — the `thin_window` rule of
+            # `trail_decay.since_entry_peak`, never a close.
             return None
         if direction == "long":
             peak = _coerce_float(window["high"].max())

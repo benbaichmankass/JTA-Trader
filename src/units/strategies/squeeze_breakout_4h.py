@@ -247,25 +247,15 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
 
 
 def _since_entry(candles_df: pd.DataFrame, open_pkg: Dict[str, Any]) -> pd.DataFrame:
-    meta = open_pkg.get("meta") or {}
-    if isinstance(meta, str):
-        try:
-            meta = json.loads(meta) if meta else {}
-        except Exception:  # noqa: BLE001
-            meta = {}
-    entry_ts = (meta.get("entry_time") if isinstance(meta, dict) else None) or \
-        open_pkg.get("created_at")
-    if entry_ts is None or "timestamp" not in getattr(candles_df, "columns", []):
-        return candles_df
-    try:
-        ts = pd.to_datetime(candles_df["timestamp"], utc=True, errors="coerce")
-        cutoff = pd.to_datetime(entry_ts, utc=True, errors="coerce")
-        if pd.isna(cutoff):
-            return candles_df
-        filtered = candles_df[ts >= cutoff]
-        return filtered if len(filtered) > 0 else candles_df
-    except Exception:  # noqa: BLE001
-        return candles_df
+    """Moved to `src/runtime/exit_levers.py::since_entry` — ONE definition.
+
+    This module carried a byte-identical copy, including the full-frame
+    fallback in the first bar after entry that SINCE-ENTRY-WINDOW-FIX
+    (2026-10-29) removed: the trail ratcheted on ~200 PRE-ENTRY bars there.
+    """
+    from src.runtime.exit_levers import since_entry
+
+    return since_entry(candles_df, open_pkg)
 
 
 def monitor(cfg, candles_df, open_pkg):
@@ -353,6 +343,10 @@ def monitor(cfg, candles_df, open_pkg):
     except Exception:  # noqa: BLE001 — telemetry must never break the trail
         pass
     try:
+        if window is None or len(window) == 0:
+            # First bar of a trade: no bar of the trade has closed yet
+            # (SINCE-ENTRY-WINDOW-FIX). No extreme to ratchet on — no move.
+            raise ValueError("empty since-entry window")
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr
