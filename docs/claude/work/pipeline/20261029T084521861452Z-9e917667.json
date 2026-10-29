@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "the I6 guard (checklist ML-ADVISORY-SCOPE-GUARD) is built: green on main and red on a fixture adding an unevidenced reduce entry for a bybit_2 leg",
+    "kind": "event"
+  },
+  "id": "PI-20261029-XME2GXW7-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7) / checklist ML-ADVISORY-SCOPE-GUARD",
+    "rerun": "python3 -m pytest -q tests/test_overlay_shadow.py -k reduce_policy"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "ML-ADVISORY-SCOPE-GUARD (I6) must also key on config/overlay_policy.yaml: a `mode: reduce` entry for a strategy rostered on a real-money/prop account without a committed RULE-ML-OVERLAY-NONINFERIOR evidence record should fail CI. Today tests/test_overlay_shadow.py only checks reduce entries are a subset of the committed artifact's gate legs."
+}
