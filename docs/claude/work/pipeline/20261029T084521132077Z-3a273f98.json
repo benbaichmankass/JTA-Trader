@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "PR #21213 (Tier-3 reduce packet) merges and deploys; then a weekly overlay_cusum.py run over the mirror's closed reduced TD trades lands in the brief with n_reduced and state (0 reads no_reduced_trades, never ok) -- or kill with a stated reason if #21213 is declined",
+    "kind": "event"
+  },
+  "id": "PI-20261029-XME2GXW7-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7) / PR #21213",
+    "rerun": "python3 scripts/ops/overlay_cusum.py --self-test ; vm-diag relay: wc -l runtime_logs/overlay_shadow.jsonl"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "ML-REAL-MONEY-OVERLAY: build the live join for the overlay demotion CUSUM -- runtime_logs/overlay_shadow.jsonl (trace_id, strategy, account, would_be_multiplier) joined to each closed trade's realised net R on bybit_portfolio, written as the JSONL scripts/ops/overlay_cusum.py --decisions reads, run weekly. Until it exists the demotion trigger has no live input."
+}
