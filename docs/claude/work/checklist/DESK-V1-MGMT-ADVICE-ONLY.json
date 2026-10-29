@@ -1,0 +1,24 @@
+{
+  "id": "DESK-V1-MGMT-ADVICE-ONLY",
+  "title": "V1 Thu-1: every in-trade class except close -> recommend-only (config/live_trade_review.yaml); close per operator ask A1",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuKietgEgZagdrtFF18",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    21026
+  ],
+  "blocked_on": [],
+  "note": "Evidence: DESK-LIFECYCLE-S0 FAIL #20967 (mgmt vs hold -0.159/-0.124 R; tighten -0.097/action, move_tp -0.155, CIs exclude 0). tighten advice-only = operator decision 2026-10-28; other classes data-backed (decide, ship, notify, revert line). A1 = close apply vs advice-only (recommended advice-only until E1 loss-cut passes). Proof: VM live_review_rows_watch next non-close row not dispatched. Plan docs/plans/desk-v1-production-plan-2026-10-29.md \u00a7 3. [2026-10-28 ~21:07Z OPERATOR ANSWER, popup relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539] A1 verbatim 'Advice-only until tested': desk/LTR in-trade actions incl. closes recorded + graded, not executed, until each class passes its own registered test. BUILT PR #21026 (Tier 3, hold, manager merges): config/live_trade_review.yaml apply_mode apply -> recommend (global; subsumes LTR-TIGHTEN-OPTIMIZE #21003's tighten proposal, which changes no config). 96 tests pass. Entries / max-hold exit / brackets unaffected. [2026-10-28 ~21:45Z] OPERATOR CONFIRMED SCOPE (popup relayed by manager, verbatim 'All paths, all actions (Recommended)'): every in-trade action advice-only on all automatic paths (desk + live reviewer); each comes off the list only via a PR citing its passed \u00a7 5b test. PR #21026 reworked onto #21024's per-class list (apply_mode stays apply); rebase onto main after #21024 lands; manager merges.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-28T21:49:58Z",
+  "updated_by": "session_01AFoLuKietgEgZagdrtFF18",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 757
+}
