@@ -58,6 +58,11 @@ EMBARGO = pd.Timedelta(days=7)
 LEG_ACCOUNTS_KEY = "strategies"
 
 
+def _read_jsonl(p: Path) -> list[dict]:
+    with open(p, encoding="utf-8") as fh:
+        return [json.loads(x) for x in fh if x.strip()]
+
+
 def _iso(ts: pd.Timestamp) -> str:
     return ts.isoformat()
 
@@ -258,8 +263,7 @@ def main(argv=None) -> int:
                     import yaml
                     cfg = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text())
                     cfg = cfg.get("strategies", cfg)
-                    rd = lambda p: [json.loads(x) for x in open(p, encoding="utf-8") if x.strip()]  # noqa: E731
-                    loaded.append((lg, rd(pth), rd(trd), cfg[lg].get("timeframe")))
+                    loaded.append((lg, _read_jsonl(pth), _read_jsonl(trd), cfg[lg].get("timeframe")))
             return loaded, [{"leg": lg, "reason": "absent from corpus dir"} for lg in legs
                             if not (d / f"{lg}__paths.jsonl").exists()]
         wd = Path(tempfile.mkdtemp(prefix=prefix, dir=str(out)))
@@ -271,6 +275,7 @@ def main(argv=None) -> int:
     reps += [{"leg": f["leg"], "state": "missing", "error": f.get("reason") or f.get("error")} for f in failed]
     hc, hfailed = corpus(a.holdout_corpus_dir, a.holdout_start, a.holdout_end, a.holdout_days, "holdout_")
     htrades, hreps = to_trades(hc)
+    hreps += [{"leg": f["leg"], "state": "missing", "error": f.get("reason") or f.get("error")} for f in hfailed]
     before = pd.Timestamp("2020-07-01", tz="UTC") - EMBARGO
     htrades = [t for t in htrades if t["exit_time"] < before]
     r = run(trades, reps, htrades, hreps, out)
