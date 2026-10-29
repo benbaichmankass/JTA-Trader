@@ -1467,7 +1467,7 @@ nodes:
       component share (a crowding/regime read), and ES/DXY/gold 1d returns joined point-in-time for the crypto heads. Rung
       1: add the set to the 1h regime learner (same folds as RQ-20261014-65cc-10) and grade the LOG-LOSS gain over the
       six shared features on >= 2 of 3 symbols; a PASS feeds the P3 portfolio-overlap reads as well (programme 03 Q7).
-      Data check first: the equity/DXY daily series must be in metis-market-data point-in-time, else file the data row.
+      Data check first: the equity/DXY daily series must be in metis-market-data point-in-time, else file the data row. BUILD GAP (programme review 2026-10-28, MEASURED in scripts/research/ml_bakeoff.py: the feature-block registry is har_rv, join_columns, df_columns, var_price_vector; no rolling cross-symbol correlation or basket-PC1 block exists), so rung 1 needs that block (or precomputed columns via join_columns) before a unit can run.
 
   # ── RESULTS-GRADE-1025 (2026-10-25) ──
   - id: P2-RG1025-yz-longtail-eth
@@ -2331,3 +2331,20 @@ nodes:
       - research/queue/RQ-20261025-001.yaml
       - research/queue/RQ-20261011-6e85-01.yaml
       - research/queue/RQ-20261016-65ff-27.yaml
+  # ── PROGRAMME-REVIEW-20261028 (2026-10-28) ──
+  - id: P2-Q2-costnet-metalabel-regate
+    goal: G4
+    theme: ml_health
+    roadmap: [M23]
+    value: {usd_at_stake_per_month: 300, confidence: 0.3}
+    after: []
+    needs_authoring: 'BUILD-GATED (programme review 2026-10-28). PR #20869 (cost-net labels + an enforced cost gate) refuses all 9 setup-candidates metalabel heads, but the refusal reason is eval_not_cost_net: the 7 setup_candidates datasets are frozen GROSS builds (triple-barrier-v1, 2026-06-06..08-04) and the cycle never rebuilds them (trainer-vm-diag #20864/#20865, MEASURED by that lane). So the refusal is NOT a measured loss of edge; it is an unread question. When PI-20261028-V8KBRR5H-0004 (rebuild the setup_candidates datasets cost-net) lands, author ONE unit: the 9 heads retrained on the cost-net build, graded by ml/promotion/cost_gate.py (strictly beat take-all, take-none, matched-random and the incumbent on net R per opportunity, every eval row cost-net), denominator 9 heads with the deflated Sharpe reported. PASS on >= 1 head -> a shadow candidate under the mechanical 1-2 prediction soak; FAIL on all 9 -> the M23 setup-metalabel line is closed for this feature set (gross-label history explains the old shadow scores) and capacity moves to the in-trade label line (P2-desk-checkin-exit-head, P1-Q11). Do not author before the rebuild: a re-run on gross rows only reproduces the refusal.'
+  - id: P2-desk-checkin-exit-head
+    goal: G4
+    theme: ml_health
+    roadmap: [M23]
+    value: {usd_at_stake_per_month: 250, confidence: 0.25}
+    after:
+    - unit: RQ-20261028-d1f5-02
+      verdict: fail
+    needs_authoring: 'MODEL feed from P1 (programme review 2026-10-28). PR #20967 commits 12,500 per-check-in priced labels (comms/research/desk_lifecycle/full-c4e/, for the F.2 ML target): at each check-in the R value of hold vs close vs tighten, net of the full cost stack, on 938 walked trades from two entry sources. The finding to learn from: holds were worth +0.142 R vs closing and tightens -0.097 R, so the class that matters is ''tighten loses'' (the negative class) and the rare ''close at <= -0.5 R wins''. Author ONE ml_bakeoff unit once #20967 is on main: purged walk-forward by week (the run''s own cluster), features = the per-bar path state already used by RQ-20261024-09a6-01 (open R, peak, bars since peak, momentum, ADX slope) plus vol ratio; target = sign(value(close) - value(hold)); metric log-loss vs the class prior AND net R of the policy ''close when P > tau'' vs hold vs a matched-random close, at tau fixed before the run. Decision: PASS -> an exit-head candidate that composes with P1-Q8; FAIL -> in-trade state does not separate close-worthy check-ins beyond the prior on this sample, and the desk exit line rests on mechanical rules (P1-Q4). Check first that the labels'' entry sources do not leak future bars (the run''s isolation audit covers the judge, not the label join).'

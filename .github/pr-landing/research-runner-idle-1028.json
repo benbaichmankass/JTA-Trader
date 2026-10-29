@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Research dispatcher starvation floor 1.5 h -> 0.75 h (constant + research_compute.yaml limits.starvation_hours). Root cause of the github_runner idle escalation: 17 queued runs > cap 10 deferred all 36 due units while the newest dispatch stamp was 1.15 h old (< 1.5 h floor), so the floor could not lift before the 60 min watchdog. Research tooling only; no src runtime, order path or config/strategies touched."
+}
