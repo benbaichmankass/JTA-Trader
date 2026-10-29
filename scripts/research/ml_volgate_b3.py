@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a lane-run research driver (ML-VOLGATE-WF-ETH-BTC, plan docs/plans/ml-live-promotion-plan-2026-10-29.md step B3); it needs trainer-produced vol-label files, so no workflow can run it unattended
 """B3 driver (ML-VOLGATE-WF-ETH-BTC): 2-D (trend, vol) cell walk-forward for ONE strategy x ONE head.
 
 Runs the leg's harness ONCE per (strategy, labels file), tags every trade with its
@@ -25,7 +26,7 @@ import os
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import direction_walkforward as dwf  # noqa: E402
@@ -220,7 +221,7 @@ def main() -> int:
     a = ap.parse_args()
     try:
         res = run(a.strategy, a.labels, a.head, os.path.join(a.workdir, a.strategy), a.days, a.cache, a.labels_end)
-    except Exception as e:  # noqa: BLE001  # named in the record, never swallowed
+    except Exception as e:  # noqa: BLE001  # allow-silent: the failure is written into the output record (res["error"]) and printed, never swallowed
         res = {"strategy": a.strategy, "head": a.head, "error": f"{type(e).__name__}: {e}"}
     with open(a.out, "w", encoding="utf-8") as fh:
         json.dump(res, fh, indent=1, default=str)
