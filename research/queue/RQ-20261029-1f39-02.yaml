@@ -62,6 +62,10 @@ decision_rule:
     (measurement_basis per_trade_r_screen): what a PASS licenses is the manager's / operator's call under the 12:40Z decision and
     ARCHITECTURE-CANONICAL § Active management clause 4 (a screen never graduates a class unless that clause is amended for it).
     Thresholds, draws, seed (20261029) and folds are not changed after any result.
+    AMENDMENT 2026-10-29, registered BEFORE any class outcome was read: the first graded run aborted on its 2nd pair, before any
+    grade was computed, because masking a recorded close / partial keeps the trade open into check-ins Claude was never asked.
+    Such an UNJUDGED check-in reads as HOLD (the bracket as placed) in both the X-only arm and its random draws; the count per class
+    is reported as unjudged_checkins_read_as_hold. Nothing else changes.
   what_it_does_not_do: >-
     Re-judges nothing (Claude's recorded calls only), edits no config or mandate, places no order. A graduation is a separate PR per
     class (MD-TRADE-DESK advice_only + ADVICE_ONLY_ACTIONS, pinned equal by tests/test_tighten_advice_only.py).

@@ -57,12 +57,19 @@ SEED = 20261029
 ACCOUNTS = ("bybit_1", "bybit_2", "bybit_portfolio")   # the crypto accounts the desk / LTR acts on (% view only)
 
 
-def class_only(dec: Dict[Tuple[str, int], dict], entry_id: str, cls: str) -> dl.Decider:
-    """Claude's recorded answer when it is ``cls``; hold for every other answer (a missing answer stays missing)."""
+def class_only(dec: Dict[Tuple[str, int], dict], entry_id: str, cls: str,
+               unjudged: Optional[List[int]] = None) -> dl.Decider:
+    """Claude's recorded answer when it is ``cls``; hold for every other answer. A check-in with NO recorded answer
+    (the all-classes path never reached it, because a masked close / partial kept the trade open) reads as HOLD --
+    the bracket as placed -- and is appended to ``unjudged`` so the verdict counts it (amendment registered on
+    RQ-20261029-1f39-02 before any outcome was read). With ``unjudged=None`` a missing answer stays missing."""
     def d(k, j, st):  # inert: j, st -- the shared Decider signature
         a = dec.get((entry_id, k))
         if a is None:
-            return None
+            if unjudged is None:
+                return None
+            unjudged.append(k)
+            return {"action": "hold"}
         return a if a.get("action") == cls else {"action": "hold"}
     return d
 
@@ -93,6 +100,7 @@ def build_books(mkt, entries, dec, policy: str, draws: int, classes=CLASSES, see
                 books[f"{c}~rnd{q}"] = []
         repro: List[Tuple[str, float, float]] = []
         action_counts: Dict[str, int] = {c: 0 for c in classes}
+        unjudged_counts: Dict[str, int] = {c: 0 for c in classes}
         for pid, d in sorted(by_pair.items()):
             if "claude" not in d or "random" not in d:
                 continue
@@ -106,9 +114,11 @@ def build_books(mkt, entries, dec, policy: str, draws: int, classes=CLASSES, see
             books["hold"].append(trade_row(s, e, h))
             books["all"].append(trade_row(s, e, allr))
             for c in classes:
-                r, p2 = dl.run(s, e, class_only(dec, e.entry_id, c), pol())
+                uj: List[int] = []
+                r, p2 = dl.run(s, e, class_only(dec, e.entry_id, c, uj), pol())
                 if p2 is not None:
-                    raise AssertionError(f"class-only replay of {pid} pended: a decision the all-classes run had is missing")
+                    raise AssertionError(f"class-only replay of {pid} pended although unjudged check-ins read as hold")
+                unjudged_counts[c] += len(uj)
                 books[c].append(trade_row(s, e, r))
                 xs = [x for x in r.checkins if x["action"] == c]
                 action_counts[c] += len(xs)
@@ -116,7 +126,7 @@ def build_books(mkt, entries, dec, policy: str, draws: int, classes=CLASSES, see
                     sd = int(hashlib.sha256(f"amcr|{seed}|{e.entry_id}|{c}|{q}".encode()).hexdigest()[:8], 16)
                     rr = dl.run(s, e, dl.matched_random(r.checkins, sd), pol())[0]
                     books[f"{c}~rnd{q}"].append(trade_row(s, e, rr))
-        out[src] = {"books": books, "repro": repro, "actions": action_counts}
+        out[src] = {"books": books, "repro": repro, "actions": action_counts, "unjudged_checkins": unjudged_counts}
     return out
 
 
@@ -163,6 +173,7 @@ def grade_all(built: Dict[str, Any], risk_pcts: Dict[str, float], classes=CLASSE
                                                          for v in ctls.values()) / len(ctls), 4)
                                             for a in (risk_pcts or {})}}
             row["n_actions"] = b["actions"].get(c)
+            row["unjudged_checkins_read_as_hold"] = b["unjudged_checkins"].get(c)
             row["mean_net_r_per_trade"] = {"hold": round(g["baseline_book"]["net_r"] / g["baseline_book"]["n"], 6),
                                            "action": round(row["book"]["net_r"] / row["book"]["n"], 6)}
             per[c] = {"baseline_book": g["baseline_book"], "rule": g["rule"], **row}
