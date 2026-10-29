@@ -227,12 +227,22 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, trend_donchian_xrp_4h, turtle_soup]
+    strategies: [trend_donchian_1h, trend_donchian_xrp_adx25, trend_donchian_eth_prop, claude_desk, ict_scalp_eth_15m, ict_scalp_xrp_15m, avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, turtle_soup]
+                                        # 2026-10-28 STRATEGY-STATUS-MODEL (Tier-3, HELD for the operator; operator decision "Adopt; build it this
+                                        # week", relayed by the manager): three statuses -- testing (general paper: bybit_1 / alpaca_paper /
+                                        # ib_paper), production (real money + its paper-portfolio mirror, NOT general paper), inactive
+                                        # (retired by record, on no roster). REMOVED here: the five bybit_2 + bybit_portfolio legs
+                                        # (xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h,
+                                        # trend_donchian_sol_prop). trend_donchian_1h STAYS: re-enabled 2026-10-28 (#21007, Tier-3, operator) as a
+                                        # TESTING leg on this demo floor, not on bybit_2. trend_donchian_eth_prop
+                                        # STAYS: it is on prop rosters only, not on bybit_2 (operator Q1 2026-10-28: prop-only legs stay testing here).
+                                        # Invariant: scripts/ci/check_strategy_status.py (strategy-status-guard). Rule: OPERATING-PLAN § 2
+                                        # "Three strategy statuses". ROLLBACK: put the five names back at the front of this list.
                                         # 2026-10-27 DEMO-FLOOR RULE (Tier-3; operator popup answer "Yes, that's the rule", relayed by the manager):
                                         # every strategy / ML leg that is not fully retired TRADES on the demo floor -- bybit_1 for crypto,
                                         # alpaca_paper / ib_paper for equities and futures. Shadow is not used for non-retired legs; the mirror is the
                                         # portfolio test; real money is promotion only. Added: avax_pullback_2h, eth_pullback_2h, eth_pullback_prop_2h, sol_pullback_2h, fade_breakout_4h, fvg_range_15m, htf_pullback_trend_2h, ict_scalp_5m, ict_scalp_avax_5m, ict_scalp_sol_5m, ict_scalp_sol_15m, ict_scalp_xrp_5m, squeeze_breakout_4h, trend_donchian, trend_donchian_ada_4h, trend_donchian_avax_4h, trend_donchian_eth, trend_donchian_sol, trend_donchian_sol_4h, trend_donchian_xrp_4h, turtle_soup.
-                                        # Excluded (retired by record): vwap (M7 kill), trend_donchian_1h (retired A/B, enabled: false).
+                                        # Excluded (retired by record): vwap (M7 kill). trend_donchian_1h was re-enabled 2026-10-28 (Tier-3, operator) and trades here as a demo-floor leg.
                                         # ROLLBACK: drop these names from this list and set the flipped legs back to execution: shadow.
                                         # 2026-10-27 DESK-8-SHORT-HOLD-S0 (Tier-3, OPERATOR-APPROVED, popup answer verbatim
                                         # "Roster on bybit_1 (Recommended)"): ict_scalp_eth_15m + ict_scalp_xrp_15m re-join as
@@ -1257,8 +1267,12 @@ accounts:
       - gdx_pullback_1d                # daily ETF pullback, gold miners — added 2026-06-27 (Tier-3)
       - tqqq_trend_long_1d             # leveraged Nasdaq-100 ETF trend: TQQQ (3x)
       - qld_trend_long_1d              # + QLD (2x) — paper soak, added 2026-06-30 (Tier-3)
-      - splg_trend_long_1d             # sub-$100 proxy cells (2026-07-07, Tier-3): SPLG
-      - iaum_pullback_1d               # (~$84, S&P 500 proxy for SPY) + IAUM (~$41, gold
+      - splg_trend_long_1d             # sub-$100 proxy cells (2026-07-07, Tier-3): SPYM
+      - iaum_pullback_1d               # NAMED EXCEPTION 2026-10-28 (operator: "Keep on alpaca_paper as exception
+                                       # (Recommended)"): production on alpaca_live, but the mirror excludes this
+                                       # affordability proxy, so it keeps a paper record here until it has a mirror
+                                       # (strategy-status-guard DUAL_BOOK_EXCEPTIONS).
+                                       # (~$84, S&P 500 proxy for SPY) + IAUM (~$41, gold
       - scha_trend_long_1d             # proxy for GLD) + SCHA (~$35, small-cap proxy for
                                        # IWM, marginal/observe). PAPER SOAK only — so the
                                        # ~$150 alpaca_live can later afford ≥1 whole share.
@@ -1272,11 +1286,11 @@ accounts:
       # support, so a desk entry and a strategy leg never share a symbol's position (refused, journalled). This roster
       # is NOT mirrored: alpaca_portfolio mirrors alpaca_live, which does not carry claude_desk. ROLLBACK: delete this line.
       - claude_desk
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPLG, IAUM, SCHA]   # instrument identity (Phase-0 +
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, TQQQ, QLD, SPYM, IAUM, SCHA]   # instrument identity (Phase-0 +
                                        # ETF-breadth daily 2026-06-20 + intraday
                                        # ETF pilot 2026-06-20 § 0e adds SLV +
                                        # rollout 2b 2026-06-20 § 0e adds USO +
-                                       # sub-$100 proxies 2026-07-07 add SPLG/IAUM/SCHA).
+                                       # sub-$100 proxies 2026-07-07 add SPYM/IAUM/SCHA).
     risk:
       max_dd_pct: 0.05                 # 5% max intra-day drawdown
       daily_loss_pct: 0.05             # daily-loss cap = 5% of equity
@@ -1309,13 +1323,13 @@ accounts:
   # ROSTER-SYNC: keep `strategies` + `symbols` in step with alpaca_live whenever
   # the real-money roster changes — this account exists to mirror it, WITH ONE
   # deliberate divergence (operator-approved 2026-07-16): the cheap sub-$100
-  # PROXIES `splg_trend_long_1d` (SPLG→SPY) + `iaum_pullback_1d` (IAUM→GLD) are
+  # PROXIES `splg_trend_long_1d` (SPYM→SPY) + `iaum_pullback_1d` (IAUM→GLD) are
   # DROPPED here. alpaca_live only added those proxies for the ~$150 real
   # account's whole-share affordability; on a large paper balance the primaries
   # (SPY/GLD) fire directly, so running both proxy AND primary would DOUBLE the
   # S&P/gold exposure and pollute the portfolio read. This paper book trades the
   # primaries; the proxies stay alpaca_live-only. ROLLBACK: re-add both cells +
-  # SPLG/IAUM to `symbols`.
+  # SPYM/IAUM to `symbols`.
   #
   # ⚠️ ROSTER-SYNC IS NOW STRICT EQUALITY, AND THE LIST BELOW DOES NOT YET
   # SATISFY IT. DECIDED 2026-09-21 (operator, checklist row B2): this account
@@ -1393,7 +1407,7 @@ accounts:
       # What ends is their record at the PORTFOLIO risk basis (risk_pct 0.02 vs
       # alpaca_paper's 0.015) and their presence in /api/bot/performance's
       # paperPortfolio block.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX]  # alpaca_live.symbols minus the SPLG/IAUM proxies.
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX]  # alpaca_live.symbols minus the SPYM/IAUM proxies.
     risk:
       max_dd_pct: 0.10                 # = alpaca_live's caps (operator, 2026-08-25:
       daily_loss_pct: 0.10             # "10% max drawdown" / "daily to 10% as well").
@@ -1668,7 +1682,7 @@ accounts:
                              # before the subset assertion. DO NOT "fix" that by
                              # adding it to alpaca_portfolio; that would break
                              # the strict `symbols` equality one line below,
-                             # which excludes SPLG/IAUM by construction.
+                             # which excludes SPYM/IAUM by construction.
       #
       # ⚠️ scha_trend_long_1d IS NOT HERE ON PURPOSE. It was offered as Option A+
       # and the operator did NOT choose it. It is also the one candidate that
@@ -1713,8 +1727,8 @@ accounts:
       # ROLLBACK (Option A only): delete the four entries above, leaving
       # `[tlt_pullback_1h]`. That is the entire gate — there is no mode flip in
       # front of it, and no deploy step beyond ict-git-sync pulling the change.
-    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPLG, IAUM]   # instrument identity
-                                       # (mirrors alpaca_paper; sub-$100 proxies SPLG/IAUM
+    symbols: [SPY, QQQ, GLD, IWM, TLT, IEF, SLV, USO, GDX, SPYM, IAUM]   # instrument identity
+                                       # (mirrors alpaca_paper; sub-$100 proxies SPYM/IAUM
                                        # added 2026-07-07 for the promotion).
     risk:
       # DEMONSTRATION-ACCOUNT RISK (2026-08-25, Tier-3, operator-directed:
@@ -1753,7 +1767,7 @@ accounts:
       # SLV/USO are capped by whole-share granularity and cash, not by risk.
       #
       # ⚠️ THE SURVIVAL-GATE EVIDENCE IS FOR 2% AND HAS NOT BEEN RE-RUN AT 5%.
-      # Prior record (2026-07-07, #5911/#5916): at 2% under 5%/5% caps SPLG
+      # Prior record (2026-07-07, #5911/#5916): at 2% under 5%/5% caps SPYM
       # survival 1.00 / P(breach) 0.093, IAUM 1.00 / 0.035 (both ROUTE); the
       # 2026-06-30 escalation to 0.10/0.10/0.10 measured survival 0.69, under
       # the 0.90 floor. This setting sits between those two measured points and

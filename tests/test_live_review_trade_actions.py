@@ -356,9 +356,13 @@ def test_materialized_evidence_is_used_only_when_absent(tmp_path, monkeypatch):
 
 # --------------------------------------------------------------- the VM rows watcher + paper scope
 
-def test_the_rows_watcher_dispatches_every_trade_action_and_a_paper_row():
-    """The watcher used to send only tighten_sl, so no trade action could ever reach the VM."""
+def test_the_rows_watcher_dispatches_every_trade_action_and_a_paper_row(monkeypatch):
+    """The watcher used to send only tighten_sl, so no trade action could ever reach the VM.
+    Tests the path a class takes once it GRADUATES (every class is advice only until its own test passes,
+    operator 2026-10-28; tests/test_tighten_advice_only.py), so the advice-only set is emptied here."""
+    from src.runtime import live_review_rows as rows_lib
     from src.runtime import live_review_rows_watch as w
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
     for a in lri.TRADE_ACTIONS:
         assert w.dispatchable({"recommendation": {"action": a}, "disposition": {"route": "recommended"}}) is None
     assert w.dispatchable({"recommendation": {"action": "hold"}, "disposition": {"route": "none"}}) == "action_hold"

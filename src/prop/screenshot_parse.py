@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # request to the fallback. The working caller in this repo
 # (``src/runtime/insights/generator.py``) uses ``claude-sonnet-4-6`` and
 # ``claude-haiku-4-5-20251001``; this now matches it rather than inventing an id.
-_DEFAULT_MODEL = "claude-sonnet-4-6"
+_DEFAULT_MODEL = "gemini-3.5-flash"   # was claude-sonnet-4-6; the Anthropic API path is disabled (2026-10-28)
 _FILL_STATUSES = {"placed", "open", "filled", "closed", "skipped"}
 _SUPPORTED_MEDIA = {"image/png", "image/jpeg", "image/webp", "image/gif"}
 
@@ -408,39 +408,17 @@ def _call_vision_gemini_once(model_id: str, image_b64: str, media_type: str) -> 
 
 
 def _call_vision_anthropic(model_id: str, image_b64: str, media_type: str) -> str:
-    """Vision call against the Anthropic Messages API."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise ScreenshotParseError(
-            "screenshot reading is unavailable (no ANTHROPIC_API_KEY set) — "
-            "type the report instead, e.g. `close ETHUSD 2950 +80 tp` / `bal 5040 5010`.")
-    try:
-        import anthropic  # noqa: F401  (lazy on purpose)
-    except ImportError as exc:  # pragma: no cover - env-dependent
-        raise ScreenshotParseError(
-            "screenshot reading is unavailable (anthropic SDK not installed) — "
-            "type the report instead.") from exc
+    """HARD REFUSAL. This used to call the Anthropic Messages API with the VM's prepaid
+    ``ANTHROPIC_API_KEY``; that spends API credits, which the operator closed on 2026-10-27
+    ("No API: plan sessions only"), re-confirmed 2026-10-28. The SDK is never imported here.
 
-    client = anthropic.Anthropic()  # picks up ANTHROPIC_API_KEY from env
-    resp = client.messages.create(
-        model=model_id,
-        max_tokens=_MAX_OUTPUT_TOKENS,
-        system=_SYSTEM_PROMPT,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {
-                    "type": "base64", "media_type": media_type, "data": image_b64}},
-                {"type": "text", "text": _USER_PROMPT},
-            ],
-        }],
-    )
-    if str(getattr(resp, "stop_reason", "") or "").lower() == "max_tokens":
-        raise ScreenshotTruncated(
-            "the screenshot held more rows than one reply can carry, so the "
-            "report was cut off mid-way. Send a tighter crop (just the position "
-            "or the one trade you want recorded), or type it "
-            "(e.g. `close ETHUSD 2950 +80 tp`).")
-    return _extract_text(resp)
+    Raised as a provider-level ``ScreenshotParseError`` so ``_call_vision`` falls back to the
+    Gemini provider exactly as it did for a dead key, naming both models in the log.
+    """
+    raise ScreenshotParseError(
+        "the Anthropic vision path is DISABLED (nothing may spend Anthropic API credits) — "
+        "set PROP_SCREENSHOT_MODEL to a gemini model, or type the report instead, "
+        "e.g. `close ETHUSD 2950 +80 tp` / `bal 5040 5010`.")
 
 
 class ScreenshotBackendUnavailable(ScreenshotParseError):

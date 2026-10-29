@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "`git remote get-url origin` on both VMs prints the JTA-Trader URL and ict-git-sync's next pull succeeds",
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "id": "PI-20261029-IHFQDB3W-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RENAME-JTA-TRADER lane (session_01AFoLuKQVFhUAn8ihFQdB3W), post-rename deferrals 2026-10-29",
+    "rerun": "vm-ops / diag relay: git -C <clone> remote get-url origin"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 2,
+  "what": "[rename] Both VMs' clones (/home/ubuntu/ict-trading-bot, /opt/ict-trading-bot) still have origin = .../Metis-Insights and rely on the GitHub redirect. Repoint to .../JTA-Trader as a Tier-2 system-action (none exists today for set-url; draft one or run via vm-ops after an operator OK). Check ict-git-sync pulls main on its next ~5 min run afterwards."
+}

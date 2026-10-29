@@ -1,0 +1,23 @@
+{
+  "id": "STRATEGY-STATUS-MODEL",
+  "title": "Three strategy statuses (testing / production / inactive): move production legs off general paper + strategy-status-guard",
+  "phase": "ops",
+  "state": "in_flight",
+  "owner": "lane",
+  "lane": "STRATEGY-STATUS-MODEL",
+  "model": "opus",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    21038
+  ],
+  "blocked_on": [],
+  "note": "Operator decision 2026-10-28 ~21:05Z 'Adopt; build it this week' (relayed by manager session_01AFoLuJi1vLTnYv9LbP6539). Lane Opus, ceiling $12. Branch claude/strategy-status-model, HELD PR (Tier 3). Rule: OPERATING-PLAN \u00a7 2 'Three strategy statuses'. Evidence: docs/research/strategy-status-model-2026-10-28.md (23 dup trades / 28 d; 2 lost, slices re-entries). Open operator questions 1-5 in the plan section. [2026-10-28 22:35Z lane] PR #21038 HELD (Tier 3) on the operator's OK of the final diff and Q1-Q5 (OPERATING-PLAN \u00a7 2 'Open'); report fired to the manager (trig_01LHwPcXMNFXhJRGvaGj8c5Q). Head 80be92e, CI queued at report time; lane stays subscribed and fixes red CI. CLOSES (after merge+deploy) on the OBSERVATION: diag journal?table=trades shows no new trade on bybit_1/alpaca_paper for a production leg (python3 scripts/ops/strategy_status.py lists them) after the deploy sha, while bybit_2+bybit_portfolio keep taking that leg's trades; and the open bybit_1 positions of the moved legs close with a TP/SL/strategy reason (not reconciler).",
+  "updated_at": "2026-10-28T22:32:55Z",
+  "updated_by": "session_01AFoLuMuLPLAveAwJS7eqad",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 764
+}

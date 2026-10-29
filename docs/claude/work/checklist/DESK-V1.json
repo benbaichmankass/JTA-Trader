@@ -1,0 +1,22 @@
+{
+  "id": "DESK-V1",
+  "title": "Desk V1 acceptance: plan \u00a7 1.6 checks 1-7 observed on VM/main (liveness 48h, p95 latency <=300s, >=1 clean claude_desk bybit_1 trade end-to-end, 0 applied untested in-trade actions, no_trade priced hourly, consumed.jsonl >=1, each alert fired once) -> comms/desk/v1_acceptance.json",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Umbrella for operator priority #2 (2026-10-28 ~20:55Z, 'fully in production by the end of the week'). Plan docs/plans/desk-v1-production-plan-2026-10-29.md. Sun-1 writes the acceptance record. STALE ROWS seen 10-28 (G13): DESK-3-EXECUTORS in_flight but #20487 merged 10-27 06:07Z; DESK-17 note says execution: shadow but strategies.yaml reads live. alpaca_paper first desk trade slips to Mon 11-02 (markets closed) -- stated, not a V1 blocker. [2026-10-28 ~21:07Z OPERATOR ANSWER, popup relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539] A1 verbatim 'Advice-only until tested' -> PR #21026 (hold). A2 verbatim 'Yes, one probe on bybit_1' -> PR #21028 (hold; probe cap 2->3). A3 verbatim 'Hourly + <=12 triggers/day'. [2026-10-28 ~21:45Z] Operator kept milestone dates (relayed by manager): ML-LIVE 11-01, DESK-V1 11-04, AM-STANDARD 11-04. The plan's Thu-Sun build stands; Sun-1 acceptance record is the V1 check, the DESK-V1 milestone date is 11-04 (alpaca_paper Mon 11-02 trade lands inside it).",
+  "priority_rank": 2,
+  "updated_at": "2026-10-28T21:49:58Z",
+  "updated_by": "session_01AFoLuKietgEgZagdrtFF18",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "_seq": 756
+}

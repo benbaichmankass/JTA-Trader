@@ -1,0 +1,77 @@
+id: RQ-20261011-9da8-05
+title: 'Frontier strategy: time-series momentum with volatility targeting on the liquid crypto perps (Stage-0, full cost stack)'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: Does a volatility-targeted time-series-momentum position (sign of trailing return over a registered lookback set,
+  size inversely to realised vol) on BTCUSDT, ETHUSDT and SOLUSDT daily bars show positive net R after fees + slippage + funding
+  over the trailing window in scripts/ops/fetch_backtest_corpus.py?
+why_this_matters: 'Time-series momentum with vol scaling is the best-documented diversifier in managed futures and is structurally
+  different from every entry family on the roster (breakout / pullback / ICT / pairs): it holds for weeks, trades rarely,
+  and is sized by risk, not signal. scripts/backtest_vol_target.py exists but books turnover-bps drag only (CLAUDE.md harness
+  list) and backs no scored leg -- so a PASS today would be fee-light evidence. Hence blocked until the cost split exists.'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    DESIGN RE-DECLARED paired -> one_sample 2026-10-28, before any run (lane FRONTIER-LEVER-XSEC-RUNNER; same precedent as RQ-20261011-9da8-01, 2026-10-22): the dispatcher's power gate does not know design paired and refuses to route it. Effect size, alpha, power and expected_n are unchanged, so the 39-trade floor is unchanged. Original basis: d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (repo E35 floor). Daily TSMOM yields tens of re-balances per symbol over 3y; if n < 39 the verdict is INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed history, nothing accrues: the window is the trailing 1095 daily bars plus the settled funding series from the public archive. expected_n is a design estimate of trades (legs opened or flipped), not an observed count; the first run replaces it with the measured n_trades.'
+decision_rule:
+  id: RULE-RQ1011-9DA8-05-TSMOM-VOLTARGET
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: 'net_total_r and n_trades per symbol from the harness summary, with fees + slippage + funding applied via execution_costs.resolve_cost_policy;
+    also reported: gross vs net and the turnover.'
+  rule: PASS IF net_total_r > 0 AND n_trades >= 39 on at least two of three symbols; FAIL IF net_total_r <= 0 with n >= 39
+    on two or more (one pass -> re-queue a confirmatory run before reading as a kill); INDETERMINATE IF n < 39.
+  what_it_does_not_do: Does not touch config/strategies.yaml or accounts.yaml and proposes no leg. A PASS is Stage-0 evidence
+    for a build row.
+practice_precedent: 'none: Stage-0 cost-stack check of a documented factor (docs/research/P7-xsec-momentum-firstpass-2026-06-26.md; docs/research/frontier-scan-2026-10-11.md S1); it makes no trade-management or AI-method claim to cite a principle for'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: Estimate from the sibling fc / harness runs; the first run replaces it.
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/frontier_momentum_runner.py
+  - --mode
+  - tsmom
+  - --n-floor
+  - '39'
+  - --days
+  - '1095'
+  - --lookbacks
+  - '28,56,112'
+  - --target-vol
+  - '0.20'
+  - --max-leverage
+  - '2.0'
+  - --rebalance-days
+  - '7'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261011-9da8-05
+  timeout_minutes: 45
+  note: "UNBLOCKED by FRONTIER-LEVER-XSEC-RUNNER. scripts/backtest_tsmom.py is the TSMOM entry-signal instrument (sign of trailing return, mean over the lookback set, vol-targeted, per symbol, execution_costs full stack, signed settled funding). OPERATOR/MANAGER TO CONFIRM BEFORE DISPATCH: this unit's text says 'a registered lookback set' but none was ever registered; the command proposes lookbacks 28,56,112 days, 20% target vol, 2x leverage cap, weekly re-weight, BTC/ETH/SOL (default symbols) -- all CLI flags, so changing them is a one-line edit here before the first run. net_total_r is the sum of daily FRACTIONAL returns of each sleeve (no stop distance exists); n_trades = legs opened or flipped. Rule graded verbatim: PASS if >=2 symbols net>0 with n>=39; FAIL if >=2 net<=0 with n>=39; else INDETERMINATE."
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/backtest_vol_target.py
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-RESEARCH
+last_dispatched_at: '2026-10-29T04:00:04+00:00'

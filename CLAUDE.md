@@ -1,4 +1,4 @@
-# Metis Insights — CLAUDE.md
+# JTA Trader — CLAUDE.md
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-10-27` · registered in [`docs/DOCUMENT-INDEX.md`](docs/DOCUMENT-INDEX.md)
 
@@ -92,7 +92,8 @@ work? 1–2 clean trades; an instrument, not a decision surface) → *Gate 2* �
   [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is MECHANICAL" — point at it, never
   restate it. Realized cost and live-vs-backtest are monitoring, never a soak's exit. `soak-contract-guard` refuses `n_needed` > 2 or a
   calendar field; `soak-doctrine-guard` refuses any live doc, skill or generator that teaches a longer soak.
-- ⚠️ **STAGE 1 IS THE DEMO FLOOR: every non-retired leg TRADES there** (operator, 2026-10-27, binding, popup *"Yes, that's the rule"*): `bybit_1` for crypto, `alpaca_paper` / `ib_paper` for equities and futures; shadow is not a holding stage; demotion stops at the floor (popup *"Demote stops at the floor (Recommended)"*); only a retirement record removes a leg. Stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "Stage 1 is the DEMO FLOOR"; point at it.
+- ⚠️ **THREE STRATEGY STATUSES** (operator, 2026-10-28, *"Adopt; build it this week"*): **testing** = general paper (Stage 1) · **production** = real money + its mirror, NOT general paper (Stage 2) · **inactive** = retired by record, on no roster. Promotion MOVES a leg off general paper; demotion moves it back. DERIVED, never a field (`scripts/ops/strategy_status.py`); `strategy-status-guard` refuses a leg on both books. Stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "Three strategy statuses"; point at it.
+- ⚠️ **STAGE 1 IS THE DEMO FLOOR: every TESTING leg TRADES there** (operator, 2026-10-27, binding, popup *"Yes, that's the rule"*): `bybit_1` for crypto, `alpaca_paper` / `ib_paper` for equities and futures; shadow is not a holding stage; demotion stops at the floor (popup *"Demote stops at the floor (Recommended)"*); only a retirement record removes a leg from the books. Stated once in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "Stage 1 is the DEMO FLOOR"; point at it.
 - **A live or paper book never establishes edge.** It checks mechanics and cost. Advancing a leg on live-book P&L is a category error.
 - **Stage 2 is one stage** (operator, 2026-09-21): mirror and live take the same strategies and trades, enforced by strict equality in
   `tests/test_paper_portfolio_accounts.py`; sanctioned divergence: the two Alpaca affordability proxies only. **Empty `alpaca_live` ⇒ empty
@@ -105,6 +106,7 @@ Every leg's bracket carries a REAL predictive take-profit at entry, the predicti
 not exempt a leg, and compliance is MEASURED — [`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "TP doctrine"; run
 `python3 scripts/ci/check_tp_doctrine.py` (guard `tp-doctrine-guard`; `tp_r: 50.0`, a rest-at-venue-cap default and `tp_intent: none` are
 non-compliant). **Re-run the guard, never quote its counts.**
+**Active management** (operator, 2026-10-28, binding): any evidence-backed move of either bracket, each action class advice-only until its own net-of-cost test passes — [`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "Active management".
 
 ### The daily sync, and standing authorizations
 
@@ -243,6 +245,9 @@ catalog; precedents are example outputs, not authority. **The manager contract i
 
 ## Repo identity
 
-Renamed to **`benbaichmankass/Metis-Insights`** 2026-07-23; the old name still redirects — **do not chase a rename sweep.** The MCP repo
-name is whatever THIS session's scope says (a denial is a scope mismatch, not an outage). VM clone dirs stay `/home/ubuntu/ict-trading-bot`
-and `/opt/ict-trading-bot`.
+The project is named **JTA Trader** (operator, 2026-10-28; previously "Metis Insights", 2026-07-23, and "ICT bot"). The GitHub repo was renamed by
+the operator in GitHub Settings to **`benbaichmankass/JTA-Trader`** (2026-10-28; record: [`docs/runbooks/jta-trader-rename.md`](docs/runbooks/jta-trader-rename.md)); the old
+names redirect — **do not chase a rename sweep.** The MCP repo name is whatever THIS session's scope says (a denial is a scope mismatch, not an
+outage). **Runtime identifiers deliberately keep their old names:** VM dirs `/home/ubuntu/ict-trading-bot` and `/opt/ict-trading-bot`, systemd
+unit names, Python package/module names, the `ict-bot.duckdns.org` domain, bot names, the `Manager Session` title convention, Kaggle slugs,
+`~/.cache/metis-*` dirs and `data-metis-*` selectors. Tooling reads the repo slug from `GITHUB_REPOSITORY` / `git remote`, never a literal.

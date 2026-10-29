@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "a confirmation unit for X6 on a disjoint window is queued and graded, or retired with a reason",
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261029-HOPS0250-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261029-0250",
+    "rerun": "python3 -c \"import json,glob;print(json.loads(open(sorted(glob.glob('research/results/RQ-20261028-a7c3-01/*.jsonl'))[-1]).readlines()[-1])['measurement']['grade']['label'])\""
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 3,
+  "what": "[research-ops 2026-10-29 02:50Z] RQ-20261028-a7c3-01 PASS (ada_pullback_2h, tp_extend X6 vs incumbent S4: net R 93.81 vs 91.43 = +2.39R, 5 of 6 folds, maxDD 21.9 <= cap 29.6, lever fired) is a DISCOVERY from a chain selected on xrp_pullback_2h and generalised to siblings; X6 has reach_ge_6r 0.0 under TP doctrine (satisfies_reach_floor false). Tier-3 candidate only. Next: ONE confirmation unit on a disjoint/most-recent window with the same statistic and bar (count X6's trial denominator: 1 selection leg + 4 sibling legs)."
+}

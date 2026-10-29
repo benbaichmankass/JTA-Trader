@@ -546,6 +546,10 @@ Turning a feature off to stop it affecting trades is a *trade-path* decision. Sw
 
 Verbatim: *"No API: plan sessions only,"* clarified the same day: *"I'm not opposed to the API path if you can get it to work from the plan tokens, but I don't want to start topping off credits."* Nothing in this system spends Anthropic API credits (the VM's `ANTHROPIC_API_KEY` is prepaid console billing, separate from the plan). Claude runs only on the plan: cloud sessions, or plan-authenticated Claude Code. The `run-desk-judge` system-action spends credits, is retired, and hard-refuses. Existing `anthropic` SDK importers (`src/runtime/insights/generator.py`, `src/prop/screenshot_parse.py`) are not changed by this line; they are reported to the operator for a decision.
 
+**Clarification (operator, 2026-10-28 ~21:55Z, verbatim):** *"When I was talking about the API thing, I meant that when we make an API call to a cloud session, that has to be taken out of credits and not out of the manager session. That was the only API thing that I meant to take off. Anything else that can be done by API is fine. It was just the issue of that the transaction path has to be one that doesn't require there being credits on the account that can be used for each API call to Claude. That was the only thing that I meant to take out of the design. Anything else is fine."* And: *"There's no credits on the account ... it's fine that the credits are on. If I happen to get free credits, then we can use them."*
+
+**Scope, stated plainly:** this rule removes only per-call **Claude** API paths that need Anthropic console credits (the `anthropic` SDK calls). Non-Claude APIs (Gemini, broker, data and similar) and plan-based Claude (cloud sessions, plan-authenticated Claude Code) are unaffected. The three SDK paths closed in #21008 (`scripts/research/desk_judge_api.py`, `src/prop/screenshot_parse.py`, `src/runtime/insights/generator.py`) are exactly that class, so their hard refusals stand.
+
 ## Validate early when it is cheap (operator directive 2026-10-28, binding)
 
 Verbatim gist: *"when we can validate something easily and cheaply earlier, we should try and validate it earlier and not wait unnecessarily long for answers."*
@@ -1824,6 +1828,11 @@ a broken close path, an unreachable account, a wiring gap — where the fix is
 the fix and tuning would be measuring a defect.
 
 ## Promotion evidence — offline edge, live mechanics (2026-07-26, binding)
+
+> **Where a leg trades — three statuses (operator, 2026-10-28).** *testing* = general paper (Stage 1), *production* = real money +
+> its mirror and NOT general paper (Stage 2), *inactive* = retired by record. Promotion moves a leg off general paper; demotion moves it
+> back. Stated once in [`OPERATING-PLAN` § 2 "Three strategy statuses"](plans/OPERATING-PLAN-2026-09-21.md); enforced by
+> `strategy-status-guard`. This section governs the EVIDENCE for a move; that one governs the BOOKS.
 
 Adopted after the de-soak workplan
 ([`docs/research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md`](research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md))

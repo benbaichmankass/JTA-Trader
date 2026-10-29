@@ -4,7 +4,7 @@
 
 One row per `execution: live` strategy. `regime`: **cell** = has a `config/regime_policy.yaml` entry; **exempt** = permanently regime-gating-N/A (reasoned); **debt** = grandfathered, owed a cell (paid down by Phase-2 / the system-review). `desc` = has a `config/strategy_descriptions.json` entry.
 
-**Coverage:** 7 celled · 13 exempt · **34 in debt** (ceiling 34). The debt count must trend to 0.
+**Coverage:** 6 celled · 14 exempt · **34 in debt** (ceiling 34). The debt count must trend to 0.
 
 | strategy | regime | desc |
 |---|---|---|
@@ -17,7 +17,6 @@ One row per `execution: live` strategy. `regime`: **cell** = has a `config/regim
 | `fvg_range_15m` | ✅ cell | ✅ |
 | `gdx_pullback_1d` | 🟠 debt | ✅ |
 | `gld_pullback_1d` | 🟠 debt | ✅ |
-| `gld_pullback_1h` | ✅ cell | ✅ |
 | `htf_pullback_trend_2h` | ✅ cell | ✅ |
 | `iaum_pullback_1d` | 🟠 debt | ✅ |
 | `ict_scalp_5m` | ✅ cell | ✅ |
@@ -49,6 +48,7 @@ One row per `execution: live` strategy. `regime`: **cell** = has a `config/regim
 | `tlt_pullback_1h` | 🟠 debt | ✅ |
 | `tqqq_trend_long_1d` | 🟠 debt | ✅ |
 | `trend_donchian` | ✅ cell | ✅ |
+| `trend_donchian_1h` | ➖ exempt | ✅ |
 | `trend_donchian_ada_4h` | 🟠 debt | ✅ |
 | `trend_donchian_avax_4h` | 🟠 debt | ✅ |
 | `trend_donchian_eth` | 🟠 debt | ✅ |
@@ -86,7 +86,7 @@ One row per `execution: live` strategy. `regime`: **cell** = has a `config/regim
 | `slv_pullback_1d` | BL-20260717-REGIME-COVERAGE-DEBT | Directional pullback trend-follower on SLV; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
 | `slv_trend_1h` | BL-20260717-REGIME-COVERAGE-DEBT | Directional trend-follower on SLV; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
 | `sol_pullback_2h` | BL-20260717-REGIME-COVERAGE-DEBT | Directional pullback trend-follower on SOLUSDT; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
-| `splg_trend_long_1d` | BL-20260717-REGIME-COVERAGE-DEBT | Directional trend-follower on SPLG; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
+| `splg_trend_long_1d` | BL-20260717-REGIME-COVERAGE-DEBT | Directional trend-follower on SPYM; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
 | `spy_pullback_1h` | BL-20260717-REGIME-COVERAGE-DEBT | Directional pullback trend-follower on SPY; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
 | `spy_trend_long_1d` | BL-20260717-REGIME-COVERAGE-DEBT | Directional trend-follower on SPY; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |
 | `tlt_pullback_1d` | BL-20260717-REGIME-COVERAGE-DEBT | Directional pullback trend-follower on TLT; live since before the regime-coverage guard, no regime_policy cell (roster grew 6->44, policy did not). Owed a Phase-2 direction-aware cell. |

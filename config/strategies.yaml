@@ -1096,9 +1096,13 @@ strategies:
     # directly on both demo (bybit_1) and real (bybit_2).
     model: null
     signal_prefixes: [trend_donchian_1h, donchian_1h]
-    enabled: false           # RETIRED — config adopted into live trend_donchian.
-    execution: shadow        # moot while disabled; left shadow for safety.
-                             # Inert while execution: shadow.
+    enabled: true            # RE-ENABLED 2026-10-28 (Tier-3, operator, manager chat ~20:00Z) on the bybit_1 DEMO floor only.
+    execution: live          # DEMO-FLOOR RULE (docs/plans/OPERATING-PLAN-2026-09-21.md § 2): a non-retired leg trades on its floor.
+                             # bybit_1 only (accounts.yaml); NOT on bybit_2 / bybit_portfolio. ROLLBACK: enabled: false, execution: shadow.
+                             # ⚠️ SAME symbol/timeframe/params as the live trend_donchian (BTCUSDT 1h, donchian 20, trail 5.0): on bybit_1
+                             # (position_model: slices) both legs fire on the same breakout and split the symbol budget by
+                             # config/slice_allocation.yaml. That duplication is the cost of the retired-A/B's reinstatement; read the
+                             # two legs' slices as one signal when grading.
     timeframe: "1h"          # the faster-TF variant (live trend_donchian is 2h).
     symbols:
       - BTCUSDT              # the only validated symbol (SUPPORTED_SYMBOLS gate).
@@ -2281,9 +2285,19 @@ strategies:
     # 0.3). Runs on alpaca_paper (PAPER money) with bracket orders (broker-side
     # SL/TP); the builder gates on the US cash session (market_hours us_equity).
     # execution: live per the paper-accounts-execute operator policy.
+    #
+    # RETIRED 2026-10-28 — INACTIVE (STRATEGY-STATUS-MODEL; operator popup answer relayed by the manager,
+    # verbatim "Retire gld, re-home 3 later (Recommended)"), consistent with the operator's GLD decision of the
+    # same day, popup verbatim "GLD: kill and exclude" (commit 75fa182dd, #21009). RETIREMENT RECORD: cut from alpaca_paper
+    # 2026-10-05 by MD-S1-CUT-ON-STAGE0-FAIL (PR #16548, R-CUT-AFFORD: alpaca_live sizes none of its setups),
+    # never re-homed, and its GLD exposure is carried by gld_pullback_1d on ib_paper (GLD-SOAK-REPLACE,
+    # 2026-10-25). Inactive legs run no shadow logging (operator, same popup set); GLD candles keep being
+    # pulled for gld_pullback_1d. RE-ENTRY TEST: a fresh Stage-0 record at
+    # comms/strategy_evidence/gld_pullback_1h.json, net of the full cost stack, clearing a rule registered
+    # before the run, AND a real-money book that can size it. ROLLBACK: enabled: true + re-roster.
     model: null
     signal_prefixes: [gld_pullback_1h]
-    enabled: true
+    enabled: false
     execution: live
     timeframe: "1h"
     symbols:
@@ -2670,7 +2684,7 @@ strategies:
   # ~1.5% and (b) real-venue revalidation.
   # ------------------------------------------------------------------
   splg_trend_long_1d:
-    # SPLG daily LONG-ONLY trend-follower — cheap-share (~$84) proxy for
+    # SPYM (ex-SPLG; ticker renamed by the issuer) daily LONG-ONLY trend-follower — cheap-share (~$84) proxy for
     # spy_trend_long_1d. SPDR Portfolio S&P 500 tracks the IDENTICAL S&P 500
     # index as SPY (lower fee 0.02% vs 0.09%), so the validated SPY cell
     # transfers ~1:1 (backtest SPLG +33.6R >= SPY +28.0R). Same trend_donchian
@@ -2684,7 +2698,7 @@ strategies:
     long_only: true
     timeframe: "1d"
     symbols:
-      - SPLG
+      - SPYM   # renamed from SPLG (fund ticker change; same S&P 500 index) - 2026-10-28, Tier-3
     donchian: 30
     atr_period: 14
     atr_stop_mult: 2.5

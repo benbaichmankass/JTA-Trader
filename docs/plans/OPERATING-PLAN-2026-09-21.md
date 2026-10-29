@@ -105,7 +105,70 @@ one question, and a leg moves only when that question is answered on evidence.
             declared window.
 ```
 
+### Three strategy statuses: testing, production, inactive (operator, 2026-10-28, binding once merged)
+
+<!-- STRATEGY-STATUS-CANONICAL: the ONE statement of the status model. Other docs point here. -->
+
+**The rule.** Operator decision *"Adopt; build it this week"* (2026-10-28 ~21:05Z, relayed by the manager), in the operator's words:
+*"All the real money strategies are trading on paper portfolio. Everything is trading on the general paper account. The idea is that
+even poor strategies are generating data for us to learn from. But everything on real money is logging trades anyway, so we can take
+them off of the general paper account."* and *"strategies have 3 statuses - in testing (live on general paper), in production (live on
+real money and paper portfolio), and inactive (if several rounds of research had proven it's not worth pursuing). I think this will
+help by cleaning up duplicate trades in the books and creating a more integrated status structure."*
+
+| status | where the leg trades | ladder | how it is recorded |
+|---|---|---|---|
+| **testing** | general paper: `bybit_1` (crypto) · `alpaca_paper` / `ib_paper` (equities, futures) | Stage 1 | on a general paper roster |
+| **production** | real money + its paper-portfolio mirror (`bybit_2` + `bybit_portfolio` · `alpaca_live` + `alpaca_portfolio`), **not** general paper | Stage 2 | on a real-money roster (the mirror equality tests pin the mirror) |
+| **inactive** | nowhere | retired | a retirement record: `enabled: false` in `config/strategies.yaml` with the reason; on no roster |
+
+- **The status is DERIVED, never declared** (`scripts/ops/strategy_status.py`): inactive = retired by record; production = on a real-money
+  roster; testing = otherwise. A `status:` field would be a third gate (CLAUDE.md § "The two execution gates") and a second copy of the
+  roster, free to drift from it.
+- **Promotion MOVES a leg.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) adds it to real money **and** the mirror and removes it from its
+  general paper account in the same PR (`mandate_resolver._delta` proposes all three edits). Production legs keep logging every trade on
+  real money and the mirror, so general paper loses no record a production leg would have made — except where real money cannot size a
+  trade the paper book would (measured below).
+- **Demotion MOVES it back.** `MD-DEMOTE-S2-S1` removes it from real money + mirror and puts it back on its general paper account
+  (unchanged: `_delta` already adds the soak account). **Demotion still stops at the floor:** a leg leaves the books only by a retirement
+  record (`R-DEMO-FLOOR` stands for S1 -> OFF).
+- **Inactive = several rounds of research say stop.** Retirement is a decision on a committed research record, never a demotion's side
+  effect. **Inactive legs do NOT run in shadow** (operator, 2026-10-28, Q5 below): the retirement already
+  concluded the question, the leg's inputs (candles, funding, news) keep being collected for the live legs on the same symbols, and any
+  re-test regenerates the leg's signals offline from that data at zero runtime cost. A shadow leg would cost a tick slot, and would add
+  journal rows with no decision attached. The off-trade-path rule (canonical § "Off the trade path is not off the data path") binds
+  **features** taken off a trade path that is still being pursued. It does not bind a retired strategy. So the retirement record must
+  name (a) the research it rests on and (b) the re-entry test that would revive the leg. A leg kept for its *data* is not inactive: it
+  stays testing.
+- **Enforced** by `strategy-status-guard` (`scripts/ci/check_strategy_status.py`, whole tree, roster-membership keyed — CI does not
+  otherwise guard a roster REMOVAL): `R-DUAL-BOOK` (production leg also on general paper) · `R-NO-MIRROR` (production leg its mirror lacks,
+  minus the declared affordability carve-out; or real money with no mirror account) · `R-INACTIVE-ROSTERED` (retired leg on any roster) ·
+  `R-UNHOMED` (non-retired leg on neither book, unless named with its reason).
+- **Measured effect** (`docs/research/strategy-status-model-2026-10-28.md`, journal `trades` table via the diag relay, 28 days to
+  2026-10-28 21:00Z): 23 duplicate production-leg trades on general paper (22 on `bybit_1`, 1 on `alpaca_paper`). The move removes the
+  22 (≈ 5.5/week); the `alpaca_paper` one stays by the Q2 exception. 2 of the 22 had no real-money sibling in their order package (the
+  data the move loses).
+
+**Decided — operator popup answers, 2026-10-28 ~22:35Z, relayed by the manager (verbatim option labels):**
+1. **Prop legs** — *"Stay 'testing' on bybit_1 (Recommended)"*. Prop membership sets no status. A prop-only leg
+   (`trend_donchian_eth_prop`) stays testing on `bybit_1`, its only paper read. A leg on prop and real money is production.
+2. **`alpaca_live` affordability proxy** — *"Keep on alpaca_paper as exception (Recommended)"*. The mirror excludes `iaum_pullback_1d`
+   by the proxy carve-out, so the leg keeps a paper record on `alpaca_paper` beside real money until it has a mirror. It is the one named
+   exception (`DUAL_BOOK_EXCEPTIONS` in the guard, per account). The guard refuses the entry once it no longer applies.
+3. **`ib_live`** — *"Yes, mirror when it gets a leg (Recommended)"*. An `ib_portfolio` mirror arrives in the same PR as `ib_live`'s
+   first leg. The guard refuses an `ib_live` leg without one.
+4. **Unhomed legs** — *"Retire gld, re-home 3 later (Recommended)"*, consistent with the same day's GLD decision *"GLD: kill and
+   exclude"* (commit `75fa182dd`, #21009). `gld_pullback_1h` is retired by record (`enabled: false`; the record
+   and its re-entry test are in its `config/strategies.yaml` comment). `spy_pullback_1h`, `qqq_pullback_1h` and `tlt_pullback_1h` go back
+   on `alpaca_paper` once it takes slices for them (a 1d leg trades the same symbols there). Until then they are named in the guard's
+   `UNHOMED` and owned by row `ALPACA-SLICES-REHOME-1H`, so none is silently unhomed.
+5. **Inactive legs** — *"No shadow logging (Recommended)"*. Market-data collection continues under "Off the trade path is not off the
+   data path".
+
 ### Stage 1 is the DEMO FLOOR: every non-retired leg trades there (operator, 2026-10-27, binding)
+
+⚠️ **AMENDED 2026-10-28 by "Three strategy statuses" above:** the floor is the home of every TESTING leg. A PRODUCTION leg
+trades on real money + the mirror INSTEAD of the floor, and returns to the floor on demotion. Everything else below stands.
 
 **The rule.** The operator confirmed it in a popup in manager session `session_01C1ooo4kqBbng7vytdG1UVs`,
 2026-10-27 ~07:10Z; the answer, verbatim, was *"Yes, that's the rule"*:
@@ -123,7 +186,7 @@ mechanical bugs while we're still improving the actual function."*
 **What follows from it:**
 - **The floor is the default home.** A leg trades on its demo floor from the moment it exists until a retirement record removes it. A missing Stage-0 pass does not keep a leg off the floor. It keeps the leg off **real money and the mirror** (Gate 2), and nothing else.
 - **`execution: shadow` is not a holding stage.** Shadow is no longer used for non-retired legs. A mechanism still being built (the desk leg, the short-hold lane, a new ML head) goes on the floor early, so mechanical bugs show up while the function is still improving.
-- **Demotion stops at the floor.** The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
+- **Demotion stops at the floor** (and, since 2026-10-28, a demoted production leg is put back ON it). The operator's popup answer, 2026-10-27, verbatim, was *"Demote stops at the floor (Recommended)"*. A leg that fails Stage 0 or underperforms is demoted out of real money and the mirror and stays on its demo floor. `MD-S1-CUT-ON-STAGE0-FAIL` and `MD-DEMOTE-S1-OFF` are rewritten to match. **Only an explicit retirement record removes a leg from its floor.**
 - **Real money is promotion only.** Gate 2 (`MD-PROMOTE-S1-S2`, human-merge PR) and the prop superset gate are unchanged.
 - **Exceptions are named, never silent.** A leg no demo venue can serve (e.g. `xauusd_trend_1h`: OANDA practice is `dry_run` and OANDA US cannot trade XAU_USD) or one blocked by a guard (same-symbol allocation without slices on alpaca_paper) is listed with the reason on its checklist row until the blocker is fixed.
 

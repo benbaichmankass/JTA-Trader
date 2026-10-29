@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "src/runtime/ltr_first_proof.py proves S3..S7 for the first real-money/prop TRADE ACTION (close / partial_close / move_tp / widen_sl / change_size / add_entry), not only a tighten_sl, with a test; or the operator retires the S3..S7 pings.",
+    "kind": "event"
+  },
+  "id": "PI-20261028-GGKQ4MZL-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "LTR-TIGHTEN-OPTIMIZE / advice-only build (session_01AFoLuLLDoFfA4BGgKq4MZL, operator popup 2026-10-28 ~20:35Z 'Advice-only tightens (Recommended)')",
+    "rerun": "grep -n 'S3_tighten\\|tighten_sl' src/runtime/ltr_first_proof.py; grep -n 'ADVICE_ONLY_ACTIONS' src/runtime/live_review_rows.py"
+  },
+  "state": "queued",
+  "what": "[ltr][observability] ltr_first_proof S3_tighten..S7_confirmed only fire for a real-money/prop tighten_sl row that the VM dispatches. Since the 2026-10-28 advice-only decision no tighten is ever dispatched, so S4..S7 can never be proven and the operator's 'ping when each stage is first proved' (2026-10-26) goes silent for the execution chain. Generalise the stages to the first dispatched trade action (the close at LR-20261028T1018Z-pkg-5277d9b977994968 already executed), or have the operator retire them."
+}

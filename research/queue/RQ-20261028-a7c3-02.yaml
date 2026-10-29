@@ -1,0 +1,117 @@
+# Hand-authored 2026-10-28 by lane ACTIVE-MGMT-REAL-MONEY-PLAN (Tier 1), dispatched by Manager Session session_01AFoLuJi1vLTnYv9LbP6539.
+# Decision rule registered BEFORE any arm of this unit was run on this window. Plan: docs/plans/real-money-active-mgmt-plan-2026-10-29.md.
+id: RQ-20261028-a7c3-02
+title: 'TP doctrine COMPLIANCE, real money: does the Donchian measured-move TP revision (width_mult 0.5, confirmed on trend_donchian_eth_4h)
+  on trend_donchian_xrp_4h stay no worse than its declared static 3R target in 5 of 6 folds, net of cost?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'T9 [S9, S25] (targets are justified for mean-reversion; on trend legs the TP doctrine requires measuring the cost, not assuming it) + T3 (net of the full cost stack); binding source docs/ARCHITECTURE-CANONICAL.md § TP doctrine. Principles in docs/reference/trading-and-model-practice-principles.md.'
+question: 'trend_donchian_xrp_4h (bybit_2 real money, bybit_portfolio) declares a reachable 3R target (guard reach 0.158,
+  n 146) and FAILS tp_revision (rule_undeclared). The donchian_measured_move rule is live in trend_donchian.monitor() and
+  declared on trend_donchian_eth_4h, where it passed (RQ-20261018-007: MM05 115.95 vs 99.23 R, MEASURED) and where live
+  closes since 2026-09-01 show the TP amended on 2 of 9 bybit_2 closes (diag journal + order_packages, 2026-10-28). The
+  coverage matrix reads tp_extend `pending` for this leg; the measured move was never run on it.'
+why_this_matters: Makes xrp_4h doctrine-compliant with a producer that already runs live on a sibling, so the gap to production
+  is one declare line. The leg's tightening levers are thin or uncorroborated (ER-gate 0142-04 on n 68; ADX trail failed
+  its sibling corroboration 511e-01).
+power:
+  expected_n: 68
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 baseline trades (the exit-refinement floor). MEASURED: trend_donchian_xrp_4h
+    declared arm n 68 over 2020-07..2026-10-15 (RQ-20261024-0142-04 arm A, 14.30 R). 68 >= 39, but a fold holds ~11 trades,
+    so a fold verdict is noisy: disclosed, not corrected after the fact.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261028A7C302-XRP4H-MM-COMPLIANCE
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_xrp_4h, window 2020-07-01 ..
+    2026-10-26 23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the harness resolves
+    per venue (execution_costs.resolve_cost_policy; recorded per arm as cost_stack). Per arm from the harness''s own --json
+    summary: n, net_total_r, max_drawdown_r, net R per fold, net_r_per_capital_day, by_outcome. BASELINE A = the leg as
+    declared (static 3R, stale exit, trail decay). MM05 = A plus the measured-move revision at the width confirmed on eth_4h,
+    chosen now and not tuned on this leg. Reported, not graded: tp_share, lever_fired, net_r_per_capital_day.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate
+    C PASSES iff net_r(C) > net_r(A) (the harness grades exactly this with --delta-r 0 --delta-r-per-trade 0) AND folds where
+    net_r(C) >= net_r(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. This is the TP-doctrine COMPLIANCE bar (bea9 precedent):
+    zero materiality, because compliance is the motive and a P&L-neutral prediction is the doctrine''s answer. PASS -> doctrine
+    read as in RQ-20261022-bea9-02 (tp_share < 0.10, lever not fired, or worse capital efficiency -> forwarded, not a declare);
+    otherwise the evidence record for ONE Tier-3 declare (tp_revision {rule: donchian_measured_move, width_mult: 0.5}) on
+    bybit_2 + bybit_portfolio, row RM-AM-XRP4H-MM. Thresholds are not changed after any result. A FAIL is ''first test failed
+    -> variants queued'', never ''dead'' (research-ops § D).'
+  what_it_does_not_do: Edits no config, places no order. One candidate only, so no multiple-comparison correction is needed;
+    the 5-of-6 fold bar on ~11 trades per fold is the binding constraint and may read INDETERMINATE-like FAILs on noise.
+  registered_before_run: true
+  registered_at: '2026-10-28'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: TP-doctrine compliance of a real-money leg''s bracket (milestone: active management on every real-money
+    leg); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: Runner. One harness invocation per arm; the bea9 precedent took minutes per arm incl. the fetch.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_xrp_4h
+  - --arm
+  - A=
+  - --arm
+  - MM05=--tp-revision=donchian_measured_move;--tp-revision-width-mult=0.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-26 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261028-a7c3-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RM-ACTIVE-MGMT-MILESTONE
+- TP-DOCTRINE
+- RQ-20261018-007
+- RQ-20261024-0142-04
+- docs/plans/real-money-active-mgmt-plan-2026-10-29.md
+last_dispatched_at: '2026-10-29T03:02:58+00:00'

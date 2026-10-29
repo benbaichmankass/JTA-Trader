@@ -2144,6 +2144,24 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "strategy-status-guard",
+        # Operator 2026-10-28 ("Adopt; build it this week", relayed by the manager): three statuses —
+        # testing (general paper), production (real money + mirror, NOT general paper), inactive
+        # (retired by record, on no roster). WHOLE TREE, roster-membership keyed: refuses a leg on both
+        # books, a production leg its mirror lacks, a retired leg on a roster, and a non-retired leg on
+        # neither book (the unguarded roster-REMOVAL direction). OPERATING-PLAN § 2.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "scripts/ops/strategy_status.py",
+            "scripts/ci/check_strategy_status.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_strategy_status.py", "--self-test"],
+            ["python3", "scripts/ci/check_strategy_status.py"],
+        ],
+    },
+    {
         "name": "manifest-scope-constants",
         # The ML manifest<->dataset contract, at COMMIT time. It was previously
         # validated ONLY at train time, on the trainer, inside a cycle that
