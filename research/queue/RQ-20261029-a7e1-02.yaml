@@ -1,7 +1,7 @@
 id: RQ-20261029-a7e1-02
 title: 'Static mid-trade 50% PARTIAL CLOSE at bar k in {3, 6, 12, 24} on the six real-money legs: does any variant pass
   RULE-AM-RISK-ADJUSTED-V1 (K-corrected) plus non-inferiority, and confirm on the blind 2017-09..2020-06 window?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-AM-STANDARD
@@ -109,3 +109,16 @@ practice_precedent: 'T1, M1, M5, M6 (docs/reference/trading-and-model-practice-p
   against hold and a matched random intervention, cost-net path labels, every variant counted and corrected, a blind
   fresh window'
 last_dispatched_at: '2026-10-29T14:24:32+00:00'
+grading:
+  attested: RULE-AM-STATIC-PARTIAL-V1
+  auto: true
+  decision_rule_id: RULE-AM-STATIC-PARTIAL-V1
+  evidence:
+  - research/results/RQ-20261029-a7e1-02/local-v1-20261029.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
