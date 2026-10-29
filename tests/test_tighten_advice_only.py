@@ -1,4 +1,9 @@
-"""Tightens are ADVICE ONLY (operator 2026-10-28 ~20:35Z, popup "Advice-only tightens (Recommended)").
+"""In-trade classes are ADVICE ONLY until each passes its own test.
+
+Operator 2026-10-28 ~20:35Z, popup "Advice-only tightens (Recommended)"; extended ~21:07Z to every in-trade
+class, popup "Advice-only until tested" (row DESK-V1-MGMT-ADVICE-ONLY; plan docs/plans/desk-v1-production-plan-2026-10-29.md
+§ 5b). GRADUATION removes ONE class from rows_lib.ADVICE_ONLY_ACTIONS and the mandate's list together; the
+"graduated" tests below simulate that with monkeypatch.
 
 Evidence: comms/research/ltr_tighten_optimize/verdict.json (LTR-TIGHTEN-OPTIMIZE; DESK-LIFECYCLE-S0, PR #20967).
 A recommended tighten row is recorded and graded but NEVER dispatched, on any route and on all three automatic
@@ -21,9 +26,28 @@ from tests import test_live_review_rows_watch as trw
 from tests.test_live_review_dispatch import RID, TABLE_ROW, _set_row, world  # noqa: F401
 
 
-def test_the_production_set_is_exactly_tighten_sl():
-    assert rows_lib.ADVICE_ONLY_ACTIONS == ("tighten_sl",)
-    assert rows_lib.ADVICE_ONLY_VERDICT == "tighten_advice_only"
+IN_TRADE_CLASSES = ("tighten_sl", "widen_sl", "move_tp", "partial_close", "close", "change_size", "add_entry")
+
+
+def test_the_production_set_is_every_in_trade_class():
+    assert rows_lib.ADVICE_ONLY_ACTIONS == IN_TRADE_CLASSES
+    assert rows_lib.ADVICE_ONLY_VERDICT == "advice_only"
+
+
+def test_every_class_the_watcher_could_send_is_advice_only():
+    """No in-trade class the code knows how to send escapes the list by omission."""
+    assert set(w.DISPATCHABLE_ACTIONS) <= set(rows_lib.ADVICE_ONLY_ACTIONS)
+    assert set(di.APPLY_ACTION.values()) <= set(rows_lib.ADVICE_ONLY_ACTIONS)
+
+
+@pytest.mark.parametrize("action", IN_TRADE_CLASSES)
+def test_watcher_logs_every_class_as_advice(tmp_path, action):
+    disp = trw.FakeDispatch()
+    w.run_pass(git=trw.FakeGit([]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
+    w.run_pass(git=trw.FakeGit([trw.row("LR-a", action=action)]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
+    assert disp.calls == []
+    (rec,) = trw.log(tmp_path)
+    assert rec["verdict"] == "advice_only"
 
 
 # ------------------------------------------------------------------ VM rows watcher
@@ -36,31 +60,42 @@ def test_watcher_never_dispatches_a_recommended_tighten_and_logs_it_as_advice(tm
                dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
     assert disp.calls == []
     (rec,) = trw.log(tmp_path)
-    assert rec["verdict"] == "tighten_advice_only" and rec["review_id"] == "LR-t"
+    assert rec["verdict"] == "advice_only" and rec["review_id"] == "LR-t"
     # seen once: the next pass does not re-log or send it
     w.run_pass(git=trw.FakeGit([trw.row("LR-t")]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
     assert disp.calls == [] and len(trw.log(tmp_path)) == 1
 
 
-def test_watcher_still_dispatches_a_recommended_close(tmp_path):
+def test_watcher_dispatches_a_graduated_close(tmp_path, monkeypatch):
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", tuple(a for a in IN_TRADE_CLASSES if a != "close"))
     disp = trw.FakeDispatch()
     w.run_pass(git=trw.FakeGit([]), dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
     w.run_pass(git=trw.FakeGit([trw.row("LR-c", action="close"), trw.row("LR-t", action="tighten_sl")]),
                dispatch=disp, now_fn=lambda: trw.T0, logs=tmp_path)
     assert disp.calls == [("LR-c", trw.TIP)]
     assert {r["review_id"]: r["verdict"] for r in trw.log(tmp_path)} == {"LR-c": "dispatched",
-                                                                        "LR-t": "tighten_advice_only"}
+                                                                        "LR-t": "advice_only"}
 
 
 # ------------------------------------------------------------------ dispatcher (incl. the manual system-action)
 
 def test_dispatcher_refuses_a_tighten_as_advice_without_running_the_apply_or_pinging(world):  # noqa: F811
     res = d.dispatch(RID, apply=True)
-    assert res["verdict"] == "tighten_advice_only" and res["exit"] == d.EXIT_REFUSED
+    assert res["verdict"] == "advice_only" and res["exit"] == d.EXIT_REFUSED
     assert world["calls"] == [] and world["pings"] == []
 
 
-def test_dispatcher_still_hands_a_recommended_close_to_the_apply(world):  # noqa: F811
+def test_dispatcher_refuses_an_ungraduated_close(world):  # noqa: F811
+    row = copy.deepcopy(TABLE_ROW)
+    row["recommendation"] = {"action": "close", "reason": "structure broke against the trade",
+                             "evidence_source": "judgement", "basis": "judgement", "judgement_confidence": 0.6}
+    _set_row(world, row)
+    res = d.dispatch(RID, apply=True)
+    assert res["verdict"] == "advice_only" and world["calls"] == [] and world["pings"] == []
+
+
+def test_dispatcher_hands_a_graduated_close_to_the_apply(world, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", tuple(a for a in IN_TRADE_CLASSES if a != "close"))
     row = copy.deepcopy(TABLE_ROW)
     row["recommendation"] = {"action": "close", "reason": "structure broke against the trade",
                              "evidence_source": "judgement", "basis": "judgement", "judgement_confidence": 0.6}
@@ -80,7 +115,7 @@ def test_desk_intake_records_a_tighten_as_advice_and_never_applies_it(tmp_path):
     tdi.run(tmp_path, [tdi.in_trade_row()], apply_fn=a)
     assert a.calls == []
     (rec,) = tdi.log(tmp_path)
-    assert rec["verdict"] == "not_dispatchable" and rec["detail"] == "tighten_advice_only"
+    assert rec["verdict"] == "not_dispatchable" and rec["detail"] == "advice_only"
     assert di.APPLY_ACTION[("in_trade", "tighten_sl")] == "tighten_sl"   # still recognised, so it is graded
 
 

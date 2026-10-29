@@ -16174,7 +16174,94 @@ nodes:
   after:
   - unit: RQ-20261026-ed1c-10
     verdict: pass
-  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-10 read PASS on trend_donchian (BTC 1h) -- arm C75 beat A: net 85.57 vs 72.82 R (+12.75, bar 9.16), 5 of 6 folds >= A and > the unconditional tight-trail control UT in 5 of 6, maxDD 21.22 vs 24.04; E25 and E35 failed the 5-of-6 fold bar (3 of 6). UT alone was far worse (26.35 R), so the gate, not an early action, carries it. Chosen from 3 arms + 1 control (denominator 3). Author ONE confirmation unit on a disjoint partition (arm C75, same bar), then the live-producer check and a Tier-3 declare PROPOSAL with the mirror. Note ed1c-07 SL and ed1c-10 C75 share leg and baseline: run any combination only as its own single-vs-combo unit.'
+  # authored PROGRAMME-REVIEW-20261028 from needs_authoring: needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-10 read PASS on trend_donchian (BTC 1h) -- arm C75 beat A: net 85.57 vs 72.82 R (+12.75, bar 9.16), 5 of 6 folds >= A and > the unconditional tight-trail control UT in 5 of 6, maxDD 21.22 vs 24.04; E25 and E35 failed the 5-of-6 fold bar (3 of 6). UT alone was far worse (26.35 R), so the gate, not an early action, carries it.
+  unit:
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    title: 'Programme 01 ATM, trend_donchian: does the CHOP-gated tight trail (C75), which beat the declared exit and the unconditional tight-trail control in 5 of 6 folds on 2020-07..2026-10, still beat both on the disjoint earlier partition 2017-09..2020-06?'
+    question: 'RQ-20261026-ed1c-10 read PASS on trend_donchian (BTC 1h): arm C75 (chop_6 > 0.75 AND peak >= 1.5 R -> trail 2.5 x ATR) net 85.57 vs A 72.82 R (+12.75, bar 0.02 x 458 = 9.16), 5 of 6 folds >= A and > the unconditional tight-trail control UT in 5 of 6, maxDD 21.22 vs 24.04; chosen from 3 arms + 1 control. On the disjoint partition 2017-09-01..2020-06-30 23:59 with the same arms (A, C75, UT), the same statistic and the same bar, does C75 beat A by >= 0.02 R/trade in >= 5 of 6 calendar folds within the drawdown bar AND beat UT? Offline Stage-0 re-measurement, never a book decision.'
+    why_this_matters: 'One confirmation before the live-producer check and any Tier-3 proposal. Context (programme review 2026-10-28): 129 of ~140 stop-tightening/exit-management lever units failed this week and the desk full run (#20967) found Claude stop-tightens cost -0.097 R each; a gated tightener that survives a disjoint window is the one shape of this family the evidence still allows, so this read decides whether the family has ANY confirmed member on a trend leg. Multiple-testing denominator for the lead: 3 arms in ed1c-10; ~6 lever passes in ~140 this week is the chance rate, so the confirmation is the test.'
+    power:
+      expected_n: 200
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.8 -> 39 trades (repo E35 floor). expected_n 200 is an ESTIMATE from RQ-20261028-001 (the same leg and window measured n(A) 39 for the SL arm build; re-declare from the run). Below 39 the unit grades INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P1-ATM-ED1C10-C75-DISJOINT
+      registered_at: '2026-10-28'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian --grade replace --vs-control C75=UT, window 2017-09-01 .. 2020-06-30 23:59, 6 equal calendar folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy + resolve_fee_bps_roundtrip, recorded per arm as cost_stack). Arms fixed now: A = the leg as declared; C75 = --trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.75;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5; UT = --trail-decay-arm-r=1.5;--trail-decay-tight-mult=2.5 (the unconditional control). Per arm: n, net_total_r, max_drawdown_r, net R per fold.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF C75 is byte-identical to A (the gate never fired). C75 CONFIRMS iff net_r(C75) > net_r(A) AND delta >= 0.02 R x n(A) AND net R(C75) >= net R(A) in >= 5 of 6 folds AND maxDD(C75) <= maxDD(A) x 1.35 AND net_r(C75) > net_r(UT) (the ed1c-10 bar, unchanged). CONFIRM -> the live-producer check on the leg monitor (trail_state levers are harness-only unless MOMENTUM-LEVERS-LIVE covers them), then a Tier-3 declare PROPOSAL note for the manager with the mirror, never a config edit. FAIL IF not confirmed with n(A) >= 39: the C75 lead is closed on this partition; the gated-tightener configuration family stays open per family_retirement_policy.yaml but drops to priority 3 on trend legs. Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A CONFIRM still needs a live producer and a Tier-3 declare. The early partition predates the bars the leg trades today; a pass is stability evidence, not a P&L claim. Has no matched-random control: UT (same action, no gate) is the control the original read used.'
+    compute: cpu_light
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+      basis: 'stand-in: same stand-in as the ed1c-10 node; an estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 35
+      why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+      basis: 'One exit_lever_ablation.py invocation, 3 arms; same shape as ed1c-10 (estimate, not measured for this window).'
+    run:
+      command:
+      - 'python3'
+      - 'scripts/research/exit_lever_ablation.py'
+      - '--leg'
+      - 'trend_donchian'
+      - '--arm'
+      - 'A='
+      - '--arm'
+      - 'C75=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.75;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5'
+      - '--arm'
+      - 'UT=--trail-decay-arm-r=1.5;--trail-decay-tight-mult=2.5'
+      - '--days'
+      - '3500'
+      - '--start'
+      - '2017-09-01'
+      - '--end'
+      - '2020-06-30 23:59'
+      - '--grade'
+      - 'replace'
+      - '--baseline'
+      - 'A'
+      - '--delta-r'
+      - '0'
+      - '--delta-r-per-trade'
+      - '0.02'
+      - '--vs-control'
+      - 'C75=UT'
+      - '--folds'
+      - '6'
+      - '--fold-majority'
+      - '5'
+      - '--dd-tol-frac'
+      - '0.35'
+      - '--n-floor'
+      - '39'
+      - '--out'
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    related:
+    - RQ-20261026-ed1c-10
+    - RQ-20261028-001
+    - scripts/research/exit_lever_ablation.py
 - id: P1-ATM-ed1c17-be-confirm
   goal: G1
   theme: live_strategy
@@ -16186,7 +16273,93 @@ nodes:
   after:
   - unit: RQ-20261026-ed1c-17
     verdict: pass
-  needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-17 read PASS on trend_donchian_eth (ETH 1h) -- all three break-even arms beat A (net 54.13 R, n 742): BE075 80.26 (+26.13, 4 of 6 folds >= A), BE15 71.51 (+17.39, 5 of 6), BE10 69.34 (+15.22, 5 of 6); bar 0.02 x 742 = 14.84; maxDD <= 27.25 vs 30.85. Best by net R is BE075 but only 4 of 6 folds; the other two arms carry 5 of 6, so the monotone gain is the finding, not one arm. Chosen from 3 arms (denominator 3). Author ONE confirmation unit on a disjoint partition (all three arms, same bar), then the live-producer check (does the leg monitor expose a break-even floor?) and a Tier-3 declare PROPOSAL with the mirror. Sibling ed1c-18/-19 (BE on sol / BTC) read FAIL: the lever is leg-specific so far.'
+  # authored PROGRAMME-REVIEW-20261028 from needs_authoring: needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-ed1c-17 read PASS on trend_donchian_eth (ETH 1h) -- all three break-even arms beat A (net 54.13 R, n 742): BE075 80.26 (+26.13, 4 of 6 folds >= A), BE15 71.51 (+17.39, 5 of 6), BE10 69.34 (+15.22, 5 of 6); bar 0.02 x 742 = 14.84; maxDD <= 27.25 vs 30.85. Best by net R is BE075 but only 4 of 6 folds; the other two arms carry 5 of 
+  unit:
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    title: 'Programme 01 ATM, trend_donchian_eth: does the break-even floor (BE075 / BE10 / BE15), which beat the declared exit on 2020-07..2026-10, still beat it on the disjoint earlier partition 2017-09..2020-06?'
+    question: 'RQ-20261026-ed1c-17 read PASS on trend_donchian_eth (ETH 1h): all three break-even arms beat A (net 54.13 R, n 742): BE075 80.26 (+26.13, 4 of 6 folds), BE15 71.51 (5 of 6), BE10 69.34 (5 of 6); bar 0.02 x 742 = 14.84; maxDD <= 27.25 vs 30.85; chosen from 3 arms. On the disjoint partition 2017-09-01..2020-06-30 23:59 with the same three arms and the same bar, does at least one BE arm beat A by >= 0.02 R/trade in >= 4 of 6 calendar folds within the drawdown bar, and is the ordering monotone in the same direction as ed1c-17? Offline Stage-0 re-measurement, never a book decision.'
+    why_this_matters: 'One confirmation before any live-producer check or Tier-3 note. A break-even floor is a THRESHOLDED tighten (it acts only after +0.75..1.5 R), the shape that differs from what failed this week (unconditional, level- and Claude-judged tightens). Denominator: 3 arms.'
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Floor 39 trades. expected_n 300 is an ESTIMATE: ed1c-17 measured n(A) 742 over ~6.3 years; ~2.8 years at similar density is ~330, but ETH 1h candles before 2019 may be thin on the public feed; below 39 or no bars -> INDETERMINATE, never FAIL.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P1-ATM-ED1C17-BE-DISJOINT
+      registered_at: '2026-10-28'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_eth --grade replace, window 2017-09-01 .. 2020-06-30 23:59, 6 equal calendar folds by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy + resolve_fee_bps_roundtrip, recorded per arm as cost_stack). Arms fixed now: A = as declared; BE075 = --be-floor-r=0.75; BE10 = --be-floor-r=1.0; BE15 = --be-floor-r=1.5.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every BE arm is byte-identical to A. CONFIRMS iff the script names a passing arm under --grade replace (net_r(C) > net_r(A), delta >= 0.02 R x n(A), >= 4 of 6 folds >= A, maxDD(C) <= maxDD(A) x 1.35 -- the ed1c-17 bar, unchanged). CONFIRM -> live-producer check (be_floor exists in the pullback and trend monitors? verify first) then a Tier-3 declare PROPOSAL note with the mirror if the leg is rostered, else a P3 roster-input note. FAIL IF no arm passes with n(A) >= 39: the break-even configuration is closed on this partition; the family stays open. Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. trend_donchian_eth carries no real-money book today (programme 03, 2026-10-21); a CONFIRM is a lever input for the legs that do, not a P&L claim. No matched-random control (fixed mechanical rule vs the declared bracket).'
+    compute: cpu_light
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+      basis: 'stand-in: same stand-in as the ed1c-10 node; an estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 40
+      why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+      basis: 'One exit_lever_ablation.py invocation, 4 arms (estimate).'
+    run:
+      command:
+      - 'python3'
+      - 'scripts/research/exit_lever_ablation.py'
+      - '--leg'
+      - 'trend_donchian_eth'
+      - '--arm'
+      - 'A='
+      - '--arm'
+      - 'BE075=--be-floor-r=0.75'
+      - '--arm'
+      - 'BE10=--be-floor-r=1.0'
+      - '--arm'
+      - 'BE15=--be-floor-r=1.5'
+      - '--days'
+      - '3500'
+      - '--start'
+      - '2017-09-01'
+      - '--end'
+      - '2020-06-30 23:59'
+      - '--grade'
+      - 'replace'
+      - '--baseline'
+      - 'A'
+      - '--delta-r'
+      - '0'
+      - '--delta-r-per-trade'
+      - '0.02'
+      - '--folds'
+      - '6'
+      - '--fold-majority'
+      - '4'
+      - '--dd-tol-frac'
+      - '0.35'
+      - '--n-floor'
+      - '39'
+      - '--out'
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    related:
+    - RQ-20261026-ed1c-17
+    - scripts/research/exit_lever_ablation.py
 - id: P1-ATM-sol4h-b-overlap
   goal: G1
   theme: live_strategy
@@ -16199,3 +16372,112 @@ nodes:
   - unit: RQ-20261026-1b57-08
     verdict: pass
   needs_authoring: 'RESULT 2026-10-27 (research-ops 2048): RQ-20261026-1b57-08 read PASS (rule: pooled n >= 88, net > 0, >= 4 of 6 folds, >= half of powered cells) -- sol_4h as declared on basket B (AVAX/NEAR/ATOM/FIL/TRX/ETC): pooled n 1375, net +111.77 R, 4 of 6 folds positive, 3 of 6 powered cells pass; the last fold is -24.6 R and the pooled t one-sided p is 0.10, so it is a discovery with a weak recent fold, not a confirmation. Per the rule, next = same-book correlation/overlap read of the passing CELLS against the live legs, then the prop EV/survival gate; a re-entry case under MD-PROMOTE-S0-S1 needs its own evidence record (never a roster act). Author the overlap-read unit (cells named in the result''s grade block) and ONE disjoint-window confirmation.'
+# ── PROGRAMME-REVIEW-20261028 (2026-10-28, lane PROGRAMME-REVIEW-20261028) ──
+- id: P1-Q4-desk-losscut-ada-pb
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.25
+  after: []
+  unit:
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    title: 'Programme 01 Q4 stop-waiting, desk-derived: on ada_pullback_2h, does a deep LOSS-CUT (close at bar N when open R < -0.5; N = 4 / 8 / 16) beat the declared exit net of the full cost stack?'
+    question: 'DESK-LIFECYCLE-S0 (RQ-20261028-d1f5-02, PR #20967) found the only management pocket where pilot and full run agree in sign is closing a trade already at -0.5 R or worse (positive, not significant), while stop-tightens lost -0.097 R each. Prior stale-exit reads on this leg used a 0 / +0.5 R threshold (RQ-20261024-0142-16 and the reads it cites), i.e. a stall exit, not a loss-cut. On ada_pullback_2h AS DECLARED, 2020-07-01..2026-10-26, do arms LC4 / LC8 / LC16 (--stale-exit-bars N --stale-exit-below-r -0.5) beat the declared exit A under the replace bar?'
+    why_this_matters: 'Moves the desk result from a Claude judgement to a mechanical rule a monitor can carry, on the real-money leg with the largest harness n (402 trades). It decides whether P1-Q4 "stop waiting" gets a loss-cut lever on the 2h pullback legs; a FAIL closes this configuration and confirms the desk pocket was noise (it was selected after the fact from ~6 action buckets). Denominator: 3 arms.'
+    power:
+      expected_n: 400
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Floor 39. ada_pullback_2h measured n 402 on 2020-07..2026-10 (RQ-20261024-09a6-01 census, MEASURED); the loss-cut acts only on trades below -0.5 R at bar N, a subset, so the per-trade effect is diluted -- the replace bar is per window, not per affected trade.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P1-Q4-LOSSCUT-ADA-PB-2H
+      registered_at: '2026-10-28'
+      registered_before_run: true
+      statistic: 'scripts/research/exit_lever_ablation.py --leg ada_pullback_2h --grade replace, window 2020-07-01 .. 2026-10-26 23:59, 6 equal calendar folds, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy + resolve_fee_bps_roundtrip, recorded per arm as cost_stack). Arms fixed now: A = as declared; LC4 / LC8 / LC16 = --stale-exit-bars=N;--stale-exit-below-r=-0.5.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF every LC arm is byte-identical to A. PASS iff the script names a passing arm under --grade replace (net_r(C) > net_r(A), delta >= 0.02 R x n(A), >= 4 of 6 folds >= A, maxDD(C) <= maxDD(A) x 1.35). PASS -> ONE confirmation on a second money leg (xrp_pullback_2h, same arm) before any producer or Tier-3 note; the pass is a discovery. FAIL -> the -0.5 R loss-cut configuration is closed on this leg and the desk -0.5 R pocket is recorded as not transferring to a mechanical rule; the stop-waiting family stays open. Thresholds and arms are not changed after any result.'
+      what_it_does_not_do: 'Edits no config, places no order, is not a promotion case. Not a test of Claude management (that is RQ-20261028-d1f5-02); a mechanical rule vs the declared bracket, so no matched-random control. Bar-N check only (not continuous), the closest existing lever to the desk check-in.'
+    compute: cpu_light
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 200
+      confidence: 0.25
+      basis: 'estimate: ada_pullback_2h is a real-money leg trading below its backtest (P3-Q1 node); a loss-cut changes its loss tail. Not measured.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 40
+      why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+      basis: 'One exit_lever_ablation.py invocation, 4 arms, 6.3 years of 2h bars (estimate).'
+    run:
+      command:
+      - 'python3'
+      - 'scripts/research/exit_lever_ablation.py'
+      - '--leg'
+      - 'ada_pullback_2h'
+      - '--arm'
+      - 'A='
+      - '--arm'
+      - 'LC4=--stale-exit-bars=4;--stale-exit-below-r=-0.5'
+      - '--arm'
+      - 'LC8=--stale-exit-bars=8;--stale-exit-below-r=-0.5'
+      - '--arm'
+      - 'LC16=--stale-exit-bars=16;--stale-exit-below-r=-0.5'
+      - '--days'
+      - '2400'
+      - '--start'
+      - '2020-07-01'
+      - '--end'
+      - '2026-10-26 23:59'
+      - '--grade'
+      - 'replace'
+      - '--baseline'
+      - 'A'
+      - '--delta-r'
+      - '0'
+      - '--delta-r-per-trade'
+      - '0.02'
+      - '--folds'
+      - '6'
+      - '--fold-majority'
+      - '4'
+      - '--dd-tol-frac'
+      - '0.35'
+      - '--n-floor'
+      - '39'
+      - '--out'
+      - '{out_dir}'
+      timeout_minutes: 150
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    related:
+    - RQ-20261028-d1f5-02
+    - RQ-20261024-0142-16
+    - scripts/research/exit_lever_ablation.py
+- id: P1-DESK-no-tighten-policy
+  goal: G1
+  theme: live_strategy
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 250
+    confidence: 0.2
+  after:
+  - unit: RQ-20261028-d1f5-02
+    verdict: fail
+  needs_authoring: 'DESK-LIFECYCLE-S0 full run FAILED (PR #20967, RULE-RQ20261028-D1F5-02-LIFECYCLE): Claude whole-trade management -0.159 R vs hold on Claude entries (n 473) and -0.124 R on random entries (n 465); 981 of 1,155 non-hold actions were stop tightens worth -0.097 R each, while its 2,001 holds were worth +0.142 R each vs closing. DIAGNOSIS (programme review 2026-10-28): the lever, not the judge -- the same loss appears in 129 of ~140 mechanical tightening units this week, so a judge restricted from tightening is the variant that tests it. NOT a re-scoring of the recorded decisions (selecting the non-tighten subset after seeing outcomes is data-snooped). Author ONE pre-registered unit only after #20967 merges and the manager decides judge spend: the C4E protocol with the action set {hold, close, take-profit move} (no stop tighten), on a FRESH pair sample, graded on the same three contrasts (vs hold, vs matched random, vs best fixed rule). A cheaper mechanical twin is P1-Q4-desk-losscut-ada-pb (no judge). Retiring Claude-management is not on the table from one test (operator 2026-10-22).'

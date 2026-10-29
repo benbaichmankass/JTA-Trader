@@ -106,6 +106,7 @@ Every leg's bracket carries a REAL predictive take-profit at entry, the predicti
 not exempt a leg, and compliance is MEASURED — [`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "TP doctrine"; run
 `python3 scripts/ci/check_tp_doctrine.py` (guard `tp-doctrine-guard`; `tp_r: 50.0`, a rest-at-venue-cap default and `tp_intent: none` are
 non-compliant). **Re-run the guard, never quote its counts.**
+**Active management** (operator, 2026-10-28, binding): any evidence-backed move of either bracket, each action class advice-only until its own net-of-cost test passes — [`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "Active management".
 
 ### The daily sync, and standing authorizations
 

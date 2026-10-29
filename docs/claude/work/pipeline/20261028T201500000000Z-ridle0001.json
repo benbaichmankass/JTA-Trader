@@ -1,0 +1,13 @@
+{
+  "due_when": {"due_date": "2026-10-30", "kind": "date"},
+  "id": "PI-20261028-NNERIDLE-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-30",
+    "how_to_check": "dispatch run job log: grep 'starvation floor' in 'Grade and dispatch'; research-queue-watchdog has no backend:github_runner idle escalation",
+    "what": "after PR #20993 merges, a cycle with repo-queued > 10 and newest stamp >= 45 min old logs 'starvation floor ... lifting' and fires one github_runner unit"
+  },
+  "origin": {"kind": "session", "ref": "RESEARCH-RUNNER-IDLE (PR #20993)", "rerun": "gh run view <latest research-queue-dispatch run> --log | grep -i 'starvation floor\\|deferred every fire'"},
+  "state": "queued",
+  "what": "[research-runner-idle] Observe PR #20993: starvation floor lowered 1.5 h -> 0.75 h so the repo-queued block lifts before the 60 min idle watchdog. Underlying cause (runner pool saturated by >10 queued runs, 38 stuck runs >24 h ignored) is not fixed; if lifting still starves, the repo-queued cap itself needs a measured rethink."
+}
