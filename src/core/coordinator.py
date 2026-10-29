@@ -2208,6 +2208,13 @@ class Coordinator:
                 pkg, sized_qty, account_name=account.name,
             )
 
+            # ML-REAL-MONEY-OVERLAY shadow scoring (annotate only, I7): logs the
+            # would-be reduce-only overlay multiplier for legs a committed
+            # ml/overlay/ artifact covers. Its result is NEVER applied -- a bare
+            # statement by design (tests/test_overlay_shadow.py checks the AST).
+            from src.runtime.overlay_shadow import record_overlay_shadow
+            record_overlay_shadow(pkg, account_name=account.name)
+
             # M9 news influence (default-off, gated by NEWS_INFLUENCE_MODE).
             # Reductive only — shrinks the qty toward a floor when the news (and
             # any imminent event) opposes the trade's direction, never enlarges.
