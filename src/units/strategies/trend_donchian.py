@@ -951,6 +951,10 @@ def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, directio
     except Exception:  # noqa: BLE001 — telemetry must never break the trail
         pass
     try:
+        if window is None or len(window) == 0:
+            # First bar of a trade: no bar of the trade has closed yet
+            # (SINCE-ENTRY-WINDOW-FIX). No extreme to ratchet on — no move.
+            raise ValueError("empty since-entry window")
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr

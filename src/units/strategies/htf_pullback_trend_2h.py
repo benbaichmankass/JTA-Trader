@@ -818,6 +818,10 @@ def monitor(cfg, candles_df, open_pkg):
         pass
     _trail = None
     try:
+        if window is None or len(window) == 0:
+            # First bar of a trade: no bar of the trade has closed yet
+            # (SINCE-ENTRY-WINDOW-FIX). No extreme to ratchet on — no move.
+            raise ValueError("empty since-entry window")
         if direction == "long":
             ext = float(window["high"].max())
             candidate = ext - trail_mult * atr

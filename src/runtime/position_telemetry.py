@@ -162,7 +162,12 @@ def build_record(
 
         entry = _f(open_pkg.get("entry"))
         risk = _f(meta.get("risk_per_unit"))
-        anchored = bool(meta.get("entry_time"))
+        # A `since_entry` full-frame fallback (timestamps / entry unreadable) is
+        # NOT the trade's window: report it `unanchored`, never a measured
+        # pre-entry peak (SINCE-ENTRY-WINDOW-FIX, 2026-10-29).
+        from src.runtime.exit_levers import since_entry_is_anchored
+
+        anchored = bool(meta.get("entry_time")) and since_entry_is_anchored(window)
 
         peak = since_entry_peak(window, entry, risk, direction, anchored=anchored)
         peak_r = _f(peak.get("peak_r"))
