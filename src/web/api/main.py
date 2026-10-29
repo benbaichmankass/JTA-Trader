@@ -60,7 +60,7 @@ from src.web.api.routers import work as work_router
 # UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
 # every router and WS /ws/market) that is a no-op until SITE_AUTH_ENFORCE is set.
 app = FastAPI(
-    title="ICT Trading Bot — Dashboard API",
+    title="JTA Trader — Dashboard API",
     version="0.2.0",
     dependencies=[Depends(auth_module.require_site_session)],
 )
