@@ -1,0 +1,133 @@
+id: RQ-20261029-a7e1-01
+title: 'ML-AM-NEXT-LIVE: an ML-gated 50% PARTIAL CLOSE on the real-money legs -- non-inferior on net R, a material
+  risk cut (RULE-AM-RISK-ADJUSTED-V1), and better than a matched random partial close and the best static rule?'
+status: queued
+cadence: once
+roadmap:
+- L-ML-LIVE
+- L-AM-STANDARD
+theme: ml_health
+priority: 1
+kind: experiment
+question: On config-exact harness paths of the six real-money legs (trend_donchian_eth_4h, trend_donchian_xrp_4h,
+  trend_donchian_eth_prop, trend_donchian_sol_prop, ada_pullback_2h, xrp_pullback_2h), 2020-07-01 .. 2026-10-15
+  23:59, does closing 50% of the position at the first bar where a logistic head on the RQ-20261024-09a6-01 R1 state
+  scores P(holding to the leg's own exit loses to exiting now) >= tau keep net R per trade non-inferior to holding
+  to the bracket, while cutting the family book's max drawdown or CVaR5 by >= 15%, beating a same-rate random
+  partial close and the best static partial-close rule, across calendar groups and on a blind 2017-09..2020-06
+  window?
+why_this_matters: 'Operator 2026-10-29 ~12:30Z, verbatim (row ML-AM-NEXT-LIVE): "I want to push for the next ML to
+  go live to be one the does active management, not position sizing". The objective (row AM-RISK-ADJUSTED-RULE,
+  operator popup 2026-10-29 ~06:25Z "Small R cost for big risk cut (Recommended)"): net P&L first, risk reduction
+  the tie-breaker, a large risk cut for a small R cost wins; the real-money bar is non-inferiority, as the canary
+  cleared (RQ-20261029-5785-02). PRIOR EVIDENCE, DISCLOSED BEFORE THIS RUN (not selected on this run): the FULL
+  exit-now version of this policy failed on money (RQ-20261014-d6e7-06: pullback -0.0137 R/trade CI [-0.0433,
+  +0.0128], donchian -0.0239 CI [-0.0475, -0.0011]); the per-trade "does holding pay" exit head failed its
+  multi-fold OOS (RQ-20260927-002: -0.0141 R/trade, 1 of 3 folds, n 1041); tightening loses (DESK-LIFECYCLE-S0,
+  LTR-TIGHTEN-OPTIMIZE). The R1 state itself PASSES on information (RQ-20261024-09a6-01). This unit tests the
+  reduce-class version of the one in-trade signal that carries information, under the operator''s risk-adjusted
+  objective rather than mean R alone. Partial close is a reduce/de-risk class (dispatch: "reduce/de-risk classes
+  first") and is UNTESTED as a class (ARCHITECTURE-CANONICAL § Active management).'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  sd: 0.25
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Gate population = RQ-20261024-09a6-01 measured 2,627 trades (TD 1,831, PB2H 796). The per-trade delta of a
+    50% partial is half the full-close delta, whose paired sd is ~0.40-0.51 R (ML-PROGRAMME § 2.2, INFERRED from
+    d6e7-06''s CIs), so sd ~0.2-0.25 R (ESTIMATE). At MDE 0.02 R: n ~ (2.49 x 0.25 / 0.02)^2 ~ 970 -> TD clears it,
+    PB2H (796) is near it. Below 200 gate trades -> INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+decision_rule:
+  id: RULE-ML-AM-PARTIAL-V1
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_am_partial_noninferior.py (this commit). CORPUS: first_passage_paths.run_harness_legs
+    (the RQ-20261024-09a6-01 argv builder, --emit-paths) for the six legs; trades failing the peak_r == mfe_r parity
+    control (< 99%) exclude their leg. STATE and LABEL: first_passage_paths.events R1 + leg fixed effects; L_t = 1 if
+    exit_r - open_r_t < -c_exit. MODEL: weighted L2 logistic (IRLS), each trade''s states weigh 1 in total, NaN ->
+    training median, standardised on training states. POLICY: the first decision bar with score >= tau (tau =
+    q-quantile of the training states'' scores) closes F = 0.5; at most one action per trade. PRICING: delta = F x
+    (open_r_b - fee - slippage - funding x (b+1)/bars - c_exit - net_r), net of the full cost stack, c_exit an extra
+    exit-slippage charge (conservative). VALIDATION: CPCV over the pooled six legs, 6 calendar groups by entry, 2 test
+    groups (15 splits, 5 paths), purge + 7-day embargo (ml_overlay_noninferior.cpcv_splits); per-trade delta = mean
+    of its 5 OOS decisions. PRIMARY config fixed now: C = 0.1, q = 0.90. TRIAL GRID, all run and reported: C in {0.1,
+    1.0} x q in {0.80, 0.90, 0.95} = 6. RISK: max drawdown of exit-ordered per-trade net R on the family book; CVaR5 =
+    mean of the worst 5% per-trade net R. RANDOM: 2,000 draws, the policy''s per-trade fire weights permuted within
+    calendar group, each weighted trade partially closed at a uniformly drawn decision bar. BEST STATIC: per split,
+    the static partial-close rule with the best training-trade mean delta among {open >= 0.5R, >= 1R, >= 2R, giveback
+    from peak >= 1R, open <= -0.5R, bar >= 6, bar >= 12}, applied to that split''s test trades. HOLDOUT: the PRIMARY
+    model fit on all main-window states scores the six legs'' trades from fresh config-exact runs over 2017-09-01 ..
+    2020-06-30 23:59 that EXIT before 2020-06-24 (the 7-day embargo).'
+  rule: 'Per gate family (TD = the four trend_donchian legs; PB2H = ada/xrp pullback_2h), PRIMARY config only.
+    INDETERMINATE IF a family leg''s corpus fails to build or fails parity, OR n_family < 200, OR the family''s
+    holdout has < 100 trades. PASS iff ALL of, on the family''s OOS trades: (a) one-sided 95% calendar-month block
+    bootstrap LB of mean delta > -0.02 R AND mean delta >= -0.05 R; (b) maxDD cut >= 15% OR CVaR5 cut >= 15%, AND
+    neither maxDD nor CVaR5 worse than hold; (c) mean delta > the 90th percentile of the random arm; (d) the qualifying
+    risk cut in (b) >= the random arm''s median cut on the same metric; (e) fire rate in [5%, 60%] of trades; (f) in
+    >= 4 of 6 calendar groups: group delta > -0.02 R and group maxDD not worse than hold; (g) no family leg with >= 100
+    trades has delta < -0.05 R; (h) mean delta > the best static rule''s mean delta; AND the HOLDOUT CONFIRMS: (a),
+    maxDD and CVaR5 not worse than hold, and (c), on the holdout trades (random permuted within 3 calendar groups).
+    FAIL otherwise, naming the failing checks. PASS -> a Tier-3 packet: auto-applied 50% partial close (reduce-only)
+    on exactly the family''s real-money legs through the existing apply path, each account''s RiskManager, with a
+    demotion trigger. Thresholds, features, grid, families and controls are not changed after any result.'
+  what_it_does_not_do: Edits no config, no roster, no stage; places no order; never moves or removes a bracket.
+    A PASS is offline evidence for a Tier-3 packet, not a promotion. iaum_pullback_1d (alpaca_live) is out of scope
+    (no Stage-0 path corpus).
+intervention_controls:
+  hold_to_bracket: true
+  matched_random: {draws: 2000}
+  best_static: {grid: [open_ge_0.5r, open_ge_1r, open_ge_2r, giveback_ge_1r, open_le_-0.5r, bar_ge_6, bar_ge_12],
+    excludes_test_folds: true}
+  bootstrap_group: month
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: (its partial_close executor, fed by a new in-trade scorer, Tier-3 on PASS) whether the real-money legs auto-apply a 50% partial close when the head fires
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  - ada_pullback_2h
+  - xrp_pullback_2h
+  book: money
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'stand-in: the real-money book''s giveback and losing-trade tail; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 12 harness legs (~1 min each, MEASURED locally 2026-10-29 for trend_donchian_eth_4h) plus 6 CPCV configs.
+run:
+  command:
+  - python3
+  - scripts/research/ml_am_partial_noninferior.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261029-a7e1-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261024-09a6-01
+- RQ-20261014-d6e7-06
+- RQ-20260927-002
+- RQ-20261029-5785-02
+- docs/plans/ml-live-promotion-plan-2026-10-29.md
+practice_precedent: 'T1, M1, M2, M4, M5, M6 (docs/reference/trading-and-model-practice-principles.md): an in-trade
+  action graded against hold, a matched random intervention and the best static rule, cost-net path labels, CPCV
+  with purge and embargo, every configuration counted, a blind fresh window'

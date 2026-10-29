@@ -1,0 +1,2248 @@
+{
+ "rule": "RULE-ML-AM-PARTIAL-V1",
+ "primary": "C0.1_q0.9",
+ "verdicts": {
+  "TD": {
+   "state": "FAIL",
+   "reasons": [
+    "a_noninferior",
+    "c_beats_random",
+    "d_risk_cut_beats_random",
+    "f_folds",
+    "g_legs",
+    "h_beats_best_static"
+   ],
+   "holdout": {
+    "state": "FAILS",
+    "n": 111,
+    "reasons": [
+     "a_noninferior",
+     "b_risk_not_worse",
+     "c_beats_random"
+    ],
+    "checks": {
+     "a_noninferior": false,
+     "b_risk_not_worse": false,
+     "c_beats_random": false
+    },
+    "eval": {
+     "n": 111,
+     "delta_mean": -0.0026,
+     "delta_lb95_month_block": -0.0261,
+     "net_hold_per_trade": 0.271,
+     "net_policy_per_trade": 0.2684,
+     "maxdd_hold": 6.439,
+     "maxdd_policy": 6.852,
+     "maxdd_cut": -0.0641,
+     "cvar5_hold": -1.0795,
+     "cvar5_policy": -1.0499,
+     "cvar5_cut": 0.0274,
+     "fire_rate": 0.3964,
+     "random": {
+      "mean_delta_p50": 0.0007,
+      "mean_delta_p90": 0.0326,
+      "maxdd_cut_p50": 0.2602,
+      "cvar5_cut_p50": 0.0047,
+      "draws": 2000
+     },
+     "best_static": null,
+     "groups": {
+      "0": {
+       "n": 37,
+       "delta": -0.0408,
+       "maxdd_hold": 4.093,
+       "maxdd_policy": 3.792,
+       "ok": false
+      },
+      "1": {
+       "n": 41,
+       "delta": 0.0247,
+       "maxdd_hold": 4.623,
+       "maxdd_policy": 3.776,
+       "ok": true
+      },
+      "2": {
+       "n": 33,
+       "delta": 0.0062,
+       "maxdd_hold": 4.693,
+       "maxdd_policy": 5.231,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 21,
+       "delta": 0.0393,
+       "fire_rate": 0.5238,
+       "ok": true
+      },
+      "trend_donchian_eth_prop": {
+       "n": 86,
+       "delta": -0.0131,
+       "fire_rate": 0.3605,
+       "ok": true
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 4,
+       "delta": 0.0014,
+       "fire_rate": 0.5,
+       "ok": true
+      }
+     }
+    }
+   }
+  },
+  "PB2H": {
+   "state": "FAIL",
+   "reasons": [
+    "a_noninferior",
+    "b_risk_cut",
+    "c_beats_random",
+    "d_risk_cut_beats_random",
+    "f_folds",
+    "h_beats_best_static"
+   ],
+   "holdout": {
+    "state": "INDETERMINATE",
+    "n": 45,
+    "reasons": [
+     "n 45 < 100"
+    ]
+   }
+  }
+ },
+ "grid": {
+  "C0.1_q0.8": {
+   "cfg": {
+    "C": 0.1,
+    "q": 0.8
+   },
+   "families": {
+    "TD": {
+     "n": 1831,
+     "delta_mean": -0.0632,
+     "delta_lb95_month_block": -0.0859,
+     "net_hold_per_trade": 0.1262,
+     "net_policy_per_trade": 0.063,
+     "maxdd_hold": 27.777,
+     "maxdd_policy": 24.247,
+     "maxdd_cut": 0.1271,
+     "cvar5_hold": -1.1287,
+     "cvar5_policy": -1.0252,
+     "cvar5_cut": 0.0918,
+     "fire_rate": 0.7312,
+     "random": {
+      "mean_delta_p50": 0.0202,
+      "mean_delta_p90": 0.0284,
+      "maxdd_cut_p50": 0.3524,
+      "cvar5_cut_p50": 0.0388,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0151,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 291,
+       "delta": -0.0709,
+       "maxdd_hold": 14.017,
+       "maxdd_policy": 11.878,
+       "ok": false
+      },
+      "1": {
+       "n": 298,
+       "delta": -0.0236,
+       "maxdd_hold": 10.652,
+       "maxdd_policy": 8.503,
+       "ok": false
+      },
+      "2": {
+       "n": 317,
+       "delta": -0.0545,
+       "maxdd_hold": 25.041,
+       "maxdd_policy": 19.936,
+       "ok": false
+      },
+      "3": {
+       "n": 298,
+       "delta": -0.1285,
+       "maxdd_hold": 14.059,
+       "maxdd_policy": 11.549,
+       "ok": false
+      },
+      "4": {
+       "n": 311,
+       "delta": -0.0578,
+       "maxdd_hold": 19.985,
+       "maxdd_policy": 14.023,
+       "ok": false
+      },
+      "5": {
+       "n": 316,
+       "delta": -0.0456,
+       "maxdd_hold": 27.776,
+       "maxdd_policy": 19.887,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 275,
+       "delta": -0.1543,
+       "fire_rate": 0.7753,
+       "ok": false
+      },
+      "trend_donchian_eth_prop": {
+       "n": 1085,
+       "delta": -0.0352,
+       "fire_rate": 0.7006,
+       "ok": true
+      },
+      "trend_donchian_sol_prop": {
+       "n": 403,
+       "delta": -0.075,
+       "fire_rate": 0.8397,
+       "ok": false
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 68,
+       "delta": -0.0708,
+       "fire_rate": 0.3971,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": false,
+      "f_folds": false,
+      "g_legs": false,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    },
+    "PB2H": {
+     "n": 796,
+     "delta_mean": -0.0597,
+     "delta_lb95_month_block": -0.0936,
+     "net_hold_per_trade": 0.1436,
+     "net_policy_per_trade": 0.0839,
+     "maxdd_hold": 25.614,
+     "maxdd_policy": 22.474,
+     "maxdd_cut": 0.1226,
+     "cvar5_hold": -1.112,
+     "cvar5_policy": -1.0555,
+     "cvar5_cut": 0.0509,
+     "fire_rate": 0.65,
+     "random": {
+      "mean_delta_p50": -0.013,
+      "mean_delta_p90": 0.0026,
+      "maxdd_cut_p50": 0.1908,
+      "cvar5_cut_p50": 0.0267,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0308,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 171,
+       "delta": -0.015,
+       "maxdd_hold": 23.481,
+       "maxdd_policy": 20.301,
+       "ok": true
+      },
+      "1": {
+       "n": 134,
+       "delta": -0.0992,
+       "maxdd_hold": 14.324,
+       "maxdd_policy": 12.391,
+       "ok": false
+      },
+      "2": {
+       "n": 121,
+       "delta": -0.0876,
+       "maxdd_hold": 16.4,
+       "maxdd_policy": 15.359,
+       "ok": false
+      },
+      "3": {
+       "n": 119,
+       "delta": -0.0654,
+       "maxdd_hold": 14.545,
+       "maxdd_policy": 16.627,
+       "ok": false
+      },
+      "4": {
+       "n": 127,
+       "delta": 0.0462,
+       "maxdd_hold": 15.705,
+       "maxdd_policy": 11.023,
+       "ok": true
+      },
+      "5": {
+       "n": 124,
+       "delta": -0.1547,
+       "maxdd_hold": 13.659,
+       "maxdd_policy": 9.561,
+       "ok": false
+      }
+     },
+     "legs": {
+      "ada_pullback_2h": {
+       "n": 402,
+       "delta": -0.0645,
+       "fire_rate": 0.7209,
+       "ok": false
+      },
+      "xrp_pullback_2h": {
+       "n": 394,
+       "delta": -0.0549,
+       "fire_rate": 0.5777,
+       "ok": false
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": false,
+      "f_folds": false,
+      "g_legs": false,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    }
+   },
+   "paths_filled_min": 5
+  },
+  "C0.1_q0.9": {
+   "cfg": {
+    "C": 0.1,
+    "q": 0.9
+   },
+   "families": {
+    "TD": {
+     "n": 1831,
+     "delta_mean": -0.0338,
+     "delta_lb95_month_block": -0.0513,
+     "net_hold_per_trade": 0.1262,
+     "net_policy_per_trade": 0.0924,
+     "maxdd_hold": 27.777,
+     "maxdd_policy": 22.842,
+     "maxdd_cut": 0.1777,
+     "cvar5_hold": -1.1287,
+     "cvar5_policy": -1.0622,
+     "cvar5_cut": 0.059,
+     "fire_rate": 0.5458,
+     "random": {
+      "mean_delta_p50": 0.0146,
+      "mean_delta_p90": 0.0237,
+      "maxdd_cut_p50": 0.2903,
+      "cvar5_cut_p50": 0.0268,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0151,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 291,
+       "delta": -0.047,
+       "maxdd_hold": 14.017,
+       "maxdd_policy": 12.494,
+       "ok": false
+      },
+      "1": {
+       "n": 298,
+       "delta": 0.0104,
+       "maxdd_hold": 10.652,
+       "maxdd_policy": 9.291,
+       "ok": true
+      },
+      "2": {
+       "n": 317,
+       "delta": -0.0131,
+       "maxdd_hold": 25.041,
+       "maxdd_policy": 22.099,
+       "ok": true
+      },
+      "3": {
+       "n": 298,
+       "delta": -0.1095,
+       "maxdd_hold": 14.059,
+       "maxdd_policy": 11.958,
+       "ok": false
+      },
+      "4": {
+       "n": 311,
+       "delta": -0.0182,
+       "maxdd_hold": 19.985,
+       "maxdd_policy": 16.778,
+       "ok": true
+      },
+      "5": {
+       "n": 316,
+       "delta": -0.0279,
+       "maxdd_hold": 27.776,
+       "maxdd_policy": 22.304,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 275,
+       "delta": -0.0826,
+       "fire_rate": 0.576,
+       "ok": false
+      },
+      "trend_donchian_eth_prop": {
+       "n": 1085,
+       "delta": -0.0207,
+       "fire_rate": 0.5067,
+       "ok": true
+      },
+      "trend_donchian_sol_prop": {
+       "n": 403,
+       "delta": -0.0406,
+       "fire_rate": 0.6938,
+       "ok": true
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 68,
+       "delta": -0.0045,
+       "fire_rate": 0.1706,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": true,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": false,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    },
+    "PB2H": {
+     "n": 796,
+     "delta_mean": -0.0417,
+     "delta_lb95_month_block": -0.0636,
+     "net_hold_per_trade": 0.1436,
+     "net_policy_per_trade": 0.1019,
+     "maxdd_hold": 25.614,
+     "maxdd_policy": 26.534,
+     "maxdd_cut": -0.0359,
+     "cvar5_hold": -1.112,
+     "cvar5_policy": -1.0802,
+     "cvar5_cut": 0.0286,
+     "fire_rate": 0.4374,
+     "random": {
+      "mean_delta_p50": -0.0087,
+      "mean_delta_p90": 0.0062,
+      "maxdd_cut_p50": 0.0997,
+      "cvar5_cut_p50": 0.016,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0308,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 171,
+       "delta": -0.003,
+       "maxdd_hold": 23.481,
+       "maxdd_policy": 21.992,
+       "ok": true
+      },
+      "1": {
+       "n": 134,
+       "delta": -0.0311,
+       "maxdd_hold": 14.324,
+       "maxdd_policy": 13.472,
+       "ok": false
+      },
+      "2": {
+       "n": 121,
+       "delta": -0.0827,
+       "maxdd_hold": 16.4,
+       "maxdd_policy": 18.832,
+       "ok": false
+      },
+      "3": {
+       "n": 119,
+       "delta": -0.0854,
+       "maxdd_hold": 14.545,
+       "maxdd_policy": 20.171,
+       "ok": false
+      },
+      "4": {
+       "n": 127,
+       "delta": 0.0448,
+       "maxdd_hold": 15.705,
+       "maxdd_policy": 14.216,
+       "ok": true
+      },
+      "5": {
+       "n": 124,
+       "delta": -0.1133,
+       "maxdd_hold": 13.659,
+       "maxdd_policy": 11.999,
+       "ok": false
+      }
+     },
+     "legs": {
+      "ada_pullback_2h": {
+       "n": 402,
+       "delta": -0.0459,
+       "fire_rate": 0.4985,
+       "ok": true
+      },
+      "xrp_pullback_2h": {
+       "n": 394,
+       "delta": -0.0374,
+       "fire_rate": 0.3751,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": true,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    }
+   },
+   "paths_filled_min": 5
+  },
+  "C0.1_q0.95": {
+   "cfg": {
+    "C": 0.1,
+    "q": 0.95
+   },
+   "families": {
+    "TD": {
+     "n": 1831,
+     "delta_mean": -0.0228,
+     "delta_lb95_month_block": -0.0362,
+     "net_hold_per_trade": 0.1262,
+     "net_policy_per_trade": 0.1034,
+     "maxdd_hold": 27.777,
+     "maxdd_policy": 24.675,
+     "maxdd_cut": 0.1117,
+     "cvar5_hold": -1.1287,
+     "cvar5_policy": -1.0752,
+     "cvar5_cut": 0.0474,
+     "fire_rate": 0.3808,
+     "random": {
+      "mean_delta_p50": 0.0104,
+      "mean_delta_p90": 0.0183,
+      "maxdd_cut_p50": 0.2248,
+      "cvar5_cut_p50": 0.0191,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0151,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 291,
+       "delta": -0.0224,
+       "maxdd_hold": 14.017,
+       "maxdd_policy": 13.085,
+       "ok": false
+      },
+      "1": {
+       "n": 298,
+       "delta": 0.003,
+       "maxdd_hold": 10.652,
+       "maxdd_policy": 10.856,
+       "ok": false
+      },
+      "2": {
+       "n": 317,
+       "delta": 0.0027,
+       "maxdd_hold": 25.041,
+       "maxdd_policy": 22.992,
+       "ok": true
+      },
+      "3": {
+       "n": 298,
+       "delta": -0.0799,
+       "maxdd_hold": 14.059,
+       "maxdd_policy": 13.392,
+       "ok": false
+      },
+      "4": {
+       "n": 311,
+       "delta": -0.0206,
+       "maxdd_hold": 19.985,
+       "maxdd_policy": 19.143,
+       "ok": false
+      },
+      "5": {
+       "n": 316,
+       "delta": -0.0214,
+       "maxdd_hold": 27.776,
+       "maxdd_policy": 24.675,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 275,
+       "delta": -0.0414,
+       "fire_rate": 0.3556,
+       "ok": true
+      },
+      "trend_donchian_eth_prop": {
+       "n": 1085,
+       "delta": -0.0157,
+       "fire_rate": 0.3443,
+       "ok": true
+      },
+      "trend_donchian_sol_prop": {
+       "n": 403,
+       "delta": -0.0329,
+       "fire_rate": 0.5484,
+       "ok": true
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 68,
+       "delta": -0.0013,
+       "fire_rate": 0.0706,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": true,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    },
+    "PB2H": {
+     "n": 796,
+     "delta_mean": -0.0171,
+     "delta_lb95_month_block": -0.0323,
+     "net_hold_per_trade": 0.1436,
+     "net_policy_per_trade": 0.1266,
+     "maxdd_hold": 25.614,
+     "maxdd_policy": 24.387,
+     "maxdd_cut": 0.0479,
+     "cvar5_hold": -1.112,
+     "cvar5_policy": -1.1008,
+     "cvar5_cut": 0.0101,
+     "fire_rate": 0.251,
+     "random": {
+      "mean_delta_p50": -0.0047,
+      "mean_delta_p90": 0.0081,
+      "maxdd_cut_p50": 0.0454,
+      "cvar5_cut_p50": 0.0083,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0308,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 171,
+       "delta": 0.008,
+       "maxdd_hold": 23.481,
+       "maxdd_policy": 23.426,
+       "ok": true
+      },
+      "1": {
+       "n": 134,
+       "delta": -0.0099,
+       "maxdd_hold": 14.324,
+       "maxdd_policy": 13.599,
+       "ok": true
+      },
+      "2": {
+       "n": 121,
+       "delta": -0.0201,
+       "maxdd_hold": 16.4,
+       "maxdd_policy": 16.171,
+       "ok": false
+      },
+      "3": {
+       "n": 119,
+       "delta": -0.0562,
+       "maxdd_hold": 14.545,
+       "maxdd_policy": 20.418,
+       "ok": false
+      },
+      "4": {
+       "n": 127,
+       "delta": 0.013,
+       "maxdd_hold": 15.705,
+       "maxdd_policy": 15.766,
+       "ok": false
+      },
+      "5": {
+       "n": 124,
+       "delta": -0.0497,
+       "maxdd_hold": 13.659,
+       "maxdd_policy": 13.018,
+       "ok": false
+      }
+     },
+     "legs": {
+      "ada_pullback_2h": {
+       "n": 402,
+       "delta": -0.0167,
+       "fire_rate": 0.2831,
+       "ok": true
+      },
+      "xrp_pullback_2h": {
+       "n": 394,
+       "delta": -0.0174,
+       "fire_rate": 0.2183,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": true,
+      "h_beats_best_static": true
+     },
+     "pass": false
+    }
+   },
+   "paths_filled_min": 5
+  },
+  "C1.0_q0.8": {
+   "cfg": {
+    "C": 1.0,
+    "q": 0.8
+   },
+   "families": {
+    "TD": {
+     "n": 1831,
+     "delta_mean": -0.0594,
+     "delta_lb95_month_block": -0.0822,
+     "net_hold_per_trade": 0.1262,
+     "net_policy_per_trade": 0.0668,
+     "maxdd_hold": 27.777,
+     "maxdd_policy": 23.564,
+     "maxdd_cut": 0.1516,
+     "cvar5_hold": -1.1287,
+     "cvar5_policy": -1.0339,
+     "cvar5_cut": 0.084,
+     "fire_rate": 0.7125,
+     "random": {
+      "mean_delta_p50": 0.0195,
+      "mean_delta_p90": 0.028,
+      "maxdd_cut_p50": 0.3449,
+      "cvar5_cut_p50": 0.0377,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0151,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 291,
+       "delta": -0.0734,
+       "maxdd_hold": 14.017,
+       "maxdd_policy": 12.049,
+       "ok": false
+      },
+      "1": {
+       "n": 298,
+       "delta": -0.0152,
+       "maxdd_hold": 10.652,
+       "maxdd_policy": 8.573,
+       "ok": true
+      },
+      "2": {
+       "n": 317,
+       "delta": -0.0526,
+       "maxdd_hold": 25.041,
+       "maxdd_policy": 19.365,
+       "ok": false
+      },
+      "3": {
+       "n": 298,
+       "delta": -0.1263,
+       "maxdd_hold": 14.059,
+       "maxdd_policy": 11.569,
+       "ok": false
+      },
+      "4": {
+       "n": 311,
+       "delta": -0.0478,
+       "maxdd_hold": 19.985,
+       "maxdd_policy": 13.06,
+       "ok": false
+      },
+      "5": {
+       "n": 316,
+       "delta": -0.0432,
+       "maxdd_hold": 27.776,
+       "maxdd_policy": 19.68,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 275,
+       "delta": -0.1526,
+       "fire_rate": 0.76,
+       "ok": false
+      },
+      "trend_donchian_eth_prop": {
+       "n": 1085,
+       "delta": -0.0331,
+       "fire_rate": 0.6846,
+       "ok": true
+      },
+      "trend_donchian_sol_prop": {
+       "n": 403,
+       "delta": -0.0653,
+       "fire_rate": 0.8119,
+       "ok": false
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 68,
+       "delta": -0.0656,
+       "fire_rate": 0.3765,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": true,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": false,
+      "f_folds": false,
+      "g_legs": false,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    },
+    "PB2H": {
+     "n": 796,
+     "delta_mean": -0.0669,
+     "delta_lb95_month_block": -0.1017,
+     "net_hold_per_trade": 0.1436,
+     "net_policy_per_trade": 0.0767,
+     "maxdd_hold": 25.614,
+     "maxdd_policy": 23.256,
+     "maxdd_cut": 0.0921,
+     "cvar5_hold": -1.112,
+     "cvar5_policy": -1.0547,
+     "cvar5_cut": 0.0516,
+     "fire_rate": 0.6656,
+     "random": {
+      "mean_delta_p50": -0.0133,
+      "mean_delta_p90": 0.0019,
+      "maxdd_cut_p50": 0.2005,
+      "cvar5_cut_p50": 0.0282,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0308,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 171,
+       "delta": -0.019,
+       "maxdd_hold": 23.481,
+       "maxdd_policy": 20.872,
+       "ok": true
+      },
+      "1": {
+       "n": 134,
+       "delta": -0.1071,
+       "maxdd_hold": 14.324,
+       "maxdd_policy": 12.604,
+       "ok": false
+      },
+      "2": {
+       "n": 121,
+       "delta": -0.0911,
+       "maxdd_hold": 16.4,
+       "maxdd_policy": 15.367,
+       "ok": false
+      },
+      "3": {
+       "n": 119,
+       "delta": -0.0726,
+       "maxdd_hold": 14.545,
+       "maxdd_policy": 17.036,
+       "ok": false
+      },
+      "4": {
+       "n": 127,
+       "delta": 0.0422,
+       "maxdd_hold": 15.705,
+       "maxdd_policy": 11.15,
+       "ok": true
+      },
+      "5": {
+       "n": 124,
+       "delta": -0.1722,
+       "maxdd_hold": 13.659,
+       "maxdd_policy": 9.481,
+       "ok": false
+      }
+     },
+     "legs": {
+      "ada_pullback_2h": {
+       "n": 402,
+       "delta": -0.0753,
+       "fire_rate": 0.7259,
+       "ok": false
+      },
+      "xrp_pullback_2h": {
+       "n": 394,
+       "delta": -0.0583,
+       "fire_rate": 0.6041,
+       "ok": false
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": false,
+      "f_folds": false,
+      "g_legs": false,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    }
+   },
+   "paths_filled_min": 5
+  },
+  "C1.0_q0.9": {
+   "cfg": {
+    "C": 1.0,
+    "q": 0.9
+   },
+   "families": {
+    "TD": {
+     "n": 1831,
+     "delta_mean": -0.0343,
+     "delta_lb95_month_block": -0.0516,
+     "net_hold_per_trade": 0.1262,
+     "net_policy_per_trade": 0.0919,
+     "maxdd_hold": 27.777,
+     "maxdd_policy": 22.914,
+     "maxdd_cut": 0.1751,
+     "cvar5_hold": -1.1287,
+     "cvar5_policy": -1.0644,
+     "cvar5_cut": 0.057,
+     "fire_rate": 0.5306,
+     "random": {
+      "mean_delta_p50": 0.0144,
+      "mean_delta_p90": 0.0231,
+      "maxdd_cut_p50": 0.2862,
+      "cvar5_cut_p50": 0.0262,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0151,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 291,
+       "delta": -0.0505,
+       "maxdd_hold": 14.017,
+       "maxdd_policy": 12.886,
+       "ok": false
+      },
+      "1": {
+       "n": 298,
+       "delta": 0.0077,
+       "maxdd_hold": 10.652,
+       "maxdd_policy": 9.367,
+       "ok": true
+      },
+      "2": {
+       "n": 317,
+       "delta": -0.0119,
+       "maxdd_hold": 25.041,
+       "maxdd_policy": 22.499,
+       "ok": true
+      },
+      "3": {
+       "n": 298,
+       "delta": -0.1091,
+       "maxdd_hold": 14.059,
+       "maxdd_policy": 12.165,
+       "ok": false
+      },
+      "4": {
+       "n": 311,
+       "delta": -0.0197,
+       "maxdd_hold": 19.985,
+       "maxdd_policy": 17.212,
+       "ok": true
+      },
+      "5": {
+       "n": 316,
+       "delta": -0.0252,
+       "maxdd_hold": 27.776,
+       "maxdd_policy": 22.134,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 275,
+       "delta": -0.0828,
+       "fire_rate": 0.5484,
+       "ok": false
+      },
+      "trend_donchian_eth_prop": {
+       "n": 1085,
+       "delta": -0.0208,
+       "fire_rate": 0.4975,
+       "ok": true
+      },
+      "trend_donchian_sol_prop": {
+       "n": 403,
+       "delta": -0.043,
+       "fire_rate": 0.669,
+       "ok": true
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 68,
+       "delta": -0.0014,
+       "fire_rate": 0.1676,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": true,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": false,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    },
+    "PB2H": {
+     "n": 796,
+     "delta_mean": -0.0432,
+     "delta_lb95_month_block": -0.0663,
+     "net_hold_per_trade": 0.1436,
+     "net_policy_per_trade": 0.1004,
+     "maxdd_hold": 25.614,
+     "maxdd_policy": 26.007,
+     "maxdd_cut": -0.0153,
+     "cvar5_hold": -1.112,
+     "cvar5_policy": -1.0789,
+     "cvar5_cut": 0.0298,
+     "fire_rate": 0.4583,
+     "random": {
+      "mean_delta_p50": -0.009,
+      "mean_delta_p90": 0.0065,
+      "maxdd_cut_p50": 0.1101,
+      "cvar5_cut_p50": 0.017,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0308,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 171,
+       "delta": -0.0112,
+       "maxdd_hold": 23.481,
+       "maxdd_policy": 22.676,
+       "ok": true
+      },
+      "1": {
+       "n": 134,
+       "delta": -0.0493,
+       "maxdd_hold": 14.324,
+       "maxdd_policy": 13.678,
+       "ok": false
+      },
+      "2": {
+       "n": 121,
+       "delta": -0.0765,
+       "maxdd_hold": 16.4,
+       "maxdd_policy": 18.075,
+       "ok": false
+      },
+      "3": {
+       "n": 119,
+       "delta": -0.0697,
+       "maxdd_hold": 14.545,
+       "maxdd_policy": 18.369,
+       "ok": false
+      },
+      "4": {
+       "n": 127,
+       "delta": 0.0467,
+       "maxdd_hold": 15.705,
+       "maxdd_policy": 13.847,
+       "ok": true
+      },
+      "5": {
+       "n": 124,
+       "delta": -0.1149,
+       "maxdd_hold": 13.659,
+       "maxdd_policy": 11.998,
+       "ok": false
+      }
+     },
+     "legs": {
+      "ada_pullback_2h": {
+       "n": 402,
+       "delta": -0.0473,
+       "fire_rate": 0.4985,
+       "ok": true
+      },
+      "xrp_pullback_2h": {
+       "n": 394,
+       "delta": -0.0391,
+       "fire_rate": 0.4173,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": true,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    }
+   },
+   "paths_filled_min": 5
+  },
+  "C1.0_q0.95": {
+   "cfg": {
+    "C": 1.0,
+    "q": 0.95
+   },
+   "families": {
+    "TD": {
+     "n": 1831,
+     "delta_mean": -0.0215,
+     "delta_lb95_month_block": -0.0341,
+     "net_hold_per_trade": 0.1262,
+     "net_policy_per_trade": 0.1047,
+     "maxdd_hold": 27.777,
+     "maxdd_policy": 24.736,
+     "maxdd_cut": 0.1095,
+     "cvar5_hold": -1.1287,
+     "cvar5_policy": -1.0768,
+     "cvar5_cut": 0.046,
+     "fire_rate": 0.3685,
+     "random": {
+      "mean_delta_p50": 0.0101,
+      "mean_delta_p90": 0.0179,
+      "maxdd_cut_p50": 0.2205,
+      "cvar5_cut_p50": 0.0186,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0151,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 291,
+       "delta": -0.0225,
+       "maxdd_hold": 14.017,
+       "maxdd_policy": 13.273,
+       "ok": false
+      },
+      "1": {
+       "n": 298,
+       "delta": 0.0006,
+       "maxdd_hold": 10.652,
+       "maxdd_policy": 11.304,
+       "ok": false
+      },
+      "2": {
+       "n": 317,
+       "delta": 0.004,
+       "maxdd_hold": 25.041,
+       "maxdd_policy": 22.948,
+       "ok": true
+      },
+      "3": {
+       "n": 298,
+       "delta": -0.0752,
+       "maxdd_hold": 14.059,
+       "maxdd_policy": 13.578,
+       "ok": false
+      },
+      "4": {
+       "n": 311,
+       "delta": -0.0165,
+       "maxdd_hold": 19.985,
+       "maxdd_policy": 18.376,
+       "ok": true
+      },
+      "5": {
+       "n": 316,
+       "delta": -0.0211,
+       "maxdd_hold": 27.776,
+       "maxdd_policy": 24.736,
+       "ok": false
+      }
+     },
+     "legs": {
+      "trend_donchian_eth_4h": {
+       "n": 275,
+       "delta": -0.0467,
+       "fire_rate": 0.3389,
+       "ok": true
+      },
+      "trend_donchian_eth_prop": {
+       "n": 1085,
+       "delta": -0.0151,
+       "fire_rate": 0.3377,
+       "ok": true
+      },
+      "trend_donchian_sol_prop": {
+       "n": 403,
+       "delta": -0.0249,
+       "fire_rate": 0.5226,
+       "ok": true
+      },
+      "trend_donchian_xrp_4h": {
+       "n": 68,
+       "delta": -0.0018,
+       "fire_rate": 0.0676,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": true,
+      "h_beats_best_static": false
+     },
+     "pass": false
+    },
+    "PB2H": {
+     "n": 796,
+     "delta_mean": -0.0218,
+     "delta_lb95_month_block": -0.0369,
+     "net_hold_per_trade": 0.1436,
+     "net_policy_per_trade": 0.1218,
+     "maxdd_hold": 25.614,
+     "maxdd_policy": 25.721,
+     "maxdd_cut": -0.0042,
+     "cvar5_hold": -1.112,
+     "cvar5_policy": -1.1,
+     "cvar5_cut": 0.0109,
+     "fire_rate": 0.2771,
+     "random": {
+      "mean_delta_p50": -0.0053,
+      "mean_delta_p90": 0.0079,
+      "maxdd_cut_p50": 0.0532,
+      "cvar5_cut_p50": 0.0088,
+      "draws": 2000
+     },
+     "best_static": {
+      "delta_mean": -0.0308,
+      "chosen_per_split": {
+       "open_ge_2r": 2,
+       "open_le_-0.5r": 13
+      }
+     },
+     "groups": {
+      "0": {
+       "n": 171,
+       "delta": -0.0097,
+       "maxdd_hold": 23.481,
+       "maxdd_policy": 24.319,
+       "ok": false
+      },
+      "1": {
+       "n": 134,
+       "delta": -0.0148,
+       "maxdd_hold": 14.324,
+       "maxdd_policy": 13.299,
+       "ok": true
+      },
+      "2": {
+       "n": 121,
+       "delta": -0.0072,
+       "maxdd_hold": 16.4,
+       "maxdd_policy": 15.634,
+       "ok": true
+      },
+      "3": {
+       "n": 119,
+       "delta": -0.0572,
+       "maxdd_hold": 14.545,
+       "maxdd_policy": 19.33,
+       "ok": false
+      },
+      "4": {
+       "n": 127,
+       "delta": 0.0149,
+       "maxdd_hold": 15.705,
+       "maxdd_policy": 15.395,
+       "ok": true
+      },
+      "5": {
+       "n": 124,
+       "delta": -0.0642,
+       "maxdd_hold": 13.659,
+       "maxdd_policy": 13.859,
+       "ok": false
+      }
+     },
+     "legs": {
+      "ada_pullback_2h": {
+       "n": 402,
+       "delta": -0.0231,
+       "fire_rate": 0.2891,
+       "ok": true
+      },
+      "xrp_pullback_2h": {
+       "n": 394,
+       "delta": -0.0206,
+       "fire_rate": 0.265,
+       "ok": true
+      }
+     },
+     "checks": {
+      "a_noninferior": false,
+      "b_risk_cut": false,
+      "c_beats_random": false,
+      "d_risk_cut_beats_random": false,
+      "e_fire_rate": true,
+      "f_folds": false,
+      "g_legs": true,
+      "h_beats_best_static": true
+     },
+     "pass": false
+    }
+   },
+   "paths_filled_min": 5
+  }
+ },
+ "legs": [
+  {
+   "leg": "trend_donchian_eth_4h",
+   "n_trade_rows": 275,
+   "n_path_rows": 3594,
+   "n_trades": 275,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 275,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "n_trade_rows": 68,
+   "n_path_rows": 545,
+   "n_trades": 68,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 68,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_eth_prop",
+   "n_trade_rows": 1085,
+   "n_path_rows": 15381,
+   "n_trades": 1085,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 1085,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "n_trade_rows": 403,
+   "n_path_rows": 8287,
+   "n_trades": 403,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 403,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "ada_pullback_2h",
+   "n_trade_rows": 402,
+   "n_path_rows": 8876,
+   "n_trades": 402,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 402,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "xrp_pullback_2h",
+   "n_trade_rows": 394,
+   "n_path_rows": 16870,
+   "n_trades": 394,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 394,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  }
+ ],
+ "holdout_legs": [
+  {
+   "leg": "trend_donchian_eth_4h",
+   "n_trade_rows": 23,
+   "n_path_rows": 298,
+   "n_trades": 23,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 23,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_xrp_4h",
+   "n_trade_rows": 6,
+   "n_path_rows": 53,
+   "n_trades": 6,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 6,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_eth_prop",
+   "n_trade_rows": 90,
+   "n_path_rows": 1184,
+   "n_trades": 90,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 90,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+   "state": "included"
+  },
+  {
+   "leg": "trend_donchian_sol_prop",
+   "n_trade_rows": 0,
+   "n_path_rows": 0,
+   "n_trades": 0,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 0,
+   "parity_share": null,
+   "c_exit_vs_harness_slippage_median_gap_r": null,
+   "state": "parity_failed"
+  },
+  {
+   "leg": "ada_pullback_2h",
+   "n_trade_rows": 28,
+   "n_path_rows": 532,
+   "n_trades": 28,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 28,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  },
+  {
+   "leg": "xrp_pullback_2h",
+   "n_trade_rows": 21,
+   "n_path_rows": 1289,
+   "n_trades": 21,
+   "n_without_path": 0,
+   "n_exit_r_mismatch_gross_r": 0,
+   "parity_n": 21,
+   "parity_share": 1.0,
+   "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+   "state": "included"
+  }
+ ],
+ "fe_legs": [
+  "ada_pullback_2h",
+  "trend_donchian_eth_4h",
+  "trend_donchian_eth_prop",
+  "trend_donchian_sol_prop",
+  "trend_donchian_xrp_4h",
+  "xrp_pullback_2h"
+ ],
+ "n_trades": 2627,
+ "n_states": 50926,
+ "runs": {
+  "main": {
+   "trend_donchian_eth_4h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "ETHUSDT",
+     "--resample",
+     "4h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "1.5",
+     "--trail-mult",
+     "6.0",
+     "--min-confidence",
+     "0.6",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_eth_4h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_eth_4h__bt.json",
+     "--trail-decay-stall-bars",
+     "10",
+     "--trail-decay-tight-mult",
+     "1.8",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "50.0",
+     "--tp-revision",
+     "donchian_measured_move",
+     "--tp-revision-width-mult",
+     "0.5",
+     "--start",
+     "2020-07-01",
+     "--end",
+     "2026-10-15 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_eth_4h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "ETHUSDT",
+     "interval": "240",
+     "resample": "4h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "trend_donchian_xrp_4h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "XRPUSDT",
+     "--resample",
+     "4h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2",
+     "--trail-mult",
+     "5.0",
+     "--min-confidence",
+     "0.8",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_xrp_4h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_xrp_4h__bt.json",
+     "--stale-exit-bars",
+     "8",
+     "--stale-exit-below-r",
+     "0.0",
+     "--side-filter",
+     "short",
+     "--trail-decay-arm-r",
+     "2.0",
+     "--trail-decay-tight-mult",
+     "2.5",
+     "--skip-hours",
+     "0",
+     "--vol-skip-above-pctl",
+     "0.9",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "3",
+     "--start",
+     "2020-07-01",
+     "--end",
+     "2026-10-15 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_xrp_4h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "XRPUSDT",
+     "interval": "240",
+     "resample": "4h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "trend_donchian_eth_prop": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "ETHUSDT",
+     "--resample",
+     "1h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2.5",
+     "--trail-mult",
+     "3.5",
+     "--min-confidence",
+     "0.6",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_eth_prop__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_eth_prop__bt.json",
+     "--trail-decay-arm-r",
+     "2.99",
+     "--trail-decay-stall-bars",
+     "10",
+     "--trail-decay-tight-mult",
+     "1.8",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "6.0",
+     "--start",
+     "2020-07-01",
+     "--end",
+     "2026-10-15 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_eth_prop__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "ETHUSDT",
+     "interval": "60",
+     "resample": "1h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "trend_donchian_sol_prop": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "SOLUSDT",
+     "--resample",
+     "1h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2.5",
+     "--trail-mult",
+     "3.5",
+     "--min-confidence",
+     "0.8",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_sol_prop__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_sol_prop__bt.json",
+     "--long-only",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "6.0",
+     "--start",
+     "2020-07-01",
+     "--end",
+     "2026-10-15 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/trend_donchian_sol_prop__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "SOLUSDT",
+     "interval": "60",
+     "resample": "1h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "ada_pullback_2h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+     "--trend-lookback",
+     "40",
+     "--pullback-lookback",
+     "10",
+     "--pullback-frac",
+     "0.618",
+     "--data",
+     "<data>",
+     "--symbol",
+     "ADAUSDT",
+     "--resample",
+     "2h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "1.5",
+     "--trail-mult",
+     "5.0",
+     "--min-confidence",
+     "0.0",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/ada_pullback_2h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/ada_pullback_2h__bt.json",
+     "--adx-min",
+     "28",
+     "--vol-skip-below-pctl",
+     "0.1",
+     "--vol-skip-above-pctl",
+     "0.95",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "4",
+     "--start",
+     "2020-07-01",
+     "--end",
+     "2026-10-15 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/ada_pullback_2h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "ADAUSDT",
+     "interval": "120",
+     "resample": "2h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "xrp_pullback_2h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+     "--trend-lookback",
+     "40",
+     "--pullback-lookback",
+     "10",
+     "--pullback-frac",
+     "0.5",
+     "--data",
+     "<data>",
+     "--symbol",
+     "XRPUSDT",
+     "--resample",
+     "2h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2.5",
+     "--trail-mult",
+     "6.0",
+     "--min-confidence",
+     "0.0",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/xrp_pullback_2h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/xrp_pullback_2h__bt.json",
+     "--adx-min",
+     "25",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "3.0",
+     "--start",
+     "2020-07-01",
+     "--end",
+     "2026-10-15 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/main__givp7cx/xrp_pullback_2h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "XRPUSDT",
+     "interval": "120",
+     "resample": "2h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   }
+  },
+  "holdout": {
+   "trend_donchian_eth_4h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "ETHUSDT",
+     "--resample",
+     "4h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "1.5",
+     "--trail-mult",
+     "6.0",
+     "--min-confidence",
+     "0.6",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_eth_4h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_eth_4h__bt.json",
+     "--trail-decay-stall-bars",
+     "10",
+     "--trail-decay-tight-mult",
+     "1.8",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "50.0",
+     "--tp-revision",
+     "donchian_measured_move",
+     "--tp-revision-width-mult",
+     "0.5",
+     "--start",
+     "2017-09-01",
+     "--end",
+     "2020-06-30 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_eth_4h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "ETHUSDT",
+     "interval": "240",
+     "resample": "4h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "trend_donchian_xrp_4h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "XRPUSDT",
+     "--resample",
+     "4h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2",
+     "--trail-mult",
+     "5.0",
+     "--min-confidence",
+     "0.8",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_xrp_4h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_xrp_4h__bt.json",
+     "--stale-exit-bars",
+     "8",
+     "--stale-exit-below-r",
+     "0.0",
+     "--side-filter",
+     "short",
+     "--trail-decay-arm-r",
+     "2.0",
+     "--trail-decay-tight-mult",
+     "2.5",
+     "--skip-hours",
+     "0",
+     "--vol-skip-above-pctl",
+     "0.9",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "3",
+     "--start",
+     "2017-09-01",
+     "--end",
+     "2020-06-30 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_xrp_4h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "XRPUSDT",
+     "interval": "240",
+     "resample": "4h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "trend_donchian_eth_prop": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "ETHUSDT",
+     "--resample",
+     "1h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2.5",
+     "--trail-mult",
+     "3.5",
+     "--min-confidence",
+     "0.6",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_eth_prop__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_eth_prop__bt.json",
+     "--trail-decay-arm-r",
+     "2.99",
+     "--trail-decay-stall-bars",
+     "10",
+     "--trail-decay-tight-mult",
+     "1.8",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "6.0",
+     "--start",
+     "2017-09-01",
+     "--end",
+     "2020-06-30 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_eth_prop__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "ETHUSDT",
+     "interval": "60",
+     "resample": "1h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "trend_donchian_sol_prop": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_trend.py",
+     "--donchian",
+     "20",
+     "--data",
+     "<data>",
+     "--symbol",
+     "SOLUSDT",
+     "--resample",
+     "1h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2.5",
+     "--trail-mult",
+     "3.5",
+     "--min-confidence",
+     "0.8",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_sol_prop__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_sol_prop__bt.json",
+     "--long-only",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "6.0",
+     "--start",
+     "2017-09-01",
+     "--end",
+     "2020-06-30 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/trend_donchian_sol_prop__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "SOLUSDT",
+     "interval": "60",
+     "resample": "1h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "ada_pullback_2h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+     "--trend-lookback",
+     "40",
+     "--pullback-lookback",
+     "10",
+     "--pullback-frac",
+     "0.618",
+     "--data",
+     "<data>",
+     "--symbol",
+     "ADAUSDT",
+     "--resample",
+     "2h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "1.5",
+     "--trail-mult",
+     "5.0",
+     "--min-confidence",
+     "0.0",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/ada_pullback_2h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/ada_pullback_2h__bt.json",
+     "--adx-min",
+     "28",
+     "--vol-skip-below-pctl",
+     "0.1",
+     "--vol-skip-above-pctl",
+     "0.95",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "4",
+     "--start",
+     "2017-09-01",
+     "--end",
+     "2020-06-30 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/ada_pullback_2h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "ADAUSDT",
+     "interval": "120",
+     "resample": "2h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   },
+   "xrp_pullback_2h": {
+    "argv": [
+     "/usr/bin/python3",
+     "/home/user/JTA-Trader/scripts/backtest_pullback.py",
+     "--trend-lookback",
+     "40",
+     "--pullback-lookback",
+     "10",
+     "--pullback-frac",
+     "0.5",
+     "--data",
+     "<data>",
+     "--symbol",
+     "XRPUSDT",
+     "--resample",
+     "2h",
+     "--atr-period",
+     "14",
+     "--atr-stop-mult",
+     "2.5",
+     "--trail-mult",
+     "6.0",
+     "--min-confidence",
+     "0.0",
+     "--fee-bps-roundtrip",
+     "11.0",
+     "--emit-trades",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/xrp_pullback_2h__trades.jsonl",
+     "--json",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/xrp_pullback_2h__bt.json",
+     "--adx-min",
+     "25",
+     "--tp-cap-pct",
+     "0.099",
+     "--tp-r",
+     "3.0",
+     "--start",
+     "2017-09-01",
+     "--end",
+     "2020-06-30 23:59",
+     "--emit-paths",
+     "/tmp/claude-0/-home-user-JTA-Trader/84bc5b65-e828-5ebc-a22b-159df376dfdb/scratchpad/a7e1run/holdout_t7klxgnh/xrp_pullback_2h__paths.jsonl"
+    ],
+    "feed": {
+     "source": "binance",
+     "ticker": "XRPUSDT",
+     "interval": "120",
+     "resample": "2h"
+    },
+    "cost_policy": {
+     "fee_bps_roundtrip": 11.0,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0
+    }
+   }
+  }
+ }
+}
