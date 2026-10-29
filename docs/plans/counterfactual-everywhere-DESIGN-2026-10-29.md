@@ -1,6 +1,6 @@
 # Counterfactual everywhere — design (phase A)
 
-> **Doc status:** `live` · category `plan` · last verified `2026-10-29` · lane `COUNTERFACTUAL-EVERYWHERE` (Tier 1, design only; nothing is built here)
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · lane `COUNTERFACTUAL-EVERYWHERE` (Tier 1, design only; nothing is built here). **Phase A design: the operator has not yet reviewed it.**
 > Operator, 2026-10-29 ~19:15Z, verbatim: *"it has to be part of how we test things, not just how we do a performance review. Like, it has to drive everything ... And we should get it run on as much data as we can."* The run uses **no Claude and no API credits**.
 
 ## Gates this adds or changes
