@@ -1,0 +1,125 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "bybit_orders: SL 101.0 / TP 99.28, position True; would_apply = the shared amend reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "short",
+    "order_package_id": "pkg-011a7bf85ee54a6f",
+    "symbol": "MGC"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-23929c3f526440c3",
+    "symbol": "GDX"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-3df9800bf7f04882",
+    "symbol": "SLV"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-4d545006a7544727",
+    "symbol": "BTCUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-64d4fa5ab0c34305",
+    "symbol": "IAUM"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-7eef4f1e1cf44df9",
+    "symbol": "ETHUSDT"
+   },
+   {
+    "direction": "short",
+    "order_package_id": "pkg-976b459f5c954df0",
+    "symbol": "MHG"
+   }
+  ],
+  "direction": "short",
+  "funding": null,
+  "news": {
+   "adjustment": 0.004181,
+   "decision": "neutral",
+   "ts": "2026-10-29T13:39:47.218554+00:00",
+   "veto": false
+  },
+  "previous_review": null,
+  "symbol": "SOLUSDT"
+ },
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9885,
+  "bars_since_peak": 4,
+  "giveback_r": 1.0002,
+  "open_r": -0.7683,
+  "peak_r": 0.2319,
+  "r_to_stop": 0.2317,
+  "r_to_target": 2.2683
+ },
+ "info_cutoff_at": "2026-10-29T13:59:57Z",
+ "leg": "ict_scalp_sol_5m",
+ "mechanics": {
+  "evidence": "package sl 100.99985714 / tp 99.27521429 agree with every readable account",
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "priced_options",
+   "reason": "open_r/peak_r/atr_stop_mult not available for this package"
+  },
+  {
+   "field": "context.funding",
+   "reason": "Bybit public funding API is geo-blocked from session networks and no read-only diag route carries funding_now; needs a diag route"
+  },
+  {
+   "field": "context.live_vs_backtest",
+   "reason": "per-leg live-vs-backtest verdict not assembled by this generator yet"
+  }
+ ],
+ "order_package_id": "pkg-e5f8bcda8cfa4ae5",
+ "packet_version": 2,
+ "priced_options": null,
+ "regime": {
+  "adx_now": 15.0585,
+  "atr_now_over_entry": 0.9885,
+  "cell_entry": "chop/calm",
+  "cell_now": null,
+  "trend_now": "chop"
+ },
+ "review_id": "LR-20261029T1359Z-pkg-e5f8bcda8cfa4ae5",
+ "state": {
+  "atr_now_over_entry": 0.9885,
+  "bars_held": 5,
+  "giveback_r": 1.0002,
+  "open_r": -0.7683,
+  "peak_provenance": "estimated",
+  "peak_r": 0.2319,
+  "regime_cell_entry": "chop/calm",
+  "regime_cell_now": null,
+  "sl": 100.99985714,
+  "tp": 99.27521429
+ }
+}
