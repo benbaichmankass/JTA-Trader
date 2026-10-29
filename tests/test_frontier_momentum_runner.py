@@ -127,7 +127,9 @@ def test_grading_follows_the_registered_rules():
     assert fmr.grade_xsec(0.9, 38, 1.0, 0.1, 39)["verdict"] == "indeterminate"
     why = fmr.grade_xsec(-0.01, 50, 0.2, 0.15, 39)["why"]
     assert "FUNDING share" in why
-    ps = lambda *rows: {f"S{i}": {"net_total_r": a, "n_trades": b} for i, (a, b) in enumerate(rows)}
+    def ps(*rows):
+        return {f"S{i}": {"net_total_r": a, "n_trades": b} for i, (a, b) in enumerate(rows)}
+
     assert fmr.grade_tsmom(ps((1, 40), (2, 45), (-1, 50)), 39)["verdict"] == "pass"
     assert fmr.grade_tsmom(ps((-1, 40), (-2, 45), (1, 50)), 39)["verdict"] == "fail"
     assert fmr.grade_tsmom(ps((1, 40), (-2, 45), (1, 30)), 39)["verdict"] == "indeterminate"
@@ -163,9 +165,13 @@ def test_runner_no_data_is_not_a_measured_zero():
 
 def test_build_inputs_trims_to_last_funded_day_and_flags_empty():
     p = _panel(n=100)
-    closes = lambda sym, a, b: p[sym.replace("USDT", "") + "USDT"]
-    fund = lambda sym, a, b: {"series": pd.Series(0.0003, index=p.index[:60]), "months_ok": [],
-                              "missing_months": ["2023-04"], "n_settlements": 180}
+    def closes(sym, a, b):
+        return p[sym]
+
+    def fund(sym, a, b):
+        return {"series": pd.Series(0.0003, index=p.index[:60]), "months_ok": [],
+                "missing_months": ["2023-04"], "n_settlements": 180}
+
     out = fmr.build_inputs(["AAAUSDT", "BBBUSDT"], 100, now=datetime(2023, 4, 11, tzinfo=timezone.utc),
                            fetch_close=closes, fetch_fund=fund)
     assert out["panel"].index.max() == p.index[59] and out["trimmed_to"] == str(p.index[59].date())
