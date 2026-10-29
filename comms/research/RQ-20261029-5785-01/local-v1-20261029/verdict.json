@@ -1,0 +1,104 @@
+{
+ "rule": "RULE-ML-OVERLAY-NONINFERIOR-V1",
+ "window": [
+  "2020-07-01",
+  "2026-10-15 23:59"
+ ],
+ "multiplier": 0.5,
+ "primary": {
+  "C": 0.1,
+  "q": 0.2
+ },
+ "grid": [
+  {
+   "C": 0.1,
+   "q": 0.1
+  },
+  {
+   "C": 0.1,
+   "q": 0.2
+  },
+  {
+   "C": 0.1,
+   "q": 0.3
+  },
+  {
+   "C": 1.0,
+   "q": 0.1
+  },
+  {
+   "C": 1.0,
+   "q": 0.2
+  },
+  {
+   "C": 1.0,
+   "q": 0.3
+  }
+ ],
+ "cpcv": {
+  "n_groups": 6,
+  "k_test": 2,
+  "embargo_days": 7.0
+ },
+ "families": {
+  "PB2H": {
+   "verdict": "INDETERMINATE",
+   "reasons": [
+    "ada_pullback_2h: parity 0.0 < 0.98",
+    "xrp_pullback_2h: parity 0.0051 < 0.98"
+   ]
+  },
+  "TD": {
+   "verdict": "INDETERMINATE",
+   "reasons": [
+    "trend_donchian_eth_4h: parity 0.0 < 0.98",
+    "trend_donchian_xrp_4h: parity 0.0 < 0.98",
+    "trend_donchian_eth_prop: parity 0.0 < 0.98",
+    "trend_donchian_sol_prop: parity 0.0 < 0.98"
+   ]
+  }
+ },
+ "read_state": "measured",
+ "verdict": "indeterminate",
+ "population": "real-money gate legs' CPCV out-of-sample Stage-0 trades, per family: PB2H n_gate=796 (ada_pullback_2h,xrp_pullback_2h); TD n_gate=1830 (trend_donchian_eth_4h,trend_donchian_xrp_4h,trend_donchian_eth_prop,trend_donchian_sol_prop)",
+ "n": 2626,
+ "note": "per family: PB2H INDETERMINATE, TD INDETERMINATE",
+ "records": [
+  {
+   "family": "PB2H",
+   "verdict": "indeterminate",
+   "n": 796,
+   "population": "PB2H gate legs ada_pullback_2h,xrp_pullback_2h",
+   "checks": {
+    "a_noninferior": false,
+    "b_risk": true,
+    "c_beats_random": false,
+    "d_not_vacuous": false,
+    "e_folds": false
+   },
+   "reasons": [
+    "ada_pullback_2h: parity 0.0 < 0.98",
+    "xrp_pullback_2h: parity 0.0051 < 0.98"
+   ]
+  },
+  {
+   "family": "TD",
+   "verdict": "indeterminate",
+   "n": 1830,
+   "population": "TD gate legs trend_donchian_eth_4h,trend_donchian_xrp_4h,trend_donchian_eth_prop,trend_donchian_sol_prop",
+   "checks": {
+    "a_noninferior": true,
+    "b_risk": true,
+    "c_beats_random": true,
+    "d_not_vacuous": true,
+    "e_folds": true
+   },
+   "reasons": [
+    "trend_donchian_eth_4h: parity 0.0 < 0.98",
+    "trend_donchian_xrp_4h: parity 0.0 < 0.98",
+    "trend_donchian_eth_prop: parity 0.0 < 0.98",
+    "trend_donchian_sol_prop: parity 0.0 < 0.98"
+   ]
+  }
+ ]
+}

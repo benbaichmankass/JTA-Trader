@@ -157,7 +157,12 @@ def load_leg(leg: str, d: Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def parity(leg: str, df: pd.DataFrame, ref_dir: Path | None) -> dict:
+def parity(leg: str, df: pd.DataFrame, ref_dir: Path | None, basis: str = "net_r", ours_dir: Path | None = None) -> dict:
+    """Trade-for-trade parity with the reference corpus. basis "net_r" (V1): same entry/direction AND net_r within
+    1e-3 -- which also fails on a deliberate cost-stack update. basis "trade" (V2): same entry_time, direction,
+    exit_time and gross_r (the trade itself), with the net_r shift reported separately as a cost-stack delta."""
+    if basis == "trade":
+        return _trade_parity(leg, ref_dir, ours_dir)
     if ref_dir is None or not (ref_dir / f"{leg}__trades.jsonl").exists():
         return {"state": "no_reference"}
     ref = [json.loads(ln) for ln in open(ref_dir / f"{leg}__trades.jsonl", encoding="utf-8") if ln.strip()]
@@ -171,6 +176,23 @@ def parity(leg: str, df: pd.DataFrame, ref_dir: Path | None) -> dict:
     denom = max(len(rk), len(ours_in), 1)
     return {"state": "checked", "n_ref": len(rk), "n_ours_in_ref_span": len(ours_in), "n_common": len(common),
             "n_same_net_r": same_r, "parity_share": round(same_r / denom, 4)}
+
+
+def _trade_parity(leg: str, ref_dir: Path | None, ours_dir: Path | None) -> dict:
+    if ref_dir is None or ours_dir is None or not (ref_dir / f"{leg}__trades.jsonl").exists():
+        return {"state": "no_reference"}
+    load = lambda d: [json.loads(ln) for ln in open(d / f"{leg}__trades.jsonl", encoding="utf-8") if ln.strip()]  # noqa: E731
+    key = lambda r: (str(pd.Timestamp(r["entry_time"])), r["direction"])  # noqa: E731
+    ref, ours = {key(r): r for r in load(ref_dir)}, {key(r): r for r in load(ours_dir)}
+    ref_end = max(pd.Timestamp(k[0]) for k in ref) if ref else None
+    ours_in = [k for k in ours if ref_end is None or pd.Timestamp(k[0]) <= ref_end]
+    same = [k for k in ours_in if k in ref and str(pd.Timestamp(ours[k]["exit_time"])) == str(pd.Timestamp(ref[k]["exit_time"]))
+            and abs(float(ours[k]["gross_r"]) - float(ref[k]["gross_r"])) <= 1e-3]
+    shift = [float(ours[k]["net_r"]) - float(ref[k]["net_r"]) for k in same]
+    denom = max(len(ref), len(ours_in), 1)
+    return {"state": "checked", "basis": "trade", "n_ref": len(ref), "n_ours_in_ref_span": len(ours_in),
+            "n_same_trade": len(same), "parity_share": round(len(same) / denom, 4),
+            "cost_stack_net_r_shift_mean": round(float(np.mean(shift)), 5) if shift else None}
 
 
 # ----------------------------------------------------------------------------------------------- CPCV
@@ -256,7 +278,8 @@ def random_deltas(R: np.ndarray, mbar: np.ndarray, groups: np.ndarray, rng: np.r
     return out
 
 
-def evaluate(df: pd.DataFrame, res: dict, gate_mask: np.ndarray, rng: np.random.Generator) -> dict:
+def evaluate(df: pd.DataFrame, res: dict, gate_mask: np.ndarray, rng: np.random.Generator,
+             n_groups: int = N_GROUPS) -> dict:
     R = df["net_r"].to_numpy()
     mbar = np.nanmean(res["mult"], axis=1)
     g = res["groups"]
@@ -276,7 +299,7 @@ def evaluate(df: pd.DataFrame, res: dict, gate_mask: np.ndarray, rng: np.random.
     red_mean = float(np.sum(w * Rg) / np.sum(w)) if np.sum(w) > 0 else float("nan")
     take_mean = float(Rg.mean())
     folds = []
-    for gk in range(N_GROUPS):
+    for gk in range(n_groups):
         ix = gg == gk
         if not ix.any():
             folds.append({"group": gk, "n": 0, "pass": False})
@@ -367,7 +390,7 @@ def parse_family(spec: str) -> tuple[str, list[str], list[str]]:
 
 
 def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, runs: dict, ref: Path | None,
-               export_dir: Path | None) -> dict:
+               export_dir: Path | None, parity_basis: str = "net_r", holdout: dict | None = None) -> dict:
     rng = np.random.default_rng(SEED)
     frames, legrep = [], {}
     for leg in legs:
@@ -377,7 +400,7 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
         d = load_leg(leg, corpus_dir)
         legrep[leg] = {"n_trades": len(d), "n_scored": int(d["scored"].sum()), "n_aligned": int(d["aligned"].sum()),
                        "gate_leg": leg in gate, "net_expectancy_r": round(float(d["net_r"].mean()), 4) if len(d) else None,
-                       "parity": parity(leg, d, ref) if leg in gate else {"state": "training_only"}}
+                       "parity": parity(leg, d, ref, parity_basis, corpus_dir) if leg in gate else {"state": "training_only"}}
         frames.append(d)
     reasons = []
     for leg in gate:
@@ -409,11 +432,19 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
             primary_eval = ev
     ev_all = evaluate(df, run_cpcv(df, PRIMARY), np.ones(len(df), dtype=bool), np.random.default_rng(SEED))
     verdict = "INDETERMINATE" if reasons else ("PASS" if primary_eval["pass"] else "FAIL")
+    hold = None
+    if holdout is not None:
+        hold = run_holdout(name, legs, gate, df, holdout)
+        if verdict == "PASS":
+            verdict = {"CONFIRMS": "PASS", "FAILS": "FAIL"}.get(hold["state"], "INDETERMINATE")
+            if verdict != "PASS":
+                reasons.append(f"fresh-window holdout {hold['state']}: {hold.get('reasons')}")
     out = {"family": name, "legs_all": legs, "legs_gate": gate, "n_pool_scored": int(len(df)),
            "verdict": verdict, "reasons": reasons, "primary": PRIMARY, "primary_eval": primary_eval,
            "pool_eval_primary": {k: ev_all[k] for k in ("n_gate", "delta_mean_r", "delta_lb95_r", "reduce_rate",
                                                          "reduced_mean_r", "take_all_mean_r", "folds_passing")},
-           "trials": trials, "n_trials": len(trials), "pbo": pbo(np.array(by_cfg_group)), "legs": legrep}
+           "trials": trials, "n_trials": len(trials), "pbo": pbo(np.array(by_cfg_group)), "legs": legrep,
+           "parity_basis": parity_basis, "holdout": hold}
     if export_dir is not None and verdict == "PASS":
         art = export_model(df, PRIMARY)
         art.update({"family": name, "legs_gate": gate, "legs_train": legs})
@@ -421,6 +452,45 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
         (export_dir / f"overlay_{name.lower()}.json").write_text(json.dumps(art, indent=1) + "\n")
         out["exported"] = str(export_dir / f"overlay_{name.lower()}.json")
     return out
+
+
+HOLDOUT_N_MIN = 100
+
+
+def run_holdout(name: str, legs: list[str], gate: list[str], train_df: pd.DataFrame, h: dict) -> dict:
+    """Fresh-window confirmation (V2, practice M5): the PRIMARY model is fit on the WHOLE main-window family pool
+    (tau from those training scores, exactly the artifact that would ship), then scores every gate-leg trade of a
+    disjoint earlier window it has never seen. CONFIRMS iff (a) LB > margin, (b), (c) and (d) hold on those
+    trades; random permutation within 3 calendar groups. Below HOLDOUT_N_MIN gate trades -> INDETERMINATE."""
+    art = export_model(train_df, PRIMARY)
+    wd = h["wd"]
+    if h.get("build", True):
+        _o, runs = build_corpus(gate, start=h["start"], end=h["end"], days=h["days"], wd=wd)
+    else:
+        runs = {}
+    frames = []
+    for leg in gate:
+        if runs.get(leg, {}).get("state", "ok") == "ok" and (wd / f"{leg}__trades.jsonl").exists():
+            d = load_leg(leg, wd)
+            frames.append(d[d["scored"] & (d["entry_time"] < h["before"])])
+    if not frames:
+        return {"state": "INDETERMINATE", "reasons": ["no holdout corpus"], "runs": runs}
+    df = pd.concat(frames, ignore_index=True).sort_values("entry_time", kind="stable").reset_index(drop=True)
+    if len(df) < HOLDOUT_N_MIN:
+        return {"state": "INDETERMINATE", "reasons": [f"n {len(df)} < {HOLDOUT_N_MIN}"], "n": len(df), "runs": runs}
+    X = df[list(FEATURES)].to_numpy(float)
+    Xs = (X - np.array(art["mean"])) / np.array(art["std"])
+    p = predict(Xs, np.array(art["coef"]), art["intercept"])
+    t = df["entry_time"]
+    g = np.minimum(((t - t.min()) / (t.max() - t.min()) * 3).astype(float).to_numpy().astype(int), 2)
+    res = {"mult": np.where(p < art["tau"], MULTIPLIER, 1.0)[:, None], "score": p[:, None], "groups": g,
+           "y": (df["net_r"].to_numpy() > 0).astype(float)}
+    ev = evaluate(df, res, np.ones(len(df), dtype=bool), np.random.default_rng(SEED + 1), n_groups=3)
+    ck = {k: ev["checks"][k] for k in ("a_noninferior", "b_risk", "c_beats_random", "d_not_vacuous")}
+    return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "reasons": [k for k, v in ck.items() if not v],
+            "window": [h["start"], str(h["before"])], "n": len(df),
+            "n_by_leg": df["leg"].value_counts().to_dict(), "checks": ck,
+            "eval": {k: v for k, v in ev.items() if k not in ("checks", "pass")}, "runs": runs}
 
 
 # ----------------------------------------------------------------------------------------------- self-test
@@ -472,6 +542,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--reference-corpus", default=None)
     ap.add_argument("--corpus-dir", default=None, help="reuse an already-built corpus dir instead of running the harness")
     ap.add_argument("--export-dir", default=None)
+    ap.add_argument("--parity-basis", choices=("net_r", "trade"), default="net_r",
+                    help="V1 net_r (default, unchanged); V2 trade = same entry/exit/direction/gross_r")
+    ap.add_argument("--holdout-start", default=None, help="V2: disjoint earlier window for the blind confirmation")
+    ap.add_argument("--holdout-end", default=None)
+    ap.add_argument("--holdout-days", type=int, default=None)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     out = Path(a.out)
@@ -485,9 +560,16 @@ def main(argv: list[str] | None = None) -> int:
         corpus.mkdir(parents=True, exist_ok=True)
         _o, runs = build_corpus(all_legs, start=a.start, end=a.end, days=a.days, wd=corpus)
     ref = Path(a.reference_corpus) if a.reference_corpus else None
-    results = [run_family(n, legs, g, corpus, runs, ref, Path(a.export_dir) if a.export_dir else None)
-               for n, legs, g in fams]
-    verdict = {"rule": RULE_ID, "window": [a.start, a.end], "multiplier": MULTIPLIER, "primary": PRIMARY,
+    holdout = None
+    if a.holdout_start:
+        hwd = out / "holdout_corpus"
+        hwd.mkdir(parents=True, exist_ok=True)
+        holdout = {"start": a.holdout_start, "end": a.holdout_end, "days": a.holdout_days, "wd": hwd,
+                   "before": pd.Timestamp(a.start, tz="UTC") - pd.Timedelta(days=EMBARGO_DAYS)}
+    results = [run_family(n, legs, g, corpus, runs, ref, Path(a.export_dir) if a.export_dir else None,
+                          a.parity_basis, holdout) for n, legs, g in fams]
+    verdict = {"rule": RULE_ID if a.parity_basis == "net_r" and not a.holdout_start else RULE_ID.replace("-V1", "-V2"),
+               "window": [a.start, a.end], "multiplier": MULTIPLIER, "primary": PRIMARY,
                "grid": GRID, "cpcv": {"n_groups": N_GROUPS, "k_test": K_TEST, "embargo_days": EMBARGO_DAYS},
                "families": {r["family"]: {"verdict": r["verdict"], "reasons": r["reasons"]} for r in results},
                "read_state": "measured"}
