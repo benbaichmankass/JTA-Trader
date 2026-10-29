@@ -1,0 +1,21 @@
+{
+  "id": "RM-AM-STANDARD-GUARD",
+  "title": "Make 'basic active management' a STANDARD for real-money legs: a CI guard that refuses a real-money/prop roster leg without (a) a declared trail with a computable activation R, (b) a TP-doctrine grade or a dated visible exemption line, (c) a coverage-matrix row",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (Opus)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-28: '...so that we can start implementing it as a standard for real money strategies'. Today the standard is implicit: every real-money leg happens to declare a trail (MEASURED 7 of 7, config/strategies.yaml 2026-10-28) but nothing refuses a new real-money leg without one. Shape: scripts/ci/check_active_mgmt_standard.py + run_guards entry + tests with positive/negative controls, reading config/accounts.yaml rosters (re-parse; never hard-code counts) and config/strategies.yaml; ratchet baseline like tp-doctrine-guard. Tier 1 (CI). Adding a leg to the baseline for a real-money/prop routing is the operator's act. Cost ~$8.",
+  "updated_at": "2026-10-28T21:11:49Z",
+  "updated_by": "session_01AFoLuMfbQGw8MoevpjjwwW",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 767
+}

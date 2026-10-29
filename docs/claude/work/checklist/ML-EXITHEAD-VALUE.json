@@ -1,0 +1,21 @@
+{
+  "id": "ML-EXITHEAD-VALUE",
+  "title": "[MODEL] B4/P5: decision value of exit-head-donchian-1h-v1 (live close on trend_donchian/_eth/_sol, outside registry) vs B0 on paths corpus, net of cost; register it as a registry row",
+  "phase": "W44",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 3 P5: KEEP iff dR/trade>=0 and trade-clustered 95% CI LB > -0.02R net; else Tier-3 de-risk proposal exit_head_action -> annotate (data-backed, manager may ship+notify). MEASURED: /api/bot/config 20:56Z exit_head_model exit-head-donchian-1h-v1 threshold 0.1 action close on 3 legs; 0 registry rows with that id.  [21:25Z] Registration is a named prerequisite of P6 (ML-HOLDBIAS-EXIT-MODEL); folds review proposal R-P5 (PI-20261028-GNVUF1ES-0002).  BASIS: the 95% CI and -0.02R are pre-registered THRESHOLDS, not measurements; evaluation population = the paths corpus (the six-money-leg corpus is 2627 trades / 50926 bar-states, RQ-20261024-09a6-01) restricted to and widened for trend_donchian/_eth/_sol 1h.",
+  "updated_at": "2026-10-28T23:06:07Z",
+  "updated_by": "session_01AFoLuNJWA5pu5sGQqcm5s3",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 759
+}

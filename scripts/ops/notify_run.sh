@@ -173,7 +173,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
+    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|set-journal-trade-qty|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
@@ -358,6 +358,18 @@ case "${action}" in
             # BYBIT_HEDGE_MODE_SYMBOLS, which refuses orders on this symbol.
             5) result="SWITCH UNVERIFIED — venue mode did not change; do NOT arm the allowlist"; priority="urgent" ;;
             *) result="FAILED/refused (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    set-bybit-collateral-switch)
+        # 2026-10-28 (lane BYBIT1-AVAILABLE-USD-ZERO): read, or with apply SET, a
+        # coin's collateral switch on a Bybit DEMO account. Exit codes are distinct.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run, no-op, or VERIFIED switch)"; priority="normal" ;;
+            2) result="REFUSED — not a bybit demo/paper account, bad input, or unconfirmed; nothing changed"; priority="high" ;;
+            3) result="REFUSED — wallet unreadable; nothing changed"; priority="high" ;;
+            5) result="SWITCH UNVERIFIED — the re-read does not show the requested switch"; priority="urgent" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
     flatten-ib-position|flatten-bybit-position|flatten-alpaca-position)

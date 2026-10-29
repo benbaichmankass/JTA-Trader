@@ -3422,9 +3422,9 @@ def iwm_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
 
 
 def splg_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
-    """SPLG daily LONG-ONLY trend-follower (cheap-share SPY proxy).
+    """SPYM daily LONG-ONLY trend-follower (cheap-share SPY proxy).
 
-    SPDR Portfolio S&P 500 ETF (SPLG) trend leg — a cheap-share (~$84) proxy
+    SPDR Portfolio S&P 500 ETF (SPYM) trend leg — a cheap-share (~$84) proxy
     for SPY, the S&P-500 sibling of spy_trend_long_1d / iwm_trend_long_1d.
     Runs on the ``alpaca_paper`` account (PAPER money; bracket orders carry
     broker-side SL/TP). Reuses the
@@ -3447,7 +3447,7 @@ def splg_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
         strategies_cfg = {}
     cfg_yaml = strategies_cfg.get("splg_trend_long_1d", {}) or {}
 
-    symbol = settings.get("SYMBOL", settings.get("symbol", "SPLG"))
+    symbol = settings.get("SYMBOL", settings.get("symbol", "SPYM"))
 
     if not bool(cfg_yaml.get("enabled", False)):
         logger.info("splg_trend_long_1d: strategy disabled in config/strategies.yaml - returning side=none")
@@ -6129,7 +6129,7 @@ for _builder, _monitor_unit in (
     # trend sibling of spy/qqq (reuses the trend_donchian unit).
     (iwm_trend_long_1d_signal_builder, "trend_donchian"),
     # splg_trend_long_1d / scha_trend_long_1d — sub-$100 proxy trend cells
-    # (2026-07-07): SPLG (S&P 500 proxy for spy) + SCHA (small-cap proxy for
+    # (2026-07-07): SPYM (S&P 500 proxy for spy) + SCHA (small-cap proxy for
     # iwm), both reuse the trend_donchian unit.
     (splg_trend_long_1d_signal_builder, "trend_donchian"),
     (scha_trend_long_1d_signal_builder, "trend_donchian"),

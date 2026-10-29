@@ -18,6 +18,15 @@ import pytest
 
 from scripts.ops import live_review_apply as lra
 from scripts.ops import live_review_dispatch as d
+from src.runtime import live_review_rows as rows_lib
+
+
+@pytest.fixture(autouse=True)
+def _legacy_tighten_path(monkeypatch):
+    """These tests exercise the tighten mechanics kept for the record and for a revert. Production makes a
+    tighten advice only (rows_lib.ADVICE_ONLY_ACTIONS, operator 2026-10-28); tests/test_tighten_advice_only.py
+    covers that with the real value."""
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
 
 RID = "LR-20261026T0800Z-pkg-aaaa"
 TABLE = "comms/live_review/tables/LR-20261026T0800Z-pkg-aaaa.json"

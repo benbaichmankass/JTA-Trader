@@ -4,6 +4,37 @@
 
 Numbers marked MEASURED were measured in this lane on 2026-10-14 from the file or command named beside them. Re-run the command rather than quoting the figure. Seeds: [`.claude/skills/perf-followup/SKILL.md`](../../../.claude/skills/perf-followup/SKILL.md) (the four tracks), `comms/reviews/performance-review-20261010-191000.json` and its follow-up record `comms/perf_followup/perf-followup-20261010-191000.json`, `research/THEMES.yaml`, `research/queue/PLANNING.md`, `docs/roadmap/milestones.yaml`.
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 29 with `programme: P3`** (10 pass, 18 fail, 1 indeterminate), plus 70 unprogrammed `live_strategy`, 27 `regime` and 8 `new_strategy_prop` units, which this review splits: Stage-0 re-validations and desk entry units to P3, exit levers to P1.
+
+**What was learned**
+- **Donchian trend transfers across symbols as declared; 2h pullback does not.** At 7.5 bps `trend_donchian_eth_4h` cleared Stage 0 on basket A (`7c2b-06`, +442.9 R pooled, 6 of 6 cells), basket B (`1b57-03`) and basket C (`1b57-04`). `eth_prop` cleared A/B/C (`7c2b-10`, `1b57-01/-02`), `sol_4h` cleared A and B (`1b57-07/-08`), and `xrp_4h` cleared B (`1b57-05`) plus the 8-fold re-read of A (`1b57-09`). `xrp_pullback_2h` (`7c2b-08`, −21 R) and `ada_pullback_2h` (`7c2b-09`, −188 R) are negative on the new perps: their roster edge is symbol-specific. Counting: about 13 trend cells passed across 3 baskets and 4 configs, and the pullback cells failed, so this is a family pattern, not one lucky cell. **Caveat:** every one of these ran at 7.5 bps on Binance-proxy symbols, and the disjoint-window confirmation of the largest (`38be-02`) is INDETERMINATE at n 67.
+- **The re-cost sweep (PR #20966) mostly measures window drift, not fee.** Of 5 bybit_1 flips at 11.0 bps, the 3 trend legs (`trend_donchian`, `trend_donchian_eth_prop`, `trend_donchian_sol`) stay positive at 11.0 on their OLD window, per the sweep's fee-isolated shift (0.61-1.40x of the predicted impact). The flip comes from the 365-day window moving 4-5 weeks. A rolling 365-day record cannot separate drift from decay, so the three diagnosis units below do. **The two scalps are a different case:** `ict_scalp_eth_15m` and `ict_scalp_xrp_15m` also FAILED a fresh disjoint window (`8a01-01/-02`) and the desk harness self-check (`8b01-01`). That is two independent instruments.
+- **The soak-book 1d equity legs hold up.** `tlt_pullback_1d`, `tqqq_trend_long_1d` and `scha_trend_long_1d` re-validated on disjoint windows (`c56e-24/-25/-26`), the `tqqq` holdout passed (`be01-02`), and the four equity trend legs are at least 2 distinct bets (`RQ-20261022-008`, n_eff 3.02 of 4). A daily long-only Donchian on 12 cheap ETFs passes (`bda2-01`, T30 +57.5 R). The equity side is the healthiest part of the book's evidence.
+
+**Failed first tests: diagnoses**
+
+| FAIL cluster | likely cause | evidence | variant |
+|---|---|---|---|
+| pullback breadth (`7c2b-08/-09`, `7c2b-14`) | **idea at these params**: symbol fit | negative pooled sign on 6 perps | none; recorded on the roster-add decision (the 10-21 plan already said so) |
+| trend-leg flips at 11.0 (#20966) | **regime / window** | fee-isolated shift keeps them positive | `P3-RECOST-flip-*` x3 (authored) |
+| single-leg regime levers (`ae17`, `326f`, `3e41` vol/ADX) | **power**: absolute bar at n_B 68-430 | `P3-RG1025-lever-pooled` node | the pooled per-lever unit (node ready; research-ops) |
+| ict_scalp fresh window (`8a01`) | **idea** (two instruments) | fresh-window FAIL plus a 11.0 bps flip | no variant; a **retirement-case proposal** goes to the manager (operator act) |
+
+**Answered / unlocked / retired.** Answered: Q8 breadth for the 4h/1h trend family (at 7.5 bps) and for pullback (negative). Unlocked: the re-cost of breadth before any Stage B. Retired: nothing. The scalp retirement case is the operator's.
+
+**Next 3-4 weeks**
+
+| # | node | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | `P3-Q8-recost-11bps-eth4h` (authored) | can ANY breadth PASS feed a re-entry case | eth_4h Stage B proceeds; other cells re-costed as they arrive | every 7.5-bps breadth PASS is re-run at 11.0 first | cpu_light, ~60 min | slippage/funding on thin alts are under-modelled even at 11.0 |
+| 2 | `P3-RECOST-flip-trend-donchian` / `-eth-prop` / `-sol` (authored) | keep on floor vs open a retirement case | window drift: keep, no case | retirement-case proposal to the manager | cpu_light, ~30 min each | 8 folds over 6 years contain the 2021 bull run, flattering a decayed leg; the latest-fold read guards against that |
+| 3 | `P3-Q1-live-bt-stage-b` (build `LIVE-BT-STAGE-B`, highest money) | why `xrp`/`ada` pullback trade below backtest on real money | — | — | build first | — |
+| 4 | `P3-RG1025-lever-pooled` (ready) | strip or keep the per-leg regime lines | Tier-3 packet | strip proposal | research-ops authors | pooled legs differ in regime exposure |
+
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
 Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.

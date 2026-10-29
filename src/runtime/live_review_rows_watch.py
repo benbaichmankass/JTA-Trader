@@ -12,14 +12,15 @@ clause on the row at the pinned commit, refuses a duplicate review_id through
 ``runtime_logs/live_review/dispatch_state.json``, and hands over to
 ``live_review_apply.py``, where each account decides through its own
 ``RiskManager.approve_amend`` and the venue is read back. This file only
-decides WHEN to call it: once per new ``review_id`` whose recommendation is a
-``tighten_sl`` or (LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``, 2026-10-26) one of
-the trade actions -- close, partial_close, move_tp, widen_sl, change_size,
+decides WHEN to call it: once per new ``review_id`` whose recommendation is
+(LTR-ALL-ACTIONS, mandate ``MD-TRADE-DESK``, 2026-10-26) one of the trade actions -- close, partial_close, move_tp, widen_sl, change_size,
 add_entry -- on a dispatchable route, on ANY account class, paper included
 (operator 2026-10-26: "All accounts now", "Real-money, prop and paper at once").
 ``hold``, ``operator_ask`` / ``none`` routes and ``flag_mechanics`` are logged
 ``not_dispatchable`` and never sent, so they cannot trip the dispatcher's
-refusal ping.
+refusal ping. A ``tighten_sl`` is ADVICE ONLY (operator 2026-10-28 ~20:35Z, "Advice-only
+tightens (Recommended)"; evidence ``comms/research/ltr_tighten_optimize/verdict.json``): on any
+route it is logged ``tighten_advice_only`` and never sent.
 
 Cadence: ``ensure_started()`` (called from ``record_position_telemetry``,
 which only runs while packages are open) starts ONE daemon thread, once, in
@@ -148,12 +149,16 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
 
 
 #: tighten_sl plus the trade-desk actions (LTR-ALL-ACTIONS); every one is re-checked by the dispatcher.
+#: rows_lib.ADVICE_ONLY_ACTIONS (tighten_sl, operator 2026-10-28) is checked FIRST and is never sent.
 DISPATCHABLE_ACTIONS = ("tighten_sl", "close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 
 
 def dispatchable(row: Dict[str, Any]) -> Optional[str]:
-    """None when the row is an apply candidate; else why it is not (logged, never sent)."""
+    """None when the row is an apply candidate; else why it is not (logged, never sent).
+    A tighten returns rows_lib.ADVICE_ONLY_VERDICT on every route: recorded as advice, never executed."""
     rec = row.get("recommendation") or {}
+    if rec.get("action") in rows_lib.ADVICE_ONLY_ACTIONS:
+        return rows_lib.ADVICE_ONLY_VERDICT
     if rec.get("action") not in DISPATCHABLE_ACTIONS:
         return f"action_{rec.get('action')}"
     route = (row.get("disposition") or {}).get("route")
@@ -257,7 +262,10 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
                                "seen_at": first.isoformat()}
         _proof(lambda fp: fp.record_row(row, at=first))
         why = dispatchable(row)
-        if why:
+        if why == rows_lib.ADVICE_ONLY_VERDICT:
+            rec.update(verdict=why, detail=f"advice only: {(row.get('recommendation') or {}).get('action')} "
+                                           f"level {(row.get('recommendation') or {}).get('level')} not executed")
+        elif why:
             rec.update(verdict="not_dispatchable", detail=why)
         else:
             res = dispatch(rid, tip)

@@ -214,7 +214,7 @@ def main_ci_state(timeout: float = 8.0) -> Tuple[str, str]:
     if not token:
         return MAIN_UNKNOWN, "no GITHUB_TOKEN/GH_TOKEN in the environment"
 
-    repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/Metis-Insights")
+    repo = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")
     url = f"https://api.github.com/repos/{repo}/commits/main/check-runs?per_page=100"
     req = urllib.request.Request(url, headers={
         "Authorization": f"Bearer {token}",
