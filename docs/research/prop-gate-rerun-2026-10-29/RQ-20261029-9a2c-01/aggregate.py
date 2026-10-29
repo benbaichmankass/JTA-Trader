@@ -22,7 +22,9 @@ for f in sorted(glob.glob(ROOT + "cells/*.json")):
 rows = []
 for (leg, win, acct, arm), cs in sorted(cells.items()):
     size, c = ACCT[acct]
-    evs = [x["ev"] for x in cs]; Bs = [x["B"] for x in cs]; n = cs[0]["n"]
+    evs = [x["ev"] for x in cs]
+    Bs = [x["B"] for x in cs]
+    n = cs[0]["n"]
     ok = n >= 88 and st.median(Bs) < c and max(Bs) < c and st.median(evs) > 0 and min(evs) > 0
     v = "INDETERMINATE" if n < 88 else ("PASS" if ok else "FAIL")
     rows.append({"leg": f"trend_donchian_{leg}_prop", "window": win, "account": acct, "arm": arm, "seeds": len(cs), "n": n, "ceiling": round(c, 3),
