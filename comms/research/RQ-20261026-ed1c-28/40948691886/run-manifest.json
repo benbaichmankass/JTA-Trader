@@ -1,0 +1,46 @@
+{
+  "unit": "RQ-20261026-ed1c-28",
+  "run_id": "40948691886",
+  "commit_sha": "c7c67bf25d04ee3859e1a2a023069c2819e398fb",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40948691886",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "eia_natgas_storage",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "UNG",
+        "--horizons",
+        "1",
+        "--primary-horizons",
+        "1",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "negative",
+        "--trade-horizon",
+        "1",
+        "--cost-symbol",
+        "UNG",
+        "--trade-t-bar",
+        "2.0",
+        "--population",
+        "eia_natgas_storage releases (live feed + survey-consensus backfill, one row per release date) joined to UNG daily closes",
+        "--out",
+        "comms/research/RQ-20261026-ed1c-28/40948691886"
+      ],
+      "log": "comms/research/RQ-20261026-ed1c-28/40948691886/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2.2
+    }
+  ],
+  "all_ok": true
+}
