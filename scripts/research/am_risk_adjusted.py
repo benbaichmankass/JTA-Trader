@@ -83,6 +83,10 @@ RULE_V1: dict[str, Any] = {
     "n_floor": 39,
     "random_control": "required",
     "min_control_beat_frac": 0.95,
+    # operator 2026-10-29 ~07:20Z: the measurement of record is a book-level $ simulation per account at its real size
+    # (production sizer + caps + daily_dd_switch). Until that simulator exists (row BOOK-SIM-REAL-SIZER) a grade over
+    # per-trade-R books is a SCREEN: it ranks candidates and never graduates a class.
+    "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
 }
 
 
@@ -179,12 +183,16 @@ def risk_pcts(accounts: list[str]) -> dict[str, float]:
 def grade_risk_adjusted(books: dict[str, list[dict[str, Any]]], *, baseline: str, candidates: list[str],
                         controls: dict[str, list[str]] | None = None, params: dict[str, Any] | None = None,
                         edges: list[datetime] | None = None,
-                        risk_pct_by_account: dict[str, float] | None = None) -> dict[str, Any]:
+                        risk_pct_by_account: dict[str, float] | None = None,
+                        basis: str = "per_trade_r_screen") -> dict[str, Any]:
+    """``basis`` names what the books hold: ``per_trade_r_screen`` (harness R books, the default; never a graduation)
+    or ``book_usd_sim`` (a per-account $ simulation at real size, whose ``net_r`` field then carries net $)."""
     p = {**RULE_V1, **(params or {})}
     tail = float(p["cvar_tail"])
     a_tr = books[baseline]
     A = book_metrics(a_tr, tail)
     out: dict[str, Any] = {"rule": {k: p[k] for k in RULE_V1}, "baseline": baseline, "baseline_book": A,
+                           "measurement_basis": basis, "graduation_eligible": basis == "book_usd_sim",
                            "candidates": {}}
     if A["n"] < int(p["n_floor"]):
         return {"verdict": "indeterminate", "label": "underpowered", **out,

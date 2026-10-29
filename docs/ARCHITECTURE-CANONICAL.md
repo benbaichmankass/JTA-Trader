@@ -743,11 +743,14 @@ This section is the design statement; the TP doctrine above is the floor it stan
 4. **Each action class graduates on its OWN test, under a RISK-ADJUSTED rule** (operator decision 2026-10-29, below). An action
    class is advice-only until a test registered before the run, net of the full cost stack, passes for that class under
    **`RULE-AM-RISK-ADJUSTED-V1`**. Then it may be executed, through the usual Tier-3 / mandate path. One class failing says nothing
-   about another: each is judged on its own merits. The class passes when, measured on the **whole book** of each arm (every trade
-   the arm took, so risk budget the action frees and re-uses counts):
-   - **R1 — small R cost.** It gives up at most a pre-stated amount of net R per baseline trade: **0.05 R** in V1.
-   - **R2 — material risk cut.** It cuts the book's **max drawdown** or its **worst-5% outcome** (the mean of the worst 5% of
-     weekly book net R) by at least **15%** in V1.
+   about another: each is judged on its own merits. **The measurement of record is a book-level $ simulation per account at its
+   real size**, using the production position sizer and risk caps: concurrency, per-account caps, and `daily_dd_switch` where it is
+   armed. That counts three book effects a per-trade R test cannot see: freed risk budget admitting trades the caps would refuse,
+   compounding under %-of-equity sizing, and prop survival against daily DD limits. The class passes when, on each arm's whole book:
+   - **R1 — small P&L cost.** The change in the book's **net $ and % return** gives up at most a pre-stated amount. V1 states it
+     as **0.05 R per baseline trade**, with R per trade reported beside the $ and % figures as the unit.
+   - **R2 — material risk cut.** It cuts the book's **max drawdown** or its **worst-5% weekly outcome**, in $ and %, by at least
+     **15%** in V1.
    - **R3 — it holds across time.** A majority of calendar folds (V1: 4 of 6) each satisfy the R1 bar without making that fold's
      risk worse.
    - **R4 — it beats chance.** It beats a **matched random-intervention control** of the same class (practice principle T1) on
@@ -755,8 +758,10 @@ This section is the design statement; the TP doctrine above is the floor it stan
 
    A class that clears R1-R4 is better than hold under the objective below, even when its mean net R is a little lower. The
    mechanical form, parameters and verdict states are in `scripts/research/am_risk_adjusted.py` (wired as
-   `exit_lever_ablation.py --grade risk_adjusted`); a unit registers the rule id and any changed parameter before its run, and a
-   re-grade of an older record is a reading, never a graduation.
+   `exit_lever_ablation.py --grade risk_adjusted`). A unit registers the rule id and any changed parameter before its run, and a
+   re-grade of an older record is a reading, never a graduation. **No harness yet simulates an account's book with the real
+   sizer and caps** (row `BOOK-SIM-REAL-SIZER`). Until one does, the grader's per-trade-R reading is a **screen** that ranks
+   candidates, and it never graduates a class.
 
 ### The rule's record and the objective it serves (operator, 2026-10-29)
 
@@ -781,6 +786,11 @@ return for risk. We do care about R, which is why we also want to reduce risk wh
 But what we care about here is the overall amount of money that we make, not the overall amount of money we make necessarily in
 relation to the amount of risk that was taken."*
 
+And on how it is measured, ~07:20Z: *"if we're optimizing for R, then that also matters how much risk we're taking. But like,
+this is why banking makes sense, because it might not be the best R trade-off, but it will make the most money overall and for
+each trade."* At fixed risk per trade, $ = R × risk. Banking can make more money overall only through the book effects named in
+clause 4. That is why the rule is graded on the book-level $ simulation.
+
 **The system's trading objective, stated once here; other docs point at it.**
 1. **Primary: absolute net P&L**, reported in **$ and as % return per account and per book**. The accounts are small and of
    different sizes. **R stays the per-trade unit of measure.**
@@ -794,8 +804,8 @@ trade, and the verdict also reports it as % return per account, from each accoun
 
 ### What the evidence says today (re-read, never quote forward)
 
-**No action class passes `RULE-AM-RISK-ADJUSTED-V1` on any landed record.** This is a re-grade of committed records, done without
-re-running anything. It lives at `comms/research/am_risk_adjusted/regrade-2026-10-29.json` and is a reading, not a graduation. Every
+**No action class passes `RULE-AM-RISK-ADJUSTED-V1`'s per-trade-R screen on any landed record.** The book-level $ measurement
+does not exist yet. This is a re-grade of committed records, done without re-running anything. It lives at `comms/research/am_risk_adjusted/regrade-2026-10-29.json` and is a reading, not a graduation. Every
 class stays advice-only. Numbers live in that record.
 
 - **Tightening fails the new rule as it failed the old one.** DESK-LIFECYCLE-S0 (#20967): Claude's whole-trade management costs far
@@ -806,7 +816,7 @@ class stays advice-only. Numbers live in that record.
 - **The break-even stop comes closest.** On `trend_donchian_eth` (RQ-20261026-ed1c-17), arming break-even at a peak of +0.75 or
   +1.0 R gains R and cuts the book's max drawdown by about a fifth. It holds in only half the folds and had no random control, so
   it does not pass. Its test on the real-money legs is registered as RQ-20261029-1f39-01, blocked on the random-control build (row
-  `HARNESS-BE-RANDOM-CONTROL`).
+  `HARNESS-BE-RANDOM-CONTROL`) and the book-level $ simulator (row `BOOK-SIM-REAL-SIZER`).
 - **Widen, move-to-structure, and TP extend / pull-in / revise are UNTESTED as action classes.** Programme 01
   (`docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md`, question Q15) holds their ladders, now graded under this rule.
 
@@ -1636,7 +1646,7 @@ filtered to architecture-level deltas only.
 | 2026-10-26 | DESK-16B-NEAR-SIGNALS (lane, Tier-1) | **Desk near-signal producer.** `scripts/ops/desk_near_signals.py` runs each rostered leg x symbol's OWN strategy unit (`trend_donchian` / `htf_pullback_trend_2h` / `ict_scalp` `order_package`) on its latest closed candles: `bars_to_signal` 0 = the unit fires now, 1 = it would fire if the next bar closed <= 1.5 ATR(14) away (a synthetic-bar probe through the same unit; no re-implemented condition). The builders' own `_resolve_side_filter` applies (`long_only` legs never report a short). `desk_scan_packet.py` injects the result: `near_signals_read_state` is `read` only when EVERY leg x symbol was looked at, else `could_not_look` with the unlooked legs and the N-of-M denominator named in `missing_inputs`. Not reproduced (builders apply them after the unit): regime router, market-hours gates, account-level `side_filter`; legs needing an HTF bias frame or a local off-cell gate are unlooked by name. | `scripts/ops/desk_near_signals.py`, `tests/test_desk_near_signals.py` | Tier-1, read-only (no order path). `landed_unproven` until a desk session reads a scan packet's near-signals and a near-signal later becomes an order package (or not) to check `bars_to_signal`. |
 | 2026-10-28 | ML-TRAINING-PRINCIPLES-GAPS (lane, Tier-2) | **Cost-net ML labels + enforced cost-net promotion gate + mechanical model soak.** Triple-barrier labels charge the full venue-correct cost stack through the shared cost model (`ml/datasets/labeling/cost_policy.py` over `src/runtime/execution_costs.py`; per-row `label_cost_basis`); `ml/promotion/cost_gate.py` computes a cost-net decision value per training run vs incumbent + take-all / take-none / matched-random (plus PSR / deflated Sharpe) and the registry ENFORCES it on landing in shadow/advisory, on retrain state swaps and on `promote-stage` / `promote`; `gates.shadow_soak` counts clean scored shadow predictions (1–2) instead of 7 calendar days. One revert value: `config/ml_training.yaml::cost_net_labels`. Regime / direction / execution heads have no net-R value column yet (`not_applicable`, pipeline PI-20261028-V8KBRR5H-0001). | `ml/datasets/labeling/{triple_barrier,cost_policy}.py`, `ml/datasets/families/{setup,exit}_candidates.py`, `ml/experiments/runner.py`, `ml/registry/model_registry.py`, `ml/promotion/{__init__,cost_gate,gates,stage_guard}.py`, `ml/cli.py`, `config/ml_training.yaml`, docs + tests | Trainer-only (no order path). Existing datasets keep the basis they were built with; the frozen setup_candidates datasets need a rebuild to carry cost-net labels (PI-20261028-V8KBRR5H-0004). |
 | 2026-10-28 | ROADMAP-PRIORITIES-AM-PRINCIPLE (lane, Tier-1) | **Active management is any evidence-backed move of either bracket.** Operator directive 2026-10-28 (verbatim in § "Active management"): the action space is SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, and hold; every action is triggered by live market data; both brackets always exist; each action class graduates from advice-only to executed only on its own registered, net-of-cost test against hold. Evidence to date covers tightening only, which loses (#20967, #21003). Roadmap milestone `L-AM-STANDARD`; Programme 01 Q15 (renumbered from Q12 on 2026-10-29: Q12-Q14 were already node labels). | `docs/ARCHITECTURE-CANONICAL.md`, `docs/roadmap/milestones.yaml`, `ROADMAP.md`, `docs/reference/trading-and-model-practice-principles.md`, `.claude/skills/exit-refinement/SKILL.md`, `.claude/skills/trading-desk/SKILL.md`, `CLAUDE.md` | None to what trades today: docs and roadmap only. No order path, config, mandate or param change. |
-| 2026-10-29 | AM-RISK-ADJUSTED-RULE (lane, Tier-3 doctrine the operator decided; landing hold) | **Active management graduates on a RISK-ADJUSTED rule.** Operator decision 2026-10-29 (verbatim in § "Active management"): clause 4's "judged against hold" (mean net R) becomes `RULE-AM-RISK-ADJUSTED-V1`, measured on the whole book. A class passes if R1 it gives up <= 0.05 R per baseline trade, R2 it cuts book max drawdown or the worst-5% weekly outcome by >= 15%, R3 it holds in a fold majority, and R4 it beats a matched random-intervention control. Each class is still judged on its own test, registered before the run and net of the full cost stack. The system's trading objective is stated once: absolute net P&L ($ and % return per account and book) first; risk reduction is the tie-breaker, and it wins when it costs little P&L; ratios are not the objective. New grader `scripts/research/am_risk_adjusted.py`, also `exit_lever_ablation.py --grade risk_adjusted`. Re-grade of landed records: no class passes. Unit RQ-20261029-1f39-01 (break-even after peak, real-money legs) is registered and blocked on row `HARNESS-BE-RANDOM-CONTROL`. | `docs/ARCHITECTURE-CANONICAL.md`, `scripts/research/am_risk_adjusted.py`, `scripts/research/exit_lever_ablation.py`, `tests/test_am_risk_adjusted.py`, `comms/research/am_risk_adjusted/`, `research/queue/blocked/RQ-20261029-1f39-01.yaml`, skills `exit-refinement` / `live-trade-review` / `trading-desk`, `docs/reference/trading-and-model-practice-principles.md`, `docs/plans/OPERATING-PLAN-2026-09-21.md`, `config/mandates.yaml` (comment only) | None to what trades today. Every in-trade class stays advice-only; no order path, config field, mandate or param changes. Graduating a class is still a Tier-3 / mandate change on its own passed record. |
+| 2026-10-29 | AM-RISK-ADJUSTED-RULE (lane, Tier-3 doctrine the operator decided; landing hold) | **Active management graduates on a RISK-ADJUSTED rule.** Operator decision 2026-10-29 (verbatim in § "Active management"): clause 4's "judged against hold" (mean net R) becomes `RULE-AM-RISK-ADJUSTED-V1`, measured on the whole book. A class passes if R1 it gives up <= 0.05 R per baseline trade, R2 it cuts book max drawdown or the worst-5% weekly outcome by >= 15%, R3 it holds in a fold majority, and R4 it beats a matched random-intervention control. Each class is still judged on its own test, registered before the run and net of the full cost stack. The system's trading objective is stated once: absolute net P&L ($ and % return per account and book) first; risk reduction is the tie-breaker, and it wins when it costs little P&L; ratios are not the objective. Measurement of record: a book-level $ simulation per account with the production sizer and caps. No harness has that yet (row `BOOK-SIM-REAL-SIZER`), so the per-trade-R grader `scripts/research/am_risk_adjusted.py` (also `exit_lever_ablation.py --grade risk_adjusted`) is a screen until one does. Re-grade of landed records: no class passes. Unit RQ-20261029-1f39-01 (break-even after peak, real-money legs) is registered and blocked on rows `HARNESS-BE-RANDOM-CONTROL` and `BOOK-SIM-REAL-SIZER`. | `docs/ARCHITECTURE-CANONICAL.md`, `scripts/research/am_risk_adjusted.py`, `scripts/research/exit_lever_ablation.py`, `tests/test_am_risk_adjusted.py`, `comms/research/am_risk_adjusted/`, `research/queue/blocked/RQ-20261029-1f39-01.yaml`, skills `exit-refinement` / `live-trade-review` / `trading-desk`, `docs/reference/trading-and-model-practice-principles.md`, `docs/plans/OPERATING-PLAN-2026-09-21.md`, `config/mandates.yaml` (comment only) | None to what trades today. Every in-trade class stays advice-only; no order path, config field, mandate or param changes. Graduating a class is still a Tier-3 / mandate change on its own passed record. |
 
 ## Known gaps
 

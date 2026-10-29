@@ -218,3 +218,14 @@ def test_cost_leg_reported_as_pct_return_per_account():
     assert am.grade_risk_adjusted({"A": hold, "BE": be}, baseline="A", candidates=["BE"])["candidates"]["BE"]["pnl_by_account"] is None
     rp = am.risk_pcts(["bybit_2", "alpaca_live"])
     assert set(rp) <= {"bybit_2", "alpaca_live"} and all(0 < x < 1 for x in rp.values())
+
+
+def test_r_books_are_a_screen_not_a_graduation():
+    """Operator ~07:20Z: the measurement of record is a book-level $ simulation; an R-book grade never graduates."""
+    hold, be, rnd = _books()
+    g = am.grade_risk_adjusted({"A": hold, "BE": be, "RND": rnd}, baseline="A", candidates=["BE"], controls={"BE": ["RND"]})
+    assert g["measurement_basis"] == "per_trade_r_screen" and g["graduation_eligible"] is False
+    g = am.grade_risk_adjusted({"A": hold, "BE": be, "RND": rnd}, baseline="A", candidates=["BE"], controls={"BE": ["RND"]},
+                               basis="book_usd_sim")
+    assert g["graduation_eligible"] is True
+    assert "BOOK-SIM-REAL-SIZER" in am.RULE_V1["measurement_of_record"]

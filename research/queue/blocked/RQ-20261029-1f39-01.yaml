@@ -61,7 +61,9 @@ decision_rule:
     max_r_cost_per_trade 0.05, min_dd_cut_pct 0.15, min_cvar5_cut_pct 0.15, fold_majority 4 of 6, fold_min_risk_cut_pct 0.0,
     min_control_beat_frac 0.95, n_floor 39 (am_risk_adjusted.RULE_V1).
   rule: >-
-    Each X is a candidate; its 100 random draws are its controls. Per candidate, per leg and pooled, the verdict is RULE-AM-RISK-ADJUSTED-V1's
+    THE MEASUREMENT OF RECORD is the book-level $ simulation per account (row BOOK-SIM-REAL-SIZER; operator ~07:20Z): R1 and R2 are
+    read on each account's simulated $ book (delta net $ and % return; drawdown / CVaR in $ and %), R per trade reported beside;
+    the per-trade-R run below is a screen that ranks the X arms and never graduates. Each X is a candidate; its 100 random draws are its controls. Per candidate, per leg and pooled, the verdict is RULE-AM-RISK-ADJUSTED-V1's
     (R1 cost, R2 risk cut, R3 folds, R4 random control; floors n >= 39 and the lever fired). THE CLASS VERDICT IS THE POOLED ONE. PASS if
     one or more X pass pooled; the passing X with the largest pooled max-drawdown cut is named (ties: the lower R cost), and the multiplicity
     denominator is 3. A pooled PASS is a DISCOVERY: the follow-up is ONE confirmation run on data after this window. Graduation (removing the
@@ -86,6 +88,17 @@ blocked_on:
     exit_lever_ablation (or am_risk_adjusted run-legs) writes 100 seeded matched-rate random trigger files per X and runs them as declared
     control arms, the best-static LOFO report is emitted, with tests. Then git mv this file to research/queue/, add the control arms to
     run.command, remove blocked_on and set status: queued.
+- kind: work_item
+  ref: BOOK-SIM-REAL-SIZER
+  what: >-
+    Operator 2026-10-29 ~07:20Z (verbatim on row AM-RISK-ADJUSTED-RULE): the rule's measurement of record is a book-level $
+    simulation per account at its real size, with the production sizer and caps (concurrency, per-account caps, daily_dd_switch
+    where armed). No harness does that today. backtest_system.py is one book on one symbol with a mirrored sizer, and nbook_portfolio.py
+    is N books over one stream. Neither applies --be-floor-r.
+  clears_when: >-
+    The simulator in row BOOK-SIM-REAL-SIZER emits per-account $ books per arm. Then run.command grades them with
+    grade_risk_adjusted(basis="book_usd_sim"), reporting delta net $ and % return per account with R per trade beside. The
+    per-trade-R run.command below is the SCREEN only, and it is kept for ranking the X arms.
 compute: cpu_light
 value:
   usd_at_stake_per_month: 300
