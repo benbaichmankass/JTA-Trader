@@ -2,18 +2,20 @@
   "id": "ML-SERVE-SETUP-FEATURES",
   "title": "[MODEL] B2 (Tier-2, held): advisory serve row carries the setup_candidates decision-time features (same functions as the family) + train-vs-serve parity test + real-money roster guard test",
   "phase": "W44",
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuM3NoUTHiuQ17qwhdZ",
   "model": "opus",
   "ceiling_usd": 12,
-  "spend_usd": null,
+  "spend_usd": 7,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    21176
+  ],
   "blocked_on": [],
-  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 4 B2. WHY MEASURED: src/runtime/advisory_sizing.py::_feature_row_from_pkg emits 6 fields (strategy,symbol,direction,confidence,setup_type,killzone); p2pool manifest needs 10 (rolling_log_return_vol, log_return, lags, vol_bucket, momentum, hour, dow, direction, symbol). Tier-2 held PR; operator OK Fri 10-30 before deploy.  [21:25Z] vol_bucket serves dead live on the yz heads (PI-20260927-3WM5HADW-0005, ml-review 2026-10-28 C5); p2pool uses vol_bucket, so parity must show it present+non-default+equal before P1 shadow.",
-  "updated_at": "2026-10-28T21:22:02Z",
-  "updated_by": "session_01AFoLuNJWA5pu5sGQqcm5s3",
+  "note": "PR #21176 (Tier 2, held) open: serve row 10/10 parity on 982 rows / 2,500 recorded ADA 2h bars; I6 guard test; I7 fixed (conviction apply reads advisory-only blend). P1 must be RETRAINED on code with this PR to carry serve_spec. Follow-ups PI-20261029-Q17QWHDZ-0001..3 (#21174).",
+  "updated_at": "2026-10-29T07:10:59Z",
+  "updated_by": "session_01AFoLuM3NoUTHiuQ17qwhdZ",
   "roadmap": [
     "M25"
   ],
