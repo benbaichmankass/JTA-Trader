@@ -1,0 +1,221 @@
+{
+  "leg": "trend_donchian_eth_prop",
+  "label": "stage0_edge",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 53.042,
+    "n": 1091,
+    "max_drawdown_r": 27.474,
+    "folds_positive": 5,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=53.042 > 0 with 5/8 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 1091,
+      "net_r": 53.042,
+      "net_r_fee_only": 76.9967,
+      "max_drawdown_r": 27.474,
+      "by_outcome": {
+        "trail_stop": 823,
+        "stop": 214,
+        "take_profit": 54
+      },
+      "mean_bars_held": 14.168,
+      "net_r_per_capital_day": 0.0824,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 2.99,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 1.8
+      },
+      "data_start": "2020-07-01 00:00:00+00:00",
+      "data_end": "2026-10-26 23:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-07-01 00:00:00+00:00",
+          "end": "2021-04-15 14:59:52.500000+00:00",
+          "trades": 137,
+          "net_r": 17.3959
+        },
+        {
+          "fold": 2,
+          "start": "2021-04-15 14:59:52.500000+00:00",
+          "end": "2022-01-29 05:59:45+00:00",
+          "trades": 129,
+          "net_r": 18.9865
+        },
+        {
+          "fold": 3,
+          "start": "2022-01-29 05:59:45+00:00",
+          "end": "2022-11-13 20:59:37.500000+00:00",
+          "trades": 140,
+          "net_r": -1.6217
+        },
+        {
+          "fold": 4,
+          "start": "2022-11-13 20:59:37.500000+00:00",
+          "end": "2023-08-29 11:59:30+00:00",
+          "trades": 140,
+          "net_r": -3.6571
+        },
+        {
+          "fold": 5,
+          "start": "2023-08-29 11:59:30+00:00",
+          "end": "2024-06-13 02:59:22.500000+00:00",
+          "trades": 133,
+          "net_r": 2.7693
+        },
+        {
+          "fold": 6,
+          "start": "2024-06-13 02:59:22.500000+00:00",
+          "end": "2025-03-28 17:59:15+00:00",
+          "trades": 139,
+          "net_r": 16.0176
+        },
+        {
+          "fold": 7,
+          "start": "2025-03-28 17:59:15+00:00",
+          "end": "2026-01-11 08:59:07.500000+00:00",
+          "trades": 142,
+          "net_r": -4.2673
+        },
+        {
+          "fold": 8,
+          "start": "2026-01-11 08:59:07.500000+00:00",
+          "end": "2026-10-26 23:59:00+00:00",
+          "trades": 131,
+          "net_r": 7.4188
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261029-004/40914537979/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261029-004/40914537979/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-07-01",
+    "end": "2026-10-26 23:59",
+    "fetch_days": 2400,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "60",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2020-07-01 00:00:00+00:00",
+      "2021-04-15 14:59:52.500000+00:00",
+      "2022-01-29 05:59:45+00:00",
+      "2022-11-13 20:59:37.500000+00:00",
+      "2023-08-29 11:59:30+00:00",
+      "2024-06-13 02:59:22.500000+00:00",
+      "2025-03-28 17:59:15+00:00",
+      "2026-01-11 08:59:07.500000+00:00",
+      "2026-10-26 23:59:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261029-004/40914537979/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261029-004/40914537979/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "2.99",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--fee-bps-roundtrip",
+        "11.0"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
