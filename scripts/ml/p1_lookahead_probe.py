@@ -20,13 +20,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from ml.datasets.families.setup_candidates import (  # noqa: E402
-    _bar_index_at_or_before, _load_live_trades, _live_realized_r,
+    _bar_index_at_or_before, _load_live_trades,
 )
 
 
 def _dt(s):
     d = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
     return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+def med(x):
+    return round(st.median(x), 2) if x else None
 
 
 def main() -> int:
@@ -37,7 +41,7 @@ def main() -> int:
     a = ap.parse_args()
     res = {}
     for sym in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
-        rows = [json.loads(l) for l in open(Path(a.datasets_out) / "market_raw" / sym / "1h" / "v002" / "data.jsonl") if l.strip()]
+        rows = [json.loads(ln) for ln in open(Path(a.datasets_out) / "market_raw" / sym / "1h" / "v002" / "data.jsonl") if ln.strip()]
         rows.sort(key=lambda r: r["ts"])
         ts = [str(r["ts"]) for r in rows]
         d_open, d_close, d_prev, inside, n = [], [], [], 0, 0
@@ -55,7 +59,6 @@ def main() -> int:
             t0 = _dt(rows[e]["ts"])
             inside += 1 if t0 <= _dt(tr["entry_ts"]) < t0 + timedelta(hours=1) else 0
             n += 1
-        med = lambda x: round(st.median(x), 2) if x else None
         res[sym] = {"n": n, "entry_inside_bar_e": inside, "median_bps_|entry-open[e]|": med(d_open),
                     "median_bps_|entry-close[e]|": med(d_close), "median_bps_|entry-close[e-1]|": med(d_prev),
                     "sample_bar_ts": ts[-2:], "first_bar_ts": ts[:1]}

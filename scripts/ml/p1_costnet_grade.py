@@ -91,7 +91,7 @@ def main() -> int:
     state = json.loads(Path(a.model_state).read_text())
     gate = json.loads(Path(a.cost_gate).read_text())
 
-    rows = [json.loads(l) for l in open(a.dataset) if l.strip()]
+    rows = [json.loads(ln) for ln in open(a.dataset) if ln.strip()]
     ev = [r for r in rows if r.get("is_live_trade")]
     srcs: dict = {}
     for r in ev:
