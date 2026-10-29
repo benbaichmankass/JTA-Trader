@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "Thursday planning records a yield-rule decision, or a later pass shows deferrals by infra yield < 1 in 7 cycles",
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261029-HOPS0250-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261029-0250",
+    "rerun": "grep -h 'deferred every fire' on the 'Grade and dispatch' step of the last 8 research-queue-dispatch runs; python3 scripts/research/research_ops_checks.py --since 24h"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 2026-10-29 02:50Z] DISPATCHER DEFERRALS, measured over the 7 dispatch cycles 2026-10-28 19:06Z..2026-10-29 01:50Z (utilization receipts + Grade-and-dispatch logs; 21:08Z and 19:53Z cycles not read): fired_this_cycle 0 in 3 of 7 (19:06Z repo-queued cap 17>10; 21:46Z INFRA YIELD with 153 repo runs queued; 00:16Z INFRA YIELD with 1 system-actions run queued and 38 repo runs), 23:15Z cap lifted by starvation floor for ONE fire; 01:50Z fired 3. Dispatch/land jobs themselves waited 14-50 min for a runner before starting. Thresholds NOT changed (research_slo.yaml rule). Decision for Thursday planning: should one queued system-actions run block all research for a cycle (GH-CAPACITY-INFRA-FIRST), or only when it has waited > N min?"
+}

@@ -22,9 +22,26 @@ Design of record: [`docs/plans/live-trade-review-DESIGN.md`](../../../docs/plans
 
 ## 0. Binding limits of this skill (read first)
 
+### 0.0 Every in-trade action class is ADVICE ONLY until its own test passes (operator 2026-10-28, binding)
+
+> **Operator, 2026-10-28 ~21:07Z, popup to ask A1 (verbatim, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539):** *"Advice-only until tested"*. Every in-trade class (`tighten_sl`, `widen_sl`, `move_tp`, `partial_close`, `close`, `change_size`, `add_entry`) is recorded and graded but NOT executed, on every route and every account, until THAT class passes its own registered test: OOS on a fresh window, against hold AND a matched random intervention of the same class, net of the full cost stack, per leg × regime ([`docs/plans/desk-v1-production-plan-2026-10-29.md`](../../../docs/plans/desk-v1-production-plan-2026-10-29.md) § 5b). Evidence: DESK-LIFECYCLE-S0 (#20967), where Claude's whole-trade management lost −0.159 R (Claude entries) and −0.124 R (random entries) per trade against hold. Operator principle ~21:08Z: *"SL tightening is just one lever"*, so recommend ANY bracket move the market data supports; each recommendation is a graded label.
+>
+> **Graduation.** One PR removes ONE class from `src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS` AND from `config/mandates.yaml` `MD-TRADE-DESK.functions.in_trade.advice_only`. The PR cites that class's committed passed-test record, and `tests/test_tighten_advice_only.py` pins the two lists equal. Record it in `AMENDMENTS.md`. Nothing else graduates a class.
+
+#### The tighten decision this extends
+
+> **Operator, 2026-10-28 ~20:35Z, popup (verbatim, relayed by the manager):** *"Advice-only tightens (Recommended)"*. Evidence: [`comms/research/ltr_tighten_optimize/verdict.json`](../../../comms/research/ltr_tighten_optimize/verdict.json) (doc `docs/research/ltr-tighten-optimize-2026-10-28.md`) over the DESK-LIFECYCLE-S0 full run (PR #20967). Population: 981 Claude stop-tightens. All of them averaged −0.097 R [−0.140, −0.047] net of the full cost stack, and 0 of 79 cells had a CI above 0. Of the 61 registered tighten rules, none beat holding to the bracket on the held-out or fresh window.
+
+- **You may still RECOMMEND a `tighten_sl`**, with its level, basis, confidence and reason exactly as below. It is recorded and graded like any call.
+- **Nothing executes it.** On every route, the VM rows watcher, `live_review_dispatch.py` and desk intake log it as `advice_only` and send nothing (`src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS`).
+- **Do not file `live-review-apply` for an advice-only class.** The dispatcher refuses it as `advice_only` (exit 2, no ping).
+- **Since ~21:07Z the same holds for every other trade action** (close, partial_close, move_tp, widen_sl, change_size, add_entry) until each graduates (above).
+- The tighten-apply text below (§ 3 Step 5 "Under apply_mode apply", Step 7) is kept for the record and for a revert. It does not run.
+- **Narrow, by design:** the evidence covers TIGHTENING only. It says nothing against widening, moving a stop to structure, moving or extending a TP, or closing. Judge those on their merits (the § 3 principle); this rule must not tilt a call toward hold.
+
 ### 0.1 The reviewer never acts by hand
 
-`config/live_trade_review.yaml::apply_mode` reads `apply` since 2026-10-25 (row `LTR-6R-APPLY-PATH`), and `MD-LIVE-TIGHTEN-SL` is granted. A tighten is applied ONLY by `scripts/ops/live_review_apply.py --apply` under that mandate, through each account's own `RiskManager.approve_amend`. The reviewer itself:
+`config/live_trade_review.yaml::apply_mode` reads `apply` since 2026-10-25 (row `LTR-6R-APPLY-PATH`), and `MD-LIVE-TIGHTEN-SL` is granted. **Since 2026-10-28 a tighten is ADVICE ONLY and is never applied (§ 0.0).** Before that, a tighten was applied ONLY by `scripts/ops/live_review_apply.py --apply` under that mandate, through each account's own `RiskManager.approve_amend`. The reviewer itself:
 
 - **never** moves a stop;
 - **never** places, amends or cancels an order;
@@ -128,6 +145,13 @@ The operator, relayed by the manager on 2026-10-25 at about 16:20Z: the **repo**
 
 ## 3. The procedure (in order; do not skip or reorder)
 
+> **Active management is the WHOLE action space, not tightening** (operator 2026-10-28 ~21:08Z, relayed by the manager, verbatim: *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"* ... *"SL tightening is just one lever"*). Judge every lever against what the live market has done since entry: structure (a level broken or reclaimed), volatility / ATR, momentum, regime, events, and liquidity levels. The levers are:
+> - **SL**: tighten, widen, or move to structure;
+> - **TP**: extend, pull in, or revise (`move_tp`);
+> - **partial close** or **full close**.
+>
+> Both brackets always stay. The advice-only rule (§ 0.0) covers `tighten_sl` ONLY: its evidence is about tightening and nothing else. **Do not read it as "prefer hold".** Every other lever keeps its route and mandate and is judged on its own merits.
+
 ### Step 1. Mechanics first
 
 Check three things:
@@ -175,7 +199,7 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 > ⚠️ **`route: recommended` is DISPATCHED, not advice** (manager, 2026-10-28, after LR-20261028T1018Z-pkg-5277d9b977994968's `recommended` close executed on bybit_1). Under `apply_mode: apply` the VM rows watcher (`src/runtime/live_review_rows_watch.py::DISPATCHABLE_ROUTES` = `recommended`, `auto_applied`) EXECUTES every `recommended` row under `MD-TRADE-DESK` / `MD-LIVE-TIGHTEN-SL` on EVERY account carrying the package, real money and prop included; each account's own risk manager still decides. **Advice only = `route: none` or `route: operator_ask`.** The enum value is not renamed in code (a schema change; proposed on row `LTR-PRACTICE-REDESIGN`).
 
 - **Apply bound (operator Q1):** a tighten whose EV cost is ≤ **0.25 R**, with the worst case improving, is `within_bound` on `apply_policy`. Record the **shadow 0.5 R arm** on `shadow_policy` on **every** review, so the two policies can be compared.
-- **Under apply_mode apply:** a `tighten_sl` with mechanics `match` that is table-backed within the bound, or judgement-backed with a confidence and reason, is applied by `live_review_apply.py --apply --mandate MD-LIVE-TIGHTEN-SL --mechanics match --basis table|judgement` (`--expected-cost-r` / `--worst-case-delta-r` for table; `--confidence` / `--reason` for judgement); its row is `route: auto_applied`, `applied: true`, with the per-account reads from the apply output. Anything else follows the recommend routes below.
+- **Under apply_mode apply:** *(superseded for tightens 2026-10-28, § 0.0: a `tighten_sl` row is recorded as advice, `route: recommended`, and never applied)* a `tighten_sl` with mechanics `match` that is table-backed within the bound, or judgement-backed with a confidence and reason, is applied by `live_review_apply.py --apply --mandate MD-LIVE-TIGHTEN-SL --mechanics match --basis table|judgement` (`--expected-cost-r` / `--worst-case-delta-r` for table; `--confidence` / `--reason` for judgement); its row is `route: auto_applied`, `applied: true`, with the per-account reads from the apply output. Anything else follows the recommend routes below.
 - **While apply_mode is recommend:**
   - a within-bound tighten is `route: recommended`;
   - an out-of-bound tighten, a `tp_revise`, a `close` and a `flag_mechanics` are `route: operator_ask`;
@@ -201,6 +225,8 @@ The actions are `hold` · `tighten_sl(level)` · `tp_revise(level)` (Tier 3, the
 > **Operator, 2026-10-26 ~07:12Z, popup (verbatim):** *"Yes, top of the queue (Recommended)"*. The option text was: *"A Tier-2 lane wires the reviewed tighten_sl decisions into an apply run (an apply system-action or the review routine itself), with a VM check."* Row `LTR-APPLY-DISPATCH`.
 
 > **Since LTR C1 (operator 2026-10-26 ~11:40Z, "VM applies from rows branch"):** a row pushed to `live-review/rows` is applied by the live trader's watcher (`src/runtime/live_review_rows_watch.py`, ~45 s) with `--ref <tip>`. The steps below are the **manual fallback**: file them only when the watcher's receipt (`log_file?name=live_review_rows_watch`) shows the row was not taken, or the row landed on `main` instead. A repo-less reviewer follows [`REVIEWER-BRIEF.md`](REVIEWER-BRIEF.md) instead of this skill.
+
+> ⚠️ **Tightens: advice only since 2026-10-28 (§ 0.0).** A `tighten_sl` row is never dispatched; do not file `live-review-apply` for one. These steps still apply to the § 3b trade actions.
 
 `apply_mode: apply` and a granted `MD-LIVE-TIGHTEN-SL` do nothing on their own. A reviewed tighten reaches a venue only when the reviewer **files the `live-review-apply` system-action** for it.
 

@@ -82,9 +82,9 @@ CELLS=(
   "qld_trend_long_1d|trend|1d|QLD|0.3|1|30|2.5|4.0||"
   "iwm_trend_long_1d|trend|1d|IWM|0.3|1|30|2.5|4.0||"
   # sub-$100 proxy cells (2026-07-07) — cheap-share equivalents of the
-  # expensive index/gold legs (SPLG≈SPY, IAUM≈GLD, SCHA≈IWM). Same unit +
+  # expensive index/gold legs (SPYM≈SPY, IAUM≈GLD, SCHA≈IWM). Same unit +
   # params as their sibling; needs data/<SYM>_1d.csv on the trainer.
-  "splg_trend_long_1d|trend|1d|SPLG|0.3|1|30|2.5|4.0||"
+  "splg_trend_long_1d|trend|1d|SPYM|0.3|1|30|2.5|4.0||"
   "scha_trend_long_1d|trend|1d|SCHA|0.3|1|30|2.5|4.0||"
   "gld_pullback_1d|pullback|1d|GLD|0.3||40|15|0.618|2.0|4.0"
   "iaum_pullback_1d|pullback|1d|IAUM|0.3||40|15|0.618|2.0|4.0"

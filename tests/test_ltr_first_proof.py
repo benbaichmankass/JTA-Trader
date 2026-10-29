@@ -4,8 +4,18 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
+from src.runtime import live_review_rows as rows_lib
 from src.runtime import live_review_rows_watch as w
 from src.runtime import ltr_first_proof as fp
+
+
+@pytest.fixture(autouse=True)
+def _legacy_tighten_path(monkeypatch):
+    """S3..S7 prove a TIGHTEN's chain; since 2026-10-28 a tighten is advice only (rows_lib.ADVICE_ONLY_ACTIONS),
+    so these tests exercise the mechanism with the legacy path (PI-20261028-GGKQ4MZL-0001 generalises the stages)."""
+    monkeypatch.setattr(rows_lib, "ADVICE_ONLY_ACTIONS", ())
 
 T0 = datetime(2026, 10, 26, 13, 0, tzinfo=timezone.utc)
 MONEY = [{"account_id": "bybit_2", "account_class": "real_money", "read": "would_apply", "evidence": "x"}]

@@ -715,6 +715,58 @@ usual evidence standard — this section makes the gap measurable, it does not
 license closing it without a record.
 
 
+## Active management — any evidence-backed move of either bracket (operator directive 2026-10-28, binding)
+
+The operator, verbatim, 2026-10-28 (~21:00Z, relayed by the Manager Session; row `ROADMAP-PRIORITIES-AM-PRINCIPLE`):
+
+> *"active management isn't only tightening - it can be any movement in either bracket triggered by developments in the live market data"*
+>
+> *"SL tightening is just one lever"*
+>
+> *"I'll settle for a conservative production ML that will mostly recommend holding outside of edge cases"* (~21:05Z)
+
+And on where it belongs (~21:10Z): *"It shouldn't just be in the manager sessions ... it should be in the design of the roadmap"*.
+This section is the design statement; the TP doctrine above is the floor it stands on (clauses 1–3: a real, live TP).
+
+### The four clauses
+
+1. **The action space is the whole bracket, not the stop.** It covers:
+   - on the SL: **tighten**, **widen**, and **move to structure** (a swing, FVG or level);
+   - on the TP: **extend**, **pull in**, and **revise** (re-estimate the prediction);
+   - on the position: a **partial close** or a **full close**;
+   - and **hold**, which is a recorded decision, never the absence of one.
+2. **Every action is triggered by a development in live market data.** The trigger is market structure, volatility/ATR, momentum,
+   regime, a scheduled event, or a liquidity level. It is never the trade's P&L alone, and never the clock alone.
+3. **Both brackets always exist.** No action removes the SL or the TP. A widen, a pull-in or a partial close leaves a live,
+   predictive SL and TP on what remains (TP doctrine clause 1).
+4. **Each action class graduates on its OWN test.** An action class is advice-only until a test registered before the run, net of
+   the full cost stack, judged against hold (and a matched random intervention, practice principle T1), passes for that class.
+   Then it may be executed, through the usual Tier-3 / mandate path. One class failing says nothing about another: each is
+   judged on its own merits.
+
+### What the evidence says today (re-read, never quote forward)
+
+- **Tightening is tested, and it loses.** The DESK-LIFECYCLE-S0 full run (#20967, merged 2026-10-28) found that Claude's whole-trade
+  management fails against hold on both entry sources, and that the loss is in frequent tightening. LTR-TIGHTEN-OPTIMIZE (#21003,
+  held on 2026-10-28) found that no tighten cell or rule out of 61 registered rules beats hold out of sample, and proposed
+  `tighten_sl` as advice-only. Numbers live in those records.
+- Leg-specific harness levers that move a stop (for example, the break-even arms on `trend_donchian_eth`, RQ-20261026-ed1c-17) are
+  separate per-leg records under their own registered rules. They are not evidence about the class in general.
+- **Widen, move-to-structure, TP extend / pull-in / revise, and partial / full close are UNTESTED as action classes** under this
+  rule. Programme 01 (`docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md`, question Q15) holds their ladders.
+
+### What production looks like
+
+A **conservative production model** that recommends **hold** almost all the time, and acts only in the edge cases its graduated
+classes cover. A model that seldom acts is the expected shape, not a failure. Every real-money strategy carries the basic
+active-management **mechanics** (the live review, the apply path, readback, records) as a standard, whether or not any class
+has yet graduated (roadmap milestone `L-AM-STANDARD`).
+
+**What this does NOT change.** The two execution gates are unchanged, and so is the TP doctrine. Moving any leg from advice-only
+to executed is still Tier-3 / mandate work on a committed evidence record. This section names the action space and the
+graduation rule; it does not license an action class. The live in-trade procedure is `.claude/skills/live-trade-review/SKILL.md`,
+and exit design is `.claude/skills/exit-refinement/SKILL.md`.
+
 ## Prop ticket flow — one state machine per executor type (operator directive 2026-10-07, binding)
 
 The operator's words (2026-10-07, verbatim):
@@ -1528,6 +1580,7 @@ filtered to architecture-level deltas only.
 | 2026-10-26 | DESK-16-SCAN-PACKETS (lane, Tier-1, PR #20295) | **Desk scan-packet builder.** `scripts/ops/desk_scan_packet.py` builds a `scan` packet (schema v2) and refuses to write one failing `desk-records-guard`; `features_at_review` is the guard's projection. Universe = the UNION pull list (`symbol_sets.resolve_symbols`); system_book = the live trade review's open-package union (near-signals `could_not_look` until DESK-16B); desk_book = unresolved `propose_entry` rows; history = forward R over ATR14 net of `resolve_cost_policy` + `roundtrip_fee_bps_for`, counting only pairs whose forward close precedes `info_cutoff_at`. `--as-of` = masked historical packet (aliases, rebased prices, anchored time) with the unmask key written only to `--mask-key-out`. | `scripts/ops/desk_scan_packet.py`, `tests/test_desk_scan_packet.py` | Tier-1, read-only (no order path, config or runtime change). `landed_unproven` until a builder packet is consumed by DESK-6 or DESK-18. |
 | 2026-10-26 | DESK-16B-NEAR-SIGNALS (lane, Tier-1) | **Desk near-signal producer.** `scripts/ops/desk_near_signals.py` runs each rostered leg x symbol's OWN strategy unit (`trend_donchian` / `htf_pullback_trend_2h` / `ict_scalp` `order_package`) on its latest closed candles: `bars_to_signal` 0 = the unit fires now, 1 = it would fire if the next bar closed <= 1.5 ATR(14) away (a synthetic-bar probe through the same unit; no re-implemented condition). The builders' own `_resolve_side_filter` applies (`long_only` legs never report a short). `desk_scan_packet.py` injects the result: `near_signals_read_state` is `read` only when EVERY leg x symbol was looked at, else `could_not_look` with the unlooked legs and the N-of-M denominator named in `missing_inputs`. Not reproduced (builders apply them after the unit): regime router, market-hours gates, account-level `side_filter`; legs needing an HTF bias frame or a local off-cell gate are unlooked by name. | `scripts/ops/desk_near_signals.py`, `tests/test_desk_near_signals.py` | Tier-1, read-only (no order path). `landed_unproven` until a desk session reads a scan packet's near-signals and a near-signal later becomes an order package (or not) to check `bars_to_signal`. |
 | 2026-10-28 | ML-TRAINING-PRINCIPLES-GAPS (lane, Tier-2) | **Cost-net ML labels + enforced cost-net promotion gate + mechanical model soak.** Triple-barrier labels charge the full venue-correct cost stack through the shared cost model (`ml/datasets/labeling/cost_policy.py` over `src/runtime/execution_costs.py`; per-row `label_cost_basis`); `ml/promotion/cost_gate.py` computes a cost-net decision value per training run vs incumbent + take-all / take-none / matched-random (plus PSR / deflated Sharpe) and the registry ENFORCES it on landing in shadow/advisory, on retrain state swaps and on `promote-stage` / `promote`; `gates.shadow_soak` counts clean scored shadow predictions (1–2) instead of 7 calendar days. One revert value: `config/ml_training.yaml::cost_net_labels`. Regime / direction / execution heads have no net-R value column yet (`not_applicable`, pipeline PI-20261028-V8KBRR5H-0001). | `ml/datasets/labeling/{triple_barrier,cost_policy}.py`, `ml/datasets/families/{setup,exit}_candidates.py`, `ml/experiments/runner.py`, `ml/registry/model_registry.py`, `ml/promotion/{__init__,cost_gate,gates,stage_guard}.py`, `ml/cli.py`, `config/ml_training.yaml`, docs + tests | Trainer-only (no order path). Existing datasets keep the basis they were built with; the frozen setup_candidates datasets need a rebuild to carry cost-net labels (PI-20261028-V8KBRR5H-0004). |
+| 2026-10-28 | ROADMAP-PRIORITIES-AM-PRINCIPLE (lane, Tier-1) | **Active management is any evidence-backed move of either bracket.** Operator directive 2026-10-28 (verbatim in § "Active management"): the action space is SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close, and hold; every action is triggered by live market data; both brackets always exist; each action class graduates from advice-only to executed only on its own registered, net-of-cost test against hold. Evidence to date covers tightening only, which loses (#20967, #21003). Roadmap milestone `L-AM-STANDARD`; Programme 01 Q15 (renumbered from Q12 on 2026-10-29: Q12-Q14 were already node labels). | `docs/ARCHITECTURE-CANONICAL.md`, `docs/roadmap/milestones.yaml`, `ROADMAP.md`, `docs/reference/trading-and-model-practice-principles.md`, `.claude/skills/exit-refinement/SKILL.md`, `.claude/skills/trading-desk/SKILL.md`, `CLAUDE.md` | None to what trades today: docs and roadmap only. No order path, config, mandate or param change. |
 
 ## Known gaps
 

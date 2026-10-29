@@ -87,7 +87,15 @@
    "state": "finding",
    "population": "9 cost-gated metalabel heads; 6 heads gate-packet",
    "reading": "all 9 refused eval_not_cost_net (unstamped rows); cost_net insufficient_data on all shadow/advisory heads; AUC 0.539-0.755",
-   "gate_packets": "could-not-look: #21005 queued at publish; stage-guard all hold (#20982)"
+   "gate_packets": {
+    "source": "trainer-vm-diag #21005 (addendum ~21:30Z)",
+    "btc-regime-15m-lgbm-fc-pcv-v2": "ready",
+    "mes-regime-5m-lgbm-v2": "ready",
+    "sol-regime-15m-lgbm-fc-pcv-v2": "not ready: sample_sufficiency",
+    "btc-regime-15m-lgbm-fc-pcv-v1": "ready (shadow) - no proposal: duplicates advisory v2",
+    "btc-regime-1h-lgbm-v2": "ready (shadow) - no proposal: no consumer",
+    "btc-regime-15m-lgbm-yz-v1": "not ready: live_parity vol_bucket"
+   }
   },
   "C7": {
    "state": "ok",
@@ -354,10 +362,10 @@
  "backlog_coverage": {
   "open_at_start": 27,
   "triaged": 27,
-  "resolved": 5,
+  "resolved": 7,
   "fixed_now": 0,
   "closed_stale": 2,
-  "kept_open": 20,
+  "kept_open": 18,
   "count_untriaged": 0
  },
  "anomalies": [

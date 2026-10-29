@@ -14,13 +14,19 @@ def _load_strategies_cfg():
     return load_strategy_config() or {}
 
 
-def test_config_block_retired_after_adoption():
-    # 2026-06-01: the A/B's 1h / trail 5.0 config was ADOPTED into the live
-    # trend_donchian, so this instance is RETIRED (enabled: false) to avoid
-    # double-firing identical 1h breakouts on bybit_1 (the demo runs both).
+def test_config_block_reenabled_on_the_bybit_1_demo_floor():
+    # 2026-06-01: retired (enabled: false) after its config was ADOPTED into the live
+    # trend_donchian. 2026-10-28 (Tier-3, operator): RE-ENABLED as a bybit_1 demo-floor
+    # leg (DEMO-FLOOR RULE). It still fires with the live trend_donchian on the same
+    # bars; the slice allocator splits the symbol budget. Demo only: never on a
+    # real-money or mirror book.
     cfg = _load_strategies_cfg().get("trend_donchian_1h")
-    assert cfg is not None, "trend_donchian_1h block retained as the A/B record"
-    assert cfg["enabled"] is False           # RETIRED — config adopted into live
+    assert cfg is not None
+    assert cfg["enabled"] is True and cfg["execution"] == "live"
+    import yaml
+    accts = yaml.safe_load(open("config/accounts.yaml"))["accounts"]
+    carrying = sorted(n for n, a in accts.items() if "trend_donchian_1h" in (a.get("strategies") or []))
+    assert carrying == ["bybit_1"], carrying
     assert cfg["timeframe"] == "1h"
     assert int(cfg["donchian"]) == 20
     assert float(cfg["trail_mult"]) == 5.0

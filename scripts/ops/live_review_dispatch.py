@@ -54,6 +54,13 @@ whether a row may be handed over at all.
    trade-update ping per review_id. The apply script pings every applied leg
    and every account refusal itself.
 
+**Advice-only classes (``rows_lib.ADVICE_ONLY_ACTIONS``).** Operator 2026-10-28 ~20:35Z, popup
+"Advice-only tightens (Recommended)" (evidence ``comms/research/ltr_tighten_optimize/verdict.json``),
+extended ~21:07Z to every in-trade class, popup "Advice-only until tested" (DESK-LIFECYCLE-S0 #20967).
+A row whose action is in that tuple is answered ``advice_only`` (exit 2, nothing sent, no ping) before
+any other check, on every route and on the manual ``live-review-apply`` system-action alike. The
+clauses below are kept for the record and for each class's graduation.
+
 Never for a tighten: a halt, a ``mode:`` or ``execution:`` write, a wider stop, a TP move,
 a size change, a close.
 
@@ -464,6 +471,11 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
                            _committed_text(rows_lib.row_path(review_id), at))
     if row is None:
         out.update(verdict="could_not_look", detail=detail, exit=EXIT_UNREADABLE)
+        return out
+    action = (row.get("recommendation") or {}).get("action")
+    if action in rows_lib.ADVICE_ONLY_ACTIONS:      # operator 2026-10-28: advice only, never executed, no ping
+        out.update(verdict=rows_lib.ADVICE_ONLY_VERDICT, detail=f"{action} is advice only (operator 2026-10-28); "
+                   "nothing sent", exit=EXIT_REFUSED)
         return out
     prev = (st.get("dispatched") or {}).get(review_id)
     if apply and prev and prev.get("sent"):

@@ -27,7 +27,7 @@ The binding statement is [`docs/ARCHITECTURE-CANONICAL.md`](../../ARCHITECTURE-C
 | **C7 partial close** | part of the size off, both brackets kept on the rest | far-rung / level reached, event ahead | eba2-12..-14 far-rung bank (variants); principle T10: partials reshape, unproven on expectancy | untested as a triggered class |
 | **C8 full close** | exit now | thesis invalidated, regime flip, event | Q8 exit-now line CLOSED FAIL on the fixed bracket (2026-10-18) | tested on the fixed bracket only |
 
-**Question Q12** (in § 2) carries this reframe. Nodes `P1-Q12-*` in [`research/programmes/01-active-trade-management.yaml`](../../../research/programmes/01-active-trade-management.yaml) are `needs_authoring` until research-ops drafts each ladder.
+**Question Q15** (in § 2) carries this reframe. Nodes `P1-Q15-*` in [`research/programmes/01-active-trade-management.yaml`](../../../research/programmes/01-active-trade-management.yaml) are `needs_authoring` until research-ops drafts each ladder.
 
 ## AI active trade management — the merged programme (2026-10-24, lane `ATM-AI-MERGE`)
 
@@ -156,6 +156,45 @@ Common to every rung:
 - the exit-refinement coverage matrix (`exit_head_ml` column).
 
 A FAIL is written with its number and closes only the line its rule names. It never closes the family ("first test failed → variants queued", exit-refinement § "Reading a FAIL").
+
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 123 with `programme: P1`** (13 pass, 107 fail, 3 indeterminate), plus the unprogrammed desk units (`bf56`, `e535`, `8b01`, `fe57`, `d1f5`) and TP-compliance units (`bea9-01/-02/-04`), which this review assigns to P1.
+
+**What was learned (beliefs, with evidence and denominators)**
+- **On the declared wide-trail legs, tightening the stop loses R, almost whatever triggers it.** Across about 140 stop-tightening and exit-management lever units graded this week, 129 FAILED. The triggers covered unconditional, R-armed, level-, ER-, CHOP-, ADX-, giveback-predictor-gated, fractional giveback and partial bank (batches `1d5c`, `3947`, `0142`, `b7e1`, `d7e6`, `9a7e`, `f08c`, `ed1c`, `90d3`, `eba2`). The 6 lever PASSes are `0142-04`, `0142-16`, `f08c-06`, `f08c-13`, `ed1c-10` and `ed1c-17`. That is about 4%, which is the rate chance alone produces at 5% per test, before counting that most units carry 2-4 arms. The desk full run (RQ-20261028-d1f5-02, PR #20967) is independent corroboration from a different instrument. It made 981 Claude stop-tightens over 938 trades, worth −0.097 R each, while its 2,001 holds were worth +0.142 R each against closing. Whole-trade management came out −0.159 R against hold on Claude entries and −0.124 R on random entries. One mechanism, two instruments: these legs earn in the right tail, so taking a trade off early costs more than the giveback it saves. Competing hypotheses: (a) noise. Eliminated: the desk CI excludes 0 and the mechanical units fail in the same direction. (b) Harness artefact, where tight stops are filled optimistically. Not eliminated, but the harness bias would favour tightening, not penalise it. (c) Regime: 2020-2026 was a trend-rich window for crypto. Plausible, and the disjoint 2017-09..2020-06 confirmations below test it.
+- **What still survives is selective, thresholded or entry-side.** The EMA-slope direction filter on `trend_donchian` CONFIRMED on the disjoint 2017-09..2020-06 partition (RQ-20261028-001: 30.68 vs 29.34 R, n(A) 39, at 11.0 bps). It is an entry gate, not a tighten. The break-even floor (`ed1c-17`, monotone across 3 arms) and the CHOP-gated trail (`ed1c-10`, which beat the unconditional control in 5 of 6 folds) act only after +0.75..1.5 R. The TP side is moving: the `tp_extend` revision on `xrp_pullback_2h` stayed no worse than the static 3R target out of sample in 3 of 3 compliance units (`bea9-01/-02/-04`).
+- **In-trade state carries information; entry state does not.** The bar-6 path metrics predict giveback on six legs the discovery never saw (`eba2-01` PASS) and survive a vol-ratio baseline (`eba2-04` PASS, log-loss gain +0.0145, 5 of 6 folds). The per-bar momentum/ADX state predicts "hold loses to exit now" beyond open R (`09a6-01` PASS, +0.0023 nats, 6 of 6 folds, 50,926 states over 2,627 trades). The effects are small, and every lever built on them so far has failed (`9a7e`, `d7e6`, `b7e1`). Information exists; a profitable action on it has not been found. Giveback is NOT predictable from entry columns (P2 `4b82-22/-23` FAIL).
+- **The losing-tail pocket.** The desk's only positive pocket, pilot and full run agreeing in sign, is closing at −0.5 R or worse. It is not significant and was selected from about 6 action buckets, so it is a lead, not a finding.
+
+**Failed first tests: diagnoses (no retirement from one test)**
+
+| FAIL cluster | likely cause | evidence | variant that tests the diagnosis |
+|---|---|---|---|
+| tightening levers (~129) | **idea, on these legs**: they are right-tail earners | desk dR −0.097 R per tighten; the census (`9807-01`) shows a median peak of ~1 R, so a tighten fires inside the median trade | none on these legs beyond the two confirmations already lined up. Value is moved to loss-cut, TP and entry (below), not to a 14th gate |
+| desk whole-trade FAIL (`d1f5-02`) | **design** (the action set allows a tighten) more than **judge** | 981 of 1,155 actions were tightens; holds were positive | `P1-DESK-no-tighten-policy` (needs #20967 merged plus a manager spend decision) and its mechanical twin `P1-Q4-desk-losscut-ada-pb` |
+| path-metric-triggered levers (`9a7e`, `d7e6`) | **power / effect size** | log-loss gains of 0.002-0.015 nats cannot move a per-trade dR bar of 0.02-0.07 R | wait for P2 `P2-desk-checkin-exit-head` (a target that is the action's value, not giveback) |
+
+**Answered / unlocked / retired**
+- Answered: the ADX-trail declare line is now `f08c-13` (PASS on a fresh leg, `ada_4h`). The direction filter is confirmed (RQ-20261028-001), so it goes to the live-producer check plus a Tier-3 note by the owning row, not a unit. Unlocked: `ed1c-10` and `ed1c-17` confirmations, authored here.
+- Retired: nothing. The tightening family stays open per `family_retirement_policy.yaml`. This review lowers its **value**, not its status: no new tightening variant on the 2h/4h trend and pullback legs is ranked in the next four weeks.
+
+**Next 3-4 weeks (pre-registered, value-ranked)**
+
+| # | node -> unit | decision it changes | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | `P1-Q4-desk-losscut-ada-pb` (authored) | whether "stop waiting" gets a loss-cut lever on the 2h pullback legs | confirm on `xrp_pullback_2h`, then producer check | close the −0.5 R configuration; the desk pocket was noise | cpu_light, ~40 min | bar-N is a poor proxy for a continuous check-in; first variant is N=2 |
+| 2 | `P1-ATM-ed1c17-be-confirm` (authored) | break-even floor as the one tighten shape that survives | producer check, then Tier-3 note | the BE floor was window-fitted | cpu_light, ~40 min | ETH 1h bars before 2019 are thin, giving INDETERMINATE |
+| 3 | `P1-ATM-ed1c10-c75-confirm` (authored) | whether the gated-tightener family has ANY confirmed member on a trend leg | producer check, then Tier-3 note | gated tighteners drop to priority 3 on trend legs | cpu_light, ~35 min | one chop threshold selected from 3; the first variant is not to re-tune |
+| 4 | `P1-DESK-no-tighten-policy` (gated: #20967 + spend) | is the desk's loss the lever or the judge | a desk policy without tightens enters the shadow pilot | the judge adds nothing over hold; desk effort moves to entries | judge spend, which is the manager's call | a fresh sample shifts the entry mix |
+| 5 | existing `P1-Q6-*` declares (`xrp4h`, `eth4h-measured-move-w05`) | Tier-3 declares on confirmed levers | — | — | session work, not units | — |
+
+**Feeds**
+- P1 -> P2: the 12,500 priced check-in labels go to node `P2-desk-checkin-exit-head` (state: waiting on #20967).
+- P1 -> P5: the BE floor and the loss-cut, if confirmed, go to the prop EV grid (prop drawdown limits price the left tail more than real money does).
+- P3 -> P1: every breadth leg that survives re-costing needs exit processing before any re-entry case.
 
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
@@ -311,7 +350,7 @@ DESTINATION (Q8): per-bar path data ─▶ first-passage census ─▶ simple st
 | **Q6** | Does the live producer reproduce the harness decision (parity), observe-only, on the first confirmed leg? | TP-DOCTRINE B1 merged the verdict contract; no leg declares a rule; a flip is Tier-3 on an evidence record | rows `TP-DOCTRINE`, `GEOM-CENSUS`; soak `target_extension_soak` (B1 design) |
 | **Q8 — destination** | **At every bar of an open trade, what is P(SL before TP \| state now) — and is there an exit-now rule (exit when E[R \| hold] < R_now − cost) that beats holding the bracket, net of the full cost stack, out of sample?** | The operator's stated destination (2026-10-14, row `IN-TRADE-EXIT-MODEL`): *"at any given moment, are we going to hit the stop loss before we hit the take profit? … improving them so that they turn from bad trades to good trades."* Entry-time giveback prediction (`RQ-20261014-9d20-01/-03`) is a cheap first rung, not the destination | **new** `RQ-20261014-d6e7-01..05` (runnable chain) + `blocked/RQ-20261014-d6e7-06`; builds `EXIT-PATH-EMIT-OFFLINE` (Tier-1, the priority), `EXIT-PATH-TELEMETRY-LIVE` (Tier-2 proposal) |
 | **Q7** | Can the prop paths carry the same bracket (dxtrade REST TP amend plumbed; browser and phone not)? | Prop is the money at stake after real money; `RQ-20261007-002` found 0/24 extension cells on the 6R near-sentinel | rows `PROP-TRAIL-PHONE`, `PROP-EXIT-READ`; re-run `RQ-20261007-002` only after gradable prop closes |
-| **Q12** | **For each action class (SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close), does a trigger in live market data make that move beat hold, net of the full cost stack, out of sample, and against a matched random intervention?** | Operator 2026-10-28: *"SL tightening is just one lever"*; each class graduates from advice-only on its own test (ARCHITECTURE-CANONICAL § "Active management"); C1 tighten is tested and loses (#20967, #21003) | nodes `P1-Q12-*` (needs_authoring); Q2/Q3/Q8/Q10/Q11 units are its existing rungs for C3, C4, C6 and C8 |
+| **Q15** | **For each action class (SL tighten / widen / move-to-structure, TP extend / pull-in / revise, partial / full close), does a trigger in live market data make that move beat hold, net of the full cost stack, out of sample, and against a matched random intervention?** | Operator 2026-10-28: *"SL tightening is just one lever"*; each class graduates from advice-only on its own test (ARCHITECTURE-CANONICAL § "Active management"); C1 tighten is tested and loses (#20967, #21003) | nodes `P1-Q15-*` (needs_authoring); Q2/Q3/Q8/Q10/Q11 units are its existing rungs for C3, C4, C6 and C8 |
 
 ## 3. Test ladders — cheap and decisive first, expensive last
 

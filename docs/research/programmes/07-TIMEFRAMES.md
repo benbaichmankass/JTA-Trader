@@ -4,6 +4,26 @@
 
 Machine tree: [`research/programmes/07-timeframes.yaml`](../../../research/programmes/07-timeframes.yaml). Units: `RQ-20261018-ef5d-01..09` (runnable), `blocked/RQ-20261018-ef5d-10/-11`. Instruments (this lane): `scripts/research/timeframe_breakeven.py`, `scripts/research/harness_stage0.py`. Numbers marked MEASURED were measured in this lane on 2026-10-18 from the file or command named beside them; re-run the command rather than quoting the figure.
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 14 with `programme: P7`** (3 pass, 8 fail, 3 indeterminate).
+
+**What was learned**
+- **Daily crypto long-only Donchian-20 is the robust daily finding.** Pooled over 12 perps it is fold-consistent (`f679-05`, LONG +181.4 R, beats unfiltered B by the materiality bar) and it transfers to basket B (`1b57-15`). The daily D20 failure was an exit-geometry problem: one of a looser 8-ATR trail or a 60-bar time stop makes it fold-consistent (`1b57-13` PASS).
+- **D55 does not transfer** (`7c2b-04` FAIL). The intraday cost-gated breakouts at 30m (`7c2b-01`) and 15m (`7c2b-05`, and the maker upper bound `f679-04`) FAIL, consistent with the 10-21 frontier (perps are viable from 15m-30m only at the margin). Re-ask of the daily vol floor (`7c2b-02`): INDETERMINATE.
+- All at 7.5 bps. At daily bars the fee is a small share of R per trade, so the cost caveat matters less here than for P3/P5. It is still re-measured before any re-entry case.
+
+**Next 3-4 weeks**
+
+| # | node | decision | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | `P7-Q5-confirm` -> the disjoint-SYMBOL check of the 12-perp LONG pass (research-ops authors) | is daily long-only Donchian a new position-trade family for bybit_1 | overlap read vs the 4h trend book, then exit processing (P1) | the LONG filter is a 2020-2026 crypto beta artefact | cpu_light | long-only in a bull-heavy window; the first variant is a bear-window split |
+| 2 | `P7-Q6-weekly-etf` | weekly ETF Donchian as one bet with the soak book | — | — | overlap read | — |
+
+**Feeds.** P7 -> P3: a daily long-only crypto leg overlaps the 4h trend legs on direction; the P3 overlap read decides. P7 -> P1: exit processing if it reaches a re-entry case.
+
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
 Population: the eleven ef5d units (RQ-20261018-ef5d-01..-11), graded 2026-10-20.
