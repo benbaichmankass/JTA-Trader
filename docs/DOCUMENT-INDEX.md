@@ -1098,6 +1098,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ws-a-s2-retune-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ws-a-s3-significance-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ws-a-s3b-fee-headroom-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/xa-d2b-conviction-verification-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-conditional-hit-rate-2026-08-19.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-entry-axis-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-joint-geometry-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
