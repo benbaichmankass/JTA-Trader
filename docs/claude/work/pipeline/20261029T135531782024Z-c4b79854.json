@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "a research/queue unit registering the static partial-close rule exists (or this is killed with a reason at Thursday planning)",
+    "kind": "event"
+  },
+  "id": "PI-20261029-IFMPNGJK-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-AM-NEXT-LIVE (session_01AFoLuN7GVCEJnGiFMpNGJK), RQ-20261029-a7e1-01 local-v1-20261029",
+    "rerun": "python3 -c \"import json;d=json.load(open('comms/research/RQ-20261029-a7e1-01/local-v1-20261029/verdict.json'));print(d['grid']['C0.1_q0.9']['families']['TD']['random'])\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "ML-AM-NEXT-LIVE follow-up. In RQ-20261029-a7e1-01 (FAIL), the matched-random control is a 50% partial close at a uniformly drawn bar on ~55% of trades, and it scored on the TD family median +0.0146 R/trade with a 29.0% book maxDD cut. The ML head scored -0.0338 with 17.8% (PB2H random: -0.0087, 10.0%). This is a control-arm observation, not a result of that unit, and must not be shipped on it. Author a pre-registered unit for a STATIC mid-trade de-risk partial close (e.g. 50% at a fixed fraction of the leg's median hold, or at bar k), graded under RULE-AM-RISK-ADJUSTED-V1 + non-inferiority + matched random + best static on the TD real-money legs, with a window none of this lane's runs used (or CPCV with the rule fixed before the run). A static rule is not ML, so it answers the operator's active-management milestone, not 'next ML live'."
+}
