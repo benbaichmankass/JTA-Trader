@@ -109,13 +109,14 @@ def test_FLIPPED_divergent_election_dispatches_both_rounds(monkeypatch, allow):
 
 # ── The roster fact that made the defect total rather than occasional ──────
 
-def test_every_bybit_2_leg_is_also_on_bybit_1():
-    """So under the global election one of the two branches above fired on
-    EVERY tick ``bybit_2`` had a candidate. Kept: it is why the flip above is
-    the whole of bybit_2's routing, not an edge case.
+def test_no_bybit_2_leg_is_on_bybit_1_and_the_pair_elects_alone():
+    """INVERTED 2026-10-28 (STRATEGY-STATUS-MODEL, operator: production legs leave general paper).
 
-    Reads the roster rather than restating it, so a future roster edit that
-    breaks the premise fails here instead of silently invalidating the memo.
+    This used to assert every bybit_2 leg was ALSO on bybit_1 -- the premise that made the E33 defect total.
+    Under the status model no production leg is on general paper, so bybit_2 + bybit_portfolio elect their
+    legs alone. The per-account election (E35) is what makes that safe: a round is dispatched to exactly the
+    accounts that elected it, so bybit_1 not hosting the leg cannot drop the pair. Reads the roster rather
+    than restating it.
     """
     from src.config.accounts_loader import load_accounts_dict
 
@@ -123,13 +124,19 @@ def test_every_bybit_2_leg_is_also_on_bybit_1():
     bybit_1 = set((accounts.get("bybit_1") or {}).get("strategies") or [])
     bybit_2 = set((accounts.get("bybit_2") or {}).get("strategies") or [])
     assert bybit_2, "bybit_2 has no legs — the premise cannot be tested"
-    # A bybit_1-only SOAK ALIAS stands in for its incumbent there: it is the same
-    # entry logic on the same symbol (one exit lever differs), so bybit_1 still has
-    # a candidate on every tick bybit_2's incumbent does, under its own label. That
-    # bybit_1 elects a DIFFERENT leg than bybit_2 is the divergent-election case
-    # test_FLIPPED_divergent_election_dispatches_both_rounds pins above.
-    # 2026-10-22 (OPERATOR-DECISIONS-1022): trend_donchian_xrp_adx25 replaces
-    # trend_donchian_xrp_4h on bybit_1 only, until the ADX trail is corroborated.
-    soak_alias_of = {"trend_donchian_xrp_adx25": "trend_donchian_xrp_4h"}
-    covered = bybit_1 | {soak_alias_of[a] for a in bybit_1 if a in soak_alias_of}
-    assert bybit_2 <= covered, sorted(bybit_2 - covered)
+    assert not (bybit_2 & bybit_1), sorted(bybit_2 & bybit_1)
+
+
+PRODUCTION_ONLY = {
+    "bybit_1": [BYBIT_1_ONLY_LEG],
+    "bybit_2": [BYBIT_2_LEG],
+    "bybit_portfolio": [BYBIT_2_LEG],
+}
+
+
+@pytest.mark.parametrize("allow", ENV_VALUES)
+def test_production_leg_off_general_paper_still_reaches_live_and_mirror(monkeypatch, allow):
+    """STRATEGY-STATUS-MODEL (2026-10-28): the production leg is on bybit_2 + bybit_portfolio only. It is
+    dispatched to exactly that pair, and bybit_1 never receives it."""
+    got = _dispatched(monkeypatch, [_intent(BYBIT_2_LEG, 0.66)], PRODUCTION_ONLY, allow)
+    assert got == {(BYBIT_2_LEG, ("bybit_2", "bybit_portfolio"))}

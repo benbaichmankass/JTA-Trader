@@ -193,6 +193,8 @@ def test_fire_s1_to_s2_proposes_live_and_mirror(repo):
     res = _s1s2(repo())
     assert res["verdict"] == "FIRE", res
     assert res["proposal"]["roster_add"] == {"bybit_2": [LEG], "bybit_portfolio": [LEG]}
+    # Promotion MOVES the leg: production is not on general paper (STRATEGY-STATUS-MODEL, 2026-10-28).
+    assert res["proposal"]["roster_remove"] == {"bybit_1": [LEG]}
     assert res["proposal"]["writes_nothing"] is True
     assert res["caveats"] == []  # perps are measured, no placeholder caveat
     cf = res["evidence"]["cost_fidelity"]
@@ -253,7 +255,9 @@ def test_paper_promotion_on_an_approximate_record_is_not_refused_by_c5(repo):
 
 
 def _stage2_accts():
+    """LEG in production: on real money + mirror and OFF general paper (STRATEGY-STATUS-MODEL, 2026-10-28)."""
     accts = copy.deepcopy(ACCOUNTS)
+    accts["accounts"]["bybit_1"]["strategies"].remove(LEG)
     accts["accounts"]["bybit_2"]["strategies"].append(LEG)
     accts["accounts"]["bybit_portfolio"]["strategies"].append(LEG)
     return accts
@@ -284,7 +288,8 @@ def test_fire_demote_s2_to_s1_when_both_t3_windows_are_below_p10(repo):
     res = mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)
     assert res["verdict"] == "FIRE", res
     assert res["proposal"]["roster_remove"] == {"bybit_2": [LEG], "bybit_portfolio": [LEG]}
-    assert res["proposal"]["roster_add"] == {}
+    # Demotion MOVES the leg back onto general paper (STRATEGY-STATUS-MODEL, 2026-10-28).
+    assert res["proposal"]["roster_add"] == {"bybit_1": [LEG]}
     assert res["evidence"]["t3_p10"] == p["p10"]
 
 
@@ -445,13 +450,13 @@ def test_refuse_derisk_only_mandate_asked_to_add(repo):
     _refused(res, "R-DERISK-ADD")
 
 
-def test_refuse_demotion_that_would_add_to_the_soak_book(repo):
-    # S2 -> S1 for a leg that never soaked would ADD it to bybit_1: derisk_only refuses.
-    accts = copy.deepcopy(ACCOUNTS)
-    accts["accounts"]["bybit_1"]["strategies"].remove(LEG)
-    accts["accounts"]["bybit_2"]["strategies"].append(LEG)
-    res = mr.resolve(LEG, "S2", "S1", "bybit_2", root=repo(accounts=accts))
-    _refused(res, "R-DERISK-ADD")
+def test_demotion_moving_a_production_leg_back_to_general_paper_is_not_an_add(repo):
+    # STRATEGY-STATUS-MODEL (operator 2026-10-28) REVERSES the old pin here: a production leg is OFF bybit_1, so
+    # S2 -> S1 re-adds it there. That is the demotion itself (paper money), not added risk, so derisk_only does not
+    # refuse it; the demotion's own evidence clauses still decide (here: no mirror-window record -> NEEDS-DATA).
+    res = mr.resolve(LEG, "S2", "S1", "bybit_2", root=repo(accounts=_stage2_accts()))
+    assert res.get("clause") != "R-DERISK-ADD", res
+    assert res["verdict"] == "NEEDS-DATA" and res["clause"] == "R-RECORD-MISSING", res
 
 
 # ── refusals: the rest of the clauses ──────────────────────────────────────
@@ -663,10 +668,7 @@ def test_refuse_kill_question_is_not_a_roster_transition(repo):
 
 
 def test_refuse_no_op(repo):
-    accts = copy.deepcopy(ACCOUNTS)
-    accts["accounts"]["bybit_2"]["strategies"].append(LEG)
-    accts["accounts"]["bybit_portfolio"]["strategies"].append(LEG)
-    _refused(_s1s2(repo(accounts=accts)), "R-NO-OP")
+    _refused(_s1s2(repo(accounts=_stage2_accts())), "R-NO-OP")
 
 
 def test_refuse_demotion_on_a_positive_mirror_window(repo):

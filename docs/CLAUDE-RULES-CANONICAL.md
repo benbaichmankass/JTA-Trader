@@ -1829,6 +1829,11 @@ the fix and tuning would be measuring a defect.
 
 ## Promotion evidence — offline edge, live mechanics (2026-07-26, binding)
 
+> **Where a leg trades — three statuses (operator, 2026-10-28).** *testing* = general paper (Stage 1), *production* = real money +
+> its mirror and NOT general paper (Stage 2), *inactive* = retired by record. Promotion moves a leg off general paper; demotion moves it
+> back. Stated once in [`OPERATING-PLAN` § 2 "Three strategy statuses"](plans/OPERATING-PLAN-2026-09-21.md); enforced by
+> `strategy-status-guard`. This section governs the EVIDENCE for a move; that one governs the BOOKS.
+
 Adopted after the de-soak workplan
 ([`docs/research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md`](research/WORKPLAN-desoak-and-milestone-closeout-2026-07-26.md))
 found that the "weeks of soak" blocking ML promotions was mostly stale framing +

@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261028-WJS7EQAD-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "STRATEGY-STATUS-MODEL lane session_01AFoLuMuLPLAveAwJS7eqad (full-suite run 2026-10-28)",
+    "rerun": "python3 -m pytest -q tests/test_live_review_outcomes.py -k committed_ada_corpus -- FINDING STILL APPLIES while it fails with 'assert (8 == 7)'"
+  },
+  "state": "queued",
+  "what": "tests/test_live_review_outcomes.py::test_committed_ada_corpus_stage0_trades_are_found_and_replay FAILS on origin/main b98c5650 (measured 2026-10-28 in a clean worktree of origin/main, not caused by PR #21038): `assert (8 == 7)` -- the committed ada_pullback_2h corpus now yields 8 Stage-0 trades where the test pins 7. Root-cause whether the corpus grew legitimately (re-pin the count with its provenance) or live_review_outcomes double-counts a trade (fix the reader)."
+}
