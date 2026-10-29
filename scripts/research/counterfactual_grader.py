@@ -133,7 +133,7 @@ def stitch_bars(series: Dict[str, List[dict]], t0: float) -> List[dict]:
 
 # --------------------------------------------------------------------------- replay engine
 
-def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, entry_fill: float, r_dist: float, t_entry: float,
+def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float, t_entry: float,
              stop0: float, tp: Optional[float], actions: Sequence[dict] = (), rules: Sequence[dict] = (),
              trail_dist: Optional[float] = None) -> dict:
     """Replay one arm. Prices in, fills out. Pure.
@@ -315,7 +315,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
     arms: List[dict] = []
 
     def run(arm_id, family, label, params, *, stop=stop0, tp=tp0, acts=(), rules=(), trail=own_trail, r=r_dist):
-        sim = simulate(bars, side=side, entry_ref=entry_ref, entry_fill=entry_fill, r_dist=r_dist, t_entry=t_entry,
+        sim = simulate(bars, side=side, entry_ref=entry_ref, r_dist=r_dist, t_entry=t_entry,
                        stop0=stop, tp=tp, actions=acts, rules=rules, trail_dist=trail)
         a = _arm(arm_id, family, label, params, sim, legs, cm_lead, side, entry_fill, r, t_entry, equity)
         arms.append(a)
@@ -415,7 +415,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
                     lvl = rng.uniform(lo_p, hi_p)
                     acts.append({"ts": b["time"], "kind": "set_stop", "level": lvl})
                     cur_stop = lvl if ((lvl > cur_stop) if sign > 0 else (lvl < cur_stop)) else cur_stop
-            sim = simulate(bars, side=side, entry_ref=entry_ref, entry_fill=entry_fill, r_dist=r_dist, t_entry=t_entry,
+            sim = simulate(bars, side=side, entry_ref=entry_ref, r_dist=r_dist, t_entry=t_entry,
                            stop0=stop0, tp=tp0, actions=acts, trail_dist=own_trail)
             nets.append(net_of(sim, side=side, entry_fill=entry_fill, r_dist=r_dist, t_entry=t_entry, cm=cm_lead)["net_r"])
         nets.sort()

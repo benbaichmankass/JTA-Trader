@@ -20,7 +20,7 @@ def b(i, o, h, lo, c, dur=60):
 
 
 def sim(bars, **kw):
-    base = dict(side="short", entry_ref=100.0, entry_fill=100.0, r_dist=1.0, t_entry=T0, stop0=101.0, tp=96.0)
+    base = dict(side="short", entry_ref=100.0, r_dist=1.0, t_entry=T0, stop0=101.0, tp=96.0)
     base.update(kw)
     return cg.simulate(bars, **base)
 
