@@ -775,6 +775,9 @@ own RiskManager). Guard: `scripts/ci/check_no_action_rate_cap.py`.
    account's book at real size with the production sizer and caps** (row `BOOK-SIM-REAL-SIZER`). Until one does, the grader's
    per-trade-R reading is a **screen** that ranks candidates, and it never graduates a class. Its % column is a per-trade
    translation (R × `risk.risk_pct`), never the book result.
+   **Dated exception:** 2026-10-29 operator decision (row AM-RISK-ADJUSTED-RULE): classes passing the RULE-AM-RISK-ADJUSTED-V1
+   re-grade on DESK-LIFECYCLE-S0 graduate on that record; BOOK-SIM-REAL-SIZER, when built, re-grades them and a fail there demotes
+   the class back to advice-only. (That re-grade, RQ-20261029-1f39-02, passed no class.)
    **Reported with every verdict, never a pass clause** (operator 2026-10-29 ~12:40Z: *"we need to make sure we're also
    measuring R giveback and overall PNL"*). For the action, hold and the random control, per class, per account and for the
    book, the verdict reports:
