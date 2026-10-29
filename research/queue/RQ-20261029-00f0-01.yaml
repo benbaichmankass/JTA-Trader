@@ -101,7 +101,7 @@ run:
   inputs:
     research_unit: RQ-20261029-00f0-01
   timeout_minutes: 120
-status: queued
+status: done
 theme: live_strategy
 title: 'TP pull-in DOSE, real money: does lengthening the stall window (20 / 30 bars) on xrp_pullback_2h shrink the 10-bar loss, and does either stay no worse than its static 3R target in 5 of 6 folds, net of cost?'
 value:
@@ -116,3 +116,16 @@ why_this_matters: 'Operator 2026-10-28 ~21:06Z: active management is any movemen
   to DESK plan § 5b class `move_tp pull in` (PR #21023); this is a Stage-0 declared-rule test on the leg''s own config-exact
   history, not a live-intervention graduation.'
 last_dispatched_at: '2026-10-29T16:44:20+00:00'
+grading:
+  attested: RULE-RQ20261029-00f0-01-PULLIN-DOSE
+  auto: true
+  decision_rule_id: RULE-RQ20261029-00f0-01-PULLIN-DOSE
+  evidence:
+  - research/results/RQ-20261029-00f0-01/40914529300.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

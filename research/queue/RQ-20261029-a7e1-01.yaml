@@ -1,7 +1,7 @@
 id: RQ-20261029-a7e1-01
 title: 'ML-AM-NEXT-LIVE: an ML-gated 50% PARTIAL CLOSE on the real-money legs -- non-inferior on net R, a material
   risk cut (RULE-AM-RISK-ADJUSTED-V1), and better than a matched random partial close and the best static rule?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -132,3 +132,16 @@ practice_precedent: 'T1, M1, M2, M4, M5, M6 (docs/reference/trading-and-model-pr
   action graded against hold, a matched random intervention and the best static rule, cost-net path labels, CPCV
   with purge and embargo, every configuration counted, a blind fresh window'
 last_dispatched_at: '2026-10-29T13:55:07+00:00'
+grading:
+  attested: RULE-ML-AM-PARTIAL-V1
+  auto: true
+  decision_rule_id: RULE-ML-AM-PARTIAL-V1
+  evidence:
+  - research/results/RQ-20261029-a7e1-01/local-v1-20261029.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -5,7 +5,7 @@ id: RQ-20261029-005
 title: 'Programme 03 re-cost diagnosis, trend_donchian_sol: is the COST-STACK-RECOST-SWEEP pass->fail
   flip (PR #20966) a moving-window artifact or edge decay -- does the leg AS DECLARED clear Stage 0 at
   11.0 bps over 2020-07..2026-10 in 8 calendar folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -115,3 +115,13 @@ generated:
   params:
     node: P3-RECOST-flip-trend-donchian-sol
 last_dispatched_at: '2026-10-29T18:03:39+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-RECOST-FLIP-TREND-DONCHIAN-SOL
+  evidence:
+  - research/results/RQ-20261029-005/40927230745.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
