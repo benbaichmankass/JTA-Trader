@@ -396,6 +396,9 @@ _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
 _VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
+# ML-REAL-MONEY-OVERLAY shadow scoring (src/runtime/overlay_shadow.py): one row per account per scored
+# package, annotate-only. Allowlisted in the SAME PR as its writer (the read-surface defect class above).
+_OVERLAY_SHADOW_LOG = runtime_logs_dir() / "overlay_shadow.jsonl"
 _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # The protection RE-ASSERT soak (2026-08-23). At the default `annotate` mode
 # this is the exact row list to review before flipping PROTECTION_REASSERT_MODE
@@ -744,6 +747,7 @@ _LOG_FILES: dict[str, Path] = {
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
     "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
+    "overlay_shadow": _OVERLAY_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
