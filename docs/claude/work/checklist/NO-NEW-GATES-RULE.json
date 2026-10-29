@@ -2,7 +2,7 @@
   "id": "NO-NEW-GATES-RULE",
   "title": "Write the operator's rule into docs/CLAUDE-RULES-CANONICAL.md and .claude/skills/manager/SKILL.md: adding ANY gate (approval step, hold, readiness condition, cap, flag, review step) needs the operator's explicit permission; an instruction that can be read as more or less friction is read as less; deploys of green Tier-1/2 work are automatic. Then audit live docs, skills and routines for gates added without his permission and list them for him",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": null,
   "lane": "session_01AFoLuKZu3ZxrvFhVkeYB3F",
   "model": "sonnet",
@@ -13,16 +13,16 @@
     21339
   ],
   "blocked_on": [],
-  "note": "PR #21339 open; closes when merged and CI green. No CI guard added (would itself be a gate; needs operator permission). History: first lane session_01AFoLuKGDfEyEYDzqtg1BG5 was denied git commit/push and its diff was lost; re-dispatched fresh.",
+  "note": "PR #21339 open; closes when merged and CI green. No CI guard added (would itself be a gate; needs operator permission). History: first lane session_01AFoLuKGDfEyEYDzqtg1BG5 was denied git commit/push and its diff was lost; re-dispatched fresh. #21339 merged; rule live in docs/CLAUDE-RULES-CANONICAL.md (docs-only: merged = in force). Gates-found table (10 entries) put to the operator in chat 2026-10-29 ~17:21Z; 4 lack an operator record (E57 queue hold, ML-consumer refusal, lane ceiling/rate, dispatcher caps). Lane archived.",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T16:49:14Z",
-  "updated_by": "session_01AFoLuKZu3ZxrvFhVkeYB3F",
+  "updated_at": "2026-10-29T18:21:03Z",
+  "updated_by": "Manager Session 2026-10-29c",
   "roadmap": [
     "L-LADDER"
   ],
   "writeback": {
-    "roadmap": "none: docs-only governance rule, no milestone",
-    "arch": "none: no architecture change"
+    "roadmap": "none: operating rule",
+    "arch": "none"
   },
   "observation": {
     "what": "PR 21339 merged to main with CI green",
