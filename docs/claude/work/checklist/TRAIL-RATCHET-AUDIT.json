@@ -1,0 +1,22 @@
+{
+  "id": "TRAIL-RATCHET-AUDIT",
+  "title": "Prove every live trailing stop (chandelier / ATR / BE / vol- and momentum-tightened trails, crypto, equities, futures, prop phone/DXtrade trails) only ever tightens: (1) list every trail implementation and show its ratchet condition; (2) MEASURE on live data (stop history per trade, e.g. position_path_history sl per bar + venue amend logs) that no stop ever moved away from price, with the population stated; fix any path that can loosen",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~11:45Z verbatim: \"even if we're using like an ATR-based moving trail, stop loss, that it would still only tighten and not loosen ... we need to make sure that they're actually being implemented correctly. Again, I don't want to waste a huge amount of compute on this.\" Manager pre-check (code, origin/main): fade_breakout_4h L470-476, trend_donchian L958/964, squeeze_breakout_4h L359/364 all ratchet (long: candidate > sl and < price; short: candidate < sl and > price); order_monitor L1700-1716 refuses a trail candidate looser than a leg's live-review sl_floor; prop phone_trail is tighten-only (L532/849); dxtrade rollout guard tighten-only (L5207-5238). NOT yet checked: the pullback legs (ada/xrp/eth/sol/avax_pullback_2h, htf_pullback_trend_2h), ict_scalp, equities/futures legs, the vol/momentum trail resolvers, and live data. Small budget: grep + one diag query; related row RM-AM-PROP-TRAIL-OBSERVE.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-29T11:41:32Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 812
+}
