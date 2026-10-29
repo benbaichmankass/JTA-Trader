@@ -769,7 +769,7 @@ This section is the design statement; the TP doctrine above is the floor it stan
 The operator, verbatim, 2026-10-29 ~06:25Z (popup answer, relayed by Manager Session 2026-10-29c; row `AM-RISK-ADJUSTED-RULE`):
 
 > *"Small R cost for big risk cut (Recommended)"* — the option shown: *"Passes if it gives up at most a set amount of R per trade
-> (I'd propose 0.05R, fixed before the run) while cutting the book's max drawdown or worst 5% of outcomes materially (e.g. 15%+).
+> (I'd propose 0.05R, fixed before the run) while cutting the book's max drawdown or worst 5% of outcomes materially (e.g. 15%+). <!-- population-ok: verbatim operator quote stating the rule's own pre-registered thresholds, not a measurement -->
 > Must hold across time periods and beat a random-intervention control, measured on the whole book."*
 >
 > *"if we've gotten to a place where we can still find ourselves getting reward while zeroing out the risk of the trade, then that

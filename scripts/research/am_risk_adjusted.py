@@ -156,6 +156,18 @@ def _in_fold(t: dict[str, Any], edges: list[datetime], i: int) -> bool:
     return edges[i] <= e < edges[i + 1] or (last and e == edges[i + 1])
 
 
+def _accounts() -> dict[str, dict[str, Any]]:
+    """config/accounts.yaml through the canonical loader (it returns {} on a read failure, and the callers below then
+    refuse rather than read an empty roster as no legs)."""
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from src.config.accounts_loader import load_accounts_dict
+    accs = load_accounts_dict(REPO / "config" / "accounts.yaml")
+    if not accs:
+        raise RuntimeError("config/accounts.yaml could not be read (load_accounts_dict returned nothing)")
+    return accs
+
+
 def pnl_view(a_book: dict[str, Any], c_book: dict[str, Any], r_cost: float,
              risk_pct_by_account: dict[str, float] | None) -> dict[str, Any] | None:
     """A PER-TRADE TRANSLATION of the R figures into % of equity per account: R x the account's risk fraction per trade,
@@ -173,9 +185,7 @@ def pnl_view(a_book: dict[str, Any], c_book: dict[str, Any], r_cost: float,
 
 def risk_pcts(accounts: list[str]) -> dict[str, float]:
     """accounts.yaml ``risk.risk_pct`` per account, read now (an account without one is left out)."""
-    import yaml
-    doc = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text(encoding="utf-8"))
-    accs = doc.get("accounts", doc)
+    accs = _accounts()
     return {a: float(accs[a]["risk"]["risk_pct"]) for a in accounts
             if isinstance((accs.get(a) or {}).get("risk"), dict) and accs[a]["risk"].get("risk_pct") is not None}
 
@@ -296,9 +306,7 @@ def books_from_dirs(dirs: Iterable[Path], labels: list[str]) -> dict[str, list[d
 
 def roster_legs(accounts: list[str]) -> list[str]:
     """Union of the `strategies:` rosters of these accounts, read from config/accounts.yaml now."""
-    import yaml
-    doc = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text(encoding="utf-8"))
-    accs = doc.get("accounts", doc)
+    accs = _accounts()
     out: list[str] = []
     for acct in accounts:
         if acct not in accs:
