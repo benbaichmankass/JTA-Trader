@@ -1,0 +1,116 @@
+id: RQ-20261029-84ef-04
+title: 'Weekly crypto trend, pooled over seventeen perps: is the weekly Donchian arm (10 and 20) gradeable once n is raised, and does it pass?'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- L-REGIME
+theme: timeframes
+priority: 2
+kind: experiment
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..26 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On Binance USD-M weekly bars (resampled from daily) for 17 perps over 2020-01-01..2026-10-25, does W10 (donchian 10) or W20 (donchian
+  20) pass the pooled Stage-0 rule?
+why_this_matters: 1b57-14 read INDETERMINATE on six perps (pooled n < 39). The tree's own instruction for that outcome (P7-Q3-indeterminate /
+  P7-Q4-indeterminate) is to pool more cells rather than lower the floor. Seventeen perps = the twelve of f679-05 plus the five of 1b57-15 not
+  already in them; the pooling is stated, so a PASS is a pooled-population statement. Floors are not changed from 1b57-14 except the per-cell
+  floor of 8 (weekly cells are thin by construction).
+power:
+  expected_n: 40
+  min_detectable_effect: 0.4
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: weekly trades per cell ~5-12 over 6.8 years (1b57-14 six-cell pooled n was under 39); 17 cells give ~2.8x; folds 6; floor 8 per cell,
+    39 pooled.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, selection-deflated across the timeframes
+  tried'
+decision_rule:
+  id: RULE-RQ20261029-84EF-04-WEEKLY-CRYPTO-17
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1w (fetch 1d, resample) on 17 perps; arms fixed now: W10=--donchian=10; W20=--donchian=20;
+    no baseline.'
+  rule: 'PASS iff W10 or W20 passes the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 folds, >= half the powered cells pass
+    at n >= 8) -> the weekly crypto bar is a measurable edge on the pooled perps; next unit is the overlap read against the daily LONG lead, no
+    roster edit. FAIL iff both fail with pooled n >= 39 -> weekly crypto trend closed on this window (configuration, horizon stays open). INDETERMINATE
+    otherwise (named, floor never lowered): then the finding is that the weekly crypto bar cannot be graded on this history by construction. Verdicts
+    are the script''s own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND
+    >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >=
+    pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline,
+    beats the baseline''s pooled net R/trade by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared
+    cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED,
+    not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; is
+    not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear) with the harness's own venue-aware fee + slippage + funding cost
+    stack (execution_costs.resolve_cost_policy), so every R is net of cost; the funding term is a directionless magnitude (execution_costs P1).
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  bucket: frontier
+  basis: 'stand-in (07 node P7-Q4 weight): resolves an INDETERMINATE by raising n; an estimate.'
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT,NEARUSDT,ATOMUSDT,FILUSDT,TRXUSDT,ETCUSDT
+  - --timeframe
+  - 1w
+  - --days
+  - '2700'
+  - --start
+  - '2020-01-01'
+  - --end
+  - '2026-10-25'
+  - --arm
+  - W10=--donchian=10
+  - --arm
+  - W20=--donchian=20
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '8'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261029-84EF-04-WEEKLY-CRYPTO-17
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261029-84ef-04
+programme: P7
+related:
+- RQ-20261026-1b57-14
+- RQ-20261018-ef5d-05
+- scripts/research/harness_stage0.py
+programme_node:
+  programme: P7
+  node: P7-Q4-indeterminate
+  goal: G1
+  after: []
