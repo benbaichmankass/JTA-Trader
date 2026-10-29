@@ -1649,6 +1649,29 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_tp_doctrine.py"]],
     },
     {
+        "name": "no-action-rate-cap-guard",
+        # REMOVE-PER-BAR-CAP (operator 2026-10-29: "What's the point of having
+        # active management and then specifically limiting how active that
+        # management can be?"): no in-trade action path, mandate, skill or doc
+        # may cap actions per bar / time window, and no gate function may read
+        # the bar. The duplicate guard is idempotency per review_id. Relevance
+        # mirrors the script's own SCOPE (globs, so a new file in a family is in).
+        "when": {"globs": [
+            "src/runtime/live_review*.py", "scripts/ops/live_review*.py", "src/runtime/ltr_*.py",
+            "src/runtime/directed_actions.py", "scripts/ops/directed_action.py", "scripts/ops/desk_intake.py",
+            "src/units/accounts/risk.py", "src/units/accounts/alpaca_amend.py", "src/prop/prop_amend_gate.py",
+            "src/runtime/exit_head_apply.py", "src/runtime/bracket_advisor.py",
+            "config/mandates.yaml", "config/live_trade_review.yaml",
+            ".claude/skills/live-trade-review/*.md", ".claude/skills/trading-desk/*.md",
+            ".claude/skills/exit-refinement/*.md",
+            "docs/ARCHITECTURE-CANONICAL.md", "docs/plans/live-trade-review-DESIGN.md",
+            "docs/plans/claude-trading-desk-DESIGN.md", "docs/claude/system-actions.md",
+            "scripts/ci/check_no_action_rate_cap.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_no_action_rate_cap.py", "--self-test"],
+                  ["python3", "scripts/ci/check_no_action_rate_cap.py"]],
+    },
+    {
         "name": "prop-harness-full-costs-guard",
         # PROP-EVAL-COSTS (operator 2026-10-15): no caller of the portfolio engine
         # (prop evaluator / Monte-Carlo / alt-prop / compat matrix / panel builder /
