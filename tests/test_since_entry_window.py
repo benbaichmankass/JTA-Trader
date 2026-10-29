@@ -270,3 +270,129 @@ def test_other_trail_units_delegate_and_do_not_move_in_the_first_bar(module):
     assert "exit_levers" in inspect.getsource(unit._since_entry), \
         f"{module} kept a private copy of since_entry"
     assert len(unit._since_entry(_deep_prior_low_frame(), _pkg())) == 0
+
+
+# --- 5. THE STICKY PRE-ENTRY PEAK (running MAX in write_record) ------------ #
+
+def _telemetry_db(tmp_path):
+    import sqlite3
+
+    path = str(tmp_path / "j.db")
+    with sqlite3.connect(path) as c:
+        c.execute(f"""CREATE TABLE {pt.TABLE} (
+            order_package_id TEXT PRIMARY KEY, trade_id TEXT, strategy TEXT,
+            symbol TEXT, account_id TEXT, direction TEXT, entry REAL,
+            risk_per_unit REAL, last_price REAL, open_r REAL, peak_r REAL,
+            peak_state TEXT, giveback_r REAL, bars_held INTEGER,
+            bars_since_peak INTEGER, cap_r REAL, pct_of_cap REAL,
+            r_to_stop REAL, r_to_target REAL, rr_from_here REAL,
+            peak_provenance TEXT, levers TEXT, updated_at TEXT)""")
+    return path
+
+
+def _stored(path):
+    import sqlite3
+
+    with sqlite3.connect(path) as c:
+        return c.execute(f"SELECT peak_r, bars_held FROM {pt.TABLE}").fetchone()
+
+
+def _first_bar_then_three_bars(pkg):
+    """A short, entry 100 / risk 2. First bar: the pre-fix window (200 pre-entry
+    bars, low 89.5 => a 'peak' of 5.25R). Three bars later: the true window,
+    whose lows never left 99.5 => a true peak of 0.25R."""
+    from datetime import datetime, timezone
+
+    t0 = datetime(2026, 10, 29, 13, 34, tzinfo=timezone.utc)
+    t1 = datetime(2026, 10, 29, 16, 5, tzinfo=timezone.utc)
+    first = pt.build_record(open_pkg=pkg, meta=pkg["meta"],
+                            window=_pre_fix_since_entry(_deep_prior_low_frame(), pkg),
+                            direction="short", current_price=100.5, now=t0)
+    true_w = exit_levers.since_entry(_frame(last_open="2026-10-29T15:00:00Z"), pkg)
+    later = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=true_w,
+                            direction="short", current_price=100.5, now=t1)
+    return first, later
+
+
+def test_a_pre_entry_peak_is_sticky_under_the_running_max(tmp_path):
+    """(a) Under the running MAX alone (a window that cannot prove it holds the
+    whole trade), the pre-entry 5.25R survives every later pass."""
+    db = _telemetry_db(tmp_path)
+    first, later = _first_bar_then_three_bars(_pkg())
+    assert first["bars_held"] == N_BARS and first["peak_r"] == pytest.approx(5.25)
+    assert later["peak_r"] == pytest.approx(0.25)
+    assert first["peak_authoritative"] == 0               # pre-fix frame proves nothing
+    unproven = {**later, "peak_authoritative": 0}
+    assert pt.write_record(first, db_path=db)
+    assert pt.write_record(unproven, db_path=db)
+    assert _stored(db)[0] == pytest.approx(5.25)          # sticky false peak
+
+
+def test_a_window_holding_the_whole_trade_repairs_the_sticky_peak(tmp_path):
+    """(b) The next pass whose window holds the whole trade (anchored, first
+    row = the bar containing the entry) replaces the stored peak with its own."""
+    db = _telemetry_db(tmp_path)
+    first, later = _first_bar_then_three_bars(_pkg())
+    assert later["peak_authoritative"] == 1
+    assert pt.write_record(first, db_path=db)
+    assert pt.write_record(later, db_path=db)
+    peak_r, bars = _stored(db)
+    assert peak_r == pytest.approx(0.25) and bars == 3
+
+
+def test_a_genuine_in_trade_peak_survives(tmp_path):
+    """Control: a real in-trade peak is inside every later whole-trade window,
+    so replacing with the window's peak keeps it."""
+    db = _telemetry_db(tmp_path)
+    pkg = _pkg()
+    lows = [99.5] * N_BARS
+    lows[-3] = 95.5                                       # 13:00 bar => 2.25R
+    w = exit_levers.since_entry(_frame(last_open="2026-10-29T15:00:00Z", lows=lows), pkg)
+    rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=w,
+                          direction="short", current_price=100.0)
+    assert rec["peak_authoritative"] == 1
+    assert pt.write_record(rec, db_path=db) and pt.write_record(rec, db_path=db)
+    assert _stored(db)[0] == pytest.approx(2.25)
+
+
+def test_a_trade_older_than_the_fetch_keeps_the_running_max(tmp_path):
+    """A window whose first bar opens AFTER the entry cannot see the whole
+    trade, so a lower pass must not walk the stored peak backwards."""
+    db = _telemetry_db(tmp_path)
+    pkg = _pkg(entry_time="2026-10-01T00:00:00+00:00")
+    deep = exit_levers.since_entry(_deep_prior_low_frame(), pkg)
+    shallow = exit_levers.since_entry(_frame(last_open="2026-10-29T12:00:00Z"), pkg)
+    r1 = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=deep,
+                         direction="short", current_price=100.0)
+    r2 = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=shallow,
+                         direction="short", current_price=100.0)
+    assert r1["peak_authoritative"] == 0 and r2["peak_authoritative"] == 0
+    assert pt.write_record(r1, db_path=db) and pt.write_record(r2, db_path=db)
+    assert _stored(db)[0] == pytest.approx(5.25)
+
+
+def test_window_covers_trade_is_false_when_it_cannot_be_proven():
+    assert not pt.window_covers_trade(None, {"entry_time": "2026-10-29T13:00:00Z"})
+    assert not pt.window_covers_trade(pd.DataFrame({"high": [1.0]}),
+                                      {"entry_time": "2026-10-29T13:00:00Z"})
+    w = exit_levers.since_entry(_frame(last_open="2026-10-29T13:00:00Z"), _pkg())
+    assert pt.window_covers_trade(w, _pkg()["meta"])
+    assert not pt.window_covers_trade(w, {})
+
+
+def test_an_unstamped_frame_never_counts_as_the_whole_trade():
+    """The pre-fix frame (no since_entry stamp) starts before the entry, which
+    is exactly why 'first row <= entry' alone is not proof."""
+    pkg = _pkg()
+    assert not pt.window_covers_trade(_pre_fix_since_entry(_deep_prior_low_frame(), pkg),
+                                      pkg["meta"])
+
+
+def test_the_donchian_trail_window_keeps_the_stamp():
+    """The real telemetry path: `_trail_window` (closed bars, entry-bar re-price)
+    must still read as a whole-trade window."""
+    from src.units.strategies import trend_donchian as donch
+
+    pkg = _pkg(entry_time="2026-10-20T13:00:00+00:00", entry_bar_closed=True)
+    w = donch._trail_window(pkg["meta"], {}, _frame(last_open="2026-10-20T15:00:00Z"), pkg)
+    assert len(w) == 3 and pt.window_covers_trade(w, pkg["meta"])

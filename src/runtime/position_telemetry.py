@@ -218,6 +218,9 @@ def build_record(
             "peak_state": peak.get("peak_state"),
             "giveback_r": _r(giveback_r),
             "bars_held": int(peak.get("bars") or 0),
+            # Not persisted: this pass's window holds the whole trade, so its
+            # peak replaces the running maximum (see `_UPSERT`).
+            "peak_authoritative": 1 if window_covers_trade(window, meta) else 0,
             "bars_since_peak": peak.get("bars_since_peak"),
             "cap_r": _r(ceiling),
             "pct_of_cap": _r(pct_of_cap, 2),
@@ -279,7 +282,19 @@ ON CONFLICT(order_package_id) DO UPDATE SET
     -- observed. Measured live 2026-08-18 on trades 4711 and 4710: peak_r
     -- -1e+18 with peak_state 'thin_window'. The CASE keeps NULL meaning
     -- "we did not look", which is the whole contract of peak_state.
+    --
+    -- SINCE-ENTRY-WINDOW-FIX (2026-10-29): until that fix `since_entry` handed
+    -- the first bar of every trade the FULL ~200-bar PRE-ENTRY frame, and this
+    -- MAX then kept that pre-entry "peak" for the life of the trade (it feeds
+    -- giveback_r, new_peak wakes and LTR packets). When this pass's window
+    -- provably holds the WHOLE trade (`window_covers_trade`), its peak is the
+    -- complete since-entry MFE and REPLACES the stored one -- which also
+    -- repairs every row written before the fix on its next measured pass. The
+    -- running MAX remains for windows that cannot prove that (no timestamps, a
+    -- trade older than the fetch).
     peak_r=CASE
+        WHEN :peak_authoritative = 1 AND excluded.peak_r IS NOT NULL
+            THEN excluded.peak_r
         WHEN {TABLE}.peak_r IS NULL AND excluded.peak_r IS NULL THEN NULL
         ELSE MAX(COALESCE({TABLE}.peak_r, -1e18),
                  COALESCE(excluded.peak_r, -1e18))
@@ -331,6 +346,34 @@ def _resolve_account_id(conn: sqlite3.Connection,
     return row[0] if row and row[0] else None
 
 
+def window_covers_trade(window: Any, meta: Dict[str, Any]) -> bool:
+    """True when ``window`` provably holds the WHOLE trade: it is a real
+    ``since_entry`` restriction (not the unreadable-input fallback) and its first
+    row is the bar containing the entry (``first_open <= entry_time``). Its peak
+    is then the complete since-entry MFE, so it needs no running maximum. A
+    window without timestamps, or one whose first bar opens after the entry (a
+    trade older than the fetch), is not proven. Never raises."""
+    try:
+        from src.runtime.exit_levers import SINCE_ENTRY_ANCHORED_ATTR
+
+        raw = (meta or {}).get("entry_time")
+        if not raw or window is None or len(window) == 0:
+            return False
+        # Positive proof only: a frame `since_entry` never stamped (or stamped
+        # as its fallback) may be the whole pre-entry fetch.
+        if getattr(window, "attrs", {}).get(SINCE_ENTRY_ANCHORED_ATTR) is not True:
+            return False
+        if "timestamp" not in window.columns:
+            return False
+        import pandas as pd
+
+        first = pd.to_datetime(window["timestamp"].iloc[0], utc=True, errors="coerce")
+        entry = pd.to_datetime(raw, utc=True, errors="coerce")
+        return bool(not pd.isna(first) and not pd.isna(entry) and first <= entry)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
     """Best-effort upsert. Returns whether the row landed; never raises.
 
@@ -338,7 +381,9 @@ def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
     one-way by definition, and a pass whose window is briefly shorter (a
     re-fetch, a restart) must not be able to walk a recorded peak backwards.
     The `-1e18` sentinel makes a NULL lose to any real value without letting a
-    NULL overwrite one.
+    NULL overwrite one. Exception: a pass whose window holds the whole trade
+    (``peak_authoritative``) writes its own peak — the repair for pre-entry
+    peaks recorded before SINCE-ENTRY-WINDOW-FIX.
     """
     if not record:
         return False
@@ -348,6 +393,7 @@ def write_record(record: Dict[str, Any], db_path: Optional[str] = None) -> bool:
         with sqlite3.connect(path, timeout=5.0) as conn:
             record = dict(record)
             record["account_id"] = _resolve_account_id(conn, record)
+            record.setdefault("peak_authoritative", 0)
             conn.execute(_UPSERT, record)
         return True
     except Exception:  # noqa: BLE001 — never raise into the monitor
