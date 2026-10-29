@@ -412,7 +412,8 @@ accounts:
                                        # RiskManager.position_size (risk.py ~L1254), never the risk-sized qty.
                                        # Applied via /v5/position/set-leverage at boot. ROLLBACK: 3.
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
-        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        armed: false                   # exception). DISARMED 2026-10-29 (operator).
+                                       # Disarmed by operator 2026-10-29: paper testing accounts generate data and are not gated.
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
                                        # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
                                        # daily_loss_pct / daily_usd above are REPORTED figures only.
@@ -1113,7 +1114,8 @@ accounts:
       risk_pct: 0.015                   # 1.5% balance risked per trade
       max_gross_exposure_pct: 1.5      # gross notional cap = 1.5x equity (a MULTIPLE, see exposure.py); operator 2026-10-24 "1.5× equity (Recommended)", MGC-SIZING-OVERSIZE
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
-        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        armed: false                   # exception). DISARMED 2026-10-29 (operator).
+                                       # Disarmed by operator 2026-10-29: paper testing accounts generate data and are not gated.
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
                                        # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
                                        # daily_loss_pct / daily_usd above are REPORTED figures only.
@@ -1219,7 +1221,8 @@ accounts:
       # already-leveraged figure is not multiplied again; on a fetch failure the
       # cap falls back to conservative cash-1x. (Replaced the interim 20x guess.)
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
-        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        armed: false                   # exception). DISARMED 2026-10-29 (operator).
+                                       # Disarmed by operator 2026-10-29: paper testing accounts generate data and are not gated.
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
                                        # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
                                        # daily_loss_pct / daily_usd above are REPORTED figures only.
@@ -1297,7 +1300,8 @@ accounts:
       daily_usd: 200                   # absolute fallback (no equity snapshot)
       risk_pct: 0.015                   # 1.5% balance risked per trade (operator 2026-06-24)
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
-        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        armed: false                   # exception). DISARMED 2026-10-29 (operator).
+                                       # Disarmed by operator 2026-10-29: paper testing accounts generate data and are not gated.
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
                                        # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
                                        # daily_loss_pct / daily_usd above are REPORTED figures only.
@@ -1893,7 +1897,8 @@ accounts:
                                        # options.max_loss_per_trade_usd), kept for
                                        # the account-level daily-loss gate basis.
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
-        armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
+        armed: false                   # exception). DISARMED 2026-10-29 (operator).
+                                       # Disarmed by operator 2026-10-29: paper testing accounts generate data and are not gated.
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
                                        # NEW entries only (DAILY_DD_SWITCH). max_dd_pct /
                                        # daily_loss_pct / daily_usd above are REPORTED figures only.

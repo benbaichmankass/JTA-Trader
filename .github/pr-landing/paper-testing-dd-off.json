@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 risk change (config/accounts.yaml risk blocks): disarms the account-level daily drawdown switch on the five paper TESTING accounts (bybit_1, ib_paper, alpaca_paper, alpaca_options_paper, oanda_practice). Operator approval 2026-10-29 ~19:10Z, verbatim: \"I also just saw that the Bybit One account hit its drawdown limit. I want to take the drawdown limit off of the paper testing accounts. There's no reason to have it there, obviously, for the portfolio. We still need it because we want to see, again, the general portfolio performance as well. But for this, like, it's a gate that's not connected to a specific strategy, and I'd rather have the strategies running on that are on that account. They should just keep running and generate data. So we should turn it back on now, and in general, we should remove the daily drawdown limits from all the paper testing accounts.\" The manager merges and deploys.",
+  "why": "Checklist row PAPER-TESTING-DD-OFF. One-field flip per account: risk.daily_dd_switch.armed true -> false (limit_pct kept; re-arm is one edit). bybit_portfolio, alpaca_portfolio, bybit_2, alpaca_live, ib_live and the prop accounts stay armed. Removes a gate, adds none. Revert = flip armed back to true."
+}
