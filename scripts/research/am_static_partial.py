@@ -122,7 +122,7 @@ def roster_risk_pcts(legs: list[str]) -> dict[str, float]:
     return out
 
 
-def grade_family(trades, ev, sel, legs, *, seed_base: int, holdout=False, risk_pcts=None) -> dict:
+def grade_family(trades, ev, sel, *, seed_base: int, holdout=False, risk_pcts=None) -> dict:
     from am_risk_adjusted import RULE_V1, grade_risk_adjusted
     idx = np.where(sel)[0]
     tr = [trades[i] for i in idx]
@@ -188,8 +188,8 @@ def run(trades, reps, htrades, hreps, out: Path) -> dict:
             res.setdefault("pnl_view_error", str(exc)[:200])
         sel = np.array([fam_of.get(t["leg"]) == f for t in trades])
         hsel = np.array([fam_of.get(t["leg"]) == f for t in htrades]) if htrades else np.zeros(0, dtype=bool)
-        main = grade_family(trades, ev, sel, legs, seed_base=SEED0 + 1000 * fi, risk_pcts=rp)
-        hold = (grade_family(htrades, hev, hsel, legs, seed_base=SEED0 + 1000 * fi + 500, holdout=True)
+        main = grade_family(trades, ev, sel, seed_base=SEED0 + 1000 * fi, risk_pcts=rp)
+        hold = (grade_family(htrades, hev, hsel, seed_base=SEED0 + 1000 * fi + 500, holdout=True)
                 if int(hsel.sum()) >= HOLDOUT_N_MIN else {"n": int(hsel.sum()), "verdict": "indeterminate",
                                                           "why": f"n {int(hsel.sum())} < {HOLDOUT_N_MIN}"})
         missing = [lg for lg in legs if lg not in present]
