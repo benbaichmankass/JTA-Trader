@@ -248,9 +248,24 @@ def select(rows: List[Dict[str, Any]], *, symbol: str, consumed: set, now: datet
     return chosen, terminal
 
 
+def _ping_outcome(row: Dict[str, Any], outcome: str) -> None:
+    """ONE operator ping for a proposal that ended without a package (refused or expired). Best-effort, never
+    raises; called only for a ledger line that is new, so each (decision_id, outcome) pings once."""
+    try:
+        from src.runtime.execution_diagnostics import enqueue_execution_failure
+        p = row.get("proposal") if isinstance(row.get("proposal"), dict) else {}
+        enqueue_execution_failure(
+            account="claude_desk leg", strategy=NAME, symbol=norm_symbol(p.get("symbol")) or "?",
+            side={"long": "buy", "short": "sell"}.get(p.get("side"), "?"), qty=None,
+            reason=f"desk proposal {row.get('decision_id')}: {outcome}")
+    except Exception:  # noqa: BLE001 -- observability never blocks the leg
+        pass
+
+
 def record(outcomes: List[Tuple[Dict[str, Any], str]], *, now: datetime,
            path: Optional[Path] = None) -> int:
-    """Append each (decision_id, outcome) to the leg ledger once. Returns lines written. Never raises."""
+    """Append each (decision_id, outcome) to the leg ledger once, with one ping per new line. Returns lines
+    written. Never raises."""
     if not outcomes:
         return 0
     lp = path or ledger_path()
@@ -268,6 +283,7 @@ def record(outcomes: List[Tuple[Dict[str, Any], str]], *, now: datetime,
                                      "intent_id": row.get("intent_id"), "outcome": outcome},
                                     separators=(",", ":")) + "\n")
                 n += 1
+                _ping_outcome(row, outcome)
         return n
     except OSError:
         return 0

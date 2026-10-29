@@ -131,6 +131,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/ops/amend_position_sl.py": ("trade-update",),   # AMEND-SL-ACTION: one SL-moved ping via enqueue_trade_update
     "scripts/ops/live_review_apply.py": ("trade-update",),   # LTR-6R: SL-moved ping per applied account + ONE not-applied alert, both via enqueue_trade_update
     "scripts/ops/live_review_dispatch.py": ("trade-update",),   # LTR-APPLY-DISPATCH: ONE not-dispatched alert per review_id (money rows) via enqueue_trade_update
+    "src/units/strategies/claude_desk.py": ("execution_alert",),   # DESK-V1-ALERTS: ONE ping per refused / expired desk proposal, via enqueue_execution_failure
     "scripts/ops/desk_intake.py": ("trade-update",),   # DESK-4-INTAKE: ONE high-priority flag per desk row that keeps failing, via enqueue_trade_update
     "src/prop/breakout_notify.py": (
         "prop_fill", "prop_monitor", "prop_ticket", "prop_expiry_prompt",
