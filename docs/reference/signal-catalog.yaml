@@ -68,8 +68,11 @@ strategy_modules:
     # DESK-17 (2026-10-26): reads NO candles. Its only input is the accepted-proposal queue
     # runtime_logs/desk/accepted_proposals.jsonl (scripts/ops/desk_intake.py) plus the journal's
     # claude_desk order_packages.meta (consumed decision_ids). Health: unmeasured.
+    # DESK-V1-ALERTS (2026-10-29): record() pings once per refused/expired proposal through
+    # src.runtime.execution_diagnostics (an operator alert, not a signal input).
     candle_columns: []
-    runtime_imports: []
+    runtime_imports:
+    - src.runtime.execution_diagnostics
     legs:
       strategy_ids: 1
       enabled: 1

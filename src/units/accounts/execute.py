@@ -2775,6 +2775,28 @@ def _log_trade_to_journal(
         return False
 
 
+def _ping_desk_refusal(pkg: OrderPackage, account_cfg: dict, *, reason: str, status: str,
+                       sized_qty: Optional[float], is_dry: bool) -> None:
+    """ONE per-trade operator ping for a refused / rejected ``claude_desk`` package (DESK-V1-ALERTS).
+
+    Every refusal passes through ``log_rejection_to_journal``, so this is the one place that catches the early
+    refusals (sizing, mirror, exclusive-hold) that never had a ping, as well as the RiskBreach / exchange paths;
+    the coordinator's own ``_emit_execution_failure_ping`` skips this strategy so a refusal is never pinged
+    twice. A deliberate dry dispatch or an expected policy skip stays quiet. Never raises."""
+    try:
+        if getattr(pkg, "strategy", None) != "claude_desk" or is_dry:
+            return
+        from src.runtime.execution_diagnostics import enqueue_execution_failure, is_expected_dispatch_skip
+        if is_expected_dispatch_skip(reason):
+            return
+        enqueue_execution_failure(
+            account=str(account_cfg.get("account_id") or "?"), strategy="claude_desk", symbol=pkg.symbol,
+            side=("buy" if pkg.direction == "long" else "sell"), qty=sized_qty,
+            reason=f"{status}: {reason}", demo=bool(account_cfg.get("demo")))
+    except Exception:  # noqa: BLE001 -- a ping failure must not disturb failure handling
+        logger.debug("desk refusal ping failed", exc_info=True)
+
+
 def log_rejection_to_journal(
     pkg: OrderPackage,
     account_cfg: dict,
@@ -2834,6 +2856,7 @@ def log_rejection_to_journal(
     journal-write failure during failure-handling can never escalate
     to a stack unwind.
     """
+    _ping_desk_refusal(pkg, account_cfg, reason=reason, status=status, sized_qty=sized_qty, is_dry=is_dry)
     try:
         order = {"qty": float(sized_qty or 0.0), "symbol": pkg.symbol}
         _extra: dict = {}

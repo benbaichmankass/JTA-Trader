@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261029-Q17QWHDZ-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-SERVE-SETUP-FEATURES session_01AFoLuM3NoUTHiuQ17qwhdZ (B2)",
+    "rerun": "python3 -m pytest -q tests/ml/test_setup_serve_parity.py::test_timeframe_mismatch_is_refused"
+  },
+  "state": "queued",
+  "what": "[MODEL, B2 follow-up] The B2 serve row is built from the leg's own closed candles and refuses (read_state timeframe_mismatch) when the head's frozen serve_spec timeframe differs. p2pool's book is 1h market_raw for all three strategies, so trend_donchian / _eth / _sol (1h) are served faithfully but squeeze_breakout_4h (4h) and htf_pullback_trend_2h (2h) are not: their P1 rows would be the 6-field base row. Fix: in src/runtime/strategy_signal_builders._emit_shadow_preds, when a resolved head's serve_spec timeframe != the leg timeframe, fetch that timeframe's closed candles once (market_data.fetch_candles, cached) and stash the block from them; parity test as tests/ml/test_setup_serve_parity.py."
+}

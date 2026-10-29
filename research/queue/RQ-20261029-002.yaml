@@ -4,7 +4,7 @@
 id: RQ-20261029-002
 title: 'Programme 01 Q4 stop-waiting, desk-derived: on ada_pullback_2h, does a deep LOSS-CUT (close at
   bar N when open R < -0.5; N = 4 / 8 / 16) beat the declared exit net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -130,3 +130,15 @@ generated:
   params:
     node: P1-Q4-desk-losscut-ada-pb
 last_dispatched_at: '2026-10-29T01:53:55+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q4-LOSSCUT-ADA-PB-2H
+  evidence:
+  - research/results/RQ-20261029-002/40803164106.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

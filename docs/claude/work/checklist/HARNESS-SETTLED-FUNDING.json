@@ -1,0 +1,22 @@
+{
+  "id": "HARNESS-SETTLED-FUNDING",
+  "title": "Wire the settled funding series (funding_series.py) into backtest_trend and backtest_pullback in place of the flat 1 bps/8h default, so money-leg Stage-0 records carry real funding",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a73.3 / top-10 #10. MEASURED: core harness funding is DEFAULT_FUNDING_BPS_PER_WINDOW flat 1.0 bps/8h (execution_costs.py:70); settled funding used only by xsec/carry/frontier runners. Of 1221 result rows since 10-15: 396 at 7.5bps fee, 14 at 11.0, 87 at 0.0, 719 unflagged. Done when: both harnesses take settled funding (default byte-identical unless flagged, per house style), with tests, and one money-leg re-run reports net_r under settled funding. Relates COST-STACK-HARNESS-RESOLVER (fee routing).",
+  "priority_rank": 4,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "updated_at": "2026-10-29T07:33:15Z",
+  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "_seq": 788
+}
