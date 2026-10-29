@@ -1,0 +1,9 @@
+{
+ "unit": "RQ-20261029-5785-02",
+ "rule": "RULE-ML-OVERLAY-NONINFERIOR-V2",
+ "run_id": "local-v2-20261029",
+ "run": "local sandbox run by lane ML-REAL-MONEY-OVERLAY (session_01AFoLuKnxrXwUfkxME2GXW7), registered argv plus two reuse flags: --corpus-dir (the main-window corpus built by the V1 run at aa69cf9c, same window and argv) and --holdout-corpus-dir (the holdout corpus fetched by the first V2 attempt). The first V2 attempt (registration commit 91e6fa8c) crashed with KeyError on the one gate leg with no holdout candles (trend_donchian_sol_prop, 0 trades, which the unit pre-states contributes nothing); the fix skips an empty leg and changes no threshold, feature, grid or check. The queue runner's dispatch of the unit is the independent replication.",
+ "registration_commit": "91e6fa8c521af7042451b9f1123e626125bf8ff2",
+ "corpus": "not committed (candles + paths); bt.json per leg under bt/ (main) and holdout_bt/ (holdout); regenerable from the argv",
+ "artifact": "artifacts/overlay_td.json -- the exported PRIMARY model the TD PASS ships (fit on the whole main-window TD pool)"
+}
