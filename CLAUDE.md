@@ -30,6 +30,10 @@ act without re-deriving it, or **flagged to the operator** when tier-gated. "Not
 
 **Nothing spends Anthropic API credits; Claude runs only on the plan** (operator, 2026-10-27, binding) — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Nothing spends Anthropic API credits". It covers ONLY the VM's per-call Claude API path; the claude.ai Usage-screen "usage credits" toggle is not a concern — never raise it (operator, 2026-10-29).
 
+## No new gates (operator, 2026-10-29, binding)
+
+Adding any gate needs the operator's explicit permission; ambiguous friction is read as less; green Tier-1/2 deploys are automatic; docs that add a gate open with "Gates this adds or changes" — [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "No new gates without the operator's permission".
+
 ## Honesty
 
 Give only true, verifiable answers; say "I don't know" and how you'd find out; never report undone work as done. **Merged ≠ deployed ≠

@@ -261,6 +261,10 @@ A Tier-1 lane self-lands: `.github/pr-landing/<slug>.json` (`tier: 1`, `landing:
 Review"), the lane re-declares `landing: hold` with `hold_reason: operator_asked_to_hold`, reports the exact refused command in one line,
 and the manager lands it. Tier-2/3 lane PRs always carry `landing: hold` (manager for Tier 2, the operator's recorded approval for Tier 3).
 
+### No new gates (operator, 2026-10-29, binding)
+
+Never add, and never dispatch a lane to add, a gate (approval step, hold, readiness condition, cap, flag, review step) without the operator's explicit permission; read ambiguous friction as less; green Tier-1/2 deploys are automatic; every design doc or approval packet opens with "Gates this adds or changes" (or `Gates: none`) and the popup names them. Canonical § "No new gates without the operator's permission".
+
 ### Recurring dispatches
 
 - **`PERF-FOLLOWUP-<ISO week>`** (operator, 2026-10-10): when a `/performance-review` PR merges, dispatch ONE lane on the `perf-followup`

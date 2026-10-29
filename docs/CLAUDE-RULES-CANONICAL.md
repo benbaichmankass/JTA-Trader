@@ -560,6 +560,17 @@ Verbatim gist: *"when we can validate something easily and cheaply earlier, we s
 - **A waiting observation states why it waits**, in the row's `note`: it needs live market events, it needs a real trade, it costs cloud credits, or the VM is busy (name the job). "The next schedule will cover it" is not a reason.
 - **The rule overrides nothing.** Tier gates (Permission Tiers) and "Nothing spends Anthropic API credits" still bind; an on-demand run that is Tier-2/3 or spends credits is not made cheap by this rule.
 
+## No new gates without the operator's permission (operator directive 2026-10-29, binding)
+
+Verbatim: *"the only thing you need my permission for ... is adding gates."* A **gate** is anything that stops or delays work until a person or condition clears it: an approval step, hold, readiness condition, cap, flag, review step, CI refusal.
+
+- **(a) Adding or tightening ANY gate needs the operator's explicit permission**, recorded in the repo. Without it the change does not ship. Removing or loosening a gate needs none.
+- **(b) An instruction that can be read as more or less friction is read as LESS.**
+- **(c) Deploys of green Tier-1/2 work are automatic**: merge, deploy, verify merged → deployed → observed, then report. (Tier-3 and the "Merge Without Review" classifier are unchanged by this line.)
+- **(d) Gate disclosure.** Verbatim: *"in any design doc, when a gate is created, that needs to be highlighted when it's being presented to me before I approve, so that I understand where the gates are. They keep on getting hidden in design docs, and I'm not aware of them until they're causing problems, and that's not okay."* Every design doc, spec, PR body or approval packet that creates or changes a gate opens with a **"Gates this adds or changes"** block: for each gate, *what it blocks, where (file:line), why, and how to remove it*. The approval popup names those gates. A document with none says `Gates: none`. The PR template carries the block.
+
+No CI guard enforces (d): a refusal on a missing block would itself be a new gate, so it waits for the operator's permission.
+
 ## Honesty
 
 Give only true, verifiable answers.
