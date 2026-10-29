@@ -1,6 +1,6 @@
 id: RQ-20261028-dda7-04
 title: 'Multi-window walk-forward of trend_donchian_sol (SOLUSDT 1h) at the 11.0 bps cost stack (window-drift flip, hand-authored)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -48,3 +48,4 @@ last_dispatched_at: null
 roadmap:
 - L-LADDER
 practice_precedent: 'docs/reference/trading-and-model-practice-principles.md (walk-forward across several windows; judge the edge ex its single best fold); skill: .claude/skills/backtesting/SKILL.md, Is n enough, and is the edge concentrated in one fold'
+result: "GRADED 2026-10-28 against RULE-WF-RECOST-trend_donchian_sol, run session-local (lane WF-RECOST-DDA7). Verdict PASS: n=183, net_r_oos +17.70R, best fold +8.33R, net_r_oos_ex_max_fold +9.38R, folds_positive 4/6 (folds [8.3281, -3.7422, 5.2311, 8.2318, -2.9453, 2.6008]), fee 11.0 bps asserted in record and bt.json, fidelity approximate. PASS is a Tier-3 Stage-2 eligibility PROPOSAL only (pipeline row filed); nothing changed in config. Row: research/results/RQ-20261028-dda7-04/session_01AFoLuNAvm4Xfk9FftW4jnY.jsonl; raw record + trades: docs/research/wf-recost-dda7-2026-10-28/RQ-20261028-dda7-04/."
