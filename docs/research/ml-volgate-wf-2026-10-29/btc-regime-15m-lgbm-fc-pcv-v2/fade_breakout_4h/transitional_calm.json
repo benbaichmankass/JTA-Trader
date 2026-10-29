@@ -1,0 +1,181 @@
+{
+ "record": "ml-volgate-wf-cell",
+ "lane": "ML-VOLGATE-WF-ETH-BTC",
+ "plan_step": "B3",
+ "head": "btc-regime-15m-lgbm-fc-pcv-v2",
+ "strategy": "fade_breakout_4h",
+ "cell": "transitional/calm",
+ "symbol": "BTCUSDT",
+ "timeframe": "4h",
+ "harness": "fade",
+ "fidelity": "faithful",
+ "omitted_levers": [],
+ "cost_policy": {
+  "source": "execution_costs.resolve_cost_policy",
+  "symbol": "BTCUSDT",
+  "fee_bps_roundtrip": 7.5,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "funding_window_hours": 8.0,
+  "term_sources": {
+   "fee": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP",
+   "funding": "venue_default",
+   "slippage": "venue_default"
+  },
+  "fee_only_arm_declared": false,
+  "prop_declared": {}
+ },
+ "mean_cost_r_per_trade": {
+  "cost_fee_r": 0.08386,
+  "cost_slippage_r": 0.02287,
+  "cost_funding_r": 0.03571
+ },
+ "cost_stack_attested": true,
+ "population": {
+  "trades_in_leg_graded": 108,
+  "trades_excluded_after_labels_end": 0,
+  "labels_end": "2026-10-28T22:30:00Z",
+  "candle_days": 1460,
+  "trades_in_cell": 14
+ },
+ "rule": "plan section 3 P2/P3: <dir>_stable_drag under every member of FOLD_PANEL (3,4,5), not fold-sensitive, >= MIN_DIRECTION_TRADES (10) in that direction, full cost stack",
+ "by_fold_4": [
+  {
+   "trades": 4,
+   "long_n": 3,
+   "long_r": 3.9627,
+   "short_n": 1,
+   "short_r": -1.1471,
+   "net_r": 2.8156,
+   "fold": 1,
+   "from": "2022-11-28",
+   "to": "2024-02-08"
+  },
+  {
+   "trades": 3,
+   "long_n": 1,
+   "long_r": -1.1137,
+   "short_n": 2,
+   "short_r": 3.1123,
+   "net_r": 1.9986,
+   "fold": 2,
+   "from": "2024-04-22",
+   "to": "2024-06-11"
+  },
+  {
+   "trades": 4,
+   "long_n": 2,
+   "long_r": 7.5539,
+   "short_n": 2,
+   "short_r": -2.5271,
+   "net_r": 5.0268,
+   "fold": 3,
+   "from": "2024-09-16",
+   "to": "2025-09-11"
+  },
+  {
+   "trades": 3,
+   "long_n": 3,
+   "long_r": -3.2892,
+   "short_n": 0,
+   "short_r": 0,
+   "net_r": -3.2892,
+   "fold": 4,
+   "from": "2025-11-03",
+   "to": "2026-10-13"
+  }
+ ],
+ "pooled": {
+  "trades": 14,
+  "long_n": 9,
+  "long_r": 7.1137,
+  "short_n": 5,
+  "short_r": -0.5619,
+  "net_r": 6.5518
+ },
+ "cell_verdict_detail": {
+  "long_trades": 9,
+  "short_trades": 5,
+  "pooled_long_r": 7.1137,
+  "pooled_short_r": -0.5619,
+  "long_verdict": "insufficient_n",
+  "short_verdict": "insufficient_n",
+  "long_stable_drag": false,
+  "short_stable_drag": false,
+  "long_fold_sensitive": false,
+  "short_fold_sensitive": true,
+  "long_insufficient_n": true,
+  "short_insufficient_n": true,
+  "per_fold_count": {
+   "3": {
+    "short_folds_negative": 2,
+    "long_folds_negative": 1,
+    "of_folds": 3,
+    "short_populated_folds": 3,
+    "long_populated_folds": 3,
+    "short_majority_negative": true,
+    "long_majority_negative": false
+   },
+   "4": {
+    "short_folds_negative": 2,
+    "long_folds_negative": 2,
+    "of_folds": 4,
+    "short_populated_folds": 3,
+    "long_populated_folds": 4,
+    "short_majority_negative": false,
+    "long_majority_negative": false
+   },
+   "5": {
+    "short_folds_negative": 1,
+    "long_folds_negative": 2,
+    "of_folds": 5,
+    "short_populated_folds": 2,
+    "long_populated_folds": 4,
+    "short_majority_negative": false,
+    "long_majority_negative": false
+   }
+  }
+ },
+ "directions": {
+  "long": {
+   "verdict": "INDETERMINATE_INSUFFICIENT_N",
+   "would_be_if_not_refused": "INDETERMINATE_INSUFFICIENT_N",
+   "informational_only": false,
+   "existing_1d_cell_already_off": false,
+   "authored_trend_vol_cell": false
+  },
+  "short": {
+   "verdict": "INDETERMINATE_INSUFFICIENT_N",
+   "would_be_if_not_refused": "INDETERMINATE_INSUFFICIENT_N",
+   "informational_only": false,
+   "existing_1d_cell_already_off": false,
+   "authored_trend_vol_cell": false
+  }
+ },
+ "label_provenance": {
+  "dataset": "market_features/BTCUSDT/15m/v002",
+  "rows": 175272,
+  "ts_first": "2021-10-29T04:45:00Z",
+  "ts_last": "2026-10-28T22:30:00Z",
+  "threshold": 0.5,
+  "threshold_source": "ML_VOL_VERDICT_THRESHOLD (live resolver)",
+  "labels": {
+   "calm": 161222,
+   "volatile": 14050,
+   "volatile_pct": 8.02
+  },
+  "stage": "advisory",
+  "resolution": "advisory_for_symbol",
+  "live_regime_discrimination_auc": 0.721,
+  "gate_check_target_advisory": "see plan section 8 (relay #21020): live AUC pass, drift_clean pass",
+  "replay_checks": {
+   "batch_vs_per_row_max_abs_delta": 0.0,
+   "vol_bucket_recomputed_mismatches": 0,
+   "feature_audit_rows_checked": 5008
+  },
+  "in_sample": true,
+  "live_verified": false,
+  "live_verified_note": "ml_vol_label_replay verify against the live regime_ml_vol_shadow audit rows was NOT run in this lane (the audit file is on the live VM, not the trainer); replayed labels are unverified against the live gate",
+  "trainer_head_sha": "303bab662"
+ }
+}
