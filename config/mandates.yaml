@@ -1241,11 +1241,18 @@ mandates:
         # ADVICE ONLY (operator popup 2026-10-28 ~20:35Z, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539,
         # verbatim "Advice-only tightens (Recommended)"): tighten_sl may be RECOMMENDED and is graded, but no
         # automatic path executes it (src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS; the rows watcher,
-        # live_review_dispatch.py and desk_intake.py log it tighten_advice_only). Evidence:
+        # live_review_dispatch.py and desk_intake.py log it advice_only). Evidence:
         # comms/research/ltr_tighten_optimize/verdict.json over DESK-LIFECYCLE-S0 (#20967): 981 Claude tightens
         # -0.097 R [-0.140, -0.047] net of the full cost stack; no registered tighten rule beat hold OOS.
-        # Every other action above is unchanged. REVERT: revert the PR that added this (ADVICE_ONLY_ACTIONS = ()).
-        advice_only: [tighten_sl]
+        # EXTENDED 2026-10-28 ~21:07Z to EVERY in-trade class (operator popup to ask A1, verbatim "Advice-only
+        # until tested", relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539; row DESK-V1-MGMT-ADVICE-ONLY;
+        # evidence DESK-LIFECYCLE-S0 #20967: Claude whole-trade management -0.159 / -0.124 R vs hold). Each
+        # class is recorded and graded, never executed, until its OWN registered test passes (OOS, vs hold AND a
+        # matched random intervention of the same class, net of cost; docs/plans/desk-v1-production-plan-2026-10-29.md
+        # § 5b). GRADUATION = remove ONE class here AND from rows_lib.ADVICE_ONLY_ACTIONS in one PR citing its
+        # passed-test record (tests/test_tighten_advice_only.py pins equality). Entries, the claude_desk
+        # max-hold exit and venue brackets are not in_trade actions and are unaffected.
+        advice_only: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
       entry_generation:
         what: desk-generated NEW entries from the desk's scan packet (trading-desk SKILL)
         actions: [propose_entry]

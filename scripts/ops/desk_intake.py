@@ -209,7 +209,7 @@ def classify(row: Dict[str, Any], *, problems: List[str], packet: Optional[Dict[
     apply_action = APPLY_ACTION.get((role, action))
     if apply_action is None:
         return "not_dispatchable", f"action_{role}/{action}", None
-    if apply_action in rows_lib.ADVICE_ONLY_ACTIONS:    # operator 2026-10-28: a tighten is advice only
+    if apply_action in rows_lib.ADVICE_ONLY_ACTIONS:    # operator 2026-10-28: advice only until the class's test passes
         return "not_dispatchable", rows_lib.ADVICE_ONLY_VERDICT, None
     if disp.get("route") != "recommended" or not row.get("intent_id"):
         return "not_dispatchable", f"route_{disp.get('route')}_intent_{bool(row.get('intent_id'))}", None

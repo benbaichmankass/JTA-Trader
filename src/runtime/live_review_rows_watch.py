@@ -18,9 +18,10 @@ add_entry -- on a dispatchable route, on ANY account class, paper included
 (operator 2026-10-26: "All accounts now", "Real-money, prop and paper at once").
 ``hold``, ``operator_ask`` / ``none`` routes and ``flag_mechanics`` are logged
 ``not_dispatchable`` and never sent, so they cannot trip the dispatcher's
-refusal ping. A ``tighten_sl`` is ADVICE ONLY (operator 2026-10-28 ~20:35Z, "Advice-only
-tightens (Recommended)"; evidence ``comms/research/ltr_tighten_optimize/verdict.json``): on any
-route it is logged ``tighten_advice_only`` and never sent.
+refusal ping. A class in ``rows_lib.ADVICE_ONLY_ACTIONS`` is ADVICE ONLY: on any route it is
+logged ``advice_only`` and never sent (tighten_sl: operator 2026-10-28 ~20:35Z, "Advice-only
+tightens (Recommended)"; every in-trade class: operator 2026-10-28 ~21:07Z, "Advice-only until
+tested"). A class graduates by leaving that tuple, citing its passed test.
 
 Cadence: ``ensure_started()`` (called from ``record_position_telemetry``,
 which only runs while packages are open) starts ONE daemon thread, once, in
@@ -149,13 +150,13 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
 
 
 #: tighten_sl plus the trade-desk actions (LTR-ALL-ACTIONS); every one is re-checked by the dispatcher.
-#: rows_lib.ADVICE_ONLY_ACTIONS (tighten_sl, operator 2026-10-28) is checked FIRST and is never sent.
+#: rows_lib.ADVICE_ONLY_ACTIONS (every in-trade class until it graduates, operator 2026-10-28) is checked FIRST and is never sent.
 DISPATCHABLE_ACTIONS = ("tighten_sl", "close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 
 
 def dispatchable(row: Dict[str, Any]) -> Optional[str]:
     """None when the row is an apply candidate; else why it is not (logged, never sent).
-    A tighten returns rows_lib.ADVICE_ONLY_VERDICT on every route: recorded as advice, never executed."""
+    An advice-only class returns rows_lib.ADVICE_ONLY_VERDICT on every route: recorded as advice, never executed."""
     rec = row.get("recommendation") or {}
     if rec.get("action") in rows_lib.ADVICE_ONLY_ACTIONS:
         return rows_lib.ADVICE_ONLY_VERDICT
