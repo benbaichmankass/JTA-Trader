@@ -2,9 +2,9 @@
   "id": "COUNTERFACTUAL-EVERYWHERE",
   "title": "Make the counterfactual grader (incl. the post-exit horizon) part of how everything is tested: (1) a bulk run on non-Claude compute (GitHub runners / trainer VM) over ALL past live+paper trades and every backtest trade corpus we hold; (2) built into the Stage-0 backtest harness so every backtest trade carries its counterfactual arms; (3) a written contract for each consumer: strategy R&D, ML training labels, desk + LTR pricing, the AM graduation rule and the weekly performance review",
   "phase": null,
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "in_flight",
+  "owner": "session_01AFoLuLpoWiu1SEu6vTJpKk",
+  "lane": "COUNTERFACTUAL-EVERYWHERE",
   "model": "sonnet",
   "ceiling_usd": 8,
   "spend_usd": null,
@@ -15,8 +15,8 @@
   ],
   "note": "Operator 2026-10-29 ~19:15Z, verbatim: \"once we have the full suite of counterfactual grader tools, including the longer term one, I want to set a run, not using Claude, using our other compute resources. We need to backtest everything, all of the data, all of the past trades, and we need to add it to the backtesting, right? Like, in general, it has to be part of how we test things, not just how we do a performance review. Like, it has to drive everything, basically. So we need to understand how we apply it, not only to grading actual trades, and obviously the desk and LTR, but also how we apply it to ML training and strategy research and development, and obviously the regular performance reviews as well. And we should get it run on as much data as we can.\" Scope: phase A design (one doc, gates block at top, per-consumer contract, compute plan + cost, which corpora/n); phase B the bulk run as a research-queue/workflow job (no Claude, no API credits); phase C harness integration. Overlaps to fold in, not duplicate: BOOK-SIM-REAL-SIZER (rank 2, book-level $), AM-REGRADE-BOOKSIM, LTR-COUNTERFACTUAL-PRICING, scripts/research/counterfactual_grader.py (#21256). Unblocks when GRADER-POST-EXIT-HORIZON lands.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T19:09:55Z",
-  "updated_by": "Manager Session 2026-10-29c",
+  "updated_at": "2026-10-29T21:23:49Z",
+  "updated_by": "session_01AFoLuLpoWiu1SEu6vTJpKk",
   "roadmap": [
     "L-AM-STANDARD"
   ],
