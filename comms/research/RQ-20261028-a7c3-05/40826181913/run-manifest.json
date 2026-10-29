@@ -1,0 +1,50 @@
+{
+  "unit": "RQ-20261028-a7c3-05",
+  "run_id": "40826181913",
+  "commit_sha": "fa6845d68a9c043887c9e504af3d3c1cfa3cc66f",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/40826181913",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "xrp_pullback_2h",
+        "--arm",
+        "S3=--tp-target-r=3",
+        "--arm",
+        "R1=--tp-target-r=3;--tp-retarget-mode=stall_pull_in;--tp-retarget-stall-bars=10",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-26 23:59",
+        "--grade",
+        "replace",
+        "--baseline",
+        "S3",
+        "--delta-r",
+        "0",
+        "--delta-r-per-trade",
+        "0",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "5",
+        "--dd-tol-frac",
+        "0.35",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261028-a7c3-05/40826181913"
+      ],
+      "log": "comms/research/RQ-20261028-a7c3-05/40826181913/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 32.8
+    }
+  ],
+  "all_ok": true
+}
