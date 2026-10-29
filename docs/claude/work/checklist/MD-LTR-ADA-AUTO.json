@@ -4,7 +4,7 @@
   "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
-  "lane": "session_01AFoLuLbY3ViuCFwrJbmcyV",
+  "lane": null,
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
   "spend_usd": null,
@@ -13,12 +13,18 @@
     21203
   ],
   "blocked_on": [],
-  "note": "#21203 MERGED cfb15c25 by manager 09:18Z (mandates.yaml diff verified: only MD-LTR-ADA-AUTO added). Deploy filed #21221 (pull-and-deploy); verification = runtime-config git_sha contains cfb15c25. Latency (lane-measured, PR comment 6491447764): median round trip ~7-8 min (due detection ~1 min, packet+marker 24.6 s, manager dispatch + reviewer 342 s, apply 9-14 s); no hop added. Closing observation: the first auto-applied ADA action with verified venue read-back (rows_watch receipt). After deploy: disable LTR-ADA-WATCH trigger trig_01TZSKJHHaThgpcGiosMHqPk.",
+  "note": "Closing observation (lane close-out 09:17Z): (a) diag status git_sha_running contains cfb15c25 (rows watcher + due computation run inside ict-trader-live: needs the restart that pull-and-deploy #21221 performs; dispatch/apply subprocesses take effect on git-sync); (b) log_file ltr_wake_post_receipt shows posted with pkg-465a5d7d27644027|mandate_cadence|<slot> after the next even-hour slot; (c) log_file live_review_rows_watch shows the ADA row with auto_mandate MD-LTR-ADA-AUTO, verdict dispatched, APPLIED with venue_after per account (or a named refusal); re-measure latency vs PR comment 6491447764. On package close: set expired_at on the mandate. Lane archived 09:18Z; spend $12.49 (Opus).",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T09:16:58Z",
+  "updated_at": "2026-10-29T09:17:37Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-AM-STANDARD"
+  ],
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuLbY3ViuCFwrJbmcyV",
+      "archived_at": "2026-10-29T09:17:37Z"
+    }
   ],
   "_seq": 793
 }
