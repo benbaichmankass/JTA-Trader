@@ -119,6 +119,13 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   row. Never commit a packet or table yourself from the comment text. `packet_state` `could_not_commit` / `evidence_conflict` → no reviewer;
   an incident (the VM receipt `ltr_wake_post_receipt` and the poller run name the http code). An `ltr-mirror-refused` comment (a row the
   mirror refused on `packet_sha` or a missing cited file) is an incident: repair the branch file from the generator's bytes, never by hand.
+  **Event `mandate_cadence`** (a per-package auto-apply mandate, `kind: ltr_auto_apply` in `config/mandates.yaml`, first MD-LTR-ADA-AUTO,
+  operator 2026-10-29): the VM emits it for the scoped open package once per `review_cadence_minutes` slot after the bar boundary, with
+  the packet committed first; dispatch the reviewer exactly as above, packet inline, and the VM applies its `recommended` row within the
+  mandate's bounds. **Never run your own timer/scheduled watch that starts a reviewer without a marker** (the LTR-ADA-WATCH
+  `evidence_missing` failure, 2026-10-29: only the wake poster commits packets). To review a package regularly, the operator grants a
+  cadence on its mandate; there is no reviewer-commit or system-action packet route (runner queues are 15-50 min; operator 2026-10-29
+  "we need to make sure the design doesn't increase latency on the round trip decisions").
 - **`desk-wake` / `desk-trigger-wake`** (operator 2026-10-26/27): `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b
   specifies (Sonnet, auto, `desk/decisions`, depth-1 sparse checkout, WAKE PROMPT verbatim; the trigger kind adds the packet-id line). Do
   not read the packet. `could_not_commit` http 403 → tell the operator.

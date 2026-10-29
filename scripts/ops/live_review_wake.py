@@ -51,6 +51,10 @@ WATCHDOG_CFG = ROOT / "scripts" / "research" / "research_watchdog.yaml"
 MARKER = "ltr-wake"
 #: Events that never wake the manager (the hourly routine covers them).
 NO_WAKE_EVENTS = {"daily_floor"}
+#: Deduped on package|event|level only, never by the per-event cooldown: the per-package auto mandate's
+#: review cadence (MD-LTR-ADA-AUTO) is one wake per slot, and its level IS the slot, so a late wake for
+#: one slot must not hold back the next one (latency of the round trip, operator 2026-10-29).
+LEVEL_DEDUPED_EVENTS = {"mandate_cadence"}
 #: At most one wake per package+event in this window, unless the event is
 #: cooldown-exempt in config (giveback, mechanics). INFERRED default: one 2h bar.
 COOLDOWN_MIN = 120
@@ -143,7 +147,8 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
             if _key(e) in seen:
                 continue
             prev = last_by.get(f"{e['order_package_id']}|{name}")
-            if prev and name not in cfg["exempt"] and now - prev < timedelta(minutes=COOLDOWN_MIN):
+            if prev and name not in cfg["exempt"] and name not in LEVEL_DEDUPED_EVENTS \
+                    and now - prev < timedelta(minutes=COOLDOWN_MIN):
                 continue
             g = grouped.setdefault(_key(e), dict(e, accounts=[]))
             if d.get("account_id") not in g["accounts"]:
