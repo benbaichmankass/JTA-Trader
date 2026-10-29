@@ -1,0 +1,22 @@
+{
+  "id": "STATUS-MOVE-OPEN-POSITIONS",
+  "title": "A status change (promotion/demotion) moves the roster but leaves positions already open on the old book: ADA 6734 on bybit_1 (opened 2026-10-24, #21038 merged 2026-10-29 04:42Z). Define and build what happens to open positions on a book move (operator 2026-10-29: 'There shouldn't be three versions of this trade. There should be at most two'), and give strategy-status-guard/a runtime check a positions read, not only the roster",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Measured 07:45Z /api/bot/positions?include_paper=true: the only production leg open on a testing book is 6734 (ada_pullback_2h, bybit_1). Deployed sha 615d38034 contains #21038, so no NEW production-leg entries reach bybit_1. No allowlisted system-action closes a position at market (docs/claude/system-actions.md); 6734 rides to its brackets and takes the same stop as the real-money legs via #21193.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T07:44:29Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 795
+}
