@@ -110,3 +110,12 @@ related:
 practice_precedent: 'M1, M2, M4, M5, M6, M9, M10 (docs/reference/trading-and-model-practice-principles.md): a supervised
   meta-label secondary model over the leg''s own rule, cost-net path labels, CPCV with purge and embargo, every
   configuration counted, graded against take-all and a same-rate random control'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: keep or replace the shipped overlay_td.json configuration that halves size on the 4 TD legs
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money

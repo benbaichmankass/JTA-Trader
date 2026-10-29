@@ -115,3 +115,12 @@ blocked_on:
     spot klines.
   clears_when: 'PI-20261029-XME2GXW7-0003 is done: the spot option exists with a self-test; then move this unit
     to research/queue/ as queued, with --holdout-corpus-dir pointing at the spot corpus build step.'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: keep or demote the reduce-only overlay (config/overlay_policy.yaml) on the 4 TD legs
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
