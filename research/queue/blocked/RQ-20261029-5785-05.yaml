@@ -1,0 +1,126 @@
+id: RQ-20261029-5785-05
+title: 'ML-REAL-MONEY-OVERLAY refine 3/3 -- LARGER HOLDOUT: does the shipped TD artifact confirm on 2017-09..2019-11
+  SPOT candles (the perp archive starts 2019-12, which capped V2''s holdout at n 105)?'
+status: blocked
+cadence: once
+roadmap:
+- L-ML-LIVE
+theme: ml_health
+priority: 1
+kind: experiment
+question: V2's blind holdout was capped at ~7 months and n 105 (82 of them eth_prop) because the Binance USD-M perp
+  archive the harness reads starts 2019-11/2020-01. On Binance SPOT candles for 2017-09-01..2019-11-30 (ETHUSDT,
+  XRPUSDT; SOL not listed), does the exported V2 TD artifact (fit on 2020-07..2026-10) confirm V2's (a)-(d) on the
+  gate legs' trades, with n >= 100?
+why_this_matters: 'Operator 2026-10-29 ~08:38Z via the manager: "Deploy shadow and continue testing to refine".
+  The holdout is the weakest part of the V2 evidence (n at its floor, one leg dominating). Spot is a PROXY for the
+  perp the legs trade: same exchange and symbol, no funding in the price, slightly different basis. The harness
+  still charges the full cost stack including funding. So a CONFIRM on spot is supporting evidence, labelled as
+  a proxy, not a perp measurement.'
+power:
+  expected_n: 2600
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  sd: 0.3
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Gate population = the real-money legs'' OOS trades: RQ-20261024-09a6-01 measured ada 402 + xrp 394 (PB2H,
+    796) and eth_4h 275 + xrp_4h 68 + eth_prop 1085 + sol_prop 403 (TD, 1831) over 2020-07..2026-10. A reduce of
+    20% of trades at 0.5x moves delta by at most 0.1 x |mean R of reduced|, so the margin -0.02 R is about 0.2 x
+    a reduced-set mean of 1 R; per-trade R sd ~1.5 gives a LB half-width of ~0.3 x 1.5 x 1.645 / sqrt(n) ~ 0.02-0.03
+    on n 800-1800 (an ESTIMATE). Below 200 gate trades -> INDETERMINATE, never FAIL. POWER METADATA corrected 2026-10-29
+    after V1''s run, for the queue schema only (no decision-rule change): design one_sample on the per-trade delta
+    vs 0; sd 0.3 is the sd of the DELTA (zero on taken trades, 0.5 x R on reduced), not of R -- consistent with
+    V1''s measured TD LB half-width (0.0114 = 1.645 x sd / sqrt(1830) -> sd ~0.30). At MDE 0.02 R this needs n ~1,400-1,800:
+    the pooled n and TD (1,830) clear it, PB2H alone (796) does not.'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
+decision_rule:
+  id: RULE-ML-OVERLAY-SPOT-HOLDOUT-V1
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: scripts/research/ml_overlay_noninferior.py with --holdout-start 2017-09-01 --holdout-end 2019-11-30
+    23:59 over a holdout corpus built from Binance SPOT klines (needs the fetcher option below), scored by the exported
+    PRIMARY TD artifact exactly as V2's holdout was; random control permuted within 3 calendar groups.
+  rule: CONFIRMS iff (a) LB > -0.02 R, (b) maxDD and CVaR5 not worse, (c) delta > the 90th percentile of 2000 same-rate
+    random reduces, (d) reduce rate >= 5% and the reduced mean R <= the take-all mean, on n >= 100 gate trades;
+    INDETERMINATE below 100; FAILS otherwise. A FAILS is a demotion input for the TD overlay (to the manager, with
+    the Tier-3 revert), labelled as a spot proxy.
+  what_it_does_not_do: Changes no config. Labelled a spot proxy throughout; not a perp measurement.
+intervention_controls:
+  not_applicable: an entry-size meta-label, not an in-trade action; the matched random control is check (c) and
+    the take-all baseline is the hold-equivalent.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the real-money book''s losing-trade tail; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data.
+  basis: 13 harness legs (~4 min for 6 in RQ-20261024-09a6-01) plus 14 CPCV evaluations (estimate).
+run:
+  command:
+  - python3
+  - scripts/research/ml_overlay_noninferior.py
+  - --family
+  - PB2H:ada_pullback_2h+,xrp_pullback_2h+,eth_pullback_2h,sol_pullback_2h,avax_pullback_2h
+  - --family
+  - TD:trend_donchian_eth_4h+,trend_donchian_xrp_4h+,trend_donchian_eth_prop+,trend_donchian_sol_prop+,trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,trend_donchian_xrp_adx25
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --days
+  - '2330'
+  - --reference-corpus
+  - comms/research/RQ-20261024-09a6-01/40143286436/first_passage_paths_4b_c03_b
+  - --parity-basis
+  - trade
+  - --holdout-start
+  - '2017-09-01'
+  - --holdout-end
+  - 2019-11-30 23:59
+  - --holdout-days
+  - '3500'
+  - --holdout-corpus-dir
+  - '{out_dir}/spot_holdout_corpus'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261029-5785-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261029-5785-02
+- RQ-20261029-5785-01
+- scripts/research/ml_overlay_noninferior.py
+practice_precedent: 'M1, M2, M4, M5, M6, M9, M10 (docs/reference/trading-and-model-practice-principles.md): a supervised
+  meta-label secondary model over the leg''s own rule, cost-net path labels, CPCV with purge and embargo, every
+  configuration counted, graded against take-all and a same-rate random control'
+blocked_on:
+- kind: work_item
+  ref: PI-20261029-XME2GXW7-0003
+  what: scripts/ops/fetch_backtest_candles.py --source binance_vision reads only data/futures/um; the unit needs
+    a spot market option plumbed through path_metric_giveback.run_leg_paths to build its holdout corpus from Binance
+    spot klines.
+  clears_when: 'PI-20261029-XME2GXW7-0003 is done: the spot option exists with a self-test; then move this unit
+    to research/queue/ as queued, with --holdout-corpus-dir pointing at the spot corpus build step.'
+ml_consumer:
+  consumer: src/runtime/overlay_features.py
+  decision: keep or demote the reduce-only overlay (config/overlay_policy.yaml) on the 4 TD legs
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
