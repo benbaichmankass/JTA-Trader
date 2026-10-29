@@ -1,0 +1,115 @@
+# Hand-authored 2026-10-28 by lane ACTIVE-MGMT-REAL-MONEY-PLAN (Tier 1), dispatched by Manager Session session_01AFoLuJi1vLTnYv9LbP6539.
+# Decision rule registered BEFORE any arm of this unit was run on this window. Plan: docs/plans/real-money-active-mgmt-plan-2026-10-29.md.
+cadence: once
+compute: cpu_light
+decision_rule:
+  id: RULE-RQ20261028a7c305-PULLIN-COMPLIANCE
+  registered_at: '2026-10-28'
+  registered_before_run: true
+  rule: INDETERMINATE IF n(S3) < 39 or IF R1 is byte-identical to S3 (the lever never fired). R1 PASSES iff net_r(R1) >
+    net_r(S3) (the harness grades exactly this with --delta-r 0 --delta-r-per-trade 0) AND folds where net_r(R1) >= net_r(S3)
+    >= 5 of 6 AND maxDD(R1) <= maxDD(S3) x 1.35. TP-doctrine compliance bar (bea9 precedent). PASS -> doctrine read (tp_share
+    < 0.10, lever not fired or worse capital efficiency -> forwarded, not a declare); otherwise evidence for a Tier-3 declare
+    once a live stall_pull_in producer exists (row RM-AM-TP-PULLIN-PRODUCER). Thresholds are not changed after any result.
+    A FAIL is 'first test failed -> variants queued', never 'dead'.
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on xrp_pullback_2h, window 2020-07-01 .. 2026-10-26
+    23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the harness resolves per
+    venue (recorded per arm as cost_stack). BASELINE S3 = the leg as declared with the GEOM-B1 static target at its declared
+    3R (--tp-target-r=3), isolating the retarget. R1 = S3 + stall_pull_in after 10 stalled bars (the cell that passed on
+    xrp_4h, fixed now, not tuned here). Reported, not graded: tp_share, lever_fired, net_r_per_capital_day.'
+  what_it_does_not_do: 'Edits no config, places no order. No live producer for stall_pull_in exists yet, so a PASS is evidence,
+    not a declarable lever. Not a § 5b graduation (no matched-random comparator): it changes the declared Stage-0 book itself,
+    which the exit-refinement gate governs.'
+id: RQ-20261028-a7c3-05
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+power:
+  alpha: 0.05
+  basis: 'Floor: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 baseline trades. MEASURED: xrp_pullback_2h n 394 over 2020-07..2026-10
+    (RQ-20261016-009 n(A)).'
+  design: one_sample
+  effect_units: sd
+  expected_n: 394
+  feasibility:
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+practice_precedent: T9 [S9, S25] (targets are justified for mean-reversion; on trend legs the TP doctrine requires measuring
+  the cost, not assuming it) + T3 (net of the full cost stack); binding source docs/ARCHITECTURE-CANONICAL.md § TP doctrine.
+  Principles in docs/reference/trading-and-model-practice-principles.md.
+priority: 1
+question: xrp_pullback_2h (bybit_2, bybit_portfolio, bybit_1) has never been tested with a TP that pulls in when the move
+  stalls; the one measured pull-in (stall_pull_in, trend_donchian_xrp_4h) passed. Does the same cell, fixed before this
+  run, hold on the pullback unit?
+related:
+- RM-ACTIVE-MGMT-MILESTONE
+- RM-AM-TP-PULLIN-PRODUCER
+- RQ-20261019-017
+- docs/plans/real-money-active-mgmt-plan-2026-10-29.md
+- docs/plans/desk-v1-production-plan-2026-10-29.md
+roadmap:
+- L-ATM
+- M20
+routing:
+  basis: Runner. One harness invocation per arm; the bea9 precedent took minutes per arm incl. the fetch.
+  est_minutes: 25
+  needs_gpu: false
+  needs_trainer_resident_data: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --arm
+  - S3=--tp-target-r=3
+  - --arm
+  - R1=--tp-target-r=3;--tp-retarget-mode=stall_pull_in;--tp-retarget-stall-bars=10
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-26 23:59
+  - --grade
+  - replace
+  - --baseline
+  - S3
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261028-a7c3-05
+  timeout_minutes: 120
+status: queued
+theme: live_strategy
+title: 'TP pull-in, real money: does a stall-pull-in TP retarget (10 stalled bars) on xrp_pullback_2h stay no worse than
+  its static 3R target in 5 of 6 folds, net of cost?'
+value:
+  basis: 'stand-in: TP-doctrine compliance of a real-money leg''s bracket (milestone: active management on every real-money
+    leg); not a P&L measurement.'
+  bucket: own_losses
+  confidence: 0.3
+  usd_at_stake_per_month: 300
+why_this_matters: 'Operator 2026-10-28 ~21:06Z: active management is any movement of either bracket triggered by live-market
+  developments, not only tightening; TP pull-in is unpriced on this leg (coverage matrix tp_retarget = pending) while the
+  only measured pull-in, stall_pull_in on trend_donchian_xrp_4h (RQ-20261019-017, R1 16.55 vs 14.30 R, n 68), PASSED. Maps
+  to DESK plan § 5b class `move_tp pull in` (PR #21023); this is a Stage-0 declared-rule test on the leg''s own config-exact
+  history, not a live-intervention graduation.'
