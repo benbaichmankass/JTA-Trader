@@ -9,11 +9,13 @@
   "ceiling_usd": 12,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    21256
+  ],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~11:00Z verbatim: \"We also need a mechanism for grading both entry brackets and active managment against different counterfactuals, e.g., we need to comeback this trade to see how much better/worse it would have been using the original brackets, more/less active managment, etc.\". Build on, do not duplicate: scripts/research/live_review_counterfactual.py (LTR-5-GRADING: replays applied/recommended review actions, 0.25R vs 0.5R), live_review_outcomes.py (option pricing from a leg corpus), exit_lever_ablation.py (lever arms), DESK-9-GRADING, LTR-COUNTERFACTUAL-PRICING (prices options AT each review: the ex-ante half; this row is the ex-post half), BOOK-SIM-REAL-SIZER (book $ layer, on PR #21169), AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH (replay join defect to fix first). FIRST WORKED EXAMPLE: ADA pkg-465a5d7d27644027 (bybit_2 6735 stopped 0.2016 at 10:47:53Z after operator moves to BE ~06:30Z and +1R 07:35Z; peak 2.27R; original stop atr 1.5x, TP 0.18739): grade actual vs original brackets, vs BE-only, vs +1R-only, vs the reviewers' holds, vs no management. Done = the ADA record committed with every arm in $ and R plus a per-close job that writes one record for each newly closed package.",
+  "note": "11:37Z first record (ADA pkg-465a5d7d27644027, net of fee+slip+funding, replay baseline = actual management): ACTUAL venue +0.89R (bybit_2 +$2.66, +1.39%; portfolio +$820). Replayed actual +0.82R. Original brackets untouched: +0.97R UNRESOLVED (still open at data end, SL 0.2109/TP never hit). BE-only = original (BE changed nothing); +1R-only = actual (the +1R lock set the exit). Rule BE@+1R -0.14R (stopped 10-26). ATR trails 1.5x/2x/3x lose (-0.26..-0.96R), 4x unresolved. Sibling exit (bybit_1 flatten 08:24Z) +1.44R = best realised arm (+0.62R vs actual). Alt brackets: SL 1.0x/TP 2R +1.83R. Random control mean -0.01R, P(random>=baseline) 0.24. Operator action times ESTIMATED. PR #21256 Tier 1 self-land; per-close runner .github/workflows/counterfactual-grade-closed.yml hourly :17 after merge. Also fixes AUD-20261028-LTR-CLOSE-REPLAY-MISMATCH (applied closes priced; initial_stop from exit_plan, not the current package SL).",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T11:00:45Z",
+  "updated_at": "2026-10-29T11:38:24Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-LADDER"
