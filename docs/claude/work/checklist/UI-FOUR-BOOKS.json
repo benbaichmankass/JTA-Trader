@@ -2,7 +2,7 @@
   "id": "UI-FOUR-BOOKS",
   "title": "Dashboard funding axis becomes four books everywhere: Live money / Prop / Paper portfolio / Paper testing (testing accounts were in no Overview tab)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01AFoLuNH6pzoFQQXVnwx6VY",
   "model": "claude-sonnet-5-5",
@@ -11,12 +11,21 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~15:15Z verbatim: \"let's also organize it this way. Live money accounts, prop accounts, paper portfolio accounts, paper testing accounts, and then we can really see the whole thing through.\" Measured 15:10Z: Overview Paper tab = portfolio mirrors only (0 open) while 8 testing trades open on bybit_1/alpaca_paper/ib_paper. Lane in ict-trader-dashboard; deploys automatically (UI). Also unblocks the LIVE-NUMBERS-STREAMING browser check.",
+  "note": "2026-10-29: ict-trader-dashboard#232 merged; live bundle at 16:07Z contains Live money / Prop accounts / Paper portfolio / Paper testing labels. Remaining observation: operator browser view. Lane archived.",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T15:16:43Z",
+  "updated_at": "2026-10-29T16:08:18Z",
   "updated_by": "Manager Session 2026-10-29c",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "the four books render with correct accounts in each",
+    "how_to_check": "operator loads the dashboard and checks the four tabs",
+    "due_by": "2026-10-30"
+  },
+  "writeback": {
+    "roadmap": "none: UI",
+    "arch": "none: SPA-only grouping"
+  },
   "_seq": 822
 }
