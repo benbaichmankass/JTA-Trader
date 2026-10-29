@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261029-LRP-04187D59",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:splg_trend_long_1d:lost_bar",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `splg_trend_long_1d` — lost_bar ×4 (paper roster) in window 2026-10-22T06:45:00+00:00..2026-10-29T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-29.json. Examples: [{\"class\": \"lost_bar\", \"bar\": \"2026-10-23T04:00:00+00:00\", \"detail\": \"26 traded 15m candles, 0 live evals\"}, {\"class\": \"lost_bar\", \"bar\": \"2026-10-26T04:00:00+00:00\", \"detail\": \"25 traded 15m candles, 0 live evals\"}, {\"class\": \"lost_bar\", \"bar\": \"2026-10-27T04:00:00+00:00\", \"detail\": \"25 traded 15m candles, 0 live evals\"}]"
+}
