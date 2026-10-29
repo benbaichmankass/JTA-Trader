@@ -152,9 +152,12 @@ def find_candles(symbol: str, timeframe: str, repo: Path = REPO, widest_span: bo
 
     ``widest_span`` also reads the ``data/<SYM>_<tf>.csv`` files (full-history pulls the filename-days
     pattern does not match) and ranks every candidate by the days it actually covers."""
+    # provenance: cpath — the chosen file is printed on every run as res["candles"]; widest span wins
     hits = glob.glob(str(repo / "comms" / "research" / "*" / "*" / "candles" / f"{symbol}_{timeframe}_*d.csv"))
     if widest_span:
+        # provenance: cpath — same selection, reported as res["candles"]
         hits += glob.glob(str(repo / "comms" / "research" / "*" / "*" / "data" / f"{symbol}_{timeframe}.csv"))
+        # provenance: cpath — same selection, reported as res["candles"]
         return max(hits, key=lambda p: (_span_days(p), p)) if hits else None
 
     def days(p: str) -> int:
