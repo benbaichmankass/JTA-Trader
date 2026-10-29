@@ -184,7 +184,8 @@ def run(trades, reps, htrades, hreps, out: Path) -> dict:
         try:
             rp = roster_risk_pcts(legs)
         except Exception as exc:  # noqa: BLE001  # allow-silent: the % view is REPORTED only; its absence is stated
-            rp, res.setdefault("pnl_view_error", str(exc)[:200])
+            rp = {}
+            res.setdefault("pnl_view_error", str(exc)[:200])
         sel = np.array([fam_of.get(t["leg"]) == f for t in trades])
         hsel = np.array([fam_of.get(t["leg"]) == f for t in htrades]) if htrades else np.zeros(0, dtype=bool)
         main = grade_family(trades, ev, sel, legs, seed_base=SEED0 + 1000 * fi, risk_pcts=rp)
