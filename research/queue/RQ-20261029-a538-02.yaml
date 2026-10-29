@@ -1,0 +1,114 @@
+id: RQ-20261029-a538-02
+title: 'Weekly LONG-only Donchian on twelve perps (daily bars resampled): does a 10- or 20-week channel clear the fee+slippage+funding stack?'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+theme: timeframes
+priority: 2
+kind: experiment
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from comparable harness_stage0 runs of 2026-10-18..29 scaled by cells x arms x bars; the first run replaces it.
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; these symbols/bars are not in the metis-market-data
+    allowlist, so no idle published-data backend can hold it; CPU only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+question: On Binance USD-M daily candles resampled to weekly for the twelve perps over 2020-06-01..2026-10-25 (--long-only), does donchian 10
+  (W10) or 20 (W20) pass the pooled Stage-0 rule AND beat the 5-week channel (W5) by >= 0.10 R per trade?
+why_this_matters: 'Programme 07 holds weekly position trades of weeks as the frontier end of the horizon. Weekly n is small (about 330 bars per
+  symbol), so the pooled floor is 39 and a short n returns INDETERMINATE with the shortfall named instead of a fabricated verdict. This is a SCOPING-plus-lead
+  measurement: what does the weekly horizon cost and earn on the basket.'
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo standing floor) = the pooled floor 39; expected_n is an ESTIMATE from comparable
+    runs, NOT a measurement for these arms; below the floor the unit grades indeterminate, never FAIL. The 0.10 R/trade delta over the baseline
+    is a materiality bar, so a PASS is a LEAD.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered rule, selection-deflated across the arms
+  tried'
+intervention_controls:
+  not_applicable: a Stage-0 parameter/horizon arm comparison through the harness, not an in-trade action or active-management intervention
+decision_rule:
+  id: RULE-RQ20261029A53802
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'harness_stage0.py --family trend --timeframe 1w on 12 perps, 2020-06-01..2026-10-25; arms fixed now: W5=--long-only;--donchian=5;
+    W10=--long-only;--donchian=10; W20=--long-only;--donchian=20; baseline W5. Net of the harness venue-aware fee + slippage + funding stack (execution_costs.resolve_cost_policy).'
+  rule: 'A candidate (W10, W20) PASSES iff it passes the pooled Stage-0 rule (pooled n >= 39, pooled net_r > 0, >= 4 of 6 calendar folds net positive,
+    >= half of the powered cells pass) AND beats W5 pooled net R/trade by >= 0.10. PASS IF one or more pass: the best by pooled net R is named
+    and the follow-up is ONE confirmation unit on a symbol-disjoint basket or later window (a pass on one window is a lead), never a roster edit.
+    FAIL IF every candidate fails with pooled n >= 39: this arm grid is closed on this basket and window; the horizon/family is NOT retired. INDETERMINATE
+    otherwise; cells under the floor are named, the floor is never lowered. Thresholds and arms are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or risk; is not a promotion case; Binance USD-M candles are a PROXY for Bybit linear; each R is
+    net of the harness's own cost stack with a directionless funding magnitude (execution_costs P1).
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  bucket: frontier
+  basis: stand-in planning weight for the programme node this question belongs to; an estimate, not a measurement.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT,BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1w
+  - --fetch-bar
+  - 1d
+  - --days
+  - '2500'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-25'
+  - --param
+  - trail_mult=5.0
+  - --arm
+  - W5=--long-only;--donchian=5
+  - --arm
+  - W10=--long-only;--donchian=10
+  - --arm
+  - W20=--long-only;--donchian=20
+  - --baseline
+  - W5
+  - --delta-r-per-trade
+  - '0.1'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '20'
+  - --pooled-n-floor
+  - '39'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261029A53802
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261029-a538-02
+related:
+- RQ-20261026-a142-02
+- RQ-20261029-84ef-02
