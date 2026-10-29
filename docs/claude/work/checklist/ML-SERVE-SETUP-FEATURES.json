@@ -5,7 +5,7 @@
   "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuM3NoUTHiuQ17qwhdZ",
-  "model": "opus",
+  "model": "claude-opus-5-5",
   "ceiling_usd": 12,
   "spend_usd": 7,
   "tier": 2,
@@ -13,7 +13,7 @@
     21176
   ],
   "blocked_on": [],
-  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 4 B2. WHY MEASURED: src/runtime/advisory_sizing.py::_feature_row_from_pkg emits 6 fields (strategy,symbol,direction,confidence,setup_type,killzone); p2pool manifest needs 10 (rolling_log_return_vol, log_return, lags, vol_bucket, momentum, hour, dow, direction, symbol). Tier-2 held PR; operator OK Fri 10-30 before deploy.  [21:25Z] vol_bucket serves dead live on the yz heads (PI-20260927-3WM5HADW-0005, ml-review 2026-10-28 C5); p2pool uses vol_bucket, so parity must show it present+non-default+equal before P1 shadow.  [07:11Z] PR #21176 (Tier 2, held) open: serve row 10/10 parity on 982 rows / 2,500 recorded ADA 2h bars; I6 guard test; I7 fixed (conviction apply reads advisory-only blend). P1 must be RETRAINED on code with this PR to carry serve_spec. Follow-ups PI-20261029-Q17QWHDZ-0001..3 (#21174).  [09:50Z] #21176 MERGED 09:47Z (merged != deployed). Closes when: deployed to ict-trader-live AND a live order package on a trend_donchian 1h leg carries meta.setup_features read_state=ok AND (after p2pool is retrained on code with #21176 and is at shadow) its shadow_predictions row shows all 10 features present/non-default with setup_rows state ok.",
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 4 B2. WHY MEASURED: src/runtime/advisory_sizing.py::_feature_row_from_pkg emits 6 fields (strategy,symbol,direction,confidence,setup_type,killzone); p2pool manifest needs 10 (rolling_log_return_vol, log_return, lags, vol_bucket, momentum, hour, dow, direction, symbol). Tier-2 held PR; operator OK Fri 10-30 before deploy.  [21:25Z] vol_bucket serves dead live on the yz heads (PI-20260927-3WM5HADW-0005, ml-review 2026-10-28 C5); p2pool uses vol_bucket, so parity must show it present+non-default+equal before P1 shadow.  [07:11Z] PR #21176 (Tier 2, held) open: serve row 10/10 parity on 982 rows / 2,500 recorded ADA 2h bars; I6 guard test; I7 fixed (conviction apply reads advisory-only blend). P1 must be RETRAINED on code with this PR to carry serve_spec. Follow-ups PI-20261029-Q17QWHDZ-0001..3 (#21174).  [09:50Z] #21176 MERGED 09:47Z (merged != deployed). Closes when: deployed to ict-trader-live AND a live order package on a trend_donchian 1h leg carries meta.setup_features read_state=ok AND (after p2pool is retrained on code with #21176 and is at shadow) its shadow_predictions row shows all 10 features present/non-default with setup_rows state ok.  || Operator ~09:50Z popup verbatim: \"Deploy now (Recommended)\". #21176 MERGED c8da6d7d; trader modules import cleanly on main c8da6d7d (manager local check); DEPLOYED via #21230: runtime-config git_sha c8da6d7d9, verdict CURRENT, ticking, observed 09:54:44Z. Closing observation: an advisory serve row on a live package carrying all 10 setup_candidates fields (diag relay).",
   "updated_at": "2026-10-29T10:06:28Z",
   "updated_by": "session_01AFoLuM3NoUTHiuQ17qwhdZ",
   "roadmap": [

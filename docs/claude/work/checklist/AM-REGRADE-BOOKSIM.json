@@ -1,0 +1,24 @@
+{
+  "id": "AM-REGRADE-BOOKSIM",
+  "title": "Re-grade every in-trade action class (tighten_sl, move_tp, partial_close, close, widen_sl) under RULE-AM-RISK-ADJUSTED-V1 on the book-level $ simulation once BOOK-SIM-REAL-SIZER lands; each class that passes graduates (one PR per class) with no popup, operator notified",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [
+    "BOOK-SIM-REAL-SIZER"
+  ],
+  "note": "Operator 2026-10-29 ~13:00Z verbatim: \"No, I don't want to wait for the book simulator - we can que up another retest once it's ready\". Prior result (per-trade R screen, RQ-20261029-1f39-02, record comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json on #21169; DESK-LIFECYCLE-S0 n=473 desk-entry and n=465 random-entry pairs): no class passes; all stay advice-only. Graduation authority already given by the operator 12:34Z ('Re-grade, then auto-unlock').",
+  "priority_rank": 3,
+  "updated_at": "2026-10-29T12:58:35Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 817
+}

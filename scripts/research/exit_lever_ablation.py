@@ -120,6 +120,13 @@ flags, never defaults chosen here:
     ``scripts/ops/mandate_resolver.py`` clause ``R-HOLDOUT`` reads from a Stage-0 record
     (``source_run`` is null here: whoever writes the record points it at the committed
     ``verdict.json``).
+  * ``risk_adjusted`` (AM-RISK-ADJUSTED-RULE, operator decision 2026-10-29: *"Small R cost for big risk cut"*) --
+    the named rule ``RULE-AM-RISK-ADJUSTED-V1`` for an active-management action class, graded on the arms' whole
+    BOOKS (``<out>/arms/<label>__trades.jsonl``) by ``am_risk_adjusted.grade_risk_adjusted``: R1 R given up per
+    baseline trade <= ``--max-r-cost-per-trade``; R2 book maxDD cut >= ``--min-dd-cut-pct`` OR weekly-book CVaR5
+    cut >= ``--min-cvar5-cut-pct``; R3 >= ``--fold-majority`` folds hold (on this run's calendar edges); R4 beats
+    each ``--vs-control`` matched random-intervention arm (none declared -> indeterminate ``no_random_control``).
+    Unset thresholds take V1's values; the clause text lives in ``am_risk_adjusted.py`` and is not restated here.
 Honesty notes. ``maxDD`` and ``net_total_r`` are read from the harness's own
 ``--json`` summary, never re-derived. ``delta_r`` is a MATERIALITY bar in R
 over the whole window (the unit says why that value), not a significance test;
@@ -144,7 +151,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
 VERDICTS = ("pass", "fail", "indeterminate")
-GRADES = ("parity", "sweep", "stage0", "replace", "holdout")
+GRADES = ("parity", "sweep", "stage0", "replace", "holdout", "risk_adjusted")
 N_FOLDS = 4
 
 
@@ -751,6 +758,10 @@ def main(argv: list[str] | None = None) -> int:
                          "substitute it for the literal token @trigger_file_random (the gate's null control)")
     ap.add_argument("--vs-control", action="append", default=[], metavar="CAND=CTRL",
                     help="replace: CAND must also beat arm CTRL on net R and in >= --fold-majority folds (repeatable)")
+    ap.add_argument("--max-r-cost-per-trade", type=float, default=None,
+                    help="risk_adjusted: R1 bar (default: RULE-AM-RISK-ADJUSTED-V1's)")
+    ap.add_argument("--min-dd-cut-pct", type=float, default=None, help="risk_adjusted: R2 maxDD-cut bar (default V1's)")
+    ap.add_argument("--min-cvar5-cut-pct", type=float, default=None, help="risk_adjusted: R2 CVaR5-cut bar (default V1's)")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -911,6 +922,27 @@ def main(argv: list[str] | None = None) -> int:
                           delta_r_per_trade=a.delta_r_per_trade, vs_controls=vs_controls)
     elif a.grade == "holdout":
         g = _run_holdout(a, base, specs, labels, arms_dir, edges, arms)
+    elif a.grade == "risk_adjusted":
+        import am_risk_adjusted as am
+        rc: dict[str, list[str]] = {}
+        for spec in a.vs_control:
+            cand, _, ctl = spec.partition("=")
+            if cand not in labels or ctl not in labels:
+                print(f"ERROR: --vs-control {spec!r} names an undeclared arm", file=sys.stderr)
+                return 2
+            rc.setdefault(cand, []).append(ctl)
+        ctl_labels = {c for cs in rc.values() for c in cs}
+        cands = [lab for lab in labels if lab != a.baseline and lab not in ctl_labels]
+        books = {lab: am.load_trades(arms_dir / f"{lab}__trades.jsonl") for lab in labels}
+        params = {"folds": a.folds, "fold_majority": a.fold_majority, "n_floor": a.n_floor,
+                  **{k: v for k, v in (("max_r_cost_per_trade", a.max_r_cost_per_trade),
+                                       ("min_dd_cut_pct", a.min_dd_cut_pct),
+                                       ("min_cvar5_cut_pct", a.min_cvar5_cut_pct)) if v is not None}}
+        g = am.grade_risk_adjusted(books, baseline=a.baseline, candidates=cands, controls=rc, params=params,
+                                   edges=[e.to_pydatetime() for e in edges])
+        if control is not None and not control["ok"]:
+            g = {**g, "verdict": "indeterminate", "label": "control_failed",
+                 "why": "the baseline arm does not reproduce the committed record: the corpus differs"}
     else:
         cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
         g = grade_sweep(arms, baseline=a.baseline, candidates=cands, delta_r=a.delta_r,

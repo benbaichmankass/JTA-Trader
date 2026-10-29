@@ -133,6 +133,9 @@ _account_class_wire = account_class_wire
 # many consumers poll. Env-tunable via POSITIONS_CACHE_TTL_S (read at call time
 # so the live VM can retune without a redeploy).
 _POSITIONS_TTL_DEFAULT_S = 30.0
+# Bybit is one cheap REST call per account; a live uPnL needs it fresh. IB / other
+# brokers keep the long TTL above (gateway pacing). LIVE-NUMBERS-STREAMING.
+_POSITIONS_TTL_FAST_S = 1.5
 # On a broker read FAILURE, keep serving the last GOOD position list for up to
 # this window instead of dropping straight to "unavailable". This (a) stops a
 # transient IB gateway wedge / Bybit blip from blanking the broker-truth uPnL,
@@ -145,16 +148,21 @@ _BROKER_POSITIONS_CACHE: dict[str, tuple[float, Any]] = {}
 _BROKER_POSITIONS_LAST_GOOD: dict[str, tuple[float, Any]] = {}
 
 
-def _positions_ttl_s() -> float:
+def _positions_ttl_s(account_id: str | None = None) -> float:
     """Broker-positions cache TTL (seconds), env-tunable via
     ``POSITIONS_CACHE_TTL_S``. Falls back to the 30s default on unset/garbage/
     non-positive so a bad value can never disable caching (which would restore
     the gateway-hammering it exists to prevent)."""
+    default = (
+        _POSITIONS_TTL_FAST_S
+        if account_id and str(account_id).lower().startswith("bybit")
+        else _POSITIONS_TTL_DEFAULT_S
+    )
     try:
         v = float(os.environ.get("POSITIONS_CACHE_TTL_S", ""))
-        return v if v > 0 else _POSITIONS_TTL_DEFAULT_S
+        return v if v > 0 else default
     except (TypeError, ValueError):
-        return _POSITIONS_TTL_DEFAULT_S
+        return default
 
 
 def _positions_stale_ok_s() -> float:
@@ -182,7 +190,7 @@ def _broker_positions_for(account_id: str) -> Any:
     than once per TTL.
     """
     now = time.monotonic()
-    ttl = _positions_ttl_s()
+    ttl = _positions_ttl_s(account_id)
     cached = _BROKER_POSITIONS_CACHE.get(account_id)
     if cached is not None and (now - cached[0]) < ttl:
         return cached[1]
@@ -892,7 +900,7 @@ async def get_positions(
     return rows
 
 
-_POSITIONS_SWR = SWRCache(name="positions", fresh_s=5.0, stale_s=120.0)
+_POSITIONS_SWR = SWRCache(name="positions", fresh_s=1.0, stale_s=120.0)
 
 
 async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:

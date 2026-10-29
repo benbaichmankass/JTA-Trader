@@ -42,7 +42,9 @@ from src.web.api.routers.dashboard import get_positions
 
 router = APIRouter(tags=["market-ws"])
 
-_POLL_SECONDS = 2.0
+# 1 s (was 2 s): positions are a snapshot read, candles are TTL-gated below, so a
+# faster tick costs only the cached positions read (LIVE-NUMBERS-STREAMING).
+_POLL_SECONDS = 1.0
 _CRYPTO_CANDLE_TTL = 2.0
 _OTHER_CANDLE_TTL = 8.0  # futures/IBKR — respect reqHistoricalData pacing limits
 _DEFAULT_LIMIT = 200
@@ -68,6 +70,9 @@ async def market_ws(ws: WebSocket) -> None:
         limit = max(10, min(1000, int(qp.get("limit") or _DEFAULT_LIMIT)))
     except (TypeError, ValueError):
         limit = _DEFAULT_LIMIT
+    # scope=all: the positions frame carries the WHOLE book, not only the
+    # subscribed symbols, so a client can render live count + uPnL for every row.
+    whole_book = (qp.get("scope") or "").lower() == "all"
     include_paper = (qp.get("include_paper") or "true").lower() not in ("0", "false", "no")
 
     loop = asyncio.get_running_loop()
@@ -102,12 +107,16 @@ async def market_ws(ws: WebSocket) -> None:
                 positions = await get_positions(include_paper=include_paper, include_demo=False)
             except Exception:  # allow-silent: a positions read hiccup must not kill the live socket — push an empty positions frame this tick and retry next loop
                 positions = []
-            if symbols:
+            if symbols and not whole_book:
                 positions = [
                     p for p in positions
                     if str(p.get("symbol", "")).upper() in symbols
                 ]
-            await ws.send_json({"type": "positions", "positions": positions})
+            await ws.send_json({
+                "type": "positions",
+                "scope": "all" if whole_book or not symbols else "symbols",
+                "positions": positions,
+            })
 
             await asyncio.sleep(_POLL_SECONDS)
     except WebSocketDisconnect:
