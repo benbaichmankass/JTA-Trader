@@ -1408,6 +1408,8 @@ mandates:
       live_review_dispatch.py --ref to live_review_apply.py --mandate MD-LTR-ADA-AUTO.
     review_cadence_minutes: 120
     expires_on_event: order_package_closed
+    expired_at: '2026-10-29T10:47:53Z'
+    expired_reason: order_package_closed -- pkg-465a5d7d27644027 closed (bybit_2 trade 6735 stopped at 0.2016 at 10:47:53Z; mirror 6736 closed 10:51:04Z), recorded per on_expiry by lane REMOVE-PER-BAR-CAP at the manager's direction
     on_expiry: >-
       Nothing to disarm: a closed package is refused by the apply and gets no
       cadence. The closing session records expired_at here and closes row

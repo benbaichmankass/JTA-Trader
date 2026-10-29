@@ -50,10 +50,13 @@ def test_the_committed_grant_is_the_operators_words_one_package_every_action():
     assert not m.get("autoland")        # landing stays a human merge
 
 
-def test_the_committed_grant_scopes_only_the_ada_package():
-    assert am.exception_for({"order_package_id": ADA, "recommendation": {"action": "close"}}, REAL) == "MD-LTR-ADA-AUTO"
+def test_the_committed_grant_expired_with_its_package_and_scopes_nothing():
+    """pkg-465a5d7d27644027 closed 2026-10-29T10:47:53Z; the entry carries expired_at per its on_expiry clause."""
+    m = next(x for x in REAL["mandates"] if x.get("id") == "MD-LTR-ADA-AUTO")
+    assert m["expired_at"] == "2026-10-29T10:47:53Z" and str(m["expired_reason"]).startswith("order_package_closed")
+    assert am.exception_for({"order_package_id": ADA, "recommendation": {"action": "close"}}, REAL) is None
     assert am.exception_for({"order_package_id": "pkg-other", "recommendation": {"action": "close"}}, REAL) is None
-    assert am.cadence(REAL) == {ADA: {"mandate": "MD-LTR-ADA-AUTO", "minutes": 120}}
+    assert am.cadence(REAL) == {}
 
 
 # ------------------------------------------------------------------ the reader
