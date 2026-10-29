@@ -41,7 +41,7 @@ This lane ranks; it fixes nothing. Each HIGH or MEDIUM gap has a closing row. Ga
 
 | # | Gap | Class | Blocks | Closing row(s) |
 |---|---|---|---|---|
-| 1 | **Prop survival gate is a form check on live prop money.** `scripts/ci/check_prop_roster_gate.py::record_problems` checks only that the fields exist and `verdict == "pass"`. It never thresholds `p_breach`. The rule `RULE-P5-GATE-BRK-PER-LEG` ran `--p-floor 0.0` (`research/queue/RQ-20261016-026.yaml:47`). The `trend_donchian_eth_prop` survival record has `p_breach 0.934` and passes. Its Stage-0 record flipped from **+9.32R (n=163) to −0.25R (n=165)** at the 11.0 bps re-cost on 10-28 (`rebaseline_history`); the prop gate was never re-run. The leg is live on breakout_2, tradeify_1 and velotrade_1, and its grandfather exemption lapses **2026-11-07**. | a, c | **H**, 9-day deadline, real prop money | **NEW `PROP-GATE-RECOST-AND-FLOOR`** (t3); related `SOL-PROP-GATE-FIX`, `PROP-GATE-ADA-XRP`, `PROP-GATE-PARITY` |
+| 1 | **Prop survival gate is a form check on live prop money.** `scripts/ci/check_prop_roster_gate.py::record_problems` checks only that the fields exist and `verdict == "pass"`. It never thresholds `p_breach`. The rule `RULE-P5-GATE-BRK-PER-LEG` ran `--p-floor 0.0` (`research/queue/RQ-20261016-026.yaml:47`). The `trend_donchian_eth_prop` survival record has `p_breach 0.934` and passes. Its Stage-0 record flipped from **+9.32R (n=163) to −0.25R (n=165)** at the 11.0 bps re-cost on 10-28 (`rebaseline_history`); the prop gate was never re-run. The leg is live on breakout_2, tradeify_1 and velotrade_1, and its grandfather exemption lapses **2026-11-07**. | a, c | **H**, 9-day deadline, real prop money | `PROP-GATE-RERUN-20261029` (manager lane, in flight: re-cost + registered floor); **NEW `PROP-GATE-RECOST-AND-FLOOR`** (t1, guard enforcement, blocked on it); related `SOL-PROP-GATE-FIX`, `PROP-GATE-ADA-XRP`, `PROP-GATE-PARITY` |
 | 2 | **Demotion cannot fire on any real-money leg.** `MD-DEMOTE-S2-S1` needs the last **40** live closed trades. At each leg's Stage-0 trade rate that takes about 13 weeks (eth_prop) to 261 weeks (iaum). The 10-28 r4 gate returned **abstain_thin on 6 of 6** production legs. On those rows measured USD is negative on 5 of 6 legs, net about −$62. No mandate firing has ever been recorded (`comms/mandate_firings/` absent). The promotion soak snapshot is 25 days old, against the resolver's 7-day max age. | d | **H**, no de-risking path on real money | **NEW `STAGE2-OFFLINE-DEMOTION-SIGNAL`** (t3); **NEW `MANDATE-EVIDENCE-SNAPSHOT-CRON`** (t1) |
 | 3 | **Every ladder and desk gate is mean-R with no risk or $ term, the ML defect system-wide.** Stage-0 `RULE-D1-STAGE0-NET-OF-FULL-COST` is pooled `net_r_oos > 0`. Demotion is R-only. The desk entry gate is "CI of mean net_r > 0" (`scripts/ops/desk_grade.py:111`). The prop gate is EV only. Of 1429 unit decision rules, **6** mention $ or % return. | a | **H**, every promotion, demotion and graduation is graded against the wrong objective | `AM-RISK-ADJUSTED-RULE`, `BOOK-SIM-REAL-SIZER` (in flight); `RISK-OBJECTIVE-AUDIT` (branch `claude/am-risk-adjusted-rule`, queued) must take the Stage-0 rule, demotion T3, the desk gate (`desk_grade.promotion_gate`) and the prop gate by name, with a $/% readout per account |
 | 4 | **The holdout was never applied to the legs already on real money.** The operator required it on 2026-10-16 ("all 8 real-money legs get holdout re-runs first"). **0 of 54** evidence records carry `holdout_confirmation`. The trial ledger shows **0 of 31** Stage-0 passes survive DSR plus the BHY haircut. All 54 records read `param_selection_provenance: not_established`. MD-PROMOTE cannot return FIRE (NEEDS_DATA). | a, c | **H**, the 6 production legs are not re-validated, and the only multiplicity control is unbuilt | `HOLDOUT-INCUMBENT-GRADE` (queued since 10-25, rank 23); re-rank |
@@ -61,6 +61,56 @@ SLOs all run. It did not build the *stations that turn a measurement into a mone
 - a declare that ships (#8).
 
 That is the ML precedent repeated in five subsystems.
+
+---
+
+## Counts, and the High items beyond the top 10
+
+The operator asked for this on 2026-10-29 ~07:33Z: *"That means theres probably more than 10 critical items in that log"*.
+
+The counts below are gap rows in the subsystem tables (§1–§6), with conformant rows excluded. A gap that appears in two tables is counted
+once in each. The holdout (3.2 = 4.3) and the wrong-metric gaps (2.2, 3.7, 4.4) do this.
+
+| Subsystem | High | Medium | Low | Total |
+|---|--:|--:|--:|--:|
+| 1 Active management + LTR | 4 | 2 | 0 | 6 |
+| 2 Trading desk | 2 | 3 | 1 | 6 |
+| 3 Research pipeline | 2 | 5 | 0 | 7 |
+| 4 Ladder / mandates / status | 3 | 5 | 0 | 8 |
+| 5 TP doctrine | 3 | 3 | 0 | 6 |
+| 6 Data and ops | 0 | 5 | 2 | 7 |
+| **All rows** | **14** | **23** | **3** | **40** |
+
+After de-duplication there are **11 distinct High gaps**. Nine are top-10 items #1–#9; #10 (cost stack) is Medium. The two Highs outside
+the top 10 are:
+
+- **1.1 (active management).** No book-level $ simulation with the production sizer exists, so `RULE-AM-RISK-ADJUSTED-V1` cannot be measured.
+  It blocks every in-trade action class from graduating on real money. Money at risk: no direct risk; it blocks de-risking.
+  Owner: `BOOK-SIM-REAL-SIZER`.
+- **5.3 (TP doctrine).** Prop TPs sit at 6R with 0.9–1.9% reach, so they are effectively unreachable. The prop path passes `take_profit=None`
+  on breakout_2 and tradeify_1. **Money at risk: yes**, live prop legs. Owners: `RM-AM-SOLPROP-TP25` (re-plan, step 1 failed),
+  `TP-DOCTRINE` B2.
+
+Three Mediums touch a live money path and are candidates to upgrade to High:
+- **6.3.** `DAILY-DD-SWITCH` is the only automatic loss limiter on real-money and prop accounts. It is armed on 13 of 14 accounts, but it has
+  never been observed reading equity. If that read is null, it fails open.
+- **4.6.** `iaum_pullback_1d` trades real money on n = 8, with placeholder costs and no mirror.
+- **6.1.** The pipeline has 649 due items, and the demo-floor soak verdicts are buried among them. The sub-audit rated this High.
+
+**High items that touch a live real-money or prop path now**, to go ahead of any cap:
+- **#1 prop gate:** eth_prop and sol_prop on 3 prop firms. Being re-run by `PROP-GATE-RERUN-20261029`.
+- **#2 no working demotion:** all 6 production legs.
+- **#4 no holdout:** all 6 production legs.
+- **#6 judgement-only live reviews:** open real-money packages.
+- **#7 forming-bar entries:** live ada and xrp entries.
+- **#8 TP doctrine:** live brackets on every real-money leg.
+- **#9 unobserved amend paths:** prop and Alpaca.
+- **5.3 unreachable prop TPs:** live prop legs.
+
+High items that are not on a live path today:
+- **#3 wrong metric:** it governs the decisions above, not orders.
+- **#5 graduation from live counts:** every class is advice-only.
+- **1.1 book simulation:** research tooling.
 
 ---
 
@@ -132,7 +182,7 @@ Design: OPERATING-PLAN § 2, `config/mandates.yaml`, `strategy_status.py`, `mand
 | # | Promise | Actual | Gap | Blocks | Row |
 |---|---|---|---|---|---|
 | 4.1 | Mirror net-of-cost window demotes | 40-trade minimum; abstain_thin 6 of 6; never fired | d | H | NEW `STAGE2-OFFLINE-DEMOTION-SIGNAL` |
-| 4.2 | Prop superset gate vs the firm's DD limits | Form check; `p_breach` 0.934 / 0.595 / 0.63 / 0.48 all pass; record predates the re-cost | a | H | NEW `PROP-GATE-RECOST-AND-FLOOR` |
+| 4.2 | Prop superset gate vs the firm's DD limits | Form check; `p_breach` 0.934 / 0.595 / 0.63 / 0.48 all pass; record predates the re-cost | a | H | `PROP-GATE-RERUN-20261029` + NEW `PROP-GATE-RECOST-AND-FLOOR` (guard) |
 | 4.3 | Holdout on incumbents | 0 of 54 | c | H | `HOLDOUT-INCUMBENT-GRADE` |
 | 4.4 | Gates use the objective's risk term | Stage-0, MD-PROMOTE and T3 are mean R; `path_stats` is `not_a_verdict` | a | M | `RISK-OBJECTIVE-AUDIT` |
 | 4.5 | Ladder automation can fire for every timeframe | 12 of 28 positive-OOS 1d legs have n_oos 6–17 over 365d against `min_n_closed 30` / `holdout_min_n 25` | d | M | NEW `STAGE0-LONGER-WINDOW-1D` |
@@ -212,7 +262,7 @@ Conformant:
 
 | Row | Rank class | Tier | Model | Ceiling |
 |---|---|---|---|---|
-| `PROP-GATE-RECOST-AND-FLOOR` | H | 3 | opus | $10 |
+| `PROP-GATE-RECOST-AND-FLOOR` (guard only; re-run owned by `PROP-GATE-RERUN-20261029`) | H | 1 | sonnet | $4 |
 | `STAGE2-OFFLINE-DEMOTION-SIGNAL` | H | 3 | opus | $15 |
 | `LTR-COUNTERFACTUAL-PRICING` | H | 1 | sonnet | $8 |
 | `DESK-GATE-OFFLINE-PATH` | H | 3 | opus | $8 |
