@@ -1,0 +1,539 @@
+{
+ "run": "PROGRAMME-REVIEW-2026-10-28",
+ "finished_at": "2026-10-28T19:49:50Z",
+ "by": "session_01AFoLuMAh63bKiCtPXBwN2w",
+ "dispatched_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+ "population": "Units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (research_ops_checks.py --kind programme_review --since 7d; 1480 units read, 0 unreadable): 445 units, 412 graded (70 pass, 50 indeterminate, 292 fail); 285 carry a programme field (P1 123, P2 49, P3 29, P4 14, P5 51, P6 5, P7 14), 160 do not (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1) -- assigned by question in RESEARCH-MAP.md. ~36 of 70 PASS rows are crypto-harness runs at 7.5 bps fee (MEASURED from result argv); 1 at 11.0.",
+ "prior_calls_scorecard": [
+  {
+   "call": "P1 (10-22 W43): the decisive Q11 read comes by leg and under vol control (eba2-01, eba2-04)",
+   "p": null,
+   "check_rerun": "grading.verdict of RQ-20261022-eba2-01 / -04",
+   "outcome": "hit",
+   "action_happened": true,
+   "note": "both PASS; no probability was stated, so no Brier"
+  },
+  {
+   "call": "P1 (10-22 W43): first-test-failed exit ideas get variants (eba2-03,-05,-06,-09..-15)",
+   "p": null,
+   "check_rerun": "grading.verdict of the eba2 lever variants",
+   "outcome": "miss",
+   "action_happened": true,
+   "note": "0 of 11 lever variants passed; 2nd-generation f08c-06/-13 passed at the family's chance rate"
+  },
+  {
+   "call": "P1 (10-21): week of 10-26, Q6 parity on 1-2 live trades per confirmed leg, then held declare PRs",
+   "p": null,
+   "check_rerun": "checklist row MOMENTUM-LEVERS-LIVE state",
+   "outcome": "unresolved",
+   "action_happened": false,
+   "note": "row still landed_unproven (updated 2026-10-22); no declare observed by this review (not searched exhaustively)"
+  },
+  {
+   "call": "P2 (10-21): re-ask P2-Q3.1 only when the ledger has grown ~50% (~2026-12); file nothing earlier",
+   "p": null,
+   "check_rerun": "git log --since=2026-10-21 --diff-filter=A -- research/queue | grep P2-Q3.1",
+   "outcome": "hit",
+   "action_happened": true
+  },
+  {
+   "call": "P2 (10-21): ml_health supply is build-bound, not authoring-bound",
+   "p": null,
+   "check_rerun": "research_ops_checks.py runnable_by_track.MODEL",
+   "outcome": "hit",
+   "action_happened": true,
+   "note": "MODEL runnable 0 on 2026-10-28"
+  },
+  {
+   "call": "P3 (10-21): Q8 breadth -- a family that fails all six perps is a symbol fit",
+   "p": null,
+   "check_rerun": "verdicts of RQ-20261021-7c2b-06..-10, -13",
+   "outcome": "hit",
+   "action_happened": true,
+   "note": "trend families transferred (06, 10 pass; 07 fold-miss then 1b57-09 8-fold pass); pullback 08/09 and sol_prop 13 failed"
+  },
+  {
+   "call": "P4 (10-21): no new macro unit; supply exceeds weight",
+   "p": null,
+   "check_rerun": "count macro-theme units graded 10-21..10-28",
+   "outcome": "miss",
+   "action_happened": false,
+   "note": "34 macro units graded this week (4795, ed1c-20..26, 7769, a1f3-17) from other lanes; 3 PPI passes, 31 fails"
+  },
+  {
+   "call": "P5 (10-21): breakout_2 sizing 0.35% dominates; apply via the data-backed Tier-3 authorization",
+   "p": null,
+   "check_rerun": "config/accounts.yaml breakout_2.risk.risk_pct",
+   "outcome": "hit",
+   "action_happened": true,
+   "note": "risk_pct 0.0035 on 2026-10-28; rung 2 (7c2b-12) INDETERMINATE n 517 < 785"
+  },
+  {
+   "call": "P7 (10-21): 7c2b-01..05 re-asks and transfers",
+   "p": null,
+   "check_rerun": "verdicts of RQ-20261021-7c2b-01..05",
+   "outcome": "void",
+   "action_happened": true,
+   "note": "no direction was predicted; 01 fail, 02 indet., 03 indet. -> f679-05 pass, 04 fail, 05 fail"
+  }
+ ],
+ "brier": "INDETERMINATE: 0 calls carried a probability (the 2026-10-21 review predates the probability format); 9 forward claims graded by outcome (5 hit, 2 miss, 1 unresolved, 1 void)",
+ "checks": {
+  "graded_by_window": {
+   "7d": {
+    "INFRA": {
+     "pass": 7
+    },
+    "MODEL": {
+     "fail": 31,
+     "indeterminate": 25,
+     "pass": 10
+    },
+    "TRADING": {
+     "pass": 73,
+     "indeterminate": 29,
+     "no_action_warranted": 13,
+     "fail": 300
+    }
+   },
+   "30d": {
+    "INFRA": {
+     "pass": 10,
+     "indeterminate": 1,
+     "fail": 1
+    },
+    "MODEL": {
+     "fail": 47,
+     "pass": 26,
+     "indeterminate": 57
+    },
+    "TRADING": {
+     "pass": 230,
+     "indeterminate": 149,
+     "no_action_warranted": 33,
+     "fail": 599
+    }
+   },
+   "lifetime": {
+    "INFRA": {
+     "pass": 10,
+     "indeterminate": 1,
+     "fail": 1
+    },
+    "MODEL": {
+     "fail": 47,
+     "pass": 26,
+     "indeterminate": 57
+    },
+    "TRADING": {
+     "pass": 230,
+     "indeterminate": 149,
+     "no_action_warranted": 33,
+     "fail": 599
+    }
+   }
+  },
+  "runnable_by_track": {
+   "TRADING": 41,
+   "MODEL": 0,
+   "INFRA": 4,
+   "total": 45
+  },
+  "fails_without_next": 159,
+  "batches_quoted": [
+   "RQ-20261021-7c2b (06 pass, 07/08/09/13 fail, 10 pass)",
+   "RQ-20261026-1b57",
+   "RQ-20261022-eba2 (2 pass / 15)",
+   "RQ-20261025-3947 + 90d3 + ed1c-29..34 regime-head learners (0 pass / 23)"
+  ],
+  "could_not_look": [
+   "previous_calls: no comms/research/programme_review record existed (this is the first)",
+   "live P&L / deploy state of any lever: not read (research review)",
+   "PR #20967 desk artifacts read from the PR body only; files not on main yet"
+  ],
+  "followthrough": "review_followthrough.py --source programme-review --window-days 7: cohort filed 9, done 1, open 8; backlog 16 open, 12% due, median age 9 d, 0 without owner; oldest open RQ-20260928-001-RUN 30 d (landed_unproven), DATA-CATALOG / DATA-KLINE-ARCHIVE / DATA-DERIV-ARCHIVE 14 d queued -> schedule-or-kill for the manager",
+  "coverage": "programme_coverage.py: 0 uncovered plan questions in P1..P7",
+  "authoring_queue": "35 ready needs_authoring nodes; 2 authored here (P1-ATM-ed1c10-c75-confirm, P1-ATM-ed1c17-be-confirm), 5 new unit nodes, 3 new gated nodes, 1 re-scoped"
+ },
+ "analysis": {
+  "ranking_error": "The 10-22 ranking put 11 exit-lever variants (tightening on the same legs) ahead of the label transfers; the variants were draws from a family now at ~4% pass rate, the transfers were the informative tests. The most informative P1 result of the week (desk full run) was on no programme plan.",
+  "programmes": {
+   "P1": {
+    "learned": [
+     "Stop tightening loses R on the declared wide-trail legs: ~129 FAIL of ~140 exit-management lever units (6 lever passes, chance rate) + desk full run: 981 Claude tightens at -0.097 R each, holds +0.142 R vs close (PR #20967)",
+     "Selective/entry-side survives: EMA-slope direction filter CONFIRMED on 2017-09..2020-06 (RQ-20261028-001, n(A) 39, 11.0 bps); BE floor (ed1c-17) and CHOP-gated trail (ed1c-10) await disjoint confirmation; tp_extend compliance 3/3 (bea9)",
+     "In-trade path state predicts giveback / hold-vs-exit (eba2-01, eba2-04, 09a6-01 PASS; gains 0.002-0.015 nats); no profitable action built on it yet"
+    ],
+    "fail_diagnoses": [
+     "tightening levers: idea on these legs (right-tail earners)",
+     "desk whole-trade: design (action set allows tighten) over judge",
+     "path-metric-triggered levers: power/effect size"
+    ],
+    "answered": [
+     "RQ-20261028-001 (direction filter confirmed)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P1-Q4-desk-losscut-ada-pb",
+      "decision_changed": "loss-cut lever on 2h pullback legs",
+      "on_pass": "confirm on xrp_pullback_2h then producer check",
+      "on_fail": "close -0.5R configuration; desk pocket noise",
+      "cost": "cpu_light ~40 min",
+      "premortem": "bar-N proxy too coarse; variant N=2"
+     },
+     {
+      "node_or_unit": "P1-ATM-ed1c17-be-confirm",
+      "decision_changed": "BE floor as the surviving tighten shape",
+      "on_pass": "producer check + Tier-3 note",
+      "on_fail": "window-fitted",
+      "cost": "cpu_light ~40 min",
+      "premortem": "thin pre-2019 ETH bars -> INDETERMINATE"
+     },
+     {
+      "node_or_unit": "P1-ATM-ed1c10-c75-confirm",
+      "decision_changed": "any confirmed gated tightener on a trend leg",
+      "on_pass": "producer check + Tier-3 note",
+      "on_fail": "gated tighteners to priority 3 on trend legs",
+      "cost": "cpu_light ~35 min",
+      "premortem": "threshold selected from 3"
+     },
+     {
+      "node_or_unit": "P1-DESK-no-tighten-policy",
+      "decision_changed": "lever vs judge in the desk loss",
+      "on_pass": "desk policy without tightens to shadow pilot",
+      "on_fail": "desk effort moves to entries",
+      "cost": "judge spend (manager)",
+      "premortem": "fresh sample shifts entry mix"
+     }
+    ]
+   },
+   "P2": {
+    "learned": [
+     "0 of 23 learner/capacity arms beat the shipped LightGBM regime head (13 fail, 10 indet.)",
+     "range-vol information improves regime-head log-loss on BTC/ETH/SOL 1h, macro-F1 on SOL only",
+     "1h direction does not beat the class prior (4 fail, 1 indet.); 15m indeterminate",
+     "#20869 refuses 9 setup-metalabel heads on eval_not_cost_net (gross frozen datasets): no measured answer, not a fail"
+    ],
+    "fail_diagnoses": [
+     "learner arms: features cap the learner",
+     "1h direction: information",
+     "metalabel refusal: harness/data",
+     "giveback-from-entry: information is in-trade"
+    ],
+    "answered": [
+     "learner choice on the regime head (LightGBM stands; belief, no family retired)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P2-Q2-costnet-metalabel-regate",
+      "decision_changed": "M23 setup meta-labelling continues or closes",
+      "on_pass": "shadow candidate (1-2 prediction mechanical soak)",
+      "on_fail": "close the line for this feature set",
+      "cost": "build PI-20261028-V8KBRR5H-0004",
+      "premortem": "rebuild keeps 2026-08 cut; n too small"
+     },
+     {
+      "node_or_unit": "P2-desk-checkin-exit-head",
+      "decision_changed": "learnable close signal on action value",
+      "on_pass": "exit-head candidate",
+      "on_fail": "desk exits stay mechanical",
+      "cost": "#20967 merge",
+      "premortem": "entry-join leakage"
+     },
+     {
+      "node_or_unit": "P2-Q4-cross-asset-features",
+      "decision_changed": "is new information the regime-head lever",
+      "on_pass": "feed P3 overlap",
+      "on_fail": "close that class at 1h",
+      "cost": "build: correlation feature block",
+      "premortem": "PIT alignment daily->1h"
+     }
+    ]
+   },
+   "P3": {
+    "learned": [
+     "Donchian trend transfers across ~17 alt perps as declared (7c2b-06/-10, 1b57-01..09), 2h pullback does not (7c2b-08/-09); all at 7.5 bps proxy fee",
+     "#20966 trend-leg flips are window drift (fee-isolated shift keeps them positive); scalps fail twice (8a01 fresh window + 11.0 flip)",
+     "soak-book 1d equity legs re-validate (c56e-24..26, be01-02) and are >= 2 bets (n_eff 3.02)"
+    ],
+    "fail_diagnoses": [
+     "pullback breadth: symbol fit",
+     "trend flips: regime/window",
+     "single-leg regime levers: power",
+     "ict_scalp fresh window: idea (two instruments) -> retirement-case proposal is the operator's"
+    ],
+    "answered": [
+     "P3-Q8 breadth (trend yes at 7.5 bps; pullback no)"
+    ],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P3-Q8-recost-11bps-eth4h",
+      "decision_changed": "can any breadth PASS feed a re-entry case",
+      "on_pass": "eth_4h Stage B",
+      "on_fail": "re-run every 7.5 bps breadth PASS at 11.0",
+      "cost": "cpu_light ~60 min",
+      "premortem": "alt slippage under-modelled"
+     },
+     {
+      "node_or_unit": "P3-RECOST-flip-trend-donchian / -eth-prop / -sol",
+      "decision_changed": "keep on floor vs retirement case",
+      "on_pass": "window drift: keep",
+      "on_fail": "retirement-case proposal",
+      "cost": "cpu_light ~30 min each",
+      "premortem": "2021 bull fold flatters a decayed leg"
+     }
+    ]
+   },
+   "P4": {
+    "learned": [
+     "PPI m/m surprise -> ES/SPY drift holds (a1f3-17, RQ-20261025-002, 4795-01; placebo null); RTY later sub-period fails",
+     "every other surprise configuration failed (~31 units)"
+    ],
+    "fail_diagnoses": [
+     "surprise families: idea at these horizons/instruments"
+    ],
+    "answered": [],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P4-Q2-ppi-rty-econ (re-point to spy/qqq_trend_long_1d)",
+      "decision_changed": "PPI as a tilt on an existing long-index leg",
+      "on_pass": "Tier-3 packet",
+      "on_fail": "PPI stays a monitor",
+      "cost": "lever MACRO-EVENT-RANKTILT",
+      "premortem": "~12 releases/yr too few"
+     }
+    ]
+   },
+   "P5": {
+    "learned": [
+     "prop pace: trend Donchian transfers (1b57-01/-02, f679-03, 326f-11); squeeze/fade/1h pullback fail on cost",
+     "breakout_2 risk_pct is 0.0035 (applied); rung 2 underpowered"
+    ],
+    "fail_diagnoses": [
+     "fast mean-reversion: cost drag",
+     "rung 2: power"
+    ],
+    "answered": [],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P3-Q8-recost-11bps-eth4h (feeds P5-Q6)",
+      "decision_changed": "prop breadth pool",
+      "on_pass": "P5-Q6 gate at the firm's own cost stack",
+      "on_fail": "pool empty",
+      "cost": "cpu_light",
+      "premortem": "prop fee != Bybit"
+     }
+    ]
+   },
+   "P6": {
+    "learned": [
+     "binding constraints are cost-basis and dataset plumbing, not research supply"
+    ],
+    "fail_diagnoses": [],
+    "answered": [],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "build: proxy-symbol fee in research harnesses",
+      "decision_changed": "every breadth PASS's cost basis",
+      "on_pass": "-",
+      "on_fail": "-",
+      "cost": "build (manager)",
+      "premortem": "-"
+     }
+    ]
+   },
+   "P7": {
+    "learned": [
+     "daily long-only Donchian-20 is fold-consistent on 12 perps (f679-05) and transfers (1b57-15); D55 does not; 15m/30m cost-gated breakouts fail"
+    ],
+    "fail_diagnoses": [
+     "intraday breakouts: cost drag"
+    ],
+    "answered": [],
+    "retired": [],
+    "next": [
+     {
+      "node_or_unit": "P7-Q5-confirm disjoint-symbol check",
+      "decision_changed": "new daily position-trade family",
+      "on_pass": "overlap read + exit processing",
+      "on_fail": "bull-window beta artefact",
+      "cost": "cpu_light",
+      "premortem": "long-only in a bull window"
+     }
+    ]
+   }
+  },
+  "tracks": {
+   "TRADING": "Tightening stops on the declared wide-trail legs loses R (two instruments, ~140 mechanical units at chance-rate passes, and the desk's 981 tightens at -0.097 R each). What survives is selective or entry-side, plus trend-Donchian breadth, and all breadth is priced at 7.5 bps rather than the 11.0 the venue charges, so the top test is a re-cost. The #20966 flips are window drift for the trend legs and a second independent FAIL for the two scalps.",
+   "MODEL": "No learner beats the shipped LightGBM regime head (0 of 23) and 1h direction does not beat the prior; new information moves log-loss, so capacity should go to information and targets. The cost gate's refusal of the 9 setup-metalabel heads is a gross-data refusal, not a measured loss. MODEL runnable supply is 0, a build gap: the cost-net rebuild, #20967's labels, and a cross-asset block."
+  },
+  "feeds": [
+   {
+    "from": "P1",
+    "to": "P2",
+    "what": "desk priced check-in labels; tighten as negative class",
+    "dest": "P2-desk-checkin-exit-head",
+    "state": "waiting on #20967"
+   },
+   {
+    "from": "P6",
+    "to": "P2",
+    "what": "cost-net datasets",
+    "dest": "P2-Q2-costnet-metalabel-regate",
+    "state": "build PI-20261028-V8KBRR5H-0004"
+   },
+   {
+    "from": "P2",
+    "to": "P1/P3",
+    "what": "no head beats its prior net of cost -> no Tier-3 gate candidate",
+    "dest": "-",
+    "state": "stated"
+   },
+   {
+    "from": "P3",
+    "to": "P5",
+    "what": "breadth cells at 11.0 bps",
+    "dest": "P3-Q8-recost-11bps-eth4h -> P5-Q6",
+    "state": "authored"
+   },
+   {
+    "from": "P3",
+    "to": "manager",
+    "what": "#20966 flip diagnosis",
+    "dest": "P3-RECOST-flip-* x3",
+    "state": "authored"
+   },
+   {
+    "from": "P1",
+    "to": "P5",
+    "what": "loss-cut / BE floor",
+    "dest": "P1 confirmations -> prop EV grid",
+    "state": "authored"
+   },
+   {
+    "from": "P4",
+    "to": "P3",
+    "what": "PPI tilt on spy/qqq 1d trend legs",
+    "dest": "P4-Q2-ppi-rty-econ",
+    "state": "ready; lever MACRO-EVENT-RANKTILT"
+   },
+   {
+    "from": "P7",
+    "to": "P3/P1",
+    "what": "daily long-only Donchian",
+    "dest": "P7-Q5-confirm",
+    "state": "research-ops"
+   },
+   {
+    "from": "P6",
+    "to": "P3/P5/P7",
+    "what": "proxy-symbol fee",
+    "dest": "build question (handoff)",
+    "state": "not filed as a row; manager"
+   }
+  ],
+  "surprises": [
+   "A confirmation PASS at only n(A) 39 (RQ-20261028-001): it is at the floor, so treat it as weak",
+   "breakout_2 sizing had been applied although last week's plan said it was not",
+   "the maker-entry PASS (a3f1-01) is by 0.03 bps on an UNVERIFIED published maker fee: too marginal to be the cost lever it looks like",
+   "macro supply ran at 34 units against a theme share of 2 despite last week's 'author nothing'"
+  ]
+ },
+ "calls": [
+  {
+   "call": "P3-Q8-recost-11bps-eth4h grades PASS (eth_4h breadth survives 11.0 bps)",
+   "p": 0.75,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/research/queue_replenish.py --programme-state | python3 -c \"import json,sys;print([x for x in json.load(sys.stdin) if x['node']=='P3-Q8-recost-11bps-eth4h'])\"",
+    "rule": "hit iff the emitted unit's grading.verdict == pass",
+    "resolves_when": "2026-11-04"
+   }
+  },
+  {
+   "call": "P1-ATM-ed1c10-c75-confirm CONFIRMS on 2017-09..2020-06",
+   "p": 0.25,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/research/queue_replenish.py --programme-state | python3 -c \"import json,sys;print([x for x in json.load(sys.stdin) if x['node']=='P1-ATM-ed1c10-c75-confirm'])\"",
+    "rule": "hit iff verdict == pass",
+    "resolves_when": "2026-11-04"
+   }
+  },
+  {
+   "call": "At least 2 of the 3 P3-RECOST-flip-* units grade PASS (window drift, not decay)",
+   "p": 0.55,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/research/queue_replenish.py --programme-state | python3 -c \"import json,sys;print([x for x in json.load(sys.stdin) if x['node']=='P3-RECOST-flip-trend-donchian'])\" ; same for -eth-prop, -sol",
+    "rule": "hit iff >= 2 of 3 verdicts == pass",
+    "resolves_when": "2026-11-04"
+   }
+  },
+  {
+   "call": "P1-Q4-desk-losscut-ada-pb grades PASS",
+   "p": 0.15,
+   "track": "TRADING",
+   "check": {
+    "command": "python3 scripts/research/queue_replenish.py --programme-state | python3 -c \"import json,sys;print([x for x in json.load(sys.stdin) if x['node']=='P1-Q4-desk-losscut-ada-pb'])\"",
+    "rule": "hit iff verdict == pass",
+    "resolves_when": "2026-11-04"
+   }
+  },
+  {
+   "call": "No regime-head learner-family or capacity arm graded 2026-10-28..11-04 beats the shipped LightGBM",
+   "p": 0.9,
+   "track": "MODEL",
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --kind programme_review --since 7d --out /tmp/c.json && python3 -c \"import json,yaml;d=json.load(open('/tmp/c.json'));print(sum(1 for u in d['results']['units'] if u['verdict']=='pass' and yaml.safe_load(open('research/queue/'+u['unit']+'.yaml')).get('title','').startswith('Regime head')))\"",
+    "rule": "hit iff the printed count is 0",
+    "resolves_when": "2026-11-04"
+   }
+  },
+  {
+   "call": "PI-20261028-V8KBRR5H-0004 (cost-net setup_candidates rebuild) is done by 2026-11-04",
+   "p": 0.3,
+   "track": "MODEL",
+   "check": {
+    "command": "grep -l 'PI-20261028-V8KBRR5H-0004' docs/claude/work/pipeline/*.json | xargs -I{} python3 -c \"import json;d=json.load(open('{}'));print(d.get('id'),d.get('state'),d.get('terminal_reason'))\"",
+    "rule": "hit iff the latest record for the id has a terminal state (done) by the date",
+    "resolves_when": "2026-11-04"
+   }
+  }
+ ],
+ "nodes_authored": [
+  "P1-ATM-ed1c10-c75-confirm",
+  "P1-ATM-ed1c17-be-confirm"
+ ],
+ "nodes_added": [
+  "P1-Q4-desk-losscut-ada-pb (unit)",
+  "P1-DESK-no-tighten-policy (needs_authoring, after d1f5-02 fail)",
+  "P3-Q8-recost-11bps-eth4h (unit)",
+  "P3-RECOST-flip-trend-donchian (unit)",
+  "P3-RECOST-flip-trend-donchian-eth-prop (unit)",
+  "P3-RECOST-flip-trend-donchian-sol (unit)",
+  "P2-Q2-costnet-metalabel-regate (needs_authoring, build-gated)",
+  "P2-desk-checkin-exit-head (needs_authoring, after d1f5-02 fail)",
+  "P2-Q4-cross-asset-features (re-scoped: build gap named)"
+ ],
+ "rows_filed": [],
+ "not_run": [
+  "no new unit for the 13 remaining ready authoring-queue nodes (declare drafts / Tier-3 packets / research-ops follow-ups; ranked in handoff)",
+  "ict_scalp retirement case: an operator act; proposed in handoff, not filed",
+  "the P1-Q6 declares: session work for the owning rows"
+ ],
+ "handoff": [
+  "MANAGER: two ict_scalp legs (eth_15m, xrp_15m) failed a fresh disjoint window (RQ-20261027-8a01-01/-02) AND flipped at 11.0 bps (#20966): put a retirement case to the operator (only a retirement record removes a leg)",
+  "MANAGER: research harnesses price Binance-proxy breadth symbols at DEFAULT_FEE_BPS_ROUNDTRIP 7.5 (execution_costs.resolve_fee_bps_roundtrip fallback); decide whether proxy symbols should resolve to the venue they would trade on (L-LADDER owner)",
+  "MANAGER: decide judge spend for P1-DESK-no-tighten-policy after #20967 merges",
+  "MANAGER: DATA-CATALOG / DATA-KLINE-ARCHIVE / DATA-DERIV-ARCHIVE queued 14 d with no movement: schedule or kill",
+  "RESEARCH-OPS (ranked): P4-Q2-ppi-rty-econ re-pointed to spy/qqq_trend_long_1d; P3-RG1025-lever-pooled; P7-Q5-confirm disjoint-symbol check; P5-RG1025-trend-pooled; P1-ATM-sol4h-b-overlap (after the re-cost)",
+  "RESEARCH-OPS: do not author further stop-tightening variants on the 2h/4h trend and pullback legs until the two confirmations grade (family stays open; value lowered by this review)"
+ ]
+}

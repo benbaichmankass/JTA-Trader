@@ -4,6 +4,26 @@
 
 **Standing (operator):** the news layer and WEPE are **not retired** (NEWS-ALPHA-PROGRAM directive 2026-10-12; WEPE-BUILDOUT 2026-10-08). The research queue is fed only from programme plans; this is P4's.
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — TRADING track
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 14 with `programme: P4`** (2 pass, 11 fail, 1 indeterminate), plus 20 unprogrammed `macro` units (1 pass, 19 fail), the calendar-event-type studies `4795`, `ed1c-20..26` and `RQ-20261026-901`, which this review assigns to P4.
+
+**What was learned**
+- **PPI m/m surprise -> equity-index drift is the one macro surprise that keeps surviving.** It held on ES=F over the full sample (`a1f3-17`, IC −0.287, t −3.52, n 140), in the later sub-period alone (`RQ-20261025-002`) and on SPY (`4795-01`). The pre-release placebo is null (`RQ-20261025-003` FAIL, as intended). It is weaker on RTY: the later sub-period FAILED (`RQ-20261020-002`) and the earlier one is INDETERMINATE. About 34 macro tests graded this week and 3 passed, all of them PPI on ES/SPY. That was last week's a-priori lead, so this is not a best-of-34 pick. The one same-question FAIL (`ed1c-21`, PPI in the NEWS-ALPHA zero-weight study) uses a different design; its rule should be read before anyone cites a contradiction.
+- **Every other surprise configuration tested this week FAILED (the configuration, at its instrument and horizon):** retail sales, ISM manufacturing and services, JOLTS, UMich, durable goods, ADP, housing, regional Fed, industrial production, unemployment, claims (forward), and CPI to gold or TLT. Each FAIL settles that configuration only (PLANNING § 1).
+- It is still sub-cost as a standalone trade (`4a4c-06`, 2026-10-21). The useful form is a **tilt on a leg that already holds the index**, and one now exists: `spy_trend_long_1d` and `qqq_trend_long_1d` are rostered (`config/strategies.yaml`, read 2026-10-28).
+
+**Next 3-4 weeks**
+
+| # | node | decision | on PASS | on FAIL | cost | pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | `P4-Q2-ppi-rty-econ` (ready; re-point to SPY/QQQ, research-ops authors) | does the PPI surprise pay as an exposure-matched tilt on an existing long-index leg | Tier-3 packet: a release-day hold/skip rule on the 1d SPY/QQQ legs | PPI stays a monitor, not a lever | needs `MACRO-EVENT-RANKTILT` (lever row) | about 12 releases a year is too few at any n; first variant pools ES, SPY and QQQ |
+| 2 | `P4-Q4-g2-rerun` | PM-implied vs consensus surprise | — | — | not before 2026-11-07 | — |
+
+**Feeds.** P4 -> P3: a PPI tilt on the 1d equity trend legs (the soak book's healthiest evidence), which is the first concrete P4->P3 feed. No other macro unit is worth authoring this month: macro graded 34 units this week against a theme share of 2, so supply is ahead of value.
+
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
 Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.

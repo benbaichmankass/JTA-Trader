@@ -186,17 +186,17 @@ class TestTruncationIsNotAnUnreadableScreenshot:
         import pathlib
         import re
         src = pathlib.Path("src/prop/screenshot_parse.py").read_text()
-        assert "max_tokens=_MAX_OUTPUT_TOKENS" in src          # anthropic
+        assert "max_tokens=_MAX_OUTPUT_TOKENS" not in src      # anthropic path is DISABLED (2026-10-28)
         assert '"maxOutputTokens": _MAX_OUTPUT_TOKENS' in src  # gemini
         assert not re.search(r"max_?[oO]utput_?[tT]okens\"?[:=]\s*1024", src)
 
     def test_both_providers_detect_truncation(self):
-        """Gemini reports finishReason, Anthropic reports stop_reason. Checking
-        one leaves the other silently truncating."""
+        """Gemini reports finishReason. The Anthropic caller is a hard refusal
+        (no API credits may be spent), so it has no stop_reason to check."""
         import pathlib
         src = pathlib.Path("src/prop/screenshot_parse.py").read_text()
         assert 'finish == "MAX_TOKENS"' in src
-        assert 'stop_reason' in src
+        assert "messages.create" not in src
 
 
 class TestBackendGateFailsClosed:
@@ -255,3 +255,15 @@ class TestBackendGateFailsClosed:
         msg = str(e.value)
         assert "Type the report" in msg or "type the report" in msg
         assert "PROP_SCREENSHOT_BACKEND=external" in msg
+
+
+def test_anthropic_vision_caller_hard_refuses_without_the_sdk():
+    """The Anthropic API path is closed (operator 2026-10-27/28). It must refuse loudly and
+    never import the SDK, whether or not a key is set."""
+    import sys
+    import pytest
+    from src.prop import screenshot_parse as sp
+    sys.modules.pop("anthropic", None)
+    with pytest.raises(sp.ScreenshotParseError, match="DISABLED"):
+        sp._call_vision_anthropic("claude-sonnet-4-6", "aGk=", "image/png")
+    assert "anthropic" not in sys.modules

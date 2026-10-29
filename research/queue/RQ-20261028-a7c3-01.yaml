@@ -1,0 +1,125 @@
+# Hand-authored 2026-10-28 by lane ACTIVE-MGMT-REAL-MONEY-PLAN (Tier 1), dispatched by Manager Session session_01AFoLuJi1vLTnYv9LbP6539.
+# Decision rule registered BEFORE any arm of this unit was run on this window. Plan: docs/plans/real-money-active-mgmt-plan-2026-10-29.md.
+id: RQ-20261028-a7c3-01
+title: 'TP doctrine COMPLIANCE, real money: does the tp_extend revision X6 (selected on xrp_pullback_2h, generalised 3 of
+  3 siblings) anchored at ada_pullback_2h''s declared 4R target stay no worse than the static 4R target in 5 of 6 folds,
+  net of cost?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+practice_precedent: 'T9 [S9, S25] (targets are justified for mean-reversion; on trend legs the TP doctrine requires measuring the cost, not assuming it) + T3 (net of the full cost stack); binding source docs/ARCHITECTURE-CANONICAL.md § TP doctrine. Principles in docs/reference/trading-and-model-practice-principles.md.'
+question: ada_pullback_2h (bybit_2 real money, bybit_portfolio, bybit_1) declares a reachable 4R entry target (tp-doctrine-guard
+  reach 0.241, n 253) and FAILS tp_revision on every routing (producer_state rule_undeclared). The tp_extend rule is registered
+  in src/runtime/tp_revision.py and merged into htf_pullback_trend_2h.monitor() (TPX-PULLBACK-PRODUCER). The bea9 family
+  read FIRED on cell X6 (3 of 3 siblings, docs/research/evidence/tpx-xrp-family-read-2026-10-22.json) and named ada's follow-on
+  as 'a 4R-anchored replay of the same cell' (RQ-20261022-bea9-02 rule text). This is that replay, never run before.
+why_this_matters: 'Milestone ''basic active management on every real-money leg'' (operator 2026-10-28): the trail is ada''s
+  only in-trade mechanic and tightening levers have failed on this leg (0 of 10 trail-gate units, 0 of 7 partial units graded
+  pass, MEASURED from research/queue grading blocks 2026-10-28). A TP that revises with the thesis is the doctrine-required
+  mechanic and the one family that has not lost on the pullback unit.'
+power:
+  expected_n: 402
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 baseline trades (the exit-refinement floor). MEASURED: ada_pullback_2h
+    baseline n 402 over 2020-07..2026-10 (RQ-20261024-09a6-01 census); S4 reproduces the declared tp_r 4.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261028A7C301-ADA-TPX-COMPLIANCE
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-26
+    23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the harness resolves per
+    venue (execution_costs.resolve_cost_policy; recorded per arm as cost_stack). Per arm from the harness''s own --json
+    summary: n, net_total_r, max_drawdown_r, net R per fold, net_r_per_capital_day, by_outcome. BASELINE S4 = the leg as
+    declared with the GEOM-B1 static target at its declared 4R (--tp-target-r=4), so S4 vs X6 isolates the REVISION. XU
+    = the negative control (--tp-thesis unknown) and MUST equal S4 (exit-refinement SKILL: ''the negative control must equal
+    the no-extension run''); it is not a candidate. Reported, not graded: tp_share = by_outcome.take_profit / n, lever_fired,
+    net_r_per_capital_day.'
+  rule: 'INDETERMINATE IF n(S4) < 39 or IF every candidate arm is byte-identical to S4 (the lever never fired). A candidate
+    C PASSES iff net_r(C) > net_r(S4) (the harness grades exactly this with --delta-r 0 --delta-r-per-trade 0) AND folds where
+    net_r(C) >= net_r(S4) >= 5 of 6 AND maxDD(C) <= maxDD(S4) x 1.35. This is the TP-doctrine COMPLIANCE bar (bea9 precedent):
+    zero materiality, because compliance is the motive and a P&L-neutral prediction is the doctrine''s answer. Only X6 is
+    a candidate. IF XU differs from S4 the run is INVALID (harness defect), not a verdict. PASS -> the doctrine read: if
+    tp_share(X6) < 0.10 OR lever_fired is false OR net_r_per_capital_day(X6) < net_r_per_capital_day(S4), forward as ''P&L
+    without a reachable prediction'', not a declare; otherwise it is the evidence record for ONE Tier-3 declare proposal
+    on ada_pullback_2h (bybit_2 + bybit_portfolio + bybit_1, strict mirror equality) on row RM-AM-ADA-TPX. Thresholds are
+    not changed after any result. A FAIL is ''first test failed -> variants queued'', never ''dead'' (research-ops § D).'
+  what_it_does_not_do: Edits no config, places no order. The window overlaps the windows the leg's own entry params were
+    chosen on, so independence is by lever (X6 was selected on xrp, not ada), not by date. tp_share is a reach proxy, not
+    calibration.
+  registered_before_run: true
+  registered_at: '2026-10-28'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: TP-doctrine compliance of a real-money leg''s bracket (milestone: active management on every real-money
+    leg); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: Runner. One harness invocation per arm; the bea9 precedent took minutes per arm incl. the fetch.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - S4=--tp-target-r=4
+  - --arm
+  - X6=--tp-target-r=4;--tp-extend-r=1;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native
+  - --arm
+  - XU=--tp-target-r=4;--tp-extend-r=1;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=unknown
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-26 23:59
+  - --grade
+  - replace
+  - --baseline
+  - S4
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261028-a7c3-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RM-ACTIVE-MGMT-MILESTONE
+- TP-DOCTRINE-W43
+- TPX-PULLBACK-PRODUCER
+- RQ-20261022-bea9-01
+- RQ-20261022-bea9-02
+- RQ-20261022-bea9-04
+- docs/plans/real-money-active-mgmt-plan-2026-10-29.md

@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "due_date": "2026-11-04",
+    "kind": "date"
+  },
+  "id": "PI-20261028-20261028-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-04",
+    "how_to_check": "python3 scripts/research/queue_replenish.py --programme-state | grep -A3 P3-Q8-recost-11bps-eth4h",
+    "what": "grading verdict of the unit emitted from node P3-Q8-recost-11bps-eth4h (11.0 bps re-run of the largest 7.5-bps breadth PASS); FAIL -> every 7.5-bps breadth PASS is re-run at 11.0 and proxy-symbol fee resolution goes to the L-LADDER owner as a build"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "PROGRAMME-REVIEW-20261028 (PR #20994)",
+    "rerun": "grep -o '\"--fee-bps-roundtrip\", \"[0-9.]*\"' research/results/RQ-20261026-1b57-0*/*.jsonl | sort | uniq -c"
+  },
+  "state": "queued",
+  "what": "[research cost basis] Research harnesses price Binance-proxy breadth symbols at DEFAULT_FEE_BPS_ROUNDTRIP 7.5 (profile_loader does not know them; execution_costs.resolve_fee_bps_roundtrip fallback) while rostered Bybit-linear symbols resolve to the measured 11.0. MEASURED 2026-10-28: ~36 of the week's 70 PASS rows carry 7.5; every Q8/P5/P7 breadth PASS is on that basis. Decision for the manager / L-LADDER owner: resolve proxy symbols to the venue they would trade on? Same review's handoff: ict_scalp_eth/xrp_15m retirement case (8a01 fresh-window FAIL + #20966 flip) is an operator decision (record comms/research/programme_review/20261028.json)."
+}

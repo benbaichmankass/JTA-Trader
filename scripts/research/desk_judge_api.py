@@ -85,11 +85,14 @@ def parse_rows(text: str, packet_id: str) -> tuple[list[dict] | None, str]:
     return (rows, "") if rows else (None, "empty reply")
 
 
+DISABLED_MSG = ("desk_judge_api.py is DISABLED: it spends Anthropic API credits, which the operator closed "
+                "(2026-10-27 'No API: plan sessions only', re-confirmed 2026-10-28). Judging is done by "
+                "manager-spawned plan sessions.")
+
+
 def make_client() -> Any:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise SystemExit("ANTHROPIC_API_KEY is not set in this environment (it exists on the live VM's .env only)")
-    import anthropic  # lazy: tests inject a fake client
-    return anthropic.Anthropic()
+    """HARD REFUSAL: the Anthropic SDK is never constructed here (no API credits may be spent)."""
+    raise SystemExit(DISABLED_MSG)
 
 
 def judge_one(client: Any, model: str, protocol: str, packet: dict) -> tuple[str, dict[str, int]]:
@@ -218,9 +221,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-skip-done", dest="skip_done", action="store_false")
     p.add_argument("--estimate-only", action="store_true")
     p.add_argument("--deadline-s", type=float, default=None)
-    a = p.parse_args(argv)
-    print(json.dumps(run(a)))
-    return 0
+    p.parse_args(argv)
+    raise SystemExit(DISABLED_MSG)      # run() stays importable for the fake-client tests; the CLI never reaches it
 
 
 if __name__ == "__main__":

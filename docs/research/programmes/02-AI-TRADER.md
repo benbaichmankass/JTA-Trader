@@ -8,6 +8,41 @@
 
 ---
 
+## Programme review 2026-10-28 (lane PROGRAMME-REVIEW-20261028) — MODEL track
+
+Population: research units with a result row generated 2026-10-21T19:30Z..2026-10-28T19:30Z (`research_ops_checks.py --kind programme_review --since 7d`, 1,480 units read, 0 unreadable): **445 units, 412 graded** (70 pass, 50 indeterminate, 292 fail), 285 with a programme field and 160 without (live_strategy 70, regime 27, ml_health 21, macro 20, infra 13, new_strategy_prop 8, none 1). This review assigns the 160 by what they ask, not by the field (map section). Every PASS below is a discovery until its confirmation unit passes. **Cost basis:** about 36 of the 70 PASS rows are crypto-harness runs charged 7.5 bps round-trip (MEASURED from each result's argv); only RQ-20261028-001 carried the measured Bybit-linear 11.0 bps. A lever A/B delta is nearly fee-neutral (both arms pay it); an absolute Stage-0 or breadth PASS is not.
+
+**Graded in the window: 41 with `programme: P2`** (ml_health 2 pass, 20 fail, 13 indeterminate; regime 2 pass, 4 fail), plus 21 unprogrammed `ml_health` units (3 pass, 6 fail, 11 indeterminate), which this review assigns to P2. `runnable_by_track` in the packet: **MODEL 0**, TRADING 41, INFRA 4.
+
+**What was learned**
+- **The learner is not the bottleneck; stop adding learner-family arms to the regime head.** 23 learner/capacity units graded this week on the shipped-shape LightGBM regime head (1h and 15m published shards, BTC/ETH/SOL) and **0 passed**: 13 FAIL and 10 INDETERMINATE. The units are `3947-19..26`, `916f-01`, `90d3-01..03`, `a142-01`, `ed1c-29..34`, `b376-01` and `RQ-20261025-008..010`, covering HistGB, ExtraTrees, MLP (default and regularised), CatBoost, multinomial logit, calibrated logistic, larger and smaller LightGBM, and heavier regularisation. With 23 tries the expected count of chance passes is about 1, so zero means "no learner is better", not "underpowered". The competing hypothesis "the features cap every learner" fits the next point.
+- **Information beats capacity, and calibration moves before ranking.** The four range-vol (Yang-Zhang set) estimators lift the SOL 1h regime head on macro-F1 (`3a84-11`), on a longer tail (`c584-01`) and on log-loss (`RQ-20261024-002`). They lift BTC and ETH 1h on LOG-LOSS (`a1f3-15`) but not on macro-F1 (BTC `3a84-09`/`RQ-20261027-006` FAIL, ETH `RQ-20261027-002` INDETERMINATE). New information improves probability quality broadly and ranking only on SOL.
+- **Direction is not predictable from these features at 1h; 15m is unresolved.** At 1h four variants of the direction head failed against the class prior on log-loss: recent window `a1f3-13`, range-vol `-14`, wider embargo `-16`, and SOL family transfer `2a2e-10`; the regularised arm `a1f3-12` is INDETERMINATE. At 15m `3e41-15/-16` are INDETERMINATE.
+- **The setup-metalabel refusal (#20869) is not a verdict on edge.** The new cost gate refuses all 9 setup-candidates heads with `eval_not_cost_net`. Their datasets are frozen GROSS builds from 2026-06/08, and the cycle never rebuilds them (PI-20261028-V8KBRR5H-0004). Until a cost-net rebuild exists, the meta-label line has **no measured answer at the cost basis that matters**. That is a build gap, not a FAIL.
+- Drift (`RQ-20261025-004` FAIL; `6e85-01` FAIL): the regime-head score drift is not explained as input-mix shift on the read run. No new node; `P2-Q1.3-*` carries it.
+
+**Failed first tests: diagnoses**
+
+| FAIL cluster | likely cause | evidence | next |
+|---|---|---|---|
+| learner families vs LightGBM (13 fail, 10 indet.) | **idea at this feature set**: the features cap the learner | 0 of 23; range-vol information moves log-loss where learners do not | no new learner arm on the regime head until a new information block lands (cross-asset, `P2-Q4-cross-asset-features`, build-gated) |
+| 1h direction vs prior (4 fail, 1 indet.) | **idea / information** | 4 variants, same sign | no 1h re-ask on the six shared features; any direction work needs new information first |
+| setup-metalabel cost refusal (9 heads) | **harness / data** (gross rows) | refusal reason `eval_not_cost_net` | `P2-Q2-costnet-metalabel-regate` after PI-...-0004 |
+| giveback from entry columns (`4b82-22/-23`) | **information**: the signal is in-trade | P1 `eba2-01/-04` PASS in-trade | `P2-desk-checkin-exit-head` |
+
+**Answered / unlocked / retired.** Answered: learner choice on the regime head at the six shared features plus range-vol (the 23 tested learner configurations did not beat the shipped LightGBM; LightGBM stands; nothing retired). Unlocked: the in-trade action-value target (desk labels). Nothing retired.
+
+**Next 3-4 weeks (value-ranked; MODEL supply is a BUILD gap, named)**
+
+| # | node | decision it changes | on PASS | on FAIL | blocker / cost | pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | `P2-Q2-costnet-metalabel-regate` (new) | does M23 setup meta-labelling continue at all | shadow candidate under the 1-2 prediction mechanical soak | close the setup-metalabel line for this feature set; capacity moves to in-trade targets | build PI-20261028-V8KBRR5H-0004 | the rebuild keeps the 2026-08 data cut and the n is too small for the gate |
+| 2 | `P2-desk-checkin-exit-head` (new) | is there a learnable exit/close signal on action value, not giveback | exit-head candidate composing with P1-Q8 | desk exits rest on mechanical rules | #20967 merge; trainer or runner | label leakage through the entry join; check first |
+| 3 | `P2-Q4-cross-asset-features` (re-scoped) | is new information the lever for the regime head | feed P3 overlap reads | that information class is closed at 1h | build: a correlation feature block in `ml_bakeoff.py` | PIT alignment of daily ES/DXY to 1h bars |
+| 4 | `RQ-20261028-4dd3-01` (queued) | AX50 forward confirmation on `eth_4h` (regime lever) | Tier-3 packet | lever stays harness-only | runner | 2 days of new bars is too few; INDETERMINATE likely |
+
+**Feeds.** P1 -> P2: the desk labels, and the in-trade information result (path state beats entry state). P2 -> P1/P3: no head is a gate yet (none beats its prior net of cost), so nothing is proposed as Tier-3 this week. P6 -> P2: PI-...-0004 is the top build for this track.
+
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 
 Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.
