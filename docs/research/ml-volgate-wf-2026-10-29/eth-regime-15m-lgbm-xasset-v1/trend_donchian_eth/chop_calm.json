@@ -1,0 +1,190 @@
+{
+ "record": "ml-volgate-wf-cell",
+ "lane": "ML-VOLGATE-WF-ETH-BTC",
+ "plan_step": "B3",
+ "head": "eth-regime-15m-lgbm-xasset-v1",
+ "strategy": "trend_donchian_eth",
+ "cell": "chop/calm",
+ "symbol": "ETHUSDT",
+ "timeframe": "1h",
+ "harness": "trend",
+ "fidelity": "approximate",
+ "omitted_levers": [
+  "exit_head_action",
+  "exit_head_model",
+  "exit_head_threshold"
+ ],
+ "cost_policy": {
+  "source": "execution_costs.resolve_cost_policy",
+  "symbol": "ETHUSDT",
+  "fee_bps_roundtrip": 7.5,
+  "slippage_bps_roundtrip": 3.0,
+  "funding_bps_per_window": 1.0,
+  "funding_window_hours": 8.0,
+  "term_sources": {
+   "fee": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP",
+   "funding": "venue_default",
+   "slippage": "venue_default"
+  },
+  "fee_only_arm_declared": false,
+  "prop_declared": {}
+ },
+ "mean_cost_r_per_trade": {
+  "cost_fee_r": 0.05577,
+  "cost_slippage_r": 0.01521,
+  "cost_funding_r": 0.01908
+ },
+ "cost_stack_attested": true,
+ "population": {
+  "trades_in_leg_graded": 438,
+  "trades_excluded_after_labels_end": 32,
+  "labels_end": "2026-07-18T22:30:00Z",
+  "candle_days": 1460,
+  "trades_in_cell": 22
+ },
+ "rule": "plan section 3 P2/P3: <dir>_stable_drag under every member of FOLD_PANEL (3,4,5), not fold-sensitive, >= MIN_DIRECTION_TRADES (10) in that direction, full cost stack",
+ "by_fold_4": [
+  {
+   "trades": 6,
+   "long_n": 3,
+   "long_r": -3.4784,
+   "short_n": 3,
+   "short_r": -1.5754,
+   "net_r": -5.0538,
+   "fold": 1,
+   "from": "2023-01-08",
+   "to": "2023-07-22"
+  },
+  {
+   "trades": 5,
+   "long_n": 4,
+   "long_r": -4.586,
+   "short_n": 1,
+   "short_r": -0.5685,
+   "net_r": -5.1545,
+   "fold": 2,
+   "from": "2023-08-13",
+   "to": "2023-10-29"
+  },
+  {
+   "trades": 6,
+   "long_n": 4,
+   "long_r": 0.4142,
+   "short_n": 2,
+   "short_r": 5.1509,
+   "net_r": 5.5651,
+   "fold": 3,
+   "from": "2023-12-01",
+   "to": "2025-10-05"
+  },
+  {
+   "trades": 5,
+   "long_n": 3,
+   "long_r": 1.1405,
+   "short_n": 2,
+   "short_r": 6.3521,
+   "net_r": 7.4926,
+   "fold": 4,
+   "from": "2025-10-24",
+   "to": "2026-06-23"
+  }
+ ],
+ "pooled": {
+  "trades": 22,
+  "long_n": 14,
+  "long_r": -6.5097,
+  "short_n": 8,
+  "short_r": 9.3591,
+  "net_r": 2.8494
+ },
+ "cell_verdict_detail": {
+  "long_trades": 14,
+  "short_trades": 8,
+  "pooled_long_r": -6.5097,
+  "pooled_short_r": 9.3591,
+  "long_verdict": "no_stable_drag",
+  "short_verdict": "insufficient_n",
+  "long_stable_drag": false,
+  "short_stable_drag": false,
+  "long_fold_sensitive": true,
+  "short_fold_sensitive": false,
+  "long_insufficient_n": false,
+  "short_insufficient_n": true,
+  "per_fold_count": {
+   "3": {
+    "short_folds_negative": 1,
+    "long_folds_negative": 3,
+    "of_folds": 3,
+    "short_populated_folds": 3,
+    "long_populated_folds": 3,
+    "short_majority_negative": false,
+    "long_majority_negative": true
+   },
+   "4": {
+    "short_folds_negative": 2,
+    "long_folds_negative": 2,
+    "of_folds": 4,
+    "short_populated_folds": 4,
+    "long_populated_folds": 4,
+    "short_majority_negative": false,
+    "long_majority_negative": false
+   },
+   "5": {
+    "short_folds_negative": 2,
+    "long_folds_negative": 3,
+    "of_folds": 5,
+    "short_populated_folds": 4,
+    "long_populated_folds": 5,
+    "short_majority_negative": false,
+    "long_majority_negative": true
+   }
+  }
+ },
+ "directions": {
+  "long": {
+   "verdict": "REFUSED_UNFAITHFUL",
+   "would_be_if_not_refused": "FAIL_FOLD_SENSITIVE",
+   "informational_only": true,
+   "existing_1d_cell_already_off": false,
+   "authored_trend_vol_cell": false
+  },
+  "short": {
+   "verdict": "REFUSED_UNFAITHFUL",
+   "would_be_if_not_refused": "INDETERMINATE_INSUFFICIENT_N",
+   "informational_only": true,
+   "existing_1d_cell_already_off": false,
+   "authored_trend_vol_cell": false
+  }
+ },
+ "label_provenance": {
+  "dataset": "market_features/ETHUSDT/15m/v901",
+  "rows": 175272,
+  "ts_first": "2021-07-19T04:45:00Z",
+  "ts_last": "2026-07-18T22:30:00Z",
+  "threshold": 0.5,
+  "threshold_source": "ML_VOL_VERDICT_THRESHOLD (live resolver)",
+  "labels": {
+   "calm": 37036,
+   "volatile": 138236,
+   "volatile_pct": 78.87
+  },
+  "stage": "shadow",
+  "resolution": "explicit_model_id",
+  "live_regime_discrimination_auc": 0.675,
+  "gate_check_target_advisory": {
+   "ready": false,
+   "live_parity": "insufficient_data (12 rows, need 20)",
+   "labels_accruing": 0.99,
+   "drift_clean": "KS 0.1075 PSI 0.0566"
+  },
+  "replay_checks": {
+   "batch_vs_per_row_max_abs_delta": 0.0,
+   "vol_bucket_recomputed_mismatches": 0,
+   "feature_audit_rows_checked": 5008
+  },
+  "in_sample": true,
+  "live_verified": false,
+  "live_verified_note": "verify against live audit rows was NOT run: no ETH head is advisory, so the router writes no audit rows for it",
+  "trainer_head_sha": "303bab662"
+ }
+}

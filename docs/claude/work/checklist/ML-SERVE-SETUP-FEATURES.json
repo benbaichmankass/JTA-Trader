@@ -2,7 +2,7 @@
   "id": "ML-SERVE-SETUP-FEATURES",
   "title": "[MODEL] B2 (Tier-2, held): advisory serve row carries the setup_candidates decision-time features (same functions as the family) + train-vs-serve parity test + real-money roster guard test",
   "phase": "W44",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01AFoLuM3NoUTHiuQ17qwhdZ",
   "model": "opus",
@@ -13,11 +13,20 @@
     21176
   ],
   "blocked_on": [],
-  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 4 B2. WHY MEASURED: src/runtime/advisory_sizing.py::_feature_row_from_pkg emits 6 fields (strategy,symbol,direction,confidence,setup_type,killzone); p2pool manifest needs 10 (rolling_log_return_vol, log_return, lags, vol_bucket, momentum, hour, dow, direction, symbol). Tier-2 held PR; operator OK Fri 10-30 before deploy.  [21:25Z] vol_bucket serves dead live on the yz heads (PI-20260927-3WM5HADW-0005, ml-review 2026-10-28 C5); p2pool uses vol_bucket, so parity must show it present+non-default+equal before P1 shadow.  [07:11Z] PR #21176 (Tier 2, held) open: serve row 10/10 parity on 982 rows / 2,500 recorded ADA 2h bars; I6 guard test; I7 fixed (conviction apply reads advisory-only blend). P1 must be RETRAINED on code with this PR to carry serve_spec. Follow-ups PI-20261029-Q17QWHDZ-0001..3 (#21174).",
-  "updated_at": "2026-10-29T07:12:24Z",
+  "note": "Plan docs/plans/ml-live-promotion-plan-2026-10-29.md section 4 B2. WHY MEASURED: src/runtime/advisory_sizing.py::_feature_row_from_pkg emits 6 fields (strategy,symbol,direction,confidence,setup_type,killzone); p2pool manifest needs 10 (rolling_log_return_vol, log_return, lags, vol_bucket, momentum, hour, dow, direction, symbol). Tier-2 held PR; operator OK Fri 10-30 before deploy.  [21:25Z] vol_bucket serves dead live on the yz heads (PI-20260927-3WM5HADW-0005, ml-review 2026-10-28 C5); p2pool uses vol_bucket, so parity must show it present+non-default+equal before P1 shadow.  [07:11Z] PR #21176 (Tier 2, held) open: serve row 10/10 parity on 982 rows / 2,500 recorded ADA 2h bars; I6 guard test; I7 fixed (conviction apply reads advisory-only blend). P1 must be RETRAINED on code with this PR to carry serve_spec. Follow-ups PI-20261029-Q17QWHDZ-0001..3 (#21174).  [09:50Z] #21176 MERGED 09:47Z (merged != deployed). Closes when: deployed to ict-trader-live AND a live order package on a trend_donchian 1h leg carries meta.setup_features read_state=ok AND (after p2pool is retrained on code with #21176 and is at shadow) its shadow_predictions row shows all 10 features present/non-default with setup_rows state ok.",
+  "updated_at": "2026-10-29T10:06:28Z",
   "updated_by": "session_01AFoLuM3NoUTHiuQ17qwhdZ",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "#21176 deployed to ict-trader-live; a live trend_donchian 1h order package carries meta.setup_features.read_state == ok; after p2pool is retrained on post-#21176 code and at shadow, its shadow_predictions rows carry all 10 features present/non-default with advisory setup_rows state ok",
+    "how_to_check": "diag relay: SELECT meta FROM order_packages WHERE strategy LIKE 'trend_donchian%' ORDER BY id DESC LIMIT 5 (look for setup_features.read_state); trainer-vm-diag: grep serve_spec in p2pool model_state.json; gate-check live_parity on p2pool with --datasets-root",
+    "due_by": "2026-11-02"
+  },
+  "writeback": {
+    "roadmap": "none: M25 milestone status changes only when P1 reaches shadow (B5), not on this merge",
+    "arch": "none: no contract, schema or gate change; a new OrderPackage meta key (setup_features) rides existing meta"
+  },
   "_seq": 757
 }

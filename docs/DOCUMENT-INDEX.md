@@ -162,6 +162,7 @@ markers that were cheaper to lie to than to satisfy — `new-table-wiring-guard`
 |---|---|---|
 | `docs/claude/DUE.md` | `scripts/ops/render_due_list.py` | verified: generator exists and names the file |
 | `docs/claude/READOUT.md` | `scripts/ops/constraint_readout.py` | verified: generator exists and names the file |
+| `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/strategy-coverage-matrix.md` | `scripts/check_strategy_coverage.py` | verified: generator exists and names the file |
 | `docs/training-population-matrix.md` | `scripts/check_training_population.py` | verified: generator exists and names the file |
 
@@ -1034,6 +1035,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-unblock-sequence-2026-09-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e33-arbitration-scope-starves-real-money-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e46-qqq-arm-inert-once-the-tp-is-modelled-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-volgate-wf-2026-10-29/README.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-2h-direction-walkforward-2026-07-29.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-frac-cross-leg-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pullback-stop-retune-and-capr-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
