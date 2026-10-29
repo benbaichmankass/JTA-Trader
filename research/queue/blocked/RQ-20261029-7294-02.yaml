@@ -1,0 +1,103 @@
+# Hand-authored 2026-10-29 by lane ML-DATA-RATE-PATH (Tier 1), dispatched by Manager Session 2026-10-29d (session_01AFoLuJUkhLNmykA1AEHrkh).
+# Decision rule registered BEFORE any run. Design: docs/research/ml-data-rate-path-2026-10-29.md section 2. Gates: none.
+id: RQ-20261029-7294-02
+title: 'Q-TM1: does a GBDT action-value exit/tighten policy beat the incumbent (hold-to-bracket and the best rule lever) on the six money legs
+  as traded, net of cost, under S-OFFLINE and against its own causal matched random control?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+programme: P1
+roadmap:
+- L-ML-LIVE
+- L-ATM
+kind: experiment
+requires_result: RQ-20261029-7294-01
+practice_precedent: 'T1, T2, T3, T8, M6 (docs/reference/trading-and-model-practice-principles.md); ML-PROGRAMME-2026-10-28 section 1.3 S-OFFLINE
+  and section 4.3 Q-TM1 (fitted-Q folded in as an arm).'
+question: 'On TM-BENCH (money-leg test rows of corpus v1: trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+  trend_donchian_eth_prop, trend_donchian_sol_prop; 2,627 trades), a LightGBM regression of each action''s net-R advantage over hold (actions:
+  close, tighten to BE, tighten to ATR trail, partial 50 percent) on the full in-trade state, acting when the predicted advantage exceeds the
+  action''s extra cost by a margin chosen on train folds only. Training corpus fixed by RQ-20261029-7294-01''s verdict: v1+v2 on PASS, v1 only
+  otherwise. Six calendar folds by entry, purged by [entry, exit + horizon] across symbols, embargo = leg max hold.'
+why_this_matters: 'ML-AM-NEXT-LIVE close-out (2026-10-29): three threshold heads on the R1 state failed on money (d6e7-06, RQ-20260927-002,
+  a7e1-01); its named next candidate is Q-TM1. A pass is the first ML active-management policy with an offline evidence record on the
+  real-money legs.'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 0.45
+  design: one_sample
+  alpha: 0.05
+  power: 0.93
+  basis: 'n MEASURED (RQ-20261024-09a6-01 census). Paired per-trade sd of policy - incumbent 0.40-0.51 R INFERRED from d6e7-06 CIs
+    (ML-PROGRAMME section 2.2). MDE at 80 percent power = 2.80 x 0.45 / sqrt(2627) = 0.025 R; power at +0.03 R = 0.93.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261029-7294-02-QTM1-SOFFLINE
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'Pooled OOS net R per trade of the policy minus max(B0 hold-to-bracket, B1 best rule lever chosen on train folds), trade-cluster
+    bootstrap 95 percent CI (2,000), per-fold sign, max drawdown, net R per capital-day (scripts/capital_efficiency.py); the same for B2, B5 and
+    B4 (the causal matched random control: same count and type of actions at random check-ins, 200 draws); the linear twin (logit
+    action-value wrapper) on the same folds. Holm across the four actions.'
+  rule: 'INDETERMINATE IF test trades < 2,000 OR TM-BENCH selfcheck fails OR the matched random is not mode causal. PASS IF policy - max(B0, B1)
+    >= +0.03 R/trade AND CI lower bound > 0 AND >= 5 of 6 folds positive AND max DD <= B0 max DD AND net R per capital-day >= B0 AND the policy
+    beats B2, B5 and B4 (p_random_ge_policy <= 0.05, Holm) AND it beats the linear twin by >= +0.01 R/trade. PASS -> one Tier-3 packet on
+    ML-AM-NEXT-LIVE (shadow via exit_head_shadow first; any action class stays advice-only until RULE-AM-RISK-ADJUSTED-V1 grades it on
+    book_usd_sim). FAIL IF CI upper bound < +0.03: this configuration (LightGBM, this state block, this action set, this corpus) does not beat
+    the rule levers; Q-TM2 (LSM) and Q-TM7 (flow) are next per ML-PROGRAMME. A FAIL closes the configuration, not the family. INDETERMINATE
+    otherwise. Thresholds are not changed after any result.'
+  min_n: 2,000 test trades (per-leg rows reported, never graded under 100)
+intervention_controls:
+  hold_to_bracket: true
+  matched_random: {draws: 200}
+  best_static: {grid: [be_at_1r, be_at_1.5r, atr_trail_2, atr_trail_3, partial_50_at_1r], excludes_test_folds: true}
+  bootstrap_group: trade
+ml_consumer:
+  consumer: src/runtime/exit_head_apply.py
+  decision: hold / close / tighten on open trades of the money legs (advice-only per class until graduation)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - xrp_pullback_2h
+  - ada_pullback_2h
+  - trend_donchian_eth_prop
+  - trend_donchian_sol_prop
+  book: money
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 600
+  confidence: 0.2
+  basis: 'stand-in: the 0.756 R/trade hindsight-oracle gap on 2,627 trades (ML-PROGRAMME section 1.3) on the five bybit_2 legs plus the prop leg;
+    not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 150
+  why_runner: Harness paths from keyless public candles; no trainer data; GBDT on CPU.
+  basis: ESTIMATED from the 09a6-01 run (60 min est, six legs) plus four action heads x six folds.
+blocked_on:
+- kind: work_item
+  ref: TM-BENCH
+  what: scripts/research/tm_bench.py does not exist on main 2026-10-29 (labels, baselines B0-B6, causal B4, folds, LightGBM and logit action-value wrappers).
+  clears_when: 'tm_bench.py selfcheck passes and B0-B4 are scored on corpus v1; RQ-20261029-7294-01 has a verdict. Then set run.command to
+    [python3, scripts/research/tm_bench.py, score, --policy, gbdt_action_value, --train-corpus, <v1 or v1+v2 per 7294-01>, --test-corpus, v1,
+    --rule, s_offline, --twin, logit_action_value, --random-draws, 200, --folds, 6, --n-boot, 2000, --out, {out_dir}], git mv to research/queue/,
+    remove blocked_on, status: queued.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-AM-NEXT-LIVE
+- ML-EXIT-ACTIONGRID-LABELS
+- CF-B0-ENGINE-LIFT
+- docs/plans/ML-PROGRAMME-2026-10-28.md (Q-TM1)
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order. A PASS produces an evidence record for one
+  Tier-3 packet, it does not graduate any action class.
