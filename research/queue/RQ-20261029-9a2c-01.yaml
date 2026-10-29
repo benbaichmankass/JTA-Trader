@@ -1,4 +1,4 @@
-id: RQ-20261029-pg2a-01
+id: RQ-20261029-9a2c-01
 title: 'Prop survival gate V2 re-run (lane PROP-GATE-RERUN-20261029): trend_donchian_eth_prop and trend_donchian_sol_prop x breakout_2 / tradeify_1 / velotrade_1, at the current cost stack, 3y and 365d windows, a real per-firm breach ceiling (median AND worst seed)'
 status: done
 cadence: once
@@ -37,13 +37,14 @@ routing:
   basis: Measured this lane - one prop_ev_sim cell (1000 lives + 4x100 outer) takes ~65 s; 120 cells over 4 cores.
 run:
   workflow: session-local
-  note: 'Run SESSION-LOCAL by lane PROP-GATE-RERUN-20261029 (prop_ev_grid does not take per-account rulesets in one call, so the grid is driven directly over prop_ev_sim.py, the same simulator prop_ev_grid wraps). Driver and raw cells: research/results/RQ-20261029-pg2a-01/.'
+  note: 'Run SESSION-LOCAL by lane PROP-GATE-RERUN-20261029 (prop_ev_grid does not take per-account rulesets in one call, so the grid is driven directly over prop_ev_sim.py, the same simulator prop_ev_grid wraps). Driver and raw cells: docs/research/prop-gate-rerun-2026-10-29/RQ-20261029-9a2c-01/.'
   inputs:
-    research_unit: RQ-20261029-pg2a-01
+    research_unit: RQ-20261029-9a2c-01
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+practice_precedent: 'none: re-pricing of committed ledgers under firm rules; follows RULE-P5-GATE-BRK-PER-LEG (RQ-20261016-026) with a real breach ceiling added; docs/reference/trading-and-model-practice-principles.md (judge an edge ex a single window)'
 related:
 - research/queue/RQ-20261016-026.yaml
 - research/queue/RQ-20261028-dda7-03.yaml
@@ -51,4 +52,4 @@ related:
 - scripts/ci/check_prop_roster_gate.py
 - docs/claude/work/checklist/PROP-GATE-RERUN-20261029.json
 what_it_does_not_do: 'Changes no roster, risk, sizing, switch or config. Does not read live book P&L. Prices each leg ALONE (the gate''s population), not the two-leg account book. The old comms/prop_survival records are left in place; V2 records sit beside them.'
-result: 'GRADED 2026-10-29 against RULE-P5-GATE-BRK-PER-LEG-V2 (primary = current-stack arm, 3y window). eth_prop PASS on breakout_2/tradeify_1/velotrade_1 (breakout_2 365d EV ~0, worst seed +$0.32: marginal). sol_prop FAIL on all three (EV < 0 at median and worst seed on both cost arms; 365d INDETERMINATE n=65). Proposal to operator: keep eth_prop; PULL sol_prop from the three prop rosters (Tier-3, not applied). Table: research/results/RQ-20261029-pg2a-01/summary.json; records comms/prop_survival/v2/.'
+result: 'GRADED 2026-10-29 against RULE-P5-GATE-BRK-PER-LEG-V2 (primary = current-stack arm, 3y window). eth_prop PASS on breakout_2/tradeify_1/velotrade_1 (breakout_2 365d EV ~0, worst seed +$0.32: marginal). sol_prop FAIL on all three (EV < 0 at median and worst seed on both cost arms; 365d INDETERMINATE n=65). Proposal to operator: keep eth_prop; PULL sol_prop from the three prop rosters (Tier-3, not applied). Table: docs/research/prop-gate-rerun-2026-10-29/RQ-20261029-9a2c-01/summary.json; records comms/prop_survival/v2/.'
