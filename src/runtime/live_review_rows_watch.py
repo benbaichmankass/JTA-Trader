@@ -21,7 +21,11 @@ add_entry -- on a dispatchable route, on ANY account class, paper included
 refusal ping. A class in ``rows_lib.ADVICE_ONLY_ACTIONS`` is ADVICE ONLY: on any route it is
 logged ``advice_only`` and never sent (tighten_sl: operator 2026-10-28 ~20:35Z, "Advice-only
 tightens (Recommended)"; every in-trade class: operator 2026-10-28 ~21:07Z, "Advice-only until
-tested"). A class graduates by leaving that tuple, citing its passed test.
+tested"). A class graduates by leaving that tuple, citing its passed test. ONE exception, per package:
+an active ``kind: ltr_auto_apply`` entry in config/mandates.yaml that scopes the row's
+order_package_id and action (``src/runtime/ltr_auto_mandate.py``; MD-LTR-ADA-AUTO, operator
+2026-10-29 "VM applies it directly") makes that row a candidate; the receipt carries
+``auto_mandate``, and the apply enforces that entry's bounds.
 
 Cadence: ``ensure_started()`` (called from ``record_position_telemetry``,
 which only runs while packages are open) starts ONE daemon thread, once, in
@@ -75,6 +79,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from src.runtime import live_review_rows as rows_lib
+from src.runtime import ltr_auto_mandate
 
 logger = logging.getLogger(__name__)
 
@@ -154,11 +159,14 @@ def _dispatch(review_id: str, ref: str) -> Dict[str, Any]:
 DISPATCHABLE_ACTIONS = ("tighten_sl", "close", "partial_close", "move_tp", "widen_sl", "change_size", "add_entry")
 
 
-def dispatchable(row: Dict[str, Any]) -> Optional[str]:
+def dispatchable(row: Dict[str, Any],
+                 auto: Callable[[Dict[str, Any]], Optional[str]] = ltr_auto_mandate.exception_for) -> Optional[str]:
     """None when the row is an apply candidate; else why it is not (logged, never sent).
-    An advice-only class returns rows_lib.ADVICE_ONLY_VERDICT on every route: recorded as advice, never executed."""
+    An advice-only class returns rows_lib.ADVICE_ONLY_VERDICT on every route: recorded as advice, never executed,
+    UNLESS an active per-package auto mandate (``ltr_auto_mandate``, read from config/mandates.yaml) scopes this
+    row's order_package_id and action (MD-LTR-ADA-AUTO, operator 2026-10-29): then it is a candidate like any other."""
     rec = row.get("recommendation") or {}
-    if rec.get("action") in rows_lib.ADVICE_ONLY_ACTIONS:
+    if rec.get("action") in rows_lib.ADVICE_ONLY_ACTIONS and not auto(row):
         return rows_lib.ADVICE_ONLY_VERDICT
     if rec.get("action") not in DISPATCHABLE_ACTIONS:
         return f"action_{rec.get('action')}"
@@ -263,6 +271,9 @@ def run_pass(git: Git = _git, dispatch: Callable[[str, str], Dict[str, Any]] = _
                                "seen_at": first.isoformat()}
         _proof(lambda fp: fp.record_row(row, at=first))
         why = dispatchable(row)
+        auto_id = ltr_auto_mandate.exception_for(row) if why is None else None
+        if auto_id:
+            rec["auto_mandate"] = auto_id
         if why == rows_lib.ADVICE_ONLY_VERDICT:
             rec.update(verdict=why, detail=f"advice only: {(row.get('recommendation') or {}).get('action')} "
                                            f"level {(row.get('recommendation') or {}).get('level')} not executed")

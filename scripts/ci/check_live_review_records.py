@@ -181,7 +181,7 @@ def trade_action_problems(rec: dict) -> list[str]:
 #: packet gave. Earlier rows are history (they carry a null level and the due side infers it).
 DUE_EVENTS = ("r_milestone", "new_peak", "giveback", "near_target", "daily_floor",
               "swing", "vol_regime", "funding", "calendar", "mechanics",
-              "adverse_r", "stall", "momentum_flip", "structure_break")
+              "adverse_r", "stall", "momentum_flip", "structure_break", "mandate_cadence")
 TRIGGER_LEVEL_RULE_FROM = "2026-10-27T00:00:00Z"
 
 
