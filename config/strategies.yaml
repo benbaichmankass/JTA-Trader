@@ -1194,7 +1194,13 @@ strategies:
     # Observe-only — feeds the cross-symbol decision models with alt data.
     exit_head_model: exit-head-donchian-1h-v1
     exit_head_threshold: 0.10
-    exit_head_action: close
+    # ANNOTATE (2026-10-29, Tier-3 data-backed de-risk, lane ML-AM-NEXT-LIVE):
+    # scored + logged every closed bar, `close` not applied. FAILS the B4 KEEP rule
+    # (dR/trade >= 0) even IN-SAMPLE (the head's own training window favours it):
+    # live-artifact replay on SOLUSDT 1h, 286 trades 2021-10..2026-10, gross R
+    # 38.74 -> 31.69 (delta -7.05, -0.0246 R/trade; identical per-trade cost both
+    # arms; issue #21295). Revert: set back to `close`.
+    exit_head_action: annotate
 
   trend_donchian_eth:
     # PROP-account alt variant of trend_donchian on ETHUSDT (PB-20260616-004).

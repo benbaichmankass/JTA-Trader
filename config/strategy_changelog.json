@@ -248,6 +248,11 @@
    "date": "2026-07-12",
    "ref": "M20 fleet sweep — stale_exit_bars 8 -> 12 (walk-forward 6/6), Tier-3",
    "summary": "Fleet-wide config-exact sweep (runtime_logs/m20_fleet/2026-07-12): the 12-bar <0R stale-stop beats-or-ties base on net_R AND maxDD in 6/6 yearly walk-forward folds (2021-2026), vs 4/6 for the shipped 8-bar cell. Same conditional shape (close only when still below 0R at bar close); the longer patience window keeps more eventual winners. ETH stays at 8 (its 12-bar cell scored 3/6)."
+  },
+  {
+   "date": "2026-10-29",
+   "ref": "ML-AM-NEXT-LIVE / ML-EXITHEAD-VALUE (B4), Tier-3 data-backed de-risk; exit-head replay issue #21295 (run 40887209578), research/results/_unattributed",
+   "summary": "exit_head_action close -> annotate (scored + logged, not applied). The live exit head fails the B4 KEEP rule (dR/trade >= 0) even in-sample: SOLUSDT 1h, 286 trades 2021-10..2026-10, delta -7.05 gross R (-0.0246 R/trade), identical per-trade cost on both arms. Revert: exit_head_action: close."
   }
  ],
  "trend_donchian_eth": [
