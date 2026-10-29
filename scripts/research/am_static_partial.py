@@ -40,9 +40,9 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import first_passage_paths as fpp
-from ml_am_partial_noninferior import GATE_FAMILIES, delta_full, load_corpus, to_trades
-from ml_overlay_noninferior import month_block_lb
+import first_passage_paths as fpp  # noqa: E402
+from ml_am_partial_noninferior import GATE_FAMILIES, delta_full, load_corpus, to_trades  # noqa: E402
+from ml_overlay_noninferior import month_block_lb  # noqa: E402
 
 RULE_ID = "RULE-AM-STATIC-PARTIAL-V1"
 FRACTION = 0.5
