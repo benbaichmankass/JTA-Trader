@@ -6134,6 +6134,14 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
     return summary
 
 
+#: LIKE predicate for the journalled refusal row an ``execution: shadow`` strategy
+#: leaves (``pipeline.py`` stamps ``dry_cause`` in the json.dumps default-separator
+#: shape). NON-TPSL-CLOSES-20261029 (pkg-1f69590887ac44e9): a shadow package is
+#: not "risk-refused", so path (1) of `_sweep_unlinked_packages` must skip it and
+#: let path (1.5) label it ``shadow_expired`` / ``shadow_no_execute``.
+_SHADOW_REJECTION_NOTES_LIKE = '%"dry_cause": "execution:shadow"%'
+
+
 def _sweep_unlinked_packages(db) -> int:
     """Mark order_packages with status='open' and no linked_trade_id as
     'orphaned'.
@@ -6246,6 +6254,7 @@ def _sweep_unlinked_packages(db) -> int:
                 "        SELECT t.status FROM trades t "
                 "        WHERE t.order_package_id = order_packages.order_package_id "
                 "          AND t.status IN ('rejected', 'rejected_too_small', 'exchange_rejected') "
+                f"          AND COALESCE(t.notes, '') NOT LIKE '{_SHADOW_REJECTION_NOTES_LIKE}' "
                 "        ORDER BY t.id DESC LIMIT 1), "
                 "    updated_at = ?, "
                 "    meta = json_set(COALESCE(meta, '{}'), "
@@ -6259,7 +6268,8 @@ def _sweep_unlinked_packages(db) -> int:
                 "  AND EXISTS ( "
                 "        SELECT 1 FROM trades t "
                 "        WHERE t.order_package_id = order_packages.order_package_id "
-                "          AND t.status IN ('rejected', 'rejected_too_small', 'exchange_rejected')) ",
+                "          AND t.status IN ('rejected', 'rejected_too_small', 'exchange_rejected') "
+                f"          AND COALESCE(t.notes, '') NOT LIKE '{_SHADOW_REJECTION_NOTES_LIKE}') ",
                 (now_iso, now_iso),
             )
             rejected_relabelled = conn.execute("SELECT changes()").fetchone()[0]
@@ -12922,13 +12932,12 @@ def _netting_apply_close(
             db.update_trade(int(row["id"]), updates)
             return "closed"
 
-        # package-cascade: KNOWN GAP — this full-close branch closes the trade
-        # and never touches the linked `order_packages` row at all (this function
-        # has no package reference of any kind), so the second-line
-        # `_sweep_stuck_linked_packages` force-closes it a tick later as
-        # 'stuck_cascade_recovered' and fires `enqueue_stuck_package_sweep`.
-        # Measured 2026-08-22: `netting_attributed` is 5.3% of main-path closes,
-        # so this fires in production. Tier-2 to fix; filed as
+        # package-cascade: both full-close branches below cascade the linked
+        # package with the trade's own reason (NON-TPSL-CLOSES-20261029: pkg-29c8
+        # / trade 6764 was closed here, the package was not, and
+        # `_sweep_stuck_linked_packages` then stamped 'stuck_cascade_recovered'
+        # and fired `enqueue_stuck_package_sweep`). Measured 2026-08-22:
+        # `netting_attributed` is 5.3% of main-path closes.
         # BL-20260822-SEVEN-OF-EIGHT-TRADE-CLOSE-SITES-DO-NOT-CASCADE-THEIR-PACKAGE.
         updates: Dict[str, Any] = {
             "status": "closed",
@@ -12962,6 +12971,10 @@ def _netting_apply_close(
                     updates["pnl_percent"] = pct
             updates["notes"] = dump_capped(notes, 500)
             db.update_trade(int(row["id"]), updates)
+            _cascade_close_linked_package(
+                db, row["id"], close_reason="netting_attributed",
+                caller="_netting_apply_close",
+            )
             return "closed"
 
         # no_anchor — declare, never substitute.
@@ -12969,6 +12982,10 @@ def _netting_apply_close(
         notes["unmeasured_reason"] = "netting_attribution_no_anchor"
         updates["notes"] = dump_capped(notes, 500)
         db.update_trade(int(row["id"]), updates)
+        _cascade_close_linked_package(
+            db, row["id"], close_reason="netting_attributed",
+            caller="_netting_apply_close",
+        )
         return "unmeasured"
     except Exception as exc:  # noqa: BLE001
         logger.warning(
@@ -15153,6 +15170,63 @@ def _sweep_exit_label_from_bracket_order(
     return summary
 
 
+def _sweep_package_close_reason_from_trade(db) -> Dict[str, int]:
+    """Carry a trade's refined ``sl``/``tp`` label onto its closed package.
+
+    NON-TPSL-CLOSES-20261029. The close paths stamp the package with the label
+    of the path that NOTICED the close (`stuck_strategy_watchdog`,
+    `reconciler_filled`, `stuck_cascade_recovered`, `netting_attributed`);
+    `_sweep_exit_label_from_bracket_order` / the price classifier later refine
+    the TRADE row to ``sl``/``tp`` from the venue fill, but never touched the
+    package, so `order_packages.close_reason` kept the bookkeeping label
+    (MEASURED 2026-10-29: pkg-d752b509, pkg-29c8e90b, pkg-11c1100f, each
+    linked to a trade with ``exit_reason='sl'``, ``exit_reason_source=
+    venue_bracket_order``).
+
+    Only a CLOSED package whose reason is one of the bookkeeping labels, linked
+    to a CLOSED trade already labelled ``sl``/``tp``, is rewritten; the prior
+    label is kept in ``meta.pre_label_close_reason``. Last 14 days. Best-effort,
+    never raises.
+    """
+    summary: Dict[str, int] = {"relabelled": 0, "errors": 0}
+    labels = _BRACKET_ORDER_RELABEL_REASONS + (
+        "stuck_cascade_recovered", "reconciler",
+    )
+    ph = ",".join("?" for _ in labels)
+    try:
+        conn = db.connect()
+        try:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "UPDATE order_packages "  # writer-conformance: allow conditional relabel; update_order_package cannot guard its WHERE on the prior close_reason
+                "   SET close_reason = (SELECT t.exit_reason FROM trades t "
+                "                        WHERE t.id = order_packages.linked_trade_id), "
+                "       updated_at = ?, "
+                "       meta = json_set(COALESCE(meta, '{}'), "
+                "           '$.pre_label_close_reason', COALESCE(close_reason, '')) "
+                " WHERE status = 'closed' "
+                f"   AND COALESCE(close_reason, '') IN ({ph}) "
+                "   AND linked_trade_id IN ("
+                "       SELECT id FROM trades WHERE status = 'closed' "
+                "          AND COALESCE(is_backtest, 0) = 0 "
+                "          AND exit_reason IN ('sl', 'tp')) "
+                "   AND datetime(updated_at) >= datetime('now', '-14 days')",
+                (now_iso, *labels),
+            )
+            summary["relabelled"] = conn.execute(
+                "SELECT changes()").fetchone()[0]
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_sweep_package_close_reason_from_trade: failed: %s", exc)
+        summary["errors"] += 1
+    if summary["relabelled"]:
+        logger.info("_sweep_package_close_reason_from_trade: %s", summary)
+    return summary
+
+
 #: `exit_price_source` marker (exit_anchor.ANCHOR_SOURCE) selected by the
 #: anchor-to-fill upgrade sweep, in the json.dumps default-separator shape the
 #: other notes LIKE predicates in this module rely on.
@@ -16249,6 +16323,17 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: bracket-order label sweep raised: %s", exc,
+        )
+
+    # NON-TPSL-CLOSES-20261029: the package carries the trade's refined label.
+    try:
+        with _phase("sweep_package_close_reason_from_trade"):
+            pkg_lbl = _sweep_package_close_reason_from_trade(db)
+        if pkg_lbl.get("relabelled") or pkg_lbl.get("errors"):
+            summaries["__package_close_reason__"] = pkg_lbl
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: package close-reason sweep raised: %s", exc,
         )
 
     # CLOSE-LABELS-1214: a reconciler-detected close time is moved back to the
