@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "clears_when": "the fix is merged and two fresh issues labelled exit-head-replay-request (strategy trend_donchian_eth / trend_donchian_sol) report 'replaying <strategy> ETHUSDT|SOLUSDT' with a measured delta",
+    "kind": "event"
+  },
+  "id": "PI-20261029-IFMPNGJK-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-AM-NEXT-LIVE (session_01AFoLuN7GVCEJnGiFMpNGJK), issues #21269 #21270",
+    "rerun": "grep -n 'exit_head_replay_data_' .github/workflows/research-exit-head-replay-trainer.yml"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Re-run the exit-head replay of exit-head-donchian-1h-v1 on trend_donchian_eth (ETHUSDT) and trend_donchian_sol (SOLUSDT) once the fail-closed fix (branch claude/exit-head-replay-fail-closed) is on main, and treat research/results/_unattributed/40873919624.jsonl (eth) and 40873924264.jsonl (sol) as VOID: both fetches were REFUSED (window mismatch on the shared /tmp csv) and the replay ran the leg's config on the previous run's BTCUSDT candles (issues #21269/#21270, 'replaying trend_donchian_eth BTCUSDT 1h', 43920 bars from 2021-09-23). Their deltas (+1.672 / -2.176 gross R) measure nothing about ETH or SOL. Feeds ML-EXITHEAD-VALUE (B4 KEEP rule) for the two non-BTC legs."
+}
