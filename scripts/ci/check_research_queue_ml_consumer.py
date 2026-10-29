@@ -46,8 +46,6 @@ import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import yaml
-
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -76,8 +74,8 @@ def is_ml_unit(entry: dict) -> bool:
 
 def books(root: Path) -> Dict[str, str]:
     """leg -> `money` | `demo_floor`, re-parsed from config/accounts.yaml (live accounts only)."""
-    p = root / "config" / "accounts.yaml"
-    accounts = ((yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("accounts") or {}) if p.is_file() else {}
+    from src.config.accounts_loader import load_accounts_dict  # noqa: PLC0415 -- the canonical accounts.yaml reader
+    accounts = load_accounts_dict(root / "config" / "accounts.yaml")
     out: Dict[str, str] = {}
     for name, cfg in accounts.items():
         if not isinstance(cfg, dict) or cfg.get("mode") != "live":
