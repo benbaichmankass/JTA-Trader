@@ -16481,3 +16481,55 @@ nodes:
   - unit: RQ-20261028-d1f5-02
     verdict: fail
   needs_authoring: 'DESK-LIFECYCLE-S0 full run FAILED (PR #20967, RULE-RQ20261028-D1F5-02-LIFECYCLE): Claude whole-trade management -0.159 R vs hold on Claude entries (n 473) and -0.124 R on random entries (n 465); 981 of 1,155 non-hold actions were stop tightens worth -0.097 R each, while its 2,001 holds were worth +0.142 R each vs closing. DIAGNOSIS (programme review 2026-10-28): the lever, not the judge -- the same loss appears in 129 of ~140 mechanical tightening units this week, so a judge restricted from tightening is the variant that tests it. NOT a re-scoring of the recorded decisions (selecting the non-tighten subset after seeing outcomes is data-snooped). Author ONE pre-registered unit only after #20967 merges and the manager decides judge spend: the C4E protocol with the action set {hold, close, take-profit move} (no stop tighten), on a FRESH pair sample, graded on the same three contrasts (vs hold, vs matched random, vs best fixed rule). A cheaper mechanical twin is P1-Q4-desk-losscut-ada-pb (no judge). Retiring Claude-management is not on the table from one test (operator 2026-10-22).'
+# ── 2026-10-28 full action space (lane ROADMAP-PRIORITIES-AM-PRINCIPLE, manager dispatch) ───────────────────────────
+# Operator 2026-10-28, verbatim: "active management isn't only tightening - it can be any movement in either bracket
+# triggered by developments in the live market data" / "SL tightening is just one lever". Each action class graduates
+# from advice-only on its OWN registered, net-of-cost test vs hold AND a matched random intervention (T1); a FAIL on one
+# class says nothing about another (docs/ARCHITECTURE-CANONICAL.md § "Active management"). C1 tighten is tested and loses
+# (#20967 merged, #21003 held); C4/C6 ride Q2/Q3/Q8. The nodes below are the untested classes; research-ops authors each
+# ladder, cheapest rung first, on the real-money legs first.
+- id: P1-Q15-c2-sl-widen
+  question: Q15
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C2 SL widen: does widening the stop on a live trigger (vol expansion, event risk, a liquidity sweep before a level) beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q15-c3-sl-structure
+  question: Q15
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C3 SL move-to-structure: does re-anchoring the stop to new structure (swing / FVG / level) beat hold net of cost? Reuse the Q10 --trail-level flags as a re-anchor, not a trail. Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q15-c5-tp-pullin
+  question: Q15
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C5 TP pull-in: does pulling the target in on momentum loss, a liquidity level ahead, or vol contraction beat hold net of cost? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q15-c7-partial
+  question: Q15
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C7 partial close: does a triggered partial close (level reached, event ahead), with both brackets kept on the remainder, beat hold net of cost? Judge on expectancy, not on distribution shape (principle T10). Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
+- id: P1-Q15-c8-full-close
+  question: Q15
+  goal: G1
+  roadmap:
+  - L-AM-STANDARD
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  needs_authoring: 'C8 full close: does a triggered exit-now (thesis invalidated, regime flip, event) beat hold net of cost on each leg as traded (not the fixed bracket the Q8 line failed on)? Register the rule before the run; grade per leg, real-money legs first; both brackets must remain.'
