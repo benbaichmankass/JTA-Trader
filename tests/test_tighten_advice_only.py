@@ -9,6 +9,11 @@ Evidence: comms/research/ltr_tighten_optimize/verdict.json (LTR-TIGHTEN-OPTIMIZE
 A recommended tighten row is recorded and graded but NEVER dispatched, on any route and on all three automatic
 paths (the VM rows watcher, the dispatcher and desk intake); every other trade action is unchanged.
 These tests run with the production value of rows_lib.ADVICE_ONLY_ACTIONS (no patching).
+
+ONE exception, per package (MD-LTR-ADA-AUTO, operator 2026-10-29): a granted ``kind: ltr_auto_apply`` entry in
+config/mandates.yaml lifts advice-only for the ONE order package it names (src/runtime/ltr_auto_mandate.py;
+behaviour in tests/test_ltr_auto_mandate.py). The last tests below pin that this is the ONLY way out: every such
+exception is a granted, single-package, operator-sourced mandate entry, and the global set is unchanged.
 """
 from __future__ import annotations
 
@@ -131,3 +136,43 @@ def test_the_mandate_records_the_same_advice_only_set_as_the_code():
     y = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "mandates.yaml").read_text())
     (desk,) = [m for m in y["mandates"] if m["id"] == "MD-TRADE-DESK"]
     assert tuple(desk["functions"]["in_trade"]["advice_only"]) == rows_lib.ADVICE_ONLY_ACTIONS
+
+
+# ------------------------------------------------------------------ the only exception: a per-package auto mandate
+
+def _mandates():
+    import yaml
+
+    return yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "mandates.yaml").read_text())
+
+
+def test_every_exception_is_a_granted_single_package_operator_mandate():
+    from src.runtime import ltr_auto_mandate as am
+
+    doc = _mandates()
+    for m in am.active(doc):
+        sc = m["package_scope"]
+        assert str(sc["order_package_id"]).startswith("pkg-") and "*" not in str(sc["order_package_id"])
+        assert m.get("granted_by") and "operator" in str(m["granted_by"]) and str(m.get("source") or "").strip()
+        assert m.get("parent") == "MD-TRADE-DESK" and m.get("expires_on_event")
+        assert set(sc["actions"]) <= set(rows_lib.ADVICE_ONLY_ACTIONS) | set(w.DISPATCHABLE_ACTIONS)
+    # a proposal never lifts anything: only the granted list is read
+    assert am.active({"mandates": [], "proposed": [m for m in am.active(doc)]}) == []
+
+
+def test_the_global_set_is_unchanged_by_any_exception():
+    """An exception is per package; it never shrinks ADVICE_ONLY_ACTIONS or MD-TRADE-DESK's list."""
+    from src.runtime import ltr_auto_mandate as am
+
+    assert am.active(_mandates())                                      # MD-LTR-ADA-AUTO is granted
+    assert rows_lib.ADVICE_ONLY_ACTIONS == IN_TRADE_CLASSES
+    test_the_mandate_records_the_same_advice_only_set_as_the_code()
+
+
+@pytest.mark.parametrize("action", IN_TRADE_CLASSES)
+def test_an_unscoped_package_stays_advice_only_with_the_production_file(tmp_path, action):
+    """trw.row is pkg-1, which no granted mandate scopes: advice only, against the real config/mandates.yaml."""
+    from src.runtime import ltr_auto_mandate as am
+
+    assert am.exception_for(trw.row("LR-u", action=action)) is None
+    assert w.dispatchable(trw.row("LR-u", action=action)) == rows_lib.ADVICE_ONLY_VERDICT

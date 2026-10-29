@@ -650,6 +650,8 @@ def test_exec_bybit_reads_the_venue_back(monkeypatch, after, read_after, want):
     fake = _FakeAps(before=0.2200, after=after, read_after=read_after)
     for name in ("_build_client", "_venue_state", "_send_modify", "_tick_size", "same_level"):
         monkeypatch.setattr(aps_mod, name, getattr(fake, name))
+    # both brackets rest (the TP read; MD-LTR-ADA-AUTO bound both_brackets, tests/test_ltr_auto_mandate.py)
+    monkeypatch.setattr(lra, "_venue_tp", lambda *a: {"read_state": "resolved", "venue_tp": 0.19})
     db = _MonDB([])
     res = lra._exec_bybit(db, {"row": _trade(1, "bybit_2")}, PKG, 0.2100, _intent())
     assert res["result"] == want

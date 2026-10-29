@@ -744,6 +744,12 @@ This section is the design statement; the TP doctrine above is the floor it stan
    the full cost stack, judged against hold (and a matched random intervention, practice principle T1), passes for that class.
    Then it may be executed, through the usual Tier-3 / mandate path. One class failing says nothing about another: each is
    judged on its own merits.
+   **The one exception is per package and the operator's own act** (2026-10-29, MD-LTR-ADA-AUTO, verbatim *"I want to put a
+   standing mandate for ltr lanes recommendations on this trade to be applied automatically"*; popups "Every action", "VM applies
+   it directly"): a granted `kind: ltr_auto_apply` entry in `config/mandates.yaml` lets the VM execute the reviewer's call on the
+   ONE `order_package_id` it names, every class, bounded by clause 3, a widen never beyond −1R, one action per package per bar,
+   venue read-back and one ping per action (`src/runtime/ltr_auto_mandate.py`). It graduates no class; every other package stays
+   advice-only, and the calls it executes are graded like any other.
 
 ### What the evidence says today (re-read, never quote forward)
 

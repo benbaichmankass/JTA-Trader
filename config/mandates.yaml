@@ -1351,4 +1351,85 @@ mandates:
     never: >-
       Never auto-renewed and never extended by a session. Never any real-money, mirror or prop account, risk cap, mode or sizing. Never removes an SL or a TP.
 
+  # ── PER-PACKAGE AUTO-APPLY (kind: ltr_auto_apply; operator 2026-10-29) ─────
+  #
+  # A PER-PACKAGE EXCEPTION to MD-TRADE-DESK functions.in_trade.advice_only: the
+  # live reviewer's recommendation on ONE order package is executed by the VM
+  # rows watcher (live_review_rows_watch -> live_review_dispatch -> live_review_apply),
+  # every in-trade class. Read by ONE module, src/runtime/ltr_auto_mandate.py,
+  # keyed on this entry (never a default-off flag: no third gate). Every other
+  # package stays advice-only, unchanged. Fields:
+  #   kind: ltr_auto_apply · package_scope.order_package_id (one package) ·
+  #   package_scope.actions · review_cadence_minutes (the VM wake poster's
+  #   mandate_cadence event for the open package) · expires_on_event · bounds
+  #   (ltr_auto_mandate.BOUNDS, each enforced in live_review_apply.py) ·
+  #   expired_at (set by whoever records the close; absent = active).
+  - id: MD-LTR-ADA-AUTO
+    kind: ltr_auto_apply
+    grants: the live reviewer's recommendation on order package pkg-465a5d7d27644027 (the ADA short) is applied automatically by the VM, every in-trade action class, on every account carrying the package
+    direction: mixed
+    direction_note: >-
+      Same as MD-TRADE-DESK: a tighten / close / reduce de-risks, a widen / add
+      adds risk, a move_tp changes the exit. Not a ladder mandate; the resolver
+      refuses `mixed` and has nothing to measure here.
+    proposed_by: manager session_01AFoLuKwNMzjtn2CH2kVd86 (Manager Session 2026-10-29c), on the operator's ask
+    proposed_at: '2026-10-29'
+    granted_by: operator (Ben)
+    granted_at: '2026-10-29'
+    source: >-
+      Checklist row MD-LTR-ADA-AUTO (docs/claude/work/checklist/MD-LTR-ADA-AUTO.json,
+      manager branch claude/mgr-ada-am-case, self-landing to main). OPERATOR
+      2026-10-29 ~07:40Z, verbatim: "I want to put a standing mandate for ltr
+      lanes recommendations on this trade to be applied automatically". Popup
+      answers, verbatim: scope = "Every action"; mechanism = "VM applies it
+      directly". Design constraint ~07:45Z, verbatim: "The reason for the
+      current design that the lanes don't commit is so they don't need to read
+      the repo to make a decision - we need to make sure the design doesn't
+      increase latency on the round trip decisions". Transcribed by lane
+      MD-LTR-ADA-AUTO (session_01AFoLuLbY3ViuCFwrJbmcyV) in a `landing: hold`
+      PR the manager merges after the operator's Tier-2 OK; the lane holds no
+      authorization of its own.
+    parent: MD-TRADE-DESK
+    package_scope:
+      order_package_id: pkg-465a5d7d27644027
+      # Stage-2 equality: the live leg and its mirror move together, and the
+      # demo floor carries the same package. The apply acts on EVERY account
+      # carrying the package (gather_legs), each through its own RiskManager;
+      # this list is the record of who that is at grant time, not a filter.
+      accounts: [bybit_2, bybit_portfolio, bybit_1]
+      actions: [tighten_sl, widen_sl, move_tp, partial_close, close, change_size, add_entry]
+    mechanism: >-
+      VM applies it directly: the VM wake poster emits a mandate_cadence ltr-wake
+      for the open package every review_cadence_minutes after the bar boundary,
+      with the packet committed byte-exact to live-review/rows BEFORE posting
+      (LTR-PACKET-ECHO); the reviewer is dispatched by reference with the packet
+      inline, reads nothing from the repo and writes only its row; the VM rows
+      watcher (~45 s poll) dispatches a `recommended` row through
+      live_review_dispatch.py --ref to live_review_apply.py --mandate MD-LTR-ADA-AUTO.
+    review_cadence_minutes: 120
+    expires_on_event: order_package_closed
+    on_expiry: >-
+      Nothing to disarm: a closed package is refused by the apply and gets no
+      cadence. The closing session records expired_at here and closes row
+      MD-LTR-ADA-AUTO; never extended to another package by a session.
+    fires_when:
+      - a committed live-review row for pkg-465a5d7d27644027 on live-review/rows, read at a pinned commit, whose action is in package_scope.actions and whose route is recommended or auto_applied
+      - MD-TRADE-DESK's package-level clauses hold (mechanics match, a reason, a judgement confidence in [0, 1] or a table EV, the action's own target)
+      - config/live_trade_review.yaml apply_mode == apply for the account, and the account's own approve_amend / approve_action returns approve or clip
+      - every bound below holds
+    bounds:
+      - both_brackets -- both brackets exist at the venue after every action (TP doctrine clause 3); a tighten, widen, move_tp or reduce that leaves either unread is apply_failed
+      - widen_within_1r -- a widen_sl never puts the stop beyond the original entry risk (-1R = entry -/+ order_packages.meta.risk_per_unit); unread risk refuses the widen
+      - tp_live_target -- the TP stays a live predictive target (beyond the mark, beyond entry, never the 50R sentinel)
+      - one_action_per_bar -- at most one applied action per package per closed bar, across every account
+      - venue_readback -- every leg is read back from the venue; a mismatch is apply_failed
+      - one_ping_per_action -- ONE Telegram trade-update per action naming account(s), symbol, action, level and review_id
+    never: [act on any other package, act on a read that could not look, act on a mechanics mismatch, remove or null a stop-loss or a take-profit, widen a stop beyond -1R, bypass an account's own risk manager / sizing cap / exposure cap / daily-DD switch, route one account's action through another's executor, write mode or execution, commit a packet from a reviewer]
+    notify: ONE trade-update ping per applied action (account(s), symbol, action, level, review_id); ONE ping per refuse / apply_failed on a real-money account (the apply's existing alerts); brief section 1 line with the row
+    revert: >-
+      Delete this entry (or set expired_at): the package returns to advice-only
+      on the next watcher pass. An applied close, partial close or filled size
+      change cannot be undone; a moved bracket can be moved back by the
+      operator's amend-position-sl system-action.
+
 proposed: []

@@ -59,7 +59,11 @@ whether a row may be handed over at all.
 extended ~21:07Z to every in-trade class, popup "Advice-only until tested" (DESK-LIFECYCLE-S0 #20967).
 A row whose action is in that tuple is answered ``advice_only`` (exit 2, nothing sent, no ping) before
 any other check, on every route and on the manual ``live-review-apply`` system-action alike. The
-clauses below are kept for the record and for each class's graduation.
+clauses below are kept for the record and for each class's graduation. ONE exception, per package
+(MD-LTR-ADA-AUTO, operator 2026-10-29): when an active ``kind: ltr_auto_apply`` entry in
+``config/mandates.yaml`` scopes the row's order_package_id and action (``src/runtime/ltr_auto_mandate.py``),
+the row is checked like any other and handed over with ``--mandate <that id>``; the apply re-reads the
+grant and enforces its bounds.
 
 Never for a tighten: a halt, a ``mode:`` or ``execution:`` write, a wider stop, a TP move,
 a size change, a close.
@@ -109,6 +113,7 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from src.runtime import live_review_rows as rows_lib  # noqa: E402
+from src.runtime import ltr_auto_mandate  # noqa: E402
 
 EXIT_OK, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREADABLE = 0, 1, 2, 3
 MANDATE_ID = "MD-LIVE-TIGHTEN-SL"
@@ -382,7 +387,8 @@ def apply_argv(plan: Dict[str, Any], *, apply: bool) -> List[str]:
     """PR #20259's ``live_review_apply.py`` interface, built from a checked plan."""
     if plan.get("action") in TRADE_ACTIONS:
         argv = ["--action", plan["action"], "--package", plan["package"], "--review-id", plan["review_id"],
-                "--evidence", plan["evidence"], "--mandate", TRADE_MANDATE_ID, "--mechanics", "match",
+                "--evidence", plan["evidence"], "--mandate", plan.get("mandate") or TRADE_MANDATE_ID,
+                "--mechanics", "match",
                 "--basis", plan["basis"], "--reason", plan["reason"]]
         for k, flag in (("new_sl", "--new-sl"), ("new_tp", "--new-tp"), ("size_fraction", "--size-fraction"),
                         ("size_multiplier", "--size-multiplier"), ("confidence", "--confidence"),
@@ -395,7 +401,7 @@ def apply_argv(plan: Dict[str, Any], *, apply: bool) -> List[str]:
         return argv
     argv = ["--package", plan["package"], "--new-sl", repr(plan["new_sl"]),
             "--review-id", plan["review_id"], "--evidence", plan["evidence"],
-            "--mandate", MANDATE_ID, "--mechanics", "match", "--basis", plan["basis"]]
+            "--mandate", plan.get("mandate") or MANDATE_ID, "--mechanics", "match", "--basis", plan["basis"]]
     if plan.get("packet_sha"):
         argv += ["--packet-sha", plan["packet_sha"]]
     if plan["basis"] == "table":
@@ -473,10 +479,13 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
         out.update(verdict="could_not_look", detail=detail, exit=EXIT_UNREADABLE)
         return out
     action = (row.get("recommendation") or {}).get("action")
-    if action in rows_lib.ADVICE_ONLY_ACTIONS:      # operator 2026-10-28: advice only, never executed, no ping
+    auto_id = ltr_auto_mandate.exception_for(row)   # a per-package auto mandate in config/mandates.yaml, or None
+    if action in rows_lib.ADVICE_ONLY_ACTIONS and not auto_id:   # operator 2026-10-28: advice only, no ping
         out.update(verdict=rows_lib.ADVICE_ONLY_VERDICT, detail=f"{action} is advice only (operator 2026-10-28); "
                    "nothing sent", exit=EXIT_REFUSED)
         return out
+    if auto_id:
+        out["auto_mandate"] = auto_id
     prev = (st.get("dispatched") or {}).get(review_id)
     if apply and prev and prev.get("sent"):
         out.update(verdict="refused", detail=f"duplicate_review_id: already dispatched at {prev.get('at')} "
@@ -488,6 +497,8 @@ def dispatch(review_id: str, *, apply: bool, state: Optional[Dict[str, Any]] = N
         evidence = f"comms/live_review/packets/{review_id}.json"
     ev_text = _committed_text(evidence, at) if evidence else None
     plan, refusal = check_row(row, ev_text)
+    if plan is not None and auto_id:
+        plan["mandate"] = auto_id                   # the apply re-checks the grant and enforces its bounds
     if refusal:
         out.update(verdict="refused", detail=f"mandate_precondition:{refusal}", exit=EXIT_REFUSED)
         alerted = st.setdefault("alerted", {})
