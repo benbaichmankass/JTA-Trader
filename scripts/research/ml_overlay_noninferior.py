@@ -460,12 +460,12 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
 HOLDOUT_N_MIN = 100
 
 
-def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict) -> dict:
+def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict, cfg: dict | None = None) -> dict:
     """Fresh-window confirmation (V2, practice M5): the PRIMARY model is fit on the WHOLE main-window family pool
     (tau from those training scores, exactly the artifact that would ship), then scores every gate-leg trade of a
     disjoint earlier window it has never seen. CONFIRMS iff (a) LB > margin, (b), (c) and (d) hold on those
     trades; random permutation within 3 calendar groups. Below HOLDOUT_N_MIN gate trades -> INDETERMINATE."""
-    art = export_model(train_df, PRIMARY)
+    art = export_model(train_df, cfg or PRIMARY)
     wd = h["wd"]
     if h.get("build", True):
         _o, runs = build_corpus(gate, start=h["start"], end=h["end"], days=h["days"], wd=wd)
@@ -491,11 +491,185 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict) -> dict:
     res = {"mult": np.where(p < art["tau"], MULTIPLIER, 1.0)[:, None], "score": p[:, None], "groups": g,
            "y": (df["net_r"].to_numpy() > 0).astype(float)}
     ev = evaluate(df, res, np.ones(len(df), dtype=bool), np.random.default_rng(SEED + 1), n_groups=3)
+    if h.get("calibrator") is not None:  # REFINE calibration: Brier skill of the calibrated score on the holdout
+        pc = isotonic_apply(h["calibrator"], p)
+        y = res["y"]
+        base = float(h.get("base_rate", y.mean()))
+        ev["calibration_refine"] = {"brier_raw": round(float(np.mean((p - y) ** 2)), 4),
+                                    "brier_cal": round(float(np.mean((pc - y) ** 2)), 4),
+                                    "brier_const_train_base": round(float(np.mean((base - y) ** 2)), 4)}
     ck = {k: ev["checks"][k] for k in ("a_noninferior", "b_risk", "c_beats_random", "d_not_vacuous")}
     return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "reasons": [k for k, v in ck.items() if not v],
             "window": [h["start"], str(h["before"])], "n": len(df),
             "n_by_leg": df["leg"].value_counts().to_dict(), "checks": ck,
             "eval": {k: v for k, v in ev.items() if k not in ("checks", "pass")}, "runs": runs}
+
+
+# ----------------------------------------------------------------------------------------------- REFINE (V2 follow-ups)
+def isotonic_fit(p: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Pool-adjacent-violators isotonic regression of y on p. Returns (block upper edges, block values)."""
+    o = np.argsort(p, kind="stable")
+    ps, ys = p[o], y[o].astype(float)
+    vals, wts, tops = [], [], []
+    for pi, yi in zip(ps, ys):
+        vals.append(yi), wts.append(1.0), tops.append(pi)
+        while len(vals) > 1 and vals[-2] > vals[-1]:
+            w = wts[-2] + wts[-1]
+            v = (vals[-2] * wts[-2] + vals[-1] * wts[-1]) / w
+            vals[-2:], wts[-2:], tops[-2:] = [v], [w], [tops[-1]]
+    return np.array(tops), np.clip(np.array(vals), 1e-3, 1 - 1e-3)
+
+
+def isotonic_apply(cal: tuple[np.ndarray, np.ndarray], p: np.ndarray) -> np.ndarray:
+    tops, vals = cal
+    return vals[np.minimum(np.searchsorted(tops, p, side="left"), len(vals) - 1)]
+
+
+def run_calibration(df: pd.DataFrame, gate_mask: np.ndarray, rng: np.random.Generator, cfg: dict) -> dict:
+    """REFINE-CAL: per CPCV split, the logistic is fit on the EARLIER 75% of the training rows (by entry time) and
+    an isotonic calibrator on the LATER 25%; both score the test block. Decisions are NOT changed by this mode
+    (a monotone map of a quantile threshold); it measures whether the probabilities carry skill over the
+    TRAINING base rate (the climatology a forecaster would otherwise use)."""
+    X = df[list(FEATURES)].to_numpy(float)
+    y = (df["net_r"].to_numpy() > 0).astype(float)
+    n = len(df)
+    raw, cal, const = (np.full((n, math.comb(N_GROUPS - 1, K_TEST - 1)), np.nan) for _ in range(3))
+    seen = np.zeros(N_GROUPS, dtype=int)
+    for _sid, tg, train, test, g in cpcv_splits(df["entry_time"], df["exit_time"]):
+        tr = np.where(train)[0]
+        cut = tr[: int(len(tr) * 0.75)], tr[int(len(tr) * 0.75):]
+        mu, sd, (Xa, Xb, Xte) = standardise(X[cut[0]], X[cut[1]], X[test])
+        coef, b = fit_logistic(Xa, y[cut[0]], cfg["C"])
+        calr = isotonic_fit(predict(Xb, coef, b), y[cut[1]])
+        pte = predict(Xte, coef, b)
+        te_idx = np.where(test)[0]
+        for k in tg:
+            col = seen[k]
+            loc = g[te_idx] == k
+            raw[te_idx[loc], col] = pte[loc]
+            cal[te_idx[loc], col] = isotonic_apply(calr, pte[loc])
+            const[te_idx[loc], col] = float(y[tr].mean())
+            seen[k] += 1
+    yg = y[gate_mask]
+    br = np.nanmean((raw - y[:, None]) ** 2, axis=1)[gate_mask]
+    bc = np.nanmean((cal - y[:, None]) ** 2, axis=1)[gate_mask]
+    bk = np.nanmean((const - y[:, None]) ** 2, axis=1)[gate_mask]
+    months = pd.DatetimeIndex(df["entry_time"][gate_mask]).strftime("%Y-%m").to_numpy()
+    gain = bk - bc
+    return {"n_gate": int(gate_mask.sum()), "base_rate": round(float(yg.mean()), 4),
+            "brier_raw": round(float(br.mean()), 5), "brier_cal": round(float(bc.mean()), 5),
+            "brier_const": round(float(bk.mean()), 5),
+            "bss_raw": round(float(1 - br.mean() / bk.mean()), 5), "bss_cal": round(float(1 - bc.mean() / bk.mean()), 5),
+            "cal_gain_lb95": round(month_block_lb(gain, months, rng, ALPHA), 6),
+            "ece_raw": calib(np.nanmean(raw, axis=1)[gate_mask], yg).get("ece"),
+            "ece_cal": calib(np.nanmean(cal, axis=1)[gate_mask], yg).get("ece")}
+
+
+def _inner_select(df: pd.DataFrame, train: np.ndarray, gate_mask: np.ndarray) -> dict:
+    """Choose a GRID config using ONLY the outer training rows: a purged, embargoed 5-fold time split inside
+    them, scoring each config by its mean delta net R on the training rows' gate trades."""
+    sub = df[train].reset_index(drop=True)
+    gm = gate_mask[train]
+    X = sub[list(FEATURES)].to_numpy(float)
+    y = (sub["net_r"].to_numpy() > 0).astype(float)
+    R = sub["net_r"].to_numpy()
+    t, e = sub["entry_time"], sub["exit_time"]
+    t0, t1 = t.min(), t.max()
+    gi = np.minimum(((t - t0) / (t1 - t0) * 5).astype(float).to_numpy().astype(int), 4)
+    edges = [t0 + (t1 - t0) * i / 5 for i in range(6)]
+    emb = pd.Timedelta(days=EMBARGO_DAYS)
+    score = {}
+    for ci, cfg in enumerate(GRID):
+        d_sum, d_n = 0.0, 0
+        for k in range(5):
+            te = gi == k
+            tr = ~te & ~((e >= edges[k]).to_numpy() & (t <= edges[k + 1] + emb).to_numpy())
+            if tr.sum() < 50 or te.sum() == 0:
+                continue
+            _m, _s, (Xtr, Xte) = standardise(X[tr], X[te])
+            coef, b = fit_logistic(Xtr, y[tr], cfg["C"])
+            tau = float(np.quantile(predict(Xtr, coef, b), cfg["q"]))
+            mlt = np.where(predict(Xte, coef, b) < tau, MULTIPLIER, 1.0)
+            sel = gm[te]
+            d_sum += float(np.sum((mlt[sel] - 1.0) * R[te][sel]))
+            d_n += int(sel.sum())
+        score[ci] = d_sum / max(d_n, 1)
+    return GRID[max(score, key=lambda c: (score[c], -c))]
+
+
+def run_cpcv_nested(df: pd.DataFrame, gate_mask: np.ndarray) -> dict:
+    """REFINE-NESTED: like run_cpcv, but each outer split uses the config _inner_select picks from its own
+    training rows, so configuration selection is inside the out-of-sample loop (the PBO concern)."""
+    X = df[list(FEATURES)].to_numpy(float)
+    y = (df["net_r"].to_numpy() > 0).astype(float)
+    n = len(df)
+    mult = np.full((n, math.comb(N_GROUPS - 1, K_TEST - 1)), np.nan)
+    score = np.full_like(mult, np.nan)
+    seen = np.zeros(N_GROUPS, dtype=int)
+    picks, groups = [], None
+    for _sid, tg, train, test, g in cpcv_splits(df["entry_time"], df["exit_time"]):
+        groups = g
+        cfg = _inner_select(df, train, gate_mask)
+        picks.append(cfg)
+        _mu, _sd, (Xtr, Xte) = standardise(X[train], X[test])
+        coef, b = fit_logistic(Xtr, y[train], cfg["C"])
+        tau = float(np.quantile(predict(Xtr, coef, b), cfg["q"]))
+        pte = predict(Xte, coef, b)
+        te_idx = np.where(test)[0]
+        for k in tg:
+            col = seen[k]
+            loc = g[te_idx] == k
+            mult[te_idx[loc], col] = np.where(pte[loc] < tau, MULTIPLIER, 1.0)
+            score[te_idx[loc], col] = pte[loc]
+            seen[k] += 1
+    freq = {json.dumps(c, sort_keys=True): sum(1 for p_ in picks if p_ == c) for c in GRID}
+    return {"mult": mult, "score": score, "groups": groups, "y": y, "picks": freq}
+
+
+def run_refine(mode: str, name: str, legs: list[str], gate: list[str], corpus_dir: Path, holdout: dict | None) -> dict:
+    rng = np.random.default_rng(SEED)
+    frames = [d for d in (load_leg(leg, corpus_dir) for leg in legs) if not d.empty]
+    df = pd.concat(frames, ignore_index=True)
+    df = df[df["scored"]].sort_values("entry_time", kind="stable").reset_index(drop=True)
+    gate_mask = df["leg"].isin(gate).to_numpy()
+    out: dict = {"family": name, "mode": mode, "legs_gate": gate, "n_pool_scored": int(len(df)),
+                 "n_gate": int(gate_mask.sum())}
+    if gate_mask.sum() < N_GATE_MIN:
+        out.update(verdict="INDETERMINATE", reasons=[f"n_gate {int(gate_mask.sum())} < {N_GATE_MIN}"])
+        return out
+    if mode == "calibration":
+        main = run_calibration(df, gate_mask, rng, PRIMARY)
+        hold = None
+        if holdout is not None:
+            tr = np.arange(len(df))
+            cut = tr[: int(len(tr) * 0.75)], tr[int(len(tr) * 0.75):]
+            X = df[list(FEATURES)].to_numpy(float)
+            y = (df["net_r"].to_numpy() > 0).astype(float)
+            art = export_model(df.iloc[cut[0]], PRIMARY)
+            pb = predict((X[cut[1]] - np.array(art["mean"])) / np.array(art["std"]), np.array(art["coef"]),
+                         art["intercept"])
+            h = {**holdout, "build": False, "calibrator": isotonic_fit(pb, y[cut[1]]), "base_rate": float(y.mean())}
+            hold = run_holdout(gate, df.iloc[cut[0]], h)
+        hc = ((hold or {}).get("eval") or {}).get("calibration_refine") or {}
+        ok_main = main["cal_gain_lb95"] > 0
+        ok_hold = bool(hc) and hc["brier_cal"] < hc["brier_const_train_base"]
+        verdict = "CALIBRATED" if (ok_main and ok_hold) else (
+            "INDETERMINATE" if hold is not None and hold.get("state") == "INDETERMINATE" else "NOT_CALIBRATED")
+        out.update(verdict=verdict, main=main, holdout_calibration=hc, holdout_n=(hold or {}).get("n"),
+                   checks={"main_cal_gain_lb95_gt_0": ok_main, "holdout_brier_cal_lt_const": ok_hold})
+        return out
+    res = run_cpcv_nested(df, gate_mask)
+    ev = evaluate(df, res, gate_mask, rng)
+    picks = res["picks"]
+    top = json.loads(max(picks, key=picks.get))
+    hold = run_holdout(gate, df, {**holdout, "build": False}, cfg=top) if holdout is not None else None
+    verdict = "PASS" if ev["pass"] and (hold is None or hold["state"] == "CONFIRMS") else (
+        "INDETERMINATE" if hold is not None and hold["state"] == "INDETERMINATE" else "FAIL")
+    out.update(verdict=verdict, nested_eval={k: v for k, v in ev.items() if k != "folds"}, folds=ev["folds"],
+               selection_frequency=picks, n_outer_splits=sum(picks.values()), modal_config=top,
+               modal_share=round(picks[max(picks, key=picks.get)] / max(sum(picks.values()), 1), 4),
+               holdout=hold)
+    return out
 
 
 # ----------------------------------------------------------------------------------------------- self-test
@@ -526,13 +700,19 @@ def _self_test() -> int:
                 fh.write("\n".join(json.dumps(x) for x in rows) + "\n")
         a = run_family("SYN", ["syn"], ["syn"], d, {}, None, None)
         b = run_family("NOISE", ["noise"], ["noise"], d, {}, None, None)
+        rc = run_refine("calibration", "SYN", ["syn"], ["syn"], d, None)
+        rn = run_refine("nested", "SYN", ["syn"], ["syn"], d, None)
     pa, pb = a["primary_eval"], b["primary_eval"]
     ok = (pa["checks"]["c_beats_random"] and pa["checks"]["d_not_vacuous"] and pa["delta_mean_r"] > pb["delta_mean_r"]
           and not pb["checks"]["c_beats_random"] and a["n_trials"] == len(GRID) and 0.0 <= a["pbo"] <= 1.0
-          and np.allclose(pa["reduce_rate"], PRIMARY["q"], atol=0.08))
+          and np.allclose(pa["reduce_rate"], PRIMARY["q"], atol=0.08)
+          and rc["main"]["brier_cal"] > 0 and rc["verdict"] in ("CALIBRATED", "NOT_CALIBRATED")
+          and rn["n_outer_splits"] == math.comb(N_GROUPS, K_TEST) and rn["nested_eval"]["checks"]["c_beats_random"])
     print(json.dumps({"self_test": "PASS" if ok else "FAIL", "informative": {k: pa[k] for k in (
         "delta_mean_r", "delta_lb95_r", "random_p_value", "reduce_rate", "folds_passing")},
-        "noise": {k: pb[k] for k in ("delta_mean_r", "random_p_value", "reduce_rate")}}, indent=1))
+        "noise": {k: pb[k] for k in ("delta_mean_r", "random_p_value", "reduce_rate")},
+        "refine_calibration": {k: rc["main"][k] for k in ("bss_raw", "bss_cal")}, "refine_nested_picks": rn["selection_frequency"]},
+        indent=1))
     return 0 if ok else 1
 
 
@@ -554,6 +734,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--holdout-days", type=int, default=None)
     ap.add_argument("--holdout-corpus-dir", default=None,
                     help="reuse an already-built holdout corpus (same window) instead of re-running the harness")
+    ap.add_argument("--refine", choices=("calibration", "nested"), default=None,
+                    help="V2 follow-up units: RULE-ML-OVERLAY-CALIBRATION-V1 / RULE-ML-OVERLAY-NESTED-SELECT-V1")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     out = Path(a.out)
@@ -574,6 +756,22 @@ def main(argv: list[str] | None = None) -> int:
         holdout = {"start": a.holdout_start, "end": a.holdout_end, "days": a.holdout_days, "wd": hwd,
                    "build": not a.holdout_corpus_dir,
                    "before": pd.Timestamp(a.start, tz="UTC") - pd.Timedelta(days=EMBARGO_DAYS)}
+    if a.refine:
+        rr = [run_refine(a.refine, n, legs, g, corpus, holdout) for n, legs, g in fams]
+        rule = {"calibration": "RULE-ML-OVERLAY-CALIBRATION-V1", "nested": "RULE-ML-OVERLAY-NESTED-SELECT-V1"}[a.refine]
+        fv = [r["verdict"] for r in rr]
+        good = {"calibration": "CALIBRATED", "nested": "PASS"}[a.refine]
+        v = {"rule": rule, "read_state": "measured",
+             "verdict": "indeterminate" if "INDETERMINATE" in fv else ("pass" if good in fv else "fail"),
+             "population": "; ".join(f"{r['family']} n_gate={r['n_gate']}" for r in rr),
+             "n": sum(r["n_gate"] for r in rr) or None,
+             "note": "per family: " + ", ".join(f"{r['family']} {r['verdict']}" for r in rr),
+             "records": [{"family": r["family"], "verdict": r["verdict"].lower(), "n": r["n_gate"],
+                          "population": f"{r['family']} gate legs {','.join(r['legs_gate'])}"} for r in rr]}
+        (out / "measurement.json").write_text(json.dumps({"runs": runs, "families": rr}, indent=1, default=str) + "\n")
+        (out / "verdict.json").write_text(json.dumps(v, indent=1) + "\n")
+        print(json.dumps(v, indent=1))
+        return 0
     results = [run_family(n, legs, g, corpus, runs, ref, Path(a.export_dir) if a.export_dir else None,
                           a.parity_basis, holdout) for n, legs, g in fams]
     verdict = {"rule": RULE_ID if a.parity_basis == "net_r" and not a.holdout_start else RULE_ID.replace("-V1", "-V2"),
