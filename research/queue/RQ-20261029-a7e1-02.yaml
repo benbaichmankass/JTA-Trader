@@ -28,11 +28,14 @@ power:
   effect_units: r_per_trade
   sd: 0.25
   design: one_sample
-  alpha: 0.0125
+  alpha: 0.01
   power: 0.8
   basis: 'Population = RQ-20261029-a7e1-01 measured 2,627 trades (TD 1,831, PB2H 796) on the same argv and window. The
     per-trade delta of a 50% partial has sd ~0.2-0.25 R (ESTIMATE, as a7e1-01); at alpha 0.05/4 one-sided and MDE 0.02 R,
-    n ~ (2.85 x 0.25 / 0.02)^2 ~ 1,270: TD clears it, PB2H does not (a PB2H null is underpowered, never "no effect").'
+    n ~ (2.85 x 0.25 / 0.02)^2 ~ 1,270: TD clears it, PB2H does not (a PB2H null is underpowered, never "no effect").
+    POWER METADATA corrected after the run, for the queue schema only (research_queue.required_n tabulates alpha
+    0.10/0.05/0.01; 0.0125 is untabulated): alpha 0.01, the nearest STRICTER tabulated value, so the floor only
+    rises. The decision rule''s alpha/4 non-inferiority bound is unchanged.'
   feasibility:
     source: none
     accrual_basis: Replays pinned history on public candles; nothing accrues.
