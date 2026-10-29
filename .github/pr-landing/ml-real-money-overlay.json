@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Registers RULE-ML-OVERLAY-NONINFERIOR-V1 as research unit RQ-20261029-5785-01 BEFORE any evaluation run, plus its offline harness (scripts/research/ml_overlay_noninferior.py), a pure point-in-time feature module not yet wired into any order path (src/runtime/overlay_features.py), its tests, and a summary-label fix in the two Stage-0 harnesses (bt.json timeframe now records the --resample bar actually traded; label only, no trade changes). No config, roster, stage or order-path change."
+  "landing": "hold",
+  "why": "Registers RULE-ML-OVERLAY-NONINFERIOR-V1/V2 (research units RQ-20261029-5785-01/-02) with the V1 result record (INDETERMINATE), the offline harness scripts/research/ml_overlay_noninferior.py, the pure point-in-time feature module src/runtime/overlay_features.py (Tier-2 by path; nothing calls it from an order path in this PR), its tests, and a bt.json timeframe-label fix in the two Stage-0 harnesses (label only). No config, roster, stage or order-path change. pr-landing-guard cannot vouch for new queue units or a src/runtime path, so this is held for the manager's merge.",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "New research queue units and a src/runtime module are outside the Tier-1 surface the guard can certify; the manager merges after reading the diff."
 }

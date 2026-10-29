@@ -41,7 +41,6 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -313,6 +312,7 @@ def evaluate(df: pd.DataFrame, res: dict, gate_mask: np.ndarray, rng: np.random.
         folds.append({"group": gk, "n": int(ix.sum()), "delta": round(dg, 4), "random_mean": round(float(np.mean(rg)), 4),
                       "a": fa, "b": bool(bdd and bcv), "c": fc, "pass": bool(fa and bdd and bcv and fc)})
     paths = [float(np.mean((res["mult"][gate_mask, j] - 1.0) * Rg)) for j in range(res["mult"].shape[1])]
+    # provenance: predict — `score` is P(net_r > 0) from the binary L2-logistic sigmoid, not a multiclass max(proba)
     p_gate, y_gate = np.nanmean(res["score"], axis=1)[gate_mask], res["y"][gate_mask]
     checks = {
         "a_noninferior": lb > NI_MARGIN,
@@ -434,7 +434,7 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
     verdict = "INDETERMINATE" if reasons else ("PASS" if primary_eval["pass"] else "FAIL")
     hold = None
     if holdout is not None:
-        hold = run_holdout(name, legs, gate, df, holdout)
+        hold = run_holdout(gate, df, holdout)
         if verdict == "PASS":
             verdict = {"CONFIRMS": "PASS", "FAILS": "FAIL"}.get(hold["state"], "INDETERMINATE")
             if verdict != "PASS":
@@ -457,7 +457,7 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
 HOLDOUT_N_MIN = 100
 
 
-def run_holdout(name: str, legs: list[str], gate: list[str], train_df: pd.DataFrame, h: dict) -> dict:
+def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict) -> dict:
     """Fresh-window confirmation (V2, practice M5): the PRIMARY model is fit on the WHOLE main-window family pool
     (tau from those training scores, exactly the artifact that would ship), then scores every gate-leg trade of a
     disjoint earlier window it has never seen. CONFIRMS iff (a) LB > margin, (b), (c) and (d) hold on those
