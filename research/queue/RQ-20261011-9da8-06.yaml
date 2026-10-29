@@ -1,6 +1,6 @@
 id: RQ-20261011-9da8-06
 title: 'Frontier strategy: cross-sectional momentum on the crypto perp basket with funding charged on held legs (Stage-0)'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -67,3 +67,16 @@ related:
 - docs/research/frontier-scan-2026-10-11.md
 - FRONTIER-RESEARCH
 last_dispatched_at: '2026-10-29T04:00:04+00:00'
+grading:
+  attested: RULE-RQ1011-9DA8-06-XSEC-MOM-FUNDING
+  auto: true
+  decision_rule_id: RULE-RQ1011-9DA8-06-XSEC-MOM-FUNDING
+  evidence:
+  - research/results/RQ-20261011-9da8-06/40815260911.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

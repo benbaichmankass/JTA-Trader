@@ -5,7 +5,7 @@ id: RQ-20261029-006
 title: 'Programme 01 ATM, trend_donchian: does the CHOP-gated tight trail (C75), which beat the declared
   exit and the unconditional tight-trail control in 5 of 6 folds on 2020-07..2026-10, still beat both
   on the disjoint earlier partition 2017-09..2020-06?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -139,3 +139,15 @@ generated:
   params:
     node: P1-ATM-ed1c10-c75-confirm
 last_dispatched_at: '2026-10-29T01:53:55+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-ATM-ED1C10-C75-DISJOINT
+  evidence:
+  - research/results/RQ-20261029-006/40803166498.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

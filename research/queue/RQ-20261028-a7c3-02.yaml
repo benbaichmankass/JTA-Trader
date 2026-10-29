@@ -3,7 +3,7 @@
 id: RQ-20261028-a7c3-02
 title: 'TP doctrine COMPLIANCE, real money: does the Donchian measured-move TP revision (width_mult 0.5, confirmed on trend_donchian_eth_4h)
   on trend_donchian_xrp_4h stay no worse than its declared static 3R target in 5 of 6 folds, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -115,3 +115,16 @@ related:
 - RQ-20261024-0142-04
 - docs/plans/real-money-active-mgmt-plan-2026-10-29.md
 last_dispatched_at: '2026-10-29T03:02:58+00:00'
+grading:
+  attested: RULE-RQ20261028A7C302-XRP4H-MM-COMPLIANCE
+  auto: true
+  decision_rule_id: RULE-RQ20261028A7C302-XRP4H-MM-COMPLIANCE
+  evidence:
+  - research/results/RQ-20261028-a7c3-02/40809915223.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -67,14 +67,26 @@ last_dispatched_at: '2026-10-29T03:02:58+00:00'
 grading:
   auto: true
   confirm_unit: RQ-20261016-d37f-02
+  confirmation: underpowered
   decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
-  discovery: unconfirmed
+  discovery: underpowered
   evidence:
-  - research/results/RQ-20260928-021/36505256182.jsonl
+  - research/results/RQ-20260928-021/40809920232.jsonl
   graded_at: '2026-10-29'
   grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 23
+    boundary: '2023-10-11'
+    confirmation: underpowered
+    confirmed_cells: []
+    selected_from: 24
+    share_used: 0.2778
+    state: ok
   latest: true
   needs_review: false
+  note: 'discovery on the span before 2023-10-11, confirmation on the held-back span in the SAME run:
+    underpowered. Only `confirmed` may feed a Tier-3 proposal.'
   reason: 1 row(s), all measured, all pass
   rows: 1
+  selected_from_cells: 24
   verdict: pass
