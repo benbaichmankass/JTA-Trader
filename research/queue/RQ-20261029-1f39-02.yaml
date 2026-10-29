@@ -2,7 +2,7 @@ id: RQ-20261029-1f39-02
 title: 'Per-class re-grade of the DESK-LIFECYCLE-S0 corpus (#20967) under RULE-AM-RISK-ADJUSTED-V1: does any single in-trade action class
   (tighten_sl, widen_sl, move_tp, partial_close, close), replayed alone from Claude''s recorded calls, give up <= 0.05 R per trade while
   cutting book max drawdown or worst-5% weekly outcome >= 15%, in 3 of 4 folds, beating >= 95% of 100 matched random draws of the class?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -102,3 +102,17 @@ related:
 - scripts/research/am_risk_adjusted.py
 - comms/research/desk_lifecycle/full-c4e/
 - AM-RISK-ADJUSTED-RULE
+last_dispatched_at: null
+grading:
+  verdict: fail
+  graded_at: '2026-10-29'
+  grader: hand (lane AM-RISK-ADJUSTED-RULE) -- the unit's own rule applied to its committed verdict.json
+  decision_rule_id: RULE-RQ20261029-1F39-02-DESK-CLASS-REGRADE
+  evidence:
+  - comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json
+  reason: >-
+    Positive control held (473 Claude-entry and 465 random-entry pairs reproduce pairs.jsonl exactly; the all-classes arm costs
+    0.159 / 0.124 R per trade, = #20967). No class passes on either entry source. tighten_sl fails R1 (costs 0.17 / 0.11 R per trade)
+    and R3 although it cuts the worst-5% weekly outcome 19% / 33%; move_tp, partial_close and close cost little or gain (close +0.0096
+    R/trade on Claude entries) but cut max drawdown <= 4.4% (R2) and hold no fold; widen_sl never acted. Every class stays advice-only.
+    Per-trade-R screen (no book simulation exists: row BOOK-SIM-REAL-SIZER).

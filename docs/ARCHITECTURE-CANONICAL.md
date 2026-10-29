@@ -837,6 +837,14 @@ class stays advice-only. Numbers live in that record.
   more than the R1 bar on both entry sources. The R-armed and predictor-gated tight trails (RQ-20261024-f08c-01, -9a7e-01) cut the
   book's drawdown too little, and the gated arm cut less than its own matched random control. LTR-TIGHTEN-OPTIMIZE (#21003) holds
   aggregates only: some rules clear R1 and the drawdown bar on its test split, and none do on its fresh split.
+- **The desk corpus, one class at a time** (RQ-20261029-1f39-02, operator decision 2026-10-29 ~12:40Z "Re-grade, then
+  auto-unlock"): Claude's recorded calls on the DESK-LIFECYCLE-S0 corpus were replayed one class at a time, against hold and 100
+  matched random draws of that class, on both entry sources. **No class passes.**
+  - **Tightening** cuts the worst-5% weekly outcome by about a fifth to a third, but costs far more than R1 allows.
+  - **TP moves, partials and closes** cost little but barely move the drawdown.
+  - **Widen** never acted.
+
+  So no class is unlocked. Record: `comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json`.
 - **Partial close at +2R** (RQ-20261022-b7e1-08) cuts neither drawdown nor the worst-5% outcome on `ada_pullback_2h`.
 - **The break-even stop comes closest.** On `trend_donchian_eth` (RQ-20261026-ed1c-17), arming break-even at a peak of +0.75 or
   +1.0 R gains R and cuts the book's max drawdown by about a fifth. It holds in only half the folds and had no random control, so
