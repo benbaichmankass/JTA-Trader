@@ -13,9 +13,9 @@
     21203
   ],
   "blocked_on": [],
-  "note": "Closing observation (lane close-out 09:17Z): (a) diag status git_sha_running contains cfb15c25 (rows watcher + due computation run inside ict-trader-live: needs the restart that pull-and-deploy #21221 performs; dispatch/apply subprocesses take effect on git-sync); (b) log_file ltr_wake_post_receipt shows posted with pkg-465a5d7d27644027|mandate_cadence|<slot> after the next even-hour slot; (c) log_file live_review_rows_watch shows the ADA row with auto_mandate MD-LTR-ADA-AUTO, verdict dispatched, APPLIED with venue_after per account (or a named refusal); re-measure latency vs PR comment 6491447764. On package close: set expired_at on the mandate. Lane archived 09:18Z; spend $12.49 (Opus).",
+  "note": "DEPLOYED: /api/bot/runtime-config git_sha cfb15c257, verdict CURRENT, observed 09:22:00Z (pull-and-deploy #21221). Observation (a) MET. Still open: (b) the first mandate_cadence ltr-wake at the next even-hour slot, (c) the first auto-applied action with venue read-back. Manager LTR-ADA-WATCH trigger trig_01TZSKJHHaThgpcGiosMHqPk DISABLED 09:23Z (VM cadence replaces it).",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T09:17:37Z",
+  "updated_at": "2026-10-29T09:22:19Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-AM-STANDARD"
