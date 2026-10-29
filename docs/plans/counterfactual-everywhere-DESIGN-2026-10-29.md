@@ -197,7 +197,7 @@ Rows only; created with `scripts/ops/checklist.py add`. Ranks are relative to th
 | `CF-C1-HARNESS-HOOK` | C | 1 | 1 | sonnet | $8 | `cf_fields` in `backtest_trend.py`, `--cf` default-on in `harness_stage0.py`, `cf_summary` in `summarize_arm`, tests; other harnesses follow in `CF-C2` | CF-B0 |
 | `CF-C2-HARNESS-REST` | C | 3 | 1 | sonnet | $8 | the same hook in the four other harnesses | CF-C1 |
 | `CF-D1-LABELS` | D | 2 | 1 | sonnet | $8 | `cf_labels` table + leakage purge/embargo helper; CF-BULK-LABELS | CF-B1 |
-| `CF-D2-LTR-PRICING` | D | 2 | 1 | sonnet | $8 | priced option arms into `outcomes.jsonl` (replaces `LTR-COUNTERFACTUAL-PRICING`; that row is closed as folded) | CF-B0, check `RM-AM-EXIT-ML-WIRING` |
+| `CF-D2-LTR-PRICING` | D | 2 | 1 | sonnet | $8 | priced option arms into `outcomes.jsonl` (the build for `LTR-COUNTERFACTUAL-PRICING`, which stays open until this lands) | CF-B0, check `RM-AM-EXIT-ML-WIRING` |
 | `CF-D3-BOOKSIM` | D | 2 | 1 | opus | $15 | `BOOK-SIM-REAL-SIZER` re-based on imported `RiskManager.position_size`, per-account $ books from arms | CF-B1 |
 | `CF-D4-PERFREVIEW-TABLE` | D | 3 | 1 | sonnet | $4 | the § 1.5 CHECK in `scripts/research/` + a line in the performance-review skill | CF-B2 |
 | `AM-REGRADE-BOOKSIM` (existing, **Tier 3**) | E | 3 | 3 | opus | $15 | retarget `blocked_on` to `CF-D3-BOOKSIM`; the regrade itself unchanged | CF-D3 |
