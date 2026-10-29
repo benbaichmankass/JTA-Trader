@@ -1992,6 +1992,23 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "research-queue-ml-consumer-guard",
+        # ML-PIPELINE-DESIGN (operator system-first rule, 2026-10-29): a NEW ML queue unit names the consumer
+        # that acts on its answer and the live or demo decision it would change (`ml_consumer:`,
+        # research/queue/PLANNING.md § 1c). Same new-vs-grandfathered grading as the design-fields guard above;
+        # config/accounts.yaml is in the globs because the guard re-parses the rosters.
+        "when": {"globs": ["research/queue/**", "research/templates/**", "research/programmes/**",
+                           "config/accounts.yaml", "scripts/ci/check_research_queue_ml_consumer.py"]},
+        "steps": [
+            ["python3", "scripts/ci/check_research_queue_ml_consumer.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_research_queue_ml_consumer.py",
+                         "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
         "name": "collapsed-state-guard",
         "when": {"regex": r"\.py$"},
         # Self-test FIRST, so a guard that silently stopped matching cannot read
