@@ -36,8 +36,8 @@ same direction: a single +1 R intervention on the 4 real-money 2h/4h legs did no
 **So V1 is built on these four decisions:**
 
 1. **Management default = hold to the bracket, plus a mechanical time exit.** The action space is every bracket move, not only tightening (operator 2026-10-28 ~21:08Z; § 5b). Each class graduates to executed separately, on its own test. No Claude in-trade action is *applied* on any desk or strategy
-   trade until that action class clears its own registered OOS test against hold AND a matched random intervention, net of cost (T1, T8,
-   M6, M10). `tighten_sl` → advice-only was decided by the operator tonight. The data-backed extension to every other in-trade class is item
+   trade until that action class clears its own registered OOS test, net of cost, under `RULE-AM-RISK-ADJUSTED-V1` (since 2026-10-29;
+   `docs/ARCHITECTURE-CANONICAL.md` § "Active management" clause 4; T1, T8, M6, M10). `tighten_sl` → advice-only was decided by the operator tonight. The data-backed extension to every other in-trade class is item
    **Thu-1**. The desk keeps *recording* in-trade advice, because every recorded call is a priced label (M1), but nothing applies.
 2. **Claude's role in V1 is entry generation on the demo floor, plus labels.** Entry value is indeterminate, not negative. The demo floor
    is a mechanics stage, not an edge stage (R3; OPERATING-PLAN § 2 "Stage 1 is the DEMO FLOOR"). Every non-retired leg trades there, so

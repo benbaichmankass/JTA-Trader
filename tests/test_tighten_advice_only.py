@@ -164,7 +164,8 @@ def test_the_global_set_is_unchanged_by_any_exception():
     """An exception is per package; it never shrinks ADVICE_ONLY_ACTIONS or MD-TRADE-DESK's list."""
     from src.runtime import ltr_auto_mandate as am
 
-    assert am.active(_mandates())                                      # MD-LTR-ADA-AUTO is granted
+    # MD-LTR-ADA-AUTO expired with its package (2026-10-29T10:47:53Z): no exception is active now
+    assert not any(m.get("id") == "MD-LTR-ADA-AUTO" for m in am.active(_mandates()))
     assert rows_lib.ADVICE_ONLY_ACTIONS == IN_TRADE_CLASSES
     test_the_mandate_records_the_same_advice_only_set_as_the_code()
 

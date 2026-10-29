@@ -2,7 +2,7 @@
   "id": "DATA-STORE-JSONL-RETIRE",
   "title": "Retire market_features data.jsonl once every reader reads data.parquet (the ~19x disk saving DATA-STORE-PARQUET-GC sets up)",
   "phase": "build",
-  "state": "queued",
+  "state": "dropped",
   "owner": "build lane; Tier-2 (trainer deletes)",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-15, filed by DATA-STORE-PARQUET-GC lane session_012is6hyqg4ANLMGrmawzbzJ] The sidecar adds ~5% today; disk drops only when the JSONL goes. MEASURED #18162: BTC 15m v513 391.3 MB JSONL vs 20.2 MB parquet. Blocked on: #18169 merged + a nightly cycle observed writing sidecars; then switch the remaining direct data.jsonl readers (git grep -l 'data.jsonl' -- scripts ml, ~45 files on 2026-10-15) or prove each never reads market_features; convert frozen pins with python -m ml.datasets.parquet_sidecar convert; then delete data.jsonl for market_features dirs whose sidecar verifies PARITY. Done = datasets-out/market_features du drops and one training cycle reads parquet-only dirs.",
-  "updated_at": "2026-10-15T06:29:20Z",
-  "updated_by": "session_012is6hyqg4ANLMGrmawzbzJ",
+  "note": "[2026-10-15, filed by DATA-STORE-PARQUET-GC lane session_012is6hyqg4ANLMGrmawzbzJ] The sidecar adds ~5% today; disk drops only when the JSONL goes. MEASURED #18162: BTC 15m v513 391.3 MB JSONL vs 20.2 MB parquet. Blocked on: #18169 merged + a nightly cycle observed writing sidecars; then switch the remaining direct data.jsonl readers (git grep -l 'data.jsonl' -- scripts ml, ~45 files on 2026-10-15) or prove each never reads market_features; convert frozen pins with python -m ml.datasets.parquet_sidecar convert; then delete data.jsonl for market_features dirs whose sidecar verifies PARITY. Done = datasets-out/market_features du drops and one training cycle reads parquet-only dirs. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:42Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-DATA"
   ],

@@ -36,9 +36,11 @@ whether a row may be handed over at all.
    (VM-local) records each apply dispatch. A review_id whose earlier apply sent
    anything (an applied account, or exit 1 ``apply_failed``) is refused as a
    duplicate. One that sent nothing (exit 2 refused, or exit 3 could not look)
-   may be retried; there is no halting. Within the apply, ``approve_amend``
-   still allows at most one amend per package per closed bar, so two review
-   ids on the same bar cannot double-amend either.
+   may be retried; there is no halting. Within the apply, each account's
+   ``approve_amend`` / ``approve_action`` refuses a review_id that already acted
+   on that leg (``duplicate_review_id``). There is NO per-bar or time-window
+   action cap (operator 2026-10-29, row REMOVE-PER-BAR-CAP): two different
+   reviews on one bar both act, each through every account's own gates.
 4. **Hand over.** It runs ``live_review_apply.py`` with PR #20259's interface:
    ``--package --new-sl --review-id --evidence --packet-sha --mandate
    MD-LIVE-TIGHTEN-SL --mechanics match --basis table|judgement`` plus

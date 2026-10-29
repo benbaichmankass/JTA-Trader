@@ -28,8 +28,8 @@ refused (:data:`R_NO_QUOTE`), named, and nothing is sent.
 
 Deliberate differences from a reviewer apply (each stated, each in a test):
 
-* the reviewer's one-action-per-package-per-bar rate guard does not bind (the intent carries no ``bar_ts``): it
-  exists to stop an automated reviewer churning; an operator who moves a stop twice in one bar means it;
+* (there is no per-bar action cap on ANY path, reviewer or directed, since 2026-10-29, row REMOVE-PER-BAR-CAP;
+  a directed record is idempotent on its record id, as a review is on its review_id);
 * the scope may be ONE account, or one trade / prop ticket of that account: the other legs are not touched,
   and the shared package stop is never moved by a scoped record.
 

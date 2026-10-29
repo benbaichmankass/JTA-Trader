@@ -1,0 +1,39 @@
+{
+  "id": "TRADE-ACTION-FAST-PATH",
+  "title": "Fast track for operator/manager-directed trade updates (tighten/move SL, move TP, close, partial close): execute within ~1 min, no PR, no GitHub Actions queue. Reuse the VM rows watcher (src/runtime/live_review_rows_watch.py, POLL_S 45) + scripts/ops/live_review_apply.py executors and each account's own RiskManager; a directed-action record (who, operator quote, package/account/leg, action, level) committed to a branch the watcher reads; per-account targeting (a leg, not only the whole package); venue read-back + one ping. This is the single trade-action interface the desk, LTR and ML exit heads also call (STATUS-MOVE-OPEN-POSITIONS gap 2)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    21216
+  ],
+  "blocked_on": [],
+  "note": "Lane archived 11:00Z; spend $12.29 (Opus).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T12:55:26Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuNFv8zgNWpX4kwek8D",
+      "archived_at": "2026-10-29T11:00:46Z"
+    }
+  ],
+  "writeback": {
+    "roadmap": "none: register/ops row, no milestone line changed",
+    "arch": "none: no architecture change"
+  },
+  "observation": {
+    "what": "first LIVE directed action applied at the venue within 60s of submit",
+    "how_to_check": "directed_action.py --wait receipt latency_s on a --live action",
+    "due_by": "2026-11-05"
+  },
+  "_seq": 801
+}

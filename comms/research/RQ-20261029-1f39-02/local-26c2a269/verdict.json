@@ -1,0 +1,1644 @@
+{
+ "decision_rule": {
+  "id": "RULE-AM-RISK-ADJUSTED-V1",
+  "unit_rule_id": "RULE-RQ20261029-1F39-02-DESK-CLASS-REGRADE",
+  "registered_before_run": true
+ },
+ "population": "DESK-LIFECYCLE-S0 corpus comms/research/desk_lifecycle/full-c4e (#20967): judged-1 Claude entries and their matched random partners, policy C4E, 1h Binance Vision USD-M perps, full cost stack; per class: hold vs the class's recorded calls vs 100 matched random draws of the class",
+ "read_state": "measured",
+ "candles": [
+  "binance_vision:ADAUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=5bc998ed2d2923de",
+  "binance_vision:AVAXUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=741b5bc998860b2b",
+  "binance_vision:BTCUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=4ccfbdb07a15564d",
+  "binance_vision:ETHUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=332ef731893dabf8",
+  "binance_vision:SOLUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=f4ac5beea2e52ee6",
+  "binance_vision:XRPUSDT:1h:rows=12289:first=2025-05-01T00:last=2026-09-25T00:sha256=9da6d04627522a41"
+ ],
+ "measurement_basis": "per_trade_r_screen",
+ "positive_control": {
+  "claude": {
+   "ok": true,
+   "committed": 473,
+   "reproduced": 473,
+   "mismatched_or_missing": 0,
+   "examples": []
+  },
+  "random": {
+   "ok": true,
+   "committed": 465,
+   "reproduced": 465,
+   "mismatched_or_missing": 0,
+   "examples": []
+  }
+ },
+ "known_limitation": "No account book is simulated (row BOOK-SIM-REAL-SIZER): every grade is a per-trade-R SCREEN; % per account is R x risk.risk_pct, uncompounded, never a book result; no $ figure is committed (public repo). A class-only arm replays Claude's recorded calls by check-in ordinal after other classes are masked; it is not a re-judgement.",
+ "grades": {
+  "claude": {
+   "tighten_sl": {
+    "baseline_book": {
+     "n": 473,
+     "net_r": 81.95626,
+     "max_drawdown_r": 30.78799,
+     "cvar5_week_r": -14.820689,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.407875,
+      "p95_r": 3.009623
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 473,
+     "net_r": 2.778088,
+     "max_drawdown_r": 32.260041,
+     "cvar5_week_r": -11.955929,
+     "cvar5_trade_r": -1.205426,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.267665,
+      "p95_r": 2.081701
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.167396,
+    "dd_cut_pct": -0.047813,
+    "cvar5_cut_pct": 0.193295,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.125547,
+      "baseline_net_return_pct": 61.4672,
+      "candidate_net_return_pct": 2.0836,
+      "baseline_max_dd_pct": 23.091,
+      "candidate_max_dd_pct": 24.195
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.251094,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 4.1671,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 48.3901
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.251094,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 4.1671,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 48.3901
+     }
+    },
+    "risk_metrics_passing": [
+     "cvar5"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 144,
+      "n_candidate": 144,
+      "r_cost": 0.10362,
+      "cuts": {
+       "dd": -0.301582,
+       "cvar5": -0.263023
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 288,
+      "n_candidate": 288,
+      "r_cost": 0.231563,
+      "cuts": {
+       "dd": 0.195097,
+       "cvar5": 0.3815
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 27,
+      "n_candidate": 27,
+      "r_cost": -0.146384,
+      "cuts": {
+       "dd": 0.702701,
+       "cvar5": 0.792792
+      },
+      "holds": true
+     },
+     {
+      "fold": 4,
+      "n_baseline": 14,
+      "n_candidate": 14,
+      "r_cost": 0.10852,
+      "cuts": {
+       "dd": 0.177373,
+       "cvar5": 0.0
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 1,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": false,
+     "R2_risk_cut": true,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R1_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 27,
+     "mean_net_r": 8.285665,
+     "mean_max_drawdown_r": 30.374577,
+     "mean_giveback_r": 1.322882,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 6.2143,
+      "bybit_2": 12.4285,
+      "bybit_portfolio": 12.4285
+     }
+    },
+    "n_actions": 517,
+    "unjudged_checkins_read_as_hold": 150,
+    "mean_net_r_per_trade": {
+     "hold": 0.173269,
+     "action": 0.005873
+    }
+   },
+   "widen_sl": {
+    "verdict": "indeterminate",
+    "label": "class_never_acted",
+    "n_actions": 0
+   },
+   "move_tp": {
+    "baseline_book": {
+     "n": 473,
+     "net_r": 81.95626,
+     "max_drawdown_r": 30.78799,
+     "cvar5_week_r": -14.820689,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.407875,
+      "p95_r": 3.009623
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 473,
+     "net_r": 77.76725,
+     "max_drawdown_r": 30.78799,
+     "cvar5_week_r": -14.820689,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.399534,
+      "p95_r": 3.009623
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.008856,
+    "dd_cut_pct": 0.0,
+    "cvar5_cut_pct": 0.0,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.006642,
+      "baseline_net_return_pct": 61.4672,
+      "candidate_net_return_pct": 58.3254,
+      "baseline_max_dd_pct": 23.091,
+      "candidate_max_dd_pct": 23.091
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.013284,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 116.6509,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 46.182
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.013284,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 116.6509,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 46.182
+     }
+    },
+    "risk_metrics_passing": [],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 144,
+      "n_candidate": 144,
+      "r_cost": 0.008185,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 288,
+      "n_candidate": 288,
+      "r_cost": 0.004981,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 27,
+      "n_candidate": 27,
+      "r_cost": 0.0,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 4,
+      "n_baseline": 14,
+      "n_candidate": 14,
+      "r_cost": 0.112559,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 0,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": false,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R2_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 0,
+     "mean_net_r": 78.371716,
+     "mean_max_drawdown_r": 30.78799,
+     "mean_giveback_r": 1.403629,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 58.7788,
+      "bybit_2": 117.5576,
+      "bybit_portfolio": 117.5576
+     }
+    },
+    "n_actions": 16,
+    "unjudged_checkins_read_as_hold": 1170,
+    "mean_net_r_per_trade": {
+     "hold": 0.173269,
+     "action": 0.164413
+    }
+   },
+   "partial_close": {
+    "baseline_book": {
+     "n": 473,
+     "net_r": 81.95626,
+     "max_drawdown_r": 30.78799,
+     "cvar5_week_r": -14.820689,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.407875,
+      "p95_r": 3.009623
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 473,
+     "net_r": 80.651827,
+     "max_drawdown_r": 29.659635,
+     "cvar5_week_r": -14.125189,
+     "cvar5_trade_r": -1.224376,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.410633,
+      "p95_r": 2.956199
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.002758,
+    "dd_cut_pct": 0.036649,
+    "cvar5_cut_pct": 0.046928,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.002069,
+      "baseline_net_return_pct": 61.4672,
+      "candidate_net_return_pct": 60.4889,
+      "baseline_max_dd_pct": 23.091,
+      "candidate_max_dd_pct": 22.2447
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.004137,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 120.9777,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 44.4895
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.004137,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 120.9777,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 44.4895
+     }
+    },
+    "risk_metrics_passing": [],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 144,
+      "n_candidate": 144,
+      "r_cost": -0.03098,
+      "cuts": {
+       "dd": 0.124974,
+       "cvar5": 0.030344
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 288,
+      "n_candidate": 288,
+      "r_cost": 0.020092,
+      "cuts": {
+       "dd": 0.036649,
+       "cvar5": 0.053767
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 27,
+      "n_candidate": 27,
+      "r_cost": -0.00077,
+      "cuts": {
+       "dd": 0.030753,
+       "cvar5": 0.15709
+      },
+      "holds": false
+     },
+     {
+      "fold": 4,
+      "n_baseline": 14,
+      "n_candidate": 14,
+      "r_cost": 0.0,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 0,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": false,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R2_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 0,
+     "mean_net_r": 78.77272,
+     "mean_max_drawdown_r": 30.27123,
+     "mean_giveback_r": 1.414606,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 59.0795,
+      "bybit_2": 118.1591,
+      "bybit_portfolio": 118.1591
+     }
+    },
+    "n_actions": 26,
+    "unjudged_checkins_read_as_hold": 1225,
+    "mean_net_r_per_trade": {
+     "hold": 0.173269,
+     "action": 0.170511
+    }
+   },
+   "close": {
+    "baseline_book": {
+     "n": 473,
+     "net_r": 81.95626,
+     "max_drawdown_r": 30.78799,
+     "cvar5_week_r": -14.820689,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.407875,
+      "p95_r": 3.009623
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 473,
+     "net_r": 86.501597,
+     "max_drawdown_r": 29.651703,
+     "cvar5_week_r": -14.618422,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.377202,
+      "p95_r": 3.009623
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": -0.00961,
+    "dd_cut_pct": 0.036907,
+    "cvar5_cut_pct": 0.013648,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": -0.007208,
+      "baseline_net_return_pct": 61.4672,
+      "candidate_net_return_pct": 64.8762,
+      "baseline_max_dd_pct": 23.091,
+      "candidate_max_dd_pct": 22.2388
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": -0.014415,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 129.7524,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 44.4776
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": -0.014415,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 129.7524,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 44.4776
+     }
+    },
+    "risk_metrics_passing": [],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 144,
+      "n_candidate": 144,
+      "r_cost": 0.00168,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 288,
+      "n_candidate": 288,
+      "r_cost": -0.015399,
+      "cuts": {
+       "dd": 0.036907,
+       "cvar5": 0.019276
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 27,
+      "n_candidate": 27,
+      "r_cost": 0.0,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 4,
+      "n_baseline": 14,
+      "n_candidate": 14,
+      "r_cost": -0.025166,
+      "cuts": {
+       "dd": 0.045947,
+       "cvar5": 0.064627
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 0,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": false,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R2_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 0,
+     "mean_net_r": 93.989909,
+     "mean_max_drawdown_r": 28.630584,
+     "mean_giveback_r": 1.36073,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 70.4924,
+      "bybit_2": 140.9849,
+      "bybit_portfolio": 140.9849
+     }
+    },
+    "n_actions": 34,
+    "unjudged_checkins_read_as_hold": 1058,
+    "mean_net_r_per_trade": {
+     "hold": 0.173269,
+     "action": 0.182879
+    }
+   },
+   "all": {
+    "baseline_book": {
+     "n": 473,
+     "net_r": 81.95626,
+     "max_drawdown_r": 30.78799,
+     "cvar5_week_r": -14.820689,
+     "cvar5_trade_r": -1.225491,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.407875,
+      "p95_r": 3.009623
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 473,
+     "net_r": 6.803916,
+     "max_drawdown_r": 29.970258,
+     "cvar5_week_r": -10.668664,
+     "cvar5_trade_r": -1.205426,
+     "weeks": 32,
+     "giveback": {
+      "n_measured": 473,
+      "n_missing_mfe": 0,
+      "mean_r": 1.241425,
+      "p95_r": 2.036806
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.158884,
+    "dd_cut_pct": 0.02656,
+    "cvar5_cut_pct": 0.280151,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.119163,
+      "baseline_net_return_pct": 61.4672,
+      "candidate_net_return_pct": 5.1029,
+      "baseline_max_dd_pct": 23.091,
+      "candidate_max_dd_pct": 22.4777
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.238326,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 10.2059,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 44.9554
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.238326,
+      "baseline_net_return_pct": 122.9344,
+      "candidate_net_return_pct": 10.2059,
+      "baseline_max_dd_pct": 46.182,
+      "candidate_max_dd_pct": 44.9554
+     }
+    },
+    "risk_metrics_passing": [
+     "cvar5"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 144,
+      "n_candidate": 144,
+      "r_cost": 0.080871,
+      "cuts": {
+       "dd": -0.181591,
+       "cvar5": -0.084868
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 288,
+      "n_candidate": 288,
+      "r_cost": 0.229239,
+      "cuts": {
+       "dd": 0.2524,
+       "cvar5": 0.4307
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 27,
+      "n_candidate": 27,
+      "r_cost": -0.13633,
+      "cuts": {
+       "dd": 0.710902,
+       "cvar5": 0.792792
+      },
+      "holds": true
+     },
+     {
+      "fold": 4,
+      "n_baseline": 14,
+      "n_candidate": 14,
+      "r_cost": 0.083353,
+      "cuts": {
+       "dd": 0.223321,
+       "cvar5": 0.064627
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 1,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": false,
+     "R2_risk_cut": true,
+     "R3_folds": false,
+     "R4_control": null
+    },
+    "verdict": "fail",
+    "label": "fails_R1_R3",
+    "random_control_summary": null,
+    "n_actions": null,
+    "unjudged_checkins_read_as_hold": null,
+    "mean_net_r_per_trade": {
+     "hold": 0.173269,
+     "action": 0.014385
+    }
+   }
+  },
+  "random": {
+   "tighten_sl": {
+    "baseline_book": {
+     "n": 465,
+     "net_r": 81.491343,
+     "max_drawdown_r": 26.314568,
+     "cvar5_week_r": -14.852466,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.389256,
+      "p95_r": 2.953129
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 465,
+     "net_r": 30.311187,
+     "max_drawdown_r": 23.235374,
+     "cvar5_week_r": -9.950254,
+     "cvar5_trade_r": -1.235962,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.242405,
+      "p95_r": 2.188747
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.110065,
+    "dd_cut_pct": 0.117015,
+    "cvar5_cut_pct": 0.33006,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.082549,
+      "baseline_net_return_pct": 61.1185,
+      "candidate_net_return_pct": 22.7334,
+      "baseline_max_dd_pct": 19.7359,
+      "candidate_max_dd_pct": 17.4265
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.165097,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 45.4668,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 34.8531
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.165097,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 45.4668,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 34.8531
+     }
+    },
+    "risk_metrics_passing": [
+     "cvar5"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 124,
+      "n_candidate": 124,
+      "r_cost": 0.099799,
+      "cuts": {
+       "dd": 0.133253,
+       "cvar5": 0.312211
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 262,
+      "n_candidate": 262,
+      "r_cost": 0.152458,
+      "cuts": {
+       "dd": 0.117015,
+       "cvar5": 0.3354
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 64,
+      "n_candidate": 64,
+      "r_cost": -0.021303,
+      "cuts": {
+       "dd": 0.358469,
+       "cvar5": 0.361751
+      },
+      "holds": true
+     },
+     {
+      "fold": 4,
+      "n_baseline": 15,
+      "n_candidate": 15,
+      "r_cost": 0.014955,
+      "cuts": {
+       "dd": 0.132043,
+       "cvar5": 0.0
+      },
+      "holds": true
+     }
+    ],
+    "folds_held": 2,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": false,
+     "R2_risk_cut": true,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R1_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 1,
+     "mean_net_r": 49.146402,
+     "mean_max_drawdown_r": 20.515498,
+     "mean_giveback_r": 1.289325,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 36.8598,
+      "bybit_2": 73.7196,
+      "bybit_portfolio": 73.7196
+     }
+    },
+    "n_actions": 464,
+    "unjudged_checkins_read_as_hold": 111,
+    "mean_net_r_per_trade": {
+     "hold": 0.17525,
+     "action": 0.065185
+    }
+   },
+   "widen_sl": {
+    "verdict": "indeterminate",
+    "label": "class_never_acted",
+    "n_actions": 0
+   },
+   "move_tp": {
+    "baseline_book": {
+     "n": 465,
+     "net_r": 81.491343,
+     "max_drawdown_r": 26.314568,
+     "cvar5_week_r": -14.852466,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.389256,
+      "p95_r": 2.953129
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 465,
+     "net_r": 70.413425,
+     "max_drawdown_r": 26.314568,
+     "cvar5_week_r": -14.852466,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.380246,
+      "p95_r": 2.962412
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.023823,
+    "dd_cut_pct": 0.0,
+    "cvar5_cut_pct": 0.0,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.017867,
+      "baseline_net_return_pct": 61.1185,
+      "candidate_net_return_pct": 52.8101,
+      "baseline_max_dd_pct": 19.7359,
+      "candidate_max_dd_pct": 19.7359
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.035735,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 105.6201,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 39.4719
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.035735,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 105.6201,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 39.4719
+     }
+    },
+    "risk_metrics_passing": [],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 124,
+      "n_candidate": 124,
+      "r_cost": 0.023252,
+      "cuts": {
+       "dd": -0.039621,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 262,
+      "n_candidate": 262,
+      "r_cost": 0.033088,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 64,
+      "n_candidate": 64,
+      "r_cost": 0.0,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 4,
+      "n_baseline": 15,
+      "n_candidate": 15,
+      "r_cost": -0.031635,
+      "cuts": {
+       "dd": 0.065478,
+       "cvar5": 0.0
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 0,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": false,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R2_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 0,
+     "mean_net_r": 75.51942,
+     "mean_max_drawdown_r": 26.301624,
+     "mean_giveback_r": 1.380297,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 56.6396,
+      "bybit_2": 113.2791,
+      "bybit_portfolio": 113.2791
+     }
+    },
+    "n_actions": 29,
+    "unjudged_checkins_read_as_hold": 1102,
+    "mean_net_r_per_trade": {
+     "hold": 0.17525,
+     "action": 0.151427
+    }
+   },
+   "partial_close": {
+    "baseline_book": {
+     "n": 465,
+     "net_r": 81.491343,
+     "max_drawdown_r": 26.314568,
+     "cvar5_week_r": -14.852466,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.389256,
+      "p95_r": 2.953129
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 465,
+     "net_r": 80.504163,
+     "max_drawdown_r": 25.146605,
+     "cvar5_week_r": -14.268485,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.391379,
+      "p95_r": 2.933813
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.002123,
+    "dd_cut_pct": 0.044385,
+    "cvar5_cut_pct": 0.039319,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.001592,
+      "baseline_net_return_pct": 61.1185,
+      "candidate_net_return_pct": 60.3781,
+      "baseline_max_dd_pct": 19.7359,
+      "candidate_max_dd_pct": 18.86
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.003184,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 120.7562,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 37.7199
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.003184,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 120.7562,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 37.7199
+     }
+    },
+    "risk_metrics_passing": [],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 124,
+      "n_candidate": 124,
+      "r_cost": -6.8e-05,
+      "cuts": {
+       "dd": -0.047405,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 262,
+      "n_candidate": 262,
+      "r_cost": -0.003372,
+      "cuts": {
+       "dd": 0.044385,
+       "cvar5": 0.05108
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 64,
+      "n_candidate": 64,
+      "r_cost": 0.02692,
+      "cuts": {
+       "dd": -0.031756,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 4,
+      "n_baseline": 15,
+      "n_candidate": 15,
+      "r_cost": 0.01041,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 0,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": false,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R2_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 0,
+     "mean_net_r": 76.278462,
+     "mean_max_drawdown_r": 25.913624,
+     "mean_giveback_r": 1.400466,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 57.2088,
+      "bybit_2": 114.4177,
+      "bybit_portfolio": 114.4177
+     }
+    },
+    "n_actions": 31,
+    "unjudged_checkins_read_as_hold": 1173,
+    "mean_net_r_per_trade": {
+     "hold": 0.17525,
+     "action": 0.173127
+    }
+   },
+   "close": {
+    "baseline_book": {
+     "n": 465,
+     "net_r": 81.491343,
+     "max_drawdown_r": 26.314568,
+     "cvar5_week_r": -14.852466,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.389256,
+      "p95_r": 2.953129
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 465,
+     "net_r": 76.657906,
+     "max_drawdown_r": 25.271516,
+     "cvar5_week_r": -14.33094,
+     "cvar5_trade_r": -1.249057,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.363518,
+      "p95_r": 2.945216
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.010394,
+    "dd_cut_pct": 0.039638,
+    "cvar5_cut_pct": 0.035114,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.007795,
+      "baseline_net_return_pct": 61.1185,
+      "candidate_net_return_pct": 57.4934,
+      "baseline_max_dd_pct": 19.7359,
+      "candidate_max_dd_pct": 18.9536
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.015591,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 114.9869,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 37.9073
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.015591,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 114.9869,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 37.9073
+     }
+    },
+    "risk_metrics_passing": [],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 124,
+      "n_candidate": 124,
+      "r_cost": 0.017589,
+      "cuts": {
+       "dd": -0.055373,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 262,
+      "n_candidate": 262,
+      "r_cost": 0.015697,
+      "cuts": {
+       "dd": 0.039638,
+       "cvar5": 0.045617
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 64,
+      "n_candidate": 64,
+      "r_cost": -0.011856,
+      "cuts": {
+       "dd": 0.028797,
+       "cvar5": 0.0
+      },
+      "holds": false
+     },
+     {
+      "fold": 4,
+      "n_baseline": 15,
+      "n_candidate": 15,
+      "r_cost": -0.046769,
+      "cuts": {
+       "dd": 0.0,
+       "cvar5": 0.0
+      },
+      "holds": false
+     }
+    ],
+    "folds_held": 0,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": true,
+     "R2_risk_cut": false,
+     "R3_folds": false,
+     "R4_control": false
+    },
+    "verdict": "fail",
+    "label": "fails_R2_R3",
+    "random_control_summary": {
+     "draws": 100,
+     "beaten": 0,
+     "mean_net_r": 86.346583,
+     "mean_max_drawdown_r": 24.633635,
+     "mean_giveback_r": 1.345935,
+     "mean_pnl_pct_by_account": {
+      "bybit_1": 64.7599,
+      "bybit_2": 129.5199,
+      "bybit_portfolio": 129.5199
+     }
+    },
+    "n_actions": 38,
+    "unjudged_checkins_read_as_hold": 1049,
+    "mean_net_r_per_trade": {
+     "hold": 0.17525,
+     "action": 0.164856
+    }
+   },
+   "all": {
+    "baseline_book": {
+     "n": 465,
+     "net_r": 81.491343,
+     "max_drawdown_r": 26.314568,
+     "cvar5_week_r": -14.852466,
+     "cvar5_trade_r": -1.2607,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.389256,
+      "p95_r": 2.953129
+     }
+    },
+    "rule": {
+     "id": "RULE-AM-RISK-ADJUSTED-V1",
+     "registered_at": "2026-10-29",
+     "doctrine": "docs/ARCHITECTURE-CANONICAL.md \u00a7 Active management, clause 4",
+     "max_r_cost_per_trade": 0.05,
+     "min_dd_cut_pct": 0.15,
+     "min_cvar5_cut_pct": 0.15,
+     "cvar_tail": 0.05,
+     "cvar_basis": "book_iso_week_of_exit",
+     "folds": 4,
+     "fold_majority": 3,
+     "fold_min_risk_cut_pct": 0.0,
+     "n_floor": 39,
+     "random_control": "required",
+     "min_control_beat_frac": 0.95,
+     "measurement_of_record": "book_usd_sim_per_account (row BOOK-SIM-REAL-SIZER)",
+     "reported_measurements": [
+      "giveback_r_mean_p95 (peak MFE R - realised net R, per trade)",
+      "net_pnl_pct_per_account_and_book (net of the full cost stack)",
+      "net_pnl_usd_per_account_and_book (only from a book_usd_sim; never committed from a per-trade translation, and balances are never committed to this public repo)"
+     ]
+    },
+    "book": {
+     "n": 465,
+     "net_r": 23.982821,
+     "max_drawdown_r": 21.060882,
+     "cvar5_week_r": -10.637011,
+     "cvar5_trade_r": -1.220597,
+     "weeks": 40,
+     "giveback": {
+      "n_measured": 465,
+      "n_missing_mfe": 0,
+      "mean_r": 1.207147,
+      "p95_r": 2.011075
+     }
+    },
+    "lever_fired": true,
+    "r_cost_per_trade": 0.123674,
+    "dd_cut_pct": 0.199649,
+    "cvar5_cut_pct": 0.283822,
+    "pnl_by_account": {
+     "bybit_1": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.0075,
+      "cost_pct_return_per_trade": 0.092756,
+      "baseline_net_return_pct": 61.1185,
+      "candidate_net_return_pct": 17.9871,
+      "baseline_max_dd_pct": 19.7359,
+      "candidate_max_dd_pct": 15.7957
+     },
+     "bybit_2": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.185511,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 35.9742,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 31.5913
+     },
+     "bybit_portfolio": {
+      "basis": "per_trade_translation_not_book_result",
+      "risk_pct_per_trade": 0.015,
+      "cost_pct_return_per_trade": 0.185511,
+      "baseline_net_return_pct": 122.237,
+      "candidate_net_return_pct": 35.9742,
+      "baseline_max_dd_pct": 39.4719,
+      "candidate_max_dd_pct": 31.5913
+     }
+    },
+    "risk_metrics_passing": [
+     "dd",
+     "cvar5"
+    ],
+    "folds": [
+     {
+      "fold": 1,
+      "n_baseline": 124,
+      "n_candidate": 124,
+      "r_cost": 0.12673,
+      "cuts": {
+       "dd": -0.018788,
+       "cvar5": -0.093764
+      },
+      "holds": false
+     },
+     {
+      "fold": 2,
+      "n_baseline": 262,
+      "n_candidate": 262,
+      "r_cost": 0.168802,
+      "cuts": {
+       "dd": 0.199649,
+       "cvar5": 0.396769
+      },
+      "holds": false
+     },
+     {
+      "fold": 3,
+      "n_baseline": 64,
+      "n_candidate": 64,
+      "r_cost": -0.027513,
+      "cuts": {
+       "dd": 0.35551,
+       "cvar5": 0.486821
+      },
+      "holds": true
+     },
+     {
+      "fold": 4,
+      "n_baseline": 15,
+      "n_candidate": 15,
+      "r_cost": -0.044758,
+      "cuts": {
+       "dd": 0.191324,
+       "cvar5": 0.0
+      },
+      "holds": true
+     }
+    ],
+    "folds_held": 2,
+    "n_folds": 4,
+    "clauses": {
+     "R1_cost": false,
+     "R2_risk_cut": true,
+     "R3_folds": false,
+     "R4_control": null
+    },
+    "verdict": "fail",
+    "label": "fails_R1_R3",
+    "random_control_summary": null,
+    "n_actions": null,
+    "unjudged_checkins_read_as_hold": null,
+    "mean_net_r_per_trade": {
+     "hold": 0.17525,
+     "action": 0.051576
+    }
+   }
+  }
+ },
+ "n": 473,
+ "verdict": "fail",
+ "label": "no_class_passes_both_sources",
+ "classes_passing_both_sources": [],
+ "classes_passing_any_source": [],
+ "note": "per-trade-R SCREEN under RULE-AM-RISK-ADJUSTED-V1 (measurement_basis per_trade_r_screen)"
+}

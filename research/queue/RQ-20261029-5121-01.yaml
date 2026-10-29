@@ -2,7 +2,7 @@ id: RQ-20261029-5121-01
 title: 'Q14 lever (VOLATILITY-EXPANSION-GATED PARTIAL BANK): on ada_pullback_2h, does banking 25% / 33% / 50% at +2.0 R ONLY
   when ATR has EXPANDED to >= 1.5 x its entry value beat the declared exit AND the ungated bank in 5 of 6 folds? (operator
   2026-10-29: ''very volatile ... a good time to bank some of that R'')'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -133,3 +133,17 @@ related:
 - research/queue/RQ-20261022-b7e1-06.yaml
 - scripts/research/live_review_outcomes.py
 - src/research/path_state_gate.py
+last_dispatched_at: '2026-10-29T11:58:26+00:00'
+grading:
+  attested: RULE-ADA-AM-CASE-VOLEXP-BANK-01
+  auto: true
+  decision_rule_id: RULE-ADA-AM-CASE-VOLEXP-BANK-01
+  evidence:
+  - research/results/RQ-20261029-5121-01/40869511506.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

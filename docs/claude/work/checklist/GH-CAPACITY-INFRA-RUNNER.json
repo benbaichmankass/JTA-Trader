@@ -17,11 +17,12 @@
       "what": "re-measure: after-snapshot ~24h after #18225 merges -- infra queued->started wait for system-actions, phone-executor-apk and diag relays; if infra still waits > ~10 min, re-raise this row"
     }
   ],
-  "note": "From GH-CAPACITY-INFRA-FIRST. MEASURED 2026-10-15 08:24Z: 20/20 concurrent jobs in progress, 171 queued -- the GitHub Free cap for a User-owned public repo. GitHub Actions has NO job priority: concurrency groups and max-parallel can only reduce competing demand, never let system-actions jump the queue. The only ways to GUARANTEE infra never queues: (a) a self-hosted runner with a dedicated label used ONLY by issue/workflow_dispatch-triggered infra workflows (public repo: must never be reachable from pull_request workflows; needs a host -- Tier 2 VM service + operator security call), or (b) GitHub Pro (40 concurrent jobs, raises the pool but still no priority). Operator decision: which, if either.  | OPERATOR DECISION (popup ~08:34Z 2026-10-15, relayed by manager), verbatim: \"Neither for now\". No GitHub Pro and no self-hosted runner. Keep today's cleanup and re-measure the queue after it lands. State stays queued; re-raise if infra queued->started still exceeds ~10 min in the ~24h after-snapshot.",
-  "updated_at": "2026-10-15T08:37:04Z",
-  "updated_by": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "note": "Re-ranked 2 (manager 08:17Z): measured 20+ min queue on an order-path system-action (#21201) behind 90 CI runs; see GH-CAPACITY-INFRA-FIRST note. Live-review applies go VM-side (rows watcher) and are not affected; operator/manager system-actions are.",
+  "updated_at": "2026-10-29T08:15:05Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-OPS"
   ],
+  "priority_rank": 2,
   "_seq": 515
 }

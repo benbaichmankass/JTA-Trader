@@ -134,7 +134,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO_ROOT not in sys.path:
@@ -299,14 +299,19 @@ def _notes(raw: Any) -> Dict[str, Any]:
         return {}
 
 
-def last_review_bar(notes: Dict[str, Any]) -> Optional[str]:
-    """The closed bar of this leg's newest review action: a tighten (``sl_amends``) OR a trade action
-    (``live_review_actions``). Both count toward one action per package per bar (MD-LTR-ADA-AUTO
-    found that a move_tp / widen_sl / reduce recorded only in ``live_review_actions`` did not)."""
-    bars = [str(a["bar"]) for key in ("sl_amends", "live_review_actions")
-            for a in (notes.get(key) or []) if isinstance(a, dict) and a.get("source") == lri.PROVENANCE
-            and a.get("bar")]
-    return max(bars) if bars else None
+def applied_review_ids(notes: Dict[str, Any]) -> Tuple[str, ...]:
+    """Every review_id / directed record id that already acted on this leg: a tighten (``sl_amends``), a
+    trade action (``live_review_actions``) or the recorded floor (``sl_floor``; a prop ticket's ``meta``).
+    The idempotency guard (``lri.R_DUPLICATE``): an identical recommendation never applies twice. It is
+    NOT a count cap -- two different reviews on one bar both act (row REMOVE-PER-BAR-CAP, operator
+    2026-10-29)."""
+    ids = {str(a["review_id"]) for key in ("sl_amends", "live_review_actions")
+           for a in (notes.get(key) or []) if isinstance(a, dict) and a.get("source") == lri.PROVENANCE
+           and a.get("review_id")}
+    fl = notes.get("sl_floor")
+    if isinstance(fl, dict) and fl.get("source") == lri.PROVENANCE and fl.get("review_id"):
+        ids.add(str(fl["review_id"]))
+    return tuple(sorted(ids))
 
 
 def tightest(direction: str, *levels: Optional[float]) -> Optional[float]:
@@ -331,7 +336,7 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
         notes = _notes(t.get("notes"))
         out.append({"kind": "trade", "account_id": t.get("account_id"), "row": t,
                     "leg_sl": tightest(direction, t.get("stop_loss"), lri.sl_floor_from(notes)),
-                    "last_bar": last_review_bar(notes)})
+                    "review_ids": applied_review_ids(notes)})
     try:
         tickets = _prop_tickets(pkg_id)
     except Exception as exc:  # noqa: BLE001 — could not look is its own entry
@@ -343,8 +348,7 @@ def gather_legs(db, pkg: Dict[str, Any]) -> List[Dict[str, Any]]:
         out.append({"kind": "ticket", "account_id": tk.get("account_id"), "row": tk,
                     "leg_sl": tightest(direction, trail.get("resting_sl") or tk.get("sl"),
                                        lri.sl_floor_from(meta)),
-                    "last_bar": (meta.get("sl_floor") or {}).get("bar")
-                    if isinstance(meta.get("sl_floor"), dict) else None})
+                    "review_ids": applied_review_ids(meta)})
     return out
 
 
@@ -540,10 +544,8 @@ def auto_bound_refusal(intent: lri.LiveReviewIntent, pkg: Dict[str, Any],
     ``both_brackets`` / ``venue_readback`` bind in the executors (a missing bracket or a mismatched read
     is apply_failed) and ``tp_live_target`` for a move_tp in ``lri.decide_action``; this adds the rest."""
     pid = intent.order_package_id
-    if not intent.bar_ts:
-        return EXIT_UNREADABLE, f"{lri.R_COULD_NOT_LOOK}:bar_ts (one_action_per_bar cannot be checked)"
-    if str((st.get("auto_bar") or {}).get(pid) or "") == str(intent.bar_ts):
-        return EXIT_REFUSED, f"{R_AUTO_BOUND}:one_action_per_bar:{pid} already acted on bar {intent.bar_ts}"
+    if str(intent.review_id or "") in ((st.get("auto_review_ids") or {}).get(pid) or []):
+        return EXIT_REFUSED, f"{R_AUTO_BOUND}:idempotent_per_review_id:{intent.review_id} already acted on {pid}"
     direction = intent.direction
     if intent.action != "close":
         tp, mark = _f(pkg.get("tp")), _f(intent.mark)
@@ -682,7 +684,7 @@ def _decide_trade_action(intent: lri.LiveReviewIntent, leg: Dict[str, Any], pkg:
         stop = _f(intent.new_sl) if intent.action == "widen_sl" else leg["leg_sl"]
         fresh = _fresh_entry(aid, cfg, pkg, intent, stop, tp)
     view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
-                                leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"), entry=entry,
+                                leg_sl=leg["leg_sl"], applied_review_ids=leg.get("review_ids") or (), entry=entry,
                                 leg_tp=tp, position_size=size, fresh_ok=fresh[0], fresh_reason=fresh[1],
                                 max_qty=fresh[2], extra=leg_extra(leg, pkg))
     return _risk_manager(aid, cfg).approve_action(intent, view)
@@ -1059,7 +1061,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             v = _decide_trade_action(intent, leg, pkg, cfg, cls, execution)
         else:
             view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
-                                        leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"),
+                                        leg_sl=leg["leg_sl"], applied_review_ids=leg.get("review_ids") or (),
                                         extra=leg_extra(leg, pkg))
             v = _risk_manager(aid, cfg).approve_amend(intent, view)
             if v.ok and (cls == "other" or (cls == "alpaca" and leg["kind"] != "trade")):
@@ -1142,7 +1144,11 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         if auto_applied:
             _ping_action(pkg, auto_applied, intent)
         if any((a.get("executor") or {}).get("result") in (X_APPLIED, X_APPLY_FAILED) for a in out["accounts"]):
-            st.setdefault("auto_bar", {})[intent.order_package_id] = intent.bar_ts   # one action per bar
+            # idempotency per review_id (never a per-bar cap): THIS row never applies twice
+            done = st.setdefault("auto_review_ids", {}).setdefault(intent.order_package_id, [])
+            if intent.review_id not in done:
+                done.append(intent.review_id)
+                del done[:-200]
     out["writeback"] = {
         "review_id": intent.review_id, "order_package_id": intent.order_package_id,
         "packet_sha": intent.packet_sha, "evidence": intent.evidence_path,

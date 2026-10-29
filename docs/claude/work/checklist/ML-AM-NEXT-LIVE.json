@@ -1,0 +1,22 @@
+{
+  "id": "ML-AM-NEXT-LIVE",
+  "title": "Next ML to go live does ACTIVE MANAGEMENT (in-trade: tighten / BE / partial / close / TP move), not sizing: (1) measure the exit head ALREADY live on paper (exit-head-donchian-1h-v1, action close, trend_donchian/_eth/_sol on bybit_1 since 2026-07-12, unregistered) \u2014 its decision value net of cost vs no-head, via the counterfactual grader + B4; (2) build/gate an in-trade policy model for the REAL-MONEY legs (trend_donchian_eth_4h/xrp_4h, eth/sol_prop, ada/xrp_pullback_2h) on their Stage-0 corpora (TM-BENCH / full-history LTR corpora), graded under RULE-AM-RISK-ADJUSTED-V1 (net P&L first, risk tie-breaker) + non-inferiority + matched random intervention; (3) ship the first passing one to real money as an auto-applied in-trade action (the trade-action fast path), Tier-3 operator yes/no with its gates listed",
+  "phase": null,
+  "state": "in_flight",
+  "owner": null,
+  "lane": "session_01AFoLuN7GVCEJnGiFMpNGJK",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~12:30Z verbatim: \"Great news about the canary. I want to push for the next ML to go live to be one the does active management, not position sizing\". MEASURED context: /api/bot/config (2026-10-28 20:56Z, ML-EXITHEAD-VALUE note) exit_head_model exit-head-donchian-1h-v1 threshold 0.1 action close on 3 testing legs; 0 registry rows; decision value never measured (row ML-EXITHEAD-VALUE, B4). Inputs: TRADE-COUNTERFACTUAL-GRADER (#21256), ML-P1-EXIT-CANDIDATES-BUILD, LTR-CORPUS-REAL-MONEY-LEGS, ML-LINE-S1/S3, the directed/auto apply path (#21216 fast path, live_review_apply executors), RULE-AM-RISK-ADJUSTED-V1 (#21169). Absorbs ML-EXITHEAD-VALUE and ML-P1-EXIT-CANDIDATES-BUILD as its first steps. [2026-10-29 14:20Z lane] STEP 1: BTC exit head fails B4 (RQ-20260927-002 pooled -0.0141 R/trade, n_oos=1041, 1/3 folds) -> annotate PR #21290 (held for manager). ETH/SOL first relays were VOID (ran on BTC candles); fail-closed fix #21285 merged; re-run #21294/#21295 (PI-20261029-IFMPNGJK-0001). STEP 2: RQ-20261029-a7e1-01 ML-gated 50% partial close FAIL both families (TD n=1831 dR -0.0338 LB -0.0513; PB2H n=796 dR -0.0417), PR #21299; no Tier-3 packet. NEXT ML CANDIDATE (proposal): Q-TM1 GBDT action-value head on TM-BENCH trained on the action-grid labels (ML-EXIT-ACTIONGRID-LABELS), all action classes priced per check-in vs hold, graded under RULE-AM-RISK-ADJUSTED-V1 + matched random + CPCV; not another threshold head on the R1 state (3 negatives: d6e7-06, RQ-20260927-002, a7e1-01). Static follow-up RQ-20261029-a7e1-02 (partial at bar k) registered 04a6de8d and running.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T14:18:07Z",
+  "updated_by": "session_01AFoLuN7GVCEJnGiFMpNGJK",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 815
+}

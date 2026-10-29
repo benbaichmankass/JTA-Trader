@@ -2,7 +2,7 @@
   "id": "AUD-20261019-SIGNAL-ACCOUNTING-READ",
   "title": "Expose leg_flow_detector (intents produced vs orders/refusals per live leg) on a diag route so the weekly audit's signal-accounting invariant can run on live data",
   "phase": null,
-  "state": "queued",
+  "state": "dropped",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: weekly-audit C1 'signal accounting closes' cannot be measured from a session. EVIDENCE: grep of src/web/api/ for leg_flow/dead_leg/refusal GET routes -> none; scripts/ops/leg_flow_detector.py and dead_leg_audit.py need the journal DB on the VM. 2026-10-21 audit measured only the 'placed or refused' half (journal trades + prop tickets). BUILD: a read-only /api/diag/leg_flow?days=7 returning leg_flow_report's rows, plus a system_invariants stem INV-SIGNAL-ACCOUNTING. DETECTOR: the invariant's self-test. [WEEKLY-AUDIT-2026-10-28 L0] unresolved, STALLED: not re-measured this run; row unchanged 7d.",
-  "updated_at": "2026-10-28T19:04:31Z",
-  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: weekly-audit C1 'signal accounting closes' cannot be measured from a session. EVIDENCE: grep of src/web/api/ for leg_flow/dead_leg/refusal GET routes -> none; scripts/ops/leg_flow_detector.py and dead_leg_audit.py need the journal DB on the VM. 2026-10-21 audit measured only the 'placed or refused' half (journal trades + prop tickets). BUILD: a read-only /api/diag/leg_flow?days=7 returning leg_flow_report's rows, plus a system_invariants stem INV-SIGNAL-ACCOUNTING. DETECTOR: the invariant's self-test. [WEEKLY-AUDIT-2026-10-28 L0] unresolved, STALLED: not re-measured this run; row unchanged 7d. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:38Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-OPS"
   ],
