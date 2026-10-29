@@ -1,6 +1,6 @@
 # System conformance audit — 2026-10-29
 
-> **Doc status:** `live` · category `review` · lane `SYSTEM-CONFORMANCE-AUDIT` (Manager Session 2026-10-29c) · measured on `origin/main` 2026-10-29 ~07:20–08:00Z
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-29` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `SYSTEM-CONFORMANCE-AUDIT` (Manager Session 2026-10-29c) · measured on `origin/main` 2026-10-29 ~07:20–08:00Z
 
 **Question (operator, 2026-10-29 ~07:30Z):** *"do like an audit to see where else we have gaps like this that like are holding us back from
 having like a technically robust system that matches the design specs that we researched and decided on ... for the strategies improvement,
