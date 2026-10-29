@@ -70,7 +70,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -322,7 +322,6 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
         return a
 
     sign = 1.0 if side == "long" else -1.0
-    price_of_r = lambda x: entry_ref + sign * x * r_dist                       # noqa: E731
     timed = [{"ts": a["ts_epoch"], "kind": "set_stop", "level": a["level"]} for a in actions]
 
     # ---- (a) actual: measured outcome, the venue pnl where it priced it
@@ -344,7 +343,7 @@ def grade_package(pkg: dict, legs_in: List[dict], bars: List[dict], reviews: Lis
 
     # ---- baseline: the actual management replayed
     rep = run("replayed_actual", "baseline", "Actual management replayed (like-for-like baseline)", {"actions": len(timed)}, acts=timed)
-    orig = run("original_brackets", "entry_brackets", "Original SL/TP, no in-trade action (own trail only)", {})
+    run("original_brackets", "entry_brackets", "Original SL/TP, no in-trade action (own trail only)", {})
 
     # ---- (c) alternative entry brackets, constant risk
     for m in SL_MULTS:
