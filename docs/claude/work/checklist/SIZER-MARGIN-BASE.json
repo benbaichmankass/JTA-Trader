@@ -2,7 +2,7 @@
   "id": "SIZER-MARGIN-BASE",
   "title": "Tier-3 proposal: size Bybit linear risk on min(totalEquity, totalMarginBalance) instead of total equity",
   "phase": "build",
-  "state": "queued",
+  "state": "dropped",
   "owner": "operator",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "PROPOSAL ONLY, no code changed. docs/proposals/sizer-margin-base-2026-10-28.md has the per-account table (what base, venue margin base, gap, leverage), the exact fix, per-account effect and revert. Only bybit_1 has a measured gap and the collateral-switch action (PR 21015) is built to close it, so decide this AFTER the collateral action and a re-read of margin_fields. Evidence still needed before approval: a 30-day bybit_1 intent replay at both bases net of cost, and why bybit_2 returns totalMarginBalance empty. Decision: operator, Thursday planning. Re-run: scripts/ops/diag_fetch.sh broker_account_status. Related: BYBIT1-MARGIN-STARVED, PI-20261028-EUSDZERO-0001.",
-  "updated_at": "2026-10-28T21:06:12Z",
-  "updated_by": "session_01AFoLuLMibKbG1UTfMLjpnY",
+  "note": "PROPOSAL ONLY, no code changed. docs/proposals/sizer-margin-base-2026-10-28.md has the per-account table (what base, venue margin base, gap, leverage), the exact fix, per-account effect and revert. Only bybit_1 has a measured gap and the collateral-switch action (PR 21015) is built to close it, so decide this AFTER the collateral action and a re-read of margin_fields. Evidence still needed before approval: a 30-day bybit_1 intent replay at both bases net of cost, and why bybit_2 returns totalMarginBalance empty. Decision: operator, Thursday planning. Re-run: scripts/ops/diag_fetch.sh broker_account_status. Related: BYBIT1-MARGIN-STARVED, PI-20261028-EUSDZERO-0001. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:33Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": "L-LADDER",
   "_seq": 755
 }

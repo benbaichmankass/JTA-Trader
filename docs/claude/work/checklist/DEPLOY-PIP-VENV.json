@@ -2,7 +2,7 @@
   "id": "DEPLOY-PIP-VENV",
   "title": "Deploy pip-installs into /usr/bin/python3 but ict-web-api runs from the repo .venv: requirements.txt additions (webauthn) never reach the web-api",
   "phase": null,
-  "state": "queued",
+  "state": "dropped",
   "owner": "lane (session_01GuVUmgAYQ8Vbfe824or9fB)",
   "lane": "session_01GuVUmgAYQ8Vbfe824or9fB",
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-12 session_01GuVUmgAYQ8Vbfe824or9fB] Root cause of passkey/register/begin 500 (ModuleNotFoundError webauthn): scripts/deploy_pull_restart.sh:420 targets /usr/bin/python3, web-api traceback is /home/ubuntu/ict-trading-bot/.venv. Immediate unblock: install-web-api-deps system-action (this PR). Durable fix still owed: make deploy install into the interpreter each unit actually runs (or drop the venv split).",
-  "updated_at": "2026-10-12T11:36:43Z",
-  "updated_by": "session_01GuVUmgAYQ8Vbfe824or9fB",
+  "note": "[2026-10-12 session_01GuVUmgAYQ8Vbfe824or9fB] Root cause of passkey/register/begin 500 (ModuleNotFoundError webauthn): scripts/deploy_pull_restart.sh:420 targets /usr/bin/python3, web-api traceback is /home/ubuntu/ict-trading-bot/.venv. Immediate unblock: install-web-api-deps system-action (this PR). Durable fix still owed: make deploy install into the interpreter each unit actually runs (or drop the venv split). [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:44Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-OPS"
   ],
