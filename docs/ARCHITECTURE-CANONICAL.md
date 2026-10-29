@@ -759,9 +759,10 @@ This section is the design statement; the TP doctrine above is the floor it stan
    A class that clears R1-R4 is better than hold under the objective below, even when its mean net R is a little lower. The
    mechanical form, parameters and verdict states are in `scripts/research/am_risk_adjusted.py` (wired as
    `exit_lever_ablation.py --grade risk_adjusted`). A unit registers the rule id and any changed parameter before its run, and a
-   re-grade of an older record is a reading, never a graduation. **No harness yet simulates an account's book with the real
-   sizer and caps** (row `BOOK-SIM-REAL-SIZER`). Until one does, the grader's per-trade-R reading is a **screen** that ranks
-   candidates, and it never graduates a class.
+   re-grade of an older record is a reading, never a graduation. **Known limitation of V1: no harness yet simulates an
+   account's book at real size with the production sizer and caps** (row `BOOK-SIM-REAL-SIZER`). Until one does, the grader's
+   per-trade-R reading is a **screen** that ranks candidates, and it never graduates a class. Its % column is a per-trade
+   translation (R × `risk.risk_pct`), never the book result.
 
 ### The rule's record and the objective it serves (operator, 2026-10-29)
 

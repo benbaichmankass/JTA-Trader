@@ -213,6 +213,7 @@ def test_cost_leg_reported_as_pct_return_per_account():
                                risk_pct_by_account={"acct_x": 0.015})
     c = g["candidates"]["BE"]
     v = c["pnl_by_account"]["acct_x"]
+    assert v["basis"] == "per_trade_translation_not_book_result"
     assert v["cost_pct_return_per_trade"] == pytest.approx(c["r_cost_per_trade"] * 1.5, abs=1e-6)
     assert v["candidate_net_return_pct"] == pytest.approx(c["book"]["net_r"] * 1.5, abs=1e-3)
     assert am.grade_risk_adjusted({"A": hold, "BE": be}, baseline="A", candidates=["BE"])["candidates"]["BE"]["pnl_by_account"] is None

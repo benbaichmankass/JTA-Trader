@@ -158,11 +158,12 @@ def _in_fold(t: dict[str, Any], edges: list[datetime], i: int) -> bool:
 
 def pnl_view(a_book: dict[str, Any], c_book: dict[str, Any], r_cost: float,
              risk_pct_by_account: dict[str, float] | None) -> dict[str, Any] | None:
-    """The cost leg and both books in % return per account: R x the account's risk fraction per trade (uncompounded,
-    so a comparison of the two arms on one account, not a forecast of its equity curve)."""
+    """A PER-TRADE TRANSLATION of the R figures into % of equity per account: R x the account's risk fraction per trade,
+    uncompounded. It is NOT the book result: no sizer, caps, concurrency, compounding or daily_dd_switch are simulated
+    (that is row BOOK-SIM-REAL-SIZER). Labelled as such in every output."""
     if not risk_pct_by_account:
         return None
-    return {acct: {"risk_pct_per_trade": rp, "cost_pct_return_per_trade": round(r_cost * rp * 100, 6),
+    return {acct: {"basis": "per_trade_translation_not_book_result", "risk_pct_per_trade": rp, "cost_pct_return_per_trade": round(r_cost * rp * 100, 6),
                    "baseline_net_return_pct": round(a_book["net_r"] * rp * 100, 4),
                    "candidate_net_return_pct": round(c_book["net_r"] * rp * 100, 4),
                    "baseline_max_dd_pct": round(a_book["max_drawdown_r"] * rp * 100, 4),
@@ -381,6 +382,12 @@ def _regrade_tighten_optimize(path: Path) -> dict[str, Any]:
 
 def regrade_records() -> dict[str, Any]:
     res: dict[str, Any] = {"rule": RULE_V1, "kind": "re-grade (reading, not graduation)", "provenance": "MEASURED",
+                           "known_limitation": ("V1 KNOWN LIMITATION: no harness simulates an account's book at real size with "
+                                                "the production sizer and risk caps (concurrency, per-account caps, "
+                                                "daily_dd_switch), so freed risk budget, compounding and prop survival are NOT "
+                                                "counted. Every figure here is a per-trade-R SCREEN over harness books, never "
+                                                "a book $ result. Build: checklist row BOOK-SIM-REAL-SIZER."),
+                           "measurement_basis": "per_trade_r_screen",
                            "method": "re-reads the committed per-trade / per-pair / per-rule records; nothing re-run",
                            "records": {}}
     for unit, spec in REGRADE_RECORDS.items():
