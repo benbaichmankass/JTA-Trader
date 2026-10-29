@@ -6,7 +6,7 @@ status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
-theme: ml
+theme: ml_health
 priority: 1
 kind: experiment
 question: 'For each family, does an L2-logistic meta-label model on 9 point-in-time candle features
@@ -23,15 +23,19 @@ power:
   expected_n: 2600
   min_detectable_effect: 0.02
   effect_units: r_per_trade
-  design: non_inferiority
+  sd: 0.3
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'Gate population = the real-money legs'' OOS trades: RQ-20261024-09a6-01 measured ada 402 + xrp 394
-    (PB2H, 796) and eth_4h 275 + xrp_4h 68 + eth_prop 1085 + sol_prop 403 (TD, 1831) over 2020-07..2026-10.
-    A reduce of 20% of trades at 0.5x moves delta by at most 0.1 x |mean R of reduced|, so the margin
-    -0.02 R is about 0.2 x a reduced-set mean of 1 R; per-trade R sd ~1.5 gives a LB half-width of
-    ~0.3 x 1.5 x 1.645 / sqrt(n) ~ 0.02-0.03 on n 800-1800 (an ESTIMATE). Below 200 gate trades ->
-    INDETERMINATE, never FAIL.'
+  basis: 'Gate population = the real-money legs'' OOS trades: RQ-20261024-09a6-01 measured ada 402 + xrp 394 (PB2H,
+    796) and eth_4h 275 + xrp_4h 68 + eth_prop 1085 + sol_prop 403 (TD, 1831) over 2020-07..2026-10. A reduce of 20%
+    of trades at 0.5x moves delta by at most 0.1 x |mean R of reduced|, so the margin -0.02 R is about 0.2 x a reduced-set
+    mean of 1 R; per-trade R sd ~1.5 gives a LB half-width of ~0.3 x 1.5 x 1.645 / sqrt(n) ~ 0.02-0.03 on n 800-1800
+    (an ESTIMATE). Below 200 gate trades -> INDETERMINATE, never FAIL. POWER METADATA corrected 2026-10-29 after V1''s
+    run, for the queue schema only (no decision-rule change): design one_sample on the per-trade delta vs 0; sd 0.3
+    is the sd of the DELTA (zero on taken trades, 0.5 x R on reduced), not of R -- consistent with V1''s measured
+    TD LB half-width (0.0114 = 1.645 x sd / sqrt(1830) -> sd ~0.30). At MDE 0.02 R this needs n ~1,400-1,800: the
+    pooled n and TD (1,830) clear it, PB2H alone (796) does not.'
   feasibility:
     source: none
     accrual_basis: Replays pinned history on freshly fetched public candles; nothing accrues.
