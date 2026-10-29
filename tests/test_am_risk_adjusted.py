@@ -204,3 +204,17 @@ def test_run_legs_end_to_end(e2e, tmp_path):
     assert rec["decision_rule"]["id"] == am.RULE_ID and rec["read_state"] == "measured"
     assert rec["per_leg"]["xrp_pullback_2h"]["exit_code"] == 0
     assert rec["pooled"]["baseline_book"]["n"] == json.loads((e2e / "verdict.json").read_text())["n"]
+
+
+def test_cost_leg_reported_as_pct_return_per_account():
+    """Objective is absolute net P&L ($ / % return per account); the R cost is also shown as % return via risk_pct."""
+    hold, be, _ = _books()
+    g = am.grade_risk_adjusted({"A": hold, "BE": be}, baseline="A", candidates=["BE"],
+                               risk_pct_by_account={"acct_x": 0.015})
+    c = g["candidates"]["BE"]
+    v = c["pnl_by_account"]["acct_x"]
+    assert v["cost_pct_return_per_trade"] == pytest.approx(c["r_cost_per_trade"] * 1.5, abs=1e-6)
+    assert v["candidate_net_return_pct"] == pytest.approx(c["book"]["net_r"] * 1.5, abs=1e-3)
+    assert am.grade_risk_adjusted({"A": hold, "BE": be}, baseline="A", candidates=["BE"])["candidates"]["BE"]["pnl_by_account"] is None
+    rp = am.risk_pcts(["bybit_2", "alpaca_live"])
+    assert set(rp) <= {"bybit_2", "alpaca_live"} and all(0 < x < 1 for x in rp.values())

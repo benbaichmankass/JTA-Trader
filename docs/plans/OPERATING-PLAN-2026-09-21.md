@@ -77,8 +77,9 @@ because it is prose and the counter-pressure is CI.
 Three stages, two gates, one continuous falsifier. Each stage answers exactly
 one question, and a leg moves only when that question is answered on evidence.
 
-**The objective every decision rule serves: net P&L first, risk second** (operator, 2026-10-29). When P&L is even, the
-lower-risk choice wins, and a large risk cut for a small, pre-stated R cost also wins. It is stated once, with the
+**The objective every decision rule serves: absolute net P&L first, in $ and % return per account and book; risk reduction is
+the tie-breaker** (operator, 2026-10-29). R stays the per-trade unit. A large risk cut for a small P&L cost wins. Risk-adjusted
+ratios are not the objective. It is stated once, with the
 operator's words, in [`docs/ARCHITECTURE-CANONICAL.md`](../ARCHITECTURE-CANONICAL.md) § "Active management". Its
 in-trade form is `RULE-AM-RISK-ADJUSTED-V1`. Point at it; never restate it.
 

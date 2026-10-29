@@ -15,7 +15,11 @@ THE RULE (parameters are explicit and travel in every verdict; V1's values are t
   take extra trades is counted. Baseline A = hold (the declared exit). Candidate C = the action class.
 
   R1 cost       r_cost = (net_r(A) - net_r(C)) / n(A)  <=  max_r_cost_per_trade (0.05 R).
-                A negative r_cost is a gain. Per BASELINE trade, so extra trades C takes count for C.
+                A negative r_cost is a gain. Per BASELINE trade, so extra trades C takes count for C. The cost is
+                NET P&L given up, never a ratio (operator 2026-10-29: the objective is absolute net P&L, $ and %
+                return per account; R is the per-trade unit). With ``risk_pct_by_account`` (each account's
+                accounts.yaml ``risk.risk_pct``) the verdict also reports the same cost and both books' net return
+                as % of account equity per account (uncompounded: R x risk_pct). Grading stays in R.
   R2 risk cut   dd_cut   = (maxDD(A) - maxDD(C)) / maxDD(A)        >= min_dd_cut_pct (0.15), OR
                 cvar_cut = (CVaR5(C) - CVaR5(A)) / |CVaR5(A)|      >= min_cvar5_cut_pct (0.15).
                 maxDD is the peak-to-trough of cumulative net R in exit-time order (same-time outcomes summed
@@ -148,10 +152,34 @@ def _in_fold(t: dict[str, Any], edges: list[datetime], i: int) -> bool:
     return edges[i] <= e < edges[i + 1] or (last and e == edges[i + 1])
 
 
+def pnl_view(a_book: dict[str, Any], c_book: dict[str, Any], r_cost: float,
+             risk_pct_by_account: dict[str, float] | None) -> dict[str, Any] | None:
+    """The cost leg and both books in % return per account: R x the account's risk fraction per trade (uncompounded,
+    so a comparison of the two arms on one account, not a forecast of its equity curve)."""
+    if not risk_pct_by_account:
+        return None
+    return {acct: {"risk_pct_per_trade": rp, "cost_pct_return_per_trade": round(r_cost * rp * 100, 6),
+                   "baseline_net_return_pct": round(a_book["net_r"] * rp * 100, 4),
+                   "candidate_net_return_pct": round(c_book["net_r"] * rp * 100, 4),
+                   "baseline_max_dd_pct": round(a_book["max_drawdown_r"] * rp * 100, 4),
+                   "candidate_max_dd_pct": round(c_book["max_drawdown_r"] * rp * 100, 4)}
+            for acct, rp in risk_pct_by_account.items()}
+
+
+def risk_pcts(accounts: list[str]) -> dict[str, float]:
+    """accounts.yaml ``risk.risk_pct`` per account, read now (an account without one is left out)."""
+    import yaml
+    doc = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text(encoding="utf-8"))
+    accs = doc.get("accounts", doc)
+    return {a: float(accs[a]["risk"]["risk_pct"]) for a in accounts
+            if isinstance((accs.get(a) or {}).get("risk"), dict) and accs[a]["risk"].get("risk_pct") is not None}
+
+
 # ── the grade (pure) ────────────────────────────────────────────────────────
 def grade_risk_adjusted(books: dict[str, list[dict[str, Any]]], *, baseline: str, candidates: list[str],
                         controls: dict[str, list[str]] | None = None, params: dict[str, Any] | None = None,
-                        edges: list[datetime] | None = None) -> dict[str, Any]:
+                        edges: list[datetime] | None = None,
+                        risk_pct_by_account: dict[str, float] | None = None) -> dict[str, Any]:
     p = {**RULE_V1, **(params or {})}
     tail = float(p["cvar_tail"])
     a_tr = books[baseline]
@@ -205,6 +233,7 @@ def grade_risk_adjusted(books: dict[str, list[dict[str, Any]]], *, baseline: str
                     beats = True
             ctl_rows[k] = {"book": K, "cuts": k_cuts, "beats": beats}
         row.update({"lever_fired": fired, "r_cost_per_trade": r_cost, "dd_cut_pct": dd_cut, "cvar5_cut_pct": cv_cut,
+                    "pnl_by_account": pnl_view(A, C, r_cost, risk_pct_by_account),
                     "risk_metrics_passing": passing, "folds": folds, "folds_held": held, "n_folds": nf,
                     "clauses": {"R1_cost": r1, "R2_risk_cut": r2, "R3_folds": r3,
                                 "R4_control": ((sum(v["beats"] for v in ctl_rows.values()) / len(ctl_rows)
@@ -527,7 +556,8 @@ def main(argv: list[str] | None = None) -> int:
                                                           "per_leg": per_leg}, indent=1) + "\n")
             return 1
         pooled = grade_risk_adjusted(books_from_dirs(dirs, labels), baseline=a.baseline, candidates=a.candidate,
-                                     controls=controls, params=params)
+                                     controls=controls, params=params,
+                                     risk_pct_by_account=risk_pcts([x for x in a.accounts.split(",") if x]))
         failed = [k for k, v in per_leg.items() if v["exit_code"] != 0]
         if failed:
             pooled = {**pooled, "verdict": "indeterminate", "label": "pooled_incomplete", "legs_failed": failed}
