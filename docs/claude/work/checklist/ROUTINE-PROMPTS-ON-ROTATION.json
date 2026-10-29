@@ -1,0 +1,22 @@
+{
+  "id": "ROUTINE-PROMPTS-ON-ROTATION",
+  "title": "Routine prompts must name the CURRENT manager session, repo slug and cadence: (1) the assistant manager rewrites every routine bound to its session now; (2) the manager handover procedure adds a step: on every rotation or rename, every routine prompt that names the outgoing manager or an old repo name is updated (by the session each routine posts into), with a check that lists stale references",
+  "phase": null,
+  "state": "in_flight",
+  "owner": null,
+  "lane": "session_011c3qoaBvGBioDWkPVToQSb",
+  "model": "sonnet",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~12:05Z verbatim: \"we still need the assistant manager to make those edits. Like we can, even if there's a good fallback, we don't want to rely on the fallback. We want to rely on the prompts being written correctly, and that means updating them when the name changes, then we need to do that.\" Found stale: research-ops trig_01UnRpzN513KbMjvJWFAf911, daily authoring trig_01PHFNiKyeRUMLJj1DgYzmuy, LTR backstop trig_01Bchsugftspk4uZhHR1ncK8 name manager session_01AFoLuJi1vLTnYv9LbP6539 and repo Metis-Insights; update_trigger refuses prompt edits from a session other than the one the routine posts into. Step 1 asked of the assistant (trig_01N2YErk5hQdADuCUrA7QrVE, fired 12:00Z). Step 2 (handover rule + stale-reference check) is a follow-up build for the manager skill.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-29T12:00:27Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 813
+}
