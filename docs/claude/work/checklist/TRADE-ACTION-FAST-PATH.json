@@ -1,0 +1,22 @@
+{
+  "id": "TRADE-ACTION-FAST-PATH",
+  "title": "Fast track for operator/manager-directed trade updates (tighten/move SL, move TP, close, partial close): execute within ~1 min, no PR, no GitHub Actions queue. Reuse the VM rows watcher (src/runtime/live_review_rows_watch.py, POLL_S 45) + scripts/ops/live_review_apply.py executors and each account's own RiskManager; a directed-action record (who, operator quote, package/account/leg, action, level) committed to a branch the watcher reads; per-account targeting (a leg, not only the whole package); venue read-back + one ping. This is the single trade-action interface the desk, LTR and ML exit heads also call (STATUS-MOVE-OPEN-POSITIONS gap 2)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~08:20Z verbatim: \"It looks like we also need a fast track for trade updates - not really sure why these require a PR at all, but the action needs to be immediate\". MEASURED evidence: amend-position-sl #21186/#21193 ~13 min each issue->result; flatten-bybit-position APPLY #21201 queued 07:57Z, not started at 08:20Z behind 90 queued Actions runs. The ADA auto-mandate (MD-LTR-ADA-AUTO #21203) already rides the VM watcher; this extends the same path to directed actions.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T08:18:19Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 801
+}
