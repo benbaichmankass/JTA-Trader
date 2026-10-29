@@ -48,8 +48,14 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import first_passage_paths as fpp  # noqa: E402
-from ml_overlay_noninferior import cpcv_splits, cvar5, max_dd, month_block_lb, predict  # noqa: E402
+import first_passage_paths as fpp
+from ml_overlay_noninferior import (
+    cpcv_splits,
+    cvar5,
+    max_dd,
+    month_block_lb,
+    predict,
+)
 
 RULE_ID = "RULE-ML-AM-PARTIAL-V1"
 GATE_FAMILIES = {"TD": ["trend_donchian_eth_4h", "trend_donchian_xrp_4h", "trend_donchian_eth_prop",
@@ -106,7 +112,7 @@ def fit_head(ev: list[dict], idx: np.ndarray, C: float, q: float) -> dict:
     coef, b = fit_logistic_w((X - mu) / sd, y, w, C)
     tau = float(np.quantile(predict((X - mu) / sd, coef, b), q))
     return {"median": med, "mean": mu, "std": sd, "coef": coef, "intercept": b, "tau": tau, "C": C, "q": q,
-            "n_train_trades": int(len(idx)), "n_train_states": int(len(y))}
+            "n_train_trades": len(idx), "n_train_states": len(y)}
 
 
 def score(head: dict, X: np.ndarray) -> np.ndarray:
@@ -280,7 +286,7 @@ def evaluate_family(trades, ev, res, sel, rng, n_groups: int = 6) -> dict:
 def evaluate_holdout(trades, ev, head, sel, rng) -> dict:
     idx = np.where(sel)[0]
     if len(idx) < HOLDOUT_N_MIN:
-        return {"state": "INDETERMINATE", "n": int(len(idx)), "reasons": [f"n {len(idx)} < {HOLDOUT_N_MIN}"]}
+        return {"state": "INDETERMINATE", "n": len(idx), "reasons": [f"n {len(idx)} < {HOLDOUT_N_MIN}"]}
     delta = np.zeros(len(trades))
     fire = np.zeros(len(trades))
     for i in idx:
@@ -296,7 +302,7 @@ def evaluate_holdout(trades, ev, head, sel, rng) -> dict:
           "b_risk_not_worse": bool(ev_["maxdd_policy"] <= ev_["maxdd_hold"] + 1e-9
                                    and ev_["cvar5_policy"] >= ev_["cvar5_hold"] - 1e-9),
           "c_beats_random": ev_["checks"]["c_beats_random"]}
-    return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "n": int(len(idx)),
+    return {"state": "CONFIRMS" if all(ck.values()) else "FAILS", "n": len(idx),
             "reasons": [k for k, v in ck.items() if not v], "checks": ck,
             "eval": {k: v for k, v in ev_.items() if k not in ("checks", "pass")}}
 

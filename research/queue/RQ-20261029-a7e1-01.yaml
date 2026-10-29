@@ -4,7 +4,7 @@ title: 'ML-AM-NEXT-LIVE: an ML-gated 50% PARTIAL CLOSE on the real-money legs --
 status: queued
 cadence: once
 roadmap:
-- M-ML
+- L-ML-LIVE
 - L-AM-STANDARD
 theme: ml_health
 priority: 1
@@ -86,8 +86,8 @@ intervention_controls:
     excludes_test_folds: true}
   bootstrap_group: month
 ml_consumer:
-  consumer: scripts/ops/live_review_apply.py (partial_close executor) via a new in-trade scorer, Tier-3 on PASS
-  decision: whether the real-money legs auto-apply a 50% partial close when the head fires
+  consumer: scripts/ops/live_review_apply.py
+  decision: (its partial_close executor, fed by a new in-trade scorer, Tier-3 on PASS) whether the real-money legs auto-apply a 50% partial close when the head fires
   legs:
   - trend_donchian_eth_4h
   - trend_donchian_xrp_4h
