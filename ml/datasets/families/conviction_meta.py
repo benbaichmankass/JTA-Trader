@@ -212,6 +212,9 @@ def _row_from_panel(
         "pnl_percent": r_val * float(risk_pct),
         "won": bool(r_val > 0),
         "r_multiple": _clip(r_val, float(r_cap)),
+        # Harness R, not a journal fill: never a cost-net eval basis
+        # (ml.promotion.cost_gate refuses it), so it can only ride the TRAIN side.
+        "label_cost_basis": "harness",
         "source": "backtest",
     }
     for col in _LENS_COLUMNS:
@@ -289,6 +292,7 @@ class ConvictionMetaBuilder(DatasetBuilder):
         "pnl_percent": float,
         "won": bool,
         "r_multiple": float,
+        "label_cost_basis": str,  # "realized" (journal) | "harness" (backtest rows)
         "source": str,  # "live" (paper/backtest excluded by construction)
     }
 
@@ -467,6 +471,10 @@ class ConvictionMetaBuilder(DatasetBuilder):
                     "pnl_percent": pnl_percent,
                     "won": bool(float(pnl) > 0),
                     "r_multiple": float(r_multiple),
+                    # pnl_percent is the journal's realized, fee-net outcome
+                    # (PI-20261028-V8KBRR5H-0002): rows were unstamped, so the
+                    # cost gate refused them as `eval_not_cost_net`.
+                    "label_cost_basis": "realized",
                     "source": "live",
                 }
                 # Lens inputs: present columns get the calibrated value; absent
