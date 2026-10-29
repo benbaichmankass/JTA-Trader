@@ -614,7 +614,7 @@ _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_
 # directed/actions fetch state. Same anchors as the writers (scripts/ops/directed_action.py::log_dir,
 # src.runtime.live_review_rows_watch.directed_log_dir).
 _DIRECTED_ACTIONS_LOG = Path(repo_root()) / "runtime_logs" / "directed_actions" / "receipts.jsonl"
-_DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "status.json"
+_DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "pass_status.json"
 _DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "watch_status.json"
 # DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by

@@ -133,8 +133,10 @@ def _apply_record(record: Dict[str, Any]) -> Dict[str, Any]:
         intent = replace(intent, bar_ts=None, directed_by=record["directed_by"],
                          operator_quote=record["operator_quote"], target_account_id=sc["account_id"],
                          target_trade_id=sc["trade_id"])
+        # state={}: never touch the reviewer path's apply_state.json (a rows dispatch may be writing it in another
+        # process); a directed record has its own retry/expire in vm_pass and alerts at most once per record.
         res = lra.run(intent, apply=not record["dry_run"], db=db, accounts=accounts, strategies=strategies,
-                      review_cfg=cfg)
+                      review_cfg=cfg, state={})
     except Exception as exc:  # noqa: BLE001 -- contained per record; retried (no halting)
         return {"exit": EXIT_UNREADABLE, "detail": f"apply did not run: {type(exc).__name__}: {exc}"[:300],
                 "accounts": []}
@@ -184,7 +186,7 @@ def vm_pass(ref: str, *, git: Git = _git, apply_fn: Callable[[Dict[str, Any]], D
             now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
     """Handle every record at ``ref`` not yet handled. Returns the status it wrote."""
     d = logs or log_dir()
-    state_path, status_path, receipts = d / "state.json", d / "status.json", d / "receipts.jsonl"
+    state_path, status_path, receipts = d / "state.json", d / "pass_status.json", d / "receipts.jsonl"
     seen_at = now_fn()
     status: Dict[str, Any] = {"pass_at": seen_at.isoformat(), "ref": ref}
     rc, out = git("ls-tree", "--name-only", ref, f"{da.RECORDS_DIR}/")
@@ -371,16 +373,16 @@ def wait_receipt(record_id: str, *, timeout_s: float, pushed_at: Optional[dateti
     path = "log_file?name=directed_actions&lines=200"
     while True:
         rc, doc = _diag(path)
-        if rc == 3 and doc is None and time.monotonic() > deadline:
-            print(f">>> could not reach the diag API directly; read it through the relay: issue title "
-                  f"'[diag-request] {path}' (label vm-diag-request) and look for id {record_id}")
-            return EXIT_UNREADABLE
         r = find_receipt(doc, record_id)
         if r:
             return print_receipt(r, pushed_at)
         if time.monotonic() > deadline:
-            print(f">>> no receipt for {record_id} after {timeout_s:.0f}s; check "
-                  f"log_file?name=directed_actions_watch_status and directed_actions_status")
+            if doc is None:
+                print(f">>> could not reach the diag API directly (rc={rc}); read it through the relay: issue title "
+                      f"'[diag-request] {path}' (label vm-diag-request) and look for id {record_id}")
+            else:
+                print(f">>> no receipt for {record_id} after {timeout_s:.0f}s; check "
+                      f"log_file?name=directed_actions_watch_status and directed_actions_status")
             return EXIT_UNREADABLE
         time.sleep(10)
 

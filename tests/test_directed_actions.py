@@ -353,7 +353,7 @@ def test_directed_watch_names_an_absent_branch(tmp_path):
 def test_the_diag_receipts_are_registered():
     from src.web.api.routers import diag
     for name, rel in (("directed_actions", "runtime_logs/directed_actions/receipts.jsonl"),
-                      ("directed_actions_status", "runtime_logs/directed_actions/status.json"),
+                      ("directed_actions_status", "runtime_logs/directed_actions/pass_status.json"),
                       ("directed_actions_watch_status", "runtime_logs/directed_actions/watch_status.json")):
         assert str(diag._LOG_FILES[name]).endswith(rel)
 
