@@ -1,0 +1,22 @@
+{
+  "id": "REMOVE-PER-BAR-CAP",
+  "title": "Remove the one-action-per-package-per-bar cap from every in-trade path (live review, auto-mandate, directed actions, prop amend gate, RiskManager.approve_amend) and from every doc, mandate and skill that states it; keep idempotency per review/record id as the duplicate guard; add a guard that refuses re-introducing a per-bar action cap",
+  "phase": null,
+  "state": "in_flight",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-29 ~10:45Z verbatim: \"Why is there a cap for the reviewer? What's the point of having active management and then specifically limiting how active that management can be? When was a cap even approved? This is a terrible design choice that shows whoever made it clearly did not understand the task they were given, and we need to make sure this isn't being implemented anywhere\". PROVENANCE (manager, git log -S on origin/main): first written by a session in docs/plans/live-trade-review-DESIGN.md \u00a7 Guardrails, PR #20088 (2026-10-25, 'HOLD for operator review'), filed under the 'noise floor' bullet as 'at most one amend per package per closed bar'; built in LTR-6R #20139 (2026-10-25: src/runtime/live_review_intent.py R_RATE='one_amend_per_package_per_bar'; RiskManager.approve_amend, src/units/accounts/risk.py ~L896) and carried by LTR-ALL-ACTIONS #7968bc40, src/prop/prop_amend_gate.py, scripts/ops/live_review_apply.py (one_action_per_bar, auto_bar state), src/runtime/ltr_auto_mandate.py BOUNDS, config/mandates.yaml (MD-LIVE-TIGHTEN-SL amendment text ~L1171 'Guardrails unchanged (...one amend per package per bar...)' and MD-LTR-ADA-AUTO bounds ~L1424), .claude/skills/live-trade-review/SKILL.md L195, docs/ARCHITECTURE-CANONICAL.md L755. No operator decision approving a per-bar cap was found; operator answers that mention it quote a session's 'guardrails unchanged' list attached to a different decision. The directed fast path (#21216) already exempts the operator's actions.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T10:45:19Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 807
+}
