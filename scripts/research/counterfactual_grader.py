@@ -271,11 +271,12 @@ def resolve_horizon(pkg: dict, strategy_cfg: Optional[dict] = None) -> dict:
 
 
 def strategy_config(name: Optional[str]) -> dict:
+    import yaml
     try:
-        import yaml
         d = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text()) or {}
         return dict((d.get("strategies") or d).get(name) or {})
-    except Exception:       # noqa: BLE001  (a config read failure falls back to the default horizon, never stops grading)
+    except (OSError, yaml.YAMLError, AttributeError, TypeError) as exc:
+        print(f"counterfactual_grader: strategies.yaml unreadable ({exc!r}); using the default horizon", file=sys.stderr)
         return {}
 
 
