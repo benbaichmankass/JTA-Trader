@@ -1,0 +1,22 @@
+{
+  "id": "ADA-AM-CASE",
+  "title": "Operator 2026-10-29 ~06:05Z on the open bybit_2 ADAUSDT short (pkg-465a5d7d27644027): should the bracket move to bank R? Price hold vs partial/TP-pull-in/tighten on the leg's FULL Stage-0 history (the LTR table reads a 61-trade 12-month corpus -> every state insufficient_n), and close that corpus gap so in-trade questions on this leg are priced",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator, verbatim: 'it's at a good amount of R right now, but it's very volatile, and this seems like we'd be a good time to bank some of that R ... what's missing to make that happen automatically?' MEASURED by manager 06:07Z: open +1.36R, peak >=2.27R (lower bound), giveback 0.91R, SL 0.21090 still the original 1R stop, 2h ATR 0.00314 at pctl 0.76 (vol_trail_shadow), vt_hot90 would_fire=false on all 300 rows for this pkg. Tested on this leg, all FAIL vs hold: partial bank at +2R 25/33/50% (RQ-20261022-b7e1-08, -9.1/-12.0/-18.2R, 0/4 folds), R-armed tight trail (f08c-01, -7.3R), giveback-gated tighten (9a7e-01, +0.56R, not pass), TP re-estimate/stall pull-in (RQ-20261007-003, 0/9 cells), giveback stop and trail_decay (RQ-20261018-009). Only vol_trail vt_hot90_t2.5 passed (path_b, passed_unshipped since 2026-09-28). LTR corpus: comms/strategy_evidence/runs/2026-10-28/ada_pullback_2h__trades.jsonl, 61 trades from 2025-11-01, 14 comparable -> hold insufficient_n (floor 20).",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T06:10:52Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 781
+}
