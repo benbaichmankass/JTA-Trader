@@ -129,6 +129,9 @@ def record_overlay_shadow(pkg: Any, account_name: str = "") -> None:
                    "symbol": str(getattr(pkg, "symbol", "") or ""),
                    "direction": str(getattr(pkg, "direction", "") or ""),
                    "trace_id": str(getattr(pkg, "trace_id", "") or ""),
+                   # The trade <-> package key the demotion join reads (scripts/ops/overlay_cusum_join.py):
+                   # trades.order_package_id is stamped from the same pkg.meta value before sizing.
+                   "order_package_id": (meta.get("order_package_id") if isinstance(meta, dict) else None),
                    "account": account_name, **rec}
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(payload, default=str) + "\n")
