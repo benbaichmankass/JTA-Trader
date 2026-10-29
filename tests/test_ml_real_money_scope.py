@@ -102,7 +102,9 @@ def violations(root: Path, accounts: dict, strategies: dict, regime_policy: dict
 
 
 def _real():
-    load = lambda rel: yaml.safe_load((REPO / rel).read_text(encoding="utf-8")) or {}
+    def load(rel):
+        return yaml.safe_load((REPO / rel).read_text(encoding="utf-8")) or {}
+
     return (load("config/accounts.yaml")["accounts"],
             load("config/strategies.yaml")["strategies"],
             load("config/regime_policy.yaml"))

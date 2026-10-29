@@ -22,15 +22,15 @@ import pytest
 pd = pytest.importorskip("pandas")
 pytest.importorskip("lightgbm")
 
-from ml.datasets.families.setup_candidates import (
+from ml.datasets.families.setup_candidates import (  # noqa: E402
     SetupCandidatesBuilder,
     serve_spec_from_rows,
 )
-from ml.experiments.runner import _attach_serve_spec
-from ml.predictors.lightgbm import LightGBMRegressionPredictor
-from ml.trainers.lightgbm_regression import LightGBMRegressionTrainer
-from src.runtime.advisory_sizing import _feature_row_from_pkg
-from src.runtime.setup_features import (
+from ml.experiments.runner import _attach_serve_spec  # noqa: E402
+from ml.predictors.lightgbm import LightGBMRegressionPredictor  # noqa: E402
+from ml.trainers.lightgbm_regression import LightGBMRegressionTrainer  # noqa: E402
+from src.runtime.advisory_sizing import _feature_row_from_pkg  # noqa: E402
+from src.runtime.setup_features import (  # noqa: E402
     META_KEY,
     decision_features_block,
     row_for_predictor,
