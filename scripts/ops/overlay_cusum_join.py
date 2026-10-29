@@ -77,6 +77,36 @@ def _json_blocks(text: str) -> list[Any]:
     return out
 
 
+_TRUNCATION_MARKERS = ("are NOT shown", "Re-request this path alone", "Re-request with a smaller")
+
+
+def relay_completeness(text: str) -> dict:
+    """Could we actually read this input? A relay comment whose ```json block was cut by the ~55 kB comment cap
+    neither parses as one JSON value nor is JSONL, and the relay appends a truncation note. Either one means the
+    rows below are NOT a census: the caller must report `incomplete_read`, never "no trades" / "no rows"
+    (measured 2026-10-29, relay #21272: a 4-path batch cut the trades block mid-JSON and the loader read 0 rows)."""
+    unparsed = 0
+    for b in re.findall(r"```json\s*\n(.*?)\n```", text, flags=re.S):
+        b = b.strip()
+        try:
+            json.loads(b, strict=False)
+            continue
+        except json.JSONDecodeError:
+            pass
+        lines = [ln.strip() for ln in b.splitlines() if ln.strip()]
+        ok = 0
+        for ln in lines:
+            try:
+                json.loads(ln, strict=False)
+                ok += 1
+            except json.JSONDecodeError:
+                pass
+        if not lines or ok < len(lines):
+            unparsed += 1
+    truncated = any(m in text for m in _TRUNCATION_MARKERS)
+    return {"unparsed_blocks": unparsed, "truncated": truncated, "complete": unparsed == 0 and not truncated}
+
+
 def load_shadow(text: str) -> list[dict]:
     rows: list[dict] = []
     for blk in _json_blocks(text):
@@ -225,15 +255,25 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=None)
     ap.add_argument("--cusum", action="store_true", help="also run scripts/ops/overlay_cusum.py on the joined rows")
     a = ap.parse_args(argv)
-    j = join(load_shadow(Path(a.shadow).read_text(encoding="utf-8")),
-             _dedupe([t for p in a.trades for t in load_trades(Path(p).read_text(encoding="utf-8"))]), a.window_min)
+    texts = {"shadow": [Path(a.shadow).read_text(encoding="utf-8")],
+             "trades": [Path(p).read_text(encoding="utf-8") for p in a.trades]}
+    completeness = {k: [relay_completeness(t) for t in v] for k, v in texts.items()}
+    j = join(load_shadow(texts["shadow"][0]),
+             _dedupe([t for txt in texts["trades"] for t in load_trades(txt)]), a.window_min)
+    if not all(c["complete"] for v in completeness.values() for c in v):
+        j["read_state"] = "incomplete_read"  # a cut/unparsed relay block: the counts below are not a census
     if a.out:
         Path(a.out).write_text("".join(json.dumps(r, default=str) + "\n" for r in j["rows"]), encoding="utf-8")
     out = {k: v for k, v in j.items() if k != "rows"}
-    if a.cusum:
+    out["input_completeness"] = completeness
+    if a.cusum and j["read_state"] == "incomplete_read":
+        out["cusum"] = {"state": "could_not_read", "note": "an input was truncated or unparsed; re-pull smaller pages"}
+    elif a.cusum:
         from overlay_cusum import cusum
         out["cusum"] = cusum(j["rows"], None if a.account == "all" else a.account)
     print(json.dumps(out, indent=1, default=str))
+    if j["read_state"] == "incomplete_read":
+        return 2  # could not look: never reported as clean
     return 1 if (out.get("cusum") or {}).get("state") == "ALARM" else 0
 
 
