@@ -30,7 +30,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-REPO_BLOB = "https://github.com/benbaichmankass/Metis-Insights/blob/main"
+REPO_BLOB = "https://github.com/benbaichmankass/JTA-Trader/blob/main"
 #: A dispatched unit with no landed row after this many hours is flagged stuck.
 STUCK_AFTER_HOURS = 6.0
 #: Result `read_state` values that carry no verdict (the run did not measure).

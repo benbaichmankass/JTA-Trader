@@ -87,7 +87,7 @@ def _send(message: str) -> int:
 
 def _cmd_session(args: argparse.Namespace) -> int:
     msg = (
-        f"✅ ICT bot session checkpoint {args.checkpoint}\n"
+        f"✅ JTA Trader session checkpoint {args.checkpoint}\n"
         f"{args.summary}"
     )
     return _send(msg)
@@ -95,7 +95,7 @@ def _cmd_session(args: argparse.Namespace) -> int:
 
 def _cmd_sprint(args: argparse.Namespace) -> int:
     msg = (
-        f"🏁 ICT bot sprint complete: {args.sprint}\n"
+        f"🏁 JTA Trader sprint complete: {args.sprint}\n"
         f"{args.summary}"
     )
     return _send(msg)

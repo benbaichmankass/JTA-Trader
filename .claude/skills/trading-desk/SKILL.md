@@ -121,7 +121,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
   title: desk-wake <the marker's bar, YYYY-MM-DDTHH:MMZ>
   tags: ["manager:session_01HAysMLfF9dYpi92YMqYxEq", "desk-wake", "DESK-6-SHADOW-PILOT"]
   permission_mode: auto
-  source_url: https://github.com/benbaichmankass/Metis-Insights
+  source_url: https://github.com/benbaichmankass/JTA-Trader
   source_revision: desk/decisions
   outcome_branch: desk/decisions
   clone_depth: 1
@@ -130,7 +130,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 WAKE PROMPT:
 You are one wake of the Claude trading desk (a proposal on a desk-leg symbol trades on the bybit_1 DEMO; every other row is a shadow label; see SKILL § 0 rule 1), started by the Metis-Insights manager's routine. The manager acts with the operator's authority. Your session's branch IS desk/decisions, the desk's append-only record branch: writing ONE row there is your whole job.
-1. Read your whole contract: get_file_contents on repo benbaichmankass/Metis-Insights, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. skill_sha = the blob sha it returns.
+1. Read your whole contract: get_file_contents on repo benbaichmankass/JTA-Trader, path .claude/skills/trading-desk/DESK-BRIEF.md, ref refs/heads/main. skill_sha = the blob sha it returns.
 2. Follow that brief EXACTLY and only it. Read nothing else in the repo, no diag, no web.
 3. You never write the row by hand: write the brief's § 4 draft and run the brief's § 5 command (`desk_write.py`). It validates and does the compare-and-swap; a refused draft is fixed and re-run, never pushed another way.
 4. End with the brief's § 6 report block. Do not open a PR or an issue, and do not message anyone.

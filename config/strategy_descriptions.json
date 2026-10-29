@@ -100,8 +100,8 @@
   "how_it_works": "Same logic as the SPY/QQQ legs on the Russell-2000 small-cap ETF: a daily close above the highest high of the prior 30 days triggers a long entry (shorts suppressed), with a 2.5x ATR(14) initial stop and a 4x ATR trailing exit, via bracket orders on the Alpaca paper account during US market hours. Adds small-cap breadth to the large-cap SPY/QQQ legs. From the ETF-breadth daily sweep (2026-06-20) it was the only live_ready cell, positive in every walk-forward fold (pooled book Sharpe 3.88, all holdouts positive)."
  },
  "splg_trend_long_1d": {
-  "short": "SPLG daily long-only trend-follower (Alpaca paper) — a cheap-share (~$84) S&P 500 proxy for spy_trend_long_1d so the small alpaca_live account can afford ≥1 whole share.",
-  "how_it_works": "Identical Donchian-30 breakout logic and params as the SPY leg, run on SPDR Portfolio S&P 500 (SPLG), which tracks the SAME S&P 500 index as SPY at ~1/9th the share price (and a lower 0.02% fee). A daily close above the prior 30-day high triggers a long (shorts suppressed) with a 2.5x ATR(14) stop and 4x ATR trail, via bracket orders during US market hours. Backtest on SPLG's own 2010-2026 series: net +33.6R / +0.61R expectancy over 55 trades — at or above the SPY cell (+28.0R). Paper soak; alpaca_live promotion is a separate Tier-3 gate."
+  "short": "SPYM daily long-only trend-follower (Alpaca paper) — a cheap-share (~$84) S&P 500 proxy for spy_trend_long_1d so the small alpaca_live account can afford ≥1 whole share.",
+  "how_it_works": "Identical Donchian-30 breakout logic and params as the SPY leg, run on SPDR Portfolio S&P 500 (SPYM), which tracks the SAME S&P 500 index as SPY at ~1/9th the share price (and a lower 0.02% fee). A daily close above the prior 30-day high triggers a long (shorts suppressed) with a 2.5x ATR(14) stop and 4x ATR trail, via bracket orders during US market hours. Backtest on SPYM's own 2010-2026 series: net +33.6R / +0.61R expectancy over 55 trades — at or above the SPY cell (+28.0R). Paper soak; alpaca_live promotion is a separate Tier-3 gate."
  },
  "iaum_pullback_1d": {
   "short": "IAUM daily pullback trader (Alpaca paper) — a cheap-share (~$41) gold proxy for gld_pullback_1d so the small alpaca_live account can afford ≥1 whole share.",
@@ -109,7 +109,7 @@
  },
  "scha_trend_long_1d": {
   "short": "SCHA daily long-only trend-follower (Alpaca paper) — a cheap-share (~$35) small-cap proxy for iwm_trend_long_1d; observe-only paper soak (marginal edge).",
-  "how_it_works": "Identical Donchian-30 breakout logic and params as the IWM leg, run on Schwab US Small-Cap (SCHA). Unlike SPLG/IAUM, SCHA tracks a DIFFERENT index (broad US small-cap vs IWM's Russell 2000, 0.99 return correlation), so it was revalidated on its own 2010-2026 series: net +9.8R / +0.19R expectancy over 53 trades — MARGINAL, on par with IWM's own weak +12.3R. Added purely to soak on paper; alpaca_live promotion is NOT proposed."
+  "how_it_works": "Identical Donchian-30 breakout logic and params as the IWM leg, run on Schwab US Small-Cap (SCHA). Unlike SPYM/IAUM, SCHA tracks a DIFFERENT index (broad US small-cap vs IWM's Russell 2000, 0.99 return correlation), so it was revalidated on its own 2010-2026 series: net +9.8R / +0.19R expectancy over 53 trades — MARGINAL, on par with IWM's own weak +12.3R. Added purely to soak on paper; alpaca_live promotion is NOT proposed."
  },
  "gld_pullback_1d": {
   "short": "GLD daily pullback trader (Alpaca paper) — buys/sells pullbacks within the prevailing gold trend; the ETF replacement for the MGC futures leg.",
