@@ -113,3 +113,19 @@ def test_closed_bar_trim_used(monkeypatch):
     monkeypatch.setattr(time, "time", lambda: now.timestamp())
     bars, tf, _last = ovs._leg_bars("leg_a", "ETHUSDT")
     assert tf == "4h" and bars["close"][-1] == 298  # the 04:00 bar closes at 08:00 > now: dropped
+
+
+def test_committed_artifacts_are_reduce_only_and_carry_their_evidence():
+    """Every committed overlay artifact is reduce-only, names its rule, and covers only legs in the roster."""
+    import yaml
+    roster = set()
+    for acct in (yaml.safe_load((REPO / "config/accounts.yaml").read_text()).get("accounts") or {}).values():
+        if isinstance(acct, dict):
+            roster.update(acct.get("strategies") or [])
+    arts = sorted((REPO / "ml/overlay").glob("overlay_*.json"))
+    for p in arts:
+        art = json.loads(p.read_text())
+        assert 0.0 < float(art["multiplier"]) < 1.0, p.name
+        assert art["rule"].startswith("RULE-ML-OVERLAY-NONINFERIOR-"), p.name
+        assert set(art["legs_gate"]) <= roster, p.name
+        assert len(art["coef"]) == len(art["features"]) == len(FEATURES) and art["features"] == list(FEATURES)
