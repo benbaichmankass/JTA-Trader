@@ -92,10 +92,19 @@ def test_adds_are_capped_at_the_fresh_entry_size():
         == "fresh_entry_check:GROSS_EXPOSURE_CAP"
 
 
+def test_no_per_bar_cap_on_trade_actions():
+    """REMOVE-PER-BAR-CAP: a move_tp then a partial_close on the same bar, two review ids, both pass."""
+    a = _d(_ti("move_tp", new_tp=0.185, review_id="LR-20261025T1805Z-P"))
+    b = _d(_ti("partial_close", size_fraction=0.5, review_id="LR-20261025T1830Z-P"),
+           _view(applied_review_ids=("LR-20261025T1805Z-P",)))
+    assert a.ok and b.ok, (a, b)
+
+
 def test_common_refusals():
     assert _d(_ti("close"), dry=True).reason == lri.R_DRY
     assert _d(_ti("close"), _view(strategy_execution="shadow")).reason == lri.R_SHADOW
-    assert _d(_ti("close"), _view(last_amend_bar="2026-10-25T18:00:00Z")).reason == lri.R_RATE
+    rid = _ti("close").review_id
+    assert _d(_ti("close"), _view(applied_review_ids=(rid,))).reason == lri.R_DUPLICATE
     assert _d(_ti("tighten_sl")).reason == lri.R_NOT_TRADE_ACTION
     assert _d(_ti("partial_close", size_fraction=1.0)).reason == lri.R_BAD_INPUT
 

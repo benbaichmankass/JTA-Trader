@@ -129,8 +129,8 @@ def _apply_record(record: Dict[str, Any]) -> Dict[str, Any]:
             reason=f"directed by {record['directed_by']}: {record['operator_quote']}"[:500], action=action,
             new_tp=lvl if action == "move_tp" else None,
             size_fraction=record.get("fraction") if action == "partial_close" else None)
-        # bar_ts=None: the reviewer's one-action-per-bar guard does not bind a directed action (see module doc).
-        intent = replace(intent, bar_ts=None, directed_by=record["directed_by"],
+        # bar_ts is kept as provenance only (the bar the action was taken on); no path caps actions per bar.
+        intent = replace(intent, directed_by=record["directed_by"],
                          operator_quote=record["operator_quote"], target_account_id=sc["account_id"],
                          target_trade_id=sc["trade_id"])
         # state={}: never touch the reviewer path's apply_state.json (a rows dispatch may be writing it in another

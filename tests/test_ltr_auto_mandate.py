@@ -184,17 +184,22 @@ def test_an_auto_tighten_applies_on_every_account_with_one_ping(wired, monkeypat
     assert res["exit"] == lra.EXIT_OK and res["auto_mandate"] == "MD-T-AUTO"
     assert [e[1] for e in wired["exec"]] == ["bybit_2", "bybit_portfolio"]
     assert wired["pings"] == [("bybit_2,bybit_portfolio", 0.21)]        # ONE ping per action
-    assert st["auto_bar"]["pkg-P"] == "2026-10-25T18:00:00Z"
+    assert st["auto_review_ids"]["pkg-P"] == [_intent(order_package_id="pkg-P").review_id]
+    assert "auto_bar" not in st
 
 
-def test_one_action_per_package_per_bar_across_every_account(wired, monkeypatch):  # noqa: F811
+def test_no_per_bar_cap_a_second_review_on_the_same_bar_applies(wired, monkeypatch):  # noqa: F811
+    """REMOVE-PER-BAR-CAP (operator 2026-10-29): two DIFFERENT reviews on one bar both act on every account."""
     _, st = _auto_run(wired, monkeypatch)
     res, _ = _auto_run(wired, monkeypatch, state=st, review_id="LR-second", new_sl=0.2090)
-    assert res["exit"] == lra.EXIT_REFUSED and "one_action_per_bar" in res["detail"]
-    assert len(wired["exec"]) == 2                                      # nothing more was sent
-    res, _ = _auto_run(wired, monkeypatch, state=st, review_id="LR-next-bar", new_sl=0.2090,
-                       bar_ts="2026-10-25T20:00:00Z")
     assert res["exit"] == lra.EXIT_OK and len(wired["exec"]) == 4
+
+
+def test_the_same_review_id_never_applies_twice(wired, monkeypatch):  # noqa: F811
+    _, st = _auto_run(wired, monkeypatch)
+    res, _ = _auto_run(wired, monkeypatch, state=st)
+    assert res["exit"] == lra.EXIT_REFUSED and "idempotent_per_review_id" in res["detail"]
+    assert len(wired["exec"]) == 2                                      # nothing more was sent
 
 
 def test_an_auto_mandate_that_does_not_scope_the_package_applies_nothing(wired, monkeypatch):  # noqa: F811
@@ -244,8 +249,9 @@ def test_tp_stays_a_live_target_and_both_brackets_exist():
     assert v.verdict == lri.V_REFUSE and "tp_through_mark" in v.reason
 
 
-def test_an_unread_bar_is_could_not_look():
-    assert _bound(bar_ts=None)[0] == lra.EXIT_UNREADABLE
+def test_an_unread_bar_refuses_nothing():
+    """REMOVE-PER-BAR-CAP: the bar is provenance only; no bound reads it, so an unread bar holds nothing back."""
+    assert _bound(bar_ts=None) is None
 
 
 def test_a_bound_refusal_alerts_once_per_review(wired, monkeypatch):  # noqa: F811
@@ -257,11 +263,12 @@ def test_a_bound_refusal_alerts_once_per_review(wired, monkeypatch):  # noqa: F8
     assert len(wired["alerts"]) == 1
 
 
-def test_last_review_bar_counts_trade_actions_too():
-    notes = {"sl_amends": [{"source": lri.PROVENANCE, "bar": "2026-10-25T16:00:00Z"}],
-             "live_review_actions": [{"source": lri.PROVENANCE, "bar": "2026-10-25T18:00:00Z", "action": "move_tp"}]}
-    assert lra.last_review_bar(notes) == "2026-10-25T18:00:00Z"
-    assert lra.last_review_bar({"live_review_actions": [{"source": "other", "bar": "x"}]}) is None
+def test_applied_review_ids_counts_tightens_trade_actions_and_the_floor():
+    notes = {"sl_amends": [{"source": lri.PROVENANCE, "review_id": "LR-a"}],
+             "live_review_actions": [{"source": lri.PROVENANCE, "review_id": "LR-b", "action": "move_tp"}],
+             "sl_floor": {"source": lri.PROVENANCE, "review_id": "DA-c"}}
+    assert lra.applied_review_ids(notes) == ("DA-c", "LR-a", "LR-b")
+    assert lra.applied_review_ids({"live_review_actions": [{"source": "other", "review_id": "x"}]}) == ()
 
 
 # ------------------------------------------------------------------ the bybit tighten keeps both brackets

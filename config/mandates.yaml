@@ -1126,7 +1126,7 @@ mandates:
       - "OR basis: judgement -- the LTR-0 cell is `insufficient_n`; the reviewer's call applies, with a recorded confidence in [0, 1] and a one-line reason, logged as judgement and graded against the realised outcome (LTR-5)"
       - mechanics.verdict == match
       - config/live_trade_review.yaml apply_mode == apply for the account (global apply covers all accounts)
-      - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, <= 1 amend per package per closed bar, account live, leg not shadow); could_not_look never applies
+      - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, a review_id never applied twice (no per-bar action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]), account live, leg not shadow); could_not_look never applies
     never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act on a mechanics mismatch, act on a judgement without a recorded confidence and reason, write mode or execution]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no-op / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the review row and table path
     review_rule: >-
@@ -1168,7 +1168,7 @@ mandates:
       a confidence; the table is used when it's there. Every call is graded
       against the actual outcome so models can learn how much weight to give
       Claude." Guardrails unchanged (tighten-only, min_buffer_atr noise floor,
-      one amend per package per bar, mechanics match, per-account
+      one amend per package per bar [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP], mechanics match, per-account
       approve_amend, could_not_look never applies). Committed by the manager
       with auto mode switched off by the operator for this edit (~07:40Z).
       SECOND AMENDMENT 2026-10-26 ~10:45Z (rows branch + pinned commit), same manager
@@ -1288,7 +1288,7 @@ mandates:
       - the row carries the action's own target (tighten_sl / widen_sl / move_tp a price level; partial_close a size_fraction in (0, 1); change_size a size_multiplier > 0 and != 1; add_entry a size_fraction > 0)
       - mechanics.verdict == match
       - config/live_trade_review.yaml apply_mode == apply for the account
-      - the account's own approve_amend / approve_action returns approve or clip. Its checks are the account's OWN and are never bypassed - a tighten is tighten-only beyond the min_buffer_atr noise floor; a widened stop and any added size pass the same risk check a fresh entry would (account live, leg not shadow, the daily-DD switch's block on new risk, the gross-exposure cap, total size <= the size a fresh entry at the stop in force would get); every result keeps BOTH brackets; one action per package per closed bar; could_not_look never applies
+      - the account's own approve_amend / approve_action returns approve or clip. Its checks are the account's OWN and are never bypassed - a tighten is tighten-only beyond the min_buffer_atr noise floor; a widened stop and any added size pass the same risk check a fresh entry would (account live, leg not shadow, the daily-DD switch's block on new risk, the gross-exposure cap, total size <= the size a fresh entry at the stop in force would get); every result keeps BOTH brackets; a review_id never applies twice (no per-bar action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]); could_not_look never applies
       - entry_generation additionally needs its blocked_until cleared
     never: [act on a read that could not look, act on a mechanics mismatch, act without a recorded reason and either a confidence or a table basis, write mode or execution, remove or null a stop-loss or a take-profit on any action (move_tp / tighten_sl / widen_sl MOVE a bracket and never delete one; a partial_close or change_size leaves the remaining position with BOTH brackets; an add_entry is placed with both brackets; a close removes the position, not just its brackets), leave a leg without a REAL take-profit (TP doctrine -- no sentinel, no TP through the mark), bypass an account's per-trade risk limit / sizing cap / exposure cap / daily-DD switch, route one account's action through another account's executor, place a desk-generated entry before entry_generation's blocked_until clears]
     notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no_action_path / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the decision row
@@ -1421,7 +1421,7 @@ mandates:
       - both_brackets -- both brackets exist at the venue after every action (TP doctrine clause 3); a tighten, widen, move_tp or reduce that leaves either unread is apply_failed
       - widen_within_1r -- a widen_sl never puts the stop beyond the original entry risk (-1R = entry -/+ order_packages.meta.risk_per_unit); unread risk refuses the widen
       - tp_live_target -- the TP stays a live predictive target (beyond the mark, beyond entry, never the 50R sentinel)
-      - one_action_per_bar -- at most one applied action per package per closed bar, across every account
+      - idempotent_per_review_id -- a row applies at most once (the same review_id is refused); there is NO per-bar or time-window action cap [removed 2026-10-29, operator, row REMOVE-PER-BAR-CAP]
       - venue_readback -- every leg is read back from the venue; a mismatch is apply_failed
       - one_ping_per_action -- ONE Telegram trade-update per action naming account(s), symbol, action, level and review_id
     never: [act on any other package, act on a read that could not look, act on a mechanics mismatch, remove or null a stop-loss or a take-profit, widen a stop beyond -1R, bypass an account's own risk manager / sizing cap / exposure cap / daily-DD switch, route one account's action through another's executor, write mode or execution, commit a packet from a reviewer]
