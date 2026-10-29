@@ -4448,7 +4448,12 @@ def _emit_execution_failure_ping(
     Drops a JSON payload into ``runtime_logs/pending_pings/`` so the
     Telegram bot's ~5 s job-queue tick delivers it to the operator.
     Never raises — diagnostics must not crash the order path.
+
+    ``claude_desk`` packages are pinged by ``execute.log_rejection_to_journal`` (every refusal, once), so this
+    skips them rather than ping twice.
     """
+    if getattr(pkg, "strategy", None) == "claude_desk":
+        return
     try:
         from src.runtime.execution_diagnostics import enqueue_execution_failure
         enqueue_execution_failure(

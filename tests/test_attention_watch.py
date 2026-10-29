@@ -270,3 +270,47 @@ def test_real_checker_refuses_the_incident_row_shape():
     refuses = a._lr_refuses()
     assert refuses is not None
     assert refuses({"review_id": "x", "reviewed_at": "2026-10-26T23:13:00Z"}) is True
+
+
+# ── DESK-V1-ALERTS: desk_row_missing ─────────────────────────────────────────
+_DNOW = datetime(2026, 10, 28, 14, 0, tzinfo=timezone.utc)
+
+
+def _desk_git(ptr, rows):
+    def fake(*args):
+        spec = args[-1]
+        if spec.endswith(a.DESK_POINTER):
+            return ptr
+        if spec.endswith(a.DESK_DECISIONS):
+            return rows
+        return None
+    return fake
+
+
+def _ptr(minutes_ago, pid="DP-1"):
+    return json.dumps({"packet_id": pid, "built_at": (_DNOW - timedelta(minutes=minutes_ago)).isoformat()})
+
+
+def test_desk_row_missing_breaches_past_15_min_with_no_row(monkeypatch):
+    monkeypatch.setattr(a, "_git", _desk_git(_ptr(16), json.dumps({"packet_id": "DP-0"}) + "\n"))
+    p = a.probe_desk_row_missing(_DNOW)
+    assert p["status"] == a.BREACHED and p["read_state"] == "read" and "DP-1" in p["detail"]
+
+
+def test_desk_row_missing_ok_inside_window_or_with_row(monkeypatch):
+    monkeypatch.setattr(a, "_git", _desk_git(_ptr(10), ""))
+    assert a.probe_desk_row_missing(_DNOW)["status"] == a.OK
+    monkeypatch.setattr(a, "_git", _desk_git(_ptr(300), json.dumps({"packet_id": "DP-1"}) + "\n"))
+    assert a.probe_desk_row_missing(_DNOW)["status"] == a.OK
+
+
+@pytest.mark.parametrize("ptr,rows", [(None, ""), (_ptr(60), None), ("{not json", ""),
+                                      (json.dumps({"packet_id": "DP-1"}), "")])
+def test_desk_row_missing_unreadable_is_unknown_never_ok(monkeypatch, ptr, rows):
+    monkeypatch.setattr(a, "_git", _desk_git(ptr, rows))
+    p = a.probe_desk_row_missing(_DNOW)
+    assert p["status"] == a.UNKNOWN and p["read_state"] == "could_not_look"
+
+
+def test_desk_row_missing_is_a_registered_probe():
+    assert "desk_row_missing" in a.PROBE_LABEL
