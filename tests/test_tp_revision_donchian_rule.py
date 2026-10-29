@@ -186,3 +186,19 @@ def test_harness_refuses_tp_revision_together_with_a_geom_b1_lever():
     with pytest.raises(ValueError, match="cannot both be armed"):
         bt.run_backtest(_series(), **_KW, tp_revision="donchian_measured_move",
                         tp_geometry=bt._tpg.TPGeometrySpec(target_r=3.0))
+
+
+def test_forming_entry_bar_is_could_not_look_not_a_prebreakout_anchor():
+    """pkg-a04b68a15ea14d19 (2026-10-29): a short built on the FORMING bar has no
+    closed bar holding entry_time; the rule must not project from the last bar
+    before it (0.26R target, closed in 90 s). Once the entry bar closes it revises."""
+    h = [110.0] * 40
+    lo = [100.0] * 40
+    c = [105.0] * 40
+    df = _frame(h, lo, c)
+    forming_ts = int(df["timestamp"].iloc[-1]) + H       # entry bar absent from closed bars
+    leg = {"donchian": 20, "tp_revision": {"rule": "donchian_measured_move", "width_mult": 0.5}}
+    kw = dict(leg=leg, direction="short", entry=99.0, risk=6.0, ref_price=99.0)
+    assert tr.plan_tp_revision(bars=df, entry_time=forming_ts, **kw) is None
+    closed = tr.plan_tp_revision(bars=df, entry_time=int(df["timestamp"].iloc[-1]), **kw)
+    assert closed is not None and closed.tp == pytest.approx(95.0)   # 100 - 0.5*10
