@@ -766,7 +766,9 @@ def main(argv: list[str] | None = None) -> int:
              "population": "; ".join(f"{r['family']} n_gate={r['n_gate']}" for r in rr),
              "n": sum(r["n_gate"] for r in rr) or None,
              "note": "per family: " + ", ".join(f"{r['family']} {r['verdict']}" for r in rr),
-             "records": [{"family": r["family"], "verdict": r["verdict"].lower(), "n": r["n_gate"],
+             "records": [{"family": r["family"], "state": r["verdict"],
+                          "verdict": {"CALIBRATED": "pass", "NOT_CALIBRATED": "fail"}.get(r["verdict"], r["verdict"].lower()),
+                          "n": r["n_gate"],
                           "population": f"{r['family']} gate legs {','.join(r['legs_gate'])}"} for r in rr]}
         (out / "measurement.json").write_text(json.dumps({"runs": runs, "families": rr}, indent=1, default=str) + "\n")
         (out / "verdict.json").write_text(json.dumps(v, indent=1) + "\n")
