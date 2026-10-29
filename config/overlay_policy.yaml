@@ -1,0 +1,29 @@
+# Real-money meta-label overlay policy (ML-REAL-MONEY-OVERLAY) -- Tier 3, operator-gated.
+#
+# Per strategy: `mode: reduce` applies the committed artifact's ONE fixed multiplier (x0.5) to the
+# RiskManager-sized qty when the artifact scores the entry below its tau. REDUCE-ONLY: it never upsizes,
+# never opens or blocks a trade, never moves a bracket. DEFAULT (unlisted strategy, or any other mode):
+# annotate = the shadow score is logged to runtime_logs/overlay_shadow.jsonl and the qty is unchanged.
+# Permissive by construction -- not an execution gate (CLAUDE.md "The two execution gates"): it can only
+# shrink a trade the two gates already let through.
+#
+# Kept OUT of config/strategies.yaml on purpose: the leg's strategy parameters (and so its committed
+# promotion-evidence config_fingerprint, scripts/ci/check_roster_promotion_evidence.py) are unchanged.
+# The precedent is config/regime_policy.yaml (a per-strategy policy table beside the roster).
+#
+# Applied per STRATEGY, so every account carrying the leg sees the same factor: bybit_2 and its mirror
+# bybit_portfolio stay identical (tests/test_paper_portfolio_accounts.py).
+#
+# EVIDENCE: comms/research/RQ-20261029-5785-02/local-v2-20261029/ -- RULE-ML-OVERLAY-NONINFERIOR-V2, TD family
+#   PASS: main 2020-07..2026-10 n 1830 dR +0.0079 R/trade (one-sided 95% LB -0.0035 > -0.02), maxDD 27.8 -> 24.8 R,
+#   beats a same-rate random reduce p<0.001, 6/6 calendar folds; blind holdout 2019-12..2020-06 n 105 dR +0.033
+#   (LB +0.012). Net of fee 11 + slippage 3 bps round trip + funding 1 bps/8h. PB2H (ada/xrp_pullback_2h) FAILED:
+#   not listed. Caveat: the model ranks; its probabilities are not calibrated (holdout Brier 0.2472 vs 0.2462).
+# DEMOTION: scripts/ops/overlay_cusum.py (Bernoulli CUSUM on the mirror's reduced trades, H 2.0) -> delete the
+#   alarming legs below.
+# ROLLBACK (one line per leg): delete the leg's entry (back to annotate).
+strategies:
+  trend_donchian_eth_4h: {mode: reduce, artifact: overlay_td.json}
+  trend_donchian_xrp_4h: {mode: reduce, artifact: overlay_td.json}
+  trend_donchian_eth_prop: {mode: reduce, artifact: overlay_td.json}
+  trend_donchian_sol_prop: {mode: reduce, artifact: overlay_td.json}

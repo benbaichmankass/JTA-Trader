@@ -2214,6 +2214,11 @@ class Coordinator:
             # statement by design (tests/test_overlay_shadow.py checks the AST).
             from src.runtime.overlay_shadow import record_overlay_shadow
             record_overlay_shadow(pkg, account_name=account.name)
+            # ML-REAL-MONEY-OVERLAY Tier-3 apply path: REDUCE-ONLY, and only for a
+            # strategy listed `mode: reduce` in config/overlay_policy.yaml (default annotate =
+            # qty unchanged). Evidence: RQ-20261029-5785-02 (TD family PASS).
+            from src.runtime.overlay_shadow import apply_overlay_reduce
+            sized_qty = apply_overlay_reduce(pkg, sized_qty, account_name=account.name)
 
             # M9 news influence (default-off, gated by NEWS_INFLUENCE_MODE).
             # Reductive only — shrinks the qty toward a floor when the news (and
