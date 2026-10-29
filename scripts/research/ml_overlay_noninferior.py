@@ -398,6 +398,9 @@ def run_family(name: str, legs: list[str], gate: list[str], corpus_dir: Path, ru
             legrep[leg] = {"state": runs[leg]["state"]}
             continue
         d = load_leg(leg, corpus_dir)
+        if d.empty:
+            legrep[leg] = {"state": "no_trades"}
+            continue
         legrep[leg] = {"n_trades": len(d), "n_scored": int(d["scored"].sum()), "n_aligned": int(d["aligned"].sum()),
                        "gate_leg": leg in gate, "net_expectancy_r": round(float(d["net_r"].mean()), 4) if len(d) else None,
                        "parity": parity(leg, d, ref, parity_basis, corpus_dir) if leg in gate else {"state": "training_only"}}
@@ -472,6 +475,8 @@ def run_holdout(gate: list[str], train_df: pd.DataFrame, h: dict) -> dict:
     for leg in gate:
         if runs.get(leg, {}).get("state", "ok") == "ok" and (wd / f"{leg}__trades.jsonl").exists():
             d = load_leg(leg, wd)
+            if d.empty:  # a leg with no candles that early (V2 unit: trend_donchian_sol_prop) contributes nothing
+                continue
             frames.append(d[d["scored"] & (d["entry_time"] < h["before"])])
     if not frames:
         return {"state": "INDETERMINATE", "reasons": ["no holdout corpus"], "runs": runs}
@@ -547,6 +552,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--holdout-start", default=None, help="V2: disjoint earlier window for the blind confirmation")
     ap.add_argument("--holdout-end", default=None)
     ap.add_argument("--holdout-days", type=int, default=None)
+    ap.add_argument("--holdout-corpus-dir", default=None,
+                    help="reuse an already-built holdout corpus (same window) instead of re-running the harness")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     out = Path(a.out)
@@ -562,9 +569,10 @@ def main(argv: list[str] | None = None) -> int:
     ref = Path(a.reference_corpus) if a.reference_corpus else None
     holdout = None
     if a.holdout_start:
-        hwd = out / "holdout_corpus"
+        hwd = Path(a.holdout_corpus_dir) if a.holdout_corpus_dir else out / "holdout_corpus"
         hwd.mkdir(parents=True, exist_ok=True)
         holdout = {"start": a.holdout_start, "end": a.holdout_end, "days": a.holdout_days, "wd": hwd,
+                   "build": not a.holdout_corpus_dir,
                    "before": pd.Timestamp(a.start, tz="UTC") - pd.Timedelta(days=EMBARGO_DAYS)}
     results = [run_family(n, legs, g, corpus, runs, ref, Path(a.export_dir) if a.export_dir else None,
                           a.parity_basis, holdout) for n, legs, g in fams]
