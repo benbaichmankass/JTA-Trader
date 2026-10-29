@@ -48,8 +48,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import first_passage_paths as fpp
-from ml_overlay_noninferior import (
+import first_passage_paths as fpp  # noqa: E402
+from ml_overlay_noninferior import (  # noqa: E402
     cpcv_splits,
     cvar5,
     max_dd,
