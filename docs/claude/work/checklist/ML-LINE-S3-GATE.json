@@ -1,0 +1,22 @@
+{
+  "id": "ML-LINE-S3-GATE",
+  "title": "[MODEL] ML line S3: gate an overlay under RULE-ML-OVERLAY-NONINFERIOR-V1 + RULE-AM-RISK-ADJUSTED-V1 (net P&L first, risk second) per leg and pooled, vs take-all, take-none, champion and a DRAWN same-rate random arm",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 1.3, section 2 S3). MEASURED: ml/promotion/cost_gate.py passes only on STRICT superiority of mean net R/opportunity; no risk term (max DD, worst-5%), pooled only, matched_random is an expectation (take_rate x mean R), not draws. So a conservative overlay that matches take-all and cuts drawdown fails today. Reuses the two rules; invents none. Depends on ML-REAL-MONEY-OVERLAY registering RULE-ML-OVERLAY-NONINFERIOR-V1 (on no branch at 2026-10-29 ~07Z) and AM-RISK-ADJUSTED-RULE landing RULE-AM-RISK-ADJUSTED-V1. Generalises the overlay's hand gate; does not rebuild it. Station metric: false-pass rate on a permuted-label null <= the rule's alpha; rule timestamp precedes the run. CLOSES WHEN: the gate grades a candidate under both rules per leg and pooled with >= 1000 random draws and its self-test shows the null passing at <= alpha.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-29T07:08:47Z",
+  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 783
+}

@@ -460,6 +460,10 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
   case). Too vague to register a rule → a SCOPING unit, not a dropped idea.
 - A unit that needs a prior result uses `requires_result`, not prose.
 - New units also carry `practice_precedent` (and an intervention test its `intervention_controls`): `research/queue/PLANNING.md` § 1a.
+- **An ML unit is admitted only if it names its consumer and the live or demo decision it would change**
+  (`ml_consumer:`; `research/queue/PLANNING.md` § 1c; guard `research-queue-ml-consumer-guard`). Draw ML units from the
+  assembly line's stations, money legs first (`docs/plans/ml-pipeline-design-2026-10-29.md` § 1), never from "a better
+  learner for a head we already have". A learner variant with no consumer on a rostered leg is not topped up.
 - **Declare the compute class and the value; never pick the runner** (RESEARCH-ROUTER, 2026-10-13;
   `research/queue/PLANNING.md` § 1b is the authoring contract). Write `compute: cpu_light | cpu_long |
   needs_vm_data | gpu | gpu_preferred | auto`, a consistent `routing:` block and, when you can state it, a

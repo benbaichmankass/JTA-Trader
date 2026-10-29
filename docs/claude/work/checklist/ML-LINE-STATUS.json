@@ -1,0 +1,22 @@
+{
+  "id": "ML-LINE-STATUS",
+  "title": "[MODEL] ML line status: scripts/ops/ml_line_status.py prints leg x station (S1-S6) with each station's own quality metric and read-state, wired into /ml-review CHECKS",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 'line', practice R2 [S18]): nothing reports leg x station state, so a broken station hides behind a green model metric. Shares output with ML-LEARNING-LEDGER (queued; scripts/ops/ml_learning_ledger.py absent). Read-states per canonical 'Collapsed states' (a null station reads 'not measured', never 0). CLOSES WHEN: the script prints all 7 money legs x 6 stations with a metric or an explicit read-state each, and /ml-review's CHECKS call it.",
+  "priority_rank": 7,
+  "updated_at": "2026-10-29T07:08:48Z",
+  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 787
+}

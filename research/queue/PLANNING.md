@@ -114,6 +114,29 @@ run:
   it in the utilization file; research-ops step A reads it and treats it as top-up work (author units whose compute
   class lands on the idle backend).
 
+## 1c. An ML unit names its CONSUMER and the live or demo DECISION it would change (operator system-first rule, 2026-10-29)
+Guard: `scripts/ci/check_research_queue_ml_consumer.py` (`research-queue-ml-consumer-guard`; new units graded, existing
+units grandfathered and counted on every run). Design: [`docs/plans/ml-pipeline-design-2026-10-29.md`](../../docs/plans/ml-pipeline-design-2026-10-29.md)
+§ 4. Why: the ML programme chose its targets from the models it already had, so its lead candidate's training book covered
+none of the real-money legs (checklist row `ML-PIPELINE-DESIGN`).
+- **An ML unit is admitted only if it names who acts on the answer.** "ML unit" means an `ml_bakeoff:` block, `theme:
+  ml_health`, or an ML term in the title or question (learner, LightGBM, meta-label, "<kind> head", ...). It carries:
+  ```yaml
+  ml_consumer:
+    consumer: src/runtime/advisory_sizing.py     # the repo path that acts, or the checklist row id that builds it
+    decision: downsize or skip entries on ada_pullback_2h   # the live or demo decision the answer would change
+    legs: [ada_pullback_2h]                       # rostered on a mode: live account (config/accounts.yaml)
+    book: money                                   # optional; money (real money, mirror, prop) | demo_floor
+  ```
+- **Order of intake: the money legs first, then the demo floor** (design § 1). A unit whose legs are all `demo_floor`
+  is admitted; the guard prints the money / demo-floor split on every run so the mix is visible.
+- **A learner variant of an existing head is admitted only through the same field.** If no consumer acts on that head's
+  output on any rostered leg, the unit names the checklist row that would build the consumer, or it is not queued.
+- A keyword hit that is not an ML question writes `ml_consumer: {not_applicable: <reason, >= 20 chars>}`. It is never
+  used for a model unit; a data or infra unit for ML names the consumer its data feeds.
+- Generated units take it from the template (`ml_consumer:`, passed through by `queue_replenish.py`) or the programme
+  node's `unit:` body.
+
 ## 2. Weights
 - `research/THEMES.yaml` is the only place weights live. They are a share of fire slots, not an order.
 - Set at the operator's direction (2026-09-30: regime 5, live_strategy 4, ml_health 3, new_strategy_prop 2,

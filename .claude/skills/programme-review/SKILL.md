@@ -86,6 +86,12 @@ comparisons, hunt surprises, premortem, neutral framing, no quota) bind every st
   `registered_before_run: true`, `theme`, `priority`, `compute:` + `routing:`, a `value:` block, `what_it_does_not_do`;
   mint ids with `python3 scripts/research/next_rq_id.py --fetch`). Cap ~15 nodes; the rest go to the record's handoff
   ranked, for research-ops.
+- **MODEL-track nodes name their consumer** (operator system-first rule, 2026-10-29; binding). A node whose unit is an ML
+  question carries an `ml_consumer:` block in its `unit:` body: the consumer that acts on the answer, the live or demo
+  decision it would change, and the rostered legs (`research/queue/PLANNING.md` § 1c; `research-queue-ml-consumer-guard`
+  refuses a generated unit without it). Rank MODEL nodes by the assembly line, money legs first
+  ([`docs/plans/ml-pipeline-design-2026-10-29.md`](../../../docs/plans/ml-pipeline-design-2026-10-29.md) § 1); a node
+  that only improves an existing head with no consumer is retired or re-pointed at the row that builds one.
 - **Write the plan sections.** Each `docs/research/programmes/<NN>-*.md` gets "## Programme review <date>" at the top
   of the review history: population, learned, answered / unlocked / retired, next 3–4 weeks (the ranked table), feeds.
   The map gets its own section with the feed table and the two-track summary. Prose that reasons; no numbers that

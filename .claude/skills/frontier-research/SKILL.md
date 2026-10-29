@@ -193,6 +193,13 @@ new hand-written unit lands in a hold PR (E57). Add the plan item to `docs/plans
 **with `family:`**; run `python3 scripts/ops/ml_plan_status.py --diversity` and
 `ml_plan_status.py` before pushing.
 
+⚠️ **Intake rule for ML ideas (operator system-first rule, 2026-10-29; binding).** A kept ML idea becomes a unit only if
+it names the **consumer** that would act on its answer and the **live or demo decision** it would change, on rostered
+legs, money legs first: the `ml_consumer:` block of `research/queue/PLANNING.md` § 1c, enforced by
+`research-queue-ml-consumer-guard`. Triage gate "what does it change" is answered by that block, not by a metric. A better
+model family for a head that changes no order is dropped with that reason in the run record, or filed with the checklist
+row that would build its consumer. Stations and owners: [`docs/plans/ml-pipeline-design-2026-10-29.md`](../../../docs/plans/ml-pipeline-design-2026-10-29.md).
+
 ⚠️ **Lever rows are the failure mode of this scheme** — blocked units can sit forever. The weekly run
 re-reads the lever rows it filed; one still `queued` after two scans is raised to the manager as the
 blocker, not re-filed.

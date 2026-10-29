@@ -1,0 +1,22 @@
+{
+  "id": "ML-LINE-S5-CANARY",
+  "title": "[MODEL] ML line S5: reduce-only canary for the first overlay that clears S3: advisory_policy mode downsize, size_floor >= 0.5, live and mirror together, 1-2 clean downsized trades",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 S5, section 5). MEASURED: advisory_sizing.py downsize path exists (reductive, per package, so Stage-2 live==mirror holds; size_floor default 0.5); 0 strategies carry advisory_policy in config/ (all annotate). Tier 3: the first canary needs the operator's approval; later ones may run under the PROPOSED (not granted) MD-ML-OVERLAY-CANARY in config/mandates.yaml. Blocked on ML-LINE-S3-GATE pass, the S4 parity rows (ML-SERVE-SETUP-FEATURES, ML-PROMO-PARITY) and ML-LINE-S6-CUSUM-RETRAIN's monitor running. Pair with ML-ADVISORY-SCOPE-GUARD. Practice [RTS6-2017/589] Art. 8, [Breck-2017-MLTestScore] canary, [FRB-SR26-2-2026] limits before full validation. CLOSES WHEN: 1-2 clean downsized trades are observed on the armed leg with live and mirror factors equal and >= the floor.",
+  "priority_rank": 6,
+  "updated_at": "2026-10-29T07:08:48Z",
+  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "_seq": 786
+}

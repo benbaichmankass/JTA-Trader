@@ -1351,4 +1351,52 @@ mandates:
     never: >-
       Never auto-renewed and never extended by a session. Never any real-money, mirror or prop account, risk cap, mode or sizing. Never removes an SL or a TP.
 
-proposed: []
+proposed:
+
+  # ── PROPOSED, NOT GRANTED ──────────────────────────────────────────────────
+  # A session may PROPOSE a mandate; only the operator GRANTS one (CLAUDE.md
+  # § The daily sync). Nothing below authorizes anything until the operator
+  # moves it to `mandates:` with `granted_by` / `granted_at` / `source`.
+
+  - id: MD-ML-OVERLAY-CANARY
+    grants: arm_and_demote_reduce_only_ml_overlay_canary
+    direction: derisk_only
+    proposed_by: session_01AFoLuJ3Z8WoJgLG7jVvqha
+    proposed_at: '2026-10-29'
+    source: >-
+      Lane ML-PIPELINE-DESIGN, dispatched by Manager Session 2026-10-29c (session_01AFoLuKwNMzjtn2CH2kVd86) under
+      the operator's system-first rule (docs/claude/work/checklist/_header.json priorities.system_first); design
+      docs/plans/ml-pipeline-design-2026-10-29.md § 5 (stations 5-6 of the ML assembly line).
+    recurrence: >-
+      Every ML overlay that clears its gate needs the same two steps on every leg it covers: arm a reduce-only
+      canary, and demote it to shadow when its decay alarm trips. Without a mandate each is its own Tier-3 popup,
+      per leg and per retrain.
+    fires_when: >-
+      (ARM) An ML overlay registry row has a committed evidence record showing it cleared BOTH
+      RULE-ML-OVERLAY-NONINFERIOR-V1 and RULE-AM-RISK-ADJUSTED-V1, registered before the run, per leg and pooled,
+      net of the full cost stack, against a drawn same-rate random arm; its shadow parity check on the live serve
+      path passed (every trained feature present, non-default and equal; the score re-computes); and a CUSUM
+      monitor with a declared false-alarm rate is running for it. Then the manager may set that leg's
+      `advisory_policy` to `mode: downsize` with `size_floor` >= 0.5 and promote the row to `advisory`.
+      (DEMOTE) That overlay's CUSUM trips, or its parity check fails. Then the manager may demote the row to
+      `shadow` (or set the leg's `advisory_policy` back to annotate).
+    bar:
+      evidence_rules: [RULE-ML-OVERLAY-NONINFERIOR-V1, RULE-AM-RISK-ADJUSTED-V1]
+      random_arm: same-rate, drawn, >= 1000 draws
+      size_floor_min: 0.5
+      soak: mechanical, 1-2 clean downsized trades (OPERATING-PLAN § 2), never a sample size or a date
+    cap:
+      basis: at most one leg armed per manager action; every armed leg listed in the brief's section 1
+      max_auto_share: unstated -- the operator sets it at grant time
+    blocked_until: >-
+      The first ML overlay (row ML-REAL-MONEY-OVERLAY) passes both rules AND the operator approves its first
+      canary as a Tier-3 decision. RULE-ML-OVERLAY-NONINFERIOR-V1 was not yet registered when this was proposed.
+    never: >-
+      Never sizes UP (factor <= 1.0 always) and never zero (size_floor >= 0.5). Never edits config/accounts.yaml
+      (`mode:`, rosters), a risk cap, sizing formulas, an SL or a TP. Never arms a leg on the live account without
+      its mirror carrying the same policy (Stage-2 equality). Never arms on a fee-only corpus. Never a new
+      execution gate: it decides what may be CHANGED without asking, not what RUNS. Never carries `autoland`.
+    evidence_required: >-
+      The evidence record for both rules, the parity read, the CUSUM's declared false-alarm rate, and for every
+      use an immediate operator notification (what changed, evidence, merged/deployed/observed, the one-line
+      revert) plus the brief's section 1.
