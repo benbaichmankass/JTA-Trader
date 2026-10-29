@@ -1,0 +1,53 @@
+id: RQ-20261029-pg2a-01
+title: 'Prop survival gate V2 re-run (lane PROP-GATE-RERUN-20261029): trend_donchian_eth_prop and trend_donchian_sol_prop x breakout_2 / tradeify_1 / velotrade_1, at the current cost stack, 3y and 365d windows, a real per-firm breach ceiling (median AND worst seed)'
+status: in_progress
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: 'Per leg x live prop account (breakout_2 breakout_turbo_1step 0.35% risk; tradeify_1 tradeify_247_1step 0.5%; velotrade_1 velotrade_classic_1step 0.5%; configured sizing from config/accounts.yaml, daily_dd_switch 0.8), priced ALONE as a one-leg book at the 11.0 bps fee + 3.0 bps slippage + flat funding stack and at the firm venue stack, on the 3-year ledger and on its trailing 365 days: do BOTH the median and the worst-seed per-attempt eval breach probability sit under the firm-specific ceiling AND is path-mode EV per life > 0 (median and worst seed)?'
+why_this_matters: 'RULE-P5-GATE-BRK-PER-LEG (RQ-20261016-026) ran at --p-floor 0.0, i.e. it had NO breach floor, so eth_prop passed on a seed-max lifetime p_breach of 0.934. Both legs are live on three prop accounts (sol_prop also on bybit_2). The Stage-0 edge at 11.0 bps is contested (365d re-cost PR #20966 turned eth_prop negative; 3y walk-forward RQ-20261028-dda7-03 passed at +29.12R, n=515). Operator 2026-10-29 verbatim: "Re-run gate today, no size change". Sizing, rosters and config are NOT touched; the output is a keep / de-risk / pull PROPOSAL (Tier-3 to apply).'
+power:
+  expected_n: 515
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n floor 88 (the floor RQ-20260928-011/-012 registered). Ledger n: eth_prop 517 (3y), sol_prop 203 (3y); the 365d slices are smaller and graded UNDERPOWERED (indeterminate) below 88, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed trade ledgers (comms/research/RQ-20261015-1bf3-05 and -06) under each firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-P5-GATE-BRK-PER-LEG-V2
+  registered_at: '2026-10-29T07:45:00Z'
+  registered_before_run: true
+  statistic: 'Per leg x account x window x cost arm, 5 seeds (1-5), prop_ev_sim path mode, 1000 lives/seed, one-leg book at the account''s configured risk_pct (--sizing start), --dd-switch-frac 0.8, ruleset leverage caps. B = per-attempt evaluation breach probability = min(1, p_breach_max_dd_in_eval + p_breach_daily_loss_in_eval) (the share of first evaluation attempts that breach). EV = ev_net_usd_per_life (730d horizon, rebuys charged), also reported as % of the account size. p_breach_max_dd (lifetime, the old record''s field) is reported beside it, NOT graded: over a 730d horizon on a static drawdown it tends to 1 for any leg.'
+  rule: 'BREACH CEILING per firm (derived, not chosen from the result): a purchased attempt costs F (account fee) and wins W = profit_split x profit_target_pct x account_size on a pass. Break-even breach is 1 - F/W; the ceiling keeps a 2x margin of safety, c = 1 - 2F/W. breakout_turbo_1step: F=20, W=0.8*0.09*5000=360, c=0.889. tradeify_247_1step: F=120, W=0.8*0.12*10000=960, c=0.750. velotrade_classic_1step: F=54, W=0.8*0.10*5000=400, c=0.730. (F from the ruleset account_fee_usd; the Breakout $20 fee is UNCONFIRMED in the ruleset.) PASS iff n >= 88 AND median-over-seeds B < c AND max-over-seeds B < c AND EV > 0 at the median seed AND at the worst seed. FAIL iff n >= 88 and any of those fails. INDETERMINATE iff n < 88. Primary cell = the current-stack arm (11.0 bps fee + 3.0 bps slippage + 1 bp per 8h funding window, flat, NOT settled funding) on the 3y window; the 365d window and the venue-stack arm are reported beside it and a PASS that flips sign on the 365d window is flagged CONTESTED in the proposal. Thresholds are NOT changed after seeing any result.'
+  proposal_mapping: 'PASS on 3y and 365d -> KEEP. PASS on 3y only (CONTESTED) or FAIL on breach only -> DE-RISK to the largest tested risk that passes, else to half the current risk_pct as a Tier-3 proposal. FAIL on EV (<= 0 at the worst or median seed) on 3y -> PULL from that account''s roster (Tier-3 proposal). Nothing is applied by this unit.'
+  min_n: '88'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 45
+  basis: Measured this lane - one prop_ev_sim cell (1000 lives + 4x100 outer) takes ~65 s; 120 cells over 4 cores.
+run:
+  workflow: session-local
+  note: 'Run SESSION-LOCAL by lane PROP-GATE-RERUN-20261029 (prop_ev_grid does not take per-account rulesets in one call, so the grid is driven directly over prop_ev_sim.py, the same simulator prop_ev_grid wraps). Driver and raw cells: research/results/RQ-20261029-pg2a-01/.'
+  inputs:
+    research_unit: RQ-20261029-pg2a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261016-026.yaml
+- research/queue/RQ-20261028-dda7-03.yaml
+- comms/prop_survival/README.md
+- scripts/ci/check_prop_roster_gate.py
+- docs/claude/work/checklist/PROP-GATE-RERUN-20261029.json
+what_it_does_not_do: 'Changes no roster, risk, sizing, switch or config. Does not read live book P&L. Prices each leg ALONE (the gate''s population), not the two-leg account book. The old comms/prop_survival records are left in place; V2 records sit beside them.'
