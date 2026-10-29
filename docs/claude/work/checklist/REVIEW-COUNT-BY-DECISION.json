@@ -1,0 +1,22 @@
+{
+  "id": "REVIEW-COUNT-BY-DECISION",
+  "title": "Performance and research reviews count one DECISION (order package) as one trade; per-account legs are counted only for pipeline/health mechanics. Re-key performance-review CHECKS, live_vs_backtest, giveback_census and grading on order_package_id, and frame the mirror and paper fan-out as by design",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-29 ~06:40Z (Thursday planning), verbatim: \"two trades that are the same, that are really the same trade on two different accounts should be counted in the review as one trade, right? Like, I mean, we need to know from a pipeline perspective that all the trades are going through correctly, but from a research and performance perspective, that's really only one trade for us to grade.\" And on fan-out: \"leave it the way it is. That's by design. We just need to frame it correctly.\" Context: the 2026-10-28 performance review had 39 closes from 25 decisions. The paper portfolio exists to trade what real money cannot yet and to check portfolio performance; real money and its mirror are intended to trade the same things. Supersedes the open fan-out-aware-rate item (BL-20260911). Scope: .claude/skills/performance-review/SKILL.md CHECKS + the scripts they name; health-review keeps per-leg counts. Tier 1 (review tooling/read path), no order path.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T06:27:58Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 784
+}
