@@ -1,0 +1,107 @@
+id: RQ-20261029-a7e1-02
+title: 'Static mid-trade 50% PARTIAL CLOSE at bar k in {3, 6, 12, 24} on the six real-money legs: does any variant pass
+  RULE-AM-RISK-ADJUSTED-V1 (K-corrected) plus non-inferiority, and confirm on the blind 2017-09..2020-06 window?'
+status: queued
+cadence: once
+roadmap:
+- L-AM-STANDARD
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On config-exact harness paths of trend_donchian_eth_4h, trend_donchian_xrp_4h, trend_donchian_eth_prop,
+  trend_donchian_sol_prop (family TD) and ada_pullback_2h, xrp_pullback_2h (family PB2H), 2020-07-01 .. 2026-10-15
+  23:59, does closing 50% of the position at the close of bar k of the trade (k in {3, 6, 12, 24} bars of the leg's
+  timeframe; trades that end earlier are untouched) give up at most 0.05 R per trade while cutting the family book's
+  max drawdown or worst-5% weekly outcome by >= 15%, in a fold majority, beating a same-rate random partial close,
+  non-inferior on net R, and confirmed on the blind earlier window?
+why_this_matters: 'Operator objective (row AM-RISK-ADJUSTED-RULE, 2026-10-29): net P&L first, risk reduction the
+  tie-breaker, a large risk cut for a small R cost wins; the real-money bar is non-inferiority. ORIGIN, DISCLOSED:
+  PI-20261029-IFMPNGJK-0002. In RQ-20261029-a7e1-01 (ML-gated partial close, FAIL), its random control (a 50% partial
+  close at a UNIFORMLY drawn bar on ~55% of trades) read TD median +0.0146 R/trade with a 29% maxDD cut (n=1831,
+  2000 draws). That was a control arm, observed before this registration; it is not evidence for this unit. This
+  unit tests FIXED-bar rules, pre-states all four, corrects for the four, draws fresh random seeds and requires a
+  blind window. A static rule is not ML: a PASS serves the L-AM-STANDARD milestone (every real-money leg carries
+  basic active management), not "the next ML live".'
+power:
+  expected_n: 2627
+  min_detectable_effect: 0.02
+  effect_units: r_per_trade
+  sd: 0.25
+  design: one_sample
+  alpha: 0.0125
+  power: 0.8
+  basis: 'Population = RQ-20261029-a7e1-01 measured 2,627 trades (TD 1,831, PB2H 796) on the same argv and window. The
+    per-trade delta of a 50% partial has sd ~0.2-0.25 R (ESTIMATE, as a7e1-01); at alpha 0.05/4 one-sided and MDE 0.02 R,
+    n ~ (2.85 x 0.25 / 0.02)^2 ~ 1,270: TD clears it, PB2H does not (a PB2H null is underpowered, never "no effect").'
+  feasibility:
+    source: none
+    accrual_basis: Replays pinned history on public candles; nothing accrues.
+decision_rule:
+  id: RULE-AM-STATIC-PARTIAL-V1
+  registered_at: '2026-10-29'
+  registered_before_run: true
+  statistic: 'scripts/research/am_static_partial.py (this commit). CORPUS: the RQ-20261029-a7e1-01 corpus argv
+    (first_passage_paths.run_harness_legs, --emit-paths), main 2020-07-01..2026-10-15 23:59, holdout 2017-09-01..
+    2020-06-30 23:59 keeping trades that exit before 2020-06-24 (7-day embargo); a run may reuse that run''s built
+    corpus (same argv and window) and says so. VARIANTS (K = 4, all run, all reported): close F = 0.5 at the close
+    of bar offset k in {3, 6, 12, 24} on every trade with a decision bar k; nothing is fitted. PRICING: delta = F x
+    (open_r_k - fee - slippage - funding x k/bars - c_exit - net_r), the full cost stack plus an extra exit-slippage
+    charge (as a7e1-01). GRADER: scripts/research/am_risk_adjusted.grade_risk_adjusted (RULE-AM-RISK-ADJUSTED-V1, PR
+    #21283, imported unchanged): R1 r_cost <= 0.05 R per baseline trade; R2 book maxDD cut >= 15% OR worst-5% ISO-week
+    CVaR cut >= 15%; R3 >= 4 of 6 calendar folds hold; R4 beats the random controls, with min_control_beat_frac raised
+    for the K = 4 variants from 0.95 to 1 - 0.05/4 = 0.9875. NON-INFERIORITY: one-sided calendar-month block bootstrap
+    LB of mean delta at alpha 0.05/4 > -0.02 R. RANDOM: 2,000 draws per variant, seeds 20261030 + 1000 x family index
+    + variant index (fresh; never a7e1-01''s): per calendar group, as many trades as the variant fired on, drawn among
+    the group''s trades with a decision bar, each closed 50% at a uniformly drawn decision bar. REPORTED, never graded:
+    giveback (peak MFE R - net R), per-account % P&L translation (R x accounts.yaml risk_pct for every account rostering
+    a family leg, uncompounded, labelled per_trade_translation_not_book_result).'
+  rule: 'Per family. INDETERMINATE IF a family leg''s corpus is missing or fails parity, OR n_family < 200, OR (a
+    variant passes the main window AND the family holdout has < 100 trades). A variant PASSES THE MAIN WINDOW iff
+    grade_risk_adjusted reads pass (R1-R4 with the K-corrected R4) AND the non-inferiority LB > -0.02 R. The holdout
+    CONFIRMS a variant iff on the holdout trades: r_cost <= 0.05 R, the alpha/4 LB > -0.02 R, maxDD and weekly CVaR5
+    not worse than hold, and mean delta > the random arm''s median (3 calendar groups). PASS iff >= 1 variant passes
+    the main window and its holdout confirms; FAIL otherwise, naming each variant''s failing clauses. PASS -> a Tier-3
+    packet for that variant on exactly that family''s real-money legs (the AM partial_close class graduating for those
+    legs, through live_review_apply''s reduce-only partial path), with a "Gates this adds or changes" block and a
+    demotion trigger. The grade is a per-trade-R SCREEN until BOOK-SIM-REAL-SIZER exists (RULE-AM-RISK-ADJUSTED-V1 §
+    measurement_of_record); a PASS is stated as such. Nothing here is changed after any result.'
+  what_it_does_not_do: Edits no config, no roster, no mandate; places no order; never removes a bracket. iaum_pullback_1d
+    is out of scope (no Stage-0 path corpus).
+intervention_controls:
+  hold_to_bracket: true
+  matched_random: {draws: 2000}
+  best_static: {grid: [partial50_bar3, partial50_bar6, partial50_bar12, partial50_bar24], excludes_test_folds: true}
+  bootstrap_group: month
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the real-money book''s drawdown and giveback; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  why_runner: Public candles + config-exact harnesses; reads no trainer data.
+  basis: 12 harness legs (~1 min each, MEASURED 2026-10-29) plus 8 graded variant x family cells with 2,000 control books.
+run:
+  command:
+  - python3
+  - scripts/research/am_static_partial.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261029-a7e1-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261029-a7e1-01
+- docs/claude/work/pipeline/20261029T135531782024Z-c4b79854.json
+- scripts/research/am_risk_adjusted.py
+practice_precedent: 'T1, M1, M5, M6 (docs/reference/trading-and-model-practice-principles.md): an in-trade action
+  against hold and a matched random intervention, cost-net path labels, every variant counted and corrected, a blind
+  fresh window'
