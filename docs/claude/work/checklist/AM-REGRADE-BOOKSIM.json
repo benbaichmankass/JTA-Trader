@@ -13,10 +13,10 @@
   "blocked_on": [
     "BOOK-SIM-REAL-SIZER"
   ],
-  "note": "Operator 2026-10-29 ~13:00Z verbatim: \"No, I don't want to wait for the book simulator - we can que up another retest once it's ready\". Prior result (per-trade R screen, RQ-20261029-1f39-02, record comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json on #21169; DESK-LIFECYCLE-S0 n=473 desk-entry and n=465 random-entry pairs): no class passes; all stay advice-only. Graduation authority already given by the operator 12:34Z ('Re-grade, then auto-unlock').",
+  "note": "Operator 2026-10-29 ~13:00Z verbatim: \"No, I don't want to wait for the book simulator - we can que up another retest once it's ready\". Prior result (per-trade R screen, RQ-20261029-1f39-02, record comms/research/RQ-20261029-1f39-02/local-26c2a269/verdict.json on #21169; DESK-LIFECYCLE-S0 n=473 desk-entry and n=465 random-entry pairs): no class passes; all stay advice-only. Graduation authority already given by the operator 12:34Z ('Re-grade, then auto-unlock'). [2026-10-29 15:10Z lane ML-AM-NEXT-LIVE] Matched-random control made CAUSAL (intervention_controls B2 default mode='causal'; PI-20261029-IFMPNGJK-0003): the legacy draw picked the random action's bar uniformly over the trade's OWN remaining check-ins (P(act at offset 0) = 1/remaining life, known only at exit). Inventory (comms/research/causal-matched-random/inventory-2026-10-29.json): 5 units declare matched_random, 7 record files carry a B2 result; 0 verdicts can flip: RQ-20261029-1f39-02 every class fails R1/R2/R3 before R4 (no class verdict flips), RQ-20261028-d1f5-02 fails on dR vs hold (n=473/465). desk_lifecycle_driver.matched_random (used by the regrade) keeps a milder per-trade-rate dependence: PI-20261029-IFMPNGJK-0005. Any future R4 read (incl. the BOOK-SIM re-grade and HARNESS-BE-RANDOM-CONTROL) must draw causally.",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T12:58:35Z",
-  "updated_by": "Manager Session 2026-10-29c",
+  "updated_at": "2026-10-29T15:07:50Z",
+  "updated_by": "session_01AFoLuN7GVCEJnGiFMpNGJK",
   "roadmap": [
     "L-AM-STANDARD"
   ],
