@@ -11,12 +11,13 @@
   "tier": 3,
   "prs": [
     21168,
-    21195
+    21195,
+    21213
   ],
   "blocked_on": [],
-  "note": "08:36Z V2 verdict: TD PASS (main n 1830: dR +0.0079, LB -0.0035, maxDD 27.8->24.8, 6/6, random p<0.001; blind holdout 2019-12..2020-06 n 105 (eth_prop 82): dR +0.033, LB +0.012, random p 0.009). PB2H FAIL. Caveats: PBO 0.75 over 6 configs (all pass), poor calibration (holdout Brier 0.2472 vs const 0.2462), small holdout. V2 record stranded on merged #21168 branch -> lane re-landing it in a new PR. Operator ~08:38Z popup answer verbatim: \"Deploy shadow and continue testing to refine\" -> Tier-2 OK for #21195 (annotate-only shadow on the 4 TD legs); manager merges + deploys on green. Refinement continues: calibration, PBO reduction, a larger holdout as data allows; canary packet for Saturday.",
+  "note": "08:46Z Tier-3 canary packet PREPARED, draft #21213 (config/overlay_policy.yaml: 4 TD legs reduce x0.5 below tau 0.337, ~20-25% of entries; bybit_2 == bybit_portfolio; prop accounts carrying eth_prop/sol_prop also cut). Demotion = scripts/ops/overlay_cusum.py (Bernoulli CUSUM p0 0.325 / p1 0.378, H 2.0). MANAGER: HOLD #21213 for the Saturday operator decision, AND until PI-20261029-XME2GXW7-0001 (the CUSUM's live shadow-log -> closed-trade join) exists: without it the demotion trigger has no input, so an applied reduce would run unmonitored. Decisions 1 (V2) and 2 (#21195 shadow OK) already taken. NB: the stack (#21168 -> #21195 -> #21213) must be rebased onto main (#21168 merged as a squash).",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T08:37:34Z",
+  "updated_at": "2026-10-29T08:46:27Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-ML-LIVE"
