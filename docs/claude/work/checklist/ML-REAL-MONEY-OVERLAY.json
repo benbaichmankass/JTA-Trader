@@ -14,9 +14,9 @@
     21195
   ],
   "blocked_on": [],
-  "note": "08:32Z: #21168 merged (gate registrations + V1 record). V1 RQ-20261029-5785-01 INDETERMINATE on parity (taker fee 7.5->11.0 bps after the reference corpus). At 11 bps: TD passes (a)-(e) (dR +0.008/trade, LB -0.0035, maxDD 27.8->24.8, random p<0.001, reduced-trade mean -0.06 vs +0.13, 6/6 folds; PBO 0.75; Brier 0.2346 vs 0.2352); PB2H FAILS (LB -0.050) and does not ship. MANAGER DECISION: accept V2 RQ-20261029-5785-02 (registered 91e6fa8c before its run): parity keyed on trade identity + an added blind earlier-window holdout; no threshold/feature/grid change; strictly harder; V1 numbers disclosed as seen. Caveat: holdout ~7 months (perp feed starts 2019-12/2020-01), TD may sit near n>=100. Tier-2 shadow wiring #21195 pending CI.",
+  "note": "08:36Z V2 verdict: TD PASS (main n 1830: dR +0.0079, LB -0.0035, maxDD 27.8->24.8, 6/6, random p<0.001; blind holdout 2019-12..2020-06 n 105 (eth_prop 82): dR +0.033, LB +0.012, random p 0.009). PB2H FAIL. Caveats: PBO 0.75 over 6 configs (all pass), poor calibration (holdout Brier 0.2472 vs const 0.2462), small holdout. V2 record stranded on merged #21168 branch -> lane re-landing it in a new PR. Operator ~08:38Z popup answer verbatim: \"Deploy shadow and continue testing to refine\" -> Tier-2 OK for #21195 (annotate-only shadow on the 4 TD legs); manager merges + deploys on green. Refinement continues: calibration, PBO reduction, a larger holdout as data allows; canary packet for Saturday.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T08:32:14Z",
+  "updated_at": "2026-10-29T08:37:34Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-ML-LIVE"
