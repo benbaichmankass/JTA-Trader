@@ -1,0 +1,22 @@
+{
+  "id": "NON-TPSL-CLOSES-20261029",
+  "title": "Root-cause and fix 3 live closes that were not TP/SL/strategy: pkg-d752b5099eab4317 stuck_strategy_watchdog, pkg-29c8e90b80c24835 stuck_cascade_recovered, pkg-11c1100f6cbb4667 reconciler_filled; plus pkg-1f69590887ac44e9 marked rejected yet carrying a position_telemetry row",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "sonnet",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found by lane SINCE-ENTRY-WINDOW-FIX (session_01AFoLuKHzZkZGP635TCg3Me, PR #21322 body) 2026-10-29. Per session-start contract any close that is not TP/SL/strategy-close is a bug. Each: pull the order_package + journal + journalctl around close, name the path that closed it, fix or file the exact Tier-2/3 fix. Related: PI-20261029-35TCG3ME-0001 (stop-move attribution on d752b509 and 11c1100f) - fold in. Queued, not dispatched (pacing 2026-10-29: weekly 32%, ~2.8x sustainable).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-29T16:10:56Z",
+  "updated_by": "Manager Session 2026-10-29c",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 823
+}
