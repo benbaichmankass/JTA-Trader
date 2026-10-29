@@ -2,7 +2,7 @@
   "id": "PAIRS-HOLDOUT-DRIVER",
   "title": "Driver for RQ-20261016-7ea6-01 (GLD/GDX holdout): dispatchable script that fetches 2006-2016 candles and runs backtest_pairs once",
   "phase": "research",
-  "state": "queued",
+  "state": "dropped",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[RESEARCH-OPS-20261027-2048] RQ-20261016-7ea6-01 queued 11 days, last_dispatched_at null: run.workflow is session-local (research-script-run.yml has no data-fetch step; the unit note has the exact fetch + backtest_pairs command). Gates GLD/GDX at Gate 2 (R-HOLDOUT NEEDS-DATA). Build a scripts/research wrapper that fetches GLD/GDX 2006-05..2016-10 via fetch_backtest_candles.py, runs backtest_pairs.py ONCE at the registered args, writes verdict.json; then retarget the unit to research-script-run.yml (unit edit holds under E57). Read the span ONCE: no exploratory run first.",
-  "updated_at": "2026-10-27T20:55:55Z",
-  "updated_by": "session_01AFoLuKUTrePGrb5dNPou8Q",
+  "note": "[RESEARCH-OPS-20261027-2048] RQ-20261016-7ea6-01 queued 11 days, last_dispatched_at null: run.workflow is session-local (research-script-run.yml has no data-fetch step; the unit note has the exact fetch + backtest_pairs command). Gates GLD/GDX at Gate 2 (R-HOLDOUT NEEDS-DATA). Build a scripts/research wrapper that fetches GLD/GDX 2006-05..2016-10 via fetch_backtest_candles.py, runs backtest_pairs.py ONCE at the registered args, writes verdict.json; then retarget the unit to research-script-run.yml (unit edit holds under E57). Read the span ONCE: no exploratory run first. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
+  "updated_at": "2026-10-29T11:31:46Z",
+  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "M22",
     "L-LADDER"
