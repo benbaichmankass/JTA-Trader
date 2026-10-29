@@ -100,6 +100,12 @@ Stated limit: a ``widen_sl`` on a TRAILING leg can be re-tightened by the leg's 
 next monitor pass (the trail ratchets from the running extreme). The widened level is recorded as
 the leg's ``notes.sl_floor`` so no older, tighter floor drags it back.
 
+DIRECTED ACTIONS (TRADE-ACTION-FAST-PATH, operator 2026-10-29): an intent carrying ``directed_by`` comes
+from ``scripts/ops/directed_action.py`` (an operator/manager-directed record, ``src/runtime/directed_actions.py``).
+Its authority is the operator's verbatim quote, checked in place of the mandate (refused without one); every
+account decision and executor below is unchanged. A ``target_account_id`` (+ ``target_trade_id``) limits it to
+that account's (trade's) leg, and then the shared package stop never moves.
+
 Exit codes: 0 ok · 1 an apply did not verify · 2 refused / bad input · 3 could not look.
 
 Usage:
@@ -495,7 +501,10 @@ def _exec_phone(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent)
 def _ping(pkg: Dict[str, Any], account_id: str, level: Optional[float], intent: lri.LiveReviewIntent) -> None:
     """The SL-moved ping the monitor sends on a trail move. Kind
     ``trade-update``: ``execution_diagnostics`` routes it to the TRADES channel
-    through ``src.runtime.telegram_channels``."""
+    through ``src.runtime.telegram_channels``. A DIRECTED action pings ONCE per record instead
+    (``scripts/ops/directed_action.py``), so it is not pinged per account here."""
+    if intent.directed_by is not None:
+        return
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
 
@@ -908,6 +917,13 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     # also a reason and its target -- LTR-ALL-ACTIONS). None = they hold.
     precondition = (lri.trade_action_precondition(intent) if trade_action
                     else lri.mandate_precondition(intent))
+    if intent.directed_by is not None:
+        # An operator/manager-DIRECTED action (TRADE-ACTION-FAST-PATH): the authority is the operator's
+        # verbatim quote, not a mandate, and is refused without one. Each account still decides below.
+        from src.runtime import directed_actions
+
+        precondition = directed_actions.precondition(intent)
+        mandate_ok = precondition is None
     out["mandate_precondition"] = precondition
     execution = str((strategies.get(pkg.get("strategy_name")) or {}).get("execution") or "live")
     streaks = st.setdefault("could_not_look", {})
@@ -923,7 +939,16 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
         out["flags"].append({"account_id": aid, "kind": kind, "line": line})
         _alert(pkg, aid, line)
 
-    for leg in gather_legs(db, pkg):
+    legs = gather_legs(db, pkg)
+    if intent.target_account_id:   # a directed record scoped to one account / trade: the others are untouched
+        from src.runtime import directed_actions
+
+        legs = [lg for lg in legs if directed_actions.leg_in_scope(lg, intent)]
+        if not legs:
+            out.update(exit=EXIT_REFUSED, detail=f"{directed_actions.R_SCOPE_EMPTY}:{intent.target_account_id}"
+                                                 f"/{intent.target_trade_id or '*'}")
+            return out
+    for leg in legs:
         aid = leg["account_id"]
         rec: Dict[str, Any] = {"account_id": aid, "leg_kind": leg["kind"]}
         if leg["kind"] == "prop_unreadable":
@@ -1020,7 +1045,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
     # each applied leg is held at ITS OWN applied level (notes.sl_floor) and the
     # trail keeps working for the untouched legs -- account-scoped execution.
     levels = set(trade_applied.values())
-    if n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1:
+    if n_trade_legs and len(trade_applied) == n_trade_legs and len(levels) == 1 and not intent.target_account_id:
         lvl = levels.pop()
         if lri.is_tighter(intent.direction, lvl, _f(pkg.get("sl")) or lvl):
             db.update_order_package(pkg["order_package_id"], {"sl": lvl})

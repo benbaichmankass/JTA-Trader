@@ -609,6 +609,13 @@ _LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "r
 _DESK_INTAKE_LOG = Path(repo_root()) / "runtime_logs" / "desk" / "intake.jsonl"
 _DESK_INTAKE_STATUS = Path(repo_root()) / "runtime_logs" / "desk" / "intake_status.json"
 _DESK_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "desk_watch_status.json"
+# TRADE-ACTION-FAST-PATH (2026-10-29): one receipt line per operator/manager-directed trade action (verdict,
+# per-account executor result + venue read-back, latencies), the last directed pass, and the watcher's
+# directed/actions fetch state. Same anchors as the writers (scripts/ops/directed_action.py::log_dir,
+# src.runtime.live_review_rows_watch.directed_log_dir).
+_DIRECTED_ACTIONS_LOG = Path(repo_root()) / "runtime_logs" / "directed_actions" / "receipts.jsonl"
+_DIRECTED_ACTIONS_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "status.json"
+_DIRECTED_ACTIONS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "directed_actions" / "watch_status.json"
 # DESK-PAPER-ACCOUNTS (2026-10-27): the claude_desk leg's own ledger -- one line per accepted proposal that ended
 # without a package (expired_unfilled, e.g. waiting on a closed ETF/CME market; a refused bracket). Written by
 # src/units/strategies/claude_desk.py::record (ledger_path()).
@@ -666,6 +673,10 @@ _LOG_FILES: dict[str, Path] = {
     "desk_intake": _DESK_INTAKE_LOG,
     "desk_intake_status": _DESK_INTAKE_STATUS,
     "desk_watch_status": _DESK_WATCH_STATUS,
+    # TRADE-ACTION-FAST-PATH: what happened to each directed trade action on the VM, and how fast.
+    "directed_actions": _DIRECTED_ACTIONS_LOG,
+    "directed_actions_status": _DIRECTED_ACTIONS_STATUS,
+    "directed_actions_watch_status": _DIRECTED_ACTIONS_WATCH_STATUS,
     "desk_leg": _DESK_LEG_LEDGER,
     "ltr_first_proof": _LTR_FIRST_PROOF,
     "status": _STATUS_JSON,
