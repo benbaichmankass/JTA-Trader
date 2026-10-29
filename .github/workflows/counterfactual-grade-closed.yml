@@ -2,8 +2,9 @@ name: counterfactual-grade-closed
 
 # TRADE-COUNTERFACTUAL-GRADER (operator 2026-10-29): every CLOSED order package is replayed against counterfactual
 # brackets and management (scripts/research/counterfactual_grader.py) and ONE graded record per package lands in
-# comms/research/counterfactual_grades/<order_package_id>.json. Idempotent by file name: a package that already
-# has a record is skipped, so an hourly run grades only what closed since the last one (cap 20 per run).
+# comms/research/counterfactual_grades/<order_package_id>.json. A package is graded only once its post-exit horizon has
+# passed (leg max-hold, else a per-timeframe default; GRADER-POST-EXIT-HORIZON) and re-graded when its record predates
+# that horizon or the current schema (scripts/research/counterfactual_grader.py::due_for_grading). Cap 20 per run.
 # A grading failure is a warning, never a stop (Prime Directive rule 7). Tier 1: read-only replay + a data commit.
 
 on:
