@@ -271,9 +271,7 @@ A class is **executed** only after its own test passes. The gate is the manager'
 beat hold, the class is retired for that leg/regime without paying for judging. That is how 8b01-01 was read (DESK-MGMT-S0). A rule that
 beats both comparators then earns a Claude-judged Stage B, at ~$0.05/check-in MEASURED.
 
-**Build note (Tier 3, follows A1).** `apply_mode` today is per account, not per class (`src/runtime/live_review_intent.apply_mode_for`).
-Graduating ONE class needs a per-class `apply_mode` map in `config/live_trade_review.yaml`, read in `live_review_apply.run()`. This is
-a small change filed on row `DESK-V1-CLASS-GATES`. It is needed only when the first class passes, and nothing graduates this week.
+**Graduation mechanism (built).** #21024 and #21026 (merged 2026-10-29, deployed `65b66ae5f`) keep one advice-only list in two places, equality-tested: `src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS` and `MD-TRADE-DESK.functions.in_trade.advice_only`. A class graduates when one PR removes it from both and cites its passed test. The planned per-class `apply_mode` map (row `DESK-V1-CLASS-GATES`) is therefore dropped.
 
 **Coordination.** Lanes `ACTIVE-MGMT-REAL-MONEY-PLAN` and `ML-LIVE-PROMOTION-PLAN` were given the same instruction. This table is the
 proposed **single per-class registry**. Those lanes should cite and extend it (real-money legs, model-driven management) rather than
