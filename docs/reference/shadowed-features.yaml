@@ -59,11 +59,19 @@ entries:
   exit_head_trend_donchian_btc:
     what: "M20 exit head exit-head-donchian-1h-v1 close on trend_donchian (BTCUSDT 1h): scored every closed bar, close no longer applied"
     decision: annotate
-    trade_path_state: "config/strategies.yaml trend_donchian exit_head_action: annotate (2026-10-29, Tier-3 data-backed de-risk); _eth/_sol still close"
+    trade_path_state: "config/strategies.yaml trend_donchian exit_head_action: annotate (2026-10-29, Tier-3 data-backed de-risk); _sol annotate too (own entry); _eth still close"
     data_artifact: runtime_logs/shadow_predictions.jsonl
     freshness_check: {state: gap, gap_row: ML-CONSUMER-LIVENESS}
     owner: ML-EXITHEAD-VALUE
     re_entry_test: "a re-trained or re-exported exit head clears the B4 KEEP rule on BTCUSDT 1h trades it never saw (dR/trade >= 0 AND trade-clustered 95% LB > -0.02 R, net of the full cost stack, multi-fold embargoed walk-forward)"
+  exit_head_trend_donchian_sol:
+    what: "M20 exit head exit-head-donchian-1h-v1 close on trend_donchian_sol (SOLUSDT 1h, bybit_1): scored every closed bar, close no longer applied"
+    decision: annotate
+    trade_path_state: "config/strategies.yaml trend_donchian_sol exit_head_action: annotate (2026-10-29, Tier-3 data-backed de-risk)"
+    data_artifact: runtime_logs/shadow_predictions.jsonl
+    freshness_check: {state: gap, gap_row: ML-CONSUMER-LIVENESS}
+    owner: ML-EXITHEAD-VALUE
+    re_entry_test: "a re-trained or re-exported exit head clears the B4 KEEP rule on SOLUSDT 1h trades it never saw (dR/trade >= 0 AND trade-clustered 95% LB > -0.02 R, net of the full cost stack, multi-fold embargoed walk-forward)"
   regime_ml_vol_verdict:
     what: "Regime-router ML vol-verdict (REGIME_ML_VERDICT_MODE off/shadow/use)"
     decision: shadowed
