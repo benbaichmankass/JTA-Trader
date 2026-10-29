@@ -82,7 +82,7 @@ are factors to evaluate, so trigger labels are kept).
 ### 1.3 Safety rails (all exist; V1 *verifies* them on a real fill)
 
 Both brackets at entry (intake refuses without) and a real TP (TP doctrine, `p_hit` in [0.10, 1)). Sizing only through each account's
-`RiskManager.approve()`. The declared slice on `bybit_1` (0.5, own budget). `daily_dd_switch` armed at 3 % on all three demo books
+`RiskManager.approve()`. The declared slice on `bybit_1` (0.5, own budget). `daily_dd_switch` was armed at 3 % on all three demo books (**DISARMED on the paper testing accounts, operator 2026-10-29**; stays armed on the portfolio mirrors, real-money and prop accounts)
 (read from `config/accounts.yaml` 10-28). `exclusive_hold_refusal` on the non-slice books. The market-hours gate. `max_hold_min` ≤ 60.
 Revert = `execution: shadow` (never a halt). Mandate: `MD-TRADE-DESK` (granted). V1 asks for no new mandate.
 

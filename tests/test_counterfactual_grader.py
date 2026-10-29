@@ -111,3 +111,74 @@ def test_grade_package_one_record_per_package_with_every_arm_family_and_the_init
 def test_a_package_with_an_open_leg_is_not_graded():
     legs = [dict(_trade(1, "bybit_2", "real_money", 10.0, None, None), status="open", closed_at=None)]
     assert cg.grade_package(_pkg(), legs, [b(0, 1, 1, 1, 1)], [], [], {}, {})["reason"] == "not_all_legs_closed"
+
+
+# ---- GRADER-POST-EXIT-HORIZON: what happened after the real exit
+T_CLOSE = T0 + 3600 + 400              # inside bar 4 (900s bars)
+HORIZON = {"seconds": 3 * 3600.0, "hours": 3.0, "source": "test", "timeframe": "15m"}
+
+
+def _post(path_after, *, exit_px, reason, pnl):
+    """Short from 100, stop 101, TP 96; four quiet bars, then bar 4 (the exit bar), then ``path_after`` bars."""
+    bars = [b(i, 100, 100.3, 99.8, 100, dur=900) for i in range(4)]
+    bars.append(b(4, 100, 101.1 if reason == "sl" else 100.5, 99.9, 100.2, dur=900))
+    bars += [b(5 + i, *ohlc, dur=900) for i, ohlc in enumerate(path_after)]
+    leg = _trade(1, "bybit_2", "real_money", 10.0, exit_px, pnl, reason=reason, closed=cg.lrc._iso(T_CLOSE))
+    return cg.grade_package(_pkg(), [leg], bars, [], [], {"bybit_2": 200.0}, {}, n_random=5, horizon=HORIZON)
+
+
+def _falling():
+    return [(100.2 - 0.4 * i, 100.3 - 0.4 * i, 100.0 - 0.5 * i, 100.0 - 0.45 * i) for i in range(12)]
+
+
+def test_price_came_back_after_the_stop_is_exited_early_and_a_1_25x_stop_survives_to_tp():
+    rec = _post(_falling(), exit_px=101.0, reason="sl", pnl=-10.0)     # spike to 101.1 stopped us at -1R, then it fell
+    po = rec["post_exit"]
+    assert po["verdict"]["verdict"] == "exited_early" and po["verdict"]["resolved"] is True and po["verdict"]["r_diff"] >= 1.0
+    w = {x["arm_id"]: x for x in po["wider_sl_arms"]}
+    assert w["alt_sl1.25x_tp3R"]["survived"] is True and w["alt_sl1.25x_tp3R"]["net_r"] > 2.0
+    assert po["mfe_r"] > 5.0 and po["tp_reach"]["reached"] is True and po["tp_reach"]["bars"] >= 1
+
+
+def test_price_kept_going_against_us_after_an_early_close_is_exit_saved_r():
+    rising = [(100.6 + 0.2 * i, 100.8 + 0.3 * i, 100.5 + 0.2 * i, 100.7 + 0.25 * i) for i in range(12)]
+    rec = _post(rising, exit_px=100.4, reason="close", pnl=-4.0)       # closed at -0.4R; holding to the stop is -1R
+    v = rec["post_exit"]["verdict"]
+    assert v["verdict"] == "exit_saved_r" and v["resolved"] is True and v["r_diff"] <= -0.5
+    assert all(x["survived"] is False for x in rec["post_exit"]["wider_sl_arms"])
+    assert rec["post_exit"]["tp_reach"]["reached"] is False             # whole horizon observed: genuinely never
+
+
+def test_an_arm_still_open_at_the_horizon_stays_unresolved_and_is_never_a_measured_number():
+    drift = [(100.0, 100.3, 99.7, 100.0)] * 12
+    rec = _post(drift, exit_px=100.4, reason="close", pnl=-4.0)
+    po = rec["post_exit"]
+    assert po["horizon_reached"] is True and po["verdict"]["verdict"] is None and po["verdict"]["resolved"] is False
+    assert po["verdict"]["n_unresolved"] > 0 and po["verdict"]["r_diff"] is None
+    assert all(x["resolved"] is False and x["net_r"] is None and x["marked_net_r_unresolved"] is not None for x in po["wider_sl_arms"])
+    assert all(x["provenance"] == "unverified" for x in po["wider_sl_arms"])
+
+
+def test_bars_stop_at_the_horizon_and_a_short_path_is_not_horizon_reached():
+    rec = _post(_falling()[:3], exit_px=101.0, reason="sl", pnl=-10.0)
+    assert rec["post_exit"]["horizon_reached"] is False and rec["post_exit"]["tp_reach"]["reached"] in (True, None)
+
+
+def test_horizon_prefers_the_legs_max_hold_else_the_timeframe_default():
+    assert cg.resolve_horizon({}, {"timeframe": "15m", "max_hold_hours": 5})["source"] == "config.max_hold_hours"
+    h = cg.resolve_horizon({}, {"timeframe": "2h"})
+    assert h["source"] == "default_by_timeframe" and h["hours"] == 144.0
+    assert cg.resolve_horizon({}, {})["source"] == "default_unknown_timeframe"
+
+
+def test_a_package_is_graded_only_once_its_horizon_has_passed_then_regraded_if_the_record_predates_it(tmp_path):
+    pkg = {"strategy_name": "nope", "timeframe": "15m"}
+    legs = [{"closed_at": cg.lrc._iso(T0)}]
+    rec = tmp_path / "r.json"
+    h_end = T0 + 48 * 3600
+    assert cg.due_for_grading(rec, pkg, legs, h_end - 60) is False
+    assert cg.due_for_grading(rec, pkg, legs, h_end + 60) is True                  # no record yet
+    rec.write_text('{"schema_version": 2, "graded_at": "%s"}' % cg.lrc._iso(T0 + 1380))
+    assert cg.due_for_grading(rec, pkg, legs, h_end + 60) is True                  # graded 23 min after the close
+    rec.write_text('{"schema_version": 2, "graded_at": "%s"}' % cg.lrc._iso(h_end + 5))
+    assert cg.due_for_grading(rec, pkg, legs, h_end + 60) is False
