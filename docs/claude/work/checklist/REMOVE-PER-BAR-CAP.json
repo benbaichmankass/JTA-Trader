@@ -2,7 +2,7 @@
   "id": "REMOVE-PER-BAR-CAP",
   "title": "Remove the one-action-per-package-per-bar cap from every in-trade path (live review, auto-mandate, directed actions, prop amend gate, RiskManager.approve_amend) and from every doc, mandate and skill that states it; keep idempotency per review/record id as the duplicate guard; add a guard that refuses re-introducing a per-bar action cap",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01AFoLuMyF3JqNaMzzisbbzr",
   "model": "claude-opus-5-5",
@@ -11,9 +11,9 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-10-29T12:31Z #21258 merged 64cccff6 (squash, green head b8f1414d); deploy issue #21267 filed (auto-deploy rule). Kept non-count guards for operator: review-wake cooldown 120m (config/live_trade_review.yaml, live_review_wake.py COOLDOWN_MIN) and noise floor min_buffer_atr 1.0. MD-LTR-ADA-AUTO expired_at set.",
+  "note": "2026-10-29T12:32:39Z DEPLOYED 64cccff63 CURRENT (runtime-config). Lane archived. Closing observation: two distinct review_ids acting on one package within one bar both apply (no R_RATE refusal) in the journal.",
   "priority_rank": 1,
-  "updated_at": "2026-10-29T12:30:08Z",
+  "updated_at": "2026-10-29T12:32:54Z",
   "updated_by": "Manager Session 2026-10-29c",
   "roadmap": [
     "L-LADDER"
