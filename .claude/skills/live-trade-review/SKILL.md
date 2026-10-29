@@ -22,14 +22,20 @@ Design of record: [`docs/plans/live-trade-review-DESIGN.md`](../../../docs/plans
 
 ## 0. Binding limits of this skill (read first)
 
-### 0.0 A tighten is ADVICE ONLY (operator 2026-10-28, binding)
+### 0.0 Every in-trade action class is ADVICE ONLY until its own test passes (operator 2026-10-28, binding)
+
+> **Operator, 2026-10-28 ~21:07Z, popup to ask A1 (verbatim, relayed by Manager session_01AFoLuJi1vLTnYv9LbP6539):** *"Advice-only until tested"*. Every in-trade class (`tighten_sl`, `widen_sl`, `move_tp`, `partial_close`, `close`, `change_size`, `add_entry`) is recorded and graded but NOT executed, on every route and every account, until THAT class passes its own registered test: OOS on a fresh window, against hold AND a matched random intervention of the same class, net of the full cost stack, per leg × regime ([`docs/plans/desk-v1-production-plan-2026-10-29.md`](../../../docs/plans/desk-v1-production-plan-2026-10-29.md) § 5b). Evidence: DESK-LIFECYCLE-S0 (#20967), where Claude's whole-trade management lost −0.159 R (Claude entries) and −0.124 R (random entries) per trade against hold. Operator principle ~21:08Z: *"SL tightening is just one lever"*, so recommend ANY bracket move the market data supports; each recommendation is a graded label.
+>
+> **Graduation.** One PR removes ONE class from `src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS` AND from `config/mandates.yaml` `MD-TRADE-DESK.functions.in_trade.advice_only`. The PR cites that class's committed passed-test record, and `tests/test_tighten_advice_only.py` pins the two lists equal. Record it in `AMENDMENTS.md`. Nothing else graduates a class.
+
+#### The tighten decision this extends
 
 > **Operator, 2026-10-28 ~20:35Z, popup (verbatim, relayed by the manager):** *"Advice-only tightens (Recommended)"*. Evidence: [`comms/research/ltr_tighten_optimize/verdict.json`](../../../comms/research/ltr_tighten_optimize/verdict.json) (doc `docs/research/ltr-tighten-optimize-2026-10-28.md`) over the DESK-LIFECYCLE-S0 full run (PR #20967). Population: 981 Claude stop-tightens. All of them averaged −0.097 R [−0.140, −0.047] net of the full cost stack, and 0 of 79 cells had a CI above 0. Of the 61 registered tighten rules, none beat holding to the bracket on the held-out or fresh window.
 
 - **You may still RECOMMEND a `tighten_sl`**, with its level, basis, confidence and reason exactly as below. It is recorded and graded like any call.
-- **Nothing executes it.** On every route, the VM rows watcher, `live_review_dispatch.py` and desk intake log it as `tighten_advice_only` and send nothing (`src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS`).
-- **Do not file `live-review-apply` for a tighten.** The dispatcher refuses it as `tighten_advice_only` (exit 2, no ping).
-- **Every other trade action under `MD-TRADE-DESK` is unchanged.** That covers close, partial_close, move_tp, widen_sl, change_size and add_entry.
+- **Nothing executes it.** On every route, the VM rows watcher, `live_review_dispatch.py` and desk intake log it as `advice_only` and send nothing (`src/runtime/live_review_rows.py::ADVICE_ONLY_ACTIONS`).
+- **Do not file `live-review-apply` for an advice-only class.** The dispatcher refuses it as `advice_only` (exit 2, no ping).
+- **Since ~21:07Z the same holds for every other trade action** (close, partial_close, move_tp, widen_sl, change_size, add_entry) until each graduates (above).
 - The tighten-apply text below (§ 3 Step 5 "Under apply_mode apply", Step 7) is kept for the record and for a revert. It does not run.
 - **Narrow, by design:** the evidence covers TIGHTENING only. It says nothing against widening, moving a stop to structure, moving or extending a TP, or closing. Judge those on their merits (the § 3 principle); this rule must not tilt a call toward hold.
 

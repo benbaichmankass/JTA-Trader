@@ -54,11 +54,12 @@ whether a row may be handed over at all.
    trade-update ping per review_id. The apply script pings every applied leg
    and every account refusal itself.
 
-**Tightens are ADVICE ONLY (operator 2026-10-28 ~20:35Z, popup "Advice-only tightens
-(Recommended)"; evidence ``comms/research/ltr_tighten_optimize/verdict.json``).** A ``tighten_sl``
-row is answered ``tighten_advice_only`` (exit 2, nothing sent, no ping) before any other check,
-on every route and on the manual ``live-review-apply`` system-action alike. The tighten clauses
-below are kept for the record and for a revert.
+**Advice-only classes (``rows_lib.ADVICE_ONLY_ACTIONS``).** Operator 2026-10-28 ~20:35Z, popup
+"Advice-only tightens (Recommended)" (evidence ``comms/research/ltr_tighten_optimize/verdict.json``),
+extended ~21:07Z to every in-trade class, popup "Advice-only until tested" (DESK-LIFECYCLE-S0 #20967).
+A row whose action is in that tuple is answered ``advice_only`` (exit 2, nothing sent, no ping) before
+any other check, on every route and on the manual ``live-review-apply`` system-action alike. The
+clauses below are kept for the record and for each class's graduation.
 
 Never for a tighten: a halt, a ``mode:`` or ``execution:`` write, a wider stop, a TP move,
 a size change, a close.
