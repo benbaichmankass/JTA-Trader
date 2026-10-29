@@ -3,7 +3,7 @@
 id: RQ-20261028-a7c3-03
 title: 'TP doctrine, harness-native CONFIRMATION, real money + prop: does trend_donchian_sol_prop with the predictive 2.5R
   entry target (K* from RQ-20261016-004) stay no worse than its declared 6R target in 5 of 6 folds, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -116,3 +116,16 @@ related:
 - RQ-20261022-bea9-03
 - docs/plans/real-money-active-mgmt-plan-2026-10-29.md
 last_dispatched_at: '2026-10-29T03:02:58+00:00'
+grading:
+  attested: RULE-RQ20261028A7C303-SOLPROP-K25-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261028A7C303-SOLPROP-K25-CONFIRM
+  evidence:
+  - research/results/RQ-20261028-a7c3-03/40809917778.jsonl
+  graded_at: '2026-10-29'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
