@@ -1,0 +1,22 @@
+{
+  "id": "OVERVIEW-PROP-OPEN-TRADES",
+  "title": "Overview 'Real money' view omits open PROP trades: /api/bot/positions reads only broker positions, so manual-bracket prop tickets (op_status open, /api/bot/prop/tickets) never appear and get no live uPnL. MEASURED 2026-10-29 ~22:35Z: trend_donchian_eth_prop ETHUSDT short open on breakout_2/tradeify_1/velotrade_1 since 21:02Z; positions route returned [] for real money; operator confirmed it is absent from Overview. Fix: surface open prop tickets on Overview (and over /ws/market) with a mark-to-market uPnL from the last price x qty, labelled ESTIMATED (no prop P&L feed), with entry/SL/TP. Repos: API here + SPA benbaichmankass/ict-trader-dashboard.",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "",
+  "priority_rank": 2,
+  "updated_at": "2026-10-29T22:34:37Z",
+  "updated_by": "Manager Session 2026-10-29d",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 827
+}
