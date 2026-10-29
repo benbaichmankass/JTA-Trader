@@ -1,6 +1,6 @@
 {
   "id": "ROUTINE-PROMPTS-ON-ROTATION",
-  "title": "Routines resolve the CURRENT manager at run time (never a hard-coded session id): STEP 0 of every routine prompt = list_sessions -> the non-archived 'Manager Session YYYY-MM-DD<letter>' with the latest date then letter; the register pointer / recent manager tag is only the second line of defense and is reported when used. Also: repo slug and cadence wording correct; a check that lists any routine prompt naming a specific manager session id or an old repo name",
+  "title": "Routines resolve the current manager by ONE step: the non-archived 'Manager Session YYYY-MM-DD<letter>' with the latest date then letter (list_sessions); no hard-coded session id, no fallback wording (operator: redundant paths waste compute). Repo slug and cadence wording correct; a check lists any routine prompt naming a specific session id or an old repo name",
   "phase": null,
   "state": "in_flight",
   "owner": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Operator 2026-10-29 ~12:10Z verbatim: \"none of the routines reference a specific manager session, because the manager sessions are always rolling over, right? So we need to make sure that it's ordered correctly, that it knows to look for the current manager session, not use a fallback ... the fallback is important, but that shouldn't be our, should be our second line of defense, not our plan A.\" Correction sent to the assistant (trig_01QvsFPkZfQUr22Jg5MRAAqu, 12:02Z): no hard-coded manager id; STEP 0 dynamic resolution. The manager's own routines (bound to the manager session) are rebound at handover; their prompts must also resolve the manager rather than name an id \u2014 fold into the manager-skill handover step.",
+  "note": "Operator ~12:15Z verbatim: \"if we're using the manager recorded in the registry and that's correct and reliable, then that's also fine ... the redundant instructions are unnecessary. They're just going to be confusing and end up wasting compute on looking for a path that's not viable.\" MEASURED: _header.json has no manager field (updated_by = last writer, often a lane), so the register is not viable; the title convention (manager SKILL \u00a7 Start of session step 1) is the single source. Final design sent to the assistant (trig_01NYVuGTt4Q24bdxycaGSnqX). BLOCKED: the assistant's prompt edits were refused by the auto-mode classifier ('Account & Standing-Rule Changes') on trig_01UnRpzN513KbMjvJWFAf911 and trig_01Bchsugftspk4uZhHR1ncK8; operator asked (~12:05Z) to take session_011c3qoaBvGBioDWkPVToQSb out of auto mode for these edits; the assistant waits for the manager's go.",
   "priority_rank": 3,
-  "updated_at": "2026-10-29T12:02:46Z",
+  "updated_at": "2026-10-29T12:04:10Z",
   "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
   "roadmap": [
     "L-LADDER"
