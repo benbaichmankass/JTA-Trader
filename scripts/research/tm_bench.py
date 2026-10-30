@@ -574,7 +574,7 @@ def _stratum(t: dict, terc: Tuple[float, float]) -> str:
 def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_boot: int, draws: int, seed: int,
           cost, kinds: Sequence[str], desk_policy: Optional[Dict[str, str]] = None,
           checkins: Sequence[str] = tuple(CHECKINS), act_margin_r: float = ACT_MARGIN_R,
-          logit_act_p: float = LOGIT_ACT_P) -> Dict[str, Any]:
+          logit_act_p: float = LOGIT_ACT_P, act_margin_grid: Sequence[float] = ()) -> Dict[str, Any]:
     T = test["trades"]
     same = train is None
     TR = T if same else train["trades"]
@@ -696,18 +696,35 @@ def score(test: Dict[str, Any], train: Optional[Dict[str, Any]], *, k: int, n_bo
         # learners
         for kind in kinds:
             recs, unavailable = [], None
+            thr_by_fold: Dict[int, float] = {}
+            if kind == "lgbm_action_value" and act_margin_grid:
+                # RQ-20261029-7294-02: the act margin is chosen on the TRAIN fold (in-sample value of the first action)
+                for f in fold_models:
+                    mdl = fold_models[f].get(kind)
+                    if mdl is None or (isinstance(mdl, dict) and "unavailable" in mdl):
+                        continue
+                    val = {m: 0.0 for m in act_margin_grid}
+                    for j in (k_ for k_ in next(x for x in fl["folds"] if x["fold"] == f)["train"] if ev_tr[k_]["n"]):
+                        sc_tr = learner_scores(kind, mdl, ev_tr[j]["X1"], fold_models[f]["_med"])
+                        mk_tr = checkin_mask(TR[j], cell, fold_medwin[f].get(TR[j]["leg"]))
+                        for m in act_margin_grid:
+                            act = first_action(sc_tr, mk_tr, m)
+                            if act is not None:
+                                val[m] += float(np.nan_to_num(lab_tr(j)["labels"][act[1]][act[0]], nan=0.0))
+                    thr_by_fold[f] = max(act_margin_grid, key=lambda m: (val[m], m))
             for f, i in oos:
                 mdl = fold_models[f].get(kind)
                 sc = learner_scores(kind, mdl, ev[i]["X1"], fold_models[f]["_med"]) if (mdl is not None and ev[i]["n"]) else None
                 if isinstance(mdl, dict) and "unavailable" in mdl:
                     unavailable = mdl["unavailable"]
-                thr = act_margin_r if kind == "lgbm_action_value" else logit_act_p
+                thr = thr_by_fold.get(f, act_margin_r) if kind == "lgbm_action_value" else logit_act_p
                 recs.append(rec(i, f, first_action(sc, masks[i], thr)))
             if unavailable:
                 cell_arms.append({"arm_id": f"{kind}@{cell}", "read_state": "unavailable", "reason": unavailable})
                 continue
             arm = summarize_arm(f"{kind}@{cell}", T, recs, rng, n_boot, b4_for(recs, labs, masks, seed + 3, draws),
-                                extra={"act_threshold": act_margin_r if kind == "lgbm_action_value" else logit_act_p})
+                                extra={"act_threshold": act_margin_r if kind == "lgbm_action_value" else logit_act_p,
+                                       "act_threshold_by_fold": thr_by_fold or None})
             fam_ps[arm["arm_id"]] = arm["p_one_sided"]
             cell_arms.append(arm)
         if desk_policy is not None:
@@ -945,6 +962,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--random-draws", type=int, default=200)
     ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--act-margin", type=float, default=ACT_MARGIN_R, help="lgbm: act if best predicted dR > this (R)")
+    ap.add_argument("--act-margin-grid", default="", help="lgbm: choose the act margin per fold on TRAIN rows from this grid (R)")
     ap.add_argument("--logit-act-p", type=float, default=LOGIT_ACT_P, help="logit: act if best P(dR > 0) > this")
     ap.add_argument("--write-labels", action="store_true")
     ap.add_argument("--out", default=None)
@@ -988,7 +1006,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             desk = {r["state_id"]: r["action"] for r in _read_jsonl(Path(a.desk_policy))}
         r = score(test, train, k=a.folds, n_boot=a.n_boot, draws=a.random_draws, seed=a.seed, cost=cost,
                   kinds=[s for s in a.learners.split(",") if s], desk_policy=desk,
-                  checkins=[s for s in a.checkins.split(",") if s], act_margin_r=a.act_margin, logit_act_p=a.logit_act_p)
+                  checkins=[s for s in a.checkins.split(",") if s], act_margin_r=a.act_margin, logit_act_p=a.logit_act_p,
+                  act_margin_grid=[float(x) for x in a.act_margin_grid.split(",") if x])
         if a.write_labels:
             with gzip.open(out / "labels.jsonl.gz", "wt", encoding="utf-8") as fh:
                 for t, L in zip(r["_trades"], r["_labs"]):
