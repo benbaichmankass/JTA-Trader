@@ -13,7 +13,7 @@
   "blocked_on": [],
   "note": "Gap rule landed in scripts/backtest_trend.py + planted-gap test. True-open parity vs cf_core on corpus v1: old 2371/2627, new 2627/2627. Re-check (same data, old vs new, 21 trend records): pass->fail flips spy_trend_long_1d and trend_donchian_eth_prop; trend_donchian_eth_4h fails under old AND new on today data (committed record not reproducible: n 135 vs 51) -- Tier-3 demote proposal in PR body, config untouched. CLOSES WHEN: PR merged on main and the baseline-irreproducibility finding is dispositioned by the manager.",
   "priority_rank": 2,
-  "updated_at": "2026-10-30T13:39:36Z",
+  "updated_at": "2026-10-30T13:58:07Z",
   "updated_by": "session_01AFoLuKbVndnNJu56Z4jYMX",
   "roadmap": [
     "L-AM-STANDARD"
@@ -21,6 +21,11 @@
   "writeback": {
     "roadmap": "L-AM-STANDARD: backtest_trend.py now gap-fills at the open (cf_core parity 2627/2627 on corpus v1 with true opens, was 2371); re-check table in comms/strategy_evidence/recheck/2026-10-30-harness-trail-gapfill.*",
     "arch": "none: research harness only, no runtime component changed"
+  },
+  "observation": {
+    "what": "PR merged to main with CI green, and the manager has dispositioned the Tier-3 proposal (eth_prop, spy_trend_long_1d) and PI-20261030-56Z4JYMX-0001",
+    "how_to_check": "git log origin/main -- scripts/backtest_trend.py shows the gap-fill commit; python3 scripts/ops/pipeline.py --due lists PI-20261030-56Z4JYMX-0001 as routed or done",
+    "due_by": "2026-11-02"
   },
   "_seq": 840
 }
