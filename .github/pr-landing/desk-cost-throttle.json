@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 (live-trader runtime path src/runtime/desk_packet_wake.py plus desk config). Operator approval, 2026-10-30 ~10:12Z, popup answer verbatim: \"Desk: every 2h, cap triggers\". Merge is the manager's; the scan-wake cadence needs an ict-trader-live restart (the running process holds the old desk_packet_wake code), run by the manager through the system-actions workflow after merging. The trigger cap (max_per_day 4) is read live and needs no restart. Revert: scan_wake_every_h: 1 and max_per_day: 12 in config/desk_triggers.yaml.",
+  "why": "Cheaper desk Claude wake cadence enforced by the system: the packet still lands every hour, the desk-wake marker only on even UTC hours (receipt skipped_by_cadence otherwise), event triggers capped at 4 per UTC day."
+}

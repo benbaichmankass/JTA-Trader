@@ -1,0 +1,17 @@
+{
+  "based_on": "20261030T084330886902Z-71e4793c.json",
+  "due_when": {
+    "due_date": "2026-11-02",
+    "kind": "date"
+  },
+  "id": "PI-20261030-PKG3RYDO-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30b, desk-wake dispatch 07:02Z",
+    "rerun": "git grep -n 'manager:session_' origin/main -- .claude/skills/trading-desk/SKILL.md"
+  },
+  "state": "done",
+  "terminal_reason": "Fixed in lane DESK-COST-THROTTLE: SKILL.md 6b create_session tags now read manager:<current Manager Session id>; no manager:session_ literal remains under .claude/skills.",
+  "what": "Stale manager id in the desk-wake create_session recipe: .claude/skills/trading-desk/SKILL.md line 124 (§ 6b) hard-codes tags [\"manager:session_01HAysMLfF9dYpi92YMqYxEq\", ...], a retired manager. A manager copying the recipe verbatim tags every desk wake with the wrong manager, so lane_reconcile / manager-tag lookups attribute desk wakes to a dead session. Fix (Tier 1, one line): replace the literal with the placeholder manager:<current Manager Session id> as the other routine prompts do, and grep the other skills for any hard-coded manager:session_ literal (precedent class: ROUTINE-PROMPTS-ON-ROTATION). Manager 30b worked around it by tagging with its own id."
+}

@@ -40,8 +40,12 @@ def posted(pid=PID, at=NOW - timedelta(minutes=3)):
 
 
 @pytest.fixture(autouse=True)
-def _reset(monkeypatch):
+def _reset(monkeypatch, tmp_path_factory):
     monkeypatch.setattr(dw, "_attempts", {})
+    # The producer tests below model a wake on every bar; the cadence tests set their own N.
+    cfg = tmp_path_factory.mktemp("cadence") / "desk_triggers.yaml"
+    cfg.write_text("scan_wake_every_h: 1\n")
+    monkeypatch.setattr(dw.marker_module(), "CONFIG", cfg)
 
 
 def run(tmp_path, net, now=NOW, **kw):
@@ -240,3 +244,60 @@ def test_latency_is_never_negative():
 def test_posted_marker_before_built_at_reads_zero_latency(tmp_path):
     rec = run(tmp_path, Net(built_ago=timedelta(minutes=4), markers=[posted(at=NOW - timedelta(minutes=5))]))
     assert rec["state"] == "posted" and rec["latency_s"] == 0.0
+
+
+# ---- scan_wake_every_h: the packet lands every hour, the wake only on N-hour bars (operator 2026-10-30) -------
+
+ODD = datetime(2026, 10, 26, 17, 3, tzinfo=timezone.utc)  # hour 17: odd -> no wake at every 2 h
+
+
+@pytest.fixture
+def every_2h(_reset):
+    dw.marker_module().CONFIG.write_text("scan_wake_every_h: 2\n")
+
+
+def test_cadence_wakes_even_utc_hours_only():
+    mm = dw.marker_module()
+    assert [h for h in range(24) if mm.wake_due(f"2026-10-26T{h:02d}:00:00Z", 2)] == list(range(0, 24, 2))
+    assert all(mm.wake_due(f"2026-10-26T{h:02d}:00:00Z", 1) for h in range(24))
+
+
+def test_cadence_is_read_live_from_config_and_a_fault_wakes_every_hour(tmp_path):
+    mm = dw.marker_module()
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("scan_wake_every_h: 3\n")
+    assert mm.scan_wake_every_h(cfg) == 3
+    cfg.write_text("scan_wake_every_h: 4\n")
+    assert mm.scan_wake_every_h(cfg) == 4
+    cfg.write_text("scan_wake_every_h: 0\n")
+    assert mm.scan_wake_every_h(cfg) == 1
+    cfg.write_text(": : not yaml [")
+    assert mm.scan_wake_every_h(cfg) == 1
+    assert mm.scan_wake_every_h(tmp_path / "missing.yaml") == 1
+    assert mm.scan_wake_every_h(mm.ROOT / "config" / "desk_triggers.yaml") == 2  # the shipped config
+
+
+def test_odd_hour_lands_the_packet_but_posts_no_wake(tmp_path, every_2h):
+    net = Net()
+    committed = []
+    rec = produce(tmp_path, net, now=ODD, commit=lambda st, pid, a, h: committed.append(pid) or ("c" * 40, None))
+    assert committed == ["DP-20261026T1703Z-scan-1h"]  # the data is kept
+    assert rec["state"] == "skipped_by_cadence" and rec["every_h"] == 2 and rec["bar"] == "2026-10-26T17:00:00Z"
+    assert net.posts == []
+
+
+def test_skipped_hour_is_not_wake_missing_on_later_passes(tmp_path, every_2h):
+    def later(hour):  # the hour's packet landed at :31, nothing else since; the pass is 24 min later
+        net = Net()
+        net.ptr.update(info_cutoff_at=f"2026-10-26T{hour}:31:00Z", built_at=f"2026-10-26T{hour}:31:30Z")
+        return run(tmp_path, net, now=datetime(2026, 10, 26, int(hour), 55, tzinfo=timezone.utc))
+    rec = later("15")  # odd bar: no marker, no row, past the grace -> skipped by design
+    assert rec["state"] == "skipped_by_cadence" and rec["bar"] == "2026-10-26T15:00:00Z"
+    assert later("14")["state"] == "wake_missing"  # the same age on an even bar IS a missing wake
+
+
+def test_workflow_post_step_skips_an_odd_bar(tmp_path, capsys, every_2h):
+    mm = dw.marker_module()
+    stage = make_stage(tmp_path)
+    assert mm.main(["post", "--stage", str(stage), "--commit", "c" * 40]) == 0
+    assert "skipped_by_cadence" in capsys.readouterr().out

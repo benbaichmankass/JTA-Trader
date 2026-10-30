@@ -314,3 +314,26 @@ def test_desk_row_missing_unreadable_is_unknown_never_ok(monkeypatch, ptr, rows)
 
 def test_desk_row_missing_is_a_registered_probe():
     assert "desk_row_missing" in a.PROBE_LABEL
+
+
+def _ptr_cut(minutes_ago, cutoff, pid="DP-1"):
+    return json.dumps({"packet_id": pid, "info_cutoff_at": cutoff,
+                       "built_at": (_DNOW - timedelta(minutes=minutes_ago)).isoformat()})
+
+
+def test_desk_row_missing_ok_on_a_bar_skipped_by_cadence(monkeypatch):
+    """scan_wake_every_h 2: an odd-hour packet has no wake and so no row, by design; an even one still breaches."""
+    monkeypatch.setattr(a, "_git", _desk_git(_ptr_cut(300, "2026-10-28T13:31:00Z"), ""))
+    p = a.probe_desk_row_missing(_DNOW)
+    assert p["status"] == a.OK and "skipped_by_cadence" in p["detail"]
+    monkeypatch.setattr(a, "_git", _desk_git(_ptr_cut(300, "2026-10-28T12:31:00Z"), ""))
+    assert a.probe_desk_row_missing(_DNOW)["status"] == a.BREACHED
+
+
+def test_desk_wake_post_probe_does_not_flag_skipped_by_cadence(tmp_path, monkeypatch):
+    (tmp_path / "runtime_logs").mkdir()
+    (tmp_path / "runtime_logs" / "desk_wake_post_receipt.json").write_text(
+        json.dumps({"computed_at": _DNOW.isoformat(), "state": "skipped_by_cadence"}))
+    monkeypatch.setattr(a, "REPO_ROOT", tmp_path)
+    p = a.probe_desk_wake_post(_DNOW)
+    assert p["status"] == a.OK and "skipped_by_cadence" in p["detail"]

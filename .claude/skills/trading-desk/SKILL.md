@@ -104,7 +104,9 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 
 **Why the VM is primary (MEASURED by the manager 2026-10-26):** GitHub's cron NEVER fired `desk-scan-packet.yml` on schedule (only `workflow_dispatch` runs), and a packet built by a backed-up runner landed ~30 min late. `desk-scan-packet.yml` is the **fallback**: `schedule-keeper` dispatches it for a missed hour; its first step (`desk_wake_marker.py gate`) does nothing when the bar already has a packet, and its last steps post the same marker, deduped on the packet id **and the bar**, so the two producers can never both wake for one bar. ⚠️ **UNVERIFIED at merge:** whether the VM's git credential may write `desk/decisions`, and whether the VM has the diag token for the system-book read (without it the packet is still valid, with `system_book` honestly `could_not_look`). A refused write reads `could_not_commit` (http code) in the receipt and the fallback covers the hour.
 
-**There is no market-hours or activity gate** (operator: crypto is 24/7, so every hour wakes). The only conditions:
+**Cadence (operator 2026-10-30 ~10:12Z, popup answer verbatim: *"Desk: every 2h, cap triggers"*).** The packet is still built and landed EVERY hour (off the trade path is not off the data path), but the `desk-wake` marker is posted only on bars whose UTC hour % `scan_wake_every_h` == 0 (`config/desk_triggers.yaml`, now 2: even hours; read live on every pass by `scripts/ops/desk_wake_marker.py::scan_wake_every_h`, so no restart for a change of N; an unreadable value reads 1, never silence). A skipped bar is receipt state `skipped_by_cadence` (VM and the fallback workflow's `post` step alike), never a silent gap, and neither `desk_wake_post` nor `desk_row_missing` in `attention_watch` flags it. Event triggers are capped at `max_per_day: 4` (was 12). MEASURED basis: 00:00-10:05Z 2026-10-30, 11 hourly + 12 triggered wakes, all `no_trade`, $0.30-0.35 each.
+
+**There is no market-hours or activity gate** (operator: crypto is 24/7; the hourly packet lands every hour and a wake follows on the cadence above). The only conditions:
 
 - a failed build or commit -> **no wake** (receipt `could_not_build` / `could_not_commit`, named; the fallback workflow posts a `could_not_build` incident marker for its own failures);
 - a `desk-wake` marker for that packet id or that bar is already on the PR -> not re-posted;
@@ -121,7 +123,7 @@ The fraction of desk decisions an Opus teacher re-judges blind. Start **0.25**; 
 ```
   model: <the Sonnet model id from the manager's model table>
   title: desk-wake <the marker's bar, YYYY-MM-DDTHH:MMZ>
-  tags: ["manager:session_01HAysMLfF9dYpi92YMqYxEq", "desk-wake", "DESK-6-SHADOW-PILOT"]
+  tags: ["manager:<current Manager Session id>", "desk-wake", "DESK-6-SHADOW-PILOT"]
   permission_mode: auto
   source_url: https://github.com/benbaichmankass/JTA-Trader
   source_revision: desk/decisions
@@ -140,6 +142,7 @@ You are one wake of the Claude trading desk (a proposal on a desk-leg symbol tra
 
 **Cadence: hourly, not the design's 15 min, decided on data (design § 11 leaves cadence to DESK-6's measurement).**
 
+- **Cost line (2026-10-30, operator "Desk: every 2h, cap triggers"):** scan wakes ≈ 12/day + at most 4 triggered = ≤ 16 wakes/day at the measured $0.30-0.35 ≈ **$5-6/day ceiling**, down from ≈ 24 + 12 = 36 wakes ≈ $11-12/day. The $11/day figure below is the 2026-10-26 hourly-only baseline.
 - **MEASURED cost per working wake** (`get_session().usage.cost_usd`, 2026-10-26, Sonnet, fresh session, one 1h scan packet ≈ 53 KB): **$0.45, $0.34, $0.45, $0.47** (n = 4; context 119–134 k tokens; 65–85 s wall). INFERRED: hourly ≈ 24 wakes ≈ **$11/day** (the spawner routine it assumed is retired; the packet landing wakes every hour); the design assumed $0.041 a working wake (§ 5.3), so a fresh-session wake costs ~10× the standing-session estimate, because each wake re-pays the session's base context.
 - The packet is a **1h** scan: its base rates and ATR are on 1h bars, so 3 of every 4 15-minute wakes would find nothing due and still pay a fresh session's start. The 15-min stage needs a 15m scan packet and a standing session (§ 6, `cadence`).
 - Cheaper per label, in order: a slimmer packet (drop untradable universe rows), a standing session at K* ≈ 22 wakes (design § 5.3), batching several symbols per wake. DESK-10 owns the $/pp conversion.
