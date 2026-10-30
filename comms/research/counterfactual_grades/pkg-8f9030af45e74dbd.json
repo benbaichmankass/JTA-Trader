@@ -1,0 +1,1501 @@
+{
+ "schema_version": 2,
+ "order_package_id": "pkg-8f9030af45e74dbd",
+ "strategy": "ict_scalp_avax_5m",
+ "symbol": "AVAXUSDT",
+ "side": "short",
+ "graded_at": "2026-10-30T01:11:50Z",
+ "biases": [
+  "stop fills at its price (+ half round-trip slippage); a gap fills at the open",
+  "a touch is not a fill: stop / TP need price to trade THROUGH the level (calibrated on one stop fill, n=1)",
+  "intrabar order unknown: stop checked before TP; rule triggers and trails take effect from the next bar",
+  "path stitched from the finest candles served (1m ~16h, 5m ~3.5d, 15m ~10d); older parts use coarser bars",
+  "entry is the actual fill, shared by every arm; R unit = INITIAL risk (exit_plan.stop)",
+  "an unresolved arm is marked at the last close and costed as closed there (resolved=false)",
+  "post-exit bars end at t_close + horizon (leg max-hold, else a per-timeframe default); an arm open there is unresolved and never in a verdict",
+  "post-exit excursions start at the first bar opening after the close; the bar containing the exit is excluded",
+  "funding = policy default x windows held (ESTIMATED); account % = current equity less actual P&L (ESTIMATED)",
+  "alt-bracket arms hold the risk budget constant (wider stop => smaller size); margin and lot size not modelled"
+ ],
+ "status": "graded",
+ "reason": null,
+ "bracket": {
+  "entry_pkg": 8.804,
+  "stop0": 8.88021429,
+  "stop0_source": "exit_plan.stop|risk_per_unit",
+  "tp": 8.68967857,
+  "tp_r": 1.5,
+  "r_dist": 0.07621428999999935,
+  "atr": 0.022428571428571558,
+  "trail_mult": null
+ },
+ "legs": [
+  {
+   "account_id": "bybit_1",
+   "trade_id": 6745,
+   "account_class": "paper",
+   "qty": 3787.1,
+   "entry_fill": 8.804,
+   "exit_price": 8.88,
+   "exit_reason": "sl",
+   "risk_usd": 288.631138,
+   "pnl_usd_journal": -287.8196,
+   "pnl_usd_venue": -1129.24545103,
+   "closed_at": "2026-10-27T15:47:21.725797+00:00",
+   "provenance": "MEASURED",
+   "equity_pre_usd": null
+  }
+ ],
+ "path": {
+  "bars": 321,
+  "bars_by_tf": {
+   "1m": 0,
+   "5m": 321,
+   "15m": 0
+  },
+  "first_bar": "2026-10-27T13:05:00Z",
+  "last_bar": "2026-10-28T15:50:00Z",
+  "t_entry": "2026-10-27T13:05:06Z",
+  "t_close": "2026-10-27T15:47:21Z"
+ },
+ "actions": [],
+ "arms": [
+  {
+   "arm_id": "actual",
+   "family": "actual",
+   "label": "ACTUAL (journal / venue closed-pnl)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:47:21.725797+00:00",
+    "px": 8.88,
+    "reason": "sl"
+   },
+   "gross_r": null,
+   "cost_r": null,
+   "net_r": -3.9124,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -1129.2455,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "MEASURED",
+   "note": "venue closed_pnl is booked net of the OPEN fee only; the simulated arms use the full recorded round trip",
+   "delta_vs_replayed_actual_r": -2.8052,
+   "delta_vs_actual_r": 0.0
+  },
+  {
+   "arm_id": "replayed_actual",
+   "family": "baseline",
+   "label": "Actual management replayed (like-for-like baseline)",
+   "params": {
+    "actions": 0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "original_brackets",
+   "family": "entry_brackets",
+   "label": "Original SL/TP, no in-trade action (own trail only)",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 2R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 8.86116072,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.86116072,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.1155,
+    "slip": 0.0231,
+    "funding": 0.0027
+   },
+   "net_r": -1.1413,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -329.4273,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0341,
+   "delta_vs_actual_r": 2.7711,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": -9.8517
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 3R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 8.86116072,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.86116072,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.1155,
+    "slip": 0.0231,
+    "funding": 0.0027
+   },
+   "net_r": -1.1413,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -329.4273,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0341,
+   "delta_vs_actual_r": 2.7711,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": -9.8517
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 4R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 8.86116072,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.86116072,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.1155,
+    "slip": 0.0231,
+    "funding": 0.0027
+   },
+   "net_r": -1.1413,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -329.4273,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0341,
+   "delta_vs_actual_r": 2.7711,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": -9.8517
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 5R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 8.86116072,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.86116072,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.1155,
+    "slip": 0.0231,
+    "funding": 0.0027
+   },
+   "net_r": -1.1413,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -329.4273,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0341,
+   "delta_vs_actual_r": 2.7711,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": -9.8517
+   }
+  },
+  {
+   "arm_id": "alt_sl0.75x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 0.75x original distance, TP 6R",
+   "params": {
+    "sl_mult": 0.75,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:30:00Z",
+    "px": 8.86116072,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.86116072,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.1155,
+    "slip": 0.0231,
+    "funding": 0.0027
+   },
+   "net_r": -1.1413,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -329.4273,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": -0.0341,
+   "delta_vs_actual_r": 2.7711,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": -9.8517
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.0,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T19:05:00Z",
+    "px": 8.89926786,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.89926786,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0693,
+    "slip": 0.0139,
+    "funding": 0.0069
+   },
+   "net_r": -1.0901,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -314.637,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0171,
+   "delta_vs_actual_r": 2.8223,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 4.9386
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T19:05:00Z",
+    "px": 8.89926786,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.89926786,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0693,
+    "slip": 0.0139,
+    "funding": 0.0069
+   },
+   "net_r": -1.0901,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -314.637,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0171,
+   "delta_vs_actual_r": 2.8223,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 4.9386
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T19:05:00Z",
+    "px": 8.89926786,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.89926786,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0693,
+    "slip": 0.0139,
+    "funding": 0.0069
+   },
+   "net_r": -1.0901,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -314.637,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0171,
+   "delta_vs_actual_r": 2.8223,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 4.9386
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T19:05:00Z",
+    "px": 8.89926786,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.89926786,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0693,
+    "slip": 0.0139,
+    "funding": 0.0069
+   },
+   "net_r": -1.0901,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -314.637,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0171,
+   "delta_vs_actual_r": 2.8223,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 4.9386
+   }
+  },
+  {
+   "arm_id": "alt_sl1.25x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.25x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.25,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T19:05:00Z",
+    "px": 8.89926786,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.89926786,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0693,
+    "slip": 0.0139,
+    "funding": 0.0069
+   },
+   "net_r": -1.0901,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -314.637,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0171,
+   "delta_vs_actual_r": 2.8223,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 4.9386
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp2R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 2R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T21:30:00Z",
+    "px": 8.91832143,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.91832143,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0578,
+    "slip": 0.0116,
+    "funding": 0.0081
+   },
+   "net_r": -1.0774,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -310.9741,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0298,
+   "delta_vs_actual_r": 2.835,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 8.6015
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp3R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 3R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T21:30:00Z",
+    "px": 8.91832143,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.91832143,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0578,
+    "slip": 0.0116,
+    "funding": 0.0081
+   },
+   "net_r": -1.0774,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -310.9741,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0298,
+   "delta_vs_actual_r": 2.835,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 8.6015
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp4R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 4R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T21:30:00Z",
+    "px": 8.91832143,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.91832143,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0578,
+    "slip": 0.0116,
+    "funding": 0.0081
+   },
+   "net_r": -1.0774,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -310.9741,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0298,
+   "delta_vs_actual_r": 2.835,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 8.6015
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp5R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 5R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 5.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T21:30:00Z",
+    "px": 8.91832143,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.91832143,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0578,
+    "slip": 0.0116,
+    "funding": 0.0081
+   },
+   "net_r": -1.0774,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -310.9741,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0298,
+   "delta_vs_actual_r": 2.835,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 8.6015
+   }
+  },
+  {
+   "arm_id": "alt_sl1.5x_tp6R",
+   "family": "alt_brackets",
+   "label": "SL 1.5x original distance, TP 6R",
+   "params": {
+    "sl_mult": 1.5,
+    "tp_r": 6.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T21:30:00Z",
+    "px": 8.91832143,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.91832143,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0578,
+    "slip": 0.0116,
+    "funding": 0.0081
+   },
+   "net_r": -1.0774,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -310.9741,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0298,
+   "delta_vs_actual_r": 2.835,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 8.6015
+   }
+  },
+  {
+   "arm_id": "more_rule_1R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1R",
+   "params": {
+    "trigger_r": 1.0,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_1.5R_to_0R",
+   "family": "more_management",
+   "label": "stop to break-even at +1.5R",
+   "params": {
+    "trigger_r": 1.5,
+    "level_r": 0.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_2R_to_1R",
+   "family": "more_management",
+   "label": "lock +1R at +2R",
+   "params": {
+    "trigger_r": 2.0,
+    "level_r": 1.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "more_rule_ladder_be1_lock2",
+   "family": "more_management",
+   "label": "ladder: BE at +1R, then lock +1R at +2R",
+   "params": {},
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T15:20:00Z",
+    "px": 8.88021429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.88021429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -1.0,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0032
+   },
+   "net_r": -1.1072,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -319.5756,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.0,
+   "delta_vs_actual_r": 2.8052,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 0.0
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_1.5x",
+   "family": "more_management",
+   "label": "ATR trail 1.5 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 1.5
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T13:35:00Z",
+    "px": 8.781,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.781,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.3018,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0007
+   },
+   "net_r": 0.1971,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": 56.8882,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 1.3043,
+   "delta_vs_actual_r": 4.1095,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 376.4638
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_2x",
+   "family": "more_management",
+   "label": "ATR trail 2 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 2.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T13:35:00Z",
+    "px": 8.78585714,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.78585714,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": 0.2381,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0007
+   },
+   "net_r": 0.1334,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": 38.4937,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 1.2406,
+   "delta_vs_actual_r": 4.0458,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 358.0693
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_3x",
+   "family": "more_management",
+   "label": "ATR trail 3 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 3.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T13:35:00Z",
+    "px": 8.80828571,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.80828571,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.0562,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0007
+   },
+   "net_r": -0.1609,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -46.4455,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.9463,
+   "delta_vs_actual_r": 3.7515,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 273.1301
+   }
+  },
+  {
+   "arm_id": "more_atr_trail_4x",
+   "family": "more_management",
+   "label": "ATR trail 4 x ATR(entry) behind the extreme",
+   "params": {
+    "k": 4.0
+   },
+   "resolved": true,
+   "exit": {
+    "ts": "2026-10-27T14:25:00Z",
+    "px": 8.82971429,
+    "reason": "stop",
+    "fills": [
+     {
+      "frac": 1.0,
+      "px": 8.82971429,
+      "reason": "stop"
+     }
+    ]
+   },
+   "gross_r": -0.3374,
+   "cost_r": {
+    "fee": 0.0866,
+    "slip": 0.0173,
+    "funding": 0.0019
+   },
+   "net_r": -0.4433,
+   "per_account": {
+    "bybit_1": {
+     "pnl_usd": -127.9449,
+     "pct_of_account": null,
+     "account_class": "paper"
+    }
+   },
+   "provenance": "ESTIMATED",
+   "delta_vs_replayed_actual_r": 0.6639,
+   "delta_vs_actual_r": 3.4691,
+   "delta_vs_replayed_actual_usd": {
+    "bybit_1": 191.6307
+   }
+  }
+ ],
+ "random_control": null,
+ "fidelity": {
+  "replayed_exit": {
+   "ts": "2026-10-27T15:20:00Z",
+   "px": 8.88021429
+  },
+  "actual_exit": {
+   "ts": "2026-10-27T15:47:21.725797+00:00",
+   "px": 8.88
+  },
+  "replayed_actual_net_r": -1.1072,
+  "actual_net_r": -3.9124,
+  "abs_gap_r": 2.8052
+ },
+ "post_exit": {
+  "horizon": {
+   "seconds": 86400.0,
+   "hours": 24.0,
+   "source": "default_by_timeframe",
+   "timeframe": "5m",
+   "end": "2026-10-28T15:47:21Z"
+  },
+  "horizon_reached": true,
+  "mfe_r": 1.1546,
+  "mae_r": -2.7029,
+  "tp_reach": {
+   "reached": false,
+   "bars": null,
+   "seconds": null
+  },
+  "wider_sl_arms": [
+   {
+    "arm_id": "alt_sl1.25x_tp2R",
+    "sl_mult": 1.25,
+    "tp_r": 2.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0901,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.8223,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp3R",
+    "sl_mult": 1.25,
+    "tp_r": 3.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0901,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.8223,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp4R",
+    "sl_mult": 1.25,
+    "tp_r": 4.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0901,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.8223,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp5R",
+    "sl_mult": 1.25,
+    "tp_r": 5.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0901,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.8223,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.25x_tp6R",
+    "sl_mult": 1.25,
+    "tp_r": 6.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0901,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.8223,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp2R",
+    "sl_mult": 1.5,
+    "tp_r": 2.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0774,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.835,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp3R",
+    "sl_mult": 1.5,
+    "tp_r": 3.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0774,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.835,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp4R",
+    "sl_mult": 1.5,
+    "tp_r": 4.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0774,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.835,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp5R",
+    "sl_mult": 1.5,
+    "tp_r": 5.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0774,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.835,
+    "provenance": "estimated"
+   },
+   {
+    "arm_id": "alt_sl1.5x_tp6R",
+    "sl_mult": 1.5,
+    "tp_r": 6.0,
+    "survived": false,
+    "resolved": true,
+    "net_r": -1.0774,
+    "marked_net_r_unresolved": null,
+    "exit_reason": "stop",
+    "delta_vs_actual_r": 2.835,
+    "provenance": "estimated"
+   }
+  ],
+  "verdict": {
+   "verdict": "exited_early",
+   "r_diff": 2.835,
+   "resolved": true,
+   "n_held_arms": 10,
+   "n_unresolved": 0,
+   "basis_arm": "alt_sl1.5x_tp2R",
+   "provenance": "estimated"
+  }
+ }
+}
