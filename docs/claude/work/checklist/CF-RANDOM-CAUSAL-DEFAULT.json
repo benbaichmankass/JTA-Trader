@@ -2,21 +2,25 @@
   "id": "CF-RANDOM-CAUSAL-DEFAULT",
   "title": "Live counterfactual grader: switch random_control default from legacy ([t_entry, t_close) = the trade's own realised length, lookahead) to causal ([t_entry, t_entry + horizon)); report the before/after on closed packages",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01AFoLuLmx72Lg7YLT2ZpPwm",
   "model": "sonnet",
   "ceiling_usd": 3,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Filed by Manager Session 2026-10-30b from CF-B0 (PR #21582: causal mode added opt-in, default left legacy, 'flipping the live default is a follow-up for the manager'). Classified data-settled (manager SKILL \u00a7 Before any operator popup, bucket 1): a lookahead control is a defect by construction; grading tooling, Tier 1, no trading effect. Done = default flipped + the graded-closed comparison (legacy vs causal random_control, n, delta) committed. Gates: none. [2026-10-30 12:35Z Manager Session 2026-10-30c] unblocked: CF-B0 merged as #21582 (30b6f8fd3).",
+  "note": "Filed by Manager Session 2026-10-30b from CF-B0 (PR #21582: causal mode added opt-in, default left legacy, 'flipping the live default is a follow-up for the manager'). Classified data-settled (manager SKILL \u00a7 Before any operator popup, bucket 1): a lookahead control is a defect by construction; grading tooling, Tier 1, no trading effect. Done = default flipped + the graded-closed comparison (legacy vs causal random_control, n, delta) committed. Gates: none. [2026-10-30 12:35Z Manager Session 2026-10-30c] unblocked: CF-B0 merged as #21582 (30b6f8fd3). [2026-10-30 session_01AFoLuLmx72Lg7YLT2ZpPwm] Default flipped to causal in cf_core.grade_package (live grader); tm_bench already hard-codes causal (intervention_controls default causal). Legacy via --random-mode legacy_own_length. Comparison record comms/research/counterfactual_grades/CF-RANDOM-CAUSAL-DEFAULT-legacy-vs-causal.json: 61 closed pkgs read, 43 graded, 16 with random_control; mean delta causal-legacy +0.0206 R/trade (median -0.021); 4/16 sign changes, 7/16 p-band changes. landed_unproven: closes on the next hourly counterfactual-grade-closed run succeeding on main with causal default, due 2026-11-02.",
   "priority_rank": 3,
-  "updated_at": "2026-10-30T12:32:04Z",
-  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
+  "updated_at": "2026-10-30T13:42:03Z",
+  "updated_by": "session_01AFoLuLmx72Lg7YLT2ZpPwm",
   "roadmap": [
     "L-AM-STANDARD"
   ],
+  "writeback": {
+    "roadmap": "none: grading-tooling default only; no L-AM-STANDARD milestone moves",
+    "arch": "none: no component changed (cf_core default random_mode legacy->causal; ARCHITECTURE-CANONICAL describes no default)"
+  },
   "_seq": 841
 }
