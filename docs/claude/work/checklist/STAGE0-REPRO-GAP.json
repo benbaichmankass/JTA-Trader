@@ -1,0 +1,22 @@
+{
+  "id": "STAGE0-REPRO-GAP",
+  "title": "Trend Stage-0 evidence does not reproduce: build_strategy_evidence.py with the OLD backtest_trend.py, rebuilt 2026-10-30, disagrees with the committed 2026-10-28 records (eth_4h n 135 vs 51, net +44.6 vs -9.6; sol_4h 116 vs 33; sol_prop 395 vs 63; qld/qqq/tqqq pass->fail). Find the cause (data window / fetch / config drift / harness path), make the rebuild reproducible, and re-issue the verdicts for every live-money trend leg.",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by Manager Session 2026-10-30c from lane HARNESS-TRAIL-GAPFILL (PR #21628; pipeline PI-20261030-56Z4JYMX-0001; table comms/strategy_evidence/recheck/2026-10-30-harness-trail-gapfill.md). system_first: the promotion-evidence system. OPERATOR DECISIONS 2026-10-30 ~14:00Z (popup to Manager Session 2026-10-30c), verbatim: on eth_prop (gap-fix flips net_r_oos +0.44 -> -4.12, n 165, on real prop accounts breakout_2/tradeify_1/velotrade_1): \"Hold until repro fixed\"; on urgency: \"Lane now, Opus (Recommended)\". So: trend_donchian_eth_prop and trend_donchian_eth_4h stay on their rosters (no config change) until this row re-issues their verdicts; then the manager re-classifies each (de-risk under data-backed authorization, or operator popup). Done = cause named with evidence; the rebuild reproduces the committed records (or the committed records are shown wrong and superseded); re-issued Stage-0 verdicts, old vs gap-fixed harness, for every live-money trend leg (eth_4h, eth_prop, sol_prop, any other trend leg on a real-money or prop roster), committed. Gates: none.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-30T14:11:40Z",
+  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
+  "roadmap": [
+    "L-AM-STANDARD"
+  ],
+  "_seq": 843
+}
