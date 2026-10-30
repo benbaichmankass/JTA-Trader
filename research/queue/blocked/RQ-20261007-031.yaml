@@ -1,7 +1,7 @@
 id: RQ-20261007-031
 title: VELOTRADE-FIT re-run on the MEASURED velotrade_1 cost stack (commission + swap read off live fills) once >= 2 closed
   round trips exist (PI-20261006-1BPXEUJR-0001)
-status: blocked
+status: retired
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -86,3 +86,4 @@ related:
 - comms/research/RQ-20261006-062/fit.json
 - claude/velotrade-risk-1pct
 - config/prop_rulesets/velotrade_classic_1step.yaml
+retired_reason: "2026-10-30 RESEARCH-OPS-20261030-1450 (blocked_over_age UNBLOCK-OR-RETIRE): retired at CONFIG level. Its first clears_when (velotrade_1 carries a roster and >= 2 closed round trips) has not been met in 23 days and is a manager Tier-3 roster call; velotrade_fit_sweep.py also still hardcodes COSTS. Re-author on the measured cost stack once the roster and 2 round trips exist (PI-20261006-1BPXEUJR-0001 keeps the trigger). No family retired."

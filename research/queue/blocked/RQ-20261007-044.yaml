@@ -4,7 +4,7 @@ title: >-
   lever (close on the wrong side of the trend midline for N bars) clear the P2 gate on the
   live alt-pullback legs at live-parity geometry? Harness lever EXISTS; BLOCKED only on a
   dispatch cell (m20 cells_for has no flip cell) -- a session can run it today
-status: blocked
+status: retired
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -118,3 +118,4 @@ related:
 - scripts/research/m20_fleet_exit_sweep.py
 - docs/research/exit-refinement-coverage.json
 last_dispatched_at: null
+retired_reason: "2026-10-30 RESEARCH-OPS-20261030-1450 (blocked_over_age UNBLOCK-OR-RETIRE): retired at CONFIG level. Unblocking needs a flip cell in the 3.9k-line m20_fleet_exit_sweep.cells_for plus a workflow lever input and a coverage-matrix column, and no row owns that build. Prior is low: the sibling frozen-label regime-flip exit returned FAIL on 0 of 42 legs at live parity (net_R -20.9 to -56.4 on the pullback legs, docs/research/exit-refinement-coverage.json). The trend-midline variant is NOT tested and the exit-lever family stays open; re-author if cells_for gains a flip cell. No family retired."
