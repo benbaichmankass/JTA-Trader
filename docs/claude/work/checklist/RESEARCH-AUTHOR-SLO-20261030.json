@@ -4,19 +4,19 @@
   "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
-  "lane": "session_01AFoLuKuWFkKjiKsvHQoNqp",
+  "lane": null,
   "model": "sonnet",
   "ceiling_usd": 6,
-  "spend_usd": null,
+  "spend_usd": 3.44,
   "tier": 1,
   "prs": [
     21554
   ],
   "blocked_on": [],
-  "note": "Same-day dispatch per manager SKILL § Research SLO escalation (runnable_floor / authoring_supply_ratio_7d -> an AUTHORING lane; supply is the lever, never the threshold). Source: research-slo comment 6517324883 on ops-flags #17895 at 07:24:38Z: runnable_floor 56 vs >= 58 [breach, since 07:24Z]; authoring_supply_ratio_7d 0.93 vs >= 1 [breach since 00:24Z]; research_ops_age_h 15.74 vs <= 8 [breach since 00:24Z]. The third is owned by today's 14:47Z research-ops slot (assistant routine trig_01UnRpzN513KbMjvJWFAf911; operator 2026-10-29 pacing rule: research-ops 1x/day while pacing), not this lane. Why no authoring lane ran today: the assistant's 05:53Z daily authoring routine deduped on RESEARCH-AUTHOR-FLOOR-20261029 (created 21:28Z, inside its 12h window). Gates: none. Dispatched 07:27Z: fresh Sonnet lane session_01AFoLuKuWFkKjiKsvHQoNqp, ceiling $6 (fresh: supply is on-disk context). | Lane: observation added for soak-contract-guard",
+  "note": "Same-day dispatch per manager SKILL \u00a7 Research SLO escalation (runnable_floor / authoring_supply_ratio_7d -> an AUTHORING lane; supply is the lever, never the threshold). Source: research-slo comment 6517324883 on ops-flags #17895 at 07:24:38Z: runnable_floor 56 vs >= 58 [breach, since 07:24Z]; authoring_supply_ratio_7d 0.93 vs >= 1 [breach since 00:24Z]; research_ops_age_h 15.74 vs <= 8 [breach since 00:24Z]. The third is owned by today's 14:47Z research-ops slot (assistant routine trig_01UnRpzN513KbMjvJWFAf911; operator 2026-10-29 pacing rule: research-ops 1x/day while pacing), not this lane. Why no authoring lane ran today: the assistant's 05:53Z daily authoring routine deduped on RESEARCH-AUTHOR-FLOOR-20261029 (created 21:28Z, inside its 12h window). Gates: none. Dispatched 07:27Z: fresh Sonnet lane session_01AFoLuKuWFkKjiKsvHQoNqp, ceiling $6 (fresh: supply is on-disk context). | Lane: observation added for soak-contract-guard #21554 merged 4e387fd (manager hold-merge via auto-merge after resolving a row conflict). research-slo 09:17Z on #17895: runnable_floor and authoring_supply_ratio_7d RECOVERED (lane read runnable 92 vs floor 59, ratio 1.02). Lane archived, final spend $3.44 of $6.",
   "priority_rank": 1,
-  "updated_at": "2026-10-30T08:15:55Z",
-  "updated_by": "session_01AFoLuKuWFkKjiKsvHQoNqp",
+  "updated_at": "2026-10-30T09:19:20Z",
+  "updated_by": "session_01AFoLuKe1M26JqmpKg3rYdo",
   "roadmap": [
     "L-PROGRAMMES"
   ],
@@ -29,5 +29,11 @@
     "how_to_check": "python3 scripts/research/research_slo.py (both rows ok), or the next research-slo comment on ops-flags #17895; pre-merge branch reading was runnable 90, ratio 1.01",
     "due_by": "2026-11-02"
   },
+  "lane_history": [
+    {
+      "lane": "session_01AFoLuKuWFkKjiKsvHQoNqp",
+      "archived_at": "2026-10-30T09:19:20Z"
+    }
+  ],
   "_seq": 838
 }
