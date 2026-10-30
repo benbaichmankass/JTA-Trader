@@ -1248,8 +1248,38 @@ def emit_trades_for(name: str, cfg: dict, workdir: str, days: int, *,
     return row
 
 
+def _tf_minutes(tf: str) -> int:
+    """'15m' -> 15, '4h' -> 240, '1d' -> 1440."""
+    tf = str(tf).strip().lower()
+    unit = {"m": 1, "h": 60, "d": 1440, "w": 10080}[tf[-1]]
+    return int(tf[:-1] or 1) * unit
+
+
+def trim_csv_to_window(csv: str, start: str, end: str, tf: str) -> int:
+    """Keep the fetched rows whose bar opens in [start, end + one leg bar).
+
+    ``start``/``end`` are a committed run's ``data_start``/``data_end`` (the
+    first and last LEG bar, after resampling), so every source row inside the
+    last leg bar is kept. STAGE0-REPRO-GAP (2026-10-30): with this, a rebuild
+    replays the committed window instead of "the last N days before today".
+    Returns the number of rows kept; raises if none, never writes an empty feed.
+    """
+    import pandas as pd
+    df = pd.read_csv(csv)
+    ts = pd.to_datetime(df["timestamp"], utc=True, format="mixed")
+    lo, hi = pd.Timestamp(start), pd.Timestamp(end) + pd.Timedelta(minutes=_tf_minutes(tf))
+    lo = lo if lo.tzinfo else lo.tz_localize("UTC")
+    hi = hi if hi.tzinfo else hi.tz_localize("UTC")
+    keep = (ts >= lo) & (ts < hi)
+    if not keep.any():
+        raise RuntimeError(f"replay window [{start}, {end}] has no rows in the fetched feed")
+    df[keep].to_csv(csv, index=False)
+    return int(keep.sum())
+
+
 def run_one(name: str, cfg: dict, workdir: str, days: int,
-            fee_arms: Optional[list] = None, research_emits: bool = False) -> dict:
+            fee_arms: Optional[list] = None, research_emits: bool = False,
+            window: Optional[tuple] = None) -> dict:
     harness = classify(cfg)
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
@@ -1264,7 +1294,17 @@ def run_one(name: str, cfg: dict, workdir: str, days: int,
     emit = os.path.join(workdir, f"{name}__trades.jsonl")
     jout = os.path.join(workdir, f"{name}__bt.json")
     try:
-        _fetch_csv(feed, days, csv)
+        if window:
+            # Fetch far enough back to cover the pinned start, then trim.
+            import pandas as pd
+            back = (pd.Timestamp.now(tz="UTC") - pd.Timestamp(window[0]).tz_convert("UTC")
+                    if pd.Timestamp(window[0]).tzinfo else
+                    pd.Timestamp.now(tz="UTC") - pd.Timestamp(window[0]).tz_localize("UTC"))
+            _fetch_csv(feed, max(days, back.days + 3), csv)
+            row["replay_window"] = list(window)
+            row["replay_rows"] = trim_csv_to_window(csv, window[0], window[1], tf)
+        else:
+            _fetch_csv(feed, days, csv)
     except Exception as e:  # noqa: BLE001
         row["error"] = f"fetch failed: {type(e).__name__}: {e}"
         return row

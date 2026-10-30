@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "regime_debt_matrix.build_harness_cmd treats an ABSENT decision_bar as the runtime default (forming: src/runtime/intent_multiplexer.py) and grades such legs approximate (or the builder runs the forming arm), and the eth_4h / sol_prop records stop carrying a 'decision_bar: forming' label over closed-bar numbers; or killed with a reason",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261030-QEJFFIDN-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane STAGE0-REPRO-GAP (session_01AFoLuJdW46ngQSqEjFFiDN)",
+    "rerun": "grep -n 'decision_bar\") or \"forming\"' src/runtime/intent_multiplexer.py; python3 -c \"import json;[print(l,json.load(open(f'comms/strategy_evidence/{l}.json')).get('decision_bar'),json.load(open(f'comms/strategy_evidence/{l}.json')).get('fidelity')) for l in ('trend_donchian_eth_4h','trend_donchian_sol_prop')]\""
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 1,
+  "what": "Evidence fidelity mislabel on two real-money legs (bybit_2 + bybit_portfolio). trend_donchian_eth_4h and trend_donchian_sol_prop declare no decision_bar, so they trade the FORMING bar (intent_multiplexer default 'forming'). regime_debt_matrix only marks an EXPLICIT 'forming' as an omitted lever, so the builder measures them on the CLOSED bar and grades them 'faithful'. The 2026-10-28 recost records (#20966) hold those closed-bar numbers (eth_4h n 135 / +44.64, reproduced exactly by STAGE0-REPRO-GAP) but kept the 2026-10-22 'decision_bar: forming' label and note. MEASURED forming arm, eth_4h, 11 bps, record window: n 209, +48.23 (old harness) / +25.08 (gap-fixed). Both pass, so no verdict moves today, but the record says it measured something it did not. Table: comms/strategy_evidence/recheck/2026-10-30-stage0-repro-gap.md."
+}
