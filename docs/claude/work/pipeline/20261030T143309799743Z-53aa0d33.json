@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "clears_when": "vol_skip_forming_bar_replay._set_costs resolves the fee via regime_debt_matrix.roundtrip_fee_bps (11.0 Bybit linear, 0.0 commission-free) with a test, or is killed with a reason",
+    "due_date": "2026-11-03",
+    "kind": "date"
+  },
+  "id": "PI-20261030-QEJFFIDN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane STAGE0-REPRO-GAP (session_01AFoLuJdW46ngQSqEjFFiDN)",
+    "rerun": "python3 -c \"import sys;sys.path[:0]=['scripts/research','.'];import vol_skip_forming_bar_replay as vs,regime_debt_matrix as r;print(vs.execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP, r.roundtrip_fee_bps('ETHUSDT'))\"  # 7.5 vs 11.0 = still open"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "The forming-bar replay (scripts/research/vol_skip_forming_bar_replay.py::_set_costs, used by forming_bar_pooled_regrade.py) sets the Bybit fee to execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP = 7.5 bps, while the evidence builder resolves 11.0 bps since the 2026-10-28 COST-STACK-RECOST-SWEEP re-baseline (#20966). MEASURED 2026-10-30 by STAGE0-REPRO-GAP: the two resolvers print 7.5 vs 11.0 for ETHUSDT. Any forming-arm Stage-0 number from that tool is understated on cost by 3.5 bps round trip. STAGE0-REPRO-GAP worked around it in its own driver (override to 11.0); the tool itself is unchanged."
+}

@@ -231,3 +231,34 @@ def test_tp_is_checked_after_the_stop_in_source(name):
         assert re.search(r"\b(?:break|return)\b", between), (
             f"{name}: the {label} stop branch does not exit before the TP test "
             "-- a bar through both levels would fall through to the TP")
+
+
+# --- HARNESS-TRAIL-GAPFILL: a stop touched on a bar that OPENS through it fills at the OPEN ---
+_GAP_PREFIX = ([(100, 101, 99, 100)] * 30 + [(100, 103, 99.5, 102)] * 3 + [(102, 104, 101, 103)] * 2
+               + [(90, 91, 88, 89)] + [(89, 90, 88, 89)] * 2)     # short entered at 89, stop 95.7857
+
+
+def _short_exit(tail):
+    import json
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        p = str(Path(td) / "t.jsonl")
+        bt.run_backtest(_frame(_GAP_PREFIX + tail), **TREND_CFG, emit_path=p)
+        return [json.loads(ln) for ln in open(p) if ln.strip()]
+
+
+@needs_pandas
+def test_gap_through_the_stop_fills_at_the_open():
+    """Planted gap bar opens at 100, 4.2 above the 95.79 stop. The old code filled at the stop
+    (-1.0 R); cf_core fills at the open: (89 - 100) / 6.7857 = -1.6211 R."""
+    (t,) = _short_exit([(100, 101, 99, 100)] * 6)
+    assert t["exit_reason"] == "stop"
+    assert t["gross_r"] == pytest.approx(-1.6211, abs=1e-3)
+
+
+@needs_pandas
+def test_touch_without_a_gap_still_fills_at_the_level():
+    """Bar opens inside the stop and trades up through it: fill stays at the stop, -1.0 R."""
+    (t,) = _short_exit([(90, 97, 89, 96)] + [(96, 97, 95, 96)] * 5)
+    assert t["exit_reason"] == "stop"
+    assert t["gross_r"] == pytest.approx(-1.0, abs=1e-3)

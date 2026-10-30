@@ -2,21 +2,32 @@
   "id": "LTR-DUE-MIRROR-LAG",
   "title": "LTR due-check reads prior reviews from main only, so a package re-wakes (r_milestone/new_peak/swing) until live-review-rows-mirror + git-sync land the row: 3 reviewers for one IAUM package in 21 min (PI-20261030-9KC5G3FG-0002). Make the due-check's prior-review index also read live-review/rows (or advance it at wake-post time).",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": null,
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 5,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    21631
+  ],
   "blocked_on": [],
   "note": "Filed by Manager Session 2026-10-30c (system_first: a defect in the live-review system, costs ~$0.40 per duplicate review and shows reviewers a stale previous_review). Evidence: ops-flags #17895 comments 6524066609 / 6524404374 / 6524507655; rows 17291da, 9c69bb8 on live-review/rows; src/runtime/live_review_due.py REVIEWS_REL = comms/live_review/reviews.jsonl (main only). Tier 2 (src/runtime on the VM): one operator OK before merge, or data-backed decide-ship-tell. Done = a fixture row only on live-review/rows suppresses the re-wake in a test; deployed; observed: no second wake within one bar of a review on a real package. Gates: none.",
   "priority_rank": 2,
-  "updated_at": "2026-10-30T13:55:32Z",
-  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
+  "updated_at": "2026-10-30T14:55:24Z",
+  "updated_by": "session_01AFoLuHshJifGd5QBmkEsS1",
   "roadmap": [
     "L-DESK"
   ],
+  "observation": {
+    "what": "no second ltr-wake for a package within one bar of a review row on live-review/rows",
+    "how_to_check": "GET /api/diag/live_review_due shows branch_state=read and branch_rows_added>0 when a branch-only row exists; the wake poster log shows one wake per package per bar after a review row lands on live-review/rows",
+    "due_by": "2026-11-02T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-DESK: due index reads live-review/rows (merged 21631); observation pending",
+    "arch": "ARCHITECTURE-CANONICAL changelog row 2026-10-30 LTR-DUE-MIRROR-LAG landed in the PR"
+  },
   "_seq": 843
 }
