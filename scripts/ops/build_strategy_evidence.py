@@ -409,7 +409,8 @@ def path_stats(trades: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
 
 def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
                  days: int, folds: int,
-                 research_emits: bool = False) -> Dict[str, Any]:
+                 research_emits: bool = False,
+                 window_days_source: str = "--days") -> Dict[str, Any]:
     """Produce one leg's evidence record. Never raises on a leg-level failure."""
     import regime_debt_matrix as rdm  # local: pulls pandas transitively
 
@@ -556,6 +557,21 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
     # just measured. Never computed unless coverage_state is actually
     # `measured` -- a rule graded against a number that was not measured is
     # exactly the post-hoc-looking record this clause exists to refuse.
+    # STAGE0-REPRO-GAP (2026-10-30): the pins a later rebuild needs to land on
+    # THIS measurement. The window is "the last `days` days before the run", so
+    # without data_start/data_end and the days actually used, a rebuild at the
+    # 365d default silently measures a different window (eth_4h: committed
+    # n 135 at 1095d, "rebuilt" n 51 at 365d). See tests/test_strategy_evidence.py.
+    rec["reproduce"] = {
+        "window_days": days,
+        "window_days_source": window_days_source,
+        "folds": folds,
+        "data_start": bt.get("data_start"),
+        "data_end": bt.get("data_end"),
+        "git_sha": _git_sha(),
+        "argv": ["python3", GENERATOR, "--strategy", name,
+                 "--days", str(days), "--folds", str(folds)],
+    }
     rec["decision_rule"] = {
         "id": DECISION_RULE_ID,
         "rule": DECISION_RULE_TEXT,
@@ -564,6 +580,43 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
     }
     rec["venue_bracket_arm"] = _venue_bracket_arm(name)
     return rec
+
+
+#: Keys every MEASURED record's `reproduce` block must carry (STAGE0-REPRO-GAP).
+REPRODUCE_KEYS = ("window_days", "window_days_source", "folds", "data_start",
+                  "data_end", "git_sha", "argv")
+
+
+def _git_sha() -> Optional[str]:
+    """HEAD of the checkout that ran the harness; None when git cannot say."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                             capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return (out.stdout.strip() or None) if out.returncode == 0 else None
+
+
+def resolve_window_days(name: str, out_dir: Path, cli_days: Optional[int]) -> tuple[int, str]:
+    """The window a rebuild of `name` should measure, and where that came from.
+
+    ⚠️ STAGE0-REPRO-GAP (2026-10-30): before this, an omitted `--days` meant
+    365 for EVERY leg, while a committed record may have been measured at 1095,
+    1460, 2170 or 6200 days. A "rebuild" of such a leg at the default is a
+    different measurement that looks like a failed reproduction. So: explicit
+    `--days` wins; else the committed record's own `window_days`; else
+    DEFAULT_DAYS.
+    """
+    if cli_days is not None:
+        return cli_days, "--days"
+    try:
+        wd = json.loads((out_dir / f"{name}.json").read_text(encoding="utf-8")).get("window_days")
+    except (OSError, ValueError, AttributeError):
+        wd = None
+    if isinstance(wd, int) and not isinstance(wd, bool) and wd > 0:
+        return wd, "committed_record"
+    return DEFAULT_DAYS, "default"
 
 
 def existing_coverage_state(path: Path) -> str:
@@ -749,7 +802,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--strategy", action="append", default=None,
                     help="Leg name; repeatable. Default: every enabled leg.")
-    ap.add_argument("--days", type=int, default=DEFAULT_DAYS)
+    ap.add_argument("--days", type=int, default=None,
+                    help="Window in days. Default: each leg's committed record's "
+                         f"own window_days, else {DEFAULT_DAYS} (STAGE0-REPRO-GAP).")
     ap.add_argument("--folds", type=int, default=DEFAULT_FOLDS)
     ap.add_argument("--out", default=str(OUT_DIR))
     ap.add_argument("--workdir", default=None,
@@ -796,15 +851,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             counts[state] += 1
             print(f"  {n:34s} harness={str(h):10s} {state}")
             continue
-        rec = build_record(n, legs[n], workdir=wd, days=a.days, folds=a.folds,
-                           research_emits=a.research_emits)
+        days, days_src = resolve_window_days(n, out_dir, a.days)
+        rec = build_record(n, legs[n], workdir=wd, days=days, folds=a.folds,
+                           research_emits=a.research_emits,
+                           window_days_source=days_src)
         counts[rec["coverage_state"]] += 1
         _, decision = write_record(rec, out_dir, refusal_dir=Path(wd))
         if decision != "write":
             refused.append((n, decision))
         print(f"  {n:34s} {rec['coverage_state']:15s} "
               f"fidelity={str(rec.get('fidelity')):12s} "
-              f"net_r_oos={rec.get('net_r_oos')} n={rec.get('n_trades_oos')}"
+              f"net_r_oos={rec.get('net_r_oos')} n={rec.get('n_trades_oos')} "
+              f"days={days} ({days_src})"
               f"{'  [REFUSED - committed record left intact]' if decision != 'write' else ''}")
 
     total = sum(counts.values())

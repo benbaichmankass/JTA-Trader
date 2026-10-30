@@ -377,3 +377,105 @@ def test_venue_bracket_arm_reads_static_arm(tmp_path, monkeypatch):
         "window": ["a", "b"]}, "provenance": "MEASURED"}))
     arm = b._venue_bracket_arm("leg")
     assert arm["exit_model"] == "static_sl_tp_only" and arm["net_r"] == 1.5 and arm["n"] == 3
+
+
+# ---------------------------------------------------------------------------
+# STAGE0-REPRO-GAP (2026-10-30): a rebuild must land on the SAME window.
+# MEASURED: rebuilding trend_donchian_eth_4h at the 365d default gave n 51 /
+# net -9.57 against the committed n 135 / +44.64, which was measured at 1095d;
+# at 1095d the old harness reproduces it exactly. So an omitted --days must
+# take the committed record's own window, and every measured record must pin
+# what a later rebuild needs.
+# ---------------------------------------------------------------------------
+def _plant_capturing_measure(monkeypatch, seen: dict):
+    mod = types.ModuleType("regime_debt_matrix")
+    mod.classify = lambda cfg: "pullback"
+
+    def run_one(name, cfg, workdir, days=365):
+        seen["days"] = days
+        wd = Path(workdir)
+        wd.mkdir(parents=True, exist_ok=True)
+        rows = [{"entry_time": f"2026-01-{d:02d} 00:00:00+00:00",
+                 "exit_time": f"2026-01-{d:02d} 12:00:00+00:00",
+                 "net_r": 1.0} for d in range(1, 5)]
+        (wd / f"{name}__trades.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in rows) + "\n")
+        (wd / f"{name}__bt.json").write_text(json.dumps({
+            "fee_bps_roundtrip": 0.0, "slippage_bps_roundtrip": 5.0,
+            "funding_bps_per_window": 0.0,
+            "data_start": "2025-01-01 00:00:00+00:00",
+            "data_end": "2026-01-04 00:00:00+00:00"}))
+        return {"fidelity": "faithful", "omitted_levers": [], "fee_bps_roundtrip": 0.0}
+
+    mod.run_one = run_one
+    monkeypatch.setitem(sys.modules, "regime_debt_matrix", mod)
+
+
+def test_omitted_days_rebuilds_at_the_committed_records_own_window(tmp_path, monkeypatch):
+    seen: dict = {}
+    _plant_capturing_measure(monkeypatch, seen)
+    target, _ = _stage_committed_record(tmp_path)
+    rec = json.loads(target.read_text())
+    rec["window_days"] = 1095
+    target.write_text(json.dumps(rec, indent=2) + "\n")
+
+    assert bse.main(["--strategy", _VICTIM, "--out", str(target.parent),
+                     "--workdir", str(tmp_path / "run")]) == 0
+    assert seen["days"] == 1095, "an omitted --days fell back to the 365d default"
+    out = json.loads(target.read_text())
+    assert out["window_days"] == 1095
+    assert out["reproduce"]["window_days_source"] == "committed_record"
+
+
+def test_explicit_days_wins_and_no_record_means_the_default(tmp_path, monkeypatch):
+    seen: dict = {}
+    _plant_capturing_measure(monkeypatch, seen)
+    target, _ = _stage_committed_record(tmp_path)
+    bse.main(["--strategy", _VICTIM, "--days", "730", "--out", str(target.parent),
+              "--workdir", str(tmp_path / "run")])
+    assert seen["days"] == 730
+    assert json.loads(target.read_text())["reproduce"]["window_days_source"] == "--days"
+
+    empty = tmp_path / "empty"
+    bse.main(["--strategy", _VICTIM, "--out", str(empty), "--workdir", str(tmp_path / "run2")])
+    assert seen["days"] == bse.DEFAULT_DAYS
+    assert json.loads((empty / f"{_VICTIM}.json").read_text())["reproduce"][
+        "window_days_source"] == "default"
+
+
+def test_a_measured_record_pins_everything_a_rebuild_needs(tmp_path, monkeypatch):
+    _plant_capturing_measure(monkeypatch, {})
+    rec = bse.build_record(_VICTIM, {"symbols": ["X"], "timeframe": "1d"},
+                           workdir=str(tmp_path), days=1095, folds=4)
+    assert rec["coverage_state"] == "measured"
+    rp = rec.get("reproduce")
+    assert isinstance(rp, dict), "a measured record without a reproduce block"
+    missing = [k for k in bse.REPRODUCE_KEYS if rp.get(k) in (None, "", [])]
+    assert not missing, f"reproduce block lacks {missing}"
+    assert rp["data_start"] == "2025-01-01 00:00:00+00:00"
+    assert rp["data_end"] == "2026-01-04 00:00:00+00:00"
+    assert rp["window_days"] == rec["window_days"] == 1095
+    assert "--days" in rp["argv"] and "1095" in rp["argv"]
+
+
+#: Records measured on or after this date are produced by the pinning builder.
+_REPRODUCE_REQUIRED_FROM = "2026-10-31"
+
+
+def test_committed_measured_records_from_the_pinning_builder_carry_the_pins():
+    """Fails on any COMMITTED record that the pinning builder wrote without pins.
+
+    Positive control first: the probe must find measured records at all, or a
+    pass here says nothing (RULE ONE: a negative needs a denominator).
+    """
+    recs = [json.loads(p.read_text()) for p in
+            (ROOT / "comms" / "strategy_evidence").glob("*.json")]
+    measured = [r for r in recs if isinstance(r, dict)
+                and r.get("coverage_state") == "measured"]
+    assert len(measured) >= 10, "probe found no measured records"
+    bad = [r["strategy"] for r in measured
+           if str(r.get("generated_at") or "") >= _REPRODUCE_REQUIRED_FROM
+           and r.get("generated_by") == bse.GENERATOR
+           and not all((r.get("reproduce") or {}).get(k) not in (None, "", [])
+                       for k in bse.REPRODUCE_KEYS if k != "git_sha")]
+    assert not bad, f"measured records without reproduce pins: {bad}"
