@@ -55,7 +55,7 @@ decision_rule:
 intervention_controls:
   hold_to_bracket: true
   matched_random: {draws: 200}
-  best_static: {grid: TM-BENCH B1_GRID (7 rules, leave-fold-out per leg), excludes_test_folds: true}
+  best_static: {grid: [be_at_1r, lock1_at_2r, be_lock_ladder, chandelier_2atr, chandelier_3atr, channel_10, channel_20], excludes_test_folds: true}
   bootstrap_group: trade
 ml_consumer:
   consumer: src/runtime/exit_head_apply.py
