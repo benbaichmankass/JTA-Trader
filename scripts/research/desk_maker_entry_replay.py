@@ -359,7 +359,7 @@ def _synthetic(o, h, l, c) -> gr.Series:  # noqa: E741
                      np.array(l, float), np.array(c, float), np.full(n, 1.0), 11.0, 3.0, 0.0)
 
 
-def cmd_selftest(a: argparse.Namespace) -> int:
+def cmd_selftest(_a: argparse.Namespace) -> int:
     ok = True
 
     def check(name: str, cond: bool, detail: str = "") -> None:

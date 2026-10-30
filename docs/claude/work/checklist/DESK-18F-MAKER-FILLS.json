@@ -12,7 +12,19 @@
   "prs": [],
   "blocked_on": [],
   "note": "2026-10-30 operator popup 'Maker fills'. RESULT (MEASURED, n 732 slots, registered before run at 61e0943): arm A (limit at entry, W4, maker 2bps) S3 +0.007 CI97.5 [-0.22,+0.22], fill 0.985; arm B (0.25 ATR inside) S3 -0.010 [-0.23,+0.20], fill 0.807; control reproduces judged-1 (+0.007 vs +0.006). Neither clears S3 >= +0.25 -> DESK-18D stays blocked. A cost lever cancels in a paired S3 by construction. Deviations: packet-sha drift 1498/1498, committed net R is a constant 3.5 bps RT cheaper than today's policy. Report docs/research/desk-18f-maker-fills-2026-10-30.md. Closes when the PR lands. Best next lever: event-driven entries (information, not fills).",
-  "updated_at": "2026-10-30T21:35:32Z",
+  "updated_at": "2026-10-30T21:53:56Z",
   "updated_by": "session_01AFoLuJFbgeLCnsH2uRRAMS",
+  "roadmap": [
+    "L-DESK"
+  ],
+  "writeback": {
+    "roadmap": "none: no L-DESK milestone moves; the maker lever did not clear S3 and DESK-18D stays blocked",
+    "arch": "none: no architecture contract changed; findings live in docs/research/desk-18f-maker-fills-2026-10-30.md"
+  },
+  "observation": {
+    "what": "the manager releases or retires research/queue/blocked/RQ-20261030-f18f-01.yaml and PR #21719 lands",
+    "how_to_check": "git cat-file -e origin/main:docs/research/desk-18f-maker-fills-2026-10-30.md; the unit is under research/queue/ or retired",
+    "due_by": "2026-11-06"
+  },
   "_seq": 846
 }
