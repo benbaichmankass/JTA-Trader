@@ -138,6 +138,13 @@ JUDGMENT_COLUMNS: tuple[str, ...] = (
     "basis",
     "applied",
     "model_tier",
+    # DESK-AM-REFOCUS forecast (ltr rows from 2026-10-31): the reviewer's falsifiable view, a label the
+    # exit / active-management heads can learn to predict and calibrate against (RULE-DESK-AM-JUDGEMENT-V1)
+    "fc_direction",
+    "fc_p_target",
+    "fc_target_r",
+    "fc_invalidation_r",
+    "fc_horizon_bars",
 )
 OUTCOME_COLUMNS: tuple[str, ...] = (
     "label_net_r",
@@ -178,6 +185,31 @@ def _num(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return None if f != f else f
+
+
+def _forecast_cols(fc: Any, state: Mapping[str, Any], feats: Mapping[str, Any], direction: str | None) -> dict:
+    """fc_* columns from a review's ``forecast``. Prices become R measured from the mark at review time, + in the
+    trade's favour, so a model sees a unit-free target. The unit and the mark come from the row itself:
+    |tp - sl| = (r_to_stop + r_to_target) units and mark = sl + side * r_to_stop units. Missing geometry or no
+    forecast -> None, never 0."""
+    out = {"fc_direction": None, "fc_p_target": None, "fc_target_r": None, "fc_invalidation_r": None,
+           "fc_horizon_bars": None}
+    if not isinstance(fc, Mapping):
+        return out
+    hb = fc.get("horizon_bars")
+    out.update(fc_direction=fc.get("direction"), fc_p_target=_num(fc.get("p_target")),
+               fc_horizon_bars=hb if isinstance(hb, int) and not isinstance(hb, bool) else None)
+    sl, tp = _num(state.get("sl")), _num(state.get("tp"))
+    rs, rt = _num(feats.get("r_to_stop")), _num(feats.get("r_to_target"))
+    if None in (sl, tp, rs, rt) or direction not in ("long", "short") or rs + rt <= 0 or tp == sl:
+        return out
+    side = 1.0 if direction == "long" else -1.0
+    unit = abs(tp - sl) / (rs + rt)
+    mark = sl + side * rs * unit
+    for col, key in (("fc_target_r", "target_px"), ("fc_invalidation_r", "invalidation_px")):
+        px = _num(fc.get(key))
+        out[col] = None if px is None else round(side * (px - mark) / unit, 4)
+    return out
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -317,6 +349,13 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
         "basis": str,
         "applied": bool,
         "model_tier": str,
+        "fc_direction": str,
+        "fc_p_target": float,
+        "fc_target_r": float,
+        "fc_invalidation_r": float,
+        "fc_horizon_bars": int,
+        # which wake asked (cadence vs a mechanical trigger); lineage, in none of the three groups
+        "trigger_event": str,
         # outcome / labels
         "label_net_r": float,
         "label_gross_r": float,
@@ -408,6 +447,7 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
                 delta, cf_source = None, "pending_replay"
             feats = r.get("features_at_review") or {}
             state = r.get("state") or {}
+            fc = _forecast_cols(r.get("forecast"), state, feats, jr["direction"] if jr else None)
             yield {
                 "judgment_id": rid,
                 "kind": "ltr_review",
@@ -449,6 +489,8 @@ class ClaudeJudgmentsBuilder(DatasetBuilder):
                 "basis": rec.get("basis"),
                 "applied": applied,
                 "model_tier": (r.get("model") or "").split(" ")[0] or None,
+                **fc,
+                "trigger_event": (r.get("trigger") or {}).get("event"),
                 "label_net_r": net_r,
                 "label_gross_r": gross_r,
                 "cf_hold_r": cf,

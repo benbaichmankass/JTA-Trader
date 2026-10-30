@@ -72,6 +72,28 @@ MARKET_EVENTS = ("swing", "vol_regime", "funding", "calendar")
 #: Pre-screen events (LTR-PRACTICE-REDESIGN): evaluated only when configured.
 #: The per-package auto mandate's review cadence (src/runtime/ltr_auto_mandate.py::CADENCE_EVENT).
 CADENCE_EVENT = "mandate_cadence"
+#: DESK-AM-REFOCUS (2026-10-30): the judgement desk's regular look at EVERY open package, not only on a
+#: mechanical trigger. One slot per ``hours_by_timeframe[tf]`` hours, aligned to UTC, level = the slot start,
+#: so every package of a timeframe falls due in the same slot and rides ONE wake (one book review).
+#: A review of the package made since the slot started (any trigger) already satisfies the slot.
+JUDGEMENT_EVENT = "judgement_cadence"
+_TF_LABEL = {300: "5m", 900: "15m", 1800: "30m", 3600: "1h", 7200: "2h", 14400: "4h", 86400: "1d"}
+
+
+def judgement_cadence_event(prior: Dict[str, Any], cfg: Dict[str, Any], now: datetime,
+                            tf: int) -> Optional[Tuple[str, Any, str]]:
+    """``(judgement_cadence, slot_start_iso, why)`` when this package's slot has had no review, else None.
+    Timeframes absent from ``hours_by_timeframe`` (the 5m/15m short-hold lane) get no slot."""
+    c = cfg["events"].get(JUDGEMENT_EVENT)
+    if not isinstance(c, dict):
+        return None
+    hours = (c.get("hours_by_timeframe") or {}).get(_TF_LABEL.get(tf, ""))
+    if not hours:
+        return None
+    slot = bar_start(now, int(float(hours) * 3600))
+    if prior["last"] is not None and prior["last"] >= slot:
+        return None
+    return (JUDGEMENT_EVENT, slot.isoformat(), f"judgement slot every {hours:g}h: no review since {slot.isoformat()}")
 PRESCREEN_EVENTS = ("adverse_r", "stall", "momentum_flip", "structure_break")
 
 _TF_RE = re.compile(r"_(\d+)(m|h|d)$")
@@ -853,6 +875,12 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
         if cad:
             slot = bar_start(now, int(cad["minutes"]) * 60).isoformat()
             mk = mk + [(CADENCE_EVENT, slot, f"{cad['mandate']}: auto-apply review every {cad['minutes']} min")]
+        # Only reviewed accounts (the daily_floor list, the wake's own account set), and never on a package
+        # an auto mandate already reviews on its own cadence (mandate_cadence above).
+        jc = None if (cad or str(row.get("account_id")) not in floor_accounts) \
+            else judgement_cadence_event(prior, cfg, now, tf)
+        if jc:
+            mk = mk + [jc]
         for name, level, why in candidate_events(row, prior, cfg, now, floor_accounts) + mk:
             if name == "mechanics" and level == VENUE_LEVEL:
                 # Not the plain fired-set: a repeat of the SAME divergence is quiet, a

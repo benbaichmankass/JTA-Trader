@@ -87,7 +87,9 @@ The strategy already runs its brackets, its trail and its time stop, and if you 
 
 Every in-trade class stays **advice only** (step 5): your call is recorded, graded against HOLD and against the mechanical rule net of cost (`RULE-DESK-AM-JUDGEMENT-V1`), and executed only once its class passes its own test. That is why the forecast matters: it is the label.
 
-**A `judgement_cadence` wake** (the VM's regular judgement slot) may carry SEVERAL package blocks. Review each one and write one row per package. Read them together first: they are one book.
+**A `judgement_cadence` wake** (the VM's regular judgement slot) carries every due package. Review each one and write one row per package. Read them together first: they are one book.
+- **A package whose entry reads `packet_state: omitted_too_large`** was left out of the comment only because of its size. If its `evidence_state` is `committed` or `exists`, the wake poster has already landed the packet and table byte-exact. This is the ONE exception to "read nothing from your checkout": read them with `git fetch -q --depth 1 origin live-review/rows`, then `git show origin/live-review/rows:comms/live_review/packets/<review_id>.json` (and `tables/<review_id>.json`), and judge the package as if its block were inline. With no committed evidence, there is no review for that package: say so in your report.
+- `trigger` on each row is that entry's `judgement_cadence` event and its `level` (the slot start), copied exactly.
 
 ## 3. The output: ONE row, exactly this shape
 

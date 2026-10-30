@@ -126,6 +126,12 @@ each **one marker, one lane, never spawn twice for the same id**; a `could_not_*
   `evidence_missing` failure, 2026-10-29: only the wake poster commits packets). To review a package regularly, the operator grants a
   cadence on its mandate; there is no reviewer-commit or system-action packet route (runner queues are 15-50 min; operator 2026-10-29
   "we need to make sure the design doesn't increase latency on the round trip decisions").
+  **Event `judgement_cadence`** (DESK-AM-REFOCUS, 2026-10-30): the VM's regular judgement slot for every open package of a reviewed
+  account (`config/live_trade_review.yaml` `judgement_cadence.hours_by_timeframe`). The slot is UTC-aligned, so one marker carries the
+  whole book. For a marker whose entries are ALL `judgement_cadence`, dispatch **ONE** Sonnet reviewer for the whole marker, not one per
+  package: same branch, same REVIEWER-BRIEF, with every entry and every inline packet block verbatim. The reviewer reads any
+  `omitted_too_large` packet from the branch (REVIEWER-BRIEF § 2b) and writes one row per package. A marker that mixes in trigger events
+  is dispatched per package as above.
 - **`desk-wake` / `desk-trigger-wake`** (operator 2026-10-26/27): `create_session` exactly as `.claude/skills/trading-desk/SKILL.md` § 6b
   specifies (Sonnet, auto, `desk/decisions`, depth-1 sparse checkout, WAKE PROMPT verbatim; the trigger kind adds the packet-id line). Do
   not read the packet. `could_not_commit` http 403 → tell the operator.

@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_runtime",
+  "why": "Tier 2: src/runtime/live_review_due.py (the live trader's in-process due computation) gains the judgement_cadence event and config/live_trade_review.yaml arms it, which changes when the VM wake poster posts ltr-wake markers (and so how many reviewer sessions the manager spawns). Also ml/datasets/families/claude_judgments.py (Tier-2 by name) gains the fc_* forecast columns, and the manager recipe + reviewer brief for a book wake. No order path, no apply path, no mandate change; every in-trade class stays advice-only. Revert: delete the judgement_cadence block from config/live_trade_review.yaml (the code then emits nothing). Held for the manager to merge and deploy (DESK-AM-REFOCUS dispatch)."
+}

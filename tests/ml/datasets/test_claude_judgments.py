@@ -317,3 +317,17 @@ def test_revealed_grade_is_t1_by_kind_even_when_cutoff_truncation_reads_t0(env):
     rows, rep = _run(comms, db)
     assert [r["kind"] for r in rows] == ["blind_grade"]
     assert rep["excluded_by_reason"] == {"t1_outcome_visible": 1}
+
+
+def test_forecast_columns_are_rebased_to_r_from_the_mark():
+    from ml.datasets.families.claude_judgments import _forecast_cols
+    # long: sl 90, tp 130, r_to_stop 1, r_to_target 3 -> unit 10, mark 100
+    fc = {"direction": "with_trade", "target_px": 120.0, "invalidation_px": 95.0, "p_target": 0.4,
+          "horizon_bars": 6, "thesis": "x", "timeframe": "2h"}
+    out = _forecast_cols(fc, {"sl": 90.0, "tp": 130.0}, {"r_to_stop": 1.0, "r_to_target": 3.0}, "long")
+    assert out == {"fc_direction": "with_trade", "fc_p_target": 0.4, "fc_target_r": 2.0,
+                   "fc_invalidation_r": -0.5, "fc_horizon_bars": 6}
+    short = _forecast_cols(fc, {"sl": 110.0, "tp": 70.0}, {"r_to_stop": 1.0, "r_to_target": 3.0}, "short")
+    assert short["fc_target_r"] == -2.0 and short["fc_invalidation_r"] == 0.5   # 120 is against a short from 100
+    assert _forecast_cols(None, {}, {}, "long")["fc_p_target"] is None
+    assert _forecast_cols(fc, {"sl": 90.0, "tp": 130.0}, {"r_to_stop": None, "r_to_target": 3.0}, "long")["fc_target_r"] is None
