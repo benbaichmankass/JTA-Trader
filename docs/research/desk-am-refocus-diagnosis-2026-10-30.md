@@ -120,7 +120,7 @@ The in-trade function stays the live trade review. It is the desk's in-trade rol
 ### 2.2 Cadence: a regular judgement slot for every open trade, plus the existing triggers
 
 - **New due event `judgement_cadence`.** Every open package becomes due once its last review is older than `hours_by_timeframe[tf]`. The level is the slot start, so all packages share one slot and arrive in **one wake**. The existing mechanical triggers stay on (22:25Z scope correction: wakes stay ON).
-- **Default cadence (proposed):** `1h`/`2h` legs every 4 h; `4h` legs every 8 h; `1d` legs every 24 h. 5m/15m short-hold trades keep their own lane.
+- **Cadence (DECIDED by the operator, popup ~22:30Z 2026-10-30, verbatim "Every 4h (~$20/day)"):** every timeframe from 30m to 1d, every 4 h. 5m/15m short-hold trades keep their own lane.
 - **One book wake per slot, not one session per package.** A `judgement_cadence` wake carries every due package's packet, and ONE reviewer reads them as a book and writes one row per package. The manager recipe changes to match.
 - **Cost (INFERRED, from the measured $0.30–0.35 per Sonnet wake on a ~53 KB packet).** A 4-hourly book wake is 6 wakes/day. With ~15 open packages at ~10 KB each (MEASURED median 9.8 KB, § 2.3) the context is ~150 KB, so a wake is likely $0.50–0.80: **≈ $3–5/day**. Per-package sessions at the same cadence would be ≈ $30/day. **Operator:** whether 4 h is the right default for 1h/2h legs.
 - **Comment budget.** The wake comment holds 60k chars. With today's ~10 KB packets plus tables, a book wake spans several comments; the poster splits them (Tier-2 increment).

@@ -368,8 +368,9 @@ def test_judgement_cadence_is_one_utc_slot_per_timeframe():
     now = datetime(2026, 10, 31, 9, 30, tzinfo=timezone.utc)
     ev = lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 7200)                 # 2h leg: 4h slots
     assert ev[0] == "judgement_cadence" and ev[1] == "2026-10-31T08:00:00+00:00"
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 14400)[1] == "2026-10-31T08:00:00+00:00"  # 8h slots
-    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 86400)[1] == "2026-10-31T00:00:00+00:00"
+    # operator 2026-10-30: every timeframe every 4h
+    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 14400)[1] == "2026-10-31T08:00:00+00:00"
+    assert lrd.judgement_cadence_event(_prior(), CFG_LIVE, now, 86400)[1] == "2026-10-31T08:00:00+00:00"
 
 
 def test_a_review_inside_the_slot_satisfies_it_and_short_hold_timeframes_get_none():
