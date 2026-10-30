@@ -1,6 +1,6 @@
 # DESK-18F — do judged-1's entries clear S3 when entered as maker fills?
 
-> **Doc status:** `live` · category `research` · last verified `2026-10-30` · lane DESK-18F-MAKER-FILLS (Tier 1, research tooling only)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · lane `DESK-18F-MAKER-FILLS` (Tier 1, `landing: hold`)
 
 Operator 2026-10-30 ~20:45Z, popup answer verbatim "Maker fills". Rule `RULE-RQ20261030-F18F-01-DESK-MAKER-ENTRY` in
 `research/queue/blocked/RQ-20261030-f18f-01.yaml` was committed (`61e0943`, 21:18Z) **before** the first maker score. Harness
