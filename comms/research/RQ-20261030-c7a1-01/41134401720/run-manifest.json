@@ -1,0 +1,44 @@
+{
+  "unit": "RQ-20261030-c7a1-01",
+  "run_id": "41134401720",
+  "commit_sha": "1d7c7b1df71cb520a76a8bd71bb2c9faed28ecf1",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/41134401720",
+  "timeout_minutes": 240,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/tm_bench.py",
+        "score",
+        "--test-corpus",
+        "v1",
+        "--rule",
+        "s_offline",
+        "--learners",
+        "lgbm_action_value,logit_action_value",
+        "--calibration",
+        "--actions",
+        "stage_a",
+        "--inner-folds",
+        "3",
+        "--act-margin-grid",
+        "0,0.02,0.05,0.1,0.2,0.3",
+        "--folds",
+        "6",
+        "--n-boot",
+        "2000",
+        "--n-perm",
+        "200",
+        "--random-draws",
+        "200",
+        "--out",
+        "comms/research/RQ-20261030-c7a1-01/41134401720"
+      ],
+      "log": "comms/research/RQ-20261030-c7a1-01/41134401720/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 357.0
+    }
+  ],
+  "all_ok": true
+}
