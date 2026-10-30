@@ -302,3 +302,54 @@ def test_market_events_still_dedupe_on_event_and_level_and_ignore_the_mechanics_
     r = row(open_r=2.2, peak_r=2.2)
     res = lrd.compute_due([r], [review(event="r_milestone", level=1.0, at=at)], CFG, NOW)
     assert [e["level"] for d in res["due"] for e in d["events"]] == [2.0]
+
+
+# --- LTR-DUE-MIRROR-LAG: rows on live-review/rows that main lacks ------------------------------
+
+def _branch(rows):
+    return lambda: {"state": "read", "rows": rows, "tip": "abc"}
+
+
+def _branch_row(rid, at, peak, event="r_milestone", level=2.0):
+    r = review(event=event, level=level, at=at, peak=peak)
+    r["review_id"] = rid
+    return r
+
+
+def test_branch_only_review_suppresses_rewake_new_peak_and_cooldown(tmp_path):
+    db = str(tmp_path / "j.db")
+    _db(db, [("pkg-1", "7", "ada_pullback_2h", "ADAUSDT", "bybit_2", "short",
+              2.2, 2.3, "measured", 0.1, 3.0, NOW.isoformat())])
+    main = tmp_path / "main.jsonl"
+    main.write_text(json.dumps(dict(review(at=NOW - timedelta(hours=30), peak=1.8), review_id="old")) + "\n")
+    # main alone: peak 2.3 vs last reviewed 1.8 (>= step_r 0.5) -> new_peak due, no cooldown
+    alone = lrd.live_review_due(db_path=db, reviews_path=str(main), now=NOW)
+    assert any(e["event"] == "new_peak" for d in alone["due"] for e in d["events"])
+    # the 2.14R review exists only on the branch, one bar ago: new_peak is below step_r over it
+    # and the package is inside the cooldown bar
+    row = _branch_row("br1", NOW - timedelta(minutes=5), 2.14)
+    out = lrd.live_review_due(db_path=db, reviews_path=str(main), now=NOW, branch=_branch([row]))
+    assert out["branch_state"] == "read" and out["branch_rows_added"] == 1
+    assert not any(e["event"] in ("new_peak", "r_milestone") for d in out["due"] for e in d["events"])
+
+
+def test_branch_rows_dedupe_by_review_id_against_main():
+    m = [{"review_id": "a", "order_package_id": "p"}]
+    got = lrd.merge_branch_rows(m, [{"review_id": "a", "order_package_id": "p"}, {"review_id": "b"}])
+    assert [r["review_id"] for r in got] == ["a", "b"]
+
+
+def test_branch_read_failure_falls_back_to_main_only(tmp_path):
+    db = str(tmp_path / "j.db")
+    _db(db, [("pkg-1", "7", "ada_pullback_2h", "ADAUSDT", "bybit_2", "short",
+              0.2, 0.3, "measured", 0.1, 3.0, NOW.isoformat())])
+    main = tmp_path / "main.jsonl"
+    main.write_text(json.dumps(review(at=NOW - timedelta(hours=1))) + "\n")
+    bad = lambda: {"state": "could_not_look", "rows": [], "reason": "branch_ref_absent: x"}  # noqa: E731
+    out = lrd.live_review_due(db_path=db, reviews_path=str(main), now=NOW, branch=bad)
+    assert out["read_state"] == "looked" and out["reviews_state"] == "read"
+    assert out["branch_state"] == "could_not_look" and "branch_ref_absent" in out["branch_reason"]
+    boom = lrd.read_branch_rows(git=lambda *a, **k: (1, "no ref"))
+    assert boom["state"] == "could_not_look" and boom["rows"] == []
+    raising = lrd.read_branch_rows(git=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x")))
+    assert raising["state"] == "could_not_look"
