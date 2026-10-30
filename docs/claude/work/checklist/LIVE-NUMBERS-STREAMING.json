@@ -13,15 +13,21 @@
   "blocked_on": [],
   "note": "2026-10-29 ~22:35Z operator check on the first open trade: the open trade was a PROP ticket (eth_prop short, 3 prop accounts) and it does NOT appear on Overview at all; filed OVERVIEW-PROP-OPEN-TRADES. No real-money broker position was open (positions route: 13 rows, all paper), so this row's own observation (real-money uPnL updates by itself) is still owed on the next real-money open position.",
   "priority_rank": 2,
-  "updated_at": "2026-10-29T22:34:37Z",
-  "updated_by": "Manager Session 2026-10-29d",
+  "updated_at": "2026-10-30T06:13:04Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
     "what": "Overview open-positions uPnL visibly updates every 1-2 s in a real browser",
     "how_to_check": "operator loads https://benbaichmankass.github.io/ict-trader-dashboard/ Overview and watches uPnL",
-    "due_by": "2026-10-30"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-30",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "operator-browser observation. stats read 2026-10-30: 2 real-money open trades now exist (openTrades 2), so the real-money uPnL condition is now testable by the operator."
+    }
   },
   "writeback": {
     "roadmap": "none: UI/observability",

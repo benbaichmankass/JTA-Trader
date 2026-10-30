@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[lane session_01PqbEwwoY1iRUJBvJtRYjxT] 7 units authored as programme nodes (02: P2-Q1.3-drift-split-persistence, P2-Q4-lgbm-capacity-small/big, P2-Q4-lgbm-regularised; 06: P6-Q6-roadmap-ref-valid, -never-dispatched-age, -related-paths-exist) and emitted RQ-20261025-004..010, all would_dispatch in dispatch_queue dry run. 3 new infra_selftest checks + tests. Finding PI-20261025-THEMEAUTHOR1025-0001 (5 units roadmap as string). Edits different nodes than PR 20047. HELD PR (hand-authored programme yaml): manager merge.",
-  "updated_at": "2026-10-25T09:27:10Z",
-  "updated_by": "session_01PqbEwwoY1iRUJBvJtRYjxT",
+  "updated_at": "2026-10-30T06:13:05Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "roadmap": [
     "L-OPS"
   ],
@@ -26,7 +26,13 @@
   "observation": {
     "what": "RQ-20261025-004..010 (4 ml_health, 3 infra) fire and land measured results; the runnable floor and ml_health/infra theme share recover",
     "how_to_check": "ls research/results | grep 20261025-00[4-9]; ls research/results | grep 20261025-010; python3 scripts/ci/check_research_queue_health.py | grep -E \"runnable|theme_supply\"",
-    "due_by": "2026-10-28T00:00Z"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-28T00:00Z",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "RQ-20261025-004..010: 004, 008, 009, 010 done; 005-007 queued with measured results; but check_research_queue_health 2026-10-30 shows ml_health supply 0 authored + 0 generated vs share 8 and runnable 53 < floor 57, so the recovery clause is not met."
+    }
   },
   "_seq": 649
 }

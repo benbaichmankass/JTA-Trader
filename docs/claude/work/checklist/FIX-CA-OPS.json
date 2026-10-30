@@ -16,9 +16,15 @@
   "observation": {
     "what": "one send-prop-test-ping dispatch writes no journal row and suppresses no real alert",
     "how_to_check": "system-actions send-prop-test-ping, then /api/diag/journal?table=trades",
-    "due_by": "2026-10-29"
+    "due_by": "2026-11-06T00:00Z",
+    "redated": {
+      "on": "2026-10-30",
+      "from": "2026-10-29",
+      "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "reason": "deployed (#13246); needs one send-prop-test-ping dispatch then a trades-table read; not dispatched this lane."
+    }
   },
-  "updated_at": "2026-10-15T06:36:09Z",
-  "updated_by": "session_019p3X1tJAdUdV2dKaw9no8r",
+  "updated_at": "2026-10-30T06:13:03Z",
+  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
   "_seq": 159
 }

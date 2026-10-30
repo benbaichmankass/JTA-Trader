@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261030-NLSZ8A5M-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-30a; lane DAILY-REVIEW-TRIAGE-20261030 report 06:17Z",
+    "rerun": "python3 -c \"import json;rows=[json.loads(l) for l in open('comms/live_review/reviews.jsonl')];j=[r for r in rows if (r.get('basis') or (r.get('recommendation') or {}).get('basis'))=='judgement'];print(len(j), sum(1 for r in j if r.get('applied_at')))\""
+  },
+  "state": "queued",
+  "what": "LTR apply path: 0 of 32 judgement-basis live-review rows ever applied (reported by lane DAILY-REVIEW-TRIAGE-20261030, 06:17Z). Split before fixing: (a) CLOSE recommendations (e.g. pkg-5d74ca7451d64ebe, 6+ repeated closes 2026-10-29 15:41-16:09Z, route recommended, applied_at null) are BY DESIGN unapplied: config/mandates.yaml MD-TRADE-DESK `never:` includes 'close or partial-close' (line ~1130), so they are operator asks, and the ask path must deliver them (verify they reached the digest/ask_operator). (b) judgement-basis TIGHTEN_SL rows: MD-TRADE-DESK line ~1126 allows the judgement basis, but row LTR-JUDGEMENT-APPLY notes 'nothing dispatches live_review_apply.py --apply' and LTR-APPLY-AUTOFLOW's PR #20319 is not found in main history. MEASURE: count judgement-basis tighten_sl rows on main and the live_review_rows_watch receipt for each (/api/diag/log_file?name=live_review_rows_watch); if any qualifying tighten was not applied, that is a live-path defect for a fix lane."
+}
